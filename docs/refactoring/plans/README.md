@@ -172,6 +172,80 @@
 
 ---
 
+### [07-advanced-cli-features-plan.md](./07-advanced-cli-features-plan.md)
+**🚀 Phase 7: 高级 CLI 功能增强实施计划**
+
+**预计时间**: 10-12 个工作日（含 20% 缓冲）
+**核心技术**: globby, commander, fs-extra
+**对应提案**: [07-advanced-cli-features.md](../proposals/07-advanced-cli-features.md)
+
+**内容**:
+- 多源支持（Multi-source）- 支持多个路径和 glob 模式
+- 标准输入支持（STDIN）- 管道集成
+- 输出路径定制 - 灵活的输出路径解析
+- 批处理模式（Batch Mode）- 多模块分析与索引生成
+
+**适用人群**: 开发者、DevOps 工程师、Monorepo 用户
+**阅读优先级**: ⭐⭐⭐⭐⭐
+
+**核心模块**:
+- `FileDiscoveryService` - 统一文件发现服务（Glob + STDIN）
+- `OutputPathResolver` - 输出路径解析与冲突处理
+- `BatchProcessor` - 批量分析编排器
+- `IndexGenerator` - Markdown 索引页生成器
+
+**实施阶段**:
+- Phase 1: Multi-source 支持（2 天）
+- Phase 2: 输出定制（2 天）
+- Phase 3: STDIN 支持（3 天）
+- Phase 4: 批处理模式（3 天）
+
+**验收标准**:
+- CLI 向后兼容性 100%
+- 测试覆盖率 ≥ 85%
+- 批处理性能: 10 模块 < 30s
+- 配置文件支持所有新参数
+
+---
+
+### [08-claude-code-subagent-integration-plan.md](./08-claude-code-subagent-integration-plan.md)
+**🤖 Phase 8: Claude Code Subagent 集成实施计划**
+
+**预计时间**: 4-6 个工作日
+**核心技术**: Claude Code Skills API
+**对应提案**: [08-claude-code-subagent-integration.md](../proposals/08-claude-code-subagent-integration.md)
+
+**内容**:
+- Claude Code Skill 开发
+- 智能项目类型检测（Monorepo/Microservices/Layered/Single）
+- 5 阶段执行工作流（检测→扫描→分析→呈现→增量）
+- 模板与示例
+- 社区推广与文档
+
+**适用人群**: Skill 开发者、ArchGuard 高级用户
+**阅读优先级**: ⭐⭐⭐⭐
+
+**核心文件**:
+- `skill.json` - Skill 元数据与激活配置
+- `instructions.md` - 5 阶段执行逻辑
+- `templates/` - 3 个 Markdown 模板（索引、摘要、洞察）
+- `examples/` - 4 个典型场景示例
+
+**实施阶段**:
+- Phase 1: 基础设施（1 天）
+- Phase 2: 核心逻辑（2-3 天）
+- Phase 3: 模板与示例（1 天）
+- Phase 4: 测试（1-2 天）
+- Phase 5: 文档与推广（1 天）
+
+**验收标准**:
+- Skill 激活成功率 > 95%
+- 项目类型检测准确率 > 90%
+- 完整文档和示例
+- 至少 1 次社区分享
+
+---
+
 ## 🗺️ 阅读路线
 
 ### 路线 1: 项目经理
@@ -218,6 +292,8 @@
 
 ## 📊 项目时间表
 
+### 核心功能开发（Phase 0-4）
+
 ```
 Week 1
 ├─ Day 1: Phase 0 - 环境准备
@@ -237,6 +313,25 @@ Week 4
 ├─ Day 1-3: Phase 4 - 配置与 CLI 改进 (继续)
 ├─ Day 4: 集成测试
 ├─ Day 5: 文档
+```
+
+### 高级功能增强（Phase 7-8）
+
+```
+Week 5-6
+├─ Day 1-2: Phase 7.1 - Multi-source 支持
+├─ Day 3-4: Phase 7.2 - 输出路径定制
+├─ Day 5-7: Phase 7.3 - STDIN 支持
+├─ Day 8-10: Phase 7.4 - 批处理模式
+└─ Day 11-12: Phase 7 - 集成测试与缓冲
+
+Week 7
+├─ Day 1: Phase 8.1 - 基础设施
+├─ Day 2-4: Phase 8.2 - 核心逻辑
+├─ Day 5: Phase 8.3 - 模板与示例
+└─ Day 6-8: Phase 8.4-8.5 - 测试与文档
+
+总工期: 7 周（35 个工作日）
 ```
 
 ---
@@ -349,16 +444,64 @@ Week 4
 
 ---
 
+### Phase 7: 高级 CLI 功能增强 (10-12 天)
+**状态**: 待开始
+**依赖**: Phase 4 完成（推荐）
+
+**目标**: 实现多源支持、STDIN、输出定制和批处理模式
+
+**详细计划**: [07-advanced-cli-features-plan.md](./07-advanced-cli-features-plan.md)
+
+**关键里程碑**:
+- Day 1-2: Multi-source 支持 ✅
+- Day 3-4: 输出路径定制 ✅
+- Day 5-7: STDIN 支持 ✅
+- Day 8-10: 批处理模式 ✅
+- Day 11-12: 集成测试与缓冲 ✅
+
+**验收标准**:
+- [ ] CLI 向后兼容性 100%
+- [ ] 测试覆盖率 ≥ 85%
+- [ ] 批处理性能: 10 模块 < 30s
+- [ ] 配置文件支持所有新参数
+- [ ] STDIN 集成测试通过
+
+---
+
+### Phase 8: Claude Code Subagent 集成 (4-6 天)
+**状态**: 待开始
+**依赖**: Phase 7 批处理功能完成
+
+**目标**: 开发 Claude Code Skill 实现自然语言架构分析
+
+**详细计划**: [08-claude-code-subagent-integration-plan.md](./08-claude-code-subagent-integration-plan.md)
+
+**关键里程碑**:
+- Day 1: 基础设施搭建 ✅
+- Day 2-4: 核心逻辑开发 ✅
+- Day 5: 模板与示例 ✅
+- Day 6-7: 测试 ✅
+- Day 8: 文档与推广 ✅
+
+**验收标准**:
+- [ ] Skill 激活成功率 > 95%
+- [ ] 项目类型检测准确率 > 90%
+- [ ] 完整文档和 4 个示例
+- [ ] 至少 1 次社区分享
+- [ ] 用户反馈收集
+
+---
+
 ## 🎯 RLM 阶段覆盖
 
-| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
-|----------|--------|---------|---------|---------|---------|
-| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 目标 |
-| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
-| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 |
-| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 |
-| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 | ✅ Git 流程 |
-| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 | ✅ 配置监控 |
+| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 7 | Phase 8 |
+|----------|--------|---------|---------|---------|---------|---------|---------|
+| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 提案07 | ✅ 提案08 |
+| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
+| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ 迭代开发 | ✅ Skill开发 |
+| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 激活测试 |
+| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 | ✅ Git 流程 | ✅ Git 流程 | ✅ Skill发布 |
+| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 | ✅ 配置监控 | ✅ 性能监控 | ✅ 使用监控 |
 
 ---
 
@@ -444,6 +587,8 @@ Week 4
 - [提案文档集](../proposals/README.md)
 - [架构优化建议](../proposals/01-architecture-optimization-proposal.md)
 - [Claude Code CLI 集成策略](../proposals/02-claude-code-integration-strategy.md)
+- [高级 CLI 功能增强提案](../proposals/07-advanced-cli-features.md)
+- [Claude Code Subagent 集成提案](../proposals/08-claude-code-subagent-integration.md)
 
 ### 外部资源
 - [ts-morph 文档](https://ts-morph.com/)
@@ -507,7 +652,7 @@ npm run test:watch
 
 ---
 
-**版本**: 1.0
+**版本**: 2.0
 **最后更新**: 2026-01-25
-**状态**: ✅ 计划完成，准备开始执行
-**下一步**: Phase 0 - 环境准备
+**状态**: ✅ 计划完成（Phase 0-4, Phase 7-8），准备开始执行
+**下一步**: Phase 0 - 环境准备（核心功能）或 Phase 7（高级功能）
