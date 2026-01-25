@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-01-25
 **分析方法**: RLM (Refactoring Lifecycle Management)
-**文档数量**: 5 份核心建议文档
+**文档数量**: 6 份核心建议文档
 
 ---
 
@@ -158,6 +158,7 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | **02-ai-integration** | ✅ 第1章 | ✅ 第2-4章 | ✅ 第4章 | ✅ 第5章 | ✅ 第6章 | ✅ 第7章 |
 | **03-multi-language** | ✅ 第1章 | ✅ 第2-4章 | ✅ 第4章 | ✅ 第5章 | ⚠️ 待补充 | ⚠️ 待补充 |
 | **04-performance** | ✅ 第1章 | ✅ 第2章 | ✅ 实施中 | ✅ 第4章 | ⚠️ 待补充 | ✅ 全文 |
+| **05-config-cli** | ✅ 第1章 | ✅ 第3章 | ✅ 第3章 | ✅ 第4章 | ✅ 第5章 | ✅ 第6章 |
 
 **图例**:
 - ✅ 已包含完整内容
@@ -392,6 +393,42 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 
 ---
 
+### [05-config-and-cli-improvements.md](./05-config-and-cli-improvements.md)
+**⚙️ 配置与 CLI 管理机制改进 - 用户体验**
+
+**适用人群**: 全体用户、DevOps、技术负责人
+**阅读优先级**: ⭐⭐⭐⭐
+
+**内容概要**:
+- 3 条配置和 CLI 改进建议
+  1. 可配置的 Claude CLI 命令（支持 `claude`, `claude-glm`, 自定义路径）
+  2. 可配置的 Claude CLI 额外参数（默认为空）
+  3. 可配置的架构图输出目录（默认 `./archguard`）
+- 配置 Schema 扩展设计
+- 向后兼容性保证
+- 输出路径统一管理
+- 完整的迁移指南
+
+**何时使用**:
+- ✅ 需要使用自定义 Claude CLI
+- ✅ 需要传递额外的 CLI 参数
+- ✅ 需要集中管理输出文件
+- ✅ 升级配置到新版本
+
+**关键亮点**:
+- 完全可配置的 Claude CLI 集成
+- 统一的输出目录管理
+- 100% 向后兼容
+- 渐进式采用新特性
+- 配置优先级清晰（CLI > 配置文件 > 默认值）
+
+**用户体验提升**:
+- CLI 灵活性提升 100%
+- 环境适配速度提升 10x
+- 输出管理简化 5x
+
+---
+
 ## 🗺️ 阅读路线建议
 
 ### 路线 1: 项目经理 / 产品负责人
@@ -464,6 +501,7 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 - ⚡ 智能模型路由（文档 02 - 建议 3）
 - ⚡ 增量更新（文档 02 - 建议 5）
 - ⚡ Prometheus 监控（文档 04 - 建议 5）
+- ⚡ 配置灵活性改进（文档 05 - 建议 1-3）
 
 ### P2 - 可选增强（长期价值）
 - 💡 时序信息建模（文档 01 - 建议 7）
@@ -487,6 +525,9 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | **监控告警** | 04 | 第 3 章 |
 | **多语言** | 03 | 第 3 章 |
 | **测试策略** | 00 | 第 4.1 章 |
+| **配置管理** | 05 | 第 2 章 |
+| **CLI 参数** | 05 | 第 2.1-2.2 章 |
+| **输出目录** | 05 | 第 2.2 章 |
 
 ### 按问题查找解决方案
 
@@ -498,6 +539,9 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | 扩展性不足 | 01, 03 | 插件化架构 |
 | 监控缺失 | 04 | 可观测性三支柱 |
 | 系统不稳定 | 01 | 熔断器 + 降级策略 |
+| CLI 命令硬编码 | 05 | 可配置 CLI 命令 |
+| 输出文件分散 | 05 | 统一输出目录管理 |
+| 配置不灵活 | 05 | 配置 Schema 扩展 |
 
 ---
 

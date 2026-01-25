@@ -139,6 +139,39 @@
 
 ---
 
+### [04-phase4-config-cli-improvements.md](./04-phase4-config-cli-improvements.md)
+**⚙️ Phase 4: 配置与 CLI 管理机制改进 (TDD)**
+
+**预计时间**: 6-9 个工作日
+**核心技术**: zod, commander, execa
+**对应提案**: [05-config-and-cli-improvements.md](../proposals/05-config-and-cli-improvements.md)
+
+**内容**:
+- 可配置的 Claude CLI 命令（默认 `claude`）
+- 可配置的 CLI 额外参数
+- 可配置的输出目录（默认 `./archguard`）
+- 完善的配置优先级机制
+- 向后兼容性保证
+- TDD 测试用例设计
+
+**适用人群**: 开发者、DevOps 工程师
+**阅读优先级**: ⭐⭐⭐⭐
+
+**关键特性**:
+- ✅ CLI 命令完全可配置
+- ✅ 统一的输出目录管理
+- ✅ 100% 向后兼容
+- ✅ 配置优先级清晰（CLI > 配置文件 > 默认值）
+- ✅ 深度配置合并
+
+**验收标准**:
+- 配置灵活性: 支持的配置项数量 +50%
+- 测试覆盖率 ≥ 80%
+- 向后兼容性 100%
+- 文档完整性 100%
+
+---
+
 ## 🗺️ 阅读路线
 
 ### 路线 1: 项目经理
@@ -198,8 +231,12 @@ Week 2
 Week 3
 ├─ Day 1-2: Phase 3 - 优化
 ├─ Day 3: 集成测试
-├─ Day 4: 文档
-└─ Day 5: 发布
+├─ Day 4-5: Phase 4 - 配置与 CLI 改进 (开始)
+
+Week 4
+├─ Day 1-3: Phase 4 - 配置与 CLI 改进 (继续)
+├─ Day 4: 集成测试
+├─ Day 5: 文档
 ```
 
 ---
@@ -288,16 +325,40 @@ Week 3
 
 ---
 
+### Phase 4: 配置与 CLI 管理机制改进 (6-9 天)
+**状态**: 待开始
+**依赖**: Phase 1 + Phase 2 + Phase 3 完成
+
+**目标**: 增强配置灵活性和 CLI 可配置性
+
+**详细计划**: [04-phase4-config-cli-improvements.md](./04-phase4-config-cli-improvements.md)
+
+**关键里程碑**:
+- Day 1-2: 配置 Schema 扩展 ✅
+- Day 3-4: CLI 参数集成 ✅
+- Day 5-6: Claude CLI Wrapper 重构 ✅
+- Day 7-8: 输出路径管理重构 ✅
+- Day 9: 文档与测试 ✅
+
+**验收标准**:
+- [ ] CLI 命令可配置性 100%
+- [ ] 支持多种 CLI 变体
+- [ ] 向后兼容性 100%
+- [ ] 测试覆盖率 ≥ 80%
+- [ ] 配置灵活性 +50%
+
+---
+
 ## 🎯 RLM 阶段覆盖
 
-| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 |
-|----------|--------|---------|---------|---------|
-| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 |
-| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
-| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 |
-| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 |
-| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 |
-| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 |
+| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
+|----------|--------|---------|---------|---------|---------|
+| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 目标 |
+| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
+| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 |
+| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 |
+| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 | ✅ Git 流程 |
+| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 | ✅ 配置监控 |
 
 ---
 
