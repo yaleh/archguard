@@ -23,7 +23,7 @@ describeWithApi('PlantUML Generation Integration (Real API)', () => {
     }
 
     costTracker = new CostTracker();
-    costTracker.setBudget(0.10); // $0.10 budget for tests
+    costTracker.setBudget(0.1); // $0.10 budget for tests
 
     generator = new PlantUMLGenerator({
       apiKey: process.env.ANTHROPIC_API_KEY!,

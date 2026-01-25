@@ -1,0 +1,743 @@
+# ArchGuard Configuration Reference
+
+Complete guide to configuring ArchGuard for your project.
+
+## Table of Contents
+
+- [Configuration Files](#configuration-files)
+- [Configuration Schema](#configuration-schema)
+- [Environment Variables](#environment-variables)
+- [CLI Options](#cli-options)
+- [Configuration Priority](#configuration-priority)
+- [Examples](#examples)
+- [Best Practices](#best-practices)
+
+## Configuration Files
+
+ArchGuard supports multiple configuration file formats:
+
+### Supported File Names
+
+- `.archguardrc.json` (recommended)
+- `.archguardrc`
+- `archguard.config.json`
+- `package.json` (under `"archguard"` key)
+
+### File Location
+
+Configuration files should be placed in the project root directory.
+
+### Creating Configuration
+
+Use the init command to create a configuration file:
+
+```bash
+archguard init
+```
+
+This creates `.archguardrc.json` with default settings.
+
+---
+
+## Configuration Schema
+
+### Complete Example
+
+```json
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  "source": "./src",
+  "output": "./docs/architecture.puml",
+  "format": "plantuml",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/__mocks__/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "concurrency": 4,
+  "cache": true,
+  "cacheDir": "~/.archguard/cache",
+  "anthropicApiKey": "${ANTHROPIC_API_KEY}",
+  "model": "claude-sonnet-4-20250514",
+  "maxTokens": 4096,
+  "verbose": false
+}
+```
+
+### Field Descriptions
+
+#### source
+
+- **Type**: `string`
+- **Default**: `"./src"`
+- **Description**: Root directory containing TypeScript source files to analyze
+
+```json
+{
+  "source": "./src"
+}
+```
+
+**Examples**:
+
+```json
+// Monorepo package
+{ "source": "./packages/core/src" }
+
+// Multiple source directories (use multiple config files)
+{ "source": "./src" }  // .archguardrc.json
+{ "source": "./lib" }  // .archguardrc.lib.json
+```
+
+#### output
+
+- **Type**: `string`
+- **Default**: `"./architecture.puml"`
+- **Description**: Path where generated diagram will be saved
+
+```json
+{
+  "output": "./docs/architecture.puml"
+}
+```
+
+**Format-specific outputs**:
+
+```json
+// PlantUML
+{ "output": "./docs/architecture.puml" }
+
+// JSON
+{ "output": "./output/architecture.json" }
+```
+
+#### format
+
+- **Type**: `"plantuml" | "json"`
+- **Default**: `"plantuml"`
+- **Description**: Output format for generated architecture
+
+```json
+{
+  "format": "plantuml"
+}
+```
+
+**Options**:
+
+- `"plantuml"` - Generates PlantUML diagram (.puml)
+- `"json"` - Generates ArchJSON data (.json)
+
+#### exclude
+
+- **Type**: `string[]`
+- **Default**: `[]`
+- **Description**: Glob patterns for files/directories to exclude from analysis
+
+```json
+{
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**"
+  ]
+}
+```
+
+**Common exclusions**:
+
+```json
+{
+  "exclude": [
+    // Test files
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+
+    // Build output
+    "**/dist/**",
+    "**/build/**",
+    "**/out/**",
+
+    // Dependencies
+    "**/node_modules/**",
+
+    // Generated code
+    "**/generated/**",
+    "**/*.generated.ts",
+
+    // Configuration
+    "**/*.config.ts",
+
+    // Examples/demos
+    "**/examples/**",
+    "**/demos/**"
+  ]
+}
+```
+
+#### concurrency
+
+- **Type**: `number`
+- **Default**: CPU core count
+- **Description**: Number of parallel workers for file parsing
+
+```json
+{
+  "concurrency": 4
+}
+```
+
+**Guidelines**:
+
+| Project Size | Files | Recommended Concurrency |
+|--------------|-------|------------------------|
+| Small | < 50 | 2-4 |
+| Medium | 50-200 | 4-8 |
+| Large | > 200 | 8-16 |
+
+#### cache
+
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Enable/disable caching of parsing results
+
+```json
+{
+  "cache": true
+}
+```
+
+**When to disable**:
+
+```json
+// Disable for CI/CD fresh builds
+{ "cache": false }
+
+// Enable for development (faster)
+{ "cache": true }
+```
+
+#### cacheDir
+
+- **Type**: `string`
+- **Default**: `"~/.archguard/cache"`
+- **Description**: Directory for storing cache files
+
+```json
+{
+  "cacheDir": "~/.archguard/cache"
+}
+```
+
+**Custom cache locations**:
+
+```json
+// Project-local cache
+{ "cacheDir": "./.archguard-cache" }
+
+// Shared cache for monorepo
+{ "cacheDir": "../../.archguard-cache" }
+```
+
+#### anthropicApiKey
+
+- **Type**: `string`
+- **Default**: `undefined`
+- **Description**: Anthropic API key for Claude AI
+
+```json
+{
+  "anthropicApiKey": "${ANTHROPIC_API_KEY}"
+}
+```
+
+**Best practices**:
+
+```json
+// Use environment variable (recommended)
+{ "anthropicApiKey": "${ANTHROPIC_API_KEY}" }
+
+// Load from .env file
+{ "anthropicApiKey": "${ANTHROPIC_API_KEY}" }
+
+// Never commit actual key!
+// ❌ { "anthropicApiKey": "sk-ant-..." }
+```
+
+#### model
+
+- **Type**: `string`
+- **Default**: `"claude-sonnet-4-20250514"`
+- **Description**: Claude model to use for diagram generation
+
+```json
+{
+  "model": "claude-sonnet-4-20250514"
+}
+```
+
+**Available models**:
+
+```json
+// Sonnet (recommended)
+{ "model": "claude-sonnet-4-20250514" }
+
+// Opus (highest quality)
+{ "model": "claude-opus-4-20250514" }
+
+// Haiku (fastest, lower cost)
+{ "model": "claude-3-5-haiku-20241022" }
+```
+
+#### maxTokens
+
+- **Type**: `number`
+- **Default**: `4096`
+- **Description**: Maximum tokens for Claude API response
+
+```json
+{
+  "maxTokens": 4096
+}
+```
+
+**Recommendations**:
+
+```json
+// Small diagrams (< 10 entities)
+{ "maxTokens": 2048 }
+
+// Medium diagrams (10-50 entities)
+{ "maxTokens": 4096 }
+
+// Large diagrams (> 50 entities)
+{ "maxTokens": 8192 }
+```
+
+#### verbose
+
+- **Type**: `boolean`
+- **Default**: `false`
+- **Description**: Enable verbose logging for debugging
+
+```json
+{
+  "verbose": false
+}
+```
+
+---
+
+## Environment Variables
+
+Environment variables override configuration file values.
+
+### ANTHROPIC_API_KEY
+
+Your Anthropic API key for Claude AI.
+
+```bash
+export ANTHROPIC_API_KEY=your_api_key_here
+```
+
+**Usage in .env file**:
+
+```env
+# .env
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+### ARCHGUARD_CACHE_DIR
+
+Override default cache directory.
+
+```bash
+export ARCHGUARD_CACHE_DIR=/custom/cache/path
+```
+
+### ARCHGUARD_CONCURRENCY
+
+Override default concurrency level.
+
+```bash
+export ARCHGUARD_CONCURRENCY=8
+```
+
+---
+
+## CLI Options
+
+Command-line options have the highest priority and override both configuration files and environment variables.
+
+```bash
+archguard analyze \
+  --source ./src \
+  --output ./docs/architecture.puml \
+  --format plantuml \
+  --exclude "**/*.test.ts" "**/*.spec.ts" \
+  --concurrency 8 \
+  --no-cache \
+  --verbose
+```
+
+See [CLI Usage Guide](CLI-USAGE.md) for complete CLI reference.
+
+---
+
+## Configuration Priority
+
+Configuration values are resolved in the following order (highest to lowest priority):
+
+1. **CLI Options** (highest priority)
+2. **Environment Variables**
+3. **Configuration File**
+4. **Default Values** (lowest priority)
+
+### Example Resolution
+
+Given:
+
+```json
+// .archguardrc.json
+{
+  "concurrency": 4
+}
+```
+
+```bash
+export ARCHGUARD_CONCURRENCY=6
+```
+
+```bash
+archguard analyze --concurrency 8
+```
+
+**Result**: Uses `8` (CLI option wins)
+
+---
+
+## Examples
+
+### Example 1: Minimal Configuration
+
+```json
+{
+  "source": "./src"
+}
+```
+
+Uses all defaults, only specifies source directory.
+
+### Example 2: Development Configuration
+
+```json
+{
+  "source": "./src",
+  "output": "./docs/architecture.puml",
+  "cache": true,
+  "verbose": true,
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
+```
+
+Optimized for development with caching and verbose output.
+
+### Example 3: CI/CD Configuration
+
+```json
+{
+  "source": "./src",
+  "output": "./docs/architecture.puml",
+  "cache": false,
+  "concurrency": 16,
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**"
+  ]
+}
+```
+
+Optimized for CI/CD with high concurrency and no caching.
+
+### Example 4: Monorepo Configuration
+
+```json
+{
+  "projects": [
+    {
+      "source": "./packages/auth/src",
+      "output": "./docs/auth-architecture.puml"
+    },
+    {
+      "source": "./packages/api/src",
+      "output": "./docs/api-architecture.puml"
+    },
+    {
+      "source": "./packages/ui/src",
+      "output": "./docs/ui-architecture.puml"
+    }
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "concurrency": 8
+}
+```
+
+### Example 5: package.json Integration
+
+```json
+{
+  "name": "my-project",
+  "version": "1.0.0",
+  "archguard": {
+    "source": "./src",
+    "output": "./docs/architecture.puml",
+    "exclude": [
+      "**/*.test.ts"
+    ]
+  },
+  "scripts": {
+    "docs": "archguard analyze"
+  }
+}
+```
+
+---
+
+## Best Practices
+
+### 1. Use Configuration Files
+
+Maintain consistent settings across team:
+
+```bash
+archguard init
+git add .archguardrc.json
+git commit -m "Add ArchGuard configuration"
+```
+
+### 2. Separate Environments
+
+Create environment-specific configurations:
+
+```
+.archguardrc.json         # Default
+.archguardrc.dev.json     # Development
+.archguardrc.ci.json      # CI/CD
+```
+
+Use with:
+
+```bash
+archguard analyze --config .archguardrc.ci.json
+```
+
+### 3. Secure API Keys
+
+Never commit API keys:
+
+```json
+{
+  "anthropicApiKey": "${ANTHROPIC_API_KEY}"
+}
+```
+
+Use .env file:
+
+```env
+# .env (add to .gitignore)
+ANTHROPIC_API_KEY=your_key_here
+```
+
+### 4. Optimize Exclusions
+
+Exclude unnecessary files for faster parsing:
+
+```json
+{
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/__mocks__/**",
+    "**/generated/**"
+  ]
+}
+```
+
+### 5. Tune Concurrency
+
+Adjust based on system resources:
+
+```json
+{
+  // Development (laptop)
+  "concurrency": 4,
+
+  // CI/CD (powerful server)
+  "concurrency": 16
+}
+```
+
+### 6. Enable Caching in Development
+
+Speed up repeated analysis:
+
+```json
+{
+  "cache": true,
+  "cacheDir": "./.archguard-cache"
+}
+```
+
+### 7. Version Control Configuration
+
+Add to .gitignore if needed:
+
+```
+# .gitignore
+.archguard-cache/
+docs/architecture.puml  # If regenerating frequently
+```
+
+### 8. Document Configuration
+
+Add comments to explain project-specific settings:
+
+```json
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  // We use higher concurrency due to large project size
+  "concurrency": 12,
+
+  // Exclude auto-generated GraphQL files
+  "exclude": [
+    "**/*.generated.ts"
+  ]
+}
+```
+
+---
+
+## Validation
+
+ArchGuard validates configuration files on load:
+
+```bash
+archguard analyze
+```
+
+If configuration is invalid:
+
+```
+❌ Configuration error:
+  - Invalid concurrency: must be a positive integer
+  - Unknown format: "yaml" (expected "plantuml" or "json")
+```
+
+### Schema Validation
+
+Use JSON schema for IDE autocomplete and validation:
+
+```json
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  "source": "./src"
+}
+```
+
+---
+
+## Migration
+
+### From v0.1 to v0.2
+
+```json
+{
+  // Old (v0.1)
+  "inputDir": "./src",
+
+  // New (v0.2)
+  "source": "./src"
+}
+```
+
+### From Environment Variables Only
+
+Before:
+
+```bash
+export ARCHGUARD_SOURCE=./src
+export ARCHGUARD_OUTPUT=./docs/arch.puml
+archguard analyze
+```
+
+After:
+
+```json
+{
+  "source": "./src",
+  "output": "./docs/arch.puml"
+}
+```
+
+```bash
+archguard analyze
+```
+
+---
+
+## Troubleshooting
+
+Common configuration issues:
+
+### Invalid JSON
+
+```bash
+❌ Error: Unexpected token } in JSON at position 123
+```
+
+**Solution**: Validate JSON syntax (remove trailing commas, check quotes)
+
+### API Key Not Found
+
+```bash
+❌ Error: Anthropic API key is required
+```
+
+**Solution**: Set `ANTHROPIC_API_KEY` environment variable
+
+### Path Not Found
+
+```bash
+❌ Error: Source directory not found: ./src
+```
+
+**Solution**: Verify source path is correct relative to project root
+
+### Concurrency Too High
+
+```bash
+⚠ Warning: Concurrency (32) exceeds CPU cores (8)
+```
+
+**Solution**: Reduce concurrency to match available resources
+
+---
+
+For more information:
+- [CLI Usage Guide](CLI-USAGE.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [GitHub Issues](https://github.com/your-org/archguard/issues)

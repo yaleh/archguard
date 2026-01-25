@@ -39,7 +39,7 @@ export class CacheManager {
     hits: 0,
     misses: 0,
     hitRate: 0,
-    totalSize: 0
+    totalSize: 0,
   };
   private defaultTTL: number = 86400; // 24 hours in seconds
 
@@ -107,7 +107,7 @@ export class CacheManager {
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
-      ttl: options.ttl ?? this.defaultTTL
+      ttl: options.ttl ?? this.defaultTTL,
     };
 
     await fs.ensureDir(path.dirname(cachePath));
@@ -127,7 +127,7 @@ export class CacheManager {
       hits: 0,
       misses: 0,
       hitRate: 0,
-      totalSize: 0
+      totalSize: 0,
     };
   }
 
@@ -192,10 +192,7 @@ export class CacheManager {
    * Generate cache key from file path and hash
    */
   private getCacheKey(filePath: string, hash: string): string {
-    return crypto
-      .createHash('md5')
-      .update(`${filePath}:${hash}`)
-      .digest('hex');
+    return crypto.createHash('md5').update(`${filePath}:${hash}`).digest('hex');
   }
 
   /**

@@ -103,11 +103,7 @@ export class ClaudeConnector {
    */
   validateInput(input: string): void {
     if (!input || input.trim().length === 0) {
-      throw new ClaudeAPIError(
-        'Input cannot be empty',
-        'INVALID_INPUT',
-        false
-      );
+      throw new ClaudeAPIError('Input cannot be empty', 'INVALID_INPUT', false);
     }
 
     const estimatedTokens = this.estimateTokens(input);
@@ -123,10 +119,7 @@ export class ClaudeConnector {
   /**
    * Send a chat message to Claude and get a response
    */
-  async chat(
-    prompt: string,
-    options: ChatOptions = {}
-  ): Promise<ChatResponse> {
+  async chat(prompt: string, options: ChatOptions = {}): Promise<ChatResponse> {
     // Validate input
     this.validateInput(prompt);
 
@@ -170,17 +163,9 @@ export class ClaudeConnector {
               false
             );
           case 408:
-            throw new ClaudeAPIError(
-              'API timeout: Request took too long',
-              'TIMEOUT',
-              true
-            );
+            throw new ClaudeAPIError('API timeout: Request took too long', 'TIMEOUT', true);
           case 429:
-            throw new ClaudeAPIError(
-              'Rate limit exceeded: Too many requests',
-              'RATE_LIMIT',
-              true
-            );
+            throw new ClaudeAPIError('Rate limit exceeded: Too many requests', 'RATE_LIMIT', true);
           case 500:
           case 502:
           case 503:
@@ -190,21 +175,13 @@ export class ClaudeConnector {
               true
             );
           default:
-            throw new ClaudeAPIError(
-              `API error: ${error.message}`,
-              'API_ERROR',
-              false
-            );
+            throw new ClaudeAPIError(`API error: ${error.message}`, 'API_ERROR', false);
         }
       }
 
       // Handle network errors
       if (error.message && error.message.includes('Network')) {
-        throw new ClaudeAPIError(
-          'Network error: Failed to connect to API',
-          'NETWORK_ERROR',
-          true
-        );
+        throw new ClaudeAPIError('Network error: Failed to connect to API', 'NETWORK_ERROR', true);
       }
 
       // Re-throw unknown errors
@@ -215,9 +192,7 @@ export class ClaudeConnector {
   /**
    * Extract text content from Claude API response
    */
-  private extractTextFromResponse(
-    response: Anthropic.Message
-  ): string {
+  private extractTextFromResponse(response: Anthropic.Message): string {
     if (!response.content || response.content.length === 0) {
       return '';
     }

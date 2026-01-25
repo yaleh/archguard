@@ -77,13 +77,13 @@ describe('Story 2: Progress Display', () => {
 
       const stages = reporter.getStages();
       expect(stages).toHaveLength(3);
-      expect(stages.every(s => s.status === 'success')).toBe(true);
+      expect(stages.every((s) => s.status === 'success')).toBe(true);
     });
 
     it('should track stage timing', async () => {
       reporter.start('Stage 1');
       // Small delay to ensure time difference
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       reporter.succeed('Done');
 
       const stages = reporter.getStages();
@@ -110,7 +110,7 @@ describe('Story 2: Progress Display', () => {
     it('should calculate total duration', async () => {
       reporter.start('Stage 1');
       // Small delay to ensure time difference
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       reporter.succeed('Done');
 
       const summary = reporter.getSummary();

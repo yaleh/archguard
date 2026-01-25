@@ -10,8 +10,7 @@ import chalk from 'chalk';
  * Create the cache command with subcommands
  */
 export function createCacheCommand(): Command {
-  const cacheCmd = new Command('cache')
-    .description('Manage cache operations');
+  const cacheCmd = new Command('cache').description('Manage cache operations');
 
   // cache clear
   cacheCmd

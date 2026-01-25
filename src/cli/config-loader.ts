@@ -13,29 +13,30 @@ const configSchema = z.object({
   source: z.string().default('./src'),
   output: z.string().optional(),
   format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
-  exclude: z.array(z.string()).default([
-    '**/*.test.ts',
-    '**/*.spec.ts',
-    '**/node_modules/**'
-  ]),
-  ai: z.object({
-    model: z.string().default('claude-3-5-sonnet-20241022'),
-    maxTokens: z.number().default(4096),
-    temperature: z.number().min(0).max(1).default(0)
-  }).optional().default({
-    model: 'claude-3-5-sonnet-20241022',
-    maxTokens: 4096,
-    temperature: 0
-  }),
-  cache: z.object({
-    enabled: z.boolean().default(true),
-    ttl: z.number().default(86400) // 24 hours in seconds
-  }).default({
-    enabled: true,
-    ttl: 86400
-  }),
+  exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
+  ai: z
+    .object({
+      model: z.string().default('claude-3-5-sonnet-20241022'),
+      maxTokens: z.number().default(4096),
+      temperature: z.number().min(0).max(1).default(0),
+    })
+    .optional()
+    .default({
+      model: 'claude-3-5-sonnet-20241022',
+      maxTokens: 4096,
+      temperature: 0,
+    }),
+  cache: z
+    .object({
+      enabled: z.boolean().default(true),
+      ttl: z.number().default(86400), // 24 hours in seconds
+    })
+    .default({
+      enabled: true,
+      ttl: 86400,
+    }),
   concurrency: z.number().optional(),
-  verbose: z.boolean().optional()
+  verbose: z.boolean().optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -68,7 +69,7 @@ export class ConfigLoader {
       return configSchema.parse(merged);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const issues = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`);
+        const issues = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
         throw new Error(`Configuration validation failed:\n${issues.join('\n')}`);
       }
       throw error;
@@ -103,10 +104,7 @@ export class ConfigLoader {
    */
   async init(options: { format?: 'json' | 'js' } = {}): Promise<void> {
     const format = options.format ?? 'json';
-    const configPath = path.join(
-      this.configDir,
-      `archguard.config.${format}`
-    );
+    const configPath = path.join(this.configDir, `archguard.config.${format}`);
 
     if (await fs.pathExists(configPath)) {
       throw new Error('Configuration file already exists');

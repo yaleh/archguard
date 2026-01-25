@@ -243,7 +243,7 @@ describe('Story 3: Cache Mechanism', () => {
       expect(cached).toEqual(data);
 
       // Wait for TTL to expire
-      await new Promise(resolve => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 1100));
 
       // Should be expired now
       cached = await cache.get(filePath, hash);

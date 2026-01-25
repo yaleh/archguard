@@ -251,9 +251,7 @@ class User
 
     it('should handle API errors', async () => {
       const mockConnector = {
-        chat: vi
-          .fn()
-          .mockRejectedValue(new Error('API authentication failed')),
+        chat: vi.fn().mockRejectedValue(new Error('API authentication failed')),
       };
 
       const generator = new PlantUMLGenerator({ apiKey: 'test-api-key' });

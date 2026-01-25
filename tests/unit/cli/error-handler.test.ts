@@ -12,11 +12,7 @@ describe('Story 4: Error Handling Optimization', () => {
 
   describe('Parse Error Formatting', () => {
     it('should format parse error with file and line', () => {
-      const error = new ParseError(
-        'Unexpected token',
-        'src/services/user.ts',
-        42
-      );
+      const error = new ParseError('Unexpected token', 'src/services/user.ts', 42);
 
       const message = handler.format(error);
 
@@ -26,12 +22,7 @@ describe('Story 4: Error Handling Optimization', () => {
     });
 
     it('should format parse error with file, line, and column', () => {
-      const error = new ParseError(
-        'Missing semicolon',
-        'src/services/auth.ts',
-        10,
-        25
-      );
+      const error = new ParseError('Missing semicolon', 'src/services/auth.ts', 10, 25);
 
       const message = handler.format(error);
 
@@ -40,11 +31,7 @@ describe('Story 4: Error Handling Optimization', () => {
     });
 
     it('should include helpful tip for parse errors', () => {
-      const error = new ParseError(
-        'Unexpected token',
-        'test.ts',
-        5
-      );
+      const error = new ParseError('Unexpected token', 'test.ts', 5);
 
       const message = handler.format(error);
 
@@ -97,10 +84,7 @@ describe('Story 4: Error Handling Optimization', () => {
 
   describe('Validation Error Formatting', () => {
     it('should format validation error with suggestions', () => {
-      const error = new ValidationError(
-        'Invalid output format: xml',
-        ['plantuml', 'json', 'svg']
-      );
+      const error = new ValidationError('Invalid output format: xml', ['plantuml', 'json', 'svg']);
 
       const message = handler.format(error);
 
@@ -123,11 +107,7 @@ describe('Story 4: Error Handling Optimization', () => {
 
   describe('File Error Formatting', () => {
     it('should format file read error', () => {
-      const error = new FileError(
-        'File not found',
-        '/path/to/file.ts',
-        'read'
-      );
+      const error = new FileError('File not found', '/path/to/file.ts', 'read');
 
       const message = handler.format(error);
 
@@ -137,11 +117,7 @@ describe('Story 4: Error Handling Optimization', () => {
     });
 
     it('should format file write error', () => {
-      const error = new FileError(
-        'Permission denied',
-        '/path/to/output.puml',
-        'write'
-      );
+      const error = new FileError('Permission denied', '/path/to/output.puml', 'write');
 
       const message = handler.format(error);
 
@@ -227,7 +203,7 @@ describe('Story 4: Error Handling Optimization', () => {
       const normalMessage = handler.format(error, { verbose: false });
 
       // Should only contain the error message, not stack trace lines
-      const lines = normalMessage.split('\n').filter(l => l.trim());
+      const lines = normalMessage.split('\n').filter((l) => l.trim());
       expect(lines.length).toBeLessThan(10); // Stack traces are usually longer
     });
   });

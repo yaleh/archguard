@@ -35,7 +35,7 @@ describe('Story 5: Configuration File Support', () => {
       await fs.writeJson(configPath, {
         source: './src',
         output: './docs',
-        format: 'plantuml'
+        format: 'plantuml',
       });
 
       const config = await loader.load();
@@ -56,7 +56,7 @@ describe('Story 5: Configuration File Support', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         source: './src',
-        format: 'plantuml'
+        format: 'plantuml',
       });
 
       const config = await loader.load({ output: './custom.puml' });
@@ -70,7 +70,7 @@ describe('Story 5: Configuration File Support', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         source: './src',
-        format: 'plantuml'
+        format: 'plantuml',
       });
 
       const config = await loader.load({ format: 'json' });
@@ -84,7 +84,7 @@ describe('Story 5: Configuration File Support', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         source: './src',
-        format: 'invalid-format'
+        format: 'invalid-format',
       });
 
       await expect(loader.load()).rejects.toThrow();
@@ -107,7 +107,7 @@ describe('Story 5: Configuration File Support', () => {
     it('should validate exclude patterns as array', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        exclude: '**/*.test.ts' // Invalid: should be array
+        exclude: '**/*.test.ts', // Invalid: should be array
       });
 
       await expect(loader.load()).rejects.toThrow();
@@ -116,7 +116,7 @@ describe('Story 5: Configuration File Support', () => {
     it('should accept valid exclude patterns array', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        exclude: ['**/*.test.ts', '**/*.spec.ts']
+        exclude: ['**/*.test.ts', '**/*.spec.ts'],
       });
 
       const config = await loader.load();
@@ -189,8 +189,8 @@ describe('Story 5: Configuration File Support', () => {
         ai: {
           model: 'claude-3-5-sonnet-20241022',
           maxTokens: 4096,
-          temperature: 0
-        }
+          temperature: 0,
+        },
       });
 
       const config = await loader.load();
@@ -204,8 +204,8 @@ describe('Story 5: Configuration File Support', () => {
       await fs.writeJson(configPath, {
         cache: {
           enabled: false,
-          ttl: 3600
-        }
+          ttl: 3600,
+        },
       });
 
       const config = await loader.load();

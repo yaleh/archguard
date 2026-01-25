@@ -3,8 +3,8 @@
  * Main entry point for the library
  */
 
-export * from './types';
-export * from './parser';
-export * from './generator';
-export * from './utils';
-export * from './ai';
+export * from './types/index.js';
+export * from './parser/index.js';
+export * from './generator/index.js';
+export * from './utils/index.js';
+export * from './ai/index.js';

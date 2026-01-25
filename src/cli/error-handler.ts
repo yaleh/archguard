@@ -94,9 +94,7 @@ ${tipLabel} Check the syntax at the specified line.
    */
   private formatAPIError(error: APIError, useColor: boolean): string {
     const title = useColor ? chalk.red.bold('API Error') : 'API Error';
-    const statusCode = useColor
-      ? chalk.yellow(`[${error.statusCode}]`)
-      : `[${error.statusCode}]`;
+    const statusCode = useColor ? chalk.yellow(`[${error.statusCode}]`) : `[${error.statusCode}]`;
 
     let suggestion = '';
     if (error.statusCode === 429) {

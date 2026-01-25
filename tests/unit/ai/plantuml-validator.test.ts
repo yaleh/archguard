@@ -237,9 +237,7 @@ class User
       const result = validator.validateStyle(puml);
 
       expect(result.isValid).toBe(true); // Style issues don't block
-      expect(result.warnings).toContain(
-        'Consider adding a theme (!theme cerulean-outline)'
-      );
+      expect(result.warnings).toContain('Consider adding a theme (!theme cerulean-outline)');
     });
 
     it('should accept theme when present', () => {
@@ -252,9 +250,7 @@ class User
 
       const result = validator.validateStyle(puml);
 
-      expect(result.warnings).not.toContain(
-        'Consider adding a theme (!theme cerulean-outline)'
-      );
+      expect(result.warnings).not.toContain('Consider adding a theme (!theme cerulean-outline)');
     });
 
     it('should suggest packages when missing', () => {
@@ -267,9 +263,7 @@ class Admin
 
       const result = validator.validateStyle(puml);
 
-      expect(result.warnings).toContain(
-        'Consider grouping classes with packages'
-      );
+      expect(result.warnings).toContain('Consider grouping classes with packages');
     });
 
     it('should accept packages when present', () => {
@@ -283,9 +277,7 @@ package "domain" {
 
       const result = validator.validateStyle(puml);
 
-      expect(result.warnings).not.toContain(
-        'Consider grouping classes with packages'
-      );
+      expect(result.warnings).not.toContain('Consider grouping classes with packages');
     });
   });
 

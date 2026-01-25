@@ -147,7 +147,7 @@ describe('CostTracker', () => {
 
   describe('budget management', () => {
     it('should track budget when set', () => {
-      tracker.setBudget(0.10); // $0.10 budget
+      tracker.setBudget(0.1); // $0.10 budget
 
       tracker.trackCall(10000, 5000); // ~$0.105
 
@@ -165,7 +165,7 @@ describe('CostTracker', () => {
     });
 
     it('should calculate remaining budget correctly', () => {
-      tracker.setBudget(0.50);
+      tracker.setBudget(0.5);
 
       tracker.trackCall(50000, 25000); // ~$0.525
 

@@ -67,9 +67,7 @@ describe('ClaudeConnector', () => {
       const connector = new ClaudeConnector('test-api-key');
       const longInput = 'a'.repeat(500000); // > 100k tokens
 
-      expect(() => connector.validateInput(longInput)).toThrow(
-        'Input exceeds token limit'
-      );
+      expect(() => connector.validateInput(longInput)).toThrow('Input exceeds token limit');
     });
 
     it('should accept valid input', () => {
@@ -82,9 +80,7 @@ describe('ClaudeConnector', () => {
     it('should reject empty input', () => {
       const connector = new ClaudeConnector('test-api-key');
 
-      expect(() => connector.validateInput('')).toThrow(
-        'Input cannot be empty'
-      );
+      expect(() => connector.validateInput('')).toThrow('Input cannot be empty');
     });
   });
 
@@ -136,9 +132,7 @@ describe('ClaudeConnector', () => {
       // @ts-ignore - inject mock client for testing
       connector.client = mockClient;
 
-      await expect(connector.chat('Test')).rejects.toThrow(
-        'API authentication failed'
-      );
+      await expect(connector.chat('Test')).rejects.toThrow('API authentication failed');
     });
 
     it('should handle API timeout error', async () => {
@@ -195,9 +189,7 @@ describe('ClaudeConnector', () => {
     it('should handle network error', async () => {
       const mockClient = {
         messages: {
-          create: vi
-            .fn()
-            .mockRejectedValue(new Error('Network connection failed')),
+          create: vi.fn().mockRejectedValue(new Error('Network connection failed')),
         },
       };
 

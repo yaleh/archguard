@@ -53,8 +53,7 @@ export class CostTracker {
 
     // Calculate cost for this call
     const inputCost = (inputTokens / 1_000_000) * this.COST_PER_MILLION_INPUT;
-    const outputCost =
-      (outputTokens / 1_000_000) * this.COST_PER_MILLION_OUTPUT;
+    const outputCost = (outputTokens / 1_000_000) * this.COST_PER_MILLION_OUTPUT;
 
     this.totalCost += inputCost + outputCost;
   }

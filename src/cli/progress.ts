@@ -50,7 +50,7 @@ export class ProgressReporter {
     const stage: Stage = {
       name: message,
       status: 'running',
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     this.stages.push(stage);
@@ -69,7 +69,7 @@ export class ProgressReporter {
     this.currentStage.progress = {
       completed,
       total,
-      percentage
+      percentage,
     };
 
     const message = `${this.currentStage.name} ${chalk.gray(`(${completed}/${total} - ${percentage}%)`)}`;
@@ -157,7 +157,7 @@ export class ProgressReporter {
       totalDurationFormatted: `${(totalDuration / 1000).toFixed(2)}s`,
       successCount,
       failureCount,
-      warningCount
+      warningCount,
     };
   }
 
@@ -190,18 +190,20 @@ export class ProgressReporter {
           color = chalk.gray;
       }
 
-      const duration = stage.endTime && stage.startTime
-        ? `${((stage.endTime - stage.startTime) / 1000).toFixed(2)}s`
-        : 'N/A';
+      const duration =
+        stage.endTime && stage.startTime
+          ? `${((stage.endTime - stage.startTime) / 1000).toFixed(2)}s`
+          : 'N/A';
 
       console.log(color(`  ${icon} ${stage.name} (${duration})`));
     }
 
     console.log(chalk.bold(`\nTotal: ${summary.totalDurationFormatted}`));
     console.log(
-      chalk.green(`✓ ${summary.successCount} succeeded`) + ' | ' +
-      chalk.red(`✗ ${summary.failureCount} failed`) +
-      (summary.warningCount > 0 ? ' | ' + chalk.yellow(`⚠ ${summary.warningCount} warnings`) : '')
+      chalk.green(`✓ ${summary.successCount} succeeded`) +
+        ' | ' +
+        chalk.red(`✗ ${summary.failureCount} failed`) +
+        (summary.warningCount > 0 ? ' | ' + chalk.yellow(`⚠ ${summary.warningCount} warnings`) : '')
     );
   }
 

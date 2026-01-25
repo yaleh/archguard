@@ -36,9 +36,7 @@ export class PlantUMLValidator {
     const completenessResult = this.validateCompleteness(puml, archJson);
     if (!completenessResult.isValid) {
       const missingEntities = completenessResult.missingEntities || [];
-      issues.push(
-        ...missingEntities.map((entity) => `Missing entity: ${entity}`)
-      );
+      issues.push(...missingEntities.map((entity) => `Missing entity: ${entity}`));
     }
 
     // 3. Style validation (warnings only)
@@ -97,9 +95,7 @@ export class PlantUMLValidator {
     for (const entity of archJson.entities) {
       // Create regex to find entity declaration
       // Matches: "class EntityName", "interface EntityName", "enum EntityName"
-      const regex = new RegExp(
-        `\\b(class|interface|enum)\\s+${this.escapeRegex(entity.name)}\\b`
-      );
+      const regex = new RegExp(`\\b(class|interface|enum)\\s+${this.escapeRegex(entity.name)}\\b`);
 
       if (!regex.test(puml)) {
         missingEntities.push(entity.name);

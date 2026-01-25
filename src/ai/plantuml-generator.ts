@@ -70,8 +70,7 @@ export class PlantUMLGenerator {
         this.lastUsage = {
           inputTokens: response.usage.inputTokens,
           outputTokens: response.usage.outputTokens,
-          totalTokens:
-            response.usage.inputTokens + response.usage.outputTokens,
+          totalTokens: response.usage.inputTokens + response.usage.outputTokens,
         };
 
         // Extract PlantUML from response
@@ -86,9 +85,7 @@ export class PlantUMLGenerator {
 
         // Validation failed
         if (attempt < this.maxRetries) {
-          console.warn(
-            `Validation failed (attempt ${attempt}/${this.maxRetries}), retrying...`
-          );
+          console.warn(`Validation failed (attempt ${attempt}/${this.maxRetries}), retrying...`);
           console.warn(`Issues: ${validation.issues.join(', ')}`);
 
           // Wait a bit before retrying
@@ -105,9 +102,7 @@ export class PlantUMLGenerator {
           );
         }
 
-        console.warn(
-          `API call failed (attempt ${attempt}/${this.maxRetries}), retrying...`
-        );
+        console.warn(`API call failed (attempt ${attempt}/${this.maxRetries}), retrying...`);
         console.warn(`Error: ${error.message}`);
 
         // Wait before retrying (exponential backoff)
