@@ -338,7 +338,7 @@ Driver --> Car : uses
    - - for private
    - # for protected
 5. Types: Include parameter and return types
-6. Organization: Group related classes with packages when appropriate
+6. ⭐ Organization: MUST USE PACKAGES to group related entities
 7. Relationships:
    - --|> for inheritance (extends)
    - ..|> for implementation (implements)
@@ -348,6 +348,41 @@ Driver --> Car : uses
 8. Formatting: Clean, readable, consistent indentation
 9. Include ALL entities from the input JSON
 10. Use appropriate relationship arrows with labels
+
+⚠️ CRITICAL: Modular Organization with Packages
+- MUST group related entities into packages using "package Name { ... }"
+- Group by functional layers (AI Layer, Parser Layer, CLI Layer, Types, etc.)
+- Group by responsibility (Generator, Validator, Renderer, Parser, Config, etc.)
+- Package names should clearly reflect the module's purpose
+- Cross-package relationships should be clearly visible
+
+Examples of GOOD modular organization:
+  package "AI Layer" {
+    class PlantUMLGenerator
+    class PlantUMLValidator
+    class PlantUMLRenderer
+  }
+
+  package "Parser Layer" {
+    class TypeScriptParser
+    class ClassExtractor
+    class InterfaceExtractor
+  }
+
+  package "Types" {
+    interface ArchJSON
+    interface Entity
+    interface Relation
+  }
+
+Examples of BAD organization (DO NOT DO THIS):
+  @startuml
+  ' ❌ All classes at top level, no packages
+  class PlantUMLGenerator
+  class PlantUMLValidator
+  class TypeScriptParser
+  class ClassExtractor
+  @enduml
 
 ⚠️ CRITICAL: Relationship Reference Constraints
 - ONLY reference entities that are DEFINED in the diagram
@@ -371,6 +406,7 @@ DO NOT:
 - Use invalid PlantUML syntax
 - Omit entities from input
 - Add entities not in input
-- Reference undefined entities in relationships`;
+- Reference undefined entities in relationships
+- Leave entities unorganized (USE PACKAGES!)`;
   }
 }

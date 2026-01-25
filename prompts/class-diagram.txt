@@ -14,55 +14,77 @@
 请基于架构指纹生成全新的 PlantUML 类图。
 {{/if}}
 
-## 要求
+## ⭐ 核心要求（按优先级）
 
-1. **语法正确性**: 必须包含 @startuml 和 @enduml
-2. **完整性**: 包含架构指纹中的所有实体
-3. **关系准确**: 正确表示继承、组合、依赖关系
-4. **引用约束**: ⚠️ 关系只能引用已定义的实体，禁止引用外部类型
-5. **现代化**: 使用 skinparam 提升视觉效果
-6. **简洁性**: 只输出代码,不要解释
+### 1. 必须使用 package 组织模块（最高优先级）
 
-## ⚠️ 关系引用约束（重要）
+```plantuml
+@startuml Architecture
+!theme cerulean-outline
 
-在定义关系时：
-- ✅ **允许引用**: 在类/接口/enum 部分已明确定义的实体
-- ❌ **禁止引用**: 外部库类型（如 Error, EventEmitter, Anthropic, Ora 等）
-- ❌ **禁止引用**: 泛型类型（如 T, Map<K,V>, Promise<T> 等）
-- ❌ **禁止引用**: 内置类型（如 string, number, boolean, Date 等）
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
 
-### 错误示例（不要这样做）
+package "AI Layer" {
+  class ClaudeCodeWrapper { }
+  class PlantUMLGenerator { }
+  class PlantUMLValidator { }
+}
 
-\`\`\`plantuml
-' ❌ 以下关系引用了未定义的实体或外部类型
-ClaudeConnector *-- Anthropic              ❌ Anthropic 是外部库
-ClaudeConnector *-- Anthropic.Message      ❌ 外部类型
-ClaudeAPIError --|> Error                  ❌ Error 未在图中定义
-ProgressReporter *-- Ora                   ❌ Ora 是 npm 包
-CacheManager ..> T : dependency            ❌ T 是泛型参数
-ParallelParser --|> EventEmitter           ❌ EventEmitter 是外部类型
-PromptTemplateManager *-- "Map<string, string>"  ❌ 泛型类型
-\`\`\`
+package "CLI Layer" {
+  class ConfigLoader { }
+  class CacheManager { }
+  class ErrorHandler { }
+}
 
-### 正确示例（应该这样做）
+package "Parser Layer" {
+  class TypeScriptParser { }
+  class ClassExtractor { }
+  class InterfaceExtractor { }
+}
 
-\`\`\`plantuml
-' ✅ 以下关系都引用了已定义的实体
-ClaudeConnector *-- ClaudeConnectorConfig  ✅ 已定义
-ClaudeConnector ..> ChatResponse           ✅ 已定义
-ProgressReporter *-- Stage                 ✅ 已定义
-CacheManager *-- CacheStats                ✅ 已定义
-TypeScriptParser *-- ClassExtractor        ✅ 已定义
-\`\`\`
+package "Types" {
+  interface ArchJSON { }
+  interface Entity { }
+  interface Relation { }
+}
 
-### 验证清单
+@enduml
+```
 
-生成后请检查：
-- [ ] 所有关系引用的实体都在 class/interface/enum 部分定义了
-- [ ] 没有引用外部库类型
-- [ ] 没有引用泛型类型参数
-- [ ] 所有实体从输入 JSON 中都存在
-- [ ] PlantUML 语法可以正常渲染
+**模块组织规则**：
+- ✅ 必须使用 `package "模块名" { ... }` 包裹相关实体
+- ✅ 按功能层分组: AI Layer, CLI Layer, Parser Layer, Types 等
+- ✅ 按文件路径分组: 同一目录下的类放在同一 package
+- ✅ 关系定义在 package 外部（跨模块关系）
+
+### 2. 语法要求
+
+- ✅ 必须包含 `@startuml` 和 `@enduml`
+- ✅ 包含所有输入 JSON 中的实体
+- ✅ 关系只引用已定义的实体
+
+### 3. ⚠️ 禁止事项
+
+- ❌ 不要引用外部类型（Error, EventEmitter, Anthropic, Ora 等）
+- ❌ 不要引用泛型参数（T, Map<K,V>, Promise<T> 等）
+- ❌ 不要在关系部分引用未定义的实体
+
+### 4. 关系符号
+
+- `--|>` 继承
+- `..|>` 实现
+- `*--` 组合
+- `-->` 依赖
+
+## 验证清单
+
+生成后检查：
+- [ ] 使用了 package 组织模块
+- [ ] 所有实体都在合适的 package 中
+- [ ] 关系在 package 外部定义
+- [ ] 没有引用外部类型
+- [ ] PlantUML 可以正常渲染
 
 ## 输出格式
 
@@ -73,7 +95,19 @@ TypeScriptParser *-- ClassExtractor        ✅ 已定义
 skinparam classAttributeIconSize 0
 skinparam classFontSize 12
 
-[您的 PlantUML 代码]
+package "模块名" {
+  class EntityName {
+    +method(): ReturnType
+    -property: Type
+  }
+
+  interface InterfaceName {
+    +method(): ReturnType
+  }
+}
+
+' 跨模块关系
+EntityA --> EntityB : label
 
 @enduml
 ```
