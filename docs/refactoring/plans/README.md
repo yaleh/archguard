@@ -73,34 +73,34 @@
 
 ---
 
-### [02-phase2-ai-generation.md](./02-phase2-ai-generation.md)
-**🤖 Phase 2: AI 集成与文档生成 (TDD)**
+### [02-phase2-claude-code-integration.md](./02-phase2-claude-code-integration.md)
+**🤖 Phase 2: Claude Code CLI 集成与文档生成 (TDD)**
 
 **预计时间**: 3-4 天
-**核心技术**: Claude 3.5 Sonnet API
+**核心技术**: Claude Code 命令行工具
 
 **内容**:
-- Claude API 集成测试
-- 提示词工程详解
+- Claude Code CLI 封装
+- 提示词模板设计
 - PlantUML 生成与验证
-- 成本追踪和优化
+- 输出解析与处理
 - 错误处理策略
-- 性能基准测试
+- 集成测试
 
-**适用人群**: AI 工程师、提示词工程师
+**适用人群**: CLI 集成工程师、提示词工程师
 **阅读优先级**: ⭐⭐⭐⭐⭐
 
 **关键特性**:
-- ✅ Claude Sonnet 集成
-- ✅ Few-shot 提示词模板
+- ✅ Claude Code CLI 封装
+- ✅ 提示词模板系统
 - ✅ PlantUML 语法验证
 - ✅ 自动重试机制
-- ✅ 成本追踪
+- ✅ 输出解析器
 
 **验收标准**:
 - PlantUML 语法正确率 ≥ 95%
-- API 调用成功率 ≥ 99%
-- 小项目成本 < $0.01/次
+- CLI 调用成功率 ≥ 99%
+- 输出解析准确率 100%
 - 生成时间 < 10s
 
 ---
@@ -156,7 +156,7 @@
   ↓
 01-phase1-code-fingerprint.md (技术方案)
   ↓
-02-phase2-ai-generation.md (AI 集成方案)
+02-phase2-claude-code-integration.md (Claude Code CLI 集成方案)
   ↓
 制定技术评审计划
 ```
@@ -192,7 +192,7 @@ Week 1
 └─ Day 5: Phase 1 Part 2 - 高级特性
 
 Week 2
-├─ Day 1-3: Phase 2 - AI 集成 (TDD)
+├─ Day 1-3: Phase 2 - Claude Code CLI 集成 (TDD)
 ├─ Day 4-5: Phase 3 - CLI 开发
 
 Week 3
@@ -245,24 +245,24 @@ Week 3
 
 ---
 
-### Phase 2: AI 集成与文档生成 (3-4 天)
+### Phase 2: Claude Code CLI 集成与文档生成 (3-4 天)
 **状态**: 待开始
 **依赖**: Phase 1 完成
 
-**目标**: 集成 Claude API，生成 PlantUML
+**目标**: 集成 Claude Code CLI，生成 PlantUML
 
-**详细计划**: [02-phase2-ai-generation.md](./02-phase2-ai-generation.md)
+**详细计划**: [02-phase2-claude-code-integration.md](./02-phase2-claude-code-integration.md)
 
 **关键里程碑**:
-- Day 1: Claude 集成 ✅
-- Day 2: PlantUML 生成 ✅
-- Day 3: 优化与增强 ✅
+- Day 1: CLI 封装 ✅
+- Day 2: 提示词模板与生成 ✅
+- Day 3: 输出解析与优化 ✅
 - Day 4: 集成测试 ✅
 
 **验收标准**:
 - [ ] 语法正确率 ≥ 95%
-- [ ] API 成功率 ≥ 99%
-- [ ] 成本 < $0.10/大项目
+- [ ] CLI 调用成功率 ≥ 99%
+- [ ] 输出解析准确率 100%
 - [ ] 测试覆盖率 ≥ 80%
 
 ---
@@ -382,7 +382,7 @@ Week 3
 ### 内部文档
 - [提案文档集](../proposals/README.md)
 - [架构优化建议](../proposals/01-architecture-optimization-proposal.md)
-- [AI 集成策略](../proposals/02-ai-integration-strategy.md)
+- [Claude Code CLI 集成策略](../proposals/02-claude-code-integration-strategy.md)
 
 ### 外部资源
 - [ts-morph 文档](https://ts-morph.com/)

@@ -133,16 +133,16 @@ interface Entity {
 }
 ```
 
-#### 2.2.2 AI 文档生成器 (AI Document Generator)
+#### 2.2.2 Claude Code CLI 集成层 (Claude Code CLI Integration)
 
-**职责**: 调用 Claude API 生成 PlantUML
+**职责**: 调用 Claude Code 命令行工具生成 PlantUML
 
-**技术栈**: @anthropic-ai/sdk
+**技术栈**: Claude Code CLI (通过 child_process/execa 调用)
 
-**输入**: Arch-JSON
+**输入**: Arch-JSON + 提示词模板
 **输出**: PlantUML 代码字符串
 
-**模型**: claude-3-5-sonnet-20241022
+**工具**: claude-code CLI
 
 #### 2.2.3 CLI 工具
 
@@ -187,15 +187,15 @@ archguard generate [options]
 
 ---
 
-#### Phase 2: AI 集成与文档生成 (3-4 天)
-**目标**: 集成 Claude API，生成高质量 PlantUML
+#### Phase 2: Claude Code CLI 集成与文档生成 (3-4 天)
+**目标**: 集成 Claude Code CLI，生成高质量 PlantUML
 
 **重点**:
-- ✅ Prompt 工程
-- ✅ 输出验证
-- ✅ 成本控制
+- ✅ CLI 封装
+- ✅ 提示词模板
+- ✅ 输出解析验证
 
-**详细计划**: 参见 `02-phase2-ai-generation.md`
+**详细计划**: 参见 `02-phase2-claude-code-integration.md`
 
 ---
 
@@ -288,7 +288,8 @@ archguard generate [options]
 | 语言 | TypeScript | ^5.3.0 | 开发语言 |
 | 运行时 | Node.js | >=18.0.0 | 运行环境 |
 | 解析器 | ts-morph | ^21.0.0 | TypeScript AST 解析 |
-| AI SDK | @anthropic-ai/sdk | ^0.20.0 | Claude API 调用 |
+| CLI 集成 | Claude Code CLI | - | PlantUML 生成 (通过命令行) |
+| 进程管理 | execa | ^8.0.0 | 子进程调用 |
 | 测试框架 | Vitest | ^1.2.0 | 单元测试 |
 | CLI | commander | ^11.1.0 | 命令行工具 |
 | 日志 | pino | ^8.17.0 | 结构化日志 |
@@ -836,7 +837,7 @@ logger.error({
 
 **提案文档**:
 - [01-architecture-optimization-proposal.md](../proposals/01-architecture-optimization-proposal.md)
-- [02-ai-integration-strategy.md](../proposals/02-ai-integration-strategy.md)
+- [02-claude-code-integration-strategy.md](../proposals/02-claude-code-integration-strategy.md)
 - [03-multi-language-support.md](../proposals/03-multi-language-support.md)
 
 **外部资源**:
@@ -916,7 +917,7 @@ Week 1
 └─ Day 5: Phase 1 Part 2 - 高级特性
 
 Week 2
-├─ Day 1-3: Phase 2 - AI 集成
+├─ Day 1-3: Phase 2 - Claude Code CLI 集成
 ├─ Day 4-5: Phase 3 Part 1 - CLI 开发
 
 Week 3

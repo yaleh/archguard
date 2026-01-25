@@ -24,11 +24,13 @@ ArchGuard 是一个旨在与 Claude Code 深度集成的持续架构文档工具
 * **细节忽略**：自动剔除私有变量、函数内部实现逻辑、第三方库内部代码，只保留“架构骨架”。  
 * **架构注解支持**：支持识别如 @Architecture 或 @Module 等特定注解，用于标记重点分析对象。
 
-### **3.3 AI 驱动的文档生成**
+### **3.3 通过 Claude Code CLI 生成文档**
 
-* **多模型支持**：支持 Claude-3.5-Sonnet/Haiku 或 Gemini-1.5-Flash。  
-* **PlantUML 生成**：基于提取的代码指纹，生成规范的 PlantUML 代码（支持类图、组件图、序列图）。  
-* **自然语言总结**：在架构图下方生成关于本次变更对系统设计影响的简短描述。
+* **Claude Code 集成**：调用 Claude Code 命令行工具（而非直接调用 LLM API），基于 TS Parser 输出生成 PlantUML。
+* **数据流**：Arch-JSON → Claude Code CLI → PlantUML 代码。
+* **PlantUML 生成**：利用 Claude Code 的代码生成能力，生成规范的 PlantUML 代码（支持类图、组件图、序列图）。
+* **自然语言总结**：Claude Code 可选生成关于本次变更对系统设计影响的简短描述。
+* **优势**：无需管理 API Key，利用 Claude Code 现有配置和上下文能力。
 
 ### **3.4 交付物管理**
 
