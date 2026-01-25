@@ -349,10 +349,28 @@ Driver --> Car : uses
 9. Include ALL entities from the input JSON
 10. Use appropriate relationship arrows with labels
 
+⚠️ CRITICAL: Relationship Reference Constraints
+- ONLY reference entities that are DEFINED in the diagram
+- NEVER reference external library types (Error, EventEmitter, Anthropic, Ora, etc.)
+- NEVER reference generic type parameters (T, K, V, Map<K,V>, Promise<T>, etc.)
+- NEVER reference built-in types (string, number, Date, etc.) in relationships
+
+Examples of INVALID relationships (DO NOT DO THIS):
+  ClaudeConnector *-- Anthropic              ❌ Anthropic is external
+  ClaudeAPIError --|> Error                  ❌ Error is not defined
+  ProgressReporter *-- Ora                   ❌ Ora is external package
+  CacheManager ..> T : dependency            ❌ T is generic parameter
+
+Examples of VALID relationships (DO THIS):
+  ClaudeConnector *-- ClaudeConnectorConfig  ✅ Defined in diagram
+  PlantUMLGenerator *-- ClaudeCodeWrapper    ✅ Defined in diagram
+  TypeScriptParser *-- ClassExtractor        ✅ Defined in diagram
+
 DO NOT:
 - Add explanatory text
 - Use invalid PlantUML syntax
 - Omit entities from input
-- Add entities not in input`;
+- Add entities not in input
+- Reference undefined entities in relationships`;
   }
 }

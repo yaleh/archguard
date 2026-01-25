@@ -19,8 +19,50 @@
 1. **语法正确性**: 必须包含 @startuml 和 @enduml
 2. **完整性**: 包含架构指纹中的所有实体
 3. **关系准确**: 正确表示继承、组合、依赖关系
-4. **现代化**: 使用 skinparam 提升视觉效果
-5. **简洁性**: 只输出代码,不要解释
+4. **引用约束**: ⚠️ 关系只能引用已定义的实体，禁止引用外部类型
+5. **现代化**: 使用 skinparam 提升视觉效果
+6. **简洁性**: 只输出代码,不要解释
+
+## ⚠️ 关系引用约束（重要）
+
+在定义关系时：
+- ✅ **允许引用**: 在类/接口/enum 部分已明确定义的实体
+- ❌ **禁止引用**: 外部库类型（如 Error, EventEmitter, Anthropic, Ora 等）
+- ❌ **禁止引用**: 泛型类型（如 T, Map<K,V>, Promise<T> 等）
+- ❌ **禁止引用**: 内置类型（如 string, number, boolean, Date 等）
+
+### 错误示例（不要这样做）
+
+\`\`\`plantuml
+' ❌ 以下关系引用了未定义的实体或外部类型
+ClaudeConnector *-- Anthropic              ❌ Anthropic 是外部库
+ClaudeConnector *-- Anthropic.Message      ❌ 外部类型
+ClaudeAPIError --|> Error                  ❌ Error 未在图中定义
+ProgressReporter *-- Ora                   ❌ Ora 是 npm 包
+CacheManager ..> T : dependency            ❌ T 是泛型参数
+ParallelParser --|> EventEmitter           ❌ EventEmitter 是外部类型
+PromptTemplateManager *-- "Map<string, string>"  ❌ 泛型类型
+\`\`\`
+
+### 正确示例（应该这样做）
+
+\`\`\`plantuml
+' ✅ 以下关系都引用了已定义的实体
+ClaudeConnector *-- ClaudeConnectorConfig  ✅ 已定义
+ClaudeConnector ..> ChatResponse           ✅ 已定义
+ProgressReporter *-- Stage                 ✅ 已定义
+CacheManager *-- CacheStats                ✅ 已定义
+TypeScriptParser *-- ClassExtractor        ✅ 已定义
+\`\`\`
+
+### 验证清单
+
+生成后请检查：
+- [ ] 所有关系引用的实体都在 class/interface/enum 部分定义了
+- [ ] 没有引用外部库类型
+- [ ] 没有引用泛型类型参数
+- [ ] 所有实体从输入 JSON 中都存在
+- [ ] PlantUML 语法可以正常渲染
 
 ## 输出格式
 

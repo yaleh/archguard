@@ -447,4 +447,197 @@ package "domain" {
       expect(result.isValid).toBe(true);
     });
   });
+
+  describe('relationship reference validation', () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-01-25',
+      sourceFiles: ['test.ts'],
+      entities: [
+        {
+          id: 'User',
+          name: 'User',
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: 'test.ts', startLine: 1, endLine: 3 },
+        },
+        {
+          id: 'Admin',
+          name: 'Admin',
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: 'test.ts', startLine: 5, endLine: 7 },
+        },
+        {
+          id: 'IUserRepository',
+          name: 'IUserRepository',
+          type: 'interface',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: 'test.ts', startLine: 9, endLine: 11 },
+        },
+      ],
+      relations: [],
+    };
+
+    it('should pass when all relationships reference defined entities', () => {
+      const puml = `
+@startuml
+class User
+class Admin
+interface IUserRepository
+
+Admin --|> User
+Admin ..|> IUserRepository
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true);
+      expect(result.undefinedReferences).toHaveLength(0);
+    });
+
+    it('should detect reference to undefined external type', () => {
+      const puml = `
+@startuml
+class User
+class Admin
+
+Admin --|> User
+Admin *-- CustomError
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(false);
+      expect(result.undefinedReferences?.length).toBeGreaterThan(0);
+      expect(result.undefinedReferences?.some((ref) => ref.includes('CustomError'))).toBe(true);
+    });
+
+    it('should detect reference to external library type', () => {
+      const puml = `
+@startuml
+class User
+
+User *-- CustomLibrary
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(false);
+      expect(result.undefinedReferences?.some((ref) => ref.includes('CustomLibrary'))).toBe(true);
+    });
+
+    it('should detect reference to generic type parameter', () => {
+      const puml = `
+@startuml
+class CacheManager
+
+CacheManager ..> T : dependency
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true); // T is in whitelist
+    });
+
+    it('should detect reference to Anthropic external type', () => {
+      const puml = `
+@startuml
+class ClaudeConnector
+
+ClaudeConnector *-- Anthropic
+ClaudeConnector *-- Anthropic.Message
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true); // Anthropic is in whitelist
+    });
+
+    it('should detect reference to Ora external package', () => {
+      const puml = `
+@startuml
+class ProgressReporter
+
+ProgressReporter *-- Ora
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true); // Ora is in whitelist
+    });
+
+    it('should ignore built-in types', () => {
+      const puml = `
+@startuml
+class User {
+  +name: string
+  +age: number
+}
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should handle complex relationship syntax', () => {
+      const puml = `
+@startuml
+class User
+class Admin
+interface IUserRepository
+
+Admin --|> User : extends
+Admin ..|> IUserRepository : implements
+User --> IUserRepository : uses
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should detect multiple undefined references', () => {
+      const puml = `
+@startuml
+class User
+
+User *-- ExternalType1
+User --> ExternalType2
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(false);
+      expect(result.undefinedReferences?.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should handle qualified names correctly', () => {
+      const puml = `
+@startuml
+class User
+
+User *-- "Map<string, string>"
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true); // Map is cleaned and ignored
+    });
+  });
 });
