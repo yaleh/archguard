@@ -1,0 +1,4394 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-01-25T07:07:05.910Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/src/index.ts",
+    "/home/yale/work/archguard/src/ai/claude-connector.ts",
+    "/home/yale/work/archguard/src/ai/cost-tracker.ts",
+    "/home/yale/work/archguard/src/ai/index.ts",
+    "/home/yale/work/archguard/src/ai/plantuml-generator.ts",
+    "/home/yale/work/archguard/src/ai/plantuml-validator.ts",
+    "/home/yale/work/archguard/src/ai/prompt-builder.ts",
+    "/home/yale/work/archguard/src/cli/cache-manager.ts",
+    "/home/yale/work/archguard/src/cli/config-loader.ts",
+    "/home/yale/work/archguard/src/cli/error-handler.ts",
+    "/home/yale/work/archguard/src/cli/errors.ts",
+    "/home/yale/work/archguard/src/cli/index.ts",
+    "/home/yale/work/archguard/src/cli/progress.ts",
+    "/home/yale/work/archguard/src/cli/types.ts",
+    "/home/yale/work/archguard/src/generator/index.ts",
+    "/home/yale/work/archguard/src/parser/class-extractor.ts",
+    "/home/yale/work/archguard/src/parser/enum-extractor.ts",
+    "/home/yale/work/archguard/src/parser/index.ts",
+    "/home/yale/work/archguard/src/parser/interface-extractor.ts",
+    "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+    "/home/yale/work/archguard/src/parser/relation-extractor.ts",
+    "/home/yale/work/archguard/src/parser/typescript-parser.ts",
+    "/home/yale/work/archguard/src/types/index.ts",
+    "/home/yale/work/archguard/src/utils/index.ts",
+    "/home/yale/work/archguard/src/cli/commands/analyze.ts",
+    "/home/yale/work/archguard/src/cli/commands/cache.ts",
+    "/home/yale/work/archguard/src/cli/commands/init.ts"
+  ],
+  "entities": [
+    {
+      "id": "ClaudeAPIError",
+      "name": "ClaudeAPIError",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "retryable",
+              "type": "boolean",
+              "isOptional": true,
+              "defaultValue": "false"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/claude-connector.ts",
+        "startLine": 38,
+        "endLine": 47
+      }
+    },
+    {
+      "id": "ClaudeConnector",
+      "name": "ClaudeConnector",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "client",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Anthropic",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "model",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "maxTokens",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "INPUT_TOKEN_LIMIT",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "100000",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "100000",
+          "decorators": []
+        },
+        {
+          "name": "getModel",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "getMaxTokens",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "estimateTokens",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "text",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "validateInput",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "input",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "chat",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "prompt",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "options",
+              "type": "import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatOptions",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatResponse>",
+          "decorators": []
+        },
+        {
+          "name": "extractTextFromResponse",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "response",
+              "type": "Anthropic.Message",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "apiKey",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "config",
+              "type": "import(\"/home/yale/work/archguard/src/ai/claude-connector\").ClaudeConnectorConfig",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/claude-connector.ts",
+        "startLine": 52,
+        "endLine": 211
+      }
+    },
+    {
+      "id": "ClaudeConnectorConfig",
+      "name": "ClaudeConnectorConfig",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "model",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "maxTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "timeout",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/claude-connector.ts",
+        "startLine": 11,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "ChatResponse",
+      "name": "ChatResponse",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "text",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "usage",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ inputTokens: number; outputTokens: number; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/claude-connector.ts",
+        "startLine": 20,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "ChatOptions",
+      "name": "ChatOptions",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "systemPrompt",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/claude-connector.ts",
+        "startLine": 31,
+        "endLine": 33
+      }
+    },
+    {
+      "id": "CostTracker",
+      "name": "CostTracker",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "totalCalls",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "0",
+          "decorators": []
+        },
+        {
+          "name": "totalInputTokens",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "0",
+          "decorators": []
+        },
+        {
+          "name": "totalOutputTokens",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "0",
+          "decorators": []
+        },
+        {
+          "name": "totalCost",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "0",
+          "decorators": []
+        },
+        {
+          "name": "budget",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "COST_PER_MILLION_INPUT",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "COST_PER_MILLION_OUTPUT",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "trackCall",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "inputTokens",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "outputTokens",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "getReport",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostReport",
+          "decorators": []
+        },
+        {
+          "name": "getFormattedCost",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "setBudget",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "amount",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "isOverBudget",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "getRemainingBudget",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "reset",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "config",
+              "type": "import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostTrackerConfig",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/cost-tracker.ts",
+        "startLine": 30,
+        "endLine": 122
+      }
+    },
+    {
+      "id": "CostTrackerConfig",
+      "name": "CostTrackerConfig",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "costPerMillionInputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "costPerMillionOutputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/cost-tracker.ts",
+        "startLine": 9,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "CostReport",
+      "name": "CostReport",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "totalCalls",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalInputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalOutputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalCost",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "avgTokensPerCall",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "avgCostPerCall",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/cost-tracker.ts",
+        "startLine": 17,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "PlantUMLGenerator",
+      "name": "PlantUMLGenerator",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "connector",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "ClaudeConnector",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "promptBuilder",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "PromptBuilder",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "validator",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "PlantUMLValidator",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "maxRetries",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "lastUsage",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "generate",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "archJson",
+              "type": "ArchJSON",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "extractPlantUML",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "response",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "getLastUsage",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage",
+          "decorators": []
+        },
+        {
+          "name": "sleep",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "ms",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "config",
+              "type": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").GeneratorConfig",
+              "isOptional": false
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/plantuml-generator.ts",
+        "startLine": 33,
+        "endLine": 159
+      }
+    },
+    {
+      "id": "GeneratorConfig",
+      "name": "GeneratorConfig",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "apiKey",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "model",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "maxRetries",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "maxTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/plantuml-generator.ts",
+        "startLine": 14,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "TokenUsage",
+      "name": "TokenUsage",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "inputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "outputTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalTokens",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/plantuml-generator.ts",
+        "startLine": 24,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "PlantUMLValidator",
+      "name": "PlantUMLValidator",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "validate",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "puml",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "archJson",
+              "type": "ArchJSON",
+              "isOptional": false
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult",
+          "decorators": []
+        },
+        {
+          "name": "validateSyntax",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "puml",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult",
+          "decorators": []
+        },
+        {
+          "name": "validateCompleteness",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "puml",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "archJson",
+              "type": "ArchJSON",
+              "isOptional": false
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult",
+          "decorators": []
+        },
+        {
+          "name": "validateStyle",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "puml",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult",
+          "decorators": []
+        },
+        {
+          "name": "escapeRegex",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "str",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/plantuml-validator.ts",
+        "startLine": 22,
+        "endLine": 142
+      }
+    },
+    {
+      "id": "ValidationResult",
+      "name": "ValidationResult",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "isValid",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "issues",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "errors",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "warnings",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "missingEntities",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/plantuml-validator.ts",
+        "startLine": 11,
+        "endLine": 17
+      }
+    },
+    {
+      "id": "PromptBuilder",
+      "name": "PromptBuilder",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "systemPrompt",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "`You are a senior software architect and PlantUML expert.\n\nYour responsibilities:\n1. Generate clean, professional UML class diagrams\n2. Follow PlantUML best practices\n3. Use modern themes and styling\n4. Ensure diagrams are readable and well-organized\n\nQuality standards:\n- Syntax must be 100% valid\n- All entities from input must be included\n- Relationships must be accurately represented\n- Visibility modifiers must be shown\n- Code should be well-formatted\n\nOutput format:\n- Start with @startuml\n- Include theme declaration\n- Use packages for organization when appropriate\n- End with @enduml\n- No explanations, only code`",
+          "decorators": []
+        },
+        {
+          "name": "getSystemPrompt",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "buildClassDiagramPrompt",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "archJson",
+              "type": "ArchJSON",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "getFewShotExamples",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "getOutputConstraints",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/ai/prompt-builder.ts",
+        "startLine": 11,
+        "endLine": 358
+      }
+    },
+    {
+      "id": "CacheManager",
+      "name": "CacheManager",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "cacheDir",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "stats",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "{\n    hits: 0,\n    misses: 0,\n    hitRate: 0,\n    totalSize: 0,\n  }",
+          "decorators": []
+        },
+        {
+          "name": "defaultTTL",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "86400",
+          "decorators": []
+        },
+        {
+          "name": "computeFileHash",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "get",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "hash",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "decorators": []
+        },
+        {
+          "name": "set",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "hash",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "data",
+              "type": "T",
+              "isOptional": false
+            },
+            {
+              "name": "options",
+              "type": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheOptions",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "clear",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "getStats",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats",
+          "decorators": []
+        },
+        {
+          "name": "getCacheSize",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<number>",
+          "decorators": []
+        },
+        {
+          "name": "getAllCacheFiles",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<string[]>",
+          "decorators": []
+        },
+        {
+          "name": "getCacheKey",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "hash",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "getCachePath",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "cacheKey",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "updateHitRate",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "setDefaultTTL",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "ttl",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "getDefaultTTL",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "cacheDir",
+              "type": "string",
+              "isOptional": true
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/cache-manager.ts",
+        "startLine": 36,
+        "endLine": 229
+      }
+    },
+    {
+      "id": "CacheStats",
+      "name": "CacheStats",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "hits",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "misses",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "hitRate",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalSize",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/cache-manager.ts",
+        "startLine": 10,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "CacheOptions",
+      "name": "CacheOptions",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "ttl",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/cache-manager.ts",
+        "startLine": 17,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "CacheEntry",
+      "name": "CacheEntry",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "data",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "T",
+          "isReadonly": false
+        },
+        {
+          "name": "timestamp",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "ttl",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "genericParams": [
+        "T"
+      ],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/cache-manager.ts",
+        "startLine": 21,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "ConfigLoader",
+      "name": "ConfigLoader",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "configDir",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "load",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "cliOptions",
+              "type": "z.infer<any>",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ],
+          "returnType": "Promise<z.infer<any>>",
+          "decorators": []
+        },
+        {
+          "name": "loadFromFile",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<z.infer<any>>",
+          "decorators": []
+        },
+        {
+          "name": "init",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "options",
+              "type": "{ format?: \"json\" | \"js\"; }",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "getConfigPath",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "configDir",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "process.cwd()"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/config-loader.ts",
+        "startLine": 54,
+        "endLine": 141
+      }
+    },
+    {
+      "id": "ErrorHandler",
+      "name": "ErrorHandler",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "format",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "unknown",
+              "isOptional": false
+            },
+            {
+              "name": "options",
+              "type": "import(\"/home/yale/work/archguard/src/cli/error-handler\").ErrorFormatOptions",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatParseError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "ParseError",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatAPIError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "APIError",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatValidationError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "ValidationError",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatFileError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "FileError",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatGenericError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "Error",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            },
+            {
+              "name": "verbose",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatStringError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "error",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "formatUnknownError",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "useColor",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/error-handler.ts",
+        "startLine": 23,
+        "endLine": 202
+      }
+    },
+    {
+      "id": "ErrorFormatOptions",
+      "name": "ErrorFormatOptions",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "color",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "verbose",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/error-handler.ts",
+        "startLine": 8,
+        "endLine": 11
+      }
+    },
+    {
+      "id": "ParseError",
+      "name": "ParseError",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "line",
+              "type": "number",
+              "isOptional": true
+            },
+            {
+              "name": "column",
+              "type": "number",
+              "isOptional": true
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/errors.ts",
+        "startLine": 8,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "APIError",
+      "name": "APIError",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "statusCode",
+              "type": "number",
+              "isOptional": false
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/errors.ts",
+        "startLine": 24,
+        "endLine": 33
+      }
+    },
+    {
+      "id": "ValidationError",
+      "name": "ValidationError",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "suggestions",
+              "type": "string[]",
+              "isOptional": true,
+              "defaultValue": "[]"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/errors.ts",
+        "startLine": 38,
+        "endLine": 47
+      }
+    },
+    {
+      "id": "FileError",
+      "name": "FileError",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "operation",
+              "type": "\"read\" | \"write\" | \"delete\" | \"create\"",
+              "isOptional": false
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/errors.ts",
+        "startLine": 52,
+        "endLine": 62
+      }
+    },
+    {
+      "id": "ProgressReporter",
+      "name": "ProgressReporter",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "spinner",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Ora",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "stages",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage[]",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "[]",
+          "decorators": []
+        },
+        {
+          "name": "currentStage",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "null",
+          "decorators": []
+        },
+        {
+          "name": "start",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "update",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "completed",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "total",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "succeed",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "fail",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "warn",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "info",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "getStages",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage[]",
+          "decorators": []
+        },
+        {
+          "name": "getCurrentStage",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage",
+          "decorators": []
+        },
+        {
+          "name": "getSummary",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "import(\"/home/yale/work/archguard/src/cli/progress\").ProgressSummary",
+          "decorators": []
+        },
+        {
+          "name": "printSummary",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "stop",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/progress.ts",
+        "startLine": 37,
+        "endLine": 216
+      }
+    },
+    {
+      "id": "Stage",
+      "name": "Stage",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "status",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"pending\" | \"running\" | \"success\" | \"failed\" | \"warning\"",
+          "isReadonly": false
+        },
+        {
+          "name": "startTime",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "endTime",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "progress",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ completed: number; total: number; percentage: number; }",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/progress.ts",
+        "startLine": 8,
+        "endLine": 18
+      }
+    },
+    {
+      "id": "ProgressSummary",
+      "name": "ProgressSummary",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "totalDuration",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "totalDurationFormatted",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "successCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "failureCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "warningCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/progress.ts",
+        "startLine": 20,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "AnalyzeOptions",
+      "name": "AnalyzeOptions",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "source",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "output",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "format",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"plantuml\" | \"json\" | \"svg\"",
+          "isReadonly": false
+        },
+        {
+          "name": "exclude",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "cache",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "concurrency",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "verbose",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/cli/types.ts",
+        "startLine": 5,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "ClassExtractor",
+      "name": "ClassExtractor",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "project",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Project",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "extract",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'test.ts'"
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "extractClass",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "classDecl",
+              "type": "ClassDeclaration",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "getVisibility",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "_classDecl",
+              "type": "ClassDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Visibility",
+          "decorators": []
+        },
+        {
+          "name": "extractGenericParams",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "classDecl",
+              "type": "ClassDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "extractMembers",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "classDecl",
+              "type": "ClassDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member[]",
+          "decorators": []
+        },
+        {
+          "name": "extractProperty",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "property",
+              "type": "PropertyDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member",
+          "decorators": []
+        },
+        {
+          "name": "extractMethod",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "method",
+              "type": "MethodDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member",
+          "decorators": []
+        },
+        {
+          "name": "extractConstructor",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "constructor",
+              "type": "ConstructorDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member",
+          "decorators": []
+        },
+        {
+          "name": "extractParameters",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "node",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Parameter[]",
+          "decorators": []
+        },
+        {
+          "name": "getMemberVisibility",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "node",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Visibility",
+          "decorators": []
+        },
+        {
+          "name": "getConstructorVisibility",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "constructor",
+              "type": "ConstructorDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Visibility",
+          "decorators": []
+        },
+        {
+          "name": "extractDecorators",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "decorators",
+              "type": "TsMorphDecorator[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Decorator[]",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/class-extractor.ts",
+        "startLine": 20,
+        "endLine": 265
+      }
+    },
+    {
+      "id": "EnumExtractor",
+      "name": "EnumExtractor",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "project",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Project",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "extract",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'test.ts'"
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "extractEnum",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "enumDecl",
+              "type": "EnumDeclaration",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "extractMembers",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "enumDecl",
+              "type": "EnumDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member[]",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/enum-extractor.ts",
+        "startLine": 12,
+        "endLine": 91
+      }
+    },
+    {
+      "id": "InterfaceExtractor",
+      "name": "InterfaceExtractor",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "project",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Project",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "extract",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'test.ts'"
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "extractInterface",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "interfaceDecl",
+              "type": "InterfaceDeclaration",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Entity",
+          "decorators": []
+        },
+        {
+          "name": "extractExtends",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "interfaceDecl",
+              "type": "InterfaceDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "extractGenericParams",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "interfaceDecl",
+              "type": "InterfaceDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "extractMembers",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "interfaceDecl",
+              "type": "InterfaceDeclaration",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member[]",
+          "decorators": []
+        },
+        {
+          "name": "extractPropertySignature",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "property",
+              "type": "PropertySignature",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member",
+          "decorators": []
+        },
+        {
+          "name": "extractMethodSignature",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "method",
+              "type": "MethodSignature",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Member",
+          "decorators": []
+        },
+        {
+          "name": "extractParameters",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "method",
+              "type": "MethodSignature",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Parameter[]",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/interface-extractor.ts",
+        "startLine": 17,
+        "endLine": 180
+      }
+    },
+    {
+      "id": "ParallelParser",
+      "name": "ParallelParser",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "concurrency",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "continueOnError",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "limit",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "any",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "getConcurrency",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "getContinueOnError",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "parseFiles",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePaths",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<ArchJSON>",
+          "decorators": []
+        },
+        {
+          "name": "parseFilesWithMetrics",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePaths",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParsingMetrics>",
+          "decorators": []
+        },
+        {
+          "name": "parseFile",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<ArchJSON>",
+          "decorators": []
+        },
+        {
+          "name": "mergeResults",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "results",
+              "type": "ArchJSON[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "ArchJSON",
+          "decorators": []
+        },
+        {
+          "name": "deduplicateRelations",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "relations",
+              "type": "Relation[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "createEmptyArchJSON",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "sourceFiles",
+              "type": "string[]",
+              "isOptional": true,
+              "defaultValue": "[]"
+            }
+          ],
+          "returnType": "ArchJSON",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "options",
+              "type": "import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParallelParserOptions",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 84,
+        "endLine": 328
+      }
+    },
+    {
+      "id": "ParallelParserOptions",
+      "name": "ParallelParserOptions",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "concurrency",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "continueOnError",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 16,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "ParsingMetrics",
+      "name": "ParsingMetrics",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "result",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "ArchJSON",
+          "isReadonly": false
+        },
+        {
+          "name": "parseTime",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "filesPerSecond",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "fileCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "memoryUsage",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ heapUsed: number; heapTotal: number; external: number; rss: number; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 33,
+        "endLine": 44
+      }
+    },
+    {
+      "id": "ProgressEvent",
+      "name": "ProgressEvent",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "completed",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "total",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "percentage",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 49,
+        "endLine": 53
+      }
+    },
+    {
+      "id": "FileCompleteEvent",
+      "name": "FileCompleteEvent",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "file",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "entityCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "relationCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 58,
+        "endLine": 62
+      }
+    },
+    {
+      "id": "CompletionEvent",
+      "name": "CompletionEvent",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "totalFiles",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "successCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "errorCount",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "parseTime",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/parallel-parser.ts",
+        "startLine": 67,
+        "endLine": 72
+      }
+    },
+    {
+      "id": "RelationExtractor",
+      "name": "RelationExtractor",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "project",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Project",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "extract",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'test.ts'"
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "extractFromSourceFile",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "sourceFile",
+              "type": "SourceFile",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "extractClassRelations",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "classDecl",
+              "type": "ClassDeclaration",
+              "isOptional": false
+            },
+            {
+              "name": "relationSet",
+              "type": "Set<string>",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "extractInterfaceRelations",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "interfaceDecl",
+              "type": "InterfaceDeclaration",
+              "isOptional": false
+            },
+            {
+              "name": "relationSet",
+              "type": "Set<string>",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "addRelation",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "relations",
+              "type": "Relation[]",
+              "isOptional": false
+            },
+            {
+              "name": "relationSet",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "type",
+              "type": "Relation",
+              "isOptional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "target",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "extractTypeName",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "typeText",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "isCustomType",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "isPrimitiveType",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/relation-extractor.ts",
+        "startLine": 18,
+        "endLine": 261
+      }
+    },
+    {
+      "id": "TypeScriptParser",
+      "name": "TypeScriptParser",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "project",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Project",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "classExtractor",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "ClassExtractor",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "interfaceExtractor",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "InterfaceExtractor",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "enumExtractor",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "EnumExtractor",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "relationExtractor",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "RelationExtractor",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "parseCode",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "filePath",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'source.ts'"
+            }
+          ],
+          "returnType": "ArchJSON",
+          "decorators": []
+        },
+        {
+          "name": "parseProject",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "rootDir",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'**/*.ts'"
+            }
+          ],
+          "returnType": "ArchJSON",
+          "decorators": []
+        },
+        {
+          "name": "deduplicateRelations",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "relations",
+              "type": "Relation[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Relation[]",
+          "decorators": []
+        },
+        {
+          "name": "toJSON",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "archJson",
+              "type": "ArchJSON",
+              "isOptional": false
+            },
+            {
+              "name": "pretty",
+              "type": "boolean",
+              "isOptional": true,
+              "defaultValue": "false"
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/parser/typescript-parser.ts",
+        "startLine": 17,
+        "endLine": 178
+      }
+    },
+    {
+      "id": "ArchJSON",
+      "name": "ArchJSON",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "version",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "language",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"typescript\"",
+          "isReadonly": false
+        },
+        {
+          "name": "timestamp",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "sourceFiles",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "entities",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Entity[]",
+          "isReadonly": false
+        },
+        {
+          "name": "relations",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Relation[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 8,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "Entity",
+      "name": "Entity",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "id",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "type",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").EntityType",
+          "isReadonly": false
+        },
+        {
+          "name": "visibility",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Visibility",
+          "isReadonly": false
+        },
+        {
+          "name": "members",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Member[]",
+          "isReadonly": false
+        },
+        {
+          "name": "sourceLocation",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").SourceLocation",
+          "isReadonly": false
+        },
+        {
+          "name": "decorators",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Decorator[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isAbstract",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isConst",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "genericParams",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "extends",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "implements",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 30,
+        "endLine": 43
+      }
+    },
+    {
+      "id": "Member",
+      "name": "Member",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "type",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").MemberType",
+          "isReadonly": false
+        },
+        {
+          "name": "visibility",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Visibility",
+          "isReadonly": false
+        },
+        {
+          "name": "returnType",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "parameters",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Parameter[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isStatic",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isAbstract",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isAsync",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isReadonly",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "isOptional",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "fieldType",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "defaultValue",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "decorators",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").Decorator[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 53,
+        "endLine": 67
+      }
+    },
+    {
+      "id": "Parameter",
+      "name": "Parameter",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "type",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "isOptional",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "defaultValue",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 72,
+        "endLine": 77
+      }
+    },
+    {
+      "id": "SourceLocation",
+      "name": "SourceLocation",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "file",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "startLine",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "endLine",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 82,
+        "endLine": 86
+      }
+    },
+    {
+      "id": "Decorator",
+      "name": "Decorator",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "arguments",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 91,
+        "endLine": 94
+      }
+    },
+    {
+      "id": "Relation",
+      "name": "Relation",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "id",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "type",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/src/types/index\").RelationType",
+          "isReadonly": false
+        },
+        {
+          "name": "source",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "target",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "/home/yale/work/archguard/src/types/index.ts",
+        "startLine": 109,
+        "endLine": 114
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "ClaudeAPIError_inheritance_Error",
+      "type": "inheritance",
+      "source": "ClaudeAPIError",
+      "target": "Error"
+    },
+    {
+      "id": "ClaudeConnector_composition_Anthropic",
+      "type": "composition",
+      "source": "ClaudeConnector",
+      "target": "Anthropic"
+    },
+    {
+      "id": "ClaudeConnector_composition_100000",
+      "type": "composition",
+      "source": "ClaudeConnector",
+      "target": "100000"
+    },
+    {
+      "id": "ClaudeConnector_composition_import(\"/home/yale/work/archguard/src/ai/claude-connector\").ClaudeConnectorConfig",
+      "type": "composition",
+      "source": "ClaudeConnector",
+      "target": "import(\"/home/yale/work/archguard/src/ai/claude-connector\").ClaudeConnectorConfig"
+    },
+    {
+      "id": "ClaudeConnector_dependency_import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatResponse",
+      "type": "dependency",
+      "source": "ClaudeConnector",
+      "target": "import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatResponse"
+    },
+    {
+      "id": "ClaudeConnector_dependency_import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatOptions",
+      "type": "dependency",
+      "source": "ClaudeConnector",
+      "target": "import(\"/home/yale/work/archguard/src/ai/claude-connector\").ChatOptions"
+    },
+    {
+      "id": "ClaudeConnector_dependency_Anthropic.Message",
+      "type": "dependency",
+      "source": "ClaudeConnector",
+      "target": "Anthropic.Message"
+    },
+    {
+      "id": "CostTracker_composition_import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostTrackerConfig",
+      "type": "composition",
+      "source": "CostTracker",
+      "target": "import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostTrackerConfig"
+    },
+    {
+      "id": "CostTracker_dependency_import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostReport",
+      "type": "dependency",
+      "source": "CostTracker",
+      "target": "import(\"/home/yale/work/archguard/src/ai/cost-tracker\").CostReport"
+    },
+    {
+      "id": "PlantUMLGenerator_composition_ClaudeConnector",
+      "type": "composition",
+      "source": "PlantUMLGenerator",
+      "target": "ClaudeConnector"
+    },
+    {
+      "id": "PlantUMLGenerator_composition_PromptBuilder",
+      "type": "composition",
+      "source": "PlantUMLGenerator",
+      "target": "PromptBuilder"
+    },
+    {
+      "id": "PlantUMLGenerator_composition_PlantUMLValidator",
+      "type": "composition",
+      "source": "PlantUMLGenerator",
+      "target": "PlantUMLValidator"
+    },
+    {
+      "id": "PlantUMLGenerator_composition_import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage",
+      "type": "composition",
+      "source": "PlantUMLGenerator",
+      "target": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage"
+    },
+    {
+      "id": "PlantUMLGenerator_composition_import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").GeneratorConfig",
+      "type": "composition",
+      "source": "PlantUMLGenerator",
+      "target": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").GeneratorConfig"
+    },
+    {
+      "id": "PlantUMLGenerator_dependency_ArchJSON",
+      "type": "dependency",
+      "source": "PlantUMLGenerator",
+      "target": "ArchJSON"
+    },
+    {
+      "id": "PlantUMLGenerator_dependency_import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage",
+      "type": "dependency",
+      "source": "PlantUMLGenerator",
+      "target": "import(\"/home/yale/work/archguard/src/ai/plantuml-generator\").TokenUsage"
+    },
+    {
+      "id": "PlantUMLValidator_dependency_import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult",
+      "type": "dependency",
+      "source": "PlantUMLValidator",
+      "target": "import(\"/home/yale/work/archguard/src/ai/plantuml-validator\").ValidationResult"
+    },
+    {
+      "id": "PlantUMLValidator_dependency_ArchJSON",
+      "type": "dependency",
+      "source": "PlantUMLValidator",
+      "target": "ArchJSON"
+    },
+    {
+      "id": "PromptBuilder_dependency_ArchJSON",
+      "type": "dependency",
+      "source": "PromptBuilder",
+      "target": "ArchJSON"
+    },
+    {
+      "id": "CacheManager_composition_import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats",
+      "type": "composition",
+      "source": "CacheManager",
+      "target": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats"
+    },
+    {
+      "id": "CacheManager_dependency_T",
+      "type": "dependency",
+      "source": "CacheManager",
+      "target": "T"
+    },
+    {
+      "id": "CacheManager_dependency_import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheOptions",
+      "type": "dependency",
+      "source": "CacheManager",
+      "target": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheOptions"
+    },
+    {
+      "id": "CacheManager_dependency_import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats",
+      "type": "dependency",
+      "source": "CacheManager",
+      "target": "import(\"/home/yale/work/archguard/src/cli/cache-manager\").CacheStats"
+    },
+    {
+      "id": "ConfigLoader_dependency_z.infer<any>",
+      "type": "dependency",
+      "source": "ConfigLoader",
+      "target": "z.infer<any>"
+    },
+    {
+      "id": "ConfigLoader_dependency_{ format?: \"json\"",
+      "type": "dependency",
+      "source": "ConfigLoader",
+      "target": "{ format?: \"json\""
+    },
+    {
+      "id": "ErrorHandler_dependency_import(\"/home/yale/work/archguard/src/cli/error-handler\").ErrorFormatOptions",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "import(\"/home/yale/work/archguard/src/cli/error-handler\").ErrorFormatOptions"
+    },
+    {
+      "id": "ErrorHandler_dependency_ParseError",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "ParseError"
+    },
+    {
+      "id": "ErrorHandler_dependency_APIError",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "APIError"
+    },
+    {
+      "id": "ErrorHandler_dependency_ValidationError",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "ValidationError"
+    },
+    {
+      "id": "ErrorHandler_dependency_FileError",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "FileError"
+    },
+    {
+      "id": "ErrorHandler_dependency_Error",
+      "type": "dependency",
+      "source": "ErrorHandler",
+      "target": "Error"
+    },
+    {
+      "id": "ParseError_inheritance_Error",
+      "type": "inheritance",
+      "source": "ParseError",
+      "target": "Error"
+    },
+    {
+      "id": "APIError_inheritance_Error",
+      "type": "inheritance",
+      "source": "APIError",
+      "target": "Error"
+    },
+    {
+      "id": "ValidationError_inheritance_Error",
+      "type": "inheritance",
+      "source": "ValidationError",
+      "target": "Error"
+    },
+    {
+      "id": "FileError_inheritance_Error",
+      "type": "inheritance",
+      "source": "FileError",
+      "target": "Error"
+    },
+    {
+      "id": "FileError_composition_\"read\"",
+      "type": "composition",
+      "source": "FileError",
+      "target": "\"read\""
+    },
+    {
+      "id": "ProgressReporter_composition_Ora",
+      "type": "composition",
+      "source": "ProgressReporter",
+      "target": "Ora"
+    },
+    {
+      "id": "ProgressReporter_composition_import(\"/home/yale/work/archguard/src/cli/progress\").Stage",
+      "type": "composition",
+      "source": "ProgressReporter",
+      "target": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage"
+    },
+    {
+      "id": "ProgressReporter_dependency_import(\"/home/yale/work/archguard/src/cli/progress\").Stage",
+      "type": "dependency",
+      "source": "ProgressReporter",
+      "target": "import(\"/home/yale/work/archguard/src/cli/progress\").Stage"
+    },
+    {
+      "id": "ProgressReporter_dependency_import(\"/home/yale/work/archguard/src/cli/progress\").ProgressSummary",
+      "type": "dependency",
+      "source": "ProgressReporter",
+      "target": "import(\"/home/yale/work/archguard/src/cli/progress\").ProgressSummary"
+    },
+    {
+      "id": "ClassExtractor_composition_Project",
+      "type": "composition",
+      "source": "ClassExtractor",
+      "target": "Project"
+    },
+    {
+      "id": "ClassExtractor_dependency_Entity",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "Entity"
+    },
+    {
+      "id": "ClassExtractor_dependency_ClassDeclaration",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "ClassDeclaration"
+    },
+    {
+      "id": "ClassExtractor_dependency_Visibility",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "Visibility"
+    },
+    {
+      "id": "ClassExtractor_dependency_Member",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "Member"
+    },
+    {
+      "id": "ClassExtractor_dependency_PropertyDeclaration",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "PropertyDeclaration"
+    },
+    {
+      "id": "ClassExtractor_dependency_MethodDeclaration",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "MethodDeclaration"
+    },
+    {
+      "id": "ClassExtractor_dependency_ConstructorDeclaration",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "ConstructorDeclaration"
+    },
+    {
+      "id": "ClassExtractor_dependency_Parameter",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "Parameter"
+    },
+    {
+      "id": "ClassExtractor_dependency_Decorator",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "Decorator"
+    },
+    {
+      "id": "ClassExtractor_dependency_TsMorphDecorator",
+      "type": "dependency",
+      "source": "ClassExtractor",
+      "target": "TsMorphDecorator"
+    },
+    {
+      "id": "EnumExtractor_composition_Project",
+      "type": "composition",
+      "source": "EnumExtractor",
+      "target": "Project"
+    },
+    {
+      "id": "EnumExtractor_dependency_Entity",
+      "type": "dependency",
+      "source": "EnumExtractor",
+      "target": "Entity"
+    },
+    {
+      "id": "EnumExtractor_dependency_EnumDeclaration",
+      "type": "dependency",
+      "source": "EnumExtractor",
+      "target": "EnumDeclaration"
+    },
+    {
+      "id": "EnumExtractor_dependency_Member",
+      "type": "dependency",
+      "source": "EnumExtractor",
+      "target": "Member"
+    },
+    {
+      "id": "InterfaceExtractor_composition_Project",
+      "type": "composition",
+      "source": "InterfaceExtractor",
+      "target": "Project"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_Entity",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "Entity"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_InterfaceDeclaration",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "InterfaceDeclaration"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_Member",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "Member"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_PropertySignature",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "PropertySignature"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_MethodSignature",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "MethodSignature"
+    },
+    {
+      "id": "InterfaceExtractor_dependency_Parameter",
+      "type": "dependency",
+      "source": "InterfaceExtractor",
+      "target": "Parameter"
+    },
+    {
+      "id": "ParallelParser_inheritance_EventEmitter",
+      "type": "inheritance",
+      "source": "ParallelParser",
+      "target": "EventEmitter"
+    },
+    {
+      "id": "ParallelParser_composition_import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParallelParserOptions",
+      "type": "composition",
+      "source": "ParallelParser",
+      "target": "import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParallelParserOptions"
+    },
+    {
+      "id": "ParallelParser_dependency_ArchJSON",
+      "type": "dependency",
+      "source": "ParallelParser",
+      "target": "ArchJSON"
+    },
+    {
+      "id": "ParallelParser_dependency_import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParsingMetrics",
+      "type": "dependency",
+      "source": "ParallelParser",
+      "target": "import(\"/home/yale/work/archguard/src/parser/parallel-parser\").ParsingMetrics"
+    },
+    {
+      "id": "ParallelParser_dependency_Relation",
+      "type": "dependency",
+      "source": "ParallelParser",
+      "target": "Relation"
+    },
+    {
+      "id": "RelationExtractor_composition_Project",
+      "type": "composition",
+      "source": "RelationExtractor",
+      "target": "Project"
+    },
+    {
+      "id": "RelationExtractor_dependency_Relation",
+      "type": "dependency",
+      "source": "RelationExtractor",
+      "target": "Relation"
+    },
+    {
+      "id": "RelationExtractor_dependency_SourceFile",
+      "type": "dependency",
+      "source": "RelationExtractor",
+      "target": "SourceFile"
+    },
+    {
+      "id": "RelationExtractor_dependency_ClassDeclaration",
+      "type": "dependency",
+      "source": "RelationExtractor",
+      "target": "ClassDeclaration"
+    },
+    {
+      "id": "RelationExtractor_dependency_InterfaceDeclaration",
+      "type": "dependency",
+      "source": "RelationExtractor",
+      "target": "InterfaceDeclaration"
+    },
+    {
+      "id": "TypeScriptParser_composition_Project",
+      "type": "composition",
+      "source": "TypeScriptParser",
+      "target": "Project"
+    },
+    {
+      "id": "TypeScriptParser_composition_ClassExtractor",
+      "type": "composition",
+      "source": "TypeScriptParser",
+      "target": "ClassExtractor"
+    },
+    {
+      "id": "TypeScriptParser_composition_InterfaceExtractor",
+      "type": "composition",
+      "source": "TypeScriptParser",
+      "target": "InterfaceExtractor"
+    },
+    {
+      "id": "TypeScriptParser_composition_EnumExtractor",
+      "type": "composition",
+      "source": "TypeScriptParser",
+      "target": "EnumExtractor"
+    },
+    {
+      "id": "TypeScriptParser_composition_RelationExtractor",
+      "type": "composition",
+      "source": "TypeScriptParser",
+      "target": "RelationExtractor"
+    },
+    {
+      "id": "TypeScriptParser_dependency_ArchJSON",
+      "type": "dependency",
+      "source": "TypeScriptParser",
+      "target": "ArchJSON"
+    },
+    {
+      "id": "TypeScriptParser_dependency_Relation",
+      "type": "dependency",
+      "source": "TypeScriptParser",
+      "target": "Relation"
+    }
+  ]
+}
