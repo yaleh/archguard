@@ -562,8 +562,7 @@ jobs:
 
       - name: E2E tests
         run: npm run test:e2e
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # Note: Requires Claude Code CLI to be installed and configured
 
   quality-gate:
     runs-on: ubuntu-latest
