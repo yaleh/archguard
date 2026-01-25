@@ -58,19 +58,65 @@ package "Types" {
 - ✅ 按文件路径分组: 同一目录下的类放在同一 package
 - ✅ 关系定义在 package 外部（跨模块关系）
 
-### 2. 语法要求
+### 2. 布局方向（垂直优先）
+
+**默认布局**：使用 `top to bottom direction` 实现垂直排列
+
+```plantuml
+@startuml Architecture
+!theme cerulean-outline
+
+' 垂直方向排列（自上而下）
+top to bottom direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+
+' 增加模块间垂直间距
+skinparam ranksep 40
+
+package "Top Layer" {
+  class A { }
+}
+
+package "Middle Layer" {
+  class B { }
+}
+
+package "Bottom Layer" {
+  class C { }
+
+A --> B : "uses"
+B --> C : "depends on"
+
+@enduml
+```
+
+**布局选择原则**：
+- ✅ **优先使用垂直布局**（top to bottom）- 适合多层架构
+- ✅ 层级关系明显时使用垂直（如：AI → CLI → Parser → Types）
+- ✅ 使用 `skinparam ranksep 40` 增加模块间距
+- ✅ 仅在语义合理时使用布局方向
+
+**何时使用水平布局**：
+- 数据流明显从左到右时
+- 模块间有明确的上下游关系
+- 垂直布局会导致图表过高时
+
+### 3. 语法要求
 
 - ✅ 必须包含 `@startuml` 和 `@enduml`
 - ✅ 包含所有输入 JSON 中的实体
 - ✅ 关系只引用已定义的实体
 
-### 3. ⚠️ 禁止事项
+### 4. ⚠️ 禁止事项
 
 - ❌ 不要引用外部类型（Error, EventEmitter, Anthropic, Ora 等）
 - ❌ 不要引用泛型参数（T, Map<K,V>, Promise<T> 等）
 - ❌ 不要在关系部分引用未定义的实体
+- ❌ 不要过度使用布局控制（保持 PlantUML 自动布局的优势）
 
-### 4. 关系符号
+### 5. 关系符号
 
 - `--|>` 继承
 - `..|>` 实现
@@ -82,6 +128,7 @@ package "Types" {
 生成后检查：
 - [ ] 使用了 package 组织模块
 - [ ] 所有实体都在合适的 package 中
+- [ ] 布局方向语义合理（垂直优先）
 - [ ] 关系在 package 外部定义
 - [ ] 没有引用外部类型
 - [ ] PlantUML 可以正常渲染
@@ -92,21 +139,31 @@ package "Types" {
 @startuml Architecture
 !theme cerulean-outline
 
+' 垂直布局：自上而下
+top to bottom direction
+
 skinparam classAttributeIconSize 0
 skinparam classFontSize 12
+skinparam ranksep 40
 
-package "模块名" {
+package "高层模块" {
   class EntityName {
     +method(): ReturnType
     -property: Type
   }
+}
 
+package "中层模块" {
   interface InterfaceName {
     +method(): ReturnType
   }
 }
 
-' 跨模块关系
+package "底层模块" {
+  class Helper { }
+}
+
+' 跨模块关系（自动垂直排列）
 EntityA --> EntityB : label
 
 @enduml

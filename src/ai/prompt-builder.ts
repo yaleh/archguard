@@ -333,21 +333,45 @@ Driver --> Car : uses
 1. Syntax: Valid PlantUML (test with plantuml.com)
 2. Structure: @startuml...@enduml
 3. Theme: Use !theme cerulean-outline
-4. Visibility:
+4. ⭐ Layout: PREFER VERTICAL LAYOUT (top to bottom)
+   - Add "top to bottom direction" after @startuml
+   - Use skinparam ranksep 40 for better spacing
+   - Vertical layout is preferred for layered architectures
+5. Visibility:
    - + for public
    - - for private
    - # for protected
-5. Types: Include parameter and return types
-6. ⭐ Organization: MUST USE PACKAGES to group related entities
-7. Relationships:
+6. Types: Include parameter and return types
+7. ⭐ Organization: MUST USE PACKAGES to group related entities
+8. Relationships:
    - --|> for inheritance (extends)
    - ..|> for implementation (implements)
    - --* for composition (contains)
    - --o for aggregation (has)
    - --> for dependency (uses)
-8. Formatting: Clean, readable, consistent indentation
-9. Include ALL entities from the input JSON
-10. Use appropriate relationship arrows with labels
+9. Formatting: Clean, readable, consistent indentation
+10. Include ALL entities from the input JSON
+
+⚠️ CRITICAL: Vertical Layout (Preferred)
+- Use "top to bottom direction" for layered architectures
+- Add "skinparam ranksep 40" to increase vertical spacing
+- This works well for: AI → CLI → Parser → Types layers
+
+Example of VERTICAL layout:
+  @startuml
+  !theme cerulean-outline
+  top to bottom direction
+  skinparam ranksep 40
+
+  package "AI Layer" { ... }
+  package "CLI Layer" { ... }
+  package "Parser Layer" { ... }
+  @enduml
+
+When to use HORIZONTAL layout:
+- Data flows clearly left-to-right
+- Explicit upstream/downstream relationships
+- Vertical layout would make diagram too tall
 
 ⚠️ CRITICAL: Modular Organization with Packages
 - MUST group related entities into packages using "package Name { ... }"
@@ -406,7 +430,7 @@ DO NOT:
 - Use invalid PlantUML syntax
 - Omit entities from input
 - Add entities not in input
-- Reference undefined entities in relationships
-- Leave entities unorganized (USE PACKAGES!)`;
+- Leave entities unorganized (USE PACKAGES!)
+- Use excessive layout controls (let PlantUML auto-layout work)`;
   }
 }
