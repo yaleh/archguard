@@ -34,18 +34,16 @@ npm install --save-dev archguard
 
 ### Prerequisites
 
-Ensure you have Claude Code CLI installed and configured:
+Ensure you have claude-glm CLI installed and configured:
 
 ```bash
-# Check if Claude Code is available
-claude --version
+# Check if claude-glm is available
+claude-glm --version
 ```
 
-If you don't have Claude Code, install it from [Claude Code documentation](https://docs.anthropic.com/claude-code).
+If you don't have claude-glm, install it according to your setup instructions.
 
-**Note**: ArchGuard uses Claude Code's existing authentication, so you don't need to manage API keys separately.
-
-**Default Model**: By default, ArchGuard uses `claude-glm` model. You can change this with the `--model` option.
+**Note**: ArchGuard uses claude-glm CLI for PlantUML generation.
 
 ### Basic Usage
 

@@ -50,7 +50,7 @@ export class ClaudeCodeWrapper {
       timeout: options.timeout ?? 30000,
       maxRetries: options.maxRetries ?? 2,
       workingDir: options.workingDir ?? process.cwd(),
-      model: options.model ?? 'claude-3-5-sonnet-20241022',
+      model: options.model ?? '',  // CLI command is used directly, not a model parameter
     };
   }
 
@@ -131,34 +131,17 @@ export class ClaudeCodeWrapper {
           PREVIOUS_PUML: previousPuml || null,
         });
 
-        // Step 2: Create temporary directory
-        const tempDir = await this.createTempDir();
-        const promptFile = path.join(tempDir, 'prompt.txt');
-        const outputFile = path.join(tempDir, 'output.puml');
+        // Step 2: Call Claude Code CLI directly with prompt
+        const output = await this.callCLI(prompt);
 
-        try {
-          // Step 3: Write prompt to file
-          await fs.writeFile(promptFile, prompt, 'utf-8');
+        // Step 3: Extract PlantUML using parser
+        const plantUML = parser.extractPlantUML(output);
 
-          // Step 4: Call Claude Code CLI
-          await this.callCLI(promptFile, outputFile);
+        // Step 4: Validate PlantUML (basic checks)
+        this.validatePlantUML(plantUML, archJson);
 
-          // Step 5: Read output file
-          const output = await fs.readFile(outputFile, 'utf-8');
-
-          // Step 6: Extract PlantUML using parser
-          const plantUML = parser.extractPlantUML(output);
-
-          // Step 7: Validate PlantUML (basic checks)
-          this.validatePlantUML(plantUML, archJson);
-
-          // Success! Return the PlantUML
-          return plantUML;
-
-        } finally {
-          // Step 8: Cleanup temporary files
-          await this.cleanup(tempDir);
-        }
+        // Success! Return the PlantUML
+        return plantUML;
 
       } catch (error) {
         lastError = error as Error;
@@ -328,33 +311,20 @@ export class ClaudeCodeWrapper {
    * Invokes Claude Code CLI with given prompt
    *
    * @internal
-   * @param promptFile - Path to file containing the prompt
-   * @param outputFile - Path to output file
+   * @param prompt - Prompt content to send to Claude
    * @returns Promise resolving to CLI execution result
    */
-  async callCLI(promptFile: string, outputFile: string): Promise<string> {
+  async callCLI(prompt: string): Promise<string> {
     try {
-      // Build command arguments
-      const args = [
-        '--prompt-file', promptFile,
-        '--output', outputFile,
-        '--no-interactive'
-      ];
+      // Execute claude-glm with prompt via stdin to avoid argument size limits
+      const result = await execa('claude-glm', [], {
+        timeout: this.options.timeout,
+        cwd: this.options.workingDir,
+        // Pass prompt via stdin to avoid E2BIG (argument list too long) error
+        input: prompt,
+      });
 
-      // Add model if specified (e.g., claude-glm)
-      if (this.options.model) {
-        args.push('--model', this.options.model);
-      }
-
-      const result = await execa(
-        'claude',
-        args,
-        {
-          timeout: this.options.timeout,
-          cwd: this.options.workingDir,
-        }
-      );
-
+      // Return the raw output (claude-glm returns PlantUML directly)
       return result.stdout;
     } catch (error) {
       // Rethrow to be handled by retry logic

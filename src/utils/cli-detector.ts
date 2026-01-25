@@ -43,8 +43,8 @@ export interface CLIDetectionResult {
  */
 export async function detectClaudeCodeCLI(): Promise<CLIDetectionResult> {
   try {
-    // Try to execute claude --version
-    const { stdout } = await execa('claude', ['--version'], {
+    // Try to execute claude-glm --version
+    const { stdout } = await execa('claude-glm', ['--version'], {
       timeout: 5000,
       reject: true,
     });

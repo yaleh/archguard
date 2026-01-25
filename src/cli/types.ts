@@ -10,5 +10,4 @@ export interface AnalyzeOptions {
   cache: boolean;
   concurrency?: number;
   verbose?: boolean;
-  model?: string;
 }
