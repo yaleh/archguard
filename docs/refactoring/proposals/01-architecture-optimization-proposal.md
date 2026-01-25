@@ -3,7 +3,7 @@
 **文档版本**: 1.0
 **创建日期**: 2026-01-25
 **分析方法**: RLM (Refactoring Lifecycle Management)
-**分析范围**: 基于现有架构设计文档和需求规格说明书
+**分析范围**: 基于现有架构设计文档 (docs/architecture.md) 和需求规格说明书 (docs/specs.md)
 
 ---
 
