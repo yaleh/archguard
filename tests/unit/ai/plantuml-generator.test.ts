@@ -74,7 +74,7 @@ class User
     it('should pass previousPuml to wrapper when provided', async () => {
       const mockWrapper = {
         generatePlantUML: vi.fn().mockResolvedValue(`@startuml
-class UpdatedUser
+class User
 @enduml
 `),
       };
