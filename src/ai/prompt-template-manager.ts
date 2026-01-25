@@ -7,9 +7,8 @@
  * @module prompt-template-manager
  */
 
-// readFile will be used in Phase 1 implementation
-// import { readFile } from 'fs/promises';
-import { join } from 'path';
+import fs from 'fs-extra';
+import path from 'path';
 
 /**
  * Template variables that can be substituted in prompts
@@ -38,35 +37,66 @@ export class PromptTemplateManager {
    * @param templatesDir - Directory containing template files (default: ./prompts)
    */
   constructor(templatesDir?: string) {
-    // Store templates directory for Phase 1 implementation
-    this.templatesDir = templatesDir ?? join(process.cwd(), 'prompts');
+    this.templatesDir = templatesDir ?? path.join(process.cwd(), 'prompts');
     this.templateCache = new Map();
   }
 
   /**
    * Loads a template from the templates directory
    *
-   * @param _templateName - Name of the template (without .txt extension)
+   * @param templateName - Name of the template (without .txt extension)
    * @returns Promise resolving to the template content
    * @throws Error if template file is not found
    */
-  async loadTemplate(_templateName: string): Promise<string> {
-    // TODO: Implement template loading logic
-    throw new Error('Not implemented - Phase 1');
+  async loadTemplate(templateName: string): Promise<string> {
+    // Check cache first
+    if (this.templateCache.has(templateName)) {
+      return this.templateCache.get(templateName)!;
+    }
+
+    // Construct template file path
+    const templatePath = path.join(this.templatesDir, `${templateName}.txt`);
+
+    // Check if file exists
+    const exists = await fs.pathExists(templatePath);
+    if (!exists) {
+      throw new Error(
+        `Template '${templateName}' not found at ${templatePath}\n\n` +
+          `Available templates are located in: ${this.templatesDir}`
+      );
+    }
+
+    // Read template content
+    const content = await fs.readFile(templatePath, 'utf-8');
+
+    // Cache for future use
+    this.templateCache.set(templateName, content);
+
+    return content;
   }
 
   /**
    * Renders a template with provided variables
    *
-   * Supports simple variable substitution using {{VARIABLE}} syntax
+   * Supports:
+   * - Simple variable substitution: {{VARIABLE_NAME}}
+   * - Conditional blocks: {{#if VARIABLE}}...{{else}}...{{/if}}
    *
-   * @param _templateName - Name of the template to render
-   * @param _variables - Variables to substitute in the template
+   * @param templateName - Name of the template to render
+   * @param variables - Variables to substitute in the template
    * @returns Promise resolving to the rendered template
    */
-  async render(_templateName: string, _variables: TemplateVariables): Promise<string> {
-    // TODO: Implement template rendering logic
-    throw new Error('Not implemented - Phase 1');
+  async render(templateName: string, variables: TemplateVariables): Promise<string> {
+    // Load template
+    let content = await this.loadTemplate(templateName);
+
+    // Handle conditionals first: {{#if VAR}}...{{else}}...{{/if}}
+    content = this.processConditionals(content, variables);
+
+    // Replace simple variables: {{VAR_NAME}}
+    content = this.replaceVariables(content, variables);
+
+    return content;
   }
 
   /**
@@ -83,5 +113,43 @@ export class PromptTemplateManager {
    */
   getTemplatesDir(): string {
     return this.templatesDir;
+  }
+
+  /**
+   * Processes conditional blocks in template
+   *
+   * @private
+   * @param content - Template content
+   * @param variables - Template variables
+   * @returns Processed content
+   */
+  private processConditionals(content: string, variables: TemplateVariables): string {
+    // Pattern: {{#if VAR}}...{{else}}...{{/if}}
+    const conditionalPattern = /\{\{#if\s+(\w+)\}\}(.*?)\{\{else\}\}(.*?)\{\{\/if\}\}/gs;
+
+    return content.replace(conditionalPattern, (_match, varName, ifContent, elseContent) => {
+      const value = variables[varName];
+      // If variable is truthy, use ifContent, else use elseContent
+      return (value !== undefined && value !== null && value !== '') ? ifContent : elseContent;
+    });
+  }
+
+  /**
+   * Replaces variable placeholders with actual values
+   *
+   * @private
+   * @param content - Template content
+   * @param variables - Template variables
+   * @returns Content with replaced variables
+   */
+  private replaceVariables(content: string, variables: TemplateVariables): string {
+    // Pattern: {{VAR_NAME}}
+    const variablePattern = /\{\{(\w+)\}\}/g;
+
+    return content.replace(variablePattern, (match, varName) => {
+      const value = variables[varName];
+      // If variable exists, use it; otherwise keep placeholder
+      return (value !== undefined && value !== null) ? String(value) : match;
+    });
   }
 }
