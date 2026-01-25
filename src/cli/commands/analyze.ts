@@ -13,6 +13,7 @@ import { PlantUMLGenerator } from '@/ai/plantuml-generator';
 import { ProgressReporter } from '../progress';
 import { ConfigLoader } from '../config-loader';
 import { OutputPathResolver } from '../utils/output-path-resolver';
+import { ErrorHandler } from '../error-handler';
 import type { Config } from '../config-loader';
 import type { AnalyzeOptions } from '../types';
 
@@ -211,7 +212,8 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     process.exit(0);
   } catch (error) {
     progress.fail('Analysis failed');
-    console.error(error instanceof Error ? error.message : String(error));
+    const errorHandler = new ErrorHandler();
+    console.error(errorHandler.format(error, { verbose: options.verbose || false }));
     process.exit(1);
   }
 }

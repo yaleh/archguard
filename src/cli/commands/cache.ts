@@ -4,6 +4,7 @@
 
 import { Command } from 'commander';
 import { CacheManager } from '../cache-manager.js';
+import { ErrorHandler } from '../error-handler.js';
 import chalk from 'chalk';
 
 /**
@@ -22,7 +23,9 @@ export function createCacheCommand(): Command {
         await cache.clear();
         console.log(chalk.green('✓ Cache cleared successfully'));
       } catch (error) {
-        console.error(chalk.red('✗ Failed to clear cache:'), error);
+        const errorHandler = new ErrorHandler();
+        console.error(chalk.red('✗ Failed to clear cache:'));
+        console.error(errorHandler.format(error));
         process.exit(1);
       }
     });
@@ -45,7 +48,9 @@ export function createCacheCommand(): Command {
         console.log(chalk.gray('  Total Size:'), formatBytes(size));
         console.log();
       } catch (error) {
-        console.error(chalk.red('✗ Failed to get cache stats:'), error);
+        const errorHandler = new ErrorHandler();
+        console.error(chalk.red('✗ Failed to get cache stats:'));
+        console.error(errorHandler.format(error));
         process.exit(1);
       }
     });

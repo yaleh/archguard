@@ -1,0 +1,20 @@
+{
+  "source": "./src",
+  "output": "./architecture.puml",
+  "format": "plantuml",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**"
+  ],
+  "cli": {
+    "command": "claude",
+    "timeout": 180000
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 86400
+  },
+  "concurrency": 8,
+  "verbose": true
+}

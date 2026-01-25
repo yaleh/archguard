@@ -10,6 +10,7 @@ import {
   type MethodSignature,
 } from 'ts-morph';
 import type { Entity, Member, Parameter } from '@/types';
+import { ParseError } from '../cli/errors.js';
 
 /**
  * Extracts interface entities from TypeScript code using ts-morph
@@ -41,7 +42,7 @@ export class InterfaceExtractor {
     const interfaceDecl = sourceFile.getInterfaces()[0];
 
     if (!interfaceDecl) {
-      throw new Error('No interface found in code');
+      throw new ParseError('No interface found in code', filePath);
     }
 
     return this.extractInterface(interfaceDecl, filePath);

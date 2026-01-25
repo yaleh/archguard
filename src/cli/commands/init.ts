@@ -4,6 +4,8 @@
 
 import { Command } from 'commander';
 import { ConfigLoader } from '../config-loader.js';
+import { ErrorHandler } from '../error-handler.js';
+import { ValidationError } from '../errors.js';
 import chalk from 'chalk';
 
 /**
@@ -23,13 +25,19 @@ export function createInitCommand(): Command {
         console.log(chalk.gray('\nYou can now customize the configuration and run:'));
         console.log(chalk.cyan('  archguard analyze'));
       } catch (error) {
+        const errorHandler = new ErrorHandler();
+
         if (error instanceof Error && error.message.includes('already exists')) {
-          console.error(chalk.yellow('⚠ Configuration file already exists'));
-          console.log(chalk.gray('Remove it first if you want to reinitialize.'));
+          const validationError = new ValidationError(
+            'Configuration file already exists',
+            ['Remove the existing file first if you want to reinitialize']
+          );
+          console.error(errorHandler.format(validationError));
           process.exit(0);
         }
 
-        console.error(chalk.red('✗ Failed to initialize config:'), error);
+        console.error(chalk.red('✗ Failed to initialize config:'));
+        console.error(errorHandler.format(error));
         process.exit(1);
       }
     });

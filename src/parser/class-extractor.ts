@@ -13,6 +13,7 @@ import {
   SyntaxKind,
 } from 'ts-morph';
 import type { Entity, Visibility, Member, Parameter, Decorator } from '@/types';
+import { ParseError } from '../cli/errors.js';
 
 /**
  * Extracts class entities from TypeScript code using ts-morph
@@ -44,7 +45,7 @@ export class ClassExtractor {
     const classDecl = sourceFile.getClasses()[0];
 
     if (!classDecl) {
-      throw new Error('No class found in code');
+      throw new ParseError('No class found in code', filePath);
     }
 
     return this.extractClass(classDecl, filePath);

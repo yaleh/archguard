@@ -5,6 +5,7 @@
 
 import { Project, type EnumDeclaration } from 'ts-morph';
 import type { Entity, Member } from '@/types';
+import { ParseError } from '../cli/errors.js';
 
 /**
  * Extracts enum entities from TypeScript code using ts-morph
@@ -36,7 +37,7 @@ export class EnumExtractor {
     const enumDecl = sourceFile.getEnums()[0];
 
     if (!enumDecl) {
-      throw new Error('No enum found in code');
+      throw new ParseError('No enum found in code', filePath);
     }
 
     return this.extractEnum(enumDecl, filePath);
