@@ -1,33 +1,33 @@
 /**
- * Integration tests for PlantUML generation with real Claude API
- * These tests require ANTHROPIC_API_KEY environment variable
+ * Integration tests for PlantUML generation with Claude Code CLI
+ * These tests require Claude Code CLI to be installed
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { PlantUMLGenerator } from '../../../src/ai/plantuml-generator';
-import { CostTracker } from '../../../src/ai/cost-tracker';
 import { ArchJSON } from '../../../src/types';
+import { isClaudeCodeAvailable } from '../../../src/utils/cli-detector.js';
 
-// Skip tests if no API key is provided
-const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
-const describeWithApi = hasApiKey ? describe : describe.skip;
+// Check CLI availability once
+let hasCLI = false;
 
-describeWithApi('PlantUML Generation Integration (Real API)', () => {
+beforeAll(async () => {
+  hasCLI = await isClaudeCodeAvailable();
+  if (!hasCLI) {
+    console.warn(
+      'Claude Code CLI not available. Integration tests will be skipped.',
+      'Install from: https://claude.com/claude-code',
+    );
+  }
+});
+
+const describeWithCli = hasCLI ? describe : describe.skip;
+
+describeWithCli('PlantUML Generation Integration (Claude Code CLI)', () => {
   let generator: PlantUMLGenerator;
-  let costTracker: CostTracker;
 
   beforeAll(() => {
-    if (!hasApiKey) {
-      console.warn('Skipping integration tests: ANTHROPIC_API_KEY not set');
-      return;
-    }
-
-    costTracker = new CostTracker();
-    costTracker.setBudget(0.1); // $0.10 budget for tests
-
-    generator = new PlantUMLGenerator({
-      apiKey: process.env.ANTHROPIC_API_KEY!,
-    });
+    generator = new PlantUMLGenerator({});
   });
 
   it('should generate PlantUML for simple class', async () => {
@@ -70,23 +70,12 @@ describeWithApi('PlantUML Generation Integration (Real API)', () => {
 
     const puml = await generator.generate(archJson);
 
-    // Track cost
-    const usage = generator.getLastUsage();
-    if (usage) {
-      costTracker.trackCall(usage.inputTokens, usage.outputTokens);
-    }
-
     // Verify PlantUML structure
     expect(puml).toContain('@startuml');
     expect(puml).toContain('@enduml');
     expect(puml).toContain('User');
     expect(puml).toContain('getName');
-
-    // Verify cost is reasonable
-    expect(costTracker.isOverBudget()).toBe(false);
-    const report = costTracker.getReport();
-    expect(report.totalCost).toBeLessThan(0.01); // Should be under 1 cent
-  }, 30000); // 30 second timeout for API call
+  }, 30000); // 30 second timeout for CLI call
 
   it('should generate PlantUML with relationships', async () => {
     const archJson: ArchJSON = {
@@ -138,23 +127,12 @@ describeWithApi('PlantUML Generation Integration (Real API)', () => {
 
     const puml = await generator.generate(archJson);
 
-    // Track cost
-    const usage = generator.getLastUsage();
-    if (usage) {
-      costTracker.trackCall(usage.inputTokens, usage.outputTokens);
-    }
-
     // Verify entities
     expect(puml).toContain('User');
     expect(puml).toContain('Admin');
 
     // Verify relationship (inheritance arrow)
     expect(puml).toMatch(/Admin.*User/s);
-
-    // Log cost for visibility
-    const report = costTracker.getReport();
-    console.log('Total cost so far:', costTracker.getFormattedCost());
-    console.log('Average per call:', `$${report.avgCostPerCall.toFixed(4)}`);
   }, 30000);
 
   it('should generate PlantUML for interface implementation', async () => {
@@ -209,26 +187,10 @@ describeWithApi('PlantUML Generation Integration (Real API)', () => {
 
     const puml = await generator.generate(archJson);
 
-    // Track cost
-    const usage = generator.getLastUsage();
-    if (usage) {
-      costTracker.trackCall(usage.inputTokens, usage.outputTokens);
-    }
-
     // Verify interface and class
     expect(puml).toContain('interface');
     expect(puml).toContain('IRepository');
     expect(puml).toContain('UserRepository');
-
-    // Final cost check
-    expect(costTracker.isOverBudget()).toBe(false);
-    const report = costTracker.getReport();
-    console.log('Final cost report:', {
-      totalCalls: report.totalCalls,
-      totalTokens: report.totalTokens,
-      totalCost: costTracker.getFormattedCost(),
-      avgCost: `$${report.avgCostPerCall.toFixed(4)}`,
-    });
   }, 30000);
 
   it('should handle performance requirements', async () => {
@@ -261,17 +223,11 @@ describeWithApi('PlantUML Generation Integration (Real API)', () => {
   }, 30000);
 });
 
-// Summary test to report overall costs
-describeWithApi('Cost Summary', () => {
-  it('should report total integration test costs', () => {
-    if (!hasApiKey) {
-      console.warn('No API key provided - integration tests skipped');
-      return;
-    }
-
-    console.log('\n=== Integration Test Cost Summary ===');
+// Summary test to report overall results
+describeWithCli('Test Summary', () => {
+  it('should report integration test completion', () => {
+    console.log('\n=== Integration Test Summary ===');
     console.log('All integration tests completed successfully');
-    console.log('Total estimated cost: < $0.10');
-    console.log('====================================\n');
+    console.log('==================================\n');
   });
 });
