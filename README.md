@@ -50,8 +50,10 @@ If you don't have claude-glm, install it according to your setup instructions.
 Analyze your TypeScript project:
 
 ```bash
-archguard analyze -s ./src -o ./docs/architecture.puml
+archguard analyze -s ./src -o ./docs/architecture
 ```
+
+This generates both `architecture.png` (diagram image) and `architecture.puml` (source code).
 
 Generate JSON output:
 
@@ -62,7 +64,7 @@ archguard analyze -s ./src -o ./docs/architecture.json -f json
 With verbose output:
 
 ```bash
-archguard analyze -s ./src -o ./docs/architecture.puml -v
+archguard analyze -s ./src -o ./docs/architecture -v
 ```
 
 ## CLI Commands
@@ -78,21 +80,27 @@ archguard analyze [options]
 **Options:**
 
 - `-s, --source <path>` - Source directory to analyze (default: ./src)
-- `-o, --output <path>` - Output file path
-- `-f, --format <type>` - Output format: plantuml, json (default: plantuml)
+- `-o, --output <path>` - Output file path (without extension for PNG format)
+- `-f, --format <type>` - Output format: png, svg, json (default: png)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
 
+**Output Formats:**
+
+- **png** (default): Generates both `.png` image and `.puml` source file
+- **svg**: Generates `.svg` vector graphics
+- **json**: Generates `.json` ArchJSON data
+
 **Examples:**
 
 ```bash
-# Basic analysis
+# Basic analysis (generates architecture.png and architecture.puml)
 archguard analyze
 
 # Analyze specific directory with custom output
-archguard analyze -s ./packages/core -o ./docs/core-architecture.puml
+archguard analyze -s ./packages/core -o ./docs/core-architecture
 
 # High-performance parallel processing
 archguard analyze -s ./src -c 8 -v
@@ -102,6 +110,9 @@ archguard analyze -s ./src -e "**/*.test.ts" "**/*.spec.ts"
 
 # JSON output for further processing
 archguard analyze -s ./src -o ./output.json -f json
+
+# SVG output
+archguard analyze -s ./src -o ./diagram -f svg
 ```
 
 ### `init`
@@ -167,7 +178,8 @@ Create `.archguardrc.json` in your project root:
 
 ### Dependencies
 
-- **Claude Code CLI** - Required for PlantUML generation (uses Claude Code's existing authentication)
+- **claude-glm CLI** - Required for PlantUML generation
+- **node-plantuml** - Required for PNG image rendering (automatically installed)
 
 ## Performance
 
@@ -352,7 +364,8 @@ npm run build && npm run lint && npm run type-check && npm test
 | Language | TypeScript | ^5.3.0 | Type-safe development |
 | Runtime | Node.js | >=18.0.0 | JavaScript runtime |
 | Parser | ts-morph | ^21.0.0 | TypeScript AST parsing |
-| CLI Integration | Claude Code CLI | - | PlantUML generation (via subprocess) |
+| CLI Integration | claude-glm CLI | - | PlantUML generation (via subprocess) |
+| PNG Rendering | @entrofi/node-plantuml | latest | PlantUML to PNG conversion |
 | Process Management | execa | ^8.0.0 | Subprocess execution |
 | Testing | Vitest | ^1.2.0 | Unit/integration tests |
 | CLI | commander | ^11.1.0 | Command-line interface |

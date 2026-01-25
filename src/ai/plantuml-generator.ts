@@ -5,6 +5,7 @@
 
 import { ClaudeCodeWrapper } from './claude-code-wrapper.js';
 import { PlantUMLValidator } from './plantuml-validator.js';
+import { PlantUMLRenderer } from './plantuml-renderer.js';
 import { ArchJSON } from '../types';
 
 /**
@@ -23,6 +24,7 @@ export interface GeneratorConfig {
 export class PlantUMLGenerator {
   private wrapper: ClaudeCodeWrapper;
   private validator: PlantUMLValidator;
+  private renderer: PlantUMLRenderer;
 
   constructor(config: GeneratorConfig = {}) {
     // Create ClaudeCodeWrapper with configuration
@@ -35,6 +37,9 @@ export class PlantUMLGenerator {
 
     // Create validator for output validation
     this.validator = new PlantUMLValidator();
+
+    // Create renderer for PNG generation
+    this.renderer = new PlantUMLRenderer();
   }
 
   /**
@@ -57,5 +62,26 @@ export class PlantUMLGenerator {
     }
 
     return puml;
+  }
+
+  /**
+   * Generate PlantUML diagram and render to PNG
+   *
+   * @param archJson - Architecture JSON data
+   * @param outputPath - Path to save the PNG file
+   * @param previousPuml - Optional previous PlantUML for incremental updates
+   * @returns Promise resolving when PNG is saved
+   * @throws Error if generation or rendering fails
+   */
+  async generateAndRender(archJson: ArchJSON, outputPath: string, previousPuml?: string): Promise<void> {
+    // Generate PlantUML code
+    const puml = await this.generate(archJson, previousPuml);
+
+    // Save PlantUML file
+    const pumlPath = outputPath.replace(/\.png$/, '.puml');
+    await import('fs').then(fs => fs.promises.writeFile(pumlPath, puml));
+
+    // Render to PNG
+    await this.renderer.render(puml, outputPath);
   }
 }

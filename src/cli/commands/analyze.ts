@@ -100,30 +100,43 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
         progress.fail('Claude Code CLI not found');
         console.error(
           '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
-          'To verify installation: claude-code --version\n'
+          'To verify installation: claude --version\n'
         );
         process.exit(1);
       }
 
       progress.succeed('Claude Code CLI available');
 
-      progress.start('Generating PlantUML diagram...');
-
       const generator = new PlantUMLGenerator({
         timeout: 60000,
       });
 
-      const plantuml = await generator.generate(archJSON);
-      const outputPath = options.output || path.join(process.cwd(), 'architecture.puml');
+      // Determine output paths
+      const defaultOutput = options.output || path.join(process.cwd(), 'architecture');
 
-      await fs.writeFile(outputPath, plantuml);
-      progress.succeed(`Generated PlantUML diagram: ${outputPath}`);
+      if (options.format === 'svg') {
+        // SVG output
+        progress.start('Generating SVG diagram...');
+        const plantuml = await generator.generate(archJSON);
+        const outputPath = defaultOutput + '.svg';
 
-      // Show statistics
-      if (options.verbose) {
-        progress.info(`Entities: ${archJSON.entities.length}`);
-        progress.info(`Relations: ${archJSON.relations.length}`);
-        progress.info(`Memory: ${(metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+        await fs.writeFile(outputPath, plantuml);
+        progress.succeed(`Generated SVG diagram: ${outputPath}`);
+      } else {
+        // PNG output (default) - also saves .puml file
+        progress.start('Generating PlantUML diagram...');
+
+        const pngPath = defaultOutput + '.png';
+        await generator.generateAndRender(archJSON, pngPath);
+
+        progress.succeed(`Generated diagram: ${pngPath}`);
+
+        // Show statistics
+        if (options.verbose) {
+          progress.info(`Entities: ${archJSON.entities.length}`);
+          progress.info(`Relations: ${archJSON.relations.length}`);
+          progress.info(`Memory: ${(metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+        }
       }
     }
 
