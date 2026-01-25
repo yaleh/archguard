@@ -49,7 +49,7 @@ describe('Story 4: Error Handling Optimization', () => {
       expect(message).toContain('API Error');
       expect(message).toContain('[401]');
       expect(message).toContain('Authentication failed');
-      expect(message).toContain('ANTHROPIC_API_KEY');
+      expect(message).toContain('Claude Code CLI');
     });
 
     it('should format 429 rate limit error', () => {

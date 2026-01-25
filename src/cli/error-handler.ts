@@ -100,7 +100,7 @@ ${tipLabel} Check the syntax at the specified line.
     if (error.statusCode === 429) {
       suggestion = 'Please try again later or check your rate limits.';
     } else if (error.statusCode === 401 || error.statusCode === 403) {
-      suggestion = 'Check your ANTHROPIC_API_KEY environment variable.';
+      suggestion = 'Ensure Claude Code CLI is properly installed and authenticated.';
     } else if (error.statusCode >= 500) {
       suggestion = 'Claude API service may be temporarily unavailable. Please retry.';
     }

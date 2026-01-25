@@ -14,18 +14,16 @@ const configSchema = z.object({
   output: z.string().optional(),
   format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
+
+  // ✅ SIMPLIFIED: No apiKey, maxTokens, temperature
   ai: z
     .object({
-      model: z.string().default('claude-3-5-sonnet-20241022'),
-      maxTokens: z.number().default(4096),
-      temperature: z.number().min(0).max(1).default(0),
+      model: z.string().optional(),
+      timeout: z.number().optional(),
     })
     .optional()
-    .default({
-      model: 'claude-3-5-sonnet-20241022',
-      maxTokens: 4096,
-      temperature: 0,
-    }),
+    .default({}),
+
   cache: z
     .object({
       enabled: z.boolean().default(true),
@@ -50,6 +48,7 @@ export type Config = z.infer<typeof configSchema>;
  * - Zod schema validation
  * - Default value handling
  * - Config file generation (init command)
+ * - Backward compatibility with deprecated options
  */
 export class ConfigLoader {
   private configDir: string;
@@ -63,6 +62,27 @@ export class ConfigLoader {
    */
   async load(cliOptions: Partial<Config> = {}): Promise<Config> {
     const fileConfig = await this.loadFromFile();
+
+    // ✅ BACKWARD COMPATIBILITY: Show deprecation warning for apiKey
+    if (fileConfig.ai && 'apiKey' in fileConfig.ai) {
+      console.warn(
+        'Warning: ai.apiKey is deprecated and will be ignored.\n' +
+        'Claude Code CLI uses its own authentication.\n' +
+        'Please remove apiKey from your config file.'
+      );
+
+      // Remove apiKey from config
+      delete (fileConfig.ai as any).apiKey;
+    }
+
+    // Remove maxTokens and temperature if present (deprecated)
+    if (fileConfig.ai && 'maxTokens' in fileConfig.ai) {
+      delete (fileConfig.ai as any).maxTokens;
+    }
+    if (fileConfig.ai && 'temperature' in fileConfig.ai) {
+      delete (fileConfig.ai as any).temperature;
+    }
+
     const merged = { ...fileConfig, ...cliOptions };
 
     try {
