@@ -1,6 +1,6 @@
 /**
  * Analyze Command - Main CLI command for analyzing TypeScript projects
- * Story 6: Enhanced with parallel processing
+ * Story 2.2: Enhanced with Claude Code CLI detection
  */
 
 import { Command } from 'commander';
@@ -92,10 +92,26 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
       progress.succeed(`Saved ArchJSON to ${outputPath}`);
     } else {
       // PlantUML output (default)
+      progress.start('Checking Claude Code CLI...');
+      const { isClaudeCodeAvailable } = await import('../../utils/cli-detector.js');
+      const cliAvailable = await isClaudeCodeAvailable();
+
+      if (!cliAvailable) {
+        progress.fail('Claude Code CLI not found');
+        console.error(
+          '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
+          'To verify installation: claude-code --version\n'
+        );
+        process.exit(1);
+      }
+
+      progress.succeed('Claude Code CLI available');
+
       progress.start('Generating PlantUML diagram...');
 
       const generator = new PlantUMLGenerator({
-        apiKey: process.env.ANTHROPIC_API_KEY || '',
+        model: options.model,
+        timeout: 60000,
       });
 
       const plantuml = await generator.generate(archJSON);
