@@ -24,9 +24,7 @@ export async function skipIfNoClaudeCode() {
  * This is kept for backward compatibility but should not be used
  */
 export function skipIfNoApiKey() {
-  console.warn(
-    'WARNING: skipIfNoApiKey is deprecated. API-based tests are no longer supported.',
-  );
+  console.warn('WARNING: skipIfNoApiKey is deprecated. API-based tests are no longer supported.');
 
   return {
     skip: true,

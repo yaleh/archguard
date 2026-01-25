@@ -60,9 +60,12 @@ This creates `.archguardrc.json` with default settings.
   "concurrency": 4,
   "cache": true,
   "cacheDir": "~/.archguard/cache",
-  "anthropicApiKey": "${ANTHROPIC_API_KEY}",
-  "model": "claude-sonnet-4-20250514",
-  "maxTokens": 4096,
+  "cli": {
+    "command": "claude",
+    "args": ["--model", "claude-sonnet-4-20250514"],
+    "timeout": 60000
+  },
+  "outputDir": "./archguard",
   "verbose": false
 }
 ```
@@ -244,80 +247,150 @@ This creates `.archguardrc.json` with default settings.
 { "cacheDir": "../../.archguard-cache" }
 ```
 
-#### anthropicApiKey
+#### cli
+
+- **Type**: `object`
+- **Default**: `{ command: "claude", args: [], timeout: 60000 }`
+- **Description**: Claude CLI configuration
+
+```json
+{
+  "cli": {
+    "command": "claude",
+    "args": ["--model", "claude-sonnet-4-20250514"],
+    "timeout": 60000
+  }
+}
+```
+
+**Field Descriptions**:
+
+- **cli.command** - The Claude CLI command to use (default: `claude`)
+- **cli.args** - Additional arguments to pass to the CLI
+- **cli.timeout** - Timeout in milliseconds for CLI operations
+
+**Examples**:
+
+```json
+// Default Claude CLI
+{ "cli": { "command": "claude" } }
+
+// Custom CLI path
+{ "cli": { "command": "/usr/local/bin/claude" } }
+
+// With custom model
+{
+  "cli": {
+    "args": ["--model", "claude-opus-4-20250514"]
+  }
+}
+
+// Extended timeout for large projects
+{
+  "cli": {
+    "timeout": 120000
+  }
+}
+```
+
+#### outputDir
 
 - **Type**: `string`
-- **Default**: `undefined`
-- **Description**: Anthropic API key for Claude AI
+- **Default**: `"./archguard"`
+- **Description**: Output directory for generated diagrams
 
 ```json
 {
-  "anthropicApiKey": "${ANTHROPIC_API_KEY}"
+  "outputDir": "./archguard"
 }
 ```
 
-**Best practices**:
+**Examples**:
 
 ```json
-// Use environment variable (recommended)
-{ "anthropicApiKey": "${ANTHROPIC_API_KEY}" }
+// Default location
+{ "outputDir": "./archguard" }
 
-// Load from .env file
-{ "anthropicApiKey": "${ANTHROPIC_API_KEY}" }
+// Custom output directory
+{ "outputDir": "./docs/diagrams" }
 
-// Never commit actual key!
-// ❌ { "anthropicApiKey": "sk-ant-..." }
+// Absolute path
+{ "outputDir": "/tmp/archguard-output" }
 ```
 
-#### model
+---
 
-- **Type**: `string`
-- **Default**: `"claude-sonnet-4-20250514"`
-- **Description**: Claude model to use for diagram generation
+## Backward Compatibility
+
+### v1.0 to v1.1 Migration
+
+Old configuration files using `ai` fields are automatically migrated:
 
 ```json
+// Old (v1.0) - Still works with deprecation warnings
 {
-  "model": "claude-sonnet-4-20250514"
+  "ai": {
+    "model": "claude-sonnet-4-20250514",
+    "timeout": 120000,
+    "apiKey": "sk-ant-..."  // Deprecated and ignored
+  }
 }
-```
 
-**Available models**:
-
-```json
-// Sonnet (recommended)
-{ "model": "claude-sonnet-4-20250514" }
-
-// Opus (highest quality)
-{ "model": "claude-opus-4-20250514" }
-
-// Haiku (fastest, lower cost)
-{ "model": "claude-3-5-haiku-20241022" }
-```
-
-#### maxTokens
-
-- **Type**: `number`
-- **Default**: `4096`
-- **Description**: Maximum tokens for Claude API response
-
-```json
+// New (v1.1) - Recommended
 {
-  "maxTokens": 4096
+  "cli": {
+    "command": "claude",
+    "args": ["--model", "claude-sonnet-4-20250514"],
+    "timeout": 120000
+  }
 }
 ```
 
-**Recommendations**:
+**Migration Mapping**:
 
-```json
-// Small diagrams (< 10 entities)
-{ "maxTokens": 2048 }
+- `ai.model` → `cli.args` (converted to `--model` flag)
+- `ai.timeout` → `cli.timeout`
+- `ai.apiKey` → **Removed** (Claude CLI uses its own auth)
+- `ai.maxTokens` → **Removed** (not applicable to CLI)
+- `ai.temperature` → **Removed** (not applicable to CLI)
 
-// Medium diagrams (10-50 entities)
-{ "maxTokens": 4096 }
+**Deprecation Warnings**:
 
-// Large diagrams (> 50 entities)
-{ "maxTokens": 8192 }
+When using deprecated fields, ArchGuard will show warnings:
+
 ```
+Warning: ai.apiKey is deprecated and will be ignored.
+Claude Code CLI uses its own authentication.
+Please remove apiKey from your config file.
+```
+
+---
+
+## CLI Options
+
+Command-line options have the highest priority and override both configuration files and environment variables.
+
+```bash
+archguard analyze \
+  --source ./src \
+  --output ./docs/architecture.puml \
+  --format plantuml \
+  --exclude "**/*.test.ts" "**/*.spec.ts" \
+  --concurrency 8 \
+  --no-cache \
+  --verbose \
+  --cli-command /usr/local/bin/claude \
+  --cli-args "--model claude-opus-4-20250514" \
+  --output-dir ./docs/diagrams
+```
+
+### New CLI Options (v1.1)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--cli-command` | string | claude | Claude CLI command to use |
+| `--cli-args` | string | - | Additional CLI arguments (space-separated) |
+| `--output-dir` | string | ./archguard | Output directory for diagrams |
 
 #### verbose
 

@@ -11,22 +11,88 @@ import globby from 'globby';
 import { ParallelParser } from '@/parser/parallel-parser';
 import { PlantUMLGenerator } from '@/ai/plantuml-generator';
 import { ProgressReporter } from '../progress';
+import { ConfigLoader } from '../config-loader';
+import { OutputPathResolver } from '../utils/output-path-resolver';
+import type { Config } from '../config-loader';
 import type { AnalyzeOptions } from '../types';
 
 /**
  * Create the analyze command
  */
 export function createAnalyzeCommand(): Command {
-  return new Command('analyze')
-    .description('Analyze TypeScript project and generate architecture diagrams')
-    .option('-s, --source <path>', 'Source directory to analyze', './src')
-    .option('-o, --output <path>', 'Output file path')
-    .option('-f, --format <type>', 'Output format (plantuml|json|svg)', 'plantuml')
-    .option('-e, --exclude <patterns...>', 'Exclude patterns')
-    .option('--no-cache', 'Disable cache')
-    .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
-    .option('-v, --verbose', 'Verbose output', false)
-    .action(analyzeCommandHandler);
+  return (
+    new Command('analyze')
+      .description('Analyze TypeScript project and generate architecture diagrams')
+      .option('-s, --source <path>', 'Source directory to analyze', './src')
+      .option('-o, --output <path>', 'Output file path')
+      .option('-f, --format <type>', 'Output format (plantuml|json|svg)', 'plantuml')
+      .option('-e, --exclude <patterns...>', 'Exclude patterns')
+      .option('--no-cache', 'Disable cache')
+      .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
+      .option('-v, --verbose', 'Verbose output', false)
+      // Phase 4.2: CLI parameter integration
+      .option('--cli-command <command>', 'Claude CLI command to use', 'claude')
+      .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
+      .option('--output-dir <dir>', 'Output directory for diagrams', './archguard')
+      .action(analyzeCommandHandler)
+  );
+}
+
+/**
+ * Build ConfigLoader options from CLI options
+ * Priority: CLI options > config file > defaults
+ */
+function buildConfigLoaderOptions(options: AnalyzeOptions): Partial<Config> {
+  const configLoaderOptions: {
+    source?: string;
+    output?: string;
+    format?: 'plantuml' | 'json' | 'svg';
+    exclude?: string[];
+    cli?: {
+      command?: string;
+      args?: string[];
+    };
+    outputDir?: string;
+    cache?: {
+      enabled: boolean;
+    };
+    concurrency?: number;
+    verbose?: boolean;
+  } = {};
+
+  // Basic options
+  if (options.source) configLoaderOptions.source = options.source;
+  if (options.output) configLoaderOptions.output = options.output;
+  if (options.format) configLoaderOptions.format = options.format;
+  if (options.exclude) configLoaderOptions.exclude = options.exclude;
+
+  // Phase 4.2: CLI-specific options
+  if (options.cliCommand || options.cliArgs) {
+    const cliOptions: {
+      command?: string;
+      args?: string[];
+    } = {};
+    if (options.cliCommand) cliOptions.command = options.cliCommand;
+    if (options.cliArgs) cliOptions.args = options.cliArgs.split(' ');
+    configLoaderOptions.cli = cliOptions;
+  }
+
+  if (options.outputDir) configLoaderOptions.outputDir = options.outputDir;
+
+  // Cache options
+  if (options.cache !== undefined) {
+    configLoaderOptions.cache = { enabled: options.cache };
+  }
+
+  // Other options
+  if (options.concurrency) {
+    configLoaderOptions.concurrency = parseInt(String(options.concurrency), 10);
+  }
+  if (options.verbose !== undefined) {
+    configLoaderOptions.verbose = options.verbose;
+  }
+
+  return configLoaderOptions as Partial<Config>;
 }
 
 /**
@@ -36,18 +102,22 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
   const progress = new ProgressReporter();
 
   try {
-    // Parse concurrency option
-    const concurrency = parseInt(String(options.concurrency || os.cpus().length), 10);
+    // Phase 4.2: Load configuration with CLI options priority
+    const configLoader = new ConfigLoader(process.cwd());
+    const config = await configLoader.load(buildConfigLoaderOptions(options));
+
+    // Use config values with fallback to options for backward compatibility
+    const concurrency = config.concurrency || os.cpus().length;
 
     // Find TypeScript files
     progress.start('Finding TypeScript files...');
-    const sourceDir = path.resolve(options.source || './src');
+    const sourceDir = path.resolve(config.source);
     const files = await globby([
       `${sourceDir}/**/*.ts`,
       `!${sourceDir}/**/*.test.ts`,
       `!${sourceDir}/**/*.spec.ts`,
       `!**/node_modules/**`,
-      ...(options.exclude?.map((p) => `!${p}`) || []),
+      ...(config.exclude?.map((p) => `!${p}`) || []),
     ]);
 
     progress.succeed(`Found ${files.length} TypeScript files`);
@@ -72,7 +142,7 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     });
 
     parser.on('file:error', ({ file, error }: { file: string; error: string }) => {
-      if (options.verbose) {
+      if (config.verbose) {
         progress.warn(`Error parsing ${file}: ${error}`);
       }
     });
@@ -85,9 +155,9 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     );
 
     // Handle output format
-    if (options.format === 'json') {
+    if (config.format === 'json') {
       // JSON output
-      const outputPath = options.output || path.join(process.cwd(), 'architecture.json');
+      const outputPath = config.output || path.join(process.cwd(), 'architecture.json');
       await fs.writeFile(outputPath, JSON.stringify(archJSON, null, 2));
       progress.succeed(`Saved ArchJSON to ${outputPath}`);
     } else {
@@ -100,39 +170,37 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
         progress.fail('Claude Code CLI not found');
         console.error(
           '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
-          'To verify installation: claude --version\n'
+            'To verify installation: claude --version\n'
         );
         process.exit(1);
       }
 
       progress.succeed('Claude Code CLI available');
 
-      const generator = new PlantUMLGenerator({
-        timeout: 60000,
-      });
+      const generator = new PlantUMLGenerator(config);
 
-      // Determine output paths
-      const defaultOutput = options.output || path.join(process.cwd(), 'architecture');
+      // Use OutputPathResolver for centralized path management
+      const pathResolver = new OutputPathResolver(config);
+      await pathResolver.ensureDirectory();
+      const paths = pathResolver.resolve({});
 
-      if (options.format === 'svg') {
+      if (config.format === 'svg') {
         // SVG output
         progress.start('Generating SVG diagram...');
         const plantuml = await generator.generate(archJSON);
-        const outputPath = defaultOutput + '.svg';
 
-        await fs.writeFile(outputPath, plantuml);
-        progress.succeed(`Generated SVG diagram: ${outputPath}`);
+        await fs.writeFile(paths.paths.svg, plantuml);
+        progress.succeed(`Generated SVG diagram: ${paths.paths.svg}`);
       } else {
         // PNG output (default) - also saves .puml file
         progress.start('Generating PlantUML diagram...');
 
-        const pngPath = defaultOutput + '.png';
-        await generator.generateAndRender(archJSON, pngPath);
+        await generator.generateAndRender(archJSON, paths);
 
-        progress.succeed(`Generated diagram: ${pngPath}`);
+        progress.succeed(`Generated diagram: ${paths.paths.png}`);
 
         // Show statistics
-        if (options.verbose) {
+        if (config.verbose) {
           progress.info(`Entities: ${archJSON.entities.length}`);
           progress.info(`Relations: ${archJSON.relations.length}`);
           progress.info(`Memory: ${(metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);

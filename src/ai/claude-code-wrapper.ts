@@ -13,9 +13,11 @@ import os from 'os';
 import path from 'path';
 import { detectClaudeCodeCLI } from '../utils/cli-detector.js';
 import type { ArchJSON } from '../types/index.js';
+import type { Config } from '../cli/config-loader.js';
 
 /**
  * Configuration options for ClaudeCodeWrapper
+ * @deprecated Use Config object instead. Maintained for backward compatibility.
  */
 export interface ClaudeCodeOptions {
   /** Timeout for CLI operations in milliseconds (default: 30000) */
@@ -27,8 +29,19 @@ export interface ClaudeCodeOptions {
   /** Working directory for CLI operations */
   workingDir?: string;
 
-  /** Claude model to use (default: claude-3-5-sonnet-20241022) */
+  /** Claude model to use (deprecated, use cli.args in Config) */
   model?: string;
+}
+
+/**
+ * Internal configuration type that combines both Config and ClaudeCodeOptions
+ */
+interface InternalConfig {
+  timeout: number;
+  maxRetries: number;
+  workingDir: string;
+  cliCommand: string;
+  cliArgs: string[];
 }
 
 /**
@@ -36,22 +49,62 @@ export interface ClaudeCodeOptions {
  *
  * Provides methods to check CLI availability, manage temporary files,
  * and invoke Claude for PlantUML generation.
+ *
+ * Supports both Config objects (preferred) and ClaudeCodeOptions (deprecated, for backward compatibility).
  */
 export class ClaudeCodeWrapper {
   readonly options: Required<ClaudeCodeOptions>;
+  readonly internalConfig: InternalConfig;
 
   /**
    * Creates a new ClaudeCodeWrapper instance
    *
-   * @param options - Configuration options
+   * @param configOrOptions - Full Config object (preferred) or ClaudeCodeOptions (deprecated)
    */
-  constructor(options: ClaudeCodeOptions = {}) {
-    this.options = {
-      timeout: options.timeout ?? 30000,
-      maxRetries: options.maxRetries ?? 2,
-      workingDir: options.workingDir ?? process.cwd(),
-      model: options.model ?? '',  // CLI command is used directly, not a model parameter
-    };
+  constructor(configOrOptions?: Config | ClaudeCodeOptions) {
+    // Detect if we received a Config object (has 'cli' property) or ClaudeCodeOptions
+    const isConfig = configOrOptions && 'cli' in configOrOptions;
+
+    if (isConfig) {
+      // Full Config object (preferred path)
+      const config = configOrOptions;
+
+      // Initialize with deprecated options structure for backward compatibility
+      this.options = {
+        timeout: config.cli.timeout,
+        maxRetries: 2, // Default value
+        workingDir: process.cwd(),
+        model: '', // Deprecated
+      };
+
+      // Store internal config with CLI settings
+      this.internalConfig = {
+        timeout: config.cli.timeout,
+        maxRetries: 2, // Default value
+        workingDir: process.cwd(),
+        cliCommand: config.cli.command,
+        cliArgs: config.cli.args,
+      };
+    } else {
+      // ClaudeCodeOptions (deprecated, backward compatibility)
+      const options = (configOrOptions as ClaudeCodeOptions) || {};
+
+      this.options = {
+        timeout: options.timeout ?? 30000,
+        maxRetries: options.maxRetries ?? 2,
+        workingDir: options.workingDir ?? process.cwd(),
+        model: options.model ?? '',
+      };
+
+      // Store internal config with default CLI settings
+      this.internalConfig = {
+        timeout: options.timeout ?? 30000,
+        maxRetries: options.maxRetries ?? 2,
+        workingDir: options.workingDir ?? process.cwd(),
+        cliCommand: 'claude-glm', // Hardcoded default for backward compatibility
+        cliArgs: [],
+      };
+    }
   }
 
   /**
@@ -142,7 +195,6 @@ export class ClaudeCodeWrapper {
 
         // Success! Return the PlantUML
         return plantUML;
-
       } catch (error) {
         lastError = error as Error;
 
@@ -165,7 +217,7 @@ export class ClaudeCodeWrapper {
         const delay = this.getBackoffDelay(attempt);
         console.warn(
           `Attempt ${attempt}/${this.options.maxRetries + 1} failed (${classification.type}). ` +
-          `Retrying in ${delay}ms...`
+            `Retrying in ${delay}ms...`
         );
 
         // Wait before retry (exponential backoff)
@@ -256,24 +308,25 @@ export class ClaudeCodeWrapper {
     // Add helpful suggestions based on error type
     switch (classification.type) {
       case 'CLI_NOT_FOUND':
-        message = `${message}\n\n` +
+        message =
+          `${message}\n\n` +
           'Please ensure Claude Code CLI is installed:\n' +
           '  https://docs.anthropic.com/claude-code\n\n' +
           'Verify installation: claude-code --version';
         break;
 
       case 'FILE_NOT_FOUND':
-        message = `${message}\n\n` +
-          'Check file paths and permissions';
+        message = `${message}\n\n` + 'Check file paths and permissions';
         break;
 
       case 'TIMEOUT':
-        message = `${message}\n\n` +
-          `Consider increasing timeout (current: ${this.options.timeout}ms)`;
+        message =
+          `${message}\n\n` + `Consider increasing timeout (current: ${this.options.timeout}ms)`;
         break;
 
       case 'VALIDATION_ERROR':
-        message = `${message}\n\n` +
+        message =
+          `${message}\n\n` +
           'The generated PlantUML does not meet requirements. ' +
           'This may indicate an issue with the prompt or model response.';
         break;
@@ -304,7 +357,7 @@ export class ClaudeCodeWrapper {
    * @returns Promise that resolves after delay
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -315,20 +368,15 @@ export class ClaudeCodeWrapper {
    * @returns Promise resolving to CLI execution result
    */
   async callCLI(prompt: string): Promise<string> {
-    try {
-      // Execute claude-glm with prompt via stdin to avoid argument size limits
-      const result = await execa('claude-glm', [], {
-        timeout: this.options.timeout,
-        cwd: this.options.workingDir,
-        // Pass prompt via stdin to avoid E2BIG (argument list too long) error
-        input: prompt,
-      });
+    // Execute CLI with configured command and args
+    const result = await execa(this.internalConfig.cliCommand, this.internalConfig.cliArgs, {
+      timeout: this.internalConfig.timeout,
+      cwd: this.internalConfig.workingDir,
+      // Pass prompt via stdin to avoid E2BIG (argument list too long) error
+      input: prompt,
+    });
 
-      // Return the raw output (claude-glm returns PlantUML directly)
-      return result.stdout;
-    } catch (error) {
-      // Rethrow to be handled by retry logic
-      throw error;
-    }
+    // Return the raw output
+    return result.stdout;
   }
 }

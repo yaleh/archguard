@@ -16,7 +16,7 @@ beforeAll(async () => {
   if (!hasCLI) {
     console.warn(
       'Claude Code CLI not available. Integration tests will be skipped.',
-      'Install from: https://claude.com/claude-code',
+      'Install from: https://claude.com/claude-code'
     );
   }
 });

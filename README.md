@@ -86,6 +86,9 @@ archguard analyze [options]
 - `--no-cache` - Disable cache
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
+- `--cli-command <command>` - Claude CLI command to use (default: claude)
+- `--cli-args <args>` - Additional CLI arguments (space-separated)
+- `--output-dir <dir>` - Output directory for diagrams (default: ./archguard)
 
 **Output Formats:**
 
@@ -113,6 +116,15 @@ archguard analyze -s ./src -o ./output.json -f json
 
 # SVG output
 archguard analyze -s ./src -o ./diagram -f svg
+
+# Custom Claude CLI command
+archguard analyze -s ./src --cli-command /usr/local/bin/claude
+
+# Additional CLI arguments (e.g., custom model)
+archguard analyze -s ./src --cli-args "--model claude-3-5-sonnet-20241022"
+
+# Custom output directory
+archguard analyze -s ./src --output-dir ./docs/diagrams
 ```
 
 ### `init`
@@ -136,7 +148,13 @@ Creates `.archguardrc.json` with default settings:
   "format": "plantuml",
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/node_modules/**"],
   "concurrency": 4,
-  "cache": true
+  "cache": true,
+  "cli": {
+    "command": "claude",
+    "args": [],
+    "timeout": 60000
+  },
+  "outputDir": "./archguard"
 }
 ```
 
@@ -172,14 +190,89 @@ Create `.archguardrc.json` in your project root:
     "**/node_modules/**"
   ],
   "concurrency": 4,
-  "cache": true
+  "cache": true,
+  "cli": {
+    "command": "claude",
+    "args": [],
+    "timeout": 60000
+  },
+  "outputDir": "./archguard"
 }
 ```
 
 ### Dependencies
 
-- **claude-glm CLI** - Required for PlantUML generation
+- **Claude Code CLI** - Required for PlantUML generation (default: `claude`)
 - **node-plantuml** - Required for PNG image rendering (automatically installed)
+
+### Configuration Fields
+
+#### CLI Configuration
+
+ArchGuard uses the Claude Code CLI for AI-powered diagram generation. You can customize the CLI behavior:
+
+```json
+{
+  "cli": {
+    "command": "claude",
+    "args": ["--model", "claude-3-5-sonnet-20241022"],
+    "timeout": 60000
+  }
+}
+```
+
+**Field Descriptions:**
+
+- **cli.command** - The Claude CLI command to use (default: `claude`)
+- **cli.args** - Additional arguments to pass to the CLI (e.g., model selection)
+- **cli.timeout** - Timeout in milliseconds for CLI operations (default: 60000)
+
+#### Output Directory
+
+Control where diagrams are generated:
+
+```json
+{
+  "outputDir": "./archguard"
+}
+```
+
+**CLI Override:**
+
+```bash
+archguard analyze --output-dir ./docs/diagrams
+```
+
+#### Backward Compatibility
+
+Old configuration files with `ai.model` are automatically migrated:
+
+```json
+// Old (v1.0) - Still works
+{
+  "ai": {
+    "model": "claude-3-5-sonnet-20241022",
+    "timeout": 120000
+  }
+}
+
+// New (v1.1) - Recommended
+{
+  "cli": {
+    "command": "claude",
+    "args": ["--model", "claude-3-5-sonnet-20241022"],
+    "timeout": 120000
+  }
+}
+```
+
+**Migration Notes:**
+
+- `ai.model` → `cli.args` (automatically converted to `--model` flag)
+- `ai.timeout` → `cli.timeout`
+- Deprecated fields: `ai.apiKey`, `ai.maxTokens`, `ai.temperature` (removed)
+
+See [MIGRATION.md](MIGRATION.md) for detailed migration guide.
 
 ## Performance
 

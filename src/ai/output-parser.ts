@@ -73,10 +73,7 @@ export class OutputParser {
    */
   private extractFromMarkdownBlock(output: string): string | null {
     // Pattern: ```plantuml or ```puml
-    const patterns = [
-      /```plantuml\n([\s\S]*?)```/gi,
-      /```puml\n([\s\S]*?)```/gi,
-    ];
+    const patterns = [/```plantuml\n([\s\S]*?)```/gi, /```puml\n([\s\S]*?)```/gi];
 
     for (const pattern of patterns) {
       const match = pattern.exec(output);

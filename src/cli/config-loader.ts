@@ -12,17 +12,31 @@ import { z } from 'zod';
 const configSchema = z.object({
   source: z.string().default('./src'),
   output: z.string().optional(),
+  outputDir: z.string().default('./archguard'),
   format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
-  // ✅ SIMPLIFIED: No apiKey, maxTokens, temperature
+  // CLI Configuration
+  cli: z
+    .object({
+      command: z.string().default('claude'),
+      args: z.array(z.string()).default([]),
+      timeout: z.number().default(60000),
+    })
+    .default({
+      command: 'claude',
+      args: [],
+      timeout: 60000,
+    }),
+
+  // ✅ BACKWARD COMPATIBILITY: ai config (deprecated but still supported)
+  // Note: This field is removed by normalizeConfig if empty after migration
   ai: z
     .object({
       model: z.string().optional(),
       timeout: z.number().optional(),
     })
-    .optional()
-    .default({}),
+    .optional(),
 
   cache: z
     .object({
@@ -38,6 +52,36 @@ const configSchema = z.object({
 });
 
 export type Config = z.infer<typeof configSchema>;
+
+/**
+ * Intermediate configuration type for file loading
+ * Includes deprecated fields that will be migrated/removed
+ */
+interface FileConfig {
+  source?: string;
+  output?: string;
+  outputDir?: string;
+  format?: 'plantuml' | 'json' | 'svg';
+  exclude?: string[];
+  cli?: {
+    command?: string;
+    args?: string[];
+    timeout?: number;
+  };
+  ai?: {
+    model?: string;
+    timeout?: number;
+    apiKey?: string;
+    maxTokens?: number;
+    temperature?: number;
+  };
+  cache?: {
+    enabled?: boolean;
+    ttl?: number;
+  };
+  concurrency?: number;
+  verbose?: boolean;
+}
 
 /**
  * ConfigLoader loads and validates configuration from files
@@ -62,48 +106,123 @@ export class ConfigLoader {
    */
   async load(cliOptions: Partial<Config> = {}): Promise<Config> {
     const fileConfig = await this.loadFromFile();
-
-    // ✅ BACKWARD COMPATIBILITY: Show deprecation warning for apiKey
-    if (fileConfig.ai && 'apiKey' in fileConfig.ai) {
-      console.warn(
-        'Warning: ai.apiKey is deprecated and will be ignored.\n' +
-        'Claude Code CLI uses its own authentication.\n' +
-        'Please remove apiKey from your config file.'
-      );
-
-      // Remove apiKey from config
-      delete (fileConfig.ai as any).apiKey;
-    }
-
-    // Remove maxTokens and temperature if present (deprecated)
-    if (fileConfig.ai && 'maxTokens' in fileConfig.ai) {
-      delete (fileConfig.ai as any).maxTokens;
-    }
-    if (fileConfig.ai && 'temperature' in fileConfig.ai) {
-      delete (fileConfig.ai as any).temperature;
-    }
-
-    const merged = { ...fileConfig, ...cliOptions };
+    const normalized = this.normalizeConfig(fileConfig);
+    const merged = this.deepMerge(normalized, cliOptions);
 
     try {
       return configSchema.parse(merged);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const issues = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
-        throw new Error(`Configuration validation failed:\n${issues.join('\n')}`);
+        const issues = error.issues
+          .map((issue) => {
+            const path = issue.path.join('.');
+            return `  - ${path}: ${issue.message}`;
+          })
+          .join('\n');
+        throw new Error(`Configuration validation failed:\n${issues}`);
       }
       throw error;
     }
   }
 
   /**
+   * Normalize configuration by migrating deprecated fields
+   * - ai.model -> cli.args
+   * - ai.timeout -> cli.timeout
+   * - Remove deprecated fields: apiKey, maxTokens, temperature
+   */
+  private normalizeConfig(config: FileConfig): FileConfig {
+    const normalized = { ...config };
+
+    // Show deprecation warning for apiKey
+    if (normalized.ai && 'apiKey' in normalized.ai) {
+      console.warn(
+        'Warning: ai.apiKey is deprecated and will be ignored.\n' +
+          'Claude Code CLI uses its own authentication.\n' +
+          'Please remove apiKey from your config file.'
+      );
+    }
+
+    // ai.model -> cli.args
+    if (normalized.ai?.model && !normalized.cli?.args) {
+      normalized.cli = normalized.cli || {};
+      normalized.cli.args = ['--model', normalized.ai.model];
+    }
+
+    // ai.timeout -> cli.timeout
+    if (normalized.ai?.timeout && !normalized.cli?.timeout) {
+      normalized.cli = normalized.cli || {};
+      normalized.cli.timeout = normalized.ai.timeout;
+    }
+
+    // Remove deprecated config
+    if (normalized.ai) {
+      delete normalized.ai.apiKey;
+      delete normalized.ai.maxTokens;
+      delete normalized.ai.temperature;
+      delete normalized.ai.model;
+      delete normalized.ai.timeout;
+
+      if (Object.keys(normalized.ai).length === 0) {
+        delete normalized.ai;
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Deep merge two objects
+   * - Nested objects are merged recursively
+   * - Arrays are replaced (not merged)
+   * - Source values override target values
+   */
+  private deepMerge(target: FileConfig, source: Partial<Config>): FileConfig {
+    const output: FileConfig = { ...target };
+
+    if (this.isObject(target) && this.isObject(source)) {
+      (Object.keys(source) as Array<keyof typeof source>).forEach((key) => {
+        const sourceValue = source[key];
+        if (sourceValue && this.isObject(sourceValue)) {
+          if (!(key in target)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            (output as any)[key] = sourceValue;
+          } else {
+            const targetValue = target[key];
+            if (targetValue && this.isObject(targetValue)) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+              (output as any)[key] = this.deepMerge(
+                targetValue as FileConfig,
+                sourceValue as Partial<Config>
+              );
+            }
+          }
+        } else if (sourceValue !== undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+          (output as any)[key] = sourceValue;
+        }
+      });
+    }
+
+    return output;
+  }
+
+  /**
+   * Check if value is a plain object (not array, null, etc.)
+   */
+  private isObject(item: unknown): item is Record<string, unknown> {
+    return item !== null && typeof item === 'object' && !Array.isArray(item);
+  }
+
+  /**
    * Load configuration from file
    * Tries archguard.config.json first, then archguard.config.js
    */
-  private async loadFromFile(): Promise<Partial<Config>> {
+  private async loadFromFile(): Promise<FileConfig> {
     // Try .json first
     const jsonPath = path.join(this.configDir, 'archguard.config.json');
     if (await fs.pathExists(jsonPath)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return await fs.readJson(jsonPath);
     }
 
@@ -111,7 +230,9 @@ export class ConfigLoader {
     const jsPath = path.join(this.configDir, 'archguard.config.js');
     if (await fs.pathExists(jsPath)) {
       // Dynamic import for ES modules
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const module = await import(`file://${jsPath}`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
       return module.default ?? module;
     }
 

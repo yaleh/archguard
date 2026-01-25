@@ -130,7 +130,7 @@ export class PromptTemplateManager {
     return content.replace(conditionalPattern, (_match, varName, ifContent, elseContent) => {
       const value = variables[varName];
       // If variable is truthy, use ifContent, else use elseContent
-      return (value !== undefined && value !== null && value !== '') ? ifContent : elseContent;
+      return value !== undefined && value !== null && value !== '' ? ifContent : elseContent;
     });
   }
 
@@ -149,7 +149,7 @@ export class PromptTemplateManager {
     return content.replace(variablePattern, (match, varName) => {
       const value = variables[varName];
       // If variable exists, use it; otherwise keep placeholder
-      return (value !== undefined && value !== null) ? String(value) : match;
+      return value !== undefined && value !== null ? String(value) : match;
     });
   }
 }

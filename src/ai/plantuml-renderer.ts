@@ -106,16 +106,23 @@ export class PlantUMLRenderer {
 
     // Insert theme after @startuml if not present
     if (!hasTheme) {
-      const startIdx = processed.findIndex(l => l.trim().startsWith('@startuml'));
+      const startIdx = processed.findIndex((l) => l.trim().startsWith('@startuml'));
       if (startIdx !== -1 && !processed[startIdx + 1]?.trim().startsWith('!theme')) {
-        processed.splice(startIdx + 1, 0, `!theme ${this.config.theme || this.defaultConfig.theme}`);
+        processed.splice(
+          startIdx + 1,
+          0,
+          `!theme ${this.config.theme || this.defaultConfig.theme}`
+        );
       }
     }
 
     // Insert background color after theme if not present
     if (!hasBackgroundColor) {
-      const themeIdx = processed.findIndex(l => l.trim().startsWith('!theme'));
-      if (themeIdx !== -1 && !processed[themeIdx + 1]?.trim().startsWith('skinparam backgroundColor')) {
+      const themeIdx = processed.findIndex((l) => l.trim().startsWith('!theme'));
+      if (
+        themeIdx !== -1 &&
+        !processed[themeIdx + 1]?.trim().startsWith('skinparam backgroundColor')
+      ) {
         processed.splice(
           themeIdx + 1,
           0,

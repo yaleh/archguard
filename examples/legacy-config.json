@@ -1,0 +1,22 @@
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  "source": "./src",
+  "output": "./docs/architecture.puml",
+  "format": "plantuml",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "ai": {
+    "model": "claude-sonnet-4-20250514",
+    "timeout": 120000,
+    "apiKey": "sk-ant-...",
+    "maxTokens": 8192,
+    "temperature": 0.7
+  },
+  "cache": {
+    "enabled": true
+  },
+  "concurrency": 4,
+  "verbose": false
+}

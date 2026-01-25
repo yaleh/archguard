@@ -1,0 +1,24 @@
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  "source": "./src",
+  "output": "./docs/architecture.puml",
+  "format": "plantuml",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "cli": {
+    "command": "claude",
+    "args": [
+      "--model",
+      "claude-sonnet-4-20250514"
+    ],
+    "timeout": 120000
+  },
+  "outputDir": "./archguard",
+  "cache": {
+    "enabled": true
+  },
+  "concurrency": 4,
+  "verbose": false
+}

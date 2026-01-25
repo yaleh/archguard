@@ -61,11 +61,14 @@ archguard analyze [options]
 |--------|------|---------|-------------|
 | `-s, --source <path>` | string | ./src | Source directory to analyze |
 | `-o, --output <path>` | string | ./architecture.puml | Output file path |
-| `-f, --format <type>` | string | plantuml | Output format (plantuml or json) |
+| `-f, --format <type>` | string | plantuml | Output format (plantuml, json, svg) |
 | `-e, --exclude <patterns...>` | string[] | [] | Glob patterns to exclude |
 | `--no-cache` | boolean | false | Disable caching |
 | `-c, --concurrency <num>` | number | CPU cores | Parallel processing concurrency |
 | `-v, --verbose` | boolean | false | Verbose output with detailed logging |
+| `--cli-command <command>` | string | claude | Claude CLI command to use |
+| `--cli-args <args>` | string | - | Additional CLI arguments (space-separated) |
+| `--output-dir <dir>` | string | ./archguard | Output directory for diagrams |
 
 #### Examples
 
@@ -110,6 +113,30 @@ archguard analyze -s ./src --no-cache
 ```
 
 Useful when you need fresh analysis without cache.
+
+**Custom Claude CLI Command**
+
+```bash
+archguard analyze -s ./src --cli-command /usr/local/bin/claude
+```
+
+Use a custom path for the Claude CLI executable.
+
+**Custom Model Selection**
+
+```bash
+archguard analyze -s ./src --cli-args "--model claude-opus-4-20250514"
+```
+
+Pass additional arguments to the Claude CLI (e.g., model selection).
+
+**Custom Output Directory**
+
+```bash
+archguard analyze -s ./src --output-dir ./docs/diagrams
+```
+
+Specify where diagrams should be generated.
 
 #### Output
 
@@ -283,11 +310,14 @@ ArchGuard supports configuration files in multiple formats:
 |-------|------|----------|---------|-------------|
 | `source` | string | No | ./src | Source directory to analyze |
 | `output` | string | No | ./architecture.puml | Output file path |
-| `format` | string | No | plantuml | Output format (plantuml, json) |
+| `format` | string | No | plantuml | Output format (plantuml, json, svg) |
 | `exclude` | string[] | No | [] | Glob patterns to exclude |
 | `concurrency` | number | No | CPU cores | Parallel processing workers |
 | `cache` | boolean | No | true | Enable caching |
-| `anthropicApiKey` | string | No | - | Anthropic API key (can use env var) |
+| `cli.command` | string | No | claude | Claude CLI command to use |
+| `cli.args` | string[] | No | [] | Additional CLI arguments |
+| `cli.timeout` | number | No | 60000 | CLI timeout in milliseconds |
+| `outputDir` | string | No | ./archguard | Output directory for diagrams |
 
 ### Environment Variables
 

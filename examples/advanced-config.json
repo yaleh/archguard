@@ -1,0 +1,30 @@
+{
+  "$schema": "https://archguard.dev/schema/config.json",
+  "source": "./packages/core/src",
+  "output": "./docs/architecture.puml",
+  "format": "plantuml",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/__mocks__/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.generated.ts"
+  ],
+  "cli": {
+    "command": "claude",
+    "args": [
+      "--model",
+      "claude-opus-4-20250514"
+    ],
+    "timeout": 120000
+  },
+  "outputDir": "./docs/diagrams",
+  "cache": {
+    "enabled": true,
+    "ttl": 86400
+  },
+  "concurrency": 8,
+  "verbose": true
+}
