@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-01-25
 **分析方法**: RLM (Refactoring Lifecycle Management)
-**文档数量**: 6 份核心建议文档
+**文档数量**: 8 份核心建议文档
 
 ---
 
@@ -429,6 +429,106 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 
 ---
 
+### [06-plantuml-validation-improvements.md](./06-plantuml-validation-improvements.md)
+**✅ PlantUML 验证改进 - 质量保证**
+
+(现有内容保持不变)
+
+---
+
+### [07-advanced-cli-features.md](./07-advanced-cli-features.md)
+**🚀 高级 CLI 功能增强 - 复杂场景支持**
+
+**适用人群**: Monorepo 用户、微服务架构开发者、CI/CD 工程师
+**阅读优先级**: ⭐⭐⭐⭐
+
+**内容概要**:
+- 4 条高级 CLI 功能增强建议
+  1. 多源路径支持 - 同时分析多个目录或模块
+  2. STDIN 文件列表 - 支持管道和脚本集成
+  3. 输出文件名自定义 - 灵活的输出命名策略
+  4. 批量输出模式 - 为多个模块生成独立架构图
+- Monorepo 和微服务场景设计
+- CI/CD 集成方案
+- Git 工具链集成
+- 性能优化策略
+
+**何时使用**:
+- ✅ 分析 Monorepo 项目（多个 packages）
+- ✅ 微服务架构多模块分析
+- ✅ 与 Git/Find 等工具集成
+- ✅ 在 CI/CD 中自动化分析
+- ✅ 需要灵活的输出文件组织
+
+**关键亮点**:
+- 支持 `source: string[]` 配置和 CLI 参数
+- STDIN 模式：`git ls-files | archguard analyze --stdin`
+- 批量模式：自动为每个模块生成独立图 + 索引页面
+- 输出自定义：`--name frontend/api` 支持子目录
+
+**用户价值**:
+- Monorepo 分析效率提升 10x
+- Git 集成：支持增量分析（只分析变更文件）
+- 输出灵活性提升 100%
+- CI/CD 集成简化 3x
+
+**实施优先级**:
+- P0: 多源支持 + 输出自定义 (1-2 天)
+- P1: STDIN 支持 (2-3 天)
+- P1: 批量模式 (2-3 天)
+
+---
+
+### [08-claude-code-subagent-integration.md](./08-claude-code-subagent-integration.md)
+**🤖 Claude Code Subagent 集成 - 智能自动化**
+
+**适用人群**: Claude Code 用户、项目经理、技术负责人
+**阅读优先级**: ⭐⭐⭐
+
+**内容概要**:
+- Claude Code Skill 集成方案
+  - 自动多层次架构分析
+  - 智能项目结构检测（Monorepo、微服务、分层架构）
+  - 批量分析自动化
+  - 智能索引生成
+- 3 种实现方案对比
+  1. Skill-based Subagent（推荐 - P1）
+  2. MCP Server（长期规划 - P3）
+  3. 内置智能模式（可选 - P2）
+- Skill 模板和示例
+- 安装和使用指南
+
+**何时使用**:
+- ✅ 希望用自然语言分析项目架构
+- ✅ 需要"一键"生成多模块架构图
+- ✅ Claude Code 深度用户
+- ✅ 降低团队学习成本
+
+**关键亮点**:
+- 自然语言交互：`"分析这个项目的架构"` → 自动完成
+- 零学习成本：无需记忆命令参数
+- 智能推荐：提供架构洞察和改进建议
+- 完整 Skill 模板：可直接安装使用
+
+**使用场景示例**:
+- **Monorepo**: 自动检测并分析所有 packages
+- **微服务**: 批量生成服务架构图 + 依赖图
+- **增量分析**: 只分析 Git 变更的模块
+- **自动索引**: 生成导航文档
+
+**预期收益**:
+- 操作时间：5-10 分钟 → 30 秒 (10-20x 提升)
+- 学习成本：需阅读文档 → 对话即可 (100% 降低)
+- 分析覆盖：手动难全面 → 自动全覆盖 (+200%)
+
+**实施时间**:
+- Phase 1: Skill 模板开发 (2-3 天)
+- Phase 2: 测试和优化 (1-2 天)
+- Phase 3: 文档和发布 (1 天)
+- **总计**: 4-6 个工作日
+
+---
+
 ## 🗺️ 阅读路线建议
 
 ### 路线 1: 项目经理 / 产品负责人
@@ -528,6 +628,11 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | **配置管理** | 05 | 第 2 章 |
 | **CLI 参数** | 05 | 第 2.1-2.2 章 |
 | **输出目录** | 05 | 第 2.2 章 |
+| **多源分析** | 07 | 第 2.1 章 |
+| **STDIN 支持** | 07 | 第 2.2 章 |
+| **批量模式** | 07 | 第 2.4 章 |
+| **Claude Skill** | 08 | 第 2.2 章 |
+| **智能分析** | 08 | 第 1.2 章 |
 
 ### 按问题查找解决方案
 
@@ -542,6 +647,11 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | CLI 命令硬编码 | 05 | 可配置 CLI 命令 |
 | 输出文件分散 | 05 | 统一输出目录管理 |
 | 配置不灵活 | 05 | 配置 Schema 扩展 |
+| Monorepo 分析困难 | 07 | 多源支持 + 批量模式 |
+| Git 集成缺失 | 07 | STDIN 支持 + 增量分析 |
+| 微服务分析复杂 | 07 | 批量模式 + 智能索引 |
+| 学习成本高 | 08 | Claude Code Skill 集成 |
+| 手动操作繁琐 | 08 | Subagent 自动化 |
 
 ---
 
