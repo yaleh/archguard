@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-01-25T00:00:00.000Z",
+  "sourceFiles": ["User.ts"],
+  "entities": [
+    {
+      "id": "User",
+      "name": "User",
+      "type": "class",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "id",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string"
+        },
+        {
+          "name": "name",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string"
+        },
+        {
+          "name": "getName",
+          "type": "method",
+          "visibility": "public",
+          "returnType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "User.ts",
+        "startLine": 1,
+        "endLine": 10
+      }
+    }
+  ],
+  "relations": []
+}
