@@ -7,13 +7,13 @@ import { Command } from 'commander';
 import os from 'os';
 import path from 'path';
 import fs from 'fs/promises';
-import globby from 'globby';
 import { ParallelParser } from '@/parser/parallel-parser';
 import { PlantUMLGenerator } from '@/ai/plantuml-generator';
 import { ProgressReporter } from '../progress';
 import { ConfigLoader } from '../config-loader';
 import { OutputPathResolver } from '../utils/output-path-resolver';
 import { ErrorHandler } from '../error-handler';
+import { FileDiscoveryService } from '../utils/file-discovery-service';
 import type { Config } from '../config-loader';
 import type { AnalyzeOptions } from '../types';
 
@@ -24,7 +24,7 @@ export function createAnalyzeCommand(): Command {
   return (
     new Command('analyze')
       .description('Analyze TypeScript project and generate architecture diagrams')
-      .option('-s, --source <path>', 'Source directory to analyze', './src')
+      .option('-s, --source <paths...>', 'Source directories to analyze (can specify multiple)', ['./src'])
       .option('-o, --output <path>', 'Output file path')
       .option('-f, --format <type>', 'Output format (plantuml|json|svg)', 'plantuml')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
@@ -45,7 +45,7 @@ export function createAnalyzeCommand(): Command {
  */
 function buildConfigLoaderOptions(options: AnalyzeOptions): Partial<Config> {
   const configLoaderOptions: {
-    source?: string;
+    source?: string | string[];
     output?: string;
     format?: 'plantuml' | 'json' | 'svg';
     exclude?: string[];
@@ -62,7 +62,12 @@ function buildConfigLoaderOptions(options: AnalyzeOptions): Partial<Config> {
   } = {};
 
   // Basic options
-  if (options.source) configLoaderOptions.source = options.source;
+  // Normalize source to array if needed (commander.js may return string or array)
+  if (options.source) {
+    configLoaderOptions.source = Array.isArray(options.source)
+      ? options.source
+      : [options.source];
+  }
   if (options.output) configLoaderOptions.output = options.output;
   if (options.format) configLoaderOptions.format = options.format;
   if (options.exclude) configLoaderOptions.exclude = options.exclude;
@@ -110,16 +115,20 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     // Use config values with fallback to options for backward compatibility
     const concurrency = config.concurrency || os.cpus().length;
 
-    // Find TypeScript files
+    // Find TypeScript files using FileDiscoveryService
     progress.start('Finding TypeScript files...');
-    const sourceDir = path.resolve(config.source);
-    const files = await globby([
-      `${sourceDir}/**/*.ts`,
-      `!${sourceDir}/**/*.test.ts`,
-      `!${sourceDir}/**/*.spec.ts`,
-      `!**/node_modules/**`,
-      ...(config.exclude?.map((p) => `!${p}`) || []),
-    ]);
+
+    // Normalize source to array
+    const sourcePaths = Array.isArray(config.source) ? config.source : [config.source];
+
+    // Use FileDiscoveryService for file discovery
+    const discoveryService = new FileDiscoveryService();
+    const files = await discoveryService.discoverFiles({
+      sources: sourcePaths,
+      baseDir: process.cwd(),
+      exclude: config.exclude,
+      skipMissing: false,
+    });
 
     progress.succeed(`Found ${files.length} TypeScript files`);
 

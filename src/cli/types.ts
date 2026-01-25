@@ -9,7 +9,7 @@ export interface CLIConfig {
 }
 
 export interface Config {
-  source: string;
+  source: string | string[];
   output?: string;
   outputDir: string;
   format: 'plantuml' | 'json' | 'svg';
@@ -28,7 +28,7 @@ export interface Config {
 }
 
 export interface AnalyzeOptions {
-  source: string;
+  source: string | string[];
   output?: string;
   format: 'plantuml' | 'json' | 'svg';
   exclude?: string[];
@@ -39,4 +39,12 @@ export interface AnalyzeOptions {
   cliCommand?: string;
   cliArgs?: string;
   outputDir?: string;
+  // Phase 1.1: Multi-source and batch processing options
+  stdin?: boolean;
+  baseDir?: string;
+  skipMissing?: boolean;
+  batch?: boolean;
+  batchIndex?: boolean;
+  separate?: boolean;
+  name?: string;
 }

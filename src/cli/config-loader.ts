@@ -10,7 +10,7 @@ import { z } from 'zod';
  * Configuration schema with validation
  */
 const configSchema = z.object({
-  source: z.string().default('./src'),
+  source: z.union([z.string(), z.array(z.string())]).default('./src'),
   output: z.string().optional(),
   outputDir: z.string().default('./archguard'),
   format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
@@ -58,7 +58,7 @@ export type Config = z.infer<typeof configSchema>;
  * Includes deprecated fields that will be migrated/removed
  */
 interface FileConfig {
-  source?: string;
+  source?: string | string[];
   output?: string;
   outputDir?: string;
   format?: 'plantuml' | 'json' | 'svg';

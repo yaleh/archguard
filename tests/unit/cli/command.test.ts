@@ -45,7 +45,8 @@ describe('Story 1: Basic CLI Framework', () => {
 
       expect(sourceOption).toBeDefined();
       expect(sourceOption?.short).toBe('-s');
-      expect(sourceOption?.defaultValue).toBe('./src');
+      // Default value is now an array to support multiple sources
+      expect(sourceOption?.defaultValue).toEqual(['./src']);
     });
 
     it('should have --output option', () => {
@@ -118,7 +119,8 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[0]).toMatchObject({ source: './custom-src' });
+      // Source is now returned as an array
+      expect(callArgs[0]).toMatchObject({ source: ['./custom-src'] });
 
       exitSpy.mockRestore();
     });
@@ -188,7 +190,7 @@ describe('Story 1: Basic CLI Framework', () => {
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
       expect(callArgs[0]).toMatchObject({
-        source: './src',
+        source: ['./src'], // Source is now an array
         format: 'plantuml',
       });
 
