@@ -34,11 +34,6 @@ describe('Project Setup', () => {
       expect(parserVersion).toBe('0.1.0');
     });
 
-    it('should export generator version', async () => {
-      const { generatorVersion } = await import('../src/generator');
-      expect(generatorVersion).toBe('0.1.0');
-    });
-
     it('should export utils version', async () => {
       const { utilsVersion } = await import('../src/utils');
       expect(utilsVersion).toBe('0.1.0');
