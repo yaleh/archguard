@@ -3,7 +3,7 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
 import fs from 'fs-extra';
 import path from 'path';
@@ -188,15 +188,33 @@ describe('Story 5: Configuration File Support', () => {
       await fs.writeJson(configPath, {
         ai: {
           model: 'claude-3-5-sonnet-20241022',
-          maxTokens: 4096,
-          temperature: 0,
+          timeout: 60000,
         },
       });
 
       const config = await loader.load();
       expect(config.ai?.model).toBe('claude-3-5-sonnet-20241022');
-      expect(config.ai?.maxTokens).toBe(4096);
-      expect(config.ai?.temperature).toBe(0);
+      expect(config.ai?.timeout).toBe(60000);
+    });
+
+    it('should show deprecation warning for apiKey', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        ai: {
+          apiKey: 'sk-ant-12345',
+          model: 'claude-3-5-sonnet-20241022',
+        },
+      });
+
+      const config = await loader.load();
+      expect(config.ai?.apiKey).toBeUndefined(); // apiKey should be filtered out
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('ai.apiKey is deprecated')
+      );
+
+      consoleSpy.mockRestore();
     });
 
     it('should load cache configuration', async () => {
