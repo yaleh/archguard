@@ -5,6 +5,7 @@
 
 import { Command } from 'commander';
 import { createAnalyzeCommand } from './commands/analyze.js';
+import { createCacheCommand } from './commands/cache.js';
 import { createRequire } from 'module';
 
 // Read package.json for version
@@ -24,6 +25,7 @@ export function createCLI(): Command {
 
   // Add commands
   program.addCommand(createAnalyzeCommand());
+  program.addCommand(createCacheCommand());
 
   return program;
 }
