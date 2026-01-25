@@ -1,0 +1,151 @@
+@startuml ArchGuardArchitecture
+!theme cerulean-outline
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageStyle rectangle
+
+package "CLI Layer (命令层)" {
+  class ProgressReporter {
+    +start(message: string): void
+    +update(completed: number, total: number): void
+    +succeed(message: string): void
+    +fail(message: string): void
+  }
+
+  class ConfigLoader {
+    +load(cliOptions?: Partial): Promise<Config>
+    +init(): Promise<void>
+  }
+
+  class ErrorHandler {
+    +format(error: unknown): string
+  }
+
+  class CacheManager {
+    +get(filePath: string, hash: string): Promise<ArchJSON>
+    +set(filePath: string, hash: string, data: ArchJSON): Promise<void>
+    +clear(): Promise<void>
+  }
+}
+
+package "CLI Integration Layer (CLI 集成层)" {
+  class ClaudeCodeWrapper {
+    +generatePlantUML(archJson: ArchJSON, previousPuml?: string): Promise<string>
+    +isClaudeCodeAvailable(): Promise<boolean>
+    +createTempDir(): Promise<string>
+    +cleanup(tempDir: string): Promise<void>
+  }
+
+  class PromptTemplateManager {
+    +loadTemplate(name: string): Promise<string>
+    +render(templateName: string, variables: TemplateVariables): Promise<string>
+    +clearCache(): void
+  }
+
+  class OutputParser {
+    +extractPlantUML(output: string): string
+  }
+
+  class PlantUMLGenerator {
+    -wrapper: ClaudeCodeWrapper
+    -validator: PlantUMLValidator
+    +generate(archJson: ArchJSON, previousPuml?: string): Promise<string>
+  }
+
+  class PlantUMLValidator {
+    +validate(puml: string, archJson: ArchJSON): ValidationResult
+  }
+}
+
+package "Parser Layer (解析层)" {
+  class TypeScriptParser {
+    +parseFile(filePath: string): Promise<ArchJSON>
+    +parseFiles(filePaths: string[]): Promise<ArchJSON[]>
+  }
+
+  class ParallelParser {
+    +parseFiles(files: string[], options?: ParseOptions): Promise<ParseResult[]>
+  }
+
+  class ClassExtractor {
+    +extract(node: ClassDeclaration): Entity
+  }
+
+  class InterfaceExtractor {
+    +extract(node: InterfaceDeclaration): Entity
+  }
+
+  class EnumExtractor {
+    +extract(node: EnumDeclaration): Entity
+  }
+
+  class DecoratorExtractor {
+    +extract(node: Decorator): Entity
+  }
+
+  class MemberExtractor {
+    +extract(node: ClassDeclaration): EntityMember[]
+  }
+
+  class RelationExtractor {
+    +extractRelations(sourceFile: SourceFile, entities: Map<string, Entity>): Relation[]
+  }
+}
+
+package "Utils (工具层)" {
+  class CLIDetector {
+    +detectClaudeCodeCLI(): Promise<CLIDetectionResult>
+    +isClaudeCodeAvailable(): Promise<boolean>
+  }
+}
+
+' 关系展示
+
+CLI_Layer ..> CLI_Integration_Layer : uses
+CLI_Integration_Layer ..> Parser_Layer : analyzes
+
+PlantUMLGenerator --> ClaudeCodeWrapper : uses
+PlantUMLGenerator --> PlantUMLValidator : validates
+
+ClaudeCodeWrapper --> PromptTemplateManager : uses
+ClaudeCodeWrapper --> OutputParser : uses
+
+TypeScriptParser --> ClassExtractor : uses
+TypeScriptParser --> InterfaceExtractor : uses
+TypeScriptParser --> EnumExtractor : uses
+TypeScriptParser --> DecoratorExtractor : uses
+TypeScriptParser --> MemberExtractor : uses
+TypeScriptParser --> RelationExtractor : uses
+
+ParallelParser --> TypeScriptParser : uses
+RelationExtractor --> ClassExtractor : uses
+RelationExtractor --> InterfaceExtractor : uses
+
+ConfigLoader ..> CacheManager : uses
+ProgressReporter ..> ConfigLoader : uses
+
+note right of CLI_Integration_Layer
+  Claude Code CLI 集成
+  ===============
+  • 调用 claude-code 命令行
+  • 使用 prompts/class-diagram.txt
+  • 临时文件管理
+  • 重试逻辑（指数退避）
+
+note right of Parser_Layer
+  TypeScript 解析
+  =================
+  • 基于 ts-morph (AST)
+  • 并行处理支持
+  • SHA-256 缓存
+  • 提取实体和关系
+
+note right of CLI_Layer
+  CLI 接口
+  =========
+  • commander.js 框架
+  • 进度显示 (ora)
+  • 错误处理
+  • 配置文件支持
+
+@enduml

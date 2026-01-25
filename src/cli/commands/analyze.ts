@@ -25,6 +25,7 @@ export function createAnalyzeCommand(): Command {
     .option('-e, --exclude <patterns...>', 'Exclude patterns')
     .option('--no-cache', 'Disable cache')
     .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
+    .option('-m, --model <name>', 'Claude model to use (default: claude-glm)', 'claude-glm')
     .option('-v, --verbose', 'Verbose output', false)
     .action(analyzeCommandHandler);
 }
@@ -110,7 +111,7 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
       progress.start('Generating PlantUML diagram...');
 
       const generator = new PlantUMLGenerator({
-        model: options.model,
+        model: options.model || 'claude-glm',  // Default to claude-glm
         timeout: 60000,
       });
 

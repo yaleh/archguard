@@ -334,13 +334,21 @@ export class ClaudeCodeWrapper {
    */
   async callCLI(promptFile: string, outputFile: string): Promise<string> {
     try {
+      // Build command arguments
+      const args = [
+        '--prompt-file', promptFile,
+        '--output', outputFile,
+        '--no-interactive'
+      ];
+
+      // Add model if specified (e.g., claude-glm)
+      if (this.options.model) {
+        args.push('--model', this.options.model);
+      }
+
       const result = await execa(
-        'claude-code',
-        [
-          '--prompt-file', promptFile,
-          '--output', outputFile,
-          '--no-interactive'
-        ],
+        'claude',
+        args,
         {
           timeout: this.options.timeout,
           cwd: this.options.workingDir,

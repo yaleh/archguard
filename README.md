@@ -38,12 +38,14 @@ Ensure you have Claude Code CLI installed and configured:
 
 ```bash
 # Check if Claude Code is available
-claude-code --version
+claude --version
 ```
 
 If you don't have Claude Code, install it from [Claude Code documentation](https://docs.anthropic.com/claude-code).
 
 **Note**: ArchGuard uses Claude Code's existing authentication, so you don't need to manage API keys separately.
+
+**Default Model**: By default, ArchGuard uses `claude-glm` model. You can change this with the `--model` option.
 
 ### Basic Usage
 

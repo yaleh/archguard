@@ -26,7 +26,7 @@ export interface CLIDetectionResult {
 /**
  * Detects if Claude Code CLI is available in the system
  *
- * Attempts to execute `claude-code --version` to verify CLI availability
+ * Attempts to execute `claude --version` to verify CLI availability
  * and extract version information.
  *
  * @returns Promise resolving to detection result
@@ -43,8 +43,8 @@ export interface CLIDetectionResult {
  */
 export async function detectClaudeCodeCLI(): Promise<CLIDetectionResult> {
   try {
-    // Try to execute claude-code --version
-    const { stdout } = await execa('claude-code', ['--version'], {
+    // Try to execute claude --version
+    const { stdout } = await execa('claude', ['--version'], {
       timeout: 5000,
       reject: true,
     });
