@@ -45,7 +45,82 @@ npm run type-check         # TypeScript type check
 ```bash
 # Build and analyze ArchGuard itself
 npm run build
-node dist/cli/index.js analyze -s ./src -o ./architecture.puml -v
+node dist/cli/index.js analyze -v
+```
+
+## Using ArchGuard
+
+### Basic Usage
+```bash
+# Analyze a TypeScript project (using archguard.config.json)
+npm run build
+node dist/cli/index.js analyze
+
+# With verbose output
+node dist/cli/index.js analyze -v
+
+# Specify source and output directory
+node dist/cli/index.js analyze -s ./src --output-dir ./diagrams
+
+# Generate JSON instead of PlantUML
+node dist/cli/index.js analyze -f json -o ./output.json
+```
+
+### Available Commands
+
+#### analyze
+Analyze TypeScript project and generate architecture diagrams.
+
+**Options**:
+- `-s, --source <path>` - Source directory to analyze (default: `./src`)
+- `-o, --output <path>` - Output file path
+- `-f, --format <type>` - Output format: `plantuml`, `json`, or `svg` (default: `plantuml`)
+- `-e, --exclude <patterns...>` - Exclude patterns
+- `--no-cache` - Disable cache
+- `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
+- `-v, --verbose` - Verbose output
+- `--cli-command <command>` - Claude CLI command to use (default: `claude`)
+- `--cli-args <args>` - Additional CLI arguments (space-separated)
+- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
+
+#### init
+Initialize configuration file.
+
+```bash
+node dist/cli/index.js init
+```
+
+Creates `archguard.config.json` with default settings.
+
+#### cache
+Manage cache operations.
+
+```bash
+# Clear all cached data
+node dist/cli/index.js cache clear
+
+# Show cache statistics
+node dist/cli/index.js cache stats
+```
+
+### Generated Artifacts
+
+When running `analyze` command with PlantUML format, ArchGuard generates:
+
+- **`archguard/architecture.puml`** - PlantUML source file
+- **`archguard/architecture.png`** - Rendered PNG diagram
+
+The output directory can be changed with `--output-dir` option or `outputDir` in config file.
+
+### Prerequisites
+
+**Required**: Claude Code CLI must be installed and configured.
+
+```bash
+# Verify Claude Code CLI is available
+claude --version
+
+# If not installed, visit: https://docs.anthropic.com/claude-code
 ```
 
 ## Architecture Overview
@@ -114,26 +189,33 @@ TypeScript Source → AST → Entities (classes, interfaces, enums) → Relation
 ### Project Config (`archguard.config.json`)
 ```json
 {
-  "source": "./src",              // Default: ./src
-  "output": "./architecture.puml", // Default: auto-generated
-  "format": "plantuml",           // plantuml | json
+  "source": "./src",              // Source directory to analyze (default: ./src)
+  "output": "./architecture.puml", // Output file path (default: auto-generated)
+  "outputDir": "./archguard",     // Output directory for diagrams (default: ./archguard)
+  "format": "plantuml",           // Output format: plantuml | json | svg (default: plantuml)
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/node_modules/**"
   ],
-  "ai": {
-    "model": "claude-3-5-sonnet-20241022",  // Optional
-    "timeout": 60000                         // Optional (ms)
+  "cli": {
+    "command": "claude",          // Claude CLI command (default: claude)
+    "timeout": 180000,            // CLI timeout in ms (default: 60000, 3 minutes recommended for large projects)
+    "args": []                    // Additional CLI arguments (optional)
   },
   "cache": {
-    "enabled": true,
-    "ttl": 86400  // 24 hours
-  }
+    "enabled": true,              // Enable caching (default: true)
+    "ttl": 86400                  // Cache TTL in seconds (default: 24 hours)
+  },
+  "concurrency": 8,               // Parallel parsing concurrency (default: CPU cores)
+  "verbose": false                // Verbose output (default: false)
 }
 ```
 
-**Important**: The `ai.apiKey` field has been removed. Claude Code CLI handles authentication.
+**Important**:
+- The `ai.apiKey` field has been removed. Claude Code CLI handles authentication.
+- For large projects (30+ files), increase `cli.timeout` to 180000ms (3 minutes) to avoid timeouts.
+- Use `outputDir` to specify where diagrams should be saved (default: `./archguard`).
 
 ## Path Aliases (TypeScript)
 When importing, use these aliases instead of relative paths:
@@ -142,7 +224,6 @@ When importing, use these aliases instead of relative paths:
 - `@/ai` → `src/ai`
 - `@/types` → `src/types`
 - `@/utils` → `src/utils`
-- `@/generator` → `src/generator`
 
 ## Testing Patterns
 
@@ -181,31 +262,60 @@ The project completed a major migration from `@anthropic-ai/sdk` (direct API cal
 - Simplified: PlantUMLGenerator reduced from 160 to 62 lines (-61%)
 
 **Key Files from Migration**:
-- `src/ai/claude-code-wrapper.ts` - New CLI wrapper (356 lines)
-- `src/ai/output-parser.ts` - New output parser (181 lines)
-- `src/ai/prompt-template-manager.ts` - New template manager (155 lines)
-- `src/utils/cli-detector.ts` - New CLI detection (104 lines)
+- `src/ai/claude-code-wrapper.ts` - CLI wrapper (356 lines)
+- `src/ai/output-parser.ts` - Output parser (181 lines)
+- `src/ai/prompt-template-manager.ts` - Template manager (155 lines)
+- `src/utils/cli-detector.ts` - CLI detection (104 lines)
 - `prompts/class-diagram.txt` - Chinese prompt template
 
-**Deprecated** (still in codebase for rollback safety):
-- `src/ai/claude-connector.ts` - Old API SDK connector
-- `src/ai/cost-tracker.ts` - No longer needed (CLI handles costs)
+**Removed**: Old API-based implementation (claude-connector.ts, cost-tracker.ts, prompt-builder.ts) has been removed as CLI integration is now stable.
 
 ## Development Workflow
 
 1. **Make changes** to source code
-2. **Run tests**: `npm test` (ensure 329+ tests pass)
+2. **Run tests**: `npm test` (ensure 370+ tests pass)
 3. **Type check**: `npm run type-check`
 4. **Lint**: `npm run lint` and `npm run lint:fix`
 5. **Build**: `npm run build`
-6. **Self-validate**: `node dist/cli/index.js analyze -s ./src -o test.puml`
+6. **Self-validate**: `node dist/cli/index.js analyze -v`
 
 ## Project-Specific Patterns
 
 ### Error Handling
-- Use custom error classes from `src/cli/errors.ts`
-- Validate early with clear error messages
-- CLI errors should suggest Claude Code installation
+ArchGuard uses a unified error handling system with custom error classes:
+
+**Error Classes** (`src/cli/errors.ts`):
+- **ParseError**: TypeScript parsing errors (includes file path and line number)
+- **APIError**: Claude Code CLI invocation errors
+- **ValidationError**: Configuration and input validation errors
+- **FileError**: File system operation errors
+
+**ErrorHandler** (`src/cli/error-handler.ts`):
+- Unified error formatting with color-coded output
+- Intelligent suggestions based on error type
+- Verbose mode for detailed debugging
+- File location information for parse errors
+
+**Usage Pattern**:
+```typescript
+import { ErrorHandler } from '@/cli/error-handler.js';
+import { ParseError } from '@/cli/errors.js';
+
+try {
+  // Your code here
+} catch (error) {
+  const errorHandler = new ErrorHandler();
+  console.error(errorHandler.format(error, { verbose: options.verbose }));
+  process.exit(1);
+}
+```
+
+**Best Practices**:
+- Use specific error classes (ParseError, ValidationError, etc.) instead of generic Error
+- Always use ErrorHandler.format() for consistent user-facing error messages
+- Include file paths and line numbers for parsing errors
+- Provide actionable suggestions in error messages
+- CLI errors should suggest Claude Code installation if CLI is not available
 
 ### Progress Reporting
 Use `ProgressReporter` from `src/cli/progress.ts`:
