@@ -42,3 +42,10 @@ tmp/
 # Cache
 .cache/
 .eslintcache
+
+# ArchGuard
+archguard/
+*.puml
+*.png
+*.svg
+.archguardrc.json
