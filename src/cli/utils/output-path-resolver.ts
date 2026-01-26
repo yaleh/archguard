@@ -118,10 +118,11 @@ export class OutputPathResolver {
   /**
    * Create output directory if it doesn't exist
    *
+   * @param options - Optional resolution options to determine which directory to create
    * @throws Error if directory creation fails
    */
-  async ensureDirectory(): Promise<void> {
-    const resolution = this.resolve();
+  async ensureDirectory(options: ResolveOptions = {}): Promise<void> {
+    const resolution = this.resolve(options);
     await fs.mkdir(resolution.outputDir, { recursive: true });
   }
 

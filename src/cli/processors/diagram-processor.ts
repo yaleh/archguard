@@ -155,7 +155,7 @@ export class DiagramProcessor {
       });
 
       const paths = pathResolver.resolve({ name: diagram.name });
-      await pathResolver.ensureDirectory();
+      await pathResolver.ensureDirectory({ name: diagram.name });
 
       // 5. Generate output based on format
       const format = diagram.format || this.globalConfig.format;
