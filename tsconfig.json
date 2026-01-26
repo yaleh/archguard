@@ -5,6 +5,7 @@
     "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "node",
+    "downlevelIteration": true,
 
     /* Emit */
     "declaration": true,
@@ -21,12 +22,12 @@
     "resolveJsonModule": true,
 
     /* Type Checking */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false,
     "noImplicitOverride": true,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,

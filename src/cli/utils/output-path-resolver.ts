@@ -24,8 +24,8 @@ export interface PathResolution {
   baseName: string;
   /** Full paths for all output file types */
   paths: {
-    /** Path to .puml file */
-    puml: string;
+    /** Path to .mmd file (Mermaid source) */
+    mmd: string;
     /** Path to .png file */
     png: string;
     /** Path to .svg file */
@@ -73,10 +73,10 @@ export interface ResolvedPaths extends PathResolution {
  *
  * // With subdirectory support
  * const paths = resolver.resolve({ name: 'frontend/api' });
- * // => Generates: archguard/frontend/api.{puml,png,svg,json}
+ * // => Generates: archguard/frontend/api.{mmd,png,svg,json}
  *
  * await resolver.ensureDirectory();
- * // Use paths.paths.png, paths.paths.puml, paths.paths.json, etc.
+ * // Use paths.paths.png, paths.paths.mmd, paths.paths.json, etc.
  * ```
  */
 export class OutputPathResolver {
@@ -135,7 +135,7 @@ export class OutputPathResolver {
       outputDir,
       baseName,
       paths: {
-        puml: path.join(outputDir, `${baseName}.puml`),
+        mmd: path.join(outputDir, `${baseName}.mmd`),
         png: path.join(outputDir, `${baseName}.png`),
         svg: path.join(outputDir, `${baseName}.svg`),
         json: path.join(outputDir, `${baseName}.json`),

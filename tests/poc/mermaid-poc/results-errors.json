@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-01-26T17:38:27.745Z",
+  "summary": {
+    "total": 10,
+    "errorsDetected": 6,
+    "errorsNotDetected": 4,
+    "clearErrors": 6,
+    "totalDuration": 1039,
+    "detectionRate": 60
+  },
+  "results": [
+    {
+      "name": "Nested namespaces",
+      "expectedError": "nested namespace not supported",
+      "actualError": "Parse error on line 3:\n...mespace Outer {    namespace Inner {  \n----------------------^\nExpecting 'CLASS', got 'ALPHA'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 71
+    },
+    {
+      "name": "Intra-namespace relationships",
+      "expectedError": "namespace relationships",
+      "actualError": "Parse error on line 11:\n...2() void    }    A --> B : dependency\n--------------------^\nExpecting 'STRUCT_STOP', 'CLASS', got 'ALPHA'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 20
+    },
+    {
+      "name": "Comma-based generics",
+      "expectedError": "comma generics not supported",
+      "errorDetected": false,
+      "errorClear": false,
+      "duration": 657
+    },
+    {
+      "name": "Invalid syntax (missing brace)",
+      "expectedError": "syntax error",
+      "actualError": "Parse error on line 3:\n...    +method() void\n---------------------^\nExpecting 'STRUCT_STOP', 'MEMBER', got 'EOF_IN_STRUCT'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 12
+    },
+    {
+      "name": "Invalid relationship type",
+      "expectedError": "invalid relationship",
+      "actualError": "Parse error on line 10:\n...od2() void  }  A ==> B : invalid_type\n--------------------^\nExpecting 'NEWLINE', 'EOF', 'SQS', 'STR', 'DOT', 'GENERICTYPE', 'LABEL', 'STRUCT_START', 'STRUCT_STOP', 'STYLE_SEPARATOR', 'ANNOTATION_END', 'ALPHA', 'AGGREGATION', 'EXTENSION', 'COMPOSITION', 'DEPENDENCY', 'LOLLIPOP', 'LINE', 'DOTTED_LINE', 'CALLBACK_NAME', 'HREF', 'NUM', 'MINUS', 'UNICODE_TEXT', 'BQUOTE_STR', got 'EQUALS'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 15
+    },
+    {
+      "name": "Invalid method syntax",
+      "expectedError": "invalid syntax",
+      "errorDetected": false,
+      "errorClear": false,
+      "duration": 55
+    },
+    {
+      "name": "Deeply nested namespaces (3+ levels)",
+      "expectedError": "deeply nested",
+      "actualError": "Parse error on line 3:\n...espace Level1 {    namespace Level2 { \n----------------------^\nExpecting 'CLASS', got 'ALPHA'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 10
+    },
+    {
+      "name": "Cross-namespace complex generics",
+      "expectedError": "cross namespace generics",
+      "errorDetected": false,
+      "errorClear": false,
+      "duration": 128
+    },
+    {
+      "name": "Special characters in names",
+      "expectedError": "special characters",
+      "actualError": "Parse error on line 2:\n...assDiagram  class \"Class-With-Special_C...\n----------------------^\nExpecting 'ALPHA', 'NUM', 'MINUS', 'UNICODE_TEXT', 'BQUOTE_STR', got 'STR'",
+      "errorDetected": true,
+      "errorClear": true,
+      "duration": 11
+    },
+    {
+      "name": "Very long method signatures",
+      "expectedError": "long signatures",
+      "errorDetected": false,
+      "errorClear": false,
+      "duration": 60
+    }
+  ]
+}

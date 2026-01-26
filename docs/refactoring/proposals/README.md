@@ -923,6 +923,6 @@ node dist/cli/index.js analyze -s ./src -f mermaid --no-llm-grouping
 
 ---
 
-**最后更新**: 2026-01-25
+**最后更新**: 2026-01-26
 **文档状态**: ✅ 完成
-**适用版本**: ArchGuard v1.0.0 规划阶段
+**适用版本**: ArchGuard v2.0.0 (Mermaid Migration)

@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-01-26T17:39:13.064Z",
+  "summary": {
+    "total": 7,
+    "passed": 6,
+    "failed": 1,
+    "totalDuration": 1359,
+    "successRate": 85.71428571428571
+  },
+  "results": [
+    {
+      "name": "Basic classDiagram rendering",
+      "passed": true,
+      "duration": 678
+    },
+    {
+      "name": "Namespace syntax rendering",
+      "passed": true,
+      "duration": 124
+    },
+    {
+      "name": "Relationship definitions",
+      "passed": true,
+      "duration": 143
+    },
+    {
+      "name": "Generic syntax",
+      "passed": true,
+      "duration": 104
+    },
+    {
+      "name": "Complex ArchGuard-style diagram",
+      "passed": false,
+      "duration": 245,
+      "error": "shapes[shape] is not a function"
+    },
+    {
+      "name": "PNG conversion",
+      "passed": true,
+      "duration": 65
+    },
+    {
+      "name": "Bundle size check",
+      "passed": true,
+      "duration": 0
+    }
+  ]
+}

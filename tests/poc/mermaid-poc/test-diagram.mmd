@@ -1,0 +1,17 @@
+classDiagram
+  direction TB
+
+  namespace ParserLayer {
+    class TypeScriptParser {
+      +parseFiles() ArchJSON
+      +parseFile() Entity[]
+    }
+  }
+
+  namespace AILayer {
+    class ClaudeCodeWrapper {
+      +generateDiagram() string
+    }
+  }
+
+  ClaudeCodeWrapper --> TypeScriptParser : uses

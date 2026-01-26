@@ -20,13 +20,41 @@
 export type DetailLevel = 'package' | 'class' | 'method';
 
 /**
+ * Mermaid-specific configuration
+ */
+export interface MermaidConfig {
+  /** Enable LLM-based intelligent grouping (default: true) */
+  enableLLMGrouping?: boolean;
+
+  /** Mermaid renderer type */
+  renderer?: 'isomorphic' | 'cli';
+
+  /** Mermaid theme */
+  theme?: 'default' | 'forest' | 'dark' | 'neutral';
+
+  /** Background transparency */
+  transparentBackground?: boolean;
+}
+
+/**
+ * Default Mermaid configuration
+ */
+export const defaultMermaidConfig: MermaidConfig = {
+  enableLLMGrouping: true,
+  renderer: 'isomorphic',
+  theme: 'default',
+  transparentBackground: true,
+};
+
+/**
  * Output format for generated diagrams
  *
- * - plantuml: Generate .puml and .png files (default, requires Claude CLI)
- * - json: Generate ArchJSON only (fast, no Claude CLI required)
- * - svg: Generate .puml and .svg files (requires Claude CLI)
+ * - mermaid: Generate .mmd and .svg/.png files (default, uses isomorphic-mermaid)
+ * - json: Generate ArchJSON only (fast, no rendering required)
+ * - plantuml: DEPRECATED - Use mermaid instead
+ * - svg: DEPRECATED - Use mermaid instead
  */
-export type OutputFormat = 'plantuml' | 'json' | 'svg';
+export type OutputFormat = 'mermaid' | 'json' | 'plantuml' | 'svg';
 
 /**
  * Single diagram configuration
@@ -94,9 +122,14 @@ export interface GlobalConfig {
 
   /**
    * Default output format for all diagrams
-   * @default 'plantuml'
+   * @default 'mermaid'
    */
   format: OutputFormat;
+
+  /**
+   * Mermaid-specific configuration (only used when format is 'mermaid')
+   */
+  mermaid?: MermaidConfig;
 
   /**
    * Default exclude patterns
@@ -241,4 +274,21 @@ export interface CLIOptions {
    * Claude CLI args override
    */
   cliArgs?: string;
+
+  // ========== Mermaid-Specific Options ==========
+
+  /**
+   * Disable LLM grouping (use heuristic)
+   */
+  llmGrouping?: boolean;
+
+  /**
+   * Mermaid theme
+   */
+  mermaidTheme?: 'default' | 'forest' | 'dark' | 'neutral';
+
+  /**
+   * Mermaid renderer
+   */
+  mermaidRenderer?: 'isomorphic' | 'cli';
 }

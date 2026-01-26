@@ -1,0 +1,26 @@
+{
+  "name": "mermaid-poc",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:basic": "node test-basic-rendering.mjs",
+    "test:errors": "node test-error-patterns.mjs",
+    "test:all": "npm run test:basic && npm run test:errors"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "isomorphic-mermaid": "^0.1.1",
+    "mermaid": "^11.12.2",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

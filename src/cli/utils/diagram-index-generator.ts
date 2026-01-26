@@ -98,9 +98,9 @@ export class DiagramIndexGenerator {
       } else if (result.paths.json) {
         const relativePath = path.relative(this.globalConfig.outputDir, result.paths.json);
         section += `- **Data**: [View JSON](${relativePath})\n\n`;
-      } else if (result.paths.puml) {
-        const relativePath = path.relative(this.globalConfig.outputDir, result.paths.puml);
-        section += `- **Source**: [View PlantUML](${relativePath})\n\n`;
+      } else if (result.paths.mmd) {
+        const relativePath = path.relative(this.globalConfig.outputDir, result.paths.mmd);
+        section += `- **Source**: [View Mermaid](${relativePath})\n\n`;
       }
     }
 

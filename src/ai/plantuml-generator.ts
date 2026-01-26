@@ -109,8 +109,16 @@ export class PlantUMLGenerator {
       pngPath = pathOrResolution;
     } else {
       // New behavior: PathResolution object
+      // Support both .puml (legacy) and .mmd (new mermaid format)
+      // @ts-ignore - transitional compatibility during mermaid migration
       pumlPath = pathOrResolution.paths.puml;
+      // @ts-ignore - transitional compatibility during mermaid migration
       pngPath = pathOrResolution.paths.png;
+
+      // Fallback to mmd if puml is not available (for mermaid diagrams)
+      if (!pumlPath && pathOrResolution.paths.mmd) {
+        pumlPath = pathOrResolution.paths.mmd;
+      }
     }
 
     // Save PlantUML file

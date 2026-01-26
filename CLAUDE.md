@@ -43,11 +43,11 @@ node dist/cli/index.js analyze -s ./src/cli -s ./src/parser --batch -v
 
 ### Basic Usage
 ```bash
-# Generate PlantUML diagram (requires Claude Code CLI)
+# Generate Mermaid diagram (default format)
 npm run build
 node dist/cli/index.js analyze -v
 
-# Generate ArchJSON only (no Claude CLI required, fast)
+# Generate ArchJSON only (no LLM required, fast)
 node dist/cli/index.js analyze -f json -o ./architecture.json
 
 # Custom source and output directory
@@ -55,6 +55,23 @@ node dist/cli/index.js analyze -s ./src --output-dir ./diagrams
 ```
 
 ### Advanced Usage
+
+#### LLM Grouping
+By default, ArchGuard uses LLM-powered intelligent grouping for better diagram organization:
+```bash
+# Enable LLM grouping (default)
+node dist/cli/index.js analyze -s ./src
+
+# Disable LLM grouping (use heuristic)
+node dist/cli/index.js analyze --no-llm-grouping
+```
+
+#### Mermaid Themes
+```bash
+# Use different themes
+node dist/cli/index.js analyze --mermaid-theme dark
+node dist/cli/index.js analyze --mermaid-theme forest
+```
 
 #### Multi-Level Architecture Diagrams
 Generate diagrams at different abstraction levels:
@@ -130,10 +147,12 @@ Analyze TypeScript project and generate architecture diagrams.
 - `-n, --name <name>` - Diagram name (default: `architecture`)
 
 **Global Config Overrides**:
-- `-f, --format <type>` - Output format: `plantuml`|`json`|`svg` (default: `plantuml`)
+- `-f, --format <type>` - Output format: `mermaid`|`json` (default: `mermaid`)
 - `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
+- `--no-llm-grouping` - Disable LLM-powered grouping (use heuristic)
+- `--mermaid-theme <theme>` - Mermaid theme: `default`|`forest`|`dark`|`neutral`
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
 
@@ -163,11 +182,12 @@ node dist/cli/index.js cache stats
 
 ### Output Formats
 
-**PlantUML** (default, requires Claude Code CLI):
-- Generates `archguard/architecture.puml` and `archguard/architecture.png`
-- Output directory: `--output-dir` option or `outputDir` in config
+**Mermaid** (default):
+- Generates `archguard/architecture.mmd`, `archguard/architecture.svg`, and `archguard/architecture.png`
+- No external dependencies required
+- Supports local rendering with isomorphic-mermaid
 
-**JSON** (ArchJSON, no Claude CLI required):
+**JSON** (ArchJSON):
 - Fast parsing-only mode for tooling integration
 - Example: `node dist/cli/index.js analyze -f json -o ./arch.json`
 - Structure:
@@ -180,29 +200,23 @@ node dist/cli/index.js cache stats
   }
   ```
 
-**SVG** (requires Claude Code CLI):
-- Generates PlantUML source only (no PNG rendering)
-
 ### Prerequisites
 
-**For PlantUML/SVG formats**: Claude Code CLI required.
-```bash
-claude --version  # Verify installation
-```
+**For Mermaid format**: No external dependencies required (uses built-in isomorphic-mermaid).
 
 ## Architecture Overview
 
 Three-layer architecture:
 1. **Parser** (`src/parser/`) - TypeScriptParser → Extractors → ArchJSON
-2. **AI Integration** (`src/ai/`) - ClaudeCodeWrapper → PlantUMLGenerator
+2. **AI Integration** (`src/ai/`) - LLMGroupingService → MermaidGenerator
 3. **CLI** (`src/cli/`) - Commands (analyze, init, cache) with ErrorHandler
 
-**Data Flow**: `TypeScript → AST → ArchJSON → PlantUML/PNG`
+**Data Flow**: `TypeScript → AST → ArchJSON → Mermaid/SVG/PNG`
 
 **Key Components**:
 - ParallelParser: Concurrent file processing
-- ClaudeCodeWrapper: CLI invocation with retry logic
-- PromptTemplateManager: Template rendering (`prompts/`)
+- LLMGroupingService: Intelligent entity grouping (optional)
+- MermaidGenerator: Local Mermaid generation with validation
 - ErrorHandler: Unified error formatting
 
 ## Configuration
@@ -212,8 +226,14 @@ Create `archguard.config.json` (run `node dist/cli/index.js init`):
 ```json
 {
   "source": "./src",
-  "format": "plantuml",           // plantuml | json | svg
+  "format": "mermaid",           // mermaid | json
   "exclude": ["**/*.test.ts", "**/*.spec.ts"],
+  "mermaid": {
+    "enableLLMGrouping": true,   // Use LLM for intelligent grouping
+    "renderer": "isomorphic",    // isomorphic | cli
+    "theme": "default",          // default | forest | dark | neutral
+    "transparentBackground": true
+  },
   "cli": { "timeout": 180000 },   // 3min for large projects (30+ files)
   "cache": { "enabled": true },
   "concurrency": 8,
@@ -221,7 +241,7 @@ Create `archguard.config.json` (run `node dist/cli/index.js init`):
 }
 ```
 
-**Tips**: Use `format: "json"` for fast ArchJSON-only mode (no Claude CLI required).
+**Tips**: Use `format: "json"` for fast ArchJSON-only mode (no LLM required).
 
 ## Path Aliases (TypeScript)
 When importing, use these aliases instead of relative paths:
@@ -288,4 +308,4 @@ progress.succeed('Done');
 
 - `docs/architecture.md` - System architecture
 - `docs/specs.md` - Requirements and specifications
-- `docs/PLANTUML-GENERATION-FLOW.md` - Generation workflow
+- `docs/MIGRATION-v2.0.md` - Migration guide from PlantUML to Mermaid

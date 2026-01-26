@@ -2,11 +2,11 @@
   "name": "archguard",
   "version": "0.1.0",
   "type": "module",
-  "description": "Automated architecture documentation generation tool with AI-powered PlantUML diagrams",
+  "description": "Automated architecture documentation generation tool with AI-powered Mermaid diagrams",
   "keywords": [
     "architecture",
     "documentation",
-    "plantuml",
+    "mermaid",
     "typescript",
     "ai",
     "claude"
@@ -17,7 +17,7 @@
     "archguard": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh",
+    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -32,7 +32,8 @@
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist coverage",
     "prepublishOnly": "npm run clean && npm run build && npm test",
-    "generate": "node dist/cli/index.js generate"
+    "generate": "node dist/cli/index.js generate",
+    "migrate": "node dist/scripts/migrate-to-mermaid.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -42,7 +43,9 @@
     "@entrofi/node-plantuml": "^0.9.1",
     "commander": "^11.1.0",
     "execa": "^8.0.1",
+    "isomorphic-mermaid": "^0.1.1",
     "pino": "^8.17.0",
+    "sharp": "^0.34.5",
     "ts-morph": "^21.0.0"
   },
   "devDependencies": {

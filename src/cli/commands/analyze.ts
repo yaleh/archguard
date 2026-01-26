@@ -37,20 +37,19 @@ import type { DiagramResult } from '../processors/diagram-processor.js';
 export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): DiagramConfig[] {
   // Priority 1: Config file diagrams
   if (config.diagrams && config.diagrams.length > 0) {
-    return config.diagrams;
+    return config.diagrams as DiagramConfig[];
   }
 
   // Priority 2: CLI shortcut
   if (cliOptions.sources && cliOptions.sources.length > 0) {
-    return [
-      {
-        name: cliOptions.name || 'architecture',
-        sources: cliOptions.sources,
-        level: cliOptions.level || 'class',
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      },
-    ];
+    const diagram: DiagramConfig = {
+      name: cliOptions.name || 'architecture',
+      sources: cliOptions.sources,
+      level: cliOptions.level || 'class',
+      format: cliOptions.format,
+      exclude: cliOptions.exclude,
+    };
+    return [diagram];
   }
 
   // Priority 3: Default diagram
@@ -146,12 +145,17 @@ export function createAnalyzeCommand(): Command {
       .option('-n, --name <name>', 'Diagram name (default: architecture)', 'architecture')
 
       // ========== Global Config Overrides ==========
-      .option('-f, --format <type>', 'Output format: plantuml|json|svg')
+      .option('-f, --format <type>', 'Output format: mermaid|json (default: mermaid)')
       .option('--output-dir <dir>', 'Output directory')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
       .option('--no-cache', 'Disable cache')
       .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
       .option('-v, --verbose', 'Verbose output', false)
+
+      // ========== Mermaid-Specific Options ==========
+      .option('--no-llm-grouping', 'Disable LLM grouping (use heuristic)')
+      .option('--mermaid-theme <theme>', 'Mermaid theme: default|forest|dark|neutral')
+      .option('--mermaid-renderer <renderer>', 'Mermaid renderer: isomorphic|cli')
 
       // ========== Claude CLI Configuration ==========
       .option('--cli-command <command>', 'Claude CLI command')
@@ -189,6 +193,17 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
         command: cliOptions.cliCommand || 'claude',
         args: cliOptions.cliArgs ? cliOptions.cliArgs.split(' ') : [],
         timeout: 60000,
+      };
+    }
+
+    // Mermaid-specific options
+    if (cliOptions.llmGrouping !== undefined ||
+        cliOptions.mermaidTheme !== undefined ||
+        cliOptions.mermaidRenderer !== undefined) {
+      configOverrides.mermaid = {
+        enableLLMGrouping: cliOptions.llmGrouping,
+        theme: cliOptions.mermaidTheme,
+        renderer: cliOptions.mermaidRenderer,
       };
     }
 
@@ -234,7 +249,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     // Step 5: Unified processing (core!)
     const processor = new DiagramProcessor({
       diagrams: selectedDiagrams,
-      globalConfig: config,
+      globalConfig: config as any, // Config type is compatible with GlobalConfig at runtime
       progress,
     });
 
@@ -243,7 +258,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     // Step 6: Generate index (if multiple diagrams)
     if (results.length > 1) {
       progress.start('Generating index...');
-      const indexGenerator = new DiagramIndexGenerator(config);
+      const indexGenerator = new DiagramIndexGenerator(config as any);
       await indexGenerator.generate(results);
       progress.succeed('Index generated');
     }

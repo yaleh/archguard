@@ -17,7 +17,7 @@ import { FileDiscoveryService } from '@/cli/utils/file-discovery-service.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
-import { PlantUMLGenerator } from '@/ai/plantuml-generator.js';
+import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import type { DiagramConfig, GlobalConfig, OutputFormat, DetailLevel } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
@@ -45,10 +45,10 @@ export interface DiagramResult {
   success: boolean;
   /** Output file paths (if successful) */
   paths?: {
-    puml?: string;
+    mmd?: string;
+    svg?: string;
     png?: string;
     json?: string;
-    svg?: string;
   };
   /** Processing statistics (if successful) */
   stats?: {
@@ -169,12 +169,10 @@ export class DiagramProcessor {
       const resultPaths: DiagramResult['paths'] = {};
       if (format === 'json') {
         resultPaths.json = paths.paths.json;
-      } else if (format === 'plantuml') {
-        resultPaths.puml = paths.paths.puml;
-        resultPaths.png = paths.paths.png;
-      } else if (format === 'svg') {
-        resultPaths.puml = paths.paths.puml;
+      } else if (format === 'mermaid') {
+        resultPaths.mmd = paths.paths.mmd;
         resultPaths.svg = paths.paths.svg;
+        resultPaths.png = paths.paths.png;
       }
 
       return {
@@ -208,7 +206,7 @@ export class DiagramProcessor {
    */
   private async generateOutput(
     archJSON: ArchJSON,
-    paths: { paths: { json: string; puml: string; png: string; svg: string } },
+    paths: { paths: { json: string; mmd: string; png: string; svg: string } },
     format: OutputFormat,
     level: DetailLevel
   ): Promise<void> {
@@ -218,22 +216,27 @@ export class DiagramProcessor {
         await fs.writeJson(paths.paths.json, archJSON, { spaces: 2 });
         break;
 
+      case 'mermaid':
+        // Generate Mermaid diagram
+        const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig);
+        await mermaidGenerator.generateAndRender(
+          archJSON,
+          {
+            outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
+            baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
+            paths: paths.paths,
+          },
+          level
+        );
+        break;
+
       case 'plantuml':
       case 'svg':
-        // Generate PlantUML diagram
-        // Create a minimal config compatible with PlantUMLGenerator
-        const generatorConfig = {
-          timeout: this.globalConfig.cli.timeout,
-          maxRetries: 2,
-          workingDir: process.cwd(),
-        };
-        const generator = new PlantUMLGenerator(generatorConfig);
-        await generator.generateAndRender(archJSON, {
-          outputDir: paths.paths.puml.replace(/\/[^/]+$/, ''),
-          baseName: paths.paths.puml.replace(/^.*\/([^/]+)\.puml$/, '$1'),
-          paths: paths.paths,
-        }, level);
-        break;
+        throw new Error(
+          `Format "${format}" is no longer supported. ` +
+            `Please use "mermaid" instead. ` +
+            `See migration guide: docs/refactoring/proposals/10-mermaid-diagram-migration.md`
+        );
 
       default:
         throw new Error(`Unsupported format: ${format}`);

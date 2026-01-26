@@ -1,7 +1,5 @@
 {
-  "source": "./src",
-  "output": "./architecture.puml",
-  "format": "plantuml",
+  "format": "mermaid",
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts",
@@ -16,5 +14,12 @@
     "ttl": 86400
   },
   "concurrency": 8,
-  "verbose": true
+  "verbose": true,
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "isomorphic",
+    "theme": "default",
+    "transparentBackground": true
+  },
+  "diagrams": []
 }

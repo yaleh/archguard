@@ -16,11 +16,26 @@ export type { ArchGuardConfig } from '../types/config.js';
  * - Removed: source, output fields
  * - Added: diagrams[] array
  * - Removed: ai config (deprecated)
+ *
+ * Breaking Changes from v2.0 to v2.1:
+ * - Changed default format from 'plantuml' to 'mermaid'
+ * - Added mermaid-specific configuration
+ * - plantuml and svg formats are deprecated and will throw errors
  */
+
+// Mermaid configuration schema
+const MermaidConfigSchema = z.object({
+  enableLLMGrouping: z.boolean().optional(),
+  renderer: z.enum(['isomorphic', 'cli']).optional(),
+  theme: z.enum(['default', 'forest', 'dark', 'neutral']).optional(),
+  transparentBackground: z.boolean().optional(),
+});
+
 const configSchema = z.object({
   // ========== Global Configuration ==========
   outputDir: z.string().default('./archguard'),
-  format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
+  format: z.enum(['mermaid', 'json', 'plantuml', 'svg']).default('mermaid'),
+  mermaid: MermaidConfigSchema.optional(),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
   // ========== CLI Configuration ==========
@@ -72,7 +87,7 @@ const configSchema = z.object({
         /** Human-readable description */
         description: z.string().optional(),
         /** Output format override */
-        format: z.enum(['plantuml', 'json', 'svg']).optional(),
+        format: z.enum(['mermaid', 'json', 'plantuml', 'svg']).optional(),
         /** Exclude patterns override */
         exclude: z.array(z.string()).optional(),
       })
@@ -89,7 +104,13 @@ export type Config = z.infer<typeof configSchema>;
  */
 interface FileConfig {
   outputDir?: string;
-  format?: 'plantuml' | 'json' | 'svg';
+  format?: 'mermaid' | 'json' | 'plantuml' | 'svg';
+  mermaid?: {
+    enableLLMGrouping?: boolean;
+    renderer?: 'isomorphic' | 'cli';
+    theme?: 'default' | 'forest' | 'dark' | 'neutral';
+    transparentBackground?: boolean;
+  };
   exclude?: string[];
   cli?: {
     command?: string;
@@ -107,7 +128,7 @@ interface FileConfig {
     sources: string[];
     level: 'package' | 'class' | 'method';
     description?: string;
-    format?: 'plantuml' | 'json' | 'svg';
+    format?: 'mermaid' | 'json' | 'plantuml' | 'svg';
     exclude?: string[];
   }>;
 }
@@ -145,6 +166,18 @@ export class ConfigLoader {
     const fileConfig = await this.loadFromFile(configPath);
     const normalized = this.normalizeConfig(fileConfig);
     const merged = this.deepMerge(normalized, cliOptions);
+
+    // Check for deprecated PlantUML/SVG formats before validation
+    if (merged.format === 'plantuml' || merged.format === 'svg') {
+      throw new Error(
+        `Format "${merged.format}" is no longer supported.\n\n` +
+          `Please use "mermaid" instead.\n\n` +
+          `Migration guide:\n` +
+          `1. Update format in config file: "format": "mermaid"\n` +
+          `2. Or use CLI: -f mermaid\n\n` +
+          `See docs/MIGRATION-v2.1.md for details.`
+      );
+    }
 
     try {
       return configSchema.parse(merged);
