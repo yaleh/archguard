@@ -1,8 +1,9 @@
 # ArchGuard 架构建议文档集
 
 **创建日期**: 2026-01-25
+**最后更新**: 2026-01-26
 **分析方法**: RLM (Refactoring Lifecycle Management)
-**文档数量**: 8 份核心建议文档
+**文档数量**: 9 份核心建议文档
 
 ---
 
@@ -529,6 +530,89 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 
 ---
 
+### [09-multi-level-architecture-diagrams.md](./09-multi-level-architecture-diagrams.md)
+**📊 多层次架构图生成 - 灵活文档体系**
+
+**适用人群**: 大型项目架构师、Monorepo 维护者、技术负责人
+**阅读优先级**: ⭐⭐⭐⭐⭐
+
+**内容概要**:
+- 4 项核心能力增强
+  1. 详细程度控制 (Level Control) - package、class、method 三种层次
+  2. 配置驱动多图生成 - 通过配置文件定义多张架构图
+  3. 灵活模块分组 - 支持混合场景（某些图合并，某些图独立）
+  4. 自动化导航索引 - 生成多层次文档体系
+- ArchJSON 聚合器设计
+- Prompt 模板增强
+- 多图处理器实现
+- 完整的 RLM 六阶段分析
+
+**何时使用**:
+- ✅ 大型项目需要多层次架构文档（总览 → 详细）
+- ✅ Monorepo 项目需要灵活的模块分组
+- ✅ 需要为不同受众生成不同详细程度的图
+- ✅ CI/CD 需要配置化的架构图生成
+- ✅ 希望建立渐进式架构文档体系
+
+**关键亮点**:
+- **三级详细程度**：package（只显示包结构）、class（显示类和方法，默认）、method（显示所有细节）
+- **配置驱动**：在 `archguard.config.json` 中定义多张图的生成规则
+- **灵活分组**：支持"auth-system（3个包）+ parser（1个包）+ cli-ai（2个包）"等混合场景
+- **自动索引**：生成 `index.md` 导航页面，建立完整文档体系
+
+**典型使用场景**:
+```json
+{
+  "diagrams": [
+    {
+      "name": "overview",
+      "sources": ["./src/**"],
+      "level": "package",
+      "description": "High-level package overview"
+    },
+    {
+      "name": "modules/auth-system",
+      "sources": ["./src/auth", "./src/identity", "./src/security"],
+      "level": "class",
+      "description": "Complete authentication system"
+    },
+    {
+      "name": "modules/parser",
+      "sources": ["./src/parser"],
+      "level": "class"
+    }
+  ]
+}
+```
+
+**命令行用法**:
+```bash
+# 生成配置文件中定义的所有图
+node dist/cli/index.js analyze --from-config
+
+# 只生成特定图
+node dist/cli/index.js analyze --from-config --diagrams overview,auth-system
+```
+
+**用户价值**:
+- 灵活性提升 **10x**（从单一详细程度到三级控制）
+- 文档完整性提升 **5x**（从单张图到多层次体系）
+- 新成员理解时间减少 **60%**（渐进式文档）
+- CI/CD 集成简化 **5x**（配置化管理）
+
+**实施优先级**:
+- P0: 配置基础设施 + ArchJSON 聚合器 (2-3 天)
+- P0: Prompt 增强 + 多图处理器 (2-3 天)
+- P0: 测试和文档 (1-2 天)
+- **总计**: 5-7 个工作日
+
+**预期收益**:
+- 适用项目规模扩大 **10x**（支持大型复杂项目）
+- 架构文档完整性达到 **95%+**（多层次覆盖）
+- 用户满意度预期 **4.5/5.0+**
+
+---
+
 ## 🗺️ 阅读路线建议
 
 ### 路线 1: 项目经理 / 产品负责人
@@ -578,6 +662,17 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 01-architecture-optimization-proposal.md (建议 1)
   ↓
 参考代码示例开始开发
+```
+
+### 路线 6: 大型项目/Monorepo 维护者
+```
+09-multi-level-architecture-diagrams.md (重点)
+  ↓
+07-advanced-cli-features.md (批处理基础)
+  ↓
+05-config-and-cli-improvements.md (配置管理)
+  ↓
+08-claude-code-subagent-integration.md (自动化)
 ```
 
 ---
@@ -633,6 +728,11 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | **批量模式** | 07 | 第 2.4 章 |
 | **Claude Skill** | 08 | 第 2.2 章 |
 | **智能分析** | 08 | 第 1.2 章 |
+| **多层次架构图** | 09 | 全文 |
+| **详细程度控制** | 09 | 第 2.1 章 |
+| **配置驱动多图** | 09 | 第 2.2-2.4 章 |
+| **灵活模块分组** | 09 | 第 2.3 章 |
+| **架构文档体系** | 09 | 第 1.2 章 |
 
 ### 按问题查找解决方案
 
@@ -652,6 +752,11 @@ PROPOSAL → PLANNING → EXECUTION → VALIDATION → INTEGRATION → MONITORIN
 | 微服务分析复杂 | 07 | 批量模式 + 智能索引 |
 | 学习成本高 | 08 | Claude Code Skill 集成 |
 | 手动操作繁琐 | 08 | Subagent 自动化 |
+| 架构图过于复杂 | 09 | 多层次详细程度控制 |
+| 缺少总览图 | 09 | Package 级别聚合 |
+| 无法灵活分组 | 09 | 配置驱动多图生成 |
+| 文档体系不完整 | 09 | 多层次文档体系 |
+| 大型项目难维护 | 09 | 渐进式架构文档 |
 
 ---
 
