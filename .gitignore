@@ -49,3 +49,4 @@ archguard/
 *.png
 *.svg
 .archguardrc.json
+/archguard-modules/
