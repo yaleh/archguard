@@ -81,6 +81,29 @@ export class PlantUMLValidator {
       errors.push('Duplicate "class" keyword');
     }
 
+    // Check for invalid entity declarations (generic names or quoted generics)
+    const lines = puml.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      const entityMatch = trimmed.match(/^(class|interface|enum)\s+(.+)$/);
+      if (entityMatch) {
+        const namePart = entityMatch[2] ?? '';
+        if (this.containsGenericType(namePart)) {
+          errors.push(`Invalid entity declaration: ${trimmed}`);
+        }
+      }
+
+      if (this.isRelationshipLine(trimmed)) {
+        if (this.containsGenericType(trimmed)) {
+          errors.push(`Invalid relationship endpoint: ${trimmed}`);
+        }
+      }
+    }
+
     // More syntax checks can be added here
     // - Malformed relationships
     // - Invalid visibility modifiers
@@ -308,5 +331,22 @@ export class PlantUMLValidator {
    */
   private escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private isRelationshipLine(line: string): boolean {
+    return (
+      line.includes('--') ||
+      line.includes('..>') ||
+      line.includes('-->') ||
+      line.includes('*--') ||
+      line.includes('-o') ||
+      line.includes('--|>')
+    );
+  }
+
+  private containsGenericType(text: string): boolean {
+    const quotedGeneric = /"[^"]*[<>][^"]*"/.test(text);
+    const inlineGeneric = /[A-Za-z_][A-Za-z0-9_]*<[^>]*>/.test(text);
+    return quotedGeneric || inlineGeneric;
   }
 }

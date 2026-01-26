@@ -288,6 +288,8 @@ B --> C : "depends on"
 - ❌ 不要引用内置类型（Error, EventEmitter, Promise, Map 等）
 - ❌ 不要引用第三方库类型（Anthropic, Ora, ts-morph 等）
 - ❌ 不要引用泛型参数（T, K, V, Promise<T> 等）
+- ❌ 不要在 class/interface/enum 名称中使用泛型或引号（如 `class "Map<string, string>"`、`class Map<string, string>`）
+- ❌ 不要在关系端点使用带泛型/引号的名称或 `as` 别名
 - ❌ 不要在关系部分引用未定义且非外部声明的实体
 - ❌ 不要过度使用布局控制（保持 PlantUML 自动布局的优势）
 - ✅ 允许引用外部模块类型，但必须提供最小声明（见"外部类型声明"部分）

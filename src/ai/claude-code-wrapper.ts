@@ -168,7 +168,12 @@ export class ClaudeCodeWrapper {
    * @returns Promise resolving to PlantUML code
    * @throws Error if generation fails after all retries
    */
-  async generatePlantUML(archJson: ArchJSON, previousPuml?: string, level: DetailLevel = 'class'): Promise<string> {
+  async generatePlantUML(
+    archJson: ArchJSON,
+    previousPuml?: string,
+    level: DetailLevel = 'class',
+    validateOutput: boolean = true
+  ): Promise<string> {
     const { PromptTemplateManager } = await import('./prompt-template-manager.js');
     const { OutputParser } = await import('./output-parser.js');
     const { ExternalTypeDetector } = await import('./external-type-detector.js');
@@ -200,7 +205,9 @@ export class ClaudeCodeWrapper {
         const plantUML = parser.extractPlantUML(output);
 
         // Step 4: Validate PlantUML (basic checks)
-        this.validatePlantUML(plantUML, archJson);
+        if (validateOutput) {
+          this.validatePlantUML(plantUML, archJson);
+        }
 
         // Success! Return the PlantUML
         return plantUML;
@@ -236,6 +243,44 @@ export class ClaudeCodeWrapper {
 
     // Should never reach here, but TypeScript needs it
     throw lastError || new Error('Unknown error in generatePlantUML');
+  }
+
+  /**
+   * Repairs an existing PlantUML file using Claude Code CLI
+   *
+   * @param pumlPath - Path to the PlantUML file to repair
+   * @param archJson - Architecture JSON data (used as ground truth)
+   * @param errorMessage - Validation error message to guide repair
+   */
+  async repairPlantUML(pumlPath: string, archJson: ArchJSON, errorMessage: string): Promise<void> {
+    const { PromptTemplateManager } = await import('./prompt-template-manager.js');
+
+    const templateManager = new PromptTemplateManager();
+    const tempDir = await this.createTempDir();
+    const archJsonPath = path.join(tempDir, 'arch.json');
+    const entityNames = archJson.entities.map((entity) => entity.name).sort();
+    // @ts-ignore - package type may not be in EntityType enum but is valid
+    const packageNames = archJson.entities
+      // @ts-ignore - package type may not be in EntityType enum but is valid
+      .filter((entity) => entity.type === 'package')
+      .map((entity) => entity.name)
+      .sort();
+
+    try {
+      await fs.writeFile(archJsonPath, JSON.stringify(archJson, null, 2));
+
+      const prompt = await templateManager.render('plantuml-repair', {
+        PUML_PATH: pumlPath,
+        ARCHJSON_PATH: archJsonPath,
+        ERROR_MESSAGE: errorMessage,
+        ARCHJSON_ENTITIES: JSON.stringify(entityNames, null, 2),
+        PACKAGE_ENTITIES: JSON.stringify(packageNames, null, 2),
+      });
+
+      await this.callCLI(prompt);
+    } finally {
+      await this.cleanup(tempDir);
+    }
   }
 
   /**

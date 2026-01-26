@@ -15,7 +15,7 @@ import path from 'path';
  */
 export interface TemplateVariables {
   /** Architecture JSON data as string */
-  ARCH_JSON: string;
+  ARCH_JSON?: string;
 
   /** Previous PlantUML diagram (for incremental updates) */
   PREVIOUS_PUML?: string | null;

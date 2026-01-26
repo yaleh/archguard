@@ -3,6 +3,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import fs from 'fs-extra';
+import os from 'os';
+import path from 'path';
 import { PlantUMLGenerator } from '../../../src/ai/plantuml-generator';
 import { ArchJSON } from '../../../src/types';
 import { DetailLevel } from '../../../src/types/config';
@@ -351,7 +354,7 @@ class User
       const level: DetailLevel = 'package';
       await generator.generateAndRender(archJson, pathResolution, level);
 
-      expect(mockWrapper.generatePlantUML).toHaveBeenCalledWith(archJson, undefined, level);
+      expect(mockWrapper.generatePlantUML).toHaveBeenCalledWith(archJson, undefined, level, false);
     });
 
     it('should use class level by default if not specified', async () => {
@@ -388,6 +391,154 @@ class User
 
       // Should use 'class' as default level
       expect(mockWrapper.generatePlantUML).toHaveBeenCalledWith(archJson, undefined, 'class');
+    });
+  });
+
+  describe('repair flow on validation failure', () => {
+    it('should attempt repair and render when validation fails once', async () => {
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-test-'));
+      const pumlPath = path.join(tempDir, 'test.puml');
+      const pngPath = path.join(tempDir, 'test.png');
+
+      const mockWrapper = {
+        generatePlantUML: vi.fn().mockResolvedValue(`@startuml
+@enduml
+`),
+        repairPlantUML: vi.fn().mockImplementation(async (pathArg: string) => {
+          await fs.writeFile(
+            pathArg,
+            `@startuml
+class User
+@enduml
+`
+          );
+        }),
+      };
+
+      const mockRenderer = {
+        render: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const mockValidator = {
+        validate: vi
+          .fn()
+          .mockReturnValueOnce({ isValid: false, issues: ['Missing entity: User'] })
+          .mockReturnValueOnce({ isValid: true, issues: [] }),
+      };
+
+      const generator = new PlantUMLGenerator({});
+      // @ts-ignore - inject mock for testing
+      generator.wrapper = mockWrapper;
+      // @ts-ignore - inject mock for testing
+      generator.renderer = mockRenderer;
+      // @ts-ignore - inject mock for testing
+      generator.validator = mockValidator;
+
+      const archJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2026-01-25',
+        sourceFiles: ['test.ts'],
+        entities: [
+          {
+            id: 'User',
+            name: 'User',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'test.ts', startLine: 1, endLine: 3 },
+          },
+        ],
+        relations: [],
+      };
+
+      const pathResolution = {
+        name: 'test',
+        paths: {
+          puml: pumlPath,
+          png: pngPath,
+          svg: '/tmp/test.svg',
+        },
+      };
+
+      await generator.generateAndRender(archJson, pathResolution, 'class');
+
+      expect(mockWrapper.generatePlantUML).toHaveBeenCalledWith(archJson, undefined, 'class', false);
+      expect(mockWrapper.repairPlantUML).toHaveBeenCalledWith(
+        pumlPath,
+        archJson,
+        'Validation failed: Missing entity: User'
+      );
+      expect(mockRenderer.render).toHaveBeenCalled();
+      expect(mockRenderer.render.mock.calls[0][0]).toContain('class User');
+
+      await fs.remove(tempDir);
+    });
+
+    it('should apply local repair if LLM repair still fails', async () => {
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-test-'));
+      const pumlPath = path.join(tempDir, 'test.puml');
+      const pngPath = path.join(tempDir, 'test.png');
+
+      const mockWrapper = {
+        generatePlantUML: vi.fn().mockResolvedValue(`@startuml\n@enduml\n`),
+        repairPlantUML: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const mockRenderer = {
+        render: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const mockValidator = {
+        validate: vi
+          .fn()
+          .mockReturnValueOnce({ isValid: false, issues: ['Missing entity: User'] })
+          .mockReturnValueOnce({ isValid: false, issues: ['Missing entity: User'] })
+          .mockReturnValueOnce({ isValid: true, issues: [] }),
+      };
+
+      const generator = new PlantUMLGenerator({});
+      // @ts-ignore - inject mock for testing
+      generator.wrapper = mockWrapper;
+      // @ts-ignore - inject mock for testing
+      generator.renderer = mockRenderer;
+      // @ts-ignore - inject mock for testing
+      generator.validator = mockValidator;
+
+      const archJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2026-01-25',
+        sourceFiles: ['test.ts'],
+        entities: [
+          {
+            id: 'User',
+            name: 'User',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'test.ts', startLine: 1, endLine: 3 },
+          },
+        ],
+        relations: [],
+      };
+
+      const pathResolution = {
+        name: 'test',
+        paths: {
+          puml: pumlPath,
+          png: pngPath,
+          svg: '/tmp/test.svg',
+        },
+      };
+
+      await generator.generateAndRender(archJson, pathResolution, 'class');
+
+      const finalPuml = await fs.readFile(pumlPath, 'utf-8');
+      expect(finalPuml).toContain('package "Auto Added"');
+      expect(finalPuml).toContain('class User');
+
+      await fs.remove(tempDir);
     });
   });
 });

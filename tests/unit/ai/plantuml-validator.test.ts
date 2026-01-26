@@ -83,6 +83,33 @@ enum Status
 
       expect(result.isValid).toBe(true);
     });
+
+    it('should reject entity declarations with generic names', () => {
+      const puml = `
+@startuml
+class "Map<string, string>" as TemplateCache
+@enduml
+      `;
+
+      const result = validator.validateSyntax(puml);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors?.some((err) => err.includes('Invalid entity declaration'))).toBe(true);
+    });
+
+    it('should reject relationship endpoints with generic names', () => {
+      const puml = `
+@startuml
+class PromptTemplateManager
+PromptTemplateManager *-- "Map<string, string>" as TemplateCache
+@enduml
+      `;
+
+      const result = validator.validateSyntax(puml);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors?.some((err) => err.includes('Invalid relationship endpoint'))).toBe(true);
+    });
   });
 
   describe('completeness validation', () => {
