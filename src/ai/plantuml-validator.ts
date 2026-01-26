@@ -102,6 +102,12 @@ export class PlantUMLValidator {
 
     // Check if all entities are present in the PlantUML
     for (const entity of archJson.entities) {
+      // Skip package entities - they're structural elements, not content entities
+      // @ts-ignore - package type may not be in EntityType enum but is valid
+      if (entity.type === 'package') {
+        continue;
+      }
+
       // Create regex to find entity declaration
       // Matches: "class EntityName", "interface EntityName", "enum EntityName"
       const regex = new RegExp(`\\b(class|interface|enum)\\s+${this.escapeRegex(entity.name)}\\b`);

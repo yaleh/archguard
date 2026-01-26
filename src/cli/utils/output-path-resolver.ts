@@ -13,7 +13,6 @@
 
 import path from 'path';
 import fs from 'fs/promises';
-import type { Config } from '../config-loader.js';
 
 /**
  * Path resolution result
@@ -81,7 +80,7 @@ export interface ResolvedPaths extends PathResolution {
  * ```
  */
 export class OutputPathResolver {
-  constructor(private config: Pick<Config, 'outputDir' | 'output'>) {}
+  constructor(private config: { outputDir: string; output?: string }) {}
 
   /**
    * Resolve output paths based on config and options

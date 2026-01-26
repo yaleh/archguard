@@ -1,187 +1,220 @@
 /**
- * Analyze Command - Main CLI command for analyzing TypeScript projects
- * Story 2.2: Enhanced with Claude Code CLI detection
+ * Analyze Command v2.0 - Completely rewritten for unified diagram processing
+ *
+ * Breaking Changes from v1.x:
+ * - Removed: --batch, --stdin, -o/--output, --base-dir, --skip-missing, --no-batch-index
+ * - Changed: -s/--source renamed to --sources (plural)
+ * - Added: -l/--level, --diagrams filter
+ * - Single processing path: Everything goes through DiagramProcessor
+ *
+ * @module cli/commands/analyze
+ * @version 2.0.0
  */
 
 import { Command } from 'commander';
 import os from 'os';
-import path from 'path';
-import fs from 'fs/promises';
-import { ParallelParser } from '@/parser/parallel-parser';
-import { PlantUMLGenerator } from '@/ai/plantuml-generator';
-import { ProgressReporter } from '../progress';
-import { ConfigLoader } from '../config-loader';
-import { OutputPathResolver } from '../utils/output-path-resolver';
-import { ErrorHandler } from '../error-handler';
-import { FileDiscoveryService } from '../utils/file-discovery-service';
-import { BatchProcessor } from '../utils/batch-processor';
-import type { Config } from '../config-loader';
-import type { AnalyzeOptions } from '../types';
+import { ProgressReporter } from '../progress.js';
+import { ConfigLoader } from '../config-loader.js';
+import { ErrorHandler } from '../error-handler.js';
+import { DiagramProcessor } from '../processors/diagram-processor.js';
+import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
+import type { Config } from '../config-loader.js';
+import type { CLIOptions, DiagramConfig } from '../../types/config.js';
+import type { DiagramResult } from '../processors/diagram-processor.js';
 
 /**
- * Create the analyze command
+ * Normalize CLI options to DiagramConfig[]
+ *
+ * Priority:
+ * 1. If config.diagrams exists and not empty → use config file
+ * 2. If CLI provides sources → create single diagram from CLI
+ * 3. Otherwise → use default config
+ *
+ * @param config - Loaded configuration
+ * @param cliOptions - CLI options
+ * @returns Array of DiagramConfig
+ */
+export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): DiagramConfig[] {
+  // Priority 1: Config file diagrams
+  if (config.diagrams && config.diagrams.length > 0) {
+    return config.diagrams;
+  }
+
+  // Priority 2: CLI shortcut
+  if (cliOptions.sources && cliOptions.sources.length > 0) {
+    return [
+      {
+        name: cliOptions.name || 'architecture',
+        sources: cliOptions.sources,
+        level: cliOptions.level || 'class',
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      },
+    ];
+  }
+
+  // Priority 3: Default diagram
+  return [
+    {
+      name: 'architecture',
+      sources: ['./src'],
+      level: 'class',
+    },
+  ];
+}
+
+/**
+ * Filter diagrams by names
+ *
+ * @param diagrams - All diagrams
+ * @param selectedNames - Names to filter (undefined = return all)
+ * @returns Filtered diagrams
+ */
+export function filterDiagrams(
+  diagrams: DiagramConfig[],
+  selectedNames?: string[]
+): DiagramConfig[] {
+  if (!selectedNames || selectedNames.length === 0) {
+    return diagrams;
+  }
+
+  return diagrams.filter((d) => selectedNames.includes(d.name));
+}
+
+/**
+ * Display results summary
+ *
+ * @param results - Array of diagram results
+ * @param config - Global configuration
+ */
+function displayResults(results: DiagramResult[], config: Config): void {
+  const successful = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  console.log('\n✅ Analysis complete!\n');
+
+  if (successful.length > 0) {
+    console.log('📊 Successful diagrams:');
+    for (const result of successful) {
+      console.log(`  - ${result.name}`);
+      if (result.stats) {
+        console.log(
+          `    Entities: ${result.stats.entities}, Relations: ${result.stats.relations}`
+        );
+      }
+      if (result.paths?.png) {
+        console.log(`    PNG: ${result.paths.png}`);
+      } else if (result.paths?.json) {
+        console.log(`    JSON: ${result.paths.json}`);
+      } else if (result.paths?.svg) {
+        console.log(`    SVG: ${result.paths.svg}`);
+      }
+    }
+  }
+
+  if (failed.length > 0) {
+    console.log('\n⚠️  Failed diagrams:');
+    for (const result of failed) {
+      console.log(`  - ${result.name}: ${result.error}`);
+    }
+  }
+
+  console.log(`\n📁 Output directory: ${config.outputDir}`);
+
+  if (results.length > 1) {
+    console.log(`📖 Index: ${config.outputDir}/index.md\n`);
+  } else {
+    console.log('');
+  }
+}
+
+/**
+ * Create the analyze command (v2.0)
  */
 export function createAnalyzeCommand(): Command {
   return (
     new Command('analyze')
       .description('Analyze TypeScript project and generate architecture diagrams')
-      .option('-s, --source <paths...>', 'Source directories to analyze (can specify multiple)', [
-        './src',
-      ])
-      .option('-o, --output <path>', 'Output file path')
-      .option('-f, --format <type>', 'Output format (plantuml|json|svg)', 'plantuml')
+
+      // ========== Configuration File ==========
+      .option('--config <path>', 'Config file path (default: archguard.config.json)')
+      .option('--diagrams <names...>', 'Generate specific diagrams (comma-separated)')
+
+      // ========== CLI Shortcut (Single Diagram) ==========
+      .option('-s, --sources <paths...>', 'Source directories (creates single diagram)')
+      .option('-l, --level <level>', 'Detail level: package|class|method (default: class)', 'class')
+      .option('-n, --name <name>', 'Diagram name (default: architecture)', 'architecture')
+
+      // ========== Global Config Overrides ==========
+      .option('-f, --format <type>', 'Output format: plantuml|json|svg')
+      .option('--output-dir <dir>', 'Output directory')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
       .option('--no-cache', 'Disable cache')
       .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
       .option('-v, --verbose', 'Verbose output', false)
-      // Phase 4.2: CLI parameter integration
-      .option('--cli-command <command>', 'Claude CLI command to use', 'claude')
+
+      // ========== Claude CLI Configuration ==========
+      .option('--cli-command <command>', 'Claude CLI command')
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
-      .option('--output-dir <dir>', 'Output directory for diagrams', './archguard')
-      // Phase 3.1: STDIN support
-      .option('--stdin', 'Read file list from stdin (one file per line)')
-      .option('--base-dir <path>', 'Base directory for relative paths (default: cwd)')
-      .option('--skip-missing', 'Skip files that do not exist', false)
-      // Phase 4: Batch mode
-      .option('--batch', 'Generate separate diagrams for each source directory')
-      .option('--name <name>', 'Output file name (supports subdirectories, e.g., "frontend/api")')
-      .option('--no-batch-index', 'Do not generate index file in batch mode')
+
       .action(analyzeCommandHandler)
   );
 }
 
 /**
- * Build ConfigLoader options from CLI options
- * Priority: CLI options > config file > defaults
+ * Analyze command handler (v2.0 - completely rewritten)
  */
-function buildConfigLoaderOptions(options: AnalyzeOptions): Partial<Config> {
-  const configLoaderOptions: {
-    source?: string | string[];
-    output?: string;
-    format?: 'plantuml' | 'json' | 'svg';
-    exclude?: string[];
-    cli?: {
-      command?: string;
-      args?: string[];
-    };
-    outputDir?: string;
-    cache?: {
-      enabled: boolean;
-    };
-    concurrency?: number;
-    verbose?: boolean;
-  } = {};
-
-  // Basic options
-  // Normalize source to array if needed (commander.js may return string or array)
-  if (options.source) {
-    configLoaderOptions.source = Array.isArray(options.source) ? options.source : [options.source];
-  }
-  if (options.output) configLoaderOptions.output = options.output;
-  if (options.format) configLoaderOptions.format = options.format;
-  if (options.exclude) configLoaderOptions.exclude = options.exclude;
-
-  // Phase 4.2: CLI-specific options
-  if (options.cliCommand || options.cliArgs) {
-    const cliOptions: {
-      command?: string;
-      args?: string[];
-    } = {};
-    if (options.cliCommand) cliOptions.command = options.cliCommand;
-    if (options.cliArgs) cliOptions.args = options.cliArgs.split(' ');
-    configLoaderOptions.cli = cliOptions;
-  }
-
-  if (options.outputDir) configLoaderOptions.outputDir = options.outputDir;
-
-  // Cache options
-  if (options.cache !== undefined) {
-    configLoaderOptions.cache = { enabled: options.cache };
-  }
-
-  // Other options
-  if (options.concurrency) {
-    configLoaderOptions.concurrency = parseInt(String(options.concurrency), 10);
-  }
-  if (options.verbose !== undefined) {
-    configLoaderOptions.verbose = options.verbose;
-  }
-
-  return configLoaderOptions as Partial<Config>;
-}
-
-/**
- * Analyze command handler
- */
-async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
+async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
   const progress = new ProgressReporter();
 
   try {
-    // Phase 4.2: Load configuration with CLI options priority
+    // Step 1: Load configuration
+    progress.start('Loading configuration...');
     const configLoader = new ConfigLoader(process.cwd());
-    const config = await configLoader.load(buildConfigLoaderOptions(options));
 
-    // Use config values with fallback to options for backward compatibility
-    const concurrency = config.concurrency || os.cpus().length;
+    // Build partial config for override
+    const configOverrides: Partial<Config> = {};
+    if (cliOptions.format) configOverrides.format = cliOptions.format;
+    if (cliOptions.outputDir) configOverrides.outputDir = cliOptions.outputDir;
+    if (cliOptions.exclude) configOverrides.exclude = cliOptions.exclude;
+    if (cliOptions.cache !== undefined) {
+      configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 };
+    }
+    if (cliOptions.concurrency) {
+      configOverrides.concurrency = parseInt(String(cliOptions.concurrency), 10);
+    }
+    if (cliOptions.verbose !== undefined) configOverrides.verbose = cliOptions.verbose;
+    if (cliOptions.cliCommand || cliOptions.cliArgs) {
+      configOverrides.cli = {
+        command: cliOptions.cliCommand || 'claude',
+        args: cliOptions.cliArgs ? cliOptions.cliArgs.split(' ') : [],
+        timeout: 60000,
+      };
+    }
 
-    // Find TypeScript files using FileDiscoveryService
-    progress.start('Finding TypeScript files...');
+    const config = await configLoader.load(configOverrides, cliOptions.config);
+    progress.succeed('Configuration loaded');
 
-    // Normalize source to array
-    const sourcePaths = Array.isArray(config.source) ? config.source : [config.source];
+    // Step 2: Normalize to DiagramConfig[]
+    const diagrams = normalizeToDiagrams(config, cliOptions);
+    progress.info(`Found ${diagrams.length} diagram(s) to generate`);
 
-    // Use FileDiscoveryService for file discovery
-    const discoveryService = new FileDiscoveryService();
-    const files = await discoveryService.discoverFiles({
-      sources: sourcePaths,
-      baseDir: options.baseDir || process.cwd(),
-      exclude: config.exclude,
-      skipMissing: options.skipMissing || false,
-      stdin: options.stdin || false,
-    });
+    // Step 3: Filter diagrams if needed
+    const selectedDiagrams = filterDiagrams(diagrams, cliOptions.diagrams);
 
-    progress.succeed(`Found ${files.length} TypeScript files`);
-
-    if (files.length === 0) {
-      progress.warn('No TypeScript files found');
+    if (selectedDiagrams.length === 0) {
+      progress.warn('No diagrams selected');
       process.exit(0);
     }
 
-    // Parse files with parallel processing
-    progress.start('Parsing TypeScript files...');
-    const parser = new ParallelParser({
-      concurrency,
-      continueOnError: true,
-    });
+    if (selectedDiagrams.length !== diagrams.length) {
+      progress.info(`Filtered to ${selectedDiagrams.length} diagram(s)`);
+    }
 
-    // Attach progress events
-    let completedFiles = 0;
-    parser.on('file:complete', () => {
-      completedFiles++;
-      progress.update(completedFiles, files.length);
-    });
+    // Step 4: Check Claude CLI availability (if needed)
+    const needsClaude = selectedDiagrams.some((d) => (d.format || config.format) !== 'json');
 
-    parser.on('file:error', ({ file, error }: { file: string; error: string }) => {
-      if (config.verbose) {
-        progress.warn(`Error parsing ${file}: ${error}`);
-      }
-    });
-
-    const metrics = await parser.parseFilesWithMetrics(files);
-    const archJSON = metrics.result;
-
-    progress.succeed(
-      `Parsed ${files.length} files in ${(metrics.parseTime / 1000).toFixed(2)}s (${metrics.filesPerSecond.toFixed(1)} files/sec)`
-    );
-
-    // Phase 4: Batch mode - generate separate diagrams for each source
-    if (options.batch && sourcePaths.length > 1) {
-      // Batch mode only makes sense with multiple sources
-      if (config.format === 'json') {
-        progress.fail('Batch mode is not supported with JSON format. Use PlantUML format instead.');
-        process.exit(1);
-      }
-
+    if (needsClaude) {
       progress.start('Checking Claude Code CLI...');
       const { isClaudeCodeAvailable } = await import('../../utils/cli-detector.js');
       const cliAvailable = await isClaudeCodeAvailable();
@@ -196,105 +229,35 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
       }
 
       progress.succeed('Claude Code CLI available');
-
-      const generator = new PlantUMLGenerator(config);
-      const batchProcessor = new BatchProcessor({
-        sources: sourcePaths,
-        config,
-        parser,
-        generator,
-        progress,
-        generateIndex: options.batchIndex !== false, // Generate index unless --no-batch-index
-      });
-
-      const results = await batchProcessor.processBatch();
-
-      // Display summary
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
-
-      console.log(`\n✅ Batch analysis complete!`);
-      console.log(`📊 Summary:`);
-      console.log(`  - Total modules: ${results.length}`);
-      console.log(`  - Successful: ${successful.length}`);
-      console.log(`  - Failed: ${failed.length}`);
-
-      if (successful.length > 0) {
-        console.log(`\n📁 Output directory: ${config.outputDir || './archguard'}`);
-        if (options.batchIndex !== false) {
-          console.log(`📖 Index: ${path.join(config.outputDir || './archguard', 'index.md')}`);
-        }
-      }
-
-      if (failed.length > 0) {
-        console.log(`\n⚠️  Failed modules:`);
-        failed.forEach((r) => {
-          console.log(`  - ${r.moduleName}: ${r.error || 'Unknown error'}`);
-        });
-      }
-
-      return; // Exit early, batch mode complete
     }
 
-    // Handle output format
-    if (config.format === 'json') {
-      // JSON output
-      const outputPath = config.output || path.join(process.cwd(), 'architecture.json');
-      await fs.writeFile(outputPath, JSON.stringify(archJSON, null, 2));
-      progress.succeed(`Saved ArchJSON to ${outputPath}`);
-    } else {
-      // PlantUML output (default)
-      progress.start('Checking Claude Code CLI...');
-      const { isClaudeCodeAvailable } = await import('../../utils/cli-detector.js');
-      const cliAvailable = await isClaudeCodeAvailable();
+    // Step 5: Unified processing (core!)
+    const processor = new DiagramProcessor({
+      diagrams: selectedDiagrams,
+      globalConfig: config,
+      progress,
+    });
 
-      if (!cliAvailable) {
-        progress.fail('Claude Code CLI not found');
-        console.error(
-          '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
-            'To verify installation: claude --version\n'
-        );
-        process.exit(1);
-      }
+    const results = await processor.processAll();
 
-      progress.succeed('Claude Code CLI available');
-
-      const generator = new PlantUMLGenerator(config);
-
-      // Use OutputPathResolver for centralized path management
-      const pathResolver = new OutputPathResolver(config);
-      await pathResolver.ensureDirectory();
-      const paths = pathResolver.resolve({});
-
-      if (config.format === 'svg') {
-        // SVG output
-        progress.start('Generating SVG diagram...');
-        const plantuml = await generator.generate(archJSON);
-
-        await fs.writeFile(paths.paths.svg, plantuml);
-        progress.succeed(`Generated SVG diagram: ${paths.paths.svg}`);
-      } else {
-        // PNG output (default) - also saves .puml file
-        progress.start('Generating PlantUML diagram...');
-
-        await generator.generateAndRender(archJSON, paths);
-
-        progress.succeed(`Generated diagram: ${paths.paths.png}`);
-
-        // Show statistics
-        if (config.verbose) {
-          progress.info(`Entities: ${archJSON.entities.length}`);
-          progress.info(`Relations: ${archJSON.relations.length}`);
-          progress.info(`Memory: ${(metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
-        }
-      }
+    // Step 6: Generate index (if multiple diagrams)
+    if (results.length > 1) {
+      progress.start('Generating index...');
+      const indexGenerator = new DiagramIndexGenerator(config);
+      await indexGenerator.generate(results);
+      progress.succeed('Index generated');
     }
 
-    process.exit(0);
+    // Step 7: Display results
+    displayResults(results, config);
+
+    // Exit with error if any diagram failed
+    const hasFailed = results.some((r) => !r.success);
+    process.exit(hasFailed ? 1 : 0);
   } catch (error) {
     progress.fail('Analysis failed');
     const errorHandler = new ErrorHandler();
-    console.error(errorHandler.format(error, { verbose: options.verbose || false }));
+    console.error(errorHandler.format(error, { verbose: cliOptions.verbose || false }));
     process.exit(1);
   }
 }

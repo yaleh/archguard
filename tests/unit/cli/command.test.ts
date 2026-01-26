@@ -39,31 +39,39 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(analyzeCmd?.description()).toContain('Analyze');
     });
 
-    it('should have --source option with default value', () => {
+    it('should have --sources option (plural)', () => {
       const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
-      const sourceOption = analyzeCmd?.options.find((opt) => opt.long === '--source');
+      const sourcesOption = analyzeCmd?.options.find((opt) => opt.long === '--sources');
 
-      expect(sourceOption).toBeDefined();
-      expect(sourceOption?.short).toBe('-s');
-      // Default value is now an array to support multiple sources
-      expect(sourceOption?.defaultValue).toEqual(['./src']);
+      expect(sourcesOption).toBeDefined();
+      expect(sourcesOption?.short).toBe('-s');
     });
 
-    it('should have --output option', () => {
+    it('should have --level option with default value class', () => {
       const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
-      const outputOption = analyzeCmd?.options.find((opt) => opt.long === '--output');
+      const levelOption = analyzeCmd?.options.find((opt) => opt.long === '--level');
 
-      expect(outputOption).toBeDefined();
-      expect(outputOption?.short).toBe('-o');
+      expect(levelOption).toBeDefined();
+      expect(levelOption?.short).toBe('-l');
+      expect(levelOption?.defaultValue).toBe('class');
     });
 
-    it('should have --format option with default plantuml', () => {
+    it('should have --name option with default value architecture', () => {
+      const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
+      const nameOption = analyzeCmd?.options.find((opt) => opt.long === '--name');
+
+      expect(nameOption).toBeDefined();
+      expect(nameOption?.short).toBe('-n');
+      expect(nameOption?.defaultValue).toBe('architecture');
+    });
+
+    it('should have --format option', () => {
       const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
       const formatOption = analyzeCmd?.options.find((opt) => opt.long === '--format');
 
       expect(formatOption).toBeDefined();
       expect(formatOption?.short).toBe('-f');
-      expect(formatOption?.defaultValue).toBe('plantuml');
+      // Format default is set in config, not CLI
     });
 
     it('should have --exclude option', () => {
@@ -99,7 +107,7 @@ describe('Story 1: Basic CLI Framework', () => {
   });
 
   describe('Command Parsing', () => {
-    it('should parse source directory option', async () => {
+    it('should parse sources directory option (plural)', async () => {
       const mockAction = vi.fn();
       const testProgram = createCLI();
 
@@ -119,13 +127,13 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      // Source is now returned as an array
-      expect(callArgs[0]).toMatchObject({ source: ['./custom-src'] });
+      // Sources is now returned as an array (plural)
+      expect(callArgs[0]).toMatchObject({ sources: ['./custom-src'] });
 
       exitSpy.mockRestore();
     });
 
-    it('should parse output file option', async () => {
+    it('should parse level option', async () => {
       const mockAction = vi.fn();
       const testProgram = createCLI();
 
@@ -138,12 +146,35 @@ describe('Story 1: Basic CLI Framework', () => {
         analyzeCmd.action(mockAction);
       }
 
-      await testProgram.parseAsync(['analyze', '-o', 'output.puml'], { from: 'user' });
+      await testProgram.parseAsync(['analyze', '-l', 'package'], { from: 'user' });
 
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[0]).toMatchObject({ output: 'output.puml' });
+      expect(callArgs[0]).toMatchObject({ level: 'package' });
+
+      exitSpy.mockRestore();
+    });
+
+    it('should parse name option', async () => {
+      const mockAction = vi.fn();
+      const testProgram = createCLI();
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        return undefined as never;
+      });
+
+      const analyzeCmd = testProgram.commands.find((cmd) => cmd.name() === 'analyze');
+      if (analyzeCmd) {
+        analyzeCmd.action(mockAction);
+      }
+
+      await testProgram.parseAsync(['analyze', '-n', 'my-diagram'], { from: 'user' });
+
+      expect(mockAction).toHaveBeenCalled();
+      const callArgs = mockAction.mock.calls[0];
+      expect(callArgs).toBeDefined();
+      expect(callArgs[0]).toMatchObject({ name: 'my-diagram' });
 
       exitSpy.mockRestore();
     });
@@ -189,9 +220,10 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
+      // v2.0 defaults: level=class, name=architecture
       expect(callArgs[0]).toMatchObject({
-        source: ['./src'], // Source is now an array
-        format: 'plantuml',
+        level: 'class',
+        name: 'architecture',
       });
 
       exitSpy.mockRestore();

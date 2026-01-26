@@ -51,6 +51,143 @@ TypeScriptParser --> ArchJSON : "produces"
 
 {{/if}}
 
+{{#if DETAIL_LEVEL}}
+## 📊 详细程度要求
+
+当前详细程度: **{{DETAIL_LEVEL}}**
+
+{{#if DETAIL_LEVEL == "package"}}
+### Package 级别规则（总览图）
+
+**生成要求**:
+- ✅ 只显示 package 结构（使用 `package "模块名" { }` 包裹）
+- ✅ 显示 package 之间的依赖关系
+- ❌ **不要显示类、接口、方法**
+- ❌ **不要在 package 内部定义任何实体**
+- ✅ Package 为空（无成员）
+
+**示例**:
+```plantuml
+@startuml Architecture Overview
+!theme cerulean-outline
+top to bottom direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam ranksep 40
+
+package "Parser Layer" {
+}
+
+package "AI Layer" {
+}
+
+package "CLI Layer" {
+}
+
+"CLI Layer" --> "Parser Layer" : "uses"
+"CLI Layer" --> "AI Layer" : "uses"
+
+@enduml
+```
+
+**关键要点**:
+- 包内为空（不包含类定义）
+- 只显示高层架构依赖
+- 适合总览和高层设计
+- 使用垂直布局展示层级关系
+
+{{/if}}
+{{#if DETAIL_LEVEL == "class"}}
+### Class 级别规则（默认）
+
+**生成要求**:
+- ✅ 显示类、接口和公共方法
+- ✅ 显示类之间的关系
+- ✅ 使用 package 组织模块
+- ❌ 不显示私有方法
+- ✅ 适合模块详细设计
+
+**示例**:
+```plantuml
+@startuml Architecture
+!theme cerulean-outline
+top to bottom direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+
+package "Parser Layer" {
+  class TypeScriptParser {
+    +parseFiles(): ArchJSON
+    +parseFile(): Entity[]
+  }
+  class ClassExtractor {
+    +extract(): Entity
+  }
+}
+
+package "AI Layer" {
+  class ClaudeCodeWrapper {
+    +generateDiagram(): string
+  }
+}
+
+ClaudeCodeWrapper --> TypeScriptParser : "uses"
+
+@enduml
+```
+
+**关键要点**:
+- 显示公共接口（public 方法）
+- 隐藏实现细节（private 方法）
+- 平衡可读性与详细程度
+- 适合团队协作和文档生成
+
+{{/if}}
+{{#if DETAIL_LEVEL == "method"}}
+### Method 级别规则（完整细节）
+
+**生成要求**:
+- ✅ 显示所有方法（包括私有）
+- ✅ 显示所有属性（包括私有）
+- ✅ 显示完整的方法签名（参数和返回类型）
+- ✅ 适合深度分析和代码审查
+
+**示例**:
+```plantuml
+@startuml Architecture Detail
+!theme cerulean-outline
+top to bottom direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+
+package "Parser Layer" {
+  class TypeScriptParser {
+    -sourceFiles: SourceFile[]
+    -options: ParserOptions
+    +constructor(options: ParserOptions)
+    +parseFiles(paths: string[]): Promise<ArchJSON>
+    +parseFile(path: string): Entity[]
+    -createEntity(node: Node): Entity
+    -extractMethods(node: ClassDeclaration): Method[]
+  }
+}
+
+@enduml
+```
+
+**关键要点**:
+- 完整的类结构（public + private）
+- 详细的方法签名
+- 适合深度代码分析
+- 可能导致图表较大
+
+{{/if}}
+
+{{/if}}
+
 ## ⭐ 核心要求（按优先级）
 
 ### 1. 必须使用 package 组织模块（最高优先级）

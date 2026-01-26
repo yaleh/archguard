@@ -9,6 +9,7 @@ import { PlantUMLRenderer } from './plantuml-renderer.js';
 import { ArchJSON } from '../types';
 import type { Config } from '../cli/config-loader.js';
 import type { PathResolution } from '../cli/utils/output-path-resolver.js';
+import type { DetailLevel } from '../types/config.js';
 
 /**
  * Generator configuration
@@ -62,12 +63,13 @@ export class PlantUMLGenerator {
    *
    * @param archJson - Architecture JSON data
    * @param previousPuml - Optional previous PlantUML for incremental updates
+   * @param level - Detail level for the diagram (default: 'class')
    * @returns PlantUML code
    * @throws Error if generation fails or validation fails
    */
-  async generate(archJson: ArchJSON, previousPuml?: string): Promise<string> {
+  async generate(archJson: ArchJSON, previousPuml?: string, level: DetailLevel = 'class'): Promise<string> {
     // Generate PlantUML using Claude Code CLI wrapper
-    const puml = await this.wrapper.generatePlantUML(archJson, previousPuml);
+    const puml = await this.wrapper.generatePlantUML(archJson, previousPuml, level);
 
     // Validate output
     const validation = this.validator.validate(puml, archJson);
@@ -84,17 +86,17 @@ export class PlantUMLGenerator {
    *
    * @param archJson - Architecture JSON data
    * @param pathOrResolution - Either a PathResolution object or output path string (deprecated)
-   * @param previousPuml - Optional previous PlantUML for incremental updates
+   * @param level - Detail level for the diagram (default: 'class')
    * @returns Promise resolving when PNG is saved
    * @throws Error if generation or rendering fails
    */
   async generateAndRender(
     archJson: ArchJSON,
     pathOrResolution: PathResolution | string,
-    previousPuml?: string
+    level: DetailLevel = 'class'
   ): Promise<void> {
     // Generate PlantUML code
-    const puml = await this.generate(archJson, previousPuml);
+    const puml = await this.generate(archJson, undefined, level);
 
     // Determine paths
     let pumlPath: string;

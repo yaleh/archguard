@@ -39,12 +39,5 @@ export interface AnalyzeOptions {
   cliCommand?: string;
   cliArgs?: string;
   outputDir?: string;
-  // Phase 1.1: Multi-source and batch processing options
-  stdin?: boolean;
-  baseDir?: string;
-  skipMissing?: boolean;
-  batch?: boolean;
-  batchIndex?: boolean;
-  separate?: boolean;
   name?: string;
 }

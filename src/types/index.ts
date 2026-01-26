@@ -2,6 +2,9 @@
  * Core type definitions for ArchGuard
  */
 
+// Export configuration types (v2.0)
+export * from './config.js';
+
 /**
  * Main architecture JSON structure
  */

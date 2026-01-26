@@ -1,22 +1,29 @@
 /**
  * Configuration Loader - Load and validate configuration from files
+ * v2.0.0 Breaking Change: Complete redesign of configuration structure
  */
 
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import { z } from 'zod';
+export type { ArchGuardConfig } from '../types/config.js';
 
 /**
- * Configuration schema with validation
+ * Configuration schema with validation (v2.0)
+ *
+ * Breaking Changes from v1.x:
+ * - Removed: source, output fields
+ * - Added: diagrams[] array
+ * - Removed: ai config (deprecated)
  */
 const configSchema = z.object({
-  source: z.union([z.string(), z.array(z.string())]).default('./src'),
-  output: z.string().optional(),
+  // ========== Global Configuration ==========
   outputDir: z.string().default('./archguard'),
   format: z.enum(['plantuml', 'json', 'svg']).default('plantuml'),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
-  // CLI Configuration
+  // ========== CLI Configuration ==========
   cli: z
     .object({
       command: z.string().default('claude'),
@@ -29,15 +36,7 @@ const configSchema = z.object({
       timeout: 60000,
     }),
 
-  // ✅ BACKWARD COMPATIBILITY: ai config (deprecated but still supported)
-  // Note: This field is removed by normalizeConfig if empty after migration
-  ai: z
-    .object({
-      model: z.string().optional(),
-      timeout: z.number().optional(),
-    })
-    .optional(),
-
+  // ========== Cache Configuration ==========
   cache: z
     .object({
       enabled: z.boolean().default(true),
@@ -47,19 +46,48 @@ const configSchema = z.object({
       enabled: true,
       ttl: 86400,
     }),
-  concurrency: z.number().optional(),
-  verbose: z.boolean().optional(),
+
+  // ========== Other Configuration ==========
+  concurrency: z.number().default(os.cpus().length),
+  verbose: z.boolean().default(false),
+
+  // ========== Diagrams Configuration (v2.0 Core Change) ==========
+  /**
+   * Array of diagram definitions
+   *
+   * Core Design: "Everything is a Diagram"
+   * - Empty array: Use CLI shortcut or default diagram
+   * - Single diagram: diagrams.length === 1
+   * - Multiple diagrams: diagrams.length > 1
+   */
+  diagrams: z
+    .array(
+      z.object({
+        /** Diagram output name (supports subdirectories) */
+        name: z.string(),
+        /** Source paths or glob patterns */
+        sources: z.array(z.string()),
+        /** Detail level: package, class, or method */
+        level: z.enum(['package', 'class', 'method']),
+        /** Human-readable description */
+        description: z.string().optional(),
+        /** Output format override */
+        format: z.enum(['plantuml', 'json', 'svg']).optional(),
+        /** Exclude patterns override */
+        exclude: z.array(z.string()).optional(),
+      })
+    )
+    .default([]),
 });
 
 export type Config = z.infer<typeof configSchema>;
 
 /**
- * Intermediate configuration type for file loading
- * Includes deprecated fields that will be migrated/removed
+ * Intermediate configuration type for file loading (v2.0)
+ *
+ * Breaking Change: Removed all deprecated fields
  */
 interface FileConfig {
-  source?: string | string[];
-  output?: string;
   outputDir?: string;
   format?: 'plantuml' | 'json' | 'svg';
   exclude?: string[];
@@ -68,23 +96,25 @@ interface FileConfig {
     args?: string[];
     timeout?: number;
   };
-  ai?: {
-    model?: string;
-    timeout?: number;
-    apiKey?: string;
-    maxTokens?: number;
-    temperature?: number;
-  };
   cache?: {
     enabled?: boolean;
     ttl?: number;
   };
   concurrency?: number;
   verbose?: boolean;
+  diagrams?: Array<{
+    name: string;
+    sources: string[];
+    level: 'package' | 'class' | 'method';
+    description?: string;
+    format?: 'plantuml' | 'json' | 'svg';
+    exclude?: string[];
+  }>;
 }
 
 /**
- * ConfigLoader loads and validates configuration from files
+ * ConfigLoader loads and validates configuration from files (v2.0)
+ *
  * Features:
  * - Support for archguard.config.json
  * - Support for archguard.config.js (with module.exports)
@@ -92,7 +122,11 @@ interface FileConfig {
  * - Zod schema validation
  * - Default value handling
  * - Config file generation (init command)
- * - Backward compatibility with deprecated options
+ *
+ * Breaking Changes from v1.x:
+ * - Removed backward compatibility with deprecated options
+ * - Configuration structure completely redesigned
+ * - Old config files will NOT work with v2.0
  */
 export class ConfigLoader {
   private configDir: string;
@@ -103,9 +137,12 @@ export class ConfigLoader {
 
   /**
    * Load configuration from file and merge with CLI options
+   *
+   * @param cliOptions - CLI options to override config file values
+   * @param configPath - Optional custom config file path
    */
-  async load(cliOptions: Partial<Config> = {}): Promise<Config> {
-    const fileConfig = await this.loadFromFile();
+  async load(cliOptions: Partial<Config> = {}, configPath?: string): Promise<Config> {
+    const fileConfig = await this.loadFromFile(configPath);
     const normalized = this.normalizeConfig(fileConfig);
     const merged = this.deepMerge(normalized, cliOptions);
 
@@ -126,49 +163,15 @@ export class ConfigLoader {
   }
 
   /**
-   * Normalize configuration by migrating deprecated fields
-   * - ai.model -> cli.args
-   * - ai.timeout -> cli.timeout
-   * - Remove deprecated fields: apiKey, maxTokens, temperature
+   * Normalize configuration (v2.0 - simplified, no backward compatibility)
+   *
+   * In v2.0, we no longer migrate deprecated fields.
+   * Old configuration files will fail validation with clear error messages.
    */
   private normalizeConfig(config: FileConfig): FileConfig {
-    const normalized = { ...config };
-
-    // Show deprecation warning for apiKey
-    if (normalized.ai && 'apiKey' in normalized.ai) {
-      console.warn(
-        'Warning: ai.apiKey is deprecated and will be ignored.\n' +
-          'Claude Code CLI uses its own authentication.\n' +
-          'Please remove apiKey from your config file.'
-      );
-    }
-
-    // ai.model -> cli.args
-    if (normalized.ai?.model && !normalized.cli?.args) {
-      normalized.cli = normalized.cli || {};
-      normalized.cli.args = ['--model', normalized.ai.model];
-    }
-
-    // ai.timeout -> cli.timeout
-    if (normalized.ai?.timeout && !normalized.cli?.timeout) {
-      normalized.cli = normalized.cli || {};
-      normalized.cli.timeout = normalized.ai.timeout;
-    }
-
-    // Remove deprecated config
-    if (normalized.ai) {
-      delete normalized.ai.apiKey;
-      delete normalized.ai.maxTokens;
-      delete normalized.ai.temperature;
-      delete normalized.ai.model;
-      delete normalized.ai.timeout;
-
-      if (Object.keys(normalized.ai).length === 0) {
-        delete normalized.ai;
-      }
-    }
-
-    return normalized;
+    // Simply return the config as-is
+    // All validation is handled by Zod schema
+    return { ...config };
   }
 
   /**
@@ -217,8 +220,29 @@ export class ConfigLoader {
   /**
    * Load configuration from file
    * Tries archguard.config.json first, then archguard.config.js
+   *
+   * @param configPath - Optional custom config file path
    */
-  private async loadFromFile(): Promise<FileConfig> {
+  private async loadFromFile(configPath?: string): Promise<FileConfig> {
+    // If configPath is provided, load it directly
+    if (configPath) {
+      const resolvedPath = path.resolve(configPath);
+      if (await fs.pathExists(resolvedPath)) {
+        if (resolvedPath.endsWith('.json')) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return await fs.readJson(resolvedPath);
+        } else if (resolvedPath.endsWith('.js')) {
+          // Dynamic import for ES modules
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const module = await import(`file://${resolvedPath}`);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+          return module.default ?? module;
+        }
+      }
+      throw new Error(`Config file not found: ${configPath}`);
+    }
+
+    // Otherwise, use default search behavior
     // Try .json first
     const jsonPath = path.join(this.configDir, 'archguard.config.json');
     if (await fs.pathExists(jsonPath)) {

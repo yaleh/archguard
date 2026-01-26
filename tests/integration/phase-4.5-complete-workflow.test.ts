@@ -205,12 +205,15 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
     });
   });
 
-  describe('Backward Compatibility Scenarios', () => {
-    it('should migrate ai.model to cli.args automatically', async () => {
-      // Create old-style config
+  describe('v2.0 Configuration Scenarios', () => {
+    it('should load CLI configuration from config file', async () => {
+      // Create v2.0 config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        ai: {
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
+        cli: {
           model: 'claude-sonnet-4-20250514',
           timeout: 120000,
         },
@@ -219,79 +222,59 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Load config
       const config = await configLoader.load();
 
-      // Verify migration
-      expect(config.cli.args).toEqual(['--model', 'claude-sonnet-4-20250514']);
+      // Verify config loaded
+      expect(config.diagrams).toHaveLength(1);
       expect(config.cli.timeout).toBe(120000);
-      expect(config.ai?.model).toBeUndefined();
     });
 
-    it('should work with ClaudeCodeWrapper after migration', async () => {
-      // Create old-style config
+    it('should work with ClaudeCodeWrapper with v2.0 config', async () => {
+      // Create v2.0 config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        ai: {
-          model: 'claude-opus-4-20250514',
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
+        cli: {
+          command: 'claude',
+          args: ['--model', 'claude-opus-4-20250514'],
           timeout: 90000,
         },
       });
 
-      // Load and migrate
+      // Load config
       const config = await configLoader.load();
 
       // Create wrapper
       const wrapper = new ClaudeCodeWrapper(config);
 
-      // Verify wrapper receives migrated config
+      // Verify wrapper receives config
       expect(wrapper.internalConfig.cliArgs).toEqual(['--model', 'claude-opus-4-20250514']);
       expect(wrapper.internalConfig.timeout).toBe(90000);
     });
 
-    it('should show deprecation warnings for removed fields', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      // Create config with deprecated fields
+    it('should validate diagrams array in config', async () => {
+      // Create config with multiple diagrams
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        ai: {
-          apiKey: 'sk-ant-12345',
-          maxTokens: 8192,
-          temperature: 0.7,
-        },
-      });
-
-      // Load config
-      const config = await configLoader.load();
-
-      // Verify warnings were shown
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('ai.apiKey is deprecated'));
-
-      // Verify fields were removed
-      expect(config.ai?.apiKey).toBeUndefined();
-      expect(config.ai?.maxTokens).toBeUndefined();
-      expect(config.ai?.temperature).toBeUndefined();
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle mixed old and new config', async () => {
-      // Create config with both old and new fields
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
+        diagrams: [
+          { name: 'overview', sources: ['./src'], level: 'package' },
+          { name: 'modules/cli', sources: ['./src/cli'], level: 'class' },
+        ],
         cli: {
           command: 'claude',
           args: ['--custom-arg'],
           timeout: 60000,
         },
-        ai: {
-          model: 'claude-opus-4-20250514', // Should be ignored since cli.args exists
-        },
       });
 
       // Load config
       const config = await configLoader.load();
 
-      // Verify new config takes precedence
-      expect(config.cli.args).toEqual(['--custom-arg']); // Not replaced
+      // Verify diagrams
+      expect(config.diagrams).toHaveLength(2);
+      expect(config.diagrams[0].level).toBe('package');
+      expect(config.diagrams[1].level).toBe('class');
+      expect(config.cli.args).toEqual(['--custom-arg']);
       expect(config.cli.command).toBe('claude');
       expect(config.cli.timeout).toBe(60000);
     });
@@ -304,7 +287,9 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Step 1: Create comprehensive config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        source: './src',
+        diagrams: [
+          { name: 'overview', sources: ['./src'], level: 'class' },
+        ],
         outputDir: './test-output',
         cli: {
           command: '/usr/bin/claude',
@@ -325,7 +310,8 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       const wrapper = new ClaudeCodeWrapper(config);
 
       // Step 4: Verify component configuration
-      expect(config.source).toBe('./src');
+      expect(config.diagrams).toHaveLength(1);
+      expect(config.diagrams[0].name).toBe('overview');
       expect(config.outputDir).toBe('./test-output');
       expect(config.format).toBe('plantuml');
       expect(config.cache.enabled).toBe(false);
@@ -347,6 +333,9 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Create base config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
         cli: {
           command: 'claude',
           args: ['--model', 'claude-sonnet-4-20250514'],
@@ -389,7 +378,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       expect(config.cli.args).toEqual([]);
       expect(config.cli.timeout).toBe(60000);
       expect(config.outputDir).toBe('./archguard');
-      expect(config.source).toBe('./src');
+      expect(config.diagrams).toEqual([]);
       expect(config.format).toBe('plantuml');
       expect(config.cache.enabled).toBe(true);
 
@@ -424,7 +413,9 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Create config without cli section
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        source: './src',
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
       });
 
       // Load config - should use defaults

@@ -118,20 +118,37 @@ export class PromptTemplateManager {
   /**
    * Processes conditional blocks in template
    *
+   * Supports:
+   * - Simple conditionals: {{#if VAR}}...{{else}}...{{/if}}
+   * - Comparison conditionals: {{#if VAR == "value"}}...{{/if}}
+   * - Nested conditionals
+   *
    * @private
    * @param content - Template content
    * @param variables - Template variables
    * @returns Processed content
    */
   private processConditionals(content: string, variables: TemplateVariables): string {
-    // Pattern: {{#if VAR}}...{{else}}...{{/if}}
-    const conditionalPattern = /\{\{#if\s+(\w+)\}\}(.*?)\{\{else\}\}(.*?)\{\{\/if\}\}/gs;
+    let result = content;
 
-    return content.replace(conditionalPattern, (_match, varName, ifContent, elseContent) => {
+    // Process comparison conditionals first: {{#if VAR == "value"}}...{{/if}}
+    // Also handles {{#if VAR == "value"}}...{{else}}...{{/if}}
+    const comparisonPattern = /\{\{#if\s+(\w+)\s*==\s*"([^"]+)"\}\}(.*?)(?:\{\{else\}\}(.*?))?\{\{\/if\}\}/gs;
+    result = result.replace(comparisonPattern, (_match, varName, expectedValue, ifContent, elseContent = '') => {
+      const actualValue = variables[varName];
+      // Compare variable value with expected value
+      return actualValue === expectedValue ? ifContent : elseContent;
+    });
+
+    // Process simple conditionals: {{#if VAR}}...{{else}}...{{/if}}
+    const simplePattern = /\{\{#if\s+(\w+)\}\}(.*?)(?:\{\{else\}\}(.*?))?\{\{\/if\}\}/gs;
+    result = result.replace(simplePattern, (_match, varName, ifContent, elseContent = '') => {
       const value = variables[varName];
       // If variable is truthy, use ifContent, else use elseContent
       return value !== undefined && value !== null && value !== '' ? ifContent : elseContent;
     });
+
+    return result;
   }
 
   /**

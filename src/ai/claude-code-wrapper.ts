@@ -14,6 +14,7 @@ import path from 'path';
 import { detectClaudeCodeCLI } from '../utils/cli-detector.js';
 import type { ArchJSON } from '../types/index.js';
 import type { Config } from '../cli/config-loader.js';
+import type { DetailLevel } from '../types/config.js';
 
 /**
  * Configuration options for ClaudeCodeWrapper
@@ -163,10 +164,11 @@ export class ClaudeCodeWrapper {
    *
    * @param archJson - Architecture JSON data
    * @param previousPuml - Optional previous PlantUML for incremental updates
+   * @param level - Detail level for the diagram (default: 'class')
    * @returns Promise resolving to PlantUML code
    * @throws Error if generation fails after all retries
    */
-  async generatePlantUML(archJson: ArchJSON, previousPuml?: string): Promise<string> {
+  async generatePlantUML(archJson: ArchJSON, previousPuml?: string, level: DetailLevel = 'class'): Promise<string> {
     const { PromptTemplateManager } = await import('./prompt-template-manager.js');
     const { OutputParser } = await import('./output-parser.js');
     const { ExternalTypeDetector } = await import('./external-type-detector.js');
@@ -187,8 +189,8 @@ export class ClaudeCodeWrapper {
         const prompt = await templateManager.render('class-diagram', {
           ARCH_JSON: JSON.stringify(archJson, null, 2),
           PREVIOUS_PUML: previousPuml || null,
-          EXTERNAL_TYPES:
-            externalTypes.length > 0 ? JSON.stringify(externalTypes, null, 2) : null,
+          EXTERNAL_TYPES: externalTypes.length > 0 ? JSON.stringify(externalTypes, null, 2) : null,
+          DETAIL_LEVEL: level,
         });
 
         // Step 2: Call Claude Code CLI directly with prompt
@@ -255,7 +257,12 @@ export class ClaudeCodeWrapper {
     }
 
     // Completeness check: verify all entities are present
+    // Skip validation for package entities as they're structural, not content entities
     for (const entity of archJson.entities) {
+      // @ts-ignore - package type may not be in EntityType enum but is valid
+      if (entity.type === 'package') {
+        continue; // Skip package entities - they're represented differently in PlantUML
+      }
       if (!plantUML.includes(entity.name)) {
         throw new Error(
           `Validation failed: Entity "${entity.name}" not found in generated PlantUML`

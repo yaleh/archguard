@@ -62,20 +62,22 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(outputDirOption?.description).toContain('Output directory');
     });
 
-    it('should use default value for --cli-command', async () => {
+    it('should not have default value for --cli-command in CLI', async () => {
       const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
       const command = createAnalyzeCommand();
 
       const cliCommandOption = command.options.find((opt) => opt.long === '--cli-command');
-      expect(cliCommandOption?.defaultValue).toBe('claude');
+      // Defaults are set in ConfigLoader, not CLI options
+      expect(cliCommandOption?.defaultValue).toBeUndefined();
     });
 
-    it('should use default value for --output-dir', async () => {
+    it('should not have default value for --output-dir in CLI', async () => {
       const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
       const command = createAnalyzeCommand();
 
       const outputDirOption = command.options.find((opt) => opt.long === '--output-dir');
-      expect(outputDirOption?.defaultValue).toBe('./archguard');
+      // Defaults are set in ConfigLoader, not CLI options
+      expect(outputDirOption?.defaultValue).toBeUndefined();
     });
   });
 
@@ -84,7 +86,9 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       // Create a test config file
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        source: './src',
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
         cli: {
           command: 'claude',
           args: ['--model', 'claude-3-5-sonnet-20241022'],
@@ -119,6 +123,9 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       // Create a test config file
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
         cli: {
           command: 'claude',
           args: ['--model', 'claude-3-5-sonnet-20241022'],
@@ -148,6 +155,9 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
     it('should use CLI option when both CLI and config file specify value', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
         cli: {
           command: 'config-claude',
         },
@@ -168,6 +178,9 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
     it('should use config file value when CLI option not provided', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
+        diagrams: [
+          { name: 'test', sources: ['./src'], level: 'class' },
+        ],
         cli: {
           command: 'config-claude',
         },

@@ -56,52 +56,51 @@ node dist/cli/index.js analyze -s ./src --output-dir ./diagrams
 
 ### Advanced Usage
 
-#### Multi-Source Analysis
-Analyze multiple directories in a single run:
+#### Multi-Level Architecture Diagrams
+Generate diagrams at different abstraction levels:
 ```bash
-# Analyze multiple source directories (files are merged)
-node dist/cli/index.js analyze -s ./src -s ./lib -s ./shared
+# Package-level overview (high-level)
+node dist/cli/index.js analyze -s ./src -l package -n overview
 
-# Files are automatically deduplicated
-node dist/cli/index.js analyze -s ./src -s ./src/cli  # No duplicates
+# Class-level detail (default)
+node dist/cli/index.js analyze -s ./src -l class -n architecture
+
+# Method-level detail (low-level)
+node dist/cli/index.js analyze -s ./src/core -l method -n core-methods
 ```
 
-#### Batch Mode (Separate Diagrams per Module)
-Generate separate diagrams for each source directory:
+#### Multiple Diagram Generation
+Use configuration file to generate multiple diagrams with different levels:
 ```bash
-# Batch mode with multiple modules
-node dist/cli/index.js analyze -s ./packages/frontend -s ./packages/backend --batch
+# Create archguard.config.json with diagrams array:
+{
+  "diagrams": [
+    {
+      "name": "overview",
+      "sources": ["./src"],
+      "level": "package"
+    },
+    {
+      "name": "modules/frontend",
+      "sources": ["./src/frontend"],
+      "level": "class"
+    },
+    {
+      "name": "modules/backend",
+      "sources": ["./src/backend"],
+      "level": "class"
+    }
+  ]
+}
 
-# Output structure:
-# archguard/
-# ├── modules/
-# │   ├── frontend.png
-# │   ├── frontend.puml
-# │   ├── backend.png
-# │   └── backend.puml
-# └── index.md  (navigation page with stats)
+# Generate all diagrams
+node dist/cli/index.js analyze
 
-# Skip index generation
-node dist/cli/index.js analyze -s ./src/cli -s ./src/parser --batch --no-batch-index
+# Generate specific diagrams
+node dist/cli/index.js analyze --diagrams overview frontend
 ```
 
-#### STDIN Mode (Pipeline Integration)
-Read file list from stdin for integration with git or other tools:
-```bash
-# Analyze specific files from git
-git ls-files '*.ts' | node dist/cli/index.js analyze --stdin -f json
-
-# Analyze changed files only
-git diff --name-only HEAD~5 | grep '\.ts$' | node dist/cli/index.js analyze --stdin
-
-# With base directory for relative paths
-cat files.txt | node dist/cli/index.js analyze --stdin --base-dir /project
-
-# Skip missing files (useful for deleted files in git diff)
-git diff --name-only | node dist/cli/index.js analyze --stdin --skip-missing
-```
-
-#### Custom Output Naming
+#### Custom Output Organization
 Control output file names and locations:
 ```bash
 # Custom name in default directory
@@ -121,27 +120,26 @@ node dist/cli/index.js analyze --name modules/frontend/components
 #### analyze
 Analyze TypeScript project and generate architecture diagrams.
 
-**Basic Options**:
-- `-s, --source <paths...>` - Source directory/directories to analyze (can specify multiple, default: `./src`)
-- `-o, --output <path>` - Output file path
-- `-f, --format <type>` - Output format: `plantuml`, `json`, or `svg` (default: `plantuml`)
+**Configuration Options**:
+- `--config <path>` - Config file path (default: `archguard.config.json`)
+- `--diagrams <names...>` - Generate specific diagrams (comma-separated)
+
+**CLI Shortcut (Single Diagram)**:
+- `-s, --sources <paths...>` - Source directories (creates single diagram)
+- `-l, --level <level>` - Detail level: `package`|`class`|`method` (default: `class`)
+- `-n, --name <name>` - Diagram name (default: `architecture`)
+
+**Global Config Overrides**:
+- `-f, --format <type>` - Output format: `plantuml`|`json`|`svg` (default: `plantuml`)
+- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
 
-**Output Options**:
-- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
-- `--name <name>` - Output file name, supports subdirectories (e.g., `"frontend/api"`)
+**Claude CLI Configuration**:
 - `--cli-command <command>` - Claude CLI command to use (default: `claude`)
 - `--cli-args <args>` - Additional CLI arguments (space-separated)
-
-**Advanced Options**:
-- `--stdin` - Read file list from stdin (one file per line)
-- `--base-dir <path>` - Base directory for resolving relative paths from stdin
-- `--skip-missing` - Skip files that do not exist (useful with stdin)
-- `--batch` - Generate separate diagrams for each source directory
-- `--no-batch-index` - Skip index.md generation in batch mode
 
 #### init
 Initialize configuration file.
