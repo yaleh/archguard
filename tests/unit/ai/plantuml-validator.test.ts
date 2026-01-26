@@ -639,5 +639,75 @@ User *-- "Map<string, string>"
 
       expect(result.isValid).toBe(true); // Map is cleaned and ignored
     });
+
+    it('should recognize external types with <<external>> stereotype', () => {
+      const puml = `
+@startuml
+package "Types (External)" {
+  class ArchJSON <<external>>
+  class Entity <<external>>
+  class Relation <<external>>
+}
+
+package "Parser Layer" {
+  class TypeScriptParser
+  class ClassExtractor
+}
+
+TypeScriptParser --> ArchJSON : "produces"
+ClassExtractor --> Entity : "extracts"
+ClassExtractor --> Relation : "uses"
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true);
+      expect(result.undefinedReferences).toHaveLength(0);
+    });
+
+    it('should recognize mixed internal and external types', () => {
+      const puml = `
+@startuml
+class User
+class Admin
+
+package "External Dependencies" {
+  class ArchJSON <<external>>
+  interface Config <<external>>
+}
+
+Admin --|> User
+Admin --> ArchJSON : "uses"
+User --> Config : "loads"
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(true);
+      expect(result.undefinedReferences).toHaveLength(0);
+    });
+
+    it('should still detect undefined types even when some are marked as external', () => {
+      const puml = `
+@startuml
+class User
+
+package "External" {
+  class ValidExternal <<external>>
+}
+
+User --> ValidExternal : "ok"
+User --> UndefinedType : "error"
+@enduml
+      `;
+
+      const result = validator.validateRelationshipReferences(puml, archJson);
+
+      expect(result.isValid).toBe(false);
+      expect(result.undefinedReferences?.some((ref) => ref.includes('UndefinedType'))).toBe(true);
+      expect(result.undefinedReferences?.some((ref) => ref.includes('ValidExternal'))).toBe(false);
+    });
   });
 });

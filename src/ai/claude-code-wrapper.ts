@@ -169,19 +169,26 @@ export class ClaudeCodeWrapper {
   async generatePlantUML(archJson: ArchJSON, previousPuml?: string): Promise<string> {
     const { PromptTemplateManager } = await import('./prompt-template-manager.js');
     const { OutputParser } = await import('./output-parser.js');
+    const { ExternalTypeDetector } = await import('./external-type-detector.js');
 
     const templateManager = new PromptTemplateManager();
     const parser = new OutputParser();
+    const detector = new ExternalTypeDetector();
 
     let lastError: Error | null = null;
 
     // Retry loop with exponential backoff
     for (let attempt = 1; attempt <= this.options.maxRetries + 1; attempt++) {
       try {
+        // Step 0: Detect external type references
+        const externalTypes = detector.detect(archJson);
+
         // Step 1: Build prompt using template
         const prompt = await templateManager.render('class-diagram', {
           ARCH_JSON: JSON.stringify(archJson, null, 2),
           PREVIOUS_PUML: previousPuml || null,
+          EXTERNAL_TYPES:
+            externalTypes.length > 0 ? JSON.stringify(externalTypes, null, 2) : null,
         });
 
         // Step 2: Call Claude Code CLI directly with prompt

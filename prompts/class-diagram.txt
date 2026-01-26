@@ -14,6 +14,43 @@
 请基于架构指纹生成全新的 PlantUML 类图。
 {{/if}}
 
+{{#if EXTERNAL_TYPES}}
+## 外部类型声明
+
+以下类型被当前模块引用，但不在当前模块定义范围内。请为它们生成**最小声明**：
+
+```json
+{{EXTERNAL_TYPES}}
+```
+
+**外部类型处理规则**：
+- ✅ 仅声明外部类型的 class/interface 名称
+- ✅ 使用 `<<external>>` 立体字标记说明这是外部类型
+- ✅ 如果提供了 package，将其放在对应 package 中（如 "Types (External)"）
+- ✅ 外部类型应该是空的类定义（没有方法和属性）
+- ❌ **不要**包含外部类型的属性、方法或字段
+- ❌ **不要**包含外部类型对其它类的依赖关系
+- ❌ **不要**声明未在上述列表中的外部类型
+
+**示例**（外部类型最小声明）：
+```plantuml
+package "Types (External)" {
+  class ArchJSON <<external>>
+  class Entity <<external>>
+  class Relation <<external>>
+}
+
+package "Parser Layer" {
+  class TypeScriptParser {
+    +parseFiles(): ArchJSON
+  }
+}
+
+TypeScriptParser --> ArchJSON : "produces"
+```
+
+{{/if}}
+
 ## ⭐ 核心要求（按优先级）
 
 ### 1. 必须使用 package 组织模块（最高优先级）
@@ -111,10 +148,12 @@ B --> C : "depends on"
 
 ### 4. ⚠️ 禁止事项
 
-- ❌ 不要引用外部类型（Error, EventEmitter, Anthropic, Ora 等）
-- ❌ 不要引用泛型参数（T, Map<K,V>, Promise<T> 等）
-- ❌ 不要在关系部分引用未定义的实体
+- ❌ 不要引用内置类型（Error, EventEmitter, Promise, Map 等）
+- ❌ 不要引用第三方库类型（Anthropic, Ora, ts-morph 等）
+- ❌ 不要引用泛型参数（T, K, V, Promise<T> 等）
+- ❌ 不要在关系部分引用未定义且非外部声明的实体
 - ❌ 不要过度使用布局控制（保持 PlantUML 自动布局的优势）
+- ✅ 允许引用外部模块类型，但必须提供最小声明（见"外部类型声明"部分）
 
 ### 5. 关系符号
 
@@ -130,7 +169,8 @@ B --> C : "depends on"
 - [ ] 所有实体都在合适的 package 中
 - [ ] 布局方向语义合理（垂直优先）
 - [ ] 关系在 package 外部定义
-- [ ] 没有引用外部类型
+- [ ] 外部类型使用了 <<external>> 标记且无成员定义
+- [ ] 没有引用内置类型或第三方库类型
 - [ ] PlantUML 可以正常渲染
 
 ## 输出格式
