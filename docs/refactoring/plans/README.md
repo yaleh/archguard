@@ -246,6 +246,52 @@
 
 ---
 
+### [09-multi-level-architecture-diagrams-plan.md](./09-multi-level-architecture-diagrams-plan.md)
+**🏗️ Phase 9: 多层次架构图生成实施计划 (v2.0 Breaking Change)**
+
+**预计时间**: 5-7 个工作日（纯开发），7 周总计（含测试和发布）
+**核心技术**: DiagramConfig 统一抽象、ArchJSONAggregator、配置驱动架构
+**对应提案**: [09-multi-level-architecture-diagrams.md](../proposals/09-multi-level-architecture-diagrams.md)
+
+**内容**:
+- 统一参数机制重构（移除 --batch、-o 等参数）
+- 详细程度控制（package/class/method 三级）
+- 配置优先设计（diagrams[] 数组）
+- 单一处理流程（DiagramProcessor）
+- ArchJSON 聚合器（新组件）
+- 迁移工具和文档
+
+**适用人群**: 核心开发者、架构师、大型项目维护者
+**阅读优先级**: ⭐⭐⭐⭐⭐
+
+**核心组件**:
+- `DiagramProcessor` - 统一图表处理器（替代 BatchProcessor）
+- `ArchJSONAggregator` - 详细程度聚合器（package/class/method）
+- `normalizeToDiagrams()` - 配置规范化函数
+- 扩展的 Prompt 模板（支持 DETAIL_LEVEL）
+- 迁移工具（v1.x → v2.0）
+
+**实施阶段**:
+- Phase 1: 类型定义和配置（1 天）
+- Phase 2: 核心组件（2-3 天）
+- Phase 3: Prompt 和 AI（1-2 天）
+- Phase 4: 测试（2 天）
+- Phase 5: 文档和迁移（1 天）
+
+**验收标准**:
+- 代码复杂度降低 ≥ 20%
+- 测试覆盖率 ≥ 80%
+- 功能采用率 > 40%（6个月内）
+- 生成成功率 > 95%
+- 迁移成功率 > 90%
+
+**Breaking Changes**:
+- ⚠️ 移除 `--batch`、`-o`、`--stdin` 参数
+- ⚠️ 配置文件结构完全重构
+- ⚠️ 需要主版本升级（v2.0.0）
+
+---
+
 ## 🗺️ 阅读路线
 
 ### 路线 1: 项目经理
@@ -286,6 +332,17 @@
 各 Phase 的测试策略和验收标准
   ↓
 准备测试用例和自动化测试
+```
+
+### 路线 5: 架构师 / 重构负责人
+```
+09-multi-level-architecture-diagrams-plan.md (完整阅读)
+  ↓
+理解 Breaking Change 和迁移策略
+  ↓
+评估对现有用户的影响
+  ↓
+制定发布计划和沟通策略
 ```
 
 ---
@@ -492,16 +549,43 @@ Week 7
 
 ---
 
+### Phase 9: 多层次架构图生成 (5-7 天开发，7 周总计)
+**状态**: 待开始
+**依赖**: 无（Breaking Change，独立重构）
+**⚠️ Breaking Change**: v2.0.0 主版本升级
+
+**目标**: 统一参数机制，支持多层次架构图生成
+
+**详细计划**: [09-multi-level-architecture-diagrams-plan.md](./09-multi-level-architecture-diagrams-plan.md)
+
+**关键里程碑**:
+- Day 1: 类型定义和配置 ✅
+- Day 2-3: 核心组件（DiagramProcessor + ArchJSONAggregator） ✅
+- Day 3-4: Prompt 和 AI ✅
+- Day 5-6: 测试（单元 + 集成 + E2E） ✅
+- Day 7: 文档和迁移工具 ✅
+- Week 2-5: Beta 测试和发布 ✅
+
+**验收标准**:
+- [ ] 代码复杂度降低 ≥ 20%
+- [ ] 测试覆盖率 ≥ 80%
+- [ ] Package/Class/Method 三级支持
+- [ ] 迁移工具可用
+- [ ] 功能采用率 > 40%（6个月）
+- [ ] 生成成功率 > 95%
+
+---
+
 ## 🎯 RLM 阶段覆盖
 
-| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 7 | Phase 8 |
-|----------|--------|---------|---------|---------|---------|---------|---------|
-| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 提案07 | ✅ 提案08 |
-| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
-| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ 迭代开发 | ✅ Skill开发 |
-| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 激活测试 |
-| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 | ✅ Git 流程 | ✅ Git 流程 | ✅ Skill发布 |
-| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 | ✅ 配置监控 | ✅ 性能监控 | ✅ 使用监控 |
+| RLM 阶段 | 主计划 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 7 | Phase 8 | Phase 9 |
+|----------|--------|---------|---------|---------|---------|---------|---------|---------|
+| **PROPOSAL** | ✅ 第1章 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 目标 | ✅ 提案07 | ✅ 提案08 | ✅ 提案09 |
+| **PLANNING** | ✅ 第2章 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 | ✅ 实施计划 |
+| **EXECUTION** | ✅ 第3章 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ TDD 循环 | ✅ 迭代开发 | ✅ Skill开发 | ✅ 重构开发 |
+| **VALIDATION** | ✅ 第4章 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 验收测试 | ✅ 激活测试 | ✅ 质量门控 |
+| **INTEGRATION** | ✅ 第5章 | ✅ Git 流程 | ✅ CI/CD | ✅ Git 流程 | ✅ Git 流程 | ✅ Git 流程 | ✅ Skill发布 | ✅ Beta发布 |
+| **MONITORING** | ✅ 第6章 | ✅ 性能监控 | ✅ 成本追踪 | ✅ 使用监控 | ✅ 配置监控 | ✅ 性能监控 | ✅ 使用监控 | ✅ 采用率监控 |
 
 ---
 
@@ -652,7 +736,7 @@ npm run test:watch
 
 ---
 
-**版本**: 2.0
-**最后更新**: 2026-01-25
-**状态**: ✅ 计划完成（Phase 0-4, Phase 7-8），准备开始执行
-**下一步**: Phase 0 - 环境准备（核心功能）或 Phase 7（高级功能）
+**版本**: 2.1
+**最后更新**: 2026-01-26
+**状态**: ✅ 计划完成（Phase 0-4, Phase 7-9），准备开始执行
+**下一步**: Phase 0 - 环境准备（核心功能）或 Phase 7（高级功能）或 Phase 9（v2.0 重构）
