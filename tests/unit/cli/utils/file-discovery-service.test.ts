@@ -3,11 +3,12 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { Readable } from 'stream';
 
 describe('FileDiscoveryService', () => {
   let service: FileDiscoveryService;
@@ -82,10 +83,7 @@ describe('FileDiscoveryService', () => {
   describe('Multiple Sources Discovery', () => {
     it('should discover files from multiple sources', async () => {
       const files = await service.discoverFiles({
-        sources: [
-          path.join(testDir, 'src'),
-          path.join(testDir, 'lib'),
-        ],
+        sources: [path.join(testDir, 'src'), path.join(testDir, 'lib')],
         baseDir: testDir,
       });
 
@@ -201,10 +199,7 @@ describe('FileDiscoveryService', () => {
   describe('Skip Missing Files', () => {
     it('should skip non-existent source directories when skipMissing is true', async () => {
       const files = await service.discoverFiles({
-        sources: [
-          path.join(testDir, 'src'),
-          path.join(testDir, 'non-existent'),
-        ],
+        sources: [path.join(testDir, 'src'), path.join(testDir, 'non-existent')],
         baseDir: testDir,
         skipMissing: true,
       });
@@ -287,4 +282,248 @@ describe('FileDiscoveryService', () => {
       expect(hasNodeModules).toBe(false);
     });
   });
+
+  describe('STDIN Mode', () => {
+    beforeEach(() => {
+      // Reset stdin mock before each test
+      vi.resetAllMocks();
+    });
+
+    it('should read file list from STDIN', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      const file2 = path.join(testDir, 'src/file2.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+      await fs.writeFile(file2, 'export const b = 2;');
+
+      // Mock stdin
+      const stdinContent = `${file1}\n${file2}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(2);
+      expect(files).toContain(file1);
+      expect(files).toContain(file2);
+    });
+
+    it('should handle relative paths from STDIN', async () => {
+      // Create test files
+      await fs.writeFile(path.join(testDir, 'src/file1.ts'), 'export const a = 1;');
+      await fs.writeFile(path.join(testDir, 'lib/file2.ts'), 'export const b = 2;');
+
+      // Mock stdin with relative paths
+      const stdinContent = 'src/file1.ts\nlib/file2.ts\n';
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(2);
+      expect(files[0]).toBe(path.join(testDir, 'src/file1.ts'));
+      expect(files[1]).toBe(path.join(testDir, 'lib/file2.ts'));
+    });
+
+    it('should handle absolute paths from STDIN', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      const file2 = path.join(testDir, 'lib/file2.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+      await fs.writeFile(file2, 'export const b = 2;');
+
+      // Mock stdin with absolute paths
+      const stdinContent = `${file1}\n${file2}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(2);
+      expect(files).toContain(file1);
+      expect(files).toContain(file2);
+    });
+
+    it('should filter out comment lines starting with #', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+
+      // Mock stdin with comments
+      const stdinContent = `# This is a comment\n${file1}\n# Another comment\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(file1);
+    });
+
+    it('should filter out empty lines', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      const file2 = path.join(testDir, 'src/file2.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+      await fs.writeFile(file2, 'export const b = 2;');
+
+      // Mock stdin with empty lines
+      const stdinContent = `${file1}\n\n${file2}\n\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(2);
+      expect(files).toContain(file1);
+      expect(files).toContain(file2);
+    });
+
+    it('should skip missing files when skipMissing is true', async () => {
+      // Create only one file
+      const file1 = path.join(testDir, 'src/file1.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+
+      // Mock stdin with one existing and one non-existing file
+      const nonExistent = path.join(testDir, 'src/nonexistent.ts');
+      const stdinContent = `${file1}\n${nonExistent}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+        skipMissing: true,
+      });
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(file1);
+    });
+
+    it('should throw error for missing files when skipMissing is false', async () => {
+      // Create only one file
+      const file1 = path.join(testDir, 'src/file1.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+
+      // Mock stdin with one existing and one non-existing file
+      const nonExistent = path.join(testDir, 'src/nonexistent.ts');
+      const stdinContent = `${file1}\n${nonExistent}\n`;
+      mockStdin(stdinContent);
+
+      await expect(
+        service.discoverFiles({
+          stdin: true,
+          baseDir: testDir,
+          skipMissing: false,
+        })
+      ).rejects.toThrow(/does not exist/);
+    });
+
+    it('should apply exclude patterns to STDIN files', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      const file2 = path.join(testDir, 'src/file2.test.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+      await fs.writeFile(file2, 'test("a", () => {});');
+
+      // Mock stdin
+      const stdinContent = `${file1}\n${file2}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+        exclude: ['**/*.test.ts'],
+      });
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(file1);
+    });
+
+    it('should handle mixed relative and absolute paths', async () => {
+      // Create test files
+      const file1 = path.join(testDir, 'src/file1.ts');
+      const file2 = path.join(testDir, 'lib/file2.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+      await fs.writeFile(file2, 'export const b = 2;');
+
+      // Mock stdin with mixed paths
+      const stdinContent = `src/file1.ts\n${file2}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(2);
+      expect(files).toContain(file1);
+      expect(files).toContain(file2);
+    });
+
+    it('should deduplicate files from STDIN', async () => {
+      // Create test file
+      const file1 = path.join(testDir, 'src/file1.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+
+      // Mock stdin with duplicate paths
+      const stdinContent = `${file1}\n${file1}\nsrc/file1.ts\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(file1);
+    });
+
+    it('should return empty array when STDIN is empty', async () => {
+      // Mock empty stdin
+      mockStdin('');
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(0);
+    });
+
+    it('should handle whitespace-only lines', async () => {
+      // Create test file
+      const file1 = path.join(testDir, 'src/file1.ts');
+      await fs.writeFile(file1, 'export const a = 1;');
+
+      // Mock stdin with whitespace lines
+      const stdinContent = `${file1}\n   \n\t\n${file1}\n`;
+      mockStdin(stdinContent);
+
+      const files = await service.discoverFiles({
+        stdin: true,
+        baseDir: testDir,
+      });
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(file1);
+    });
+  });
 });
+
+/**
+ * Helper function to mock process.stdin
+ */
+function mockStdin(content: string): void {
+  const readable = Readable.from([content]);
+  vi.spyOn(process, 'stdin', 'get').mockReturnValue(readable as unknown as NodeJS.ReadStream);
+}

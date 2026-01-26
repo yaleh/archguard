@@ -14,6 +14,7 @@ import { ConfigLoader } from '../config-loader';
 import { OutputPathResolver } from '../utils/output-path-resolver';
 import { ErrorHandler } from '../error-handler';
 import { FileDiscoveryService } from '../utils/file-discovery-service';
+import { BatchProcessor } from '../utils/batch-processor';
 import type { Config } from '../config-loader';
 import type { AnalyzeOptions } from '../types';
 
@@ -24,7 +25,9 @@ export function createAnalyzeCommand(): Command {
   return (
     new Command('analyze')
       .description('Analyze TypeScript project and generate architecture diagrams')
-      .option('-s, --source <paths...>', 'Source directories to analyze (can specify multiple)', ['./src'])
+      .option('-s, --source <paths...>', 'Source directories to analyze (can specify multiple)', [
+        './src',
+      ])
       .option('-o, --output <path>', 'Output file path')
       .option('-f, --format <type>', 'Output format (plantuml|json|svg)', 'plantuml')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
@@ -35,6 +38,14 @@ export function createAnalyzeCommand(): Command {
       .option('--cli-command <command>', 'Claude CLI command to use', 'claude')
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
       .option('--output-dir <dir>', 'Output directory for diagrams', './archguard')
+      // Phase 3.1: STDIN support
+      .option('--stdin', 'Read file list from stdin (one file per line)')
+      .option('--base-dir <path>', 'Base directory for relative paths (default: cwd)')
+      .option('--skip-missing', 'Skip files that do not exist', false)
+      // Phase 4: Batch mode
+      .option('--batch', 'Generate separate diagrams for each source directory')
+      .option('--name <name>', 'Output file name (supports subdirectories, e.g., "frontend/api")')
+      .option('--no-batch-index', 'Do not generate index file in batch mode')
       .action(analyzeCommandHandler)
   );
 }
@@ -64,9 +75,7 @@ function buildConfigLoaderOptions(options: AnalyzeOptions): Partial<Config> {
   // Basic options
   // Normalize source to array if needed (commander.js may return string or array)
   if (options.source) {
-    configLoaderOptions.source = Array.isArray(options.source)
-      ? options.source
-      : [options.source];
+    configLoaderOptions.source = Array.isArray(options.source) ? options.source : [options.source];
   }
   if (options.output) configLoaderOptions.output = options.output;
   if (options.format) configLoaderOptions.format = options.format;
@@ -125,9 +134,10 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     const discoveryService = new FileDiscoveryService();
     const files = await discoveryService.discoverFiles({
       sources: sourcePaths,
-      baseDir: process.cwd(),
+      baseDir: options.baseDir || process.cwd(),
       exclude: config.exclude,
-      skipMissing: false,
+      skipMissing: options.skipMissing || false,
+      stdin: options.stdin || false,
     });
 
     progress.succeed(`Found ${files.length} TypeScript files`);
@@ -163,6 +173,68 @@ async function analyzeCommandHandler(options: AnalyzeOptions): Promise<void> {
     progress.succeed(
       `Parsed ${files.length} files in ${(metrics.parseTime / 1000).toFixed(2)}s (${metrics.filesPerSecond.toFixed(1)} files/sec)`
     );
+
+    // Phase 4: Batch mode - generate separate diagrams for each source
+    if (options.batch && sourcePaths.length > 1) {
+      // Batch mode only makes sense with multiple sources
+      if (config.format === 'json') {
+        progress.fail('Batch mode is not supported with JSON format. Use PlantUML format instead.');
+        process.exit(1);
+      }
+
+      progress.start('Checking Claude Code CLI...');
+      const { isClaudeCodeAvailable } = await import('../../utils/cli-detector.js');
+      const cliAvailable = await isClaudeCodeAvailable();
+
+      if (!cliAvailable) {
+        progress.fail('Claude Code CLI not found');
+        console.error(
+          '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
+            'To verify installation: claude --version\n'
+        );
+        process.exit(1);
+      }
+
+      progress.succeed('Claude Code CLI available');
+
+      const generator = new PlantUMLGenerator(config);
+      const batchProcessor = new BatchProcessor({
+        sources: sourcePaths,
+        config,
+        parser,
+        generator,
+        progress,
+        generateIndex: options.batchIndex !== false, // Generate index unless --no-batch-index
+      });
+
+      const results = await batchProcessor.processBatch();
+
+      // Display summary
+      const successful = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+
+      console.log(`\n✅ Batch analysis complete!`);
+      console.log(`📊 Summary:`);
+      console.log(`  - Total modules: ${results.length}`);
+      console.log(`  - Successful: ${successful.length}`);
+      console.log(`  - Failed: ${failed.length}`);
+
+      if (successful.length > 0) {
+        console.log(`\n📁 Output directory: ${config.outputDir || './archguard'}`);
+        if (options.batchIndex !== false) {
+          console.log(`📖 Index: ${path.join(config.outputDir || './archguard', 'index.md')}`);
+        }
+      }
+
+      if (failed.length > 0) {
+        console.log(`\n⚠️  Failed modules:`);
+        failed.forEach((r) => {
+          console.log(`  - ${r.moduleName}: ${r.error || 'Unknown error'}`);
+        });
+      }
+
+      return; // Exit early, batch mode complete
+    }
 
     // Handle output format
     if (config.format === 'json') {

@@ -1,6 +1,7 @@
 /**
  * Tests for OutputPathResolver
  * Phase 4.4: Output Path Management Refactoring
+ * Task #4: TDD Implementation with subdirectory support
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -353,6 +354,109 @@ describe('OutputPathResolver', () => {
 
       expect(result.outputDir).toContain('diagrams');
       expect(result.baseName).toBe('architecture');
+    });
+  });
+
+  describe('Task #4: New requirements - subdirectory support and json path', () => {
+    it('should generate json path alongside other paths', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './diagrams',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      const result = resolver.resolve({ baseName: 'my-arch' });
+
+      expect(result.paths.json).toBeDefined();
+      expect(result.paths.json).toContain('diagrams');
+      expect(result.paths.json).toMatch(/my-arch\.json$/);
+    });
+
+    it('should support subdirectories in baseName - single level', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './archguard',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      const result = resolver.resolve({ baseName: 'frontend/api' });
+
+      expect(result.baseName).toBe('api');
+      expect(result.outputDir).toContain('archguard/frontend');
+      expect(result.paths.puml).toMatch(/archguard\/frontend\/api\.puml$/);
+      expect(result.paths.png).toMatch(/archguard\/frontend\/api\.png$/);
+      expect(result.paths.svg).toMatch(/archguard\/frontend\/api\.svg$/);
+      expect(result.paths.json).toMatch(/archguard\/frontend\/api\.json$/);
+    });
+
+    it('should support subdirectories in baseName - multiple levels', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './archguard',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      const result = resolver.resolve({ baseName: 'services/auth/models' });
+
+      expect(result.baseName).toBe('models');
+      expect(result.outputDir).toContain('archguard/services/auth');
+      expect(result.paths.puml).toMatch(/archguard\/services\/auth\/models\.puml$/);
+    });
+
+    it('should create subdirectories when ensureDirectory is called', async () => {
+      const outputPath = path.join(testDir, 'archguard');
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: outputPath,
+      };
+      const resolver = new OutputPathResolver(config);
+
+      // Resolve with subdirectory
+      const result = resolver.resolve({ baseName: 'frontend/api' });
+
+      // Create directories using the resolved path
+      await fs.mkdir(result.outputDir, { recursive: true });
+
+      const exists = await fs.access(result.outputDir).then(
+        () => true,
+        () => false
+      );
+      expect(exists).toBe(true);
+      expect(result.outputDir).toBe(path.join(outputPath, 'frontend'));
+    });
+
+    it('should handle windows-style paths in baseName', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './archguard',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      const result = resolver.resolve({ baseName: 'frontend\\api' });
+
+      // Should normalize to forward slashes
+      expect(result.outputDir).toContain('archguard');
+      expect(result.baseName).toBe('api');
+    });
+
+    it('should handle trailing slashes in baseName', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './archguard',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      const result = resolver.resolve({ baseName: 'frontend/' });
+
+      expect(result.outputDir).toContain('archguard/frontend');
+      expect(result.baseName).toBe('architecture');
+    });
+
+    it('should support options.name parameter (alias for baseName)', () => {
+      const config: Pick<Config, 'outputDir' | 'output'> = {
+        outputDir: './archguard',
+      };
+      const resolver = new OutputPathResolver(config);
+
+      // Use 'name' instead of 'baseName' (new interface)
+      const result = resolver.resolve({ name: 'custom' } as any);
+
+      expect(result.baseName).toBe('custom');
+      expect(result.paths.puml).toContain('custom.puml');
     });
   });
 });

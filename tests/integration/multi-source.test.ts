@@ -70,10 +70,7 @@ describe('Multi-Source Integration Tests', () => {
     );
 
     // Create test files that should be excluded
-    await fs.writeFile(
-      path.join(testDir, 'src/index.test.ts'),
-      'test("index", () => {});'
-    );
+    await fs.writeFile(path.join(testDir, 'src/index.test.ts'), 'test("index", () => {});');
   });
 
   afterEach(async () => {
@@ -85,16 +82,14 @@ describe('Multi-Source Integration Tests', () => {
   describe('CLI Single Source Parameter', () => {
     it('should analyze single source directory', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'),
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [cliPath, 'analyze', '-s', path.join(testDir, 'src'), '-f', 'json', '-o', outputPath],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 
@@ -116,17 +111,25 @@ describe('Multi-Source Integration Tests', () => {
   describe('CLI Multiple Source Parameters', () => {
     it('should analyze multiple sources with repeated -s flag', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'),
-        '-s', path.join(testDir, 'lib'),
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          path.join(testDir, 'src'),
+          '-s',
+          path.join(testDir, 'lib'),
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 
@@ -148,16 +151,24 @@ describe('Multi-Source Integration Tests', () => {
 
     it('should analyze multiple sources with space-separated values', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'), path.join(testDir, 'lib'),
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          path.join(testDir, 'src'),
+          path.join(testDir, 'lib'),
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 
@@ -177,26 +188,32 @@ describe('Multi-Source Integration Tests', () => {
   describe('File Deduplication', () => {
     it('should deduplicate files from overlapping sources', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'),
-        '-s', path.join(testDir, 'src/components'), // Overlapping
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          path.join(testDir, 'src'),
+          '-s',
+          path.join(testDir, 'src/components'), // Overlapping
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 
       const archJSON = await fs.readJson(outputPath);
 
       // Button should appear only once even though src/components overlaps with src
-      const buttonEntities = archJSON.entities.filter(
-        (e: { name: string }) => e.name === 'Button'
-      );
+      const buttonEntities = archJSON.entities.filter((e: { name: string }) => e.name === 'Button');
       expect(buttonEntities.length).toBe(1);
     });
 
@@ -204,17 +221,25 @@ describe('Multi-Source Integration Tests', () => {
       const srcPath = path.join(testDir, 'src');
       const outputPath = path.join(testDir, 'architecture.json');
 
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', srcPath,
-        '-s', srcPath, // Duplicate
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          srcPath,
+          '-s',
+          srcPath, // Duplicate
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 
@@ -230,16 +255,14 @@ describe('Multi-Source Integration Tests', () => {
   describe('Backward Compatibility', () => {
     it('should work with single source string (legacy behavior)', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'),
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [cliPath, 'analyze', '-s', path.join(testDir, 'src'), '-f', 'json', '-o', outputPath],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
       expect(await fs.pathExists(outputPath)).toBe(true);
@@ -249,16 +272,23 @@ describe('Multi-Source Integration Tests', () => {
       // Use the existing test src directory and specify it explicitly
       // (testing default behavior requires running from the test dir which conflicts with prompts)
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'), // Explicitly specify src
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          path.join(testDir, 'src'), // Explicitly specify src
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
       expect(await fs.pathExists(outputPath)).toBe(true);
@@ -268,18 +298,27 @@ describe('Multi-Source Integration Tests', () => {
   describe('Exclude Patterns with Multiple Sources', () => {
     it('should apply exclude patterns across all sources', async () => {
       const outputPath = path.join(testDir, 'architecture.json');
-      const result = await execa('node', [
-        cliPath,
-        'analyze',
-        '-s', path.join(testDir, 'src'),
-        '-s', path.join(testDir, 'lib'),
-        '-e', '**/utils/**',
-        '-f', 'json',
-        '-o', outputPath,
-      ], {
-        cwd: projectRoot,
-        reject: false,
-      });
+      const result = await execa(
+        'node',
+        [
+          cliPath,
+          'analyze',
+          '-s',
+          path.join(testDir, 'src'),
+          '-s',
+          path.join(testDir, 'lib'),
+          '-e',
+          '**/utils/**',
+          '-f',
+          'json',
+          '-o',
+          outputPath,
+        ],
+        {
+          cwd: projectRoot,
+          reject: false,
+        }
+      );
 
       expect(result.exitCode).toBe(0);
 

@@ -28,10 +28,9 @@ export function createInitCommand(): Command {
         const errorHandler = new ErrorHandler();
 
         if (error instanceof Error && error.message.includes('already exists')) {
-          const validationError = new ValidationError(
-            'Configuration file already exists',
-            ['Remove the existing file first if you want to reinitialize']
-          );
+          const validationError = new ValidationError('Configuration file already exists', [
+            'Remove the existing file first if you want to reinitialize',
+          ]);
           console.error(errorHandler.format(validationError));
           process.exit(0);
         }

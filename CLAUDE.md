@@ -34,6 +34,9 @@ npm run type-check         # TypeScript type check
 # Build and analyze ArchGuard itself
 npm run build
 node dist/cli/index.js analyze -v
+
+# Batch mode: analyze multiple modules
+node dist/cli/index.js analyze -s ./src/cli -s ./src/parser --batch -v
 ```
 
 ## Using ArchGuard
@@ -51,22 +54,94 @@ node dist/cli/index.js analyze -f json -o ./architecture.json
 node dist/cli/index.js analyze -s ./src --output-dir ./diagrams
 ```
 
+### Advanced Usage
+
+#### Multi-Source Analysis
+Analyze multiple directories in a single run:
+```bash
+# Analyze multiple source directories (files are merged)
+node dist/cli/index.js analyze -s ./src -s ./lib -s ./shared
+
+# Files are automatically deduplicated
+node dist/cli/index.js analyze -s ./src -s ./src/cli  # No duplicates
+```
+
+#### Batch Mode (Separate Diagrams per Module)
+Generate separate diagrams for each source directory:
+```bash
+# Batch mode with multiple modules
+node dist/cli/index.js analyze -s ./packages/frontend -s ./packages/backend --batch
+
+# Output structure:
+# archguard/
+# ├── modules/
+# │   ├── frontend.png
+# │   ├── frontend.puml
+# │   ├── backend.png
+# │   └── backend.puml
+# └── index.md  (navigation page with stats)
+
+# Skip index generation
+node dist/cli/index.js analyze -s ./src/cli -s ./src/parser --batch --no-batch-index
+```
+
+#### STDIN Mode (Pipeline Integration)
+Read file list from stdin for integration with git or other tools:
+```bash
+# Analyze specific files from git
+git ls-files '*.ts' | node dist/cli/index.js analyze --stdin -f json
+
+# Analyze changed files only
+git diff --name-only HEAD~5 | grep '\.ts$' | node dist/cli/index.js analyze --stdin
+
+# With base directory for relative paths
+cat files.txt | node dist/cli/index.js analyze --stdin --base-dir /project
+
+# Skip missing files (useful for deleted files in git diff)
+git diff --name-only | node dist/cli/index.js analyze --stdin --skip-missing
+```
+
+#### Custom Output Naming
+Control output file names and locations:
+```bash
+# Custom name in default directory
+node dist/cli/index.js analyze --name my-architecture
+
+# Subdirectory organization
+node dist/cli/index.js analyze --name services/auth-api
+# Output: archguard/services/auth-api.png
+
+# Multiple levels
+node dist/cli/index.js analyze --name modules/frontend/components
+# Output: archguard/modules/frontend/components.png
+```
+
 ### Available Commands
 
 #### analyze
 Analyze TypeScript project and generate architecture diagrams.
 
-**Options**:
-- `-s, --source <path>` - Source directory to analyze (default: `./src`)
+**Basic Options**:
+- `-s, --source <paths...>` - Source directory/directories to analyze (can specify multiple, default: `./src`)
 - `-o, --output <path>` - Output file path
 - `-f, --format <type>` - Output format: `plantuml`, `json`, or `svg` (default: `plantuml`)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
+
+**Output Options**:
+- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
+- `--name <name>` - Output file name, supports subdirectories (e.g., `"frontend/api"`)
 - `--cli-command <command>` - Claude CLI command to use (default: `claude`)
 - `--cli-args <args>` - Additional CLI arguments (space-separated)
-- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
+
+**Advanced Options**:
+- `--stdin` - Read file list from stdin (one file per line)
+- `--base-dir <path>` - Base directory for resolving relative paths from stdin
+- `--skip-missing` - Skip files that do not exist (useful with stdin)
+- `--batch` - Generate separate diagrams for each source directory
+- `--no-batch-index` - Skip index.md generation in batch mode
 
 #### init
 Initialize configuration file.

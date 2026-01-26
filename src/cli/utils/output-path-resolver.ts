@@ -1,12 +1,14 @@
 /**
  * Output Path Resolver
  * Phase 4.4: Centralized output path management
+ * Task #4: Enhanced with subdirectory support and json path
  *
  * Responsibilities:
  * - Resolve output directory from config
- * - Generate paths for .puml, .png, .svg files
- * - Create output directories automatically
+ * - Generate paths for .puml, .png, .svg, .json files
+ * - Create output directories automatically (including subdirectories)
  * - Handle relative and absolute paths
+ * - Support subdirectory organization (e.g., "frontend/api")
  */
 
 import path from 'path';
@@ -29,17 +31,35 @@ export interface PathResolution {
     png: string;
     /** Path to .svg file */
     svg: string;
+    /** Path to .json file */
+    json: string;
   };
 }
 
 /**
  * Options for path resolution
+ * Supports both legacy 'baseName' and new 'name' parameter
  */
 export interface ResolveOptions {
   /** Optional custom base name (default: 'architecture') */
   baseName?: string;
+  /** Optional custom name (alias for baseName, supports subdirectories) */
+  name?: string;
   /** Optional output override (takes priority over config.output) */
   output?: string;
+}
+
+/**
+ * New interface for Task #4 (alias for ResolveOptions)
+ */
+export interface OutputPathOptions extends ResolveOptions {}
+
+/**
+ * New interface for Task #4 (alias for PathResolution)
+ */
+export interface ResolvedPaths extends PathResolution {
+  /** Alias for outputDir */
+  dir: string;
 }
 
 /**
@@ -48,9 +68,16 @@ export interface ResolveOptions {
  * Usage:
  * ```typescript
  * const resolver = new OutputPathResolver(config);
- * const paths = resolver.resolve({ baseName: 'my-arch' });
+ *
+ * // Basic usage
+ * const paths = resolver.resolve({ name: 'my-arch' });
+ *
+ * // With subdirectory support
+ * const paths = resolver.resolve({ name: 'frontend/api' });
+ * // => Generates: archguard/frontend/api.{puml,png,svg,json}
+ *
  * await resolver.ensureDirectory();
- * // Use paths.paths.png, paths.paths.puml, etc.
+ * // Use paths.paths.png, paths.paths.puml, paths.paths.json, etc.
  * ```
  */
 export class OutputPathResolver {
@@ -61,34 +88,32 @@ export class OutputPathResolver {
    *
    * Priority:
    * 1. options.output (if provided)
-   * 2. config.output (if set)
-   * 3. config.outputDir
+   * 2. options.name or options.baseName (if set, supports subdirectories)
+   * 3. config.output (if set)
+   * 4. config.outputDir
    *
    * @param options - Resolution options
    * @returns PathResolution with all resolved paths
    */
   resolve(options: ResolveOptions = {}): PathResolution {
-    // Determine the base output path
+    // Priority 1: If options.output is provided, use it directly
+    if (options.output) {
+      const { dir, baseName } = this.parseBasePath(options.output);
+      return this.buildPathResolution(path.resolve(dir), baseName);
+    }
+
+    // Priority 2: Handle options.name or options.baseName with subdirectory support
+    const customName = options.name || options.baseName;
+
+    if (customName) {
+      const { outputDir, fileName } = this.parseCustomName(customName);
+      return this.buildPathResolution(outputDir, fileName);
+    }
+
+    // Priority 3 & 4: Use config.output or config.outputDir
     const basePath = this.determineBasePath(options);
-
-    // Extract directory and base name
     const { dir, baseName } = this.parseBasePath(basePath);
-
-    // Use custom baseName from options if provided
-    const finalBaseName = options.baseName || baseName;
-
-    // Resolve to absolute path
-    const outputDir = path.resolve(dir);
-
-    return {
-      outputDir,
-      baseName: finalBaseName,
-      paths: {
-        puml: path.join(outputDir, `${finalBaseName}.puml`),
-        png: path.join(outputDir, `${finalBaseName}.png`),
-        svg: path.join(outputDir, `${finalBaseName}.svg`),
-      },
-    };
+    return this.buildPathResolution(path.resolve(dir), baseName);
   }
 
   /**
@@ -99,6 +124,59 @@ export class OutputPathResolver {
   async ensureDirectory(): Promise<void> {
     const resolution = this.resolve();
     await fs.mkdir(resolution.outputDir, { recursive: true });
+  }
+
+  /**
+   * Build PathResolution object from resolved directory and filename
+   * Eliminates code duplication
+   */
+  private buildPathResolution(outputDir: string, baseName: string): PathResolution {
+    return {
+      outputDir,
+      baseName,
+      paths: {
+        puml: path.join(outputDir, `${baseName}.puml`),
+        png: path.join(outputDir, `${baseName}.png`),
+        svg: path.join(outputDir, `${baseName}.svg`),
+        json: path.join(outputDir, `${baseName}.json`),
+      },
+    };
+  }
+
+  /**
+   * Parse custom name with subdirectory support
+   * Handles: "frontend/api", "services/auth/models", "frontend/"
+   */
+  private parseCustomName(customName: string): { outputDir: string; fileName: string } {
+    let baseDir: string;
+    let fileName: string;
+
+    // Normalize path separators (convert \ to / for cross-platform support)
+    const normalizedName = customName.replace(/\\/g, '/');
+
+    if (normalizedName.includes('/')) {
+      // Handle trailing slash separately
+      if (normalizedName.endsWith('/')) {
+        // Directory only, use default filename
+        fileName = 'architecture';
+        baseDir = normalizedName.replace(/\/$/, '');
+      } else {
+        // Parse subdirectory structure
+        const parsed = path.posix.parse(normalizedName);
+        fileName = parsed.name || 'architecture';
+        baseDir = parsed.dir;
+      }
+    } else {
+      fileName = normalizedName;
+      baseDir = '';
+    }
+
+    // Get base directory from config
+    const configDir = this.config.outputDir || '.';
+    const finalDir = baseDir ? path.join(configDir, baseDir) : configDir;
+    const outputDir = path.resolve(finalDir);
+
+    return { outputDir, fileName };
   }
 
   /**
