@@ -613,6 +613,95 @@ node dist/cli/index.js analyze --from-config --diagrams overview,auth-system
 
 ---
 
+### [10-mermaid-diagram-migration.md](./10-mermaid-diagram-migration.md)
+**🎨 Mermaid 图表迁移方案 - 混合智能架构**
+
+**适用人群**: 全体用户、架构师、AI 工程师
+**阅读优先级**: ⭐⭐⭐⭐⭐
+
+**内容概要**:
+- 从 PlantUML 迁移到 Mermaid 的完整方案
+- 混合智能架构设计
+  - LLM 决策层：模块分组、命名优化、布局建议
+  - JS 确定性生成：Mermaid 语法生成、本地验证
+  - 可选 LLM：启发式分组作为备用
+- 核心组件实现
+  - MermaidGenerator（确定性生成器）
+  - HeuristicGrouper（启发式分组器）
+  - MermaidValidator（本地验证器）
+  - MermaidRenderer（本地渲染器）
+- 完整的 RLM 六阶段分析
+
+**何时使用**:
+- ✅ PlantUML 渲染错误率高（40-60%）
+- ✅ 需要快速反馈和调试
+- ✅ 希望降低 LLM 成本
+- ✅ 需要确定性输出
+- ✅ 希望支持完全离线模式
+
+**关键亮点**:
+- **错误率降低 92%**：从 40-60% → <5%（确定性生成）
+- **速度提升 5x**：本地验证和渲染，无需重试
+- **成本降低 70%**：LLM 只做轻量决策（2,000 tokens vs 10,000-17,000）
+- **混合智能**：LLM 分组 + 启发式备用
+- **本地验证**：mermaid-cli 提供详细错误信息
+
+**架构对比**:
+```
+当前（PlantUML）：
+ArchJSON → LLM 生成完整 PlantUML → 外部验证 → 重试 2-3 次
+         ↑ 不确定性高，成本高
+
+新方案（Mermaid）：
+ArchJSON → LLM 决策（2k tokens） → JS 生成 → 本地验证 → 渲染
+         ↑ 轻量调用           ↑ 确定性   ↑ 快速反馈
+```
+
+**典型使用**:
+```bash
+# 1. LLM 智能分组（默认）
+node dist/cli/index.js analyze -s ./src -f mermaid
+
+# 2. 启发式分组（离线模式）
+node dist/cli/index.js analyze -s ./src -f mermaid --no-llm-grouping
+
+# 3. 配置文件
+{
+  "format": "mermaid",
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "cli",
+    "theme": "default"
+  }
+}
+```
+
+**用户价值**:
+- 渲染错误率：60% → <5% (**-92%**)
+- 生成速度：30-60s → 5-10s (**5x**)
+- LLM 成本：100% → 30% (**-70%**)
+- 维护成本：高 → 低 (**-80%**)
+- 输出质量：不稳定 → 确定性 (**100% 可预测**)
+
+**实施优先级**:
+- P0: 核心组件开发 (Week 1)
+- P0: LLM 集成 + 配置 (Week 2)
+- P0: 测试 + 文档 + 迁移 (Week 3)
+- **总计**: 3 周（15 个工作日）
+
+**Breaking Change**:
+- ⚠️ 完全移除 PlantUML 支持（不向后兼容）
+- ⚠️ `format: "plantuml"` 将报错
+- ✅ 提供自动迁移工具
+
+**预期收益**:
+- 核心痛点解决：**100%**（彻底解决渲染错误问题）
+- 用户体验提升：**10x**（快速反馈 + 稳定输出）
+- 运营成本降低：**70%**（LLM 成本大幅下降）
+- 维护负担减轻：**80%**（JS 逻辑可控）
+
+---
+
 ## 🗺️ 阅读路线建议
 
 ### 路线 1: 项目经理 / 产品负责人
