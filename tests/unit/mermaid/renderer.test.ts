@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import sharp from 'sharp';
 import { IsomorphicMermaidRenderer } from '../../../src/mermaid/renderer';
 
 describe('IsomorphicMermaidRenderer', () => {
@@ -379,6 +380,121 @@ describe('IsomorphicMermaidRenderer', () => {
 
       expect(svg).toContain('<svg');
       expect(svg.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('PNG resolution and quality', () => {
+    it('should use high DPI (300) for PNG rendering', async () => {
+      const mermaidCode = `classDiagram
+  class User {
+    +String name
+  }`;
+
+      const outputPath = path.join(tempDir, 'dpi-test.png');
+      await renderer.renderPNG(mermaidCode, outputPath);
+
+      // Verify file exists
+      const exists = await fs.pathExists(outputPath);
+      expect(exists).toBe(true);
+
+      // Check PNG metadata
+      const metadata = await sharp(outputPath).metadata();
+
+      // DPI should be 300 (density in sharp)
+      // Note: sharp stores density as metadata, we need to verify it's set
+      expect(metadata.density).toBeGreaterThanOrEqual(300);
+    });
+
+    it('should use SVG actual dimensions for PNG', async () => {
+      const mermaidCode = `classDiagram
+  class Class1 {
+    +String field1
+    +String field2
+    +method1()
+    +method2()
+  }
+  class Class2 {
+    +String field3
+    +method3()
+  }
+  Class1 --> Class2 : uses`;
+
+      const outputPath = path.join(tempDir, 'dimensions-test.png');
+      await renderer.renderPNG(mermaidCode, outputPath);
+
+      // Get SVG first to check its viewBox
+      const svg = await renderer.renderSVG(mermaidCode);
+      const viewBoxMatch = svg.match(/viewBox="([^"]+)"/);
+      expect(viewBoxMatch).toBeDefined();
+
+      const [, , vbWidth, vbHeight] = viewBoxMatch![1].split(/\s+/).map(Number);
+      const svgWidth = Math.ceil(vbWidth);
+      const svgHeight = Math.ceil(vbHeight);
+
+      // Check PNG metadata
+      const metadata = await sharp(outputPath).metadata();
+
+      // PNG dimensions should be based on SVG viewBox (at 300 DPI)
+      // The exact dimensions may vary due to DPI scaling, but should be close to SVG size
+      expect(metadata.width).toBeGreaterThan(0);
+      expect(metadata.height).toBeGreaterThan(0);
+
+      // PNG should be at least as large as SVG viewBox (accounting for DPI)
+      // At 300 DPI (vs default 72 DPI for screen), we expect roughly 4x scaling
+      const minExpectedWidth = Math.floor(svgWidth * 0.5); // Conservative estimate
+      const minExpectedHeight = Math.floor(svgHeight * 0.5);
+
+      expect(metadata.width).toBeGreaterThanOrEqual(minExpectedWidth);
+      expect(metadata.height).toBeGreaterThanOrEqual(minExpectedHeight);
+    });
+
+    it('should generate high-resolution PNG for complex diagrams', async () => {
+      // Create a complex diagram with many classes
+      const classes = Array.from({ length: 20 }, (_, i) => `  class Class${i}`).join('\n');
+      const mermaidCode = `classDiagram
+${classes}`;
+
+      const outputPath = path.join(tempDir, 'complex-hires.png');
+      await renderer.renderPNG(mermaidCode, outputPath);
+
+      // Verify file exists
+      const exists = await fs.pathExists(outputPath);
+      expect(exists).toBe(true);
+
+      // Check PNG metadata
+      const metadata = await sharp(outputPath).metadata();
+
+      // For a complex diagram, we expect reasonable dimensions
+      expect(metadata.width).toBeGreaterThan(100);
+      expect(metadata.height).toBeGreaterThan(100);
+
+      // File size should be substantial for high-resolution output
+      const stats = await fs.stat(outputPath);
+      expect(stats.size).toBeGreaterThan(5000); // At least 5KB for complex diagram
+    });
+
+    it('should produce readable text in PNG', async () => {
+      const mermaidCode = `classDiagram
+  class VeryLongClassName {
+    +String veryLongFieldName
+    +veryLongMethodName()
+  }
+  class AnotherLongClassName {
+    +String field
+  }
+  VeryLongClassName --> AnotherLongClassName`;
+
+      const outputPath = path.join(tempDir, 'readable-text.png');
+      await renderer.renderPNG(mermaidCode, outputPath);
+
+      // Verify file exists and has reasonable size
+      const stats = await fs.stat(outputPath);
+      expect(stats.size).toBeGreaterThan(2000);
+
+      // Check metadata
+      const metadata = await sharp(outputPath).metadata();
+      expect(metadata.width).toBeGreaterThan(200);
+      expect(metadata.height).toBeGreaterThan(100);
     });
   });
 });

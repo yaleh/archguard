@@ -81,13 +81,50 @@ export class IsomorphicMermaidRenderer {
       // Ensure output directory exists
       await fs.ensureDir(path.dirname(outputPath));
 
-      // Use sharp to convert SVG to PNG
-      const pipeline = sharp(svgBuffer, {
-        density: 150, // DPI for better quality
-      }).resize(this.options.width, this.options.height, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
+      // Parse SVG viewBox to get dimensions
+      const viewBoxMatch = svg.match(/viewBox="([^"]+)"/);
+      let density = 300; // Default high DPI
+      let resizeWidth: number | undefined;
+      let resizeHeight: number | undefined;
+      const maxPixels = 32767; // Sharp's maximum dimension limit
+
+      if (viewBoxMatch) {
+        const [, , vbWidth, vbHeight] = viewBoxMatch[1].split(/\s+/).map(Number);
+        const svgWidth = vbWidth || 0;
+        const svgHeight = vbHeight || 0;
+
+        // Calculate estimated output size at 300 DPI
+        // SVG default is 72 DPI, so 300 DPI is ~4.17x scaling
+        const estimatedWidth = svgWidth * (300 / 72);
+        const estimatedHeight = svgHeight * (300 / 72);
+
+        // If SVG viewBox itself exceeds limit, we need to scale it down
+        if (svgWidth > maxPixels || svgHeight > maxPixels) {
+          const scale = Math.min(maxPixels / svgWidth, maxPixels / svgHeight);
+          resizeWidth = Math.floor(svgWidth * scale);
+          resizeHeight = Math.floor(svgHeight * scale);
+          density = 72; // Use base DPI to avoid further scaling
+        }
+        // If estimated size exceeds limit, reduce DPI
+        else if (estimatedWidth > maxPixels || estimatedHeight > maxPixels) {
+          const maxDimension = Math.max(svgWidth, svgHeight);
+          // Calculate DPI that keeps within limit (with some margin)
+          density = Math.floor((maxPixels * 0.9) / maxDimension * 72);
+          // Ensure minimum DPI of 72 for reasonable quality
+          density = Math.max(72, Math.min(300, density));
+        }
+      }
+
+      // Use sharp to convert SVG to PNG with adaptive DPI
+      let pipeline = sharp(svgBuffer, { density });
+
+      // Apply resize if needed for oversized SVGs
+      if (resizeWidth && resizeHeight) {
+        pipeline = pipeline.resize(resizeWidth, resizeHeight, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        });
+      }
 
       // Add solid background if not transparent
       if (this.options.backgroundColor !== 'transparent') {

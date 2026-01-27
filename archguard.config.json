@@ -1,25 +1,84 @@
 {
+  "outputDir": "./archguard",
   "format": "mermaid",
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts",
+    "**/__tests__/**",
+    "**/dist/**",
     "**/node_modules/**"
   ],
-  "cli": {
-    "command": "claude",
-    "timeout": 180000
-  },
-  "cache": {
-    "enabled": true,
-    "ttl": 86400
-  },
-  "concurrency": 8,
-  "verbose": true,
   "mermaid": {
     "enableLLMGrouping": true,
     "renderer": "isomorphic",
     "theme": "default",
     "transparentBackground": true
   },
-  "diagrams": []
+  "cli": {
+    "command": "claude",
+    "args": [],
+    "timeout": 300000
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 3600
+  },
+  "concurrency": 8,
+  "verbose": true,
+  "diagrams": [
+    {
+      "name": "overview/package",
+      "sources": ["./src"],
+      "level": "package",
+      "description": "Package-level overview of ArchGuard"
+    },
+    {
+      "name": "class/all-classes",
+      "sources": ["./src"],
+      "level": "class",
+      "description": "Class-level diagram for all modules"
+    },
+    {
+      "name": "method/all-methods",
+      "sources": ["./src"],
+      "level": "method",
+      "description": "Method-level diagram for all modules"
+    },
+    {
+      "name": "method/ai-module",
+      "sources": ["./src/ai"],
+      "level": "method",
+      "description": "Method-level detail for AI module"
+    },
+    {
+      "name": "method/cli-module",
+      "sources": ["./src/cli"],
+      "level": "method",
+      "description": "Method-level detail for CLI module"
+    },
+    {
+      "name": "method/mermaid-module",
+      "sources": ["./src/mermaid"],
+      "level": "method",
+      "description": "Method-level detail for Mermaid module"
+    },
+    {
+      "name": "method/parser-module",
+      "sources": ["./src/parser"],
+      "level": "method",
+      "description": "Method-level detail for Parser module"
+    },
+    {
+      "name": "method/types-module",
+      "sources": ["./src/types"],
+      "level": "method",
+      "description": "Method-level detail for Types module"
+    },
+    {
+      "name": "method/utils-module",
+      "sources": ["./src/utils"],
+      "level": "method",
+      "description": "Method-level detail for Utils module"
+    }
+  ]
 }
