@@ -52,3 +52,4 @@ archguard/
 /archguard-modules/
 archguard*.json
 /archguard-diagrams/
+/archguard-self-analysis/

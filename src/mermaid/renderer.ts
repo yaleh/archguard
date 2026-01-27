@@ -39,6 +39,26 @@ export class IsomorphicMermaidRenderer {
       // Generate SVG from Mermaid code
       const { svg } = await mermaid.render(this.generateId(), mermaidCode);
 
+      // Add background color to SVG root element (if not transparent)
+      if (this.options.backgroundColor !== 'transparent') {
+        // Check if the SVG already has a style attribute
+        const styleMatch = svg.match(/<svg[^>]*style="([^"]*)"/);
+
+        if (styleMatch) {
+          // SVG already has a style attribute, append background-color to it
+          return svg.replace(
+            /(<svg[^>]*style=")([^"]*)(")/,
+            `$1$2; background-color: ${this.options.backgroundColor};$3`
+          );
+        } else {
+          // SVG doesn't have a style attribute, add one
+          return svg.replace(
+            /<svg/,
+            `<svg style="background-color: ${this.options.backgroundColor};"`
+          );
+        }
+      }
+
       return svg;
     } catch (error) {
       throw new Error(
@@ -62,15 +82,21 @@ export class IsomorphicMermaidRenderer {
       await fs.ensureDir(path.dirname(outputPath));
 
       // Use sharp to convert SVG to PNG
-      await sharp(svgBuffer, {
+      const pipeline = sharp(svgBuffer, {
         density: 150, // DPI for better quality
-      })
-        .resize(this.options.width, this.options.height, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .png()
-        .toFile(outputPath);
+      }).resize(this.options.width, this.options.height, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+
+      // Add solid background if not transparent
+      if (this.options.backgroundColor !== 'transparent') {
+        pipeline.flatten({
+          background: this.parseBackgroundColor(this.options.backgroundColor),
+        });
+      }
+
+      await pipeline.png().toFile(outputPath);
     } catch (error) {
       throw new Error(
         `Failed to render PNG to ${outputPath}: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -160,5 +186,41 @@ export class IsomorphicMermaidRenderer {
       this.initialized = false;
       this.ensureInitialized();
     }
+  }
+
+  /**
+   * Parse background color string to format accepted by Sharp
+   */
+  private parseBackgroundColor(color: string): string {
+    // If already in rgb/rgba format, return as-is
+    if (color.startsWith('rgb')) {
+      return color;
+    }
+
+    // Named colors - map common colors
+    const namedColors: Record<string, string> = {
+      white: '#FFFFFF',
+      black: '#000000',
+      red: '#FF0000',
+      green: '#00FF00',
+      blue: '#0000FF',
+      yellow: '#FFFF00',
+      cyan: '#00FFFF',
+      magenta: '#FF00FF',
+      gray: '#808080',
+      grey: '#808080',
+      lightgray: '#D3D3D3',
+      lightgrey: '#D3D3D3',
+      darkgray: '#A9A9A9',
+      darkgrey: '#A9A9A9',
+    };
+
+    const lowerColor = color.toLowerCase();
+    if (namedColors[lowerColor]) {
+      return namedColors[lowerColor];
+    }
+
+    // Return as-is (hex format or other)
+    return color;
   }
 }
