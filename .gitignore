@@ -50,5 +50,5 @@ archguard/
 *.svg
 .archguardrc.json
 /archguard-modules/
-archguard.full-docs.config.json
-
+archguard*.json
+/archguard-diagrams/
