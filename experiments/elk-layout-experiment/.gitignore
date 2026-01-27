@@ -1,0 +1,8 @@
+node_modules/
+dist/
+results/*.svg
+results/*.png
+results/*.json
+*.log
+.DS_Store
+test-data

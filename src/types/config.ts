@@ -43,7 +43,7 @@ export const defaultMermaidConfig: MermaidConfig = {
   enableLLMGrouping: true,
   renderer: 'isomorphic',
   theme: 'default',
-  transparentBackground: true,
+  transparentBackground: false,
 };
 
 /**

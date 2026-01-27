@@ -106,7 +106,7 @@ export class ValidatedMermaidGenerator {
       for (const entityId of group.entities) {
         const entity = this.archJson.entities.find((e) => e.id === entityId);
         if (entity) {
-          lines.push(`    class ${this.escapeId(entity.name)}`);
+          lines.push(`    class ${this.escapeId(this.normalizeEntityName(entity.name))}`);
         }
       }
 
@@ -205,7 +205,7 @@ export class ValidatedMermaidGenerator {
 
     // Class declaration - Mermaid doesn't support generics in class names
     // Remove generic parameters from the class name
-    const className = this.escapeId(entity.name);
+    const className = this.escapeId(this.normalizeEntityName(entity.name));
     const classType = entity.type === 'interface' ? 'class' : entity.type;
     lines.push(`${padding}${classType} ${className} {`);
 
@@ -262,11 +262,48 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
+   * Normalize entity name for Mermaid diagram
+   * Handles import___ path format and import() function format from ts-morph
+   */
+  private normalizeEntityName(name: string): string {
+    // Remove special characters that aren't valid in Mermaid identifiers
+
+    // ✅ Handle ts-morph import() function format
+    // Format: import("path").ClassName or import("./relative").ClassName
+    if (name.startsWith('import(')) {
+      const match = name.match(/^import\([^)]+\)\.\s*([\w.]+)/);
+      if (match) {
+        return match[2]; // Return the class name after the dot
+      }
+    }
+
+    // ✅ Handle import___ path format (ts-morph fully qualified names)
+    // Format: import___<file_path>___<actual_class_name>
+    // Example: import___home_yale_work_archguard_src_cli_cache_manager___CacheStats
+    if (name.startsWith('import___')) {
+      const parts = name.split('___');
+      if (parts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        if (lastPart && lastPart.length > 0) {
+          return lastPart;
+        }
+      }
+    }
+
+    // Handle complex type objects
+    if (name.startsWith('{') || name.includes('=>')) {
+      return '[Type]';
+    }
+
+    return name;
+  }
+
+  /**
    * Generate relation line
    */
   private generateRelationLine(relation: Relation): string {
-    const source = this.escapeId(relation.source);
-    const target = this.escapeId(relation.target);
+    const source = this.escapeId(this.normalizeEntityName(relation.source));
+    const target = this.escapeId(this.normalizeEntityName(relation.target));
 
     switch (relation.type) {
       case 'inheritance':
@@ -371,6 +408,10 @@ export class ValidatedMermaidGenerator {
   private sanitizeType(type: string): string {
     if (!type) return 'any';
 
+    // Normalize import() paths first - extract actual class names
+    // This handles import("path").ClassName -> ClassName
+    type = this.normalizeTypeName(type);
+
     let simplified = type;
 
     // 1. Remove inline object types FIRST (before any other processing)
@@ -455,6 +496,23 @@ export class ValidatedMermaidGenerator {
       return simplified.substring(0, 20);
     }
     return simplified;
+  }
+
+  /**
+   * Normalize type names by extracting actual class names from import paths
+   * Handles both import("path").ClassName and import___path___ClassName formats
+   */
+  private normalizeTypeName(type: string): string {
+    // Handle import() function format: import("path").ClassName
+    // This can appear in Promise<import("path").ClassName> or as standalone type
+    const importPattern = /import\([^)]+\)\.\s*([\w.]+)/g;
+    type = type.replace(importPattern, '$1');
+
+    // Handle import___ format (ts-morph fully qualified names)
+    const importPathPattern = /import___[^_]+___([\w]+)/g;
+    type = type.replace(importPathPattern, '$1');
+
+    return type;
   }
 
   /**

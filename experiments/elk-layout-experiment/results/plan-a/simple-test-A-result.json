@@ -1,0 +1,17 @@
+{
+  "filename": "simple-test",
+  "plan": "A",
+  "svgSize": {
+    "width": 750,
+    "height": 200,
+    "aspectRatio": 3.75,
+    "viewBox": "0 0 750 200"
+  },
+  "pngSize": {
+    "width": 750,
+    "height": 200
+  },
+  "aspectRatioRatio": 3.75,
+  "renderTime": 11,
+  "success": true
+}

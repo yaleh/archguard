@@ -178,7 +178,7 @@ export class RelationExtractor {
 
   /**
    * Extract the main type name from a type string
-   * Handles generics, arrays, and union types
+   * Handles generics, arrays, union types, and import paths
    * @param typeText - Type as text
    * @returns Base type name or null
    */
@@ -186,19 +186,77 @@ export class RelationExtractor {
     // Remove whitespace
     typeText = typeText.trim();
 
+    // ✅ Handle ts-morph import() function format
+    // Format: import("path").ClassName or import("./relative").ClassName
+    if (typeText.startsWith('import(')) {
+      const match = typeText.match(/^import\([^)]+\)\.\s*([\w.]+)/);
+      if (match) {
+        return match[2]; // Return the class name after the dot
+      }
+    }
+
+    // ✅ Handle import___ path format (ts-morph fully qualified names)
+    // Format: import___<file_path>___<actual_class_name>
+    // Example: import___home_yale_work_archguard_src_cli_cache_manager___CacheStats
+    if (typeText.startsWith('import___')) {
+      const parts = typeText.split('___');
+      if (parts.length > 0) {
+        // Return the last part which is the actual class name
+        const actualTypeName = parts[parts.length - 1];
+        // If the last part is empty, try the second to last
+        if (actualTypeName && actualTypeName.length > 0) {
+          return actualTypeName;
+        } else if (parts.length > 1) {
+          return parts[parts.length - 2];
+        }
+      }
+      // Fallback: if parsing fails, return null to ignore this type
+      return null;
+    }
+
     // Handle arrays (e.g., "User[]" -> "User")
     if (typeText.endsWith('[]')) {
       return this.extractTypeName(typeText.slice(0, -2));
     }
 
-    // Handle generics (e.g., "Promise<User>" -> "User")
+    // ✅ Handle generics (e.g., "Promise<User>" -> "User", "Map<K, V>" -> "K" and "V")
+    // Must handle BEFORE checking primitive types
     const genericMatch = typeText.match(/^(\w+)<(.+)>$/);
     if (genericMatch) {
-      // Extract inner type
+      const containerType = genericMatch[1];
+      // For containers like Map, Set, Promise, etc., extract the inner type(s)
       const innerType = genericMatch[2];
-      if (innerType) {
-        return this.extractTypeName(innerType);
+
+      // For Map<K, V> or similar multi-parameter generics, extract all types
+      // Split by comma outside of angle brackets
+      const typeParams: string[] = [];
+      let depth = 0;
+      let current = '';
+
+      for (const char of innerType) {
+        if (char === '<') depth++;
+        if (char === '>') depth--;
+        if (char === ',' && depth === 0) {
+          typeParams.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
       }
+      if (current.trim()) {
+        typeParams.push(current.trim());
+      }
+
+      // Return the first custom type from the parameters
+      for (const param of typeParams) {
+        const extracted = this.extractTypeName(param);
+        if (extracted) {
+          return extracted;
+        }
+      }
+
+      // If no custom type found, return null
+      return null;
     }
 
     // Handle union types - take first type
@@ -209,7 +267,7 @@ export class RelationExtractor {
       }
     }
 
-    // Handle primitive and built-in types
+    // Handle primitive and built-in types (check AFTER generics)
     if (this.isPrimitiveType(typeText)) {
       return null;
     }
