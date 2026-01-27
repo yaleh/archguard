@@ -24,8 +24,8 @@ interface TestResult {
 }
 
 async function runComparisonTest() {
-  const mermaidPath = '/home/yale/work/archguard/archguard-self-analysis/cli-method.mmd';
-  const outputDir = '/home/yale/work/archguard/experiments/elk-layout-experiment/results/full-elk-comparison';
+  const mermaidPath = 'test-data/cli-module.mmd';
+  const outputDir = 'results/cli-module-elk-test';
 
   await fs.ensureDir(outputDir);
 
