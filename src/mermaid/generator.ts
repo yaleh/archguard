@@ -135,7 +135,7 @@ export class ValidatedMermaidGenerator {
         for (const entityId of group.entities) {
           const entity = this.archJson.entities.find((e) => e.id === entityId);
           if (entity) {
-            lines.push(...this.generateClassDefinition(entity, 2));
+            lines.push(...this.generateClassDefinition(entity, 2, true));
           }
         }
 
@@ -149,7 +149,7 @@ export class ValidatedMermaidGenerator {
     } else {
       // No grouping or default grouping, just list all classes
       for (const entity of this.archJson.entities) {
-        lines.push(...this.generateClassDefinition(entity, 1));
+        lines.push(...this.generateClassDefinition(entity, 1, true));
       }
 
       // Add all relationships
@@ -203,13 +203,15 @@ export class ValidatedMermaidGenerator {
     const lines: string[] = [];
     const padding = '  '.repeat(indent);
 
-    // Class declaration with generic parameters
-    const genericSuffix = entity.genericParams?.length ? `<${entity.genericParams.join(', ')}>` : '';
+    // Class declaration - Mermaid doesn't support generics in class names
+    // Remove generic parameters from the class name
+    const className = this.escapeId(entity.name);
     const classType = entity.type === 'interface' ? 'class' : entity.type;
-    lines.push(`${padding}${classType} ${this.escapeId(entity.name)}${genericSuffix} {`);
+    lines.push(`${padding}${classType} ${className} {`);
 
-    // Add members
-    for (const member of entity.members) {
+    // Add members (with null check)
+    const members = entity.members || [];
+    for (const member of members) {
       if (!this.shouldIncludeMember(member)) {
         continue;
       }
@@ -220,24 +222,14 @@ export class ValidatedMermaidGenerator {
 
     lines.push(`${padding}}`);
 
-    // Add inheritance/implementation
-    if (entity.extends && entity.extends.length > 0) {
-      for (const parent of entity.extends) {
-        lines.push(`${padding}${this.escapeId(parent)} <|-- ${this.escapeId(entity.name)}`);
-      }
-    }
-
-    if (entity.implements && entity.implements.length > 0) {
-      for (const iface of entity.implements) {
-        lines.push(`${padding}${this.escapeId(iface)} <|.. ${this.escapeId(entity.name)}`);
-      }
-    }
+    // Note: Inheritance/implementation relations are generated separately
+    // at the end of the diagram to ensure parent classes are defined first
 
     return lines;
   }
 
   /**
-   * Generate member line
+   * Generate member line - Enhanced to handle default values
    */
   private generateMemberLine(member: Member, detailed: boolean): string {
     const visibility = this.getVisibilitySymbol(member.visibility);
@@ -252,29 +244,21 @@ export class ValidatedMermaidGenerator {
     } else if (member.type === 'method' || member.type === 'constructor') {
       const async = member.isAsync ? 'async ' : '';
       const returnType = member.returnType ? `: ${this.sanitizeType(member.returnType)}` : '';
-      const params = this.generateParameters(member.parameters, detailed);
+
+      // Build parameters string, removing default values
+      const params = member.parameters
+        ?.map((p) => {
+          const optional = p.isOptional ? '?' : '';
+          const paramType = p.type ? `: ${this.sanitizeType(p.type)}` : '';
+          return `${p.name}${optional}${paramType}`;
+        })
+        .join(', ') || '';
+
       return `${visibility}${staticModifier}${abstractModifier}${async}${member.name}(${params})${returnType}`;
+    } else {
+      // Fallback for unknown member types
+      return `${visibility}${member.name}`;
     }
-
-    return `${visibility} ${member.name}`;
-  }
-
-  /**
-   * Generate parameters list
-   */
-  private generateParameters(parameters?: Member['parameters'], detailed = true): string {
-    if (!parameters || parameters.length === 0) {
-      return '';
-    }
-
-    return parameters
-      .map((param) => {
-        const optional = param.isOptional ? '?' : '';
-        // Skip default values in Mermaid - they're not well supported
-        // const defaultStr = param.defaultValue ? ` = ${param.defaultValue}` : '';
-        return `${param.name}${optional}: ${this.sanitizeType(param.type)}`;
-      })
-      .join(', ');
   }
 
   /**
@@ -364,49 +348,112 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
-   * Escape entity ID for Mermaid
+   * Escape entity ID for Mermaid - Enhanced to remove generic parameters
    */
   private escapeId(id: string): string {
-    // For all IDs (including namespaces), replace special characters with underscores
+    if (!id) return 'Unknown';
+
+    let escaped = id;
+
+    // Remove generic parameters from class/interface names
+    // CacheEntry<T> -> CacheEntry
+    // Map<K, V> -> Map
+    escaped = escaped.replace(/<[^>]*>$/g, '');
+
+    // Replace remaining special characters with underscores
     // Mermaid doesn't support quoted identifiers in all contexts
-    return id.replace(/[^a-zA-Z0-9_]/g, '_');
+    return escaped.replace(/[^a-zA-Z0-9_]/g, '_');
   }
 
   /**
-   * Sanitize type string
+   * Sanitize type string - Enhanced version to handle complex types
    */
   private sanitizeType(type: string): string {
     if (!type) return 'any';
 
-    // Simplify complex types for better readability
     let simplified = type;
 
-    // Remove inline object types like { field: type }
-    simplified = simplified.replace(/\{[^}]*\}/g, 'object');
+    // 1. Remove inline object types FIRST (before any other processing)
+    // Use iterative approach to handle nested objects correctly
+    // Example: { a: { b: number } } -> { a: object } -> object
+    let prevLength: number;
+    do {
+      prevLength = simplified.length;
+      simplified = simplified.replace(/\{[^{}]*\}/g, 'object');
+    } while (simplified.length !== prevLength && simplified.includes('{'));
 
-    // Remove function types
-    simplified = simplified.replace(/\([^)]*\)\s*=>\s*/, 'function');
+    // 2. Handle TypeScript advanced types
+    // Partial<T>, Required<T>, Readonly<T>, Pick<T, K>, Omit<T, K>, etc.
+    const advancedTypePattern = /^(Partial|Required|Readonly|Pick|Omit|Record|Exclude|Extract|ReturnType|Parameters|DeepPartial)<.+>$/;
+    if (advancedTypePattern.test(simplified)) {
+      return 'any';
+    }
 
-    // Remove union types complexity
-    simplified = simplified.replace(/\|/g, ' or ');
+    // 3. Remove function types: (args) => ReturnType
+    simplified = simplified.replace(/\([^)]*\)\s*=>\s*/g, 'Function');
 
-    // Remove intersection types
-    simplified = simplified.replace(/&/g, ' and ');
+    // 4. Handle Promise types - convert Promise<T> to Promise~T~
+    simplified = simplified.replace(/Promise<(.+?)>/g, (match, innerType) => {
+      const sanitizedInner = this.simplifyGenericType(innerType);
+      return `Promise~${sanitizedInner}~`;
+    });
 
-    // Handle generic types - convert angle brackets to tilde notation
-    simplified = simplified.replace(/</g, '~').replace(/>/g, '~');
+    // 5. Remove union types (A | B | C) -> any
+    if (simplified.includes('|')) {
+      return 'any';
+    }
 
-    // Remove array brackets notation
-    simplified = simplified.replace(/\[\]/g, 'Array');
+    // 6. Remove intersection types (A & B & C) -> object
+    if (simplified.includes('&')) {
+      return 'object';
+    }
 
-    // Normalize whitespace
+    // 7. Handle array types - must do this before generics
+    // Array<Array<T>> -> Array, Array<T> -> Array, T[] -> Array
+    // Use a loop to handle nested arrays
+    let prevLength2: number;
+    do {
+      prevLength2 = simplified.length;
+      simplified = simplified.replace(/Array<[^>]+>/g, 'Array');
+    } while (simplified.length !== prevLength2); // Keep looping until no more changes
+    simplified = simplified.replace(/\w+\[\]/g, 'Array'); // T[] -> Array
+    simplified = simplified.replace(/Array+/g, 'Array'); // Collapse ArrayArray -> Array
+
+    // 8. Handle generic types - convert to tilde notation
+    // Map<K, V> -> Map~KV~
+    // For nested generics, flatten them completely
+    while (simplified.includes('<')) {
+      const match = simplified.match(/<([^>]+)>/);
+      if (!match) break;
+
+      const content = match[1];
+      const flattened = content.replace(/\s*,\s*/g, '').replace(/\s+/g, '').replace(/<[^>]+>/g, '');
+      simplified = simplified.replace(/<[^>]+>/, `~${flattened}`);
+    }
+
+    // 9. Normalize whitespace
     simplified = simplified.replace(/\s+/g, ' ').trim();
 
-    // If still too complex or empty, just return 'any'
+    // 10. If still too complex or empty, return 'any'
     if (simplified.length > 50 || simplified === '') {
       return 'any';
     }
 
+    return simplified;
+  }
+
+  /**
+   * Simplify generic type content (for Promise<...>)
+   */
+  private simplifyGenericType(type: string): string {
+    // Remove spaces
+    let simplified = type.replace(/\s+/g, '');
+    // Remove commas
+    simplified = simplified.replace(/,/g, '');
+    // If still too long, truncate
+    if (simplified.length > 20) {
+      return simplified.substring(0, 20);
+    }
     return simplified;
   }
 
