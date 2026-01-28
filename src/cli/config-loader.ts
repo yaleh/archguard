@@ -25,7 +25,6 @@ export type { ArchGuardConfig } from '../types/config.js';
 
 // Mermaid configuration schema
 const MermaidConfigSchema = z.object({
-  enableLLMGrouping: z.boolean().optional(),
   renderer: z.enum(['isomorphic', 'cli']).optional(),
   theme: z.enum(['default', 'forest', 'dark', 'neutral']).optional(),
   transparentBackground: z.boolean().optional(),
@@ -219,7 +218,6 @@ interface FileConfig {
   outputDir?: string;
   format?: 'mermaid' | 'json';
   mermaid?: {
-    enableLLMGrouping?: boolean;
     renderer?: 'isomorphic' | 'cli';
     theme?: 'default' | 'forest' | 'dark' | 'neutral';
     transparentBackground?: boolean;

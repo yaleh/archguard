@@ -14,7 +14,7 @@
 import type { ArchJSON } from '../types/index.js';
 import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
 import type { GroupingDecision } from './types.js';
-import { HeuristicGrouper, LLMGrouper } from './grouper.js';
+import { HeuristicGrouper } from './grouper.js';
 import { ValidatedMermaidGenerator } from './generator.js';
 import { MermaidValidationPipeline } from './validation-pipeline.js';
 import { IsomorphicMermaidRenderer } from './renderer.js';
@@ -66,27 +66,11 @@ export class MermaidDiagramGenerator {
     const progress = new ProgressReporter();
 
     try {
-      // 1. Decision Layer - Choose grouping strategy
+      // 1. Decision Layer - Group entities using heuristic strategy
       progress.start('🧠 Analyzing architecture...');
-      let grouping: GroupingDecision;
-
-      if (this.config.mermaid?.enableLLMGrouping !== false) {
-        // Try LLM grouping first (if enabled)
-        const llmGrouper = new LLMGrouper(this.config);
-        try {
-          grouping = await llmGrouper.getLLMGrouping(archJson, level);
-          progress.succeed(`✅ LLM grouping complete: ${grouping.packages.length} groups`);
-        } catch (error) {
-          progress.warn('⚠️  LLM grouping failed, using heuristic');
-          const heuristicGrouper = new HeuristicGrouper();
-          grouping = heuristicGrouper.group(archJson);
-        }
-      } else {
-        // Use heuristic grouping directly
-        const heuristicGrouper = new HeuristicGrouper();
-        grouping = heuristicGrouper.group(archJson);
-        progress.succeed(`✅ Heuristic grouping complete: ${grouping.packages.length} groups`);
-      }
+      const heuristicGrouper = new HeuristicGrouper();
+      const grouping = heuristicGrouper.group(archJson);
+      progress.succeed(`✅ Grouping complete: ${grouping.packages.length} groups`);
 
       // 2. Deterministic Generation
       progress.start('📝 Generating Mermaid code...');

@@ -151,7 +151,6 @@ export function createAnalyzeCommand(): Command {
       .option('-v, --verbose', 'Verbose output', false)
 
       // ========== Mermaid-Specific Options ==========
-      .option('--no-llm-grouping', 'Disable LLM grouping (use heuristic)')
       .option('--mermaid-theme <theme>', 'Mermaid theme: default|forest|dark|neutral')
       .option('--mermaid-renderer <renderer>', 'Mermaid renderer: isomorphic|cli')
 
@@ -196,12 +195,10 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
 
     // Mermaid-specific options
     if (
-      cliOptions.llmGrouping !== undefined ||
       cliOptions.mermaidTheme !== undefined ||
       cliOptions.mermaidRenderer !== undefined
     ) {
       configOverrides.mermaid = {
-        enableLLMGrouping: cliOptions.llmGrouping,
         theme: cliOptions.mermaidTheme,
         renderer: cliOptions.mermaidRenderer,
       };

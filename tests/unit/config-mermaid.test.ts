@@ -15,7 +15,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const config: Partial<Config> = {
         format: 'mermaid',
         mermaid: {
-          enableLLMGrouping: true,
           renderer: 'isomorphic',
           theme: 'default',
           transparentBackground: true,
@@ -24,7 +23,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
 
       const result = await loader.load(config);
       expect(result.format).toBe('mermaid');
-      expect(result.mermaid?.enableLLMGrouping).toBe(true);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
       expect(result.mermaid?.transparentBackground).toBe(true);
@@ -41,7 +39,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       expect(result.format).toBe('mermaid');
       // Zod applies defaults, so mermaid config will have default values
       expect(result.mermaid).toBeDefined();
-      expect(result.mermaid?.enableLLMGrouping).toBe(true);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
       expect(result.mermaid?.transparentBackground).toBe(false);
@@ -60,7 +57,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const result = await loader.load(config);
       expect(result.mermaid?.theme).toBe('dark');
       // Zod applies defaults for unspecified fields
-      expect(result.mermaid?.enableLLMGrouping).toBe(true);
+      expect(result.mermaid?.renderer).toBe('isomorphic');
     });
 
     it('should accept all valid mermaid themes', async () => {
@@ -126,18 +123,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       await expect(loader.load(config)).rejects.toThrow(/validation failed/i);
     });
 
-    it('should reject invalid enableLLMGrouping type', async () => {
-      const loader = new ConfigLoader();
-
-      const config: Partial<Config> = {
-        format: 'mermaid',
-        mermaid: {
-          enableLLMGrouping: 'true' as any,
-        },
-      };
-
-      await expect(loader.load(config)).rejects.toThrow(/validation failed/i);
-    });
   });
 
   describe('PlantUML format deprecation', () => {
@@ -221,7 +206,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const testConfig = {
         format: 'mermaid',
         mermaid: {
-          enableLLMGrouping: false,
           renderer: 'cli',
           theme: 'forest',
           transparentBackground: false,
@@ -235,7 +219,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       try {
         const result = await loader.load();
         expect(result.format).toBe('mermaid');
-        expect(result.mermaid?.enableLLMGrouping).toBe(false);
         expect(result.mermaid?.renderer).toBe('cli');
         expect(result.mermaid?.theme).toBe('forest');
         expect(result.mermaid?.transparentBackground).toBe(false);
@@ -272,7 +255,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const fileConfig = {
         format: 'mermaid',
         mermaid: {
-          enableLLMGrouping: true,
           theme: 'default',
         },
         diagrams: [],
@@ -284,13 +266,11 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       try {
         const cliOptions: Partial<Config> = {
           mermaid: {
-            enableLLMGrouping: false,
             theme: 'dark',
           },
         };
 
         const result = await loader.load(cliOptions);
-        expect(result.mermaid?.enableLLMGrouping).toBe(false);
         expect(result.mermaid?.theme).toBe('dark');
       } finally {
         await fs.remove(testDir);
@@ -310,7 +290,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const result = await loader.load(config);
       expect(result.format).toBe('mermaid');
       // Zod applies defaults even for empty object
-      expect(result.mermaid?.enableLLMGrouping).toBe(true);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
       expect(result.mermaid?.transparentBackground).toBe(false);
@@ -338,13 +317,11 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const config: Partial<Config> = {
         format: 'mermaid',
         mermaid: {
-          enableLLMGrouping: false,
           transparentBackground: false,
         },
       };
 
       const result = await loader.load(config);
-      expect(result.mermaid?.enableLLMGrouping).toBe(false);
       expect(result.mermaid?.transparentBackground).toBe(false);
     });
   });

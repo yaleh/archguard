@@ -11,7 +11,6 @@ export { ValidatedMermaidGenerator } from './generator.js';
 
 // Groupers
 export { HeuristicGrouper } from './grouper.js';
-export { LLMGrouper } from './grouper.js';
 
 // Validators
 export { MermaidParseValidator } from './validator-parse.js';

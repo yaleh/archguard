@@ -23,9 +23,6 @@ export type DetailLevel = 'package' | 'class' | 'method';
  * Mermaid-specific configuration
  */
 export interface MermaidConfig {
-  /** Enable LLM-based intelligent grouping (default: true) */
-  enableLLMGrouping?: boolean;
-
   /** Mermaid renderer type */
   renderer?: 'isomorphic' | 'cli';
 
@@ -40,7 +37,6 @@ export interface MermaidConfig {
  * Default Mermaid configuration
  */
 export const defaultMermaidConfig: MermaidConfig = {
-  enableLLMGrouping: true,
   renderer: 'isomorphic',
   theme: 'default',
   transparentBackground: false,
@@ -510,11 +506,6 @@ export interface CLIOptions {
   cliArgs?: string;
 
   // ========== Mermaid-Specific Options ==========
-
-  /**
-   * Disable LLM grouping (use heuristic)
-   */
-  llmGrouping?: boolean;
 
   /**
    * Mermaid theme
