@@ -223,27 +223,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
       progress.info(`Filtered to ${selectedDiagrams.length} diagram(s)`);
     }
 
-    // Step 4: Check Claude CLI availability (if needed)
-    const needsClaude = selectedDiagrams.some((d) => (d.format || config.format) !== 'json');
-
-    if (needsClaude) {
-      progress.start('Checking Claude Code CLI...');
-      const { isClaudeCodeAvailable } = await import('../../utils/cli-detector.js');
-      const cliAvailable = await isClaudeCodeAvailable();
-
-      if (!cliAvailable) {
-        progress.fail('Claude Code CLI not found');
-        console.error(
-          '\nPlease install Claude Code CLI from: https://docs.anthropic.com/claude-code\n\n' +
-            'To verify installation: claude --version\n'
-        );
-        process.exit(1);
-      }
-
-      progress.succeed('Claude Code CLI available');
-    }
-
-    // Step 5: Unified processing (core!)
+    // Step 4: Unified processing (core!)
     const processor = new DiagramProcessor({
       diagrams: selectedDiagrams,
       globalConfig: config as any, // Config type is compatible with GlobalConfig at runtime

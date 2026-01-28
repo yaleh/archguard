@@ -40,14 +40,17 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
+    "cli-progress": "^3.12.0",
     "commander": "^11.1.0",
     "execa": "^8.0.1",
     "isomorphic-mermaid": "^0.1.1",
+    "p-map": "^7.0.4",
     "pino": "^8.17.0",
     "sharp": "^0.34.5",
     "ts-morph": "^21.0.0"
   },
   "devDependencies": {
+    "@types/cli-progress": "^3.11.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",

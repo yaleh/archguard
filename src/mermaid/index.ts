@@ -27,6 +27,9 @@ export { IsomorphicMermaidRenderer } from './renderer.js';
 // Auto-repair
 export { MermaidAutoRepair } from './auto-repair.js';
 
+// External Dependencies Filter
+export { isExternalDependency, EXTERNAL_DEPENDENCIES } from './external-dependencies.js';
+
 // Main Diagram Generator
 export { MermaidDiagramGenerator } from './diagram-generator.js';
 export type { MermaidOutputOptions } from './diagram-generator.js';

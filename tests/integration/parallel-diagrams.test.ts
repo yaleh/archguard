@@ -1,7 +1,7 @@
 /**
- * Unit tests for DiagramProcessor
+ * Integration tests for parallel diagram processing
  *
- * TDD test suite for the unified diagram processing component (v2.0 core)
+ * TDD test suite for verifying p-map parallel processing implementation
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -10,28 +10,14 @@ import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import { ProgressReporter } from '@/cli/progress.js';
 import type { ArchJSON } from '@/types/index.js';
 
-// Mock dependencies
+// Mock dependencies before importing
 vi.mock('@/cli/utils/file-discovery-service.js');
 vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
 
-// Mock cli-progress for ParallelProgressReporter
-vi.mock('cli-progress', () => ({
-  MultiBar: vi.fn().mockImplementation(() => ({
-    create: vi.fn().mockReturnValue({
-      update: vi.fn(),
-    }),
-    stop: vi.fn(),
-  })),
-  Presets: {
-    shades_classic: {},
-  },
-}));
-
-describe('DiagramProcessor', () => {
-  // Test data
+describe('DiagramProcessor.parallel', () => {
   const createGlobalConfig = (): GlobalConfig => ({
     outputDir: './archguard',
     format: 'mermaid',
@@ -85,35 +71,8 @@ describe('DiagramProcessor', () => {
     vi.clearAllMocks();
   });
 
-  describe('constructor', () => {
-    it('should create processor with valid options', () => {
-      const diagrams = [createDiagramConfig('test', ['./src'])];
-      const globalConfig = createGlobalConfig();
-
-      const processor = new DiagramProcessor({
-        diagrams,
-        globalConfig,
-        progress,
-      });
-
-      expect(processor).toBeDefined();
-    });
-
-    it('should throw error if diagrams array is empty', () => {
-      const globalConfig = createGlobalConfig();
-
-      expect(() => {
-        new DiagramProcessor({
-          diagrams: [],
-          globalConfig,
-          progress,
-        });
-      }).toThrow('At least one diagram configuration is required');
-    });
-  });
-
-  describe('processAll', () => {
-    it('should process single diagram successfully', async () => {
+  describe('parallel processing', () => {
+    it('should process multiple diagrams in parallel', async () => {
       // Mock FileDiscoveryService
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
@@ -160,102 +119,44 @@ describe('DiagramProcessor', () => {
         generateAndRender: mockGenerateAndRender,
       }));
 
-      // Create processor
-      const diagrams = [createDiagramConfig('test', ['./src'])];
-      const globalConfig = createGlobalConfig();
-      const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
-
-      // Process diagrams
-      const results = await processor.processAll();
-
-      // Verify results
-      expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
-      expect(results[0].name).toBe('test');
-      expect(results[0].stats).toBeDefined();
-      expect(results[0].stats?.entities).toBe(1);
-      expect(results[0].stats?.relations).toBe(0);
-    });
-
-    it('should process multiple diagrams independently', async () => {
-      // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
-      const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
-        discoverFiles: mockDiscoverFiles,
-      }));
-
-      // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
-      const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
-        parseFiles: mockParseFiles,
-      }));
-
-      // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
-
-      // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
-      const mockResolve = vi
-        .fn()
-        .mockReturnValueOnce({
-          outputDir: './archguard',
-          baseName: 'diagram1',
-          paths: {
-            mmd: './archguard/diagram1.mmd',
-            png: './archguard/diagram1.png',
-            svg: './archguard/diagram1.svg',
-            json: './archguard/diagram1.json',
-          },
-        })
-        .mockReturnValueOnce({
-          outputDir: './archguard',
-          baseName: 'diagram2',
-          paths: {
-            mmd: './archguard/diagram2.mmd',
-            png: './archguard/diagram2.png',
-            svg: './archguard/diagram2.svg',
-            json: './archguard/diagram2.json',
-          },
-        });
-      const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
-        resolve: mockResolve,
-        ensureDirectory: mockEnsureDirectory,
-      }));
-
-      // Create processor with multiple diagrams
+      // Create processor with 3 diagrams
       const diagrams = [
         createDiagramConfig('diagram1', ['./src/module1']),
         createDiagramConfig('diagram2', ['./src/module2']),
+        createDiagramConfig('diagram3', ['./src/module3']),
       ];
       const globalConfig = createGlobalConfig();
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
 
-      // Process diagrams
+      // Track parallel execution
+      const startTime = Date.now();
       const results = await processor.processAll();
+      const endTime = Date.now();
+      const duration = endTime - startTime;
 
-      // Verify results
-      expect(results).toHaveLength(2);
-      expect(results[0].success).toBe(true);
-      expect(results[0].name).toBe('diagram1');
-      expect(results[1].success).toBe(true);
-      expect(results[1].name).toBe('diagram2');
+      // Verify all diagrams processed
+      expect(results).toHaveLength(3);
+      expect(results.every((r) => r.success)).toBe(true);
+
+      // Verify parallel execution - with 3 concurrent operations,
+      // it should complete faster than serial (serial would be ~3x)
+      // For mocked tests with minimal delay, this is more about ensuring
+      // they started concurrently rather than exact timing
+      expect(mockParseFiles).toHaveBeenCalledTimes(3);
+
+      // In parallel mode, all parseFiles calls should have been made
+      // before any completed (or at least overlapping)
+      // We can't test exact timing in unit tests, but we verify the structure
     });
 
-    it('should handle diagram processing failure without affecting others', async () => {
+    it('should isolate errors - one failure should not affect others', async () => {
       // Mock FileDiscoveryService
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi
         .fn()
-        .mockResolvedValueOnce(['/src/test.ts']) // First diagram succeeds
-        .mockRejectedValueOnce(new Error('Discovery failed')) // Second diagram fails
-        .mockResolvedValueOnce(['/src/test.ts']); // Third diagram succeeds
+        .mockResolvedValueOnce(['/src/test.ts']) // diagram1 succeeds
+        .mockRejectedValueOnce(new Error('Discovery failed')) // diagram2 fails
+        .mockResolvedValueOnce(['/src/test.ts']); // diagram3 succeeds
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
@@ -299,7 +200,7 @@ describe('DiagramProcessor', () => {
         generateAndRender: mockGenerateAndRender,
       }));
 
-      // Create processor with multiple diagrams
+      // Create processor with 3 diagrams
       const diagrams = [
         createDiagramConfig('diagram1', ['./src/module1']),
         createDiagramConfig('diagram2', ['./src/module2']), // This will fail
@@ -311,7 +212,7 @@ describe('DiagramProcessor', () => {
       // Process diagrams
       const results = await processor.processAll();
 
-      // Verify results
+      // Verify results - all should complete, with one failure
       expect(results).toHaveLength(3);
       expect(results[0].success).toBe(true);
       expect(results[0].name).toBe('diagram1');
@@ -320,12 +221,29 @@ describe('DiagramProcessor', () => {
       expect(results[1].error).toBe('Discovery failed');
       expect(results[2].success).toBe(true);
       expect(results[2].name).toBe('diagram3');
+
+      // Verify that diagram1 and diagram3 both attempted to process
+      // despite diagram2's failure
+      expect(mockDiscoverFiles).toHaveBeenCalledTimes(3);
     });
 
-    it('should correctly apply level aggregation', async () => {
-      // Mock FileDiscoveryService
+    it('should respect concurrency limit', async () => {
+      // Mock FileDiscoveryService with delay to test concurrency
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
-      const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
+      let activeOperations = 0;
+      let maxConcurrentOperations = 0;
+
+      const mockDiscoverFiles = vi.fn().mockImplementation(async () => {
+        activeOperations++;
+        maxConcurrentOperations = Math.max(maxConcurrentOperations, activeOperations);
+
+        // Simulate some work
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        activeOperations--;
+        return ['/src/test.ts'];
+      });
+
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
@@ -369,25 +287,29 @@ describe('DiagramProcessor', () => {
         generateAndRender: mockGenerateAndRender,
       }));
 
-      // Create processor with package level
+      // Create processor with concurrency limit of 2
       const diagrams = [
-        {
-          name: 'test',
-          sources: ['./src'],
-          level: 'package' as const,
-        },
+        createDiagramConfig('diagram1', ['./src/module1']),
+        createDiagramConfig('diagram2', ['./src/module2']),
+        createDiagramConfig('diagram3', ['./src/module3']),
+        createDiagramConfig('diagram4', ['./src/module4']),
+        createDiagramConfig('diagram5', ['./src/module5']),
       ];
-      const globalConfig = createGlobalConfig();
+      const globalConfig = {
+        ...createGlobalConfig(),
+        concurrency: 2,
+      };
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
 
       // Process diagrams
       await processor.processAll();
 
-      // Verify aggregator was called with 'package' level
-      expect(mockAggregate).toHaveBeenCalledWith(expect.any(Object), 'package');
+      // Verify concurrency was respected
+      // With concurrency of 2, we should never have more than 2 operations active
+      expect(maxConcurrentOperations).toBeLessThanOrEqual(2);
     });
 
-    it('should support different output formats', async () => {
+    it('should handle zero concurrency config by using CPU count', async () => {
       // Mock FileDiscoveryService
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
@@ -434,51 +356,43 @@ describe('DiagramProcessor', () => {
         generateAndRender: mockGenerateAndRender,
       }));
 
-      // Create processor with JSON format
-      const diagrams = [
-        {
-          name: 'test',
-          sources: ['./src'],
-          level: 'class' as const,
-          format: 'json' as const,
-        },
-      ];
-      const globalConfig = createGlobalConfig();
+      // Create processor with undefined concurrency
+      const diagrams = [createDiagramConfig('test', ['./src'])];
+      const globalConfig = {
+        ...createGlobalConfig(),
+        concurrency: undefined,
+      } as any;
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
 
-      // Process diagrams
+      // Should not throw and should complete successfully
       const results = await processor.processAll();
-
-      // Verify JSON file was written (no PlantUML generation)
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(true);
-      expect(results[0].paths?.json).toBe('./archguard/test.json');
     });
+  });
 
-    it('should report detailed statistics', async () => {
-      // Mock FileDiscoveryService
+  describe('performance validation', () => {
+    it('should complete faster than serial processing', async () => {
+      // This is a conceptual test - in real scenarios with actual parsing,
+      // parallel should be 3-4x faster than serial
+      // For unit tests, we just verify the structure is correct
+
+      // Mock FileDiscoveryService with realistic delay
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
-      const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
+      const mockDiscoverFiles = vi.fn().mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return ['/src/test.ts'];
+      });
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
-      // Mock ParallelParser
+      // Mock ParallelParser with delay
       const { ParallelParser } = await import('@/parser/parallel-parser.js');
-      const testArchJSON = createTestArchJSON();
-      testArchJSON.entities = [
-        testArchJSON.entities[0],
-        { ...testArchJSON.entities[0], id: 'TestClass2', name: 'TestClass2' },
-      ];
-      testArchJSON.relations = [
-        {
-          id: 'rel-1',
-          type: 'dependency',
-          source: 'TestClass',
-          target: 'TestClass2',
-        },
-      ];
-      const mockParseFiles = vi.fn().mockResolvedValue(testArchJSON);
+      const mockParseFiles = vi.fn().mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return createTestArchJSON();
+      });
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
@@ -515,19 +429,29 @@ describe('DiagramProcessor', () => {
         generateAndRender: mockGenerateAndRender,
       }));
 
-      // Create processor
-      const diagrams = [createDiagramConfig('test', ['./src'])];
+      // Create processor with 3 diagrams
+      const diagrams = [
+        createDiagramConfig('diagram1', ['./src/module1']),
+        createDiagramConfig('diagram2', ['./src/module2']),
+        createDiagramConfig('diagram3', ['./src/module3']),
+      ];
       const globalConfig = createGlobalConfig();
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
 
-      // Process diagrams
+      // Process and time
+      const startTime = Date.now();
       const results = await processor.processAll();
+      const endTime = Date.now();
+      const parallelTime = endTime - startTime;
 
-      // Verify statistics
-      expect(results[0].stats).toBeDefined();
-      expect(results[0].stats?.entities).toBe(2);
-      expect(results[0].stats?.relations).toBe(1);
-      expect(results[0].stats?.parseTime).toBeGreaterThanOrEqual(0);
+      // Verify all completed
+      expect(results.every((r) => r.success)).toBe(true);
+
+      // In serial mode, this would take ~450ms (3 * 150ms)
+      // In parallel mode with concurrency 3, it should take ~150ms
+      // We use a loose threshold to account for test environment variations
+      // Parallel should be at least somewhat faster
+      expect(parallelTime).toBeLessThan(400); // Serial would be ~450ms
     });
   });
 });

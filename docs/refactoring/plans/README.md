@@ -419,6 +419,73 @@ Week 6-7: Phase 6 (发布和监控)
 
 ---
 
+### [14-performance-optimization-plan.md](./14-performance-optimization-plan.md)
+**⚡ Phase 14: 性能优化与并行处理实施计划 (TDD)**
+
+**预计时间**: 7-10 个工作日
+**核心技术**: p-map (并发控制), cli-progress (进度条)
+**对应提案**: [14-performance-optimization-proposal.md](../proposals/14-performance-optimization-proposal.md)
+
+**内容**:
+- 多 diagrams 并行处理（Promise.all() / p-map）
+- 移除不必要的 Claude CLI 检查
+- 外部依赖警告过滤（黑名单机制）
+- 并行进度条（cli-progress）
+- 源代码缓存优化（共享解析结果）
+- 渲染阶段分离（批量并行渲染）
+- 质量评分改进（区分内外部依赖）
+- 完整的 RLM 六阶段实施计划
+- TDD 开发流程示例
+
+**适用人群**: 性能工程师、核心开发者、所有需要生成多图的用户
+**阅读优先级**: ⭐⭐⭐⭐⭐ (必读)
+
+**关键组件**:
+- `DiagramProcessor.processDiagrams()` - 并行处理逻辑
+- `ParallelProgressReporter` - 多行进度条显示
+- `EXTERNAL_DEPENDENCIES` - 外部依赖黑名单
+- `SourceCache` - 源代码缓存
+- 两阶段处理流程（生成 → 批量渲染）
+
+**实施阶段**:
+- Phase 14.1: P0 核心优化（2-3 天）
+  - 并行处理 + 移除 Claude CLI 检查
+- Phase 14.2: P1 用户体验优化（2-3 天）
+  - 外部依赖过滤 + 并行进度条 + 质量评分
+- Phase 14.3: P2-P3 高级优化（2-3 天）
+  - 源代码缓存 + 渲染分离
+
+**验收标准**:
+- 6 diagrams 总耗时 <15s（对比 30-60s，**3-4x 提升**）
+- CPU 利用率 >80%（对比 20-30%，**+3x**）
+- 警告数量 <10（对比 100+，**-95%**）
+- 缓存命中率 >70%
+- 质量评分 >85/100（对比 49/100，**+73%**）
+- 测试覆盖率 ≥80%
+- 用户体验评分 ≥4.5/5.0
+
+**核心改进**:
+- ⚡ 性能提升：**3-4x**（并行处理）
+- ⚡ 警告可读性：**+500%**（过滤外部依赖）
+- ⚡ 用户体验：**显著改善**（并行进度条）
+- ⚡ 资源利用率：**+3x**（CPU 利用率）
+- ⚡ 重复运行：**10x+**（源代码缓存）
+
+**新增依赖**:
+```json
+{
+  "dependencies": {
+    "p-map": "^7.0.0",
+    "cli-progress": "^3.12.0"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.12.0"
+  }
+}
+```
+
+---
+
 ## 🗺️ 阅读路线
 
 ### 路线 1: 项目经理

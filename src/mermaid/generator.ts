@@ -15,6 +15,7 @@ import type {
   MermaidTheme,
 } from './types.js';
 import { CommentGenerator } from './comment-generator.js';
+import { isExternalDependency } from './external-dependencies.js';
 
 /**
  * Validated Mermaid Generator
@@ -25,6 +26,7 @@ export class ValidatedMermaidGenerator {
   private readonly options: Required<MermaidGeneratorOptions>;
   private readonly diagramConfig?: DiagramConfig;
   private readonly commentGenerator: CommentGenerator;
+  private readonly verbose: boolean;
 
   constructor(
     archJson: ArchJSON,
@@ -35,6 +37,7 @@ export class ValidatedMermaidGenerator {
       includePrivate?: boolean;
       includeProtected?: boolean;
       maxDepth?: number;
+      verbose?: boolean;
     },
     diagramConfig?: DiagramConfig
   ) {
@@ -48,6 +51,7 @@ export class ValidatedMermaidGenerator {
       maxDepth: options.maxDepth ?? 3,
     };
     this.diagramConfig = diagramConfig;
+    this.verbose = options.verbose ?? false;
     this.commentGenerator = new CommentGenerator();
   }
 
@@ -122,12 +126,51 @@ export class ValidatedMermaidGenerator {
   private validateBeforeGenerate(): void {
     // Check for circular references
     const entityIds = new Set(this.archJson.entities.map((e) => e.id));
+    const filteredWarnings: string[] = [];
 
     for (const relation of this.archJson.relations) {
-      if (!entityIds.has(relation.source) || !entityIds.has(relation.target)) {
-        console.warn(
-          `Warning: Relation references undefined entity: ${relation.source} -> ${relation.target}`
-        );
+      const sourceExists = entityIds.has(relation.source);
+      const targetExists = entityIds.has(relation.target);
+
+      if (!sourceExists || !targetExists) {
+        // Check if the undefined entities are external dependencies
+        const sourceIsExternal = !sourceExists && isExternalDependency(relation.source);
+        const targetIsExternal = !targetExists && isExternalDependency(relation.target);
+
+        // Only warn if both are not external dependencies
+        if (!sourceIsExternal || !targetIsExternal) {
+          const warningParts: string[] = [];
+
+          if (!sourceExists && !sourceIsExternal) {
+            warningParts.push(`source: ${relation.source}`);
+          }
+          if (!targetExists && !targetIsExternal) {
+            warningParts.push(`target: ${relation.target}`);
+          }
+
+          if (warningParts.length > 0) {
+            filteredWarnings.push(`  - ${relation.source} -> ${relation.target} (${warningParts.join(', ')})`);
+          }
+        }
+      }
+    }
+
+    // Print warnings (if any)
+    if (filteredWarnings.length > 0) {
+      console.warn(`⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`);
+      console.warn(filteredWarnings.join('\n'));
+    }
+
+    // Log filtered warnings in verbose mode
+    if (this.verbose) {
+      const filteredCount = this.archJson.relations.filter(
+        (r) =>
+          (!entityIds.has(r.source) && isExternalDependency(r.source)) ||
+          (!entityIds.has(r.target) && isExternalDependency(r.target))
+      ).length;
+
+      if (filteredCount > 0) {
+        console.debug(`🔇 Filtered ${filteredCount} external dependency warning(s)`);
       }
     }
 

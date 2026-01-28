@@ -79,6 +79,7 @@ export class MermaidDiagramGenerator {
         {
           level,
           grouping,
+          verbose: this.config.verbose || false,
         },
         diagramConfig // v2.1.0: Pass diagram config for metadata comments
       );
