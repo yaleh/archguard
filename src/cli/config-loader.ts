@@ -87,11 +87,25 @@ const ProcessInfoSchema = z.object({
 });
 
 // v2.1.0: Annotation config schema
+// v2.1.1: Added visible title support
 const AnnotationConfigSchema = z.object({
   enableComments: z.boolean().optional(),
   highlightPatterns: z.boolean().optional(),
   showExternalDeps: z.boolean().optional(),
   includeUsageExample: z.boolean().optional(),
+  // v2.1.1: Visible title in rendered images
+  enableVisibleTitle: z.boolean().optional(),
+  visibleTitleSections: z.array(z.enum([
+    'title',
+    'subtitle',
+    'purpose',
+    'input',
+    'output',
+    'patterns',
+    'principles',
+    'process',
+  ])).optional(),
+  titlePosition: z.enum(['top', 'bottom']).optional(),
 });
 
 const ClassAnnotationSchema = z.object({

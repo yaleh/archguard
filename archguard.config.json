@@ -31,19 +31,30 @@
     "system": "ArchGuard - TypeScript Architecture Diagram Generator",
     "author": "ArchGuard Team",
     "projectUrl": "https://github.com/anthropics/archguard",
-    "keywords": ["架构分析", "TypeScript", "Mermaid", "CLI", "AST Parsing"]
+    "keywords": [
+      "架构分析",
+      "TypeScript",
+      "Mermaid",
+      "CLI",
+      "AST Parsing"
+    ]
   },
   "diagrams": [
     {
       "name": "overview/package",
-      "sources": ["./src"],
+      "sources": [
+        "./src"
+      ],
       "level": "package",
       "description": "Package-level overview of ArchGuard",
       "metadata": {
         "title": "ArchGuard Package Overview",
         "subtitle": "系统架构概览",
         "purpose": "展示 ArchGuard 整体包结构和模块依赖关系",
-        "primaryActors": ["开发者", "架构师"],
+        "primaryActors": [
+          "开发者",
+          "架构师"
+        ],
         "input": {
           "type": "TypeScript 源代码目录",
           "description": "待分析的项目源代码",
@@ -51,7 +62,11 @@
         },
         "output": {
           "description": "包级依赖关系图",
-          "formats": ["PNG", "SVG", "MMD"],
+          "formats": [
+            "PNG",
+            "SVG",
+            "MMD"
+          ],
           "example": "archguard/overview/package.png"
         }
       },
@@ -61,7 +76,14 @@
           {
             "name": "Layered Architecture",
             "category": "structural",
-            "participants": ["cli", "parser", "mermaid", "ai", "types", "utils"],
+            "participants": [
+              "cli",
+              "parser",
+              "mermaid",
+              "ai",
+              "types",
+              "utils"
+            ],
             "description": "三层架构：CLI 层 → 业务逻辑层 → 基础设施层"
           }
         ],
@@ -73,70 +95,103 @@
       "process": {
         "stages": 5,
         "dataFlow": "用户命令 → CLI 处理 → 配置加载 → 文件发现 → 并行解析 → 聚合 → 图生成 → 渲染",
-        "keyDependencies": ["commander", "ts-morph", "isomorphic-mermaid", "sharp", "zod"]
+        "keyDependencies": [
+          "commander",
+          "ts-morph",
+          "isomorphic-mermaid",
+          "sharp",
+          "zod"
+        ]
       },
       "annotations": {
         "enableComments": true,
         "highlightPatterns": true,
-        "includeUsageExample": true
+        "includeUsageExample": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "class/all-classes",
-      "sources": ["./src"],
+      "sources": [
+        "./src"
+      ],
       "level": "class",
       "description": "Class-level diagram for all modules",
       "metadata": {
         "title": "ArchGuard Complete Class Architecture",
         "subtitle": "完整类图",
         "purpose": "展示所有模块的核心类及其关系",
-        "primaryActors": ["开发者", "架构师"],
+        "primaryActors": [
+          "开发者",
+          "架构师"
+        ],
         "input": {
           "type": "TypeScript 源代码",
           "example": "./src/**/*.ts"
         },
         "output": {
           "description": "完整类图（包含所有模块）",
-          "formats": ["PNG", "SVG", "MMD"]
+          "formats": [
+            "PNG",
+            "SVG",
+            "MMD"
+          ]
         }
       },
       "annotations": {
         "enableComments": true,
-        "highlightPatterns": true
+        "highlightPatterns": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/all-methods",
-      "sources": ["./src"],
+      "sources": [
+        "./src"
+      ],
       "level": "method",
       "description": "Method-level diagram for all modules",
       "metadata": {
         "title": "ArchGuard Method-Level Architecture",
         "subtitle": "方法级架构",
         "purpose": "展示所有类的详细方法签名和属性",
-        "primaryActors": ["开发者"],
+        "primaryActors": [
+          "开发者"
+        ],
         "input": {
           "type": "TypeScript 源代码"
         },
         "output": {
           "description": "方法级详细图",
-          "formats": ["PNG", "SVG", "MMD"]
+          "formats": [
+            "PNG",
+            "SVG",
+            "MMD"
+          ]
         }
       },
       "annotations": {
-        "enableComments": true
+        "enableComments": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/cli-module",
-      "sources": ["./src/cli"],
+      "sources": [
+        "./src/cli"
+      ],
       "level": "method",
       "description": "Method-level detail for CLI module",
       "metadata": {
         "title": "CLI Module Method-Level Architecture",
         "subtitle": "CLI 模块方法详解",
         "purpose": "展示 CLI 命令处理、配置加载、进度报告的详细实现",
-        "primaryActors": ["开发者"],
+        "primaryActors": [
+          "开发者"
+        ],
         "input": {
           "type": "CLI 命令",
           "example": "archguard analyze -s ./src"
@@ -150,19 +205,27 @@
           {
             "name": "Command Pattern",
             "category": "behavioral",
-            "participants": ["createAnalyzeCommand", "createInitCommand", "createCacheCommand"],
+            "participants": [
+              "createAnalyzeCommand",
+              "createInitCommand",
+              "createCacheCommand"
+            ],
             "description": "每个命令封装为一个独立的命令对象"
           },
           {
             "name": "Builder Pattern",
             "category": "creational",
-            "participants": ["ConfigLoader"],
+            "participants": [
+              "ConfigLoader"
+            ],
             "description": "分步构建配置"
           },
           {
             "name": "Observer Pattern",
             "category": "behavioral",
-            "participants": ["ProgressReporter"],
+            "participants": [
+              "ProgressReporter"
+            ],
             "description": "统一的进度报告接口"
           }
         ]
@@ -171,41 +234,59 @@
         "dataFlow": "CLI 命令 → Commander 解析 → ConfigLoader → DiagramProcessor → 输出"
       },
       "classes": {
-        "highlightClasses": ["ConfigLoader", "DiagramProcessor", "ProgressReporter"],
+        "highlightClasses": [
+          "ConfigLoader",
+          "DiagramProcessor",
+          "ProgressReporter"
+        ],
         "annotateClasses": [
           {
             "className": "ConfigLoader",
-            "stereotypes": ["<<Builder>>"],
+            "stereotypes": [
+              "<<Builder>>"
+            ],
             "responsibility": "加载并验证配置文件"
           },
           {
             "className": "DiagramProcessor",
-            "stereotypes": ["<<Chain of Responsibility>>"],
+            "stereotypes": [
+              "<<Chain of Responsibility>>"
+            ],
             "responsibility": "协调整个图表处理流程"
           }
         ]
       },
       "annotations": {
         "enableComments": true,
-        "highlightPatterns": true
+        "highlightPatterns": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/mermaid-module",
-      "sources": ["./src/mermaid"],
+      "sources": [
+        "./src/mermaid"
+      ],
       "level": "method",
       "description": "Method-level detail for Mermaid module",
       "metadata": {
         "title": "Mermaid Module Method-Level Architecture",
         "subtitle": "Mermaid 生成模块方法详解",
         "purpose": "展示 Mermaid 代码生成、验证、渲染的详细实现",
-        "primaryActors": ["开发者"],
+        "primaryActors": [
+          "开发者"
+        ],
         "input": {
           "type": "ArchJSON"
         },
         "output": {
           "description": "Mermaid 图表文件",
-          "formats": ["PNG", "SVG", "MMD"]
+          "formats": [
+            "PNG",
+            "SVG",
+            "MMD"
+          ]
         }
       },
       "design": {
@@ -213,19 +294,28 @@
           {
             "name": "Pipeline Pattern",
             "category": "behavioral",
-            "participants": ["MermaidDiagramGenerator", "ValidatedMermaidGenerator", "MermaidValidationPipeline"],
+            "participants": [
+              "MermaidDiagramGenerator",
+              "ValidatedMermaidGenerator",
+              "MermaidValidationPipeline"
+            ],
             "description": "数据处理流水线"
           },
           {
             "name": "Strategy Pattern",
             "category": "behavioral",
-            "participants": ["HeuristicGrouper", "LLMGrouper"],
+            "participants": [
+              "HeuristicGrouper",
+              "LLMGrouper"
+            ],
             "description": "多种分组策略"
           },
           {
             "name": "Template Method Pattern",
             "category": "behavioral",
-            "participants": ["MermaidValidationPipeline"],
+            "participants": [
+              "MermaidValidationPipeline"
+            ],
             "description": "定义验证流程"
           }
         ]
@@ -235,42 +325,59 @@
         "dataFlow": "ArchJSON → Grouping → Mermaid Code → Validation → Auto-Repair → Rendering"
       },
       "classes": {
-        "highlightClasses": ["MermaidDiagramGenerator", "ValidatedMermaidGenerator", "MermaidValidationPipeline", "CommentGenerator"],
+        "highlightClasses": [
+          "MermaidDiagramGenerator",
+          "ValidatedMermaidGenerator",
+          "MermaidValidationPipeline",
+          "CommentGenerator"
+        ],
         "annotateClasses": [
           {
             "className": "MermaidDiagramGenerator",
-            "stereotypes": ["<<Facade>>"],
+            "stereotypes": [
+              "<<Facade>>"
+            ],
             "responsibility": "协调整个生成流程"
           },
           {
             "className": "CommentGenerator",
-            "stereotypes": ["<<Generator>>"],
+            "stereotypes": [
+              "<<Generator>>"
+            ],
             "responsibility": "v2.1.0: 生成元数据注释"
           }
         ]
       },
       "annotations": {
         "enableComments": true,
-        "highlightPatterns": true
+        "highlightPatterns": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/parser-module",
-      "sources": ["./src/parser"],
+      "sources": [
+        "./src/parser"
+      ],
       "level": "method",
       "description": "Method-level detail for Parser module",
       "metadata": {
         "title": "Parser Module Method-Level Architecture",
         "subtitle": "解析模块方法详解",
         "purpose": "展示 TypeScript 源代码解析为 ArchJSON 的详细实现",
-        "primaryActors": ["开发者"],
+        "primaryActors": [
+          "开发者"
+        ],
         "input": {
           "type": "TypeScript 源文件",
           "example": "./src/**/*.ts"
         },
         "output": {
           "description": "ArchJSON 结构",
-          "formats": ["JSON"]
+          "formats": [
+            "JSON"
+          ]
         }
       },
       "design": {
@@ -278,13 +385,19 @@
           {
             "name": "Strategy Pattern",
             "category": "behavioral",
-            "participants": ["ClassExtractor", "MethodExtractor", "RelationExtractor"],
+            "participants": [
+              "ClassExtractor",
+              "MethodExtractor",
+              "RelationExtractor"
+            ],
             "description": "不同元素使用不同提取策略"
           },
           {
             "name": "Facade Pattern",
             "category": "structural",
-            "participants": ["TypeScriptParser"],
+            "participants": [
+              "TypeScriptParser"
+            ],
             "description": "简化 ts-morph API"
           }
         ]
@@ -293,40 +406,59 @@
         "dataFlow": "TypeScript Code → ts-morph AST → Extractors → ArchJSON"
       },
       "classes": {
-        "highlightClasses": ["TypeScriptParser", "ClassExtractor", "MethodExtractor", "RelationExtractor", "ArchJSONAggregator", "ParallelParser"],
+        "highlightClasses": [
+          "TypeScriptParser",
+          "ClassExtractor",
+          "MethodExtractor",
+          "RelationExtractor",
+          "ArchJSONAggregator",
+          "ParallelParser"
+        ],
         "annotateClasses": [
           {
             "className": "TypeScriptParser",
-            "stereotypes": ["<<Facade>>"],
+            "stereotypes": [
+              "<<Facade>>"
+            ],
             "responsibility": "解析 TypeScript 源代码"
           },
           {
             "className": "ClassExtractor",
-            "stereotypes": ["<<Strategy>>"],
+            "stereotypes": [
+              "<<Strategy>>"
+            ],
             "responsibility": "提取类型实体"
           },
           {
             "className": "ParallelParser",
-            "stereotypes": ["<<Parallel>>"],
+            "stereotypes": [
+              "<<Parallel>>"
+            ],
             "responsibility": "并发解析多个文件"
           }
         ]
       },
       "annotations": {
         "enableComments": true,
-        "highlightPatterns": true
+        "highlightPatterns": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/ai-module",
-      "sources": ["./src/ai"],
+      "sources": [
+        "./src/ai"
+      ],
       "level": "method",
       "description": "Method-level detail for AI module",
       "metadata": {
         "title": "AI Integration Module Method-Level Architecture",
         "subtitle": "AI 集成模块方法详解",
         "purpose": "展示 Claude CLI 集成和 LLM 智能分组的详细实现",
-        "primaryActors": ["开发者"],
+        "primaryActors": [
+          "开发者"
+        ],
         "input": {
           "type": "ArchJSON"
         },
@@ -339,59 +471,82 @@
           {
             "name": "Adapter Pattern",
             "category": "structural",
-            "participants": ["ClaudeCodeAdapter"],
+            "participants": [
+              "ClaudeCodeAdapter"
+            ],
             "description": "适配 Claude CLI 接口"
           }
         ]
       },
       "classes": {
-        "highlightClasses": ["LLMGrouper", "ClaudeCodeAdapter"],
+        "highlightClasses": [
+          "LLMGrouper",
+          "ClaudeCodeAdapter"
+        ],
         "annotateClasses": [
           {
             "className": "LLMGrouper",
-            "stereotypes": ["<<Strategy>>"],
+            "stereotypes": [
+              "<<Strategy>>"
+            ],
             "responsibility": "使用 LLM 进行语义分组"
           },
           {
             "className": "ClaudeCodeAdapter",
-            "stereotypes": ["<<Adapter>>"],
+            "stereotypes": [
+              "<<Adapter>>"
+            ],
             "responsibility": "封装 Claude CLI 调用"
           }
         ]
       },
       "annotations": {
         "enableComments": true,
-        "highlightPatterns": true
+        "highlightPatterns": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/types-module",
-      "sources": ["./src/types"],
+      "sources": [
+        "./src/types"
+      ],
       "level": "method",
       "description": "Method-level detail for Types module",
       "metadata": {
         "title": "Types Module Method-Level Architecture",
         "subtitle": "类型定义模块详解",
         "purpose": "展示 ArchGuard 的核心类型定义",
-        "primaryActors": ["开发者"]
+        "primaryActors": [
+          "开发者"
+        ]
       },
       "annotations": {
-        "enableComments": true
+        "enableComments": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     },
     {
       "name": "method/utils-module",
-      "sources": ["./src/utils"],
+      "sources": [
+        "./src/utils"
+      ],
       "level": "method",
       "description": "Method-level detail for Utils module",
       "metadata": {
         "title": "Utils Module Method-Level Architecture",
         "subtitle": "工具模块详解",
         "purpose": "展示共享工具类和辅助函数",
-        "primaryActors": ["开发者"]
+        "primaryActors": [
+          "开发者"
+        ]
       },
       "annotations": {
-        "enableComments": true
+        "enableComments": true,
+        "enableVisibleTitle": true,
+        "titlePosition": "bottom"
       }
     }
   ]

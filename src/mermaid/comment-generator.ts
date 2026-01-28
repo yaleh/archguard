@@ -246,4 +246,113 @@ export class CommentGenerator {
 
     return parts.filter((p) => p.length > 0).join('\n');
   }
+
+  /**
+   * Generate visible title (v2.1.1)
+   *
+   * Creates a Mermaid note that will be visible in rendered PNG/SVG images.
+   * This is different from comment blocks (%%) which are only visible in source.
+   *
+   * @param config - Diagram configuration
+   * @returns Mermaid note syntax string
+   */
+  generateVisibleTitle(config: DiagramConfig): string {
+    // Check if visible title is enabled
+    if (!config.annotations?.enableVisibleTitle) {
+      return '';
+    }
+
+    const meta = config.metadata;
+    if (!meta) {
+      return '';
+    }
+
+    // Get sections to include (default: all)
+    const sections = config.annotations.visibleTitleSections || [
+      'title',
+      'subtitle',
+      'purpose',
+      'input',
+      'output',
+      'patterns',
+      'principles',
+      'process',
+    ];
+
+    // Build note content
+    const lines: string[] = [];
+
+    // Title
+    if (sections.includes('title')) {
+      if (meta.title) {
+        lines.push(`**${meta.title}**`);
+      } else {
+        lines.push(`**${config.name}**`);
+      }
+    }
+
+    // Subtitle
+    if (sections.includes('subtitle') && meta.subtitle) {
+      lines.push(meta.subtitle);
+    }
+
+    // Purpose
+    if (sections.includes('purpose') && meta.purpose) {
+      lines.push(`用途: ${meta.purpose}`);
+    }
+
+    // Input/Output
+    if (sections.includes('input') && meta.input) {
+      if (meta.input.type) {
+        lines.push(`输入: ${meta.input.type}`);
+        if (meta.input.example) {
+          lines.push(`  示例: ${meta.input.example}`);
+        }
+      }
+    }
+
+    if (sections.includes('output') && meta.output) {
+      if (meta.output.description) {
+        lines.push(`输出: ${meta.output.description}`);
+      }
+      if (meta.output.formats) {
+        lines.push(`  格式: ${meta.output.formats.join(', ')}`);
+      }
+    }
+
+    // Design Patterns
+    if (sections.includes('patterns')) {
+      const design = config.design;
+      if (design?.patterns && design.patterns.length > 0) {
+        const patternNames = design.patterns.map((p) => p.name).join(', ');
+        lines.push(`设计模式: ${patternNames}`);
+      }
+    }
+
+    // Principles
+    if (sections.includes('principles')) {
+      const design = config.design;
+      if (design?.principles && design.principles.length > 0) {
+        lines.push(`原则: ${design.principles.join(', ')}`);
+      }
+    }
+
+    // Process
+    if (sections.includes('process')) {
+      const process = config.process;
+      if (process?.dataFlow) {
+        lines.push(`流程: ${process.dataFlow}`);
+      }
+    }
+
+    // Return empty if no content
+    if (lines.length === 0) {
+      return '';
+    }
+
+    // Format as Mermaid note
+    // note for Diagram "content" is the syntax
+    const content = lines.join('\n');
+    return `\nnote for Diagram "${content}"\n`;
+  }
 }

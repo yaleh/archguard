@@ -91,6 +91,26 @@ export class ValidatedMermaidGenerator {
     const diagramLines = diagramCode.split('\n').slice(1);
     lines.push(...diagramLines);
 
+    // v2.1.1: Add visible title at the end (bottom) or beginning (top)
+    if (this.diagramConfig && this.diagramConfig.annotations?.enableVisibleTitle) {
+      const visibleTitle = this.commentGenerator.generateVisibleTitle(this.diagramConfig);
+      if (visibleTitle) {
+        const position = this.diagramConfig.annotations.titlePosition || 'bottom';
+
+        if (position === 'bottom') {
+          // Add at the end (after diagram content)
+          lines.push(visibleTitle);
+        } else {
+          // Add at the beginning (after classDiagram but before diagram content)
+          // Insert after comments but before the first diagram line
+          const insertIndex = lines.findIndex((line) => !line.startsWith('%%') && line !== 'classDiagram');
+          if (insertIndex !== -1) {
+            lines.splice(insertIndex, 0, visibleTitle);
+          }
+        }
+      }
+    }
+
     // Join and post-process
     const code = lines.join('\n');
     return this.postProcess(code);

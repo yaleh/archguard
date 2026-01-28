@@ -191,7 +191,7 @@ export interface ProcessStage {
  * Annotation configuration
  */
 export interface AnnotationConfig {
-  /** Enable comment generation */
+  /** Enable comment generation (%% comments in source files only) */
   enableComments?: boolean;
 
   /** Highlight design patterns */
@@ -202,6 +202,28 @@ export interface AnnotationConfig {
 
   /** Include usage example */
   includeUsageExample?: boolean;
+
+  // ========== v2.1.1: Visible Title in Diagrams ==========
+  /** Enable visible title (shown in rendered PNG/SVG images) */
+  enableVisibleTitle?: boolean;
+
+  /**
+   * Which sections to include in visible title
+   * Default: all sections included
+   */
+  visibleTitleSections?: (
+    | 'title'
+    | 'subtitle'
+    | 'purpose'
+    | 'input'
+    | 'output'
+    | 'patterns'
+    | 'principles'
+    | 'process'
+  )[];
+
+  /** Title position in diagram */
+  titlePosition?: 'top' | 'bottom';
 }
 
 /**

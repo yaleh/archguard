@@ -402,4 +402,154 @@ describe('CommentGenerator', () => {
       expect(output).not.toContain('%% Processing Flow');
     });
   });
+
+  describe('generateVisibleTitle (v2.1.1)', () => {
+    it('should generate note-style visible title with all sections', () => {
+      const config: DiagramConfig = {
+        name: 'parser-module',
+        sources: ['./src/parser'],
+        level: 'class',
+        metadata: {
+          title: 'Parser Module',
+          subtitle: '解析模块',
+          purpose: '展示如何解析 TypeScript 源代码',
+          input: {
+            type: 'TypeScript 源文件',
+            example: './src/**/*.ts',
+          },
+          output: {
+            description: 'ArchJSON 结构',
+            formats: ['JSON'],
+          },
+        },
+        design: {
+          patterns: [
+            {
+              name: 'Strategy Pattern',
+              category: 'behavioral',
+              participants: ['ClassExtractor', 'MethodExtractor'],
+              description: '不同元素使用不同策略',
+            },
+          ],
+          principles: ['Single Responsibility', 'Open/Closed'],
+        },
+        process: {
+          stages: 3,
+          dataFlow: 'TS Code → AST → ArchJSON',
+          stageList: [
+            {
+              order: 1,
+              name: '解析',
+              description: 'TypeScriptParser 解析源代码',
+            },
+          ],
+        },
+        annotations: {
+          enableVisibleTitle: true,
+          titlePosition: 'bottom',
+        },
+      };
+
+      const output = generator.generateVisibleTitle(config);
+
+      // Should be valid Mermaid note syntax
+      expect(output).toContain('note for Diagram');
+      expect(output).toContain('Parser Module');
+      expect(output).toContain('解析模块');
+      expect(output).toContain('用途: 展示如何解析 TypeScript 源代码');
+      expect(output).toContain('输入: TypeScript 源文件');
+      expect(output).toContain('输出: ArchJSON 结构');
+      expect(output).toContain('设计模式: Strategy Pattern');
+      expect(output).toContain('原则: Single Responsibility, Open/Closed');
+      expect(output).toContain('流程: TS Code → AST → ArchJSON');
+    });
+
+    it('should filter sections based on visibleTitleSections', () => {
+      const config: DiagramConfig = {
+        name: 'test',
+        sources: ['./src'],
+        level: 'class',
+        metadata: {
+          title: 'Test',
+          purpose: 'Test purpose',
+          input: { type: 'Test Input' },
+          output: { description: 'Test Output' },
+        },
+        design: {
+          patterns: [
+            {
+              name: 'Test Pattern',
+              category: 'structural',
+              participants: ['A', 'B'],
+              description: 'Test',
+            },
+          ],
+        },
+        annotations: {
+          enableVisibleTitle: true,
+          visibleTitleSections: ['title', 'purpose', 'patterns'],
+        },
+      };
+
+      const output = generator.generateVisibleTitle(config);
+
+      expect(output).toContain('Test');
+      expect(output).toContain('用途: Test purpose');
+      expect(output).toContain('设计模式: Test Pattern');
+      expect(output).not.toContain('输入:');
+      expect(output).not.toContain('输出:');
+    });
+
+    it('should return empty string when enableVisibleTitle is false', () => {
+      const config: DiagramConfig = {
+        name: 'test',
+        sources: ['./src'],
+        level: 'class',
+        metadata: {
+          title: 'Test',
+        },
+        annotations: {
+          enableVisibleTitle: false,
+        },
+      };
+
+      const output = generator.generateVisibleTitle(config);
+
+      expect(output).toBe('');
+    });
+
+    it('should return empty string when metadata is missing', () => {
+      const config: DiagramConfig = {
+        name: 'test',
+        sources: ['./src'],
+        level: 'class',
+        annotations: {
+          enableVisibleTitle: true,
+        },
+      };
+
+      const output = generator.generateVisibleTitle(config);
+
+      expect(output).toBe('');
+    });
+
+    it('should handle minimal metadata gracefully', () => {
+      const config: DiagramConfig = {
+        name: 'minimal-test',
+        sources: ['./src'],
+        level: 'class',
+        metadata: {
+          title: 'Minimal',
+        },
+        annotations: {
+          enableVisibleTitle: true,
+        },
+      };
+
+      const output = generator.generateVisibleTitle(config);
+
+      expect(output).toContain('note for Diagram');
+      expect(output).toContain('Minimal');
+    });
+  });
 });
