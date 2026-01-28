@@ -25,7 +25,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should use custom background color', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: '#f0f0f0'
+        backgroundColor: '#f0f0f0',
       });
       const svg = await renderer.renderSVG(testCode);
 
@@ -35,7 +35,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should support transparent background when explicitly set', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'transparent'
+        backgroundColor: 'transparent',
       });
       const svg = await renderer.renderSVG(testCode);
 
@@ -47,7 +47,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should support rgba colors with opacity', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'rgba(255, 0, 0, 0.1)'
+        backgroundColor: 'rgba(255, 0, 0, 0.1)',
       });
       const svg = await renderer.renderSVG(testCode);
 
@@ -57,7 +57,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should support named colors', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'lightgray'
+        backgroundColor: 'lightgray',
       });
       const svg = await renderer.renderSVG(testCode);
 
@@ -67,7 +67,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should add background color to svg element root', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'white'
+        backgroundColor: 'white',
       });
       const svg = await renderer.renderSVG(testCode);
 
@@ -81,7 +81,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
   describe('renderPNG - Background Color', () => {
     it('should render PNG with background from SVG', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'white'
+        backgroundColor: 'white',
       });
 
       const outputPath = path.join(testOutputDir, 'test-white-bg.png');
@@ -93,7 +93,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should render PNG with custom background color', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: '#ff0000' // red background for testing
+        backgroundColor: '#ff0000', // red background for testing
       });
 
       const outputPath = path.join(testOutputDir, 'test-red-bg.png');
@@ -105,7 +105,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
 
     it('should render PNG with transparent background when configured', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'transparent'
+        backgroundColor: 'transparent',
       });
 
       const outputPath = path.join(testOutputDir, 'test-transparent.png');
@@ -119,7 +119,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
   describe('renderAndSave - Background Color', () => {
     it('should save SVG and PNG with configured background color', async () => {
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: '#f5f5f5'
+        backgroundColor: '#f5f5f5',
       });
 
       const paths = {
@@ -177,7 +177,7 @@ describe('IsomorphicMermaidRenderer - Background Color Support', () => {
         A --> B`;
 
       const renderer = new IsomorphicMermaidRenderer({
-        backgroundColor: 'white'
+        backgroundColor: 'white',
       });
 
       const svg = await renderer.renderSVG(complexCode);

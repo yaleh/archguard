@@ -2,14 +2,11 @@
  * Tests for ClaudeClient
  *
  * Phase 4.3: Config-based initialization and CLI execution
- *
- * @deprecated This test file is maintained for backward compatibility.
- * New tests are in tests/unit/mermaid/llm/claude-client.test.ts
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ClaudeClient } from '../../../src/mermaid/llm/claude-client.js';
-import type { Config } from '../../../src/cli/config-loader.js';
+import { ClaudeClient } from '../../../../src/mermaid/llm/claude-client.js';
+import type { Config } from '../../../../src/cli/config-loader.js';
 import { execa } from 'execa';
 
 // Mock execa
@@ -31,7 +28,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -44,16 +41,16 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
-      expect(wrapper.options.timeout).toBe(60000);
-      expect(wrapper.options.maxRetries).toBe(2);
+      const client = new ClaudeClient(config);
+      expect(client.options.timeout).toBe(60000);
+      expect(client.options.maxRetries).toBe(2);
     });
 
     it('should use default cli.command when not specified', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -66,15 +63,15 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
-      expect(wrapper.options.timeout).toBe(60000);
+      const client = new ClaudeClient(config);
+      expect(client.options.timeout).toBe(60000);
     });
 
     it('should use custom cli.timeout from config', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude-glm',
@@ -87,8 +84,8 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
-      expect(wrapper.options.timeout).toBe(120000);
+      const client = new ClaudeClient(config);
+      expect(client.options.timeout).toBe(120000);
     });
   });
 
@@ -97,7 +94,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -110,11 +107,11 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
+      const client = new ClaudeClient(config);
 
       // Mock execa to return success
       vi.mocked(execa).mockResolvedValue({
-        stdout: '@startuml\nTest content\n@enduml',
+        stdout: '```mermaid\ngraph TD\nA-->B\n```',
         stderr: '',
         command: 'claude',
         escapedCommand: '',
@@ -125,7 +122,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         exitCodeName: 'SUCCESS',
       } as any);
 
-      await wrapper.callCLI('test prompt');
+      await client.callCLI('test prompt');
 
       expect(execa).toHaveBeenCalledWith(
         'claude',
@@ -140,7 +137,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -153,11 +150,11 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
+      const client = new ClaudeClient(config);
 
       // Mock execa to return success
       vi.mocked(execa).mockResolvedValue({
-        stdout: '@startuml\nTest content\n@enduml',
+        stdout: '```mermaid\ngraph TD\nA-->B\n```',
         stderr: '',
         command: 'claude',
         escapedCommand: '',
@@ -168,7 +165,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         exitCodeName: 'SUCCESS',
       } as any);
 
-      await wrapper.callCLI('test prompt');
+      await client.callCLI('test prompt');
 
       expect(execa).toHaveBeenCalledWith(
         'claude',
@@ -183,7 +180,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude-glm',
@@ -196,11 +193,11 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
+      const client = new ClaudeClient(config);
 
       // Mock execa to return success
       vi.mocked(execa).mockResolvedValue({
-        stdout: '@startuml\nTest content\n@enduml',
+        stdout: '```mermaid\ngraph TD\nA-->B\n```',
         stderr: '',
         command: 'claude-glm',
         escapedCommand: '',
@@ -211,7 +208,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         exitCodeName: 'SUCCESS',
       } as any);
 
-      await wrapper.callCLI('test prompt');
+      await client.callCLI('test prompt');
 
       expect(execa).toHaveBeenCalledWith(
         'claude-glm',
@@ -228,7 +225,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: '/usr/local/bin/claude',
@@ -241,10 +238,10 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
+      const client = new ClaudeClient(config);
 
       vi.mocked(execa).mockResolvedValue({
-        stdout: '@startuml\nTest content\n@enduml',
+        stdout: '```mermaid\ngraph TD\nA-->B\n```',
         stderr: '',
         command: '/usr/local/bin/claude',
         escapedCommand: '',
@@ -255,7 +252,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         exitCodeName: 'SUCCESS',
       } as any);
 
-      await wrapper.callCLI('test prompt');
+      await client.callCLI('test prompt');
 
       expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude', [], expect.any(Object));
     });
@@ -264,7 +261,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
       const config: Config = {
         source: './src',
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude-glm',
@@ -277,10 +274,10 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         },
       };
 
-      const wrapper = new ClaudeClient(config);
+      const client = new ClaudeClient(config);
 
       vi.mocked(execa).mockResolvedValue({
-        stdout: '@startuml\nTest content\n@enduml',
+        stdout: '```mermaid\ngraph TD\nA-->B\n```',
         stderr: '',
         command: 'claude-glm',
         escapedCommand: '',
@@ -291,7 +288,7 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
         exitCodeName: 'SUCCESS',
       } as any);
 
-      await wrapper.callCLI('test prompt');
+      await client.callCLI('test prompt');
 
       expect(execa).toHaveBeenCalledWith(
         'claude-glm',
@@ -302,22 +299,22 @@ describe('ClaudeClient - Phase 4.3 (Config-based)', () => {
   });
 
   describe('Backward compatibility', () => {
-    it('should still accept ClaudeCodeOptions for backward compatibility', () => {
-      const wrapper = new ClaudeClient({
+    it('should still accept ClaudeClientOptions for backward compatibility', () => {
+      const client = new ClaudeClient({
         timeout: 45000,
         maxRetries: 3,
         workingDir: '/test/dir',
       });
 
-      expect(wrapper.options.timeout).toBe(45000);
-      expect(wrapper.options.maxRetries).toBe(3);
-      expect(wrapper.options.workingDir).toBe('/test/dir');
+      expect(client.options.timeout).toBe(45000);
+      expect(client.options.maxRetries).toBe(3);
+      expect(client.options.workingDir).toBe('/test/dir');
     });
 
     it('should use default values when no options provided', () => {
-      const wrapper = new ClaudeClient();
-      expect(wrapper.options.timeout).toBe(30000);
-      expect(wrapper.options.maxRetries).toBe(2);
+      const client = new ClaudeClient();
+      expect(client.options.timeout).toBe(30000);
+      expect(client.options.maxRetries).toBe(2);
     });
   });
 });

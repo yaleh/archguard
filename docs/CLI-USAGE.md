@@ -40,7 +40,7 @@ Or add to package.json scripts:
 ```json
 {
   "scripts": {
-    "docs": "archguard analyze -s ./src -o ./docs/architecture.puml"
+    "docs": "archguard analyze -s ./src -o ./docs/architecture"
   }
 }
 ```
@@ -60,15 +60,18 @@ archguard analyze [options]
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `-s, --source <path>` | string | ./src | Source directory to analyze |
-| `-o, --output <path>` | string | ./architecture.puml | Output file path |
-| `-f, --format <type>` | string | plantuml | Output format (plantuml, json, svg) |
+| `-o, --output <path>` | string | ./architecture | Output file path (without extension) |
+| `-f, --format <type>` | string | mermaid | Output format (mermaid, json) |
 | `-e, --exclude <patterns...>` | string[] | [] | Glob patterns to exclude |
 | `--no-cache` | boolean | false | Disable caching |
 | `-c, --concurrency <num>` | number | CPU cores | Parallel processing concurrency |
 | `-v, --verbose` | boolean | false | Verbose output with detailed logging |
-| `--cli-command <command>` | string | claude | Claude CLI command to use |
+| `--cli-command <command>` | string | claude | Claude CLI command to use (optional) |
 | `--cli-args <args>` | string | - | Additional CLI arguments (space-separated) |
 | `--output-dir <dir>` | string | ./archguard | Output directory for diagrams |
+| `--no-llm-grouping` | boolean | false | Disable LLM-powered grouping |
+| `--mermaid-theme <theme>` | string | default | Mermaid theme (default, forest, dark, neutral) |
+| `--mermaid-renderer <renderer>` | string | isomorphic | Mermaid renderer (isomorphic, cli) |
 
 #### Examples
 
@@ -78,12 +81,12 @@ archguard analyze [options]
 archguard analyze
 ```
 
-Analyzes `./src` directory and generates `./architecture.puml`.
+Analyzes `./src` directory and generates `./architecture.mmd`, `.svg`, and `.png`.
 
 **Custom Paths**
 
 ```bash
-archguard analyze -s ./packages/core -o ./docs/core-architecture.puml
+archguard analyze -s ./packages/core -o ./docs/core-architecture
 ```
 
 **JSON Output**
@@ -130,6 +133,22 @@ archguard analyze -s ./src --cli-args "--model claude-opus-4-20250514"
 
 Pass additional arguments to the Claude CLI (e.g., model selection).
 
+**Disable LLM Grouping**
+
+```bash
+archguard analyze -s ./src --no-llm-grouping
+```
+
+Use faster heuristic grouping instead of LLM-powered grouping.
+
+**Custom Mermaid Theme**
+
+```bash
+archguard analyze -s ./src --mermaid-theme dark
+```
+
+Use different Mermaid visual theme.
+
 **Custom Output Directory**
 
 ```bash
@@ -146,8 +165,10 @@ The analyze command provides real-time progress feedback:
 ✔ Found 27 TypeScript files
 ⠋ Parsing TypeScript files... (12/27 files)
 ✔ Parsed 27 files in 6.26s (4.3 files/sec)
-⠋ Generating PlantUML diagram...
-✔ Generated PlantUML diagram: /path/to/architecture.puml
+⠋ Generating Mermaid diagram...
+✔ Generated Mermaid diagram: /path/to/archguard/architecture.mmd
+✔ Rendered SVG: /path/to/archguard/architecture.svg
+✔ Rendered PNG: /path/to/archguard/architecture.png
 ```
 
 With verbose mode (`-v`), additional details are shown:
@@ -156,6 +177,7 @@ With verbose mode (`-v`), additional details are shown:
 ℹ Entities: 47
 ℹ Relations: 79
 ℹ Memory: 24.50 MB
+ℹ Quality Score: 75.5/100
 ```
 
 ---
@@ -182,20 +204,24 @@ archguard init [options]
 archguard init
 ```
 
-Creates `.archguardrc.json` with default settings:
+Creates `archguard.config.json` with default settings:
 
 ```json
 {
   "source": "./src",
-  "output": "./docs/architecture.puml",
-  "format": "plantuml",
+  "format": "mermaid",
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/node_modules/**"
   ],
   "concurrency": 4,
-  "cache": true
+  "cache": true,
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "isomorphic",
+    "theme": "default"
+  }
 }
 ```
 
@@ -205,20 +231,7 @@ Creates `.archguardrc.json` with default settings:
 archguard init --force
 ```
 
-Overwrites existing `.archguardrc.json` file.
-
-#### Interactive Mode
-
-The init command interactively prompts for configuration options:
-
-```
-? Source directory: (./src)
-? Output file: (./docs/architecture.puml)
-? Output format: (plantuml)
-? Exclude patterns: **/*.test.ts, **/*.spec.ts
-? Enable caching? (yes)
-? Concurrency level: (4)
-```
+Overwrites existing `archguard.config.json` file.
 
 ---
 
@@ -283,24 +296,32 @@ Output:
 
 ArchGuard supports configuration files in multiple formats:
 
+- `archguard.config.json` (recommended)
 - `.archguardrc.json`
-- `.archguardrc`
-- `archguard.config.json`
 
 ### Configuration Schema
 
 ```json
 {
   "source": "./src",
-  "output": "./docs/architecture.puml",
-  "format": "plantuml",
+  "format": "mermaid",
+  "outputDir": "./archguard",
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts"
   ],
   "concurrency": 4,
   "cache": true,
-  "anthropicApiKey": "${ANTHROPIC_API_KEY}"
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "isomorphic",
+    "theme": "default"
+  },
+  "cli": {
+    "command": "claude",
+    "args": [],
+    "timeout": 60000
+  }
 }
 ```
 
@@ -309,15 +330,17 @@ ArchGuard supports configuration files in multiple formats:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source` | string | No | ./src | Source directory to analyze |
-| `output` | string | No | ./architecture.puml | Output file path |
-| `format` | string | No | plantuml | Output format (plantuml, json, svg) |
+| `outputDir` | string | No | ./archguard | Output directory for diagrams |
+| `format` | string | No | mermaid | Output format (mermaid, json) |
 | `exclude` | string[] | No | [] | Glob patterns to exclude |
 | `concurrency` | number | No | CPU cores | Parallel processing workers |
 | `cache` | boolean | No | true | Enable caching |
-| `cli.command` | string | No | claude | Claude CLI command to use |
+| `mermaid.enableLLMGrouping` | boolean | No | true | Use LLM for intelligent grouping |
+| `mermaid.renderer` | string | No | isomorphic | Mermaid renderer (isomorphic, cli) |
+| `mermaid.theme` | string | No | default | Mermaid theme (default, forest, dark, neutral) |
+| `cli.command` | string | No | claude | Claude CLI command to use (optional) |
 | `cli.args` | string[] | No | [] | Additional CLI arguments |
 | `cli.timeout` | number | No | 60000 | CLI timeout in milliseconds |
-| `outputDir` | string | No | ./archguard | Output directory for diagrams |
 
 ### Environment Variables
 
@@ -361,16 +384,16 @@ archguard analyze -c 8
 # └── docs/
 
 # Generate architecture diagram
-archguard analyze -s ./src -o ./docs/architecture.puml
+archguard analyze -s ./src -o ./docs/architecture
 ```
 
 ### Example 2: Monorepo
 
 ```bash
 # Analyze each package separately
-archguard analyze -s ./packages/auth -o ./docs/auth-architecture.puml
-archguard analyze -s ./packages/api -o ./docs/api-architecture.puml
-archguard analyze -s ./packages/ui -o ./docs/ui-architecture.puml
+archguard analyze -s ./packages/auth -o ./docs/auth-architecture
+archguard analyze -s ./packages/api -o ./docs/api-architecture
+archguard analyze -s ./packages/ui -o ./docs/ui-architecture
 ```
 
 ### Example 3: CI/CD Integration
@@ -394,10 +417,10 @@ jobs:
         with:
           node-version: '18'
       - run: npm install -g archguard
-      - run: archguard analyze -s ./src -o ./docs/architecture.puml
+      - run: archguard analyze -s ./src --output-dir ./docs/diagrams
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      - run: git add docs/architecture.puml
+      - run: git add docs/diagrams/
       - run: git commit -m "Update architecture diagram"
       - run: git push
 ```
@@ -407,10 +430,10 @@ jobs:
 ```json
 {
   "scripts": {
-    "docs:generate": "archguard analyze -s ./src -o ./docs/architecture.puml",
+    "docs:generate": "archguard analyze -s ./src --output-dir ./docs/diagrams",
     "docs:json": "archguard analyze -s ./src -o ./output/architecture.json -f json",
     "docs:clean": "archguard cache clear && npm run docs:generate",
-    "docs:verbose": "archguard analyze -s ./src -o ./docs/architecture.puml -v"
+    "docs:verbose": "archguard analyze -s ./src -v"
   }
 }
 ```
@@ -422,10 +445,10 @@ jobs:
 # .git/hooks/pre-commit
 
 # Generate updated architecture diagram before commit
-archguard analyze -s ./src -o ./docs/architecture.puml --no-cache
+archguard analyze -s ./src --output-dir ./docs/diagrams --no-cache
 
 # Add to commit if changed
-git add docs/architecture.puml
+git add docs/diagrams/
 ```
 
 ---
@@ -504,13 +527,13 @@ archguard analyze -v
 Add to `.gitignore` if regenerating frequently:
 
 ```
-docs/architecture.puml
+docs/diagrams/
 ```
 
 Or commit for documentation:
 
 ```bash
-git add docs/architecture.puml
+git add docs/diagrams/
 ```
 
 ### 7. Separate Concerns
@@ -519,13 +542,13 @@ Generate different diagrams for different concerns:
 
 ```bash
 # Domain model
-archguard analyze -s ./src/models -o ./docs/domain-model.puml
+archguard analyze -s ./src/models -o ./docs/domain-model
 
 # Services architecture
-archguard analyze -s ./src/services -o ./docs/services-architecture.puml
+archguard analyze -s ./src/services -o ./docs/services-architecture
 
 # API architecture
-archguard analyze -s ./src/api -o ./docs/api-architecture.puml
+archguard analyze -s ./src/api -o ./docs/api-architecture
 ```
 
 ### 8. Automate Documentation
@@ -536,7 +559,7 @@ Add to package.json scripts:
 {
   "scripts": {
     "postinstall": "archguard analyze",
-    "precommit": "archguard analyze && git add docs/architecture.puml"
+    "precommit": "archguard analyze && git add docs/diagrams/"
   }
 }
 ```

@@ -4,10 +4,7 @@
  */
 
 import type { ArchJSON } from '../types/index.js';
-import type {
-  StructuralValidationResult,
-  StructuralIssue,
-} from './types.js';
+import type { StructuralValidationResult, StructuralIssue } from './types.js';
 
 /**
  * Validates structural properties of Mermaid diagrams

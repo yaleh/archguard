@@ -190,9 +190,7 @@ describe('RenderValidator', () => {
 
       const result = validator.validate(mermaidCode);
 
-      const syntaxError = result.issues.find(
-        (i) => i.type === 'syntax' && i.severity === 'error'
-      );
+      const syntaxError = result.issues.find((i) => i.type === 'syntax' && i.severity === 'error');
       expect(syntaxError).toBeDefined();
       expect(syntaxError?.message).toContain('special characters');
     });

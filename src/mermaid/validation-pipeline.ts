@@ -110,10 +110,7 @@ export class MermaidValidationPipeline {
     const parseResult = await this.parseValidator.validate(mermaidCode);
 
     // Step 2: Structural validation
-    const structuralResult = this.structuralValidator.validate(
-      mermaidCode,
-      archJson
-    );
+    const structuralResult = this.structuralValidator.validate(mermaidCode, archJson);
 
     // Step 3: Render validation
     const renderResult = this.renderValidator.validate(mermaidCode);

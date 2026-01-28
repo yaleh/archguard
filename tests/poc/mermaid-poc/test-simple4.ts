@@ -22,7 +22,6 @@ try {
   console.log('Render completed');
   console.log('SVG type:', typeof svg);
   console.log('SVG:', svg);
-
 } catch (error) {
   console.error('Caught error:', error);
   console.error('Error type:', error?.constructor?.name);

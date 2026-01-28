@@ -1,17 +1,18 @@
 /**
- * Tests for OutputParser
+ * Tests for ResponseParser
  *
- * Phase 0: Stub file - Tests will be implemented in Phase 1
+ * @deprecated This test file is maintained for backward compatibility.
+ * New tests are in tests/unit/mermaid/llm/response-parser.test.ts
  */
 
 import { describe, it, expect } from 'vitest';
-import { OutputParser } from '../../../src/ai/output-parser.js';
+import { ResponseParser } from '../../../src/mermaid/llm/response-parser.js';
 
-describe('OutputParser (Phase 0 - Stub)', () => {
-  describe('extractPlantUML', () => {
+describe('ResponseParser (Phase 0 - Stub)', () => {
+  describe('extractMermaid', () => {
     it('should be defined', () => {
-      const parser = new OutputParser();
-      expect(parser.extractPlantUML).toBeDefined();
+      const parser = new ResponseParser();
+      expect(parser.extractMermaid).toBeDefined();
     });
 
     // Phase 1 tests will be added here:

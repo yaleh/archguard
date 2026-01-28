@@ -3,12 +3,7 @@
  */
 
 import type { ArchJSON } from '../types/index.js';
-import type {
-  GroupingDecision,
-  PackageGroup,
-  LayoutDecision,
-  GrouperConfig,
-} from './types.js';
+import type { GroupingDecision, PackageGroup, LayoutDecision, GrouperConfig } from './types.js';
 
 /**
  * Heuristic Grouper - Groups entities based on file path patterns
@@ -90,7 +85,7 @@ export class HeuristicGrouper {
           if (!packageMap.has(rule.packageName)) {
             packageMap.set(rule.packageName, []);
           }
-          packageMap.get(rule.packageName)!.push(entity.id);
+          packageMap.get(rule.packageName).push(entity.id);
           usedEntityIds.add(entity.id);
         }
       }
@@ -128,7 +123,7 @@ export class HeuristicGrouper {
         packageMap.set(packageName, []);
       }
 
-      packageMap.get(packageName)!.push(entity.id);
+      packageMap.get(packageName).push(entity.id);
     }
 
     return Array.from(packageMap.entries()).map(([rawName, entities]) => ({
@@ -308,15 +303,12 @@ export class LLMGrouper {
   /**
    * Get grouping decision from LLM
    */
-  async getLLMGrouping(
-    archJson: ArchJSON,
-    level: string
-  ): Promise<GroupingDecision> {
-    const { PromptTemplateManager } = await import('../ai/prompt-template-manager.js');
-    const { ClaudeCodeWrapper } = await import('../ai/claude-code-wrapper.js');
+  async getLLMGrouping(archJson: ArchJSON, level: string): Promise<GroupingDecision> {
+    const { PromptManager } = await import('./llm/prompt-manager.js');
+    const { ClaudeClient } = await import('./llm/claude-client.js');
 
-    const templateManager = new PromptTemplateManager();
-    const wrapper = new ClaudeCodeWrapper(this.config);
+    const templateManager = new PromptManager();
+    const wrapper = new ClaudeClient(this.config);
 
     // Build entity list
     const entitiesList = archJson.entities
@@ -363,10 +355,7 @@ export class LLMGrouper {
     try {
       return await this.getLLMGrouping(archJson, 'class');
     } catch (error) {
-      console.warn(
-        '⚠️  LLM grouping failed, falling back to heuristic:',
-        (error as Error).message
-      );
+      console.warn('⚠️  LLM grouping failed, falling back to heuristic:', (error as Error).message);
       const heuristicGrouper = new HeuristicGrouper();
       return heuristicGrouper.group(archJson);
     }

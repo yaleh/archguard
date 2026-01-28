@@ -198,14 +198,17 @@ describe('StructuralValidator', () => {
     });
 
     it('should detect relation with both source and target missing', () => {
-      const archJson = createMockArchJSON([], [
-        {
-          id: 'rel1',
-          type: 'dependency',
-          source: 'NonExistent1',
-          target: 'NonExistent2',
-        },
-      ]);
+      const archJson = createMockArchJSON(
+        [],
+        [
+          {
+            id: 'rel1',
+            type: 'dependency',
+            source: 'NonExistent1',
+            target: 'NonExistent2',
+          },
+        ]
+      );
 
       const mermaidCode = `classDiagram
   class Other`;

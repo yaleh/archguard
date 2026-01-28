@@ -1,8 +1,14 @@
 # ArchGuard
 
-## ⚠️ Breaking Change: v2.0
+## ⚠️ Breaking Changes
 
-ArchGuard v2.0 completely removes PlantUML support and uses **Mermaid** as the default diagram format. See [Migration Guide](docs/MIGRATION-v2.0.md) for details.
+### v2.1: PlantUML Removal Complete
+
+ArchGuard v2.1 completes the transition to Mermaid by removing all PlantUML support. See [PlantUML Removal Notice](docs/PLANTUML-REMOVAL-NOTICE.md) for details.
+
+### v2.0: Mermaid Migration
+
+ArchGuard v2.0 migrated from PlantUML to **Mermaid** as the default diagram format. See [Migration Guide](docs/MIGRATION-v2.0.md) for details.
 
 **Key Improvements**:
 - Error rate: 40-60% → <1% (-98%)
@@ -20,7 +26,7 @@ ArchGuard analyzes TypeScript projects to extract architectural insights and gen
 - **Parallel Processing**: High-performance parsing with configurable concurrency
 - **Smart Caching**: File-based caching with SHA-256 hashing for fast repeated analysis
 - **AI-Powered Diagrams**: Beautiful Mermaid diagrams with intelligent LLM grouping
-- **Zero Dependencies**: Local Mermaid rendering using isomorphic-mermaid (no PlantUML required)
+- **Zero Dependencies**: Local Mermaid rendering using isomorphic-mermaid
 - **Rich CLI**: Interactive progress display with real-time feedback
 - **Flexible Output**: Generate Mermaid diagrams (SVG/PNG) or ArchJSON data
 - **Robust Error Handling**: Graceful handling of parsing errors with detailed reporting
@@ -46,7 +52,7 @@ npm install --save-dev archguard
 
 **No external dependencies required!** ArchGuard uses built-in isomorphic-mermaid for diagram rendering.
 
-For optional LLM-powered grouping (better diagram organization), ensure you have Claude CLI installed:
+For optional LLM-powered grouping (better diagram organization), Claude CLI is recommended but not required:
 
 ```bash
 # Check if Claude CLI is available (optional)
@@ -375,11 +381,20 @@ archguard/
 │   │   ├── class-extractor.ts
 │   │   ├── interface-extractor.ts
 │   │   └── relation-extractor.ts
-│   ├── ai/                  # AI integration
-│   │   ├── claude-connector.ts
-│   │   ├── plantuml-generator.ts
-│   │   ├── plantuml-validator.ts
-│   │   └── cost-tracker.ts
+│   ├── ai/                  # AI integration (optional LLM grouping)
+│   │   ├── claude-client.ts
+│   │   ├── prompt-manager.ts
+│   │   ├── response-parser.ts
+│   │   └── grouper.ts
+│   ├── mermaid/              # Mermaid diagram generation
+│   │   ├── generator.ts
+│   │   ├── validator.ts
+│   │   ├── renderer.ts
+│   │   └── llm/              # LLM-powered grouping
+│   │       ├── grouper.ts
+│   │       ├── client.ts
+│   │       ├── prompt.ts
+│   │       └── parser.ts
 │   ├── cli/                 # CLI implementation
 │   │   ├── commands/
 │   │   ├── progress.ts
@@ -488,6 +503,7 @@ See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues and solution
 
 ## Documentation
 
+- [PlantUML Removal Notice](docs/PLANTUML-REMOVAL-NOTICE.md) - Migration guide from PlantUML to Mermaid
 - [Migration Guide v2.0](docs/MIGRATION-v2.0.md) - Upgrade from PlantUML to Mermaid
 - [CLI Usage Guide](docs/CLI-USAGE.md)
 - [Configuration Reference](docs/CONFIGURATION.md)

@@ -7,7 +7,7 @@
  * - Each diagram uses the same DiagramConfig structure
  * - Failures are isolated (one diagram failure doesn't affect others)
  * - Supports all detail levels (package/class/method)
- * - Supports all output formats (plantuml/json/svg)
+ * - Supports all output formats (mermaid/json)
  *
  * @module cli/processors/diagram-processor
  * @version 2.0.0
@@ -230,16 +230,9 @@ export class DiagramProcessor {
         );
         break;
 
-      case 'plantuml':
-      case 'svg':
-        throw new Error(
-          `Format "${format}" is no longer supported. ` +
-            `Please use "mermaid" instead. ` +
-            `See migration guide: docs/refactoring/proposals/10-mermaid-diagram-migration.md`
-        );
-
       default:
-        throw new Error(`Unsupported format: ${format}`);
+        const exhaustiveCheck: never = format;
+        throw new Error(`Unsupported format: ${exhaustiveCheck}`);
     }
   }
 }

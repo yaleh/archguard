@@ -205,9 +205,11 @@ describe('MermaidValidationPipeline', () => {
         validate: vi.fn().mockResolvedValue({ valid: true, errors: [], warnings: [] }),
       });
 
-      const structuralSpy = vi.spyOn(pipeline as any, 'structuralValidator', 'get').mockReturnValue({
-        validate: vi.fn().mockReturnValue({ valid: true, issues: [] }),
-      });
+      const structuralSpy = vi
+        .spyOn(pipeline as any, 'structuralValidator', 'get')
+        .mockReturnValue({
+          validate: vi.fn().mockReturnValue({ valid: true, issues: [] }),
+        });
 
       const renderSpy = vi.spyOn(pipeline as any, 'renderValidator', 'get').mockReturnValue({
         validate: vi.fn().mockReturnValue({ valid: true, canRender: true, issues: [] }),

@@ -438,54 +438,61 @@ rm -rf ~/.archguard/cache/*
 
 ## Output Generation
 
-### PlantUML Generation Fails
+### Mermaid Generation Fails
 
-**Problem**: `Error: Failed to generate PlantUML diagram`
+**Problem**: `Error: Failed to generate Mermaid diagram`
 
 **Solutions**:
 
-1. **Check API key**:
-```bash
-echo $ANTHROPIC_API_KEY
-```
-
-2. **Use verbose mode** to see detailed error:
+1. **Check verbose output** for detailed error:
 ```bash
 archguard analyze -v
 ```
 
-3. **Try JSON output** first:
+2. **Try JSON output** first to verify parsing:
 ```bash
 archguard analyze -f json -o output.json
 ```
 
-4. **Check output directory permissions**:
+3. **Check output directory permissions**:
 ```bash
 mkdir -p ./docs
 chmod 755 ./docs
 ```
 
-### Invalid PlantUML Syntax
+4. **Verify isomorphic-mermaid installation**:
+```bash
+npm ls isomorphic-mermaid
+```
 
-**Problem**: Generated PlantUML has syntax errors
+### Invalid Mermaid Syntax
+
+**Problem**: Generated Mermaid has syntax errors
 
 **Solutions**:
 
-1. **Validate PlantUML**:
+1. **Use verbose mode** to see validation results:
 ```bash
-plantuml -checkonly docs/architecture.puml
+archguard analyze -v
 ```
 
-2. **Report issue** with:
-   - Source files (if possible)
-   - Generated PlantUML
-   - ArchGuard version
+2. **Check quality metrics** in verbose output:
+```
+✅ Parse Validation: Passed
+✅ Structural Validation: Passed
+✅ Render Validation: Passed
+✅ Quality Analysis: 75.5/100
+```
 
-3. **Manually fix** PlantUML syntax:
-```puml
-@startuml
-' Fix syntax errors here
-@enduml
+3. **Report issue** with:
+   - Source files (if possible)
+   - Generated Mermaid (.mmd file)
+   - ArchGuard version
+   - Quality metrics output
+
+4. **Try different themes** if rendering issues:
+```bash
+archguard analyze --mermaid-theme forest
 ```
 
 ### Output File Not Created
@@ -496,13 +503,13 @@ plantuml -checkonly docs/architecture.puml
 
 1. **Check output path**:
 ```bash
-archguard analyze -o /full/path/to/output.puml
+archguard analyze -o /full/path/to/output
 ```
 
 2. **Verify directory exists**:
 ```bash
 mkdir -p docs
-archguard analyze -o docs/architecture.puml
+archguard analyze -o docs/architecture
 ```
 
 3. **Check file permissions**:
@@ -512,7 +519,16 @@ ls -la docs/
 
 4. **Use absolute paths**:
 ```bash
-archguard analyze -o $(pwd)/docs/architecture.puml
+archguard analyze -o $(pwd)/docs/architecture
+```
+
+5. **Check for all output files**:
+```bash
+ls -la archguard/
+# Should show:
+# architecture.mmd  (Mermaid source)
+# architecture.svg  (Vector image)
+# architecture.png  (Raster image)
 ```
 
 ---
@@ -586,7 +602,7 @@ archguard cache clear
 
 3. **Use different output directory**:
 ```bash
-archguard analyze -o /other-disk/output.puml
+archguard analyze --output-dir /other-disk/output
 ```
 
 ---

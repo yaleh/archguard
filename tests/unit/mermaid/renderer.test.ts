@@ -427,7 +427,7 @@ describe('IsomorphicMermaidRenderer', () => {
       const viewBoxMatch = svg.match(/viewBox="([^"]+)"/);
       expect(viewBoxMatch).toBeDefined();
 
-      const [, , vbWidth, vbHeight] = viewBoxMatch![1].split(/\s+/).map(Number);
+      const [, , vbWidth, vbHeight] = viewBoxMatch[1].split(/\s+/).map(Number);
       const svgWidth = Math.ceil(vbWidth);
       const svgHeight = Math.ceil(vbHeight);
 

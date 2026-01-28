@@ -1,12 +1,12 @@
 /**
  * Phase 4.5: Integration Tests for Complete Workflow
  *
- * Tests the complete flow from CLI options → ConfigLoader → ClaudeCodeWrapper → Output
+ * Tests the complete flow from CLI options → ConfigLoader → ClaudeClient → Output
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
-import { ClaudeCodeWrapper } from '@/ai/claude-code-wrapper';
+import { ClaudeClient } from '@/mermaid/llm/claude-client';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver';
 import fs from 'fs-extra';
 import path from 'path';
@@ -38,8 +38,8 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
     vi.clearAllMocks();
   });
 
-  describe('CLI Options → ConfigLoader → ClaudeCodeWrapper Flow', () => {
-    it('should flow CLI options through to ClaudeCodeWrapper configuration', async () => {
+  describe('CLI Options → ConfigLoader → ClaudeClient Flow', () => {
+    it('should flow CLI options through to ClaudeClient configuration', async () => {
       // Step 1: Create config with CLI settings
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
@@ -53,8 +53,8 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Step 2: Load configuration
       const config = await configLoader.load();
 
-      // Step 3: Create ClaudeCodeWrapper with config
-      const wrapper = new ClaudeCodeWrapper(config);
+      // Step 3: Create ClaudeClient with config
+      const wrapper = new ClaudeClient(config);
 
       // Step 4: Verify wrapper has correct CLI configuration
       expect(wrapper.internalConfig.cliCommand).toBe('/custom/claude');
@@ -105,8 +105,8 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Step 3: Create OutputPathResolver
       const pathResolver = new OutputPathResolver(config);
 
-      // Step 4: Create ClaudeCodeWrapper
-      const wrapper = new ClaudeCodeWrapper(config);
+      // Step 4: Create ClaudeClient
+      const wrapper = new ClaudeClient(config);
 
       // Step 5: Verify all components are configured correctly
       expect(config.outputDir).toBe('./output/diagrams');
@@ -195,13 +195,13 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
 
       // Verify all path types are resolved
       expect(paths.paths).toBeDefined();
-      expect(paths.paths.puml).toBeDefined();
+      expect(paths.paths.mmd).toBeDefined();
       expect(paths.paths.png).toBeDefined();
       expect(paths.paths.svg).toBeDefined();
 
       // Verify paths use outputDir
       expect(paths.paths.png).toContain('diagrams');
-      expect(paths.paths.puml).toContain('diagrams');
+      expect(paths.paths.mmd).toContain('diagrams');
     });
   });
 
@@ -210,9 +210,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Create v2.0 config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          { name: 'test', sources: ['./src'], level: 'class' },
-        ],
+        diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
         cli: {
           model: 'claude-sonnet-4-20250514',
           timeout: 120000,
@@ -227,13 +225,11 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       expect(config.cli.timeout).toBe(120000);
     });
 
-    it('should work with ClaudeCodeWrapper with v2.0 config', async () => {
+    it('should work with ClaudeClient with v2.0 config', async () => {
       // Create v2.0 config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          { name: 'test', sources: ['./src'], level: 'class' },
-        ],
+        diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
         cli: {
           command: 'claude',
           args: ['--model', 'claude-opus-4-20250514'],
@@ -245,7 +241,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       const config = await configLoader.load();
 
       // Create wrapper
-      const wrapper = new ClaudeCodeWrapper(config);
+      const wrapper = new ClaudeClient(config);
 
       // Verify wrapper receives config
       expect(wrapper.internalConfig.cliArgs).toEqual(['--model', 'claude-opus-4-20250514']);
@@ -287,16 +283,14 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Step 1: Create comprehensive config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          { name: 'overview', sources: ['./src'], level: 'class' },
-        ],
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
         outputDir: './test-output',
         cli: {
           command: '/usr/bin/claude',
           args: ['--model', 'claude-opus-4-20250514', '--verbose'],
           timeout: 120000,
         },
-        format: 'plantuml',
+        format: 'mermaid',
         cache: {
           enabled: false,
         },
@@ -307,13 +301,13 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
 
       // Step 3: Initialize all components
       const pathResolver = new OutputPathResolver(config);
-      const wrapper = new ClaudeCodeWrapper(config);
+      const wrapper = new ClaudeClient(config);
 
       // Step 4: Verify component configuration
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('overview');
       expect(config.outputDir).toBe('./test-output');
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
       expect(config.cache.enabled).toBe(false);
 
       expect(wrapper.internalConfig.cliCommand).toBe('/usr/bin/claude');
@@ -333,9 +327,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Create base config
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          { name: 'test', sources: ['./src'], level: 'class' },
-        ],
+        diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
         cli: {
           command: 'claude',
           args: ['--model', 'claude-sonnet-4-20250514'],
@@ -355,7 +347,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
 
       // Create components
       const pathResolver = new OutputPathResolver(config);
-      const wrapper = new ClaudeCodeWrapper(config);
+      const wrapper = new ClaudeClient(config);
 
       // Verify CLI overrides took effect
       expect(wrapper.internalConfig.cliCommand).toBe('/usr/local/bin/claude'); // CLI override
@@ -371,7 +363,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
 
       // Create components
       const pathResolver = new OutputPathResolver(config);
-      const wrapper = new ClaudeCodeWrapper(config);
+      const wrapper = new ClaudeClient(config);
 
       // Verify all defaults are applied
       expect(config.cli.command).toBe('claude');
@@ -379,7 +371,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       expect(config.cli.timeout).toBe(60000);
       expect(config.outputDir).toBe('./archguard');
       expect(config.diagrams).toEqual([]);
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
       expect(config.cache.enabled).toBe(true);
 
       expect(wrapper.internalConfig.cliCommand).toBe('claude');
@@ -413,9 +405,7 @@ describe('Phase 4.5: Integration Tests - Complete Workflow', () => {
       // Create config without cli section
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          { name: 'test', sources: ['./src'], level: 'class' },
-        ],
+        diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
       });
 
       // Load config - should use defaults

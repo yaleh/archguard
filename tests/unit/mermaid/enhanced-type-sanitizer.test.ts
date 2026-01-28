@@ -293,7 +293,12 @@ describe('EnhancedTypeSanitizer', () => {
           members: [
             { name: 'items', type: 'property', visibility: '+', fieldType: 'string[]' },
             { name: 'values', type: 'property', visibility: '+', fieldType: 'Array<number>' },
-            { name: 'nested', type: 'property', visibility: '+', fieldType: 'Array<Array<string>>' },
+            {
+              name: 'nested',
+              type: 'property',
+              visibility: '+',
+              fieldType: 'Array<Array<string>>',
+            },
           ],
         },
       ]);
@@ -354,7 +359,12 @@ describe('EnhancedTypeSanitizer', () => {
           type: 'class',
           sourceLocation: { file: 'test.ts', line: 1, column: 1 },
           members: [
-            { name: 'selected', type: 'property', visibility: '+', fieldType: 'Pick<User, "name" | "email">' },
+            {
+              name: 'selected',
+              type: 'property',
+              visibility: '+',
+              fieldType: 'Pick<User, "name" | "email">',
+            },
           ],
         },
       ]);
@@ -411,7 +421,12 @@ describe('EnhancedTypeSanitizer', () => {
           sourceLocation: { file: 'test.ts', line: 1, column: 1 },
           members: [
             { name: 'format', type: 'property', visibility: '+', fieldType: "'mermaid' | 'json'" },
-            { name: 'mermaid', type: 'property', visibility: '+', fieldType: 'MermaidConfig | undefined' },
+            {
+              name: 'mermaid',
+              type: 'property',
+              visibility: '+',
+              fieldType: 'MermaidConfig | undefined',
+            },
           ],
         },
       ]);
@@ -447,18 +462,14 @@ describe('EnhancedTypeSanitizer', () => {
               type: 'method',
               visibility: '+',
               returnType: 'Promise<HandlerResult>',
-              parameters: [
-                { name: 'options', type: 'CommandOptions', optional: false },
-              ],
+              parameters: [{ name: 'options', type: 'CommandOptions', optional: false }],
             },
             {
               name: 'validate',
               type: 'method',
               visibility: '+',
               returnType: 'ValidationResult',
-              parameters: [
-                { name: 'config', type: 'ArchGuardConfig', optional: false },
-              ],
+              parameters: [{ name: 'config', type: 'ArchGuardConfig', optional: false }],
             },
           ],
         },
@@ -551,7 +562,12 @@ describe('EnhancedTypeSanitizer', () => {
             },
           ],
           properties: [
-            { name: 'cache', type: 'property', visibility: '-', fieldType: 'Map<string, Promise<TData>>' },
+            {
+              name: 'cache',
+              type: 'property',
+              visibility: '-',
+              fieldType: 'Map<string, Promise<TData>>',
+            },
             { name: 'config', type: 'property', visibility: '+', fieldType: 'Required<Config>' },
           ],
         },
@@ -651,7 +667,8 @@ describe('EnhancedTypeSanitizer', () => {
               name: 'validateFull',
               type: 'method',
               visibility: '+',
-              returnType: 'Promise<{overallValid: boolean; stages: Array<{name: string; result: any;}>}>',
+              returnType:
+                'Promise<{overallValid: boolean; stages: Array<{name: string; result: any;}>}>',
               parameters: [
                 { name: 'mermaidCode', type: 'string', optional: false },
                 { name: 'archJson', type: 'ArchJSON', optional: false },
@@ -675,7 +692,6 @@ describe('EnhancedTypeSanitizer', () => {
       expect(code).not.toMatch(/stages:\s*Array/);
       expect(code).not.toMatch(/overallValid/);
 
-
       // Promise 应该被正确简化
       expect(code).toMatch(/Promise~/);
     });
@@ -692,7 +708,8 @@ describe('EnhancedTypeSanitizer', () => {
               name: 'process',
               type: 'method',
               visibility: '+',
-              returnType: 'Promise<{ status: boolean; data: Array<{ id: string; meta: { created: number } }> }>',
+              returnType:
+                'Promise<{ status: boolean; data: Array<{ id: string; meta: { created: number } }> }>',
               parameters: [],
             },
           ],
@@ -760,7 +777,8 @@ describe('EnhancedTypeSanitizer', () => {
               name: 'getData',
               type: 'method',
               visibility: '+',
-              returnType: 'Promise<{ "key-with-dash": string; key: { nested: { "special-key": number } } }>',
+              returnType:
+                'Promise<{ "key-with-dash": string; key: { nested: { "special-key": number } } }>',
               parameters: [],
             },
           ],

@@ -320,6 +320,66 @@ describe('ValidatedMermaidGenerator', () => {
       expect(mermaidCode).toContain('<|--');
     });
 
+    it('should generate inheritance relation in correct direction (parent <|-- child)', () => {
+      const errorGrouping: GroupingDecision = {
+        packages: [
+          {
+            name: 'Error Layer',
+            entities: ['Error', 'ParseError'],
+            reasoning: 'Error classes',
+          },
+        ],
+        layout: groupingDecision.layout,
+      };
+
+      const errorInheritanceArchJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: ['src/errors.ts'],
+        entities: [
+          {
+            id: 'Error',
+            name: 'Error',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/errors.ts', startLine: 1, endLine: 5 },
+          },
+          {
+            id: 'ParseError',
+            name: 'ParseError',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/errors.ts', startLine: 10, endLine: 20 },
+            extends: ['Error'],
+          },
+        ],
+        relations: [
+          {
+            id: 'rel1',
+            type: 'inheritance',
+            source: 'ParseError', // child class
+            target: 'Error', // parent class
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(errorInheritanceArchJson, {
+        level: 'class',
+        grouping: errorGrouping,
+      });
+
+      const mermaidCode = generator.generate();
+
+      // Mermaid syntax: Parent <|-- Child
+      // Since ParseError extends Error, the relation should be: Error <|-- ParseError
+      expect(mermaidCode).toContain('Error <|-- ParseError');
+      // Should NOT have the reversed direction
+      expect(mermaidCode).not.toContain('ParseError <|-- Error');
+    });
+
     it('should handle implementation relationships', () => {
       const repoGrouping: GroupingDecision = {
         packages: [
@@ -376,6 +436,66 @@ describe('ValidatedMermaidGenerator', () => {
       expect(mermaidCode).toContain('class IRepository');
       expect(mermaidCode).toContain('class UserRepository');
       expect(mermaidCode).toContain('<|..');
+    });
+
+    it('should generate implementation relation in correct direction (interface <|.. class)', () => {
+      const repoGrouping: GroupingDecision = {
+        packages: [
+          {
+            name: 'Repository Layer',
+            entities: ['IRepository', 'UserRepository'],
+            reasoning: 'Repository classes',
+          },
+        ],
+        layout: groupingDecision.layout,
+      };
+
+      const interfaceArchJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: ['src/repo/IRepository.ts', 'src/repo/UserRepository.ts'],
+        entities: [
+          {
+            id: 'IRepository',
+            name: 'IRepository',
+            type: 'interface',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/repo/IRepository.ts', startLine: 1, endLine: 5 },
+          },
+          {
+            id: 'UserRepository',
+            name: 'UserRepository',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/repo/UserRepository.ts', startLine: 1, endLine: 10 },
+            implements: ['IRepository'],
+          },
+        ],
+        relations: [
+          {
+            id: 'rel1',
+            type: 'implementation',
+            source: 'UserRepository', // implementing class
+            target: 'IRepository', // interface being implemented
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(interfaceArchJson, {
+        level: 'class',
+        grouping: repoGrouping,
+      });
+
+      const mermaidCode = generator.generate();
+
+      // Mermaid syntax: Interface <|.. ImplementingClass
+      // Since UserRepository implements IRepository, the relation should be: IRepository <|.. UserRepository
+      expect(mermaidCode).toContain('IRepository <|.. UserRepository');
+      // Should NOT have the reversed direction
+      expect(mermaidCode).not.toContain('UserRepository <|.. IRepository');
     });
   });
 

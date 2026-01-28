@@ -7,10 +7,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import mermaid from 'isomorphic-mermaid';
 import sharp from 'sharp';
-import type {
-  MermaidRendererOptions,
-  MermaidOutputPaths,
-} from './types.js';
+import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
 
 /**
  * Renderer for Mermaid diagrams supporting SVG and PNG output
@@ -109,7 +106,7 @@ export class IsomorphicMermaidRenderer {
         else if (estimatedWidth > maxPixels || estimatedHeight > maxPixels) {
           const maxDimension = Math.max(svgWidth, svgHeight);
           // Calculate DPI that keeps within limit (with some margin)
-          density = Math.floor((maxPixels * 0.9) / maxDimension * 72);
+          density = Math.floor(((maxPixels * 0.9) / maxDimension) * 72);
           // Ensure minimum DPI of 72 for reasonable quality
           density = Math.max(72, Math.min(300, density));
         }

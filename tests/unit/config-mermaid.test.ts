@@ -44,7 +44,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       expect(result.mermaid?.enableLLMGrouping).toBe(true);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
-      expect(result.mermaid?.transparentBackground).toBe(true);
+      expect(result.mermaid?.transparentBackground).toBe(false);
     });
 
     it('should accept partial mermaid configuration', async () => {
@@ -66,7 +66,12 @@ describe('ConfigLoader - Mermaid Configuration', () => {
     it('should accept all valid mermaid themes', async () => {
       const loader = new ConfigLoader();
 
-      const themes: Array<'default' | 'forest' | 'dark' | 'neutral'> = ['default', 'forest', 'dark', 'neutral'];
+      const themes: Array<'default' | 'forest' | 'dark' | 'neutral'> = [
+        'default',
+        'forest',
+        'dark',
+        'neutral',
+      ];
 
       for (const theme of themes) {
         const config: Partial<Config> = {
@@ -136,27 +141,26 @@ describe('ConfigLoader - Mermaid Configuration', () => {
   });
 
   describe('PlantUML format deprecation', () => {
-    it('should reject plantuml format with helpful error', async () => {
+    it('should reject plantuml format with validation error', async () => {
       const loader = new ConfigLoader('/tmp/test-config-reject');
 
       const config: Partial<Config> = {
-        format: 'plantuml',
+        format: 'plantuml' as any,
       };
 
-      await expect(loader.load(config)).rejects.toThrow(/Format "plantuml" is no longer supported/);
-      await expect(loader.load(config)).rejects.toThrow(/Please use "mermaid" instead/);
-      await expect(loader.load(config)).rejects.toThrow(/MIGRATION-v2.1.md/);
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|plantuml/);
+      await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
     });
 
-    it('should reject svg format with helpful error', async () => {
+    it('should reject svg format with validation error', async () => {
       const loader = new ConfigLoader('/tmp/test-config-svg');
 
       const config: Partial<Config> = {
-        format: 'svg',
+        format: 'svg' as any,
       };
 
-      await expect(loader.load(config)).rejects.toThrow(/Format "svg" is no longer supported/);
-      await expect(loader.load(config)).rejects.toThrow(/Please use "mermaid" instead/);
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|svg/);
+      await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
     });
 
     it('should reject plantuml in diagram config', async () => {
@@ -169,18 +173,12 @@ describe('ConfigLoader - Mermaid Configuration', () => {
             name: 'test',
             sources: ['./src'],
             level: 'class',
-            format: 'plantuml',
+            format: 'plantuml' as any,
           },
         ],
       };
 
-      // Note: Diagram-level format is currently allowed by schema
-      // The validation happens at processing time, not config load time
-      // So this test expects the config to load successfully
-      const result = await loader.load(config);
-      expect(result.diagrams).toHaveLength(1);
-      expect(result.diagrams[0].format).toBe('plantuml');
-      // TODO: Add diagram-level validation in processing phase
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|plantuml/);
     });
   });
 
@@ -315,7 +313,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       expect(result.mermaid?.enableLLMGrouping).toBe(true);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
-      expect(result.mermaid?.transparentBackground).toBe(true);
+      expect(result.mermaid?.transparentBackground).toBe(false);
     });
 
     it('should handle mermaid config with json format (should be ignored)', async () => {

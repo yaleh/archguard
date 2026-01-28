@@ -150,7 +150,9 @@ describe('MermaidAutoRepair', () => {
 
       // Relations should be extracted
       const lines = repaired.split('\n');
-      const relationLine = lines.find((line) => line.includes('-->') && !line.includes('namespace'));
+      const relationLine = lines.find(
+        (line) => line.includes('-->') && !line.includes('namespace')
+      );
 
       expect(relationLine).toBeDefined();
     });

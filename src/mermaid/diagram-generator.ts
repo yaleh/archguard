@@ -73,9 +73,7 @@ export class MermaidDiagramGenerator {
         const llmGrouper = new LLMGrouper(this.config);
         try {
           grouping = await llmGrouper.getLLMGrouping(archJson, level);
-          progress.succeed(
-            `✅ LLM grouping complete: ${grouping.packages.length} groups`
-          );
+          progress.succeed(`✅ LLM grouping complete: ${grouping.packages.length} groups`);
         } catch (error) {
           progress.warn('⚠️  LLM grouping failed, using heuristic');
           const heuristicGrouper = new HeuristicGrouper();
@@ -85,9 +83,7 @@ export class MermaidDiagramGenerator {
         // Use heuristic grouping directly
         const heuristicGrouper = new HeuristicGrouper();
         grouping = heuristicGrouper.group(archJson);
-        progress.succeed(
-          `✅ Heuristic grouping complete: ${grouping.packages.length} groups`
-        );
+        progress.succeed(`✅ Heuristic grouping complete: ${grouping.packages.length} groups`);
       }
 
       // 2. Deterministic Generation
@@ -130,16 +126,11 @@ export class MermaidDiagramGenerator {
           mermaidCode = await autoRepair.repair(mermaidCode, errors);
 
           // Re-validate after repair
-          const repairedReport = await pipeline.validateFull(
-            mermaidCode,
-            archJson
-          );
+          const repairedReport = await pipeline.validateFull(mermaidCode, archJson);
           if (repairedReport.overallValid) {
             progress.succeed('✅ Repaired successfully');
           } else {
-            throw new Error(
-              'Auto-repair completed but validation still fails'
-            );
+            throw new Error('Auto-repair completed but validation still fails');
           }
         } catch (repairError) {
           progress.fail('❌ Auto-repair failed');
@@ -149,9 +140,7 @@ export class MermaidDiagramGenerator {
               ?.result?.errors?.map((e: any) => `- ${e.message}`)
               .join('\n') || 'Unknown errors';
 
-          throw new Error(
-            `Validation failed and cannot be repaired.\nErrors:\n${errorMessages}`
-          );
+          throw new Error(`Validation failed and cannot be repaired.\nErrors:\n${errorMessages}`);
         }
       } else {
         progress.succeed('✅ Validation passed');
@@ -160,7 +149,7 @@ export class MermaidDiagramGenerator {
       // 4. Output Quality Report
       const qualityStage = report.stages.find((s) => s.name === 'quality');
       if (qualityStage && qualityStage.result) {
-        const metrics = qualityStage.result as any;
+        const metrics = qualityStage.result;
         console.log('\n📊 Quality Metrics:');
         console.log(`  Overall Score: ${metrics.score?.toFixed(1) || 'N/A'}/100`);
 

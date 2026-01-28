@@ -281,5 +281,4 @@ describe('FileDiscoveryService', () => {
       expect(hasNodeModules).toBe(false);
     });
   });
-
 });

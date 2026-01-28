@@ -51,10 +51,8 @@ export const defaultMermaidConfig: MermaidConfig = {
  *
  * - mermaid: Generate .mmd and .svg/.png files (default, uses isomorphic-mermaid)
  * - json: Generate ArchJSON only (fast, no rendering required)
- * - plantuml: DEPRECATED - Use mermaid instead
- * - svg: DEPRECATED - Use mermaid instead
  */
-export type OutputFormat = 'mermaid' | 'json' | 'plantuml' | 'svg';
+export type OutputFormat = 'mermaid' | 'json';
 
 /**
  * Single diagram configuration

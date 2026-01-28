@@ -1,14 +1,11 @@
 /**
  * Tests for PromptManager
- *
- * @deprecated This test file is maintained for backward compatibility.
- * New tests are in tests/unit/mermaid/llm/prompt-manager.test.ts
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { PromptManager } from '../../../src/mermaid/llm/prompt-manager.js';
+import { PromptManager } from '../../../../src/mermaid/llm/prompt-manager.js';
 
 describe('PromptManager', () => {
   let manager: PromptManager;

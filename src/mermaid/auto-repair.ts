@@ -267,7 +267,7 @@ export class MermaidAutoRepair {
    * Remove unknown tokens
    */
   private removeUnknownTokens(code: string): string {
-    let repaired = code;
+    const repaired = code;
 
     // Remove lines with special characters that might be unknown tokens
     const lines = repaired.split('\n');

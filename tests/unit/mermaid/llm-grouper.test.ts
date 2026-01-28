@@ -67,7 +67,11 @@ describe('LLMGrouper', () => {
         type: 'class',
         visibility: 'public',
         members: [],
-        sourceLocation: { file: 'src/parser/extractors/ClassExtractor.ts', startLine: 1, endLine: 30 },
+        sourceLocation: {
+          file: 'src/parser/extractors/ClassExtractor.ts',
+          startLine: 1,
+          endLine: 30,
+        },
       },
       {
         id: 'ClaudeCodeWrapper',
@@ -165,14 +169,14 @@ Here's the grouping:
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -182,12 +186,15 @@ Here's the grouping:
       expect(mockCallCLI).toHaveBeenCalledWith('rendered prompt');
 
       // Verify template was rendered with correct variables
-      expect(mockRender).toHaveBeenCalledWith('mermaid-grouping', expect.objectContaining({
-        ENTITY_COUNT: '6', // Converted to string
-        RELATION_COUNT: '2', // Converted to string
-        DETAIL_LEVEL: 'class',
-        ENTITIES_LIST: expect.stringContaining('TypeScriptParser'),
-      }));
+      expect(mockRender).toHaveBeenCalledWith(
+        'mermaid-grouping',
+        expect.objectContaining({
+          ENTITY_COUNT: '6', // Converted to string
+          RELATION_COUNT: '2', // Converted to string
+          DETAIL_LEVEL: 'class',
+          ENTITIES_LIST: expect.stringContaining('TypeScriptParser'),
+        })
+      );
 
       // Verify result structure
       expect(result.packages).toHaveLength(3);
@@ -230,14 +237,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -272,14 +279,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -302,14 +309,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -342,14 +349,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -388,14 +395,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -416,14 +423,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       // Spy on console.warn
@@ -456,14 +463,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -494,7 +501,7 @@ More text here...
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -509,7 +516,7 @@ More text here...
       expect(capturedPrompt).not.toBeNull();
 
       // Estimate tokens (roughly: characters / 4)
-      const estimatedTokens = capturedPrompt!.length / 4;
+      const estimatedTokens = capturedPrompt.length / 4;
 
       // Should be under 3000 tokens
       expect(estimatedTokens).toBeLessThan(3000);
@@ -531,7 +538,7 @@ More text here...
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -551,7 +558,9 @@ More text here...
       expect(capturedVariables.ENTITIES_LIST).toContain('ClaudeCodeWrapper');
 
       // Should format correctly: "- id: name (type) in file"
-      expect(capturedVariables.ENTITIES_LIST).toMatch(/- TypeScriptParser: TypeScriptParser \(class\) in/);
+      expect(capturedVariables.ENTITIES_LIST).toMatch(
+        /- TypeScriptParser: TypeScriptParser \(class\) in/
+      );
     });
   });
 
@@ -567,14 +576,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);
@@ -593,14 +602,14 @@ More text here...
         () =>
           ({
             callCLI: mockCallCLI,
-          } as any)
+          }) as any
       );
 
       vi.mocked(PromptTemplateManager).mockImplementation(
         () =>
           ({
             render: mockRender,
-          } as any)
+          }) as any
       );
 
       const grouper = new LLMGrouper(mockConfig);

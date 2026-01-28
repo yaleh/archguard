@@ -4,11 +4,7 @@
  */
 
 import type { ArchJSON } from '../types/index.js';
-import type {
-  QualityValidationResult,
-  QualityMetrics,
-  QualitySuggestion,
-} from './types.js';
+import type { QualityValidationResult, QualityMetrics, QualitySuggestion } from './types.js';
 
 /**
  * Validates quality aspects of Mermaid diagrams

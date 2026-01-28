@@ -1,10 +1,10 @@
 /**
- * Prompt Template Manager
+ * Prompt Manager for Mermaid LLM Integration
  *
  * This module manages prompt templates for different diagram types
  * and provides rendering capabilities with variable substitution.
  *
- * @module prompt-template-manager
+ * @module prompt-manager
  */
 
 import fs from 'fs-extra';
@@ -27,12 +27,12 @@ export interface TemplateVariables {
 /**
  * Manager class for loading and rendering prompt templates
  */
-export class PromptTemplateManager {
+export class PromptManager {
   private readonly templatesDir: string;
   private templateCache: Map<string, string>;
 
   /**
-   * Creates a new PromptTemplateManager instance
+   * Creates a new PromptManager instance
    *
    * @param templatesDir - Directory containing template files (default: ./prompts)
    */

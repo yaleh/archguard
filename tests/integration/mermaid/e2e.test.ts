@@ -34,9 +34,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     const limitedFiles = files.slice(0, 20);
 
     const parser = new TypeScriptParser();
-    const results = await Promise.all(
-      limitedFiles.map((file) => parser.parseFile(file))
-    );
+    const results = await Promise.all(limitedFiles.map((file) => parser.parseFile(file)));
 
     // Aggregate results
     archJson = {
@@ -76,29 +74,17 @@ describe('MermaidDiagramGenerator E2E', () => {
     );
 
     // Verify files were generated
-    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.mmd'))).toBe(
-      true
-    );
-    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.svg'))).toBe(
-      true
-    );
-    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.png'))).toBe(
-      true
-    );
+    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.mmd'))).toBe(true);
+    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.svg'))).toBe(true);
+    expect(await fs.pathExists(path.join(testOutputDir, 'test-diagram.png'))).toBe(true);
 
     // Verify Mermaid code content
-    const mmdContent = await fs.readFile(
-      path.join(testOutputDir, 'test-diagram.mmd'),
-      'utf-8'
-    );
+    const mmdContent = await fs.readFile(path.join(testOutputDir, 'test-diagram.mmd'), 'utf-8');
     expect(mmdContent).toContain('classDiagram');
     expect(mmdContent.length).toBeGreaterThan(100);
 
     // Verify SVG content
-    const svgContent = await fs.readFile(
-      path.join(testOutputDir, 'test-diagram.svg'),
-      'utf-8'
-    );
+    const svgContent = await fs.readFile(path.join(testOutputDir, 'test-diagram.svg'), 'utf-8');
     expect(svgContent).toContain('<svg');
     expect(svgContent).toContain('</svg>');
   });
@@ -160,9 +146,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     ).resolves.not.toThrow();
 
     // Verify files were generated despite problematic input
-    expect(await fs.pathExists(path.join(testOutputDir, 'problematic.mmd'))).toBe(
-      true
-    );
+    expect(await fs.pathExists(path.join(testOutputDir, 'problematic.mmd'))).toBe(true);
   });
 
   it('should support package-level diagrams', async () => {
@@ -187,10 +171,7 @@ describe('MermaidDiagramGenerator E2E', () => {
       'package'
     );
 
-    const mmdContent = await fs.readFile(
-      path.join(testOutputDir, 'package-level.mmd'),
-      'utf-8'
-    );
+    const mmdContent = await fs.readFile(path.join(testOutputDir, 'package-level.mmd'), 'utf-8');
     expect(mmdContent).toContain('classDiagram');
     // Package level should have namespaces
     expect(mmdContent).toMatch(/namespace|class/);
@@ -218,10 +199,7 @@ describe('MermaidDiagramGenerator E2E', () => {
       'method'
     );
 
-    const mmdContent = await fs.readFile(
-      path.join(testOutputDir, 'method-level.mmd'),
-      'utf-8'
-    );
+    const mmdContent = await fs.readFile(path.join(testOutputDir, 'method-level.mmd'), 'utf-8');
     expect(mmdContent).toContain('classDiagram');
     expect(mmdContent).toContain('('); // Should have method parameters
   });
@@ -368,10 +346,7 @@ describe('MermaidDiagramGenerator E2E', () => {
       'class'
     );
 
-    const mmdContent = await fs.readFile(
-      path.join(testOutputDir, 'relations.mmd'),
-      'utf-8'
-    );
+    const mmdContent = await fs.readFile(path.join(testOutputDir, 'relations.mmd'), 'utf-8');
 
     // Check for relationship markers
     expect(mmdContent).toContain('<|--'); // Inheritance

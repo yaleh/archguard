@@ -40,7 +40,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'class',
           },
         ],
-        format: 'plantuml',
+        format: 'mermaid',
       });
 
       const config = await loader.load();
@@ -48,35 +48,35 @@ describe('Story 5: Configuration File Support', () => {
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('overview');
       expect(config.diagrams[0].sources).toEqual(['./src']);
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
     });
 
     it('should use default values when config file not found', async () => {
       const config = await loader.load();
 
       expect(config.diagrams).toEqual([]);
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
     });
 
     it('should merge CLI options with config file', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-        format: 'plantuml',
+        format: 'mermaid',
       });
 
       const config = await loader.load({ outputDir: './custom' });
 
       expect(config.diagrams).toHaveLength(1); // From config
       expect(config.outputDir).toBe('./custom'); // From CLI (overrides)
-      expect(config.format).toBe('plantuml'); // From config
+      expect(config.format).toBe('mermaid'); // From config
     });
 
     it('should give CLI options higher priority', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-        format: 'plantuml',
+        format: 'mermaid',
       });
 
       const config = await loader.load({ format: 'json' });
@@ -97,7 +97,7 @@ describe('Story 5: Configuration File Support', () => {
     });
 
     it('should accept valid formats', async () => {
-      const formats = ['plantuml', 'json', 'svg'];
+      const formats = ['mermaid', 'json'];
 
       for (const format of formats) {
         const configPath = path.join(testDir, 'archguard.config.json');
@@ -157,7 +157,7 @@ describe('Story 5: Configuration File Support', () => {
       const config = await fs.readJson(configPath);
 
       expect(config.diagrams).toBeDefined();
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
       expect(config.exclude).toBeInstanceOf(Array);
       expect(config.cache).toBeDefined();
       expect(config.cache.enabled).toBe(true);
@@ -172,7 +172,7 @@ describe('Story 5: Configuration File Support', () => {
 
     it('should use default format', async () => {
       const config = await loader.load();
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
     });
 
     it('should use default exclude patterns', async () => {
@@ -322,7 +322,6 @@ describe('Story 5: Configuration File Support', () => {
       });
     });
 
-
     describe('Deep Merge Logic', () => {
       it('should deep merge nested objects', async () => {
         const configPath = path.join(testDir, 'archguard.config.json');
@@ -383,9 +382,7 @@ describe('Story 5: Configuration File Support', () => {
       it('should load complete config with all fields', async () => {
         const configPath = path.join(testDir, 'archguard.config.json');
         await fs.writeJson(configPath, {
-          diagrams: [
-            { name: 'overview', sources: ['./lib'], level: 'class' },
-          ],
+          diagrams: [{ name: 'overview', sources: ['./lib'], level: 'class' }],
           outputDir: './docs/output',
           format: 'json',
           exclude: ['**/*.test.ts', '**/dist/**'],
@@ -424,7 +421,7 @@ describe('Story 5: Configuration File Support', () => {
             { name: 'overview', sources: ['./src'], level: 'package' },
             { name: 'modules/parser', sources: ['./src/parser'], level: 'class' },
           ],
-          format: 'plantuml',
+          format: 'mermaid',
           cli: {
             command: 'claude',
             args: ['--model', 'claude-3-5-sonnet-20241022'],
@@ -469,16 +466,20 @@ describe('Story 5: Configuration File Support', () => {
 
     it('should load config from custom path with .js extension', async () => {
       const customPath = path.join(testDir, 'custom.config.js');
-      const jsContent = `export default ${JSON.stringify({
-        diagrams: [
-          {
-            name: 'js-diagram',
-            sources: ['./js/src'],
-            level: 'package',
-          },
-        ],
-        format: 'plantuml',
-      }, null, 2)};
+      const jsContent = `export default ${JSON.stringify(
+        {
+          diagrams: [
+            {
+              name: 'js-diagram',
+              sources: ['./js/src'],
+              level: 'package',
+            },
+          ],
+          format: 'mermaid',
+        },
+        null,
+        2
+      )};
 `;
       await fs.writeFile(customPath, jsContent);
 
@@ -486,7 +487,7 @@ describe('Story 5: Configuration File Support', () => {
 
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('js-diagram');
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
     });
 
     it('should throw error if custom config path does not exist', async () => {
@@ -530,10 +531,10 @@ describe('Story 5: Configuration File Support', () => {
         outputDir: './custom-output',
       });
 
-      const config = await loader.load({ format: 'plantuml' }, customPath);
+      const config = await loader.load({ format: 'mermaid' }, customPath);
 
       expect(config.diagrams).toHaveLength(1);
-      expect(config.format).toBe('plantuml'); // CLI override
+      expect(config.format).toBe('mermaid'); // CLI override
       expect(config.outputDir).toBe('./custom-output'); // From custom config
     });
 
@@ -561,7 +562,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'package',
           },
         ],
-        format: 'plantuml',
+        format: 'mermaid',
       });
 
       // Load with custom path
@@ -570,7 +571,7 @@ describe('Story 5: Configuration File Support', () => {
       // Should use custom config, not default
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('custom-diagram');
-      expect(config.format).toBe('plantuml');
+      expect(config.format).toBe('mermaid');
     });
   });
 });

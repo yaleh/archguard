@@ -4,11 +4,7 @@
  */
 
 import mermaid from 'isomorphic-mermaid';
-import type {
-  ParseValidationResult,
-  ValidationError,
-  ValidationWarning,
-} from './types.js';
+import type { ParseValidationResult, ValidationError, ValidationWarning } from './types.js';
 
 /**
  * Validator for Mermaid diagram syntax

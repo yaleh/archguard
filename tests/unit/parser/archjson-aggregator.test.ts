@@ -107,14 +107,14 @@ describe('ArchJSONAggregator', () => {
 
       const userService = result.entities.find((e) => e.name === 'UserService');
       expect(userService).toBeDefined();
-      expect(userService!.members).toHaveLength(1);
-      expect(userService!.members[0].name).toBe('getUser');
-      expect(userService!.members[0].visibility).toBe('public');
+      expect(userService.members).toHaveLength(1);
+      expect(userService.members[0].name).toBe('getUser');
+      expect(userService.members[0].visibility).toBe('public');
 
       const userRepo = result.entities.find((e) => e.name === 'UserRepository');
       expect(userRepo).toBeDefined();
-      expect(userRepo!.members).toHaveLength(1);
-      expect(userRepo!.members[0].name).toBe('findById');
+      expect(userRepo.members).toHaveLength(1);
+      expect(userRepo.members[0].name).toBe('findById');
     });
 
     it('should aggregate to package level', () => {
@@ -141,7 +141,7 @@ describe('ArchJSONAggregator', () => {
       const result = aggregator['aggregateToClassLevel'](archJSON);
 
       const userService = result.entities.find((e) => e.name === 'UserService');
-      expect(userService!.members.every((m) => m.visibility === 'public')).toBe(true);
+      expect(userService.members.every((m) => m.visibility === 'public')).toBe(true);
     });
 
     it('should preserve entity metadata', () => {
@@ -239,7 +239,7 @@ describe('ArchJSONAggregator', () => {
         (r) => r.source === 'services' && r.target === 'repositories'
       );
       expect(relation).toBeDefined();
-      expect(relation!.type).toBe('dependency');
+      expect(relation.type).toBe('dependency');
     });
 
     it('should handle multiple classes in the same package', () => {

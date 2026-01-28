@@ -18,10 +18,8 @@ ArchGuard supports multiple configuration file formats:
 
 ### Supported File Names
 
-- `.archguardrc.json` (recommended)
-- `.archguardrc`
-- `archguard.config.json`
-- `package.json` (under `"archguard"` key)
+- `archguard.config.json` (recommended)
+- `.archguardrc.json`
 
 ### File Location
 
@@ -35,7 +33,7 @@ Use the init command to create a configuration file:
 archguard init
 ```
 
-This creates `.archguardrc.json` with default settings.
+This creates `archguard.config.json` with default settings.
 
 ---
 
@@ -47,8 +45,7 @@ This creates `.archguardrc.json` with default settings.
 {
   "$schema": "https://archguard.dev/schema/config.json",
   "source": "./src",
-  "output": "./docs/architecture.puml",
-  "format": "plantuml",
+  "format": "mermaid",
   "exclude": [
     "**/*.test.ts",
     "**/*.spec.ts",
@@ -60,13 +57,19 @@ This creates `.archguardrc.json` with default settings.
   "concurrency": 4,
   "cache": true,
   "cacheDir": "~/.archguard/cache",
+  "outputDir": "./archguard",
+  "verbose": false,
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "isomorphic",
+    "theme": "default",
+    "transparentBackground": true
+  },
   "cli": {
     "command": "claude",
     "args": ["--model", "claude-sonnet-4-20250514"],
     "timeout": 60000
-  },
-  "outputDir": "./archguard",
-  "verbose": false
+  }
 }
 ```
 
@@ -95,43 +98,21 @@ This creates `.archguardrc.json` with default settings.
 { "source": "./lib" }  // .archguardrc.lib.json
 ```
 
-#### output
-
-- **Type**: `string`
-- **Default**: `"./architecture.puml"`
-- **Description**: Path where generated diagram will be saved
-
-```json
-{
-  "output": "./docs/architecture.puml"
-}
-```
-
-**Format-specific outputs**:
-
-```json
-// PlantUML
-{ "output": "./docs/architecture.puml" }
-
-// JSON
-{ "output": "./output/architecture.json" }
-```
-
 #### format
 
-- **Type**: `"plantuml" | "json"`
-- **Default**: `"plantuml"`
+- **Type**: `"mermaid" | "json"`
+- **Default**: `"mermaid"`
 - **Description**: Output format for generated architecture
 
 ```json
 {
-  "format": "plantuml"
+  "format": "mermaid"
 }
 ```
 
 **Options**:
 
-- `"plantuml"` - Generates PlantUML diagram (.puml)
+- `"mermaid"` - Generates Mermaid diagram (.mmd, .svg, .png)
 - `"json"` - Generates ArchJSON data (.json)
 
 #### exclude
@@ -318,6 +299,46 @@ This creates `.archguardrc.json` with default settings.
 { "outputDir": "/tmp/archguard-output" }
 ```
 
+#### mermaid
+
+- **Type**: `object`
+- **Default**: `{ enableLLMGrouping: true, renderer: "isomorphic", theme: "default", transparentBackground: true }`
+- **Description**: Mermaid-specific configuration
+
+```json
+{
+  "mermaid": {
+    "enableLLMGrouping": true,
+    "renderer": "isomorphic",
+    "theme": "default",
+    "transparentBackground": true
+  }
+}
+```
+
+**Field Descriptions**:
+
+- **enableLLMGrouping** - Use LLM for intelligent entity grouping (default: true)
+- **renderer** - Rendering engine: `"isomorphic"` (default) or `"cli"`
+- **theme** - Visual theme: `"default"`, `"forest"`, `"dark"`, `"neutral"`
+- **transparentBackground** - Use transparent background for PNG output (default: true)
+
+**Examples**:
+
+```json
+// Default configuration
+{ "mermaid": { "enableLLMGrouping": true, "theme": "default" } }
+
+// Disable LLM grouping (faster, free)
+{ "mermaid": { "enableLLMGrouping": false } }
+
+// Dark theme
+{ "mermaid": { "theme": "dark" } }
+
+// Use CLI renderer (requires mermaid-cli)
+{ "mermaid": { "renderer": "cli" } }
+```
+
 ---
 
 ## Backward Compatibility
@@ -373,22 +394,26 @@ Command-line options have the highest priority and override both configuration f
 ```bash
 archguard analyze \
   --source ./src \
-  --output ./docs/architecture.puml \
-  --format plantuml \
+  --format mermaid \
   --exclude "**/*.test.ts" "**/*.spec.ts" \
   --concurrency 8 \
   --no-cache \
   --verbose \
+  --no-llm-grouping \
+  --mermaid-theme dark \
   --cli-command /usr/local/bin/claude \
   --cli-args "--model claude-opus-4-20250514" \
   --output-dir ./docs/diagrams
 ```
 
-### New CLI Options (v1.1)
+### v2.0 CLI Options (Mermaid)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--cli-command` | string | claude | Claude CLI command to use |
+| `--no-llm-grouping` | boolean | false | Disable LLM-powered grouping |
+| `--mermaid-theme` | string | default | Mermaid theme (default, forest, dark, neutral) |
+| `--mermaid-renderer` | string | isomorphic | Mermaid renderer (isomorphic, cli) |
+| `--cli-command` | string | claude | Claude CLI command to use (optional) |
 | `--cli-args` | string | - | Additional CLI arguments (space-separated) |
 | `--output-dir` | string | ./archguard | Output directory for diagrams |
 
@@ -682,7 +707,7 @@ Add to .gitignore if needed:
 ```
 # .gitignore
 .archguard-cache/
-docs/architecture.puml  # If regenerating frequently
+archguard/  # If regenerating frequently
 ```
 
 ### 8. Document Configuration
@@ -717,7 +742,7 @@ If configuration is invalid:
 ```
 ❌ Configuration error:
   - Invalid concurrency: must be a positive integer
-  - Unknown format: "yaml" (expected "plantuml" or "json")
+  - Unknown format: "yaml" (expected "mermaid" or "json")
 ```
 
 ### Schema Validation
@@ -735,11 +760,38 @@ Use JSON schema for IDE autocomplete and validation:
 
 ## Migration
 
-### From v0.1 to v0.2
+### From v2.0 (PlantUML) to v2.1 (Mermaid Only)
+
+**Important**: PlantUML support has been completely removed in v2.1.
+
+```json
+// Old (v2.0) - No longer supported
+{
+  "format": "plantuml",
+  "output": "./docs/architecture.puml"
+}
+
+// New (v2.1) - Use Mermaid
+{
+  "format": "mermaid",
+  "outputDir": "./archguard"
+}
+```
+
+**Migration Steps**:
+
+1. Update `format` field from `"plantuml"` to `"mermaid"` (or omit, as it's the default)
+2. Replace `output` file path with `outputDir` directory
+3. Add `mermaid` configuration section (optional)
+4. Remove any PlantUML-specific settings
+
+For detailed migration instructions, see [PlantUML Removal Notice](PLANTUML-REMOVAL-NOTICE.md).
+
+### From v1.0 to v1.1
 
 ```json
 {
-  // Old (v0.1)
+  // Old (v1.0)
   "inputDir": "./src",
 
   // New (v0.2)
@@ -753,7 +805,6 @@ Before:
 
 ```bash
 export ARCHGUARD_SOURCE=./src
-export ARCHGUARD_OUTPUT=./docs/arch.puml
 archguard analyze
 ```
 
@@ -761,8 +812,7 @@ After:
 
 ```json
 {
-  "source": "./src",
-  "output": "./docs/arch.puml"
+  "source": "./src"
 }
 ```
 

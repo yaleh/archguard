@@ -27,16 +27,17 @@ async function runErrorTest(
       expectedError,
       errorDetected: false,
       errorClear: false,
-      duration
+      duration,
     });
     console.log(`❌ ${name} (${duration}ms)`);
     console.log(`   Expected error but none occurred: ${expectedError}`);
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorDetected = errorMessage.toLowerCase().includes(expectedError.toLowerCase()) ||
-                          errorMessage.toLowerCase().includes('error') ||
-                          errorMessage.toLowerCase().includes('syntax');
+    const errorDetected =
+      errorMessage.toLowerCase().includes(expectedError.toLowerCase()) ||
+      errorMessage.toLowerCase().includes('error') ||
+      errorMessage.toLowerCase().includes('syntax');
 
     results.push({
       name,
@@ -44,7 +45,7 @@ async function runErrorTest(
       actualError: errorMessage,
       errorDetected,
       errorClear: errorMessage.length > 0,
-      duration
+      duration,
     });
 
     if (errorDetected) {
@@ -339,11 +340,7 @@ async function main() {
   console.log('🧪 Running Mermaid POC - Error Pattern Tests\n');
   console.log('='.repeat(60));
 
-  await runErrorTest(
-    'Nested namespaces',
-    'nested namespace not supported',
-    testNestedNamespaces
-  );
+  await runErrorTest('Nested namespaces', 'nested namespace not supported', testNestedNamespaces);
 
   await runErrorTest(
     'Intra-namespace relationships',
@@ -351,17 +348,9 @@ async function main() {
     testIntraNamespaceRelationships
   );
 
-  await runErrorTest(
-    'Comma-based generics',
-    'comma generics not supported',
-    testCommaGenerics
-  );
+  await runErrorTest('Comma-based generics', 'comma generics not supported', testCommaGenerics);
 
-  await runErrorTest(
-    'Invalid syntax (missing brace)',
-    'syntax error',
-    testInvalidSyntax
-  );
+  await runErrorTest('Invalid syntax (missing brace)', 'syntax error', testInvalidSyntax);
 
   await runErrorTest(
     'Invalid relationship type',
@@ -369,11 +358,7 @@ async function main() {
     testInvalidRelationshipType
   );
 
-  await runErrorTest(
-    'Invalid method syntax',
-    'invalid syntax',
-    testInvalidMethodSyntax
-  );
+  await runErrorTest('Invalid method syntax', 'invalid syntax', testInvalidMethodSyntax);
 
   await runErrorTest(
     'Deeply nested namespaces (3+ levels)',
@@ -387,25 +372,17 @@ async function main() {
     testCrossNamespaceComplexGenerics
   );
 
-  await runErrorTest(
-    'Special characters in names',
-    'special characters',
-    testSpecialCharacters
-  );
+  await runErrorTest('Special characters in names', 'special characters', testSpecialCharacters);
 
-  await runErrorTest(
-    'Very long method signatures',
-    'long signatures',
-    testLongMethodSignatures
-  );
+  await runErrorTest('Very long method signatures', 'long signatures', testLongMethodSignatures);
 
   console.log('='.repeat(60));
   console.log('\n📊 Error Pattern Test Results Summary:');
   console.log('='.repeat(60));
 
-  const errorsDetected = results.filter(r => r.errorDetected).length;
-  const errorsNotDetected = results.filter(r => !r.errorDetected).length;
-  const clearErrors = results.filter(r => r.errorClear).length;
+  const errorsDetected = results.filter((r) => r.errorDetected).length;
+  const errorsNotDetected = results.filter((r) => !r.errorDetected).length;
+  const clearErrors = results.filter((r) => r.errorClear).length;
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
   console.log(`Total Tests: ${results.length}`);
@@ -418,8 +395,8 @@ async function main() {
   if (errorsNotDetected > 0) {
     console.log('\n⚠️  Tests Where Errors Were Not Detected:');
     results
-      .filter(r => !r.errorDetected)
-      .forEach(r => {
+      .filter((r) => !r.errorDetected)
+      .forEach((r) => {
         console.log(`   - ${r.name}`);
         console.log(`     Expected: ${r.expectedError}`);
         if (r.actualError) {
@@ -437,9 +414,9 @@ async function main() {
       errorsNotDetected,
       clearErrors,
       totalDuration,
-      detectionRate: (errorsDetected / results.length) * 100
+      detectionRate: (errorsDetected / results.length) * 100,
     },
-    results
+    results,
   };
 
   fs.writeFileSync(
@@ -450,7 +427,7 @@ async function main() {
   console.log('\n✅ Results saved to results-errors.json');
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

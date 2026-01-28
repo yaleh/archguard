@@ -13,10 +13,7 @@ interface TestResult {
 
 const results: TestResult[] = [];
 
-async function runTest(
-  name: string,
-  testFn: () => Promise<void>
-): Promise<void> {
+async function runTest(name: string, testFn: () => Promise<void>): Promise<void> {
   const startTime = Date.now();
   try {
     await testFn();
@@ -263,7 +260,12 @@ classDiagram
 
 // Test 7: Bundle size check
 async function testBundleSize() {
-  const packageJsonPath = path.join(__dirname, 'node_modules', 'isomorphic-mermaid', 'package.json');
+  const packageJsonPath = path.join(
+    __dirname,
+    'node_modules',
+    'isomorphic-mermaid',
+    'package.json'
+  );
   const distPath = path.join(__dirname, 'node_modules', 'isomorphic-mermaid', 'dist');
 
   if (!fs.existsSync(distPath)) {
@@ -312,8 +314,8 @@ async function main() {
   console.log('\n📊 Test Results Summary:');
   console.log('='.repeat(60));
 
-  const passed = results.filter(r => r.passed).length;
-  const failed = results.filter(r => !r.passed).length;
+  const passed = results.filter((r) => r.passed).length;
+  const failed = results.filter((r) => !r.passed).length;
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
   console.log(`Total Tests: ${results.length}`);
@@ -325,8 +327,8 @@ async function main() {
   if (failed > 0) {
     console.log('\n❌ Failed Tests:');
     results
-      .filter(r => !r.passed)
-      .forEach(r => {
+      .filter((r) => !r.passed)
+      .forEach((r) => {
         console.log(`   - ${r.name}`);
         console.log(`     Error: ${r.error}`);
       });
@@ -340,9 +342,9 @@ async function main() {
       passed,
       failed,
       totalDuration,
-      successRate: (passed / results.length) * 100
+      successRate: (passed / results.length) * 100,
     },
-    results
+    results,
   };
 
   fs.writeFileSync(
@@ -355,7 +357,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

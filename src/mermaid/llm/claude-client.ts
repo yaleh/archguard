@@ -1,26 +1,26 @@
 /**
- * Claude Code CLI Wrapper
+ * Claude Client for Mermaid LLM Integration
  *
  * This module provides a wrapper around the Claude Code CLI for invoking
  * Claude AI through the official Claude Code interface instead of direct API calls.
  *
- * @module claude-code-wrapper
+ * @module claude-client
  */
 
 import { execa } from 'execa';
 import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import { detectClaudeCodeCLI } from '../utils/cli-detector.js';
-import type { ArchJSON } from '../types/index.js';
-import type { Config } from '../cli/config-loader.js';
-import type { DetailLevel } from '../types/config.js';
+import { detectClaudeCodeCLI } from '../../utils/cli-detector.js';
+import type { ArchJSON } from '../../types/index.js';
+import type { Config } from '../../cli/config-loader.js';
+import type { DetailLevel } from '../../types/config.js';
 
 /**
- * Configuration options for ClaudeCodeWrapper
+ * Configuration options for ClaudeClient
  * @deprecated Use Config object instead. Maintained for backward compatibility.
  */
-export interface ClaudeCodeOptions {
+export interface ClaudeClientOptions {
   /** Timeout for CLI operations in milliseconds (default: 30000) */
   timeout?: number;
 
@@ -35,7 +35,7 @@ export interface ClaudeCodeOptions {
 }
 
 /**
- * Internal configuration type that combines both Config and ClaudeCodeOptions
+ * Internal configuration type that combines both Config and ClaudeClientOptions
  */
 interface InternalConfig {
   timeout: number;
@@ -46,24 +46,24 @@ interface InternalConfig {
 }
 
 /**
- * Wrapper class for executing Claude Code CLI operations
+ * Client class for executing Claude Code CLI operations
  *
  * Provides methods to check CLI availability, manage temporary files,
  * and invoke Claude for AI-powered operations.
  *
- * Supports both Config objects (preferred) and ClaudeCodeOptions (deprecated, for backward compatibility).
+ * Supports both Config objects (preferred) and ClaudeClientOptions (deprecated, for backward compatibility).
  */
-export class ClaudeCodeWrapper {
-  readonly options: Required<ClaudeCodeOptions>;
+export class ClaudeClient {
+  readonly options: Required<ClaudeClientOptions>;
   readonly internalConfig: InternalConfig;
 
   /**
-   * Creates a new ClaudeCodeWrapper instance
+   * Creates a new ClaudeClient instance
    *
-   * @param configOrOptions - Full Config object (preferred) or ClaudeCodeOptions (deprecated)
+   * @param configOrOptions - Full Config object (preferred) or ClaudeClientOptions (deprecated)
    */
-  constructor(configOrOptions?: Config | ClaudeCodeOptions) {
-    // Detect if we received a Config object (has 'cli' property) or ClaudeCodeOptions
+  constructor(configOrOptions?: Config | ClaudeClientOptions) {
+    // Detect if we received a Config object (has 'cli' property) or ClaudeClientOptions
     const isConfig = configOrOptions && 'cli' in configOrOptions;
 
     if (isConfig) {
@@ -87,8 +87,8 @@ export class ClaudeCodeWrapper {
         cliArgs: config.cli.args,
       };
     } else {
-      // ClaudeCodeOptions (deprecated, backward compatibility)
-      const options = (configOrOptions as ClaudeCodeOptions) || {};
+      // ClaudeClientOptions (deprecated, backward compatibility)
+      const options = (configOrOptions as ClaudeClientOptions) || {};
 
       this.options = {
         timeout: options.timeout ?? 30000,

@@ -47,7 +47,7 @@ describe('Config Types - v2.0 API', () => {
       const config: ArchGuardConfig = {
         diagrams: [],
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -74,7 +74,7 @@ describe('Config Types - v2.0 API', () => {
           },
         ],
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -112,7 +112,7 @@ describe('Config Types - v2.0 API', () => {
           },
         ],
         outputDir: './archguard',
-        format: 'plantuml',
+        format: 'mermaid',
         exclude: [],
         cli: {
           command: 'claude',
@@ -137,7 +137,7 @@ describe('Config Types - v2.0 API', () => {
     it('should include sources (plural)', () => {
       const options: CLIOptions = {
         sources: ['./src', './lib'],
-        format: 'plantuml',
+        format: 'mermaid',
       };
       expect(options.sources).toEqual(['./src', './lib']);
     });
@@ -219,7 +219,9 @@ describe('ConfigLoader Schema Validation - v2.0 API', () => {
     it('should reject invalid level value', async () => {
       await expect(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        configLoader.load({ diagrams: [{ name: 'test', sources: ['./src'], level: 'invalid' as any }] })
+        configLoader.load({
+          diagrams: [{ name: 'test', sources: ['./src'], level: 'invalid' as any }],
+        })
       ).rejects.toThrow();
     });
   });

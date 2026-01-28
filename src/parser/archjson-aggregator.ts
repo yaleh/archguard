@@ -115,7 +115,9 @@ export class ArchJSONAggregator {
       packages.add(packageName);
     }
 
-    return Array.from(packages).filter((pkg) => pkg !== '').sort();
+    return Array.from(packages)
+      .filter((pkg) => pkg !== '')
+      .sort();
   }
 
   /**

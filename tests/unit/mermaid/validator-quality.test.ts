@@ -560,9 +560,7 @@ describe('QualityValidator', () => {
       const result = validator.validate(mermaidCode, archJson);
 
       if (result.metrics.completeness < 80) {
-        const completenessSuggestion = result.suggestions.find(
-          (s) => s.type === 'detail-level'
-        );
+        const completenessSuggestion = result.suggestions.find((s) => s.type === 'detail-level');
         expect(completenessSuggestion).toBeDefined();
         expect(completenessSuggestion?.impact).toBe('high');
       }
@@ -756,9 +754,30 @@ describe('QualityValidator', () => {
     it('should provide useful feedback for poor quality diagram', () => {
       const archJson = createMockArchJSON(
         [
-          { id: 'a', name: 'a', type: 'class', visibility: 'public', members: [], sourceLocation: { file: 'test.ts', startLine: 1, endLine: 10 } },
-          { id: 'b', name: 'B', type: 'class', visibility: 'public', members: [], sourceLocation: { file: 'test.ts', startLine: 11, endLine: 20 } },
-          { id: 'c', name: 'C_CLASS', type: 'class', visibility: 'public', members: [], sourceLocation: { file: 'test.ts', startLine: 21, endLine: 30 } },
+          {
+            id: 'a',
+            name: 'a',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'test.ts', startLine: 1, endLine: 10 },
+          },
+          {
+            id: 'b',
+            name: 'B',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'test.ts', startLine: 11, endLine: 20 },
+          },
+          {
+            id: 'c',
+            name: 'C_CLASS',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'test.ts', startLine: 21, endLine: 30 },
+          },
         ],
         []
       );

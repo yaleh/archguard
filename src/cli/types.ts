@@ -12,7 +12,7 @@ export interface Config {
   source: string | string[];
   output?: string;
   outputDir: string;
-  format: 'plantuml' | 'json' | 'svg';
+  format: 'mermaid' | 'json';
   exclude: string[];
   cli: CLIConfig;
   ai?: {
@@ -30,7 +30,7 @@ export interface Config {
 export interface AnalyzeOptions {
   source: string | string[];
   output?: string;
-  format: 'plantuml' | 'json' | 'svg';
+  format: 'mermaid' | 'json';
   exclude?: string[];
   cache: boolean;
   concurrency?: number;

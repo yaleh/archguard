@@ -25,7 +25,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       `;
 
       const relations = extractor.extract(code);
-      const relation = relations.find(r => r.target === 'string');
+      const relation = relations.find((r) => r.target === 'string');
 
       expect(relation).toBeUndefined(); // string is primitive type
     });
@@ -62,7 +62,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       `;
 
       const relations = extractor.extract(code);
-      const profileRelation = relations.find(r => r.target === 'Profile');
+      const profileRelation = relations.find((r) => r.target === 'Profile');
 
       expect(profileRelation).toBeDefined();
       expect(profileRelation?.type).toBe('composition');
@@ -77,7 +77,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       `;
 
       const relations = extractor.extract(code);
-      const itemRelation = relations.find(r => r.target === 'Item');
+      const itemRelation = relations.find((r) => r.target === 'Item');
 
       expect(itemRelation).toBeDefined();
       expect(itemRelation?.target).toBe('Item');
@@ -92,7 +92,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       `;
 
       const relations = extractor.extract(code);
-      const itemRelation = relations.find(r => r.target === 'Item');
+      const itemRelation = relations.find((r) => r.target === 'Item');
 
       expect(itemRelation).toBeDefined();
       expect(itemRelation?.target).toBe('Item');
@@ -135,7 +135,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       `;
 
       const relations = extractor.extract(code);
-      const userRelation = relations.find(r => r.target === 'User');
+      const userRelation = relations.find((r) => r.target === 'User');
 
       expect(userRelation).toBeDefined();
       expect(userRelation?.target).toBe('User');
@@ -165,7 +165,7 @@ describe('RelationExtractor - Import Name Normalization', () => {
       // console.log('Extracted relations:', JSON.stringify(relations, null, 2));
 
       // 应该有一个从 CacheManager 到 CacheStats 的 composition 关系
-      const statsRelation = relations.find(r => r.target === 'CacheStats');
+      const statsRelation = relations.find((r) => r.target === 'CacheStats');
 
       // 如果没有找到，至少验证我们提取到了一些关系
       if (statsRelation) {

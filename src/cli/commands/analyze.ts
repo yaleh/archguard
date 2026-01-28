@@ -97,9 +97,7 @@ function displayResults(results: DiagramResult[], config: Config): void {
     for (const result of successful) {
       console.log(`  - ${result.name}`);
       if (result.stats) {
-        console.log(
-          `    Entities: ${result.stats.entities}, Relations: ${result.stats.relations}`
-        );
+        console.log(`    Entities: ${result.stats.entities}, Relations: ${result.stats.relations}`);
       }
       if (result.paths?.png) {
         console.log(`    PNG: ${result.paths.png}`);
@@ -197,9 +195,11 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     }
 
     // Mermaid-specific options
-    if (cliOptions.llmGrouping !== undefined ||
-        cliOptions.mermaidTheme !== undefined ||
-        cliOptions.mermaidRenderer !== undefined) {
+    if (
+      cliOptions.llmGrouping !== undefined ||
+      cliOptions.mermaidTheme !== undefined ||
+      cliOptions.mermaidRenderer !== undefined
+    ) {
       configOverrides.mermaid = {
         enableLLMGrouping: cliOptions.llmGrouping,
         theme: cliOptions.mermaidTheme,

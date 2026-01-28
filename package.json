@@ -40,7 +40,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
-    "@entrofi/node-plantuml": "^0.9.1",
     "commander": "^11.1.0",
     "execa": "^8.0.1",
     "isomorphic-mermaid": "^0.1.1",

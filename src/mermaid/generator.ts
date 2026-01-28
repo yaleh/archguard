@@ -246,13 +246,14 @@ export class ValidatedMermaidGenerator {
       const returnType = member.returnType ? `: ${this.sanitizeType(member.returnType)}` : '';
 
       // Build parameters string, removing default values
-      const params = member.parameters
-        ?.map((p) => {
-          const optional = p.isOptional ? '?' : '';
-          const paramType = p.type ? `: ${this.sanitizeType(p.type)}` : '';
-          return `${p.name}${optional}${paramType}`;
-        })
-        .join(', ') || '';
+      const params =
+        member.parameters
+          ?.map((p) => {
+            const optional = p.isOptional ? '?' : '';
+            const paramType = p.type ? `: ${this.sanitizeType(p.type)}` : '';
+            return `${p.name}${optional}${paramType}`;
+          })
+          .join(', ') || '';
 
       return `${visibility}${staticModifier}${abstractModifier}${async}${member.name}(${params})${returnType}`;
     } else {
@@ -307,9 +308,15 @@ export class ValidatedMermaidGenerator {
 
     switch (relation.type) {
       case 'inheritance':
-        return `${source} <|-- ${target}`;
+        // Mermaid syntax: Parent <|-- Child
+        // In ArchJSON: source = child, target = parent
+        // So we need: target <|-- source
+        return `${target} <|-- ${source}`;
       case 'implementation':
-        return `${source} <|.. ${target}`;
+        // Mermaid syntax: Interface <|.. ImplementingClass
+        // In ArchJSON: source = implementing class, target = interface
+        // So we need: target <|.. source
+        return `${target} <|.. ${source}`;
       case 'composition':
         return `${source} *-- ${target}`;
       case 'aggregation':
@@ -425,7 +432,8 @@ export class ValidatedMermaidGenerator {
 
     // 2. Handle TypeScript advanced types
     // Partial<T>, Required<T>, Readonly<T>, Pick<T, K>, Omit<T, K>, etc.
-    const advancedTypePattern = /^(Partial|Required|Readonly|Pick|Omit|Record|Exclude|Extract|ReturnType|Parameters|DeepPartial)<.+>$/;
+    const advancedTypePattern =
+      /^(Partial|Required|Readonly|Pick|Omit|Record|Exclude|Extract|ReturnType|Parameters|DeepPartial)<.+>$/;
     if (advancedTypePattern.test(simplified)) {
       return 'any';
     }
@@ -468,7 +476,10 @@ export class ValidatedMermaidGenerator {
       if (!match) break;
 
       const content = match[1];
-      const flattened = content.replace(/\s*,\s*/g, '').replace(/\s+/g, '').replace(/<[^>]+>/g, '');
+      const flattened = content
+        .replace(/\s*,\s*/g, '')
+        .replace(/\s+/g, '')
+        .replace(/<[^>]+>/g, '');
       simplified = simplified.replace(/<[^>]+>/, `~${flattened}`);
     }
 

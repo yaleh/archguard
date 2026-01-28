@@ -101,9 +101,7 @@ describe('HeuristicGrouper', () => {
       const grouper = new HeuristicGrouper();
       const decision = grouper.group(archJson);
 
-      const userPackage = decision.packages.find((p) =>
-        p.name.toLowerCase().includes('user')
-      );
+      const userPackage = decision.packages.find((p) => p.name.toLowerCase().includes('user'));
       expect(userPackage).toBeDefined();
       expect(userPackage?.entities).toContain('User');
       expect(userPackage?.entities).toContain('UserService');
@@ -113,9 +111,7 @@ describe('HeuristicGrouper', () => {
       const grouper = new HeuristicGrouper();
       const decision = grouper.group(archJson);
 
-      const authPackage = decision.packages.find((p) =>
-        p.name.toLowerCase().includes('auth')
-      );
+      const authPackage = decision.packages.find((p) => p.name.toLowerCase().includes('auth'));
       expect(authPackage).toBeDefined();
       expect(authPackage?.entities).toContain('AuthService');
       expect(authPackage?.entities).toContain('AuthController');
@@ -125,9 +121,7 @@ describe('HeuristicGrouper', () => {
       const grouper = new HeuristicGrouper();
       const decision = grouper.group(archJson);
 
-      const repoPackage = decision.packages.find((p) =>
-        p.name.toLowerCase().includes('repo')
-      );
+      const repoPackage = decision.packages.find((p) => p.name.toLowerCase().includes('repo'));
       expect(repoPackage).toBeDefined();
       expect(repoPackage?.entities).toContain('BaseRepository');
     });
@@ -138,8 +132,8 @@ describe('HeuristicGrouper', () => {
       const grouper = new HeuristicGrouper();
       const decision = grouper.group(archJson);
 
-      const libPackage = decision.packages.find((p) =>
-        p.name.toLowerCase().includes('util') || p.name.toLowerCase().includes('lib')
+      const libPackage = decision.packages.find(
+        (p) => p.name.toLowerCase().includes('util') || p.name.toLowerCase().includes('lib')
       );
       expect(libPackage).toBeDefined();
       expect(libPackage?.entities).toContain('Helpers');
@@ -234,7 +228,11 @@ describe('HeuristicGrouper', () => {
             type: 'class',
             visibility: 'public',
             members: [],
-            sourceLocation: { file: 'src/features/user/components/UserCard.ts', startLine: 1, endLine: 10 },
+            sourceLocation: {
+              file: 'src/features/user/components/UserCard.ts',
+              startLine: 1,
+              endLine: 10,
+            },
           },
         ],
       };
@@ -244,8 +242,8 @@ describe('HeuristicGrouper', () => {
 
       expect(decision.packages.length).toBeGreaterThan(0);
       // Should use the directory after src/
-      const featurePackage = decision.packages.find((p) =>
-        p.name.toLowerCase().includes('feature') || p.name.toLowerCase().includes('user')
+      const featurePackage = decision.packages.find(
+        (p) => p.name.toLowerCase().includes('feature') || p.name.toLowerCase().includes('user')
       );
       expect(featurePackage).toBeDefined();
     });
@@ -295,10 +293,7 @@ describe('HeuristicGrouper', () => {
     it('should handle monorepo packages structure', () => {
       const monorepoArchJson: ArchJSON = {
         ...archJson,
-        sourceFiles: [
-          'packages/user-service/src/User.ts',
-          'packages/auth-service/src/Auth.ts',
-        ],
+        sourceFiles: ['packages/user-service/src/User.ts', 'packages/auth-service/src/Auth.ts'],
         entities: [
           {
             id: 'User',
@@ -306,7 +301,11 @@ describe('HeuristicGrouper', () => {
             type: 'class',
             visibility: 'public',
             members: [],
-            sourceLocation: { file: 'packages/user-service/src/User.ts', startLine: 1, endLine: 10 },
+            sourceLocation: {
+              file: 'packages/user-service/src/User.ts',
+              startLine: 1,
+              endLine: 10,
+            },
           },
           {
             id: 'Auth',
@@ -314,7 +313,11 @@ describe('HeuristicGrouper', () => {
             type: 'class',
             visibility: 'public',
             members: [],
-            sourceLocation: { file: 'packages/auth-service/src/Auth.ts', startLine: 1, endLine: 10 },
+            sourceLocation: {
+              file: 'packages/auth-service/src/Auth.ts',
+              startLine: 1,
+              endLine: 10,
+            },
           },
         ],
       };
