@@ -159,7 +159,7 @@ export class DiagramProcessor {
 
       // 5. Generate output based on format
       const format = diagram.format || this.globalConfig.format;
-      await this.generateOutput(aggregatedJSON, paths, format, diagram.level);
+      await this.generateOutput(aggregatedJSON, paths, format, diagram.level, diagram);
 
       const parseTime = Date.now() - startTime;
 
@@ -203,12 +203,15 @@ export class DiagramProcessor {
    * @param archJSON - Architecture JSON
    * @param paths - Output paths
    * @param format - Output format
+   * @param level - Detail level
+   * @param diagram - Diagram configuration (v2.1.0: for metadata)
    */
   private async generateOutput(
     archJSON: ArchJSON,
     paths: { paths: { json: string; mmd: string; png: string; svg: string } },
     format: OutputFormat,
-    level: DetailLevel
+    level: DetailLevel,
+    diagram: DiagramConfig
   ): Promise<void> {
     switch (format) {
       case 'json':
@@ -226,7 +229,8 @@ export class DiagramProcessor {
             baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
             paths: paths.paths,
           },
-          level
+          level,
+          diagram // v2.1.0: Pass diagram config for metadata
         );
         break;
 

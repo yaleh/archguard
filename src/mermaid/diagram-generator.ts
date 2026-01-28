@@ -12,7 +12,7 @@
  */
 
 import type { ArchJSON } from '../types/index.js';
-import type { GlobalConfig, DetailLevel } from '../types/config.js';
+import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
 import type { GroupingDecision } from './types.js';
 import { HeuristicGrouper, LLMGrouper } from './grouper.js';
 import { ValidatedMermaidGenerator } from './generator.js';
@@ -55,11 +55,13 @@ export class MermaidDiagramGenerator {
    * @param archJson - Architecture JSON data
    * @param outputOptions - Output file paths
    * @param level - Detail level (package/class/method)
+   * @param diagramConfig - Diagram configuration (v2.1.0: for metadata comments)
    */
   async generateAndRender(
     archJson: ArchJSON,
     outputOptions: MermaidOutputOptions,
-    level: DetailLevel
+    level: DetailLevel,
+    diagramConfig?: DiagramConfig
   ): Promise<void> {
     const progress = new ProgressReporter();
 
@@ -88,10 +90,14 @@ export class MermaidDiagramGenerator {
 
       // 2. Deterministic Generation
       progress.start('📝 Generating Mermaid code...');
-      const generator = new ValidatedMermaidGenerator(archJson, {
-        level,
-        grouping,
-      });
+      const generator = new ValidatedMermaidGenerator(
+        archJson,
+        {
+          level,
+          grouping,
+        },
+        diagramConfig // v2.1.0: Pass diagram config for metadata comments
+      );
 
       let mermaidCode = generator.generate();
       progress.succeed('✅ Mermaid code generated');

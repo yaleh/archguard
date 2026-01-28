@@ -1,9 +1,12 @@
 /**
  * ValidatedMermaidGenerator - Generates Mermaid diagram code from ArchJSON
  * Ensures valid Mermaid syntax and proper structure
+ *
+ * v2.1.0: Integrated CommentGenerator for self-documenting diagrams
  */
 
 import type { ArchJSON, Entity, Member, Relation } from '../types/index.js';
+import type { DiagramConfig } from '../types/config.js';
 import type {
   MermaidDetailLevel,
   GroupingDecision,
@@ -11,6 +14,7 @@ import type {
   MermaidGeneratorOptions,
   MermaidTheme,
 } from './types.js';
+import { CommentGenerator } from './comment-generator.js';
 
 /**
  * Validated Mermaid Generator
@@ -19,6 +23,8 @@ import type {
 export class ValidatedMermaidGenerator {
   private readonly archJson: ArchJSON;
   private readonly options: Required<MermaidGeneratorOptions>;
+  private readonly diagramConfig?: DiagramConfig;
+  private readonly commentGenerator: CommentGenerator;
 
   constructor(
     archJson: ArchJSON,
@@ -29,7 +35,8 @@ export class ValidatedMermaidGenerator {
       includePrivate?: boolean;
       includeProtected?: boolean;
       maxDepth?: number;
-    }
+    },
+    diagramConfig?: DiagramConfig
   ) {
     this.archJson = archJson;
     this.options = {
@@ -40,31 +47,52 @@ export class ValidatedMermaidGenerator {
       includeProtected: options.includeProtected ?? true,
       maxDepth: options.maxDepth ?? 3,
     };
+    this.diagramConfig = diagramConfig;
+    this.commentGenerator = new CommentGenerator();
   }
 
   /**
    * Generate Mermaid diagram code
+   *
+   * v2.1.0: Adds comment generation if diagramConfig is provided
    */
   generate(): string {
     // Validate before generation
     this.validateBeforeGenerate();
 
+    // Start with comment header (v2.1.0)
+    const lines: string[] = ['classDiagram'];
+
+    // Add metadata comments if enabled (v2.1.0)
+    if (this.diagramConfig && this.diagramConfig.annotations?.enableComments !== false) {
+      const comments = this.commentGenerator.generateAll(this.diagramConfig);
+      if (comments) {
+        lines.push(comments);
+        lines.push(''); // Empty line separator
+      }
+    }
+
     // Generate based on level
-    let code: string;
+    let diagramCode: string;
     switch (this.options.level) {
       case 'package':
-        code = this.generatePackageLevel();
+        diagramCode = this.generatePackageLevel();
         break;
       case 'method':
-        code = this.generateMethodLevel();
+        diagramCode = this.generateMethodLevel();
         break;
       case 'class':
       default:
-        code = this.generateClassLevel();
+        diagramCode = this.generateClassLevel();
         break;
     }
 
-    // Post-process and return
+    // Remove the initial 'classDiagram' from diagramCode since we already added it
+    const diagramLines = diagramCode.split('\n').slice(1);
+    lines.push(...diagramLines);
+
+    // Join and post-process
+    const code = lines.join('\n');
     return this.postProcess(code);
   }
 

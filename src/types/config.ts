@@ -54,11 +54,196 @@ export const defaultMermaidConfig: MermaidConfig = {
  */
 export type OutputFormat = 'mermaid' | 'json';
 
+// ============================================================================
+// v2.1.0: Metadata Enhancement - Diagram Self-Documentation
+// ============================================================================
+
+/**
+ * Diagram metadata for self-documenting architecture diagrams
+ *
+ * Breaking Change (v2.1): New optional fields for rich context
+ * All fields are optional but recommended for better documentation
+ */
+export interface DiagramMetadata {
+  /** Diagram title (displayed at top of diagram) */
+  title?: string;
+
+  /** Diagram subtitle */
+  subtitle?: string;
+
+  /** Purpose/use case description */
+  purpose?: string;
+
+  /** Primary actors or user roles */
+  primaryActors?: string[];
+
+  /** Input description */
+  input?: {
+    /** Input type (e.g., "TypeScript source files", "CLI commands") */
+    type: string;
+    /** Detailed description */
+    description?: string;
+    /** Example input */
+    example?: string;
+  };
+
+  /** Output description */
+  output?: {
+    /** Output description */
+    description: string;
+    /** Output formats (e.g., ["JSON", "Mermaid"]) */
+    formats?: string[];
+    /** Example output */
+    example?: string;
+  };
+}
+
+/**
+ * Design pattern and architectural information
+ */
+export interface DesignInfo {
+  /** Architecture style */
+  architectureStyle?: 'layered' | 'event-driven' | 'microkernel' | 'serverless';
+
+  /** Applied design patterns */
+  patterns?: DesignPatternInfo[];
+
+  /** Key principles */
+  principles?: string[];
+
+  /** Architectural Decision Records (ADR) */
+  decisions?: ArchitecturalDecision[];
+}
+
+/**
+ * Design pattern information
+ */
+export interface DesignPatternInfo {
+  /** Pattern name (e.g., "Builder Pattern", "Strategy Pattern") */
+  name: string;
+  /** Pattern category */
+  category: PatternCategory;
+  /** Participating classes/namespaces */
+  participants: string[];
+  /** Brief description */
+  description: string;
+  /** Code example (optional) */
+  codeExample?: string;
+}
+
+/**
+ * Design pattern categories
+ */
+export type PatternCategory =
+  | 'creational'      // 创建型：Builder, Factory
+  | 'structural'      // 结构型：Facade, Adapter, Proxy
+  | 'behavioral'      // 行为型：Strategy, Observer, Template Method
+  | 'concurrency';    // 并发型：Parallel Processing
+
+/**
+ * Architectural decision record
+ */
+export interface ArchitecturalDecision {
+  /** Decision topic */
+  topic: string;
+  /** What was chosen */
+  decision: string;
+  /** Why this choice was made */
+  rationale: string;
+  /** Alternatives considered */
+  alternatives?: string[];
+}
+
+/**
+ * Processing flow information
+ */
+export interface ProcessInfo {
+  /** Number of processing stages */
+  stages?: number;
+
+  /** List of stages */
+  stageList?: ProcessStage[];
+
+  /** Data flow description */
+  dataFlow?: string;
+
+  /** Key dependencies */
+  keyDependencies?: string[];
+}
+
+/**
+ * Processing stage
+ */
+export interface ProcessStage {
+  /** Stage order */
+  order: number;
+  /** Stage name */
+  name: string;
+  /** Stage description */
+  description: string;
+  /** Namespace/package */
+  namespace?: string;
+  /** Patterns used in this stage */
+  patterns?: string[];
+}
+
+/**
+ * Annotation configuration
+ */
+export interface AnnotationConfig {
+  /** Enable comment generation */
+  enableComments?: boolean;
+
+  /** Highlight design patterns */
+  highlightPatterns?: boolean;
+
+  /** Show external dependencies */
+  showExternalDeps?: boolean;
+
+  /** Include usage example */
+  includeUsageExample?: boolean;
+}
+
+/**
+ * Class-level annotation configuration
+ */
+export interface ClassHighlightConfig {
+  /** Classes to highlight */
+  highlightClasses?: string[];
+
+  /** Classes with specific annotations */
+  annotateClasses?: ClassAnnotation[];
+
+  /** Visibility control */
+  visibility?: {
+    /** Explicitly include these classes */
+    show?: string[];
+    /** Explicitly exclude these classes */
+    hide?: string[];
+  };
+}
+
+/**
+ * Class-level annotation
+ */
+export interface ClassAnnotation {
+  /** Class name */
+  className: string;
+  /** Mermaid note */
+  note?: string;
+  /** Mermaid stereotypes (e.g., ["<<builder>>", "<<core>>"]) */
+  stereotypes?: string[];
+  /** Responsibility description */
+  responsibility?: string;
+}
+
 /**
  * Single diagram configuration
  *
  * This is the core abstraction in v2.0 - both single and multiple diagrams
  * use the same DiagramConfig structure.
+ *
+ * Breaking Change (v2.1): Added optional metadata, design, process, annotations, classes
  */
 export interface DiagramConfig {
   /**
@@ -104,6 +289,35 @@ export interface DiagramConfig {
    * Overrides global exclude patterns if specified.
    */
   exclude?: string[];
+
+  // ========== v2.1.0: Metadata Enhancement (Optional) ==========
+
+  /**
+   * Diagram metadata for self-documentation
+   *
+   * Breaking Change: Replaces simple `description` field
+   */
+  metadata?: DiagramMetadata;
+
+  /**
+   * Design pattern and architectural information
+   */
+  design?: DesignInfo;
+
+  /**
+   * Processing flow information
+   */
+  process?: ProcessInfo;
+
+  /**
+   * Annotation configuration
+   */
+  annotations?: AnnotationConfig;
+
+  /**
+   * Class-level annotation configuration
+   */
+  classes?: ClassHighlightConfig;
 }
 
 /**

@@ -31,6 +31,85 @@ const MermaidConfigSchema = z.object({
   transparentBackground: z.boolean().optional(),
 });
 
+// v2.1.0: Diagram metadata schema
+const DiagramMetadataSchema = z.object({
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  purpose: z.string().optional(),
+  primaryActors: z.array(z.string()).optional(),
+  input: z.object({
+    type: z.string(),
+    description: z.string().optional(),
+    example: z.string().optional(),
+  }).optional(),
+  output: z.object({
+    description: z.string(),
+    formats: z.array(z.string()).optional(),
+    example: z.string().optional(),
+  }).optional(),
+});
+
+// v2.1.0: Design pattern schema
+const DesignPatternInfoSchema = z.object({
+  name: z.string(),
+  category: z.enum(['creational', 'structural', 'behavioral', 'concurrency']),
+  participants: z.array(z.string()),
+  description: z.string(),
+  codeExample: z.string().optional(),
+});
+
+const DesignInfoSchema = z.object({
+  architectureStyle: z.enum(['layered', 'event-driven', 'microkernel', 'serverless']).optional(),
+  patterns: z.array(DesignPatternInfoSchema).optional(),
+  principles: z.array(z.string()).optional(),
+  decisions: z.array(z.object({
+    topic: z.string(),
+    decision: z.string(),
+    rationale: z.string(),
+    alternatives: z.array(z.string()).optional(),
+  })).optional(),
+});
+
+// v2.1.0: Process info schema
+const ProcessStageSchema = z.object({
+  order: z.number(),
+  name: z.string(),
+  description: z.string(),
+  namespace: z.string().optional(),
+  patterns: z.array(z.string()).optional(),
+});
+
+const ProcessInfoSchema = z.object({
+  stages: z.number().optional(),
+  stageList: z.array(ProcessStageSchema).optional(),
+  dataFlow: z.string().optional(),
+  keyDependencies: z.array(z.string()).optional(),
+});
+
+// v2.1.0: Annotation config schema
+const AnnotationConfigSchema = z.object({
+  enableComments: z.boolean().optional(),
+  highlightPatterns: z.boolean().optional(),
+  showExternalDeps: z.boolean().optional(),
+  includeUsageExample: z.boolean().optional(),
+});
+
+const ClassAnnotationSchema = z.object({
+  className: z.string(),
+  note: z.string().optional(),
+  stereotypes: z.array(z.string()).optional(),
+  responsibility: z.string().optional(),
+});
+
+const ClassHighlightConfigSchema = z.object({
+  highlightClasses: z.array(z.string()).optional(),
+  annotateClasses: z.array(ClassAnnotationSchema).optional(),
+  visibility: z.object({
+    show: z.array(z.string()).optional(),
+    hide: z.array(z.string()).optional(),
+  }).optional(),
+});
+
 const configSchema = z.object({
   // ========== Global Configuration ==========
   outputDir: z.string().default('./archguard'),
@@ -66,7 +145,17 @@ const configSchema = z.object({
   concurrency: z.number().default(os.cpus().length),
   verbose: z.boolean().default(false),
 
-  // ========== Diagrams Configuration (v2.0 Core Change) ==========
+  // ========== v2.1.0: Root Metadata (Optional) ==========
+  metadata: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    system: z.string().optional(),
+    author: z.string().optional(),
+    projectUrl: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+  }).optional(),
+
+  // ========== Diagrams Configuration (v2.0 Core Change + v2.1.0 Enhancement) ==========
   /**
    * Array of diagram definitions
    *
@@ -90,6 +179,16 @@ const configSchema = z.object({
         format: z.enum(['mermaid', 'json']).optional(),
         /** Exclude patterns override */
         exclude: z.array(z.string()).optional(),
+        /** v2.1.0: Diagram metadata */
+        metadata: DiagramMetadataSchema.optional(),
+        /** v2.1.0: Design information */
+        design: DesignInfoSchema.optional(),
+        /** v2.1.0: Process information */
+        process: ProcessInfoSchema.optional(),
+        /** v2.1.0: Annotation configuration */
+        annotations: AnnotationConfigSchema.optional(),
+        /** v2.1.0: Class-level annotations */
+        classes: ClassHighlightConfigSchema.optional(),
       })
     )
     .default([]),
