@@ -31,17 +31,124 @@
 
 ### 2.2 解析引擎技术选型 (进程内执行)
 
-为避免 `go-ast-extractor` CLI 带来的分发灾难和跨进程性能损耗，我们将采用以下集成策略之一，在 Node.js 进程内获取 Go 的结构与语义信息：
-
-| 方案 | 优势 | 劣势 | 决策 |
-| --- | --- | --- | --- |
-| **Tree-sitter** (`tree-sitter-go`) | 解析极快，Node.js 原生 C++ 绑定，无需 Go 环境。 | 仅提供 AST 抽象语法树，缺乏深度语义和类型推导。 | **配合 LSP 使用** |
-| **Go WASM (golang.org/x/tools/go/packages)** | 标准库纯正，可通过编译为一套 `.wasm` 发行代码运行在 Node.js 或浏览器端，彻底解决平台依赖；提供绝对精准的语义类型和包级（Package）推导。 | WASM 初始化及 V8 内存传递有极小的心智负担，需手写 JS <-> WASM 通信桥接。 | **首推方案（推荐）** |
-| JSON-RPC Daemon | 通过启动常驻后台 Go 进程（如 gopls 的变体）交互。 | 架构重、生命周期管理复杂。 | 备选/淘汰 |
+为避免 `go-ast-extractor` CLI 带来的分发灾难和跨进程性能损耗，我们在 Node.js 进程内获取 Go 的结构与语义信息，采用 **Go WASM (golang.org/x/tools/go/packages)** 技术栈。
 
 **结论**: Go 语言插件 (`GoPlugin`) 将捆绑经过编译的 `parser.wasm` (由 Go 编写的使用 `go/packages` 的提取器)。Node.js 主进程直接加载执行。
 
-### 2.3 解决 Go 的 Duck Typing 与依赖识别
+### 2.3 核心类图与接口设计 (PlantUML)
+
+以下是 Go 插件架构的核心类与接口设计：
+
+```plantuml
+@startuml
+skinparam handwritten false
+skinparam classAttributeIconSize 0
+
+package "ArchGuard Core (Proposal 03)" {
+  interface ILanguagePlugin {
+    + metadata: PluginMetadata
+    + canHandle(targetPath: string): boolean
+    + parseProject(workspaceRoot: string): ArchJSON
+  }
+}
+
+package "ArchGuard Go Plugin (Node.js)" {
+  class GoPlugin {
+    - wasmBridge: WasmBridge
+    + canHandle(targetPath: string): boolean
+    + parseProject(workspaceRoot: string): ArchJSON
+    - parse(filePath: string): ArchJSON <<Not Supported/Downgraded>>
+  }
+
+  class WasmBridge {
+    - goInstance: any
+    + initWasm(wasmPath: string): void
+    + extractGoPackages(workspace: string, config: GoConfig): GoRawData
+  }
+}
+
+package "WASM Extractor (Go)" {
+  interface Extractor {
+    + Extract(path string, cfg ExtractorConfig): RawPackageData
+  }
+  
+  class PackagesExtractor {
+    - loadConfig: packages.Config
+    + Extract(path string, cfg ExtractorConfig): RawPackageData
+  }
+}
+
+ILanguagePlugin <|.. GoPlugin
+GoPlugin --> WasmBridge : uses
+WasmBridge -.> PackagesExtractor : JSI/WASM call
+Extractor <|.. PackagesExtractor
+
+@enduml
+```
+
+#### 2.3.1 核心数据结构与接口 (无实现逻辑)
+
+为了连接 Node 端和 WASM 端，需要设计一个中间传输结构（`GoRawData`），它比最终的 `ArchJSON` 更加扁平和贴近 Go 语义，由 `GoPlugin` 负责清洗。
+
+**1. WASM 核心提取接口 (Go 侧定义)**:
+```go
+// ExtractorConfig 为传给 golang.org/x/tools/go/packages 的载荷配置
+type ExtractorConfig struct {
+    Dir              string
+    IgnoreGoModCache bool
+    AnalyzeTests     bool
+    BuildTags        []string
+}
+
+// Extractor 控制整个提取流程
+type Extractor interface {
+    Extract(path string, cfg ExtractorConfig) (*RawPackageData, error)
+}
+```
+
+**2. 中间传输记录结构 (Node/TS 侧定义)**:
+```typescript
+/**
+ * 由 WASM 端返回的未经清洗的 Go 语义树（扁平化）
+ */
+interface GoRawData {
+  packages: GoRawPackage[];
+  moduleRoot: string;
+}
+
+interface GoRawPackage {
+  id: string;               // e.g. "github.com/example/swarm/net"
+  name: string;             // e.g. "net"
+  imports: string[];        // 导入的其他包 ID
+  structs: GoRawStruct[];
+  interfaces: GoRawInterface[];
+}
+
+interface GoRawStruct {
+  name: string;
+  fields: GoRawField[];
+  methods: GoRawMethod[];
+  embedded: string[];       // 嵌入的其他结构体或接口 (组合关系)
+}
+
+interface GoRawInterface {
+  name: string;
+  methods: GoRawMethod[];
+}
+
+interface GoRawMethod {
+  name: string;
+  signature: string;        // 完整签名
+  receiverType: string;     // e.g. "*Service"
+}
+
+interface GoRawField {
+  name: string;
+  type: string;
+}
+```
+
+### 2.4 解决 Go 的 Duck Typing 与依赖识别
 
 仅靠单文件 AST 无法识别如下情况下的接口实现关系：
 ```go
@@ -57,7 +164,7 @@ func (s *MyService) Load() error { return nil }
   - 通过全局扫描包级别方法集（Method Sets）与接口签名（Signatures），动态建立属于 `implementation` 的 Relation。
   - 通过指针或值接收器（Receivers）、字段组合（Struct Embedding）建立 `composition` 关系。
 
-### 2.4 扩展的运行时配置
+### 2.5 扩展的运行时配置
 
 `ArchGuardConfig` 及 CLI 支持以下专为 Go Modules 时代设计的配置：
 

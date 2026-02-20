@@ -50,14 +50,17 @@ interface ILanguagePlugin {
   /** 初始化插件（加载配置、依赖等） */
   initialize(config: PluginConfig): Promise<void>;
 
-  /** 检查文件是否由本插件处理 */
-  canHandle(filePath: string): boolean;
+  /** 检查文件或目录是否由本插件处理 */
+  canHandle(targetPath: string): boolean;
 
-  /** 解析文件为统一的 Arch-JSON */
-  parse(filePath: string): Promise<ArchJSON>;
+  /** 解析单文件（适用于脚本或局部上下文语言） */
+  parse?(filePath: string): Promise<ArchJSON>;
 
-  /** 批量解析（性能优化） */
-  parseBatch(filePaths: string[]): Promise<ArchJSON[]>;
+  /** 解析整个项目/模块工作区（适用于强类型及需要全局语义推导的语言，如 Go/Java/Rust） */
+  parseProject?(workspaceRoot: string): Promise<ArchJSON>;
+
+  /** 批量解析（性能优化，文件集） */
+  parseBatch?(filePaths: string[]): Promise<ArchJSON[]>;
 
   /** 提取依赖关系 */
   extractDependencies(filePath: string): Promise<Dependency[]>;
