@@ -73,6 +73,15 @@ node dist/cli/index.js analyze --mermaid-theme dark
 node dist/cli/index.js analyze --mermaid-theme forest
 ```
 
+#### Language Selection
+```bash
+# Auto-detect language (default: TypeScript)
+node dist/cli/index.js analyze -s ./src
+
+# Explicitly specify language (currently supports: typescript)
+node dist/cli/index.js analyze -s ./src --lang typescript
+```
+
 #### Multi-Level Architecture Diagrams
 Generate diagrams at different abstraction levels:
 ```bash

@@ -48,6 +48,7 @@ export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): Dia
       level: cliOptions.level || 'class',
       format: cliOptions.format,
       exclude: cliOptions.exclude,
+      language: cliOptions.lang,
     };
     return [diagram];
   }
@@ -141,6 +142,7 @@ export function createAnalyzeCommand(): Command {
       .option('-s, --sources <paths...>', 'Source directories (creates single diagram)')
       .option('-l, --level <level>', 'Detail level: package|class|method (default: class)', 'class')
       .option('-n, --name <name>', 'Diagram name (default: architecture)', 'architecture')
+      .option('--lang <language>', 'Language plugin: typescript (default: auto-detect)')
 
       // ========== Global Config Overrides ==========
       .option('-f, --format <type>', 'Output format: mermaid|json (default: mermaid)')

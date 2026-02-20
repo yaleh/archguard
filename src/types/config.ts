@@ -308,6 +308,15 @@ export interface DiagramConfig {
    */
   exclude?: string[];
 
+  /**
+   * Language plugin to use for this diagram
+   *
+   * If not specified, defaults to 'typescript'.
+   * Available plugins: 'typescript'
+   * @default 'typescript'
+   */
+  language?: string;
+
   // ========== v2.1.0: Metadata Enhancement (Optional) ==========
 
   /**
@@ -462,6 +471,14 @@ export interface CLIOptions {
    * Diagram name (CLI shortcut)
    */
   name?: string;
+
+  /**
+   * Language plugin to use (CLI shortcut)
+   *
+   * If not specified, auto-detection is performed based on directory markers.
+   * Available: 'typescript' (default)
+   */
+  lang?: string;
 
   // ========== Global Config Overrides ==========
 
