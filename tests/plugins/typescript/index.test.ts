@@ -437,3 +437,338 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
     });
   });
 });
+
+describe('TypeScriptPlugin - T1.1.4 Validation', () => {
+  let plugin: TypeScriptPlugin;
+
+  beforeEach(async () => {
+    plugin = new TypeScriptPlugin();
+    await plugin.initialize({ workspaceRoot: __dirname });
+  });
+
+  afterEach(async () => {
+    await plugin.dispose();
+  });
+
+  describe('validate', () => {
+    it('should validate valid ArchJSON', () => {
+      const validArchJson: any = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: new Date().toISOString(),
+        sourceFiles: ['test.ts'],
+        entities: [
+          {
+            id: 'TestClass',
+            name: 'TestClass',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: {
+              file: 'test.ts',
+              startLine: 1,
+              endLine: 5,
+            },
+          },
+        ],
+        relations: [],
+      };
+
+      const result = plugin.validator!.validate(validArchJson);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should detect missing version', () => {
+      const invalidJson: any = {
+        language: 'typescript',
+        entities: [],
+        relations: [],
+      };
+
+      const result = plugin.validator!.validate(invalidJson);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'MISSING_VERSION',
+          severity: 'error',
+        })
+      );
+    });
+
+    it('should detect missing language', () => {
+      const invalidJson: any = {
+        version: '1.0',
+        entities: [],
+        relations: [],
+      };
+
+      const result = plugin.validator!.validate(invalidJson);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'MISSING_LANGUAGE',
+          severity: 'error',
+        })
+      );
+    });
+
+    it('should detect missing entity id', () => {
+      const invalidJson: any = {
+        version: '1.0',
+        language: 'typescript',
+        entities: [
+          {
+            name: 'TestClass',
+            type: 'class',
+          },
+        ],
+        relations: [],
+      };
+
+      const result = plugin.validator!.validate(invalidJson);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'MISSING_ENTITY_ID',
+          path: 'entities[0].id',
+        })
+      );
+    });
+
+    it('should detect missing entity name', () => {
+      const invalidJson: any = {
+        version: '1.0',
+        language: 'typescript',
+        entities: [
+          {
+            id: 'test',
+            type: 'class',
+          },
+        ],
+        relations: [],
+      };
+
+      const result = plugin.validator!.validate(invalidJson);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'MISSING_ENTITY_NAME',
+          path: 'entities[0].name',
+        })
+      );
+    });
+
+    it('should warn about dangling relation source', () => {
+      const jsonWithDanglingRelation: any = {
+        version: '1.0',
+        language: 'typescript',
+        entities: [
+          {
+            id: 'ClassA',
+            name: 'ClassA',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'dependency',
+            source: 'NonExistent',
+            target: 'ClassA',
+          },
+        ],
+      };
+
+      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+
+      expect(result.valid).toBe(true); // Warnings don't invalidate
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          code: 'DANGLING_RELATION_SOURCE',
+          severity: 'warning',
+        })
+      );
+    });
+
+    it('should warn about dangling relation target', () => {
+      const jsonWithDanglingRelation: any = {
+        version: '1.0',
+        language: 'typescript',
+        entities: [
+          {
+            id: 'ClassA',
+            name: 'ClassA',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'dependency',
+            source: 'ClassA',
+            target: 'NonExistent',
+          },
+        ],
+      };
+
+      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+
+      expect(result.valid).toBe(true);
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          code: 'DANGLING_RELATION_TARGET',
+          severity: 'warning',
+        })
+      );
+    });
+
+    it('should include suggestions in warnings', () => {
+      const jsonWithDanglingRelation: any = {
+        version: '1.0',
+        language: 'typescript',
+        entities: [],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'dependency',
+            source: 'A',
+            target: 'B',
+          },
+        ],
+      };
+
+      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+
+      expect(result.warnings.length).toBeGreaterThan(0);
+      expect(result.warnings[0].suggestion).toBeDefined();
+    });
+  });
+});
+
+describe('TypeScriptPlugin - T1.1.5 Integration Tests', () => {
+  let plugin: TypeScriptPlugin;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    plugin = new TypeScriptPlugin();
+    tempDir = path.join(os.tmpdir(), `archguard-test-${Date.now()}`);
+    await fs.ensureDir(tempDir);
+
+    await plugin.initialize({
+      workspaceRoot: tempDir,
+      verbose: false,
+    });
+  });
+
+  afterEach(async () => {
+    await plugin.dispose();
+    await fs.remove(tempDir);
+  });
+
+  it('should complete full workflow: parse, extract, validate', async () => {
+    // Create a small TypeScript project
+    const srcDir = path.join(tempDir, 'src');
+    await fs.ensureDir(srcDir);
+
+    const classFile = path.join(srcDir, 'service.ts');
+    await fs.writeFile(
+      classFile,
+      `
+export class UserService {
+  getUser(id: string): User {
+    return { id };
+  }
+}
+      `
+    );
+
+    const packageJson = path.join(tempDir, 'package.json');
+    await fs.writeJson(packageJson, {
+      name: 'test-app',
+      dependencies: {
+        express: '^4.0.0',
+      },
+    });
+
+    // 1. Parse the code
+    const config: ParseConfig = {
+      workspaceRoot: tempDir,
+      excludePatterns: [],
+    };
+    const archJson = await plugin.parseProject(tempDir, config);
+
+    expect(archJson.language).toBe('typescript');
+    expect(archJson.entities.length).toBeGreaterThan(0);
+
+    // 2. Extract dependencies
+    const deps = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+    expect(deps).toContainEqual(
+      expect.objectContaining({
+        name: 'express',
+        type: 'npm',
+      })
+    );
+
+    // 3. Validate the result
+    const validation = plugin.validator!.validate(archJson);
+    expect(validation.valid).toBe(true);
+  });
+
+  it('should handle errors gracefully', async () => {
+    // Test with non-existent directory
+    const nonExistent = path.join(tempDir, 'does-not-exist');
+
+    const config: ParseConfig = {
+      workspaceRoot: nonExistent,
+      excludePatterns: [],
+    };
+
+    // Should not throw, but return empty result (graceful degradation)
+    const result = await plugin.parseProject(nonExistent, config);
+    expect(result.entities).toHaveLength(0);
+    expect(result.sourceFiles).toHaveLength(0);
+  });
+
+  it('should preserve existing TypeScript parser behavior', async () => {
+    // This test ensures backward compatibility
+    const code = `
+      export class LegacyClass {
+        oldMethod(): void {}
+      }
+    `;
+
+    const result = plugin.parseCode(code);
+
+    // Should produce same output as old TypeScriptParser
+    expect(result.version).toBe('1.0');
+    expect(result.language).toBe('typescript');
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0].name).toBe('LegacyClass');
+  });
+
+  it('should integrate with PluginRegistry', async () => {
+    const { PluginRegistry } = await import('@/core/plugin-registry.js');
+    const registry = new PluginRegistry();
+
+    registry.register(plugin);
+
+    const retrieved = registry.getByName('typescript');
+    expect(retrieved).toBe(plugin);
+
+    const byExtension = registry.getByExtension('.ts');
+    expect(byExtension).toBe(plugin);
+  });
+});

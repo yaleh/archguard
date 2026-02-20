@@ -1,107 +1,98 @@
 /**
  * TypeScript/JavaScript Language Plugin
- * Phase 1.1: T1.1.1 - TypeScript Plugin Implementation
+ * Phase 1.1: TypeScript Plugin Migration
  */
 
+import path from 'path';
+import fs from 'fs-extra';
 import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
+  PluginCapabilities,
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
-import type {
-  IDependencyExtractor,
-  Dependency,
-  DependencyScope,
-} from '@/core/interfaces/dependency.js';
-import type { IValidator } from '@/core/interfaces/validation.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { IDependencyExtractor, Dependency } from '@/core/interfaces/dependency.js';
+import type { IValidator, ValidationResult, ValidationError, ValidationWarning } from '@/core/interfaces/validation.js';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
-import * as fs from 'fs-extra';
-import * as path from 'path';
 
 /**
- * TypeScript/JavaScript language plugin for ArchGuard
- *
- * Provides comprehensive parsing support for TypeScript and JavaScript projects,
- * including dependency extraction and validation capabilities.
+ * TypeScript/JavaScript plugin for ArchGuard
+ * 
+ * Wraps existing TypeScriptParser and ParallelParser to conform to
+ * the ILanguagePlugin interface, enabling multi-language support.
  */
 export class TypeScriptPlugin implements ILanguagePlugin {
-  /**
-   * Plugin metadata
-   */
   readonly metadata: PluginMetadata = {
     name: 'typescript',
     version: '1.0.0',
     displayName: 'TypeScript/JavaScript',
     fileExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     author: 'ArchGuard Team',
+    repository: 'https://github.com/archguard/archguard',
     minCoreVersion: '2.0.0',
     capabilities: {
       singleFileParsing: true,
       incrementalParsing: true,
       dependencyExtraction: true,
       typeInference: true,
-    },
+    } as PluginCapabilities,
   };
 
   private parser!: TypeScriptParser;
   private parallelParser!: ParallelParser;
-  private workspaceRoot?: string;
-  private verbose: boolean = false;
+  private initialized = false;
+
+  readonly dependencyExtractor: IDependencyExtractor = {
+    extractDependencies: this.extractDeps.bind(this),
+  };
+
+  readonly validator: IValidator = {
+    validate: this.validateArchJson.bind(this),
+  };
 
   /**
    * Initialize the plugin
-   *
-   * Sets up the TypeScript parser and parallel parser instances.
-   *
-   * @param config - Plugin initialization configuration
    */
   async initialize(config: PluginInitConfig): Promise<void> {
-    this.workspaceRoot = config.workspaceRoot;
-    this.verbose = config.verbose ?? false;
+    if (this.initialized) {
+      return;
+    }
 
     // Initialize parsers
     this.parser = new TypeScriptParser();
     this.parallelParser = new ParallelParser({
-      concurrency: undefined, // Will use CPU cores by default
       continueOnError: true,
     });
 
-    if (this.verbose) {
-      console.log(`[TypeScriptPlugin] Initialized for workspace: ${this.workspaceRoot}`);
-    }
+    this.initialized = true;
   }
 
   /**
-   * Check if this plugin can handle the given file or directory
-   *
-   * Checks:
-   * - File extensions for individual files (.ts, .tsx, .js, .jsx)
-   * - Project markers for directories (package.json, tsconfig.json)
-   *
-   * @param targetPath - Path to file or directory
-   * @returns true if the plugin can handle this target
+   * Check if plugin can handle the given target path
    */
   canHandle(targetPath: string): boolean {
     // Check if it's a file with supported extension
-    const ext = path.extname(targetPath);
+    const ext = path.extname(targetPath).toLowerCase();
     if (this.metadata.fileExtensions.includes(ext)) {
       return true;
     }
 
-    // Check if it's a directory with TypeScript/JavaScript project markers
-    // Note: This is synchronous check - in production, consider async version
+    // Check if it's a directory with TypeScript/JavaScript markers
     try {
-      const packageJsonPath = path.join(targetPath, 'package.json');
-      const tsconfigPath = path.join(targetPath, 'tsconfig.json');
-
-      if (fs.existsSync(packageJsonPath) || fs.existsSync(tsconfigPath)) {
-        return true;
+      if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+        // Check for package.json
+        if (fs.existsSync(path.join(targetPath, 'package.json'))) {
+          return true;
+        }
+        // Check for tsconfig.json
+        if (fs.existsSync(path.join(targetPath, 'tsconfig.json'))) {
+          return true;
+        }
       }
-    } catch {
-      // If path doesn't exist or is not a directory, return false
+    } catch (error) {
       return false;
     }
 
@@ -109,103 +100,48 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   }
 
   /**
-   * Clean up plugin resources
-   *
-   * Currently TypeScriptPlugin has no resources that require explicit cleanup,
-   * but this method is provided for interface compliance and future extensibility.
-   */
-  async dispose(): Promise<void> {
-    if (this.verbose) {
-      console.log('[TypeScriptPlugin] Disposed');
-    }
-    // No explicit cleanup needed for current implementation
-  }
-
-  /**
-   * Parse an entire project and return ArchJSON representation
-   *
-   * Delegates to TypeScriptParser.parseProject()
-   *
-   * @param workspaceRoot - Root directory of the project to analyze
-   * @param config - Parsing configuration options
-   * @returns Promise resolving to ArchJSON representation of the project
+   * Parse entire project
+   * Delegates to TypeScriptParser.parseProject
    */
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
-    if (!this.parser) {
-      throw new Error('Plugin not initialized. Call initialize() first.');
-    }
+    this.ensureInitialized();
 
-    // Use file pattern from config, defaulting to all TypeScript files
     const pattern = config.filePattern ?? '**/*.ts';
-
-    // Delegate to TypeScriptParser
-    // Note: TypeScriptParser.parseProject is synchronous, so we wrap in Promise
-    const result = this.parser.parseProject(workspaceRoot, pattern);
-
-    return result;
+    return this.parser.parseProject(workspaceRoot, pattern);
   }
 
   /**
-   * Parse a single code string and return ArchJSON representation
-   *
-   * Delegates to TypeScriptParser.parseCode()
-   *
-   * @param code - Source code string to parse
-   * @param filePath - Optional file path for context
-   * @returns ArchJSON representation of the code
+   * Parse single code string
+   * Delegates to TypeScriptParser.parseCode
    */
   parseCode(code: string, filePath: string = 'source.ts'): ArchJSON {
-    if (!this.parser) {
-      throw new Error('Plugin not initialized. Call initialize() first.');
-    }
-
-    // Delegate to TypeScriptParser
+    this.ensureInitialized();
     return this.parser.parseCode(code, filePath);
   }
 
   /**
-   * Parse specific files and return ArchJSON representation
-   *
-   * Delegates to ParallelParser.parseFiles()
-   *
-   * @param filePaths - Array of absolute file paths to parse
-   * @returns Promise resolving to ArchJSON representation of the files
+   * Parse multiple files
+   * Delegates to ParallelParser.parseFiles
    */
   async parseFiles(filePaths: string[]): Promise<ArchJSON> {
-    if (!this.parallelParser) {
-      throw new Error('Plugin not initialized. Call initialize() first.');
-    }
-
-    // Delegate to ParallelParser
+    this.ensureInitialized();
     return this.parallelParser.parseFiles(filePaths);
   }
 
   /**
-   * Dependency extractor implementation
-   */
-  readonly dependencyExtractor: IDependencyExtractor = {
-    extractDependencies: this.extractDependencies.bind(this),
-  };
-
-  /**
    * Extract npm dependencies from package.json
-   *
-   * @param workspaceRoot - Root directory of the project
-   * @returns Promise resolving to array of dependencies
    */
-  private async extractDependencies(workspaceRoot: string): Promise<Dependency[]> {
+  private async extractDeps(workspaceRoot: string): Promise<Dependency[]> {
     const packageJsonPath = path.join(workspaceRoot, 'package.json');
 
-    // Check if package.json exists
     if (!(await fs.pathExists(packageJsonPath))) {
       return [];
     }
 
-    // Read and parse package.json
     const packageJson = await fs.readJson(packageJsonPath);
     const dependencies: Dependency[] = [];
 
-    // Extract regular dependencies (runtime)
+    // Runtime dependencies
     if (packageJson.dependencies) {
       for (const [name, version] of Object.entries(packageJson.dependencies)) {
         dependencies.push({
@@ -219,7 +155,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       }
     }
 
-    // Extract devDependencies (development)
+    // Development dependencies
     if (packageJson.devDependencies) {
       for (const [name, version] of Object.entries(packageJson.devDependencies)) {
         dependencies.push({
@@ -233,7 +169,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       }
     }
 
-    // Extract peerDependencies (peer)
+    // Peer dependencies
     if (packageJson.peerDependencies) {
       for (const [name, version] of Object.entries(packageJson.peerDependencies)) {
         dependencies.push({
@@ -251,8 +187,104 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   }
 
   /**
-   * Optional validator
-   * Will be implemented in T1.1.4
+   * Validate ArchJSON structure
    */
-  readonly validator?: IValidator;
+  private validateArchJson(archJson: ArchJSON): ValidationResult {
+    const errors: ValidationError[] = [];
+    const warnings: ValidationWarning[] = [];
+    const startTime = Date.now();
+
+    // Validate version
+    if (!archJson.version) {
+      errors.push({
+        code: 'MISSING_VERSION',
+        message: 'ArchJSON version is required',
+        path: 'version',
+        severity: 'error',
+      });
+    }
+
+    // Validate language
+    if (!archJson.language) {
+      errors.push({
+        code: 'MISSING_LANGUAGE',
+        message: 'ArchJSON language is required',
+        path: 'language',
+        severity: 'error',
+      });
+    }
+
+    // Validate entities
+    if (archJson.entities) {
+      archJson.entities.forEach((entity, index) => {
+        if (!entity.id) {
+          errors.push({
+            code: 'MISSING_ENTITY_ID',
+            message: `Entity at index ${index} is missing id`,
+            path: `entities[${index}].id`,
+            severity: 'error',
+          });
+        }
+
+        if (!entity.name) {
+          errors.push({
+            code: 'MISSING_ENTITY_NAME',
+            message: `Entity at index ${index} is missing name`,
+            path: `entities[${index}].name`,
+            severity: 'error',
+          });
+        }
+      });
+    }
+
+    // Validate relation references
+    if (archJson.relations && archJson.entities) {
+      const entityIds = new Set(archJson.entities.map((e) => e.id));
+
+      archJson.relations.forEach((relation, index) => {
+        if (!entityIds.has(relation.source)) {
+          warnings.push({
+            code: 'DANGLING_RELATION_SOURCE',
+            message: `Relation references non-existent source entity: ${relation.source}`,
+            path: `relations[${index}].source`,
+            severity: 'warning',
+            suggestion: 'Ensure the source entity is included in the parsed scope',
+          });
+        }
+
+        if (!entityIds.has(relation.target)) {
+          warnings.push({
+            code: 'DANGLING_RELATION_TARGET',
+            message: `Relation references non-existent target entity: ${relation.target}`,
+            path: `relations[${index}].target`,
+            severity: 'warning',
+            suggestion: 'Ensure the target entity is included in the parsed scope',
+          });
+        }
+      });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Dispose resources
+   */
+  async dispose(): Promise<void> {
+    this.initialized = false;
+  }
+
+  /**
+   * Ensure plugin is initialized before use
+   */
+  private ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new Error('TypeScriptPlugin not initialized. Call initialize() first.');
+    }
+  }
 }
