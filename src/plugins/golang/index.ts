@@ -5,7 +5,7 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import glob from 'glob';
+import { glob } from 'glob';
 import type {
   ILanguagePlugin,
   PluginMetadata,
@@ -16,6 +16,7 @@ import type { ArchJSON } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { InterfaceMatcher } from './interface-matcher.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
+import { GoplsClient } from './gopls-client.js';
 import type { GoRawPackage } from './types.js';
 
 /**
@@ -45,7 +46,9 @@ export class GoPlugin implements ILanguagePlugin {
   private treeSitter!: TreeSitterBridge;
   private matcher!: InterfaceMatcher;
   private mapper!: ArchJsonMapper;
+  private goplsClient: GoplsClient | null = null;
   private initialized = false;
+  private workspaceRoot = '';
 
   /**
    * Initialize the plugin
@@ -58,6 +61,15 @@ export class GoPlugin implements ILanguagePlugin {
     this.treeSitter = new TreeSitterBridge();
     this.matcher = new InterfaceMatcher();
     this.mapper = new ArchJsonMapper();
+
+    // Try to initialize gopls (optional enhancement)
+    try {
+      this.goplsClient = new GoplsClient();
+      // Note: We'll initialize gopls with workspace root when parseProject is called
+    } catch (error) {
+      console.warn('gopls not available, using fallback interface matcher');
+      this.goplsClient = null;
+    }
 
     this.initialized = true;
   }
@@ -92,6 +104,19 @@ export class GoPlugin implements ILanguagePlugin {
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
     this.ensureInitialized();
 
+    // Store workspace root for gopls
+    this.workspaceRoot = workspaceRoot;
+
+    // Initialize gopls if available
+    if (this.goplsClient && !this.goplsClient.isInitialized()) {
+      try {
+        await this.goplsClient.initialize(workspaceRoot);
+      } catch (error) {
+        console.warn('Failed to initialize gopls, using fallback:', error);
+        this.goplsClient = null;
+      }
+    }
+
     // Find all .go files
     const pattern = config.filePattern ?? '**/*.go';
     const files = await glob(pattern, {
@@ -121,10 +146,14 @@ export class GoPlugin implements ILanguagePlugin {
 
     const packageList = Array.from(packages.values());
 
-    // Match interface implementations
+    // Match interface implementations (using gopls if available)
     const allStructs = packageList.flatMap(p => p.structs);
     const allInterfaces = packageList.flatMap(p => p.interfaces);
-    const implementations = this.matcher.matchImplicitImplementations(allStructs, allInterfaces);
+    const implementations = await this.matcher.matchWithGopls(
+      allStructs,
+      allInterfaces,
+      this.goplsClient
+    );
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
@@ -142,13 +171,14 @@ export class GoPlugin implements ILanguagePlugin {
 
   /**
    * Parse single Go file
+   * Note: gopls not used for single file parsing (requires workspace context)
    */
   parseCode(code: string, filePath: string = 'source.go'): ArchJSON {
     this.ensureInitialized();
 
     const pkg = this.treeSitter.parseCode(code, filePath);
 
-    // Match implementations within single file
+    // Match implementations within single file (name-based only)
     const implementations = this.matcher.matchImplicitImplementations(
       pkg.structs,
       pkg.interfaces
@@ -174,6 +204,16 @@ export class GoPlugin implements ILanguagePlugin {
   async parseFiles(filePaths: string[]): Promise<ArchJSON> {
     this.ensureInitialized();
 
+    // Try to initialize gopls if we have a workspace context
+    if (this.goplsClient && !this.goplsClient.isInitialized() && this.workspaceRoot) {
+      try {
+        await this.goplsClient.initialize(this.workspaceRoot);
+      } catch (error) {
+        console.warn('Failed to initialize gopls:', error);
+        this.goplsClient = null;
+      }
+    }
+
     const packages = new Map<string, GoRawPackage>();
 
     for (const file of filePaths) {
@@ -194,10 +234,14 @@ export class GoPlugin implements ILanguagePlugin {
 
     const packageList = Array.from(packages.values());
 
-    // Match implementations
+    // Match implementations (using gopls if available)
     const allStructs = packageList.flatMap(p => p.structs);
     const allInterfaces = packageList.flatMap(p => p.interfaces);
-    const implementations = this.matcher.matchImplicitImplementations(allStructs, allInterfaces);
+    const implementations = await this.matcher.matchWithGopls(
+      allStructs,
+      allInterfaces,
+      this.goplsClient
+    );
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
@@ -217,6 +261,16 @@ export class GoPlugin implements ILanguagePlugin {
    * Dispose resources
    */
   async dispose(): Promise<void> {
+    // Cleanup gopls client
+    if (this.goplsClient) {
+      try {
+        await this.goplsClient.dispose();
+      } catch (error) {
+        console.warn('Error disposing gopls client:', error);
+      }
+      this.goplsClient = null;
+    }
+
     this.initialized = false;
   }
 

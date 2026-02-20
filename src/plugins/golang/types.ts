@@ -118,5 +118,5 @@ export interface InferredImplementation {
   interfacePackageId: string;
   confidence: number;
   matchedMethods: string[];
-  source: 'explicit' | 'inferred';
+  source: 'explicit' | 'inferred' | 'gopls';
 }

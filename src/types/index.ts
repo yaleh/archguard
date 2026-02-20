@@ -132,5 +132,5 @@ export interface Relation {
   source: string;
   target: string;
   confidence?: number;
-  inferenceSource?: 'explicit' | 'inferred';
+  inferenceSource?: 'explicit' | 'inferred' | 'gopls';
 }
