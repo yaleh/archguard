@@ -1,6 +1,6 @@
 # ArchGuard 多语言支持实施建议
 
-**文档版本**: 2.0
+**文档版本**: 2.1
 **创建日期**: 2026-01-25
 **最后修改**: 2026-02-20
 **关联文档**: 01-architecture-optimization-proposal.md
@@ -12,12 +12,12 @@
 
 本文档详细规划 ArchGuard 从 TypeScript 单语言支持扩展到多语言（Java, Python, Go, Rust）的技术路线。通过插件化架构设计，实现语言扩展的低成本、高一致性。
 
-**v2.0 主要变更**:
-- 重新设计接口体系，遵循接口隔离原则（ISP）
-- 补充 `Dependency` 类型定义
-- 修复测试代码语法错误
-- 调整实施路线图为更现实的时间估算
-- 确保与现有代码库的兼容性
+**v2.1 主要变更**:
+- 对齐 TypeScriptPlugin 实现与现有 `TypeScriptParser` API
+- 新增类型迁移计划（Phase 0 前置任务）
+- 统一 ArchJSON Schema 与现有类型定义
+- 修复代码示例中的导入和空值检查问题
+- 明确 `Relation` 字段使用 `source/target`（与现有代码一致）
 
 ---
 
@@ -37,12 +37,162 @@
 | AST 解析器各异 | 中 | 插件化 Parser 接口 |
 | 语言特性不对称 | 中 | 定义最小公共特征集 |
 | 测试成本倍增 | 高 | 自动化测试套件 |
+| 现有类型定义需要迁移 | 中 | 渐进式迁移 + 向后兼容 |
 
 ---
 
-## 2. 架构设计
+## 2. 现有类型迁移计划（Phase 0 前置任务）
 
-### 2.1 接口体系设计（遵循 ISP 原则）
+### 2.1 当前类型定义分析
+
+现有 `src/types/index.ts` 与多语言支持存在以下不兼容：
+
+| 字段 | 当前定义 | 目标定义 | 迁移策略 |
+|------|---------|---------|---------|
+| `ArchJSON.language` | `'typescript'` (字面量) | `string` | 改为联合类型，渐进扩展 |
+| `Relation.source/target` | `source`, `target` | 保持不变 | 无需迁移 |
+| `Relation.id` | `id: string` (必需) | 保持不变 | 无需迁移 |
+| `MemberType` | `'property' \| 'method' \| 'constructor'` | 增加 `'field'` | 向后兼容扩展 |
+| `RelationType` | 不含 `'association'` | 增加 `'association'` | 向后兼容扩展 |
+| `Decorator.arguments` | `string[]` | `string[] \| Record<string, unknown>` | 联合类型兼容 |
+
+### 2.2 迁移实施步骤
+
+```typescript
+// src/types/index.ts - 迁移后的类型定义
+
+/**
+ * 支持的语言类型
+ * 渐进式扩展：新语言通过联合类型添加
+ */
+export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust';
+
+/**
+ * Main architecture JSON structure
+ * v2.0: 支持多语言
+ */
+export interface ArchJSON {
+  version: string;
+  language: SupportedLanguage;  // 从字面量改为联合类型
+  timestamp: string;
+  sourceFiles: string[];
+  entities: Entity[];
+  relations: Relation[];
+  modules?: Module[];           // 新增：模块/包结构
+  metadata?: Record<string, unknown>; // 新增：语言特定元信息
+}
+
+/**
+ * Entity types in the architecture
+ * v2.0: 扩展支持更多语言的实体类型
+ */
+export type EntityType =
+  | 'class'
+  | 'interface'
+  | 'enum'
+  | 'struct'          // Go, Rust
+  | 'trait'           // Rust
+  | 'abstract_class'
+  | 'function';       // 顶层函数（Go, Python）
+
+/**
+ * Member types
+ * v2.0: 增加 'field' 用于 Go struct 字段
+ */
+export type MemberType = 'property' | 'method' | 'constructor' | 'field';
+
+/**
+ * Relation types between entities
+ * v2.0: 增加 'association'
+ */
+export type RelationType =
+  | 'inheritance'
+  | 'implementation'
+  | 'composition'
+  | 'aggregation'
+  | 'dependency'
+  | 'association';    // 新增
+
+/**
+ * Relation between entities
+ * 注意：使用 source/target 而非 from/to（与现有代码一致）
+ */
+export interface Relation {
+  id: string;
+  type: RelationType;
+  source: string;     // 保持现有字段名
+  target: string;     // 保持现有字段名
+  label?: string;
+  multiplicity?: string;
+  confidence?: number;           // 新增：隐式推断的置信度
+  inferenceSource?: 'explicit' | 'inferred'; // 新增：关系来源
+}
+
+/**
+ * Decorator information
+ * v2.0: 支持复杂参数结构
+ */
+export interface Decorator {
+  name: string;
+  arguments?: string[] | Record<string, unknown>; // 联合类型兼容
+}
+
+/**
+ * Module structure (新增)
+ */
+export interface Module {
+  name: string;
+  entities: string[];
+  submodules?: Module[];
+}
+```
+
+### 2.3 迁移验证
+
+```typescript
+// tests/types/migration.test.ts
+
+describe('Type Migration Compatibility', () => {
+  it('should accept legacy typescript-only ArchJSON', () => {
+    const legacyJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',  // 仍然有效
+      // ...
+    };
+    expect(legacyJson.language).toBe('typescript');
+  });
+
+  it('should accept new multi-language ArchJSON', () => {
+    const newJson: ArchJSON = {
+      version: '1.0',
+      language: 'go',  // 新语言
+      // ...
+    };
+    expect(newJson.language).toBe('go');
+  });
+
+  it('should accept both decorator argument formats', () => {
+    const legacyDecorator: Decorator = {
+      name: 'Injectable',
+      arguments: ['provided']  // 旧格式
+    };
+
+    const newDecorator: Decorator = {
+      name: 'Injectable',
+      arguments: { providedIn: 'root' }  // 新格式
+    };
+
+    expect(legacyDecorator.arguments).toEqual(['provided']);
+    expect(newDecorator.arguments).toEqual({ providedIn: 'root' });
+  });
+});
+```
+
+---
+
+## 3. 架构设计
+
+### 3.1 接口体系设计（遵循 ISP 原则）
 
 将原单一接口拆分为职责清晰的多个接口，插件可按需组合实现：
 
@@ -61,17 +211,16 @@ interface IParser {
   parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON>;
 
   /**
-   * 解析单文件（可选）
-   * 仅适用于脚本语言或局部上下文即可完成分析的场景
-   * 默认实现：调用 parseProject 并过滤结果
+   * 解析单个代码字符串（可选）
+   * 用于测试或小片段分析
    */
-  parseFile?(filePath: string, config: ParseConfig): Promise<ArchJSON>;
+  parseCode?(code: string, filePath?: string): ArchJSON;
 
   /**
-   * 批量解析（可选，性能优化）
-   * 默认实现：并行调用 parseFile
+   * 批量解析文件列表（可选，性能优化）
+   * 默认实现：使用 ParallelParser
    */
-  parseBatch?(filePaths: string[], config: ParseConfig): Promise<ArchJSON>;
+  parseFiles?(filePaths: string[]): Promise<ArchJSON>;
 }
 
 /**
@@ -103,6 +252,7 @@ interface ParseConfig {
   workspaceRoot: string;
   excludePatterns: string[];
   includePatterns?: string[];
+  filePattern?: string;        // glob 模式，如 '**/*.ts'
   concurrency?: number;
   languageSpecific?: Record<string, unknown>;
 }
@@ -110,7 +260,7 @@ interface ParseConfig {
 
 ---
 
-### 2.2 语言插件统一接口
+### 3.2 语言插件统一接口
 
 ```typescript
 // core/interfaces/language-plugin.ts
@@ -179,7 +329,7 @@ interface PluginInitConfig {
 
 ---
 
-### 2.3 依赖类型定义
+### 3.3 依赖类型定义
 
 ```typescript
 // core/interfaces/dependency.ts
@@ -224,7 +374,7 @@ type DependencyScope =
 
 ---
 
-### 2.4 验证结果类型定义
+### 3.4 验证结果类型定义
 
 ```typescript
 // core/interfaces/validation.ts
@@ -256,7 +406,7 @@ interface ValidationWarning {
 
 ---
 
-### 2.5 插件注册与发现
+### 3.5 插件注册与发现
 
 ```typescript
 // core/plugin-registry.ts
@@ -264,6 +414,7 @@ interface ValidationWarning {
 import { pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs-extra';
+import type { ILanguagePlugin, PluginMetadata } from './interfaces/index.js';
 
 interface PluginRegistration {
   plugin: ILanguagePlugin;
@@ -385,6 +536,32 @@ class PluginRegistry {
   }
 
   /**
+   * 根据目录检测合适的插件
+   * 检查目录中是否存在语言标识文件（如 go.mod, package.json）
+   */
+  async detectPluginForDirectory(dirPath: string): Promise<ILanguagePlugin | null> {
+    // 检测顺序：go.mod -> package.json -> Cargo.toml -> pom.xml -> setup.py
+    const detectionRules: Array<{ file: string; plugin: string }> = [
+      { file: 'go.mod', plugin: 'golang' },
+      { file: 'package.json', plugin: 'typescript' },
+      { file: 'Cargo.toml', plugin: 'rust' },
+      { file: 'pom.xml', plugin: 'java' },
+      { file: 'setup.py', plugin: 'python' },
+      { file: 'pyproject.toml', plugin: 'python' },
+    ];
+
+    for (const rule of detectionRules) {
+      const filePath = path.join(dirPath, rule.file);
+      if (await fs.pathExists(filePath)) {
+        const plugin = this.plugins.get(rule.plugin)?.plugin;
+        if (plugin) return plugin;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * 获取特定版本的插件
    */
   getPluginByVersion(name: string, version: string): ILanguagePlugin | null {
@@ -461,146 +638,24 @@ class PluginConflictError extends Error {
     this.name = 'PluginConflictError';
   }
 }
+
+export { PluginRegistry, PluginConflictError };
+export type { RegisterOptions, PluginRegistration };
 ```
 
 ---
 
-### 2.6 统一的 Arch-JSON Schema
+## 4. 语言适配器实现
 
-```typescript
-// core/schema/arch-json.ts
-
-/**
- * 架构 JSON - 跨语言统一格式
- *
- * 设计原则:
- * 1. 语言无关: 不依赖特定语言特性
- * 2. 可扩展: 支持通过 metadata 添加语言特定信息
- * 3. 语义清晰: 字段命名明确，易于 AI 理解
- */
-interface ArchJSON {
-  version: string;           // Schema 版本
-  language: string;          // 源语言 (typescript, java, python, go, rust)
-  timestamp: string;         // 生成时间
-  sourceFiles: string[];     // 源文件列表
-
-  entities: Entity[];        // 实体列表 (类、接口、结构体等)
-  relations: Relation[];     // 关系列表
-  modules?: Module[];        // 模块/包结构 (可选)
-
-  metadata?: Record<string, unknown>; // 语言特定元信息
-}
-
-interface Entity {
-  id: string;                // 唯一标识 (e.g., "com.example.UserService")
-  name: string;              // 短名称 (e.g., "UserService")
-  type: EntityType;          // 实体类型
-  visibility: Visibility;    // 可见性
-  isAbstract?: boolean;      // 是否抽象
-  isFinal?: boolean;         // 是否 final/sealed
-
-  members: Member[];         // 成员 (方法、字段)
-  decorators?: Decorator[];  // 装饰器/注解
-  genericParams?: string[];  // 泛型参数
-
-  sourceLocation: SourceLocation;
-  documentation?: string;    // 文档注释
-  metadata?: Record<string, unknown>;
-}
-
-type EntityType =
-  | 'class'
-  | 'interface'
-  | 'enum'
-  | 'struct'        // Go, Rust
-  | 'trait'         // Rust
-  | 'protocol'      // Swift
-  | 'abstract_class'
-  | 'function';     // 顶层函数（Go, Python）
-
-type Visibility = 'public' | 'protected' | 'private' | 'internal' | 'package';
-
-interface Member {
-  name: string;
-  type: MemberType;
-  visibility: Visibility;
-  isStatic?: boolean;
-  isAsync?: boolean;
-
-  // 方法特定
-  parameters?: Parameter[];
-  returnType?: string;
-
-  // 字段特定
-  fieldType?: string;
-  isReadonly?: boolean;
-
-  metadata?: Record<string, unknown>;
-}
-
-type MemberType = 'method' | 'field' | 'property' | 'constructor';
-
-interface Parameter {
-  name: string;
-  type: string;
-  isOptional?: boolean;
-  defaultValue?: string;
-}
-
-interface Relation {
-  from: string;              // Entity ID
-  to: string;                // Entity ID
-  type: RelationType;
-  label?: string;            // 关系标签
-  multiplicity?: string;     // 多重性 (e.g., "1..*")
-
-  /** 关系的置信度 (0-1)，用于隐式推断的关系 */
-  confidence?: number;
-
-  /** 关系来源说明 */
-  source?: 'explicit' | 'inferred';
-}
-
-type RelationType =
-  | 'inheritance'      // 继承
-  | 'implementation'   // 接口实现
-  | 'composition'      // 组合
-  | 'aggregation'      // 聚合
-  | 'dependency'       // 依赖
-  | 'association';     // 关联
-
-interface Module {
-  name: string;              // 模块名 (e.g., "com.example.user")
-  entities: string[];        // 包含的实体 ID
-  submodules?: Module[];
-}
-
-interface SourceLocation {
-  file: string;
-  startLine: number;
-  endLine: number;
-}
-
-interface Decorator {
-  name: string;              // 装饰器名 (e.g., "@Injectable", "@Service")
-  arguments?: Record<string, unknown>;
-}
-```
-
----
-
-## 3. 语言适配器实现
-
-### 3.1 TypeScript 插件（复用现有基础设施）
+### 4.1 TypeScript 插件（复用现有基础设施）
 
 ```typescript
 // plugins/typescript/index.ts
 
+import path from 'path';
+import fs from 'fs-extra';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
-import { ClassExtractor } from '@/parser/class-extractor.js';
-import { InterfaceExtractor } from '@/parser/interface-extractor.js';
-import { EnumExtractor } from '@/parser/enum-extractor.js';
-import { RelationExtractor } from '@/parser/relation-extractor.js';
+import { ParallelParser } from '@/parser/parallel-parser.js';
 import type {
   ILanguagePlugin,
   PluginMetadata,
@@ -610,7 +665,9 @@ import type {
   IDependencyExtractor,
   IValidator,
   Dependency,
-  ValidationResult
+  ValidationResult,
+  ValidationError,
+  ValidationWarning
 } from '@/core/interfaces/index.js';
 
 export default class TypeScriptPlugin implements ILanguagePlugin {
@@ -630,6 +687,7 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
   };
 
   private parser!: TypeScriptParser;
+  private parallelParser!: ParallelParser;
   private initialized = false;
 
   readonly dependencyExtractor: IDependencyExtractor = {
@@ -644,34 +702,55 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
     if (this.initialized) return;
 
     this.parser = new TypeScriptParser();
+    this.parallelParser = new ParallelParser({
+      continueOnError: true
+    });
     this.initialized = true;
   }
 
   canHandle(targetPath: string): boolean {
+    // 处理目录：检查是否存在 package.json 或 tsconfig.json
+    if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+      return fs.existsSync(path.join(targetPath, 'package.json')) ||
+             fs.existsSync(path.join(targetPath, 'tsconfig.json'));
+    }
+
+    // 处理文件：检查扩展名
     const ext = path.extname(targetPath).toLowerCase();
     return this.metadata.fileExtensions.includes(ext);
   }
 
+  /**
+   * 解析整个项目
+   * 使用现有的 TypeScriptParser.parseProject 方法
+   */
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
     this.ensureInitialized();
 
-    // 复用现有的 TypeScriptParser
-    return await this.parser.parseDirectory(workspaceRoot, {
-      exclude: config.excludePatterns,
-      include: config.includePatterns
-    });
+    // 构建 glob 模式
+    const pattern = config.filePattern ?? '**/*.ts';
+
+    // 调用现有的 parseProject 方法
+    // 注意：现有方法签名是 parseProject(rootDir, pattern)
+    return this.parser.parseProject(workspaceRoot, pattern);
   }
 
-  async parseFile(filePath: string, config: ParseConfig): Promise<ArchJSON> {
+  /**
+   * 解析单个代码字符串
+   * 使用现有的 TypeScriptParser.parseCode 方法
+   */
+  parseCode(code: string, filePath: string = 'source.ts'): ArchJSON {
     this.ensureInitialized();
-    return await this.parser.parseFile(filePath);
+    return this.parser.parseCode(code, filePath);
   }
 
-  async parseBatch(filePaths: string[], config: ParseConfig): Promise<ArchJSON> {
+  /**
+   * 批量解析文件
+   * 使用现有的 ParallelParser.parseFiles 方法
+   */
+  async parseFiles(filePaths: string[]): Promise<ArchJSON> {
     this.ensureInitialized();
-    return await this.parser.parseFiles(filePaths, {
-      concurrency: config.concurrency
-    });
+    return this.parallelParser.parseFiles(filePaths);
   }
 
   private async extractDeps(workspaceRoot: string): Promise<Dependency[]> {
@@ -708,6 +787,18 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
       });
     }
 
+    // 对等依赖
+    for (const [name, version] of Object.entries(packageJson.peerDependencies ?? {})) {
+      dependencies.push({
+        name,
+        version: version as string,
+        type: 'npm',
+        scope: 'peer',
+        source: 'package.json',
+        isDirect: true
+      });
+    }
+
     return dependencies;
   }
 
@@ -726,6 +817,16 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
       });
     }
 
+    // 验证 language
+    if (!archJson.language) {
+      errors.push({
+        code: 'MISSING_LANGUAGE',
+        message: 'ArchJSON language is required',
+        path: 'language',
+        severity: 'error'
+      });
+    }
+
     // 验证 entities
     archJson.entities.forEach((entity, index) => {
       if (!entity.id) {
@@ -736,18 +837,38 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
           severity: 'error'
         });
       }
+
+      if (!entity.name) {
+        errors.push({
+          code: 'MISSING_ENTITY_NAME',
+          message: `Entity at index ${index} is missing name`,
+          path: `entities[${index}].name`,
+          severity: 'error'
+        });
+      }
     });
 
     // 验证 relations 引用的实体存在
     const entityIds = new Set(archJson.entities.map(e => e.id));
     archJson.relations.forEach((relation, index) => {
-      if (!entityIds.has(relation.from)) {
+      // 注意：使用 source/target 字段（与现有代码一致）
+      if (!entityIds.has(relation.source)) {
         warnings.push({
-          code: 'DANGLING_RELATION',
-          message: `Relation references non-existent entity: ${relation.from}`,
-          path: `relations[${index}].from`,
+          code: 'DANGLING_RELATION_SOURCE',
+          message: `Relation references non-existent source entity: ${relation.source}`,
+          path: `relations[${index}].source`,
           severity: 'warning',
           suggestion: 'Ensure the source entity is included in the parsed scope'
+        });
+      }
+
+      if (!entityIds.has(relation.target)) {
+        warnings.push({
+          code: 'DANGLING_RELATION_TARGET',
+          message: `Relation references non-existent target entity: ${relation.target}`,
+          path: `relations[${index}].target`,
+          severity: 'warning',
+          suggestion: 'Ensure the target entity is included in the parsed scope'
         });
       }
     });
@@ -774,12 +895,15 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
 
 ---
 
-## 4. 实施路线图
+## 5. 实施路线图
 
-### Phase 0: 接口定义与 PoC (Week 1-2)
+### Phase 0: 类型迁移与接口定义 (Week 1-2)
 
-**目标**: 验证插件架构的可行性
+**目标**: 迁移现有类型定义，验证插件架构的可行性
 
+**任务**:
+- [ ] 迁移 `src/types/index.ts`：扩展 `language`, `EntityType`, `MemberType`, `RelationType`
+- [ ] 确保所有现有测试仍然通过（向后兼容）
 - [ ] 定义 `IParser`, `IDependencyExtractor`, `IValidator` 接口
 - [ ] 定义 `ILanguagePlugin` 组合接口
 - [ ] 定义 `Dependency`, `ValidationResult` 类型
@@ -787,6 +911,7 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
 - [ ] 创建接口 PoC：用 mock 插件验证注册/发现流程
 
 **验收标准**:
+- 类型迁移后所有现有测试通过（370+ 测试）
 - 接口定义通过 TypeScript 类型检查
 - 能成功注册/获取 mock 插件
 - 单元测试覆盖率 > 80%
@@ -795,9 +920,11 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
 
 **目标**: 将现有 TypeScript 解析器封装为插件
 
-- [ ] 创建 `TypeScriptPlugin` 包装现有 `TypeScriptParser`
+**任务**:
+- [ ] 创建 `TypeScriptPlugin` 包装现有 `TypeScriptParser` 和 `ParallelParser`
 - [ ] 实现 `dependencyExtractor` 和 `validator`
 - [ ] 修改 CLI 使用 `PluginRegistry` 获取解析器
+- [ ] 新增 `--lang` CLI 参数支持显式语言选择
 - [ ] 完善自动发现机制（ESM 兼容）
 - [ ] 编写迁移测试确保 100% 兼容
 
@@ -834,57 +961,109 @@ export default class TypeScriptPlugin implements ILanguagePlugin {
 
 ---
 
-## 5. 测试策略
+## 6. 测试策略
 
-### 5.1 单元测试
+### 6.1 类型迁移测试
 
 ```typescript
-// __tests__/plugins/typescript.test.ts
+// tests/types/migration.test.ts
+
+import { describe, it, expect } from 'vitest';
+import type { ArchJSON, Relation, MemberType, EntityType } from '../../src/types/index.js';
+
+describe('Type Migration', () => {
+  it('should support new languages', () => {
+    const goJson: ArchJSON = {
+      version: '1.0',
+      language: 'go',  // 新语言
+      timestamp: new Date().toISOString(),
+      sourceFiles: ['main.go'],
+      entities: [],
+      relations: []
+    };
+
+    expect(goJson.language).toBe('go');
+  });
+
+  it('should support field member type', () => {
+    const memberType: MemberType = 'field';
+    expect(memberType).toBe('field');
+  });
+
+  it('should support struct entity type', () => {
+    const entityType: EntityType = 'struct';
+    expect(entityType).toBe('struct');
+  });
+
+  it('should use source/target for relations', () => {
+    const relation: Relation = {
+      id: 'rel-1',
+      type: 'dependency',
+      source: 'ClassA',
+      target: 'ClassB'
+    };
+
+    expect(relation.source).toBe('ClassA');
+    expect(relation.target).toBe('ClassB');
+  });
+});
+```
+
+### 6.2 插件单元测试
+
+```typescript
+// tests/plugins/typescript.test.ts
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import TypeScriptPlugin from '../../plugins/typescript/index.js';
+import type { ParseConfig } from '../../core/interfaces/index.js';
 
 describe('TypeScriptPlugin', () => {
   let plugin: TypeScriptPlugin;
 
-  // 修复：使用 async 函数
   beforeEach(async () => {
     plugin = new TypeScriptPlugin();
     await plugin.initialize({ workspaceRoot: __dirname });
   });
 
-  it('should parse a simple class', async () => {
-    const filePath = '__fixtures__/SimpleClass.ts';
-    const result = await plugin.parseFile(filePath, {
-      workspaceRoot: __dirname,
-      excludePatterns: []
-    });
+  it('should have correct metadata', () => {
+    expect(plugin.metadata.name).toBe('typescript');
+    expect(plugin.metadata.fileExtensions).toContain('.ts');
+  });
+
+  it('should parse code string', () => {
+    const code = `
+      class UserService {
+        getUser(id: string): User {
+          return { id };
+        }
+      }
+    `;
+
+    const result = plugin.parseCode(code, 'user-service.ts');
 
     expect(result.entities).toHaveLength(1);
     expect(result.entities[0].name).toBe('UserService');
-    expect(result.entities[0].members).toHaveLength(2);
+    expect(result.language).toBe('typescript');
   });
 
-  it('should extract decorators', async () => {
-    const filePath = '__fixtures__/DecoratedClass.ts';
-    const result = await plugin.parseFile(filePath, {
-      workspaceRoot: __dirname,
-      excludePatterns: []
-    });
+  it('should parse project directory', async () => {
+    const config: ParseConfig = {
+      workspaceRoot: './fixtures/sample-project',
+      excludePatterns: ['**/*.test.ts'],
+      filePattern: '**/*.ts'
+    };
 
-    expect(result.entities[0].decorators).toContainEqual({
-      name: 'Injectable',
-      arguments: {}
-    });
+    const result = await plugin.parseProject(config.workspaceRoot, config);
+
+    expect(result.entities.length).toBeGreaterThan(0);
+    expect(result.language).toBe('typescript');
   });
 
   it('should extract npm dependencies', async () => {
-    const deps = await plugin.dependencyExtractor.extractDependencies(__dirname);
+    const deps = await plugin.dependencyExtractor.extractDependencies('./fixtures/sample-project');
 
-    expect(deps).toContainEqual(expect.objectContaining({
-      type: 'npm',
-      scope: 'runtime'
-    }));
+    expect(deps.some(d => d.type === 'npm')).toBe(true);
   });
 
   it('should validate ArchJSON', () => {
@@ -903,17 +1082,26 @@ describe('TypeScriptPlugin', () => {
     expect(result.errors).toContainEqual(expect.objectContaining({
       code: 'MISSING_VERSION'
     }));
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'MISSING_ENTITY_ID'
+    }));
+  });
+
+  it('should handle directory detection', () => {
+    expect(plugin.canHandle('./fixtures/sample-project')).toBe(true);
+    expect(plugin.canHandle('./non-existent')).toBe(false);
   });
 });
 ```
 
-### 5.2 跨语言一致性测试
+### 6.3 跨语言一致性测试
 
 ```typescript
-// __tests__/cross-language.test.ts
+// tests/cross-language.test.ts
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { PluginRegistry } from '../../core/plugin-registry.js';
+import type { ArchJSON, ParseConfig } from '../../core/interfaces/index.js';
 
 describe('Cross-language consistency', () => {
   let registry: PluginRegistry;
@@ -921,11 +1109,9 @@ describe('Cross-language consistency', () => {
   const testCases = [
     {
       name: 'Simple class with methods',
-      files: {
-        typescript: '__fixtures__/ts/SimpleClass.ts',
-        java: '__fixtures__/java/SimpleClass.java',
-        python: '__fixtures__/py/simple_class.py',
-        go: '__fixtures__/go/simple_struct.go'
+      fixtures: {
+        typescript: 'fixtures/ts/SimpleClass.ts',
+        go: 'fixtures/go/simple_struct.go'
       },
       expected: {
         entityCount: 1,
@@ -944,29 +1130,41 @@ describe('Cross-language consistency', () => {
     it(`should produce consistent output for: ${testCase.name}`, async () => {
       const results: Record<string, ArchJSON> = {};
 
-      for (const [lang, file] of Object.entries(testCase.files)) {
+      for (const [lang, file] of Object.entries(testCase.fixtures)) {
         const plugin = registry.getPluginForFile(file);
         if (!plugin) {
           console.warn(`No plugin for ${lang}, skipping`);
           continue;
         }
 
-        results[lang] = await plugin.parseFile(file, {
-          workspaceRoot: __dirname,
-          excludePatterns: []
-        });
+        // 使用 parseCode 进行单文件测试（如果插件支持）
+        if (plugin.parseCode) {
+          const fs = await import('fs-extra');
+          const code = await fs.default.readFile(file, 'utf-8');
+          results[lang] = plugin.parseCode(code, file);
+        } else {
+          // 否则使用 parseProject
+          const config: ParseConfig = {
+            workspaceRoot: file,
+            excludePatterns: []
+          };
+          results[lang] = await plugin.parseProject(file, config);
+        }
       }
 
       // 验证所有语言提取的实体数量一致
       const entityCounts = Object.values(results).map(r => r.entities.length);
-      expect(new Set(entityCounts).size).toBe(1);
-      expect(entityCounts[0]).toBe(testCase.expected.entityCount);
+      if (entityCounts.length > 1) {
+        expect(new Set(entityCounts).size).toBe(1);
+      }
 
       // 验证方法数量一致
       for (const result of Object.values(results)) {
-        const methodCount = result.entities[0].members
-          .filter(m => m.type === 'method').length;
-        expect(methodCount).toBe(testCase.expected.methodCount);
+        if (result.entities.length > 0) {
+          const methodCount = result.entities[0].members
+            .filter(m => m.type === 'method').length;
+          expect(methodCount).toBe(testCase.expected.methodCount);
+        }
       }
     });
   }
@@ -975,102 +1173,79 @@ describe('Cross-language consistency', () => {
 
 ---
 
-## 6. 文档与示例
+## 7. CLI 扩展
 
-### 6.1 插件开发指南
-
-创建 `docs/plugin-development-guide.md`:
-
-```markdown
-# ArchGuard 语言插件开发指南
-
-## 快速开始
-
-### 1. 使用脚手架创建插件
-
-```bash
-npm run create-plugin -- --name rust --extensions .rs
-```
-
-### 2. 实现必需接口
+### 7.1 新增 `--lang` 参数
 
 ```typescript
-import type { ILanguagePlugin, ParseConfig, ArchJSON } from '@archguard/core';
+// src/cli/commands/analyze.ts (修改)
 
-export default class RustPlugin implements ILanguagePlugin {
-  readonly metadata = {
-    name: 'rust',
-    version: '1.0.0',
-    displayName: 'Rust',
-    fileExtensions: ['.rs'],
-    author: 'Your Name',
-    minCoreVersion: '2.0.0',
-    capabilities: {
-      singleFileParsing: false,  // Rust 需要项目级分析
-      incrementalParsing: false,
-      dependencyExtraction: true,
-      typeInference: true
-    }
-  };
+import { Command } from 'commander';
+import { PluginRegistry } from '@/core/plugin-registry.js';
 
-  async initialize(config) { /* ... */ }
-  canHandle(path) { /* ... */ }
+export function createAnalyzeCommand(): Command {
+  return new Command('analyze')
+    .description('Analyze source code and generate architecture diagrams')
+    .option('-s, --sources <paths...>', 'Source directories')
+    .option('-l, --level <level>', 'Detail level: package|class|method', 'class')
+    .option('--lang <language>', 'Force language plugin (auto-detect if not specified)')
+    .option('-v, --verbose', 'Verbose output')
+    // ... 其他选项
+    .action(async (options) => {
+      const registry = new PluginRegistry();
+      await registry.discoverPlugins('./plugins');
 
-  async parseProject(root: string, config: ParseConfig): Promise<ArchJSON> {
-    // 实现解析逻辑
-  }
+      let plugin;
 
-  async dispose() { /* ... */ }
+      if (options.lang) {
+        // 显式指定语言
+        plugin = registry.getPluginByVersion(options.lang, 'latest');
+        if (!plugin) {
+          console.error(`Plugin not found: ${options.lang}`);
+          process.exit(1);
+        }
+      } else {
+        // 自动检测
+        plugin = await registry.detectPluginForDirectory(options.sources[0]);
+        if (!plugin) {
+          // 回退到 TypeScript
+          plugin = registry.getPluginForFile('.ts');
+        }
+      }
+
+      // ... 使用 plugin 进行解析
+    });
 }
-```
-
-### 3. 测试插件
-
-```bash
-npm test -- plugins/rust
-```
-
-### 4. 发布插件
-
-```bash
-npm publish --access public
-```
-
-## 最佳实践
-
-1. **性能优化**: 使用 `parseProject` 而非逐文件解析
-2. **错误处理**: 捕获并记录解析错误，不阻塞整体流程
-3. **可配置**: 通过 `languageSpecific` 接受语言特定配置
-4. **测试覆盖**: 提供跨语言一致性测试 fixtures
 ```
 
 ---
 
-## 7. 成功指标
+## 8. 成功指标
 
 | 指标 | 目标 | 测量方法 |
 |------|------|---------|
+| 类型迁移向后兼容 | 100% | 现有测试通过率 |
 | 支持语言数量 | 5+ | 已发布插件数 |
 | 插件开发工作量 | < 5 人日/语言 | 时间跟踪 |
 | Arch-JSON 一致性 | > 90% | 跨语言测试通过率 |
 | 社区贡献插件 | 3+ | GitHub 插件仓库 |
 | 性能回归 | < 5% | 基准测试对比 |
-| 现有测试通过率 | 100% | CI 验证 |
 
 ---
 
-## 8. 风险与缓解
+## 9. 风险与缓解
 
 | 风险 | 可能性 | 影响 | 缓解措施 |
 |------|--------|------|----------|
-| 现有功能回归 | 中 | 高 | 完整的迁移测试套件 |
+| 类型迁移破坏现有功能 | 中 | 高 | 使用联合类型保持向后兼容 |
+| 现有 API 与插件接口不匹配 | 已确认 | 高 | Phase 0 前置类型迁移 |
 | 插件接口变更频繁 | 中 | 中 | 定义 stable/unstable API 边界 |
 | 跨语言一致性难以保证 | 高 | 中 | 定义最小公共特征集 + 严格的一致性测试 |
-| 第三方解析器维护风险 | 低 | 高 | 优先选择活跃维护的解析器 |
 
 ---
 
 **下一步行动**:
-1. 评审本文档中的接口定义
-2. 创建 Phase 0 的 PoC 分支
-3. 开始 TypeScript 插件迁移的详细设计
+1. 执行 Phase 0：迁移 `src/types/index.ts`
+2. 验证所有现有测试仍然通过
+3. 创建 PluginRegistry PoC
+4. 开始 TypeScript 插件封装
