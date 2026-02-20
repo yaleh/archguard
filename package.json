@@ -47,6 +47,8 @@
     "p-map": "^7.0.4",
     "pino": "^8.17.0",
     "sharp": "^0.34.5",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-go": "^0.25.0",
     "ts-morph": "^21.0.0"
   },
   "devDependencies": {
