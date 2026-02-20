@@ -15,6 +15,7 @@
 - 修复 T2.B.3 循环依赖：从依赖 T2.A.3 改为 T2.A.5
 - 更新 T2.B.3 验收标准：明确 gopls 初始化时机
 - 同步 Proposal 03 v2.2 和 Proposal 15 v3.2 的变更
+- 标准化测试覆盖率目标：统一使用 80% 作为基准（之前混用 75%/80%/85%）
 
 ---
 
@@ -173,7 +174,7 @@ gantt
     - ESM 动态加载
   acceptance:
     - 支持插件注册、查询、版本管理
-    - 单元测试覆盖率 > 85%
+    - 单元测试覆盖率 > 80%  # 标准基准
   files:
     - src/core/plugin-registry.ts
     - tests/core/plugin-registry.test.ts
@@ -191,6 +192,7 @@ gantt
   acceptance:
     - Mock 插件测试全部通过
     - PluginRegistry 集成测试通过
+    - 测试覆盖率 > 80%
   files:
     - tests/fixtures/mock-plugin/index.ts
     - tests/core/plugin-registry.integration.test.ts
@@ -208,7 +210,7 @@ gantt
 
 - [ ] 所有现有测试通过（370+ tests）
 - [ ] 新增类型迁移测试通过
-- [ ] PluginRegistry 单元测试通过（覆盖率 > 85%）
+- [ ] PluginRegistry 单元测试通过（覆盖率 > 80%）
 - [ ] Mock 插件集成测试通过
 - [ ] 性能回归 < 2%
 - [ ] 文档更新（CHANGELOG, README）
@@ -304,7 +306,7 @@ gantt
     - 测试错误处理
     - 测试与 PluginRegistry 集成
   acceptance:
-    - 插件测试覆盖率 > 85%
+    - 插件测试覆盖率 > 80%  # 标准基准
     - 所有测试通过
   files:
     - tests/plugins/typescript/index.test.ts
@@ -435,7 +437,7 @@ gantt
 
 **Checkpoint P1**: TypeScript 插件就绪
 
-- [ ] TypeScript 插件所有测试通过（覆盖率 > 85%）
+- [ ] TypeScript 插件所有测试通过（覆盖率 > 80%）
 - [ ] CLI `--lang` 参数工作正常
 - [ ] 所有现有测试通过（370+）
 - [ ] 性能回归 < 5%
@@ -513,7 +515,7 @@ Phase 2 采用 **2 个并行工作流**：
   acceptance:
     - 隐式接口检测准确率 > 75% (无 gopls)
     - 嵌入方法提升准确率 > 95%
-    - 单元测试覆盖率 > 85%
+    - 单元测试覆盖率 > 80%  # 标准基准
   files:
     - plugins/golang/interface-matcher.ts
     - tests/plugins/golang/interface-matcher.test.ts
@@ -593,7 +595,7 @@ Phase 2 采用 **2 个并行工作流**：
   acceptance:
     - 能获取接口实现信息
     - 能获取类型信息
-    - 单元测试覆盖率 > 75%
+    - 单元测试覆盖率 > 80%  # 标准基准
   files:
     - plugins/golang/gopls-client.ts
     - tests/plugins/golang/gopls-requests.test.ts
