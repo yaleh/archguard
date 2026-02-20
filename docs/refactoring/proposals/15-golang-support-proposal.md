@@ -1,9 +1,9 @@
-# ArchGuard Go 语言支持实施建议 (Proposal v3.1)
+# ArchGuard Go 语言支持实施建议 (Proposal v3.2)
 
-**文档版本**: 3.1
+**文档版本**: 3.2
 **创建日期**: 2026-02-20
 **最后修改**: 2026-02-20
-**关联文档**: 03-multi-language-support.md (前置依赖)
+**关联文档**: 03-multi-language-support.md v2.2+ (前置依赖)
 **目标示例项目**: `/home/yale/work/codex-swarm`
 
 ---
@@ -12,14 +12,19 @@
 
 本文档规划为 ArchGuard 引入对 Go 语言（Golang）微服务及系统编程项目的深度架构分析支持。
 
-**v3.1 主要变更**:
+**v3.2 主要变更**:
+- 明确 gopls 初始化时机：在 `parseProject()` 中初始化，而非 `plugin.initialize()` 中
+- 新增 gopls 生命周期说明（Section 4.2.2）
+- 更新类图注释说明初始化时机（Section 3.2）
+- 更新 GoPlugin 实现代码注释（Section 6）
+
+**v3.1 变更**:
 - 补充 `InferredImplementation`, `MatchResult`, `MethodSet` 类型定义
 - 完善嵌入类型的方法提升算法
 - 补全 `GoplsClient.parseImplementations` 和 `parseTypeInfo` 方法
 - 对齐 `TreeSitterBridge` 类图与实际调用
 - 修复缺失的导入语句
-- 统一 Relation 字段使用 `source/target`（与 Proposal 03 v2.1 及现有代码一致）
-- 调整 gopls 初始化时机到 parseProject 阶段
+- 统一 Relation 字段使用 `source/target`（与 Proposal 03 及现有代码一致）
 
 **核心目标：**
 - 依赖 Proposal 03 v2.1+ 的 `ILanguagePlugin` 基础设施
@@ -162,6 +167,9 @@ classDiagram
         -parseImplementations(result: any) Implementation[]
         -parseTypeInfo(result: any) TypeInfo?
     }
+
+    %% 注意: GoplsClient.initialize() 在 GoPlugin.parseProject() 时调用
+    %% 而非 GoPlugin.initialize() 时调用，因为 workspace 可能不同
 
     class InterfaceMatcher {
         -structCache: Map~string, GoRawStruct~
@@ -813,6 +821,26 @@ export { InterfaceMatcher };
 
 #### 4.2.2 gopls 客户端实现
 
+**重要设计决策: gopls 初始化时机**
+
+gopls 的初始化**不在插件的 `initialize()` 方法中进行**，而是**在 `parseProject()` 时按需初始化**，原因如下：
+
+1. **workspace 依赖性**: gopls 需要知道 Go 模块的根目录（go.mod 所在目录），这个路径在 `parseProject()` 调用时才确定
+2. **多项目支持**: 用户可能在同一个会话中分析多个不同的 Go 项目，每个项目需要独立的 gopls 实例
+3. **资源管理**: 仅在实际需要语义分析时启动 gopls，避免不必要的进程开销
+4. **可选性**: 用户可以通过配置禁用 gopls，此时完全不启动进程
+
+**生命周期**:
+```
+GoPlugin.initialize()        // gopls 客户端对象创建但未启动
+  ↓
+GoPlugin.parseProject(root)  // 此时调用 goplsClient.initialize(root)
+  ↓
+[解析和语义分析]
+  ↓
+GoPlugin.dispose()           // 调用 goplsClient.shutdown()
+```
+
 ```typescript
 // plugins/golang/gopls-client.ts
 
@@ -829,6 +857,9 @@ import type { SourceLocation, Implementation, TypeInfo } from './types.js';
  * gopls LSP 客户端
  *
  * 通过 LSP 协议与 gopls 通信，获取精确的类型信息
+ *
+ * 注意：initialize() 应在 GoPlugin.parseProject() 时调用，
+ * 而非 GoPlugin.initialize() 时调用
  */
 export class GoplsClient {
   private serverProcess: ChildProcess | null = null;
@@ -1302,6 +1333,10 @@ export default class GoPlugin implements ILanguagePlugin {
       implicitInterfaceConfidenceThreshold: 0.8
     };
 
+    // 注意: gopls 客户端对象在这里不初始化
+    // 实际初始化发生在 parseProject() 中，因为需要 workspaceRoot
+    this.goplsClient = null;
+
     this.initialized = true;
   }
 
@@ -1334,13 +1369,19 @@ export default class GoPlugin implements ILanguagePlugin {
     const rawData = await this.treeSitter.parseFiles(goFiles, goConfig);
 
     // 3. 可选：初始化并使用 gopls 增强语义信息
+    // 注意：gopls 初始化在这里进行，而非 plugin.initialize() 中
+    // 原因：每个项目可能有不同的 workspaceRoot (go.mod 位置)
     if (goConfig.enableGopls !== false) {
       try {
         if (!this.goplsClient) {
           this.goplsClient = new GoplsClient();
         }
-        // 在 parseProject 时初始化 gopls（因为 workspaceRoot 可能不同）
+
+        // 关键：在 parseProject() 阶段初始化 gopls
+        // 传入当前项目的 workspaceRoot，gopls 会基于此根目录进行语义分析
         await this.goplsClient.initialize(workspaceRoot);
+
+        // 使用 gopls 增强接口实现检测
         await this.enhanceWithGopls(rawData);
       } catch (error) {
         console.warn('gopls initialization failed, falling back to Tree-sitter only:', error);

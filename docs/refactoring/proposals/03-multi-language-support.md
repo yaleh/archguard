@@ -1,6 +1,6 @@
 # ArchGuard 多语言支持实施建议
 
-**文档版本**: 2.1
+**文档版本**: 2.2
 **创建日期**: 2026-01-25
 **最后修改**: 2026-02-20
 **关联文档**: 01-architecture-optimization-proposal.md
@@ -12,7 +12,13 @@
 
 本文档详细规划 ArchGuard 从 TypeScript 单语言支持扩展到多语言（Java, Python, Go, Rust）的技术路线。通过插件化架构设计，实现语言扩展的低成本、高一致性。
 
-**v2.1 主要变更**:
+**v2.2 主要变更**:
+- 新增详细的测试 Fixture 规范（Section 6.3）
+- 新增插件错误处理规范（Section 3.5）
+- 定义 PluginError 层次结构和错误代码规范
+- 更新跨语言一致性测试为 spec 驱动
+
+**v2.1 变更**:
 - 对齐 TypeScriptPlugin 实现与现有 `TypeScriptParser` API
 - 新增类型迁移计划（Phase 0 前置任务）
 - 统一 ArchJSON Schema 与现有类型定义
@@ -406,7 +412,237 @@ interface ValidationWarning {
 
 ---
 
-### 3.5 插件注册与发现
+### 3.5 插件错误处理规范
+
+**目的**: 统一插件错误类型，提供一致的错误处理体验
+
+#### 3.5.1 错误层次结构
+
+```typescript
+// core/interfaces/errors.ts
+
+/**
+ * 插件错误基类
+ * 所有插件抛出的错误都应继承此类
+ */
+export class PluginError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly pluginName: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'PluginError';
+
+    // 保留堆栈跟踪
+    if (cause && cause.stack) {
+      this.stack = `${this.stack}\nCaused by: ${cause.stack}`;
+    }
+  }
+}
+
+/**
+ * 解析错误 - 源代码解析失败
+ */
+export class ParseError extends PluginError {
+  constructor(
+    message: string,
+    pluginName: string,
+    public readonly file: string,
+    public readonly line?: number,
+    cause?: Error
+  ) {
+    super(message, 'PARSE_ERROR', pluginName, cause);
+    this.name = 'ParseError';
+  }
+}
+
+/**
+ * 配置错误 - 插件配置无效
+ */
+export class PluginConfigError extends PluginError {
+  constructor(
+    message: string,
+    pluginName: string,
+    public readonly configKey: string,
+    cause?: Error
+  ) {
+    super(message, 'CONFIG_ERROR', pluginName, cause);
+    this.name = 'PluginConfigError';
+  }
+}
+
+/**
+ * 初始化错误 - 插件初始化失败
+ */
+export class PluginInitializationError extends PluginError {
+  constructor(
+    message: string,
+    pluginName: string,
+    public readonly reason: string,
+    cause?: Error
+  ) {
+    super(message, 'INIT_ERROR', pluginName, cause);
+    this.name = 'PluginInitializationError';
+  }
+}
+
+/**
+ * 工具依赖错误 - 外部工具不可用
+ */
+export class ToolDependencyError extends PluginError {
+  constructor(
+    message: string,
+    pluginName: string,
+    public readonly toolName: string,
+    public readonly requiredVersion?: string,
+    cause?: Error
+  ) {
+    super(message, 'TOOL_DEPENDENCY_ERROR', pluginName, cause);
+    this.name = 'ToolDependencyError';
+  }
+}
+
+/**
+ * 文件系统错误 - 文件操作失败
+ */
+export class FileSystemError extends PluginError {
+  constructor(
+    message: string,
+    pluginName: string,
+    public readonly filePath: string,
+    public readonly operation: 'read' | 'write' | 'access' | 'scan',
+    cause?: Error
+  ) {
+    super(message, 'FILE_SYSTEM_ERROR', pluginName, cause);
+    this.name = 'FileSystemError';
+  }
+}
+```
+
+#### 3.5.2 错误使用规范
+
+**插件实现者应当**:
+
+1. **使用特定错误类型**
+   ```typescript
+   // ✅ Good
+   throw new ParseError(
+     'Failed to parse Go struct',
+     'golang',
+     '/path/to/file.go',
+     42,
+     originalError
+   );
+
+   // ❌ Bad
+   throw new Error('Parse failed');
+   ```
+
+2. **保留原始错误**
+   ```typescript
+   try {
+     await fs.readFile(filePath);
+   } catch (error) {
+     throw new FileSystemError(
+       `Failed to read ${filePath}`,
+       this.metadata.name,
+       filePath,
+       'read',
+       error as Error  // 保留原始错误
+     );
+   }
+   ```
+
+3. **提供上下文信息**
+   ```typescript
+   throw new PluginConfigError(
+     `Invalid concurrency value: ${config.concurrency}. Expected 1-16.`,
+     this.metadata.name,
+     'concurrency'
+   );
+   ```
+
+4. **使用描述性消息**
+   ```typescript
+   // ✅ Good
+   throw new ToolDependencyError(
+     'gopls is required but not found in PATH. Install with: go install golang.org/x/tools/gopls@latest',
+     'golang',
+     'gopls',
+     '>=0.11.0'
+   );
+
+   // ❌ Bad
+   throw new ToolDependencyError('gopls not found', 'golang', 'gopls');
+   ```
+
+#### 3.5.3 错误处理最佳实践
+
+**PluginRegistry 错误处理**:
+```typescript
+try {
+  const plugin = await registry.getPluginForFile(filePath);
+  const result = await plugin.parseProject(root, config);
+} catch (error) {
+  if (error instanceof PluginError) {
+    console.error(`[${error.pluginName}] ${error.code}: ${error.message}`);
+
+    // 特定错误类型的处理
+    if (error instanceof ToolDependencyError) {
+      console.error(`Missing tool: ${error.toolName}`);
+      if (error.requiredVersion) {
+        console.error(`Required version: ${error.requiredVersion}`);
+      }
+    } else if (error instanceof ParseError) {
+      console.error(`Parse error in ${error.file}${error.line ? `:${error.line}` : ''}`);
+    }
+
+    // 打印原始错误（如果有）
+    if (error.cause) {
+      console.error('Caused by:', error.cause);
+    }
+  } else {
+    // 未知错误
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+**插件内部错误恢复**:
+```typescript
+async parseProject(root: string, config: ParseConfig): Promise<ArchJSON> {
+  try {
+    // 主要解析逻辑
+  } catch (error) {
+    if (config.continueOnError) {
+      // 降级策略
+      console.warn(`Parse failed, returning partial result: ${error}`);
+      return this.createPartialArchJSON(root);
+    } else {
+      // 向上传播错误
+      throw error;
+    }
+  }
+}
+```
+
+#### 3.5.4 错误代码规范
+
+| 错误代码 | 类型 | 场景 | 推荐操作 |
+|---------|------|------|---------|
+| `PARSE_ERROR` | ParseError | 源代码解析失败 | 检查语法错误 |
+| `CONFIG_ERROR` | PluginConfigError | 配置无效 | 修正配置文件 |
+| `INIT_ERROR` | PluginInitializationError | 插件初始化失败 | 检查前置条件 |
+| `TOOL_DEPENDENCY_ERROR` | ToolDependencyError | 外部工具缺失 | 安装依赖工具 |
+| `FILE_SYSTEM_ERROR` | FileSystemError | 文件操作失败 | 检查文件权限 |
+| `VALIDATION_ERROR` | PluginError | ArchJSON 验证失败 | 修复验证错误 |
+| `TIMEOUT_ERROR` | PluginError | 操作超时 | 增加超时时间 |
+
+---
+
+### 3.6 插件注册与发现
 
 ```typescript
 // core/plugin-registry.ts
@@ -1094,7 +1330,142 @@ describe('TypeScriptPlugin', () => {
 });
 ```
 
-### 6.3 跨语言一致性测试
+### 6.3 测试 Fixture 规范
+
+**目的**: 定义跨语言一致性测试所需的标准化测试用例
+
+#### 6.3.1 Fixture 目录结构
+
+```
+tests/fixtures/cross-language/
+├── 01-simple-class/
+│   ├── spec.json              # 测试用例规范
+│   ├── typescript.ts          # TypeScript 实现
+│   ├── go.go                  # Go 实现
+│   ├── expected.json          # 预期 ArchJSON 结构
+│   └── README.md              # 用例说明
+├── 02-interface-implementation/
+│   ├── spec.json
+│   ├── typescript.ts
+│   ├── go.go
+│   └── expected.json
+├── 03-composition/
+├── 04-inheritance/
+└── README.md                   # Fixture 使用指南
+```
+
+#### 6.3.2 Spec 文件格式
+
+```json
+// tests/fixtures/cross-language/01-simple-class/spec.json
+{
+  "name": "Simple class with methods",
+  "description": "Tests basic entity extraction with fields and methods",
+  "languages": ["typescript", "go"],
+  "expectedMetrics": {
+    "entityCount": 1,
+    "methodCount": 2,
+    "fieldCount": 1,
+    "relationCount": 0
+  },
+  "validationRules": [
+    "Entity visibility should match language export rules",
+    "Method signatures should be normalized consistently",
+    "Field types should be extracted accurately"
+  ]
+}
+```
+
+#### 6.3.3 Fixture 示例
+
+**TypeScript 实现** (`typescript.ts`):
+```typescript
+export class UserService {
+  private userId: string;
+
+  constructor(userId: string) {
+    this.userId = userId;
+  }
+
+  getUser(): User {
+    return { id: this.userId };
+  }
+
+  updateUser(name: string): void {
+    // implementation
+  }
+}
+```
+
+**Go 实现** (`go.go`):
+```go
+package service
+
+type UserService struct {
+	userId string
+}
+
+func NewUserService(userId string) *UserService {
+	return &UserService{userId: userId}
+}
+
+func (s *UserService) GetUser() User {
+	return User{ID: s.userId}
+}
+
+func (s *UserService) UpdateUser(name string) {
+	// implementation
+}
+```
+
+**预期输出** (`expected.json`):
+```json
+{
+  "entities": [
+    {
+      "name": "UserService",
+      "type": "class|struct",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "userId",
+          "type": "field|property",
+          "visibility": "private"
+        },
+        {
+          "name": "getUser|GetUser",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [],
+          "returnType": "User"
+        },
+        {
+          "name": "updateUser|UpdateUser",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [{"name": "name", "type": "string"}],
+          "returnType": "void"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### 6.3.4 标准 Fixture 集合
+
+| Fixture ID | 名称 | 测试目标 | 语言 |
+|-----------|------|---------|------|
+| 01 | Simple Class | 基础实体提取 | TS, Go |
+| 02 | Interface Implementation | 接口实现检测 | TS, Go |
+| 03 | Composition | 组合关系 | TS, Go |
+| 04 | Inheritance | 继承关系 | TS, Go |
+| 05 | Generic Types | 泛型支持 | TS, Go (1.18+) |
+| 06 | Decorators/Tags | 装饰器/标签 | TS, Go |
+| 07 | Private Members | 可见性检测 | TS, Go |
+| 08 | Method Overloading | 方法重载 | TS (不适用 Go) |
+
+### 6.4 跨语言一致性测试
 
 ```typescript
 // tests/cross-language.test.ts
@@ -1102,70 +1473,91 @@ describe('TypeScriptPlugin', () => {
 import { describe, it, expect, beforeAll } from 'vitest';
 import { PluginRegistry } from '../../core/plugin-registry.js';
 import type { ArchJSON, ParseConfig } from '../../core/interfaces/index.js';
+import fs from 'fs-extra';
+import path from 'path';
 
 describe('Cross-language consistency', () => {
   let registry: PluginRegistry;
 
-  const testCases = [
-    {
-      name: 'Simple class with methods',
-      fixtures: {
-        typescript: 'fixtures/ts/SimpleClass.ts',
-        go: 'fixtures/go/simple_struct.go'
-      },
-      expected: {
-        entityCount: 1,
-        methodCount: 2,
-        fieldCount: 1
-      }
-    }
-  ];
+  const fixturesDir = path.join(__dirname, '../fixtures/cross-language');
 
   beforeAll(async () => {
     registry = new PluginRegistry();
     await registry.discoverPlugins('./plugins');
   });
 
-  for (const testCase of testCases) {
-    it(`should produce consistent output for: ${testCase.name}`, async () => {
-      const results: Record<string, ArchJSON> = {};
+  // 动态加载所有 fixture
+  const fixtureTests = fs.readdirSync(fixturesDir)
+    .filter(dir => fs.statSync(path.join(fixturesDir, dir)).isDirectory())
+    .map(dir => {
+      const specPath = path.join(fixturesDir, dir, 'spec.json');
+      const spec = fs.readJsonSync(specPath);
+      return { dir, spec };
+    });
 
-      for (const [lang, file] of Object.entries(testCase.fixtures)) {
-        const plugin = registry.getPluginForFile(file);
+  beforeAll(async () => {
+    registry = new PluginRegistry();
+    await registry.discoverPlugins('./plugins');
+  });
+
+  for (const { dir, spec } of fixtureTests) {
+    it(`should produce consistent output for: ${spec.name}`, async () => {
+      const results: Record<string, ArchJSON> = {};
+      const fixturePath = path.join(fixturesDir, dir);
+
+      // 解析每种语言的实现
+      for (const lang of spec.languages) {
+        const fileName = `${lang}.${lang === 'go' ? 'go' : 'ts'}`;
+        const filePath = path.join(fixturePath, fileName);
+
+        const plugin = registry.getPluginForFile(filePath);
         if (!plugin) {
           console.warn(`No plugin for ${lang}, skipping`);
           continue;
         }
 
-        // 使用 parseCode 进行单文件测试（如果插件支持）
+        // 使用 parseCode 进行单文件测试
         if (plugin.parseCode) {
-          const fs = await import('fs-extra');
-          const code = await fs.default.readFile(file, 'utf-8');
-          results[lang] = plugin.parseCode(code, file);
+          const code = await fs.readFile(filePath, 'utf-8');
+          results[lang] = plugin.parseCode(code, filePath);
         } else {
-          // 否则使用 parseProject
+          // 降级到 parseProject
           const config: ParseConfig = {
-            workspaceRoot: file,
-            excludePatterns: []
+            workspaceRoot: path.dirname(filePath),
+            excludePatterns: [],
+            filePattern: fileName
           };
-          results[lang] = await plugin.parseProject(file, config);
+          results[lang] = await plugin.parseProject(path.dirname(filePath), config);
         }
       }
 
       // 验证所有语言提取的实体数量一致
       const entityCounts = Object.values(results).map(r => r.entities.length);
-      if (entityCounts.length > 1) {
-        expect(new Set(entityCounts).size).toBe(1);
-      }
+      expect(new Set(entityCounts).size).toBe(1, 'All languages should extract the same number of entities');
+      expect(entityCounts[0]).toBe(spec.expectedMetrics.entityCount);
 
       // 验证方法数量一致
       for (const result of Object.values(results)) {
         if (result.entities.length > 0) {
           const methodCount = result.entities[0].members
             .filter(m => m.type === 'method').length;
-          expect(methodCount).toBe(testCase.expected.methodCount);
+          expect(methodCount).toBe(spec.expectedMetrics.methodCount);
         }
       }
+
+      // 验证字段数量一致
+      for (const result of Object.values(results)) {
+        if (result.entities.length > 0) {
+          const fieldCount = result.entities[0].members
+            .filter(m => m.type === 'field' || m.type === 'property').length;
+          expect(fieldCount).toBe(spec.expectedMetrics.fieldCount);
+        }
+      }
+
+      // 验证关系数量一致
+      const relationCounts = Object.values(results).map(r => r.relations.length);
+      expect(new Set(relationCounts).size).toBe(1, 'All languages should extract the same number of relations');
+      expect(relationCounts[0]).toBe(spec.expectedMetrics.relationCount);
     });
   }
 });
