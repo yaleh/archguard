@@ -6,21 +6,37 @@
 export * from './config.js';
 
 /**
+ * Supported programming languages
+ */
+export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust';
+
+/**
+ * Module structure for organizing entities
+ */
+export interface Module {
+  name: string;
+  entities: string[];
+  submodules?: Module[];
+}
+
+/**
  * Main architecture JSON structure
  */
 export interface ArchJSON {
   version: string;
-  language: 'typescript';
+  language: SupportedLanguage;
   timestamp: string;
   sourceFiles: string[];
   entities: Entity[];
   relations: Relation[];
+  modules?: Module[];
+  metadata?: Record<string, unknown>;
 }
 
 /**
  * Entity types in the architecture
  */
-export type EntityType = 'class' | 'interface' | 'enum';
+export type EntityType = 'class' | 'interface' | 'enum' | 'struct' | 'trait' | 'abstract_class' | 'function';
 
 /**
  * Visibility modifiers
@@ -48,7 +64,7 @@ export interface Entity {
 /**
  * Member types (properties and methods)
  */
-export type MemberType = 'property' | 'method' | 'constructor';
+export type MemberType = 'property' | 'method' | 'constructor' | 'field';
 
 /**
  * Member of an entity
@@ -93,7 +109,7 @@ export interface SourceLocation {
  */
 export interface Decorator {
   name: string;
-  arguments?: string[];
+  arguments?: string[] | Record<string, unknown>;
 }
 
 /**
@@ -104,7 +120,8 @@ export type RelationType =
   | 'implementation'
   | 'composition'
   | 'aggregation'
-  | 'dependency';
+  | 'dependency'
+  | 'association';
 
 /**
  * Relation between entities
@@ -114,4 +131,6 @@ export interface Relation {
   type: RelationType;
   source: string;
   target: string;
+  confidence?: number;
+  inferenceSource?: 'explicit' | 'inferred';
 }
