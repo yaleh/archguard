@@ -253,9 +253,13 @@ describe('DiagramProcessor', () => {
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi
         .fn()
-        .mockResolvedValueOnce(['/src/test.ts']) // First diagram succeeds
-        .mockRejectedValueOnce(new Error('Discovery failed')) // Second diagram fails
-        .mockResolvedValueOnce(['/src/test.ts']); // Third diagram succeeds
+        .mockImplementation(({ sources }: { sources: string[] }) => {
+          // Fail for module2, succeed for others
+          if (sources.includes('./src/module2')) {
+            throw new Error('Discovery failed');
+          }
+          return Promise.resolve(['/src/test.ts']);
+        });
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));

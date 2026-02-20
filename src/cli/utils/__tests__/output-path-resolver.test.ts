@@ -40,8 +40,8 @@ describe('OutputPathResolver', () => {
       // Should resolve to current working directory + archguard
       expect(result.outputDir).toContain('archguard');
       expect(result.baseName).toBe('architecture');
-      expect(result.paths.puml).toContain('archguard');
-      expect(result.paths.puml).toMatch(/architecture\.puml$/);
+      expect(result.paths.mmd).toContain('archguard');
+      expect(result.paths.mmd).toMatch(/architecture\.mmd$/);
       expect(result.paths.png).toContain('archguard');
       expect(result.paths.png).toMatch(/architecture\.png$/);
       expect(result.paths.svg).toContain('archguard');
@@ -57,7 +57,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({});
 
       expect(result.baseName).toBe('architecture');
-      expect(result.paths.puml).toContain('architecture.puml');
+      expect(result.paths.mmd).toContain('architecture.mmd');
     });
   });
 
@@ -71,8 +71,8 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({});
 
       expect(result.outputDir).toContain('diagrams');
-      expect(result.paths.puml).toContain('diagrams');
-      expect(result.paths.puml).toMatch(/architecture\.puml$/);
+      expect(result.paths.mmd).toContain('diagrams');
+      expect(result.paths.mmd).toMatch(/architecture\.mmd$/);
     });
 
     it('should handle absolute paths in outputDir', () => {
@@ -85,7 +85,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({});
 
       expect(result.outputDir).toBe(absolutePath);
-      expect(result.paths.puml).toBe(path.join(absolutePath, 'architecture.puml'));
+      expect(result.paths.mmd).toBe(path.join(absolutePath, 'architecture.mmd'));
     });
   });
 
@@ -102,8 +102,8 @@ describe('OutputPathResolver', () => {
       // When config.output is set, it should be used
       expect(result.outputDir).toContain('custom-dir');
       expect(result.baseName).toBe('diagram');
-      expect(result.paths.puml).toContain('custom-dir');
-      expect(result.paths.puml).toMatch(/diagram\.puml$/);
+      expect(result.paths.mmd).toContain('custom-dir');
+      expect(result.paths.mmd).toMatch(/diagram\.mmd$/);
     });
 
     it('should handle CLI output with absolute path', () => {
@@ -151,7 +151,7 @@ describe('OutputPathResolver', () => {
   });
 
   describe('resolve() - path resolution for all file types', () => {
-    it('should generate correct .puml path', () => {
+    it('should generate correct .mmd path', () => {
       const config: Pick<Config, 'outputDir' | 'output'> = {
         outputDir: './diagrams',
       };
@@ -159,8 +159,8 @@ describe('OutputPathResolver', () => {
 
       const result = resolver.resolve({ baseName: 'my-arch' });
 
-      expect(result.paths.puml).toContain('diagrams');
-      expect(result.paths.puml).toMatch(/my-arch\.puml$/);
+      expect(result.paths.mmd).toContain('diagrams');
+      expect(result.paths.mmd).toMatch(/my-arch\.mmd$/);
     });
 
     it('should generate correct .png path', () => {
@@ -198,7 +198,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({ baseName: 'custom-name' });
 
       expect(result.baseName).toBe('custom-name');
-      expect(result.paths.puml).toContain('custom-name.puml');
+      expect(result.paths.mmd).toContain('custom-name.mmd');
       expect(result.paths.png).toContain('custom-name.png');
       expect(result.paths.svg).toContain('custom-name.svg');
     });
@@ -212,7 +212,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({ baseName: 'my architecture' });
 
       expect(result.baseName).toBe('my architecture');
-      expect(result.paths.puml).toContain('my architecture.puml');
+      expect(result.paths.mmd).toContain('my architecture.mmd');
     });
   });
 
@@ -226,8 +226,8 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({});
 
       expect(result.outputDir).toContain('output');
-      expect(result.paths.puml).toContain('output');
-      expect(result.paths.puml).toMatch(/architecture\.puml$/);
+      expect(result.paths.mmd).toContain('output');
+      expect(result.paths.mmd).toMatch(/architecture\.mmd$/);
     });
 
     it('should preserve absolute paths', () => {
@@ -240,7 +240,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({});
 
       expect(result.outputDir).toBe(absolutePath);
-      expect(result.paths.puml).toBe(path.join(absolutePath, 'architecture.puml'));
+      expect(result.paths.mmd).toBe(path.join(absolutePath, 'architecture.mmd'));
     });
 
     it('should handle nested relative paths', () => {
@@ -320,14 +320,14 @@ describe('OutputPathResolver', () => {
     it('should handle output with extension stripped correctly', () => {
       const config: Pick<Config, 'outputDir' | 'output'> = {
         outputDir: './diagrams',
-        output: 'my-diagram.puml',
+        output: 'my-diagram.mmd',
       };
       const resolver = new OutputPathResolver(config);
 
       const result = resolver.resolve({});
 
       expect(result.baseName).toBe('my-diagram');
-      expect(result.paths.puml).toContain('my-diagram.puml');
+      expect(result.paths.mmd).toContain('my-diagram.mmd');
     });
 
     it('should handle output without directory as filename in outputDir', () => {
@@ -381,7 +381,7 @@ describe('OutputPathResolver', () => {
 
       expect(result.baseName).toBe('api');
       expect(result.outputDir).toContain('archguard/frontend');
-      expect(result.paths.puml).toMatch(/archguard\/frontend\/api\.puml$/);
+      expect(result.paths.mmd).toMatch(/archguard\/frontend\/api\.mmd$/);
       expect(result.paths.png).toMatch(/archguard\/frontend\/api\.png$/);
       expect(result.paths.svg).toMatch(/archguard\/frontend\/api\.svg$/);
       expect(result.paths.json).toMatch(/archguard\/frontend\/api\.json$/);
@@ -397,7 +397,7 @@ describe('OutputPathResolver', () => {
 
       expect(result.baseName).toBe('models');
       expect(result.outputDir).toContain('archguard/services/auth');
-      expect(result.paths.puml).toMatch(/archguard\/services\/auth\/models\.puml$/);
+      expect(result.paths.mmd).toMatch(/archguard\/services\/auth\/models\.mmd$/);
     });
 
     it('should create subdirectories when ensureDirectory is called', async () => {
@@ -456,7 +456,7 @@ describe('OutputPathResolver', () => {
       const result = resolver.resolve({ name: 'custom' } as any);
 
       expect(result.baseName).toBe('custom');
-      expect(result.paths.puml).toContain('custom.puml');
+      expect(result.paths.mmd).toContain('custom.mmd');
     });
   });
 });

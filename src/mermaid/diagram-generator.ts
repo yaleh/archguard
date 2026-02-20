@@ -38,6 +38,25 @@ export interface MermaidOutputOptions {
 }
 
 /**
+ * Render job for two-stage rendering
+ *
+ * Stage 1 (generateOnly) produces RenderJob[]
+ * Stage 2 (renderJobsInParallel) consumes RenderJob[]
+ */
+export interface RenderJob {
+  /** Diagram name */
+  name: string;
+  /** Generated Mermaid code */
+  mermaidCode: string;
+  /** Output file paths */
+  outputPath: {
+    mmd: string;
+    svg: string;
+    png: string;
+  };
+}
+
+/**
  * Main generator for Mermaid diagrams
  *
  * Usage:
@@ -50,19 +69,25 @@ export class MermaidDiagramGenerator {
   constructor(private config: GlobalConfig) {}
 
   /**
-   * Generate and render a Mermaid diagram
+   * Stage 1: Generate Mermaid code only (no rendering)
+   *
+   * This is the CPU-intensive stage that:
+   * - Groups entities using heuristic strategy
+   * - Generates Mermaid code
+   * - Validates the generated code
    *
    * @param archJson - Architecture JSON data
    * @param outputOptions - Output file paths
    * @param level - Detail level (package/class/method)
    * @param diagramConfig - Diagram configuration (v2.1.0: for metadata comments)
+   * @returns Array of RenderJob to be rendered in Stage 2
    */
-  async generateAndRender(
+  async generateOnly(
     archJson: ArchJSON,
     outputOptions: MermaidOutputOptions,
     level: DetailLevel,
     diagramConfig?: DiagramConfig
-  ): Promise<void> {
+  ): Promise<RenderJob[]> {
     const progress = new ProgressReporter();
 
     try {
@@ -163,7 +188,82 @@ export class MermaidDiagramGenerator {
         }
       }
 
-      // 5. Render
+      // Return render job (Stage 1 complete)
+      return [
+        {
+          name: outputOptions.baseName,
+          mermaidCode,
+          outputPath: outputOptions.paths,
+        },
+      ];
+    } catch (error) {
+      progress.fail('❌ Generation failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Stage 2: Render all render jobs in parallel
+   *
+   * This is the I/O-intensive stage that renders all Mermaid diagrams
+   * in parallel using configurable concurrency.
+   *
+   * @param jobs - Array of render jobs from Stage 1
+   * @param concurrency - Maximum number of concurrent renders
+   */
+  static async renderJobsInParallel(jobs: RenderJob[], concurrency: number): Promise<void> {
+    const pMap = (await import('p-map')).default;
+    const progress = new ProgressReporter();
+
+    try {
+      progress.start(`🎨 Rendering ${jobs.length} diagram${jobs.length > 1 ? 's' : ''} in parallel...`);
+
+      await pMap(
+        jobs,
+        async (job) => {
+          // Prepare renderer options from config
+          const rendererOptions: any = {};
+          // Note: For static method, we use default theme options
+          // In production, these would come from global config
+          rendererOptions.theme = { name: 'default' };
+          rendererOptions.backgroundColor = 'transparent';
+
+          const renderer = new IsomorphicMermaidRenderer(rendererOptions);
+          await renderer.renderAndSave(job.mermaidCode, job.outputPath);
+        },
+        { concurrency }
+      );
+
+      progress.succeed(`✅ Rendered ${jobs.length} diagram${jobs.length > 1 ? 's' : ''}`);
+    } catch (error) {
+      progress.fail('❌ Rendering failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Generate and render a Mermaid diagram
+   *
+   * @param archJson - Architecture JSON data
+   * @param outputOptions - Output file paths
+   * @param level - Detail level (package/class/method)
+   * @param diagramConfig - Diagram configuration (v2.1.0: for metadata comments)
+   */
+  async generateAndRender(
+    archJson: ArchJSON,
+    outputOptions: MermaidOutputOptions,
+    level: DetailLevel,
+    diagramConfig?: DiagramConfig
+  ): Promise<void> {
+    const progress = new ProgressReporter();
+
+    try {
+      // Stage 1: Generate Mermaid code (CPU intensive)
+      progress.start('📝 Generating Mermaid code...');
+      const allRenderJobs = await this.generateOnly(archJson, outputOptions, level, diagramConfig);
+      progress.succeed(`✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`);
+
+      // Stage 2: Render all jobs in parallel (I/O intensive)
       progress.start('🎨 Rendering diagram...');
 
       // Prepare renderer options from config
@@ -180,9 +280,16 @@ export class MermaidDiagramGenerator {
         }
       }
 
-      const renderer = new IsomorphicMermaidRenderer(rendererOptions);
+      // Render with higher concurrency for I/O-bound operations
+      const renderConcurrency = (this.config.concurrency || require('os').cpus().length) * 2;
 
-      await renderer.renderAndSave(mermaidCode, outputOptions.paths);
+      // Use the static method for rendering
+      await MermaidDiagramGenerator.renderJobsInParallelWithConfig(
+        allRenderJobs,
+        renderConcurrency,
+        rendererOptions
+      );
+
       progress.succeed('✅ Diagram rendered successfully');
 
       console.log('\n✨ Generated files:');
@@ -193,5 +300,32 @@ export class MermaidDiagramGenerator {
       progress.fail('❌ Generation failed');
       throw error;
     }
+  }
+
+  /**
+   * Stage 2: Render all render jobs in parallel with custom config
+   *
+   * Private helper method that allows passing custom renderer options
+   * (used by generateAndRender to respect global config)
+   *
+   * @param jobs - Array of render jobs from Stage 1
+   * @param concurrency - Maximum number of concurrent renders
+   * @param rendererOptions - Custom renderer options
+   */
+  private static async renderJobsInParallelWithConfig(
+    jobs: RenderJob[],
+    concurrency: number,
+    rendererOptions: any
+  ): Promise<void> {
+    const pMap = (await import('p-map')).default;
+
+    await pMap(
+      jobs,
+      async (job) => {
+        const renderer = new IsomorphicMermaidRenderer(rendererOptions);
+        await renderer.renderAndSave(job.mermaidCode, job.outputPath);
+      },
+      { concurrency }
+    );
   }
 }

@@ -22,9 +22,11 @@ import type { DiagramConfig, GlobalConfig, OutputFormat, DetailLevel } from '@/t
 import type { ArchJSON } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
+import type { RenderJob } from '@/mermaid/diagram-generator.js';
 import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
+import { createHash } from 'crypto';
 
 /**
  * Options for DiagramProcessor
@@ -107,6 +109,8 @@ export class DiagramProcessor {
    * Uses p-map for concurrent processing with configurable concurrency limit.
    * Shows parallel progress bars when processing multiple diagrams.
    *
+   * Groups diagrams by source hash to reuse cached ArchJSON results.
+   *
    * @returns Array of DiagramResult
    */
   async processAll(): Promise<DiagramResult[]> {
@@ -119,13 +123,29 @@ export class DiagramProcessor {
     }
 
     try {
-      const results = await pMap(
-        this.diagrams,
-        async (diagram) => {
-          return await this.processDiagram(diagram);
+      // Group diagrams by source hash to enable caching
+      const sourceGroups = this.groupDiagramsBySource();
+
+      // Process each source group
+      const groupResults = await pMap(
+        Array.from(sourceGroups.entries()),
+        async ([sourceKey, diagrams]) => {
+          // All diagrams in this group share the same sources
+          // Parse once and reuse ArchJSON
+          return await this.processSourceGroup(sourceKey, diagrams);
         },
-        { concurrency }
+        { concurrency: Math.min(concurrency, sourceGroups.size) }
       );
+
+      // Flatten results
+      const results = groupResults.flat();
+
+      // Log cache statistics in debug mode
+      if (process.env.ArchGuardDebug === 'true') {
+        console.debug(
+          `📊 Cache stats: ${this.archJsonCache.size} entries`
+        );
+      }
 
       return results;
     } finally {
@@ -137,12 +157,124 @@ export class DiagramProcessor {
   }
 
   /**
-   * Process a single diagram
+   * Group diagrams by their source hash for caching
+   *
+   * @returns Map of source hash to array of diagrams
+   */
+  private groupDiagramsBySource(): Map<string, DiagramConfig[]> {
+    const sourceGroups = new Map<string, DiagramConfig[]>();
+
+    for (const diagram of this.diagrams) {
+      const key = this.hashSources(diagram.sources);
+      if (!sourceGroups.has(key)) {
+        sourceGroups.set(key, []);
+      }
+      sourceGroups.get(key)!.push(diagram);
+    }
+
+    return sourceGroups;
+  }
+
+  /**
+   * Generate hash key from source files
+   *
+   * @param sources - Array of source directory paths
+   * @returns SHA-256 hash string (first 8 characters)
+   */
+  private hashSources(sources: string[]): string {
+    const normalized = sources
+      .map(s => s.replace(/\\/g, '/'))
+      .sort()
+      .join('|');
+    return createHash('sha256').update(normalized).digest('hex').slice(0, 8);
+  }
+
+  /**
+   * Cache key for parsed ArchJSON results
+   * Maps source hash to parsed ArchJSON
+   */
+  private archJsonCache = new Map<string, ArchJSON>();
+
+  /**
+   * Process a group of diagrams that share the same sources
+   *
+   * @param sourceKey - Hash key for the sources
+   * @param diagrams - Array of diagrams sharing these sources
+   * @returns Array of DiagramResult
+   */
+  private async processSourceGroup(
+    sourceKey: string,
+    diagrams: DiagramConfig[]
+  ): Promise<DiagramResult[]> {
+    // For single diagram, use original progress reporter
+    if (!this.parallelProgress && diagrams.length === 1) {
+      this.progress.start(`Processing diagram: ${diagrams[0].name}`);
+    }
+
+    try {
+      // Discover files from sources (all diagrams in group use same sources)
+      const files = await this.fileDiscovery.discoverFiles({
+        sources: diagrams[0].sources,
+        exclude: diagrams[0].exclude || this.globalConfig.exclude,
+        skipMissing: false,
+      });
+
+      if (files.length === 0) {
+        throw new Error(`No TypeScript files found in sources: ${diagrams[0].sources.join(', ')}`);
+      }
+
+      // Check cache for parsed ArchJSON
+      let rawArchJSON = this.archJsonCache.get(sourceKey);
+      if (!rawArchJSON) {
+        if (process.env.ArchGuardDebug === 'true') {
+          console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+        }
+
+        // Parse files in parallel
+        const parser = new ParallelParser({
+          concurrency: this.globalConfig.concurrency,
+          continueOnError: true,
+        });
+        rawArchJSON = await parser.parseFiles(files);
+
+        // Cache the raw parsed result
+        this.archJsonCache.set(sourceKey, rawArchJSON);
+      } else if (process.env.ArchGuardDebug === 'true') {
+        console.debug(`📦 Cache hit for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+      }
+
+      // Process all diagrams in this group in parallel, using cached ArchJSON
+      const results = await pMap(
+        diagrams,
+        async (diagram) => {
+          return await this.processDiagramWithArchJSON(diagram, rawArchJSON!);
+        },
+        { concurrency: this.globalConfig.concurrency || os.cpus().length }
+      );
+
+      return results;
+    } catch (error) {
+      // If the entire group fails, return error results for all diagrams in the group
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return diagrams.map(diagram => ({
+        name: diagram.name,
+        success: false,
+        error: errorMessage,
+      }));
+    }
+  }
+
+  /**
+   * Process a single diagram with pre-parsed ArchJSON
    *
    * @param diagram - Diagram configuration
+   * @param rawArchJSON - Pre-parsed ArchJSON (before aggregation)
    * @returns DiagramResult
    */
-  private async processDiagram(diagram: DiagramConfig): Promise<DiagramResult> {
+  private async processDiagramWithArchJSON(
+    diagram: DiagramConfig,
+    rawArchJSON: ArchJSON
+  ): Promise<DiagramResult> {
     const startTime = Date.now();
 
     try {
@@ -151,38 +283,13 @@ export class DiagramProcessor {
         this.progress.start(`Processing diagram: ${diagram.name}`);
       }
 
-      // 1. Discover files from sources
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 10, 'Discovering files');
-      }
-      const files = await this.fileDiscovery.discoverFiles({
-        sources: diagram.sources,
-        exclude: diagram.exclude || this.globalConfig.exclude,
-        skipMissing: false,
-      });
-
-      if (files.length === 0) {
-        throw new Error(`No TypeScript files found in sources: ${diagram.sources.join(', ')}`);
-      }
-
-      // 2. Parse files in parallel
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 30, 'Parsing files');
-      }
-      const parser = new ParallelParser({
-        concurrency: this.globalConfig.concurrency,
-        continueOnError: true,
-      });
-
-      const archJSON = await parser.parseFiles(files);
-
-      // 3. Aggregate to specified level
+      // 1. Aggregate to specified level
       if (this.parallelProgress) {
         this.parallelProgress.update(diagram.name, 50, 'Aggregating');
       }
-      const aggregatedJSON = this.aggregator.aggregate(archJSON, diagram.level);
+      const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
 
-      // 4. Resolve output paths
+      // 2. Resolve output paths
       if (this.parallelProgress) {
         this.parallelProgress.update(diagram.name, 60, 'Preparing output');
       }
@@ -194,7 +301,7 @@ export class DiagramProcessor {
       const paths = pathResolver.resolve({ name: diagram.name });
       await pathResolver.ensureDirectory({ name: diagram.name });
 
-      // 5. Generate output based on format
+      // 3. Generate output based on format
       if (this.parallelProgress) {
         this.parallelProgress.update(diagram.name, 70, 'Generating output');
       }
@@ -247,6 +354,134 @@ export class DiagramProcessor {
         success: false,
         error: errorMessage,
       };
+    }
+  }
+
+  /**
+   * Process a source group using two-stage rendering approach
+   *
+   * Stage 1: Parse and generate all Mermaid codes (CPU intensive)
+   * Stage 2: Render all Mermaid codes in parallel (I/O intensive)
+   *
+   * @param sourceKey - Hash key for the sources
+   * @param diagrams - Array of diagrams sharing these sources
+   * @returns Array of DiagramResult
+   */
+  private async processSourceGroupWithTwoStageRendering(
+    sourceKey: string,
+    diagrams: DiagramConfig[]
+  ): Promise<DiagramResult[]> {
+    const startTime = Date.now();
+
+    try {
+      // Discover files from sources (all diagrams in group use same sources)
+      const files = await this.fileDiscovery.discoverFiles({
+        sources: diagrams[0].sources,
+        exclude: diagrams[0].exclude || this.globalConfig.exclude,
+        skipMissing: false,
+      });
+
+      if (files.length === 0) {
+        throw new Error(`No TypeScript files found in sources: ${diagrams[0].sources.join(', ')}`);
+      }
+
+      // Check cache for parsed ArchJSON
+      let rawArchJSON = this.archJsonCache.get(sourceKey);
+      if (!rawArchJSON) {
+        if (process.env.ArchGuardDebug === 'true') {
+          console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+        }
+
+        // Parse files in parallel
+        const parser = new ParallelParser({
+          concurrency: this.globalConfig.concurrency,
+          continueOnError: true,
+        });
+        rawArchJSON = await parser.parseFiles(files);
+
+        // Cache the raw parsed result
+        this.archJsonCache.set(sourceKey, rawArchJSON);
+      } else if (process.env.ArchGuardDebug === 'true') {
+        console.debug(`📦 Cache hit for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+      }
+
+      // Stage 1: Generate all Mermaid codes (CPU intensive)
+      this.progress.start('📝 Stage 1: Generating Mermaid code for all diagrams...');
+      const allRenderJobs: RenderJob[] = [];
+
+      for (const diagram of diagrams) {
+        const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
+
+        const format = diagram.format || this.globalConfig.format;
+        if (format === 'mermaid') {
+          const pathResolver = new OutputPathResolver({
+            outputDir: this.globalConfig.outputDir,
+            output: undefined,
+          });
+
+          const paths = pathResolver.resolve({ name: diagram.name });
+          await pathResolver.ensureDirectory({ name: diagram.name });
+
+          const generator = new MermaidDiagramGenerator(this.globalConfig);
+          const jobs = await generator.generateOnly(
+            aggregatedJSON,
+            {
+              outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
+              baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
+              paths: paths.paths,
+            },
+            diagram.level,
+            diagram
+          );
+
+          allRenderJobs.push(...jobs);
+        }
+      }
+
+      this.progress.succeed(`✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`);
+
+      // Stage 2: Render all in parallel (I/O intensive)
+      if (allRenderJobs.length > 0) {
+        const renderConcurrency = (this.globalConfig.concurrency || os.cpus().length) * 2;
+        await MermaidDiagramGenerator.renderJobsInParallel(allRenderJobs, renderConcurrency);
+      }
+
+      const parseTime = Date.now() - startTime;
+
+      // Build results
+      return diagrams.map((diagram) => {
+        const pathResolver = new OutputPathResolver({
+          outputDir: this.globalConfig.outputDir,
+          output: undefined,
+        });
+
+        const paths = pathResolver.resolve({ name: diagram.name });
+        const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
+
+        return {
+          name: diagram.name,
+          success: true,
+          paths: {
+            mmd: paths.paths.mmd,
+            svg: paths.paths.svg,
+            png: paths.paths.png,
+          },
+          stats: {
+            entities: aggregatedJSON.entities.length,
+            relations: aggregatedJSON.relations.length,
+            parseTime,
+          },
+        };
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.progress.fail(`❌ Two-stage rendering failed: ${errorMessage}`);
+
+      return diagrams.map((diagram) => ({
+        name: diagram.name,
+        success: false,
+        error: errorMessage,
+      }));
     }
   }
 

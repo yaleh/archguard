@@ -192,7 +192,7 @@ export class ValidatedMermaidGenerator {
     const packageGroups = this.groupEntitiesByPackage();
 
     for (const group of packageGroups) {
-      lines.push(`  namespace ${this.escapeId(group.name)} {`);
+      lines.push(`  namespace "${group.name}" {`);
 
       for (const entityId of group.entities) {
         const entity = this.archJson.entities.find((e) => e.id === entityId);
@@ -221,7 +221,7 @@ export class ValidatedMermaidGenerator {
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace ${this.escapeId(group.name)} {`);
+        lines.push(`  namespace "${group.name}" {`);
 
         for (const entityId of group.entities) {
           const entity = this.archJson.entities.find((e) => e.id === entityId);
@@ -262,7 +262,7 @@ export class ValidatedMermaidGenerator {
 
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace ${this.escapeId(group.name)} {`);
+        lines.push(`  namespace "${group.name}" {`);
 
         for (const entityId of group.entities) {
           const entity = this.archJson.entities.find((e) => e.id === entityId);
@@ -321,17 +321,19 @@ export class ValidatedMermaidGenerator {
 
   /**
    * Generate member line - Enhanced to handle default values
+   * v2.2.1: Fixed static/abstract modifiers to use Mermaid-compatible syntax
    */
   private generateMemberLine(member: Member, detailed: boolean): string {
     const visibility = this.getVisibilitySymbol(member.visibility);
-    const staticModifier = member.isStatic ? '{static}' : '';
-    const abstractModifier = member.isAbstract ? '{abstract}' : '';
+    // Mermaid syntax: 'static' not '{static}', 'abstract' not '{abstract}'
+    const staticModifier = member.isStatic ? 'static ' : '';
+    const abstractModifier = member.isAbstract ? 'abstract ' : '';
 
     if (member.type === 'property') {
-      const readonly = member.isReadonly ? 'readonly' : '';
+      const readonly = member.isReadonly ? 'readonly ' : '';
       const optional = member.isOptional ? '?' : '';
       const type = member.fieldType ? `: ${this.sanitizeType(member.fieldType)}` : '';
-      return `${visibility}${staticModifier}${abstractModifier}${readonly} ${member.name}${optional}${type}`;
+      return `${visibility}${staticModifier}${abstractModifier}${readonly}${member.name}${optional}${type}`;
     } else if (member.type === 'method' || member.type === 'constructor') {
       const async = member.isAsync ? 'async ' : '';
       const returnType = member.returnType ? `: ${this.sanitizeType(member.returnType)}` : '';
@@ -502,6 +504,9 @@ export class ValidatedMermaidGenerator {
 
   /**
    * Sanitize type string - Enhanced version to handle complex types
+   *
+   * v2.2.1: Fixed nested generics to avoid Mermaid parsing errors
+   * Now simplifies Promise<Array<T>> -> Promise instead of Promise~Array~T~
    */
   private sanitizeType(type: string): string {
     if (!type) return 'any';
@@ -532,11 +537,15 @@ export class ValidatedMermaidGenerator {
     // 3. Remove function types: (args) => ReturnType
     simplified = simplified.replace(/\([^)]*\)\s*=>\s*/g, 'Function');
 
-    // 4. Handle Promise types - convert Promise<T> to Promise~T~
-    simplified = simplified.replace(/Promise<(.+?)>/g, (match, innerType) => {
-      const sanitizedInner = this.simplifyGenericType(innerType);
-      return `Promise~${sanitizedInner}~`;
-    });
+    // 4. Handle Promise types - Use loop to remove nested generics from innermost to outermost
+    // Promise<Array<T>> -> Promise<Array> -> Promise -> any
+    // Promise<z.infer<typeof config>> -> Promise<z.infer> -> Promise -> any
+    while (simplified.includes('Promise<')) {
+      // Remove the innermost generic (e.g., Array<T> -> Array)
+      simplified = simplified.replace(/(\w+)<([^<>]*)>/g, '$1');
+      // If we just removed a Promise<...>, replace Promise with any
+      simplified = simplified.replace(/\bPromise\b/g, 'any');
+    }
 
     // 5. Remove union types (A | B | C) -> any
     if (simplified.includes('|')) {
@@ -559,20 +568,13 @@ export class ValidatedMermaidGenerator {
     simplified = simplified.replace(/\w+\[\]/g, 'Array'); // T[] -> Array
     simplified = simplified.replace(/Array+/g, 'Array'); // Collapse ArrayArray -> Array
 
-    // 8. Handle generic types - convert to tilde notation
-    // Map<K, V> -> Map~KV~
-    // For nested generics, flatten them completely
-    while (simplified.includes('<')) {
-      const match = simplified.match(/<([^>]+)>/);
-      if (!match) break;
-
-      const content = match[1];
-      const flattened = content
-        .replace(/\s*,\s*/g, '')
-        .replace(/\s+/g, '')
-        .replace(/<[^>]+>/g, '');
-      simplified = simplified.replace(/<[^>]+>/, `~${flattened}`);
+    // 8. Handle remaining generic types - Remove all generics from innermost to outermost
+    // Map<K, V>, Set<T>, z.infer<...> -> Map, Set, z.infer -> Map, Set, any (if z.infer)
+    while (simplified.match(/\w+</)) {
+      simplified = simplified.replace(/(\w+)<([^<>]*)>/g, '$1');
     }
+    // Special case: z.infer -> any (it's a Zod utility type that's too complex)
+    simplified = simplified.replace(/\bz\.infer\b/g, 'any');
 
     // 9. Normalize whitespace
     simplified = simplified.replace(/\s+/g, ' ').trim();
@@ -582,21 +584,6 @@ export class ValidatedMermaidGenerator {
       return 'any';
     }
 
-    return simplified;
-  }
-
-  /**
-   * Simplify generic type content (for Promise<...>)
-   */
-  private simplifyGenericType(type: string): string {
-    // Remove spaces
-    let simplified = type.replace(/\s+/g, '');
-    // Remove commas
-    simplified = simplified.replace(/,/g, '');
-    // If still too long, truncate
-    if (simplified.length > 20) {
-      return simplified.substring(0, 20);
-    }
     return simplified;
   }
 
