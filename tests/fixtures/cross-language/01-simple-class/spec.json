@@ -1,0 +1,11 @@
+{
+  "name": "Simple class with methods",
+  "description": "Tests basic entity extraction - a class/struct with fields and methods",
+  "languages": ["typescript", "go"],
+  "expectedMetrics": {
+    "entityCount": 1,
+    "methodCount": 2,
+    "fieldCount": 2,
+    "relationCount": 0
+  }
+}

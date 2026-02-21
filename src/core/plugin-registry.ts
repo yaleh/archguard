@@ -4,7 +4,9 @@
  * Provides centralized plugin registration, discovery, and version management.
  */
 
+import path from 'path';
 import { pathToFileURL } from 'node:url';
+import fs from 'fs-extra';
 import type { ILanguagePlugin } from './interfaces/index.js';
 
 /**
@@ -55,7 +57,7 @@ export class PluginRegistry {
       this.plugins.set(name, new Map());
     }
 
-    const versionMap = this.plugins.get(name)!;
+    const versionMap = this.plugins.get(name);
     if (versionMap.has(version) && !overwrite) {
       throw new Error(
         `Plugin '${name}@${version}' is already registered. Use overwrite option to replace.`
@@ -70,7 +72,7 @@ export class PluginRegistry {
       if (!this.extensionMap.has(ext)) {
         this.extensionMap.set(ext, []);
       }
-      const plugins = this.extensionMap.get(ext)!;
+      const plugins = this.extensionMap.get(ext);
 
       // Remove old version if overwriting
       if (overwrite) {
@@ -134,20 +136,50 @@ export class PluginRegistry {
   }
 
   /**
+   * Detection rules mapping file names to plugin names
+   * Order matters: first match wins
+   */
+  private static readonly DETECTION_RULES: Array<{ file: string; plugin: string }> = [
+    { file: 'go.mod', plugin: 'golang' },
+    { file: 'package.json', plugin: 'typescript' },
+    { file: 'tsconfig.json', plugin: 'typescript' },
+    { file: 'pom.xml', plugin: 'java' },
+    { file: 'build.gradle', plugin: 'java' },
+    { file: 'pyproject.toml', plugin: 'python' },
+    { file: 'requirements.txt', plugin: 'python' },
+    { file: 'setup.py', plugin: 'python' },
+  ];
+
+  /**
    * Detect plugin for a directory based on project markers
    *
-   * @param directoryPath - Path to directory
-   * @returns Plugin instance or null if no plugin detected
+   * Scans the directory for known project configuration files and returns
+   * the appropriate plugin. Detection rules are checked in order, and the
+   * first match wins.
+   *
+   * @param directoryPath - Path to directory to scan
+   * @returns Promise resolving to plugin instance or null if no plugin detected
    */
-  detectPluginForDirectory(directoryPath: string): ILanguagePlugin | null {
-    // This will be implemented with filesystem checks
-    // For now, return null as placeholder
-    // Future implementation will check for:
-    // - package.json -> TypeScript plugin
-    // - go.mod -> Go plugin
-    // - pom.xml -> Java plugin
-    // - requirements.txt -> Python plugin
-    // - Cargo.toml -> Rust plugin
+  async detectPluginForDirectory(directoryPath: string): Promise<ILanguagePlugin | null> {
+    // Check each detection rule in order
+    for (const rule of PluginRegistry.DETECTION_RULES) {
+      const markerPath = path.join(directoryPath, rule.file);
+
+      try {
+        if (await fs.pathExists(markerPath)) {
+          // Found a matching marker file, get the corresponding plugin
+          const plugin = this.getByName(rule.plugin);
+          if (plugin) {
+            return plugin;
+          }
+        }
+      } catch {
+        // Ignore errors (permission issues, etc.) and continue to next rule
+        continue;
+      }
+    }
+
+    // No matching plugin found
     return null;
   }
 

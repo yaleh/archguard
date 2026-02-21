@@ -13,11 +13,16 @@ import type {
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { InterfaceMatcher } from './interface-matcher.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { GoplsClient } from './gopls-client.js';
+import { DependencyExtractor } from './dependency-extractor.js';
 import type { GoRawPackage } from './types.js';
+
+// Re-export for external use
+export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 
 /**
  * Go plugin for ArchGuard
@@ -38,10 +43,12 @@ export class GoPlugin implements ILanguagePlugin {
     capabilities: {
       singleFileParsing: true,
       incrementalParsing: false,
-      dependencyExtraction: false, // TODO: Phase 2.B
+      dependencyExtraction: true,
       typeInference: true,
     },
   };
+
+  readonly dependencyExtractor: IDependencyExtractor;
 
   private treeSitter!: TreeSitterBridge;
   private matcher!: InterfaceMatcher;
@@ -49,6 +56,10 @@ export class GoPlugin implements ILanguagePlugin {
   private goplsClient: GoplsClient | null = null;
   private initialized = false;
   private workspaceRoot = '';
+
+  constructor() {
+    this.dependencyExtractor = new DependencyExtractor();
+  }
 
   /**
    * Initialize the plugin
@@ -134,7 +145,7 @@ export class GoPlugin implements ILanguagePlugin {
 
       // Merge into packages map
       if (packages.has(pkg.name)) {
-        const existing = packages.get(pkg.name)!;
+        const existing = packages.get(pkg.name);
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
@@ -147,8 +158,8 @@ export class GoPlugin implements ILanguagePlugin {
     const packageList = Array.from(packages.values());
 
     // Match interface implementations (using gopls if available)
-    const allStructs = packageList.flatMap(p => p.structs);
-    const allInterfaces = packageList.flatMap(p => p.interfaces);
+    const allStructs = packageList.flatMap((p) => p.structs);
+    const allInterfaces = packageList.flatMap((p) => p.interfaces);
     const implementations = await this.matcher.matchWithGopls(
       allStructs,
       allInterfaces,
@@ -179,10 +190,7 @@ export class GoPlugin implements ILanguagePlugin {
     const pkg = this.treeSitter.parseCode(code, filePath);
 
     // Match implementations within single file (name-based only)
-    const implementations = this.matcher.matchImplicitImplementations(
-      pkg.structs,
-      pkg.interfaces
-    );
+    const implementations = this.matcher.matchImplicitImplementations(pkg.structs, pkg.interfaces);
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities([pkg]);
@@ -222,7 +230,7 @@ export class GoPlugin implements ILanguagePlugin {
 
       // Merge into packages map
       if (packages.has(pkg.name)) {
-        const existing = packages.get(pkg.name)!;
+        const existing = packages.get(pkg.name);
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
@@ -235,8 +243,8 @@ export class GoPlugin implements ILanguagePlugin {
     const packageList = Array.from(packages.values());
 
     // Match implementations (using gopls if available)
-    const allStructs = packageList.flatMap(p => p.structs);
-    const allInterfaces = packageList.flatMap(p => p.interfaces);
+    const allStructs = packageList.flatMap((p) => p.structs);
+    const allInterfaces = packageList.flatMap((p) => p.interfaces);
     const implementations = await this.matcher.matchWithGopls(
       allStructs,
       allInterfaces,

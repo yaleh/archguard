@@ -24,12 +24,7 @@ export class PluginError extends Error {
    */
   public override readonly cause?: Error;
 
-  constructor(
-    message: string,
-    code: string,
-    pluginName: string,
-    cause?: Error
-  ) {
+  constructor(message: string, code: string, pluginName: string, cause?: Error) {
     super(message);
     this.name = 'PluginError';
     this.code = code;
@@ -63,12 +58,7 @@ export class PluginConfigError extends PluginError {
    */
   public readonly field?: string;
 
-  constructor(
-    pluginName: string,
-    message: string,
-    field?: string,
-    cause?: Error
-  ) {
+  constructor(pluginName: string, message: string, field?: string, cause?: Error) {
     super(
       `Invalid configuration for plugin '${pluginName}': ${message}`,
       'PLUGIN_CONFIG_INVALID',
@@ -95,11 +85,7 @@ export class ToolDependencyError extends PluginError {
    */
   public readonly requiredVersion?: string;
 
-  constructor(
-    pluginName: string,
-    toolName: string,
-    requiredVersion?: string
-  ) {
+  constructor(pluginName: string, toolName: string, requiredVersion?: string) {
     const versionInfo = requiredVersion ? ` (>= ${requiredVersion})` : '';
     super(
       `Plugin '${pluginName}' requires '${toolName}'${versionInfo} to be installed`,
@@ -109,6 +95,28 @@ export class ToolDependencyError extends PluginError {
     this.name = 'ToolDependencyError';
     this.toolName = toolName;
     this.requiredVersion = requiredVersion;
+  }
+}
+
+/**
+ * Error thrown when parsing fails during plugin operations
+ */
+export class ParseError extends PluginError {
+  /**
+   * Path to the file that caused the parsing error
+   */
+  public readonly file: string;
+
+  /**
+   * Line number where the error occurred (if known)
+   */
+  public readonly line?: number;
+
+  constructor(message: string, pluginName: string, file: string, line?: number, cause?: Error) {
+    super(message, 'PARSE_ERROR', pluginName, cause);
+    this.name = 'ParseError';
+    this.file = file;
+    this.line = line;
   }
 }
 

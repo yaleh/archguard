@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "language": "cross-language",
+  "description": "Expected baseline for simple class fixture",
+  "entities": [
+    {
+      "name": "User",
+      "type": "class",
+      "members": [
+        {
+          "name": "id",
+          "type": "field",
+          "visibility": "private"
+        },
+        {
+          "name": "name",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "getName",
+          "type": "method",
+          "visibility": "public"
+        },
+        {
+          "name": "setId",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    }
+  ],
+  "relations": []
+}

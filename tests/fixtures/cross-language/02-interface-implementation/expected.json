@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "language": "cross-language",
+  "description": "Expected baseline for interface implementation fixture",
+  "entities": [
+    {
+      "name": "IRepository",
+      "type": "interface",
+      "members": [
+        {
+          "name": "findById",
+          "type": "method",
+          "visibility": "public"
+        },
+        {
+          "name": "save",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    },
+    {
+      "name": "InMemoryRepository",
+      "type": "class",
+      "members": [
+        {
+          "name": "data",
+          "type": "field",
+          "visibility": "private"
+        },
+        {
+          "name": "findById",
+          "type": "method",
+          "visibility": "public"
+        },
+        {
+          "name": "save",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "source": "InMemoryRepository",
+      "target": "IRepository",
+      "type": "implements"
+    }
+  ]
+}

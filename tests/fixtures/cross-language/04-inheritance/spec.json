@@ -1,0 +1,11 @@
+{
+  "name": "Inheritance",
+  "description": "Tests inheritance patterns - class extending another class",
+  "languages": ["typescript", "go"],
+  "expectedMetrics": {
+    "entityCount": 2,
+    "methodCount": 4,
+    "fieldCount": 4,
+    "relationCount": 1
+  }
+}

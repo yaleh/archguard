@@ -41,6 +41,31 @@ export interface GoMethod {
 }
 
 /**
+ * Normalized method signature for interface matching
+ */
+export interface MethodSignature {
+  name: string;
+  normalizedSignature: string;
+}
+
+/**
+ * Method set for a Go type (value vs pointer methods)
+ */
+export interface MethodSet {
+  valueMethodSet: Map<string, MethodSignature>;
+  pointerMethodSet: Map<string, MethodSignature>;
+}
+
+/**
+ * Embedded type reference (for method promotion)
+ */
+export interface EmbeddedTypeRef {
+  name: string;
+  isPointer: boolean;
+  location: GoSourceLocation;
+}
+
+/**
  * Go struct definition
  */
 export interface GoRawStruct {
@@ -49,6 +74,7 @@ export interface GoRawStruct {
   fields: GoField[];
   methods: GoMethod[];
   embeddedTypes: string[];
+  embeddedTypeRefs?: EmbeddedTypeRef[]; // Detailed embedded type info for method promotion
   exported: boolean;
   location: GoSourceLocation;
 }

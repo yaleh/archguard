@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "language": "cross-language",
+  "description": "Expected baseline for composition fixture",
+  "entities": [
+    {
+      "name": "Address",
+      "type": "class",
+      "members": [
+        {
+          "name": "street",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "city",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "getFullAddress",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    },
+    {
+      "name": "Person",
+      "type": "class",
+      "members": [
+        {
+          "name": "name",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "address",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "getPersonInfo",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "source": "Person",
+      "target": "Address",
+      "type": "composition"
+    }
+  ]
+}

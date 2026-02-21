@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "language": "cross-language",
+  "description": "Expected baseline for inheritance fixture",
+  "entities": [
+    {
+      "name": "Animal",
+      "type": "class",
+      "members": [
+        {
+          "name": "name",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "age",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "makeSound",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    },
+    {
+      "name": "Dog",
+      "type": "class",
+      "members": [
+        {
+          "name": "breed",
+          "type": "field",
+          "visibility": "public"
+        },
+        {
+          "name": "makeSound",
+          "type": "method",
+          "visibility": "public"
+        },
+        {
+          "name": "fetch",
+          "type": "method",
+          "visibility": "public"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "source": "Dog",
+      "target": "Animal",
+      "type": "extends"
+    }
+  ]
+}

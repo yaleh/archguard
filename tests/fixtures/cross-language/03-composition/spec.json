@@ -1,0 +1,11 @@
+{
+  "name": "Composition/embedding",
+  "description": "Tests composition patterns - one class/struct embedding another",
+  "languages": ["typescript", "go"],
+  "expectedMetrics": {
+    "entityCount": 2,
+    "methodCount": 3,
+    "fieldCount": 4,
+    "relationCount": 1
+  }
+}

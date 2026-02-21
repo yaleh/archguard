@@ -1,0 +1,11 @@
+{
+  "name": "Interface implementation",
+  "description": "Tests interface/implementation detection - an interface with a concrete implementation",
+  "languages": ["typescript", "go"],
+  "expectedMetrics": {
+    "entityCount": 2,
+    "methodCount": 4,
+    "fieldCount": 2,
+    "relationCount": 1
+  }
+}

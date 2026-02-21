@@ -21,6 +21,20 @@ describe('GoPlugin', () => {
       expect(plugin.metadata.capabilities.singleFileParsing).toBe(true);
       expect(plugin.metadata.capabilities.typeInference).toBe(true);
     });
+
+    it('should have dependencyExtraction capability enabled', () => {
+      expect(plugin.metadata.capabilities.dependencyExtraction).toBe(true);
+    });
+  });
+
+  describe('dependencyExtractor', () => {
+    it('should expose dependencyExtractor property', () => {
+      expect(plugin.dependencyExtractor).toBeDefined();
+    });
+
+    it('should have extractDependencies method', () => {
+      expect(typeof plugin.dependencyExtractor.extractDependencies).toBe('function');
+    });
   });
 
   describe('canHandle', () => {

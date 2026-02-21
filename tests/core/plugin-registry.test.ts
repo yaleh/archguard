@@ -4,9 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import path from 'path';
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import type { ILanguagePlugin } from '@/core/interfaces/index.js';
 import type { ArchJSON } from '@/types/index.js';
+
+// Fixture directory for detection tests
+const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/detection');
 
 // Mock plugin for testing
 class MockPlugin implements ILanguagePlugin {
@@ -117,6 +121,142 @@ class AnotherMockPlugin implements ILanguagePlugin {
   async dispose(): Promise<void> {}
 }
 
+// Mock Go plugin for detection testing
+class MockGoPlugin implements ILanguagePlugin {
+  readonly metadata = {
+    name: 'golang',
+    version: '1.0.0',
+    displayName: 'Go (Golang)',
+    fileExtensions: ['.go'],
+    author: 'Test',
+    minCoreVersion: '2.0.0',
+    capabilities: {
+      singleFileParsing: true,
+      incrementalParsing: false,
+      dependencyExtraction: false,
+      typeInference: true,
+    },
+  };
+
+  async initialize(): Promise<void> {}
+  canHandle(targetPath: string): boolean {
+    return targetPath.endsWith('.go');
+  }
+  async parseProject(): Promise<ArchJSON> {
+    return {
+      version: '1.0',
+      language: 'go',
+      timestamp: new Date().toISOString(),
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    };
+  }
+  async dispose(): Promise<void> {}
+}
+
+// Mock TypeScript plugin for detection testing
+class MockTypeScriptPlugin implements ILanguagePlugin {
+  readonly metadata = {
+    name: 'typescript',
+    version: '1.0.0',
+    displayName: 'TypeScript/JavaScript',
+    fileExtensions: ['.ts', '.tsx', '.js', '.jsx'],
+    author: 'Test',
+    minCoreVersion: '2.0.0',
+    capabilities: {
+      singleFileParsing: true,
+      incrementalParsing: true,
+      dependencyExtraction: true,
+      typeInference: true,
+    },
+  };
+
+  async initialize(): Promise<void> {}
+  canHandle(targetPath: string): boolean {
+    return /\.(ts|tsx|js|jsx)$/.test(targetPath);
+  }
+  async parseProject(): Promise<ArchJSON> {
+    return {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: new Date().toISOString(),
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    };
+  }
+  async dispose(): Promise<void> {}
+}
+
+// Mock Java plugin for detection testing
+class MockJavaPlugin implements ILanguagePlugin {
+  readonly metadata = {
+    name: 'java',
+    version: '1.0.0',
+    displayName: 'Java',
+    fileExtensions: ['.java'],
+    author: 'Test',
+    minCoreVersion: '2.0.0',
+    capabilities: {
+      singleFileParsing: true,
+      incrementalParsing: true,
+      dependencyExtraction: true,
+      typeInference: false,
+    },
+  };
+
+  async initialize(): Promise<void> {}
+  canHandle(targetPath: string): boolean {
+    return targetPath.endsWith('.java');
+  }
+  async parseProject(): Promise<ArchJSON> {
+    return {
+      version: '1.0',
+      language: 'java',
+      timestamp: new Date().toISOString(),
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    };
+  }
+  async dispose(): Promise<void> {}
+}
+
+// Mock Python plugin for detection testing
+class MockPythonPlugin implements ILanguagePlugin {
+  readonly metadata = {
+    name: 'python',
+    version: '1.0.0',
+    displayName: 'Python',
+    fileExtensions: ['.py'],
+    author: 'Test',
+    minCoreVersion: '2.0.0',
+    capabilities: {
+      singleFileParsing: true,
+      incrementalParsing: true,
+      dependencyExtraction: true,
+      typeInference: false,
+    },
+  };
+
+  async initialize(): Promise<void> {}
+  canHandle(targetPath: string): boolean {
+    return targetPath.endsWith('.py');
+  }
+  async parseProject(): Promise<ArchJSON> {
+    return {
+      version: '1.0',
+      language: 'python',
+      timestamp: new Date().toISOString(),
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    };
+  }
+  async dispose(): Promise<void> {}
+}
+
 describe('PluginRegistry', () => {
   let registry: PluginRegistry;
 
@@ -212,13 +352,131 @@ describe('PluginRegistry', () => {
   });
 
   describe('detectPluginForDirectory()', () => {
-    it('should detect plugin for directory with mock.json file', () => {
-      const plugin = new MockPlugin();
-      registry.register(plugin);
+    it('should have detectPluginForDirectory method defined', () => {
+      expect(typeof registry.detectPluginForDirectory).toBe('function');
+    });
 
-      // Note: This test will need filesystem mocking or fixture
-      // For now, we test the interface exists
-      expect(registry.detectPluginForDirectory).toBeDefined();
+    it('should detect Go plugin for directory with go.mod', async () => {
+      const goPlugin = new MockGoPlugin();
+      registry.register(goPlugin);
+
+      const goProjectDir = path.join(FIXTURES_DIR, 'go-project');
+      const detected = await registry.detectPluginForDirectory(goProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('golang');
+    });
+
+    it('should detect TypeScript plugin for directory with package.json', async () => {
+      const tsPlugin = new MockTypeScriptPlugin();
+      registry.register(tsPlugin);
+
+      const tsProjectDir = path.join(FIXTURES_DIR, 'ts-project');
+      const detected = await registry.detectPluginForDirectory(tsProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('typescript');
+    });
+
+    it('should detect TypeScript plugin for directory with tsconfig.json', async () => {
+      const tsPlugin = new MockTypeScriptPlugin();
+      registry.register(tsPlugin);
+
+      // ts-project has both package.json and tsconfig.json
+      const tsProjectDir = path.join(FIXTURES_DIR, 'ts-project');
+      const detected = await registry.detectPluginForDirectory(tsProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('typescript');
+    });
+
+    it('should detect Java plugin for directory with pom.xml', async () => {
+      const javaPlugin = new MockJavaPlugin();
+      registry.register(javaPlugin);
+
+      const javaProjectDir = path.join(FIXTURES_DIR, 'java-project');
+      const detected = await registry.detectPluginForDirectory(javaProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('java');
+    });
+
+    it('should detect Java plugin for directory with build.gradle', async () => {
+      const javaPlugin = new MockJavaPlugin();
+      registry.register(javaPlugin);
+
+      // java-project has both pom.xml and build.gradle
+      const javaProjectDir = path.join(FIXTURES_DIR, 'java-project');
+      const detected = await registry.detectPluginForDirectory(javaProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('java');
+    });
+
+    it('should detect Python plugin for directory with pyproject.toml', async () => {
+      const pythonPlugin = new MockPythonPlugin();
+      registry.register(pythonPlugin);
+
+      const pythonProjectDir = path.join(FIXTURES_DIR, 'python-project');
+      const detected = await registry.detectPluginForDirectory(pythonProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('python');
+    });
+
+    it('should detect Python plugin for directory with requirements.txt', async () => {
+      const pythonPlugin = new MockPythonPlugin();
+      registry.register(pythonPlugin);
+
+      // python-project has both pyproject.toml and requirements.txt
+      const pythonProjectDir = path.join(FIXTURES_DIR, 'python-project');
+      const detected = await registry.detectPluginForDirectory(pythonProjectDir);
+
+      expect(detected).not.toBeNull();
+      expect(detected?.metadata.name).toBe('python');
+    });
+
+    it('should return null for unknown project type', async () => {
+      const detected = await registry.detectPluginForDirectory(
+        path.join(FIXTURES_DIR, 'unknown-project')
+      );
+
+      expect(detected).toBeNull();
+    });
+
+    it('should return null for non-existent directory', async () => {
+      const detected = await registry.detectPluginForDirectory(
+        path.join(FIXTURES_DIR, 'non-existent-dir')
+      );
+
+      expect(detected).toBeNull();
+    });
+
+    it('should return null when no matching plugin is registered', async () => {
+      // Only register TypeScript plugin
+      const tsPlugin = new MockTypeScriptPlugin();
+      registry.register(tsPlugin);
+
+      // Try to detect Go project (no Go plugin registered)
+      const detected = await registry.detectPluginForDirectory(
+        path.join(FIXTURES_DIR, 'go-project')
+      );
+
+      expect(detected).toBeNull();
+    });
+
+    it('should prioritize detection rules in order (go.mod before package.json)', async () => {
+      const goPlugin = new MockGoPlugin();
+      const tsPlugin = new MockTypeScriptPlugin();
+      registry.register(goPlugin);
+      registry.register(tsPlugin);
+
+      // Go project should be detected as Go, not TypeScript
+      const detected = await registry.detectPluginForDirectory(
+        path.join(FIXTURES_DIR, 'go-project')
+      );
+
+      expect(detected?.metadata.name).toBe('golang');
     });
   });
 

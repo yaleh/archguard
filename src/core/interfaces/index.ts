@@ -38,4 +38,5 @@ export {
   PluginConfigError,
   ToolDependencyError,
   FileSystemError,
+  ParseError,
 } from './errors.js';
