@@ -1,0 +1,13 @@
+// Sample class definition for testing
+class SampleClass {
+  field: string
+  counter: number
+
+  method(): void {
+    // method body
+  }
+
+  anotherMethod(param: string): number {
+    return 42
+  }
+}

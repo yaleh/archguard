@@ -1,0 +1,8 @@
+// Sample inheritance for testing
+class Parent {
+  parentMethod(): void {}
+}
+
+class Child extends Parent {
+  childMethod(): void {}
+}

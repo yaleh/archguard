@@ -213,6 +213,42 @@ node dist/cli/index.js cache stats
 
 **For Mermaid format**: No external dependencies required (uses built-in isomorphic-mermaid).
 
+## Language Support
+
+ArchGuard supports multiple programming languages through its plugin system:
+
+| Language | Status | Features |
+|----------|--------|----------|
+| TypeScript | Stable | Full support, dependency extraction |
+| Go | Stable | Tree-sitter + gopls, interface detection |
+| Java | Beta | Tree-sitter, Maven/Gradle deps |
+| Python | Beta | Tree-sitter, pip/Poetry deps |
+
+### Adding Language Support
+
+To add a new language, create a plugin implementing `ILanguagePlugin`. See [Plugin Development Guide](docs/plugin-development-guide.md).
+
+### Using Language Plugins
+
+```bash
+# Auto-detect language (default)
+node dist/cli/index.js analyze -s ./src
+
+# Explicitly specify language
+node dist/cli/index.js analyze -s ./src --lang typescript
+node dist/cli/index.js analyze -s ./src --lang go
+node dist/cli/index.js analyze -s ./src --lang java
+node dist/cli/index.js analyze -s ./src --lang python
+```
+
+### Plugin Registry
+
+ArchGuard uses a plugin registry to manage language support. Plugins can be:
+- **Built-in**: TypeScript, Go, Java, Python plugins included
+- **External**: Load third-party plugins via configuration
+
+See [Plugin Registry Documentation](docs/plugin-registry.md) for details.
+
 ## Architecture Overview
 
 Three-layer architecture:

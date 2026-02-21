@@ -1,0 +1,9 @@
+# Example project marker file for MyLanguage
+# Similar to pyproject.toml or package.json
+
+[project]
+name = "my-project"
+version = "1.0.0"
+
+[dependencies]
+mylib = "2.0.0"
