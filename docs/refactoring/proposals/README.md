@@ -845,6 +845,67 @@ export class ELKRenderer {
 **适用人群**: 性能工程师、DevOps、需要生成多图的用户
 **阅读优先级**: ⭐⭐⭐⭐⭐ (必读)
 
+---
+
+### [15-golang-support-proposal.md](./15-golang-support-proposal.md)
+**🐹 Go 语言基础支持 - Tree-sitter + gopls**
+
+**适用人群**: Go 开发者、语言插件开发者
+**阅读优先级**: ⭐⭐⭐⭐ (Go 项目必读)
+
+**内容概要**:
+- Go 语言插件实现 (Phase 0-4)
+- Tree-sitter 语法分析
+- gopls 语义分析
+- 隐式接口检测
+- 方法提升
+
+---
+
+### [16-go-architecture-atlas.md](./16-go-architecture-atlas.md)
+**🗺️ Go Architecture Atlas - Go 语言架构可观测系统**
+
+**适用人群**: Go 架构师、微服务开发者、LLM/Agent 用户
+**阅读优先级**: ⭐⭐⭐⭐⭐ (Go 深度分析必读)
+
+**内容概要**:
+- **核心洞察**: Go 类型系统不是架构载体，必须从行为恢复架构
+- **四层架构图**:
+  1. Package Dependency Graph (静态边界)
+  2. Capability Graph (抽象关系)
+  3. Goroutine Topology (执行结构)
+  4. Flow Graph (信息路径)
+- **BehaviorAnalyzer** 实现
+- **市场空白**: 目前几乎没有工具自动做 Goroutine/Flow 分析
+- **LLM 时代价值**: 成为 Go + Agent + LLM 时代的架构显微镜
+
+**何时使用**:
+- ✅ Go 项目架构分析
+- ✅ 并发结构理解
+- ✅ 接口依赖追踪
+- ✅ 信息流分析
+- ✅ LLM 生成代码的架构验证
+
+**关键亮点**:
+- **Package Graph**: 100% 静态恢复，无 LLM
+- **Capability Graph**: 真实接口使用关系，而非定义
+- **Goroutine Topology**: 市场空白，自动识别并发模式
+- **Flow Graph**: HTTP/CLI 入口点到数据流的完整追踪
+
+**用户价值**:
+- 架构理解准确度: 40-60% → 90%+ (**+50%**)
+- 并发结构可见性: 0% → 100% (**∞**)
+- 接口使用追踪: 0% → 100% (**∞**)
+- 市场定位: 成为第一个真正的 Go 架构工具
+
+**实施优先级**:
+- Phase 5: Package Graph (2-3 天)
+- Phase 6: Capability Graph (3-4 天)
+- Phase 7: Goroutine Topology (4-5 天) - **市场空白**
+- Phase 8: Flow Graph (5-7 天)
+- Phase 9: 集成与优化 (3-4 天)
+- **总计**: 17-23 天
+
 **内容概要**:
 - 解决多 diagram 串行处理的性能瓶颈
 - 7 项性能优化建议
