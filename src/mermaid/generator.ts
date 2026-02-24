@@ -198,15 +198,17 @@ export class ValidatedMermaidGenerator {
     const packageGroups = this.groupEntitiesByPackage();
 
     for (const group of packageGroups) {
-      lines.push(`  namespace "${group.name}" {`);
-
+      const entityLines: string[] = [];
       for (const entityId of group.entities) {
         const entity = this.archJson.entities.find((e) => e.id === entityId);
         if (entity) {
-          lines.push(`    class ${this.escapeId(this.normalizeEntityName(entity.name))}`);
+          entityLines.push(`    class ${this.escapeId(this.normalizeEntityName(entity.name))}`);
         }
       }
-
+      // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
+      if (entityLines.length === 0) continue;
+      lines.push(`  namespace ${this.escapeId(group.name)} {`);
+      lines.push(...entityLines);
       lines.push('  }');
     }
 
@@ -227,7 +229,7 @@ export class ValidatedMermaidGenerator {
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace "${group.name}" {`);
+        lines.push(`  namespace ${this.escapeId(group.name)} {`);
 
         for (const entityId of group.entities) {
           const entity = this.archJson.entities.find((e) => e.id === entityId);
@@ -268,7 +270,7 @@ export class ValidatedMermaidGenerator {
 
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace "${group.name}" {`);
+        lines.push(`  namespace ${this.escapeId(group.name)} {`);
 
         for (const entityId of group.entities) {
           const entity = this.archJson.entities.find((e) => e.id === entityId);
@@ -303,7 +305,8 @@ export class ValidatedMermaidGenerator {
     // Class declaration - Mermaid doesn't support generics in class names
     // Remove generic parameters from the class name
     const className = this.escapeId(this.normalizeEntityName(entity.name));
-    const classType = entity.type === 'interface' ? 'class' : entity.type;
+    // Mermaid classDiagram only supports 'class' keyword; map all entity types accordingly
+    const classType = entity.type === 'interface' ? 'class' : 'class';
     lines.push(`${padding}${classType} ${className} {`);
 
     // Add members (with null check)
