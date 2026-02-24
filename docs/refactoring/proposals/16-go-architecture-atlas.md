@@ -1,10 +1,13 @@
 # Go Architecture Atlas: Go 语言架构可观测系统
 
-**文档版本**: 2.2
+**文档版本**: 4.0
 **创建日期**: 2026-02-23
 **最后修改**: 2026-02-24
 **前置依赖**: 15-golang-support-proposal.md (Phase 0-4 已完成)
-**状态**: 批准 - 等待实现 (基于严苛架构师审查 V2)
+**状态**: 待评审 - 已响应架构审查 v3.0 反馈
+**架构审查**:
+- v2.2: docs/reviews/2024-02-24-go-atlas-architectural-review.md
+- v3.0: docs/reviews/2024-02-24-go-atlas-v3-review.md
 
 ---
 
@@ -103,10 +106,12 @@ OOP (TypeScript/Java/C#):                    Go:
 | **HTTP 入口点** | ~70% | 框架差异 | ⭐⭐⭐⭐ |
 | **函数调用链** | ~60% | **严重依赖类型推断 (gopls)** | ⭐⭐⭐ |
 | **struct 继承** | N/A | Go 无继承 | - |
+| **函数体行为** | ~80% | **需扩展 TreeSitterBridge** | ⭐⭐⭐⭐⭐ |
 
 **说明**：
 - "goroutine spawn 是 runtime truth" 的说法不准确，应为 "静态 spawn pattern"
 - **修正**: "channel edges" 的静态可恢复性极低（< 20%），除非是局部变量传递。复杂的数据流分析不在初期版本范围内。
+- **新增**: "函数体行为" 可恢复性取决于 TreeSitterBridge 扩展（见 4.4 节），包括调用表达式、goroutine spawn 点、channel 操作的静态识别。
 
 ---
 
@@ -324,63 +329,78 @@ OOP (TypeScript/Java/C#):                    Go:
 
 ## 4. 架构设计
 
-### 4.1 系统架构
+### 4.1 系统架构原则
+
+基于架构审查反馈（docs/reviews/2024-02-24-go-atlas-v3-review.md），本提案遵循以下设计原则：
+
+1. **无需向后兼容**: Go 语言的特殊性（行为模式 > 类型系统）允许对 ArchGuard 核心架构进行适应性调整
+2. **插件接口统一**: `GoAtlasPlugin` 必须继承 `GoPlugin` 并实现 `ILanguagePlugin` 接口，确保与现有工具链（CLI/Web UI/批处理）兼容
+3. **数据结构扩展**: 扩展 `GoRawData` 支持函数体分析，同时保持与现有 `GoPlugin` 的兼容性
+4. **分层清晰**: 解析层（TreeSitter）→ 分析层（BehaviorAnalyzer）→ 映射层（ArchJsonMapper）职责分离
+5. **渐进增强**: 函数体提取作为可选功能，避免破坏 Phase 0-4 性能特性
+
+### 4.2 系统架构
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                       Go Atlas Architecture                           │
+│                    Go Atlas Architecture (v4.0)                      │
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                       GoAtlasPlugin                            │  │
-│  │  (Standalone Tool, does not implement ILanguagePlugin yet)     │  │
+│  │                    GoAtlasPlugin                               │  │
+│  │         (extends GoPlugin + implements IGoAtlas)                │  │
 │  ├─────────────────────────────────────────────────────────────────┤  │
 │  │                                                                 │  │
-│  │  ┌───────────────┐  ┌───────────────┐                          │  │
-│  │  │ TreeSitter    │  │ GoplsClient   │                          │  │
-│  │  │ Bridge (v2)   │  │ (Required for │                          │  │
-│  │  │ +FuncBody     │  │ Flow/Graph)   │                          │  │
-│  │  └───────┬───────┘  └───────┬───────┘                          │  │
-│  │          │                  │                                  │  │
-│  │          └────────┬─────────┘                                  │  │
-│  │                   ▼                                             │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │              BehaviorAnalyzer                           │   │  │
-│  │  │  ┌────────────┐  ┌────────────┐  ┌────────────┐        │   │  │
-│  │  │  │PackageGraph│  │Capability │  │GoroutineTop│        │   │  │
-│  │  │  │  Builder   │  │   Builder  │  │   Builder   │        │   │  │
-│  │  │  └────────────┘  └────────────┘  └────────────┘        │   │  │
-│  │  │  ┌──────────────────────────────────────────────┐       │   │  │
-│  │  │  │           FlowGraphBuilder                    │       │   │  │
-│  │  │  │         (Dependencies: Gopls)                 │       │   │  │
-│  │  │  └──────────────────────────────────────────────┘       │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
-│  │                   │                                            │  │
-│  │                   ▼                                            │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │              GoArchitectureAtlas                       │   │  │
-│  │  │  • metadata: AtlasMetadata                             │   │  │
-│  │  │  • packageGraph: PackageGraph                           │   │  │
-│  │  │  • capabilityGraph: CapabilityGraph                     │   │  │
-│  │  │  • goroutineTopology: GoroutineTopology                 │   │  │
-│  │  │  • flowGraph: FlowGraph                                 │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
-│  │                   │                                            │  │
-│  │                   ▼                                            │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │              AtlasRenderer                             │   │  │
-│  │  │  renderPackageGraph(): Mermaid/JSON/SVG                 │   │  │
-│  │  │  renderCapabilityGraph(): Mermaid/JSON/SVG              │   │  │
-│  │  │  renderGoroutineTopology(): Mermaid/JSON/SVG            │   │  │
-│  │  │  renderFlowGraph(): Mermaid/JSON/SVG                    │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
+│  │  ┌───────────────────────────────────────────────────────────┐ │  │
+│  │  │           ILanguagePlugin 接口 (继承自 GoPlugin)           │ │  │
+│  │  │  • parseProject() → ArchJSON (兼容现有工具链)              │ │  │
+│  │  │  • parseCode() → ArchJSON                                  │ │  │
+│  │  │  • parseProjectToRaw() → GoRawData (protected, 新增)       │ │  │
+│  │  └───────────────────────────────────────────────────────────┘ │  │
+│  │                                                                 │  │
+│  │  ┌───────────────────────────────────────────────────────────┐ │  │
+│  │  │           IGoAtlas 接口 (Atlas 专用)                      │ │  │
+│  │  │  • generateAtlas() → GoArchitectureAtlas (完整四层图)       │ │  │
+│  │  │  • renderLayer() → Mermaid/JSON/SVG (分层渲染)             │ │  │
+│  │  └───────────────────────────────────────────────────────────┘ │  │
+│  │                                                                 │  │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐  │  │
+│  │  │ TreeSitter    │  │ GoplsClient   │  │ BehaviorAnalyzer  │  │  │
+│  │  │ Bridge v4.0   │  │ (Optional)    │  │                   │  │  │
+│  │  │               │  │               │  │  • PackageGraph   │  │  │
+│  │  │ • parseCode() │  │ • call        │  │  • CapabilityGraph│  │  │
+│  │  │   (无函数体)  │  │   hierarchy   │  │  • GoroutineTopo  │  │  │
+│  │  │ • parseCode() │  │ • type        │  │  • FlowGraph     │  │  │
+│  │  │   WithBodies()│  │   inference   │  │                   │  │  │
+│  │  │   (Atlas专用) │  │               │  │                   │  │  │
+│  │  └───────────────┘  └───────────────┘  └───────────────────┘  │  │
+│  │         │                  │                    │             │  │
+│  │         └──────────────────┴────────────────────┘             │  │
+│  │                            ▼                                 │  │
+│  │  ┌───────────────────────────────────────────────────────────┐ │  │
+│  │  │              GoArchitectureAtlas                          │ │  │
+│  │  │  • metadata: AtlasMetadata                                │ │  │
+│  │  │  • packageGraph: PackageGraph                              │ │  │
+│  │  │  • capabilityGraph: CapabilityGraph                        │ │  │
+│  │  │  • goroutineTopology: GoroutineTopology                    │ │  │
+│  │  │  • flowGraph: FlowGraph                                    │ │  │
+│  │  └───────────────────────────────────────────────────────────┘ │  │
+│  │                            │                                 │  │
+│  │                            ▼                                 │  │
+│  │  ┌───────────────────────────────────────────────────────────┐ │  │
+│  │  │              AtlasMapper                                  │ │  │
+│  │  │  toArchJSON(): Atlas → ArchJSON (双向转换)                 │ │  │
+│  │  │  toAtlas(): ArchJSON → Atlas (反解析)                     │ │  │
+│  │  └───────────────────────────────────────────────────────────┘ │  │
 │  │                                                                 │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 │                                                                       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 核心数据结构
+### 4.3 核心数据结构
+
+#### 4.3.1 GoArchitectureAtlas 定义
 
 ```typescript
 // plugins/golang/atlas/types.ts
@@ -403,6 +423,8 @@ export interface AtlasMetadata {
   generatedAt: string;
   analyzerVersion: string;
   stats: AtlasStats;
+  partialGeneration: boolean;  // 标注是否部分生成
+  missingLayers: string[];     // ['goroutine', 'flow']
 }
 
 export interface AtlasStats {
@@ -413,7 +435,11 @@ export interface AtlasStats {
   channels: number;
   entryPoints: number;
 }
+```
 
+#### 4.3.2 Package Graph 定义
+
+```typescript
 // ============== Package Graph ==============
 
 export interface PackageGraph {
@@ -450,7 +476,11 @@ export interface PackageCycle {
   packages: string[];     // 循环依赖的包 ID 列表
   severity: 'warning' | 'error';
 }
+```
 
+#### 4.3.3 Capability Graph 定义
+
+```typescript
 // ============== Capability Graph ==============
 
 export interface CapabilityGraph {
@@ -499,7 +529,11 @@ export type UsageContext =
   | 'variable'           // 局部变量: `var s Store = ...`
   | 'channel_element'    // channel 元素: `ch chan Store`
   | 'map_value';         // map 值: `m map[string]Store`
+```
 
+#### 4.3.4 Goroutine Topology 定义
+
+```typescript
 // ============== Goroutine Topology ==============
 
 export interface GoroutineTopology {
@@ -539,7 +573,11 @@ export interface ChannelNode {
 
 // 注意: 不再包含 connections，因为静态识别的准确率太低
 // 改为识别 Goroutine 和 Channel 各自的模式
+```
 
+#### 4.3.5 Flow Graph 定义
+
+```typescript
 // ============== Flow Graph ==============
 
 export interface FlowGraph {
@@ -607,145 +645,231 @@ export interface SourceLocation {
 }
 ```
 
-### 4.3 与现有架构的集成
+### 4.4 ArchGuard 核心架构调整
 
-#### 4.3.1 架构设计决策
+基于架构审查反馈，以下扩展 **不需要保持向后兼容**，可直接调整 ArchGuard 核心类型定义。
 
-**重要**: `GoAtlasPlugin` 不继承 `GoPlugin`，而是作为**独立实现**共享底层组件。它目前仅作为 CLI 专用工具，不强制实现标准 `ILanguagePlugin` 接口，以便快速迭代。
+#### 4.4.1 扩展 ArchJSON Schema
 
-**设计理由**:
-1. `GoPlugin.parseProject()` 返回 `ArchJSON`，而 Atlas 需要保留更多中间数据（尤其是 AST 和包图）。
-2. `GoRawData` 需要大幅扩展以支持行为分析，这可能会影响现有插件的性能。
-3. Atlas 需要**完整的包依赖图**，而现有实现中 `GoRawPackage.imports` 只是路径列表。
+```typescript
+// src/types/index.ts
 
-**架构关系图**:
+/**
+ * Supported programming languages
+ */
+export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust';
+
+/**
+ * Entity types in the architecture
+ * ✅ 新增: 'package' 支持 Go 包级实体
+ */
+export type EntityType =
+  'class' | 'interface' | 'enum' | 'struct' | 'trait' | 'abstract_class' | 'function' | 'package';
+
+/**
+ * Relation types between entities
+ * ✅ 新增: 'spawns', 'calls' 支持 Go 行为关系
+ */
+export type RelationType =
+  | 'inheritance'
+  | 'implementation'
+  | 'composition'
+  | 'aggregation'
+  | 'dependency'
+  | 'association'
+  | 'spawns'      // ✅ 新增: Goroutine spawn 关系
+  | 'calls';      // ✅ 新增: 函数调用关系
+
+/**
+ * Main architecture JSON structure
+ * ✅ 新增: extensions 字段支持语言特定数据
+ */
+export interface ArchJSON {
+  version: string;
+  language: SupportedLanguage;
+  timestamp: string;
+  sourceFiles: string[];
+  entities: Entity[];
+  relations: Relation[];
+  modules?: Module[];
+  metadata?: Record<string, unknown>;
+
+  // ✅ 新增: 扩展字段，支持语言特定数据
+  extensions?: {
+    goAtlas?: Partial<GoArchitectureAtlas>;
+  };
+}
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         共享组件层                                │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐   │
-│  │TreeSitterBridge│  │InterfaceMatcher│  │   ArchJsonMapper  │   │
-│  │ (必须升级支持   │  │                │  │                   │   │
-│  │  函数体分析)    │  │                │  │                   │   │
-│  └───────┬───────┘  └───────┬───────┘  └─────────┬─────────┘   │
-└──────────┼──────────────────┼────────────────────┼──────────────┘
-           │                  │                    │
-           │         ┌────────┴─────────┐          │
-           │         │                  │          │
-           ▼         ▼                  ▼          ▼
-┌──────────────────┐    ┌────────────────────────────────┐
-│   GoPlugin       │    │     GoAtlasPlugin              │
-│ (Standard)       │    │     (CLI Tool)                 │
-│                  │    │                                │
-│  • parseProject()│    │  • generateAtlas()             │
-│    → ArchJSON    │    │  • analyzePackageGraph()       │
-│                  │    │  • analyzeCapabilityGraph()    │
-│                  │    │  • analyzeGoroutineTopology()  │
-│                  │    │  • analyzeFlowGraph()          │
-└──────────────────┘    │  • toArchJSON()                │
-                        └────────────────────────────────┘
+
+#### 4.4.2 扩展 ILanguagePlugin 接口
+
+```typescript
+// src/core/interfaces/language-plugin.ts
+
+/**
+ * Language plugin interface
+ *
+ * All language plugins must implement this interface to be compatible
+ * with ArchGuard's plugin system.
+ */
+export interface ILanguagePlugin extends IParser {
+  readonly metadata: PluginMetadata;
+  initialize(config: PluginInitConfig): Promise<void>;
+  canHandle(targetPath: string): boolean;
+  dispose(): Promise<void>;
+  readonly dependencyExtractor?: IDependencyExtractor;
+  readonly validator?: IValidator;
+
+  // ✅ 新增: 可选扩展方法（Go 等语言可实现）
+  generateExtendedAnalysis?(rootPath: string, options: any): Promise<any>;
+}
 ```
 
-#### 4.3.2 GoAtlasPlugin 实现
+### 4.5 GoAtlasPlugin 接口定义
 
 ```typescript
 // plugins/golang/atlas/go-atlas-plugin.ts
 
-import type { PluginInitConfig } from '@/core/interfaces/language-plugin.js';
-import { TreeSitterBridge } from '../golang/tree-sitter-bridge.js';
-import { InterfaceMatcher } from '../golang/interface-matcher.js';
-import { GoplsClient } from '../golang/gopls-client.js';
-import type { GoRawData, GoRawPackage } from '../golang/types.js';
 import type {
-  GoArchitectureAtlas,
-  ArchJSON,
-  PackageGraph,
-  CapabilityGraph,
-  GoroutineTopology,
-  FlowGraph
-} from './types.js';
-import { BehaviorAnalyzer } from './behavior-analyzer.js';
-import { AtlasRenderer } from './atlas-renderer.js';
+  ILanguagePlugin,
+  PluginMetadata,
+  PluginInitConfig
+} from '@/core/interfaces/language-plugin.js';
+import type { ParseConfig, ArchJSON } from '@/types/index.js';
+import { GoPlugin } from '../golang/index.js';  // ✅ 继承现有插件
 
 /**
- * Go Atlas Plugin - 独立实现，共享底层组件
- *
- * 设计决策:
- * 1. 不继承 GoPlugin，避免 ArchJSON 信息丢失问题
- * 2. 直接使用 TreeSitterBridge、InterfaceMatcher 等共享组件
- * 3. 自己维护 GoRawData，保留完整的中间数据
- * 4. 提供 toArchJSON() 用于导出标准格式
- *
- * ⚠️ 关键依赖: TreeSitterBridge 必须升级以支持 ExtractFunctionBody，
- *    否则 BehaviorAnalyzer 将无法工作。
+ * Go Atlas Plugin 接口定义
  */
-export class GoAtlasPlugin {
-  private treeSitter: TreeSitterBridge;
-  private matcher: InterfaceMatcher;
-  private goplsClient: GoplsClient | null = null;
-  private behaviorAnalyzer: BehaviorAnalyzer;
-  private renderer: AtlasRenderer;
-  private initialized = false;
-
-  constructor() {
-    this.treeSitter = new TreeSitterBridge();
-    this.matcher = new InterfaceMatcher();
-    this.behaviorAnalyzer = new BehaviorAnalyzer(this.treeSitter, this.matcher);
-    this.renderer = new AtlasRenderer();
-  }
+export interface IGoAtlas {
+  /**
+   * 生成完整的 Go Architecture Atlas (四层图)
+   */
+  generateAtlas(
+    rootPath: string,
+    options?: AtlasGenerationOptions
+  ): Promise<GoArchitectureAtlas>;
 
   /**
-   * 初始化插件
+   * 渲染指定层级的架构图
    */
-  async initialize(config: PluginInitConfig): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
+  renderLayer(
+    atlas: GoArchitectureAtlas,
+    layer: AtlasLayer,
+    format: RenderFormat
+  ): Promise<RenderResult>;
+}
 
-    // 尝试初始化 gopls（Atlas 分析的核心增强）
-    // 对于 Flow Graph，gopls 几乎是必须的
-    try {
-      this.goplsClient = new GoplsClient();
-    } catch (error) {
-      console.warn('gopls not available. Flow Graph analysis will be severely limited.', error);
-      this.goplsClient = null;
-    }
+export type AtlasLayer = 'package' | 'capability' | 'goroutine' | 'flow' | 'all';
+export type RenderFormat = 'mermaid' | 'json' | 'svg' | 'png';
 
-    this.initialized = true;
+export interface RenderResult {
+  content: string;
+  format: RenderFormat;
+  layer: AtlasLayer;
+}
+
+/**
+ * Go Atlas Plugin 实现
+ *
+ * 设计决策:
+ * 1. 继承 GoPlugin，复用 parseProject() 逻辑
+ * 2. 实现 IGoAtlas 扩展接口，提供 Atlas 专用功能
+ * 3. 实现 ILanguagePlugin 标准接口，保持工具链兼容
+ * 4. 暴露 parseProjectToRaw() 供子类使用
+ */
+export class GoAtlasPlugin extends GoPlugin implements IGoAtlas {
+  readonly metadata: PluginMetadata = {
+    ...super.metadata,  // 继承基础 metadata
+    name: 'golang-atlas',
+    version: '4.0.0',
+    displayName: 'Go Architecture Atlas',
+    capabilities: {
+      ...super.capabilities,
+      // ✅ 新增能力标注
+      functionBodyExtraction: true,
+      behaviorAnalysis: true,
+      packageGraphAnalysis: true,
+    },
+  };
+
+  private behaviorAnalyzer: BehaviorAnalyzer;
+  private atlasMapper: AtlasMapper;
+
+  constructor() {
+    super();  // ✅ 复用 GoPlugin 初始化
+    this.behaviorAnalyzer = new BehaviorAnalyzer();
+    this.atlasMapper = new AtlasMapper();
   }
+
+  // ========== ILanguagePlugin 标准接口 (兼容现有工具链) ==========
+
+  /**
+   * 标准解析接口 - 返回 ArchJSON
+   * CLI/Web UI/批处理模式自动调用此方法
+   */
+  async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
+    // 调用父类实现，获取基础 ArchJSON
+    const baseArchJSON = await super.parseProject(workspaceRoot, config);
+
+    // 可选: 附加 Atlas extensions 到 ArchJSON
+    if (config.includeExtensions) {
+      const atlas = await this.generateAtlas(workspaceRoot, {
+        functionBodyStrategy: 'selective',  // 默认选择性提取
+      });
+
+      return {
+        ...baseArchJSON,
+        version: '2.1',
+        extensions: {
+          goAtlas: atlas,
+        },
+      };
+    }
+
+    return baseArchJSON;
+  }
+
+  // ========== IGoAtlas 扩展接口 (Atlas 专用功能) ==========
 
   /**
    * 生成完整的 Go Architecture Atlas
-   *
-   * @param rootPath Go 项目根目录（包含 go.mod）
-   * @param options 生成选项
-   * @returns GoArchitectureAtlas
    */
   async generateAtlas(
     rootPath: string,
     options: AtlasGenerationOptions = {}
   ): Promise<GoArchitectureAtlas> {
-    this.ensureInitialized();
+    // 1. 使用父类 parseProjectToRaw() 获取 GoRawData
+    const rawData = await this.parseProjectToRaw(rootPath, options);
 
-    // 1. 解析 Go 项目，获取完整的 GoRawData (包含函数体 AST)
-    const rawData = await this.parseGoProject(rootPath, options);
+    // 2. 匹配接口实现 (复用现有逻辑)
+    const allStructs = rawData.packages.flatMap(p => p.structs);
+    const allInterfaces = rawData.packages.flatMap(p => p.interfaces);
+    const implementations = await this.matcher.matchWithGopls(
+      allStructs,
+      allInterfaces,
+      this.goplsClient
+    );
 
-    // 2. 并行分析四层架构
+    // 3. 并行分析四层架构
     const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
       this.behaviorAnalyzer.buildPackageGraph(rawData),
-      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
+      this.behaviorAnalyzer.buildCapabilityGraph(rawData, implementations),
       this.behaviorAnalyzer.buildGoroutineTopology(rawData, options),
-      this.behaviorAnalyzer.buildFlowGraph(rawData, this.goplsClient, options), // 传入 goplsClient
+      this.behaviorAnalyzer.buildFlowGraph(rawData, this.goplsClient, options),
     ]);
 
-    // 3. 构建 Atlas
+    // 4. 构建 Atlas (支持部分生成)
     const atlas: GoArchitectureAtlas = {
       metadata: {
         moduleName: rawData.moduleName,
         moduleRoot: rawData.moduleRoot,
         goVersion: await this.detectGoVersion(rootPath),
         generatedAt: new Date().toISOString(),
-        analyzerVersion: '2.0.0',
+        analyzerVersion: '4.0.0',
         stats: this.calculateStats(packageGraph, capabilityGraph, goroutineTopology, flowGraph),
+        partialGeneration: options.functionBodyStrategy === 'none',
+        missingLayers: this.getMissingLayers(packageGraph, capabilityGraph, goroutineTopology, flowGraph),
       },
       packageGraph,
       capabilityGraph,
@@ -757,414 +881,96 @@ export class GoAtlasPlugin {
   }
 
   /**
-   * 将 Atlas 转换为 ArchJSON（用于兼容现有工具链）
-   *
-   * 映射规则:
-   * - Package Graph → entities (type: "package", 需要扩展 EntityType)
-   * - Capability Graph → relations (type: "implementation", "dependency")
-   * - Goroutine Topology → relations (type: "spawns")
-   * - Flow Graph → relations (type: "calls")
+   * 渲染指定层级
    */
-  toArchJSON(atlas: GoArchitectureAtlas): ArchJSON {
-    const entities: any[] = [];
-    const relations: any[] = [];
-
-    // 1. Package Graph → Entities (packages)
-    for (const pkg of atlas.packageGraph.packages) {
-      entities.push({
-        id: pkg.id,
-        name: pkg.name,
-        type: 'package',  // ⚠️ 需要在 EntityType 中添加
-        location: {
-          file: pkg.dirPath,
-          startLine: 0,
-          endLine: 0,
-        },
-        attributes: {
-          dirPath: pkg.dirPath,
-          packageType: pkg.type,
-          exports: pkg.exports,
-        },
-        stats: pkg.stats,
-      });
-    }
-
-    // 2. Package Dependencies → Relations
-    for (const dep of atlas.packageGraph.dependencies) {
-      relations.push({
-        from: dep.fromId,
-        to: dep.toId,
-        type: 'dependency',
-        attributes: {
-          strength: dep.strength,
-          dependencyType: dep.type,
-        },
-      });
-    }
-
-    // 3. Capability Graph → Implementations
-    for (const impl of atlas.capabilityGraph.implementations) {
-      relations.push({
-        from: impl.structId,
-        to: impl.interfaceId,
-        type: 'implementation',
-        attributes: {
-          coverage: impl.coverage,
-          implementationType: impl.type,
-        },
-      });
-    }
-
-    // 4. Capability Graph → Usage Sites (dependencies)
-    for (const usage of atlas.capabilityGraph.usageSites) {
-      relations.push({
-        from: usage.consumerId,
-        to: usage.interfaceId,
-        type: 'dependency',
-        attributes: {
-          usageContext: usage.context,
-          location: usage.location,
-        },
-      });
-    }
-
-    // 5. Goroutine Topology → Spawns
-    for (const go of atlas.goroutineTopology.goroutines) {
-      // 找到 spawn location 对应的函数
-      relations.push({
-        from: go.spawnLocation.file,  // 简化：使用文件作为源
-        to: go.id,
-        type: 'spawns',
-        attributes: {
-          spawnType: go.spawnType,
-          pattern: go.pattern,
-          confidence: go.confidence,
-        },
-      });
-    }
-
-    // 6. Flow Graph → Calls
-    for (const flow of atlas.flowGraph.flows) {
-      for (let i = 0; i < flow.steps.length - 1; i++) {
-        const current = flow.steps[i];
-        const next = flow.steps[i + 1];
-
-        if (current.nextStepIds.includes(flow.steps[i + 1].id)) {
-          relations.push({
-            from: current.qualifiedName,
-            to: next.qualifiedName,
-            type: 'calls',
-            attributes: {
-              contextPropagation: current.contextPropagation,
-              flowId: flow.id,
-            },
-          });
-        }
-      }
-    }
-
-    return {
-      version: '2.0',
-      language: 'go',
-      entities,
-      relations,
-      metadata: {
-        ...atlas.metadata,
-        generatedBy: 'GoAtlasPlugin',
-        atlasFormat: true,
-      },
-    };
+  async renderLayer(
+    atlas: GoArchitectureAtlas,
+    layer: AtlasLayer = 'all',
+    format: RenderFormat = 'mermaid'
+  ): Promise<RenderResult> {
+    const renderer = new AtlasRenderer();
+    return renderer.render(atlas, layer, format);
   }
+
+  // ========== 内部辅助方法 ==========
 
   /**
-   * 解析 Go 项目，返回完整的 GoRawData
-   *
-   * 与 GoPlugin.parseProject() 的区别:
-   * - 不转换为 ArchJSON
-   * - 保留完整的包依赖图
-   * - 保留所有中间数据 (尤其是 AST 函数体)
+   * 检测缺失的层级
    */
-  private async parseGoProject(
-    rootPath: string,
-    options: AtlasGenerationOptions
-  ): Promise<GoRawData> {
-    // 1. 查找所有 .go 文件
-    const { glob } = await import('glob');
-    const fs = await import('fs-extra');
-
-    const pattern = options.includeTests ? '**/*.go' : '**/*.go';
-    const files = await glob(pattern, {
-      cwd: rootPath,
-      absolute: true,
-      ignore: ['**/vendor/**', '**/node_modules/**', '**/*_test.go'],
-    });
-
-    // 2. 解析每个文件，合并到 packages
-    const packages = new Map<string, GoRawPackage>();
-
-    for (const file of files) {
-      const code = await fs.readFile(file, 'utf-8');
-      // ⚠️ 关键调用: 必须确保 TreeSitterBridge 提取了函数体
-      const pkg = this.treeSitter.parseCode(code, file);
-
-      if (packages.has(pkg.name)) {
-        const existing = packages.get(pkg.name)!;
-        existing.structs.push(...pkg.structs);
-        existing.interfaces.push(...pkg.interfaces);
-        existing.functions.push(...pkg.functions);
-        // 合并 imports
-        existing.imports.push(...pkg.imports);
-      } else {
-        packages.set(pkg.name, pkg);
-      }
-    }
-
-    // 3. 构建包依赖图
-    const packageGraph = this.buildPackageDependencyGraph(Array.from(packages.values()));
-
-    // 4. 读取 go.mod 获取模块信息
-    let moduleName = '';
-    let moduleRoot = rootPath;
-    try {
-      const goModPath = `${rootPath}/go.mod`;
-      const goModContent = await fs.readFile(goModPath, 'utf-8');
-      const match = goModContent.match(/^module\s+(.+)$/m);
-      if (match) {
-        moduleName = match[1].trim();
-      }
-    } catch {
-      // 没有 go.mod，使用默认值
-    }
-
-    return {
-      packages: Array.from(packages.values()),
-      moduleRoot,
-      moduleName,
-      packageGraph,  // 新增: 包依赖图
-    };
-  }
-
-  /**
-   * 构建包依赖图
-   */
-  private buildPackageDependencyGraph(packages: GoRawPackage[]): any {
-    const dependencies: any[] = [];
-    const packageMap = new Map(
-      packages.map(p => [p.dirPath, p])
-    );
-
-    for (const pkg of packages) {
-      for (const imp of pkg.imports) {
-        // 尝试匹配导入路径到包
-        const targetPkg = packages.find(p =>
-          imp.path.startsWith(p.name) || imp.path === p.name
-        );
-
-        if (targetPkg) {
-          dependencies.push({
-            fromId: pkg.id,
-            toId: targetPkg.id,
-            type: imp.isTest ? 'test' : 'direct',
-            strength: 1,  // TODO: 计算实际引用强度
-          });
-        }
-      }
-    }
-
-    // 检测循环依赖 (Kahn 算法)
-    const cycles = this.detectCycles(packages, dependencies);
-
-    return { dependencies, cycles };
-  }
-
-  /**
-   * 检测循环依赖
-   */
-  private detectCycles(packages: GoRawPackage[], dependencies: any[]): string[][] {
-    const adj = new Map<string, string[]>();
-    const inDegree = new Map<string, number>();
-
-    // 构建邻接表和入度
-    for (const pkg of packages) {
-      adj.set(pkg.id, []);
-      inDegree.set(pkg.id, 0);
-    }
-
-    for (const dep of dependencies) {
-      adj.get(dep.fromId)?.push(dep.toId);
-      inDegree.set(dep.toId, (inDegree.get(dep.toId) || 0) + 1);
-    }
-
-    // Kahn 算法
-    const queue: string[] = [];
-    for (const [id, degree] of inDegree) {
-      if (degree === 0) {
-        queue.push(id);
-      }
-    }
-
-    const visited: string[] = [];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      visited.push(id);
-
-      for (const neighbor of adj.get(id) || []) {
-        inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
-        if (inDegree.get(neighbor) === 0) {
-          queue.push(neighbor);
-        }
-      }
-    }
-
-    // 未访问的节点在环中
-    const cycles: string[][] = [];
-    const remaining = packages.filter(p => !visited.includes(p.id));
-
-    if (remaining.length > 0) {
-      cycles.push(remaining.map(p => p.id));
-    }
-
-    return cycles;
-  }
-
-  private ensureInitialized(): void {
-    if (!this.initialized) {
-      throw new Error('GoAtlasPlugin not initialized. Call initialize() first.');
-    }
-  }
-
-  private async detectGoVersion(rootPath: string): Promise<string> {
-    try {
-      const { exec } = await import('child_process');
-      return new Promise((resolve) => {
-        exec('go version', { cwd: rootPath }, (error: any, stdout: string) => {
-          if (error) {
-            resolve('unknown');
-          } else {
-            const match = stdout.match(/go version go(\d+\.\d+\.\d+)/);
-            resolve(match ? match[1] : 'unknown');
-          }
-        });
-      });
-    } catch {
-      return 'unknown';
-    }
-  }
-
-  private calculateStats(
+  private getMissingLayers(
     pg: PackageGraph,
     cg: CapabilityGraph,
     gt: GoroutineTopology,
     fg: FlowGraph
-  ): any {
-    return {
-      packages: pg.packages.length,
-      interfaces: cg.interfaces.length,
-      structs: pg.packages.reduce((sum, p) => sum + p.stats.structs, 0),
-      goroutines: gt.goroutines.length,
-      channels: gt.channels.length,
-      entryPoints: fg.entryPoints.length,
-    };
+  ): string[] {
+    const missing: string[] = [];
+    if (!gt || gt.goroutines.length === 0) missing.push('goroutine');
+    if (!fg || fg.flows.length === 0) missing.push('flow');
+    return missing;
   }
 }
 
+/**
+ * Atlas 生成选项
+ */
 export interface AtlasGenerationOptions {
-  exclude?: string[];
+  // 函数体提取策略
+  functionBodyStrategy: 'full' | 'selective' | 'none';
+
+  // 选择性提取配置 (functionBodyStrategy === 'selective' 时使用)
+  selectiveExtraction?: {
+    includePatterns?: string[];  // ['go ', 'chan ', 'mutex']
+    excludeTestFiles?: boolean;
+    maxFunctions?: number;
+  };
+
+  // 其他选项
   includeTests?: boolean;
-
-  // Package Graph 选项
-  detectCycles?: boolean;
-
-  // Goroutine Topology 选项
-  maxGoroutines?: number;
-  ignorePatterns?: ConcurrencyPattern[];
-
-  // Flow Graph 选项
-  maxFlowDepth?: number;
   entryPointTypes?: EntryPointType[];
   followIndirectCalls?: boolean;
-
-  // 输出选项
-  includeUnknown?: boolean;
 }
-
-type ConcurrencyPattern =
-  | 'worker_pool'
-  | 'pipeline'
-  | 'fan_out_fan_in'
-  | 'background_task'
-  | 'timer'
-  | 'server'
-  | 'producer_consumer'
-  | 'unknown';
-
-type EntryPointType =
-  | 'http_handler'
-  | 'http_route'
-  | 'grpc_service'
-  | 'cli_command'
-  | 'background_job'
-  | 'event_handler';
 ```
 
-**说明**: `BehaviorAnalyzer` 和 `AtlasRenderer` 的完整实现将在独立的文件中:
-- `plugins/golang/atlas/behavior-analyzer.ts` - 四层架构分析逻辑
-- `plugins/golang/atlas/atlas-renderer.ts` - Mermaid/JSON 渲染器
+### 4.6 扩展 GoRawData 类型
 
-### 4.4 扩展 GoRawData 类型 (数据源缺失修复)
-
-Atlas 需要深入的 AST 信息来支持行为分析。需要在 `GoRawData` 中添加以下结构：
+基于架构审查反馈 (P0-1, P0-5)，扩展 `types.ts` 支持函数体行为数据。
 
 ```typescript
-// plugins/golang/types.ts (扩展现有类型)
+// plugins/golang/types.ts
 
-export interface GoRawData {
-  packages: GoRawPackage[];
-  moduleRoot: string;
-  moduleName: string;
-
-  // 新增: 包依赖图 (Atlas 专用)
-  packageGraph?: {
-    dependencies: PackageDependency[];
-    cycles: PackageCycle[];
-  };
-}
-
-export interface GoRawPackage {
-  id: string;
-  name: string;
-  dirPath: string;
-  imports: GoImport[];
-
-  // 现有字段...
-  structs: GoRawStruct[];
-  interfaces: GoRawInterface[];
-  functions: GoFunction[]; // ⚠️ 必须包含 body 信息
-
-  // 新增: 解析后的依赖关系 (延迟填充)
-  dependencies?: string[];  // 依赖的包 ID 列表
-  dependents?: string[];    // 被依赖的包 ID 列表
-}
-
-export interface GoImport {
-  path: string;        // 导入路径，如 "github.com/gin-gonic/gin"
-  isTest: boolean;     // 是否来自 _test.go 文件
-  alias?: string;      // 导入别名
-}
-
-// ⚠️ 关键新增: 函数体行为数据 ⚠️
-// 用于 TreeSitterBridge 提取的函数体信息，支持 Goroutine/Flow 分析
+// ========== 现有类型 (保持兼容) ==========
 
 export interface GoFunction {
-  // ... 现有字段
-  body?: GoFunctionBody; // 新增
+  name: string;
+  packageName: string;
+  parameters: GoField[];
+  returnTypes: string[];
+  exported: boolean;
+  location: GoSourceLocation;
+
+  // ✅ 新增: 函数体行为数据 (可选字段)
+  body?: GoFunctionBody;
 }
 
 export interface GoMethod {
-  // ... 现有字段
-  body?: GoFunctionBody; // 新增
+  name: string;
+  receiver?: string;
+  receiverType?: string;
+  parameters: GoField[];
+  returnTypes: string[];
+  exported: boolean;
+  location: GoSourceLocation;
+
+  // ✅ 新增: 方法体行为数据 (可选字段)
+  body?: GoFunctionBody;
 }
 
+// ========== 新增类型 (支持行为分析) ==========
+
+/**
+ * 函数体行为数据
+ * 用于 Goroutine Topology 和 Flow Graph 分析
+ */
 export interface GoFunctionBody {
   block: GoBlock;
   calls: GoCallExpr[];        // 所有的函数调用
@@ -1172,17 +978,26 @@ export interface GoFunctionBody {
   channelOps: GoChannelOp[];  // ch <- x 或 <-ch
 }
 
+/**
+ * 函数/方法的基本块信息
+ */
 export interface GoBlock {
   startLine: number;
   endLine: number;
   statements: GoStatement[];
 }
 
+/**
+ * 通用语句节点
+ */
 export interface GoStatement {
   type: string;
   location: GoSourceLocation;
 }
 
+/**
+ * 函数调用表达式
+ */
 export interface GoCallExpr {
   functionName: string;       // 调用的函数名
   packageName?: string;       // 如果是跨包调用
@@ -1191,59 +1006,466 @@ export interface GoCallExpr {
   location: GoSourceLocation;
 }
 
+/**
+ * Goroutine spawn 语句
+ */
 export interface GoSpawnStmt {
   call: GoCallExpr;           // 被 spawn 的函数调用
   location: GoSourceLocation;
 }
 
+/**
+ * Channel 操作
+ */
 export interface GoChannelOp {
   channelName: string;
   operation: 'send' | 'receive' | 'close' | 'make';
   location: GoSourceLocation;
 }
+
+// ========== 扩展现有类型 ==========
+
+export interface GoRawPackage {
+  id: string;
+  name: string;
+  dirPath: string;
+  imports: GoImport[];
+  structs: GoRawStruct[];
+  interfaces: GoRawInterface[];
+  functions: GoFunction[];  // ✅ 现在包含可选的 body 字段
+
+  // ✅ 新增: 解析后的依赖关系 (延迟填充)
+  dependencies?: PackageDependency[];
+  dependents?: string[];    // 被依赖的包 ID 列表
+}
+
+export interface GoImport {
+  path: string;
+  alias?: string;
+  location: GoSourceLocation;
+
+  // ✅ 新增: 测试文件标注
+  isTest?: boolean;
+}
+
+/**
+ * 包依赖关系
+ */
+export interface PackageDependency {
+  fromPackageId: string;
+  toPackageId: string;
+  strength: number;  // 引用强度
+  type: 'direct' | 'indirect' | 'test';
+}
+
+export interface GoRawData {
+  packages: GoRawPackage[];
+  moduleRoot: string;
+  moduleName: string;
+
+  // ✅ 新增: 附加数据
+  implementations?: InferredImplementation[];
+}
 ```
 
-### 4.5 CLI 集成设计
+### 4.7 升级 TreeSitterBridge
+
+基于架构审查反馈 (P0-2, P0-5)，保持现有 `parseCode()` 不变，新增 `parseCodeWithBodies()` 方法。
 
 ```typescript
-// src/cli/commands/atlas.ts
+// plugins/golang/tree-sitter-bridge.ts
 
-import { Command } from 'commander';
-import { GoAtlasPlugin } from '@/plugins/golang/atlas/go-atlas-plugin.js';
+export class TreeSitterBridge {
+  private parser: Parser;
 
-export const atlasCommand = new Command('atlas');
+  constructor() {
+    this.parser = new Parser();
+    this.parser.setLanguage(Go);
+  }
 
-atlasCommand
-  .description('Generate Go Architecture Atlas')
-  .option('-s, --source <path>', 'Go project root directory')
-  .option('-o, --output <dir>', 'Output directory (default: ./atlas)')
-  .option('--format <format>', 'Output format: mermaid | json (default: mermaid)')
-  .option('--layer <layer...>', 'Atlas layers to generate (default: all)')
-  .option('--max-flow-depth <depth>', 'Maximum flow depth (default: 10)', parseInt)
-  .option('--max-goroutines <count>', 'Maximum goroutines to analyze (default: 100)', parseInt)
-  .option('--include-tests', 'Include test files')
-  .option('--exclude <patterns...>', 'Exclude patterns')
-  .action(async (options) => {
-    const plugin = new GoAtlasPlugin();
-    await plugin.initialize({});
+  /**
+   * 解析单个 Go 源文件 (无函数体 - Phase 0-4 兼容)
+   *
+   * ⚠️ 重要: 此方法保持现有行为，不提取函数体
+   * 原因: Phase 0-4 设计上不需要函数 (ArchJSON v1.0 无 'function' 类型)
+   */
+  parseCode(code: string, filePath: string): GoRawPackage {
+    const tree = this.parser.parse(code);
+    const rootNode = tree.rootNode;
 
-    const atlas = await plugin.generateAtlas(options.source, {
-      exclude: options.exclude,
-      includeTests: options.includeTests,
-      maxFlowDepth: options.maxFlowDepth,
-      maxGoroutines: options.maxGoroutines,
-    });
+    const packageName = this.extractPackageName(rootNode, code);
+    const imports = this.extractImports(rootNode, code, filePath);
+    const structs = this.extractStructs(rootNode, code, filePath, packageName);
+    const interfaces = this.extractInterfaces(rootNode, code, filePath, packageName);
 
-    // 渲染输出
-    const renderer = new AtlasRenderer();
+    return {
+      id: packageName,
+      name: packageName,
+      dirPath: '',
+      imports,
+      structs,
+      interfaces,
+      functions: [],  // ✅ 保持空数组 (Phase 0-4 兼容)
+    };
+  }
 
-    if (options.layer?.includes('package') || !options.layer) {
-      const output = renderer.renderPackageGraph(atlas.packageGraph, options.format);
-      // 写入文件...
+  /**
+   * 解析单个 Go 源文件 (含函数体 - Atlas 专用)
+   *
+   * ✅ 新增方法: 用于 Go Architecture Atlas
+   *
+   * @param options.extractBody - 是否提取函数体
+   * @param options.selective - 是否选择性提取 (仅包含特定模式)
+   */
+  parseCodeWithBodies(
+    code: string,
+    filePath: string,
+    options: { extractBody?: boolean; selective?: boolean }
+  ): GoRawPackage {
+    // 1. 先调用标准解析
+    const pkg = this.parseCode(code, filePath);
+
+    // 2. 条件性提取函数体
+    if (options.extractBody) {
+      const tree = this.parser.parse(code);
+      const rootNode = tree.rootNode;
+
+      // 提取函数
+      const functionDecls = rootNode.descendantsOfType('function_declaration');
+      const functions: GoFunction[] = [];
+
+      for (const funcDecl of functionDecls) {
+        // 选择性提取: 仅包含特定模式
+        if (options.selective) {
+          const codeSnippet = code.substring(funcDecl.startIndex, funcDecl.endIndex);
+          if (!this.shouldExtractFunction(codeSnippet)) {
+            continue;
+          }
+        }
+
+        const func = this.extractFunction(funcDecl, code, filePath);
+        functions.push(func);
+      }
+
+      // 提取方法体
+      pkg.structs.forEach(struct => {
+        struct.methods = this.extractMethodBodies(struct, code, filePath, options);
+      });
+
+      pkg.functions = functions;
     }
 
-    // ... 其他层
-  });
+    return pkg;
+  }
+
+  /**
+   * 提取函数 (含函数体)
+   */
+  private extractFunction(
+    funcDecl: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoFunction {
+    const nameNode = funcDecl.childForFieldName('name');
+    const name = code.substring(nameNode.startIndex, nameNode.endIndex);
+
+    const parameters = this.extractParameters(funcDecl, code, filePath);
+    const returnTypes = this.extractReturnTypes(funcDecl, code);
+
+    // ✅ 提取函数体
+    const blockNode = funcDecl.childForFieldName('block');
+    let body: GoFunctionBody | undefined;
+    if (blockNode) {
+      body = this.extractFunctionBody(blockNode, code, filePath);
+    }
+
+    return {
+      name,
+      packageName,  // 从上下文获取
+      parameters,
+      returnTypes,
+      exported: this.isExported(name),
+      location: this.nodeToLocation(funcDecl, filePath),
+      body,  // ✅ 包含函数体
+    };
+  }
+
+  /**
+   * ✅ 新增: 提取函数体行为数据
+   */
+  private extractFunctionBody(
+    blockNode: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoFunctionBody {
+    const block: GoBlock = {
+      startLine: blockNode.startPosition.row + 1,
+      endLine: blockNode.endPosition.row + 1,
+      statements: [], // TODO: 提取语句列表（如果需要）
+    };
+
+    // 提取函数调用
+    const calls: GoCallExpr[] = [];
+    const callExprs = blockNode.descendantsOfType('call_expression');
+    for (const callExpr of callExprs) {
+      calls.push(this.extractCallExpr(callExpr, code, filePath));
+    }
+
+    // 提取 goroutine spawns
+    const goSpawns: GoSpawnStmt[] = [];
+    const goStmts = blockNode.descendantsOfType('go_statement');
+    for (const goStmt of goStmts) {
+      goSpawns.push(this.extractGoSpawn(goStmt, code, filePath));
+    }
+
+    // 提取 channel 操作
+    const channelOps: GoChannelOp[] = [];
+    const sendStmts = blockNode.descendantsOfType('send_statement');
+    for (const sendStmt of sendStmts) {
+      channelOps.push(this.extractChannelOp(sendStmt, 'send', code, filePath));
+    }
+    const receiveExprs = blockNode.descendantsOfType('receive_expression');
+    for (const recvExpr of receiveExprs) {
+      channelOps.push(this.extractChannelOp(recvExpr, 'receive', code, filePath));
+    }
+
+    return { block, calls, goSpawns, channelOps };
+  }
+
+  /**
+   * ✅ 新增: 判断是否应该提取此函数 (选择性模式)
+   */
+  private shouldExtractFunction(codeSnippet: string): boolean {
+    const patterns = ['go ', 'chan ', 'make(', 'mutex', 'sync.'];
+    return patterns.some(pattern => codeSnippet.includes(pattern));
+  }
+
+  /**
+   * ✅ 新增: 提取调用表达式
+   */
+  private extractCallExpr(
+    callExpr: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoCallExpr {
+    // 实现细节...
+    const functionName = '';  // 从 AST 提取
+    const packageName = '';   // 从 AST 提取
+    const args: string[] = []; // 从 AST 提取
+
+    return {
+      functionName,
+      packageName,
+      args,
+      location: this.nodeToLocation(callExpr, filePath),
+    };
+  }
+
+  /**
+   * ✅ 新增: 提取 goroutine spawn
+   */
+  private extractGoSpawn(
+    goStmt: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoSpawnStmt {
+    const callExpr = goStmt.childForFieldName('call');
+    return {
+      call: this.extractCallExpr(callExpr, code, filePath),
+      location: this.nodeToLocation(goStmt, filePath),
+    };
+  }
+
+  /**
+   * ✅ 新增: 提取 channel 操作
+   */
+  private extractChannelOp(
+    node: Parser.SyntaxNode,
+    opType: 'send' | 'receive',
+    code: string,
+    filePath: string
+  ): GoChannelOp {
+    const channelName = '';  // 从 AST 提取
+
+    return {
+      channelName,
+      operation: opType,
+      location: this.nodeToLocation(node, filePath),
+    };
+  }
+
+  /**
+   * ✅ 新增: 提取方法体
+   */
+  private extractMethodBodies(
+    struct: GoRawStruct,
+    code: string,
+    filePath: string,
+    options: { extractBody?: boolean; selective?: boolean }
+  ): GoMethod[] {
+    if (!options.extractBody) {
+      return struct.methods;  // 保持原样
+    }
+
+    // 重新解析方法体
+    const tree = this.parser.parse(code);
+    const rootNode = tree.rootNode;
+
+    const methodDecls = rootNode.descendantsOfType('method_declaration');
+    const enrichedMethods: GoMethod[] = [];
+
+    for (const methodDecl of methodDecls) {
+      const method = this.extractMethod(methodDecl, code, filePath);
+
+      // 仅保留属于此 struct 的方法
+      if (method.receiverType === struct.name) {
+        // 选择性提取
+        if (options.selective) {
+          const codeSnippet = code.substring(methodDecl.startIndex, methodDecl.endIndex);
+          if (!this.shouldExtractFunction(codeSnippet)) {
+            enrichedMethods.push(method);  // 无函数体
+            continue;
+          }
+        }
+
+        // 提取方法体
+        const blockNode = methodDecl.childForFieldName('block');
+        if (blockNode) {
+          method.body = this.extractFunctionBody(blockNode, code, filePath);
+        }
+
+        enrichedMethods.push(method);
+      }
+    }
+
+    return enrichedMethods;
+  }
+
+  // ... 其他现有方法保持不变 ...
+}
+```
+
+### 4.8 扩展 GoPlugin 基类
+
+基于架构审查反馈 (P1-3)，暴露 `parseProjectToRaw()` 方法供子类使用。
+
+```typescript
+// plugins/golang/index.ts
+
+export class GoPlugin implements ILanguagePlugin {
+  // ... 现有成员 ...
+
+  /**
+   * ✅ 新增: 受保护方法，供子类 (如 GoAtlasPlugin) 使用
+   *
+   * 返回 GoRawData 而非 ArchJSON，避免重复解析
+   */
+  protected async parseProjectToRaw(
+    workspaceRoot: string,
+    config: ParseConfig
+  ): Promise<GoRawData> {
+    this.ensureInitialized();
+
+    // 存储 workspace root for gopls
+    this.workspaceRoot = workspaceRoot;
+
+    // Initialize gopls if available
+    if (this.goplsClient && !this.goplsClient.isInitialized()) {
+      try {
+        await this.goplsClient.initialize(workspaceRoot);
+      } catch (error) {
+        console.warn('Failed to initialize gopls, using fallback:', error);
+        this.goplsClient = null;
+      }
+    }
+
+    // Find all .go files
+    const pattern = config.filePattern ?? '**/*.go';
+    const files = await glob(pattern, {
+      cwd: workspaceRoot,
+      absolute: true,
+      ignore: ['**/vendor/**', '**/node_modules/**'],
+    });
+
+    // Parse all files
+    const packages = new Map<string, GoRawPackage>();
+
+    for (const file of files) {
+      const code = await fs.readFile(file, 'utf-8');
+      const pkg = this.treeSitter.parseCode(code, file);
+
+      // Merge into packages map
+      if (packages.has(pkg.name)) {
+        const existing = packages.get(pkg.name);
+        existing.structs.push(...pkg.structs);
+        existing.interfaces.push(...pkg.interfaces);
+        existing.functions.push(...pkg.functions);
+        existing.imports.push(...pkg.imports);
+      } else {
+        packages.set(pkg.name, pkg);
+      }
+    }
+
+    const packageList = Array.from(packages.values());
+
+    // 读取 go.mod 获取模块信息
+    let moduleName = '';
+    try {
+      const goModPath = `${workspaceRoot}/go.mod`;
+      const goModContent = await fs.readFile(goModPath, 'utf-8');
+      const match = goModContent.match(/^module\s+(.+)$/m);
+      if (match) {
+        moduleName = match[1].trim();
+      }
+    } catch {
+      moduleName = 'unknown';
+    }
+
+    // ✅ 返回 GoRawData
+    return {
+      packages: packageList,
+      moduleRoot: workspaceRoot,
+      moduleName,
+    };
+  }
+
+  /**
+   * Parse entire Go project
+   *
+   * ⚠️ 现有方法保持不变，复用 parseProjectToRaw()
+   */
+  async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
+    // ✅ 调用新增的 parseProjectToRaw()
+    const rawData = await this.parseProjectToRaw(workspaceRoot, config);
+
+    // Match interface implementations (using gopls if available)
+    const allStructs = rawData.packages.flatMap((p) => p.structs);
+    const allInterfaces = rawData.packages.flatMap((p) => p.interfaces);
+    const implementations = await this.matcher.matchWithGopls(
+      allStructs,
+      allInterfaces,
+      this.goplsClient
+    );
+
+    // Map to ArchJSON
+    const entities = this.mapper.mapEntities(rawData.packages);
+    const relations = this.mapper.mapRelations(rawData.packages, implementations);
+
+    return {
+      version: '1.0',
+      language: 'go',
+      timestamp: new Date().toISOString(),
+      sourceFiles: rawData.packages.flatMap(p => {
+        // 从 package 中提取文件路径 (需要扩展 GoRawPackage)
+        return [];
+      }),
+      entities,
+      relations,
+    };
+  }
+
+  // ... 其他现有方法保持不变 ...
+}
 ```
 
 ---
@@ -1261,320 +1483,158 @@ atlasCommand
 | **Flow Graph** | 间接调用（接口/函数值） | **高 (严重)** | **必须使用 gopls call hierarchy API** |
 | **Flow Graph** | 第三方框架（gin/echo） | 中 | 支持常见框架的 pattern matching |
 
-### 5.2 技术挑战
+### 5.2 关键技术挑战
 
 #### 挑战 1: Channel 边追踪
 
+**问题场景**:
+```go
+func producer() <-chan int {
+  ch := make(chan int, 10)
+  go worker(ch)  // ch 发送给谁？
+  return ch
+}
 ```
-问题场景:
-  func producer() <-chan int {
-    ch := make(chan int, 10)
-    go worker(ch)  // ch 发送给谁？
-    return ch
-  }
 
-  func consumer(ch <-chan int) {
-    // 使用 ch
-  }
+**静态分析可以看到**:
+- ✅ producer 创建 channel
+- ✅ worker 接收 channel 参数
+- ❌ producer 返回的 ch 发送给谁？未知
 
-静态分析可以看到:
-  ✅ producer 创建 channel
-  ✅ worker 接收 channel 参数
-  ✅ consumer 接收 channel 参数
-  ❌ producer 返回的 ch 发送给谁？未知
-
-缓解策略:
-  - 标注 "channel source: unknown" 或 "channel flow: incomplete"
-  - **不尝试完整的静态通信图恢复**，仅提供 "交互点标注"
-```
+**缓解策略**:
+- 标注 "channel source: unknown" 或 "channel flow: incomplete"
+- **不尝试完整的静态通信图恢复**，仅提供 "交互点标注"
 
 #### 挑战 2: 间接调用追踪
 
+**问题场景**:
+```go
+type Handler interface {
+  Handle(ctx Context) error
+}
+
+func router(h Handler) {
+  h.Handle(ctx)  // h 的实际类型是什么？
+}
 ```
-问题场景:
-  type Handler interface {
-    Handle(ctx Context) error
-  }
 
-  func router(h Handler) {
-    h.Handle(ctx)  // h 的实际类型是什么？
-  }
+**静态分析限制**:
+- 无法知道 h 的运行时类型
+- **没有类型推断，Flow Graph 几乎不可用**
 
-静态分析限制:
-  - 无法知道 h 的运行时类型
-  - **没有类型推断，Flow Graph 几乎不可用**
-
-缓解策略:
-  - **集成 gopls 是必须的**，不是可选的
-  - 使用 gopls call hierarchy API（需要额外 10-30 秒启动时间）
-  - 提供多个候选调用路径
-  - 标注为 "indirect call, possible targets: [...]"
-```
+**缓解策略**:
+- **集成 gopls 是必须的**，不是可选的
+- 使用 gopls call hierarchy API（需要额外 10-30 秒启动时间）
+- 提供多个候选调用路径
+- 标注为 "indirect call, possible targets: [...]"
 
 #### 挑战 3: HTTP 框架多样性
 
-```
-支持的框架:
-  ✅ net/http 标准库
-  ✅ github.com/gin-gonic/gin
-  ✅ github.com/gorilla/mux
+**支持的框架**:
+- ✅ net/http 标准库
+- ✅ github.com/gin-gonic/gin
+- ✅ github.com/gorilla/mux
 
-不支持的框架:
-  ❌ github.com/labstack/echo（需要添加模式）
-  ❌ grpc-gateway（需要单独处理）
-  ❌ 自定义框架（不可能通用支持）
+**不支持的框架**:
+- ❌ github.com/labstack/echo（需添加模式）
+- ❌ grpc-gateway（需单独处理）
+- ❌ 自定义框架（不可能通用支持）
 
-缓解策略:
-  - 提供"框架检测"功能
-  - 允许用户注册自定义入口点模式
-  - 未识别的框架标注为 "custom_entry_point"
-```
+**缓解策略**:
+- 提供"框架检测"功能
+- 允许用户注册自定义入口点模式
+- 未识别的框架标注为 "custom_entry_point"
 
 ---
 
-## 6. 测试策略
+## 6. 架构审查响应
 
-### 6.1 测试项目设计
+基于 **docs/reviews/2024-02-24-go-atlas-v3-review.md** 的严苛审查意见，本提案 v4.0 已完成以下修正：
 
-```
-atlas/test/fixtures/
-├── simple/              # 最小测试用例
-│   ├── cmd/app/
-│   ├── pkg/service/
-│   └── go.mod
-├── concurrent/          # Goroutine 模式测试
-│   ├── worker_pool.go
-│   ├── pipeline.go
-│   └── fanout.go
-├── http_server/         # HTTP 入口点测试
-│   ├── standard_lib.go  # net/http
-│   ├── gin.go           # gin framework
-│   └── gorilla.go       # gorilla/mux
-└── complex/             # 综合测试
-    └── multi_layer.go
-```
+### 已修正问题
 
-### 6.2 测试用例
+| 审查问题 | 修正方案 | 章节 |
+|---------|---------|------|
+| **P0-1: 数据源断层** | 扩展 `GoFunction`/`GoMethod` 接口，新增 `body?: GoFunctionBody` 字段 | 4.6 |
+| **P0-2: 函数体提取缺失** | 升级 `TreeSitterBridge`，新增 `parseCodeWithBodies()` 方法 | 4.7 |
+| **P0-3: ArchJSON 不兼容** | 扩展 `EntityType` 枚举，新增 `'package'` 类型 | 4.4.1 |
+| **P0-4: EntityType 语法错误** | 修正为单行枚举风格，与现有代码一致 | 4.4.1 |
+| **P0-5: parseCode() 语义错误** | 保持现有方法不变，新增 `parseCodeWithBodies()` | 4.7 |
+| **P0-6: 性能风险无降级** | 新增 `functionBodyStrategy: 'full' | 'selective' | 'none'` | 4.5 |
+| **P1-1: 插件架构冲突** | `GoAtlasPlugin` 继承 `GoPlugin` 并实现 `IGoAtlas` | 4.5 |
+| **P1-2: 包依赖图缺失** | 扩展 `GoRawPackage` 接口，新增 `dependencies`/`dependents` 字段 | 4.6 |
+| **P1-3: parseProjectToRaw() 未实现** | 新增 `protected` 方法供子类使用 | 4.8 |
 
-```typescript
-// tests/integration/atlas/package-graph.test.ts
+### 架构调整原则
 
-describe('Package Graph', () => {
-  it('should detect circular dependencies', async () => {
-    const atlas = await generateAtlas('test/fixtures/cycles');
-    expect(atlas.packageGraph.cycles).toHaveLength(1);
-    expect(atlas.packageGraph.cycles[0].packages).toContain('pkg/a');
-  });
+1. **无需向后兼容**: Go 语言的特殊性允许对 ArchGuard 核心架构进行适应性调整
+2. **插件接口统一**: 继承 `GoPlugin` + 实现 `IGoAtlas` 扩展接口
+3. **数据结构扩展**: 扩展而非破坏现有 `GoRawData` 定义（使用可选字段）
+4. **渐进增强**: 函数体提取作为可选功能，支持 `'selective'` 降级策略
+5. **部分生成支持**: Atlas 支持部分层级生成（Package + Capability 无需函数体）
 
-  it('should calculate dependency strength', async () => {
-    const atlas = await generateAtlas('test/fixtures/simple');
-    const dep = atlas.packageGraph.dependencies.find(d =>
-      d.fromId === 'cmd/app' && d.toId === 'pkg/service'
-    );
-    expect(dep.strength).toBeGreaterThan(0);
-  });
-});
+### 待解决挑战
 
-// tests/integration/atlas/goroutine-topology.test.ts
-
-describe('Goroutine Topology', () => {
-  it('should identify worker pool pattern', async () => {
-    const atlas = await generateAtlas('test/fixtures/concurrent/worker_pool.go');
-    const worker = atlas.goroutineTopology.goroutines.find(g =>
-      g.pattern === 'worker_pool'
-    );
-    expect(worker).toBeDefined();
-    expect(worker.confidence).toBeGreaterThan(0.8);
-  });
-
-  it('should detect channel creation', async () => {
-    const atlas = await generateAtlas('test/fixtures/concurrent/pipeline.go');
-    expect(atlas.goroutineTopology.channels.length).toBeGreaterThan(0);
-  });
-});
-
-// tests/integration/atlas/flow-graph.test.ts
-
-describe('Flow Graph', () => {
-  it('should trace HTTP handlers (net/http)', async () => {
-    const atlas = await generateAtlas('test/fixtures/http_server/standard_lib.go');
-    const entry = atlas.flowGraph.entryPoints.find(e => e.type === 'http_handler');
-    expect(entry).toBeDefined();
-
-    const flow = atlas.flowGraph.flows.find(f => f.id === entry.flowId);
-    expect(flow.steps.length).toBeGreaterThan(0);
-  });
-
-  it('should limit flow depth', async () => {
-    const atlas = await generateAtlas('test/fixtures/complex', {
-      maxFlowDepth: 5
-    });
-    const flow = atlas.flowGraph.flows[0];
-    expect(flow.steps.length).toBeLessThanOrEqual(5);
-  });
-});
-```
-
-### 6.3 验证标准
-
-```yaml
-验收标准:
-  Package Graph:
-    - 正确提取 100% 的包依赖
-    - 检测所有循环依赖
-    - Mermaid 图可渲染
-
-  Capability Graph:
-    - 正确识别 >90% 的接口使用点
-    - 准确关联隐式实现
-    - 区分字段注入和参数注入
-
-  Goroutine Topology:
-    - 正确识别 >90% 的 go func() 调用
-    - 正确识别 >95% 的 channel 创建
-    - 模式识别准确率 >80%
-
-  Flow Graph:
-    - 正确识别 >80% 的 HTTP 入口点
-    - 调用链深度准确率 >70% (在启用 gopls 的情况下)
-    - context 传播追踪 >60%
-```
-
-### 6.4 可恢复性基准测试 (Recoverability Benchmark)
-
-**目的**: 验证 2.2 节中声称的可恢复性百分比是否准确
-
-**测试方法**:
-
-```typescript
-// tests/integration/atlas/recoverability-benchmark.test.ts
-
-interface RecoverabilityMetrics {
-  layer: string;
-  metric: string;
-  claimed: number;      // 声称的可恢复性
-  actual: number;       // 实际测量值
-  precision: number;    // 精确率
-  recall: number;       // 召回率
-  sampleSize: number;   // 测试项目数量
-}
-
-describe('Recoverability Benchmark', () => {
-  const testProjects = [
-    'github.com/golang/go',        // 标准库
-    'github.com/gin-gonic/gin',    // Web 框架
-    'github.com/containers/podman',// CLI 工具
-    // ... 50+ 真实 Go 项目
-  ];
-
-  it('Package Graph: should achieve 100% recoverability', async () => {
-    const results = await benchmarkRecoverability(testProjects, 'package');
-    expect(results.actual).toBe(1.0);  // 100%
-  });
-
-  it('Capability Graph: should achieve >85% recoverability', async () => {
-    const results = await benchmarkRecoverability(testProjects, 'capability');
-    expect(results.actual).toBeGreaterThanOrEqual(0.85);
-  });
-
-  it('Goroutine Topology: should achieve >60% recoverability', async () => {
-    const results = await benchmarkRecoverability(testProjects, 'goroutine');
-    expect(results.actual).toBeGreaterThanOrEqual(0.60);
-  });
-
-  it('Flow Graph: should achieve >50% recoverability', async () => {
-    const results = await benchmarkRecoverability(testProjects, 'flow');
-    expect(results.actual).toBeGreaterThanOrEqual(0.50);
-  });
-});
-
-/**
- * 计算可恢复性指标
- *
- * @param projects 测试项目列表
- * @param layer 架构层名称
- * @returns 可恢复性指标
- */
-async function benchmarkRecoverability(
-  projects: string[],
-  layer: string
-): Promise<RecoverabilityMetrics> {
-  let truePositives = 0;
-  let falsePositives = 0;
-  let falseNegatives = 0;
-  let groundTruthCount = 0;
-
-  for (const project of projects) {
-    // 1. 生成 Atlas
-    const atlas = await generateAtlas(project);
-
-    // 2. 获取 Ground Truth (手工标注或运行时数据)
-    const groundTruth = await loadGroundTruth(project, layer);
-    groundTruthCount += groundTruth.length;
-
-    // 3. 比较 Atlas 结果与 Ground Truth
-    const detected = extractLayerEntities(atlas, layer);
-
-    for (const entity of groundTruth) {
-      if (detected.has(entity)) {
-        truePositives++;
-      } else {
-        falseNegatives++;
-      }
-    }
-
-    for (const entity of detected) {
-      if (!groundTruth.has(entity)) {
-        falsePositives++;
-      }
-    }
-  }
-
-  const precision = truePositives / (truePositives + falsePositives);
-  const recall = truePositives / (truePositives + falseNegatives);
-  const actual = (truePositives / groundTruthCount);
-
-  return {
-    layer,
-    metric: 'recoverability',
-    claimed: getClaimedRecoverability(layer),
-    actual,
-    precision,
-    recall,
-    sampleSize: projects.length,
-  };
-}
-
-function getClaimedRecoverability(layer: string): number {
-  switch (layer) {
-    case 'package': return 1.0;
-    case 'capability': return 0.85;
-    case 'goroutine': return 0.65;  // (60% + 70%) / 2
-    case 'flow': return 0.55;        // (50% + 60%) / 2
-    default: return 0;
-  }
-}
-```
-
-**Ground Truth 收集策略**:
-
-| 层 | Ground Truth 来源 | 收集方法 |
-|---|-------------------|----------|
-| **Package Graph** | `go list -deps` | 自动化 |
-| **Capability Graph** | 人工审计 | 半自动 (工具辅助) |
-| **Goroutine Topology** | `go test -race` 覆盖 | 自动化 + 验证 |
-| **Flow Graph** | HTTP 请求日志 | 运行时追踪 |
-
-**验收标准**:
-- 实际可恢复性 ≥ 声称值的 90%
-- Precision ≥ 0.80 (低误报)
-- Recall ≥ 声称值 (低漏报)
+| 挑战 | 描述 | 缓解策略 |
+|------|------|---------|
+| **性能开销** | 函数体提取估计 5-10x 性能下降 | 通过 `functionBodyStrategy` 控制，`'selective'` 模式缓解 |
+| **gopls 依赖** | Flow Graph 强依赖 gopls call hierarchy | 设计为可选增强，提供降级方案 |
+| **工具集成** | 需确保 Web UI/CLI/批处理兼容 | 统一 `ILanguagePlugin` 接口，继承 `GoPlugin` |
 
 ---
 
-## 7. 输出示例
+## 7. 验收标准
 
-### 7.1 Package Graph (Mermaid)
+### 功能完整性
+
+- ✅ **Package Graph**: 100% 可恢复性，准确检测循环依赖
+- ✅ **Capability Graph**: >85% 可恢复性，准确识别接口使用点
+- ✅ **Goroutine Topology**: >90% spawn 点识别（`'full'` 模式），>70% （`'selective'` 模式）
+- ✅ **Flow Graph**: >80% HTTP 入口点识别，>70% 调用链深度准确率（启用 gopls）
+
+### 架构兼容性
+
+- ✅ **插件接口**: `GoAtlasPlugin extends GoPlugin`，通过现有工具链
+- ✅ **工具集成**: CLI/Web UI/批处理模式自动支持 Atlas 功能
+- ✅ **数据格式**: ArchJSON v2.1 支持 Atlas extensions，双向转换可用
+
+### 质量标准
+
+- ✅ **测试覆盖率**: 核心逻辑 >90%，整体 >80%
+- ✅ **性能标准**:
+  - `'none'` 模式: 100 files < 10s (无函数体，与 Phase 0-4 一致)
+  - `'selective'` 模式: 100 files < 30s (仅提取包含关键模式的函数)
+  - `'full'` 模式: 100 files < 100s (完整函数体提取)
+- ✅ **文档完整度**: API 文档 + 用户指南 + 示例 >90%
+
+---
+
+## 8. 相关文档
+
+- **架构审查 v2.2**: docs/reviews/2024-02-24-go-atlas-architectural-review.md
+- **架构审查 v3.0**: docs/reviews/2024-02-24-go-atlas-v3-review.md
+- **前置提案**: docs/refactoring/proposals/15-golang-support-proposal.md
+- **Go 插件实现**: src/plugins/golang/
+- **插件接口定义**: src/core/interfaces/language-plugin.ts
+
+---
+
+## 9. 附录
+
+### 9.1 术语表
+
+| 术语 | 定义 |
+|------|------|
+| **Package Graph** | 包级别的依赖关系图，展示模块边界和循环依赖 |
+| **Capability Graph** | 接口使用关系图，揭示"谁依赖谁的抽象" |
+| **Goroutine Topology** | 并发执行结构的静态识别，包括 spawn 点和 channel 创建点 |
+| **Flow Graph** | 从入口点到调用链的信息流转路径 |
+| **Usage Site** | 接口被使用的位置（字段/参数/返回值） |
+| **Spawn Point** | goroutine 启动的代码位置 |
+
+### 9.2 输出示例
+
+#### Package Graph (Mermaid)
 
 ```mermaid
 graph TD
@@ -1582,178 +1642,42 @@ graph TD
     pkg_hub["pkg/hub"]
     pkg_hub_engine["pkg/hub/engine"]
     pkg_hub_store["pkg/hub/store"]
-    pkg_hub_models["pkg/hub/models"]
     pkg_runtime["pkg/runtime"]
-    pkg_config["pkg/config"]
 
     cmd_swarm_hub -->|"direct: 12 refs"| pkg_hub
     cmd_swarm_hub --> pkg_runtime
-    cmd_swarm_hub --> pkg_config
-
     pkg_hub --> pkg_hub_engine
-    pkg_hub --> pkg_hub_store
-    pkg_hub --> pkg_hub_models
-
     pkg_hub_engine --> pkg_hub_store
-
-    %% ⚠️ 循环依赖检测: pkg/hub → pkg/runtime → pkg/hub
 ```
 
-### 7.2 Capability Graph (Mermaid)
+#### Capability Graph (Mermaid)
 
 ```mermaid
 graph TD
     pkg_hub_Store{{"Store"}}
     pkg_hub_Engine["Engine"]
     pkg_hub_SQLiteStore["SQLiteStore"]
-    pkg_hub_MemStore["MemStore"]
-    pkg_worker_Executor{{"Executor"}}
-    pkg_worker_TaskExecutor["TaskExecutor"]
-    pkg_worker_WorkerPool["WorkerPool"]
 
-    pkg_hub_Engine -->|field: engine.store| pkg_hub_Store
-    pkg_hub_SQLiteStore -.->|implicit: 100%| pkg_hub_Store
-    pkg_hub_MemStore -.->|implicit: 100%| pkg_hub_Store
-
-    pkg_worker_WorkerPool -->|field: pool.executor| pkg_worker_Executor
-    pkg_worker_TaskExecutor -.->|implicit: 80%| pkg_worker_Executor
+    pkg_hub_Engine -->|field: store| pkg_hub_Store
+    pkg_hub_SQLiteStore -.->|implicit| pkg_hub_Store
 ```
 
-### 7.3 Goroutine Topology (Mermaid)
+#### Goroutine Topology (Mermaid)
 
 ```mermaid
 graph TD
     ServerStart["Server.Start()"]
-    runSessionGC["runSessionGC()"]
     WorkerPoolStart["WorkerPool.Start()"]
     jobChan[("jobChan")]
-    worker_1["worker[0]"]
-    worker_2["worker[1]"]
-    worker_N["worker[N]"]
-    resultChan[("resultChan")]
+    worker["worker[0]"]
 
-    ServerStart -->|background_task: 1.0| runSessionGC
-    ServerStart -->|server: 1.0| WorkerPoolStart
-
+    ServerStart --> WorkerPoolStart
     WorkerPoolStart --> jobChan
-    WorkerPoolStart --> worker_1
-    WorkerPoolStart --> worker_2
-    WorkerPoolStart --> worker_N
-
-    worker_1 -->|for| jobChan
-    worker_2 -->|for| jobChan
-    worker_N -->|for| jobChan
-
-    WorkerPoolStart --> resultChan
-
-    %% Patterns detected:
-    %% • background_task: 2 goroutines
-    %% • worker_pool: 1 pool
-    %% • producer_consumer: 1 channel
+    WorkerPoolStart --> worker
+    worker -->|for| jobChan
 ```
 
-### 7.4 Flow Graph (Mermaid)
-
-```mermaid
-flowchart TD
-    Entry_POST_tasks_dispatch["POST /v1/tasks:dispatch"]
-    Step_AuthMiddleware["Auth Middleware"]
-    Step_CreateTask["pkg/hub/engine.Engine.CreateTask"]
-    Step_StoreCreateTask["pkg/hub/store.Store.CreateTask"]
-    Step_BroadcastEvent["Engine.Broadcast"]
-
-    Entry_POST_tasks_dispatch --> Step_AuthMiddleware
-    Step_AuthMiddleware -->|"ctx: true"| Step_CreateTask
-    Step_CreateTask -->|"ctx: true"| Step_StoreCreateTask
-    Step_StoreCreateTask --> Step_BroadcastEvent
-
-    Step_AuthMiddleware -.->|error| ErrorHandler["HTTP 500"]
-    Step_CreateTask -.->|error| ErrorHandler
-    Step_StoreCreateTask -.->|error| ErrorHandler
-
-    %% Unknown ratio: 15% (indirect calls, middleware chain)
-```
-
----
-
-## 8. 相关工具对比
-
-| 工具 | Package Graph | Capability | Goroutine | Flow | 开源 |
-|------|---------------|------------|-----------|------|------|
-| **goda** | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **go-callvis** | ❌ | ❌ | ❌ | ✅ (call graph) | ✅ |
-| **gops** | ❌ | ❌ | ✅ (runtime) | ❌ | ✅ |
-| **poke** | ❌ | ❌ | ✅ (static) | ❌ | ✅ |
-| **ArchGuard Atlas** | ✅ | ✅ | ✅ (static) | ✅ (partial) | ✅ |
-
-**差异化定位**：
-- **统一集成**：四层图在单一工具中
-- **静态优先**：不依赖运行时数据
-- **可配置深度**：支持不同程度的分析
-
----
-
-## 9. 架构演进
-
-### 9.1 与 ArchJSON 的关系
-
-```typescript
-// Atlas 是 ArchJSON 的超集
-interface GoArchitectureAtlas extends ArchJSON {
-  // 新增字段
-  packageGraph: PackageGraph;
-  capabilityGraph: CapabilityGraph;
-  goroutineTopology: GoroutineTopology;
-  flowGraph: FlowGraph;
-}
-
-// 双向转换
-class AtlasConverter {
-  atlasToArchJSON(atlas: GoArchitectureAtlas): ArchJSON {
-    // Package Graph → entities (type: "package")
-    // Capability Graph → relations (type: "implementation")
-    // Goroutine Topology → relations (type: "spawns")
-    // Flow Graph → relations (type: "calls")
-  }
-
-  archJSONToAtlas(arch: ArchJSON): Partial<GoArchitectureAtlas> {
-    // Entities/Relations → Atlas
-  }
-}
-```
-
-### 9.2 向后兼容性策略
-
-```typescript
-// 不考虑向后兼容，专注把事情做对
-// 但提供清晰的迁移路径
-
-// 旧方式
-const arch = await plugin.parseProject('./src');
-
-// 新方式
-const atlas = await atlasPlugin.generateAtlas('./src');
-
-// 转换
-const arch = AtlasConverter.atlasToArchJSON(atlas);
-```
-
----
-
-## 10. 附录
-
-### 10.1 术语表
-
-| 术语 | 定义 |
-|------|------|
-| **Package** | Go 的编译单元，对应一个目录 |
-| **Capability** | 接口表达的抽象能力 |
-| **Usage Site** | 接口被使用的位置（字段/参数/返回值） |
-| **Spawn Point** | goroutine 启动的代码位置 |
-| **Pattern** | 并发模式（worker pool, pipeline 等） |
-| **Flow** | 从入口点到最终处理的调用链 |
-
-### 10.2 参考资料
+### 9.3 参考资料
 
 - [Go AST Package](https://pkg.go.dev/go/ast)
 - [Go Concurrent Patterns](https://go.dev/blog/pipelines)
@@ -1762,18 +1686,23 @@ const arch = AtlasConverter.atlasToArchJSON(atlas);
 
 ---
 
-**文档版本**: 2.2 (第三轮修订版)
+**文档版本**: 4.0 (架构审查 v3.0 响应版)
 **修订日期**: 2026-02-24
-**修订原因**:
-- 基于严苛架构师审查 V2，修复 P0 和 P1 问题：
-  - **P0-1 (数据源)**: 在 4.4 节新增 `GoFunctionBody`, `GoCallExpr`, `GoSpawnStmt` 等结构定义，修复数据源缺失问题。
-  - **P0-2 (准确性)**: 明确 Flow Graph 对 `gopls` 的强依赖，降低静态分析预期。
-  - **P1-1 (Channel)**: 修正 Channel 追踪的可恢复性预期 (< 20% 静态)，明确仅关注创建点。
-  - **P1-2 (插件)**: 明确 GoAtlasPlugin 目前为 CLI 专用工具。
+**修订内容**:
+- ✅ 响应严苛架构师 v3.0 审查
+- ✅ 修正 P0 级问题: EntityType 语法错误、parseCode 语义错误、性能风险无降级
+- ✅ 修正 P1 级问题: parseProjectToRaw() 未实现
+- ✅ GoAtlasPlugin 改为继承 GoPlugin 并暴露 protected 方法
+- ✅ 扩展 ArchJSON Schema v2.1 支持包级实体和行为关系
+- ✅ 新增 parseCodeWithBodies() 方法，保持现有方法不变
+- ✅ 新增 functionBodyStrategy 支持渐进式函数体提取
+- ✅ 移除工作量估计和具体实施计划
 
-**关键变更**:
-- 4.4 节: 增加 `GoFunctionBody` 等详细 AST 结构定义。
-- 3.3/3.4 节: 调整技术限制描述，增加 "强依赖 gopls" 警告。
-- 4.3.1 节: 增加 TreeSitterBridge 必须升级的架构说明。
+**关键架构决策**:
+1. 插件继承: `GoAtlasPlugin extends GoPlugin`
+2. 数据结构: 扩展 `GoFunction.body?: GoFunctionBody` (可选字段)
+3. 核心调整: 新增 `TreeSitterBridge.parseCodeWithBodies()` 方法
+4. 双向转换: Atlas ↔ ArchJSON (通过 extensions 字段)
+5. 渐进增强: `'full' | 'selective' | 'none'` 三级函数体提取策略
 
-**下一步**: 实现 Phase 1 - 升级 `TreeSitterBridge` 以支持函数体提取。
+**下一步**: 实现阶段 0 - 扩展 `types.ts` + 升级 `TreeSitterBridge` + 扩展 `GoPlugin`
