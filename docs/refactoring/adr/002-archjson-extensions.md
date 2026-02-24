@@ -4,6 +4,7 @@
 **日期**: 2026-02-24
 **上下文**: Go Architecture Atlas 实施计划 Phase 4
 **决策者**: ArchGuard 架构团队
+**修订**: v1.1 - 结构化 cycles、扩展 PackageNode、补充 GoroutineNode.spawnType
 
 ---
 
@@ -176,14 +177,26 @@ export interface GoAtlasMetadata {
 export interface PackageGraph {
   nodes: PackageNode[];
   edges: PackageDependency[];
-  cycles: string[][];  // 检测到的循环依赖
+  cycles: PackageCycle[];  // 检测到的循环依赖
+}
+
+export interface PackageCycle {
+  packages: string[];     // 循环依赖的包 ID 列表
+  severity: 'warning' | 'error';
 }
 
 export interface PackageNode {
   id: string;           // "github.com/archguard/swarm-hub/pkg/hub"
   name: string;         // "pkg/hub"
-  type: 'internal' | 'external' | 'vendor' | 'std';
+  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd';
   fileCount: number;
+  stats?: PackageStats;
+}
+
+export interface PackageStats {
+  structs: number;
+  interfaces: number;
+  functions: number;
 }
 
 export interface PackageDependency {
@@ -236,6 +249,7 @@ export interface GoroutineNode {
   id: string;
   name: string;          // 函数名
   type: 'main' | 'spawned';
+  spawnType?: 'named_func' | 'anonymous_func' | 'method';
   package: string;
   location: {
     file: string;
@@ -342,7 +356,7 @@ const archJSON: ArchJSON = {
           edges: [
             { from: 'cmd/swarm-hub', to: 'pkg/hub', strength: 5 },
           ],
-          cycles: [],
+          cycles: [],  // PackageCycle[]
         },
         capability: {
           nodes: [/* ... */],
@@ -620,7 +634,7 @@ relations: [
 ## 相关决策
 
 - [ADR-001: GoAtlasPlugin 组合模式](./001-goatlas-plugin-composition.md)
-- [Proposal 16: Go Architecture Atlas v4.0](../proposals/16-go-architecture-atlas.md)
+- [Proposal 16: Go Architecture Atlas v5.0](../proposals/16-go-architecture-atlas.md)
 
 ---
 
@@ -636,6 +650,8 @@ relations: [
 
 ---
 
-**文档版本**: 1.0
+**文档版本**: 1.1
 **最后更新**: 2026-02-24
 **状态**: 已采纳 - 待实施
+**变更记录**:
+- v1.1: `PackageGraph.cycles` 改为结构化 `PackageCycle[]`（含 severity）；`PackageNode.type` 新增 `'cmd'`；`PackageNode` 新增可选 `stats`；`GoroutineNode` 新增可选 `spawnType`
