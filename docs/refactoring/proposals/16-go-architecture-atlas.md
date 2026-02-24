@@ -279,6 +279,50 @@ OOP (TypeScript/Java/C#):                    Go:
 
 **关键价值**：Flow Graph 揭示了"请求如何流转"，这是理解业务逻辑的关键。
 
+#### 入口点检测模式匹配规则
+
+**支持的 HTTP 框架和模式**:
+
+| 框架 | 检测模式 | 示例代码 | 识别准确率 |
+|------|----------|----------|------------|
+| **net/http** | `http.HandleFunc()` 调用 | `http.HandleFunc("/path", handler)` | ~95% |
+| **net/http** | `ServeMux.Handle()` 调用 | `mux.Handle("/path", handler)` | ~90% |
+| **gin** | `router.GET/POST/...()` 调用 | `router.GET("/path", handler)` | ~85% |
+| **gorilla/mux** | `router.HandleFunc()` 调用 | `router.HandleFunc("/path", handler)` | ~85% |
+| **echo** | `router.GET/POST/...()` 调用 | `router.GET("/path", handler)` | ~80% |
+| **grpc** | `Register*Server()` 调用 | `pb.RegisterServiceServer(server, srv)` | ~90% |
+
+**检测局限性**:
+
+1. **间接注册无法识别**:
+   ```go
+   // ❌ 无法静态识别 handler 是什么
+   func setupRoutes(mux *http.ServeMux, handlers map[string]http.HandlerFunc) {
+       for path, handler := range handlers {
+           mux.HandleFunc(path, handler)  // handler 来自 map
+       }
+   }
+   ```
+
+2. **动态路由无法完全解析**:
+   ```go
+   // ❌ 只能识别 "GET /api/..." 模式，无法确定实际路径
+   router.GET("/api/:id", handler)  // gin/echo 的路径参数
+   ```
+
+3. **中间件链顺序不确定**:
+   ```go
+   // ⚠️ 中间件可能动态注册
+   r.Use(middleware1)
+   // ... 其他代码 ...
+   r.Use(middleware2)  // 顺序依赖运行时
+   ```
+
+**缓解策略**:
+- 使用 `gopls call hierarchy` API 追踪间接调用
+- 标注 `dynamic_route` 表示动态路由
+- 提供最大/最小中间件链范围
+
 ---
 
 ## 4. 架构设计
@@ -566,39 +610,104 @@ export interface SourceLocation {
 
 ### 4.3 与现有架构的集成
 
+#### 4.3.1 架构设计决策
+
+**重要**: `GoAtlasPlugin` 不继承 `GoPlugin`，而是作为**独立实现**共享底层组件。
+
+**设计理由**:
+1. `GoPlugin.parseProject()` 返回 `ArchJSON`，而 Atlas 需要保留更多中间数据
+2. `GoRawData` 当前仅存在于 `TreeSitterBridge` 内部，未暴露
+3. Atlas 需要**完整的包依赖图**，而现有实现中 `GoRawPackage.imports` 只是路径列表
+
+**架构关系图**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         共享组件层                                │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐   │
+│  │TreeSitterBridge│  │InterfaceMatcher│  │   ArchJsonMapper  │   │
+│  └───────┬───────┘  └───────┬───────┘  └─────────┬─────────┘   │
+└──────────┼──────────────────┼────────────────────┼──────────────┘
+           │                  │                    │
+           │         ┌────────┴─────────┐          │
+           │         │                  │          │
+           ▼         ▼                  ▼          ▼
+┌──────────────────┐    ┌────────────────────────────────┐
+│   GoPlugin       │    │     GoAtlasPlugin              │
+│                  │    │                                │
+│  • parseProject()│    │  • generateAtlas()             │
+│    → ArchJSON    │    │  • analyzePackageGraph()       │
+│                  │    │  • analyzeCapabilityGraph()    │
+└──────────────────┘    │  • analyzeGoroutineTopology()  │
+                        │  • analyzeFlowGraph()          │
+                        └────────────────────────────────┘
+```
+
+#### 4.3.2 GoAtlasPlugin 实现
+
 ```typescript
 // plugins/golang/atlas/go-atlas-plugin.ts
 
-import { GoPlugin } from '../golang/index.js';
-import type { ILanguagePlugin, PluginInitConfig } from '@/core/interfaces/language-plugin.js';
-import type { GoRawData } from '../golang/types.js';
-import type { GoArchitectureAtlas, ArchJSON } from './types.js';
+import type { PluginInitConfig } from '@/core/interfaces/language-plugin.js';
+import { TreeSitterBridge } from '../golang/tree-sitter-bridge.js';
+import { InterfaceMatcher } from '../golang/interface-matcher.js';
+import { GoplsClient } from '../golang/gopls-client.js';
+import type { GoRawData, GoRawPackage } from '../golang/types.js';
+import type {
+  GoArchitectureAtlas,
+  ArchJSON,
+  PackageGraph,
+  CapabilityGraph,
+  GoroutineTopology,
+  FlowGraph
+} from './types.js';
+import { BehaviorAnalyzer } from './behavior-analyzer.js';
+import { AtlasRenderer } from './atlas-renderer.js';
 
 /**
- * Go Atlas Plugin - 扩展 GoPlugin 以生成 Atlas
+ * Go Atlas Plugin - 独立实现，共享底层组件
  *
  * 设计决策:
- * 1. 不直接实现 ILanguagePlugin，而是扩展 GoPlugin
- * 2. 提供 generateAtlas() 作为独立接口
- * 3. Atlas 是 ArchJSON 的超集，提供转换方法
+ * 1. 不继承 GoPlugin，避免 ArchJSON 信息丢失问题
+ * 2. 直接使用 TreeSitterBridge、InterfaceMatcher 等共享组件
+ * 3. 自己维护 GoRawData，保留完整的中间数据
+ * 4. 提供 toArchJSON() 用于导出标准格式
  */
-export class GoAtlasPlugin extends GoPlugin {
+export class GoAtlasPlugin {
+  private treeSitter: TreeSitterBridge;
+  private matcher: InterfaceMatcher;
+  private goplsClient: GoplsClient | null = null;
   private behaviorAnalyzer: BehaviorAnalyzer;
-  private atlasRenderer: AtlasRenderer;
+  private renderer: AtlasRenderer;
+  private initialized = false;
 
-  override async initialize(config: PluginInitConfig): Promise<void> {
-    await super.initialize(config);
-
-    // 初始化 Atlas 专用组件
-    this.behaviorAnalyzer = new BehaviorAnalyzer(
-      this.getTreeSitter(),
-      this.getGoplsClient()
-    );
-    this.atlasRenderer = new AtlasRenderer();
+  constructor() {
+    this.treeSitter = new TreeSitterBridge();
+    this.matcher = new InterfaceMatcher();
+    this.behaviorAnalyzer = new BehaviorAnalyzer(this.treeSitter, this.matcher);
+    this.renderer = new AtlasRenderer();
   }
 
   /**
-   * 生成 Go Architecture Atlas
+   * 初始化插件
+   */
+  async initialize(config: PluginInitConfig): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    // 尝试初始化 gopls（可选增强）
+    try {
+      this.goplsClient = new GoplsClient();
+    } catch (error) {
+      console.warn('gopls not available for Atlas analysis:', error);
+      this.goplsClient = null;
+    }
+
+    this.initialized = true;
+  }
+
+  /**
+   * 生成完整的 Go Architecture Atlas
    *
    * @param rootPath Go 项目根目录（包含 go.mod）
    * @param options 生成选项
@@ -608,34 +717,24 @@ export class GoAtlasPlugin extends GoPlugin {
     rootPath: string,
     options: AtlasGenerationOptions = {}
   ): Promise<GoArchitectureAtlas> {
-    // 1. 使用父类方法解析原始数据
-    const rawData = await this.parseProject(rootPath, {
-      language: 'go',
-      exclude: options.exclude,
-      includeTests: options.includeTests ?? false,
-    });
+    this.ensureInitialized();
 
-    // 2. 从 ArchJSON 转换为 GoRawData
-    const goData = this.convertToGoRawData(rawData);
+    // 1. 解析 Go 项目，获取完整的 GoRawData
+    const rawData = await this.parseGoProject(rootPath, options);
 
-    // 3. 分析四层架构
-    const [
-      packageGraph,
-      capabilityGraph,
-      goroutineTopology,
-      flowGraph
-    ] = await Promise.all([
-      this.behaviorAnalyzer.buildPackageGraph(goData),
-      this.behaviorAnalyzer.buildCapabilityGraph(goData),
-      this.behaviorAnalyzer.buildGoroutineTopology(goData, options),
-      this.behaviorAnalyzer.buildFlowGraph(goData, options),
+    // 2. 并行分析四层架构
+    const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
+      this.behaviorAnalyzer.buildPackageGraph(rawData),
+      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
+      this.behaviorAnalyzer.buildGoroutineTopology(rawData, options),
+      this.behaviorAnalyzer.buildFlowGraph(rawData, options),
     ]);
 
-    // 4. 构建 Atlas
+    // 3. 构建 Atlas
     const atlas: GoArchitectureAtlas = {
       metadata: {
-        moduleName: goData.moduleName,
-        moduleRoot: goData.moduleRoot,
+        moduleName: rawData.moduleName,
+        moduleRoot: rawData.moduleRoot,
         goVersion: await this.detectGoVersion(rootPath),
         generatedAt: new Date().toISOString(),
         analyzerVersion: '2.0.0',
@@ -651,34 +750,312 @@ export class GoAtlasPlugin extends GoPlugin {
   }
 
   /**
-   * 将 Atlas 转换为 ArchJSON（向后兼容）
+   * 将 Atlas 转换为 ArchJSON（用于兼容现有工具链）
+   *
+   * 映射规则:
+   * - Package Graph → entities (type: "package", 需要扩展 EntityType)
+   * - Capability Graph → relations (type: "implementation", "dependency")
+   * - Goroutine Topology → relations (type: "spawns")
+   * - Flow Graph → relations (type: "calls")
    */
-  atlasToArchJSON(atlas: GoArchitectureAtlas): ArchJSON {
-    // 实现：从 Atlas 提取 entities 和 relations
-    // Package Graph → entities (type: "package")
-    // Capability Graph → relations (type: "implementation", "usage")
-    // Goroutine Topology → relations (type: "spawns")
-    // Flow Graph → relations (type: "calls")
+  toArchJSON(atlas: GoArchitectureAtlas): ArchJSON {
+    const entities: any[] = [];
+    const relations: any[] = [];
+
+    // 1. Package Graph → Entities (packages)
+    for (const pkg of atlas.packageGraph.packages) {
+      entities.push({
+        id: pkg.id,
+        name: pkg.name,
+        type: 'package',  // ⚠️ 需要在 EntityType 中添加
+        location: {
+          file: pkg.dirPath,
+          startLine: 0,
+          endLine: 0,
+        },
+        attributes: {
+          dirPath: pkg.dirPath,
+          packageType: pkg.type,
+          exports: pkg.exports,
+        },
+        stats: pkg.stats,
+      });
+    }
+
+    // 2. Package Dependencies → Relations
+    for (const dep of atlas.packageGraph.dependencies) {
+      relations.push({
+        from: dep.fromId,
+        to: dep.toId,
+        type: 'dependency',
+        attributes: {
+          strength: dep.strength,
+          dependencyType: dep.type,
+        },
+      });
+    }
+
+    // 3. Capability Graph → Implementations
+    for (const impl of atlas.capabilityGraph.implementations) {
+      relations.push({
+        from: impl.structId,
+        to: impl.interfaceId,
+        type: 'implementation',
+        attributes: {
+          coverage: impl.coverage,
+          implementationType: impl.type,
+        },
+      });
+    }
+
+    // 4. Capability Graph → Usage Sites (dependencies)
+    for (const usage of atlas.capabilityGraph.usageSites) {
+      relations.push({
+        from: usage.consumerId,
+        to: usage.interfaceId,
+        type: 'dependency',
+        attributes: {
+          usageContext: usage.context,
+          location: usage.location,
+        },
+      });
+    }
+
+    // 5. Goroutine Topology → Spawns
+    for (const go of atlas.goroutineTopology.goroutines) {
+      // 找到 spawn location 对应的函数
+      relations.push({
+        from: go.spawnLocation.file,  // 简化：使用文件作为源
+        to: go.id,
+        type: 'spawns',
+        attributes: {
+          spawnType: go.spawnType,
+          pattern: go.pattern,
+          confidence: go.confidence,
+        },
+      });
+    }
+
+    // 6. Flow Graph → Calls
+    for (const flow of atlas.flowGraph.flows) {
+      for (let i = 0; i < flow.steps.length - 1; i++) {
+        const current = flow.steps[i];
+        const next = flow.steps[i + 1];
+
+        if (current.nextStepIds.includes(flow.steps[i + 1].id)) {
+          relations.push({
+            from: current.qualifiedName,
+            to: next.qualifiedName,
+            type: 'calls',
+            attributes: {
+              contextPropagation: current.contextPropagation,
+              flowId: flow.id,
+            },
+          });
+        }
+      }
+    }
 
     return {
       version: '2.0',
       language: 'go',
-      entities: [],
-      relations: [],
-      metadata: atlas.metadata,
+      entities,
+      relations,
+      metadata: {
+        ...atlas.metadata,
+        generatedBy: 'GoAtlasPlugin',
+        atlasFormat: true,
+      },
     };
   }
 
   /**
-   * 从 ArchJSON 构建 Atlas（增量更新）
+   * 解析 Go 项目，返回完整的 GoRawData
+   *
+   * 与 GoPlugin.parseProject() 的区别:
+   * - 不转换为 ArchJSON
+   * - 保留完整的包依赖图
+   * - 保留所有中间数据
    */
-  archJSONToAtlas(arch: ArchJSON): Partial<GoArchitectureAtlas> {
-    // 允许用户基于现有 ArchJSON 构建 Atlas
-    // 用于增量分析场景
-    return {};
+  private async parseGoProject(
+    rootPath: string,
+    options: AtlasGenerationOptions
+  ): Promise<GoRawData> {
+    // 1. 查找所有 .go 文件
+    const { glob } = await import('glob');
+    const fs = await import('fs-extra');
+
+    const pattern = options.includeTests ? '**/*.go' : '**/*.go';
+    const files = await glob(pattern, {
+      cwd: rootPath,
+      absolute: true,
+      ignore: ['**/vendor/**', '**/node_modules/**', '**/*_test.go'],
+    });
+
+    // 2. 解析每个文件，合并到 packages
+    const packages = new Map<string, GoRawPackage>();
+
+    for (const file of files) {
+      const code = await fs.readFile(file, 'utf-8');
+      const pkg = this.treeSitter.parseCode(code, file);
+
+      if (packages.has(pkg.name)) {
+        const existing = packages.get(pkg.name)!;
+        existing.structs.push(...pkg.structs);
+        existing.interfaces.push(...pkg.interfaces);
+        existing.functions.push(...pkg.functions);
+      } else {
+        packages.set(pkg.name, pkg);
+      }
+    }
+
+    // 3. 构建包依赖图
+    const packageGraph = this.buildPackageDependencyGraph(Array.from(packages.values()));
+
+    // 4. 读取 go.mod 获取模块信息
+    let moduleName = '';
+    let moduleRoot = rootPath;
+    try {
+      const goModPath = `${rootPath}/go.mod`;
+      const goModContent = await fs.readFile(goModPath, 'utf-8');
+      const match = goModContent.match(/^module\s+(.+)$/m);
+      if (match) {
+        moduleName = match[1].trim();
+      }
+    } catch {
+      // 没有 go.mod，使用默认值
+    }
+
+    return {
+      packages: Array.from(packages.values()),
+      moduleRoot,
+      moduleName,
+      packageGraph,  // 新增: 包依赖图
+    };
   }
 
-  // 私有方法...
+  /**
+   * 构建包依赖图
+   */
+  private buildPackageDependencyGraph(packages: GoRawPackage[]): any {
+    const dependencies: any[] = [];
+    const packageMap = new Map(
+      packages.map(p => [p.dirPath, p])
+    );
+
+    for (const pkg of packages) {
+      for (const imp of pkg.imports) {
+        // 尝试匹配导入路径到包
+        const targetPkg = packages.find(p =>
+          imp.path.startsWith(p.name) || imp.path === p.name
+        );
+
+        if (targetPkg) {
+          dependencies.push({
+            fromId: pkg.id,
+            toId: targetPkg.id,
+            type: imp.isTest ? 'test' : 'direct',
+            strength: 1,  // TODO: 计算实际引用强度
+          });
+        }
+      }
+    }
+
+    // 检测循环依赖 (Kahn 算法)
+    const cycles = this.detectCycles(packages, dependencies);
+
+    return { dependencies, cycles };
+  }
+
+  /**
+   * 检测循环依赖
+   */
+  private detectCycles(packages: GoRawPackage[], dependencies: any[]): string[][] {
+    const adj = new Map<string, string[]>();
+    const inDegree = new Map<string, number>();
+
+    // 构建邻接表和入度
+    for (const pkg of packages) {
+      adj.set(pkg.id, []);
+      inDegree.set(pkg.id, 0);
+    }
+
+    for (const dep of dependencies) {
+      adj.get(dep.fromId)?.push(dep.toId);
+      inDegree.set(dep.toId, (inDegree.get(dep.toId) || 0) + 1);
+    }
+
+    // Kahn 算法
+    const queue: string[] = [];
+    for (const [id, degree] of inDegree) {
+      if (degree === 0) {
+        queue.push(id);
+      }
+    }
+
+    const visited: string[] = [];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      visited.push(id);
+
+      for (const neighbor of adj.get(id) || []) {
+        inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
+        if (inDegree.get(neighbor) === 0) {
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    // 未访问的节点在环中
+    const cycles: string[][] = [];
+    const remaining = packages.filter(p => !visited.includes(p.id));
+
+    if (remaining.length > 0) {
+      cycles.push(remaining.map(p => p.id));
+    }
+
+    return cycles;
+  }
+
+  private ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new Error('GoAtlasPlugin not initialized. Call initialize() first.');
+    }
+  }
+
+  private async detectGoVersion(rootPath: string): Promise<string> {
+    try {
+      const { exec } = await import('child_process');
+      return new Promise((resolve) => {
+        exec('go version', { cwd: rootPath }, (error: any, stdout: string) => {
+          if (error) {
+            resolve('unknown');
+          } else {
+            const match = stdout.match(/go version go(\d+\.\d+\.\d+)/);
+            resolve(match ? match[1] : 'unknown');
+          }
+        });
+      });
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  private calculateStats(
+    pg: PackageGraph,
+    cg: CapabilityGraph,
+    gt: GoroutineTopology,
+    fg: FlowGraph
+  ): any {
+    return {
+      packages: pg.packages.length,
+      interfaces: cg.interfaces.length,
+      structs: pg.packages.reduce((sum, p) => sum + p.stats.structs, 0),
+      goroutines: gt.goroutines.length,
+      channels: gt.channels.length,
+      entryPoints: fg.entryPoints.length,
+    };
+  }
 }
 
 export interface AtlasGenerationOptions {
@@ -689,69 +1066,84 @@ export interface AtlasGenerationOptions {
   detectCycles?: boolean;
 
   // Goroutine Topology 选项
-  maxGoroutines?: number;  // 限制分析的 goroutine 数量
+  maxGoroutines?: number;
   ignorePatterns?: ConcurrencyPattern[];
 
   // Flow Graph 选项
-  maxFlowDepth?: number;    // 限制调用链深度
+  maxFlowDepth?: number;
   entryPointTypes?: EntryPointType[];
-  followIndirectCalls?: boolean;  // 是否追踪间接调用
+  followIndirectCalls?: boolean;
 
   // 输出选项
-  includeUnknown?: boolean;  // 是否包含"未知"部分
+  includeUnknown?: boolean;
 }
 
-/**
- * 行为分析器 - 核心 AST 分析引擎
- */
-class BehaviorAnalyzer {
-  constructor(
-    private treeSitter: any,
-    private gopls: any
-  ) {}
+type ConcurrencyPattern =
+  | 'worker_pool'
+  | 'pipeline'
+  | 'fan_out_fan_in'
+  | 'background_task'
+  | 'timer'
+  | 'server'
+  | 'producer_consumer'
+  | 'unknown';
 
-  async buildPackageGraph(data: GoRawData): Promise<PackageGraph> {
-    // 实现...
-  }
+type EntryPointType =
+  | 'http_handler'
+  | 'http_route'
+  | 'grpc_service'
+  | 'cli_command'
+  | 'background_job'
+  | 'event_handler';
+```
 
-  async buildCapabilityGraph(data: GoRawData): Promise<CapabilityGraph> {
-    // 实现...
-  }
+**说明**: `BehaviorAnalyzer` 和 `AtlasRenderer` 的完整实现将在独立的文件中:
+- `plugins/golang/atlas/behavior-analyzer.ts` - 四层架构分析逻辑
+- `plugins/golang/atlas/atlas-renderer.ts` - Mermaid/JSON 渲染器
 
-  async buildGoroutineTopology(
-    data: GoRawData,
-    options: AtlasGenerationOptions
-  ): Promise<GoroutineTopology> {
-    // 实现...
-  }
+### 4.4 扩展 GoRawData 类型
 
-  async buildFlowGraph(
-    data: GoRawData,
-    options: AtlasGenerationOptions
-  ): Promise<FlowGraph> {
-    // 实现...
-  }
+由于 Atlas 需要完整的包依赖图，需要在现有 `GoRawData` 基础上添加字段:
+
+```typescript
+// plugins/golang/types.ts (扩展现有类型)
+
+export interface GoRawData {
+  packages: GoRawPackage[];
+  moduleRoot: string;
+  moduleName: string;
+
+  // 新增: 包依赖图 (Atlas 专用)
+  packageGraph?: {
+    dependencies: PackageDependency[];
+    cycles: PackageCycle[];
+  };
 }
 
-/**
- * Atlas 渲染器
- */
-class AtlasRenderer {
-  renderPackageGraph(graph: PackageGraph, format: 'mermaid'): string;
-  renderPackageGraph(graph: PackageGraph, format: 'json'): object;
+export interface GoRawPackage {
+  id: string;
+  name: string;
+  dirPath: string;
+  imports: GoImport[];
 
-  renderCapabilityGraph(graph: CapabilityGraph, format: 'mermaid'): string;
-  renderCapabilityGraph(graph: CapabilityGraph, format: 'json'): object;
+  // 现有字段...
+  structs: GoRawStruct[];
+  interfaces: GoRawInterface[];
+  functions: GoFunction[];
 
-  renderGoroutineTopology(topology: GoroutineTopology, format: 'mermaid'): string;
-  renderGoroutineTopology(topology: GoroutineTopology, format: 'json'): object;
+  // 新增: 解析后的依赖关系 (延迟填充)
+  dependencies?: string[];  // 依赖的包 ID 列表
+  dependents?: string[];    // 被依赖的包 ID 列表
+}
 
-  renderFlowGraph(graph: FlowGraph, format: 'mermaid'): string;
-  renderFlowGraph(graph: FlowGraph, format: 'json'): object;
+export interface GoImport {
+  path: string;        // 导入路径，如 "github.com/gin-gonic/gin"
+  isTest: boolean;     // 是否来自 _test.go 文件
+  alias?: string;      // 导入别名
 }
 ```
 
-### 4.4 CLI 集成设计
+### 4.5 CLI 集成设计
 
 ```typescript
 // src/cli/commands/atlas.ts
@@ -987,6 +1379,136 @@ describe('Flow Graph', () => {
     - context 传播追踪 >60%
 ```
 
+### 6.4 可恢复性基准测试 (Recoverability Benchmark)
+
+**目的**: 验证 2.2 节中声称的可恢复性百分比是否准确
+
+**测试方法**:
+
+```typescript
+// tests/integration/atlas/recoverability-benchmark.test.ts
+
+interface RecoverabilityMetrics {
+  layer: string;
+  metric: string;
+  claimed: number;      // 声称的可恢复性
+  actual: number;       // 实际测量值
+  precision: number;    // 精确率
+  recall: number;       // 召回率
+  sampleSize: number;   // 测试项目数量
+}
+
+describe('Recoverability Benchmark', () => {
+  const testProjects = [
+    'github.com/golang/go',        // 标准库
+    'github.com/gin-gonic/gin',    // Web 框架
+    'github.com/containers/podman',// CLI 工具
+    // ... 50+ 真实 Go 项目
+  ];
+
+  it('Package Graph: should achieve 100% recoverability', async () => {
+    const results = await benchmarkRecoverability(testProjects, 'package');
+    expect(results.actual).toBe(1.0);  // 100%
+  });
+
+  it('Capability Graph: should achieve >85% recoverability', async () => {
+    const results = await benchmarkRecoverability(testProjects, 'capability');
+    expect(results.actual).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('Goroutine Topology: should achieve >60% recoverability', async () => {
+    const results = await benchmarkRecoverability(testProjects, 'goroutine');
+    expect(results.actual).toBeGreaterThanOrEqual(0.60);
+  });
+
+  it('Flow Graph: should achieve >50% recoverability', async () => {
+    const results = await benchmarkRecoverability(testProjects, 'flow');
+    expect(results.actual).toBeGreaterThanOrEqual(0.50);
+  });
+});
+
+/**
+ * 计算可恢复性指标
+ *
+ * @param projects 测试项目列表
+ * @param layer 架构层名称
+ * @returns 可恢复性指标
+ */
+async function benchmarkRecoverability(
+  projects: string[],
+  layer: string
+): Promise<RecoverabilityMetrics> {
+  let truePositives = 0;
+  let falsePositives = 0;
+  let falseNegatives = 0;
+  let groundTruthCount = 0;
+
+  for (const project of projects) {
+    // 1. 生成 Atlas
+    const atlas = await generateAtlas(project);
+
+    // 2. 获取 Ground Truth (手工标注或运行时数据)
+    const groundTruth = await loadGroundTruth(project, layer);
+    groundTruthCount += groundTruth.length;
+
+    // 3. 比较 Atlas 结果与 Ground Truth
+    const detected = extractLayerEntities(atlas, layer);
+
+    for (const entity of groundTruth) {
+      if (detected.has(entity)) {
+        truePositives++;
+      } else {
+        falseNegatives++;
+      }
+    }
+
+    for (const entity of detected) {
+      if (!groundTruth.has(entity)) {
+        falsePositives++;
+      }
+    }
+  }
+
+  const precision = truePositives / (truePositives + falsePositives);
+  const recall = truePositives / (truePositives + falseNegatives);
+  const actual = (truePositives / groundTruthCount);
+
+  return {
+    layer,
+    metric: 'recoverability',
+    claimed: getClaimedRecoverability(layer),
+    actual,
+    precision,
+    recall,
+    sampleSize: projects.length,
+  };
+}
+
+function getClaimedRecoverability(layer: string): number {
+  switch (layer) {
+    case 'package': return 1.0;
+    case 'capability': return 0.85;
+    case 'goroutine': return 0.65;  // (60% + 70%) / 2
+    case 'flow': return 0.55;        // (50% + 60%) / 2
+    default: return 0;
+  }
+}
+```
+
+**Ground Truth 收集策略**:
+
+| 层 | Ground Truth 来源 | 收集方法 |
+|---|-------------------|----------|
+| **Package Graph** | `go list -deps` | 自动化 |
+| **Capability Graph** | 人工审计 | 半自动 (工具辅助) |
+| **Goroutine Topology** | `go test -race` 覆盖 | 自动化 + 验证 |
+| **Flow Graph** | HTTP 请求日志 | 运行时追踪 |
+
+**验收标准**:
+- 实际可恢复性 ≥ 声称值的 90%
+- Precision ≥ 0.80 (低误报)
+- Recall ≥ 声称值 (低漏报)
+
 ---
 
 ## 7. 输出示例
@@ -1179,7 +1701,21 @@ const arch = AtlasConverter.atlasToArchJSON(atlas);
 
 ---
 
-**文档版本**: 2.0 (修订版)
+**文档版本**: 2.1 (第二轮修订版)
 **修订日期**: 2026-02-24
-**修订原因**: 基于严苛架构师审查，修复架构设计问题，明确技术限制，添加测试策略
-**下一步**: 原型实现验证
+**修订原因**:
+- 基于第二轮严苛架构师审查，修复 P0 和 P1 问题：
+  - **P0-1**: 重新设计 GoAtlasPlugin 为独立实现，共享组件但不继承
+  - **P0-2**: 补充完整的 toArchJSON() 映射逻辑
+  - **P1-1**: 在 GoRawData 中添加 packageGraph 字段支持
+  - **P1-2**: 明确入口点检测的模式匹配规则和局限性
+  - **P2-1**: 添加可恢复性基准测试验证策略
+
+**关键变更**:
+- GoAtlasPlugin 不再继承 GoPlugin，避免 ArchJSON 信息丢失
+- 提供完整的 Atlas → ArchJSON 转换映射规则
+- 扩展 GoRawData 类型，添加包依赖图字段
+- 新增 HTTP 入口点检测准确率表和检测局限性说明
+- 新增 6.4 节：可恢复性基准测试方法
+
+**下一步**: 原型实现验证，重点验证可恢复性百分比

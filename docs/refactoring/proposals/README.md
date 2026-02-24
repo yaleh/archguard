@@ -863,11 +863,11 @@ export class ELKRenderer {
 ---
 
 ### [16-go-architecture-atlas.md](./16-go-architecture-atlas.md)
-**🗺️ Go Architecture Atlas - Go 语言架构可观测系统 (修订版 v2.0)**
+**🗺️ Go Architecture Atlas - Go 语言架构可观测系统 (修订版 v2.1)**
 
 **适用人群**: Go 架构师、微服务开发者、LLM/Agent 用户
 **阅读优先级**: ⭐⭐⭐⭐⭐ (Go 深度分析必读)
-**文档状态**: ✅ 修订版 - 基于严苛架构师审查
+**文档状态**: ✅ 修订版 - 第二轮严苛架构师审查
 
 **内容概要**:
 - **核心洞察**: Go 类型系统不是架构载体，必须从行为模式恢复架构
@@ -876,9 +876,9 @@ export class ELKRenderer {
   2. Capability Graph (~85% 可恢复)
   3. Goroutine Topology (~60-70% 可恢复，静态模式识别)
   4. Flow Graph (~50-60% 可恢复，入口点→调用链)
-- **与现有架构的集成**: 扩展 GoPlugin，提供独立 Atlas 接口
+- **与现有架构的集成**: 独立实现共享组件，不继承 GoPlugin
 - **技术限制**: 明确标注每层的可恢复性和缓解策略
-- **测试策略**: Fixture 项目 + 验收标准
+- **测试策略**: Fixture 项目 + 验收标准 + 可恢复性基准测试
 
 **何时使用**:
 - ✅ Go 项目架构分析
@@ -887,12 +887,19 @@ export class ELKRenderer {
 - ✅ 信息流分析
 - ✅ LLM 生成代码的架构验证
 
-**v2.0 主要修订**:
+**v2.0 主要修订** (第一轮):
 - ✅ 修复架构设计：明确 Atlas 与 ArchJSON 的关系
 - ✅ 修正数据结构：添加包 ID 防止冲突
 - ✅ 明确技术限制：每层标注真实可恢复性
 - ✅ 移除工作量估算：将在计划文档中讨论
 - ✅ 添加测试策略：Fixture 项目 + 验收标准
+
+**v2.1 主要修订** (第二轮):
+- ✅ **P0-1**: 重新设计 GoAtlasPlugin 为独立实现，共享组件但不继承
+- ✅ **P0-2**: 补充完整的 toArchJSON() 映射逻辑
+- ✅ **P1-1**: 在 GoRawData 中添加 packageGraph 字段支持
+- ✅ **P1-2**: 明确入口点检测的模式匹配规则和局限性
+- ✅ **P2-1**: 添加可恢复性基准测试验证策略
 
 **用户价值**:
 - 架构理解准确度: 40-60% → 70-80% (多视角叠加)
@@ -904,6 +911,7 @@ export class ELKRenderer {
 - **多视角投影**: Go 架构 = Package × Capability × Goroutine × Flow 的交集
 - **渐进式分析**: 从 100% 可靠的 Package Graph 开始，逐步扩展
 - **未知标注**: 对无法静态识别的部分明确标注"unknown"
+- **独立实现**: 避免继承带来的信息丢失，共享底层组件
 
 **内容概要**:
 - 解决多 diagram 串行处理的性能瓶颈
