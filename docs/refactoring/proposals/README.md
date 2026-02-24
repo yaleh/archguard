@@ -863,21 +863,22 @@ export class ELKRenderer {
 ---
 
 ### [16-go-architecture-atlas.md](./16-go-architecture-atlas.md)
-**🗺️ Go Architecture Atlas - Go 语言架构可观测系统**
+**🗺️ Go Architecture Atlas - Go 语言架构可观测系统 (修订版 v2.0)**
 
 **适用人群**: Go 架构师、微服务开发者、LLM/Agent 用户
 **阅读优先级**: ⭐⭐⭐⭐⭐ (Go 深度分析必读)
+**文档状态**: ✅ 修订版 - 基于严苛架构师审查
 
 **内容概要**:
-- **核心洞察**: Go 类型系统不是架构载体，必须从行为恢复架构
-- **四层架构图**:
-  1. Package Dependency Graph (静态边界)
-  2. Capability Graph (抽象关系)
-  3. Goroutine Topology (执行结构)
-  4. Flow Graph (信息路径)
-- **BehaviorAnalyzer** 实现
-- **市场空白**: 目前几乎没有工具自动做 Goroutine/Flow 分析
-- **LLM 时代价值**: 成为 Go + Agent + LLM 时代的架构显微镜
+- **核心洞察**: Go 类型系统不是架构载体，必须从行为模式恢复架构
+- **四层架构图**（已修正技术限制）:
+  1. Package Dependency Graph (100% 可恢复)
+  2. Capability Graph (~85% 可恢复)
+  3. Goroutine Topology (~60-70% 可恢复，静态模式识别)
+  4. Flow Graph (~50-60% 可恢复，入口点→调用链)
+- **与现有架构的集成**: 扩展 GoPlugin，提供独立 Atlas 接口
+- **技术限制**: 明确标注每层的可恢复性和缓解策略
+- **测试策略**: Fixture 项目 + 验收标准
 
 **何时使用**:
 - ✅ Go 项目架构分析
@@ -886,25 +887,23 @@ export class ELKRenderer {
 - ✅ 信息流分析
 - ✅ LLM 生成代码的架构验证
 
-**关键亮点**:
-- **Package Graph**: 100% 静态恢复，无 LLM
-- **Capability Graph**: 真实接口使用关系，而非定义
-- **Goroutine Topology**: 市场空白，自动识别并发模式
-- **Flow Graph**: HTTP/CLI 入口点到数据流的完整追踪
+**v2.0 主要修订**:
+- ✅ 修复架构设计：明确 Atlas 与 ArchJSON 的关系
+- ✅ 修正数据结构：添加包 ID 防止冲突
+- ✅ 明确技术限制：每层标注真实可恢复性
+- ✅ 移除工作量估算：将在计划文档中讨论
+- ✅ 添加测试策略：Fixture 项目 + 验收标准
 
 **用户价值**:
-- 架构理解准确度: 40-60% → 90%+ (**+50%**)
-- 并发结构可见性: 0% → 100% (**∞**)
-- 接口使用追踪: 0% → 100% (**∞**)
-- 市场定位: 成为第一个真正的 Go 架构工具
+- 架构理解准确度: 40-60% → 70-80% (多视角叠加)
+- 并发结构可见性: 0% → 60-70% (静态模式识别)
+- 接口使用追踪: 0% → 85%+ (使用点分析)
+- 包依赖可视化: 部分 → 100% (完整依赖图)
 
-**实施优先级**:
-- Phase 5: Package Graph (2-3 天)
-- Phase 6: Capability Graph (3-4 天)
-- Phase 7: Goroutine Topology (4-5 天) - **市场空白**
-- Phase 8: Flow Graph (5-7 天)
-- Phase 9: 集成与优化 (3-4 天)
-- **总计**: 17-23 天
+**架构创新**:
+- **多视角投影**: Go 架构 = Package × Capability × Goroutine × Flow 的交集
+- **渐进式分析**: 从 100% 可靠的 Package Graph 开始，逐步扩展
+- **未知标注**: 对无法静态识别的部分明确标注"unknown"
 
 **内容概要**:
 - 解决多 diagram 串行处理的性能瓶颈
