@@ -1,10 +1,10 @@
 # Go Architecture Atlas: Go 语言架构可观测系统
 
-**文档版本**: 2.0
+**文档版本**: 2.2
 **创建日期**: 2026-02-23
 **最后修改**: 2026-02-24
 **前置依赖**: 15-golang-support-proposal.md (Phase 0-4 已完成)
-**状态**: 修订版 - 基于严苛架构师审查
+**状态**: 批准 - 等待实现 (基于严苛架构师审查 V2)
 
 ---
 
@@ -99,14 +99,14 @@ OOP (TypeScript/Java/C#):                    Go:
 | **interface 使用点** | ~85% | 匿名函数、反射 | ⭐⭐⭐⭐⭐ |
 | **goroutine 启动** | ~90% | 动态启动、条件分支 | ⭐⭐⭐⭐⭐ |
 | **channel 创建** | ~95% | 动态创建、类型推断 | ⭐⭐⭐⭐ |
-| **channel 通信边** | ~40% | 参数传递、存储在结构体 | ⭐⭐⭐ |
+| **channel 通信边** | **< 20%** | **严重依赖数据流分析** | ⭐⭐⭐ |
 | **HTTP 入口点** | ~70% | 框架差异 | ⭐⭐⭐⭐ |
-| **函数调用链** | ~60% | 间接调用、接口调用 | ⭐⭐⭐ |
+| **函数调用链** | ~60% | **严重依赖类型推断 (gopls)** | ⭐⭐⭐ |
 | **struct 继承** | N/A | Go 无继承 | - |
 
 **说明**：
 - "goroutine spawn 是 runtime truth" 的说法不准确，应为 "静态 spawn pattern"
-- "channel edges" 的真实度被高估，实际只能识别 ~40% 的通信关系
+- **修正**: "channel edges" 的静态可恢复性极低（< 20%），除非是局部变量传递。复杂的数据流分析不在初期版本范围内。
 
 ---
 
@@ -192,20 +192,18 @@ OOP (TypeScript/Java/C#):                    Go:
 
 ### 3.3 Goroutine Topology
 
-**可恢复性**: ~60-70%
+**可恢复性**: ~60-70% (仅限启动点和创建点)
 **技术限制**:
-- 只能识别静态的 `go func()` 调用
-- channel 作为参数传递时无法追踪源头
-- channel 存储在结构体中时无法追踪使用者
-- 条件启动的 goroutine（如 `if condition { go ... }`）无法确定是否实际启动
+- **数据流缺失**: Channel 作为参数传递或存储在结构体中时，静态追踪极为困难。
+- **动态性**: 条件启动的 goroutine 无法确定运行时是否执行。
 
 **架构价值**: ⭐⭐⭐⭐⭐
 
 ```
 解析方式:
-- go func() 调用模式匹配（AST）
+- go func() 调用模式匹配（需要 AST 函数体分析）
 - make(chan) 调用模式匹配
-- range/chan 模式识别
+- range/chan 模式识别（仅限局部变量）
 - select 语句识别
 
 输出示例（简化版）:
@@ -223,7 +221,7 @@ OOP (TypeScript/Java/C#):                    Go:
 │                          │                                   │
 │                          └──resultAggregator               │
 │                                                              │
-│  ⚠️ 注意: 通信边仅为静态识别，实际运行时可能更复杂       │
+│  ⚠️ 注意: 通信边仅为静态识别，复杂跨包通信可能丢失       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -231,11 +229,10 @@ OOP (TypeScript/Java/C#):                    Go:
 
 ### 3.4 Flow Graph
 
-**可恢复性**: ~50-60%
+**可恢复性**: ~50-60% (**强依赖 gopls**)
 **技术限制**:
-- HTTP 框架差异：标准库 net/http、gin、echo、grpc 等
-- 中间件链：动态注册的中间件难以静态分析
-- 间接调用：通过接口或函数值的调用无法追踪
+- **纯静态分析极其有限**: 仅能识别同包内的直接函数调用。
+- **接口调用黑盒**: 静态分析无法知道 `interface.Method()` 调用了哪个实现，必须依赖 gopls 的类型指针分析。
 
 **架构价值**: ⭐⭐⭐⭐
 
@@ -319,9 +316,9 @@ OOP (TypeScript/Java/C#):                    Go:
    ```
 
 **缓解策略**:
-- 使用 `gopls call hierarchy` API 追踪间接调用
-- 标注 `dynamic_route` 表示动态路由
-- 提供最大/最小中间件链范围
+- **必须集成 gopls**: 使用 `gopls call hierarchy` API 追踪间接调用。
+- 标注 `dynamic_route` 表示动态路由。
+- 提供最大/最小中间件链范围。
 
 ---
 
@@ -336,12 +333,13 @@ OOP (TypeScript/Java/C#):                    Go:
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────────────┐  │
 │  │                       GoAtlasPlugin                            │  │
-│  │  (extends GoPlugin, implements IAtlasGenerator)              │  │
+│  │  (Standalone Tool, does not implement ILanguagePlugin yet)     │  │
 │  ├─────────────────────────────────────────────────────────────────┤  │
 │  │                                                                 │  │
 │  │  ┌───────────────┐  ┌───────────────┐                          │  │
 │  │  │ TreeSitter    │  │ GoplsClient   │                          │  │
-│  │  │ Bridge        │  │ (optional)    │                          │  │
+│  │  │ Bridge (v2)   │  │ (Required for │                          │  │
+│  │  │ +FuncBody     │  │ Flow/Graph)   │                          │  │
 │  │  └───────┬───────┘  └───────┬───────┘                          │  │
 │  │          │                  │                                  │  │
 │  │          └────────┬─────────┘                                  │  │
@@ -354,6 +352,7 @@ OOP (TypeScript/Java/C#):                    Go:
 │  │  │  └────────────┘  └────────────┘  └────────────┘        │   │  │
 │  │  │  ┌──────────────────────────────────────────────┐       │   │  │
 │  │  │  │           FlowGraphBuilder                    │       │   │  │
+│  │  │  │         (Dependencies: Gopls)                 │       │   │  │
 │  │  │  └──────────────────────────────────────────────┘       │   │  │
 │  │  └─────────────────────────────────────────────────────────┘   │  │
 │  │                   │                                            │  │
@@ -612,12 +611,12 @@ export interface SourceLocation {
 
 #### 4.3.1 架构设计决策
 
-**重要**: `GoAtlasPlugin` 不继承 `GoPlugin`，而是作为**独立实现**共享底层组件。
+**重要**: `GoAtlasPlugin` 不继承 `GoPlugin`，而是作为**独立实现**共享底层组件。它目前仅作为 CLI 专用工具，不强制实现标准 `ILanguagePlugin` 接口，以便快速迭代。
 
 **设计理由**:
-1. `GoPlugin.parseProject()` 返回 `ArchJSON`，而 Atlas 需要保留更多中间数据
-2. `GoRawData` 当前仅存在于 `TreeSitterBridge` 内部，未暴露
-3. Atlas 需要**完整的包依赖图**，而现有实现中 `GoRawPackage.imports` 只是路径列表
+1. `GoPlugin.parseProject()` 返回 `ArchJSON`，而 Atlas 需要保留更多中间数据（尤其是 AST 和包图）。
+2. `GoRawData` 需要大幅扩展以支持行为分析，这可能会影响现有插件的性能。
+3. Atlas 需要**完整的包依赖图**，而现有实现中 `GoRawPackage.imports` 只是路径列表。
 
 **架构关系图**:
 ```
@@ -625,6 +624,8 @@ export interface SourceLocation {
 │                         共享组件层                                │
 │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐   │
 │  │TreeSitterBridge│  │InterfaceMatcher│  │   ArchJsonMapper  │   │
+│  │ (必须升级支持   │  │                │  │                   │   │
+│  │  函数体分析)    │  │                │  │                   │   │
 │  └───────┬───────┘  └───────┬───────┘  └─────────┬─────────┘   │
 └──────────┼──────────────────┼────────────────────┼──────────────┘
            │                  │                    │
@@ -633,12 +634,14 @@ export interface SourceLocation {
            ▼         ▼                  ▼          ▼
 ┌──────────────────┐    ┌────────────────────────────────┐
 │   GoPlugin       │    │     GoAtlasPlugin              │
+│ (Standard)       │    │     (CLI Tool)                 │
 │                  │    │                                │
 │  • parseProject()│    │  • generateAtlas()             │
 │    → ArchJSON    │    │  • analyzePackageGraph()       │
 │                  │    │  • analyzeCapabilityGraph()    │
-└──────────────────┘    │  • analyzeGoroutineTopology()  │
-                        │  • analyzeFlowGraph()          │
+│                  │    │  • analyzeGoroutineTopology()  │
+│                  │    │  • analyzeFlowGraph()          │
+└──────────────────┘    │  • toArchJSON()                │
                         └────────────────────────────────┘
 ```
 
@@ -671,6 +674,9 @@ import { AtlasRenderer } from './atlas-renderer.js';
  * 2. 直接使用 TreeSitterBridge、InterfaceMatcher 等共享组件
  * 3. 自己维护 GoRawData，保留完整的中间数据
  * 4. 提供 toArchJSON() 用于导出标准格式
+ *
+ * ⚠️ 关键依赖: TreeSitterBridge 必须升级以支持 ExtractFunctionBody，
+ *    否则 BehaviorAnalyzer 将无法工作。
  */
 export class GoAtlasPlugin {
   private treeSitter: TreeSitterBridge;
@@ -695,11 +701,12 @@ export class GoAtlasPlugin {
       return;
     }
 
-    // 尝试初始化 gopls（可选增强）
+    // 尝试初始化 gopls（Atlas 分析的核心增强）
+    // 对于 Flow Graph，gopls 几乎是必须的
     try {
       this.goplsClient = new GoplsClient();
     } catch (error) {
-      console.warn('gopls not available for Atlas analysis:', error);
+      console.warn('gopls not available. Flow Graph analysis will be severely limited.', error);
       this.goplsClient = null;
     }
 
@@ -719,7 +726,7 @@ export class GoAtlasPlugin {
   ): Promise<GoArchitectureAtlas> {
     this.ensureInitialized();
 
-    // 1. 解析 Go 项目，获取完整的 GoRawData
+    // 1. 解析 Go 项目，获取完整的 GoRawData (包含函数体 AST)
     const rawData = await this.parseGoProject(rootPath, options);
 
     // 2. 并行分析四层架构
@@ -727,7 +734,7 @@ export class GoAtlasPlugin {
       this.behaviorAnalyzer.buildPackageGraph(rawData),
       this.behaviorAnalyzer.buildCapabilityGraph(rawData),
       this.behaviorAnalyzer.buildGoroutineTopology(rawData, options),
-      this.behaviorAnalyzer.buildFlowGraph(rawData, options),
+      this.behaviorAnalyzer.buildFlowGraph(rawData, this.goplsClient, options), // 传入 goplsClient
     ]);
 
     // 3. 构建 Atlas
@@ -875,7 +882,7 @@ export class GoAtlasPlugin {
    * 与 GoPlugin.parseProject() 的区别:
    * - 不转换为 ArchJSON
    * - 保留完整的包依赖图
-   * - 保留所有中间数据
+   * - 保留所有中间数据 (尤其是 AST 函数体)
    */
   private async parseGoProject(
     rootPath: string,
@@ -897,6 +904,7 @@ export class GoAtlasPlugin {
 
     for (const file of files) {
       const code = await fs.readFile(file, 'utf-8');
+      // ⚠️ 关键调用: 必须确保 TreeSitterBridge 提取了函数体
       const pkg = this.treeSitter.parseCode(code, file);
 
       if (packages.has(pkg.name)) {
@@ -904,6 +912,8 @@ export class GoAtlasPlugin {
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
+        // 合并 imports
+        existing.imports.push(...pkg.imports);
       } else {
         packages.set(pkg.name, pkg);
       }
@@ -1101,9 +1111,9 @@ type EntryPointType =
 - `plugins/golang/atlas/behavior-analyzer.ts` - 四层架构分析逻辑
 - `plugins/golang/atlas/atlas-renderer.ts` - Mermaid/JSON 渲染器
 
-### 4.4 扩展 GoRawData 类型
+### 4.4 扩展 GoRawData 类型 (数据源缺失修复)
 
-由于 Atlas 需要完整的包依赖图，需要在现有 `GoRawData` 基础上添加字段:
+Atlas 需要深入的 AST 信息来支持行为分析。需要在 `GoRawData` 中添加以下结构：
 
 ```typescript
 // plugins/golang/types.ts (扩展现有类型)
@@ -1129,7 +1139,7 @@ export interface GoRawPackage {
   // 现有字段...
   structs: GoRawStruct[];
   interfaces: GoRawInterface[];
-  functions: GoFunction[];
+  functions: GoFunction[]; // ⚠️ 必须包含 body 信息
 
   // 新增: 解析后的依赖关系 (延迟填充)
   dependencies?: string[];  // 依赖的包 ID 列表
@@ -1140,6 +1150,56 @@ export interface GoImport {
   path: string;        // 导入路径，如 "github.com/gin-gonic/gin"
   isTest: boolean;     // 是否来自 _test.go 文件
   alias?: string;      // 导入别名
+}
+
+// ⚠️ 关键新增: 函数体行为数据 ⚠️
+// 用于 TreeSitterBridge 提取的函数体信息，支持 Goroutine/Flow 分析
+
+export interface GoFunction {
+  // ... 现有字段
+  body?: GoFunctionBody; // 新增
+}
+
+export interface GoMethod {
+  // ... 现有字段
+  body?: GoFunctionBody; // 新增
+}
+
+export interface GoFunctionBody {
+  block: GoBlock;
+  calls: GoCallExpr[];        // 所有的函数调用
+  goSpawns: GoSpawnStmt[];    // go func() ...
+  channelOps: GoChannelOp[];  // ch <- x 或 <-ch
+}
+
+export interface GoBlock {
+  startLine: number;
+  endLine: number;
+  statements: GoStatement[];
+}
+
+export interface GoStatement {
+  type: string;
+  location: GoSourceLocation;
+}
+
+export interface GoCallExpr {
+  functionName: string;       // 调用的函数名
+  packageName?: string;       // 如果是跨包调用
+  receiverType?: string;      // 如果是方法调用
+  args: string[];             // 参数列表（简化文本）
+  location: GoSourceLocation;
+}
+
+export interface GoSpawnStmt {
+  call: GoCallExpr;           // 被 spawn 的函数调用
+  location: GoSourceLocation;
+}
+
+export interface GoChannelOp {
+  channelName: string;
+  operation: 'send' | 'receive' | 'close' | 'make';
+  location: GoSourceLocation;
 }
 ```
 
@@ -1196,9 +1256,9 @@ atlasCommand
 |---|------|----------|----------|
 | **Package Graph** | 无 | - | - |
 | **Capability Graph** | 匿名函数中的接口参数 | 中 | 标注为 "unknown usage" |
-| **Goroutine Topology** | channel 作为参数传递 | 高 | 只识别创建点，标注 "untraced channel" |
+| **Goroutine Topology** | channel 作为参数传递 | **高 (严重)** | 只识别创建点，标注 "untraced channel" |
 | **Goroutine Topology** | 条件启动的 goroutine | 中 | 标注为 "conditional spawn" |
-| **Flow Graph** | 间接调用（接口/函数值） | 高 | 使用 gopls call hierarchy API |
+| **Flow Graph** | 间接调用（接口/函数值） | **高 (严重)** | **必须使用 gopls call hierarchy API** |
 | **Flow Graph** | 第三方框架（gin/echo） | 中 | 支持常见框架的 pattern matching |
 
 ### 5.2 技术挑战
@@ -1225,7 +1285,7 @@ atlasCommand
 
 缓解策略:
   - 标注 "channel source: unknown" 或 "channel flow: incomplete"
-  - 提供 "交互点标注" 而非完整连接图
+  - **不尝试完整的静态通信图恢复**，仅提供 "交互点标注"
 ```
 
 #### 挑战 2: 间接调用追踪
@@ -1242,9 +1302,10 @@ atlasCommand
 
 静态分析限制:
   - 无法知道 h 的运行时类型
-  - 需要运行时信息或启发式规则
+  - **没有类型推断，Flow Graph 几乎不可用**
 
 缓解策略:
+  - **集成 gopls 是必须的**，不是可选的
   - 使用 gopls call hierarchy API（需要额外 10-30 秒启动时间）
   - 提供多个候选调用路径
   - 标注为 "indirect call, possible targets: [...]"
@@ -1375,7 +1436,7 @@ describe('Flow Graph', () => {
 
   Flow Graph:
     - 正确识别 >80% 的 HTTP 入口点
-    - 调用链深度准确率 >70%
+    - 调用链深度准确率 >70% (在启用 gopls 的情况下)
     - context 传播追踪 >60%
 ```
 
@@ -1701,21 +1762,18 @@ const arch = AtlasConverter.atlasToArchJSON(atlas);
 
 ---
 
-**文档版本**: 2.1 (第二轮修订版)
+**文档版本**: 2.2 (第三轮修订版)
 **修订日期**: 2026-02-24
 **修订原因**:
-- 基于第二轮严苛架构师审查，修复 P0 和 P1 问题：
-  - **P0-1**: 重新设计 GoAtlasPlugin 为独立实现，共享组件但不继承
-  - **P0-2**: 补充完整的 toArchJSON() 映射逻辑
-  - **P1-1**: 在 GoRawData 中添加 packageGraph 字段支持
-  - **P1-2**: 明确入口点检测的模式匹配规则和局限性
-  - **P2-1**: 添加可恢复性基准测试验证策略
+- 基于严苛架构师审查 V2，修复 P0 和 P1 问题：
+  - **P0-1 (数据源)**: 在 4.4 节新增 `GoFunctionBody`, `GoCallExpr`, `GoSpawnStmt` 等结构定义，修复数据源缺失问题。
+  - **P0-2 (准确性)**: 明确 Flow Graph 对 `gopls` 的强依赖，降低静态分析预期。
+  - **P1-1 (Channel)**: 修正 Channel 追踪的可恢复性预期 (< 20% 静态)，明确仅关注创建点。
+  - **P1-2 (插件)**: 明确 GoAtlasPlugin 目前为 CLI 专用工具。
 
 **关键变更**:
-- GoAtlasPlugin 不再继承 GoPlugin，避免 ArchJSON 信息丢失
-- 提供完整的 Atlas → ArchJSON 转换映射规则
-- 扩展 GoRawData 类型，添加包依赖图字段
-- 新增 HTTP 入口点检测准确率表和检测局限性说明
-- 新增 6.4 节：可恢复性基准测试方法
+- 4.4 节: 增加 `GoFunctionBody` 等详细 AST 结构定义。
+- 3.3/3.4 节: 调整技术限制描述，增加 "强依赖 gopls" 警告。
+- 4.3.1 节: 增加 TreeSitterBridge 必须升级的架构说明。
 
-**下一步**: 原型实现验证，重点验证可恢复性百分比
+**下一步**: 实现 Phase 1 - 升级 `TreeSitterBridge` 以支持函数体提取。
