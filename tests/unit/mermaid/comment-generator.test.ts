@@ -138,7 +138,9 @@ describe('CommentGenerator', () => {
       expect(output).toContain('%% Design Patterns (2)');
       expect(output).toContain('%% Architecture Style: layered');
       expect(output).toContain('%% Strategy Pattern (behavioral)');
-      expect(output).toContain('%%   Participants: ClassExtractor, MethodExtractor, RelationExtractor');
+      expect(output).toContain(
+        '%%   Participants: ClassExtractor, MethodExtractor, RelationExtractor'
+      );
       expect(output).toContain('%%   Description: 不同类型的代码元素使用不同的提取策略');
       expect(output).toContain('%%   Example:');
       expect(output).toContain('%%     extractor.extract(source)');
@@ -244,7 +246,9 @@ describe('CommentGenerator', () => {
       const output = generator.generateProcessComments(config);
 
       expect(output).toContain('%% Processing Flow');
-      expect(output).toContain('%% Data Flow: CLI Command → Config → Files → ArchJSON → Mermaid → PNG/SVG');
+      expect(output).toContain(
+        '%% Data Flow: CLI Command → Config → Files → ArchJSON → Mermaid → PNG/SVG'
+      );
       expect(output).toContain('%% Stage 1: 配置加载');
       expect(output).toContain('%% ConfigLoader 使用 Builder Pattern 加载配置');
       expect(output).toContain('%% Namespace: Configuration');

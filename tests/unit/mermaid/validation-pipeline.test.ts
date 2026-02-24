@@ -149,8 +149,12 @@ describe('MermaidValidationPipeline', () => {
 
       expect(result.parse.valid).toBe(true); // Syntax is valid
       expect(result.structural.valid).toBe(false); // But structure has issues
-      expect(result.overall.canProceed).toBe(false);
-      expect(result.overall.blockingIssues.length).toBeGreaterThan(0);
+      // Structural issues are NON-blocking: canProceed stays true
+      expect(result.overall.canProceed).toBe(true);
+      // No blocking issues from structural failures
+      expect(result.overall.blockingIssues).toHaveLength(0);
+      // But overall.valid IS false because structural.valid is included in the formula
+      expect(result.overall.valid).toBe(false);
     });
 
     it('should continue validation after parse success', async () => {
@@ -275,9 +279,10 @@ describe('MermaidValidationPipeline', () => {
       const result = await pipeline.validate(mermaidCode, archJson);
 
       expect(result.structural.issues.length).toBeGreaterThan(0);
-      expect(result.overall.blockingIssues.some((issue) => issue.includes('structural'))).toBe(
-        true
-      );
+      // Structural issues are warnings, NOT blocking - they do not appear in blockingIssues
+      expect(result.overall.blockingIssues.some((issue) => issue.includes('structural'))).toBe(false);
+      // But they affect overall.valid (since valid = canProceed && structural.valid && quality.valid)
+      expect(result.overall.valid).toBe(false);
     });
 
     it('should include render issues in result', async () => {
@@ -530,7 +535,10 @@ describe('MermaidValidationPipeline', () => {
       const result = await pipeline.validate(mermaidCode, archJson);
 
       if (!result.structural.valid) {
-        expect(result.overall.canProceed).toBe(false);
+        // Structural validity does NOT affect canProceed (intentional design)
+        expect(result.overall.canProceed).toBe(true);
+        // But it DOES affect overall.valid
+        expect(result.overall.valid).toBe(false);
       }
     });
 
@@ -555,7 +563,10 @@ describe('MermaidValidationPipeline', () => {
       const result = await pipeline.validate(mermaidCode, archJson);
 
       // Overall valid requires all stages including quality
-      expect(result.overall.valid).toBe(result.quality.valid && result.overall.canProceed);
+      // Overall valid = canProceed AND structural.valid AND quality.valid
+      expect(result.overall.valid).toBe(
+        result.overall.canProceed && result.structural.valid && result.quality.valid
+      );
     });
   });
 

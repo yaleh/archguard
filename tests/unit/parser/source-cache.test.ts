@@ -75,7 +75,7 @@ describe('SourceCache', () => {
       const sources = ['./src/parser'];
 
       const result1 = await shortCache.getOrParse(sources, parser);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       const result2 = await shortCache.getOrParse(sources, parser);
       expect(result2).not.toBe(result1);
@@ -86,7 +86,7 @@ describe('SourceCache', () => {
       const sources = ['./src/parser'];
 
       const result1 = await shortCache.getOrParse(sources, parser);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const result2 = await shortCache.getOrParse(sources, parser);
       expect(result2).toBe(result1); // Still cached
@@ -128,7 +128,7 @@ describe('SourceCache', () => {
       let stats = shortCache.getStats();
       expect(stats.entries[0].valid).toBe(true);
 
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       stats = shortCache.getStats();
       expect(stats.entries[0].valid).toBe(false);

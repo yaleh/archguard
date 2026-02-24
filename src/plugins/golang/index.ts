@@ -15,11 +15,12 @@ import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
+import type { TreeSitterParseOptions } from './tree-sitter-bridge.js';
 import { InterfaceMatcher } from './interface-matcher.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { GoplsClient } from './gopls-client.js';
 import { DependencyExtractor } from './dependency-extractor.js';
-import type { GoRawPackage } from './types.js';
+import type { GoRawPackage, GoRawData } from './types.js';
 
 // Re-export for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -110,12 +111,18 @@ export class GoPlugin implements ILanguagePlugin {
   }
 
   /**
-   * Parse entire Go project
+   * PUBLIC: Parse project to raw data
+   *
+   * Exposed for GoAtlasPlugin composition (ADR-001 v1.2).
+   * Returns GoRawData (not ArchJSON) to avoid unnecessary mapping.
+   * Accepts TreeSitterParseOptions for body extraction control.
    */
-  async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
+  async parseToRawData(
+    workspaceRoot: string,
+    config: ParseConfig & TreeSitterParseOptions
+  ): Promise<GoRawData> {
     this.ensureInitialized();
 
-    // Store workspace root for gopls
     this.workspaceRoot = workspaceRoot;
 
     // Initialize gopls if available
@@ -136,30 +143,55 @@ export class GoPlugin implements ILanguagePlugin {
       ignore: ['**/vendor/**', '**/node_modules/**'],
     });
 
-    // Parse all files
+    const moduleName = await this.readModuleName(workspaceRoot);
+
+    // Parse all files — merge by fullName (not name!)
     const packages = new Map<string, GoRawPackage>();
 
     for (const file of files) {
       const code = await fs.readFile(file, 'utf-8');
-      const pkg = this.treeSitter.parseCode(code, file);
+      const pkg = this.treeSitter.parseCode(code, file, {
+        extractBodies: config.extractBodies,
+        selectiveExtraction: config.selectiveExtraction,
+      });
 
-      // Merge into packages map
-      if (packages.has(pkg.name)) {
-        const existing = packages.get(pkg.name);
+      // Compute fullName from file path relative to module root
+      const relDir = path.relative(workspaceRoot, path.dirname(file));
+      pkg.fullName = relDir || pkg.name;
+      pkg.dirPath = path.dirname(file);
+      pkg.id = pkg.fullName;
+
+      // Merge by fullName (prevents same-name package collision)
+      const key = pkg.fullName;
+      if (packages.has(key)) {
+        const existing = packages.get(key);
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
         existing.imports.push(...pkg.imports);
+        existing.sourceFiles.push(...pkg.sourceFiles);
       } else {
-        packages.set(pkg.name, pkg);
+        packages.set(key, pkg);
       }
     }
 
-    const packageList = Array.from(packages.values());
+    return {
+      packages: Array.from(packages.values()),
+      moduleRoot: workspaceRoot,
+      moduleName,
+    };
+  }
+
+  /**
+   * Parse entire Go project
+   * Refactored to reuse parseToRawData()
+   */
+  async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
+    const rawData = await this.parseToRawData(workspaceRoot, config);
 
     // Match interface implementations (using gopls if available)
-    const allStructs = packageList.flatMap((p) => p.structs);
-    const allInterfaces = packageList.flatMap((p) => p.interfaces);
+    const allStructs = rawData.packages.flatMap((p) => p.structs);
+    const allInterfaces = rawData.packages.flatMap((p) => p.interfaces);
     const implementations = await this.matcher.matchWithGopls(
       allStructs,
       allInterfaces,
@@ -167,17 +199,27 @@ export class GoPlugin implements ILanguagePlugin {
     );
 
     // Map to ArchJSON
-    const entities = this.mapper.mapEntities(packageList);
-    const relations = this.mapper.mapRelations(packageList, implementations);
+    const entities = this.mapper.mapEntities(rawData.packages);
+    const relations = this.mapper.mapRelations(rawData.packages, implementations);
 
     return {
       version: '1.0',
       language: 'go',
       timestamp: new Date().toISOString(),
-      sourceFiles: files,
+      sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),
       entities,
       relations,
     };
+  }
+
+  private async readModuleName(workspaceRoot: string): Promise<string> {
+    try {
+      const goModContent = await fs.readFile(`${workspaceRoot}/go.mod`, 'utf-8');
+      const match = goModContent.match(/^module\s+(.+)$/m);
+      return match ? match[1].trim() : 'unknown';
+    } catch {
+      return 'unknown';
+    }
   }
 
   /**
@@ -228,15 +270,21 @@ export class GoPlugin implements ILanguagePlugin {
       const code = await fs.readFile(file, 'utf-8');
       const pkg = this.treeSitter.parseCode(code, file);
 
+      // Use directory path as key to avoid same-name package collisions
+      const key = path.dirname(file);
+      pkg.fullName = pkg.fullName || key;
+      pkg.dirPath = pkg.dirPath || key;
+
       // Merge into packages map
-      if (packages.has(pkg.name)) {
-        const existing = packages.get(pkg.name);
+      if (packages.has(key)) {
+        const existing = packages.get(key);
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
         existing.imports.push(...pkg.imports);
+        existing.sourceFiles.push(...pkg.sourceFiles);
       } else {
-        packages.set(pkg.name, pkg);
+        packages.set(key, pkg);
       }
     }
 

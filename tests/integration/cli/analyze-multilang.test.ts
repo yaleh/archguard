@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createAnalyzeCommand, normalizeToDiagrams, filterDiagrams } from '@/cli/commands/analyze.js';
+import {
+  createAnalyzeCommand,
+  normalizeToDiagrams,
+  filterDiagrams,
+} from '@/cli/commands/analyze.js';
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
 import type { Config } from '@/cli/config-loader.js';
@@ -31,9 +35,7 @@ describe('CLI Multi-language Support', () => {
 
     // Verify --lang option is available in command options
     const options = command.options;
-    const hasLangOption = options.some((opt) =>
-      opt.long === '--lang' || opt.short === '--lang'
-    );
+    const hasLangOption = options.some((opt) => opt.long === '--lang' || opt.short === '--lang');
 
     // Note: Commander doesn't make it easy to check options, so we verify by parsing
     // The real test is that the command doesn't throw when we add the option
@@ -140,7 +142,7 @@ describe('CLI Multi-language Support', () => {
       diagrams: ['overview'],
     };
 
-    const diagrams = filterDiagrams(config.diagrams!, cliOptions.diagrams);
+    const diagrams = filterDiagrams(config.diagrams, cliOptions.diagrams);
 
     expect(diagrams).toBeDefined();
     expect(diagrams.length).toBe(1);

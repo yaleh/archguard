@@ -31,8 +31,8 @@ export interface PythonRawParameter {
   name: string;
   type?: string;
   defaultValue?: string;
-  isVarArgs: boolean;  // *args
-  isKwArgs: boolean;   // **kwargs
+  isVarArgs: boolean; // *args
+  isKwArgs: boolean; // **kwargs
 }
 
 /**
@@ -47,7 +47,7 @@ export interface PythonRawMethod {
   isStaticMethod: boolean;
   isProperty: boolean;
   isAsync: boolean;
-  isPrivate: boolean;  // __ prefix
+  isPrivate: boolean; // __ prefix
   docstring?: string;
   startLine: number;
   endLine: number;

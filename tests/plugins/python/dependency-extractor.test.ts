@@ -37,7 +37,7 @@ numpy
 
         expect(deps).toHaveLength(3);
 
-        const flask = deps.find(d => d.name === 'flask');
+        const flask = deps.find((d) => d.name === 'flask');
         expect(flask).toBeDefined();
         expect(flask?.version).toBe('==2.0.1');
         expect(flask?.type).toBe('pip');
@@ -45,11 +45,11 @@ numpy
         expect(flask?.source).toBe('requirements.txt');
         expect(flask?.isDirect).toBe(true);
 
-        const requests = deps.find(d => d.name === 'requests');
+        const requests = deps.find((d) => d.name === 'requests');
         expect(requests).toBeDefined();
         expect(requests?.version).toBe('>=2.25.0');
 
-        const numpy = deps.find(d => d.name === 'numpy');
+        const numpy = deps.find((d) => d.name === 'numpy');
         expect(numpy).toBeDefined();
         expect(numpy?.version).toBe('*'); // No version constraint
       });
@@ -67,13 +67,13 @@ black==21.5b1
 
         expect(deps).toHaveLength(3);
 
-        const django = deps.find(d => d.name === 'django');
+        const django = deps.find((d) => d.name === 'django');
         expect(django?.version).toBe('>=3.2,<4.0');
 
-        const pytest = deps.find(d => d.name === 'pytest');
+        const pytest = deps.find((d) => d.name === 'pytest');
         expect(pytest?.version).toBe('~=6.2.0');
 
-        const black = deps.find(d => d.name === 'black');
+        const black = deps.find((d) => d.name === 'black');
         expect(black?.version).toBe('==21.5b1');
       });
 
@@ -91,7 +91,7 @@ requests>=2.25.0
         const deps = await extractor.extractDependencies(tempDir);
 
         expect(deps).toHaveLength(2);
-        expect(deps.map(d => d.name).sort()).toEqual(['flask', 'requests']);
+        expect(deps.map((d) => d.name).sort()).toEqual(['flask', 'requests']);
       });
 
       it('should handle extras and markers', async () => {
@@ -107,11 +107,11 @@ pytest>=6.0; python_version >= "3.6"
         expect(deps).toHaveLength(2);
 
         // Should extract package name without extras
-        const requests = deps.find(d => d.name === 'requests');
+        const requests = deps.find((d) => d.name === 'requests');
         expect(requests).toBeDefined();
         expect(requests?.version).toBe('==2.25.0');
 
-        const pytest = deps.find(d => d.name === 'pytest');
+        const pytest = deps.find((d) => d.name === 'pytest');
         expect(pytest).toBeDefined();
       });
     });
@@ -138,13 +138,13 @@ pytest = "^6.2.0"
         // Should have at least flask and pytest
         expect(deps.length).toBeGreaterThanOrEqual(2);
 
-        const flask = deps.find(d => d.name === 'flask');
+        const flask = deps.find((d) => d.name === 'flask');
         expect(flask).toBeDefined();
         expect(flask?.type).toBe('pip');
         expect(flask?.scope).toBe('runtime');
         expect(flask?.source).toBe('pyproject.toml');
 
-        const pytest = deps.find(d => d.name === 'pytest');
+        const pytest = deps.find((d) => d.name === 'pytest');
         expect(pytest).toBeDefined();
         expect(pytest?.scope).toBe('development');
       });
@@ -163,7 +163,7 @@ flask = { version = "^2.0.0" }
 
         const deps = await extractor.extractDependencies(tempDir);
 
-        const flask = deps.find(d => d.name === 'flask');
+        const flask = deps.find((d) => d.name === 'flask');
         expect(flask).toBeDefined();
         expect(flask?.version).toBe('^2.0.0');
       });
@@ -187,7 +187,7 @@ flask = "^2.0.0"
         const deps = await extractor.extractDependencies(tempDir);
 
         // When pyproject.toml exists, it should be used instead of requirements.txt
-        const flask = deps.find(d => d.name === 'flask');
+        const flask = deps.find((d) => d.name === 'flask');
         expect(flask).toBeDefined();
         expect(flask?.source).toBe('pyproject.toml');
       });
@@ -210,8 +210,8 @@ requests>=2.25.0
 
         // Should still parse valid lines
         expect(deps.length).toBeGreaterThanOrEqual(2);
-        expect(deps.find(d => d.name === 'flask')).toBeDefined();
-        expect(deps.find(d => d.name === 'requests')).toBeDefined();
+        expect(deps.find((d) => d.name === 'flask')).toBeDefined();
+        expect(deps.find((d) => d.name === 'requests')).toBeDefined();
       });
 
       it('should handle malformed pyproject.toml gracefully', async () => {

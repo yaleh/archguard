@@ -357,7 +357,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const tempPackageJson = path.join(tempDir, 'package.json');
       await fs.copy(fixturePackageJson, tempPackageJson);
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       expect(dependencies.length).toBeGreaterThan(0);
 
@@ -375,7 +375,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const tempPackageJson = path.join(tempDir, 'package.json');
       await fs.copy(fixturePackageJson, tempPackageJson);
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       const vitest = dependencies.find((d) => d.name === 'vitest');
       expect(vitest).toBeDefined();
@@ -388,7 +388,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const tempPackageJson = path.join(tempDir, 'package.json');
       await fs.copy(fixturePackageJson, tempPackageJson);
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       const react = dependencies.find((d) => d.name === 'react');
       expect(react).toBeDefined();
@@ -398,7 +398,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
 
     it('should handle missing package.json', async () => {
       // No package.json in tempDir
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       expect(dependencies).toEqual([]);
     });
@@ -407,7 +407,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const emptyPackageJson = path.join(tempDir, 'package.json');
       await fs.writeJson(emptyPackageJson, { name: 'empty-project' });
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       expect(dependencies).toEqual([]);
     });
@@ -417,7 +417,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const tempPackageJson = path.join(tempDir, 'package.json');
       await fs.copy(fixturePackageJson, tempPackageJson);
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       dependencies.forEach((dep) => {
         expect(dep.isDirect).toBe(true);
@@ -429,7 +429,7 @@ describe('TypeScriptPlugin - T1.1.3 Dependency Extraction', () => {
       const tempPackageJson = path.join(tempDir, 'package.json');
       await fs.copy(fixturePackageJson, tempPackageJson);
 
-      const dependencies = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const dependencies = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       const lodash = dependencies.find((d) => d.name === 'lodash');
       expect(lodash).toBeDefined();
@@ -474,7 +474,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         relations: [],
       };
 
-      const result = plugin.validator!.validate(validArchJson);
+      const result = plugin.validator.validate(validArchJson);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -488,7 +488,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         relations: [],
       };
 
-      const result = plugin.validator!.validate(invalidJson);
+      const result = plugin.validator.validate(invalidJson);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
@@ -506,7 +506,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         relations: [],
       };
 
-      const result = plugin.validator!.validate(invalidJson);
+      const result = plugin.validator.validate(invalidJson);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
@@ -530,7 +530,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         relations: [],
       };
 
-      const result = plugin.validator!.validate(invalidJson);
+      const result = plugin.validator.validate(invalidJson);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
@@ -554,7 +554,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         relations: [],
       };
 
-      const result = plugin.validator!.validate(invalidJson);
+      const result = plugin.validator.validate(invalidJson);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContainEqual(
@@ -589,7 +589,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         ],
       };
 
-      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+      const result = plugin.validator.validate(jsonWithDanglingRelation);
 
       expect(result.valid).toBe(true); // Warnings don't invalidate
       expect(result.warnings).toContainEqual(
@@ -624,7 +624,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         ],
       };
 
-      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+      const result = plugin.validator.validate(jsonWithDanglingRelation);
 
       expect(result.valid).toBe(true);
       expect(result.warnings).toContainEqual(
@@ -650,7 +650,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
         ],
       };
 
-      const result = plugin.validator!.validate(jsonWithDanglingRelation);
+      const result = plugin.validator.validate(jsonWithDanglingRelation);
 
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings[0].suggestion).toBeDefined();
@@ -714,7 +714,7 @@ export class UserService {
     expect(archJson.entities.length).toBeGreaterThan(0);
 
     // 2. Extract dependencies
-    const deps = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+    const deps = await plugin.dependencyExtractor.extractDependencies(tempDir);
     expect(deps).toContainEqual(
       expect.objectContaining({
         name: 'express',
@@ -723,7 +723,7 @@ export class UserService {
     );
 
     // 3. Validate the result
-    const validation = plugin.validator!.validate(archJson);
+    const validation = plugin.validator.validate(archJson);
     expect(validation.valid).toBe(true);
   });
 

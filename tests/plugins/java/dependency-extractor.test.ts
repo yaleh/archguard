@@ -13,7 +13,7 @@ describe('JavaDependencyExtractor', () => {
 
       expect(dependencies.length).toBeGreaterThan(0);
 
-      const springDep = dependencies.find(d => d.name === 'spring-boot-starter');
+      const springDep = dependencies.find((d) => d.name === 'spring-boot-starter');
       expect(springDep).toBeDefined();
       expect(springDep?.version).toBe('3.2.0');
       expect(springDep?.scope).toBe('runtime');
@@ -23,7 +23,7 @@ describe('JavaDependencyExtractor', () => {
       const pomPath = path.join(fixturesPath, 'pom.xml');
       const dependencies = await extractor.extractFromMaven(pomPath);
 
-      const junitDep = dependencies.find(d => d.name === 'junit');
+      const junitDep = dependencies.find((d) => d.name === 'junit');
       expect(junitDep).toBeDefined();
       expect(junitDep?.scope).toBe('development');
     });
@@ -32,7 +32,7 @@ describe('JavaDependencyExtractor', () => {
       const pomPath = path.join(fixturesPath, 'pom.xml');
       const dependencies = await extractor.extractFromMaven(pomPath);
 
-      const slf4jDep = dependencies.find(d => d.name === 'slf4j-api');
+      const slf4jDep = dependencies.find((d) => d.name === 'slf4j-api');
       expect(slf4jDep).toBeDefined();
       expect(slf4jDep?.scope).toBe('runtime');
     });
@@ -52,7 +52,7 @@ describe('JavaDependencyExtractor', () => {
 
       expect(dependencies.length).toBeGreaterThan(0);
 
-      const springDep = dependencies.find(d => d.name.includes('spring-boot-starter'));
+      const springDep = dependencies.find((d) => d.name.includes('spring-boot-starter'));
       expect(springDep).toBeDefined();
     });
 
@@ -60,7 +60,7 @@ describe('JavaDependencyExtractor', () => {
       const gradlePath = path.join(fixturesPath, 'build.gradle');
       const dependencies = await extractor.extractFromGradle(gradlePath);
 
-      const springDep = dependencies.find(d => d.name.includes('spring-boot-starter'));
+      const springDep = dependencies.find((d) => d.name.includes('spring-boot-starter'));
       expect(springDep?.scope).toBe('runtime');
     });
 
@@ -68,7 +68,7 @@ describe('JavaDependencyExtractor', () => {
       const gradlePath = path.join(fixturesPath, 'build.gradle');
       const dependencies = await extractor.extractFromGradle(gradlePath);
 
-      const junitDep = dependencies.find(d => d.name.includes('junit'));
+      const junitDep = dependencies.find((d) => d.name.includes('junit'));
       expect(junitDep?.scope).toBe('development');
     });
 
@@ -76,7 +76,7 @@ describe('JavaDependencyExtractor', () => {
       const gradlePath = path.join(fixturesPath, 'build.gradle');
       const dependencies = await extractor.extractFromGradle(gradlePath);
 
-      const slf4jDep = dependencies.find(d => d.name.includes('slf4j-api'));
+      const slf4jDep = dependencies.find((d) => d.name.includes('slf4j-api'));
       expect(slf4jDep?.scope).toBe('runtime');
     });
 

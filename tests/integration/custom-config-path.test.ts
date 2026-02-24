@@ -32,7 +32,7 @@ describe('Custom Config Path Integration', () => {
     const customConfigPath = path.join(testDir, 'my-custom.config.json');
     await fs.writeJson(customConfigPath, {
       outputDir: './custom-output',
-      format: 'plantuml',
+      format: 'mermaid',
       diagrams: [
         {
           name: 'overview',
@@ -121,14 +121,14 @@ describe('Custom Config Path Integration', () => {
     const loader = new ConfigLoader(testDir);
     const config = await loader.load(
       {
-        format: 'plantuml',
+        format: 'mermaid',
         outputDir: './override-output',
       },
       customConfigPath
     );
 
     // CLI options should override config file
-    expect(config.format).toBe('plantuml');
+    expect(config.format).toBe('mermaid');
     expect(config.outputDir).toBe('./override-output');
     // But diagrams should come from config file
     expect(config.diagrams[0].name).toBe('base-diagram');
@@ -153,7 +153,7 @@ describe('Custom Config Path Integration', () => {
       level: 'package',
     },
   ],
-  format: 'svg',
+  format: 'mermaid',
 };
 `;
     await fs.writeFile(customConfigPath, jsContent);
@@ -163,7 +163,7 @@ describe('Custom Config Path Integration', () => {
 
     expect(config.diagrams).toHaveLength(1);
     expect(config.diagrams[0].name).toBe('js-diagram');
-    expect(config.format).toBe('svg');
+    expect(config.format).toBe('mermaid');
   });
 
   it('should ignore default config when custom path is provided', async () => {

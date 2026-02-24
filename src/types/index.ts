@@ -5,6 +5,33 @@
 // Export configuration types (v2.0)
 export * from './config.js';
 
+// Export extension types (ADR-002)
+export type { ArchJSONExtensions } from './extensions.js';
+export type {
+  GoAtlasExtension,
+  GoAtlasLayers,
+  GoAtlasMetadata,
+  PackageGraph,
+  PackageCycle,
+  PackageNode,
+  PackageStats,
+  PackageDependency,
+  CapabilityGraph,
+  CapabilityNode,
+  CapabilityRelation,
+  GoroutineTopology,
+  GoroutineNode,
+  GoroutinePattern,
+  SpawnRelation,
+  ChannelInfo,
+  FlowGraph,
+  EntryPoint,
+  EntryPointType,
+  CallChain,
+  CallEdge,
+} from './extensions.js';
+export { GO_ATLAS_EXTENSION_VERSION } from './extensions.js';
+
 /**
  * Supported programming languages
  */
@@ -31,12 +58,22 @@ export interface ArchJSON {
   relations: Relation[];
   modules?: Module[];
   metadata?: Record<string, unknown>;
+
+  // Type-safe extensions (ADR-002)
+  extensions?: import('./extensions.js').ArchJSONExtensions;
 }
 
 /**
  * Entity types in the architecture
  */
-export type EntityType = 'class' | 'interface' | 'enum' | 'struct' | 'trait' | 'abstract_class' | 'function';
+export type EntityType =
+  | 'class'
+  | 'interface'
+  | 'enum'
+  | 'struct'
+  | 'trait'
+  | 'abstract_class'
+  | 'function';
 
 /**
  * Visibility modifiers

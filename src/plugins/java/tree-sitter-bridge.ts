@@ -69,7 +69,7 @@ export class TreeSitterBridge {
    * Extract package name from AST
    */
   private extractPackageName(rootNode: Parser.SyntaxNode, code: string): string {
-    const packageDecl = rootNode.children.find(n => n.type === 'package_declaration');
+    const packageDecl = rootNode.children.find((n) => n.type === 'package_declaration');
     if (!packageDecl) {
       return '';
     }
@@ -112,8 +112,9 @@ export class TreeSitterBridge {
     let superClass: string | undefined = undefined;
     if (superclassNode) {
       // The superclass field contains 'extends' keyword + type
-      const typeId = superclassNode.descendantsOfType('type_identifier')[0] ||
-                     superclassNode.descendantsOfType('identifier')[0];
+      const typeId =
+        superclassNode.descendantsOfType('type_identifier')[0] ||
+        superclassNode.descendantsOfType('identifier')[0];
       if (typeId) {
         superClass = code.substring(typeId.startIndex, typeId.endIndex);
       }
@@ -187,7 +188,7 @@ export class TreeSitterBridge {
     const annotations = this.extractAnnotations(node, code);
 
     // Extract extended interfaces
-    const extendsNode = node.children.find(n => n.type === 'extends_interfaces');
+    const extendsNode = node.children.find((n) => n.type === 'extends_interfaces');
     const extendsList: string[] = [];
     if (extendsNode) {
       const typeIds = extendsNode.descendantsOfType('type_identifier');
@@ -319,9 +320,7 @@ export class TreeSitterBridge {
 
     // Get parameters
     const parametersNode = node.childForFieldName('parameters');
-    const parameters = parametersNode
-      ? this.extractParameters(parametersNode, code)
-      : [];
+    const parameters = parametersNode ? this.extractParameters(parametersNode, code) : [];
 
     return {
       name,
@@ -342,9 +341,7 @@ export class TreeSitterBridge {
 
     // Get parameters
     const parametersNode = node.childForFieldName('parameters');
-    const parameters = parametersNode
-      ? this.extractParameters(parametersNode, code)
-      : [];
+    const parameters = parametersNode ? this.extractParameters(parametersNode, code) : [];
 
     return {
       parameters,
@@ -385,17 +382,24 @@ export class TreeSitterBridge {
    */
   private extractModifiers(node: Parser.SyntaxNode, code: string): string[] {
     const modifiers: string[] = [];
-    const modifierNodes = node.children.filter(n => n.type === 'modifiers');
+    const modifierNodes = node.children.filter((n) => n.type === 'modifiers');
 
     for (const modNode of modifierNodes) {
       // Extract all children (both named and unnamed) that are modifiers
       for (const child of modNode.children) {
         // Skip non-modifier children
         const validModifiers = [
-          'public', 'private', 'protected',
-          'static', 'final', 'abstract',
-          'synchronized', 'volatile', 'transient',
-          'native', 'strictfp'
+          'public',
+          'private',
+          'protected',
+          'static',
+          'final',
+          'abstract',
+          'synchronized',
+          'volatile',
+          'transient',
+          'native',
+          'strictfp',
         ];
         if (validModifiers.includes(child.type)) {
           modifiers.push(child.type);
@@ -413,7 +417,7 @@ export class TreeSitterBridge {
     const annotations: JavaRawAnnotation[] = [];
 
     // Look for annotations in modifiers
-    const modifierNodes = node.children.filter(n => n.type === 'modifiers');
+    const modifierNodes = node.children.filter((n) => n.type === 'modifiers');
     for (const modNode of modifierNodes) {
       for (const child of modNode.children) {
         if (child.type === 'marker_annotation' || child.type === 'annotation') {

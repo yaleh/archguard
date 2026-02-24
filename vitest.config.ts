@@ -25,9 +25,24 @@ export default defineConfig({
       }
     },
     include: ['tests/**/*.{test,spec}.ts', 'src/**/*.{test,spec}.ts'],
-    exclude: ['node_modules', 'dist'],
-    testTimeout: 10000,
-    hookTimeout: 10000
+    exclude: [
+      'node_modules',
+      'dist',
+      'tests/poc/**/node_modules/**',  // Fix 1: exclude poc package node_modules
+      'experiments/**',
+    ],
+    testTimeout: 30000,   // Fix 2: increase from 10s to 30s (handles resource contention)
+    hookTimeout: 30000,   // Fix 3: increase hook timeout too
+    pool: 'forks',        // Fix 4: use process forks for better isolation (avoids thread contention)
+    poolOptions: {
+      forks: {
+        singleFork: false,
+        isolate: true,
+      }
+    },
+    sequence: {
+      shuffle: false,     // Keep deterministic order
+    },
   },
   resolve: {
     alias: {

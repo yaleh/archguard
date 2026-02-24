@@ -13,7 +13,7 @@ export class Animal {
   }
 
   public makeSound(): string {
-    return "Some generic sound";
+    return 'Some generic sound';
   }
 }
 
@@ -26,7 +26,7 @@ export class Dog extends Animal {
   }
 
   public makeSound(): string {
-    return "Woof!";
+    return 'Woof!';
   }
 
   public fetch(): string {

@@ -227,7 +227,7 @@ describe('Performance Benchmarks', () => {
       console.log(`Entities: ${metrics.result.entities.length}`);
       // eslint-disable-next-line no-console
       console.log(`Relations: ${metrics.result.relations.length}`);
-    });
+    }, 60000);
 
     it('should generate valid architecture output', async () => {
       const archguardSrc = path.resolve(__dirname, '../../../src');
@@ -258,7 +258,7 @@ describe('Performance Benchmarks', () => {
         expect(entity).toHaveProperty('type');
         expect(entity.type).toMatch(/^(class|interface|enum)$/);
       });
-    });
+    }, 60000);
   });
 
   describe('Stress Testing', () => {

@@ -168,9 +168,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Warning: 1 relation(s) reference undefined entities:')
     );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('MissingClass')
-    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('MissingClass'));
   });
 
   it('should show filtered count in verbose mode', () => {

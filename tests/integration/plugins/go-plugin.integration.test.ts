@@ -104,23 +104,23 @@ func (u *User) IsAdmin() bool {
       expect(result.entities).toHaveLength(3); // User, UserRepository, InMemoryUserRepository
 
       // Verify User struct
-      const user = result.entities.find(e => e.name === 'User');
+      const user = result.entities.find((e) => e.name === 'User');
       expect(user).toBeDefined();
       expect(user?.type).toBe('struct');
-      expect(user?.members.filter(m => m.type === 'field')).toHaveLength(4);
-      expect(user?.members.filter(m => m.type === 'method')).toHaveLength(2);
+      expect(user?.members.filter((m) => m.type === 'field')).toHaveLength(4);
+      expect(user?.members.filter((m) => m.type === 'method')).toHaveLength(2);
 
       // Verify UserRepository interface
-      const repo = result.entities.find(e => e.name === 'UserRepository');
+      const repo = result.entities.find((e) => e.name === 'UserRepository');
       expect(repo).toBeDefined();
       expect(repo?.type).toBe('interface');
-      expect(repo?.members.filter(m => m.type === 'method')).toHaveLength(3);
+      expect(repo?.members.filter((m) => m.type === 'method')).toHaveLength(3);
 
       // Verify InMemoryUserRepository struct
-      const inMemoryRepo = result.entities.find(e => e.name === 'InMemoryUserRepository');
+      const inMemoryRepo = result.entities.find((e) => e.name === 'InMemoryUserRepository');
       expect(inMemoryRepo).toBeDefined();
       expect(inMemoryRepo?.type).toBe('struct');
-      expect(inMemoryRepo?.members.filter(m => m.type === 'method')).toHaveLength(3);
+      expect(inMemoryRepo?.members.filter((m) => m.type === 'method')).toHaveLength(3);
 
       // Verify implementation relationship
       // Note: Implementation detection works but method signatures must match exactly
@@ -146,12 +146,12 @@ type User struct {
 
       const result = plugin.parseCode(code, 'model.go');
 
-      const user = result.entities.find(e => e.name === 'User');
+      const user = result.entities.find((e) => e.name === 'User');
       expect(user).toBeDefined();
       expect(user?.type).toBe('struct');
 
       // Should have 2 regular fields (Name, Email)
-      const fields = user?.members.filter(m => m.type === 'field');
+      const fields = user?.members.filter((m) => m.type === 'field');
       expect(fields?.length).toBe(2);
     });
 
@@ -173,8 +173,8 @@ type Config struct {
       const result = plugin.parseCode(code, 'main.go');
 
       expect(result.entities).toHaveLength(2);
-      expect(result.entities.find(e => e.name === 'App')).toBeDefined();
-      expect(result.entities.find(e => e.name === 'Config')).toBeDefined();
+      expect(result.entities.find((e) => e.name === 'App')).toBeDefined();
+      expect(result.entities.find((e) => e.name === 'Config')).toBeDefined();
     });
   });
 

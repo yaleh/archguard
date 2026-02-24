@@ -190,7 +190,7 @@ export class TreeSitterBridge {
     const returnType = this.extractReturnType(node, code);
 
     // Check if async
-    const isAsync = node.children.some(c => c.type === 'async');
+    const isAsync = node.children.some((c) => c.type === 'async');
 
     // Check if private (__ prefix)
     const isPrivate = methodName.startsWith('__') && !methodName.endsWith('__');
@@ -236,7 +236,7 @@ export class TreeSitterBridge {
     const returnType = this.extractReturnType(node, code);
 
     // Check if async
-    const isAsync = node.children.some(c => c.type === 'async');
+    const isAsync = node.children.some((c) => c.type === 'async');
 
     // Extract docstring
     const body = node.childForFieldName('body');
@@ -282,9 +282,7 @@ export class TreeSitterBridge {
           if (identifiers.length > 0) {
             parameters.push({
               name: code.substring(identifiers[0].startIndex, identifiers[0].endIndex),
-              type: typeNode
-                ? code.substring(typeNode.startIndex, typeNode.endIndex)
-                : undefined,
+              type: typeNode ? code.substring(typeNode.startIndex, typeNode.endIndex) : undefined,
               isVarArgs: false,
               isKwArgs: false,
             });
@@ -298,9 +296,7 @@ export class TreeSitterBridge {
           if (identifiers.length > 0) {
             parameters.push({
               name: code.substring(identifiers[0].startIndex, identifiers[0].endIndex),
-              type: typeNode
-                ? code.substring(typeNode.startIndex, typeNode.endIndex)
-                : undefined,
+              type: typeNode ? code.substring(typeNode.startIndex, typeNode.endIndex) : undefined,
               defaultValue: valueNode
                 ? code.substring(valueNode.startIndex, valueNode.endIndex)
                 : undefined,
@@ -325,7 +321,7 @@ export class TreeSitterBridge {
           }
         } else if (child.type === 'list_splat_pattern') {
           // *args
-          const nameNode = child.children.find(c => c.type === 'identifier');
+          const nameNode = child.children.find((c) => c.type === 'identifier');
           if (nameNode) {
             parameters.push({
               name: code.substring(nameNode.startIndex, nameNode.endIndex),
@@ -335,7 +331,7 @@ export class TreeSitterBridge {
           }
         } else if (child.type === 'dictionary_splat_pattern') {
           // **kwargs
-          const nameNode = child.children.find(c => c.type === 'identifier');
+          const nameNode = child.children.find((c) => c.type === 'identifier');
           if (nameNode) {
             parameters.push({
               name: code.substring(nameNode.startIndex, nameNode.endIndex),
@@ -379,7 +375,7 @@ export class TreeSitterBridge {
           if (nameNodes.length > 0) {
             // Use first identifier or join with dots for chained decorators
             decoratorName = nameNodes
-              .map(n => code.substring(n.startIndex, n.endIndex))
+              .map((n) => code.substring(n.startIndex, n.endIndex))
               .join('.');
           }
 
@@ -406,10 +402,7 @@ export class TreeSitterBridge {
   /**
    * Extract docstring from body
    */
-  private extractDocstring(
-    bodyNode: Parser.SyntaxNode | null,
-    code: string
-  ): string | undefined {
+  private extractDocstring(bodyNode: Parser.SyntaxNode | null, code: string): string | undefined {
     if (!bodyNode) return undefined;
 
     // Look for first expression_statement containing a string

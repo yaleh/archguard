@@ -87,8 +87,9 @@ describe('EnhancedTypeSanitizer', () => {
       // 不应该包含尖括号
       expect(code).not.toContain('<');
       expect(code).not.toContain('>');
-      // 应该使用 tilde 表示法
-      expect(code).toMatch(/\+\s*data:\s*Map~/);
+      // v2.2.1: generics are stripped to base type
+      expect(code).toMatch(/\+\s*data:\s*Map/);
+      expect(code).not.toContain('Map~');
     });
   });
 
@@ -132,7 +133,9 @@ describe('EnhancedTypeSanitizer', () => {
       // Promise 应该被正确处理
       expect(code).toMatch(/\+\s*fetch\(/);
       expect(code).not.toContain('Promise<Data>'); // 不能有尖括号
-      expect(code).toMatch(/Promise~Data~/);
+      // v2.2.1: Promise<T> is converted to 'any'
+      expect(code).not.toContain('Promise<');
+      expect(code).not.toContain('Promise~');
     });
 
     it('should handle Promise with complex types', () => {
@@ -167,8 +170,9 @@ describe('EnhancedTypeSanitizer', () => {
       // 不应该包含尖括号
       expect(code).not.toContain('<');
       expect(code).not.toContain('>');
-      // Promise 应该使用 tilde 表示法
-      expect(code).toMatch(/Promise~Map/);
+      // v2.2.1: Promise<T> is converted to 'any', no tilde notation
+      expect(code).not.toContain('Promise~');
+      expect(code).not.toContain('Promise<');
     });
   });
 
@@ -692,8 +696,9 @@ describe('EnhancedTypeSanitizer', () => {
       expect(code).not.toMatch(/stages:\s*Array/);
       expect(code).not.toMatch(/overallValid/);
 
-      // Promise 应该被正确简化
-      expect(code).toMatch(/Promise~/);
+      // v2.2.1: Promise<T> is converted to 'any', no tilde notation
+      expect(code).not.toContain('Promise~');
+      expect(code).not.toContain('Promise<');
     });
 
     it('should handle triple-nested object types', () => {

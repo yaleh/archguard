@@ -39,16 +39,16 @@ describe('PythonPlugin Integration Tests', () => {
       expect(result.language).toBe('python');
       expect(result.entities.length).toBeGreaterThan(0);
 
-      const userClass = result.entities.find(e => e.name === 'User');
+      const userClass = result.entities.find((e) => e.name === 'User');
       expect(userClass).toBeDefined();
       expect(userClass?.type).toBe('class');
       expect(userClass?.members.length).toBeGreaterThan(0);
 
       // Check methods
-      const initMethod = userClass?.members.find(m => m.name === '__init__');
+      const initMethod = userClass?.members.find((m) => m.name === '__init__');
       expect(initMethod).toBeDefined();
 
-      const getNameMethod = userClass?.members.find(m => m.name === 'get_name');
+      const getNameMethod = userClass?.members.find((m) => m.name === 'get_name');
       expect(getNameMethod).toBeDefined();
       expect(getNameMethod?.returnType).toBe('str');
     });
@@ -61,22 +61,20 @@ describe('PythonPlugin Integration Tests', () => {
 
       expect(result.entities.length).toBeGreaterThanOrEqual(3);
 
-      const userClass = result.entities.find(e => e.name === 'User');
-      const auditableClass = result.entities.find(e => e.name === 'Auditable');
-      const adminUserClass = result.entities.find(e => e.name === 'AdminUser');
+      const userClass = result.entities.find((e) => e.name === 'User');
+      const auditableClass = result.entities.find((e) => e.name === 'Auditable');
+      const adminUserClass = result.entities.find((e) => e.name === 'AdminUser');
 
       expect(userClass).toBeDefined();
       expect(auditableClass).toBeDefined();
       expect(adminUserClass).toBeDefined();
 
       // Check inheritance relations
-      const inheritanceRelations = result.relations.filter(r => r.type === 'inheritance');
+      const inheritanceRelations = result.relations.filter((r) => r.type === 'inheritance');
       expect(inheritanceRelations.length).toBeGreaterThanOrEqual(2);
 
       // AdminUser should inherit from both User and Auditable
-      const adminInherits = inheritanceRelations.filter(
-        r => r.source.includes('AdminUser')
-      );
+      const adminInherits = inheritanceRelations.filter((r) => r.source.includes('AdminUser'));
       expect(adminInherits.length).toBe(2);
     });
 
@@ -86,24 +84,24 @@ describe('PythonPlugin Integration Tests', () => {
 
       const result = plugin.parseCode(code, filePath);
 
-      const serviceClass = result.entities.find(e => e.name === 'Service');
+      const serviceClass = result.entities.find((e) => e.name === 'Service');
       expect(serviceClass).toBeDefined();
 
       // Check for property decorator
-      const nameMethod = serviceClass?.members.find(m => m.name === 'name');
+      const nameMethod = serviceClass?.members.find((m) => m.name === 'name');
       expect(nameMethod).toBeDefined();
       expect(nameMethod?.decorators).toBeDefined();
-      expect(nameMethod?.decorators?.some(d => d.name === 'property')).toBe(true);
+      expect(nameMethod?.decorators?.some((d) => d.name === 'property')).toBe(true);
 
       // Check for classmethod decorator
-      const createMethod = serviceClass?.members.find(m => m.name === 'create');
+      const createMethod = serviceClass?.members.find((m) => m.name === 'create');
       expect(createMethod).toBeDefined();
-      expect(createMethod?.decorators?.some(d => d.name === 'classmethod')).toBe(true);
+      expect(createMethod?.decorators?.some((d) => d.name === 'classmethod')).toBe(true);
 
       // Check for staticmethod decorator
-      const validateMethod = serviceClass?.members.find(m => m.name === 'validate');
+      const validateMethod = serviceClass?.members.find((m) => m.name === 'validate');
       expect(validateMethod).toBeDefined();
-      expect(validateMethod?.decorators?.some(d => d.name === 'staticmethod')).toBe(true);
+      expect(validateMethod?.decorators?.some((d) => d.name === 'staticmethod')).toBe(true);
     });
 
     it('should parse type-hints.py fixture', async () => {
@@ -112,16 +110,16 @@ describe('PythonPlugin Integration Tests', () => {
 
       const result = plugin.parseCode(code, filePath);
 
-      const processorClass = result.entities.find(e => e.name === 'DataProcessor');
+      const processorClass = result.entities.find((e) => e.name === 'DataProcessor');
       expect(processorClass).toBeDefined();
 
-      const processMethod = processorClass?.members.find(m => m.name === 'process_items');
+      const processMethod = processorClass?.members.find((m) => m.name === 'process_items');
       expect(processMethod).toBeDefined();
       expect(processMethod?.parameters).toBeDefined();
       expect(processMethod?.parameters?.length).toBeGreaterThan(0);
 
       // Check parameter types
-      const itemsParam = processMethod?.parameters?.find(p => p.name === 'items');
+      const itemsParam = processMethod?.parameters?.find((p) => p.name === 'items');
       expect(itemsParam?.type).toContain('List');
 
       // Check return type
@@ -138,19 +136,19 @@ describe('PythonPlugin Integration Tests', () => {
       expect(result.entities.length).toBeGreaterThanOrEqual(2);
 
       // Check module-level async function
-      const fetchDataFunc = result.entities.find(e => e.name === 'fetch_data');
+      const fetchDataFunc = result.entities.find((e) => e.name === 'fetch_data');
       expect(fetchDataFunc).toBeDefined();
       expect(fetchDataFunc?.type).toBe('function');
 
-      const asyncServiceClass = result.entities.find(e => e.name === 'AsyncService');
+      const asyncServiceClass = result.entities.find((e) => e.name === 'AsyncService');
       expect(asyncServiceClass).toBeDefined();
 
-      const processMethod = asyncServiceClass?.members.find(m => m.name === 'process');
+      const processMethod = asyncServiceClass?.members.find((m) => m.name === 'process');
       expect(processMethod).toBeDefined();
       expect(processMethod?.isAsync).toBe(true);
 
       const fetchMultipleMethod = asyncServiceClass?.members.find(
-        m => m.name === 'fetch_multiple'
+        (m) => m.name === 'fetch_multiple'
       );
       expect(fetchMultipleMethod).toBeDefined();
       expect(fetchMultipleMethod?.isAsync).toBe(true);
@@ -163,13 +161,13 @@ describe('PythonPlugin Integration Tests', () => {
       const result = plugin.parseCode(code, filePath);
 
       // Module-level functions should be entities with type 'function'
-      expect(result.entities.some(e => e.type === 'function')).toBe(true);
+      expect(result.entities.some((e) => e.type === 'function')).toBe(true);
 
-      const calculate = result.entities.find(e => e.name === 'calculate');
+      const calculate = result.entities.find((e) => e.name === 'calculate');
       expect(calculate).toBeDefined();
       expect(calculate?.type).toBe('function');
 
-      const processString = result.entities.find(e => e.name === 'process_string');
+      const processString = result.entities.find((e) => e.name === 'process_string');
       expect(processString).toBeDefined();
       expect(processString?.type).toBe('function');
     });
@@ -191,7 +189,7 @@ describe('PythonPlugin Integration Tests', () => {
       expect(result.entities.length).toBeGreaterThan(3);
 
       // Should include User from both files (they're different modules)
-      const userEntities = result.entities.filter(e => e.name === 'User');
+      const userEntities = result.entities.filter((e) => e.name === 'User');
       expect(userEntities.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -220,8 +218,8 @@ pytest = "^6.2.0"
         const deps = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
         expect(deps.length).toBeGreaterThanOrEqual(2);
-        expect(deps.find(d => d.name === 'flask')).toBeDefined();
-        expect(deps.find(d => d.name === 'pytest')).toBeDefined();
+        expect(deps.find((d) => d.name === 'flask')).toBeDefined();
+        expect(deps.find((d) => d.name === 'pytest')).toBeDefined();
       } finally {
         await fs.remove(tempDir);
       }

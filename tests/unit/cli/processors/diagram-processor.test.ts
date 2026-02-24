@@ -251,15 +251,13 @@ describe('DiagramProcessor', () => {
     it('should handle diagram processing failure without affecting others', async () => {
       // Mock FileDiscoveryService
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
-      const mockDiscoverFiles = vi
-        .fn()
-        .mockImplementation(({ sources }: { sources: string[] }) => {
-          // Fail for module2, succeed for others
-          if (sources.includes('./src/module2')) {
-            throw new Error('Discovery failed');
-          }
-          return Promise.resolve(['/src/test.ts']);
-        });
+      const mockDiscoverFiles = vi.fn().mockImplementation(({ sources }: { sources: string[] }) => {
+        // Fail for module2, succeed for others
+        if (sources.includes('./src/module2')) {
+          throw new Error('Discovery failed');
+        }
+        return Promise.resolve(['/src/test.ts']);
+      });
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));

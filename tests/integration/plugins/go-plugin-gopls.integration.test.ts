@@ -44,18 +44,19 @@ describe.skipIf(!goplsAvailable)('GoPlugin with gopls integration', () => {
     expect(result.relations.length).toBeGreaterThan(0);
 
     // Check for Service struct
-    const serviceEntity = result.entities.find(e => e.name === 'Service');
+    const serviceEntity = result.entities.find((e) => e.name === 'Service');
     expect(serviceEntity).toBeDefined();
     expect(serviceEntity?.type).toBe('struct');
 
     // Check for Runner interface
-    const runnerEntity = result.entities.find(e => e.name === 'Runner');
+    const runnerEntity = result.entities.find((e) => e.name === 'Runner');
     expect(runnerEntity).toBeDefined();
     expect(runnerEntity?.type).toBe('interface');
 
     // Check for implementation relation
     const implRelation = result.relations.find(
-      r => r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
+      (r) =>
+        r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
     );
     expect(implRelation).toBeDefined();
   });
@@ -64,7 +65,8 @@ describe.skipIf(!goplsAvailable)('GoPlugin with gopls integration', () => {
     const result = await plugin.parseProject(fixtureDir, {});
 
     const implRelation = result.relations.find(
-      r => r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
+      (r) =>
+        r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
     );
 
     // Should have high confidence (>0.9) from gopls or fallback
@@ -116,7 +118,8 @@ describe('GoPlugin without gopls (graceful degradation)', () => {
 
     // Should still find Service implements Runner
     const implRelation = result.relations.find(
-      r => r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
+      (r) =>
+        r.source.endsWith('Service') && r.target.endsWith('Runner') && r.type === 'implementation'
     );
     expect(implRelation).toBeDefined();
   });
@@ -126,7 +129,7 @@ describe('GoPlugin without gopls (graceful degradation)', () => {
 
     // Count expected vs actual implementations
     // In sample.go: Service implements Runner (1 implementation)
-    const implementations = result.relations.filter(r => r.type === 'implementation');
+    const implementations = result.relations.filter((r) => r.type === 'implementation');
 
     // Should find at least the obvious implementation
     expect(implementations.length).toBeGreaterThanOrEqual(1);
@@ -153,7 +156,10 @@ func (f *FileReader) Read() string {
 
     expect(result.entities.length).toBe(2); // Reader interface + FileReader struct
     const implRelation = result.relations.find(
-      r => r.source.endsWith('FileReader') && r.target.endsWith('Reader') && r.type === 'implementation'
+      (r) =>
+        r.source.endsWith('FileReader') &&
+        r.target.endsWith('Reader') &&
+        r.type === 'implementation'
     );
     expect(implRelation).toBeDefined();
   });

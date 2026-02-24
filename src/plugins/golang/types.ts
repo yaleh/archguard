@@ -38,6 +38,7 @@ export interface GoMethod {
   returnTypes: string[];
   exported: boolean;
   location: GoSourceLocation;
+  body?: GoFunctionBody; // Optional: filled in Atlas mode
 }
 
 /**
@@ -92,6 +93,33 @@ export interface GoRawInterface {
 }
 
 /**
+ * Function body behavior data (for Atlas mode)
+ */
+export interface GoFunctionBody {
+  calls: GoCallExpr[];
+  goSpawns: GoSpawnStmt[];
+  channelOps: GoChannelOp[];
+}
+
+export interface GoCallExpr {
+  functionName: string;
+  packageName?: string;
+  receiverType?: string;
+  location: GoSourceLocation;
+}
+
+export interface GoSpawnStmt {
+  call: GoCallExpr;
+  location: GoSourceLocation;
+}
+
+export interface GoChannelOp {
+  channelName: string;
+  operation: 'send' | 'receive' | 'close' | 'make';
+  location: GoSourceLocation;
+}
+
+/**
  * Go function (standalone, not a method)
  */
 export interface GoFunction {
@@ -101,6 +129,7 @@ export interface GoFunction {
   returnTypes: string[];
   exported: boolean;
   location: GoSourceLocation;
+  body?: GoFunctionBody; // Optional: filled in Atlas mode
 }
 
 /**
@@ -110,19 +139,25 @@ export interface GoImport {
   path: string;
   alias?: string;
   location: GoSourceLocation;
+  type?: 'std' | 'internal' | 'external' | 'vendor'; // Filled by GoModResolver
 }
 
 /**
  * Go package (aggregation of files in same directory)
+ *
+ * CRITICAL: Use fullName (not name) as Map key when merging packages.
+ * This prevents data loss when different directories have same package name.
  */
 export interface GoRawPackage {
   id: string;
-  name: string;
+  name: string; // Package name: "hub"
+  fullName: string; // Module-relative path: "pkg/hub" (disambiguation key)
   dirPath: string;
   imports: GoImport[];
   structs: GoRawStruct[];
   interfaces: GoRawInterface[];
   functions: GoFunction[];
+  sourceFiles: string[]; // Source file paths in this package
 }
 
 /**
@@ -132,6 +167,7 @@ export interface GoRawData {
   packages: GoRawPackage[];
   moduleRoot: string;
   moduleName: string;
+  implementations?: InferredImplementation[];
 }
 
 /**

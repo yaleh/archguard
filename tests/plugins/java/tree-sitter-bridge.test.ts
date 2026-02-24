@@ -58,12 +58,12 @@ public class User {
 
       expect(userClass.fields).toHaveLength(2);
 
-      const nameField = userClass.fields.find(f => f.name === 'name');
+      const nameField = userClass.fields.find((f) => f.name === 'name');
       expect(nameField).toBeDefined();
       expect(nameField?.type).toBe('String');
       expect(nameField?.modifiers).toContain('private');
 
-      const ageField = userClass.fields.find(f => f.name === 'age');
+      const ageField = userClass.fields.find((f) => f.name === 'age');
       expect(ageField).toBeDefined();
       expect(ageField?.type).toBe('int');
       expect(ageField?.modifiers).toContain('private');
@@ -89,13 +89,13 @@ public class User {
 
       expect(userClass.methods).toHaveLength(2);
 
-      const getName = userClass.methods.find(m => m.name === 'getName');
+      const getName = userClass.methods.find((m) => m.name === 'getName');
       expect(getName).toBeDefined();
       expect(getName?.returnType).toBe('String');
       expect(getName?.parameters).toHaveLength(0);
       expect(getName?.modifiers).toContain('public');
 
-      const setName = userClass.methods.find(m => m.name === 'setName');
+      const setName = userClass.methods.find((m) => m.name === 'setName');
       expect(setName).toBeDefined();
       expect(setName?.returnType).toBe('void');
       expect(setName?.parameters).toHaveLength(1);
@@ -218,10 +218,10 @@ public abstract class AbstractService {
       const result = bridge.parseCode(code, 'AbstractService.java');
       const abstractService = result.classes[0];
 
-      const initMethod = abstractService.methods.find(m => m.name === 'initialize');
+      const initMethod = abstractService.methods.find((m) => m.name === 'initialize');
       expect(initMethod?.isAbstract).toBe(true);
 
-      const startMethod = abstractService.methods.find(m => m.name === 'start');
+      const startMethod = abstractService.methods.find((m) => m.name === 'start');
       expect(startMethod?.isAbstract).toBe(false);
     });
   });
@@ -259,7 +259,7 @@ public class Service {
       const stopMethod = service.methods[0];
 
       expect(stopMethod.annotations).toHaveLength(2);
-      const annotationNames = stopMethod.annotations.map(a => a.name);
+      const annotationNames = stopMethod.annotations.map((a) => a.name);
       expect(annotationNames).toContain('Override');
       expect(annotationNames).toContain('Deprecated');
     });

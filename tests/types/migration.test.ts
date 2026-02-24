@@ -51,13 +51,7 @@ describe('Type Migration - Multi-Language Support', () => {
     });
 
     it('should accept all supported languages in a union type', () => {
-      const allLanguages: SupportedLanguage[] = [
-        'typescript',
-        'go',
-        'java',
-        'python',
-        'rust',
-      ];
+      const allLanguages: SupportedLanguage[] = ['typescript', 'go', 'java', 'python', 'rust'];
 
       allLanguages.forEach((lang) => {
         const archJson: ArchJSON = {

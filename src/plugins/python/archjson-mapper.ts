@@ -46,7 +46,7 @@ export class ArchJsonMapper {
       version: '1.0',
       language: 'python',
       timestamp: new Date().toISOString(),
-      sourceFiles: modules.map(m => m.filePath),
+      sourceFiles: modules.map((m) => m.filePath),
       entities,
       relations,
     };
@@ -107,12 +107,13 @@ export class ArchJsonMapper {
     const visibility: Visibility = cls.name.startsWith('_') ? 'private' : 'public';
 
     // Map decorators
-    const decorators: Decorator[] | undefined = cls.decorators.length > 0
-      ? cls.decorators.map(d => ({
-          name: d.name,
-          arguments: d.arguments,
-        }))
-      : undefined;
+    const decorators: Decorator[] | undefined =
+      cls.decorators.length > 0
+        ? cls.decorators.map((d) => ({
+            name: d.name,
+            arguments: d.arguments,
+          }))
+        : undefined;
 
     return {
       id: this.generateEntityId(cls.name, moduleName, cls.filePath),
@@ -136,14 +137,15 @@ export class ArchJsonMapper {
   private mapMethod(method: PythonRawMethod): Member {
     const visibility: Visibility = method.isPrivate ? 'private' : 'public';
 
-    const parameters: Parameter[] = method.parameters.map(p => this.mapParameter(p));
+    const parameters: Parameter[] = method.parameters.map((p) => this.mapParameter(p));
 
-    const decorators: Decorator[] | undefined = method.decorators.length > 0
-      ? method.decorators.map(d => ({
-          name: d.name,
-          arguments: d.arguments,
-        }))
-      : undefined;
+    const decorators: Decorator[] | undefined =
+      method.decorators.length > 0
+        ? method.decorators.map((d) => ({
+            name: d.name,
+            arguments: d.arguments,
+          }))
+        : undefined;
 
     return {
       name: method.name,
@@ -160,10 +162,13 @@ export class ArchJsonMapper {
   /**
    * Map Python property to Member
    */
-  private mapProperty(prop: { name: string; type?: string; decorators: Array<{ name: string }> }): Member {
-    const decorators: Decorator[] | undefined = prop.decorators.length > 0
-      ? prop.decorators.map(d => ({ name: d.name }))
-      : undefined;
+  private mapProperty(prop: {
+    name: string;
+    type?: string;
+    decorators: Array<{ name: string }>;
+  }): Member {
+    const decorators: Decorator[] | undefined =
+      prop.decorators.length > 0 ? prop.decorators.map((d) => ({ name: d.name })) : undefined;
 
     return {
       name: prop.name,
@@ -180,14 +185,15 @@ export class ArchJsonMapper {
   private mapFunction(func: PythonRawFunction): Entity {
     const visibility: Visibility = func.name.startsWith('_') ? 'private' : 'public';
 
-    const parameters: Parameter[] = func.parameters.map(p => this.mapParameter(p));
+    const parameters: Parameter[] = func.parameters.map((p) => this.mapParameter(p));
 
-    const decorators: Decorator[] | undefined = func.decorators.length > 0
-      ? func.decorators.map(d => ({
-          name: d.name,
-          arguments: d.arguments,
-        }))
-      : undefined;
+    const decorators: Decorator[] | undefined =
+      func.decorators.length > 0
+        ? func.decorators.map((d) => ({
+            name: d.name,
+            arguments: d.arguments,
+          }))
+        : undefined;
 
     // Module-level functions are represented as entities with a single member
     const member: Member = {

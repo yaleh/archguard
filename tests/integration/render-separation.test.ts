@@ -121,7 +121,9 @@ describe('Render Stage Separation', () => {
           },
         ],
       };
-      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(mockValidationReport);
+      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(
+        mockValidationReport
+      );
 
       // Generate Mermaid code only (no rendering)
       const renderJobs = await generator.generateOnly(archJson, outputOptions, 'class');
@@ -175,7 +177,9 @@ describe('Render Stage Separation', () => {
           },
         ],
       };
-      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(mockValidationReport);
+      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(
+        mockValidationReport
+      );
 
       // Generate multiple diagrams
       const outputOptions1 = createOutputOptions('diagram1');
@@ -240,7 +244,9 @@ describe('Render Stage Separation', () => {
           },
         ],
       };
-      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(mockValidationReport);
+      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(
+        mockValidationReport
+      );
 
       // Should throw validation error
       await expect(generator.generateOnly(archJson, outputOptions, 'class')).rejects.toThrow();
@@ -281,7 +287,9 @@ describe('Render Stage Separation', () => {
 
       // Mock IsomorphicMermaidRenderer.renderAndSave
       const mockRenderAndSave = vi.fn().mockResolvedValue(undefined);
-      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(mockRenderAndSave);
+      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(
+        mockRenderAndSave
+      );
 
       // Render all jobs in parallel with concurrency of 2
       await MermaidDiagramGenerator.renderJobsInParallel(renderJobs, 2);
@@ -346,15 +354,17 @@ describe('Render Stage Separation', () => {
       let maxConcurrentOperations = 0;
 
       // Mock IsomorphicMermaidRenderer.renderAndSave with concurrency tracking
-      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(async () => {
-        activeOperations++;
-        maxConcurrentOperations = Math.max(maxConcurrentOperations, activeOperations);
+      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(
+        async () => {
+          activeOperations++;
+          maxConcurrentOperations = Math.max(maxConcurrentOperations, activeOperations);
 
-        // Simulate some rendering work
-        await new Promise((resolve) => setTimeout(resolve, 50));
+          // Simulate some rendering work
+          await new Promise((resolve) => setTimeout(resolve, 50));
 
-        activeOperations--;
-      });
+          activeOperations--;
+        }
+      );
 
       // Render with concurrency limit of 2
       await MermaidDiagramGenerator.renderJobsInParallel(renderJobs, 2);
@@ -401,7 +411,9 @@ describe('Render Stage Separation', () => {
         }
       });
 
-      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(mockRenderAndSave);
+      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(
+        mockRenderAndSave
+      );
 
       // Should throw error (first failure)
       await expect(MermaidDiagramGenerator.renderJobsInParallel(renderJobs, 2)).rejects.toThrow(
@@ -451,11 +463,15 @@ describe('Render Stage Separation', () => {
           },
         ],
       };
-      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(mockValidationReport);
+      vi.spyOn(MermaidValidationPipeline.prototype, 'validateFull').mockResolvedValue(
+        mockValidationReport
+      );
 
       // Mock IsomorphicMermaidRenderer.renderAndSave
       const mockRenderAndSave = vi.fn().mockResolvedValue(undefined);
-      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(mockRenderAndSave);
+      vi.spyOn(IsomorphicMermaidRenderer.prototype, 'renderAndSave').mockImplementation(
+        mockRenderAndSave
+      );
 
       // Stage 1: Generate Mermaid code for all diagrams
       const outputOptions1 = createOutputOptions('diagram1');

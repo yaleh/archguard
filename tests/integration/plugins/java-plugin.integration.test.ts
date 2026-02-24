@@ -25,15 +25,15 @@ describe('JavaPlugin Integration Tests', () => {
       expect(result.entities.length).toBeGreaterThan(0);
 
       // Check for expected entities from fixtures
-      const userClass = result.entities.find(e => e.name === 'User');
+      const userClass = result.entities.find((e) => e.name === 'User');
       expect(userClass).toBeDefined();
       expect(userClass?.type).toBe('class');
 
-      const serviceInterface = result.entities.find(e => e.name === 'Service');
+      const serviceInterface = result.entities.find((e) => e.name === 'Service');
       expect(serviceInterface).toBeDefined();
       expect(serviceInterface?.type).toBe('interface');
 
-      const statusEnum = result.entities.find(e => e.name === 'Status');
+      const statusEnum = result.entities.find((e) => e.name === 'Status');
       expect(statusEnum).toBeDefined();
       expect(statusEnum?.type).toBe('enum');
     });
@@ -45,18 +45,18 @@ describe('JavaPlugin Integration Tests', () => {
       });
 
       // Find AdminUser class
-      const adminUser = result.entities.find(e => e.name === 'AdminUser');
+      const adminUser = result.entities.find((e) => e.name === 'AdminUser');
       expect(adminUser).toBeDefined();
 
       // Check inheritance relations
       const inheritanceRels = result.relations.filter(
-        r => r.source === 'com.example.AdminUser' && r.type === 'inheritance'
+        (r) => r.source === 'com.example.AdminUser' && r.type === 'inheritance'
       );
       expect(inheritanceRels.length).toBeGreaterThan(0);
 
       // Check implementation relations
       const implRels = result.relations.filter(
-        r => r.source === 'com.example.AdminUser' && r.type === 'implementation'
+        (r) => r.source === 'com.example.AdminUser' && r.type === 'implementation'
       );
       expect(implRels.length).toBeGreaterThan(0);
     });
@@ -67,7 +67,7 @@ describe('JavaPlugin Integration Tests', () => {
         excludePatterns: [],
       });
 
-      const legacyService = result.entities.find(e => e.name === 'LegacyService');
+      const legacyService = result.entities.find((e) => e.name === 'LegacyService');
       expect(legacyService).toBeDefined();
       expect(legacyService?.decorators).toBeDefined();
       expect(legacyService?.decorators?.length).toBeGreaterThan(0);
@@ -80,12 +80,12 @@ describe('JavaPlugin Integration Tests', () => {
         excludePatterns: [],
       });
 
-      const statusEnum = result.entities.find(e => e.name === 'Status');
+      const statusEnum = result.entities.find((e) => e.name === 'Status');
       expect(statusEnum).toBeDefined();
       expect(statusEnum?.type).toBe('enum');
       expect(statusEnum?.members.length).toBe(4);
 
-      const enumValues = statusEnum?.members.map(m => m.name);
+      const enumValues = statusEnum?.members.map((m) => m.name);
       expect(enumValues).toContain('ACTIVE');
       expect(enumValues).toContain('INACTIVE');
       expect(enumValues).toContain('PENDING');
@@ -131,7 +131,7 @@ describe('JavaPlugin Integration Tests', () => {
       expect(result.sourceFiles).toEqual(files);
 
       // Verify all entities are present
-      const entityNames = result.entities.map(e => e.name);
+      const entityNames = result.entities.map((e) => e.name);
       expect(entityNames).toContain('User');
       expect(entityNames).toContain('Service');
       expect(entityNames).toContain('AdminUser');
@@ -149,10 +149,10 @@ describe('JavaPlugin Integration Tests', () => {
       expect(dependencies.length).toBeGreaterThan(0);
 
       // Verify specific dependencies
-      const springBoot = dependencies.find(d => d.name.includes('spring-boot-starter'));
+      const springBoot = dependencies.find((d) => d.name.includes('spring-boot-starter'));
       expect(springBoot).toBeDefined();
 
-      const junit = dependencies.find(d => d.name === 'junit');
+      const junit = dependencies.find((d) => d.name === 'junit');
       expect(junit).toBeDefined();
       expect(junit?.scope).toBe('development');
     });

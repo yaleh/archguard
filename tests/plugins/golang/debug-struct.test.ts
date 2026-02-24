@@ -37,7 +37,9 @@ type User struct {
       for (let i = 0; i < typeDecl.childCount; i++) {
         const child = typeDecl.child(i);
         if (child) {
-          console.log(`    ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`);
+          console.log(
+            `    ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`
+          );
         }
       }
 
@@ -45,7 +47,9 @@ type User struct {
       for (let i = 0; i < typeDecl.namedChildCount; i++) {
         const child = typeDecl.namedChild(i);
         if (child) {
-          console.log(`    ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`);
+          console.log(
+            `    ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`
+          );
 
           if (child.type === 'type_spec') {
             console.log('\n    Type spec details:');

@@ -26,7 +26,7 @@ type Runner interface {
     const rootNode = tree.rootNode;
 
     const typeDecls = rootNode.descendantsOfType('type_declaration');
-    const typeSpec = typeDecls[0].namedChildren.find(child => child.type === 'type_spec');
+    const typeSpec = typeDecls[0].namedChildren.find((child) => child.type === 'type_spec');
 
     if (!typeSpec) {
       console.log('No type_spec found');
@@ -54,7 +54,9 @@ type Runner interface {
         for (let j = 0; j < child.childCount; j++) {
           const methodChild = child.child(j);
           if (methodChild) {
-            console.log(`      ${j}: type="${methodChild.type}", text="${code.substring(methodChild.startIndex, methodChild.endIndex)}"`);
+            console.log(
+              `      ${j}: type="${methodChild.type}", text="${code.substring(methodChild.startIndex, methodChild.endIndex)}"`
+            );
           }
         }
 
@@ -62,11 +64,21 @@ type Runner interface {
         for (let j = 0; j < child.namedChildCount; j++) {
           const methodChild = child.namedChild(j);
           if (methodChild) {
-            console.log(`      ${j}: type="${methodChild.type}", text="${code.substring(methodChild.startIndex, methodChild.endIndex)}"`);
+            console.log(
+              `      ${j}: type="${methodChild.type}", text="${code.substring(methodChild.startIndex, methodChild.endIndex)}"`
+            );
           }
         }
 
-        console.log('    Field name:', child.childForFieldName('name') ? code.substring(child.childForFieldName('name')!.startIndex, child.childForFieldName('name')!.endIndex) : 'null');
+        console.log(
+          '    Field name:',
+          child.childForFieldName('name')
+            ? code.substring(
+                child.childForFieldName('name').startIndex,
+                child.childForFieldName('name').endIndex
+              )
+            : 'null'
+        );
       }
     }
   });

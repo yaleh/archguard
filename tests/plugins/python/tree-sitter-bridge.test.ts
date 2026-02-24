@@ -305,10 +305,7 @@ def greet(name: str = "World"):
 
   describe('Real fixtures', () => {
     it('should parse simple-class.py fixture', async () => {
-      const fixturePath = path.join(
-        __dirname,
-        '../../fixtures/python/simple-class.py'
-      );
+      const fixturePath = path.join(__dirname, '../../fixtures/python/simple-class.py');
       const code = await fs.readFile(fixturePath, 'utf-8');
 
       const result = bridge.parseCode(code, fixturePath);
@@ -319,33 +316,27 @@ def greet(name: str = "World"):
     });
 
     it('should parse inheritance.py fixture', async () => {
-      const fixturePath = path.join(
-        __dirname,
-        '../../fixtures/python/inheritance.py'
-      );
+      const fixturePath = path.join(__dirname, '../../fixtures/python/inheritance.py');
       const code = await fs.readFile(fixturePath, 'utf-8');
 
       const result = bridge.parseCode(code, fixturePath);
 
       expect(result.classes.length).toBeGreaterThanOrEqual(2);
-      const adminUser = result.classes.find(c => c.name === 'AdminUser');
+      const adminUser = result.classes.find((c) => c.name === 'AdminUser');
       expect(adminUser).toBeDefined();
       expect(adminUser?.baseClasses.length).toBeGreaterThan(0);
     });
 
     it('should parse decorators.py fixture', async () => {
-      const fixturePath = path.join(
-        __dirname,
-        '../../fixtures/python/decorators.py'
-      );
+      const fixturePath = path.join(__dirname, '../../fixtures/python/decorators.py');
       const code = await fs.readFile(fixturePath, 'utf-8');
 
       const result = bridge.parseCode(code, fixturePath);
 
       const serviceClass = result.classes[0];
-      const propertyMethod = serviceClass.methods.find(m => m.name === 'name');
-      const classMethod = serviceClass.methods.find(m => m.name === 'create');
-      const staticMethod = serviceClass.methods.find(m => m.name === 'validate');
+      const propertyMethod = serviceClass.methods.find((m) => m.name === 'name');
+      const classMethod = serviceClass.methods.find((m) => m.name === 'create');
+      const staticMethod = serviceClass.methods.find((m) => m.name === 'validate');
 
       expect(propertyMethod?.isProperty).toBe(true);
       expect(classMethod?.isClassMethod).toBe(true);
@@ -353,16 +344,13 @@ def greet(name: str = "World"):
     });
 
     it('should parse async-functions.py fixture', async () => {
-      const fixturePath = path.join(
-        __dirname,
-        '../../fixtures/python/async-functions.py'
-      );
+      const fixturePath = path.join(__dirname, '../../fixtures/python/async-functions.py');
       const code = await fs.readFile(fixturePath, 'utf-8');
 
       const result = bridge.parseCode(code, fixturePath);
 
       expect(result.functions.length).toBeGreaterThan(0);
-      const asyncFunc = result.functions.find(f => f.name === 'fetch_data');
+      const asyncFunc = result.functions.find((f) => f.name === 'fetch_data');
       expect(asyncFunc?.isAsync).toBe(true);
     });
   });

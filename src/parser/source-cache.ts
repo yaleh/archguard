@@ -73,7 +73,7 @@ export class SourceCache {
    */
   private hashSources(sources: string[]): string {
     const normalized = sources
-      .map(s => s.replace(/\\/g, '/')) // Normalize Windows paths
+      .map((s) => s.replace(/\\/g, '/')) // Normalize Windows paths
       .sort() // Sort for consistent ordering
       .join('|');
 
@@ -98,10 +98,7 @@ export class SourceCache {
    * @param parser - TypeScriptParser instance
    * @returns Cached or freshly parsed ArchJSON
    */
-  async getOrParse(
-    sources: string[],
-    parser: TypeScriptParser
-  ): Promise<ArchJSON> {
+  async getOrParse(sources: string[], parser: TypeScriptParser): Promise<ArchJSON> {
     const key = this.hashSources(sources);
     const cached = this.cache.get(key);
 

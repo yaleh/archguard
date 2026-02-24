@@ -93,7 +93,7 @@ describe('Configuration Types v2.1 - Metadata Enhancement', () => {
 
       expect(design.architectureStyle).toBe('layered');
       expect(design.patterns).toHaveLength(2);
-      expect(design.patterns![0].category).toBe('behavioral');
+      expect(design.patterns[0].category).toBe('behavioral');
       expect(design.principles).toHaveLength(2);
       expect(design.decisions).toBeDefined();
     });
@@ -154,7 +154,7 @@ describe('Configuration Types v2.1 - Metadata Enhancement', () => {
       expect(process.stages).toBe(4);
       expect(process.dataFlow).toContain('CLI Command');
       expect(process.stageList).toHaveLength(4);
-      expect(process.stageList![0].patterns).toEqual(['Builder Pattern']);
+      expect(process.stageList[0].patterns).toEqual(['Builder Pattern']);
       expect(process.keyDependencies).toContain('ts-morph');
     });
 
@@ -216,7 +216,7 @@ describe('Configuration Types v2.1 - Metadata Enhancement', () => {
 
       expect(classes.highlightClasses).toHaveLength(3);
       expect(classes.annotateClasses).toHaveLength(2);
-      expect(classes.annotateClasses![0].stereotypes).toEqual(['<<Builder>>']);
+      expect(classes.annotateClasses[0].stereotypes).toEqual(['<<Builder>>']);
       expect(classes.visibility?.show).toContain('PublicClass');
     });
 

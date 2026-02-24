@@ -71,13 +71,7 @@ export class PythonPlugin implements ILanguagePlugin {
     try {
       if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
         // Check for common Python project markers
-        const markers = [
-          'pyproject.toml',
-          'requirements.txt',
-          'setup.py',
-          'setup.cfg',
-          'Pipfile',
-        ];
+        const markers = ['pyproject.toml', 'requirements.txt', 'setup.py', 'setup.cfg', 'Pipfile'];
 
         for (const marker of markers) {
           if (fs.existsSync(path.join(targetPath, marker))) {
@@ -199,7 +193,7 @@ export class PythonPlugin implements ILanguagePlugin {
           const fullPath = path.join(dir, entry.name);
 
           // Skip excluded patterns
-          if (exclude && exclude.some(exc => fullPath.includes(exc))) {
+          if (exclude && exclude.some((exc) => fullPath.includes(exc))) {
             continue;
           }
 

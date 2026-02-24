@@ -4,7 +4,7 @@
 **日期**: 2026-02-24
 **上下文**: Go Architecture Atlas 实施计划 Phase 4
 **决策者**: ArchGuard 架构团队
-**修订**: v1.1 - 消除 bracket hack，使用 GoPlugin 公共 API
+**修订**: v1.2 - 对齐 Proposal v5.1（PluginMetadata、注册策略、ParseConfig 类型安全）
 
 ---
 
@@ -66,13 +66,15 @@ export class GoPlugin implements ILanguagePlugin {
   /**
    * 公共方法: 解析项目为原始数据
    * 供 GoAtlasPlugin 等组合使用者调用。
+   *
+   * @param config - 支持 TreeSitterParseOptions 扩展（extractBodies, selectiveExtraction）
    */
   async parseToRawData(
     workspaceRoot: string,
-    config: ParseConfig
+    config: ParseConfig & TreeSitterParseOptions
   ): Promise<GoRawData> {
     // 提取自现有 parseProject() 的前半部分逻辑
-    // 包括文件发现、Tree-sitter 解析、包合并
+    // 包括文件发现、Tree-sitter 解析（传递 body 提取选项）、按 fullName 合并包
   }
 
   /**
@@ -102,11 +104,14 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
   private atlasMapper: AtlasMapper;
 
   // ========== 元数据 ==========
+  // 使用 name: 'golang' 替代 GoPlugin，兼容 Registry 自动检测
   readonly metadata: PluginMetadata = {
-    name: 'golang-atlas',
+    name: 'golang',
     version: '5.0.0',
     displayName: 'Go Architecture Atlas',
     fileExtensions: ['.go'],
+    author: 'ArchGuard Team',
+    minCoreVersion: '2.0.0',
     capabilities: {
       singleFileParsing: true,
       incrementalParsing: false,
@@ -115,11 +120,14 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     },
   };
 
+  readonly dependencyExtractor: IDependencyExtractor;
+
   constructor() {
     this.goPlugin = new GoPlugin();
     this.behaviorAnalyzer = new BehaviorAnalyzer();
     this.atlasRenderer = new AtlasRenderer();
     this.atlasMapper = new AtlasMapper();
+    this.dependencyExtractor = this.goPlugin.dependencyExtractor;
   }
 
   // ========== ILanguagePlugin 实现 ==========
@@ -133,50 +141,56 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     return this.goPlugin.canHandle(targetPath);
   }
 
-  get dependencyExtractor() {
-    return this.goPlugin.dependencyExtractor;
+  // IParser 可选方法委托
+  parseCode(code: string, filePath?: string): ArchJSON {
+    return this.goPlugin.parseCode(code, filePath);
+  }
+
+  async parseFiles(filePaths: string[]): Promise<ArchJSON> {
+    return this.goPlugin.parseFiles(filePaths);
   }
 
   async parseProject(
     workspaceRoot: string,
-    config: ParseConfig & { atlas?: AtlasConfig }
+    config: ParseConfig
   ): Promise<ArchJSON> {
+    const atlasConfig = config.languageSpecific?.atlas as AtlasConfig | undefined;
+
     // 如果未启用 Atlas，委托给 GoPlugin
-    if (!config.atlas?.enabled) {
+    if (!atlasConfig?.enabled) {
       return this.goPlugin.parseProject(workspaceRoot, config);
     }
 
     // 启用 Atlas 时，执行增强分析
-    return this.parseProjectWithAtlas(workspaceRoot, config);
+    return this.parseProjectWithAtlas(workspaceRoot, config, atlasConfig);
   }
 
   // ========== IGoAtlas 实现 ==========
 
   async generateAtlas(
     rootPath: string,
-    options: AtlasGenerationOptions
+    options: AtlasGenerationOptions = {}
   ): Promise<GoArchitectureAtlas> {
-    // 1. 通过 GoPlugin 公共 API 获取原始数据
-    const rawData = await this.goPlugin.parseToRawData(rootPath, {});
+    // 1. 通过 GoPlugin 公共 API 获取原始数据（含函数体提取选项）
+    const rawData = await this.goPlugin.parseToRawData(rootPath, {
+      workspaceRoot: rootPath,
+      excludePatterns: ['**/vendor/**', '**/testdata/**'],
+      extractBodies: options.functionBodyStrategy !== 'none',
+      selectiveExtraction: options.functionBodyStrategy === 'selective',
+    });
 
-    // 2. 如需函数体，使用增强解析
-    let enrichedData = rawData;
-    if (options.functionBodyStrategy && options.functionBodyStrategy !== 'none') {
-      enrichedData = await this.enrichWithFunctionBodies(rawData, rootPath, options);
-    }
-
-    // 3. 并行构建四层架构图
+    // 2. 并行构建四层架构图（函数体已在 parseToRawData 中一次性提取）
     const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
-      this.behaviorAnalyzer.buildPackageGraph(enrichedData),
-      this.behaviorAnalyzer.buildCapabilityGraph(enrichedData),
-      this.behaviorAnalyzer.buildGoroutineTopology(enrichedData, options),
-      this.behaviorAnalyzer.buildFlowGraph(enrichedData, options),
+      this.behaviorAnalyzer.buildPackageGraph(rawData),
+      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
+      this.behaviorAnalyzer.buildGoroutineTopology(rawData, options),
+      this.behaviorAnalyzer.buildFlowGraph(rawData, options),
     ]);
 
     return {
       version: '1.0',
       layers: { package: packageGraph, capability: capabilityGraph, goroutine: goroutineTopology, flow: flowGraph },
-      metadata: this.buildAtlasMetadata(enrichedData, options, packageGraph, capabilityGraph, goroutineTopology, flowGraph),
+      metadata: this.buildAtlasMetadata(rawData, options, packageGraph, capabilityGraph, goroutineTopology, flowGraph),
     };
   }
 
@@ -192,25 +206,24 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
 
   private async parseProjectWithAtlas(
     workspaceRoot: string,
-    config: ParseConfig & { atlas: AtlasConfig }
+    config: ParseConfig,
+    atlasConfig: AtlasConfig
   ): Promise<ArchJSON> {
     // 1. 获取基础 ArchJSON
     const baseArchJSON = await this.goPlugin.parseProject(workspaceRoot, config);
 
     // 2. 生成 Atlas
     const atlas = await this.generateAtlas(workspaceRoot, {
-      functionBodyStrategy: config.atlas.functionBodyStrategy,
-      includeTests: config.atlas.includeTests ?? false,
-      entryPointTypes: config.atlas.entryPointTypes,
-      followIndirectCalls: config.atlas.followIndirectCalls ?? false,
+      functionBodyStrategy: atlasConfig.functionBodyStrategy,
+      includeTests: atlasConfig.includeTests ?? false,
+      entryPointTypes: atlasConfig.entryPointTypes,
+      followIndirectCalls: atlasConfig.followIndirectCalls ?? false,
     });
 
     // 3. 添加 Atlas 扩展
     return {
       ...baseArchJSON,
-      extensions: {
-        goAtlas: atlas,
-      },
+      extensions: { goAtlas: atlas },
     };
   }
 
@@ -234,21 +247,17 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
 
 #### 2. 配置驱动的行为
 
-```typescript
-interface ParseConfig {
-  // 标准配置
-  filePattern?: string;
-  exclude?: string[];
+Atlas 配置通过 `ParseConfig.languageSpecific.atlas` 传递，不修改 `ParseConfig` 接口：
 
-  // Atlas 扩展配置
-  atlas?: {
-    enabled: boolean;
-    functionBodyStrategy: 'none' | 'selective' | 'full';
-    layers?: AtlasLayer[];
-    includeTests?: boolean;
-    entryPointTypes?: EntryPointType[];
-    followIndirectCalls?: boolean;
-  };
+```typescript
+// AtlasConfig（通过 languageSpecific 传递）
+interface AtlasConfig {
+  enabled: boolean;
+  functionBodyStrategy?: 'none' | 'selective' | 'full';
+  layers?: AtlasLayer[];
+  includeTests?: boolean;
+  entryPointTypes?: EntryPointType[];
+  followIndirectCalls?: boolean;
 }
 ```
 
@@ -256,16 +265,22 @@ interface ParseConfig {
 ```typescript
 // 标准 Go 解析（无 Atlas）
 const archJSON = await plugin.parseProject('/path/to/go/project', {
+  workspaceRoot: '/path/to/go/project',
+  excludePatterns: ['**/vendor/**'],
   filePattern: '**/*.go',
 });
 
-// 启用 Atlas
+// 启用 Atlas（通过 languageSpecific）
 const atlasArchJSON = await plugin.parseProject('/path/to/go/project', {
+  workspaceRoot: '/path/to/go/project',
+  excludePatterns: ['**/vendor/**'],
   filePattern: '**/*.go',
-  atlas: {
-    enabled: true,
-    functionBodyStrategy: 'selective',
-    layers: ['package', 'capability'],
+  languageSpecific: {
+    atlas: {
+      enabled: true,
+      functionBodyStrategy: 'selective',
+      layers: ['package', 'capability'],
+    },
   },
 });
 ```
@@ -282,7 +297,10 @@ describe('GoPlugin', () => {
 
   it('should expose raw data via parseToRawData()', () => {
     const plugin = new GoPlugin();
-    const rawData = await plugin.parseToRawData('/path', {});
+    const rawData = await plugin.parseToRawData('/path', {
+      workspaceRoot: '/path',
+      excludePatterns: [],
+    });
     expect(rawData.packages).toBeDefined();
   });
 });
@@ -380,12 +398,13 @@ class GoAtlasPlugin implements ILanguagePlugin { /* ... */ }
 ## 相关决策
 
 - [ADR-002: ArchJSON extensions 设计](./002-archjson-extensions.md)
-- [Proposal 16: Go Architecture Atlas v5.0](../proposals/16-go-architecture-atlas.md)
+- [Proposal 16: Go Architecture Atlas v5.1](../proposals/16-go-architecture-atlas.md)
 
 ---
 
-**文档版本**: 1.1
+**文档版本**: 1.2
 **最后更新**: 2026-02-24
 **状态**: 已采纳 - 待实施
 **变更记录**:
 - v1.1: 消除 `this.goPlugin['treeSitter']` bracket hack，改为使用 `GoPlugin.parseToRawData()` 公共 API；移除 `FunctionBodyExtractor` 独立组件（函数体提取集成到 TreeSitterBridge 统一 API 中）；更新版本号至 5.0.0；返回值类型对齐 ADR-002 `GoAtlasExtension`
+- v1.2: 补全 PluginMetadata 必填字段 `author`/`minCoreVersion`；插件名称改为 `'golang'`（替代 GoPlugin，兼容 Registry 自动检测）；`parseToRawData()` 签名改为 `ParseConfig & TreeSitterParseOptions`（满足必填字段 + 集成 body 提取）；`dependencyExtractor` 从 getter 改为 readonly 属性；新增 `parseCode()`/`parseFiles()` 委托；Atlas 配置通过 `ParseConfig.languageSpecific.atlas` 传递；移除 `enrichWithFunctionBodies()`

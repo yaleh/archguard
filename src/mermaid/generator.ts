@@ -107,7 +107,9 @@ export class ValidatedMermaidGenerator {
         } else {
           // Add at the beginning (after classDiagram but before diagram content)
           // Insert after comments but before the first diagram line
-          const insertIndex = lines.findIndex((line) => !line.startsWith('%%') && line !== 'classDiagram');
+          const insertIndex = lines.findIndex(
+            (line) => !line.startsWith('%%') && line !== 'classDiagram'
+          );
           if (insertIndex !== -1) {
             lines.splice(insertIndex, 0, visibleTitle);
           }
@@ -149,7 +151,9 @@ export class ValidatedMermaidGenerator {
           }
 
           if (warningParts.length > 0) {
-            filteredWarnings.push(`  - ${relation.source} -> ${relation.target} (${warningParts.join(', ')})`);
+            filteredWarnings.push(
+              `  - ${relation.source} -> ${relation.target} (${warningParts.join(', ')})`
+            );
           }
         }
       }
@@ -157,7 +161,9 @@ export class ValidatedMermaidGenerator {
 
     // Print warnings (if any)
     if (filteredWarnings.length > 0) {
-      console.warn(`⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`);
+      console.warn(
+        `⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`
+      );
       console.warn(filteredWarnings.join('\n'));
     }
 

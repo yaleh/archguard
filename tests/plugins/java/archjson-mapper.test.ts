@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/java/archjson-mapper.js';
-import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from '@/plugins/java/types.js';
+import type {
+  JavaRawPackage,
+  JavaRawClass,
+  JavaRawInterface,
+  JavaRawEnum,
+} from '@/plugins/java/types.js';
 
 describe('JavaArchJsonMapper', () => {
   let mapper: ArchJsonMapper;
@@ -193,7 +198,7 @@ describe('JavaArchJsonMapper', () => {
       };
 
       const entities = mapper.mapEntities([pkg]);
-      const fields = entities[0].members.filter(m => m.type === 'field');
+      const fields = entities[0].members.filter((m) => m.type === 'field');
 
       expect(fields).toHaveLength(2);
       expect(fields[0].name).toBe('name');
@@ -225,9 +230,7 @@ describe('JavaArchJsonMapper', () => {
               {
                 name: 'setName',
                 returnType: 'void',
-                parameters: [
-                  { name: 'name', type: 'String', annotations: [] },
-                ],
+                parameters: [{ name: 'name', type: 'String', annotations: [] }],
                 modifiers: ['public'],
                 annotations: [],
                 isAbstract: false,
@@ -246,7 +249,7 @@ describe('JavaArchJsonMapper', () => {
       };
 
       const entities = mapper.mapEntities([pkg]);
-      const methods = entities[0].members.filter(m => m.type === 'method');
+      const methods = entities[0].members.filter((m) => m.type === 'method');
 
       expect(methods).toHaveLength(2);
       expect(methods[0].name).toBe('getName');
@@ -291,7 +294,7 @@ describe('JavaArchJsonMapper', () => {
       };
 
       const entities = mapper.mapEntities([pkg]);
-      const constructors = entities[0].members.filter(m => m.type === 'constructor');
+      const constructors = entities[0].members.filter((m) => m.type === 'constructor');
 
       expect(constructors).toHaveLength(1);
       expect(constructors[0].name).toBe('User');
@@ -532,7 +535,7 @@ describe('JavaArchJsonMapper', () => {
 
       const relations = mapper.mapRelations([pkg]);
 
-      const dependencies = relations.filter(r => r.type === 'dependency');
+      const dependencies = relations.filter((r) => r.type === 'dependency');
       expect(dependencies.length).toBeGreaterThan(0);
       expect(dependencies[0].source).toBe('com.example.UserService');
       expect(dependencies[0].target).toContain('UserRepository');
@@ -552,9 +555,7 @@ describe('JavaArchJsonMapper', () => {
             fields: [],
             methods: [],
             constructors: [],
-            annotations: [
-              { name: 'Deprecated', arguments: undefined },
-            ],
+            annotations: [{ name: 'Deprecated', arguments: undefined }],
             isAbstract: false,
             filePath: 'LegacyService.java',
             startLine: 1,

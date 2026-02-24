@@ -113,12 +113,7 @@ export class JavaPlugin implements ILanguagePlugin {
     const files = await glob(pattern, {
       cwd: workspaceRoot,
       absolute: true,
-      ignore: [
-        '**/target/**',
-        '**/build/**',
-        '**/node_modules/**',
-        ...config.excludePatterns,
-      ],
+      ignore: ['**/target/**', '**/build/**', '**/node_modules/**', ...config.excludePatterns],
     });
 
     // Parse all files
@@ -131,7 +126,7 @@ export class JavaPlugin implements ILanguagePlugin {
 
         // Merge into packages map
         if (packages.has(pkg.name)) {
-          const existing = packages.get(pkg.name)!;
+          const existing = packages.get(pkg.name);
           existing.classes.push(...pkg.classes);
           existing.interfaces.push(...pkg.interfaces);
           existing.enums.push(...pkg.enums);
@@ -210,7 +205,7 @@ export class JavaPlugin implements ILanguagePlugin {
 
         // Merge into packages map
         if (packages.has(pkg.name)) {
-          const existing = packages.get(pkg.name)!;
+          const existing = packages.get(pkg.name);
           existing.classes.push(...pkg.classes);
           existing.interfaces.push(...pkg.interfaces);
           existing.enums.push(...pkg.enums);

@@ -106,10 +106,10 @@ public class AdminUser extends User implements Service {
       const result = plugin.parseCode(code, 'AdminUser.java');
 
       expect(result.relations.length).toBeGreaterThan(0);
-      const inheritanceRel = result.relations.find(r => r.type === 'inheritance');
+      const inheritanceRel = result.relations.find((r) => r.type === 'inheritance');
       expect(inheritanceRel).toBeDefined();
 
-      const implRel = result.relations.find(r => r.type === 'implementation');
+      const implRel = result.relations.find((r) => r.type === 'implementation');
       expect(implRel).toBeDefined();
     });
   });

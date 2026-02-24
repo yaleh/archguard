@@ -27,6 +27,7 @@ import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
 import { createHash } from 'crypto';
+import path from 'path';
 
 /**
  * Options for DiagramProcessor
@@ -118,7 +119,7 @@ export class DiagramProcessor {
 
     // Initialize parallel progress for multiple diagrams
     if (this.diagrams.length > 1) {
-      const diagramNames = this.diagrams.map(d => d.name);
+      const diagramNames = this.diagrams.map((d) => d.name);
       this.parallelProgress = new ParallelProgressReporter(diagramNames);
     }
 
@@ -142,9 +143,7 @@ export class DiagramProcessor {
 
       // Log cache statistics in debug mode
       if (process.env.ArchGuardDebug === 'true') {
-        console.debug(
-          `📊 Cache stats: ${this.archJsonCache.size} entries`
-        );
+        console.debug(`📊 Cache stats: ${this.archJsonCache.size} entries`);
       }
 
       return results;
@@ -169,7 +168,7 @@ export class DiagramProcessor {
       if (!sourceGroups.has(key)) {
         sourceGroups.set(key, []);
       }
-      sourceGroups.get(key)!.push(diagram);
+      sourceGroups.get(key).push(diagram);
     }
 
     return sourceGroups;
@@ -183,7 +182,7 @@ export class DiagramProcessor {
    */
   private hashSources(sources: string[]): string {
     const normalized = sources
-      .map(s => s.replace(/\\/g, '/'))
+      .map((s) => s.replace(/\\/g, '/'))
       .sort()
       .join('|');
     return createHash('sha256').update(normalized).digest('hex').slice(0, 8);
@@ -212,6 +211,20 @@ export class DiagramProcessor {
     }
 
     try {
+      // Route Go diagrams through the Go plugin system
+      const firstDiagram = diagrams[0];
+      if (firstDiagram.language === 'go') {
+        const rawArchJSON = await this.parseGoProject(firstDiagram);
+        this.archJsonCache.set(sourceKey, rawArchJSON);
+
+        const results = await pMap(
+          diagrams,
+          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON),
+          { concurrency: this.globalConfig.concurrency || os.cpus().length }
+        );
+        return results;
+      }
+
       // Discover files from sources (all diagrams in group use same sources)
       const files = await this.fileDiscovery.discoverFiles({
         sources: diagrams[0].sources,
@@ -247,7 +260,7 @@ export class DiagramProcessor {
       const results = await pMap(
         diagrams,
         async (diagram) => {
-          return await this.processDiagramWithArchJSON(diagram, rawArchJSON!);
+          return await this.processDiagramWithArchJSON(diagram, rawArchJSON);
         },
         { concurrency: this.globalConfig.concurrency || os.cpus().length }
       );
@@ -256,7 +269,7 @@ export class DiagramProcessor {
     } catch (error) {
       // If the entire group fails, return error results for all diagrams in the group
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return diagrams.map(diagram => ({
+      return diagrams.map((diagram) => ({
         name: diagram.name,
         success: false,
         error: errorMessage,
@@ -438,7 +451,9 @@ export class DiagramProcessor {
         }
       }
 
-      this.progress.succeed(`✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`);
+      this.progress.succeed(
+        `✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`
+      );
 
       // Stage 2: Render all in parallel (I/O intensive)
       if (allRenderJobs.length > 0) {
@@ -483,6 +498,29 @@ export class DiagramProcessor {
         error: errorMessage,
       }));
     }
+  }
+
+  /**
+   * Parse a Go project using GoAtlasPlugin
+   *
+   * Routes Go diagrams through the plugin system instead of ParallelParser.
+   * Uses GoAtlasPlugin which handles both standard Go parsing and Atlas mode.
+   *
+   * @param diagram - Diagram configuration with language === 'go'
+   * @returns Parsed ArchJSON (with optional Atlas extensions)
+   */
+  private async parseGoProject(diagram: DiagramConfig): Promise<ArchJSON> {
+    // Dynamic import to avoid loading Go plugin when not needed
+    const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
+    const plugin = new GoAtlasPlugin();
+    await plugin.initialize({ workspaceRoot: diagram.sources[0] });
+
+    const workspaceRoot = path.resolve(diagram.sources[0]);
+    return plugin.parseProject(workspaceRoot, {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      languageSpecific: diagram.languageSpecific,
+    });
   }
 
   /**

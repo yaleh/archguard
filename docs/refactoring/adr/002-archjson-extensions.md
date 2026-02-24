@@ -4,7 +4,7 @@
 **日期**: 2026-02-24
 **上下文**: Go Architecture Atlas 实施计划 Phase 4
 **决策者**: ArchGuard 架构团队
-**修订**: v1.1 - 结构化 cycles、扩展 PackageNode、补充 GoroutineNode.spawnType
+**修订**: v1.2 - 修正 selectiveConfig 字段名、对齐 Proposal v5.1
 
 ---
 
@@ -131,7 +131,11 @@ export interface GoAtlasMetadata {
 
     // 选择性提取配置（如果适用）
     selectiveConfig?: {
-      includedPatterns: string[];
+      /**
+       * 触发函数体提取的 AST 节点类型
+       * 例如: ['go_statement', 'send_statement', 'receive_expression']
+       */
+      triggerNodeTypes: string[];
       excludedTestFiles: boolean;
       extractedFunctionCount: number;
       totalFunctionCount: number;
@@ -377,7 +381,7 @@ const archJSON: ArchJSON = {
         generationStrategy: {
           functionBodyStrategy: 'selective',
           selectiveConfig: {
-            includedPatterns: ['.*Handler.*', '.*Start.*'],
+            triggerNodeTypes: ['go_statement', 'send_statement', 'receive_expression'],
             excludedTestFiles: true,
             extractedFunctionCount: 42,
             totalFunctionCount: 156,
@@ -634,7 +638,7 @@ relations: [
 ## 相关决策
 
 - [ADR-001: GoAtlasPlugin 组合模式](./001-goatlas-plugin-composition.md)
-- [Proposal 16: Go Architecture Atlas v5.0](../proposals/16-go-architecture-atlas.md)
+- [Proposal 16: Go Architecture Atlas v5.1](../proposals/16-go-architecture-atlas.md)
 
 ---
 
@@ -650,8 +654,9 @@ relations: [
 
 ---
 
-**文档版本**: 1.1
+**文档版本**: 1.2
 **最后更新**: 2026-02-24
 **状态**: 已采纳 - 待实施
 **变更记录**:
 - v1.1: `PackageGraph.cycles` 改为结构化 `PackageCycle[]`（含 severity）；`PackageNode.type` 新增 `'cmd'`；`PackageNode` 新增可选 `stats`；`GoroutineNode` 新增可选 `spawnType`
+- v1.2: `selectiveConfig.includedPatterns` 重命名为 `triggerNodeTypes`（语义修正：这是 AST 节点类型列表，非正则匹配模式）；更新示例对齐实际用法；交叉引用更新至 Proposal v5.1

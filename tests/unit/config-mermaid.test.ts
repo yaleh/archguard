@@ -122,7 +122,6 @@ describe('ConfigLoader - Mermaid Configuration', () => {
 
       await expect(loader.load(config)).rejects.toThrow(/validation failed/i);
     });
-
   });
 
   describe('PlantUML format deprecation', () => {

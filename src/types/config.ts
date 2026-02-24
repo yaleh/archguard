@@ -131,10 +131,10 @@ export interface DesignPatternInfo {
  * Design pattern categories
  */
 export type PatternCategory =
-  | 'creational'      // 创建型：Builder, Factory
-  | 'structural'      // 结构型：Facade, Adapter, Proxy
-  | 'behavioral'      // 行为型：Strategy, Observer, Template Method
-  | 'concurrency';    // 并发型：Parallel Processing
+  | 'creational' // 创建型：Builder, Factory
+  | 'structural' // 结构型：Facade, Adapter, Proxy
+  | 'behavioral' // 行为型：Strategy, Observer, Template Method
+  | 'concurrency'; // 并发型：Parallel Processing
 
 /**
  * Architectural decision record
@@ -312,10 +312,18 @@ export interface DiagramConfig {
    * Language plugin to use for this diagram
    *
    * If not specified, defaults to 'typescript'.
-   * Available plugins: 'typescript'
+   * Available plugins: 'typescript', 'go'
    * @default 'typescript'
    */
   language?: string;
+
+  /**
+   * Language-specific configuration options
+   *
+   * Passed through to ParseConfig.languageSpecific.
+   * Example: { atlas: { enabled: true, functionBodyStrategy: 'selective' } }
+   */
+  languageSpecific?: Record<string, unknown>;
 
   // ========== v2.1.0: Metadata Enhancement (Optional) ==========
 
@@ -533,4 +541,21 @@ export interface CLIOptions {
    * Mermaid renderer
    */
   mermaidRenderer?: 'isomorphic' | 'cli';
+
+  // ========== Go Architecture Atlas ==========
+
+  /** Enable Go Architecture Atlas mode */
+  atlas?: boolean;
+
+  /** Atlas layers to generate (comma-separated: package,capability,goroutine,flow) */
+  atlasLayers?: string;
+
+  /** Function body extraction strategy: none|selective|full */
+  atlasStrategy?: string;
+
+  /** Exclude test files from Atlas extraction */
+  atlasNoTests?: boolean;
+
+  /** Entry point types for flow graph (comma-separated) */
+  atlasEntryPoints?: string;
 }

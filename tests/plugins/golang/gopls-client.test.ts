@@ -76,9 +76,9 @@ describe('GoplsClient', () => {
       const workspaceRoot = path.resolve(__dirname, '../../fixtures/go');
       const filePath = path.join(workspaceRoot, 'sample.go');
 
-      await expect(
-        client.getImplementations('Runner', filePath, 11)
-      ).rejects.toThrow('GoplsClient not initialized');
+      await expect(client.getImplementations('Runner', filePath, 11)).rejects.toThrow(
+        'GoplsClient not initialized'
+      );
     });
 
     it('should handle file not found gracefully', async () => {
@@ -86,11 +86,7 @@ describe('GoplsClient', () => {
 
       await client.initialize(workspaceRoot);
 
-      const implementations = await client.getImplementations(
-        'Runner',
-        '/nonexistent/file.go',
-        1
-      );
+      const implementations = await client.getImplementations('Runner', '/nonexistent/file.go', 1);
 
       expect(implementations).toEqual([]);
     });
@@ -124,9 +120,9 @@ describe('GoplsClient', () => {
       const workspaceRoot = path.resolve(__dirname, '../../fixtures/go');
       const filePath = path.join(workspaceRoot, 'sample.go');
 
-      await expect(
-        client.getTypeInfo('Service', filePath, 17)
-      ).rejects.toThrow('GoplsClient not initialized');
+      await expect(client.getTypeInfo('Service', filePath, 17)).rejects.toThrow(
+        'GoplsClient not initialized'
+      );
     });
   });
 

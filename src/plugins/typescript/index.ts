@@ -14,13 +14,18 @@ import type {
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor, Dependency } from '@/core/interfaces/dependency.js';
-import type { IValidator, ValidationResult, ValidationError, ValidationWarning } from '@/core/interfaces/validation.js';
+import type {
+  IValidator,
+  ValidationResult,
+  ValidationError,
+  ValidationWarning,
+} from '@/core/interfaces/validation.js';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 
 /**
  * TypeScript/JavaScript plugin for ArchGuard
- * 
+ *
  * Wraps existing TypeScriptParser and ParallelParser to conform to
  * the ILanguagePlugin interface, enabling multi-language support.
  */

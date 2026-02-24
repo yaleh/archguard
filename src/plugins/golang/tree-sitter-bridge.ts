@@ -12,11 +12,28 @@ import type {
   GoRawStruct,
   GoRawInterface,
   GoFunction,
+  GoFunctionBody,
+  GoCallExpr,
+  GoSpawnStmt,
+  GoChannelOp,
   GoMethod,
   GoField,
   GoImport,
   GoSourceLocation,
 } from './types.js';
+
+/**
+ * Parse options for TreeSitterBridge
+ *
+ * DESIGN: Single entry point, options control behavior.
+ * Avoids double-parsing (no separate parseCode vs parseCodeWithBodies).
+ */
+export interface TreeSitterParseOptions {
+  /** Whether to extract function body behavior data (default false) */
+  extractBodies?: boolean;
+  /** Whether to use selective extraction (only functions with target AST nodes) */
+  selectiveExtraction?: boolean;
+}
 
 export class TreeSitterBridge {
   private parser: Parser;
@@ -28,10 +45,13 @@ export class TreeSitterBridge {
   }
 
   /**
-   * Parse a single Go source file
+   * Parse a single Go source file with optional function body extraction
+   *
+   * UNIFIED API: Single method, single parser.parse() call.
+   * Body extraction controlled by options.
    */
-  parseCode(code: string, filePath: string): GoRawPackage {
-    const tree = this.parser.parse(code);
+  parseCode(code: string, filePath: string, options?: TreeSitterParseOptions): GoRawPackage {
+    const tree = this.parser.parse(code); // Only parsed ONCE
     const rootNode = tree.rootNode;
 
     // Extract package name
@@ -47,7 +67,7 @@ export class TreeSitterBridge {
     const typeDecls = rootNode.descendantsOfType('type_declaration');
     for (const typeDecl of typeDecls) {
       // type_spec is a named child, not a field
-      const typeSpec = typeDecl.namedChildren.find(child => child.type === 'type_spec');
+      const typeSpec = typeDecl.namedChildren.find((child) => child.type === 'type_spec');
       if (!typeSpec) continue;
 
       const nameNode = typeSpec.childForFieldName('name');
@@ -66,25 +86,263 @@ export class TreeSitterBridge {
     // Extract methods for structs
     const methodDecls = rootNode.descendantsOfType('method_declaration');
     for (const methodDecl of methodDecls) {
-      const method = this.extractMethod(methodDecl, code, filePath);
+      const method = this.extractMethod(methodDecl, code, filePath, options);
       if (method && method.receiverType) {
         // Find the struct this method belongs to
-        const struct = structs.find(s => s.name === method.receiverType);
+        const struct = structs.find((s) => s.name === method.receiverType);
         if (struct) {
           struct.methods.push(method);
         }
       }
     }
 
+    // Extract functions (with optional bodies)
+    const functions = options?.extractBodies
+      ? this.extractFunctionsWithBodies(rootNode, code, filePath, packageName, options)
+      : this.extractFunctions(rootNode, code, filePath, packageName);
+
     return {
       id: packageName,
       name: packageName,
+      fullName: '', // Filled by caller (needs moduleRoot context)
       dirPath: '',
       imports,
       structs,
       interfaces,
-      functions: [], // TODO: Extract standalone functions
+      functions,
+      sourceFiles: [filePath],
     };
+  }
+
+  /**
+   * Extract standalone functions (without bodies)
+   */
+  private extractFunctions(
+    rootNode: Parser.SyntaxNode,
+    code: string,
+    filePath: string,
+    packageName: string
+  ): GoFunction[] {
+    const functions: GoFunction[] = [];
+    const funcDecls = rootNode.descendantsOfType('function_declaration');
+
+    for (const funcDecl of funcDecls) {
+      functions.push(this.extractFunctionSignature(funcDecl, code, filePath, packageName));
+    }
+
+    return functions;
+  }
+
+  /**
+   * Extract functions with optional body data
+   */
+  private extractFunctionsWithBodies(
+    rootNode: Parser.SyntaxNode,
+    code: string,
+    filePath: string,
+    packageName: string,
+    options: TreeSitterParseOptions
+  ): GoFunction[] {
+    const funcDecls = rootNode.descendantsOfType('function_declaration');
+    const functions: GoFunction[] = [];
+
+    for (const funcDecl of funcDecls) {
+      const func = this.extractFunctionSignature(funcDecl, code, filePath, packageName);
+
+      // Decide whether to extract body
+      const blockNode = funcDecl.childForFieldName('body');
+      if (blockNode) {
+        if (options.selectiveExtraction) {
+          // AST-based pre-scanning (NOT string matching)
+          if (this.shouldExtractBody(blockNode)) {
+            func.body = this.extractFunctionBody(blockNode, code, filePath);
+          }
+        } else {
+          // Full extraction
+          func.body = this.extractFunctionBody(blockNode, code, filePath);
+        }
+      }
+
+      functions.push(func);
+    }
+
+    return functions;
+  }
+
+  /**
+   * Extract a function's signature (name, params, return types)
+   */
+  private extractFunctionSignature(
+    funcDecl: Parser.SyntaxNode,
+    code: string,
+    filePath: string,
+    packageName: string
+  ): GoFunction {
+    const nameNode = funcDecl.childForFieldName('name');
+    const funcName = nameNode ? code.substring(nameNode.startIndex, nameNode.endIndex) : '';
+
+    const parameters = this.extractParameters(funcDecl, code, filePath);
+    const returnTypes = this.extractReturnTypes(funcDecl, code);
+
+    return {
+      name: funcName,
+      packageName,
+      parameters,
+      returnTypes,
+      exported: this.isExported(funcName),
+      location: this.nodeToLocation(funcDecl, filePath),
+    };
+  }
+
+  /**
+   * Selective extraction: AST node type pre-scanning
+   *
+   * Uses descendantsOfType() instead of string matching.
+   * This avoids false positives from comments, variable names, etc.
+   */
+  private shouldExtractBody(blockNode: Parser.SyntaxNode): boolean {
+    const targetNodeTypes = [
+      'go_statement', // go func() / go namedFunc()
+      'send_statement', // ch <- value
+      'receive_expression', // <-ch
+    ];
+
+    return targetNodeTypes.some((nodeType) => blockNode.descendantsOfType(nodeType).length > 0);
+  }
+
+  /**
+   * Extract function body behavior data
+   */
+  private extractFunctionBody(
+    blockNode: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoFunctionBody {
+    return {
+      calls: this.extractCallExprs(blockNode, code, filePath),
+      goSpawns: this.extractGoSpawns(blockNode, code, filePath),
+      channelOps: this.extractChannelOps(blockNode, code, filePath),
+    };
+  }
+
+  /**
+   * Extract goroutine spawn statements
+   */
+  private extractGoSpawns(block: Parser.SyntaxNode, code: string, filePath: string): GoSpawnStmt[] {
+    const spawns: GoSpawnStmt[] = [];
+    const goStmts = block.descendantsOfType('go_statement');
+
+    for (const goStmt of goStmts) {
+      const children = goStmt.namedChildren;
+      if (children.length === 0) continue;
+
+      const expr = children[0]; // The spawned expression
+
+      if (expr.type === 'call_expression') {
+        const call = this.extractCallExpr(expr, code, filePath);
+        spawns.push({ call, location: this.nodeToLocation(goStmt, filePath) });
+      } else if (expr.type === 'func_literal') {
+        // go func() { ... }()
+        spawns.push({
+          call: { functionName: '<anonymous>', location: this.nodeToLocation(expr, filePath) },
+          location: this.nodeToLocation(goStmt, filePath),
+        });
+      }
+    }
+
+    return spawns;
+  }
+
+  /**
+   * Extract call expressions from a block
+   */
+  private extractCallExprs(block: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr[] {
+    const calls: GoCallExpr[] = [];
+    const callExprs = block.descendantsOfType('call_expression');
+
+    for (const callExpr of callExprs) {
+      calls.push(this.extractCallExpr(callExpr, code, filePath));
+    }
+
+    return calls;
+  }
+
+  private extractCallExpr(callExpr: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr {
+    const funcNode = callExpr.childForFieldName('function');
+    let functionName = '';
+    let packageName: string | undefined;
+    let receiverType: string | undefined;
+
+    if (funcNode) {
+      if (funcNode.type === 'identifier') {
+        functionName = code.substring(funcNode.startIndex, funcNode.endIndex);
+      } else if (funcNode.type === 'selector_expression') {
+        const operand = funcNode.childForFieldName('operand');
+        const field = funcNode.childForFieldName('field');
+        if (operand && field) {
+          packageName = code.substring(operand.startIndex, operand.endIndex);
+          functionName = code.substring(field.startIndex, field.endIndex);
+        }
+      }
+    }
+
+    return {
+      functionName,
+      packageName,
+      receiverType,
+      location: this.nodeToLocation(callExpr, filePath),
+    };
+  }
+
+  /**
+   * Extract channel operations
+   */
+  private extractChannelOps(
+    block: Parser.SyntaxNode,
+    code: string,
+    filePath: string
+  ): GoChannelOp[] {
+    const ops: GoChannelOp[] = [];
+
+    // send_statement: ch <- value
+    for (const sendStmt of block.descendantsOfType('send_statement')) {
+      const channel = sendStmt.childForFieldName('channel');
+      ops.push({
+        channelName: channel ? code.substring(channel.startIndex, channel.endIndex) : '',
+        operation: 'send',
+        location: this.nodeToLocation(sendStmt, filePath),
+      });
+    }
+
+    // receive_expression: <-ch
+    for (const recvExpr of block.descendantsOfType('receive_expression')) {
+      const operand = recvExpr.namedChildren[0];
+      ops.push({
+        channelName: operand ? code.substring(operand.startIndex, operand.endIndex) : '',
+        operation: 'receive',
+        location: this.nodeToLocation(recvExpr, filePath),
+      });
+    }
+
+    // make(chan T, size) — detect via call_expression
+    for (const callExpr of block.descendantsOfType('call_expression')) {
+      const funcNode = callExpr.childForFieldName('function');
+      if (funcNode && code.substring(funcNode.startIndex, funcNode.endIndex) === 'make') {
+        const args = callExpr.childForFieldName('arguments');
+        if (args) {
+          const firstArg = args.namedChildren[0];
+          if (firstArg && firstArg.type === 'channel_type') {
+            ops.push({
+              channelName: '',
+              operation: 'make',
+              location: this.nodeToLocation(callExpr, filePath),
+            });
+          }
+        }
+      }
+    }
+
+    return ops;
   }
 
   /**
@@ -123,9 +381,7 @@ export class TreeSitterBridge {
         path = path.replace(/^["']|["']$/g, '');
 
         const nameNode = importSpec.childForFieldName('name');
-        const alias = nameNode
-          ? code.substring(nameNode.startIndex, nameNode.endIndex)
-          : undefined;
+        const alias = nameNode ? code.substring(nameNode.startIndex, nameNode.endIndex) : undefined;
 
         imports.push({
           path,
@@ -168,9 +424,7 @@ export class TreeSitterBridge {
     }
 
     // Get all field_declaration children
-    const fieldDecls = fieldDeclList.children.filter(
-      (child) => child.type === 'field_declaration'
-    );
+    const fieldDecls = fieldDeclList.children.filter((child) => child.type === 'field_declaration');
 
     for (const fieldDecl of fieldDecls) {
       // Get all named children (should be field name identifiers and type)
@@ -183,9 +437,9 @@ export class TreeSitterBridge {
       const typeText = code.substring(typeNode.startIndex, typeNode.endIndex);
 
       // Check if there are name identifiers before the type
-      const nameNodes = namedChildren.slice(0, -1).filter(
-        (child) => child.type === 'field_identifier' || child.type === 'identifier'
-      );
+      const nameNodes = namedChildren
+        .slice(0, -1)
+        .filter((child) => child.type === 'field_identifier' || child.type === 'identifier');
 
       if (nameNodes.length === 0) {
         // Embedded field (no names, just type)
@@ -196,7 +450,7 @@ export class TreeSitterBridge {
           const fieldName = code.substring(nameNode.startIndex, nameNode.endIndex);
 
           // Extract tag if present
-          const tagNode = fieldDecl.children.find(child => child.type === 'raw_string_literal');
+          const tagNode = fieldDecl.children.find((child) => child.type === 'raw_string_literal');
           const tag = tagNode
             ? code.substring(tagNode.startIndex, tagNode.endIndex).replace(/`/g, '')
             : undefined;
@@ -237,9 +491,7 @@ export class TreeSitterBridge {
     const embeddedInterfaces: string[] = [];
 
     // Get all method_elem children (interface methods)
-    const methodElems = interfaceNode.namedChildren.filter(
-      (child) => child.type === 'method_elem'
-    );
+    const methodElems = interfaceNode.namedChildren.filter((child) => child.type === 'method_elem');
 
     for (const methodElem of methodElems) {
       const nameNode = methodElem.childForFieldName('name');
@@ -286,21 +538,17 @@ export class TreeSitterBridge {
     const parameters: GoField[] = [];
 
     // Find parameter_list
-    const paramList = node.namedChildren.find(child => child.type === 'parameter_list');
+    const paramList = node.namedChildren.find((child) => child.type === 'parameter_list');
     if (!paramList) return parameters;
 
     // Get parameter_declaration children
     const paramDecls = paramList.namedChildren.filter(
-      child => child.type === 'parameter_declaration'
+      (child) => child.type === 'parameter_declaration'
     );
 
     for (const paramDecl of paramDecls) {
-      const nameList = paramDecl.namedChildren.filter(
-        child => child.type === 'identifier'
-      );
-      const typeNode = paramDecl.namedChildren.find(
-        child => child.type !== 'identifier'
-      );
+      const nameList = paramDecl.namedChildren.filter((child) => child.type === 'identifier');
+      const typeNode = paramDecl.namedChildren.find((child) => child.type !== 'identifier');
 
       if (!typeNode) continue;
 
@@ -350,13 +598,9 @@ export class TreeSitterBridge {
         // This should be a return type
         if (child.type === 'parameter_list') {
           // Multiple return values
-          const types = child.namedChildren.filter(
-            c => c.type === 'parameter_declaration'
-          );
+          const types = child.namedChildren.filter((c) => c.type === 'parameter_declaration');
           for (const typeDecl of types) {
-            const typeNode = typeDecl.namedChildren.find(
-              c => c.type !== 'identifier'
-            );
+            const typeNode = typeDecl.namedChildren.find((c) => c.type !== 'identifier');
             if (typeNode) {
               returnTypes.push(code.substring(typeNode.startIndex, typeNode.endIndex));
             }
@@ -377,7 +621,8 @@ export class TreeSitterBridge {
   private extractMethod(
     methodDecl: Parser.SyntaxNode,
     code: string,
-    filePath: string
+    filePath: string,
+    options?: TreeSitterParseOptions
   ): GoMethod | null {
     const nameNode = methodDecl.childForFieldName('name');
     if (!nameNode) return null;
@@ -393,15 +638,27 @@ export class TreeSitterBridge {
       if (paramList.length > 0) {
         const typeNode = paramList[0].childForFieldName('type');
         if (typeNode) {
-          receiverType = code
-            .substring(typeNode.startIndex, typeNode.endIndex)
-            .replace(/^\*/, ''); // Remove pointer indicator
+          receiverType = code.substring(typeNode.startIndex, typeNode.endIndex).replace(/^\*/, ''); // Remove pointer indicator
         }
       }
     }
 
     const parameters = this.extractParameters(methodDecl, code, filePath);
     const returnTypes = this.extractReturnTypes(methodDecl, code);
+
+    let body: GoFunctionBody | undefined;
+    if (options?.extractBodies) {
+      const blockNode = methodDecl.childForFieldName('body');
+      if (blockNode) {
+        if (options.selectiveExtraction) {
+          if (this.shouldExtractBody(blockNode)) {
+            body = this.extractFunctionBody(blockNode, code, filePath);
+          }
+        } else {
+          body = this.extractFunctionBody(blockNode, code, filePath);
+        }
+      }
+    }
 
     return {
       name: methodName,
@@ -410,17 +667,14 @@ export class TreeSitterBridge {
       returnTypes,
       exported: this.isExported(methodName),
       location: this.nodeToLocation(methodDecl, filePath),
+      body,
     };
   }
 
   /**
    * Extract parameters from method/function
    */
-  private extractParameters(
-    node: Parser.SyntaxNode,
-    code: string,
-    filePath: string
-  ): GoField[] {
+  private extractParameters(node: Parser.SyntaxNode, code: string, filePath: string): GoField[] {
     const parameters: GoField[] = [];
     const paramsNode = node.childForFieldName('parameters');
 

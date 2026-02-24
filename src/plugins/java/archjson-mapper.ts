@@ -2,18 +2,8 @@
  * ArchJSON Mapper - Convert Java raw data to ArchJSON format
  */
 
-import type {
-  Entity,
-  Relation,
-  Member,
-  Visibility,
-} from '@/types/index.js';
-import type {
-  JavaRawPackage,
-  JavaRawClass,
-  JavaRawInterface,
-  JavaRawEnum,
-} from './types.js';
+import type { Entity, Relation, Member, Visibility } from '@/types/index.js';
+import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from './types.js';
 
 export class ArchJsonMapper {
   /**
@@ -55,9 +45,10 @@ export class ArchJsonMapper {
         type: 'field',
         visibility: this.mapVisibility(field.modifiers),
         fieldType: field.type,
-        decorators: field.annotations.length > 0
-          ? field.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-          : undefined,
+        decorators:
+          field.annotations.length > 0
+            ? field.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+            : undefined,
       });
     }
 
@@ -67,13 +58,14 @@ export class ArchJsonMapper {
         name: cls.name,
         type: 'constructor',
         visibility: this.mapVisibility(constructor.modifiers),
-        parameters: constructor.parameters.map(p => ({
+        parameters: constructor.parameters.map((p) => ({
           name: p.name,
           type: p.type,
         })),
-        decorators: constructor.annotations.length > 0
-          ? constructor.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-          : undefined,
+        decorators:
+          constructor.annotations.length > 0
+            ? constructor.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+            : undefined,
       });
     }
 
@@ -84,15 +76,16 @@ export class ArchJsonMapper {
         type: 'method',
         visibility: this.mapVisibility(method.modifiers),
         returnType: method.returnType,
-        parameters: method.parameters.map(p => ({
+        parameters: method.parameters.map((p) => ({
           name: p.name,
           type: p.type,
         })),
         isAbstract: method.isAbstract,
         isStatic: method.modifiers.includes('static'),
-        decorators: method.annotations.length > 0
-          ? method.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-          : undefined,
+        decorators:
+          method.annotations.length > 0
+            ? method.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+            : undefined,
       });
     }
 
@@ -107,9 +100,10 @@ export class ArchJsonMapper {
         startLine: cls.startLine,
         endLine: cls.endLine,
       },
-      decorators: cls.annotations.length > 0
-        ? cls.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-        : undefined,
+      decorators:
+        cls.annotations.length > 0
+          ? cls.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+          : undefined,
       isAbstract: cls.isAbstract,
       extends: cls.superClass ? [cls.superClass] : undefined,
       implements: cls.interfaces.length > 0 ? cls.interfaces : undefined,
@@ -129,14 +123,15 @@ export class ArchJsonMapper {
         type: 'method',
         visibility: this.mapVisibility(method.modifiers),
         returnType: method.returnType,
-        parameters: method.parameters.map(p => ({
+        parameters: method.parameters.map((p) => ({
           name: p.name,
           type: p.type,
         })),
         isAbstract: true, // Interface methods are implicitly abstract
-        decorators: method.annotations.length > 0
-          ? method.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-          : undefined,
+        decorators:
+          method.annotations.length > 0
+            ? method.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+            : undefined,
       });
     }
 
@@ -151,9 +146,10 @@ export class ArchJsonMapper {
         startLine: iface.startLine,
         endLine: iface.endLine,
       },
-      decorators: iface.annotations.length > 0
-        ? iface.annotations.map(a => ({ name: a.name, arguments: a.arguments }))
-        : undefined,
+      decorators:
+        iface.annotations.length > 0
+          ? iface.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
+          : undefined,
       extends: iface.extends.length > 0 ? iface.extends : undefined,
     };
   }
@@ -338,9 +334,25 @@ export class ArchJsonMapper {
    */
   private isUserDefinedType(type: string): boolean {
     const primitives = [
-      'void', 'boolean', 'byte', 'char', 'short', 'int', 'long', 'float', 'double',
-      'Boolean', 'Byte', 'Character', 'Short', 'Integer', 'Long', 'Float', 'Double',
-      'String', 'Object',
+      'void',
+      'boolean',
+      'byte',
+      'char',
+      'short',
+      'int',
+      'long',
+      'float',
+      'double',
+      'Boolean',
+      'Byte',
+      'Character',
+      'Short',
+      'Integer',
+      'Long',
+      'Float',
+      'Double',
+      'String',
+      'Object',
     ];
 
     // Check if it's a primitive

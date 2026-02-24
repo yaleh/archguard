@@ -36,16 +36,20 @@ const DiagramMetadataSchema = z.object({
   subtitle: z.string().optional(),
   purpose: z.string().optional(),
   primaryActors: z.array(z.string()).optional(),
-  input: z.object({
-    type: z.string(),
-    description: z.string().optional(),
-    example: z.string().optional(),
-  }).optional(),
-  output: z.object({
-    description: z.string(),
-    formats: z.array(z.string()).optional(),
-    example: z.string().optional(),
-  }).optional(),
+  input: z
+    .object({
+      type: z.string(),
+      description: z.string().optional(),
+      example: z.string().optional(),
+    })
+    .optional(),
+  output: z
+    .object({
+      description: z.string(),
+      formats: z.array(z.string()).optional(),
+      example: z.string().optional(),
+    })
+    .optional(),
 });
 
 // v2.1.0: Design pattern schema
@@ -61,12 +65,16 @@ const DesignInfoSchema = z.object({
   architectureStyle: z.enum(['layered', 'event-driven', 'microkernel', 'serverless']).optional(),
   patterns: z.array(DesignPatternInfoSchema).optional(),
   principles: z.array(z.string()).optional(),
-  decisions: z.array(z.object({
-    topic: z.string(),
-    decision: z.string(),
-    rationale: z.string(),
-    alternatives: z.array(z.string()).optional(),
-  })).optional(),
+  decisions: z
+    .array(
+      z.object({
+        topic: z.string(),
+        decision: z.string(),
+        rationale: z.string(),
+        alternatives: z.array(z.string()).optional(),
+      })
+    )
+    .optional(),
 });
 
 // v2.1.0: Process info schema
@@ -94,16 +102,20 @@ const AnnotationConfigSchema = z.object({
   includeUsageExample: z.boolean().optional(),
   // v2.1.1: Visible title in rendered images
   enableVisibleTitle: z.boolean().optional(),
-  visibleTitleSections: z.array(z.enum([
-    'title',
-    'subtitle',
-    'purpose',
-    'input',
-    'output',
-    'patterns',
-    'principles',
-    'process',
-  ])).optional(),
+  visibleTitleSections: z
+    .array(
+      z.enum([
+        'title',
+        'subtitle',
+        'purpose',
+        'input',
+        'output',
+        'patterns',
+        'principles',
+        'process',
+      ])
+    )
+    .optional(),
   titlePosition: z.enum(['top', 'bottom']).optional(),
 });
 
@@ -117,10 +129,12 @@ const ClassAnnotationSchema = z.object({
 const ClassHighlightConfigSchema = z.object({
   highlightClasses: z.array(z.string()).optional(),
   annotateClasses: z.array(ClassAnnotationSchema).optional(),
-  visibility: z.object({
-    show: z.array(z.string()).optional(),
-    hide: z.array(z.string()).optional(),
-  }).optional(),
+  visibility: z
+    .object({
+      show: z.array(z.string()).optional(),
+      hide: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 const configSchema = z.object({
@@ -159,14 +173,16 @@ const configSchema = z.object({
   verbose: z.boolean().default(false),
 
   // ========== v2.1.0: Root Metadata (Optional) ==========
-  metadata: z.object({
-    title: z.string().optional(),
-    description: z.string().optional(),
-    system: z.string().optional(),
-    author: z.string().optional(),
-    projectUrl: z.string().optional(),
-    keywords: z.array(z.string()).optional(),
-  }).optional(),
+  metadata: z
+    .object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      system: z.string().optional(),
+      author: z.string().optional(),
+      projectUrl: z.string().optional(),
+      keywords: z.array(z.string()).optional(),
+    })
+    .optional(),
 
   // ========== Diagrams Configuration (v2.0 Core Change + v2.1.0 Enhancement) ==========
   /**

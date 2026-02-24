@@ -80,13 +80,13 @@ describe('ArchJsonMapper', () => {
       expect(entity.members).toHaveLength(2);
 
       // Check constructor
-      const constructor = entity.members.find(m => m.name === '__init__');
+      const constructor = entity.members.find((m) => m.name === '__init__');
       expect(constructor).toBeDefined();
       expect(constructor?.type).toBe('method');
       expect(constructor?.parameters).toHaveLength(2);
 
       // Check method
-      const getName = entity.members.find(m => m.name === 'get_name');
+      const getName = entity.members.find((m) => m.name === 'get_name');
       expect(getName).toBeDefined();
       expect(getName?.returnType).toBe('str');
     });
@@ -187,7 +187,7 @@ describe('ArchJsonMapper', () => {
       expect(result.entities).toHaveLength(3);
       expect(result.relations).toHaveLength(2);
 
-      const inheritanceRelations = result.relations.filter(r => r.type === 'inheritance');
+      const inheritanceRelations = result.relations.filter((r) => r.type === 'inheritance');
       expect(inheritanceRelations).toHaveLength(2);
       expect(inheritanceRelations[0].source).toContain('AdminUser');
       expect(inheritanceRelations[0].target).toContain('User');
@@ -290,12 +290,12 @@ describe('ArchJsonMapper', () => {
       const entity = result.entities[0];
       expect(entity.members).toHaveLength(2);
 
-      const property = entity.members.find(m => m.name === 'radius');
+      const property = entity.members.find((m) => m.name === 'radius');
       expect(property).toBeDefined();
       expect(property?.decorators).toHaveLength(1);
       expect(property?.decorators?.[0].name).toBe('property');
 
-      const classmethod = entity.members.find(m => m.name === 'from_json');
+      const classmethod = entity.members.find((m) => m.name === 'from_json');
       expect(classmethod).toBeDefined();
       expect(classmethod?.decorators).toHaveLength(1);
       expect(classmethod?.decorators?.[0].name).toBe('classmethod');
@@ -341,7 +341,7 @@ describe('ArchJsonMapper', () => {
       const result = mapper.mapModule(module);
 
       const entity = result.entities[0];
-      const asyncMethod = entity.members.find(m => m.name === 'fetch_data');
+      const asyncMethod = entity.members.find((m) => m.name === 'fetch_data');
       expect(asyncMethod).toBeDefined();
       expect(asyncMethod?.isAsync).toBe(true);
     });
@@ -385,7 +385,7 @@ describe('ArchJsonMapper', () => {
       const result = mapper.mapModule(module);
 
       const entity = result.entities[0];
-      const privateMethod = entity.members.find(m => m.name === '__validate');
+      const privateMethod = entity.members.find((m) => m.name === '__validate');
       expect(privateMethod).toBeDefined();
       expect(privateMethod?.visibility).toBe('private');
     });
@@ -429,7 +429,7 @@ describe('ArchJsonMapper', () => {
       const result = mapper.mapModule(module);
 
       const entity = result.entities[0];
-      const staticMethod = entity.members.find(m => m.name === 'format_date');
+      const staticMethod = entity.members.find((m) => m.name === 'format_date');
       expect(staticMethod).toBeDefined();
       expect(staticMethod?.isStatic).toBe(true);
     });
@@ -452,16 +452,16 @@ describe('ArchJsonMapper', () => {
       // Imports should create dependency relations
       expect(result.relations.length).toBeGreaterThan(0);
 
-      const depRelations = result.relations.filter(r => r.type === 'dependency');
+      const depRelations = result.relations.filter((r) => r.type === 'dependency');
       expect(depRelations.length).toBe(3);
 
-      const osDep = depRelations.find(r => r.target === 'os');
+      const osDep = depRelations.find((r) => r.target === 'os');
       expect(osDep).toBeDefined();
 
-      const sysDep = depRelations.find(r => r.target === 'sys');
+      const sysDep = depRelations.find((r) => r.target === 'sys');
       expect(sysDep).toBeDefined();
 
-      const typingDep = depRelations.find(r => r.target === 'typing');
+      const typingDep = depRelations.find((r) => r.target === 'typing');
       expect(typingDep).toBeDefined();
     });
   });

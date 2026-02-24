@@ -94,11 +94,11 @@ func (s Service) Stop() {
 
       expect(result.entities).toHaveLength(2);
 
-      const iface = result.entities.find(e => e.name === 'Runner');
+      const iface = result.entities.find((e) => e.name === 'Runner');
       expect(iface).toBeDefined();
       expect(iface?.type).toBe('interface');
 
-      const struct = result.entities.find(e => e.name === 'Service');
+      const struct = result.entities.find((e) => e.name === 'Service');
       expect(struct).toBeDefined();
       expect(struct?.type).toBe('struct');
 
@@ -130,8 +130,8 @@ type Authenticator interface {
       const result = plugin.parseCode(code, 'test.go');
 
       expect(result.entities).toHaveLength(3);
-      expect(result.entities.filter(e => e.type === 'struct')).toHaveLength(2);
-      expect(result.entities.filter(e => e.type === 'interface')).toHaveLength(1);
+      expect(result.entities.filter((e) => e.type === 'struct')).toHaveLength(2);
+      expect(result.entities.filter((e) => e.type === 'interface')).toHaveLength(1);
     });
 
     it('should extract field visibility', () => {
@@ -147,8 +147,8 @@ type User struct {
       const result = plugin.parseCode(code, 'test.go');
 
       const user = result.entities[0];
-      const nameField = user.members.find(m => m.name === 'Name');
-      const ageField = user.members.find(m => m.name === 'age');
+      const nameField = user.members.find((m) => m.name === 'Name');
+      const ageField = user.members.find((m) => m.name === 'age');
 
       expect(nameField?.visibility).toBe('public');
       expect(ageField?.visibility).toBe('private');
@@ -170,7 +170,7 @@ func (u User) GetName() string {
       const result = plugin.parseCode(code, 'test.go');
 
       const user = result.entities[0];
-      const methods = user.members.filter(m => m.type === 'method');
+      const methods = user.members.filter((m) => m.type === 'method');
 
       expect(methods).toHaveLength(1);
       expect(methods[0].name).toBe('GetName');

@@ -89,11 +89,11 @@ func (u *User) SetName(name string) {
       expect(result.structs).toHaveLength(1);
       expect(result.structs[0].methods).toHaveLength(2);
 
-      const getNameMethod = result.structs[0].methods.find(m => m.name === 'GetName');
+      const getNameMethod = result.structs[0].methods.find((m) => m.name === 'GetName');
       expect(getNameMethod).toBeDefined();
       expect(getNameMethod?.returnTypes).toEqual(['string']);
 
-      const setNameMethod = result.structs[0].methods.find(m => m.name === 'SetName');
+      const setNameMethod = result.structs[0].methods.find((m) => m.name === 'SetName');
       expect(setNameMethod).toBeDefined();
       // Simplified - just check method exists, don't worry about parameter details for now
       expect(setNameMethod?.name).toBe('SetName');

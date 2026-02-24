@@ -26,7 +26,7 @@ type User struct {
     const rootNode = tree.rootNode;
 
     const typeDecls = rootNode.descendantsOfType('type_declaration');
-    const typeSpec = typeDecls[0].namedChildren.find(child => child.type === 'type_spec');
+    const typeSpec = typeDecls[0].namedChildren.find((child) => child.type === 'type_spec');
 
     if (!typeSpec) {
       console.log('No type_spec found');
@@ -52,7 +52,9 @@ type User struct {
       for (let i = 0; i < typeNode.childCount; i++) {
         const child = typeNode.child(i);
         if (child) {
-          console.log(`  ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`);
+          console.log(
+            `  ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`
+          );
         }
       }
 
@@ -60,14 +62,18 @@ type User struct {
       for (let i = 0; i < typeNode.namedChildCount; i++) {
         const child = typeNode.namedChild(i);
         if (child) {
-          console.log(`  ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`);
+          console.log(
+            `  ${i}: type="${child.type}", text="${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`
+          );
 
           if (child.type === 'field_declaration_list') {
             console.log('\n    Field declaration list children:');
             for (let j = 0; j < child.childCount; j++) {
               const fieldChild = child.child(j);
               if (fieldChild) {
-                console.log(`      ${j}: type="${fieldChild.type}", text="${code.substring(fieldChild.startIndex, fieldChild.endIndex)}"`);
+                console.log(
+                  `      ${j}: type="${fieldChild.type}", text="${code.substring(fieldChild.startIndex, fieldChild.endIndex)}"`
+                );
               }
             }
           }

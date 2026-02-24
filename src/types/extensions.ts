@@ -1,0 +1,228 @@
+/**
+ * ArchJSON extension types
+ *
+ * This file is the SINGLE SOURCE OF TRUTH for all language-specific extension types.
+ * As defined in ADR-002: ArchJSON Extensions v1.2
+ */
+
+// ========== Container ==========
+
+/**
+ * Type-safe extension container
+ */
+export interface ArchJSONExtensions {
+  goAtlas?: GoAtlasExtension;
+  // Future: javaAtlas?, rustAtlas?, ...
+}
+
+// ========== Go Atlas Extension ==========
+
+export const GO_ATLAS_EXTENSION_VERSION = '1.0';
+
+/**
+ * Go Architecture Atlas extension
+ */
+export interface GoAtlasExtension {
+  version: string; // "1.0"
+  layers: GoAtlasLayers;
+  metadata: GoAtlasMetadata;
+}
+
+/**
+ * Go Atlas layer definitions (partial generation supported)
+ */
+export interface GoAtlasLayers {
+  package?: PackageGraph;
+  capability?: CapabilityGraph;
+  goroutine?: GoroutineTopology;
+  flow?: FlowGraph;
+}
+
+/**
+ * Go Atlas metadata
+ */
+export interface GoAtlasMetadata {
+  generatedAt: string;
+  generationStrategy: {
+    functionBodyStrategy: 'none' | 'selective' | 'full';
+    selectiveConfig?: {
+      /**
+       * AST node types that trigger body extraction
+       * e.g. ['go_statement', 'send_statement', 'receive_expression']
+       */
+      triggerNodeTypes: string[];
+      excludedTestFiles: boolean;
+      extractedFunctionCount: number;
+      totalFunctionCount: number;
+    };
+    entryPointTypes: EntryPointType[];
+    followIndirectCalls: boolean;
+    goplsEnabled: boolean;
+  };
+  completeness: {
+    package: number; // 0.0 - 1.0 (always 1.0)
+    capability: number;
+    goroutine: number;
+    flow: number;
+  };
+  performance: {
+    fileCount: number;
+    parseTime: number; // ms
+    totalTime: number; // ms
+    memoryUsage: number; // bytes
+  };
+  warnings?: string[];
+}
+
+// ========== Package Dependency Graph ==========
+
+export interface PackageGraph {
+  nodes: PackageNode[];
+  edges: PackageDependency[];
+  cycles: PackageCycle[];
+}
+
+export interface PackageCycle {
+  packages: string[]; // list of package IDs in the cycle
+  severity: 'warning' | 'error';
+}
+
+export interface PackageNode {
+  id: string; // e.g. "github.com/archguard/swarm-hub/pkg/hub"
+  name: string; // e.g. "pkg/hub"
+  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd';
+  fileCount: number;
+  stats?: PackageStats;
+}
+
+export interface PackageStats {
+  structs: number;
+  interfaces: number;
+  functions: number;
+}
+
+export interface PackageDependency {
+  from: string; // package id
+  to: string; // package id
+  strength: number; // number of imported symbols
+  transitive?: boolean;
+}
+
+// ========== Capability Graph ==========
+
+export interface CapabilityGraph {
+  nodes: CapabilityNode[];
+  edges: CapabilityRelation[];
+}
+
+export interface CapabilityNode {
+  id: string;
+  name: string;
+  type: 'interface' | 'struct';
+  package: string;
+  exported: boolean;
+}
+
+export interface CapabilityRelation {
+  id: string;
+  type: 'implements' | 'uses';
+  source: string; // struct or function id
+  target: string; // interface id
+  confidence: number; // 0.0 - 1.0
+  context?: {
+    fieldType?: boolean;
+    parameterType?: boolean;
+    returnType?: boolean;
+    usageLocations: string[]; // "file:line" references
+  };
+}
+
+// ========== Goroutine Topology ==========
+
+export interface GoroutineTopology {
+  nodes: GoroutineNode[];
+  edges: SpawnRelation[];
+  channels: ChannelInfo[];
+}
+
+export interface GoroutineNode {
+  id: string;
+  name: string;
+  type: 'main' | 'spawned';
+  spawnType?: 'named_func' | 'anonymous_func' | 'method';
+  package: string;
+  location: {
+    file: string;
+    line: number;
+  };
+  pattern?: GoroutinePattern;
+}
+
+export type GoroutinePattern =
+  | 'worker-pool'
+  | 'pipeline'
+  | 'fan-out'
+  | 'fan-in'
+  | 'orchestrator'
+  | 'unknown';
+
+export interface SpawnRelation {
+  from: string; // spawner function id
+  to: string; // spawned function id
+  spawnType: 'go-func' | 'go-stmt';
+}
+
+export interface ChannelInfo {
+  id: string;
+  type: string; // e.g. "chan Job"
+  direction: 'send' | 'receive' | 'bidirectional';
+  bufferSize?: number;
+  location: {
+    file: string;
+    line: number;
+  };
+}
+
+// ========== Flow Graph ==========
+
+export interface FlowGraph {
+  entryPoints: EntryPoint[];
+  callChains: CallChain[];
+}
+
+export interface EntryPoint {
+  id: string;
+  type: EntryPointType;
+  path: string; // HTTP path or gRPC method
+  handler: string; // function id
+  middleware: string[]; // middleware function ids
+  location: {
+    file: string;
+    line: number;
+  };
+}
+
+export type EntryPointType =
+  | 'http-get'
+  | 'http-post'
+  | 'http-put'
+  | 'http-delete'
+  | 'http-patch'
+  | 'http-handler'
+  | 'grpc-unary'
+  | 'grpc-stream'
+  | 'cli-command';
+
+export interface CallChain {
+  id: string;
+  entryPoint: string; // entry point id
+  calls: CallEdge[];
+  errorPath?: CallEdge[];
+}
+
+export interface CallEdge {
+  from: string;
+  to: string;
+  type: 'direct' | 'interface' | 'indirect';
+  confidence: number;
+}

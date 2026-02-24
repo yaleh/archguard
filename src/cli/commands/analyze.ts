@@ -48,7 +48,18 @@ export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): Dia
       level: cliOptions.level || 'class',
       format: cliOptions.format,
       exclude: cliOptions.exclude,
-      language: cliOptions.lang,
+      language: cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined),
+      languageSpecific: cliOptions.atlas
+        ? {
+            atlas: {
+              enabled: true,
+              functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
+              includeTests: !cliOptions.atlasNoTests,
+              entryPointTypes: cliOptions.atlasEntryPoints?.split(',').map((s) => s.trim()),
+              layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
+            },
+          }
+        : undefined,
     };
     return [diagram];
   }
@@ -160,6 +171,25 @@ export function createAnalyzeCommand(): Command {
       .option('--cli-command <command>', 'Claude CLI command')
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
 
+      // ========== Go Architecture Atlas ==========
+      .option('--atlas', 'Enable Go Architecture Atlas mode (Go projects only)')
+      .option(
+        '--atlas-layers <layers>',
+        'Atlas layers to generate (comma-separated): package,capability,goroutine,flow',
+        'package,capability,goroutine,flow'
+      )
+      .option(
+        '--atlas-strategy <strategy>',
+        'Function body extraction strategy: none|selective|full',
+        'selective'
+      )
+      .option('--atlas-no-tests', 'Exclude test files from Atlas extraction')
+      .option(
+        '--atlas-entry-points <types>',
+        'Entry point types for flow graph (comma-separated)',
+        'http-handler,http-get,http-post'
+      )
+
       .action(analyzeCommandHandler)
   );
 }
@@ -196,10 +226,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     }
 
     // Mermaid-specific options
-    if (
-      cliOptions.mermaidTheme !== undefined ||
-      cliOptions.mermaidRenderer !== undefined
-    ) {
+    if (cliOptions.mermaidTheme !== undefined || cliOptions.mermaidRenderer !== undefined) {
       configOverrides.mermaid = {
         theme: cliOptions.mermaidTheme,
         renderer: cliOptions.mermaidRenderer,

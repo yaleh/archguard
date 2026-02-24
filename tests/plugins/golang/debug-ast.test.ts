@@ -54,7 +54,9 @@ type User struct {
       for (let j = 0; j < decl.namedChildCount; j++) {
         const child = decl.namedChild(j);
         if (child) {
-          console.log(`    ${j}: ${child.type} = "${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`);
+          console.log(
+            `    ${j}: ${child.type} = "${code.substring(child.startIndex, child.endIndex).substring(0, 30)}"`
+          );
         }
       }
     }
@@ -68,7 +70,10 @@ type User struct {
       console.log(`\nType spec ${i}:`);
       const nameNode = spec.childForFieldName('name');
       const typeNode = spec.childForFieldName('type');
-      console.log('  Name field:', nameNode ? code.substring(nameNode.startIndex, nameNode.endIndex) : 'null');
+      console.log(
+        '  Name field:',
+        nameNode ? code.substring(nameNode.startIndex, nameNode.endIndex) : 'null'
+      );
       console.log('  Type field type:', typeNode?.type);
 
       if (typeNode) {

@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { ArchJSON } from '@/types';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
-import { fs } from 'fs-extra';
+import fs from 'fs-extra';
 import path from 'path';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service.js';
@@ -34,7 +34,12 @@ describe('MermaidDiagramGenerator E2E', () => {
     const limitedFiles = files.slice(0, 20);
 
     const parser = new TypeScriptParser();
-    const results = await Promise.all(limitedFiles.map((file) => parser.parseFile(file)));
+    const results = await Promise.all(
+      limitedFiles.map(async (file) => {
+        const code = await fs.readFile(file, 'utf-8');
+        return parser.parseCode(code, file);
+      })
+    );
 
     // Aggregate results
     archJson = {

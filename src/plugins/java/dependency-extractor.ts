@@ -48,7 +48,8 @@ export class DependencyExtractor {
 
       // Parse XML using regex (simple approach for MVP)
       // In production, use a proper XML parser like 'fast-xml-parser'
-      const dependencyPattern = /<dependency>\s*<groupId>(.*?)<\/groupId>\s*<artifactId>(.*?)<\/artifactId>\s*<version>(.*?)<\/version>(?:\s*<scope>(.*?)<\/scope>)?/gs;
+      const dependencyPattern =
+        /<dependency>\s*<groupId>(.*?)<\/groupId>\s*<artifactId>(.*?)<\/artifactId>\s*<version>(.*?)<\/version>(?:\s*<scope>(.*?)<\/scope>)?/gs;
 
       let match;
       while ((match = dependencyPattern.exec(content)) !== null) {
@@ -86,7 +87,8 @@ export class DependencyExtractor {
       // Parse Gradle dependencies using regex
       // Matches: implementation 'group:artifact:version'
       // Matches: testImplementation 'group:artifact:version'
-      const dependencyPattern = /(implementation|testImplementation|runtimeOnly|compileOnly|api)\s+['"]([^:]+):([^:]+):([^'"]+)['"]/g;
+      const dependencyPattern =
+        /(implementation|testImplementation|runtimeOnly|compileOnly|api)\s+['"]([^:]+):([^:]+):([^'"]+)['"]/g;
 
       let match;
       while ((match = dependencyPattern.exec(content)) !== null) {

@@ -214,7 +214,7 @@ describe('InterfaceMatcher', () => {
 
       // Should find the implementation via gopls or fallback
       expect(results.length).toBeGreaterThan(0);
-      const serviceImpl = results.find(r => r.structName === 'Service');
+      const serviceImpl = results.find((r) => r.structName === 'Service');
       expect(serviceImpl).toBeDefined();
       expect(serviceImpl?.interfaceName).toBe('Runner');
       // Source can be either 'gopls' or 'inferred' (fallback)
@@ -253,7 +253,7 @@ describe('InterfaceMatcher', () => {
 
       const results = await matcher.matchWithGopls([struct], [iface], goplsClient);
 
-      const nonImpl = results.find(r => r.structName === 'NonImplementer');
+      const nonImpl = results.find((r) => r.structName === 'NonImplementer');
       expect(nonImpl).toBeUndefined();
     });
 
@@ -378,7 +378,7 @@ describe('InterfaceMatcher', () => {
       const results = await matcher.matchWithGopls([struct], [iface], goplsClient);
 
       expect(results.length).toBeGreaterThanOrEqual(1);
-      const impl = results.find(r => r.structName === 'Service' && r.interfaceName === 'Runner');
+      const impl = results.find((r) => r.structName === 'Service' && r.interfaceName === 'Runner');
       expect(impl).toBeDefined();
 
       await goplsClient.dispose();
@@ -433,7 +433,11 @@ describe('InterfaceMatcher', () => {
         methods: [],
         embeddedTypes: ['Base'],
         embeddedTypeRefs: [
-          { name: 'Base', isPointer: false, location: { file: 'test.go', startLine: 1, endLine: 1 } },
+          {
+            name: 'Base',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 1, endLine: 1 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 10, endLine: 15 },
@@ -500,7 +504,11 @@ describe('InterfaceMatcher', () => {
         methods: [],
         embeddedTypes: ['*Base'],
         embeddedTypeRefs: [
-          { name: 'Base', isPointer: true, location: { file: 'test.go', startLine: 1, endLine: 1 } },
+          {
+            name: 'Base',
+            isPointer: true,
+            location: { file: 'test.go', startLine: 1, endLine: 1 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 10, endLine: 15 },
@@ -624,7 +632,11 @@ describe('InterfaceMatcher', () => {
         ],
         embeddedTypes: ['Base'],
         embeddedTypeRefs: [
-          { name: 'Base', isPointer: false, location: { file: 'test.go', startLine: 8, endLine: 8 } },
+          {
+            name: 'Base',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 8, endLine: 8 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 8, endLine: 15 },
@@ -690,8 +702,16 @@ describe('InterfaceMatcher', () => {
         methods: [],
         embeddedTypes: ['A', 'B'],
         embeddedTypeRefs: [
-          { name: 'A', isPointer: false, location: { file: 'test.go', startLine: 11, endLine: 11 } },
-          { name: 'B', isPointer: false, location: { file: 'test.go', startLine: 12, endLine: 12 } },
+          {
+            name: 'A',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 11, endLine: 11 },
+          },
+          {
+            name: 'B',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 12, endLine: 12 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 11, endLine: 15 },
@@ -748,7 +768,11 @@ describe('InterfaceMatcher', () => {
         ],
         embeddedTypes: ['GrandParent'],
         embeddedTypeRefs: [
-          { name: 'GrandParent', isPointer: false, location: { file: 'test.go', startLine: 7, endLine: 7 } },
+          {
+            name: 'GrandParent',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 7, endLine: 7 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 7, endLine: 12 },
@@ -769,7 +793,11 @@ describe('InterfaceMatcher', () => {
         ],
         embeddedTypes: ['Parent'],
         embeddedTypeRefs: [
-          { name: 'Parent', isPointer: false, location: { file: 'test.go', startLine: 15, endLine: 15 } },
+          {
+            name: 'Parent',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 15, endLine: 15 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 15, endLine: 20 },
@@ -819,7 +847,11 @@ describe('InterfaceMatcher', () => {
         methods: [], // No direct methods
         embeddedTypes: ['Base'],
         embeddedTypeRefs: [
-          { name: 'Base', isPointer: false, location: { file: 'test.go', startLine: 6, endLine: 6 } },
+          {
+            name: 'Base',
+            isPointer: false,
+            location: { file: 'test.go', startLine: 6, endLine: 6 },
+          },
         ],
         exported: true,
         location: { file: 'test.go', startLine: 6, endLine: 10 },

@@ -202,10 +202,7 @@ export class DependencyExtractor implements IDependencyExtractor {
   /**
    * Parse Poetry dependencies section
    */
-  private parsePoetryDepsSection(
-    section: string,
-    scope: 'runtime' | 'development'
-  ): Dependency[] {
+  private parsePoetryDepsSection(section: string, scope: 'runtime' | 'development'): Dependency[] {
     const dependencies: Dependency[] = [];
     const lines = section.split('\n');
 
@@ -284,8 +281,8 @@ export class DependencyExtractor implements IDependencyExtractor {
       const items = match[1];
       const packageNames = items
         .split(',')
-        .map(s => s.trim().replace(/["']/g, ''))
-        .filter(s => s.length > 0);
+        .map((s) => s.trim().replace(/["']/g, ''))
+        .filter((s) => s.length > 0);
 
       packages.push(...packageNames);
     }

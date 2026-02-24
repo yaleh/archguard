@@ -2,13 +2,14 @@
  * ArchJSON Mapper - Convert Go raw data to ArchJSON format
  */
 
+import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
 import type {
-  ArchJSON,
-  Entity,
-  Relation,
-  Member,
-} from '@/types/index.js';
-import type { GoRawPackage, GoRawStruct, GoRawInterface, GoFunction, InferredImplementation } from './types.js';
+  GoRawPackage,
+  GoRawStruct,
+  GoRawInterface,
+  GoFunction,
+  InferredImplementation,
+} from './types.js';
 
 export class ArchJsonMapper {
   /**
@@ -55,7 +56,7 @@ export class ArchJsonMapper {
         type: 'method',
         visibility: method.exported ? 'public' : 'private',
         returnType: method.returnTypes.join(', ') || 'void',
-        parameters: method.parameters.map(p => ({
+        parameters: method.parameters.map((p) => ({
           name: p.name,
           type: p.type,
         })),
@@ -85,7 +86,7 @@ export class ArchJsonMapper {
         type: 'method',
         visibility: method.exported ? 'public' : 'private',
         returnType: method.returnTypes.join(', ') || 'void',
-        parameters: method.parameters.map(p => ({
+        parameters: method.parameters.map((p) => ({
           name: p.name,
           type: p.type,
         })),
@@ -105,10 +106,7 @@ export class ArchJsonMapper {
   /**
    * Map interface implementations to Relations
    */
-  mapRelations(
-    packages: GoRawPackage[],
-    implementations: InferredImplementation[]
-  ): Relation[] {
+  mapRelations(packages: GoRawPackage[], implementations: InferredImplementation[]): Relation[] {
     const relations: Relation[] = [];
 
     // Map implementations

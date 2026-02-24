@@ -216,7 +216,9 @@ export class MermaidDiagramGenerator {
     const progress = new ProgressReporter();
 
     try {
-      progress.start(`🎨 Rendering ${jobs.length} diagram${jobs.length > 1 ? 's' : ''} in parallel...`);
+      progress.start(
+        `🎨 Rendering ${jobs.length} diagram${jobs.length > 1 ? 's' : ''} in parallel...`
+      );
 
       await pMap(
         jobs,
@@ -261,7 +263,9 @@ export class MermaidDiagramGenerator {
       // Stage 1: Generate Mermaid code (CPU intensive)
       progress.start('📝 Generating Mermaid code...');
       const allRenderJobs = await this.generateOnly(archJson, outputOptions, level, diagramConfig);
-      progress.succeed(`✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`);
+      progress.succeed(
+        `✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`
+      );
 
       // Stage 2: Render all jobs in parallel (I/O intensive)
       progress.start('🎨 Rendering diagram...');

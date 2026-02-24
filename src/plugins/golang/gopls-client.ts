@@ -46,11 +46,14 @@ interface TypeInfo {
 export class GoplsClient {
   private process: ChildProcess | null = null;
   private nextId = 1;
-  private pendingRequests = new Map<number, {
-    resolve: (value: any) => void;
-    reject: (error: Error) => void;
-    timer: NodeJS.Timeout;
-  }>();
+  private pendingRequests = new Map<
+    number,
+    {
+      resolve: (value: any) => void;
+      reject: (error: Error) => void;
+      timer: NodeJS.Timeout;
+    }
+  >();
   private messageBuffer = '';
   private initialized = false;
   private workspaceRoot = '';
@@ -262,11 +265,7 @@ export class GoplsClient {
   /**
    * Get type information for a symbol
    */
-  async getTypeInfo(
-    symbol: string,
-    filePath: string,
-    line: number
-  ): Promise<TypeInfo | null> {
+  async getTypeInfo(symbol: string, filePath: string, line: number): Promise<TypeInfo | null> {
     if (!this.initialized) {
       throw new Error('GoplsClient not initialized. Call initialize() first.');
     }
@@ -305,9 +304,7 @@ export class GoplsClient {
 
       // Extract type info from hover contents
       const contents =
-        typeof result.contents === 'string'
-          ? result.contents
-          : result.contents.value || '';
+        typeof result.contents === 'string' ? result.contents : result.contents.value || '';
 
       return {
         name: symbol,
@@ -454,7 +451,7 @@ export class GoplsClient {
       const contentLength = Buffer.byteLength(messageStr, 'utf-8');
       const header = `Content-Length: ${contentLength}\r\n\r\n`;
 
-      this.process!.stdin!.write(header + messageStr);
+      this.process.stdin.write(header + messageStr);
     });
   }
 
@@ -496,7 +493,7 @@ export class GoplsClient {
 
       const contentLength = parseInt(headerMatch[1], 10);
       const headerLength = headerMatch[0].length;
-      const messageStart = headerMatch.index! + headerLength;
+      const messageStart = headerMatch.index + headerLength;
       const messageEnd = messageStart + contentLength;
 
       // Check if we have the complete message

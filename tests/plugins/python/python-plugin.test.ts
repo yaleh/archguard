@@ -57,10 +57,7 @@ describe('PythonPlugin', () => {
       // Create temp directory with pyproject.toml
       const pyprojectDir = path.join(tempDir, 'pyproject-project');
       await fs.ensureDir(pyprojectDir);
-      await fs.writeFile(
-        path.join(pyprojectDir, 'pyproject.toml'),
-        '[tool.poetry]\nname = "test"'
-      );
+      await fs.writeFile(path.join(pyprojectDir, 'pyproject.toml'), '[tool.poetry]\nname = "test"');
 
       expect(plugin.canHandle(pyprojectDir)).toBe(true);
 
@@ -195,15 +192,21 @@ class User:
       testFile1 = path.join(tempDir, 'module1.py');
       testFile2 = path.join(tempDir, 'module2.py');
 
-      await fs.writeFile(testFile1, `
+      await fs.writeFile(
+        testFile1,
+        `
 class Class1:
     pass
-      `.trim());
+      `.trim()
+      );
 
-      await fs.writeFile(testFile2, `
+      await fs.writeFile(
+        testFile2,
+        `
 class Class2:
     pass
-      `.trim());
+      `.trim()
+      );
     });
 
     it('should parse multiple files', async () => {
@@ -231,16 +234,13 @@ class Class2:
     });
 
     it('should extract dependencies from requirements.txt', async () => {
-      await fs.writeFile(
-        path.join(tempDir, 'requirements.txt'),
-        'flask==2.0.0\nrequests>=2.25.0'
-      );
+      await fs.writeFile(path.join(tempDir, 'requirements.txt'), 'flask==2.0.0\nrequests>=2.25.0');
 
-      const deps = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const deps = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       expect(deps.length).toBeGreaterThanOrEqual(2);
-      expect(deps.find(d => d.name === 'flask')).toBeDefined();
-      expect(deps.find(d => d.name === 'requests')).toBeDefined();
+      expect(deps.find((d) => d.name === 'flask')).toBeDefined();
+      expect(deps.find((d) => d.name === 'requests')).toBeDefined();
     });
 
     it('should extract dependencies from pyproject.toml', async () => {
@@ -255,11 +255,11 @@ pytest = "^6.2.0"
         `.trim()
       );
 
-      const deps = await plugin.dependencyExtractor!.extractDependencies(tempDir);
+      const deps = await plugin.dependencyExtractor.extractDependencies(tempDir);
 
       expect(deps.length).toBeGreaterThanOrEqual(2);
-      expect(deps.find(d => d.name === 'flask')?.scope).toBe('runtime');
-      expect(deps.find(d => d.name === 'pytest')?.scope).toBe('development');
+      expect(deps.find((d) => d.name === 'flask')?.scope).toBe('runtime');
+      expect(deps.find((d) => d.name === 'pytest')?.scope).toBe('development');
     });
   });
 
