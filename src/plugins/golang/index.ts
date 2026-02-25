@@ -140,7 +140,7 @@ export class GoPlugin implements ILanguagePlugin {
     const files = await glob(pattern, {
       cwd: workspaceRoot,
       absolute: true,
-      ignore: ['**/vendor/**', '**/node_modules/**'],
+      ignore: ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])],
     });
 
     const moduleName = await this.readModuleName(workspaceRoot);
