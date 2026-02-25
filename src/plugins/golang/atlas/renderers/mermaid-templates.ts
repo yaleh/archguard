@@ -3,6 +3,7 @@ import type {
   PackageGraph,
   PackageNode,
   CapabilityGraph,
+  CapabilityNode,
   GoroutineTopology,
   FlowGraph,
   EntryPoint,
@@ -183,21 +184,71 @@ export class MermaidTemplates {
   }
 
   static renderCapabilityGraph(graph: CapabilityGraph): string {
+    if (graph.nodes.length === 0) {
+      return 'flowchart LR';
+    }
+
     let output = 'flowchart LR\n';
 
+    // Group nodes by package
+    const nodesByPkg = new Map<string, CapabilityNode[]>();
     for (const node of graph.nodes) {
-      if (node.type === 'interface') {
-        output += `  ${this.sanitizeId(node.id)}{{"${node.name}"}}\n`;
-      } else {
-        output += `  ${this.sanitizeId(node.id)}["${node.name}"]\n`;
+      if (!nodesByPkg.has(node.package)) nodesByPkg.set(node.package, []);
+      nodesByPkg.get(node.package)!.push(node);
+    }
+
+    // Build package hierarchy
+    const packages = Array.from(nodesByPkg.keys()).sort();
+    const childrenMap = new Map<string, string[]>();
+    const hasParent = new Set<string>();
+
+    for (const pkg of packages) {
+      let parent: string | null = null;
+      for (const candidate of packages) {
+        if (candidate !== pkg && pkg.startsWith(candidate + '/')) {
+          if (parent === null || candidate.length > parent.length) {
+            parent = candidate;
+          }
+        }
+      }
+      if (parent !== null) {
+        if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+        childrenMap.get(parent)!.push(pkg);
+        hasParent.add(pkg);
       }
     }
 
+    const roots = packages.filter((p) => !hasParent.has(p));
+
+    const renderPkg = (pkg: string, indent: string): void => {
+      const pkgId = MermaidTemplates.sanitizeId(pkg);
+      output += `${indent}subgraph grp_${pkgId}["${pkg}"]\n`;
+      for (const node of nodesByPkg.get(pkg) ?? []) {
+        const nodeId = MermaidTemplates.sanitizeId(node.id);
+        if (node.type === 'interface') {
+          output += `${indent}  ${nodeId}{{"${node.name}"}}\n`;
+        } else {
+          output += `${indent}  ${nodeId}["${node.name}"]\n`;
+        }
+      }
+      for (const child of childrenMap.get(pkg) ?? []) {
+        renderPkg(child, indent + '  ');
+      }
+      output += `${indent}end\n`;
+    };
+
+    for (const root of roots) {
+      renderPkg(root, '');
+    }
+
+    // Render edges after all subgraphs
     for (const edge of graph.edges) {
+      const src = MermaidTemplates.sanitizeId(edge.source);
+      const tgt = MermaidTemplates.sanitizeId(edge.target);
       if (edge.type === 'implements') {
-        output += `  ${this.sanitizeId(edge.source)} -.->|impl| ${this.sanitizeId(edge.target)}\n`;
+        output += `  ${src} -.->|impl| ${tgt}\n`;
       } else {
-        output += `  ${this.sanitizeId(edge.source)} -->|uses| ${this.sanitizeId(edge.target)}\n`;
+        output += `  ${src} -->|uses| ${tgt}\n`;
       }
     }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
 import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
+import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '@/plugins/golang/atlas/types.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -855,5 +856,133 @@ describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
     expect(out).not.toMatch(/pkg\/hub/);
     expect(out).toContain('pkg_hub_WorkerPool_Start');
     expect(out).toContain('chan_pkg_hub_50');
+  });
+});
+
+// ─── renderCapabilityGraph — hierarchical subgraph grouping ──────────────────
+
+function makeCapNode(id: string, name: string, type: 'interface' | 'struct', pkg: string): CapabilityNode {
+  return { id, name, type, package: pkg, exported: true };
+}
+
+function makeCapEdge(source: string, target: string, type: 'implements' | 'uses'): CapabilityRelation {
+  return { id: `${type}-${source}-${target}`, type, source, target, confidence: 1.0 };
+}
+
+describe('renderCapabilityGraph', () => {
+  it('renders nodes in package subgraph', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    expect(output).toContain('pkg_hub_Server["Server"]');
+    expect(output).toContain('end');
+  });
+
+  it('renders interface nodes with diamond syntax inside subgraph', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    expect(output).toContain('pkg_hub_Store{{"Store"}}');
+  });
+
+  it('nests sub-package subgraph inside parent subgraph', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.WorkerPool', 'WorkerPool', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub/engine.Engine', 'Engine', 'struct', 'pkg/hub/engine'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // pkg/hub/engine subgraph should appear INSIDE pkg/hub subgraph
+    const hubStart = output.indexOf('subgraph grp_pkg_hub[');
+    const hubEnd = output.indexOf('\nend', hubStart);
+    const engineStart = output.indexOf('subgraph grp_pkg_hub_engine[');
+    expect(hubStart).toBeGreaterThan(-1);
+    expect(engineStart).toBeGreaterThan(hubStart);
+    expect(engineStart).toBeLessThan(hubEnd);
+  });
+
+  it('renders multiple top-level packages as separate subgraphs', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/adapter.RuntimeAdapter', 'RuntimeAdapter', 'interface', 'pkg/adapter'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    expect(output).toContain('subgraph grp_pkg_adapter["pkg/adapter"]');
+  });
+
+  it('renders edges after all subgraphs', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Engine', 'Engine', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Engine', 'pkg/hub.Store', 'implements')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    const lastEnd = output.lastIndexOf('\nend');
+    const edgeLine = output.indexOf('-.->|impl|');
+    expect(edgeLine).toBeGreaterThan(lastEnd);
+  });
+
+  it('renders implements edge with dashed arrow', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Server', 'pkg/hub.Store', 'implements')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('pkg_hub_Server -.->|impl| pkg_hub_Store');
+  });
+
+  it('renders uses edge with solid arrow', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Engine', 'Engine', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Engine', 'pkg/hub.Store', 'uses')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('pkg_hub_Engine -->|uses| pkg_hub_Store');
+  });
+
+  it('handles deeply nested packages (3 levels)', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub/engine.Engine', 'Engine', 'struct', 'pkg/hub/engine'),
+        makeCapNode('pkg/hub/engine/store.SQLiteStore', 'SQLiteStore', 'struct', 'pkg/hub/engine/store'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // All three subgraphs should exist with correct nesting order
+    expect(output).toContain('subgraph grp_pkg_hub[');
+    expect(output).toContain('subgraph grp_pkg_hub_engine[');
+    expect(output).toContain('subgraph grp_pkg_hub_engine_store[');
+    // engine/store subgraph must appear after engine subgraph
+    const engineIdx = output.indexOf('subgraph grp_pkg_hub_engine[');
+    const storeIdx = output.indexOf('subgraph grp_pkg_hub_engine_store[');
+    expect(storeIdx).toBeGreaterThan(engineIdx);
+  });
+
+  it('renders empty graph as flowchart LR with no subgraphs', () => {
+    const graph: CapabilityGraph = { nodes: [], edges: [] };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output.trim()).toBe('flowchart LR');
   });
 });

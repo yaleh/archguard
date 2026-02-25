@@ -71,7 +71,7 @@ describe('CapabilityGraphBuilder', () => {
     expect(node.exported).toBe(true);
   });
 
-  // Test 3: Struct node
+  // Test 3: Struct node — struct connected via implements edge is retained and has correct fields
   it('should build struct node with correct fields', async () => {
     const rawData = makeRawData({
       packages: [
@@ -90,22 +90,42 @@ describe('CapabilityGraphBuilder', () => {
               location: { file: 'api.go', startLine: 10, endLine: 15 },
             },
           ],
+          interfaces: [
+            {
+              name: 'Handler',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'api.go', startLine: 1, endLine: 5 },
+            },
+          ],
         }),
+      ],
+      implementations: [
+        {
+          structName: 'Server',
+          structPackageId: 'api',
+          interfaceName: 'Handler',
+          interfacePackageId: 'api',
+          confidence: 1.0,
+          matchedMethods: [],
+        },
       ],
     });
 
     const graph = await builder.build(rawData);
 
-    expect(graph.nodes).toHaveLength(1);
-    const node = graph.nodes[0];
-    expect(node.id).toBe('pkg/api.Server');
-    expect(node.name).toBe('Server');
-    expect(node.type).toBe('struct');
-    expect(node.package).toBe('pkg/api');
-    expect(node.exported).toBe(true);
+    const node = graph.nodes.find((n) => n.name === 'Server');
+    expect(node).toBeDefined();
+    expect(node?.id).toBe('pkg/api.Server');
+    expect(node?.name).toBe('Server');
+    expect(node?.type).toBe('struct');
+    expect(node?.package).toBe('pkg/api');
+    expect(node?.exported).toBe(true);
   });
 
-  // Test 4: Unexported struct
+  // Test 4: Unexported struct — connected via implements edge so it passes interface-centric filter
   it('should build unexported struct node with exported=false', async () => {
     const rawData = makeRawData({
       packages: [
@@ -121,14 +141,35 @@ describe('CapabilityGraphBuilder', () => {
               location: { file: 'api.go', startLine: 1, endLine: 5 },
             },
           ],
+          interfaces: [
+            {
+              name: 'Handler',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'api.go', startLine: 7, endLine: 10 },
+            },
+          ],
         }),
+      ],
+      implementations: [
+        {
+          structName: 'internalServer',
+          structPackageId: 'api',
+          interfaceName: 'Handler',
+          interfacePackageId: 'api',
+          confidence: 1.0,
+          matchedMethods: [],
+        },
       ],
     });
 
     const graph = await builder.build(rawData);
 
-    expect(graph.nodes).toHaveLength(1);
-    expect(graph.nodes[0].exported).toBe(false);
+    const structNode = graph.nodes.find((n) => n.name === 'internalServer');
+    expect(structNode).toBeDefined();
+    expect(structNode?.exported).toBe(false);
   });
 
   // Test 5: Implements edge from rawData.implementations
@@ -277,7 +318,7 @@ describe('CapabilityGraphBuilder', () => {
     expect(usesEdges).toHaveLength(0);
   });
 
-  // Test 8: Multiple packages — nodes from both included
+  // Test 8: Multiple packages — nodes from both included (structs retained via implements edges)
   it('should include nodes from all packages', async () => {
     const rawData = makeRawData({
       packages: [
@@ -323,6 +364,24 @@ describe('CapabilityGraphBuilder', () => {
             },
           ],
         }),
+      ],
+      implementations: [
+        {
+          structName: 'HTTPServer',
+          structPackageId: 'server',
+          interfaceName: 'Handler',
+          interfacePackageId: 'api',
+          confidence: 1.0,
+          matchedMethods: [],
+        },
+        {
+          structName: 'GRPCServer',
+          structPackageId: 'server',
+          interfaceName: 'Handler',
+          interfacePackageId: 'api',
+          confidence: 1.0,
+          matchedMethods: [],
+        },
       ],
     });
 
@@ -382,10 +441,12 @@ describe('CapabilityGraphBuilder', () => {
   });
 
   // Test 10: ID format verification — id is `${pkg.fullName}.${typeName}` exactly
+  // struct is retained via implements edge so both nodes appear in the filtered graph
   it('should format node id as pkg.fullName.TypeName exactly', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
+          name: 'service',
           fullName: 'github.com/myorg/myproject/internal/service',
           interfaces: [
             {
@@ -409,6 +470,16 @@ describe('CapabilityGraphBuilder', () => {
             },
           ],
         }),
+      ],
+      implementations: [
+        {
+          structName: 'userServiceImpl',
+          structPackageId: 'service',
+          interfaceName: 'UserService',
+          interfacePackageId: 'service',
+          confidence: 1.0,
+          matchedMethods: [],
+        },
       ],
     });
 
@@ -907,5 +978,193 @@ describe('CapabilityGraphBuilder', () => {
     expect(usesEdges).toHaveLength(1);
     expect(usesEdges[0].source).toBe('pkg/pool.Pool');
     expect(usesEdges[0].target).toBe('pkg/pool.Worker');
+  });
+
+  // Interface-centric filter: isolated struct is excluded
+  it('should exclude isolated struct with no edges', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          id: 'pkg/hub',
+          name: 'hub',
+          fullName: 'pkg/hub',
+          structs: [
+            {
+              name: 'IsolatedDTO',
+              packageName: 'hub',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'dto.go', startLine: 1, endLine: 5 },
+            },
+            {
+              name: 'UsedStruct',
+              packageName: 'hub',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'used.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [
+            {
+              name: 'MyInterface',
+              packageName: 'hub',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'iface.go', startLine: 1, endLine: 5 },
+            },
+          ],
+        }),
+      ],
+      implementations: [
+        {
+          structName: 'UsedStruct',
+          structPackageId: 'hub',
+          interfaceName: 'MyInterface',
+          interfacePackageId: 'hub',
+          confidence: 1.0,
+          matchedMethods: [],
+          source: 'inferred',
+        },
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    // IsolatedDTO should NOT be in nodes (no edges)
+    expect(graph.nodes.find((n) => n.name === 'IsolatedDTO')).toBeUndefined();
+    // UsedStruct and MyInterface should be in nodes
+    expect(graph.nodes.find((n) => n.name === 'UsedStruct')).toBeDefined();
+    expect(graph.nodes.find((n) => n.name === 'MyInterface')).toBeDefined();
+  });
+
+  // Interface-centric filter: interface with no edges is still kept
+  it('should keep interface node even when it has no edges', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'UnimplementedInterface',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'api.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          structs: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    // Interface always kept even with no edges
+    expect(graph.nodes).toHaveLength(1);
+    expect(graph.nodes[0].name).toBe('UnimplementedInterface');
+    expect(graph.nodes[0].type).toBe('interface');
+  });
+
+  // Interface-centric filter: struct referenced as edge TARGET is kept
+  it('should keep struct node that appears as edge target (uses dependency)', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          structs: [
+            {
+              name: 'Consumer',
+              packageName: 'hub',
+              fields: [
+                {
+                  name: 'dep',
+                  type: 'Dependency',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'hub.go', startLine: 3, endLine: 3 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'hub.go', startLine: 1, endLine: 10 },
+            },
+            {
+              name: 'Dependency',
+              packageName: 'hub',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'dep.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    // Consumer has uses edge → kept; Dependency is target → kept
+    expect(graph.nodes.find((n) => n.name === 'Consumer')).toBeDefined();
+    expect(graph.nodes.find((n) => n.name === 'Dependency')).toBeDefined();
+  });
+
+  // Edge deduplication: duplicate impl edges are removed
+  it('should deduplicate edges with same source, target, and type', async () => {
+    const impl = {
+      structName: 'Server',
+      structPackageId: 'api',
+      interfaceName: 'Handler',
+      interfacePackageId: 'api',
+      confidence: 1.0,
+      matchedMethods: [],
+      source: 'inferred' as const,
+    };
+
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          id: 'pkg/api',
+          name: 'api',
+          fullName: 'pkg/api',
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'server.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [
+            {
+              name: 'Handler',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'handler.go', startLine: 1, endLine: 5 },
+            },
+          ],
+        }),
+      ],
+      // Same impl twice (can happen when InterfaceMatcher processes multiple packages)
+      implementations: [impl, impl],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const implEdges = graph.edges.filter((e) => e.type === 'implements');
+    expect(implEdges).toHaveLength(1);
   });
 });

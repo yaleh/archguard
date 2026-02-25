@@ -12,8 +12,32 @@ import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '../typ
  */
 export class CapabilityGraphBuilder {
   build(rawData: GoRawData): Promise<CapabilityGraph> {
-    const nodes = this.buildNodes(rawData);
-    const edges = this.buildEdges(rawData);
+    const allNodes = this.buildNodes(rawData);
+    const rawEdges = this.buildEdges(rawData);
+
+    // Deduplicate edges: keep first occurrence of each (source, target, type) triple
+    const edgeSeen = new Set<string>();
+    const edges: CapabilityRelation[] = [];
+    for (const edge of rawEdges) {
+      const key = `${edge.type}:${edge.source}:${edge.target}`;
+      if (!edgeSeen.has(key)) {
+        edgeSeen.add(key);
+        edges.push(edge);
+      }
+    }
+
+    // Interface-centric filter:
+    // - Always keep interface nodes
+    // - Keep struct nodes only if referenced in at least one edge
+    const referencedIds = new Set<string>();
+    for (const edge of edges) {
+      referencedIds.add(edge.source);
+      referencedIds.add(edge.target);
+    }
+
+    const nodes = allNodes.filter(
+      (node) => node.type === 'interface' || referencedIds.has(node.id)
+    );
 
     return Promise.resolve({ nodes, edges });
   }
