@@ -486,6 +486,42 @@ Week 6-7: Phase 6 (发布和监控)
 
 ---
 
+### [16-go-architecture-atlas-implementation-plan.md](./16-go-architecture-atlas-implementation-plan.md)
+**🗺️ Plan 16: Go Architecture Atlas - 四层架构可观测系统**
+
+**预计时间**: 已完成
+**状态**: ✅ 已实现
+**对应提案**: [16-go-architecture-atlas.md](../proposals/16-go-architecture-atlas.md)
+
+---
+
+### [17-go-atlas-quality-improvements-plan.md](./17-go-atlas-quality-improvements-plan.md)
+**🔧 Plan 17: Go Atlas 图表质量改进**
+
+**预计时间**: 10-16 个工作日（3 个阶段并行执行）
+**状态**: Ready for Implementation
+**优先级**: High
+**对应提案**: [17-go-atlas-quality-improvements.md](../proposals/17-go-atlas-quality-improvements.md)
+**分支**: `feat/go`
+
+**7 个 TDD Iteration**:
+- Iter 1 (P0, ~1d): `--atlas-no-tests` 全局过滤（`AtlasConfig.excludeTests` + `excludePatterns`）
+- Iter 2 (P0, ~2d): Flow 层 `flowchart LR` 重设计（subgraph + HandleFunc 标签降级 + 向后兼容）
+- Iter 3 (P1, ~1d): Flow handler 方法追踪修复（补充 `pkg.structs[i].methods` 查找）
+- Iter 4 (P1, ~1d): Goroutine 节点命名修正（`.spawn-N` 正确分割 + `sanitizeId` 64 字符截断）
+- Iter 5 (P1, ~1d): Package 边去重（`Map` 统计 `strength`，模板侧已预留支持）
+- Iter 6 (P2, ~1d): Capability `implements` 边（BehaviorAnalyzer 调用 `InterfaceMatcher.matchImplicitImplementations`）
+- Iter 7 (P2, ~0.5d): Capability `uses` 边扩展（`allKnownTypeNames` = 接口 + struct，一行改动）
+
+**阶段目标**:
+- Phase 1 (P0): Package 节点 ≤28（过滤后），Flow 格式为 `flowchart LR`
+- Phase 2 (P1): Goroutine PNG 成功，方法 handler callchain 非空，Package 无重复边
+- Phase 3 (P2): Capability `implements` 边 > 0，`uses` 边 ≥ 50
+
+**Fixture 目录**: `tests/fixtures/go/` (5 个 fixture，CI 可重复执行)
+
+---
+
 ## 🗺️ 阅读路线
 
 ### 路线 1: 项目经理

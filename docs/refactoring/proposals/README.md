@@ -955,6 +955,54 @@ export class ELKRenderer {
 
 ---
 
+### [17-go-atlas-quality-improvements.md](./17-go-atlas-quality-improvements.md)
+**🔧 Go Atlas 质量改进 - 四层图可读性与语义准确性**
+
+**适用人群**: Go 架构师、ArchGuard 贡献者、使用 Atlas 功能的开发者
+**阅读优先级**: ⭐⭐⭐⭐⭐ (Go Atlas 用户必读)
+**文档状态**: 📋 提案 - 基于 codex-swarm 实际分析结果
+
+**内容概要**:
+- 基于真实项目 (codex-swarm) 分析发现的系统性质量问题
+- 用户观察 → 根因分析 → 解决方案一对一映射表
+- **P0 优先级** (全局影响):
+  1. 全局 `--exclude-tests` 过滤器 - 从所有四层图中排除测试代码
+  2. Flow 层重设计 - `sequenceDiagram` → `flowchart LR` + 服务子图
+- **P1 优先级** (可读性提升):
+  3. Goroutine 节点命名优化 - 使用函数名而非路径+ID
+  4. Package 层边去重与循环路径展示
+- **P2 优先级** (语义准确性):
+  5. Capability 层 Go 隐式接口检测 (InterfaceMatcher 集成)
+  6. struct 字段依赖提取
+  7. Flow 层多深度调用链追踪
+
+**问题 → 解决方案对照**:
+- Goroutine 图包含大量 `tests_` 路由 → P0: `--exclude-tests` 过滤器
+- PNG 生成失败 (117节点超限) → P0: 过滤测试代码后节点数大幅减少
+- Flow 图不表现业务处理流程 → P0: 重设计为 `flowchart LR`
+- Capability 连接极稀疏 (0.012% 密度) → P2: 隐式接口检测
+- Package 图包含测试包、层次混乱 → P0: 测试过滤 + P1: 外部依赖分组
+
+**何时使用**:
+- ✅ 分析现有 Atlas 生成结果的质量问题
+- ✅ 规划 Atlas 功能下一迭代
+- ✅ 理解测试代码污染对图可读性的影响
+- ✅ 评估 Flow 层设计改进方案
+
+**实施阶段**:
+- Phase 1 (P0): `--exclude-tests` 全局过滤 + Flow 层架构重设计 (3-5 天)
+- Phase 2 (P1): Goroutine 命名 + Package 边去重 (2-3 天)
+- Phase 3 (P2): 隐式接口检测 + 调用链深度追踪 (5-8 天)
+- **总计**: 10-16 天
+
+**验收标准**:
+- P0: 过滤后 Goroutine 节点 ≤50, PNG 生成成功率 100%
+- P0: Flow 图包含 ≥10 个业务处理节点, 子图数量 ≥3
+- P1: Package 图零重复边, 节点聚类系数 ≥0.5
+- P2: Capability 接口边数量 ≥实际接口数 × 0.7
+
+---
+
 ## 🗺️ 阅读路线建议
 
 ### 路线 1: 项目经理 / 产品负责人
@@ -1093,6 +1141,10 @@ export class ELKRenderer {
 | **并行进度条** | 14 | 第 2.4 章 |
 | **源代码缓存** | 14 | 第 2.5 章 |
 | **渲染分离** | 14 | 第 2.6 章 |
+| **Atlas 测试过滤** | 17 | 第 2.1 章 |
+| **Flow 图重设计** | 17 | 第 2.2 章 |
+| **隐式接口检测** | 17 | 第 2.5 章 |
+| **Go Atlas 质量** | 17 | 全文 |
 
 ### 按问题查找解决方案
 
@@ -1132,6 +1184,11 @@ export class ELKRenderer {
 | 重复解析源代码 | 14 | 源代码缓存 |
 | CPU 利用率低 | 14 | Promise.all() 并行 |
 | 输出质量分数低 | 14 | 改进质量评分机制 |
+| Atlas 图含测试代码 | 17 | --exclude-tests 过滤器 |
+| Flow 图不表现业务流程 | 17 | flowchart LR 重设计 |
+| Capability 连接稀疏 | 17 | 隐式接口检测 |
+| Goroutine 节点难读 | 17 | 函数名命名优化 |
+| Atlas PNG 生成失败 | 17 | 测试过滤降低节点数 |
 
 ---
 
@@ -1209,6 +1266,6 @@ export class ELKRenderer {
 
 ---
 
-**最后更新**: 2026-01-28
+**最后更新**: 2026-02-25
 **文档状态**: ✅ 完成
 **适用版本**: ArchGuard v2.1.0+
