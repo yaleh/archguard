@@ -448,12 +448,15 @@ export class TreeSitterBridge {
    * Extract package name from AST
    */
   private extractPackageName(rootNode: Parser.SyntaxNode, code: string): string {
-    const packageClause = rootNode.childForFieldName('package');
+    // In tree-sitter-go, package_clause is the first named child of source_file,
+    // not a named field. Use namedChildren.find() to locate it.
+    const packageClause = rootNode.namedChildren.find((c) => c.type === 'package_clause');
     if (!packageClause) {
       return 'main';
     }
 
-    const nameNode = packageClause.childForFieldName('name');
+    // package_clause's package_identifier is the first named child (no field name in tree-sitter-go)
+    const nameNode = packageClause.namedChild(0);
     if (!nameNode) {
       return 'main';
     }

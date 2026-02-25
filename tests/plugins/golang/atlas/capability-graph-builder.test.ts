@@ -757,4 +757,155 @@ describe('CapabilityGraphBuilder', () => {
     expect(usesEdges[0].source).toBe('pkg/service.UserService');
     expect(usesEdges[0].target).toBe('pkg/contracts.Repository');
   });
+
+  // normalizeFieldType: pointer field type generates uses edge
+  it('should generate uses edge for pointer field type (*Config)', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'hub',
+              fields: [
+                {
+                  name: 'config',
+                  type: '*Config',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'server.go', startLine: 5, endLine: 5 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'server.go', startLine: 1, endLine: 10 },
+            },
+            {
+              name: 'Config',
+              packageName: 'hub',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'config.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdges = graph.edges.filter((e) => e.type === 'uses');
+    expect(usesEdges).toHaveLength(1);
+    expect(usesEdges[0].source).toBe('pkg/hub.Server');
+    expect(usesEdges[0].target).toBe('pkg/hub.Config');
+  });
+
+  // normalizeFieldType: package-qualified field type generates uses edge
+  it('should generate uses edge for package-qualified field type (engine.Engine)', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          id: 'pkg/hub',
+          name: 'hub',
+          fullName: 'pkg/hub',
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'hub',
+              fields: [
+                {
+                  name: 'engine',
+                  type: '*engine.Engine',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'server.go', startLine: 5, endLine: 5 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'server.go', startLine: 1, endLine: 10 },
+            },
+          ],
+          interfaces: [],
+        }),
+        makePackage({
+          id: 'pkg/hub/engine',
+          name: 'engine',
+          fullName: 'pkg/hub/engine',
+          structs: [
+            {
+              name: 'Engine',
+              packageName: 'engine',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'engine.go', startLine: 1, endLine: 10 },
+            },
+          ],
+          interfaces: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdges = graph.edges.filter((e) => e.type === 'uses');
+    expect(usesEdges).toHaveLength(1);
+    expect(usesEdges[0].source).toBe('pkg/hub.Server');
+    expect(usesEdges[0].target).toBe('pkg/hub/engine.Engine');
+  });
+
+  // normalizeFieldType: slice field type generates uses edge
+  it('should generate uses edge for slice field type ([]Worker)', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/pool',
+          structs: [
+            {
+              name: 'Pool',
+              packageName: 'pool',
+              fields: [
+                {
+                  name: 'workers',
+                  type: '[]Worker',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'pool.go', startLine: 3, endLine: 3 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'pool.go', startLine: 1, endLine: 10 },
+            },
+            {
+              name: 'Worker',
+              packageName: 'pool',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdges = graph.edges.filter((e) => e.type === 'uses');
+    expect(usesEdges).toHaveLength(1);
+    expect(usesEdges[0].source).toBe('pkg/pool.Pool');
+    expect(usesEdges[0].target).toBe('pkg/pool.Worker');
+  });
 });

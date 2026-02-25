@@ -99,8 +99,9 @@ export class CapabilityGraphBuilder {
     for (const pkg of rawData.packages) {
       for (const struct of pkg.structs) {
         for (const field of struct.fields) {
-          if (allKnownTypeNames.has(field.type)) {
-            const targetNodeId = typeNameToNodeId.get(field.type) ?? field.type;
+          const bareType = this.normalizeFieldType(field.type);
+          if (allKnownTypeNames.has(bareType)) {
+            const targetNodeId = typeNameToNodeId.get(bareType) ?? bareType;
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,
               type: 'uses',
@@ -118,6 +119,33 @@ export class CapabilityGraphBuilder {
     }
 
     return edges;
+  }
+
+  /**
+   * Normalize a raw Go field type string to its bare type name for lookup.
+   *
+   * Handles:
+   * - Pointer: `*Config` → `Config`, `**T` → `T`
+   * - Slice/array: `[]workerSlot` → `workerSlot`, `[4]T` → `T`
+   * - Map value: `map[string]adapter.RuntimeAdapter` → `RuntimeAdapter`
+   * - Package qualifier: `engine.Engine` → `Engine`, `store.Store` → `Store`
+   * - Combinations: `*engine.Engine` → `Engine`
+   */
+  private normalizeFieldType(fieldType: string): string {
+    let t = fieldType.trim();
+    // Strip leading pointer star(s)
+    t = t.replace(/^\*+/, '');
+    // Strip slice/array prefix: [] or [N]
+    t = t.replace(/^\[\d*\]/, '');
+    // Handle map: extract the value type (after the closing bracket)
+    const mapMatch = t.match(/^map\[.*?\](.+)$/);
+    if (mapMatch) t = mapMatch[1];
+    // Strip pointer again (e.g. map[K]*V → V)
+    t = t.replace(/^\*+/, '');
+    // Strip package qualifier: pkg.Type → Type
+    const dotIdx = t.lastIndexOf('.');
+    if (dotIdx >= 0) t = t.substring(dotIdx + 1);
+    return t;
   }
 
   /**

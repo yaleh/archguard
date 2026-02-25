@@ -317,6 +317,58 @@ func Register(r *gin.Engine) {
     });
   });
 
+  describe('package name extraction', () => {
+    it('should extract non-main package name', () => {
+      const code = `
+package user
+
+type User struct {
+  Name string
+}
+`;
+      const result = bridge.parseCode(code, 'user.go');
+      expect(result.name).toBe('user');
+    });
+
+    it('should extract package name from hub package', () => {
+      const code = `
+package hub
+
+type Server struct {
+  port int
+}
+`;
+      const result = bridge.parseCode(code, 'server.go');
+      expect(result.name).toBe('hub');
+    });
+
+    it('should assign extracted package name to all structs', () => {
+      const code = `
+package store
+
+type SQLiteStore struct {
+  db string
+}
+`;
+      const result = bridge.parseCode(code, 'store.go');
+      expect(result.name).toBe('store');
+      expect(result.structs[0].packageName).toBe('store');
+    });
+
+    it('should assign extracted package name to all interfaces', () => {
+      const code = `
+package store
+
+type Store interface {
+  Get() string
+}
+`;
+      const result = bridge.parseCode(code, 'store.go');
+      expect(result.name).toBe('store');
+      expect(result.interfaces[0].packageName).toBe('store');
+    });
+  });
+
   describe('extractChannelOps — make(chan) variable name', () => {
     it('extracts variable name from short_var_declaration', () => {
       const code = `
