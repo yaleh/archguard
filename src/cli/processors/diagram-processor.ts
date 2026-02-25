@@ -638,13 +638,21 @@ export class DiagramProcessor {
         png: `${basePath}-${layer}.png`,
       };
 
+      // Write MMD and SVG unconditionally; attempt PNG separately so large
+      // diagrams that exceed the pixel limit still produce MMD + SVG.
+      await fs.ensureDir(path.dirname(layerPaths.mmd));
+      await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
+
+      const svg = await mermaidRenderer.renderSVG(result.content);
+      await fs.writeFile(layerPaths.svg, svg, 'utf-8');
+
       try {
-        await mermaidRenderer.renderAndSave(result.content, layerPaths);
+        await mermaidRenderer.renderPNG(result.content, layerPaths.png);
         console.log(`  ✅ ${layer}: ${layerPaths.mmd}`);
       } catch (err) {
-        // PNG may fail for very large diagrams; SVG and MMD should still be saved
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`  ⚠️  ${layer}: render warning - ${msg}`);
+        console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
+        console.log(`  ✅ ${layer}: ${layerPaths.mmd} (no PNG)`);
       }
     }
 
