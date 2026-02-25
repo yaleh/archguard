@@ -227,7 +227,7 @@ describe('CapabilityGraphBuilder', () => {
     expect(usesEdge).toBeDefined();
     expect(usesEdge?.type).toBe('uses');
     expect(usesEdge?.source).toBe('pkg/api.Server');
-    expect(usesEdge?.target).toBe('Handler');
+    expect(usesEdge?.target).toBe('pkg/api.Handler');
     expect(usesEdge?.confidence).toBe(0.9);
     expect(usesEdge?.context?.fieldType).toBe(true);
     expect(usesEdge?.context?.usageLocations).toContain('server.go:5');
@@ -490,6 +490,169 @@ describe('CapabilityGraphBuilder', () => {
     expect(usesEdge?.id).toBe('uses-pkg/app.App-Repository');
   });
 
+  // Bug 1 fix: resolve impl edge source/target using Go package name → full node ID
+  it('should resolve impl edge source/target when structPackageId is a Go package name', async () => {
+    const impl: InferredImplementation = {
+      structName: 'SQLiteStore',
+      structPackageId: 'store', // Go package name, not full path
+      interfaceName: 'Store',
+      interfacePackageId: 'hub', // Go package name, not full path
+      confidence: 0.95,
+      matchedMethods: ['Get', 'Set'],
+      source: 'inferred',
+    };
+
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          id: 'pkg/hub/store',
+          name: 'store',
+          fullName: 'pkg/hub/store',
+          structs: [
+            {
+              name: 'SQLiteStore',
+              packageName: 'store',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'store.go', startLine: 1, endLine: 10 },
+            },
+          ],
+          interfaces: [],
+        }),
+        makePackage({
+          id: 'pkg/hub',
+          name: 'hub',
+          fullName: 'pkg/hub',
+          structs: [],
+          interfaces: [
+            {
+              name: 'Store',
+              packageName: 'hub',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'hub.go', startLine: 1, endLine: 5 },
+            },
+          ],
+        }),
+      ],
+      implementations: [impl],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const implEdge = graph.edges.find((e) => e.type === 'implements');
+    expect(implEdge).toBeDefined();
+    expect(implEdge?.source).toBe('pkg/hub/store.SQLiteStore');
+    expect(implEdge?.target).toBe('pkg/hub.Store');
+    expect(implEdge?.id).toBe('impl-pkg/hub/store.SQLiteStore-pkg/hub.Store');
+  });
+
+  // Bug 2 fix: uses edge target resolves to full node ID (not bare type name)
+  it('should resolve uses edge target to full node ID', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [
+                {
+                  name: 'handler',
+                  type: 'Handler',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'server.go', startLine: 5, endLine: 5 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'server.go', startLine: 1, endLine: 10 },
+            },
+          ],
+          interfaces: [
+            {
+              name: 'Handler',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'handler.go', startLine: 1, endLine: 5 },
+            },
+          ],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdge = graph.edges.find((e) => e.type === 'uses');
+    expect(usesEdge).toBeDefined();
+    expect(usesEdge?.source).toBe('pkg/api.Server');
+    expect(usesEdge?.target).toBe('pkg/api.Handler'); // resolved full node ID
+  });
+
+  // Bug 2 fix: cross-package uses edge target resolves to declaring package
+  it('should resolve cross-package uses edge target to declaring package node ID', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          id: 'pkg/contracts',
+          name: 'contracts',
+          fullName: 'pkg/contracts',
+          interfaces: [
+            {
+              name: 'Repository',
+              packageName: 'contracts',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: { file: 'contracts.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          structs: [],
+        }),
+        makePackage({
+          id: 'pkg/service',
+          name: 'service',
+          fullName: 'pkg/service',
+          interfaces: [],
+          structs: [
+            {
+              name: 'UserService',
+              packageName: 'service',
+              fields: [
+                {
+                  name: 'repo',
+                  type: 'Repository',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'service.go', startLine: 4, endLine: 4 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'service.go', startLine: 1, endLine: 10 },
+            },
+          ],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdge = graph.edges.find((e) => e.type === 'uses');
+    expect(usesEdge).toBeDefined();
+    expect(usesEdge?.source).toBe('pkg/service.UserService');
+    expect(usesEdge?.target).toBe('pkg/contracts.Repository'); // resolved to declaring package
+  });
+
   // Iter 7: generates uses edges for struct field types (not just interfaces)
   it('generates uses edges for struct field types', async () => {
     const rawData = makeRawData({
@@ -534,7 +697,7 @@ describe('CapabilityGraphBuilder', () => {
     const usesEdges = graph.edges.filter((e) => e.type === 'uses');
     expect(usesEdges).toHaveLength(1);
     expect(usesEdges[0].source).toBe('pkg/hub.Router');
-    expect(usesEdges[0].target).toBe('Engine');
+    expect(usesEdges[0].target).toBe('pkg/hub.Engine');
     expect(usesEdges[0].confidence).toBe(0.9);
     expect(usesEdges[0].context?.fieldType).toBe(true);
   });
@@ -592,6 +755,6 @@ describe('CapabilityGraphBuilder', () => {
     const usesEdges = graph.edges.filter((e) => e.type === 'uses');
     expect(usesEdges).toHaveLength(1);
     expect(usesEdges[0].source).toBe('pkg/service.UserService');
-    expect(usesEdges[0].target).toBe('Repository');
+    expect(usesEdges[0].target).toBe('pkg/contracts.Repository');
   });
 });

@@ -49,21 +49,48 @@ export class CapabilityGraphBuilder {
   private buildEdges(rawData: GoRawData): CapabilityRelation[] {
     const edges: CapabilityRelation[] = [];
 
+    // Build lookup maps for resolving Go package names → full node IDs.
+    // "goPackageName:typeName" → "pkg.fullName.typeName" (for impl edge resolution)
+    const pkgTypeToNodeId = new Map<string, string>();
+    // typeName → fullNodeId (first match wins, for uses edge resolution)
+    const typeNameToNodeId = new Map<string, string>();
+
+    for (const pkg of rawData.packages) {
+      for (const iface of pkg.interfaces) {
+        pkgTypeToNodeId.set(`${pkg.name}:${iface.name}`, `${pkg.fullName}.${iface.name}`);
+        if (!typeNameToNodeId.has(iface.name)) {
+          typeNameToNodeId.set(iface.name, `${pkg.fullName}.${iface.name}`);
+        }
+      }
+      for (const struct of pkg.structs) {
+        pkgTypeToNodeId.set(`${pkg.name}:${struct.name}`, `${pkg.fullName}.${struct.name}`);
+        if (!typeNameToNodeId.has(struct.name)) {
+          typeNameToNodeId.set(struct.name, `${pkg.fullName}.${struct.name}`);
+        }
+      }
+    }
+
     // Use pre-computed implementations if available
     if (rawData.implementations) {
       for (const impl of rawData.implementations) {
+        const sourceId = this.resolveNodeId(impl.structPackageId, impl.structName, pkgTypeToNodeId);
+        const targetId = this.resolveNodeId(
+          impl.interfacePackageId,
+          impl.interfaceName,
+          pkgTypeToNodeId
+        );
         edges.push({
-          id: `impl-${impl.structPackageId}.${impl.structName}-${impl.interfacePackageId}.${impl.interfaceName}`,
+          id: `impl-${sourceId}-${targetId}`,
           type: 'implements',
-          source: `${impl.structPackageId}.${impl.structName}`,
-          target: `${impl.interfacePackageId}.${impl.interfaceName}`,
+          source: sourceId,
+          target: targetId,
           confidence: impl.confidence,
         });
       }
     }
 
-    // Detect interface/struct usage in struct fields
-    // TODO: field.type is a simple name (e.g., "Engine") but node ID is "pkg/hub.Engine" — may create dangling edges
+    // Detect interface/struct usage in struct fields.
+    // Resolve field.type to full node ID using the type name lookup map.
     const allKnownTypeNames = new Set([
       ...rawData.packages.flatMap((p) => p.interfaces.map((i) => i.name)),
       ...rawData.packages.flatMap((p) => (p.structs || []).map((s) => s.name)),
@@ -73,11 +100,12 @@ export class CapabilityGraphBuilder {
       for (const struct of pkg.structs) {
         for (const field of struct.fields) {
           if (allKnownTypeNames.has(field.type)) {
+            const targetNodeId = typeNameToNodeId.get(field.type) ?? field.type;
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,
               type: 'uses',
               source: `${pkg.fullName}.${struct.name}`,
-              target: field.type,
+              target: targetNodeId,
               confidence: 0.9,
               context: {
                 fieldType: true,
@@ -90,5 +118,36 @@ export class CapabilityGraphBuilder {
     }
 
     return edges;
+  }
+
+  /**
+   * Resolve a (packageId, typeName) pair to a full node ID using the lookup map.
+   *
+   * InterfaceMatcher stores `structPackageId = struct.packageName` (Go package name, e.g. "store"),
+   * but node IDs use `pkg.fullName` (e.g. "pkg/hub/store"). This resolves the mismatch.
+   *
+   * Strategy:
+   * 1. Try direct lookup with packageId as key (works when packageId is a Go package name)
+   * 2. Try last path segment of packageId (works when packageId is already a full path)
+   * 3. Fallback: construct from packageId directly (preserves backward compat)
+   */
+  private resolveNodeId(
+    packageId: string,
+    typeName: string,
+    lookup: Map<string, string>
+  ): string {
+    // Try direct key (Go package name, e.g. "store:SQLiteStore")
+    const direct = lookup.get(`${packageId}:${typeName}`);
+    if (direct) return direct;
+
+    // Try last path segment (full path like "pkg/hub/store" → "store")
+    if (packageId.includes('/')) {
+      const lastSegment = packageId.split('/').pop()!;
+      const bySegment = lookup.get(`${lastSegment}:${typeName}`);
+      if (bySegment) return bySegment;
+    }
+
+    // Fallback: construct from packageId as-is (may already be a full qualified path)
+    return `${packageId}.${typeName}`;
   }
 }
