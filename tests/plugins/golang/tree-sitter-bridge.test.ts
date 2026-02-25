@@ -233,4 +233,87 @@ func setup() {
       expect(printCall?.args).toEqual(['hello']);
     });
   });
+
+  describe('selective extraction with HTTP handler patterns', () => {
+    it('should extract body of standalone function containing HandleFunc when selectiveExtraction is true', () => {
+      const code = `
+package server
+
+func setupRoutes(mux *http.ServeMux) {
+  mux.HandleFunc("/healthz", handleHealth)
+  mux.HandleFunc("/v1/sessions", handleSessions)
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const fn = result.functions.find((f) => f.name === 'setupRoutes');
+      expect(fn).toBeDefined();
+      expect(fn?.body).toBeDefined();
+      expect(fn?.body?.calls.some((c) => c.functionName === 'HandleFunc')).toBe(true);
+    });
+
+    it('should extract body of struct method containing HandleFunc when selectiveExtraction is true', () => {
+      const code = `
+package server
+
+type Server struct{}
+
+func (s *Server) setupRoutes(mux *http.ServeMux) {
+  mux.HandleFunc("/healthz", s.handleHealth)
+  mux.HandleFunc("/v1/tasks", s.handleTasks)
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const method = result.structs[0]?.methods.find((m) => m.name === 'setupRoutes');
+      expect(method).toBeDefined();
+      expect(method?.body).toBeDefined();
+      expect(method?.body?.calls.filter((c) => c.functionName === 'HandleFunc')).toHaveLength(2);
+    });
+
+    it('should NOT extract body of function with no goroutine/channel/http patterns', () => {
+      const code = `
+package server
+
+func unrelated() {
+  x := 1 + 1
+  _ = x
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const fn = result.functions.find((f) => f.name === 'unrelated');
+      expect(fn).toBeDefined();
+      expect(fn?.body).toBeUndefined();
+    });
+
+    it('should extract body containing router.GET (gin-style method HTTP pattern)', () => {
+      const code = `
+package routes
+
+func Register(r *gin.Engine) {
+  r.GET("/users", listUsers)
+  r.POST("/users", createUser)
+}
+`;
+      const result = bridge.parseCode(code, 'routes.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const fn = result.functions.find((f) => f.name === 'Register');
+      expect(fn?.body).toBeDefined();
+      expect(fn?.body?.calls.some((c) => c.functionName === 'GET')).toBe(true);
+      expect(fn?.body?.calls.some((c) => c.functionName === 'POST')).toBe(true);
+    });
+  });
 });

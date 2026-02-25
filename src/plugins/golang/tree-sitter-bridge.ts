@@ -199,6 +199,10 @@ export class TreeSitterBridge {
    *
    * Uses descendantsOfType() instead of string matching.
    * This avoids false positives from comments, variable names, etc.
+   *
+   * Triggers on:
+   * - Goroutine/channel patterns (go_statement, send_statement, receive_expression)
+   * - HTTP handler registration calls (HandleFunc, Handle, GET, POST, ...)
    */
   private shouldExtractBody(blockNode: Parser.SyntaxNode): boolean {
     const targetNodeTypes = [
@@ -207,7 +211,32 @@ export class TreeSitterBridge {
       'receive_expression', // <-ch
     ];
 
-    return targetNodeTypes.some((nodeType) => blockNode.descendantsOfType(nodeType).length > 0);
+    if (targetNodeTypes.some((nodeType) => blockNode.descendantsOfType(nodeType).length > 0)) {
+      return true;
+    }
+
+    // HTTP handler registration patterns (net/http and gin/echo/chi-style routers)
+    const httpHandlerNames = new Set([
+      'HandleFunc', 'Handle', // net/http ServeMux
+      'GET', 'POST', 'PUT', 'DELETE', 'PATCH', // gin / echo / chi
+    ]);
+
+    for (const callExpr of blockNode.descendantsOfType('call_expression')) {
+      const funcNode = callExpr.childForFieldName('function');
+      if (!funcNode) continue;
+
+      let fnName = '';
+      if (funcNode.type === 'identifier') {
+        fnName = funcNode.text;
+      } else if (funcNode.type === 'selector_expression') {
+        const field = funcNode.childForFieldName('field');
+        if (field) fnName = field.text;
+      }
+
+      if (httpHandlerNames.has(fnName)) return true;
+    }
+
+    return false;
   }
 
   /**
