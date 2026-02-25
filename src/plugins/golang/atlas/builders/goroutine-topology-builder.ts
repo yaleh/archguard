@@ -41,8 +41,8 @@ export class GoroutineTopologyBuilder {
       for (const func of pkg.functions) {
         if (func.name === 'main' && pkg.name === 'main') {
           nodes.push({
-            id: 'main',
-            name: 'main.main',
+            id: `${pkg.fullName}.main`,
+            name: `${pkg.fullName}.main`,
             type: 'main',
             package: pkg.fullName,
             location: { file: func.location.file, line: func.location.startLine },
@@ -98,8 +98,7 @@ export class GoroutineTopologyBuilder {
       // Functions
       for (const func of pkg.functions) {
         if (!func.body) continue;
-        const fromId =
-          func.name === 'main' && pkg.name === 'main' ? 'main' : `${pkg.fullName}.${func.name}`;
+        const fromId = `${pkg.fullName}.${func.name}`;
 
         for (const spawn of func.body.goSpawns) {
           relations.push({

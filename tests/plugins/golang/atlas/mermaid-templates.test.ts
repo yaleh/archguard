@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
-import type { FlowGraph, EntryPoint, GoroutineTopology, PackageGraph, PackageNode } from '@/types/extensions.js';
+import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, PackageGraph, PackageNode } from '@/types/extensions.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -160,6 +160,21 @@ describe('MermaidTemplates (private) formatGoroutineName', () => {
 
   it('handles two-part id', () => {
     expect(fn({ id: 'main.run', name: '' })).toBe('main.run');
+  });
+
+  it('strips package path prefix (slash) from non-empty name', () => {
+    // "examples/user-service.NewTestHarness" → "NewTestHarness"
+    expect(fn({ id: 'examples_user_service_NewTestHarness_spawn_43', name: 'examples/user-service.NewTestHarness' })).toBe('NewTestHarness');
+  });
+
+  it('leaves name unchanged when it contains no slash', () => {
+    // "WorkerPool.Start" → "WorkerPool.Start" (unchanged)
+    expect(fn({ id: 'pkg_hub_WorkerPool_Start_spawn_98', name: 'WorkerPool.Start' })).toBe('WorkerPool.Start');
+  });
+
+  it('strips slash prefix from cmd package main name', () => {
+    // "cmd/swarm-hub.main" → "swarm-hub.main"
+    expect(fn({ id: 'cmd_swarm_hub_main', name: 'cmd/swarm-hub.main' })).toBe('swarm-hub.main');
   });
 });
 
@@ -441,5 +456,85 @@ describe('MermaidTemplates.renderGoroutineTopology — goroutine name display', 
     const result = MermaidTemplates.renderGoroutineTopology(topology);
     // Should show last 2 parts after stripping spawn suffix: main.worker
     expect(result).toContain('"main.worker"');
+  });
+});
+
+// ─── renderGoroutineTopology — spawner node declarations ──────────────────────
+
+describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations', () => {
+  function makeTopology(overrides?: Partial<{ nodes: GoroutineNode[]; edges: SpawnRelation[]; channels: ChannelInfo[] }>) {
+    return { nodes: [], edges: [], channels: [], ...overrides };
+  }
+
+  it('declares undeclared spawner nodes with short labels and :::spawner style', () => {
+    // edge.from = "pkg/hub.WorkerPool.Start" is NOT in nodes — must be declared
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-98',
+          name: '<anonymous>',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 98 },
+        },
+      ],
+      edges: [
+        {
+          from: 'pkg/hub.WorkerPool.Start',
+          to: 'pkg/hub.WorkerPool.Start.spawn-98',
+          spawnType: 'go-stmt' as const,
+        },
+      ],
+    });
+
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // spawner node should be declared with short label
+    expect(out).toContain('["WorkerPool.Start"]');
+    expect(out).toContain(':::spawner');
+  });
+
+  it('does NOT re-declare spawner when it is already in nodes list', () => {
+    // edge.from = "cmd/app.main" IS in nodes (as main type)
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'cmd/app.main',
+          name: 'cmd/app.main',
+          type: 'main' as const,
+          package: 'cmd/app',
+          location: { file: 'main.go', line: 1 },
+        },
+        {
+          id: 'cmd/app.main.spawn-10',
+          name: 'worker',
+          type: 'spawned' as const,
+          package: 'cmd/app',
+          location: { file: 'main.go', line: 10 },
+        },
+      ],
+      edges: [
+        {
+          from: 'cmd/app.main',
+          to: 'cmd/app.main.spawn-10',
+          spawnType: 'go-stmt' as const,
+        },
+      ],
+    });
+
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // "cmd_app_main" should appear exactly ONCE as a node declaration (the :::main one)
+    const lines = out.split('\n').filter(l => l.includes('cmd_app_main['));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain(':::main');
+    expect(lines[0]).not.toContain(':::spawner');
+  });
+
+  it('includes classDef for spawner style', () => {
+    const topology = makeTopology({
+      nodes: [{ id: 'spawn1', name: 'fn', type: 'spawned' as const, package: 'p', location: { file: 'f.go', line: 1 } }],
+      edges: [{ from: 'undeclared_spawner', to: 'spawn1', spawnType: 'go-stmt' as const }],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('classDef spawner');
   });
 });

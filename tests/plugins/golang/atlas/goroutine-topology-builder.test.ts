@@ -56,7 +56,7 @@ describe('GoroutineTopologyBuilder', () => {
 
     const topology = await builder.build(rawData);
 
-    const mainNode = topology.nodes.find((n) => n.id === 'main');
+    const mainNode = topology.nodes.find((n) => n.id === 'cmd/app.main');
     expect(mainNode).toBeDefined();
     expect(mainNode?.type).toBe('main');
   });
@@ -217,5 +217,86 @@ describe('GoroutineTopologyBuilder', () => {
 
     expect(namedNode?.spawnType).toBe('named_func');
     expect(anonNode?.spawnType).toBe('anonymous_func');
+  });
+
+  it('should produce distinct node IDs for multiple cmd packages with main', async () => {
+    function makeMainPkg(fullName: string) {
+      return {
+        id: fullName,
+        name: 'main',
+        fullName,
+        dirPath: `/test/${fullName}`,
+        sourceFiles: ['main.go'],
+        imports: [],
+        structs: [],
+        interfaces: [],
+        functions: [
+          {
+            name: 'main',
+            packageName: 'main',
+            parameters: [],
+            returnTypes: [],
+            exported: false,
+            location: { file: 'main.go', startLine: 1, endLine: 5 },
+            body: { calls: [], goSpawns: [], channelOps: [] },
+          },
+        ],
+      };
+    }
+
+    const rawData = makeRawData({
+      packages: [makeMainPkg('cmd/app-a'), makeMainPkg('cmd/app-b')],
+    });
+
+    const topology = await builder.build(rawData);
+    const mainNodes = topology.nodes.filter((n) => n.type === 'main');
+
+    expect(mainNodes).toHaveLength(2);
+    const ids = mainNodes.map((n) => n.id);
+    expect(ids).toContain('cmd/app-a.main');
+    expect(ids).toContain('cmd/app-b.main');
+    // IDs must be distinct
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('should use package-qualified fromId for main goroutine spawn relations', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'cmd/app',
+          name: 'main',
+          fullName: 'cmd/app',
+          dirPath: '/test/cmd/app',
+          sourceFiles: ['main.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'main',
+              packageName: 'main',
+              parameters: [],
+              returnTypes: [],
+              exported: false,
+              location: { file: 'main.go', startLine: 1, endLine: 10 },
+              body: {
+                calls: [],
+                goSpawns: [
+                  {
+                    call: { functionName: 'worker', location: { file: 'main.go', startLine: 5, endLine: 5 } },
+                    location: { file: 'main.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                channelOps: [],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+    expect(topology.edges).toHaveLength(1);
+    expect(topology.edges[0].from).toBe('cmd/app.main');
   });
 });

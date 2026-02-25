@@ -207,11 +207,24 @@ export class MermaidTemplates {
   static renderGoroutineTopology(topology: GoroutineTopology): string {
     let output = 'flowchart TB\n';
 
+    // Track declared node IDs (by raw id, before sanitize)
+    const declaredIds = new Set<string>();
+
     for (const node of topology.nodes) {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
       output += `  ${this.sanitizeId(node.id)}["${displayName}${patternLabel}"]${style}\n`;
+      declaredIds.add(node.id);
+    }
+
+    // Declare spawner nodes that are not already declared
+    for (const edge of topology.edges) {
+      if (!declaredIds.has(edge.from)) {
+        const label = MermaidTemplates.formatSpawnerLabel(edge.from);
+        output += `  ${this.sanitizeId(edge.from)}["${label}"]:::spawner\n`;
+        declaredIds.add(edge.from);
+      }
     }
 
     for (const edge of topology.edges) {
@@ -228,6 +241,7 @@ export class MermaidTemplates {
 
     output += '\n  classDef main fill:#f66,stroke:#333,stroke-width:2px\n';
     output += '  classDef spawned fill:#6f6,stroke:#333,stroke-width:1px\n';
+    output += '  classDef spawner fill:#69f,stroke:#333,stroke-width:1px\n';
     output += '  classDef channel fill:#ff6,stroke:#333,stroke-width:1px\n';
 
     return output;
@@ -327,8 +341,34 @@ export class MermaidTemplates {
     return `${method} ${entry.path}`;
   }
 
+  private static formatSpawnerLabel(nodeId: string): string {
+    // Strip package path prefix (everything before last '/')
+    const slashIdx = nodeId.lastIndexOf('/');
+    const afterSlash = slashIdx >= 0 ? nodeId.slice(slashIdx + 1) : nodeId;
+    // If method (3+ dot-parts like "hub.WorkerPool.Start"), return last 2
+    // If function (1-2 dot-parts like "capabilities.NewMemoryRegistry"), return as-is
+    const parts = afterSlash.split('.');
+    return parts.length > 2 ? parts.slice(-2).join('.') : afterSlash;
+  }
+
   private static formatGoroutineName(node: { id: string; name: string }): string {
-    if (node.name) return node.name;
+    if (node.name) {
+      // Strip package path prefix (everything up to and including the last '/')
+      const slashIdx = node.name.lastIndexOf('/');
+      const afterSlash = slashIdx >= 0 ? node.name.slice(slashIdx + 1) : node.name;
+      // If the part before the first dot is a hyphenated package name, strip it
+      // only when the symbol after the dot is an exported (capitalized) identifier.
+      // e.g. "user-service.NewTestHarness" → "NewTestHarness"
+      // but  "swarm-hub.main"             → "swarm-hub.main" (main is unexported)
+      const dotIdx = afterSlash.indexOf('.');
+      if (dotIdx > 0 && afterSlash.slice(0, dotIdx).includes('-')) {
+        const symbol = afterSlash.slice(dotIdx + 1);
+        if (symbol.length > 0 && symbol[0] === symbol[0].toUpperCase() && symbol[0] !== symbol[0].toLowerCase()) {
+          return symbol;
+        }
+      }
+      return afterSlash;
+    }
     // Strip .spawn-N suffix, take last 2 dot-separated parts
     const stripped = node.id.replace(/\.spawn-\d+$/, '');
     const parts = stripped.split('.');
