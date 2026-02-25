@@ -623,4 +623,44 @@ describe('path and handler extraction from args', () => {
     expect(result.entryPoints[0].path).toBe('');
     expect(result.entryPoints[0].handler).toBe('');
   });
+
+  it('should set handler to empty string when args[1] is an anonymous function literal', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'HandleFunc',
+              args: ['/api/v1/', 'func(w http.ResponseWriter, r *http.Request) { doSomething() }'],
+              location: { file: 'server.go', startLine: 42, endLine: 42 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].path).toBe('/api/v1/');
+    expect(result.entryPoints[0].handler).toBe('');
+  });
+
+  it('should keep named handler unchanged when it does not start with func(', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'HandleFunc',
+              args: ['/healthz', 's.handleHealth'],
+              location: { file: 'server.go', startLine: 10, endLine: 10 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].handler).toBe('s.handleHealth');
+  });
 });

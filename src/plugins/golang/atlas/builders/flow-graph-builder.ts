@@ -60,7 +60,8 @@ export class FlowGraphBuilder {
    */
   private matchEntryPointPattern(call: GoCallExpr, pkg: GoRawPackage): EntryPoint | null {
     const path = call.args?.[0] ?? '';
-    const handler = call.args?.[1] ?? '';
+    const rawHandler = call.args?.[1] ?? '';
+    const handler = rawHandler.startsWith('func(') ? '' : rawHandler;
 
     // http.HandleFunc or mux.HandleFunc / mux.Handle
     if (call.functionName === 'HandleFunc' || call.functionName === 'Handle') {
