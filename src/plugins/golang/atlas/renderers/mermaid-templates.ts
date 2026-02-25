@@ -8,38 +8,117 @@ import type {
   EntryPoint,
 } from '../types.js';
 
+interface GroupNode {
+  prefix: string;
+  children: GroupNode[];
+  nodeIds: string[];
+}
+
 /**
  * Mermaid template renderer for Go Atlas layers
  */
 export class MermaidTemplates {
-  // Two-layer grouping rule:
-  //   Top-level dirs (cmd, tests, examples) → group by first segment alone
-  //   All other multi-segment paths         → group by first two segments
-  private static readonly TOP_LEVEL_GROUP_DIRS = new Set(['cmd', 'tests', 'examples']);
-
-  private static getGroupPrefix(name: string): string | null {
-    const segs = name.split('/');
-    if (segs.length < 2) return null;
-    if (MermaidTemplates.TOP_LEVEL_GROUP_DIRS.has(segs[0])) return segs[0];
-    return segs.slice(0, 2).join('/');
-  }
-
-  private static buildGroups(nodes: PackageNode[]): Map<string, string[]> {
-    const prefixCount = new Map<string, number>();
+  // ── nested subgraph grouping ───────────────────────────────────────────────
+  //
+  // buildGroupTree(): builds a prefix-tree of subgraph groups.
+  //   A prefix becomes a group when ≥2 package nodes fall under it.
+  //   Groups nest: 'pkg/hub' is a child of 'pkg' when both are valid.
+  //   Each node is assigned to its deepest valid group.
+  //
+  // TODO: potential collision if group labels exceed 59 chars after sanitize
+  private static buildGroupTree(
+    nodes: PackageNode[]
+  ): { roots: GroupNode[]; grouped: Set<string> } {
+    // Count all nodes under every ancestor prefix
+    const prefixMembers = new Map<string, string[]>();
     for (const node of nodes) {
-      const prefix = MermaidTemplates.getGroupPrefix(node.name);
-      if (prefix) prefixCount.set(prefix, (prefixCount.get(prefix) ?? 0) + 1);
-    }
-    const groups = new Map<string, string[]>();
-    for (const node of nodes) {
-      const prefix = MermaidTemplates.getGroupPrefix(node.name);
-      if (prefix && (prefixCount.get(prefix) ?? 0) >= 2) {
-        const members = groups.get(prefix) ?? [];
-        members.push(node.id);
-        groups.set(prefix, members);
+      const segs = node.name.split('/');
+      for (let d = 1; d <= segs.length; d++) {
+        const prefix = segs.slice(0, d).join('/');
+        const arr = prefixMembers.get(prefix) ?? [];
+        arr.push(node.id);
+        prefixMembers.set(prefix, arr);
       }
     }
-    return groups;
+
+    // Valid groups: prefixes with ≥2 nodes below them
+    const validPrefixes = new Set<string>();
+    for (const [prefix, ids] of prefixMembers) {
+      if (ids.length >= 2) validPrefixes.add(prefix);
+    }
+
+    // Deepest valid group prefix for a node name
+    const deepestGroupFor = (name: string): string | null => {
+      const segs = name.split('/');
+      for (let d = segs.length; d >= 1; d--) {
+        const prefix = segs.slice(0, d).join('/');
+        if (validPrefixes.has(prefix)) return prefix;
+      }
+      return null;
+    };
+
+    // Immediate valid parent group for a prefix
+    const parentGroupFor = (prefix: string): string | null => {
+      const segs = prefix.split('/');
+      for (let d = segs.length - 1; d >= 1; d--) {
+        const p = segs.slice(0, d).join('/');
+        if (validPrefixes.has(p)) return p;
+      }
+      return null;
+    };
+
+    // Build GroupNode objects
+    const nodeObjects = new Map<string, GroupNode>();
+    for (const prefix of validPrefixes) {
+      nodeObjects.set(prefix, { prefix, children: [], nodeIds: [] });
+    }
+
+    // Wire parent–child relationships
+    const roots: GroupNode[] = [];
+    for (const prefix of validPrefixes) {
+      const parent = parentGroupFor(prefix);
+      if (parent && nodeObjects.has(parent)) {
+        nodeObjects.get(parent)!.children.push(nodeObjects.get(prefix)!);
+      } else {
+        roots.push(nodeObjects.get(prefix)!);
+      }
+    }
+
+    // Assign each node to its deepest group
+    const grouped = new Set<string>();
+    for (const node of nodes) {
+      const group = deepestGroupFor(node.name);
+      if (group && nodeObjects.has(group)) {
+        nodeObjects.get(group)!.nodeIds.push(node.id);
+        grouped.add(node.id);
+      }
+    }
+
+    return { roots, grouped };
+  }
+
+  // Recursive subgraph renderer
+  private static renderGroupNodes(
+    groups: GroupNode[],
+    nodeMap: Map<string, PackageNode>,
+    cycleNodeIds: Set<string>,
+    indent: string
+  ): string {
+    let out = '';
+    for (const group of groups) {
+      const sgId = 'grp_' + MermaidTemplates.sanitizeId(group.prefix);
+      out += `\n${indent}subgraph ${sgId}["${group.prefix}"]\n`;
+      // Recurse: emit nested child groups first
+      out += MermaidTemplates.renderGroupNodes(group.children, nodeMap, cycleNodeIds, indent + '  ');
+      // Then emit this group's direct node members
+      for (const nodeId of group.nodeIds) {
+        const node = nodeMap.get(nodeId)!;
+        const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
+        out += `${indent}  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
+      }
+      out += `${indent}end\n`;
+    }
+    return out;
   }
 
   static renderPackageGraph(graph: PackageGraph): string {
@@ -52,35 +131,23 @@ export class MermaidTemplates {
         .flatMap(c => c.packages)
     );
 
-    // --- subgraph grouping (P3) ---
-    const groups = MermaidTemplates.buildGroups(graph.nodes);
-    const nodeGroupMap = new Map<string, string>();
-    for (const [label, ids] of groups) {
-      for (const id of ids) nodeGroupMap.set(id, label);
-    }
+    // --- nested subgraph grouping (P4) ---
+    const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+    const { roots, grouped } = MermaidTemplates.buildGroupTree(graph.nodes);
 
-    // Pass 1: top-level nodes (not in any group)
+    // Pass 1: ungrouped top-level nodes
     for (const node of graph.nodes) {
-      if (!nodeGroupMap.has(node.id)) {
+      if (!grouped.has(node.id)) {
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         output += `  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
     }
 
-    // Pass 1 cont.: subgraph blocks
-    for (const [label, ids] of groups) {
-      const sgId = 'grp_' + MermaidTemplates.sanitizeId(label);
-      output += `\n  subgraph ${sgId}["${label}"]\n`;
-      for (const id of ids) {
-        const node = graph.nodes.find(n => n.id === id)!;
-        const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
-        output += `    ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
-      }
-      output += '  end\n';
-    }
+    // Pass 1 cont.: recursive subgraph tree
+    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ');
 
-    // Pass 2: classDef block (P0) — placed before edges so lastIndexOf('end') in
-    // classDef vendor doesn't interfere with edge-ordering assertions
+    // Pass 2: classDef block — placed before edges so lastIndexOf('end') in
+    // 'vendor' substring doesn't produce a false negative for the edge-ordering test
     output += '\n';
     output += '  classDef cmd      fill:#ff6b6b,stroke:#c0392b,color:#000\n';
     output += '  classDef tests    fill:#b2bec3,stroke:#636e72,color:#000\n';

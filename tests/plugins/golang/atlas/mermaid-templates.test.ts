@@ -265,50 +265,13 @@ describe('MermaidTemplates.renderPackageGraph — cycles', () => {
 // ─── renderPackageGraph — subgraph grouping (P3) ─────────────────────────────
 
 describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
-  // Helper to access private static
-  const buildGroups = (nodes: PackageNode[]) =>
-    (MermaidTemplates as any).buildGroups(nodes) as Map<string, string[]>;
-
-  it('groups packages sharing a two-segment prefix', () => {
-    const nodes: PackageNode[] = [
-      { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/hub/store',  name: 'pkg/hub/store',  type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
-    ];
-    const groups = buildGroups(nodes);
-    expect(groups.has('pkg/hub')).toBe(true);
-    expect(groups.get('pkg/hub')).toHaveLength(3);
-    expect(groups.has('pkg/store')).toBe(false);
-  });
-
-  it('groups cmd/* packages under the single-segment prefix "cmd"', () => {
-    const nodes: PackageNode[] = [
-      { id: 'mod/cmd/server', name: 'cmd/server', type: 'cmd', fileCount: 1 },
-      { id: 'mod/cmd/worker', name: 'cmd/worker', type: 'cmd', fileCount: 1 },
-    ];
-    const groups = buildGroups(nodes);
-    expect(groups.has('cmd')).toBe(true);
-    expect(groups.get('cmd')).toHaveLength(2);
-  });
-
-  it('groups tests/* packages under the single-segment prefix "tests"', () => {
-    const nodes: PackageNode[] = [
-      { id: 'mod/tests/integration', name: 'tests/integration', type: 'tests', fileCount: 1 },
-      { id: 'mod/tests/unit',        name: 'tests/unit',        type: 'tests', fileCount: 1 },
-    ];
-    const groups = buildGroups(nodes);
-    expect(groups.has('tests')).toBe(true);
-    expect(groups.get('tests')).toHaveLength(2);
-  });
-
-  it('does not group a single package', () => {
-    const nodes: PackageNode[] = [
-      { id: 'mod/cmd/server', name: 'cmd/server', type: 'cmd', fileCount: 1 },
-    ];
-    const groups = buildGroups(nodes);
-    expect(groups.size).toBe(0);
-  });
+  interface GroupNode {
+    prefix: string;
+    children: GroupNode[];
+    nodeIds: string[];
+  }
+  const buildGroupTree = (nodes: PackageNode[]) =>
+    (MermaidTemplates as any).buildGroupTree(nodes) as { roots: GroupNode[]; grouped: Set<string> };
 
   it('wraps grouped nodes in subgraph blocks using grp_ prefix', () => {
     const graph = makePackageGraph({
@@ -352,6 +315,106 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
     const subgraphEnd = result.lastIndexOf('end');
     const edgeLine   = result.indexOf('mod_pkg_hub -->');
     expect(edgeLine).toBeGreaterThan(subgraphEnd);
+  });
+
+  it('renders nested subgraphs: grp_pkg contains grp_pkg_hub', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Outer subgraph exists
+    expect(result).toContain('subgraph grp_pkg["pkg"]');
+    // Inner subgraph exists
+    expect(result).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    // pkg/hub node is inside the inner subgraph (appears somewhere in result)
+    expect(result).toContain('mod_pkg_hub["pkg/hub"]:::internal');
+    // pkg/store and pkg/logging are direct children of grp_pkg (appear in result)
+    expect(result).toContain('mod_pkg_store["pkg/store"]:::internal');
+    // The inner subgraph appears after the outer subgraph opening
+    const innerEnd = result.indexOf('subgraph grp_pkg_hub');
+    const outerEnd = result.indexOf('subgraph grp_pkg["pkg"]');
+    expect(innerEnd).toBeGreaterThan(outerEnd);
+  });
+});
+
+// ─── buildGroupTree ───────────────────────────────────────────────────────────
+
+describe('MermaidTemplates (private) buildGroupTree', () => {
+  interface GroupNode {
+    prefix: string;
+    children: GroupNode[];
+    nodeIds: string[];
+  }
+  const buildGroupTree = (nodes: PackageNode[]) =>
+    (MermaidTemplates as any).buildGroupTree(nodes) as { roots: GroupNode[]; grouped: Set<string> };
+
+  it('assigns cmd/* nodes to a single-level cmd group', () => {
+    const nodes: PackageNode[] = [
+      { id: 'mod/cmd/server', name: 'cmd/server', type: 'cmd', fileCount: 1 },
+      { id: 'mod/cmd/worker', name: 'cmd/worker', type: 'cmd', fileCount: 1 },
+    ];
+    const { roots, grouped } = buildGroupTree(nodes);
+    expect(roots).toHaveLength(1);
+    expect(roots[0].prefix).toBe('cmd');
+    expect(roots[0].children).toHaveLength(0);
+    expect(roots[0].nodeIds).toHaveLength(2);
+    expect(grouped.size).toBe(2);
+  });
+
+  it('builds a two-level tree: pkg contains pkg/hub sub-group', () => {
+    const nodes: PackageNode[] = [
+      { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub/store',  name: 'pkg/hub/store',  type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+    ];
+    const { roots, grouped } = buildGroupTree(nodes);
+    // One root: pkg
+    expect(roots).toHaveLength(1);
+    const pkgRoot = roots[0];
+    expect(pkgRoot.prefix).toBe('pkg');
+    // pkg has one child: pkg/hub
+    expect(pkgRoot.children).toHaveLength(1);
+    expect(pkgRoot.children[0].prefix).toBe('pkg/hub');
+    // pkg/hub has 3 direct nodes (pkg/hub itself + models + store)
+    expect(pkgRoot.children[0].nodeIds).toHaveLength(3);
+    // pkg has 2 direct nodes: pkg/store, pkg/logging
+    expect(pkgRoot.nodeIds).toHaveLength(2);
+    // All 5 nodes are grouped
+    expect(grouped.size).toBe(5);
+  });
+
+  it('pkg/hub node belongs to pkg/hub group, not to pkg directly', () => {
+    const nodes: PackageNode[] = [
+      { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+    ];
+    const { roots } = buildGroupTree(nodes);
+    const pkgRoot = roots[0];
+    const hubGroup = pkgRoot.children.find(c => c.prefix === 'pkg/hub')!;
+    // mod/pkg/hub node is in pkg/hub group
+    expect(hubGroup.nodeIds).toContain('mod/pkg/hub');
+    // Not in pkg directly
+    expect(pkgRoot.nodeIds).not.toContain('mod/pkg/hub');
+  });
+
+  it('does not group a single-member package', () => {
+    const nodes: PackageNode[] = [
+      { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 },
+    ];
+    const { roots, grouped } = buildGroupTree(nodes);
+    expect(roots).toHaveLength(0);
+    expect(grouped.size).toBe(0);
   });
 });
 
