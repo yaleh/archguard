@@ -156,8 +156,9 @@ describe('ValidatedMermaidGenerator', () => {
 
       expect(mermaidCode).toContain('classDiagram');
       expect(mermaidCode).toContain('namespace');
-      expect(mermaidCode).toContain('"User Layer"');
-      expect(mermaidCode).toContain('"Auth Layer"');
+      // Namespace names are unquoted identifiers (Mermaid doesn't support quoted namespace names)
+      expect(mermaidCode).toContain('namespace User_Layer');
+      expect(mermaidCode).toContain('namespace Auth_Layer');
     });
 
     it('should include packages in correct order', () => {
@@ -168,9 +169,9 @@ describe('ValidatedMermaidGenerator', () => {
 
       const mermaidCode = generator.generate();
 
-      // Check that namespaces are properly defined
-      const userLayerIndex = mermaidCode.indexOf('"User Layer"');
-      const authLayerIndex = mermaidCode.indexOf('"Auth Layer"');
+      // Check that namespaces are properly defined (unquoted identifiers)
+      const userLayerIndex = mermaidCode.indexOf('namespace User_Layer');
+      const authLayerIndex = mermaidCode.indexOf('namespace Auth_Layer');
 
       expect(userLayerIndex).toBeGreaterThanOrEqual(0);
       expect(authLayerIndex).toBeGreaterThanOrEqual(0);
@@ -509,8 +510,9 @@ describe('ValidatedMermaidGenerator', () => {
       const mermaidCode = generator.generate();
 
       expect(mermaidCode).toContain('namespace');
-      expect(mermaidCode).toContain('"User Layer"');
-      expect(mermaidCode).toContain('"Auth Layer"');
+      // Namespace names are unquoted identifiers (Mermaid doesn't support quoted namespace names)
+      expect(mermaidCode).toContain('namespace User_Layer');
+      expect(mermaidCode).toContain('namespace Auth_Layer');
     });
 
     it('should generate without namespaces when no grouping', () => {

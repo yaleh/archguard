@@ -55,7 +55,8 @@ export class MermaidTemplates {
     for (const node of topology.nodes) {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
-      output += `  ${this.sanitizeId(node.id)}["${node.name}${patternLabel}"]${style}\n`;
+      const displayName = node.name || node.id;
+      output += `  ${this.sanitizeId(node.id)}["${displayName}${patternLabel}"]${style}\n`;
     }
 
     for (const edge of topology.edges) {
@@ -84,11 +85,19 @@ export class MermaidTemplates {
       const entry = graph.entryPoints.find((e) => e.id === chain.entryPoint);
       if (!entry) continue;
 
-      output += `\n  Note over ${this.sanitizeId(entry.handler)}: ${entry.type} ${entry.path}\n`;
+      // Only emit Note when handler is a valid non-empty identifier
+      const handlerId = this.sanitizeId(entry.handler);
+      if (handlerId) {
+        const pathLabel = entry.path || entry.id;
+        output += `\n  Note over ${handlerId}: ${entry.type} ${pathLabel}\n`;
+      }
 
       for (const call of chain.calls) {
-        output += `  ${this.sanitizeId(call.from)}->>+${this.sanitizeId(call.to)}: call\n`;
-        output += `  ${this.sanitizeId(call.to)}-->>-${this.sanitizeId(call.from)}: return\n`;
+        const fromId = this.sanitizeId(call.from);
+        const toId = this.sanitizeId(call.to);
+        if (!fromId || !toId) continue;
+        output += `  ${fromId}->>+${toId}: call\n`;
+        output += `  ${toId}-->>-${fromId}: return\n`;
       }
     }
 

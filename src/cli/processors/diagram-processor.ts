@@ -546,23 +546,112 @@ export class DiagramProcessor {
         break;
 
       case 'mermaid':
-        // Generate Mermaid diagram
-        const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig);
-        await mermaidGenerator.generateAndRender(
-          archJSON,
-          {
-            outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
-            baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
-            paths: paths.paths,
-          },
-          level,
-          diagram // v2.1.0: Pass diagram config for metadata
-        );
+        // Route Go Atlas diagrams to AtlasRenderer (4-layer flowchart output)
+        if (archJSON.extensions?.goAtlas) {
+          await this.generateAtlasOutput(archJSON, paths, diagram);
+        } else {
+          // Generate standard Mermaid classDiagram
+          const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig);
+          await mermaidGenerator.generateAndRender(
+            archJSON,
+            {
+              outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
+              baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
+              paths: paths.paths,
+            },
+            level,
+            diagram // v2.1.0: Pass diagram config for metadata
+          );
+        }
         break;
 
       default:
         const exhaustiveCheck: never = format;
         throw new Error(`Unsupported format: ${exhaustiveCheck}`);
     }
+  }
+
+  /**
+   * Generate Go Architecture Atlas output (4-layer flowchart diagrams)
+   *
+   * Renders each requested Atlas layer as a separate Mermaid flowchart file:
+   *   {name}-package.mmd/svg/png    - Package dependency graph
+   *   {name}-capability.mmd/svg/png - Capability graph
+   *   {name}-goroutine.mmd/svg/png  - Goroutine topology
+   *   {name}-flow.mmd/svg/png       - Flow graph
+   *   {name}-atlas.json             - Full Atlas data
+   *
+   * @param archJSON - Architecture JSON with goAtlas extension
+   * @param paths - Base output paths
+   * @param diagram - Diagram configuration
+   */
+  private async generateAtlasOutput(
+    archJSON: ArchJSON,
+    paths: { paths: { json: string; mmd: string; png: string; svg: string } },
+    diagram: DiagramConfig
+  ): Promise<void> {
+    const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
+    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+    const atlas = archJSON.extensions!.goAtlas!;
+    const renderer = new AtlasRenderer();
+
+    // Determine which layers to render (from config or default to all 4)
+    const requestedLayers: string[] =
+      (diagram.languageSpecific?.atlas as { layers?: string[] } | undefined)?.layers ??
+      ['package', 'capability', 'goroutine', 'flow'];
+
+    // Only render layers that have actual data
+    const availableLayers = requestedLayers.filter(
+      (layer) => atlas.layers[layer as keyof typeof atlas.layers]
+    );
+
+    // Derive base path by stripping .mmd extension
+    const basePath = paths.paths.mmd.replace(/\.mmd$/, '');
+
+    // Build renderer options from global config
+    const rendererOptions: Record<string, unknown> = {};
+    if (this.globalConfig.mermaid?.theme) {
+      rendererOptions.theme =
+        typeof this.globalConfig.mermaid.theme === 'string'
+          ? { name: this.globalConfig.mermaid.theme }
+          : this.globalConfig.mermaid.theme;
+    }
+    if (this.globalConfig.mermaid?.transparentBackground) {
+      rendererOptions.backgroundColor = 'transparent';
+    }
+
+    const mermaidRenderer = new IsomorphicMermaidRenderer(rendererOptions as any);
+
+    console.log('\n🗺️  Generating Go Architecture Atlas...');
+
+    for (const layer of availableLayers) {
+      const result = await renderer.render(
+        atlas,
+        layer as Parameters<typeof renderer.render>[1],
+        'mermaid'
+      );
+
+      const layerPaths = {
+        mmd: `${basePath}-${layer}.mmd`,
+        svg: `${basePath}-${layer}.svg`,
+        png: `${basePath}-${layer}.png`,
+      };
+
+      try {
+        await mermaidRenderer.renderAndSave(result.content, layerPaths);
+        console.log(`  ✅ ${layer}: ${layerPaths.mmd}`);
+      } catch (err) {
+        // PNG may fail for very large diagrams; SVG and MMD should still be saved
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  ⚠️  ${layer}: render warning - ${msg}`);
+      }
+    }
+
+    // Save full Atlas JSON alongside the layer diagrams
+    const atlasJsonPath = `${basePath}-atlas.json`;
+    await fs.writeJson(atlasJsonPath, atlas, { spaces: 2 });
+    console.log(`  📊 Atlas JSON: ${atlasJsonPath}`);
+    console.log(`\n✨ Atlas layers: ${availableLayers.join(', ')}`);
   }
 }
