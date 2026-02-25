@@ -369,9 +369,10 @@ export class MermaidTemplates {
       }
       return afterSlash;
     }
-    // Strip .spawn-N suffix, take last 2 dot-separated parts
+    // Strip .spawn-N suffix, strip package path prefix, take last 2 dot-separated parts
     const stripped = node.id.replace(/\.spawn-\d+$/, '');
-    const parts = stripped.split('.');
+    const afterSlash = stripped.slice(stripped.lastIndexOf('/') + 1);
+    const parts = afterSlash.split('.');
     return parts.slice(-2).join('.');
   }
 

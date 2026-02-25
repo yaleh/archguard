@@ -150,6 +150,17 @@ describe('MermaidTemplates (private) formatGoroutineName', () => {
     expect(fn({ id: 'main.worker.spawn-3', name: '' })).toBe('main.worker');
   });
 
+  it('strips package path prefix from id when name is empty', () => {
+    // "examples/user-service.main.spawn-25" → strip spawn → "examples/user-service.main"
+    // → strip before last '/' → "user-service.main" → last 2 parts → "user-service.main"
+    expect(fn({ id: 'examples/user-service.main.spawn-25', name: '' })).toBe('user-service.main');
+  });
+
+  it('strips path prefix from slashed id with method spawn', () => {
+    // "cmd/swarm-mcp.startTestWorkersParallel.spawn-283" → "swarm-mcp.startTestWorkersParallel"
+    expect(fn({ id: 'cmd/swarm-mcp.startTestWorkersParallel.spawn-283', name: '' })).toBe('swarm-mcp.startTestWorkersParallel');
+  });
+
   it('handles id with no spawn suffix — returns last 2 parts', () => {
     expect(fn({ id: 'pkg.subpkg.handler', name: '' })).toBe('subpkg.handler');
   });
