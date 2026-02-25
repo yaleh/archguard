@@ -470,6 +470,28 @@ describe('MermaidTemplates.renderGoroutineTopology — goroutine name display', 
   });
 });
 
+// ─── formatChannelLabel ──────────────────────────────────────────────────────
+
+describe('MermaidTemplates (private) formatChannelLabel', () => {
+  const fn = (id: string) => (MermaidTemplates as any).formatChannelLabel(id);
+
+  it('extracts package short name from standard channel id', () => {
+    expect(fn('chan-pkg/hub-114')).toBe('hub');
+  });
+
+  it('handles hyphenated package name', () => {
+    expect(fn('chan-cmd/swarm-mcp-278')).toBe('swarm-mcp');
+  });
+
+  it('handles top-level package without slash', () => {
+    expect(fn('chan-main-42')).toBe('main');
+  });
+
+  it('returns id as-is when no chan- prefix', () => {
+    expect(fn('ch1')).toBe('ch1');
+  });
+});
+
 // ─── renderGoroutineTopology — spawner node declarations ──────────────────────
 
 describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations', () => {
@@ -547,5 +569,135 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     expect(out).toContain('classDef spawner');
+  });
+
+  // P1: package subgraphs
+  it('groups nodes with same package into a subgraph', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-98',
+          name: 'WorkerPool.Start',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 98 },
+        },
+        {
+          id: 'pkg/hub.WorkerPool.Stop.spawn-115',
+          name: 'WorkerPool.Stop',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 115 },
+        },
+      ],
+      edges: [],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    // Both nodes should be inside the subgraph
+    expect(out).toContain('"WorkerPool.Start"');
+    expect(out).toContain('"WorkerPool.Stop"');
+  });
+
+  it('puts nodes from different packages into different subgraphs', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-98',
+          name: 'WorkerPool.Start',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 98 },
+        },
+        {
+          id: 'pkg/preflight.Checker.Check.spawn-199',
+          name: 'Checker.Check',
+          type: 'spawned' as const,
+          package: 'pkg/preflight',
+          location: { file: 'checker.go', line: 199 },
+        },
+      ],
+      edges: [],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('subgraph grp_pkg_hub["pkg/hub"]');
+    expect(out).toContain('subgraph grp_pkg_preflight["pkg/preflight"]');
+  });
+
+  it('places spawner in the same subgraph as its spawned node', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-98',
+          name: '<anonymous>',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 98 },
+        },
+      ],
+      edges: [
+        {
+          from: 'pkg/hub.WorkerPool.Start',
+          to: 'pkg/hub.WorkerPool.Start.spawn-98',
+          spawnType: 'go-stmt' as const,
+        },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // Find the pkg/hub subgraph block
+    const lines = out.split('\n');
+    const sgStart = lines.findIndex(l => l.includes('grp_pkg_hub'));
+    const sgEnd = lines.findIndex((l, i) => i > sgStart && l.trim() === 'end');
+    const sgContent = lines.slice(sgStart, sgEnd).join('\n');
+    expect(sgContent).toContain('["WorkerPool.Start"]:::spawner');
+  });
+
+  it('renders node with empty package at top-level, not in a subgraph', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'orphan.spawn-1',
+          name: 'orphan',
+          type: 'spawned' as const,
+          package: '' as any,
+          location: { file: 'x.go', line: 1 },
+        },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).not.toContain('subgraph grp_');
+    expect(out).toContain('"orphan"');
+  });
+
+  // P2: channel labels
+  it('shows package short name for generic "chan" type channels', () => {
+    const topology = makeTopology({
+      channels: [
+        {
+          id: 'chan-pkg/hub-114',
+          type: 'chan',
+          direction: 'bidirectional' as const,
+          location: { file: 'hub.go', line: 114 },
+        },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('"hub"');
+    expect(out).not.toContain('[("chan")]');
+  });
+
+  it('preserves rich channel type when not generic "chan"', () => {
+    const topology = makeTopology({
+      channels: [
+        {
+          id: 'ch1',
+          type: 'chan Job',
+          direction: 'bidirectional' as const,
+          location: { file: 'main.go', line: 10 },
+        },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('"chan Job"');
   });
 });

@@ -207,34 +207,75 @@ export class MermaidTemplates {
   static renderGoroutineTopology(topology: GoroutineTopology): string {
     let output = 'flowchart TB\n';
 
-    // Track declared node IDs (by raw id, before sanitize)
+    // ── Build package groups ──────────────────────────────────────────────────
+    type NodeDecl = { rawId: string; label: string; style: string };
+    const packageGroups = new Map<string, NodeDecl[]>();
+    const ungrouped: NodeDecl[] = [];
     const declaredIds = new Set<string>();
 
+    const addDecl = (pkg: string | undefined, decl: NodeDecl) => {
+      if (pkg) {
+        if (!packageGroups.has(pkg)) packageGroups.set(pkg, []);
+        packageGroups.get(pkg)!.push(decl);
+      } else {
+        ungrouped.push(decl);
+      }
+      declaredIds.add(decl.rawId);
+    };
+
+    // Build nodeId → package lookup for spawner inference
+    const nodeIdToPackage = new Map<string, string>();
+    for (const node of topology.nodes) {
+      if (node.package) nodeIdToPackage.set(node.id, node.package);
+    }
+
+    // Add topology nodes (main, spawned)
     for (const node of topology.nodes) {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
-      output += `  ${this.sanitizeId(node.id)}["${displayName}${patternLabel}"]${style}\n`;
-      declaredIds.add(node.id);
+      addDecl(node.package || undefined, {
+        rawId: node.id,
+        label: `${displayName}${patternLabel}`,
+        style,
+      });
     }
 
-    // Declare spawner nodes that are not already declared
+    // Add spawner nodes (infer package from corresponding spawned node)
     for (const edge of topology.edges) {
       if (!declaredIds.has(edge.from)) {
         const label = MermaidTemplates.formatSpawnerLabel(edge.from);
-        output += `  ${this.sanitizeId(edge.from)}["${label}"]:::spawner\n`;
-        declaredIds.add(edge.from);
+        const pkg = nodeIdToPackage.get(edge.to);
+        addDecl(pkg, { rawId: edge.from, label, style: ':::spawner' });
       }
     }
 
+    // ── Emit package subgraphs ────────────────────────────────────────────────
+    for (const [pkg, decls] of packageGroups) {
+      const sgId = 'grp_' + MermaidTemplates.sanitizeId(pkg);
+      output += `\n  subgraph ${sgId}["${pkg}"]\n`;
+      for (const decl of decls) {
+        output += `    ${this.sanitizeId(decl.rawId)}["${decl.label}"]${decl.style}\n`;
+      }
+      output += `  end\n`;
+    }
+
+    // ── Emit ungrouped nodes (no package) ────────────────────────────────────
+    for (const decl of ungrouped) {
+      output += `  ${this.sanitizeId(decl.rawId)}["${decl.label}"]${decl.style}\n`;
+    }
+
+    // ── Emit spawn edges ──────────────────────────────────────────────────────
     for (const edge of topology.edges) {
       output += `  ${this.sanitizeId(edge.from)} -->|go| ${this.sanitizeId(edge.to)}\n`;
     }
 
+    // ── Channels subgraph ─────────────────────────────────────────────────────
     if (topology.channels.length > 0) {
       output += '\n  subgraph channels\n';
       for (const ch of topology.channels) {
-        output += `    ${this.sanitizeId(ch.id)}[("${ch.type}")]:::channel\n`;
+        const label = ch.type !== 'chan' ? ch.type : MermaidTemplates.formatChannelLabel(ch.id);
+        output += `    ${this.sanitizeId(ch.id)}[("${label}")]:::channel\n`;
       }
       output += '  end\n';
     }
@@ -349,6 +390,16 @@ export class MermaidTemplates {
     // If function (1-2 dot-parts like "capabilities.NewMemoryRegistry"), return as-is
     const parts = afterSlash.split('.');
     return parts.length > 2 ? parts.slice(-2).join('.') : afterSlash;
+  }
+
+  private static formatChannelLabel(channelId: string): string {
+    // Channel IDs: "chan-${pkg.fullName}-${lineNum}" e.g. "chan-pkg/hub-114"
+    const withoutPrefix = channelId.startsWith('chan-') ? channelId.slice(5) : channelId;
+    // Strip trailing line number: "-114" → remove last "-N" segment
+    const withoutSuffix = withoutPrefix.replace(/-\d+$/, '');
+    // Return last segment after final '/': "pkg/hub" → "hub"
+    const slashIdx = withoutSuffix.lastIndexOf('/');
+    return slashIdx >= 0 ? withoutSuffix.slice(slashIdx + 1) : withoutSuffix;
   }
 
   private static formatGoroutineName(node: { id: string; name: string }): string {
