@@ -217,8 +217,13 @@ export class TreeSitterBridge {
 
     // HTTP handler registration patterns (net/http and gin/echo/chi-style routers)
     const httpHandlerNames = new Set([
-      'HandleFunc', 'Handle', // net/http ServeMux
-      'GET', 'POST', 'PUT', 'DELETE', 'PATCH', // gin / echo / chi
+      'HandleFunc',
+      'Handle', // net/http ServeMux
+      'GET',
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH', // gin / echo / chi
     ]);
 
     for (const callExpr of blockNode.descendantsOfType('call_expression')) {
@@ -321,10 +326,7 @@ export class TreeSitterBridge {
     if (argsNode) {
       for (const child of argsNode.namedChildren) {
         const text = code.substring(child.startIndex, child.endIndex);
-        if (
-          child.type === 'interpreted_string_literal' ||
-          child.type === 'raw_string_literal'
-        ) {
+        if (child.type === 'interpreted_string_literal' || child.type === 'raw_string_literal') {
           // Strip surrounding quotes/backticks
           args.push(text.slice(1, -1));
         } else {

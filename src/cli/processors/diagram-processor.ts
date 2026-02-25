@@ -593,13 +593,13 @@ export class DiagramProcessor {
     const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
-    const atlas = archJSON.extensions!.goAtlas!;
+    const atlas = archJSON.extensions.goAtlas;
     const renderer = new AtlasRenderer();
 
     // Determine which layers to render (from config or default to all 4)
-    const requestedLayers: string[] =
-      (diagram.languageSpecific?.atlas as { layers?: string[] } | undefined)?.layers ??
-      ['package', 'capability', 'goroutine', 'flow'];
+    const requestedLayers: string[] = (
+      diagram.languageSpecific?.atlas as { layers?: string[] } | undefined
+    )?.layers ?? ['package', 'capability', 'goroutine', 'flow'];
 
     // Only render layers that have actual data
     const availableLayers = requestedLayers.filter(

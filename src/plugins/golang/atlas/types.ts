@@ -65,6 +65,8 @@ export interface AtlasGenerationOptions {
     maxFunctions?: number;
   };
   includeTests?: boolean;
+  excludeTests?: boolean;
+  excludePatterns?: string[];
   entryPointTypes?: import('@/types/extensions.js').EntryPointType[];
   followIndirectCalls?: boolean;
 }
@@ -77,6 +79,8 @@ export interface AtlasConfig {
   functionBodyStrategy?: 'none' | 'selective' | 'full';
   layers?: AtlasLayer[];
   includeTests?: boolean;
+  excludeTests?: boolean;
   entryPointTypes?: import('@/types/extensions.js').EntryPointType[];
   followIndirectCalls?: boolean;
+  excludePatterns?: string[];
 }

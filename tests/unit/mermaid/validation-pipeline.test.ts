@@ -280,7 +280,9 @@ describe('MermaidValidationPipeline', () => {
 
       expect(result.structural.issues.length).toBeGreaterThan(0);
       // Structural issues are warnings, NOT blocking - they do not appear in blockingIssues
-      expect(result.overall.blockingIssues.some((issue) => issue.includes('structural'))).toBe(false);
+      expect(result.overall.blockingIssues.some((issue) => issue.includes('structural'))).toBe(
+        false
+      );
       // But they affect overall.valid (since valid = canProceed && structural.valid && quality.valid)
       expect(result.overall.valid).toBe(false);
     });

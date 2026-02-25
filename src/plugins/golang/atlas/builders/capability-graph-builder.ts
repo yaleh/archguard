@@ -62,15 +62,17 @@ export class CapabilityGraphBuilder {
       }
     }
 
-    // Detect interface usage in struct fields
-    const allInterfaceNames = new Set(
-      rawData.packages.flatMap((p) => p.interfaces.map((i) => i.name))
-    );
+    // Detect interface/struct usage in struct fields
+    // TODO: field.type is a simple name (e.g., "Engine") but node ID is "pkg/hub.Engine" — may create dangling edges
+    const allKnownTypeNames = new Set([
+      ...rawData.packages.flatMap((p) => p.interfaces.map((i) => i.name)),
+      ...rawData.packages.flatMap((p) => (p.structs || []).map((s) => s.name)),
+    ]);
 
     for (const pkg of rawData.packages) {
       for (const struct of pkg.structs) {
         for (const field of struct.fields) {
-          if (allInterfaceNames.has(field.type)) {
+          if (allKnownTypeNames.has(field.type)) {
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,
               type: 'uses',

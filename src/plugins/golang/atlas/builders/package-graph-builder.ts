@@ -16,7 +16,7 @@ export class PackageGraphBuilder {
 
   build(rawData: GoRawData): Promise<PackageGraph> {
     const nodes = this.buildNodes(rawData);
-    const edges = this.buildEdges(rawData);
+    const edges = this.buildEdges(rawData, nodes);
     const cycles = this.detectCycles(nodes, edges);
 
     return Promise.resolve({ nodes, edges, cycles });
@@ -36,25 +36,36 @@ export class PackageGraphBuilder {
     }));
   }
 
-  private buildEdges(rawData: GoRawData): PackageDependency[] {
-    const edges: PackageDependency[] = [];
+  private buildEdges(rawData: GoRawData, nodes: PackageNode[]): PackageDependency[] {
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const edgeMap = new Map<string, { from: string; to: string; count: number }>();
 
     for (const pkg of rawData.packages) {
       const fromId = pkg.fullName ? `${rawData.moduleName}/${pkg.fullName}` : pkg.name;
+      if (!nodeIds.has(fromId)) continue;
 
       for (const imp of pkg.imports) {
         const importType = this.goModResolver.classifyImport(imp.path);
         if (importType === 'std') continue; // Skip std lib
 
-        edges.push({
-          from: fromId,
-          to: imp.path,
-          strength: 1,
-        });
+        const toId = imp.path;
+        if (!nodeIds.has(toId)) continue;
+
+        const key = `${fromId}→${toId}`;
+        const existing = edgeMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          edgeMap.set(key, { from: fromId, to: toId, count: 1 });
+        }
       }
     }
 
-    return edges;
+    return [...edgeMap.values()].map((e) => ({
+      from: e.from,
+      to: e.to,
+      strength: e.count,
+    }));
   }
 
   /**
@@ -111,11 +122,16 @@ export class PackageGraphBuilder {
     return cycles;
   }
 
-  private classifyPackageType(
-    pkg: GoRawPackage
-  ): 'internal' | 'external' | 'vendor' | 'std' | 'cmd' {
+  private classifyPackageType(pkg: GoRawPackage): PackageNode['type'] {
+    const full = pkg.fullName;
+    const segments = full.split('/');
+    const isTestutil = segments.some(s => s === 'testutil' || s === 'hubtest');
+
+    if (full.startsWith('tests/') || full === 'tests') return 'tests';
+    if (full.startsWith('examples/')) return 'examples';
+    if (isTestutil) return 'testutil';
     if (pkg.name === 'main') return 'cmd';
-    if (pkg.fullName.includes('/vendor/')) return 'vendor';
+    if (full.includes('/vendor/')) return 'vendor';
     return 'internal';
   }
 }

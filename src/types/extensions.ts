@@ -90,7 +90,8 @@ export interface PackageCycle {
 export interface PackageNode {
   id: string; // e.g. "github.com/archguard/swarm-hub/pkg/hub"
   name: string; // e.g. "pkg/hub"
-  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd';
+  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd'
+      | 'tests' | 'examples' | 'testutil';
   fileCount: number;
   stats?: PackageStats;
 }

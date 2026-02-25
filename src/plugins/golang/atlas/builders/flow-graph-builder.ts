@@ -124,10 +124,26 @@ export class FlowGraphBuilder {
     const handlerFnName = entry.handler.split('.').at(-1) ?? entry.handler;
 
     for (const pkg of rawData.packages) {
+      // Search top-level functions
       for (const func of pkg.functions) {
         if (func.name !== handlerFnName || !func.body) continue;
 
         for (const call of func.body.calls) {
+          calls.push({
+            from: entry.handler,
+            to: call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName,
+            type: 'direct',
+            confidence: 0.7,
+          });
+        }
+      }
+
+      // Also search struct methods
+      for (const struct of pkg.structs || []) {
+        const method = (struct.methods || []).find((m) => m.name === handlerFnName);
+        if (!method || !method.body) continue;
+
+        for (const call of method.body.calls) {
           calls.push({
             from: entry.handler,
             to: call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName,

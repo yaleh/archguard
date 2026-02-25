@@ -507,19 +507,26 @@ describe('path and handler extraction from args', () => {
 
   it('should extract path and handler from HandleFunc args', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        fullName: 'pkg/api',
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'HandleFunc',
-              args: ['/v1/sessions', 's.handleSessions'],
-              location: { file: 'api.go', startLine: 5, endLine: 5 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/v1/sessions', 's.handleSessions'],
+                    location: { file: 'api.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].path).toBe('/v1/sessions');
@@ -528,18 +535,25 @@ describe('path and handler extraction from args', () => {
 
   it('should extract path from METHOD-prefixed string in HandleFunc args', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'HandleFunc',
-              args: ['POST /products', 'r.handler.CreateProduct'],
-              location: { file: 'router.go', startLine: 10, endLine: 10 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['POST /products', 'r.handler.CreateProduct'],
+                    location: { file: 'router.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].path).toBe('POST /products');
@@ -548,18 +562,25 @@ describe('path and handler extraction from args', () => {
 
   it('should extract path and handler from GET args', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'GET',
-              args: ['/users', 'listUsers'],
-              location: { file: 'routes.go', startLine: 8, endLine: 8 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'GET',
+                    args: ['/users', 'listUsers'],
+                    location: { file: 'routes.go', startLine: 8, endLine: 8 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].path).toBe('/users');
@@ -568,34 +589,42 @@ describe('path and handler extraction from args', () => {
 
   it('should trace calls from handler function when handler matches a function in same package', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        fullName: 'pkg/api',
-        functions: [
-          makeFunction({
-            name: 'SetupRoutes',
-            body: {
-              calls: [{
-                functionName: 'HandleFunc',
-                args: ['/users', 'listUsers'],
-                location: { file: 'routes.go', startLine: 5, endLine: 5 },
-              }],
-              goSpawns: [], channelOps: [],
-            },
-          }),
-          makeFunction({
-            name: 'listUsers',
-            body: {
-              calls: [{
-                functionName: 'Encode',
-                packageName: 'json',
-                args: [],
-                location: { file: 'routes.go', startLine: 10, endLine: 10 },
-              }],
-              goSpawns: [], channelOps: [],
-            },
-          }),
-        ],
-      })],
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/users', 'listUsers'],
+                    location: { file: 'routes.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'listUsers',
+              body: {
+                calls: [
+                  {
+                    functionName: 'Encode',
+                    packageName: 'json',
+                    args: [],
+                    location: { file: 'routes.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].handler).toBe('listUsers');
@@ -606,38 +635,126 @@ describe('path and handler extraction from args', () => {
 
   it('should fall back to empty path and handler when no args provided', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'HandleFunc',
-              // no args field
-              location: { file: 'api.go', startLine: 5, endLine: 5 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    // no args field
+                    location: { file: 'api.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].path).toBe('');
     expect(result.entryPoints[0].handler).toBe('');
   });
 
+  it('resolves struct method as HTTP handler', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/users', 'UserHandler'],
+                    location: { file: 'routes.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+          structs: [
+            {
+              name: 'Controller',
+              packageName: 'api',
+              fields: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'controller.go', startLine: 1, endLine: 60 },
+              methods: [
+                {
+                  name: 'UserHandler',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: true,
+                  location: { file: 'controller.go', startLine: 10, endLine: 30 },
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'FindAll',
+                        packageName: 'db',
+                        args: [],
+                        location: { file: 'controller.go', startLine: 15, endLine: 15 },
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData);
+
+    // The entry point for the HandleFunc call on line 5 should be detected
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].id).toBe('entry-pkg/api-5');
+    expect(result.entryPoints[0].handler).toBe('UserHandler');
+
+    // The call chain should resolve UserHandler as a struct method and include its calls
+    expect(result.callChains).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    expect(chain.calls[0].from).toBe('UserHandler');
+    expect(chain.calls[0].to).toBe('db.FindAll');
+  });
+
   it('should set handler to empty string when args[1] is an anonymous function literal', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'HandleFunc',
-              args: ['/api/v1/', 'func(w http.ResponseWriter, r *http.Request) { doSomething() }'],
-              location: { file: 'server.go', startLine: 42, endLine: 42 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: [
+                      '/api/v1/',
+                      'func(w http.ResponseWriter, r *http.Request) { doSomething() }',
+                    ],
+                    location: { file: 'server.go', startLine: 42, endLine: 42 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints).toHaveLength(1);
@@ -647,18 +764,25 @@ describe('path and handler extraction from args', () => {
 
   it('should keep named handler unchanged when it does not start with func(', async () => {
     const rawData = makeRawData({
-      packages: [makePackage({
-        functions: [makeFunction({
-          body: {
-            calls: [{
-              functionName: 'HandleFunc',
-              args: ['/healthz', 's.handleHealth'],
-              location: { file: 'server.go', startLine: 10, endLine: 10 },
-            }],
-            goSpawns: [], channelOps: [],
-          },
-        })],
-      })],
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/healthz', 's.handleHealth'],
+                    location: { file: 'server.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].handler).toBe('s.handleHealth');

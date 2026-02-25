@@ -192,7 +192,8 @@ export interface PackageCycle {
 export interface PackageNode {
   id: string;           // "github.com/archguard/swarm-hub/pkg/hub"
   name: string;         // "pkg/hub"
-  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd';
+  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd'
+      | 'tests' | 'examples' | 'testutil';  // v1.3: role-based classification
   fileCount: number;
   stats?: PackageStats;
 }
@@ -488,7 +489,7 @@ export type RelationType =
   - **补丁版本**: Bug 修复
 
 ```typescript
-export const GO_ATLAS_EXTENSION_VERSION = '1.0';
+export const GO_ATLAS_EXTENSION_VERSION = '1.1';  // v1.3: PackageNode.type widened
 
 export interface GoAtlasExtension {
   version: string;  // 与常量匹配
@@ -654,9 +655,10 @@ relations: [
 
 ---
 
-**文档版本**: 1.2
-**最后更新**: 2026-02-24
+**文档版本**: 1.3
+**最后更新**: 2026-02-25
 **状态**: 已采纳 - 待实施
 **变更记录**:
 - v1.1: `PackageGraph.cycles` 改为结构化 `PackageCycle[]`（含 severity）；`PackageNode.type` 新增 `'cmd'`；`PackageNode` 新增可选 `stats`；`GoroutineNode` 新增可选 `spawnType`
 - v1.2: `selectiveConfig.includedPatterns` 重命名为 `triggerNodeTypes`（语义修正：这是 AST 节点类型列表，非正则匹配模式）；更新示例对齐实际用法；交叉引用更新至 Proposal v5.1
+- v1.3: `PackageNode.type` union 扩展，新增 `'tests' | 'examples' | 'testutil'` 用于角色分类（原有 5 个值不变，向下兼容）；`GO_ATLAS_EXTENSION_VERSION` 从 `'1.0'` 升至 `'1.1'`（序列化格式新增字段值）；消费方处理 `type` 时需对未知值添加 default 分支。关联：Plan 18 Proposal

@@ -109,7 +109,7 @@ describe('AtlasRenderer', () => {
     const atlas = makeAtlas({ layers: { flow: makeFlowGraph() } });
     const result = await renderer.render(atlas, 'flow', 'mermaid');
 
-    expect(result.content).toMatch(/^sequenceDiagram/);
+    expect(result.content).toMatch(/^flowchart LR/);
     expect(result.layer).toBe('flow');
     expect(result.format).toBe('mermaid');
   });
@@ -131,7 +131,7 @@ describe('AtlasRenderer', () => {
     expect(parts[0]).toMatch(/^flowchart TB/);
     expect(parts[1]).toMatch(/^flowchart LR/);
     expect(parts[2]).toMatch(/^flowchart TB/);
-    expect(parts[3]).toMatch(/^sequenceDiagram/);
+    expect(parts[3]).toMatch(/^flowchart LR/);
   });
 
   // 6. render 'all' with only partial layers present
@@ -148,7 +148,7 @@ describe('AtlasRenderer', () => {
     const parts = result.content.split('\n---\n');
     expect(parts).toHaveLength(2);
     expect(parts[0]).toMatch(/^flowchart TB/);
-    expect(parts[1]).toMatch(/^sequenceDiagram/);
+    expect(parts[1]).toMatch(/^flowchart LR/);
   });
 
   // 7. render 'package' in json
@@ -177,7 +177,7 @@ describe('AtlasRenderer', () => {
   it('throws when package layer is missing', async () => {
     const atlas = makeAtlas({ layers: {} });
     await expect(async () => renderer.render(atlas, 'package', 'mermaid')).rejects.toThrow(
-      'Package layer not available',
+      'Package layer not available'
     );
   });
 
@@ -185,7 +185,7 @@ describe('AtlasRenderer', () => {
   it('throws when capability layer is missing', async () => {
     const atlas = makeAtlas({ layers: {} });
     await expect(async () => renderer.render(atlas, 'capability', 'mermaid')).rejects.toThrow(
-      'Capability layer not available',
+      'Capability layer not available'
     );
   });
 
@@ -193,7 +193,7 @@ describe('AtlasRenderer', () => {
   it('throws when goroutine layer is missing', async () => {
     const atlas = makeAtlas({ layers: {} });
     await expect(async () => renderer.render(atlas, 'goroutine', 'mermaid')).rejects.toThrow(
-      'Goroutine layer not available',
+      'Goroutine layer not available'
     );
   });
 
@@ -201,7 +201,7 @@ describe('AtlasRenderer', () => {
   it('throws when flow layer is missing', async () => {
     const atlas = makeAtlas({ layers: {} });
     await expect(async () => renderer.render(atlas, 'flow', 'mermaid')).rejects.toThrow(
-      'Flow layer not available',
+      'Flow layer not available'
     );
   });
 });
@@ -288,7 +288,13 @@ describe('MermaidTemplates', () => {
   it('renders interface nodes with {{ }} syntax', () => {
     const graph = makeCapabilityGraph({
       nodes: [
-        { id: 'iface1', name: 'IRepository', type: 'interface', package: 'pkg/repo', exported: true },
+        {
+          id: 'iface1',
+          name: 'IRepository',
+          type: 'interface',
+          package: 'pkg/repo',
+          exported: true,
+        },
       ],
     });
     const output = MermaidTemplates.renderCapabilityGraph(graph);
@@ -387,11 +393,11 @@ describe('MermaidTemplates', () => {
   });
 
   // 24. renderFlowGraph with no chains and no entry points returns minimal output
-  it('renders empty flow graph as just sequenceDiagram header', () => {
+  it('renders empty flow graph as just flowchart LR header', () => {
     const graph = makeFlowGraph();
     const output = MermaidTemplates.renderFlowGraph(graph);
 
-    expect(output).toBe('sequenceDiagram\n');
+    expect(output).toBe('flowchart LR\n');
   });
 
   // Additional coverage: renderGoroutineTopology with main node uses :::main style
@@ -432,7 +438,7 @@ describe('MermaidTemplates', () => {
     expect(output).toContain(':::spawned');
   });
 
-  // Additional coverage: renderFlowGraph with an entry point and call chain
+  // Additional coverage: renderFlowGraph with an entry point and call chain (sequence format)
   it('renders flow graph sequence with entry point and calls', () => {
     const graph = makeFlowGraph({
       entryPoints: [
@@ -453,7 +459,7 @@ describe('MermaidTemplates', () => {
         },
       ],
     });
-    const output = MermaidTemplates.renderFlowGraph(graph);
+    const output = MermaidTemplates.renderFlowGraph(graph, 'sequence');
 
     expect(output).toContain('Note over UserHandler');
     expect(output).toContain('http-get /api/users');
@@ -461,7 +467,7 @@ describe('MermaidTemplates', () => {
     expect(output).toContain('UserService-->>-UserHandler: return');
   });
 
-  // Additional coverage: call chain skipped when entry point not found
+  // Additional coverage: call chain skipped when entry point not found (sequence format)
   it('skips call chain when entry point is not found', () => {
     const graph = makeFlowGraph({
       entryPoints: [],
@@ -473,7 +479,7 @@ describe('MermaidTemplates', () => {
         },
       ],
     });
-    const output = MermaidTemplates.renderFlowGraph(graph);
+    const output = MermaidTemplates.renderFlowGraph(graph, 'sequence');
 
     expect(output).toBe('sequenceDiagram\n');
     expect(output).not.toContain('A->>');

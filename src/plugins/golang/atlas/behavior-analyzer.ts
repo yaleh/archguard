@@ -6,6 +6,7 @@ import { CapabilityGraphBuilder } from './builders/capability-graph-builder.js';
 import { GoroutineTopologyBuilder } from './builders/goroutine-topology-builder.js';
 import { FlowGraphBuilder } from './builders/flow-graph-builder.js';
 import { GoModResolver } from './go-mod-resolver.js';
+import { InterfaceMatcher } from '../interface-matcher.js';
 
 /**
  * Behavior analysis coordinator
@@ -30,6 +31,14 @@ export class BehaviorAnalyzer {
   }
 
   async buildCapabilityGraph(rawData: GoRawData): Promise<CapabilityGraph> {
+    if (!rawData.implementations?.length) {
+      const structs = rawData.packages.flatMap((p) => p.structs || []);
+      const interfaces = rawData.packages.flatMap((p) => p.interfaces || []);
+      rawData.implementations = new InterfaceMatcher().matchImplicitImplementations(
+        structs,
+        interfaces
+      );
+    }
     return this.capabilityGraphBuilder.build(rawData);
   }
 

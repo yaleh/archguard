@@ -417,14 +417,10 @@ describe('CapabilityGraphBuilder', () => {
     expect(graph.nodes).toHaveLength(2);
 
     const interfaceNode = graph.nodes.find((n) => n.type === 'interface');
-    expect(interfaceNode?.id).toBe(
-      'github.com/myorg/myproject/internal/service.UserService'
-    );
+    expect(interfaceNode?.id).toBe('github.com/myorg/myproject/internal/service.UserService');
 
     const structNode = graph.nodes.find((n) => n.type === 'struct');
-    expect(structNode?.id).toBe(
-      'github.com/myorg/myproject/internal/service.userServiceImpl'
-    );
+    expect(structNode?.id).toBe('github.com/myorg/myproject/internal/service.userServiceImpl');
   });
 
   // Additional: implements edge id format verification
@@ -492,6 +488,55 @@ describe('CapabilityGraphBuilder', () => {
 
     const usesEdge = graph.edges.find((e) => e.type === 'uses');
     expect(usesEdge?.id).toBe('uses-pkg/app.App-Repository');
+  });
+
+  // Iter 7: generates uses edges for struct field types (not just interfaces)
+  it('generates uses edges for struct field types', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          structs: [
+            {
+              name: 'Router',
+              packageName: 'hub',
+              fields: [
+                {
+                  name: 'engine',
+                  type: 'Engine',
+                  exported: false,
+                  embedded: false,
+                  location: { file: 'router.go', startLine: 5, endLine: 5 },
+                },
+              ],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'router.go', startLine: 1, endLine: 10 },
+            },
+            {
+              name: 'Engine',
+              packageName: 'hub',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'engine.go', startLine: 1, endLine: 5 },
+            },
+          ],
+          interfaces: [],
+        }),
+      ],
+    });
+
+    const graph = await builder.build(rawData);
+
+    const usesEdges = graph.edges.filter((e) => e.type === 'uses');
+    expect(usesEdges).toHaveLength(1);
+    expect(usesEdges[0].source).toBe('pkg/hub.Router');
+    expect(usesEdges[0].target).toBe('Engine');
+    expect(usesEdges[0].confidence).toBe(0.9);
+    expect(usesEdges[0].context?.fieldType).toBe(true);
   });
 
   // Additional: interface names collected across all packages for uses detection
