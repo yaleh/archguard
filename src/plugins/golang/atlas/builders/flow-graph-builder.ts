@@ -59,13 +59,16 @@ export class FlowGraphBuilder {
    * Match call expression against known HTTP framework patterns
    */
   private matchEntryPointPattern(call: GoCallExpr, pkg: GoRawPackage): EntryPoint | null {
+    const path = call.args?.[0] ?? '';
+    const handler = call.args?.[1] ?? '';
+
     // http.HandleFunc or mux.HandleFunc / mux.Handle
     if (call.functionName === 'HandleFunc' || call.functionName === 'Handle') {
       return {
         id: `entry-${pkg.fullName}-${call.location.startLine}`,
         type: 'http-handler' as EntryPointType,
-        path: '',
-        handler: '',
+        path,
+        handler,
         middleware: [],
         location: { file: call.location.file, line: call.location.startLine },
       };
@@ -84,8 +87,8 @@ export class FlowGraphBuilder {
       return {
         id: `entry-${pkg.fullName}-${call.location.startLine}`,
         type: httpMethodMap[call.functionName],
-        path: '',
-        handler: '',
+        path,
+        handler,
         middleware: [],
         location: { file: call.location.file, line: call.location.startLine },
       };
@@ -116,9 +119,12 @@ export class FlowGraphBuilder {
 
     if (!entry.handler) return calls;
 
+    // handler may be a selector expression like "s.handleSessions"; match on the final segment
+    const handlerFnName = entry.handler.split('.').at(-1) ?? entry.handler;
+
     for (const pkg of rawData.packages) {
       for (const func of pkg.functions) {
-        if (func.name !== entry.handler || !func.body) continue;
+        if (func.name !== handlerFnName || !func.body) continue;
 
         for (const call of func.body.calls) {
           calls.push({

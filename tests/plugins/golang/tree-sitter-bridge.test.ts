@@ -151,4 +151,86 @@ type Authenticator interface {
       expect(result.interfaces).toHaveLength(1);
     });
   });
+
+  describe('call expression args extraction', () => {
+    it('should extract string literal arguments', () => {
+      const code = `
+package main
+
+func setup() {
+  mux.HandleFunc("/api/users", handleUsers)
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+
+      const calls = result.functions[0].body?.calls ?? [];
+      const handleFuncCall = calls.find((c) => c.functionName === 'HandleFunc');
+      expect(handleFuncCall).toBeDefined();
+      expect(handleFuncCall?.args).toEqual(['/api/users', 'handleUsers']);
+    });
+
+    it('should extract string with METHOD prefix', () => {
+      const code = `
+package main
+
+func setup() {
+  mux.HandleFunc("POST /products", handler.Create)
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+
+      const calls = result.functions[0].body?.calls ?? [];
+      const handleFuncCall = calls.find((c) => c.functionName === 'HandleFunc');
+      expect(handleFuncCall).toBeDefined();
+      expect(handleFuncCall?.args).toEqual(['POST /products', 'handler.Create']);
+    });
+
+    it('should extract selector_expression as second argument', () => {
+      const code = `
+package main
+
+func setup() {
+  mux.HandleFunc("/health", s.handleHealth)
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+
+      const calls = result.functions[0].body?.calls ?? [];
+      const handleFuncCall = calls.find((c) => c.functionName === 'HandleFunc');
+      expect(handleFuncCall).toBeDefined();
+      expect(handleFuncCall?.args?.[1]).toBe('s.handleHealth');
+    });
+
+    it('should return empty args for call with no arguments', () => {
+      const code = `
+package main
+
+func setup() {
+  foo()
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+
+      const calls = result.functions[0].body?.calls ?? [];
+      const fooCall = calls.find((c) => c.functionName === 'foo');
+      expect(fooCall).toBeDefined();
+      expect(fooCall?.args).toEqual([]);
+    });
+
+    it('should extract single string argument', () => {
+      const code = `
+package main
+
+func setup() {
+  log.Print("hello")
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+
+      const calls = result.functions[0].body?.calls ?? [];
+      const printCall = calls.find((c) => c.functionName === 'Print');
+      expect(printCall).toBeDefined();
+      expect(printCall?.args).toEqual(['hello']);
+    });
+  });
 });

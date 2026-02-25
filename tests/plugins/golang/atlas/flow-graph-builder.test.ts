@@ -501,3 +501,126 @@ describe('FlowGraphBuilder', () => {
     });
   });
 });
+
+describe('path and handler extraction from args', () => {
+  const builder = new FlowGraphBuilder();
+
+  it('should extract path and handler from HandleFunc args', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        fullName: 'pkg/api',
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'HandleFunc',
+              args: ['/v1/sessions', 's.handleSessions'],
+              location: { file: 'api.go', startLine: 5, endLine: 5 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].path).toBe('/v1/sessions');
+    expect(result.entryPoints[0].handler).toBe('s.handleSessions');
+  });
+
+  it('should extract path from METHOD-prefixed string in HandleFunc args', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'HandleFunc',
+              args: ['POST /products', 'r.handler.CreateProduct'],
+              location: { file: 'router.go', startLine: 10, endLine: 10 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].path).toBe('POST /products');
+    expect(result.entryPoints[0].handler).toBe('r.handler.CreateProduct');
+  });
+
+  it('should extract path and handler from GET args', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'GET',
+              args: ['/users', 'listUsers'],
+              location: { file: 'routes.go', startLine: 8, endLine: 8 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].path).toBe('/users');
+    expect(result.entryPoints[0].handler).toBe('listUsers');
+  });
+
+  it('should trace calls from handler function when handler matches a function in same package', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        fullName: 'pkg/api',
+        functions: [
+          makeFunction({
+            name: 'SetupRoutes',
+            body: {
+              calls: [{
+                functionName: 'HandleFunc',
+                args: ['/users', 'listUsers'],
+                location: { file: 'routes.go', startLine: 5, endLine: 5 },
+              }],
+              goSpawns: [], channelOps: [],
+            },
+          }),
+          makeFunction({
+            name: 'listUsers',
+            body: {
+              calls: [{
+                functionName: 'Encode',
+                packageName: 'json',
+                args: [],
+                location: { file: 'routes.go', startLine: 10, endLine: 10 },
+              }],
+              goSpawns: [], channelOps: [],
+            },
+          }),
+        ],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].handler).toBe('listUsers');
+    expect(result.callChains[0].calls).toHaveLength(1);
+    expect(result.callChains[0].calls[0].from).toBe('listUsers');
+    expect(result.callChains[0].calls[0].to).toContain('Encode');
+  });
+
+  it('should fall back to empty path and handler when no args provided', async () => {
+    const rawData = makeRawData({
+      packages: [makePackage({
+        functions: [makeFunction({
+          body: {
+            calls: [{
+              functionName: 'HandleFunc',
+              // no args field
+              location: { file: 'api.go', startLine: 5, endLine: 5 },
+            }],
+            goSpawns: [], channelOps: [],
+          },
+        })],
+      })],
+    });
+    const result = await builder.build(rawData);
+    expect(result.entryPoints[0].path).toBe('');
+    expect(result.entryPoints[0].handler).toBe('');
+  });
+});

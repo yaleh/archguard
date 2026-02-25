@@ -286,10 +286,30 @@ export class TreeSitterBridge {
       }
     }
 
+    // Extract argument list
+    const argsNode = callExpr.childForFieldName('arguments');
+    const args: string[] = [];
+    if (argsNode) {
+      for (const child of argsNode.namedChildren) {
+        const text = code.substring(child.startIndex, child.endIndex);
+        if (
+          child.type === 'interpreted_string_literal' ||
+          child.type === 'raw_string_literal'
+        ) {
+          // Strip surrounding quotes/backticks
+          args.push(text.slice(1, -1));
+        } else {
+          // selector_expression, identifier, etc. — keep raw text
+          args.push(text);
+        }
+      }
+    }
+
     return {
       functionName,
       packageName,
       receiverType,
+      args,
       location: this.nodeToLocation(callExpr, filePath),
     };
   }

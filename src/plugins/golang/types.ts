@@ -105,6 +105,8 @@ export interface GoCallExpr {
   functionName: string;
   packageName?: string;
   receiverType?: string;
+  /** Raw argument strings extracted from the AST (e.g. ["/path", "handlerFn"]) */
+  args?: string[];
   location: GoSourceLocation;
 }
 
