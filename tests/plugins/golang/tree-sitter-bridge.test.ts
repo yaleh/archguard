@@ -316,4 +316,72 @@ func Register(r *gin.Engine) {
       expect(fn?.body?.calls.some((c) => c.functionName === 'POST')).toBe(true);
     });
   });
+
+  describe('extractChannelOps — make(chan) variable name', () => {
+    it('extracts variable name from short_var_declaration', () => {
+      const code = `
+package main
+
+func start() {
+  jobs := make(chan int, 100)
+  _ = jobs
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+      const fn = result.functions.find((f) => f.name === 'start');
+      const makeOp = fn?.body?.channelOps.find((op) => op.operation === 'make');
+      expect(makeOp).toBeDefined();
+      expect(makeOp?.channelName).toBe('jobs');
+    });
+
+    it('extracts variable name from assignment_statement', () => {
+      const code = `
+package main
+
+func start() {
+  var jobs chan int
+  jobs = make(chan int, 100)
+  _ = jobs
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+      const fn = result.functions.find((f) => f.name === 'start');
+      const makeOp = fn?.body?.channelOps.find((op) => op.operation === 'make');
+      expect(makeOp).toBeDefined();
+      expect(makeOp?.channelName).toBe('jobs');
+    });
+
+    it('extracts correct variable in multi-assign short_var_declaration', () => {
+      const code = `
+package main
+
+func start() {
+  results, done := make(chan string), make(chan bool)
+  _ = results
+  _ = done
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+      const fn = result.functions.find((f) => f.name === 'start');
+      const makeOps = fn?.body?.channelOps.filter((op) => op.operation === 'make') ?? [];
+      expect(makeOps).toHaveLength(2);
+      expect(makeOps[0].channelName).toBe('results');
+      expect(makeOps[1].channelName).toBe('done');
+    });
+
+    it('returns empty string when make(chan) is not assigned to a variable', () => {
+      const code = `
+package main
+
+func start() chan int {
+  return make(chan int)
+}
+`;
+      const result = bridge.parseCode(code, 'test.go', { extractBodies: true });
+      const fn = result.functions.find((f) => f.name === 'start');
+      const makeOp = fn?.body?.channelOps.find((op) => op.operation === 'make');
+      expect(makeOp).toBeDefined();
+      expect(makeOp?.channelName).toBe('');
+    });
+  });
 });

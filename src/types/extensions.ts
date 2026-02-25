@@ -144,6 +144,7 @@ export interface GoroutineTopology {
   nodes: GoroutineNode[];
   edges: SpawnRelation[];
   channels: ChannelInfo[];
+  channelEdges: ChannelEdge[];
 }
 
 export interface GoroutineNode {
@@ -175,6 +176,7 @@ export interface SpawnRelation {
 
 export interface ChannelInfo {
   id: string;
+  name: string; // variable name from make(chan), e.g. "jobs"
   type: string; // e.g. "chan Job"
   direction: 'send' | 'receive' | 'bidirectional';
   bufferSize?: number;
@@ -182,6 +184,12 @@ export interface ChannelInfo {
     file: string;
     line: number;
   };
+}
+
+export interface ChannelEdge {
+  from: string; // goroutine node ID (for make/send) OR channel ID (for recv)
+  to: string; // channel ID (for make/send) OR goroutine node ID (for recv)
+  edgeType: 'make' | 'send' | 'recv';
 }
 
 // ========== Flow Graph ==========

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
-import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, PackageGraph, PackageNode } from '@/types/extensions.js';
+import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -448,7 +448,7 @@ describe('MermaidTemplates (private) buildGroupTree', () => {
 
 describe('MermaidTemplates.renderGoroutineTopology — goroutine name display', () => {
   function makeTopology(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
-    return { nodes: [], edges: [], channels: [], ...overrides };
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
   }
 
   it('uses node.name as display label when it is set', () => {
@@ -495,8 +495,8 @@ describe('MermaidTemplates (private) formatChannelLabel', () => {
 // ─── renderGoroutineTopology — spawner node declarations ──────────────────────
 
 describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations', () => {
-  function makeTopology(overrides?: Partial<{ nodes: GoroutineNode[]; edges: SpawnRelation[]; channels: ChannelInfo[] }>) {
-    return { nodes: [], edges: [], channels: [], ...overrides };
+  function makeTopology(overrides?: Partial<{ nodes: GoroutineNode[]; edges: SpawnRelation[]; channels: ChannelInfo[]; channelEdges: ChannelEdge[] }>) {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
   }
 
   it('declares undeclared spawner nodes with short labels and :::spawner style', () => {
@@ -675,6 +675,7 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
       channels: [
         {
           id: 'chan-pkg/hub-114',
+          name: 'jobs',
           type: 'chan',
           direction: 'bidirectional' as const,
           location: { file: 'hub.go', line: 114 },
@@ -691,6 +692,7 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
       channels: [
         {
           id: 'ch1',
+          name: 'results',
           type: 'chan Job',
           direction: 'bidirectional' as const,
           location: { file: 'main.go', line: 10 },
@@ -699,5 +701,159 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     expect(out).toContain('"chan Job"');
+  });
+});
+
+// ─── renderGoroutineTopology — channelEdges rendering ──────────────────────────
+
+describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
+  function makeTopology(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('renders a make channelEdge as "-->|make|" arrow', () => {
+    const topology = makeTopology({
+      channelEdges: [
+        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('-->|make|');
+    expect(out).toMatch(/pkg_hub_WorkerPool_Start\s*-->|make|\s*chan_pkg_hub_50/);
+  });
+
+  it('renders a recv channelEdge as "-->|recv|" arrow', () => {
+    const topology = makeTopology({
+      channelEdges: [
+        { from: 'chan-pkg/hub-50', to: 'pkg/hub.WorkerPool.Start.spawn-53', edgeType: 'recv' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('-->|recv|');
+  });
+
+  it('renders a send channelEdge as "-->|send|" arrow', () => {
+    const topology = makeTopology({
+      channelEdges: [
+        { from: 'pkg/hub.WorkerPool.Dispatch', to: 'chan-pkg/hub-50', edgeType: 'send' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('-->|send|');
+  });
+
+  it('renders no extra edges when channelEdges is empty', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.main.spawn-1',
+          name: 'worker',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'hub.go', line: 1 },
+        },
+      ],
+      channelEdges: [],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).not.toContain('-->|make|');
+    expect(out).not.toContain('-->|recv|');
+    expect(out).not.toContain('-->|send|');
+  });
+
+  it('renders both make and recv edges when both are present', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-53',
+          name: '<anonymous>',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 53 },
+        },
+      ],
+      channels: [
+        {
+          id: 'chan-pkg/hub-50',
+          name: 'jobs',
+          type: 'chan',
+          direction: 'bidirectional' as const,
+          location: { file: 'worker.go', line: 50 },
+        },
+      ],
+      channelEdges: [
+        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
+        { from: 'chan-pkg/hub-50', to: 'pkg/hub.WorkerPool.Start.spawn-53', edgeType: 'recv' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(out).toContain('-->|make|');
+    expect(out).toContain('-->|recv|');
+  });
+
+  it('auto-declares undeclared goroutine spawner from channelEdge.from with :::spawner', () => {
+    // 'pkg/hub.WorkerPool.Start' is not in nodes — must be auto-declared as spawner
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-53',
+          name: '<anonymous>',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 53 },
+        },
+      ],
+      channelEdges: [
+        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // Spawner node should be declared with short label and :::spawner style
+    expect(out).toContain('["WorkerPool.Start"]:::spawner');
+  });
+
+  it('does not auto-declare a channel ID (starting with chan-) as a spawner node', () => {
+    // 'chan-pkg/hub-50' starts with 'chan-' so it should NOT be declared as a spawner
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-53',
+          name: 'worker',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 53 },
+        },
+      ],
+      channels: [
+        {
+          id: 'chan-pkg/hub-50',
+          name: 'jobs',
+          type: 'chan',
+          direction: 'bidirectional' as const,
+          location: { file: 'worker.go', line: 50 },
+        },
+      ],
+      channelEdges: [
+        { from: 'chan-pkg/hub-50', to: 'pkg/hub.WorkerPool.Start.spawn-53', edgeType: 'recv' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // chan-pkg/hub-50 should appear only in channels subgraph, not as a spawner node declaration
+    const lines = out.split('\n');
+    const spawnerLines = lines.filter(l => l.includes('chan_pkg_hub_50[') && l.includes(':::spawner'));
+    expect(spawnerLines).toHaveLength(0);
+  });
+
+  it('sanitizes IDs in channelEdge arrows', () => {
+    const topology = makeTopology({
+      channelEdges: [
+        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
+      ],
+    });
+    const out = MermaidTemplates.renderGoroutineTopology(topology);
+    // Sanitized IDs should not contain slashes, dots, or hyphens
+    expect(out).not.toMatch(/pkg\/hub/);
+    expect(out).toContain('pkg_hub_WorkerPool_Start');
+    expect(out).toContain('chan_pkg_hub_50');
   });
 });

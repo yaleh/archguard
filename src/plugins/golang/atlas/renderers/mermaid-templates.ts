@@ -250,6 +250,15 @@ export class MermaidTemplates {
       }
     }
 
+    // Add spawner nodes from channelEdges (goroutine node IDs that aren't channels)
+    for (const edge of topology.channelEdges) {
+      if (!edge.from.startsWith('chan-') && !declaredIds.has(edge.from)) {
+        const label = MermaidTemplates.formatSpawnerLabel(edge.from);
+        const pkg = nodeIdToPackage.get(edge.to);
+        addDecl(pkg, { rawId: edge.from, label, style: ':::spawner' });
+      }
+    }
+
     // ── Emit package subgraphs ────────────────────────────────────────────────
     for (const [pkg, decls] of packageGroups) {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(pkg);
@@ -278,6 +287,11 @@ export class MermaidTemplates {
         output += `    ${this.sanitizeId(ch.id)}[("${label}")]:::channel\n`;
       }
       output += '  end\n';
+    }
+
+    // ── Emit channel edges (make / send / recv) ────────────────────────────────
+    for (const edge of topology.channelEdges) {
+      output += `  ${this.sanitizeId(edge.from)} -->|${edge.edgeType}| ${this.sanitizeId(edge.to)}\n`;
     }
 
     output += '\n  classDef main fill:#f66,stroke:#333,stroke-width:2px\n';

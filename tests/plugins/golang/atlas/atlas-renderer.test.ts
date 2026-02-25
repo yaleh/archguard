@@ -52,6 +52,7 @@ function makeGoroutineTopology(overrides?: Partial<GoroutineTopology>): Goroutin
     nodes: [],
     edges: [],
     channels: [],
+    channelEdges: [],
     ...overrides,
   };
 }
@@ -361,6 +362,7 @@ describe('MermaidTemplates', () => {
       channels: [
         {
           id: 'ch1',
+          name: 'results',
           type: 'chan Job',
           direction: 'bidirectional',
           location: { file: 'main.go', line: 10 },

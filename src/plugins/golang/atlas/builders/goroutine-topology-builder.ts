@@ -1,10 +1,11 @@
-import type { GoRawData, GoRawPackage, GoSpawnStmt } from '../../types.js';
+import type { GoRawData, GoRawPackage, GoSpawnStmt, GoFunctionBody } from '../../types.js';
 import type {
   GoroutineTopology,
   GoroutineNode,
   GoroutinePattern,
   SpawnRelation,
   ChannelInfo,
+  ChannelEdge,
 } from '../types.js';
 
 /**
@@ -18,13 +19,14 @@ export class GoroutineTopologyBuilder {
     const nodes = this.extractGoroutineNodes(rawData);
     const edges = this.buildSpawnRelations(rawData);
     const channels = this.extractChannelInfo(rawData);
+    const channelEdges = this.buildChannelEdges(rawData);
 
     // Classify patterns
     for (const node of nodes) {
       node.pattern = this.classifyPattern(node, edges, channels);
     }
 
-    return Promise.resolve({ nodes, edges, channels });
+    return Promise.resolve({ nodes, edges, channels, channelEdges });
   }
 
   /**
@@ -140,6 +142,7 @@ export class GoroutineTopologyBuilder {
         if (op.operation === 'make') {
           channels.push({
             id: `chan-${pkg.fullName}-${op.location.startLine}`,
+            name: op.channelName,
             type: 'chan',
             direction: 'bidirectional',
             location: { file: op.location.file, line: op.location.startLine },
@@ -160,6 +163,63 @@ export class GoroutineTopologyBuilder {
     }
 
     return channels;
+  }
+
+  private buildChannelEdges(rawData: GoRawData): ChannelEdge[] {
+    const channelEdges: ChannelEdge[] = [];
+
+    for (const pkg of rawData.packages) {
+      // Standalone functions
+      for (const func of pkg.functions) {
+        if (!func.body) continue;
+        const spawnerId = `${pkg.fullName}.${func.name}`;
+        this.extractBodyChannelEdges(func.body, pkg, spawnerId, func.name, channelEdges);
+      }
+
+      // Struct methods
+      for (const struct of pkg.structs) {
+        for (const method of struct.methods) {
+          if (!method.body) continue;
+          const spawnerId = `${pkg.fullName}.${struct.name}.${method.name}`;
+          const parentName = `${struct.name}.${method.name}`;
+          this.extractBodyChannelEdges(method.body, pkg, spawnerId, parentName, channelEdges);
+        }
+      }
+    }
+
+    return channelEdges;
+  }
+
+  private extractBodyChannelEdges(
+    body: GoFunctionBody,
+    pkg: GoRawPackage,
+    spawnerId: string,
+    parentName: string,
+    channelEdges: ChannelEdge[]
+  ): void {
+    // Build local scope: channelVarName → channelId from make ops in this body
+    const scopeMap = new Map<string, string>();
+    for (const op of body.channelOps) {
+      if (op.operation === 'make' && op.channelName) {
+        const channelId = `chan-${pkg.fullName}-${op.location.startLine}`;
+        scopeMap.set(op.channelName, channelId);
+        // Emit make edge: spawner → channel
+        channelEdges.push({ from: spawnerId, to: channelId, edgeType: 'make' });
+      }
+    }
+
+    // For each spawn: check if any arg matches a channel var in scope
+    for (const spawn of body.goSpawns) {
+      const args = spawn.call.args ?? [];
+      for (const arg of args) {
+        const channelId = scopeMap.get(arg);
+        if (channelId !== undefined) {
+          const spawnedId = `${pkg.fullName}.${parentName}.spawn-${spawn.location.startLine}`;
+          channelEdges.push({ from: channelId, to: spawnedId, edgeType: 'recv' });
+          break; // one recv edge per spawn (first matching arg)
+        }
+      }
+    }
   }
 
   private classifyPattern(

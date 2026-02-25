@@ -299,4 +299,284 @@ describe('GoroutineTopologyBuilder', () => {
     expect(topology.edges).toHaveLength(1);
     expect(topology.edges[0].from).toBe('cmd/app.main');
   });
+
+  // ==================== ChannelEdge tests ====================
+
+  it('should return empty channelEdges when no channels exist', async () => {
+    const rawData = makeRawData();
+    const topology = await builder.build(rawData);
+
+    expect(topology.channelEdges).toBeDefined();
+    expect(topology.channelEdges).toHaveLength(0);
+  });
+
+  it('should set channel name from make op channelName field', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/worker',
+          name: 'worker',
+          fullName: 'pkg/worker',
+          dirPath: '/test/pkg/worker',
+          sourceFiles: ['worker.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'StartWorkers',
+              packageName: 'worker',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 20 },
+              body: {
+                calls: [],
+                goSpawns: [],
+                channelOps: [
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'worker.go', startLine: 3, endLine: 3 },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    expect(topology.channels).toHaveLength(1);
+    expect(topology.channels[0].name).toBe('jobs');
+  });
+
+  it('should emit make edge from spawner to channel', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/worker',
+          name: 'worker',
+          fullName: 'pkg/worker',
+          dirPath: '/test/pkg/worker',
+          sourceFiles: ['worker.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'StartWorkers',
+              packageName: 'worker',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 20 },
+              body: {
+                calls: [],
+                goSpawns: [],
+                channelOps: [
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'worker.go', startLine: 3, endLine: 3 },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    expect(topology.channelEdges).toHaveLength(1);
+    const makeEdge = topology.channelEdges[0];
+    expect(makeEdge.from).toBe('pkg/worker.StartWorkers');
+    expect(makeEdge.to).toBe('chan-pkg/worker-3');
+    expect(makeEdge.edgeType).toBe('make');
+  });
+
+  it('should emit recv edge from channel to spawned goroutine when channel var is in spawn args', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/worker',
+          name: 'worker',
+          fullName: 'pkg/worker',
+          dirPath: '/test/pkg/worker',
+          sourceFiles: ['worker.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'StartWorkers',
+              packageName: 'worker',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 20 },
+              body: {
+                calls: [],
+                goSpawns: [
+                  {
+                    call: {
+                      functionName: 'doWork',
+                      args: ['jobs'],
+                      location: { file: 'worker.go', startLine: 7, endLine: 7 },
+                    },
+                    location: { file: 'worker.go', startLine: 7, endLine: 7 },
+                  },
+                ],
+                channelOps: [
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'worker.go', startLine: 3, endLine: 3 },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    // Should have: 1 make edge + 1 recv edge
+    expect(topology.channelEdges).toHaveLength(2);
+
+    const recvEdge = topology.channelEdges.find((e) => e.edgeType === 'recv');
+    expect(recvEdge).toBeDefined();
+    expect(recvEdge?.from).toBe('chan-pkg/worker-3');
+    expect(recvEdge?.to).toBe('pkg/worker.StartWorkers.spawn-7');
+    expect(recvEdge?.edgeType).toBe('recv');
+  });
+
+  it('should emit make and recv edges for method bodies', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/server',
+          name: 'server',
+          fullName: 'pkg/server',
+          dirPath: '/test/pkg/server',
+          sourceFiles: ['server.go'],
+          imports: [],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'server',
+              fields: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 'server.go', startLine: 1, endLine: 5 },
+              methods: [
+                {
+                  name: 'Start',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: true,
+                  location: { file: 'server.go', startLine: 7, endLine: 30 },
+                  body: {
+                    calls: [],
+                    goSpawns: [
+                      {
+                        call: {
+                          functionName: 'handleConn',
+                          args: ['done'],
+                          location: { file: 'server.go', startLine: 12, endLine: 12 },
+                        },
+                        location: { file: 'server.go', startLine: 12, endLine: 12 },
+                      },
+                    ],
+                    channelOps: [
+                      {
+                        channelName: 'done',
+                        operation: 'make',
+                        location: { file: 'server.go', startLine: 9, endLine: 9 },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          interfaces: [],
+          functions: [],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    const makeEdge = topology.channelEdges.find((e) => e.edgeType === 'make');
+    expect(makeEdge).toBeDefined();
+    expect(makeEdge?.from).toBe('pkg/server.Server.Start');
+    expect(makeEdge?.to).toBe('chan-pkg/server-9');
+
+    const recvEdge = topology.channelEdges.find((e) => e.edgeType === 'recv');
+    expect(recvEdge).toBeDefined();
+    expect(recvEdge?.from).toBe('chan-pkg/server-9');
+    expect(recvEdge?.to).toBe('pkg/server.Server.Start.spawn-12');
+  });
+
+  it('should not emit recv edge when spawn args do not match any channel var', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/worker',
+          name: 'worker',
+          fullName: 'pkg/worker',
+          dirPath: '/test/pkg/worker',
+          sourceFiles: ['worker.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'StartWorkers',
+              packageName: 'worker',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 20 },
+              body: {
+                calls: [],
+                goSpawns: [
+                  {
+                    call: {
+                      functionName: 'doWork',
+                      args: ['someOtherVar'],
+                      location: { file: 'worker.go', startLine: 7, endLine: 7 },
+                    },
+                    location: { file: 'worker.go', startLine: 7, endLine: 7 },
+                  },
+                ],
+                channelOps: [
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'worker.go', startLine: 3, endLine: 3 },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    // Only make edge, no recv edge
+    const recvEdges = topology.channelEdges.filter((e) => e.edgeType === 'recv');
+    expect(recvEdges).toHaveLength(0);
+    const makeEdges = topology.channelEdges.filter((e) => e.edgeType === 'make');
+    expect(makeEdges).toHaveLength(1);
+  });
 });

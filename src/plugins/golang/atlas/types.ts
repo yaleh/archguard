@@ -23,6 +23,7 @@ export type {
   GoroutinePattern,
   SpawnRelation,
   ChannelInfo,
+  ChannelEdge,
   FlowGraph,
   EntryPoint,
   EntryPointType,

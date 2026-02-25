@@ -384,7 +384,7 @@ export class TreeSitterBridge {
           const firstArg = args.namedChildren[0];
           if (firstArg && firstArg.type === 'channel_type') {
             ops.push({
-              channelName: '',
+              channelName: this.extractMakeChanVarName(callExpr, code),
               operation: 'make',
               location: this.nodeToLocation(callExpr, filePath),
             });
@@ -394,6 +394,54 @@ export class TreeSitterBridge {
     }
 
     return ops;
+  }
+
+  /**
+   * Extract the variable name assigned from a make(chan) call expression.
+   * Walks up the AST to find the enclosing short_var_declaration or
+   * assignment_statement, then returns the LHS identifier at the matching index.
+   *
+   * Handles:
+   *   jobs := make(chan Job, 100)          → "jobs"
+   *   x, done := make(chan T), make(chan T) → "x" / "done" (by RHS position)
+   *   jobs = make(chan Job)                → "jobs"
+   *   s.jobs = make(chan Job)              → "jobs" (selector field name)
+   */
+  private extractMakeChanVarName(callExpr: Parser.SyntaxNode, code: string): string {
+    let node: Parser.SyntaxNode | null = callExpr.parent;
+
+    while (node) {
+      if (node.type === 'short_var_declaration' || node.type === 'assignment_statement') {
+        const lhsList = node.namedChildren[0]; // expression_list (LHS)
+        const rhsList = node.namedChildren[1]; // expression_list (RHS)
+
+        if (lhsList && rhsList) {
+          // Find position of callExpr among RHS siblings
+          const rhsIdx = rhsList.namedChildren.findIndex(
+            (ch) => ch.startIndex <= callExpr.startIndex && ch.endIndex >= callExpr.endIndex
+          );
+          const lhsVar = lhsList.namedChildren[rhsIdx >= 0 ? rhsIdx : 0];
+          if (lhsVar) {
+            if (lhsVar.type === 'identifier') {
+              return code.substring(lhsVar.startIndex, lhsVar.endIndex);
+            }
+            // selector_expression: e.g. s.jobs → extract field name
+            if (lhsVar.type === 'selector_expression') {
+              const field = lhsVar.namedChildren[lhsVar.namedChildCount - 1];
+              if (field) return code.substring(field.startIndex, field.endIndex);
+            }
+          }
+        }
+        break;
+      }
+
+      // Don't walk past statement/block boundaries
+      if (['block', 'function_declaration', 'method_declaration', 'func_literal'].includes(node.type)) {
+        break;
+      }
+      node = node.parent;
+    }
+    return '';
   }
 
   /**

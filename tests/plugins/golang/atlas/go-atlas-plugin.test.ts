@@ -180,7 +180,7 @@ describe('GoAtlasPlugin', () => {
         layers: {
           package: { nodes: [], edges: [], cycles: [] },
           capability: { nodes: [], edges: [] },
-          goroutine: { nodes: [], edges: [], channels: [] },
+          goroutine: { nodes: [], edges: [], channels: [], channelEdges: [] },
           flow: { entryPoints: [], callChains: [] },
         },
         metadata: {
