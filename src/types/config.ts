@@ -555,6 +555,7 @@ export interface CLIOptions {
 
   /** Exclude test files from Atlas extraction */
   atlasNoTests?: boolean;
+  atlasIncludeTests?: boolean;
 
   /** Entry point types for flow graph (comma-separated) */
   atlasEntryPoints?: string;

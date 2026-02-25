@@ -20,6 +20,19 @@ import type {
 } from './types.js';
 
 /**
+ * Returns true if a package's fullName indicates it is a test or testutil package.
+ * Used to filter test packages from rawData when excludeTests is set.
+ *
+ * Matches: tests/*, tests, pkg/testutil, pkg/hub/testutil, pkg/hubtest
+ */
+function isTestPackage(fullName: string): boolean {
+  if (fullName.startsWith('tests/') || fullName === 'tests') return true;
+  const segs = fullName.split('/');
+  if (segs.some((s) => s === 'testutil' || s === 'hubtest')) return true;
+  return false;
+}
+
+/**
  * IGoAtlas - Atlas-specific interface (Proposal v5.1 §4.5.2)
  */
 export interface IGoAtlas {
@@ -134,12 +147,20 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
       '**/testdata/**',
       ...(options.excludeTests ? ['**/*_test.go'] : []),
     ];
-    const rawData = await this.goPlugin.parseToRawData(rootPath, {
+    let rawData = await this.goPlugin.parseToRawData(rootPath, {
       workspaceRoot: rootPath,
       excludePatterns,
       extractBodies: options.functionBodyStrategy !== 'none',
       selectiveExtraction: options.functionBodyStrategy === 'selective',
     });
+
+    // 1b. Filter test packages from rawData when excludeTests is set
+    if (options.excludeTests) {
+      rawData = {
+        ...rawData,
+        packages: rawData.packages.filter((pkg) => !isTestPackage(pkg.fullName)),
+      };
+    }
 
     // 2. Resolve module info for import classification
     await this.goModResolver.resolveProject(rootPath);

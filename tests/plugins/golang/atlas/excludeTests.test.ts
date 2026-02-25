@@ -32,6 +32,58 @@ const rawDataWithTestFiles: GoRawData = {
   moduleName: 'github.com/test/project',
 };
 
+/** Raw data that contains test PACKAGES (not just test files) */
+const rawDataWithTestPackages: GoRawData = {
+  packages: [
+    {
+      id: 'pkg/service',
+      name: 'service',
+      fullName: 'pkg/service',
+      dirPath: '/test/pkg/service',
+      sourceFiles: ['service.go'],
+      imports: [],
+      structs: [{ name: 'Service', fullName: 'pkg/service.Service', fields: [], methods: [] }],
+      interfaces: [],
+      functions: [],
+    },
+    {
+      id: 'tests/integration',
+      name: 'integration',
+      fullName: 'tests/integration',
+      dirPath: '/test/tests/integration',
+      sourceFiles: ['suite.go'],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
+    },
+    {
+      id: 'tests/e2e',
+      name: 'e2e',
+      fullName: 'tests/e2e',
+      dirPath: '/test/tests/e2e',
+      sourceFiles: ['e2e.go'],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
+    },
+    {
+      id: 'pkg/testutil',
+      name: 'testutil',
+      fullName: 'pkg/testutil',
+      dirPath: '/test/pkg/testutil',
+      sourceFiles: ['helpers.go'],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
+    },
+  ],
+  moduleRoot: '/test',
+  moduleName: 'github.com/test/project',
+};
+
 /** Raw data that contains only production source files (no test files) */
 const rawDataWithoutTestFiles: GoRawData = {
   packages: [
@@ -159,6 +211,52 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
       const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
 
       expect(atlas.metadata.performance.fileCount).toBe(rawDataWithoutTestFiles.packages.length);
+    });
+  });
+
+  describe('package-level filtering (tests/* and */testutil)', () => {
+    it('removes tests/* packages from rawData when excludeTests is true', async () => {
+      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
+        rawDataWithTestPackages
+      );
+
+      const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
+
+      // Only pkg/service survives — tests/integration, tests/e2e, pkg/testutil are removed
+      expect(atlas.metadata.performance.fileCount).toBe(1);
+    });
+
+    it('keeps tests/* packages when excludeTests is false', async () => {
+      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
+        rawDataWithTestPackages
+      );
+
+      const atlas = await plugin.generateAtlas('/test', { excludeTests: false });
+
+      // All 4 packages survive
+      expect(atlas.metadata.performance.fileCount).toBe(4);
+    });
+
+    it('keeps tests/* packages when excludeTests is omitted (API default: include)', async () => {
+      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
+        rawDataWithTestPackages
+      );
+
+      const atlas = await plugin.generateAtlas('/test', {});
+
+      // All 4 packages survive (API-level default is still include)
+      expect(atlas.metadata.performance.fileCount).toBe(4);
+    });
+
+    it('removes */testutil packages when excludeTests is true', async () => {
+      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
+        rawDataWithTestPackages
+      );
+
+      const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
+
+      // pkg/testutil is removed along with tests/*
+      expect(atlas.metadata.performance.fileCount).toBe(1);
     });
   });
 

@@ -54,7 +54,7 @@ export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): Dia
             atlas: {
               enabled: true,
               functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
-              includeTests: !cliOptions.atlasNoTests,
+              excludeTests: !cliOptions.atlasIncludeTests,
               entryPointTypes: cliOptions.atlasEntryPoints?.split(',').map((s) => s.trim()),
               layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             },
@@ -183,7 +183,8 @@ export function createAnalyzeCommand(): Command {
         'Function body extraction strategy: none|selective|full',
         'selective'
       )
-      .option('--atlas-no-tests', 'Exclude test files from Atlas extraction')
+      .option('--atlas-no-tests', 'Exclude test files from Atlas extraction (deprecated: now the default)')
+      .option('--atlas-include-tests', 'Include test packages in Atlas extraction (overrides default exclusion)')
       .option(
         '--atlas-entry-points <types>',
         'Entry point types for flow graph (comma-separated)',
