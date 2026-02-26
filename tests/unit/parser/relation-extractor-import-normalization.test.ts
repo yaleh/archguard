@@ -2,13 +2,13 @@
  * Tests for RelationExtractor - import name normalization
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { RelationExtractor } from '@/parser/relation-extractor.js';
 
 describe('RelationExtractor - Import Name Normalization', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 

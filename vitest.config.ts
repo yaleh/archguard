@@ -30,10 +30,11 @@ export default defineConfig({
       'dist',
       'tests/poc/**/node_modules/**',  // Fix 1: exclude poc package node_modules
       'experiments/**',
+      'tests/integration/performance/**', // Excluded from npm test — use npm run test:perf
     ],
     testTimeout: 30000,   // Fix 2: increase from 10s to 30s (handles resource contention)
     hookTimeout: 30000,   // Fix 3: increase hook timeout too
-    pool: 'forks',        // Fix 4: use process forks for better isolation (avoids thread contention)
+    pool: 'forks',        // Native modules (tree-sitter, sharp) require process isolation
     poolOptions: {
       forks: {
         singleFork: false,

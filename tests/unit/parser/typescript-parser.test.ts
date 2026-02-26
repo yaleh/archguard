@@ -3,13 +3,13 @@
  * Testing complete Arch-JSON generation
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { TypeScriptParser } from '@/parser/typescript-parser';
 
 describe('TypeScriptParser - Single File', () => {
   let parser: TypeScriptParser;
 
-  beforeEach(() => {
+  beforeAll(() => {
     parser = new TypeScriptParser();
   });
 
@@ -107,7 +107,7 @@ describe('TypeScriptParser - Single File', () => {
 describe('TypeScriptParser - JSON Serialization', () => {
   let parser: TypeScriptParser;
 
-  beforeEach(() => {
+  beforeAll(() => {
     parser = new TypeScriptParser();
   });
 
@@ -151,7 +151,7 @@ describe('TypeScriptParser - JSON Serialization', () => {
 describe('TypeScriptParser - Complex Scenarios', () => {
   let parser: TypeScriptParser;
 
-  beforeEach(() => {
+  beforeAll(() => {
     parser = new TypeScriptParser();
   });
 
@@ -243,7 +243,7 @@ describe('TypeScriptParser - Complex Scenarios', () => {
 describe('TypeScriptParser - Empty Cases', () => {
   let parser: TypeScriptParser;
 
-  beforeEach(() => {
+  beforeAll(() => {
     parser = new TypeScriptParser();
   });
 

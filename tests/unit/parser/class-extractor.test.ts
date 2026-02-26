@@ -3,13 +3,13 @@
  * Following TDD Red-Green-Refactor methodology
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
 
 describe('ClassExtractor - Simple Classes', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 

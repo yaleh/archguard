@@ -3,13 +3,13 @@
  * Testing interface and enum extraction
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { InterfaceExtractor } from '@/parser/interface-extractor';
 
 describe('InterfaceExtractor - Simple Interfaces', () => {
   let extractor: InterfaceExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new InterfaceExtractor();
   });
 
@@ -132,7 +132,7 @@ describe('InterfaceExtractor - Simple Interfaces', () => {
 describe('InterfaceExtractor - Complex Interfaces', () => {
   let extractor: InterfaceExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new InterfaceExtractor();
   });
 

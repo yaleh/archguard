@@ -5,13 +5,13 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { RelationExtractor } from '@/parser/relation-extractor';
 
 describe('RelationExtractor - Inheritance', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 
@@ -50,7 +50,7 @@ describe('RelationExtractor - Inheritance', () => {
 describe('RelationExtractor - Implementation', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 
@@ -105,7 +105,7 @@ describe('RelationExtractor - Implementation', () => {
 describe('RelationExtractor - Interface Extends', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 
@@ -131,7 +131,7 @@ describe('RelationExtractor - Interface Extends', () => {
 describe('RelationExtractor - Composition', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 
@@ -175,7 +175,7 @@ describe('RelationExtractor - Composition', () => {
 describe('RelationExtractor - Dependency', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 
@@ -219,7 +219,7 @@ describe('RelationExtractor - Dependency', () => {
 describe('RelationExtractor - Complex Scenarios', () => {
   let extractor: RelationExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new RelationExtractor();
   });
 

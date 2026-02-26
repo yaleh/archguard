@@ -3,13 +3,13 @@
  * Testing decorator extraction from classes, methods, and properties
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
 
 describe('Decorator Extraction - Class Decorators', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -72,7 +72,7 @@ describe('Decorator Extraction - Class Decorators', () => {
 describe('Decorator Extraction - Method Decorators', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -116,7 +116,7 @@ describe('Decorator Extraction - Method Decorators', () => {
 describe('Decorator Extraction - Property Decorators', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -154,7 +154,7 @@ describe('Decorator Extraction - Property Decorators', () => {
 describe('Decorator Extraction - Mixed', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 

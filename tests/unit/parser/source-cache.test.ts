@@ -1,6 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SourceCache } from '@/parser/source-cache';
-import { TypeScriptParser } from '@/parser';
+import type { TypeScriptParser } from '@/parser';
+import type { ArchJSON } from '@/types/index.js';
+
+// Synthetic result returned by the mocked parser — cache logic doesn't care about content
+const MOCK_ARCHJSON: ArchJSON = {
+  version: '1.0',
+  language: 'typescript',
+  timestamp: new Date().toISOString(),
+  sourceFiles: ['stub.ts'],
+  entities: [
+    {
+      id: 'Stub',
+      name: 'Stub',
+      type: 'class',
+      members: [],
+      decorators: [],
+      visibility: 'public',
+      sourceLocation: { file: 'stub.ts', startLine: 1, endLine: 1 },
+    },
+  ],
+  relations: [],
+};
 
 describe('SourceCache', () => {
   let cache: SourceCache;
@@ -8,7 +29,11 @@ describe('SourceCache', () => {
 
   beforeEach(() => {
     cache = new SourceCache();
-    parser = new TypeScriptParser();
+    // Use mockImplementation so each parse call returns a new object reference
+    // (mirrors real parser behaviour — required for cache clear/TTL tests)
+    parser = {
+      parseProject: vi.fn().mockImplementation(() => Promise.resolve({ ...MOCK_ARCHJSON })),
+    } as unknown as TypeScriptParser;
   });
 
   describe('Cache Hit and Reuse', () => {

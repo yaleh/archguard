@@ -3,13 +3,13 @@
  * Testing methods, properties, and constructors
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
 
 describe('ClassExtractor - Methods', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -141,7 +141,7 @@ describe('ClassExtractor - Methods', () => {
 describe('ClassExtractor - Properties', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -221,7 +221,7 @@ describe('ClassExtractor - Properties', () => {
 describe('ClassExtractor - Constructors', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
@@ -279,7 +279,7 @@ describe('ClassExtractor - Constructors', () => {
 describe('ClassExtractor - Mixed Members', () => {
   let extractor: ClassExtractor;
 
-  beforeEach(() => {
+  beforeAll(() => {
     extractor = new ClassExtractor();
   });
 
