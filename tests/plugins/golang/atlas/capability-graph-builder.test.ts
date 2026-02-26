@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CapabilityGraphBuilder } from '@/plugins/golang/atlas/builders/capability-graph-builder.js';
+import { BehaviorAnalyzer } from '@/plugins/golang/atlas/behavior-analyzer.js';
 import type { GoRawData, GoRawPackage, InferredImplementation } from '@/plugins/golang/types.js';
 
 function makeRawData(overrides?: Partial<GoRawData>): GoRawData {
@@ -1117,6 +1118,220 @@ describe('CapabilityGraphBuilder', () => {
     expect(graph.nodes.find((n) => n.name === 'Dependency')).toBeDefined();
   });
 
+  describe('impl edge resolution - cross-package same short name', () => {
+    it('correctly attributes impl edges when two packages share the same short package name', async () => {
+      // Two packages both named 'store' (short) but different fullNames
+      // pkg/hub/store has SQLiteStore implementing hub/store.Store (CreateSession, GetSession)
+      // pkg/catalog/store has SQLiteStore implementing catalog/store.Store (CreateProduct, GetProduct)
+      // Result: NO cross-contamination
+      const rawData: GoRawData = {
+        packages: [
+          {
+            id: 'pkg/hub/store',
+            name: 'store',
+            fullName: 'pkg/hub/store',
+            dirPath: '/x/pkg/hub/store',
+            sourceFiles: ['sqlite.go'],
+            files: [],
+            imports: [],
+            functions: [],
+            structs: [
+              {
+                name: 'SQLiteStore',
+                packageName: 'store', // short name (as parser sets it)
+                exported: true,
+                fields: [],
+                embeddedTypes: [],
+                location: {
+                  file: '/x/pkg/hub/store/sqlite.go',
+                  startLine: 1,
+                  endLine: 100,
+                },
+                methods: [
+                  {
+                    name: 'CreateSession',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/hub/store/sqlite.go',
+                      startLine: 10,
+                      endLine: 15,
+                    },
+                  },
+                  {
+                    name: 'GetSession',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/hub/store/sqlite.go',
+                      startLine: 16,
+                      endLine: 20,
+                    },
+                  },
+                ],
+              },
+            ],
+            interfaces: [
+              {
+                name: 'Store',
+                packageName: 'store',
+                exported: true,
+                methods: [
+                  {
+                    name: 'CreateSession',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/hub/store/store.go',
+                      startLine: 5,
+                      endLine: 6,
+                    },
+                  },
+                  {
+                    name: 'GetSession',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/hub/store/store.go',
+                      startLine: 7,
+                      endLine: 8,
+                    },
+                  },
+                ],
+                embeddedInterfaces: [],
+                location: {
+                  file: '/x/pkg/hub/store/store.go',
+                  startLine: 1,
+                  endLine: 10,
+                },
+              },
+            ],
+          },
+          {
+            id: 'pkg/catalog/store',
+            name: 'store',
+            fullName: 'pkg/catalog/store',
+            dirPath: '/x/pkg/catalog/store',
+            sourceFiles: ['sqlite.go'],
+            files: [],
+            imports: [],
+            functions: [],
+            structs: [
+              {
+                name: 'SQLiteStore',
+                packageName: 'store', // SAME short name!
+                exported: true,
+                fields: [],
+                embeddedTypes: [],
+                location: {
+                  file: '/x/pkg/catalog/store/sqlite.go',
+                  startLine: 1,
+                  endLine: 100,
+                },
+                methods: [
+                  {
+                    name: 'CreateProduct',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/catalog/store/sqlite.go',
+                      startLine: 10,
+                      endLine: 15,
+                    },
+                  },
+                  {
+                    name: 'GetProduct',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/catalog/store/sqlite.go',
+                      startLine: 16,
+                      endLine: 20,
+                    },
+                  },
+                ],
+              },
+            ],
+            interfaces: [
+              {
+                name: 'Store',
+                packageName: 'store',
+                exported: true,
+                methods: [
+                  {
+                    name: 'CreateProduct',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/catalog/store/catalog_store.go',
+                      startLine: 5,
+                      endLine: 6,
+                    },
+                  },
+                  {
+                    name: 'GetProduct',
+                    exported: true,
+                    parameters: [],
+                    returnTypes: [],
+                    location: {
+                      file: '/x/pkg/catalog/store/catalog_store.go',
+                      startLine: 7,
+                      endLine: 8,
+                    },
+                  },
+                ],
+                embeddedInterfaces: [],
+                location: {
+                  file: '/x/pkg/catalog/store/catalog_store.go',
+                  startLine: 1,
+                  endLine: 10,
+                },
+              },
+            ],
+          },
+        ],
+        implementations: [], // empty so BehaviorAnalyzer runs the matcher
+      };
+
+      const behaviorAnalyzer = new BehaviorAnalyzer(null as any);
+      const graph = await behaviorAnalyzer.buildCapabilityGraph(rawData);
+
+      // hub/store.SQLiteStore should implement hub/store.Store
+      const hubImplEdge = graph.edges.find(
+        (e) =>
+          e.type === 'implements' &&
+          e.source === 'pkg/hub/store.SQLiteStore' &&
+          e.target === 'pkg/hub/store.Store'
+      );
+      expect(hubImplEdge).toBeDefined();
+
+      // catalog/store.SQLiteStore should implement catalog/store.Store
+      const catalogImplEdge = graph.edges.find(
+        (e) =>
+          e.type === 'implements' &&
+          e.source === 'pkg/catalog/store.SQLiteStore' &&
+          e.target === 'pkg/catalog/store.Store'
+      );
+      expect(catalogImplEdge).toBeDefined();
+
+      // CRITICAL: catalog/store.SQLiteStore must NOT implement hub/store.Store
+      const falseEdge = graph.edges.find(
+        (e) =>
+          e.type === 'implements' &&
+          e.source === 'pkg/catalog/store.SQLiteStore' &&
+          e.target === 'pkg/hub/store.Store'
+      );
+      expect(falseEdge).toBeUndefined();
+    });
+  });
+
   // Edge deduplication: duplicate impl edges are removed
   it('should deduplicate edges with same source, target, and type', async () => {
     const impl = {
@@ -1166,5 +1381,153 @@ describe('CapabilityGraphBuilder', () => {
 
     const implEdges = graph.edges.filter((e) => e.type === 'implements');
     expect(implEdges).toHaveLength(1);
+  });
+
+  describe('uses edge - same-name type disambiguation via package qualifier', () => {
+    it('resolves models.Event to pkg/hub/models.Event, not cmd/swarm-mcp.Event', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            // Package with the WRONG Event (should NOT be picked)
+            id: 'cmd/swarm-mcp',
+            name: 'swarm_mcp',
+            fullName: 'cmd/swarm-mcp',
+            structs: [
+              {
+                name: 'Event',
+                packageName: 'swarm_mcp',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/cmd/swarm-mcp/event.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            // Package with the CORRECT Event
+            id: 'pkg/hub/models',
+            name: 'models',
+            fullName: 'pkg/hub/models',
+            structs: [
+              {
+                name: 'Event',
+                packageName: 'models',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/pkg/hub/models/models.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            // Package with the struct that uses models.Event
+            id: 'pkg/hub',
+            name: 'hub',
+            fullName: 'pkg/hub',
+            structs: [
+              {
+                name: 'sessionSubscriber',
+                packageName: 'hub',
+                exported: false,
+                fields: [
+                  {
+                    name: 'ch',
+                    type: 'chan *models.Event', // qualifier: 'models'
+                    exported: false,
+                    location: { file: '/x/pkg/hub/session.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/pkg/hub/session.go', startLine: 5, endLine: 20 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      // Should have a uses edge to pkg/hub/models.Event
+      const correctEdge = graph.edges.find(
+        (e) =>
+          e.type === 'uses' &&
+          e.source === 'pkg/hub.sessionSubscriber' &&
+          e.target === 'pkg/hub/models.Event'
+      );
+      expect(correctEdge).toBeDefined();
+
+      // Must NOT have a uses edge to cmd/swarm-mcp.Event
+      const wrongEdge = graph.edges.find(
+        (e) =>
+          e.type === 'uses' &&
+          e.source === 'pkg/hub.sessionSubscriber' &&
+          e.target === 'cmd/swarm-mcp.Event'
+      );
+      expect(wrongEdge).toBeUndefined();
+    });
+
+    it('falls back to typeNameToNodeId when no qualifier in field type', async () => {
+      // Field type is bare "Config" (no package qualifier)
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/config',
+            name: 'config',
+            fullName: 'pkg/config',
+            structs: [
+              {
+                name: 'Config',
+                packageName: 'config',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/pkg/config/config.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            id: 'pkg/hub',
+            name: 'hub',
+            fullName: 'pkg/hub',
+            structs: [
+              {
+                name: 'Server',
+                packageName: 'hub',
+                exported: true,
+                fields: [
+                  {
+                    name: 'cfg',
+                    type: 'Config', // No qualifier
+                    exported: false,
+                    location: { file: '/x/pkg/hub/server.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/pkg/hub/server.go', startLine: 1, endLine: 20 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find((e) => e.type === 'uses' && e.source === 'pkg/hub.Server');
+      expect(edge).toBeDefined();
+      // Should resolve to pkg/config.Config via typeNameToNodeId fallback
+      expect(edge?.target).toBe('pkg/config.Config');
+    });
   });
 });

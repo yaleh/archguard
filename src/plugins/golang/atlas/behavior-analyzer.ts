@@ -32,8 +32,17 @@ export class BehaviorAnalyzer {
 
   async buildCapabilityGraph(rawData: GoRawData): Promise<CapabilityGraph> {
     if (!rawData.implementations?.length) {
-      const structs = rawData.packages.flatMap((p) => p.structs || []);
-      const interfaces = rawData.packages.flatMap((p) => p.interfaces || []);
+      // Use fullName as packageName so InterfaceMatcher produces unambiguous
+      // structPackageId / interfacePackageId values (full import path, not short name).
+      // Without this, two packages sharing the same short name (e.g. both named "store")
+      // would produce ambiguous package IDs and cause impl edges to be attributed to
+      // the wrong struct.
+      const structs = rawData.packages.flatMap((p) =>
+        (p.structs || []).map((s) => ({ ...s, packageName: p.fullName }))
+      );
+      const interfaces = rawData.packages.flatMap((p) =>
+        (p.interfaces || []).map((i) => ({ ...i, packageName: p.fullName }))
+      );
       rawData.implementations = new InterfaceMatcher().matchImplicitImplementations(
         structs,
         interfaces

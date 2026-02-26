@@ -82,12 +82,17 @@ export class CapabilityGraphBuilder {
     for (const pkg of rawData.packages) {
       for (const iface of pkg.interfaces) {
         pkgTypeToNodeId.set(`${pkg.name}:${iface.name}`, `${pkg.fullName}.${iface.name}`);
+        // Also register under the full import path so that structPackageId values
+        // produced with fullName (e.g. "pkg/hub/store") resolve correctly.
+        pkgTypeToNodeId.set(`${pkg.fullName}:${iface.name}`, `${pkg.fullName}.${iface.name}`);
         if (!typeNameToNodeId.has(iface.name)) {
           typeNameToNodeId.set(iface.name, `${pkg.fullName}.${iface.name}`);
         }
       }
       for (const struct of pkg.structs) {
         pkgTypeToNodeId.set(`${pkg.name}:${struct.name}`, `${pkg.fullName}.${struct.name}`);
+        // Also register under the full import path for unambiguous resolution.
+        pkgTypeToNodeId.set(`${pkg.fullName}:${struct.name}`, `${pkg.fullName}.${struct.name}`);
         if (!typeNameToNodeId.has(struct.name)) {
           typeNameToNodeId.set(struct.name, `${pkg.fullName}.${struct.name}`);
         }
@@ -125,7 +130,12 @@ export class CapabilityGraphBuilder {
         for (const field of struct.fields) {
           const bareType = this.normalizeFieldType(field.type);
           if (allKnownTypeNames.has(bareType)) {
-            const targetNodeId = typeNameToNodeId.get(bareType) ?? bareType;
+            // Prefer package-qualified lookup to disambiguate same-name types in different packages
+            const qualifier = this.extractTypeQualifier(field.type);
+            const targetNodeId =
+              (qualifier ? pkgTypeToNodeId.get(`${qualifier}:${bareType}`) : undefined) ??
+              typeNameToNodeId.get(bareType) ??
+              bareType;
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,
               type: 'uses',
@@ -170,6 +180,43 @@ export class CapabilityGraphBuilder {
     const dotIdx = t.lastIndexOf('.');
     if (dotIdx >= 0) t = t.substring(dotIdx + 1);
     return t;
+  }
+
+  /**
+   * Extract the Go package qualifier from a raw field type string.
+   *
+   * Examples:
+   * - "chan *models.Event" → "models"
+   * - "*engine.Engine"    → "engine"
+   * - "[]store.Store"     → "store"
+   * - "map[string]*V"     → null (map value has no qualifier)
+   * - "string"            → null
+   *
+   * The qualifier is the simple identifier before the dot in a qualified type name.
+   * It corresponds to the Go package short name, which is used as the key prefix in
+   * pkgTypeToNodeId ("models:Event" → "pkg/hub/models.Event").
+   */
+  private extractTypeQualifier(fieldType: string): string | null {
+    let t = fieldType.trim();
+    // Strip chan keyword
+    t = t.replace(/^chan\s+/, '');
+    // Strip leading pointer(s)
+    t = t.replace(/^\*+/, '');
+    // Strip slice/array prefix: [] or [N]
+    t = t.replace(/^\[\d*\]/, '');
+    // Handle map: extract value type (after the closing bracket)
+    const mapMatch = t.match(/^map\[.*?\](.+)$/);
+    if (mapMatch) t = mapMatch[1].trim();
+    // Strip pointer again (e.g. map[K]*V → V)
+    t = t.replace(/^\*+/, '');
+    // Extract qualifier: the part before the first dot, if it is a simple Go identifier (no slashes)
+    const dotIdx = t.indexOf('.');
+    if (dotIdx > 0) {
+      const qualifier = t.slice(0, dotIdx);
+      // Only return if qualifier looks like a Go package name (simple identifier, no further dots)
+      if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(qualifier)) return qualifier;
+    }
+    return null;
   }
 
   /**
