@@ -15,20 +15,96 @@ interface GroupNode {
   nodeIds: string[];
 }
 
+/** A node in the package prefix tree for capability/goroutine renderers */
+interface PkgTreeNode {
+  pkg: string;        // full package path (empty string = virtual ancestor)
+  isVirtual: boolean; // true = no real nodes, exists only as a grouping ancestor
+  children: PkgTreeNode[];
+}
+
 /**
  * Mermaid template renderer for Go Atlas layers
  */
 export class MermaidTemplates {
   // ── nested subgraph grouping ───────────────────────────────────────────────
   //
-  // buildGroupTree(): builds a prefix-tree of subgraph groups.
-  //   A prefix becomes a group when ≥2 package nodes fall under it.
-  //   Groups nest: 'pkg/hub' is a child of 'pkg' when both are valid.
-  //   Each node is assigned to its deepest valid group.
+  // Two complementary helpers build prefix-tree structures:
+  //
+  //   buildGroupTree()   — used by renderPackageGraph.  Groups PackageNode[]
+  //                        into ancestor prefix subgraphs when ≥2 nodes share
+  //                        a prefix.  Each node is assigned to its deepest
+  //                        valid group.
+  //
+  //   buildPackageTree() — used by renderCapabilityGraph and
+  //                        renderGoroutineTopology.  Every real package path
+  //                        becomes its own subgraph; virtual ancestor nodes
+  //                        are inserted when ≥2 siblings share a prefix that
+  //                        is not itself a real package.
   //
   // TODO: potential collision if group labels exceed 59 chars after sanitize
+  /**
+   * buildPackageTree(): builds a prefix tree for a list of known package paths.
+   *
+   * Every real package becomes a PkgTreeNode.  When ≥2 real packages share a
+   * common ancestor prefix that is NOT itself a known package, a virtual node
+   * is inserted so that the two siblings are grouped under a common subgraph.
+   *
+   * Returns the root-level PkgTreeNodes (could be real or virtual).
+   */
+  private static buildPackageTree(packages: string[]): PkgTreeNode[] {
+    const pkgSet = new Set(packages);
+
+    // Collect all ancestor prefixes that have ≥2 real packages beneath them
+    const prefixCount = new Map<string, number>();
+    for (const pkg of packages) {
+      const segs = pkg.split('/');
+      for (let d = 1; d < segs.length; d++) {
+        const prefix = segs.slice(0, d).join('/');
+        prefixCount.set(prefix, (prefixCount.get(prefix) ?? 0) + 1);
+      }
+    }
+    // A prefix becomes a virtual group if it has ≥2 packages beneath it
+    // AND is not itself a known package (real packages get their own nodes)
+    const virtualGroups = new Set<string>();
+    for (const [prefix, count] of prefixCount) {
+      if (count >= 2 && !pkgSet.has(prefix)) {
+        virtualGroups.add(prefix);
+      }
+    }
+
+    // All nodes in the tree (real + virtual)
+    const allPrefixes = new Set([...packages, ...virtualGroups]);
+    const nodeMap = new Map<string, PkgTreeNode>();
+    for (const p of allPrefixes) {
+      nodeMap.set(p, { pkg: p, isVirtual: !pkgSet.has(p), children: [] });
+    }
+
+    // Find the immediate parent (longest matching ancestor in allPrefixes)
+    const parentOf = (pkg: string): string | null => {
+      const segs = pkg.split('/');
+      for (let d = segs.length - 1; d >= 1; d--) {
+        const prefix = segs.slice(0, d).join('/');
+        if (allPrefixes.has(prefix)) return prefix;
+      }
+      return null;
+    };
+
+    // Wire parent→child edges
+    const roots: PkgTreeNode[] = [];
+    for (const p of allPrefixes) {
+      const parent = parentOf(p);
+      if (parent && nodeMap.has(parent)) {
+        nodeMap.get(parent)!.children.push(nodeMap.get(p)!);
+      } else {
+        roots.push(nodeMap.get(p)!);
+      }
+    }
+
+    return roots;
+  }
+
   private static buildGroupTree(
-    nodes: PackageNode[]
+    nodes: Array<{ id: string; name: string }>
   ): { roots: GroupNode[]; grouped: Set<string> } {
     // Count all nodes under every ancestor prefix
     const prefixMembers = new Map<string, string[]>();
@@ -190,55 +266,42 @@ export class MermaidTemplates {
 
     let output = 'flowchart LR\n';
 
-    // Group nodes by package
+    // Group capability nodes by package
     const nodesByPkg = new Map<string, CapabilityNode[]>();
     for (const node of graph.nodes) {
       if (!nodesByPkg.has(node.package)) nodesByPkg.set(node.package, []);
       nodesByPkg.get(node.package)!.push(node);
     }
 
-    // Build package hierarchy
-    const packages = Array.from(nodesByPkg.keys()).sort();
-    const childrenMap = new Map<string, string[]>();
-    const hasParent = new Set<string>();
+    // Build prefix-tree using buildPackageTree — every real package gets a
+    // subgraph; virtual ancestor nodes group siblings under a common parent.
+    const pkgList = Array.from(nodesByPkg.keys());
+    const pkgRoots = MermaidTemplates.buildPackageTree(pkgList);
 
-    for (const pkg of packages) {
-      let parent: string | null = null;
-      for (const candidate of packages) {
-        if (candidate !== pkg && pkg.startsWith(candidate + '/')) {
-          if (parent === null || candidate.length > parent.length) {
-            parent = candidate;
+    // Recursive subgraph renderer for capability graph
+    const renderCapNode = (treeNode: PkgTreeNode, indent: string): void => {
+      const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
+      output += `${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;
+      // Recurse into children first
+      for (const child of treeNode.children) {
+        renderCapNode(child, indent + '  ');
+      }
+      // Direct capability nodes for this real package (virtual nodes have none)
+      if (!treeNode.isVirtual) {
+        for (const node of nodesByPkg.get(treeNode.pkg) ?? []) {
+          const mId = MermaidTemplates.sanitizeId(node.id);
+          if (node.type === 'interface') {
+            output += `${indent}  ${mId}{{"${node.name}"}}\n`;
+          } else {
+            output += `${indent}  ${mId}["${node.name}"]\n`;
           }
         }
-      }
-      if (parent !== null) {
-        if (!childrenMap.has(parent)) childrenMap.set(parent, []);
-        childrenMap.get(parent)!.push(pkg);
-        hasParent.add(pkg);
-      }
-    }
-
-    const roots = packages.filter((p) => !hasParent.has(p));
-
-    const renderPkg = (pkg: string, indent: string): void => {
-      const pkgId = MermaidTemplates.sanitizeId(pkg);
-      output += `${indent}subgraph grp_${pkgId}["${pkg}"]\n`;
-      for (const node of nodesByPkg.get(pkg) ?? []) {
-        const nodeId = MermaidTemplates.sanitizeId(node.id);
-        if (node.type === 'interface') {
-          output += `${indent}  ${nodeId}{{"${node.name}"}}\n`;
-        } else {
-          output += `${indent}  ${nodeId}["${node.name}"]\n`;
-        }
-      }
-      for (const child of childrenMap.get(pkg) ?? []) {
-        renderPkg(child, indent + '  ');
       }
       output += `${indent}end\n`;
     };
 
-    for (const root of roots) {
-      renderPkg(root, '');
+    for (const root of pkgRoots) {
+      renderCapNode(root, '');
     }
 
     // Render edges after all subgraphs
@@ -310,14 +373,28 @@ export class MermaidTemplates {
       }
     }
 
-    // ── Emit package subgraphs ────────────────────────────────────────────────
-    for (const [pkg, decls] of packageGroups) {
-      const sgId = 'grp_' + MermaidTemplates.sanitizeId(pkg);
-      output += `\n  subgraph ${sgId}["${pkg}"]\n`;
-      for (const decl of decls) {
-        output += `    ${this.sanitizeId(decl.rawId)}["${decl.label}"]${decl.style}\n`;
+    // ── Emit package subgraphs (nested via buildPackageTree) ─────────────────
+    const pkgList = Array.from(packageGroups.keys());
+    const pkgRoots = MermaidTemplates.buildPackageTree(pkgList);
+
+    const renderGoroutineNode = (treeNode: PkgTreeNode, indent: string): void => {
+      const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
+      output += `\n${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;
+      // Recurse into children first
+      for (const child of treeNode.children) {
+        renderGoroutineNode(child, indent + '  ');
       }
-      output += `  end\n`;
+      // Direct goroutine nodes for this real package (virtual nodes have none)
+      if (!treeNode.isVirtual) {
+        for (const decl of packageGroups.get(treeNode.pkg) ?? []) {
+          output += `${indent}  ${this.sanitizeId(decl.rawId)}["${decl.label}"]${decl.style}\n`;
+        }
+      }
+      output += `${indent}end\n`;
+    };
+
+    for (const root of pkgRoots) {
+      renderGoroutineNode(root, '  ');
     }
 
     // ── Emit ungrouped nodes (no package) ────────────────────────────────────

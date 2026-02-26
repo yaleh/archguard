@@ -986,3 +986,120 @@ describe('renderCapabilityGraph', () => {
     expect(output.trim()).toBe('flowchart LR');
   });
 });
+
+// ─── renderCapabilityGraph — nested subgraphs via buildGroupTree ──────────────
+
+describe('renderCapabilityGraph - nested subgraphs', () => {
+  it('groups pkg/hub and pkg/hub/store into nested subgraph', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub/store.Store', 'Store', 'interface', 'pkg/hub/store'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // pkg/hub/store subgraph must appear inside pkg/hub subgraph
+    const hubStart = output.indexOf('subgraph grp_pkg_hub[');
+    const hubEnd = output.indexOf('\nend', hubStart);
+    const storeStart = output.indexOf('subgraph grp_pkg_hub_store[');
+    expect(hubStart).toBeGreaterThan(-1);
+    expect(storeStart).toBeGreaterThan(hubStart);
+    expect(storeStart).toBeLessThan(hubEnd);
+  });
+
+  it('creates top-level pkg group when multiple pkg/* packages exist', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub/store.Store', 'Store', 'interface', 'pkg/hub/store'),
+        makeCapNode('pkg/catalog.Catalog', 'Catalog', 'struct', 'pkg/catalog'),
+        makeCapNode('pkg/catalog/store.CatalogStore', 'CatalogStore', 'struct', 'pkg/catalog/store'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // Top-level pkg group should exist wrapping both pkg/hub and pkg/catalog
+    expect(output).toContain('subgraph grp_pkg["pkg"]');
+    // Both sub-groups should be inside the pkg group
+    const pkgStart = output.indexOf('subgraph grp_pkg[');
+    const pkgEnd = output.lastIndexOf('end');
+    const hubStart = output.indexOf('subgraph grp_pkg_hub[');
+    const catalogStart = output.indexOf('subgraph grp_pkg_catalog[');
+    expect(hubStart).toBeGreaterThan(pkgStart);
+    expect(catalogStart).toBeGreaterThan(pkgStart);
+    expect(hubStart).toBeLessThan(pkgEnd);
+    expect(catalogStart).toBeLessThan(pkgEnd);
+  });
+});
+
+// ─── renderGoroutineTopology — nested subgraphs via buildGroupTree ────────────
+
+describe('renderGoroutineTopology - nested subgraphs', () => {
+  function makeTopology(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('groups pkg/hub and pkg/hub/store goroutines under nested subgraph', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.Start.spawn-1',
+          name: 'WorkerPool.Start',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 1 },
+        },
+        {
+          id: 'pkg/hub/store.Repo.Save.spawn-2',
+          name: 'Repo.Save',
+          type: 'spawned' as const,
+          package: 'pkg/hub/store',
+          location: { file: 'store.go', line: 2 },
+        },
+      ],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // pkg/hub/store subgraph must appear inside pkg/hub subgraph
+    const lines = output.split('\n');
+    const hubStart = lines.findIndex(l => l.includes('subgraph grp_pkg_hub['));
+    const storeStart = lines.findIndex(l => l.includes('subgraph grp_pkg_hub_store['));
+    // Find the closing 'end' of grp_pkg_hub (first 'end' after hub, that is NOT the store's end)
+    const hubEnd = lines.findIndex((l, i) => i > hubStart && l.trim() === 'end' && i > storeStart);
+    expect(hubStart).toBeGreaterThan(-1);
+    expect(storeStart).toBeGreaterThan(hubStart);
+    expect(storeStart).toBeLessThan(hubEnd);
+  });
+
+  it('creates top-level pkg group when multiple pkg/* packages exist', () => {
+    const topology = makeTopology({
+      nodes: [
+        {
+          id: 'pkg/hub.WorkerPool.spawn-1',
+          name: 'WorkerPool',
+          type: 'spawned' as const,
+          package: 'pkg/hub',
+          location: { file: 'worker.go', line: 1 },
+        },
+        {
+          id: 'pkg/catalog.Indexer.spawn-2',
+          name: 'Indexer',
+          type: 'spawned' as const,
+          package: 'pkg/catalog',
+          location: { file: 'catalog.go', line: 2 },
+        },
+      ],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // Top-level pkg group should wrap both pkg/hub and pkg/catalog
+    expect(output).toContain('subgraph grp_pkg["pkg"]');
+    const pkgStart = output.indexOf('subgraph grp_pkg[');
+    const pkgEnd = output.lastIndexOf('end');
+    const hubStart = output.indexOf('subgraph grp_pkg_hub[');
+    const catalogStart = output.indexOf('subgraph grp_pkg_catalog[');
+    expect(hubStart).toBeGreaterThan(pkgStart);
+    expect(catalogStart).toBeGreaterThan(pkgStart);
+    expect(hubStart).toBeLessThan(pkgEnd);
+    expect(catalogStart).toBeLessThan(pkgEnd);
+  });
+});
