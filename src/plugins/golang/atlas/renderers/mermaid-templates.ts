@@ -5,6 +5,7 @@ import type {
   CapabilityGraph,
   CapabilityNode,
   GoroutineTopology,
+  GoroutineLifecycleSummary,
   FlowGraph,
   EntryPoint,
 } from '../types.js';
@@ -278,6 +279,9 @@ export class MermaidTemplates {
     const pkgList = Array.from(nodesByPkg.keys());
     const pkgRoots = MermaidTemplates.buildPackageTree(pkgList);
 
+    // Track whether any node qualifies for hotspot styling
+    let hasHotspot = false;
+
     // Recursive subgraph renderer for capability graph
     const renderCapNode = (treeNode: PkgTreeNode, indent: string): void => {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
@@ -290,10 +294,13 @@ export class MermaidTemplates {
       if (!treeNode.isVirtual) {
         for (const node of nodesByPkg.get(treeNode.pkg) ?? []) {
           const mId = MermaidTemplates.sanitizeId(node.id);
+          const label = MermaidTemplates.formatCapabilityLabel(node);
+          const hotspotSuffix = MermaidTemplates.isHotspot(node) ? ':::hotspot' : '';
+          if (hotspotSuffix) hasHotspot = true;
           if (node.type === 'interface') {
-            output += `${indent}  ${mId}{{"${node.name}"}}\n`;
+            output += `${indent}  ${mId}{{"${label}"}}${hotspotSuffix}\n`;
           } else {
-            output += `${indent}  ${mId}["${node.name}"]\n`;
+            output += `${indent}  ${mId}["${label}"]${hotspotSuffix}\n`;
           }
         }
       }
@@ -304,18 +311,49 @@ export class MermaidTemplates {
       renderCapNode(root, '');
     }
 
+    // Emit hotspot classDef only when at least one node qualifies
+    if (hasHotspot) {
+      output += '  classDef hotspot fill:#ff7675,stroke:#d63031,stroke-width:2px\n';
+    }
+
     // Render edges after all subgraphs
     for (const edge of graph.edges) {
       const src = MermaidTemplates.sanitizeId(edge.source);
       const tgt = MermaidTemplates.sanitizeId(edge.target);
       if (edge.type === 'implements') {
         output += `  ${src} -.->|impl| ${tgt}\n`;
+      } else if (edge.concreteUsage === true) {
+        output += `  ${src} ==>|conc| ${tgt}\n`;
       } else {
         output += `  ${src} -->|uses| ${tgt}\n`;
       }
     }
 
     return output;
+  }
+
+  private static formatCapabilityLabel(node: CapabilityNode): string {
+    const sizeParts: string[] = [];
+    if ((node.fieldCount ?? 0) > 0) sizeParts.push(`${node.fieldCount}f`);
+    if ((node.methodCount ?? 0) > 0) sizeParts.push(`${node.methodCount}m`);
+
+    const couplingParts: string[] = [];
+    if ((node.fanIn ?? 0) > 0) couplingParts.push(`fi:${node.fanIn}`);
+    if ((node.fanOut ?? 0) > 0) couplingParts.push(`fo:${node.fanOut}`);
+
+    if (sizeParts.length === 0 && couplingParts.length === 0) {
+      return node.name;
+    }
+
+    const sections: string[] = [];
+    if (sizeParts.length > 0) sections.push(sizeParts.join(' '));
+    if (couplingParts.length > 0) sections.push(couplingParts.join(' '));
+
+    return `${node.name} [${sections.join(' | ')}]`;
+  }
+
+  private static isHotspot(node: CapabilityNode): boolean {
+    return (node.methodCount ?? 0) > 10 || (node.fanIn ?? 0) > 5;
   }
 
   static renderGoroutineTopology(topology: GoroutineTopology): string {
@@ -348,9 +386,12 @@ export class MermaidTemplates {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
+      const lifecycleTag = node.type === 'spawned'
+        ? MermaidTemplates.getLifecycleTag(node.id, topology.lifecycle)
+        : '';
       addDecl(node.package || undefined, {
         rawId: node.id,
-        label: `${displayName}${patternLabel}`,
+        label: `${displayName}${patternLabel}${lifecycleTag}`,
         style,
       });
     }
@@ -610,6 +651,18 @@ export class MermaidTemplates {
     const afterSlash = stripped.slice(stripped.lastIndexOf('/') + 1);
     const parts = afterSlash.split('.');
     return parts.slice(-2).join('.');
+  }
+
+  private static getLifecycleTag(
+    nodeId: string,
+    lifecycle: GoroutineLifecycleSummary[] | undefined
+  ): string {
+    const entry = lifecycle?.find(l => l.nodeId === nodeId);
+    if (!entry) return '';
+    if (entry.receivesContext && entry.hasCancellationCheck) return ' \u2713ctx';
+    if (entry.receivesContext && !entry.cancellationCheckAvailable) return ' ctx?';
+    if (entry.orphan) return ' \u26a0 no exit';
+    return '';
   }
 
   private static sanitizeId(id: string): string {
