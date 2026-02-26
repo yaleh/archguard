@@ -130,10 +130,16 @@ export class CapabilityGraphBuilder {
         for (const field of struct.fields) {
           const bareType = this.normalizeFieldType(field.type);
           if (allKnownTypeNames.has(bareType)) {
-            // Prefer package-qualified lookup to disambiguate same-name types in different packages
+            // Resolve field type to node ID with priority:
+            // 1. Explicit package qualifier (e.g. "models.Event" → qualifier="models")
+            // 2. Same-package by full import path (unqualified types are same-package in Go)
+            // 3. Same-package by short name
+            // 4. Cross-package fallback (first-match-wins — may be ambiguous)
             const qualifier = this.extractTypeQualifier(field.type);
             const targetNodeId =
               (qualifier ? pkgTypeToNodeId.get(`${qualifier}:${bareType}`) : undefined) ??
+              pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`) ??
+              pkgTypeToNodeId.get(`${pkg.name}:${bareType}`) ??
               typeNameToNodeId.get(bareType) ??
               bareType;
             edges.push({

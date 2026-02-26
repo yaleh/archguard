@@ -1529,5 +1529,77 @@ describe('CapabilityGraphBuilder', () => {
       // Should resolve to pkg/config.Config via typeNameToNodeId fallback
       expect(edge?.target).toBe('pkg/config.Config');
     });
+
+    it('prefers same-package resolution over first-match-wins for unqualified field types', async () => {
+      // Reproduces the codex-swarm false positive:
+      // examples/user-service/internal/catalog.Handler.store has type "Store" (no qualifier).
+      // pkg/hub/store also defines a "Store" interface and is registered first.
+      // Without same-package preference, Handler would incorrectly point to pkg/hub/store.Store.
+      const rawData = makeRawData({
+        packages: [
+          // pkg/hub/store is registered FIRST → first-match-wins would pick this
+          makePackage({
+            id: 'pkg/hub/store',
+            name: 'store',
+            fullName: 'pkg/hub/store',
+            interfaces: [
+              {
+                name: 'Store',
+                packageName: 'store',
+                methods: [],
+                embeddedInterfaces: [],
+                exported: true,
+                location: { file: '/x/pkg/hub/store/store.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [],
+          }),
+          // catalog package defines its own Store interface and Handler struct
+          makePackage({
+            id: 'examples/user-service/internal/catalog',
+            name: 'catalog',
+            fullName: 'examples/user-service/internal/catalog',
+            interfaces: [
+              {
+                name: 'Store',
+                packageName: 'catalog',
+                methods: [],
+                embeddedInterfaces: [],
+                exported: true,
+                location: { file: '/x/examples/user-service/internal/catalog/store.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [
+              {
+                name: 'Handler',
+                packageName: 'catalog',
+                exported: true,
+                fields: [
+                  {
+                    name: 'store',
+                    type: 'Store', // no package qualifier — same-package reference
+                    exported: false,
+                    location: { file: '/x/examples/user-service/internal/catalog/handler.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: '/x/examples/user-service/internal/catalog/handler.go', startLine: 5, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'examples/user-service/internal/catalog.Handler'
+      );
+      expect(edge).toBeDefined();
+      // Must resolve to the local catalog.Store, NOT to pkg/hub/store.Store
+      expect(edge?.target).toBe('examples/user-service/internal/catalog.Store');
+    });
   });
 });
