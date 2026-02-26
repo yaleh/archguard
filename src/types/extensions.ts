@@ -145,10 +145,10 @@ export interface CapabilityRelation {
 }
 
 export interface ConcreteUsageRisk {
-  owner: string;       // source node ID
-  fieldType: string;   // raw field type string, e.g. "*engine.Engine"
-  concreteType: string; // target node ID
-  location: string;    // "file:line"
+  owner: string;        // source node ID (the struct that holds the field)
+  fieldType: string;    // raw field type string, e.g. "*engine.Engine"
+  concreteType: string; // target node ID (the concrete struct being depended on)
+  location: string;     // "file:line" first usage location
 }
 
 // ========== Goroutine Topology ==========
