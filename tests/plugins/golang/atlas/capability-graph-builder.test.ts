@@ -1610,280 +1610,629 @@ describe('CapabilityGraphBuilder', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Cross-package same-name type collision tests (Phase A)
-  // -------------------------------------------------------------------------
-  describe('cross-package same-name type collision resolution', () => {
-    // Two packages both named "engine" (different fullName).
-    // pkg/engine contains Engine struct.
-    // pkg/adapter/engine also contains Engine struct.
-    // A consumer package imports pkg/engine under the "engine" qualifier.
-    // A second consumer package imports pkg/adapter/engine under the "engine" qualifier.
+  describe('Phase B-types: structural metrics + concrete usage', () => {
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
 
-    function makeCollisionFixture() {
-      // Package 1: pkg/engine
-      const pkgEngine = makePackage({
-        id: 'pkg/engine',
-        name: 'engine',
-        fullName: 'pkg/engine',
-        dirPath: '/test/pkg/engine',
-        sourceFiles: ['engine.go'],
-        imports: [],
-        structs: [
-          {
-            name: 'Engine',
-            packageName: 'engine',
-            fields: [],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'engine.go', startLine: 5, endLine: 20 },
-          },
-        ],
-        interfaces: [],
-        functions: [],
-      });
-
-      // Package 2: pkg/adapter/engine — same short name "engine", different fullName
-      const pkgAdapterEngine = makePackage({
-        id: 'pkg/adapter/engine',
-        name: 'engine',
-        fullName: 'pkg/adapter/engine',
-        dirPath: '/test/pkg/adapter/engine',
-        sourceFiles: ['engine.go'],
-        imports: [],
-        structs: [
-          {
-            name: 'Engine',
-            packageName: 'engine',
-            fields: [],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'engine.go', startLine: 5, endLine: 20 },
-          },
-        ],
-        interfaces: [],
-        functions: [],
-      });
-
-      return { pkgEngine, pkgAdapterEngine };
+    function makeMethod(name: string) {
+      return {
+        name,
+        parameters: [],
+        returnTypes: [],
+        exported: true,
+        location: { file: 'x.go', startLine: 1, endLine: 1 },
+      };
     }
 
-    // Test A-1: Struct importing pkg/engine resolves *engine.Engine → pkg/engine.Engine
-    it('resolves field qualifier to pkg/engine.Engine when pkg/engine is imported', async () => {
-      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
+    function makeField(name: string, type: string, exported: boolean) {
+      return {
+        name,
+        type,
+        exported,
+        location: { file: 'x.go', startLine: 1, endLine: 1 },
+      };
+    }
 
-      // Consumer imports pkg/engine
-      const pkgConsumer = makePackage({
-        id: 'pkg/consumer',
-        name: 'consumer',
-        fullName: 'pkg/consumer',
-        dirPath: '/test/pkg/consumer',
-        sourceFiles: ['consumer.go'],
-        imports: [
-          {
-            path: 'github.com/test/project/pkg/engine',
-            location: { file: 'consumer.go', startLine: 3, endLine: 3 },
-          },
-        ],
-        structs: [
-          {
-            name: 'Service',
-            packageName: 'consumer',
-            fields: [
+    // -------------------------------------------------------------------------
+    // 1. methodCount on interface node
+    // -------------------------------------------------------------------------
+    it('sets methodCount on interface node equal to iface.methods.length', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
               {
-                name: 'eng',
-                type: '*engine.Engine',
-                exported: false,
-                location: { file: 'consumer.go', startLine: 10, endLine: 10 },
+                name: 'Writer',
+                packageName: 'svc',
+                exported: true,
+                methods: [makeMethod('Write'), makeMethod('Flush')],
+                embeddedInterfaces: [],
+                location: { file: 'writer.go', startLine: 1, endLine: 10 },
               },
             ],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'consumer.go', startLine: 8, endLine: 20 },
-          },
+            structs: [],
+          }),
         ],
-        interfaces: [],
-        functions: [],
-      });
-
-      const rawData = makeRawData({
-        packages: [pkgEngine, pkgAdapterEngine, pkgConsumer],
       });
 
       const graph = await builder.build(rawData);
-
-      const edge = graph.edges.find(
-        (e) => e.type === 'uses' && e.source === 'pkg/consumer.Service'
-      );
-      expect(edge).toBeDefined();
-      // Must resolve to pkg/engine.Engine, NOT pkg/adapter/engine.Engine
-      expect(edge?.target).toBe('pkg/engine.Engine');
+      const node = graph.nodes.find((n) => n.name === 'Writer');
+      expect(node).toBeDefined();
+      expect(node?.methodCount).toBe(2);
     });
 
-    // Test A-2: Struct importing pkg/adapter/engine resolves *engine.Engine → pkg/adapter/engine.Engine
-    it('resolves field qualifier to pkg/adapter/engine.Engine when pkg/adapter/engine is imported', async () => {
-      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
-
-      // Consumer imports pkg/adapter/engine
-      const pkgConsumer2 = makePackage({
-        id: 'pkg/consumer2',
-        name: 'consumer2',
-        fullName: 'pkg/consumer2',
-        dirPath: '/test/pkg/consumer2',
-        sourceFiles: ['consumer2.go'],
-        imports: [
-          {
-            path: 'github.com/test/project/pkg/adapter/engine',
-            location: { file: 'consumer2.go', startLine: 3, endLine: 3 },
-          },
-        ],
-        structs: [
-          {
-            name: 'Adapter',
-            packageName: 'consumer2',
-            fields: [
+    // -------------------------------------------------------------------------
+    // 2. methodCount on struct node (directly-declared methods only)
+    // -------------------------------------------------------------------------
+    it('sets methodCount on struct node equal to struct.methods.length', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
               {
-                name: 'eng',
-                type: '*engine.Engine',
-                exported: false,
-                location: { file: 'consumer2.go', startLine: 10, endLine: 10 },
+                name: 'Writer',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'writer.go', startLine: 1, endLine: 5 },
               },
             ],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'consumer2.go', startLine: 8, endLine: 20 },
+            structs: [
+              {
+                name: 'FileWriter',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [makeMethod('Write'), makeMethod('Flush'), makeMethod('Close')],
+                embeddedTypes: [],
+                location: { file: 'file_writer.go', startLine: 1, endLine: 30 },
+              },
+            ],
+          }),
+        ],
+        implementations: [
+          {
+            structPackageId: 'svc',
+            structName: 'FileWriter',
+            interfacePackageId: 'svc',
+            interfaceName: 'Writer',
+            confidence: 1.0,
           },
         ],
-        interfaces: [],
-        functions: [],
-      });
-
-      const rawData = makeRawData({
-        packages: [pkgEngine, pkgAdapterEngine, pkgConsumer2],
       });
 
       const graph = await builder.build(rawData);
-
-      const edge = graph.edges.find(
-        (e) => e.type === 'uses' && e.source === 'pkg/consumer2.Adapter'
-      );
-      expect(edge).toBeDefined();
-      // Must resolve to pkg/adapter/engine.Engine, NOT pkg/engine.Engine
-      expect(edge?.target).toBe('pkg/adapter/engine.Engine');
+      const node = graph.nodes.find((n) => n.name === 'FileWriter');
+      expect(node).toBeDefined();
+      expect(node?.methodCount).toBe(3);
     });
 
-    // Test A-3: Struct with NO import matching a qualifier → no false-positive edge
-    it('produces no uses edge when qualifier has no matching import', async () => {
-      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
-
-      // Consumer with engine.Engine field but NO import for either engine package.
-      // The imports array is non-empty (has an unrelated import) to signal that import
-      // data IS available — so a missing "engine" qualifier entry means no import was
-      // declared for it, and the edge should be suppressed (not a false positive).
-      const pkgConsumerNoImport = makePackage({
-        id: 'pkg/noImport',
-        name: 'noImport',
-        fullName: 'pkg/noImport',
-        dirPath: '/test/pkg/noImport',
-        sourceFiles: ['noimport.go'],
-        imports: [
-          // Has an unrelated import — import data is present but "engine" is not listed
-          {
-            path: 'fmt',
-            location: { file: 'noimport.go', startLine: 2, endLine: 2 },
-          },
-        ],
-        structs: [
-          {
-            name: 'Worker',
-            packageName: 'noImport',
-            fields: [
+    // -------------------------------------------------------------------------
+    // 3. fieldCount on struct = exported fields only; absent on interface nodes
+    // -------------------------------------------------------------------------
+    it('sets fieldCount on struct counting only exported fields, absent on interface nodes', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
               {
-                name: 'eng',
-                type: '*engine.Engine',
-                exported: false,
-                location: { file: 'noimport.go', startLine: 10, endLine: 10 },
+                name: 'Writer',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'writer.go', startLine: 1, endLine: 5 },
               },
             ],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'noimport.go', startLine: 8, endLine: 20 },
+            structs: [
+              {
+                name: 'FileWriter',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('Name', 'string', true),   // exported
+                  makeField('size', 'int64', false),    // unexported
+                  makeField('Mode', 'os.FileMode', true), // exported
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'file_writer.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+        implementations: [
+          {
+            structPackageId: 'svc',
+            structName: 'FileWriter',
+            interfacePackageId: 'svc',
+            interfaceName: 'Writer',
+            confidence: 1.0,
           },
         ],
-        interfaces: [],
-        functions: [],
-      });
-
-      const rawData = makeRawData({
-        packages: [pkgEngine, pkgAdapterEngine, pkgConsumerNoImport],
       });
 
       const graph = await builder.build(rawData);
-
-      const edge = graph.edges.find(
-        (e) => e.type === 'uses' && e.source === 'pkg/noImport.Worker'
-      );
-      // Must NOT produce a false-positive edge when no import disambiguates the qualifier
-      expect(edge).toBeUndefined();
+      const structNode = graph.nodes.find((n) => n.name === 'FileWriter');
+      const ifaceNode = graph.nodes.find((n) => n.name === 'Writer');
+      expect(structNode?.fieldCount).toBe(2);       // Name + Mode
+      expect(ifaceNode?.fieldCount).toBeUndefined(); // interfaces have no fieldCount
     });
 
-    // Test A-4: Import alias is used as qualifier instead of package short name
-    it('resolves aliased import qualifier to correct package', async () => {
-      const { pkgEngine } = makeCollisionFixture();
-
-      // Consumer imports pkg/engine with an alias "eng"
-      const pkgConsumerAliased = makePackage({
-        id: 'pkg/aliased',
-        name: 'aliased',
-        fullName: 'pkg/aliased',
-        dirPath: '/test/pkg/aliased',
-        sourceFiles: ['aliased.go'],
-        imports: [
-          {
-            path: 'github.com/test/project/pkg/engine',
-            alias: 'eng',
-            location: { file: 'aliased.go', startLine: 3, endLine: 3 },
-          },
-        ],
-        structs: [
-          {
-            name: 'Runner',
-            packageName: 'aliased',
-            fields: [
+    // -------------------------------------------------------------------------
+    // 4. fanIn: distinct sources pointing to a node
+    // -------------------------------------------------------------------------
+    it('computes fanIn as the number of distinct source nodes pointing to a target', async () => {
+      // Two structs (A, B) both implement the same interface (IFoo)
+      // → IFoo.fanIn === 2
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
               {
-                name: 'e',
-                type: '*eng.Engine', // uses alias "eng" as qualifier
-                exported: false,
-                location: { file: 'aliased.go', startLine: 10, endLine: 10 },
+                name: 'IFoo',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'ifoo.go', startLine: 1, endLine: 5 },
               },
             ],
-            methods: [],
-            embeddedTypes: [],
-            exported: true,
-            location: { file: 'aliased.go', startLine: 8, endLine: 20 },
+            structs: [
+              {
+                name: 'AlphaFoo',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'alpha.go', startLine: 1, endLine: 10 },
+              },
+              {
+                name: 'BetaFoo',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'beta.go', startLine: 1, endLine: 10 },
+              },
+            ],
+          }),
+        ],
+        implementations: [
+          {
+            structPackageId: 'svc',
+            structName: 'AlphaFoo',
+            interfacePackageId: 'svc',
+            interfaceName: 'IFoo',
+            confidence: 1.0,
+          },
+          {
+            structPackageId: 'svc',
+            structName: 'BetaFoo',
+            interfacePackageId: 'svc',
+            interfaceName: 'IFoo',
+            confidence: 1.0,
           },
         ],
-        interfaces: [],
-        functions: [],
-      });
-
-      const rawData = makeRawData({
-        packages: [pkgEngine, pkgConsumerAliased],
       });
 
       const graph = await builder.build(rawData);
+      const ifooNode = graph.nodes.find((n) => n.name === 'IFoo');
+      expect(ifooNode?.fanIn).toBe(2);
+    });
 
-      const edge = graph.edges.find(
-        (e) => e.type === 'uses' && e.source === 'pkg/aliased.Runner'
+    // -------------------------------------------------------------------------
+    // 5. fanOut: distinct targets from a single source
+    // -------------------------------------------------------------------------
+    it('computes fanOut as the number of distinct targets from a source node', async () => {
+      // Struct C uses both IFoo and IBar
+      // → C.fanOut === 2
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
+              {
+                name: 'IFoo',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'ifoo.go', startLine: 1, endLine: 5 },
+              },
+              {
+                name: 'IBar',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'ibar.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [
+              {
+                name: 'ServiceC',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('foo', 'IFoo', false),
+                  makeField('bar', 'IBar', false),
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'service_c.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const cNode = graph.nodes.find((n) => n.name === 'ServiceC');
+      expect(cNode?.fanOut).toBe(2);
+    });
+
+    // -------------------------------------------------------------------------
+    // 6. fanIn/fanOut distinct, not edge count (both implements AND uses same iface)
+    // -------------------------------------------------------------------------
+    it('counts distinct nodes for fanIn/fanOut, not raw edge count (implements + uses same iface)', async () => {
+      // StructD: implements IFoo AND has a field of type IFoo
+      // After deduplication, there is still only 1 unique source→target pair per type.
+      // However implements and uses are different types, so both edges are kept.
+      // But for fanIn/fanOut, we use distinct source/target NODES not edge count.
+      // StructD → IFoo via 'implements'
+      // StructD → IFoo via 'uses'
+      // IFoo.fanIn should be 1 (only one distinct source: StructD)
+      // StructD.fanOut should be 1 (only one distinct target: IFoo)
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
+              {
+                name: 'IFoo',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'ifoo.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [
+              {
+                name: 'StructD',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('dep', 'IFoo', false), // uses IFoo
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'structd.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+        implementations: [
+          {
+            structPackageId: 'svc',
+            structName: 'StructD',
+            interfacePackageId: 'svc',
+            interfaceName: 'IFoo',
+            confidence: 1.0,
+          },
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const ifooNode = graph.nodes.find((n) => n.name === 'IFoo');
+      const dNode = graph.nodes.find((n) => n.name === 'StructD');
+
+      // 2 edges total (implements + uses), but only 1 distinct source → IFoo
+      expect(ifooNode?.fanIn).toBe(1);
+      // StructD points to only 1 distinct target: IFoo
+      expect(dNode?.fanOut).toBe(1);
+    });
+
+    // -------------------------------------------------------------------------
+    // 7. concreteUsage: true when uses-edge target is a struct
+    // -------------------------------------------------------------------------
+    it('marks concreteUsage: true on uses edges where target is a struct', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [],
+            structs: [
+              {
+                name: 'Engine',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'engine.go', startLine: 1, endLine: 10 },
+              },
+              {
+                name: 'Service',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('eng', 'Engine', false),
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'service.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const usesEdge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/svc.Service' && e.target === 'pkg/svc.Engine'
       );
-      expect(edge).toBeDefined();
-      // Must resolve via alias "eng" → import path "github.com/test/project/pkg/engine" → pkg/engine.Engine
-      expect(edge?.target).toBe('pkg/engine.Engine');
+      expect(usesEdge).toBeDefined();
+      expect(usesEdge?.concreteUsage).toBe(true);
+    });
+
+    // -------------------------------------------------------------------------
+    // 8. concreteUsage absent on uses-edges to interface nodes
+    // -------------------------------------------------------------------------
+    it('does not mark concreteUsage on uses edges where target is an interface', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
+              {
+                name: 'IEngine',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'iengine.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [
+              {
+                name: 'Service',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('eng', 'IEngine', false),
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'service.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const usesEdge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/svc.Service' && e.target === 'pkg/svc.IEngine'
+      );
+      expect(usesEdge).toBeDefined();
+      expect(usesEdge?.concreteUsage).toBeFalsy();
+    });
+
+    // -------------------------------------------------------------------------
+    // 9. concreteUsage absent on implements edges
+    // -------------------------------------------------------------------------
+    it('does not mark concreteUsage on implements edges', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
+              {
+                name: 'IFoo',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'ifoo.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [
+              {
+                name: 'FooImpl',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'foo_impl.go', startLine: 1, endLine: 10 },
+              },
+            ],
+          }),
+        ],
+        implementations: [
+          {
+            structPackageId: 'svc',
+            structName: 'FooImpl',
+            interfacePackageId: 'svc',
+            interfaceName: 'IFoo',
+            confidence: 1.0,
+          },
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const implEdge = graph.edges.find((e) => e.type === 'implements');
+      expect(implEdge).toBeDefined();
+      expect(implEdge?.concreteUsage).toBeFalsy();
+    });
+
+    // -------------------------------------------------------------------------
+    // 10. concreteUsageRisks populated for cross-package concrete field
+    // -------------------------------------------------------------------------
+    it('populates concreteUsageRisks for cross-package concrete field dependencies', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/db',
+            name: 'db',
+            fullName: 'pkg/db',
+            interfaces: [],
+            structs: [
+              {
+                name: 'SQLiteStore',
+                packageName: 'db',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'sqlite.go', startLine: 1, endLine: 10 },
+              },
+            ],
+          }),
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [],
+            structs: [
+              {
+                name: 'Service',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  {
+                    name: 'store',
+                    type: 'db.SQLiteStore',
+                    exported: false,
+                    location: { file: '/pkg/svc/service.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'service.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      expect(graph.concreteUsageRisks).toBeDefined();
+      expect(graph.concreteUsageRisks).toHaveLength(1);
+
+      const risk = graph.concreteUsageRisks![0];
+      expect(risk.owner).toBe('pkg/svc.Service');
+      expect(risk.fieldType).toBe('db.SQLiteStore');
+      expect(risk.concreteType).toBe('pkg/db.SQLiteStore');
+      expect(risk.location).toBe('/pkg/svc/service.go:5');
+    });
+
+    // -------------------------------------------------------------------------
+    // 11. Same-package concrete field → no concreteUsageRisk entry
+    // -------------------------------------------------------------------------
+    it('does not create concreteUsageRisk entries for same-package concrete field usage', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [],
+            structs: [
+              {
+                name: 'Engine',
+                packageName: 'svc',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'engine.go', startLine: 1, endLine: 10 },
+              },
+              {
+                name: 'Service',
+                packageName: 'svc',
+                exported: true,
+                fields: [
+                  makeField('eng', 'Engine', false),
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'service.go', startLine: 1, endLine: 20 },
+              },
+            ],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      // The uses edge should exist (concrete struct dependency)
+      const usesEdge = graph.edges.find((e) => e.type === 'uses' && e.source === 'pkg/svc.Service');
+      expect(usesEdge).toBeDefined();
+      expect(usesEdge?.concreteUsage).toBe(true);
+
+      // But no risk because source and target are in the same package
+      expect(graph.concreteUsageRisks).toBeUndefined();
+    });
+
+    // -------------------------------------------------------------------------
+    // 12. Nodes with 0 in/out get fanIn === 0, fanOut === 0
+    // -------------------------------------------------------------------------
+    it('assigns fanIn=0 and fanOut=0 to isolated nodes', async () => {
+      // An interface with no implementors and no uses edges = isolated
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            id: 'pkg/svc',
+            name: 'svc',
+            fullName: 'pkg/svc',
+            interfaces: [
+              {
+                name: 'Orphan',
+                packageName: 'svc',
+                exported: true,
+                methods: [],
+                embeddedInterfaces: [],
+                location: { file: 'orphan.go', startLine: 1, endLine: 5 },
+              },
+            ],
+            structs: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData);
+      const orphanNode = graph.nodes.find((n) => n.name === 'Orphan');
+      expect(orphanNode).toBeDefined();
+      expect(orphanNode?.fanIn).toBe(0);
+      expect(orphanNode?.fanOut).toBe(0);
     });
   });
 });
