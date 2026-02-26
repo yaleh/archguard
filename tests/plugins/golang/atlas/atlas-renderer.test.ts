@@ -13,7 +13,7 @@ import type {
 
 function makeAtlas(overrides?: Partial<GoAtlasExtension>): GoAtlasExtension {
   return {
-    version: '1.0',
+    version: '1.1',
     layers: {},
     metadata: {
       generatedAt: new Date().toISOString(),
