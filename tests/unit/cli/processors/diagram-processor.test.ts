@@ -16,6 +16,15 @@ vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
+vi.mock('fs-extra', () => ({
+  default: {
+    writeJson: vi.fn().mockResolvedValue(undefined),
+    ensureDir: vi.fn().mockResolvedValue(undefined),
+    readJson: vi.fn().mockResolvedValue({}),
+    pathExists: vi.fn().mockResolvedValue(false),
+    remove: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // Mock cli-progress for ParallelProgressReporter
 vi.mock('cli-progress', () => ({

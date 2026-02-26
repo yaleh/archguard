@@ -88,6 +88,12 @@ export class MermaidDiagramGenerator {
     level: DetailLevel,
     diagramConfig?: DiagramConfig
   ): Promise<RenderJob[]> {
+    // Empty ArchJSON produces an invalid bare `classDiagram\n` that fails Mermaid parsing.
+    // Return gracefully with no render jobs instead of throwing.
+    if (!archJson.entities || archJson.entities.length === 0) {
+      return [];
+    }
+
     const progress = new ProgressReporter();
 
     try {

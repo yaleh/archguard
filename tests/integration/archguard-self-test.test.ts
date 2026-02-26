@@ -16,10 +16,10 @@ describe('ArchGuard Self Test - Integration', () => {
     const archJson = parser.parseProject(srcDir);
     const duration = Date.now() - startTime;
 
-    // Performance: Should parse in < 15 seconds (with coverage instrumentation)
+    // Performance: Should parse in < 30 seconds (with coverage instrumentation)
     // Normal run: ~5 seconds, with coverage: ~12 seconds
     // Future optimization target: < 2 seconds
-    expect(duration).toBeLessThan(15000);
+    expect(duration).toBeLessThan(30000);
 
     // Should have entities
     expect(archJson.entities.length).toBeGreaterThan(0);

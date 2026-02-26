@@ -92,7 +92,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     const svgContent = await fs.readFile(path.join(testOutputDir, 'test-diagram.svg'), 'utf-8');
     expect(svgContent).toContain('<svg');
     expect(svgContent).toContain('</svg>');
-  });
+  }, 90000); // Renders SVG+PNG from 20 real files — needs extra time
 
   it('should handle validation errors and auto-repair', async () => {
     // Create ArchJSON with problematic names that need repair
