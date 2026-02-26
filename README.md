@@ -64,7 +64,7 @@ claude --version
 Analyze your TypeScript project:
 
 ```bash
-archguard analyze -s ./src -o ./docs/architecture
+archguard analyze -s ./src --output-dir ./docs/architecture
 ```
 
 This generates `architecture.mmd` (Mermaid source), `architecture.svg`, and `architecture.png` (rendered diagrams).
@@ -72,13 +72,13 @@ This generates `architecture.mmd` (Mermaid source), `architecture.svg`, and `arc
 Generate JSON output:
 
 ```bash
-archguard analyze -s ./src -o ./docs/architecture.json -f json
+archguard analyze -s ./src --output-dir ./docs -f json
 ```
 
 With verbose output:
 
 ```bash
-archguard analyze -s ./src -o ./docs/architecture -v
+archguard analyze -s ./src --output-dir ./docs/architecture -v
 ```
 
 ## CLI Commands
@@ -94,7 +94,7 @@ archguard analyze [options]
 **Options:**
 
 - `-s, --source <path>` - Source directory to analyze (default: ./src)
-- `-o, --output <path>` - Output file path (without extension)
+- `--output-dir <dir>` - Output directory for diagrams (default: ./archguard)
 - `-f, --format <type>` - Output format: mermaid, json (default: mermaid)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
@@ -118,7 +118,7 @@ archguard analyze [options]
 archguard analyze
 
 # Analyze specific directory with custom output
-archguard analyze -s ./packages/core -o ./docs/core-architecture
+archguard analyze -s ./packages/core --output-dir ./docs/core-architecture
 
 # High-performance parallel processing
 archguard analyze -s ./src -c 8 -v
@@ -127,7 +127,7 @@ archguard analyze -s ./src -c 8 -v
 archguard analyze -s ./src -e "**/*.test.ts" "**/*.spec.ts"
 
 # JSON output for further processing
-archguard analyze -s ./src -o ./output.json -f json
+archguard analyze -s ./src --output-dir . -f json
 
 # Disable LLM grouping (use heuristic, faster)
 archguard analyze -s ./src --no-llm-grouping

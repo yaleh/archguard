@@ -32,11 +32,14 @@ export function createCLI(): Command {
   return program;
 }
 
+import * as fs from 'fs';
+import * as url from 'url';
+
 /**
  * Main CLI entry point (only run when executed directly)
  */
-// In ES modules, check if this file is the entry point
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMain = process.argv[1] && import.meta.url === url.pathToFileURL(fs.realpathSync(process.argv[1])).href;
+if (isMain) {
   const program = createCLI();
   program.parse(process.argv);
 }
