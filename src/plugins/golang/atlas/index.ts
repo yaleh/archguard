@@ -18,6 +18,7 @@ import type {
   RenderFormat,
   RenderResult,
 } from './types.js';
+import { GO_ATLAS_EXTENSION_VERSION } from './types.js';
 
 /**
  * Returns true if a package's fullName indicates it is a test or testutil package.
@@ -182,7 +183,7 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
 
     // 4. Return GoAtlasExtension (ADR-002 structure)
     return {
-      version: '1.0',
+      version: GO_ATLAS_EXTENSION_VERSION,
       layers: {
         package: packageGraph,
         capability: capabilityGraph,

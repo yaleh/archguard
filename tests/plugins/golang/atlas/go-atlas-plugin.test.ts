@@ -21,7 +21,7 @@ const minimalRawData: GoRawData = {
 };
 
 const minimalArchJSON = {
-  version: '1.0',
+  version: '1.1',
   language: 'go' as const,
   timestamp: new Date().toISOString(),
   sourceFiles: [],
@@ -75,9 +75,9 @@ describe('GoAtlasPlugin', () => {
       vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
     });
 
-    it('returns version "1.0"', async () => {
+    it('returns version "1.1"', async () => {
       const atlas = await plugin.generateAtlas('/test');
-      expect(atlas.version).toBe('1.0');
+      expect(atlas.version).toBe('1.1');
     });
 
     it('returns all 4 layers defined', async () => {
@@ -176,7 +176,7 @@ describe('GoAtlasPlugin', () => {
   describe('renderLayer', () => {
     it('delegates to AtlasRenderer and returns RenderResult with format and layer fields', async () => {
       const mockAtlas = {
-        version: '1.0',
+        version: '1.1',
         layers: {
           package: { nodes: [], edges: [], cycles: [] },
           capability: { nodes: [], edges: [] },
