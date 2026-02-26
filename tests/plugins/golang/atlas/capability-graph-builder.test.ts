@@ -1609,4 +1609,281 @@ describe('CapabilityGraphBuilder', () => {
       expect(edge?.target).toBe('examples/user-service/internal/catalog.Store');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Cross-package same-name type collision tests (Phase A)
+  // -------------------------------------------------------------------------
+  describe('cross-package same-name type collision resolution', () => {
+    // Two packages both named "engine" (different fullName).
+    // pkg/engine contains Engine struct.
+    // pkg/adapter/engine also contains Engine struct.
+    // A consumer package imports pkg/engine under the "engine" qualifier.
+    // A second consumer package imports pkg/adapter/engine under the "engine" qualifier.
+
+    function makeCollisionFixture() {
+      // Package 1: pkg/engine
+      const pkgEngine = makePackage({
+        id: 'pkg/engine',
+        name: 'engine',
+        fullName: 'pkg/engine',
+        dirPath: '/test/pkg/engine',
+        sourceFiles: ['engine.go'],
+        imports: [],
+        structs: [
+          {
+            name: 'Engine',
+            packageName: 'engine',
+            fields: [],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'engine.go', startLine: 5, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      // Package 2: pkg/adapter/engine — same short name "engine", different fullName
+      const pkgAdapterEngine = makePackage({
+        id: 'pkg/adapter/engine',
+        name: 'engine',
+        fullName: 'pkg/adapter/engine',
+        dirPath: '/test/pkg/adapter/engine',
+        sourceFiles: ['engine.go'],
+        imports: [],
+        structs: [
+          {
+            name: 'Engine',
+            packageName: 'engine',
+            fields: [],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'engine.go', startLine: 5, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      return { pkgEngine, pkgAdapterEngine };
+    }
+
+    // Test A-1: Struct importing pkg/engine resolves *engine.Engine → pkg/engine.Engine
+    it('resolves field qualifier to pkg/engine.Engine when pkg/engine is imported', async () => {
+      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
+
+      // Consumer imports pkg/engine
+      const pkgConsumer = makePackage({
+        id: 'pkg/consumer',
+        name: 'consumer',
+        fullName: 'pkg/consumer',
+        dirPath: '/test/pkg/consumer',
+        sourceFiles: ['consumer.go'],
+        imports: [
+          {
+            path: 'github.com/test/project/pkg/engine',
+            location: { file: 'consumer.go', startLine: 3, endLine: 3 },
+          },
+        ],
+        structs: [
+          {
+            name: 'Service',
+            packageName: 'consumer',
+            fields: [
+              {
+                name: 'eng',
+                type: '*engine.Engine',
+                exported: false,
+                location: { file: 'consumer.go', startLine: 10, endLine: 10 },
+              },
+            ],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'consumer.go', startLine: 8, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      const rawData = makeRawData({
+        packages: [pkgEngine, pkgAdapterEngine, pkgConsumer],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/consumer.Service'
+      );
+      expect(edge).toBeDefined();
+      // Must resolve to pkg/engine.Engine, NOT pkg/adapter/engine.Engine
+      expect(edge?.target).toBe('pkg/engine.Engine');
+    });
+
+    // Test A-2: Struct importing pkg/adapter/engine resolves *engine.Engine → pkg/adapter/engine.Engine
+    it('resolves field qualifier to pkg/adapter/engine.Engine when pkg/adapter/engine is imported', async () => {
+      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
+
+      // Consumer imports pkg/adapter/engine
+      const pkgConsumer2 = makePackage({
+        id: 'pkg/consumer2',
+        name: 'consumer2',
+        fullName: 'pkg/consumer2',
+        dirPath: '/test/pkg/consumer2',
+        sourceFiles: ['consumer2.go'],
+        imports: [
+          {
+            path: 'github.com/test/project/pkg/adapter/engine',
+            location: { file: 'consumer2.go', startLine: 3, endLine: 3 },
+          },
+        ],
+        structs: [
+          {
+            name: 'Adapter',
+            packageName: 'consumer2',
+            fields: [
+              {
+                name: 'eng',
+                type: '*engine.Engine',
+                exported: false,
+                location: { file: 'consumer2.go', startLine: 10, endLine: 10 },
+              },
+            ],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'consumer2.go', startLine: 8, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      const rawData = makeRawData({
+        packages: [pkgEngine, pkgAdapterEngine, pkgConsumer2],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/consumer2.Adapter'
+      );
+      expect(edge).toBeDefined();
+      // Must resolve to pkg/adapter/engine.Engine, NOT pkg/engine.Engine
+      expect(edge?.target).toBe('pkg/adapter/engine.Engine');
+    });
+
+    // Test A-3: Struct with NO import matching a qualifier → no false-positive edge
+    it('produces no uses edge when qualifier has no matching import', async () => {
+      const { pkgEngine, pkgAdapterEngine } = makeCollisionFixture();
+
+      // Consumer with engine.Engine field but NO import for either engine package.
+      // The imports array is non-empty (has an unrelated import) to signal that import
+      // data IS available — so a missing "engine" qualifier entry means no import was
+      // declared for it, and the edge should be suppressed (not a false positive).
+      const pkgConsumerNoImport = makePackage({
+        id: 'pkg/noImport',
+        name: 'noImport',
+        fullName: 'pkg/noImport',
+        dirPath: '/test/pkg/noImport',
+        sourceFiles: ['noimport.go'],
+        imports: [
+          // Has an unrelated import — import data is present but "engine" is not listed
+          {
+            path: 'fmt',
+            location: { file: 'noimport.go', startLine: 2, endLine: 2 },
+          },
+        ],
+        structs: [
+          {
+            name: 'Worker',
+            packageName: 'noImport',
+            fields: [
+              {
+                name: 'eng',
+                type: '*engine.Engine',
+                exported: false,
+                location: { file: 'noimport.go', startLine: 10, endLine: 10 },
+              },
+            ],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'noimport.go', startLine: 8, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      const rawData = makeRawData({
+        packages: [pkgEngine, pkgAdapterEngine, pkgConsumerNoImport],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/noImport.Worker'
+      );
+      // Must NOT produce a false-positive edge when no import disambiguates the qualifier
+      expect(edge).toBeUndefined();
+    });
+
+    // Test A-4: Import alias is used as qualifier instead of package short name
+    it('resolves aliased import qualifier to correct package', async () => {
+      const { pkgEngine } = makeCollisionFixture();
+
+      // Consumer imports pkg/engine with an alias "eng"
+      const pkgConsumerAliased = makePackage({
+        id: 'pkg/aliased',
+        name: 'aliased',
+        fullName: 'pkg/aliased',
+        dirPath: '/test/pkg/aliased',
+        sourceFiles: ['aliased.go'],
+        imports: [
+          {
+            path: 'github.com/test/project/pkg/engine',
+            alias: 'eng',
+            location: { file: 'aliased.go', startLine: 3, endLine: 3 },
+          },
+        ],
+        structs: [
+          {
+            name: 'Runner',
+            packageName: 'aliased',
+            fields: [
+              {
+                name: 'e',
+                type: '*eng.Engine', // uses alias "eng" as qualifier
+                exported: false,
+                location: { file: 'aliased.go', startLine: 10, endLine: 10 },
+              },
+            ],
+            methods: [],
+            embeddedTypes: [],
+            exported: true,
+            location: { file: 'aliased.go', startLine: 8, endLine: 20 },
+          },
+        ],
+        interfaces: [],
+        functions: [],
+      });
+
+      const rawData = makeRawData({
+        packages: [pkgEngine, pkgConsumerAliased],
+      });
+
+      const graph = await builder.build(rawData);
+
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/aliased.Runner'
+      );
+      expect(edge).toBeDefined();
+      // Must resolve via alias "eng" → import path "github.com/test/project/pkg/engine" → pkg/engine.Engine
+      expect(edge?.target).toBe('pkg/engine.Engine');
+    });
+  });
 });
