@@ -437,6 +437,34 @@ func start() chan int {
     });
   });
 
+  describe('orphaned methods — receiver struct in another file', () => {
+    it('should store methods whose receiver struct is defined in another file as orphanedMethods', () => {
+      const bridge = new TreeSitterBridge();
+      // File contains ONLY a method — no struct definition
+      const code = `package hub
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+  w.WriteHeader(200)
+}
+`;
+      const result = bridge.parseCode(code, '/pkg/hub/handlers_health.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      // The method should NOT be in any struct's methods (no struct defined here)
+      expect(result.structs).toHaveLength(0);
+
+      // But should be captured as orphaned
+      expect(result.orphanedMethods).toBeDefined();
+      expect(result.orphanedMethods).toHaveLength(1);
+      expect(result.orphanedMethods![0].name).toBe('handleHealth');
+      expect(result.orphanedMethods![0].receiverType).toBe('Server');
+      // Body should be extracted (ResponseWriter + Request signature triggers shouldExtractBody)
+      expect(result.orphanedMethods![0].body).toBeDefined();
+    });
+  });
+
   describe('shouldExtractBody - HTTP handler detection', () => {
     it('extracts body of a method with (http.ResponseWriter, *http.Request) params', async () => {
       const code = `

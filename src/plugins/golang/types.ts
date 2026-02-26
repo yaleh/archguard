@@ -160,6 +160,7 @@ export interface GoRawPackage {
   interfaces: GoRawInterface[];
   functions: GoFunction[];
   sourceFiles: string[]; // Source file paths in this package
+  orphanedMethods?: GoMethod[]; // Methods whose receiver struct is defined in another file
 }
 
 /**

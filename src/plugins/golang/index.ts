@@ -164,15 +164,32 @@ export class GoPlugin implements ILanguagePlugin {
       // Merge by fullName (prevents same-name package collision)
       const key = pkg.fullName;
       if (packages.has(key)) {
-        const existing = packages.get(key);
+        const existing = packages.get(key)!;
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);
         existing.imports.push(...pkg.imports);
         existing.sourceFiles.push(...pkg.sourceFiles);
+        // Accumulate orphaned methods for later re-attachment
+        if (pkg.orphanedMethods?.length) {
+          if (!existing.orphanedMethods) existing.orphanedMethods = [];
+          existing.orphanedMethods.push(...pkg.orphanedMethods);
+        }
       } else {
         packages.set(key, pkg);
       }
+    }
+
+    // Re-attach orphaned methods: methods whose receiver struct was in another file
+    for (const pkg of packages.values()) {
+      if (!pkg.orphanedMethods?.length) continue;
+      for (const method of pkg.orphanedMethods) {
+        const struct = pkg.structs.find((s) => s.name === method.receiverType);
+        if (struct) {
+          struct.methods.push(method);
+        }
+      }
+      pkg.orphanedMethods = [];
     }
 
     return {

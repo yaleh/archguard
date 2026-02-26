@@ -85,6 +85,7 @@ export class TreeSitterBridge {
 
     // Extract methods for structs
     const methodDecls = rootNode.descendantsOfType('method_declaration');
+    const orphanedMethods: GoMethod[] = [];
     for (const methodDecl of methodDecls) {
       const method = this.extractMethod(methodDecl, code, filePath, options);
       if (method && method.receiverType) {
@@ -92,6 +93,9 @@ export class TreeSitterBridge {
         const struct = structs.find((s) => s.name === method.receiverType);
         if (struct) {
           struct.methods.push(method);
+        } else {
+          // Struct defined in another file — save for cross-file re-attachment
+          orphanedMethods.push(method);
         }
       }
     }
@@ -111,6 +115,7 @@ export class TreeSitterBridge {
       interfaces,
       functions,
       sourceFiles: [filePath],
+      ...(orphanedMethods.length > 0 ? { orphanedMethods } : {}),
     };
   }
 
