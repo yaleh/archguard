@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
+import { FlowGraphBuilder } from '@/plugins/golang/atlas/builders/flow-graph-builder.js';
 import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
 import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '@/plugins/golang/atlas/types.js';
+import type { GoRawData, GoRawPackage } from '@/plugins/golang/types.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -63,14 +65,81 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
     });
     const graph = makeFlowGraph([e1, e2]);
     const result = MermaidTemplates.renderFlowGraph(graph);
+    // The two entries are in different groups — verify each entry node id appears
+    // Note: nested buildPackageTree may add virtual ancestor subgraphs, so we
+    // check for at least 2 subgraphs (one per entry group) rather than exactly 2.
     const subgraphMatches = result.match(/subgraph /g);
-    expect(subgraphMatches).toHaveLength(2);
+    expect(subgraphMatches).not.toBeNull();
+    expect(subgraphMatches!.length).toBeGreaterThanOrEqual(2);
+    // Both entry node ids should appear
+    expect(result).toContain('ep1');
+    expect(result).toContain('ep2');
   });
 
   it('renders empty graph with just "flowchart LR"', () => {
     const graph = makeFlowGraph([]);
     const result = MermaidTemplates.renderFlowGraph(graph);
     expect(result.trim()).toBe('flowchart LR');
+  });
+});
+
+// ─── renderFlowGraph - node labels ────────────────────────────────────────────
+
+describe('renderFlowGraph - node labels', () => {
+  it('declares handler node with original dotted name as label', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
+        handler: 'r.handler.GetFoo',
+        middleware: [], package: 'pkg/hub',
+        location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [{ from: 'r.handler.GetFoo', to: 'store.Find', type: 'direct', confidence: 0.7 }]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    // Handler node must be declared with original name as label
+    expect(mmd).toContain('r_handler_GetFoo["r.handler.GetFoo"]');
+  });
+
+  it('declares callee node with original dotted name as label', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
+        handler: 'myHandler',
+        middleware: [], package: 'pkg/hub',
+        location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [{ from: 'myHandler', to: 'fmt.Sprintf', type: 'direct', confidence: 0.7 }]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    // Callee node must show original name
+    expect(mmd).toContain('fmt_Sprintf["fmt.Sprintf"]');
+  });
+
+  it('does not redeclare entry nodes that are already in subgraphs', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
+        handler: 'myHandler',
+        middleware: [], package: 'pkg/hub',
+        location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [{ from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    // entry node id should appear exactly once as a declaration (inside subgraph)
+    const entryId = (MermaidTemplates as any).sanitizeId('entry-pkg/hub-1');
+    const declarations = (mmd.match(new RegExp(`^\\s*${entryId}\\[`, 'gm')) ?? []).length;
+    expect(declarations).toBe(1);
   });
 });
 
@@ -1101,5 +1170,173 @@ describe('renderGoroutineTopology - nested subgraphs', () => {
     expect(catalogStart).toBeGreaterThan(pkgStart);
     expect(hubStart).toBeLessThan(pkgEnd);
     expect(catalogStart).toBeLessThan(pkgEnd);
+  });
+});
+
+// ─── renderFlowGraph — nested subgraphs and labels ───────────────────────────
+
+describe('renderFlowGraph - nested subgraphs and labels', () => {
+  function makeRawData(overrides?: Partial<GoRawData>): GoRawData {
+    return {
+      packages: [],
+      moduleRoot: '/test',
+      moduleName: 'github.com/test/project',
+      ...overrides,
+    };
+  }
+
+  function makePackage(overrides?: Partial<GoRawPackage>): GoRawPackage {
+    return {
+      id: 'pkg/hub',
+      name: 'hub',
+      fullName: 'pkg/hub',
+      dirPath: '/abs/path/pkg/hub',
+      sourceFiles: ['server.go'],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
+      ...overrides,
+    };
+  }
+
+  it('uses package name as subgraph label, not absolute file path', () => {
+    // entry with package: 'pkg/hub', location.file: '/abs/path/pkg/hub/server.go'
+    const entry = makeEntry({
+      id: 'entry-pkg_hub-10',
+      package: 'pkg/hub',
+      location: { file: '/abs/path/pkg/hub/server.go', line: 10 },
+    });
+    const graph = makeFlowGraph([entry]);
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    // Subgraph label must be the Go package path, not the absolute directory
+    expect(result).toContain('"pkg/hub"');
+    expect(result).not.toContain('/abs/path/pkg/hub');
+  });
+
+  it('groups pkg/hub and pkg/catalog under nested pkg subgraph', () => {
+    const hubEntry = makeEntry({
+      id: 'entry-pkg_hub-10',
+      package: 'pkg/hub',
+      location: { file: '/abs/path/pkg/hub/server.go', line: 10 },
+    });
+    const catalogEntry = makeEntry({
+      id: 'entry-pkg_catalog-20',
+      package: 'pkg/catalog',
+      location: { file: '/abs/path/pkg/catalog/catalog.go', line: 20 },
+    });
+    const graph = makeFlowGraph([hubEntry, catalogEntry]);
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    // Virtual ancestor 'pkg' group should be created wrapping both sub-packages
+    expect(result).toContain('subgraph grp_pkg["pkg"]');
+    // Both real package subgraphs should be inside the pkg subgraph
+    const pkgStart = result.indexOf('subgraph grp_pkg[');
+    const pkgEnd = result.lastIndexOf('end');
+    const hubStart = result.indexOf('subgraph grp_pkg_hub[');
+    const catalogStart = result.indexOf('subgraph grp_pkg_catalog[');
+    expect(hubStart).toBeGreaterThan(pkgStart);
+    expect(catalogStart).toBeGreaterThan(pkgStart);
+    expect(hubStart).toBeLessThan(pkgEnd);
+    expect(catalogStart).toBeLessThan(pkgEnd);
+  });
+
+  it('populates package field in entry points from flow-graph-builder', async () => {
+    const builder = new FlowGraphBuilder();
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          functions: [
+            {
+              name: 'SetupRoutes',
+              packageName: 'hub',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: '/abs/path/pkg/hub/server.go', startLine: 5, endLine: 20 },
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/healthz', 's.handleHealth'],
+                    location: { file: '/abs/path/pkg/hub/server.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            },
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData);
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].package).toBe('pkg/hub');
+  });
+});
+
+// ─── renderFlowGraph - edge deduplication ─────────────────────────────────────
+
+describe('renderFlowGraph - edge deduplication', () => {
+  it('emits entry→handler edge exactly once even when handler has many calls', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo', handler: 'myHandler',
+        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [
+          { from: 'myHandler', to: 'a.DoA', type: 'direct', confidence: 0.7 },
+          { from: 'myHandler', to: 'b.DoB', type: 'direct', confidence: 0.7 },
+          { from: 'myHandler', to: 'c.DoC', type: 'direct', confidence: 0.7 },
+        ]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    // entry→handler should appear exactly once
+    const entryId = (MermaidTemplates as any).sanitizeId('entry-pkg/hub-1');
+    const handlerId = (MermaidTemplates as any).sanitizeId('myHandler');
+    const entryToHandlerMatches = (mmd.match(new RegExp(`${entryId}.*${handlerId}`, 'g')) ?? []).length;
+    expect(entryToHandlerMatches).toBe(1);
+  });
+
+  it('emits handler→callee edges without duplicates', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-get', path: '/bar', handler: 'myHandler',
+        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [
+          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 },
+          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
+          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
+        ]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    const handlerId = (MermaidTemplates as any).sanitizeId('myHandler');
+    const storeId = (MermaidTemplates as any).sanitizeId('store.Get');
+    const count = (mmd.match(new RegExp(`${handlerId}.*${storeId}`, 'g')) ?? []).length;
+    expect(count).toBe(1);
+  });
+
+  it('adds entry label on entry→handler edge', () => {
+    const graph: FlowGraph = {
+      entryPoints: [{
+        id: 'entry-pkg/hub-1', type: 'http-post', path: '/items', handler: 'myHandler',
+        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
+      }],
+      callChains: [{
+        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
+        calls: [{ from: 'myHandler', to: 'store.Create', type: 'direct', confidence: 0.7 }]
+      }]
+    };
+    const mmd = MermaidTemplates.renderFlowGraph(graph);
+    expect(mmd).toContain('1 calls');
   });
 });

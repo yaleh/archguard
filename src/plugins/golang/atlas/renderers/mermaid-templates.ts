@@ -457,48 +457,91 @@ export class MermaidTemplates {
       return output;
     }
 
-    // flowchart LR — group entry points by directory into subgraphs
+    // flowchart LR — group entry points by package using prefix tree
     let output = 'flowchart LR\n';
 
-    // Group entry points by their directory
-    const dirGroups = new Map<string, EntryPoint[]>();
+    // Group entry points by package (fall back to dirname when package is absent)
+    const pkgGroups = new Map<string, EntryPoint[]>();
     for (const entry of graph.entryPoints) {
-      const dir = path.dirname(entry.location.file);
-      if (!dirGroups.has(dir)) {
-        dirGroups.set(dir, []);
-      }
-      dirGroups.get(dir).push(entry);
+      const pkg = entry.package ?? path.dirname(entry.location.file);
+      if (!pkgGroups.has(pkg)) pkgGroups.set(pkg, []);
+      pkgGroups.get(pkg)!.push(entry);
     }
 
-    // Emit subgraph per directory with entry point nodes
-    for (const [dir, entries] of dirGroups) {
-      const subgraphId = this.sanitizeId(dir);
-      output += `\n  subgraph ${subgraphId}["${dir}"]\n`;
-      for (const entry of entries) {
-        const nodeId = this.sanitizeId(entry.id);
-        const label = this.formatEntryLabel(entry);
-        output += `    ${nodeId}["${label}"]\n`;
+    // Build nested package prefix tree (same as capability / goroutine renderers)
+    const pkgPaths = Array.from(pkgGroups.keys());
+    const pkgTree = MermaidTemplates.buildPackageTree(pkgPaths);
+
+    // Recursive renderer: emit subgraph per tree node
+    const renderEntryPkg = (node: PkgTreeNode, indent: string): void => {
+      const sgId = 'grp_' + MermaidTemplates.sanitizeId(node.pkg);
+      output += `${indent}subgraph ${sgId}["${node.pkg}"]\n`;
+      for (const child of node.children) {
+        renderEntryPkg(child, indent + '  ');
       }
-      output += '  end\n';
+      // Only real package nodes have entry points (virtual ancestors have none)
+      if (!node.isVirtual) {
+        for (const entry of pkgGroups.get(node.pkg) ?? []) {
+          const nodeId = MermaidTemplates.sanitizeId(entry.id);
+          const label = MermaidTemplates.formatEntryLabel(entry);
+          output += `${indent}  ${nodeId}["${label}"]\n`;
+        }
+      }
+      output += `${indent}end\n`;
+    };
+
+    for (const root of pkgTree) {
+      renderEntryPkg(root, '  ');
     }
 
-    // Emit call-chain edges
+    // Track nodes already declared inside subgraphs (entry point nodes)
+    const declaredNodeIds = new Set<string>(
+      graph.entryPoints.map((e) => this.sanitizeId(e.id))
+    );
+
+    // Emit call-chain edges — deduplicated across all chains
+    const emittedEdges = new Set<string>();
+    const addEdge = (from: string, to: string, label?: string): void => {
+      const key = `${from}\x00${to}`;
+      if (emittedEdges.has(key)) return;
+      emittedEdges.add(key);
+      if (label) {
+        output += `  ${from} -->|${label}| ${to}\n`;
+      } else {
+        output += `  ${from} --> ${to}\n`;
+      }
+    };
+
+    // Declare a node with its original name as label (skip if already declared)
+    const declareNode = (id: string, originalName: string): void => {
+      if (declaredNodeIds.has(id)) return;
+      declaredNodeIds.add(id);
+      output += `  ${id}["${originalName}"]\n`;
+    };
+
     for (const chain of graph.callChains) {
       const entry = graph.entryPoints.find((e) => e.id === chain.entryPoint);
-      if (!entry) continue;
+      if (!entry || chain.calls.length === 0) continue;
 
       const entryNodeId = this.sanitizeId(entry.id);
+      const handlerNodeId = this.sanitizeId(entry.handler);
 
+      // Declare handler node with its original dotted name as label
+      declareNode(handlerNodeId, entry.handler);
+
+      // entry → handler: emit exactly once, label = unique call count
+      const entryLabel = `"${chain.calls.length} calls"`;
+      addEdge(entryNodeId, handlerNodeId, entryLabel);
+
+      // handler → callee: deduplicated
       for (const call of chain.calls) {
         const fromId = this.sanitizeId(call.from);
         const toId = this.sanitizeId(call.to);
         if (!fromId || !toId) continue;
-
-        // Connect entry node to first call if from matches handler
-        if (call.from === entry.handler) {
-          output += `  ${entryNodeId} --> ${fromId}\n`;
-        }
-        output += `  ${fromId} --> ${toId}\n`;
+        // Declare both endpoints with their original dotted names as labels
+        declareNode(fromId, call.from);
+        declareNode(toId, call.to);
+        addEdge(fromId, toId);
       }
     }
 
