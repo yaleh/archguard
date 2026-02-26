@@ -436,4 +436,69 @@ func start() chan int {
       expect(makeOp?.channelName).toBe('');
     });
   });
+
+  describe('shouldExtractBody - HTTP handler detection', () => {
+    it('extracts body of a method with (http.ResponseWriter, *http.Request) params', async () => {
+      const code = `
+package server
+
+type Server struct {
+  data string
+}
+
+func (s *Server) handleFoo(w http.ResponseWriter, r *http.Request) {
+  json.NewEncoder(w).Encode(s.data)
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const method = result.structs[0]?.methods.find((m) => m.name === 'handleFoo');
+      expect(method).toBeDefined();
+      expect(method?.body).toBeDefined();
+      expect(method?.body?.calls.length).toBeGreaterThan(0);
+    });
+
+    it('extracts body of a function with (w http.ResponseWriter, r *http.Request) params', async () => {
+      const code = `
+package server
+
+func handleBar(w http.ResponseWriter, r *http.Request) {
+  w.WriteHeader(200)
+  w.Write([]byte("ok"))
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const fn = result.functions.find((f) => f.name === 'handleBar');
+      expect(fn).toBeDefined();
+      expect(fn?.body).toBeDefined();
+      expect(fn?.body?.calls.length).toBeGreaterThan(0);
+    });
+
+    it('does NOT extract body of a method with unrelated params', async () => {
+      const code = `
+package server
+
+type Server struct{}
+
+func (s *Server) doWork(x int) {
+  doSomething(x)
+}
+`;
+      const result = bridge.parseCode(code, 'server.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+      });
+
+      const method = result.structs[0]?.methods.find((m) => m.name === 'doWork');
+      expect(method).toBeDefined();
+      expect(method?.body).toBeUndefined();
+    });
+  });
 });

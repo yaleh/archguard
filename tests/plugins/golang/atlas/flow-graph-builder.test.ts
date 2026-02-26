@@ -612,10 +612,18 @@ describe('path and handler extraction from args', () => {
               body: {
                 calls: [
                   {
+                    // stdlib call — filtered out
                     functionName: 'Encode',
                     packageName: 'json',
                     args: [],
                     location: { file: 'routes.go', startLine: 10, endLine: 10 },
+                  },
+                  {
+                    // business logic call — kept
+                    functionName: 'FindAll',
+                    packageName: 'repo',
+                    args: [],
+                    location: { file: 'routes.go', startLine: 11, endLine: 11 },
                   },
                 ],
                 goSpawns: [],
@@ -628,9 +636,10 @@ describe('path and handler extraction from args', () => {
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].handler).toBe('listUsers');
+    // json.Encode is filtered out; only business logic repo.FindAll remains
     expect(result.callChains[0].calls).toHaveLength(1);
     expect(result.callChains[0].calls[0].from).toBe('listUsers');
-    expect(result.callChains[0].calls[0].to).toContain('Encode');
+    expect(result.callChains[0].calls[0].to).toBe('repo.FindAll');
   });
 
   it('should fall back to empty path and handler when no args provided', async () => {
@@ -786,5 +795,375 @@ describe('path and handler extraction from args', () => {
     });
     const result = await builder.build(rawData);
     expect(result.entryPoints[0].handler).toBe('s.handleHealth');
+  });
+});
+
+describe('traceCallsFromEntry - stdlib filtering', () => {
+  it('filters out fmt.* stdlib calls', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'hub',
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'setupRoutes',
+              exported: false,
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    packageName: 'mux',
+                    args: ['/api', 'doWork'],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'doWork',
+              exported: false,
+              parameters: [
+                { name: 'w', type: 'http.ResponseWriter' },
+                { name: 'r', type: '*http.Request' },
+              ],
+              body: {
+                calls: [
+                  {
+                    functionName: 'Sprintf',
+                    packageName: 'fmt',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 14, endLine: 14 },
+                  },
+                  {
+                    functionName: 'CreateItem',
+                    packageName: 'store',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 16, endLine: 16 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const builder = new FlowGraphBuilder();
+    const graph = await builder.build(rawData);
+    const chain = graph.callChains[0];
+    expect(chain).toBeDefined();
+    const toValues = chain.calls.map((c) => c.to);
+    expect(toValues).not.toContain('fmt.Sprintf');
+    expect(toValues.some((t) => t.includes('CreateItem'))).toBe(true);
+  });
+
+  it('filters out w.* ResponseWriter calls', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'hub',
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'setupRoutes',
+              exported: false,
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    packageName: 'mux',
+                    args: ['/api', 'serve'],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'serve',
+              exported: false,
+              parameters: [
+                { name: 'w', type: 'http.ResponseWriter' },
+                { name: 'r', type: '*http.Request' },
+              ],
+              body: {
+                calls: [
+                  {
+                    functionName: 'WriteHeader',
+                    packageName: 'w',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 14, endLine: 14 },
+                  },
+                  {
+                    functionName: 'doLogic',
+                    packageName: 'svc',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 16, endLine: 16 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const builder = new FlowGraphBuilder();
+    const graph = await builder.build(rawData);
+    const chain = graph.callChains[0];
+    const toValues = chain.calls.map((c) => c.to);
+    expect(toValues.some((t) => t.startsWith('w.'))).toBe(false);
+    expect(toValues.some((t) => t.includes('doLogic'))).toBe(true);
+  });
+
+  it('filters out Go builtins like make, len, append', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'hub',
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'setupRoutes',
+              exported: false,
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    packageName: 'mux',
+                    args: ['/list', 'listAll'],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'listAll',
+              exported: false,
+              parameters: [
+                { name: 'w', type: 'http.ResponseWriter' },
+                { name: 'r', type: '*http.Request' },
+              ],
+              body: {
+                calls: [
+                  {
+                    functionName: 'make',
+                    packageName: '',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 14, endLine: 14 },
+                  },
+                  {
+                    functionName: 'len',
+                    packageName: '',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 15, endLine: 15 },
+                  },
+                  {
+                    functionName: 'append',
+                    packageName: '',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 16, endLine: 16 },
+                  },
+                  {
+                    functionName: 'Query',
+                    packageName: 'db',
+                    args: [],
+                    location: { file: '/x/pkg/hub/r.go', startLine: 17, endLine: 17 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const builder = new FlowGraphBuilder();
+    const graph = await builder.build(rawData);
+    const chain = graph.callChains[0];
+    const toValues = chain.calls.map((c) => c.to);
+    expect(toValues).not.toContain('make');
+    expect(toValues).not.toContain('len');
+    expect(toValues).not.toContain('append');
+    expect(toValues.some((t) => t.includes('Query'))).toBe(true);
+  });
+});
+
+describe('traceCallsFromEntry - deduplication', () => {
+  it('deduplicates duplicate (from, to) call pairs from a top-level handler function', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'setupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'listItems'],
+                    location: { file: 'routes.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'listItems',
+              body: {
+                calls: [
+                  {
+                    functionName: 'Get',
+                    packageName: 'store',
+                    args: [],
+                    location: { file: 'routes.go', startLine: 25, endLine: 25 },
+                  },
+                  {
+                    functionName: 'Get',
+                    packageName: 'store',
+                    args: [],
+                    location: { file: 'routes.go', startLine: 28, endLine: 28 },
+                  },
+                  {
+                    functionName: 'Get',
+                    packageName: 'store',
+                    args: [],
+                    location: { file: 'routes.go', startLine: 31, endLine: 31 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const builder = new FlowGraphBuilder();
+    const result = await builder.build(rawData);
+
+    expect(result.callChains.length).toBeGreaterThan(0);
+
+    for (const chain of result.callChains) {
+      const seen = new Set<string>();
+      for (const call of chain.calls) {
+        const key = `${call.from}\x00${call.to}`;
+        expect(seen.has(key), `duplicate edge found: ${call.from} -> ${call.to}`).toBe(false);
+        seen.add(key);
+      }
+    }
+
+    // Specifically confirm the chain for 'listItems' has only one store.Get edge
+    const listItemsChain = result.callChains.find((c) =>
+      result.entryPoints.find((e) => e.id === c.entryPoint && e.handler === 'listItems'),
+    );
+    expect(listItemsChain).toBeDefined();
+    expect(listItemsChain!.calls).toHaveLength(1);
+    expect(listItemsChain!.calls[0].from).toBe('listItems');
+    expect(listItemsChain!.calls[0].to).toBe('store.Get');
+  });
+
+  it('deduplicates duplicate (from, to) call pairs from a struct method handler', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/sessions', 'handleFoo'],
+                    location: { file: 's.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'hub',
+              fields: [],
+              embeddedTypes: [],
+              exported: true,
+              location: { file: 's.go', startLine: 1, endLine: 100 },
+              methods: [
+                {
+                  name: 'handleFoo',
+                  parameters: [
+                    { name: 'w', type: 'http.ResponseWriter' },
+                    { name: 'r', type: '*http.Request' },
+                  ],
+                  returnTypes: [],
+                  exported: false,
+                  location: { file: 's.go', startLine: 10, endLine: 30 },
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'doWork',
+                        packageName: 'store',
+                        args: [],
+                        location: { file: 's.go', startLine: 12, endLine: 12 },
+                      },
+                      {
+                        functionName: 'doWork',
+                        packageName: 'store',
+                        args: [],
+                        location: { file: 's.go', startLine: 15, endLine: 15 },
+                      },
+                      {
+                        functionName: 'doWork',
+                        packageName: 'store',
+                        args: [],
+                        location: { file: 's.go', startLine: 18, endLine: 18 },
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+
+    const builder = new FlowGraphBuilder();
+    const result = await builder.build(rawData);
+
+    expect(result.callChains.length).toBeGreaterThan(0);
+
+    for (const chain of result.callChains) {
+      const seen = new Set<string>();
+      for (const call of chain.calls) {
+        const key = `${call.from}\x00${call.to}`;
+        expect(seen.has(key), `duplicate edge found: ${call.from} -> ${call.to}`).toBe(false);
+        seen.add(key);
+      }
+    }
+
+    // Confirm exactly one store.doWork edge after dedup
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    expect(chain.calls[0].from).toBe('handleFoo');
+    expect(chain.calls[0].to).toBe('store.doWork');
   });
 });

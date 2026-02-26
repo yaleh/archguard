@@ -205,6 +205,7 @@ export interface EntryPoint {
   path: string; // HTTP path or gRPC method
   handler: string; // function id
   middleware: string[]; // middleware function ids
+  package?: string; // Go package full path, e.g. "pkg/hub"
   location: {
     file: string;
     line: number;

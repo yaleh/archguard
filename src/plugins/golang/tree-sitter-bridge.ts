@@ -154,7 +154,7 @@ export class TreeSitterBridge {
       if (blockNode) {
         if (options.selectiveExtraction) {
           // AST-based pre-scanning (NOT string matching)
-          if (this.shouldExtractBody(blockNode)) {
+          if (this.shouldExtractBody(blockNode, code)) {
             func.body = this.extractFunctionBody(blockNode, code, filePath);
           }
         } else {
@@ -204,7 +204,7 @@ export class TreeSitterBridge {
    * - Goroutine/channel patterns (go_statement, send_statement, receive_expression)
    * - HTTP handler registration calls (HandleFunc, Handle, GET, POST, ...)
    */
-  private shouldExtractBody(blockNode: Parser.SyntaxNode): boolean {
+  private shouldExtractBody(blockNode: Parser.SyntaxNode, code: string): boolean {
     const targetNodeTypes = [
       'go_statement', // go func() / go namedFunc()
       'send_statement', // ch <- value
@@ -239,6 +239,18 @@ export class TreeSitterBridge {
       }
 
       if (httpHandlerNames.has(fnName)) return true;
+    }
+
+    // Detect HTTP handler signature: params include ResponseWriter + Request
+    const parentDecl = blockNode.parent;
+    if (parentDecl) {
+      const paramsNode = parentDecl.childForFieldName('parameters');
+      if (paramsNode) {
+        const paramsText = code.substring(paramsNode.startIndex, paramsNode.endIndex);
+        if (paramsText.includes('ResponseWriter') && paramsText.includes('Request')) {
+          return true;
+        }
+      }
     }
 
     return false;
@@ -753,7 +765,7 @@ export class TreeSitterBridge {
       const blockNode = methodDecl.childForFieldName('body');
       if (blockNode) {
         if (options.selectiveExtraction) {
-          if (this.shouldExtractBody(blockNode)) {
+          if (this.shouldExtractBody(blockNode, code)) {
             body = this.extractFunctionBody(blockNode, code, filePath);
           }
         } else {
