@@ -112,16 +112,19 @@ export class IsomorphicMermaidRenderer {
         }
       }
 
-      // Use sharp to convert SVG to PNG with adaptive DPI
-      let pipeline = sharp(svgBuffer, { density });
+      // Use sharp to convert SVG to PNG with adaptive DPI.
+      // limitInputPixels: false bypasses Sharp's default 268M pixel decode limit,
+      // allowing large SVGs to be decoded; we cap output via resize below.
+      let pipeline = sharp(svgBuffer, { density, limitInputPixels: false });
 
-      // Apply resize if needed for oversized SVGs
-      if (resizeWidth && resizeHeight) {
-        pipeline = pipeline.resize(resizeWidth, resizeHeight, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        });
-      }
+      // Always cap final output to maxPixels per dimension to keep PNG manageable.
+      // For oversized SVGs this also applies the explicit resize computed above.
+      const capWidth = resizeWidth ?? maxPixels;
+      const capHeight = resizeHeight ?? maxPixels;
+      pipeline = pipeline.resize(capWidth, capHeight, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
 
       // Add solid background if not transparent
       if (this.options.backgroundColor !== 'transparent') {
