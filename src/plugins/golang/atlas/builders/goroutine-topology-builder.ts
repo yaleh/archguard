@@ -1,8 +1,9 @@
-import type { GoRawData, GoRawPackage, GoSpawnStmt, GoFunctionBody } from '../../types.js';
+import type { GoRawData, GoRawPackage, GoSpawnStmt, GoFunctionBody, GoField } from '../../types.js';
 import type {
   GoroutineTopology,
   GoroutineNode,
   GoroutinePattern,
+  GoroutineLifecycleSummary,
   SpawnRelation,
   ChannelInfo,
   ChannelEdge,
@@ -26,7 +27,15 @@ export class GoroutineTopologyBuilder {
       node.pattern = this.classifyPattern(node, edges, channels);
     }
 
-    return Promise.resolve({ nodes, edges, channels, channelEdges });
+    const lifecycle = this.buildLifecycle(rawData);
+
+    return Promise.resolve({
+      nodes,
+      edges,
+      channels,
+      channelEdges,
+      lifecycle: lifecycle.length > 0 ? lifecycle : undefined,
+    });
   }
 
   /**
@@ -220,6 +229,142 @@ export class GoroutineTopologyBuilder {
         }
       }
     }
+  }
+
+  /**
+   * Build per-goroutine lifecycle summaries (Phase C-1).
+   *
+   * For each spawned goroutine, classifies cancellation hygiene using a two-tier approach:
+   * - Tier 1: context.Context parameter check (always available from parameter list)
+   * - Tier 2: body-level cancellation check (ctx.Done() or stop-channel receive)
+   *
+   * When function body was not extracted (selective mode), cancellationCheckAvailable=false.
+   */
+  private buildLifecycle(rawData: GoRawData): GoroutineLifecycleSummary[] {
+    const summaries: GoroutineLifecycleSummary[] = [];
+
+    // Channel names that indicate stop-channel cancellation patterns
+    const STOP_CHANNEL_NAMES = new Set(['done', 'stop', 'quit', 'cancel', 'stopCh', 'doneCh']);
+
+    for (const pkg of rawData.packages) {
+      // Build a lookup from function/method name → { params, body }
+      // Covers standalone functions only (methods are not spawn targets by name alone)
+      const funcByName = new Map<string, { params: GoField[]; body: GoFunctionBody | undefined }>();
+
+      for (const func of pkg.functions) {
+        funcByName.set(func.name, { params: func.parameters ?? [], body: func.body });
+      }
+
+      // Collect all spawn statements with their parent names
+      // Follows the same iteration pattern as extractGoroutineNodes / buildSpawnRelations
+      const allSpawns: Array<{ spawn: GoSpawnStmt; parentName: string }> = [];
+
+      for (const func of pkg.functions) {
+        if (func.body) {
+          for (const spawn of func.body.goSpawns) {
+            allSpawns.push({ spawn, parentName: func.name });
+          }
+        }
+      }
+
+      for (const struct of pkg.structs) {
+        for (const method of struct.methods) {
+          if (method.body) {
+            for (const spawn of method.body.goSpawns) {
+              allSpawns.push({ spawn, parentName: `${struct.name}.${method.name}` });
+            }
+          }
+        }
+      }
+
+      for (const { spawn, parentName } of allSpawns) {
+        const nodeId = `${pkg.fullName}.${parentName}.spawn-${spawn.location.startLine}`;
+        const targetName = spawn.call.functionName;
+        const isAnonymous = targetName === '<anonymous>';
+
+        if (isAnonymous) {
+          summaries.push({
+            nodeId,
+            spawnTargetName: '<anonymous>',
+            receivesContext: false,
+            cancellationCheckAvailable: false,
+            orphan: true,
+          });
+          continue;
+        }
+
+        // Look up the target function in this package
+        const targetFunc = funcByName.get(targetName);
+
+        if (!targetFunc) {
+          // Cross-package target or not found → cannot determine lifecycle
+          summaries.push({
+            nodeId,
+            spawnTargetName: targetName,
+            receivesContext: false,
+            cancellationCheckAvailable: false,
+            orphan: true,
+          });
+          continue;
+        }
+
+        // Tier 1: Does the target function accept a context.Context parameter?
+        const ctxParam = targetFunc.params.find((p) => p.type?.includes('context.Context'));
+        const receivesContext = ctxParam !== undefined;
+        const ctxVarName = ctxParam?.name;
+
+        if (!targetFunc.body) {
+          // Body not extracted (selective mode) → Tier 2 unavailable
+          summaries.push({
+            nodeId,
+            spawnTargetName: targetName,
+            receivesContext,
+            cancellationCheckAvailable: false,
+            orphan: !receivesContext,
+          });
+          continue;
+        }
+
+        // Tier 2: Check body for cancellation signals
+        const body = targetFunc.body;
+
+        // ctx.Done() call: a call to functionName 'Done' where packageName matches the ctx var name
+        const hasCtxDone =
+          receivesContext &&
+          ctxVarName != null &&
+          (body.calls ?? []).some(
+            (c) => c.functionName === 'Done' && c.packageName === ctxVarName
+          );
+
+        // Stop-channel receive: a receive op on a well-known stop-channel variable name
+        const hasStopChannel = (body.channelOps ?? []).some(
+          (op) => op.operation === 'receive' && STOP_CHANNEL_NAMES.has(op.channelName)
+        );
+
+        const hasCancellationCheck = hasCtxDone || hasStopChannel;
+        const cancellationMechanism: 'context' | 'channel' | undefined = hasCtxDone
+          ? 'context'
+          : hasStopChannel
+            ? 'channel'
+            : undefined;
+
+        // A goroutine is orphaned when it neither receives a context nor has any
+        // cancellation check (it cannot be stopped by the caller)
+        const orphan = !receivesContext && !hasCancellationCheck;
+
+        summaries.push({
+          nodeId,
+          spawnTargetName: targetName,
+          receivesContext,
+          cancellationCheckAvailable: true,
+          hasCancellationCheck,
+          ...(cancellationMechanism !== undefined ? { cancellationMechanism } : {}),
+          orphan,
+        });
+      }
+    }
+
+    return summaries;
   }
 
   private classifyPattern(
