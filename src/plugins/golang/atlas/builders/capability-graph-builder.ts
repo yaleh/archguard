@@ -1,5 +1,10 @@
 import type { GoRawData } from '../../types.js';
-import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '../types.js';
+import type {
+  CapabilityGraph,
+  CapabilityNode,
+  CapabilityRelation,
+  ConcreteUsageRisk,
+} from '../types.js';
 
 /**
  * Capability (interface usage) graph builder
@@ -13,7 +18,7 @@ import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '../typ
 export class CapabilityGraphBuilder {
   build(rawData: GoRawData): Promise<CapabilityGraph> {
     const allNodes = this.buildNodes(rawData);
-    const rawEdges = this.buildEdges(rawData);
+    const rawEdges = this.buildEdges(rawData, allNodes);
 
     // Deduplicate edges: keep first occurrence of each (source, target, type) triple
     const edgeSeen = new Set<string>();
@@ -39,7 +44,45 @@ export class CapabilityGraphBuilder {
       (node) => node.type === 'interface' || referencedIds.has(node.id)
     );
 
-    return Promise.resolve({ nodes, edges });
+    // Post-process: compute fanIn / fanOut for each node (distinct node counts)
+    const fanInSources = new Map<string, Set<string>>();  // targetId → Set of sourceIds
+    const fanOutTargets = new Map<string, Set<string>>(); // sourceId → Set of targetIds
+    for (const edge of edges) {
+      if (!fanInSources.has(edge.target)) fanInSources.set(edge.target, new Set());
+      fanInSources.get(edge.target)!.add(edge.source);
+      if (!fanOutTargets.has(edge.source)) fanOutTargets.set(edge.source, new Set());
+      fanOutTargets.get(edge.source)!.add(edge.target);
+    }
+    for (const node of nodes) {
+      node.fanIn  = fanInSources.get(node.id)?.size  ?? 0;
+      node.fanOut = fanOutTargets.get(node.id)?.size ?? 0;
+    }
+
+    // Collect concrete usage risks: cross-package concrete field dependencies
+    const nodeIdToPackage = new Map(nodes.map((n) => [n.id, n.package]));
+    const risks: ConcreteUsageRisk[] = [];
+    for (const edge of edges) {
+      if (!edge.concreteUsage) continue;
+      const sourcePackage = nodeIdToPackage.get(edge.source);
+      const targetPackage = nodeIdToPackage.get(edge.target);
+      if (sourcePackage && targetPackage && sourcePackage !== targetPackage) {
+        // Extract raw field type from edge.id format: "uses-{sourceId}-{rawType}"
+        const rawType = edge.id.replace(`uses-${edge.source}-`, '');
+        const location = edge.context?.usageLocations?.[0] ?? '';
+        risks.push({
+          owner: edge.source,
+          fieldType: rawType,
+          concreteType: edge.target,
+          location,
+        });
+      }
+    }
+
+    return Promise.resolve({
+      nodes,
+      edges,
+      concreteUsageRisks: risks.length > 0 ? risks : undefined,
+    });
   }
 
   private buildNodes(rawData: GoRawData): CapabilityNode[] {
@@ -53,6 +96,7 @@ export class CapabilityGraphBuilder {
           type: 'interface',
           package: pkg.fullName,
           exported: iface.exported,
+          methodCount: iface.methods.length,
         });
       }
 
@@ -63,6 +107,8 @@ export class CapabilityGraphBuilder {
           type: 'struct',
           package: pkg.fullName,
           exported: struct.exported,
+          methodCount: struct.methods.length,
+          fieldCount: struct.fields.filter((f) => f.exported).length,
         });
       }
     }
@@ -70,8 +116,11 @@ export class CapabilityGraphBuilder {
     return nodes;
   }
 
-  private buildEdges(rawData: GoRawData): CapabilityRelation[] {
+  private buildEdges(rawData: GoRawData, allNodes: CapabilityNode[]): CapabilityRelation[] {
     const edges: CapabilityRelation[] = [];
+
+    // Map from node ID to node type for concreteUsage detection
+    const nodeIdToType = new Map(allNodes.map((n) => [n.id, n.type]));
 
     // Build lookup maps for resolving Go package names → full node IDs.
     // "goPackageName:typeName" → "pkg.fullName.typeName" (for impl edge resolution)
@@ -159,6 +208,7 @@ export class CapabilityGraphBuilder {
               source: `${pkg.fullName}.${struct.name}`,
               target: targetNodeId,
               confidence: 0.9,
+              concreteUsage: nodeIdToType.get(targetNodeId) === 'struct',
               context: {
                 fieldType: true,
                 usageLocations: [`${field.location.file}:${field.location.startLine}`],
