@@ -136,12 +136,23 @@ export class CapabilityGraphBuilder {
             // 3. Same-package by short name
             // 4. Cross-package fallback (first-match-wins — may be ambiguous)
             const qualifier = this.extractTypeQualifier(field.type);
-            const targetNodeId =
-              (qualifier ? pkgTypeToNodeId.get(`${qualifier}:${bareType}`) : undefined) ??
-              pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`) ??
-              pkgTypeToNodeId.get(`${pkg.name}:${bareType}`) ??
-              typeNameToNodeId.get(bareType) ??
-              bareType;
+            // Resolution priority:
+            // 1. Explicit qualifier (e.g. "models.Event" → qualifier="models"):
+            //    look up in pkgTypeToNodeId by qualifier. If no match, the type is
+            //    external (stdlib / third-party) — do NOT fall through to bare-name lookup.
+            // 2. Same-package by full import path (unqualified → must be same-package in Go)
+            // 3. Same-package by short name
+            //
+            // typeNameToNodeId (first-match-wins cross-package bare-name lookup) is
+            // intentionally NOT used as a fallback. In valid Go source, a cross-package
+            // type reference must carry a qualifier, so bare-name resolution would only
+            // produce false-positive edges (e.g. http.Client → examples/user-service.Client,
+            // or same-package func-type → a struct of the same name in another package).
+            const targetNodeId = (qualifier
+              ? pkgTypeToNodeId.get(`${qualifier}:${bareType}`)
+              : pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`) ??
+                pkgTypeToNodeId.get(`${pkg.name}:${bareType}`));
+            if (targetNodeId === undefined) continue;
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,
               type: 'uses',

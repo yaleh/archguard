@@ -671,6 +671,8 @@ describe('CapabilityGraphBuilder', () => {
 
   // Bug 2 fix: cross-package uses edge target resolves to declaring package
   it('should resolve cross-package uses edge target to declaring package node ID', async () => {
+    // In real Go source, cross-package refs carry a qualifier: "contracts.Repository".
+    // The parser preserves the raw source text, so field.type = "contracts.Repository".
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -701,7 +703,7 @@ describe('CapabilityGraphBuilder', () => {
               fields: [
                 {
                   name: 'repo',
-                  type: 'Repository',
+                  type: 'contracts.Repository', // qualified, as Go source requires
                   exported: false,
                   embedded: false,
                   location: { file: 'service.go', startLine: 4, endLine: 4 },
@@ -776,6 +778,7 @@ describe('CapabilityGraphBuilder', () => {
 
   // Additional: interface names collected across all packages for uses detection
   it('should detect uses edges when field type matches interface from a different package', async () => {
+    // Go requires a qualifier for cross-package refs; the parser preserves it verbatim.
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -806,7 +809,7 @@ describe('CapabilityGraphBuilder', () => {
               fields: [
                 {
                   name: 'repo',
-                  type: 'Repository',
+                  type: 'contracts.Repository', // qualified, as Go source requires
                   exported: false,
                   embedded: false,
                   location: { file: 'service.go', startLine: 4, endLine: 4 },
@@ -1473,8 +1476,12 @@ describe('CapabilityGraphBuilder', () => {
       expect(wrongEdge).toBeUndefined();
     });
 
-    it('falls back to typeNameToNodeId when no qualifier in field type', async () => {
-      // Field type is bare "Config" (no package qualifier)
+    it('does not create cross-package edge for unqualified field type (Go requires qualifier)', async () => {
+      // In Go, cross-package type references MUST use a qualifier (e.g. "config.Config").
+      // A bare "Config" field in pkg/hub can only refer to a type defined in the same package.
+      // If pkg/hub has no "Config" struct/interface, no uses-edge should be created —
+      // even if another package (pkg/config) defines a "Config" type.
+      // This prevents false-positive edges from same-package func-types or parser artefacts.
       const rawData = makeRawData({
         packages: [
           makePackage({
@@ -1506,7 +1513,7 @@ describe('CapabilityGraphBuilder', () => {
                 fields: [
                   {
                     name: 'cfg',
-                    type: 'Config', // No qualifier
+                    type: 'Config', // No qualifier — cross-package ref impossible in valid Go
                     exported: false,
                     location: { file: '/x/pkg/hub/server.go', startLine: 5, endLine: 5 },
                   },
@@ -1524,10 +1531,10 @@ describe('CapabilityGraphBuilder', () => {
 
       const graph = await builder.build(rawData);
 
+      // No uses-edge should be created: "Config" has no same-package match in pkg/hub,
+      // and cross-package bare-name resolution is disabled to prevent false positives.
       const edge = graph.edges.find((e) => e.type === 'uses' && e.source === 'pkg/hub.Server');
-      expect(edge).toBeDefined();
-      // Should resolve to pkg/config.Config via typeNameToNodeId fallback
-      expect(edge?.target).toBe('pkg/config.Config');
+      expect(edge).toBeUndefined();
     });
 
     it('prefers same-package resolution over first-match-wins for unqualified field types', async () => {
