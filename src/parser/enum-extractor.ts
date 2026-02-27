@@ -53,7 +53,7 @@ export class EnumExtractor {
     const name = enumDecl.getName();
 
     return {
-      id: name,
+      id: `${filePath}.${name}`,
       name,
       type: 'enum',
       visibility: 'public',

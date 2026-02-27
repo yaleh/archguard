@@ -61,7 +61,7 @@ export class ClassExtractor {
     const name = classDecl.getName() || 'Anonymous';
 
     return {
-      id: name,
+      id: `${filePath}.${name}`,
       name,
       type: 'class',
       visibility: this.getVisibility(classDecl),

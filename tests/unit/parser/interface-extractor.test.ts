@@ -172,3 +172,30 @@ describe('InterfaceExtractor - Complex Interfaces', () => {
     expect(result.type).toBe('interface');
   });
 });
+
+describe('InterfaceExtractor - File-scoped entity IDs (A-1 TDD)', () => {
+  let extractor: InterfaceExtractor;
+
+  beforeAll(() => {
+    extractor = new InterfaceExtractor();
+  });
+
+  it('should produce distinct IDs for same interface name in different files', () => {
+    const code = 'export interface IConfig {}';
+
+    const result1 = extractor.extract(code, 'src/cli/config.ts');
+    const result2 = extractor.extract(code, 'src/server/config.ts');
+
+    // IDs must be distinct when filePaths differ
+    expect(result1.id).not.toBe(result2.id);
+  });
+
+  it('should prefix entity id with file path: src/core/interfaces.ts.IRepository', () => {
+    const code = 'export interface IRepository {}';
+    const result = extractor.extract(code, 'src/core/interfaces.ts');
+
+    // id must be file-path prefixed, NOT bare 'IRepository'
+    expect(result.id).toBe('src/core/interfaces.ts.IRepository');
+    expect(result.name).toBe('IRepository');
+  });
+});

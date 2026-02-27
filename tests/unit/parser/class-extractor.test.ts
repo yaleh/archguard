@@ -19,7 +19,7 @@ describe('ClassExtractor - Simple Classes', () => {
       const result = extractor.extract(code);
 
       expect(result).toMatchObject({
-        id: 'User',
+        id: 'test.ts.User',
         name: 'User',
         type: 'class',
         visibility: 'public',
@@ -103,5 +103,40 @@ class SecondClass {}
       expect(result.name).toBe('Map');
       expect(result.genericParams).toEqual(['K', 'V']);
     });
+  });
+});
+
+describe('ClassExtractor - File-scoped entity IDs (A-1 TDD)', () => {
+  let extractor: ClassExtractor;
+
+  beforeAll(() => {
+    extractor = new ClassExtractor();
+  });
+
+  it('should produce distinct IDs for same class name in different files', () => {
+    const code = 'export class Config {}';
+
+    const result1 = extractor.extract(code, 'src/cli/config.ts');
+    const result2 = extractor.extract(code, 'src/server/config.ts');
+
+    // IDs must be distinct when filePaths differ
+    expect(result1.id).not.toBe(result2.id);
+  });
+
+  it('should prefix entity id with file path: src/cli/config.ts.Config', () => {
+    const code = 'export class Config {}';
+    const result = extractor.extract(code, 'src/cli/config.ts');
+
+    // id must be file-path prefixed, NOT bare 'Config'
+    expect(result.id).toBe('src/cli/config.ts.Config');
+    expect(result.name).toBe('Config');
+  });
+
+  it('should prefix entity id for deep-path file', () => {
+    const code = 'export class UserService {}';
+    const result = extractor.extract(code, 'src/domain/user/user-service.ts');
+
+    expect(result.id).toBe('src/domain/user/user-service.ts.UserService');
+    expect(result.name).toBe('UserService');
   });
 });

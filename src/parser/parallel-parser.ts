@@ -9,6 +9,7 @@ import pLimit from 'p-limit';
 import { TypeScriptParser } from './typescript-parser';
 import type { ArchJSON, Entity, Relation } from '@/types';
 import fs from 'fs/promises';
+import type { ParseCache } from './parse-cache.js';
 
 /**
  * Options for ParallelParser configuration
@@ -25,6 +26,19 @@ export interface ParallelParserOptions {
    * Default: true
    */
   continueOnError?: boolean;
+
+  /**
+   * Workspace root path used to relativize file paths in entity IDs.
+   * When provided, entity IDs will be like "src/cli/config.ts.Config"
+   * instead of using the absolute file path.
+   */
+  workspaceRoot?: string;
+
+  /**
+   * Optional parse-time cache that deduplicates TypeScriptParser instantiation
+   * for files appearing in multiple overlapping source sets.
+   */
+  parseCache?: ParseCache;
 }
 
 /**
@@ -85,12 +99,16 @@ export class ParallelParser extends EventEmitter {
   private concurrency: number;
   private continueOnError: boolean;
   private limit: ReturnType<typeof pLimit>;
+  private workspaceRoot?: string;
+  private parseCache?: ParseCache;
 
   constructor(options: ParallelParserOptions = {}) {
     super();
 
     this.concurrency = options.concurrency ?? os.cpus().length;
     this.continueOnError = options.continueOnError ?? true;
+    this.workspaceRoot = options.workspaceRoot;
+    this.parseCache = options.parseCache;
     this.limit = pLimit(this.concurrency);
   }
 
@@ -249,8 +267,14 @@ export class ParallelParser extends EventEmitter {
       content = '';
     }
 
-    // Parse the file
-    const parser = new TypeScriptParser();
+    // Parse the file (use cache when available to avoid redundant ts-morph Project creation)
+    if (this.parseCache) {
+      return this.parseCache.getOrParse(filePath, content, () => {
+        const parser = new TypeScriptParser(this.workspaceRoot);
+        return parser.parseCode(content, filePath);
+      });
+    }
+    const parser = new TypeScriptParser(this.workspaceRoot);
     return parser.parseCode(content, filePath);
   }
 

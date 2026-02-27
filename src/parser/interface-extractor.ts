@@ -58,7 +58,7 @@ export class InterfaceExtractor {
     const name = interfaceDecl.getName();
 
     return {
-      id: name,
+      id: `${filePath}.${name}`,
       name,
       type: 'interface',
       visibility: 'public',

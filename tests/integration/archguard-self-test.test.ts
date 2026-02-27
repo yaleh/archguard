@@ -63,7 +63,10 @@ describe('ArchGuard Self Test - Integration', () => {
     expect(archJson.relations.length).toBeGreaterThan(0);
 
     // Verify TypeScriptParser uses other extractors
-    const parserRelations = archJson.relations.filter((r) => r.source === 'TypeScriptParser');
+    // After B-P1: relation sources are scoped IDs (e.g. "src/parser/typescript-parser.ts.TypeScriptParser")
+    const parserRelations = archJson.relations.filter((r) =>
+      r.source.endsWith('.TypeScriptParser')
+    );
     expect(parserRelations.length).toBeGreaterThan(0);
   }, 10000); // 10 second timeout for integration test
 

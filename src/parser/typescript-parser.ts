@@ -3,11 +3,13 @@
  * Story 6: Complete Arch-JSON Generation
  */
 
+import path from 'path';
 import { Project } from 'ts-morph';
 import { ClassExtractor } from './class-extractor';
 import { InterfaceExtractor } from './interface-extractor';
 import { EnumExtractor } from './enum-extractor';
 import { RelationExtractor } from './relation-extractor';
+import { FunctionExtractor } from './function-extractor';
 import type { ArchJSON, Entity, Relation } from '@/types';
 
 /**
@@ -20,8 +22,11 @@ export class TypeScriptParser {
   private interfaceExtractor: InterfaceExtractor;
   private enumExtractor: EnumExtractor;
   private relationExtractor: RelationExtractor;
+  private functionExtractor: FunctionExtractor;
+  private workspaceRoot?: string;
 
-  constructor() {
+  constructor(workspaceRoot?: string) {
+    this.workspaceRoot = workspaceRoot;
     this.project = new Project({
       useInMemoryFileSystem: true,
       compilerOptions: {
@@ -32,10 +37,28 @@ export class TypeScriptParser {
     this.interfaceExtractor = new InterfaceExtractor();
     this.enumExtractor = new EnumExtractor();
     this.relationExtractor = new RelationExtractor();
+    this.functionExtractor = new FunctionExtractor();
+  }
+
+  /**
+   * Convert an absolute file path to a workspace-relative path.
+   * If no workspaceRoot is set, returns the path as-is.
+   */
+  private toRelPath(absPath: string): string {
+    if (this.workspaceRoot) {
+      return path.relative(this.workspaceRoot, absPath).replace(/\\/g, '/');
+    }
+    return absPath;
   }
 
   /**
    * Parse TypeScript code and generate ArchJSON
+   *
+   * NOTE: This is the in-memory per-file entry point used by ParallelParser.parseFiles().
+   * It uses an in-memory ts-morph Project without TypeChecker, so cross-file type
+   * resolution and external relation filtering are NOT applied here. Those transforms
+   * are applied only in parseProject() which has filesystem access and a full TypeChecker.
+   *
    * @param code - TypeScript source code
    * @param filePath - Source file path (default: 'source.ts')
    * @returns Complete ArchJSON structure
@@ -48,23 +71,28 @@ export class TypeScriptParser {
     const entities: Entity[] = [];
     const sourceFiles: string[] = [filePath];
 
+    const relPath = this.toRelPath(filePath);
+
     // Extract classes
     for (const classDecl of sourceFile.getClasses()) {
-      const entity = this.classExtractor['extractClass'](classDecl, filePath);
+      const entity = this.classExtractor['extractClass'](classDecl, relPath);
       entities.push(entity);
     }
 
     // Extract interfaces
     for (const interfaceDecl of sourceFile.getInterfaces()) {
-      const entity = this.interfaceExtractor.extractInterface(interfaceDecl, filePath);
+      const entity = this.interfaceExtractor.extractInterface(interfaceDecl, relPath);
       entities.push(entity);
     }
 
     // Extract enums
     for (const enumDecl of sourceFile.getEnums()) {
-      const entity = this.enumExtractor.extractEnum(enumDecl, filePath);
+      const entity = this.enumExtractor.extractEnum(enumDecl, relPath);
       entities.push(entity);
     }
+
+    // Extract standalone functions
+    entities.push(...this.functionExtractor.extract(sourceFile, relPath));
 
     // Extract relations
     const relations = this.relationExtractor.extractFromSourceFile(sourceFile);
@@ -81,25 +109,43 @@ export class TypeScriptParser {
 
   /**
    * Parse multiple TypeScript files from a project directory
+   *
+   * NOTE: This is the filesystem entry point. It uses a real ts-morph Project with
+   * TypeChecker, enabling cross-file relation target resolution (resolveRelationTargets)
+   * and external/primitive relation filtering (filterExternalRelations). These transforms
+   * are NOT available in parseCode() / ParallelParser.parseFiles() which use in-memory
+   * per-file projects without TypeChecker.
+   *
    * @param rootDir - Root directory path
-   * @param pattern - Glob pattern for files (default: '** /*.ts')
+   * @param pattern - Glob pattern for files (default: '**\/*.ts')
    * @returns Complete ArchJSON structure
    */
-  parseProject(rootDir: string, pattern: string = '**/*.ts'): ArchJSON {
-    // Create a new project for filesystem parsing (not in-memory)
-    const fsProject = new Project({
-      compilerOptions: {
-        target: 99, // ESNext
-      },
-    });
+  parseProject(rootDir: string, pattern: string = '**/*.ts', externalProject?: Project): ArchJSON {
+    // Set workspaceRoot so toRelPath() can relativize paths
+    this.workspaceRoot = rootDir;
 
-    // Add source files (exclude test files and node_modules)
-    fsProject.addSourceFilesAtPaths([
-      `${rootDir}/${pattern}`,
-      `!${rootDir}/**/*.test.ts`,
-      `!${rootDir}/**/*.spec.ts`,
-      `!${rootDir}/**/node_modules/**`,
-    ]);
+    // Use externally-provided Project if supplied; otherwise create a new one.
+    // This allows TypeScriptPlugin to share a single ts-morph Project instance
+    // between parsing and analysis (avoiding a duplicate parse pass).
+    let fsProject: Project;
+    if (externalProject) {
+      fsProject = externalProject;
+    } else {
+      // Create a new project for filesystem parsing (not in-memory)
+      fsProject = new Project({
+        compilerOptions: {
+          target: 99, // ESNext
+        },
+      });
+
+      // Add source files (exclude test files and node_modules)
+      fsProject.addSourceFilesAtPaths([
+        `${rootDir}/${pattern}`,
+        `!${rootDir}/**/*.test.ts`,
+        `!${rootDir}/**/*.spec.ts`,
+        `!${rootDir}/**/node_modules/**`,
+      ]);
+    }
 
     const entities: Entity[] = [];
     const relations: Relation[] = [];
@@ -110,40 +156,119 @@ export class TypeScriptParser {
       const filePath = sourceFile.getFilePath();
       sourceFiles.push(filePath);
 
+      const relPath = this.toRelPath(filePath);
+
       // Extract classes
       for (const classDecl of sourceFile.getClasses()) {
-        const entity = this.classExtractor['extractClass'](classDecl, filePath);
+        const entity = this.classExtractor['extractClass'](classDecl, relPath);
         entities.push(entity);
       }
 
       // Extract interfaces
       for (const interfaceDecl of sourceFile.getInterfaces()) {
-        const entity = this.interfaceExtractor.extractInterface(interfaceDecl, filePath);
+        const entity = this.interfaceExtractor.extractInterface(interfaceDecl, relPath);
         entities.push(entity);
       }
 
       // Extract enums
       for (const enumDecl of sourceFile.getEnums()) {
-        const entity = this.enumExtractor.extractEnum(enumDecl, filePath);
+        const entity = this.enumExtractor.extractEnum(enumDecl, relPath);
         entities.push(entity);
       }
 
-      // Extract relations
+      // Extract standalone functions
+      entities.push(...this.functionExtractor.extract(sourceFile, relPath));
+
+      // Build import resolution map for this source file:
+      // maps imported name → scoped entity ID (e.g. "ArchJSON" → "src/types/index.ts.ArchJSON")
+      const importedNameToScopedId = new Map<string, string>();
+      for (const importDecl of sourceFile.getImportDeclarations()) {
+        const importedSourceFile = importDecl.getModuleSpecifierSourceFile();
+        if (!importedSourceFile) continue;
+        const importedRelPath = this.toRelPath(importedSourceFile.getFilePath());
+        for (const named of importDecl.getNamedImports()) {
+          const importedName = named.getName();
+          importedNameToScopedId.set(importedName, `${importedRelPath}.${importedName}`);
+        }
+      }
+
+      // Extract relations for this file and resolve both source and target to scoped IDs
       const fileRelations = this.relationExtractor.extractFromSourceFile(sourceFile);
-      relations.push(...fileRelations);
+      const resolvedRelations = fileRelations.map((rel) => {
+        // Fix source: RelationExtractor returns bare class name; scope it to the current file
+        const scopedSource = `${relPath}.${rel.source}`;
+
+        // Fix target: if imported, map to scoped ID; otherwise keep bare for diagnostics
+        let resolvedTarget = rel.target;
+        if (importedNameToScopedId.has(rel.target)) {
+          resolvedTarget = importedNameToScopedId.get(rel.target)!;
+        }
+
+        return {
+          ...rel,
+          id: `${scopedSource}_${rel.type}_${resolvedTarget}`,
+          source: scopedSource,
+          target: resolvedTarget,
+        };
+      });
+
+      relations.push(...resolvedRelations);
     }
 
-    // Deduplicate relations
-    const uniqueRelations = this.deduplicateRelations(relations);
-
-    return {
+    // Build merged result
+    const merged: ArchJSON = {
       version: '1.0',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles,
       entities,
+      relations,
+    };
+
+    // Filter out external/primitive type relations that could not be resolved to project entities.
+    // Note: cross-file relation resolution and external filtering apply here only.
+    // The parseCode() path (ParallelParser) uses in-memory per-file projects without
+    // TypeChecker and cannot resolve cross-file types.
+    const filtered = this.filterExternalRelations(merged);
+
+    // Deduplicate relations
+    const uniqueRelations = this.deduplicateRelations(filtered.relations);
+
+    return {
+      ...filtered,
       relations: uniqueRelations,
     };
+  }
+
+  /**
+   * Filter out relations whose targets are external types (primitives, built-ins, or
+   * types that could not be resolved to any known project entity ID).
+   * Keeps unknown non-primitive targets for diagnostics.
+   * Only applicable in parseProject() where the full entity set is available.
+   *
+   * @param merged - ArchJSON with all entities and relations
+   * @returns ArchJSON with external primitive relations removed
+   */
+  private filterExternalRelations(merged: ArchJSON): ArchJSON {
+    const entityIds = new Set(merged.entities.map((e) => e.id));
+    const EXTERNAL_PATTERNS = [
+      /^(string|number|boolean|void|null|undefined|any|unknown|never|object|symbol|bigint)$/,
+      /^(NodeJS\.|Buffer$|Error$|Promise$|Map$|Set$|Array$|Record$|WeakMap|WeakSet)/,
+      /^\{/,
+      /^\[/,
+      /^\d+$/,
+    ];
+
+    const filteredRelations = merged.relations.filter((rel) => {
+      // Keep relations whose target is a known project entity
+      if (entityIds.has(rel.target)) return true;
+      // Remove relations whose target matches an external/primitive pattern
+      if (EXTERNAL_PATTERNS.some((p) => p.test(rel.target))) return false;
+      // Keep unknown non-primitive targets for diagnostics
+      return true;
+    });
+
+    return { ...merged, relations: filteredRelations };
   }
 
   /**

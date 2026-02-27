@@ -3,7 +3,10 @@
  * Testing complete Arch-JSON generation
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
 import { TypeScriptParser } from '@/parser/typescript-parser';
 
 describe('TypeScriptParser - Single File', () => {
@@ -275,5 +278,158 @@ describe('TypeScriptParser - Empty Cases', () => {
     const result = parser.parseCode(code);
 
     expect(result.entities).toHaveLength(0);
+  });
+});
+
+describe('TypeScriptParser - File-scoped entity IDs with workspaceRoot (A-1 TDD)', () => {
+  it('should produce file-scoped id when workspaceRoot is provided', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = 'export class Config {}';
+
+    const result = parser.parseCode(code, '/project/src/cli/config.ts');
+
+    const entity = result.entities.find((e) => e.name === 'Config');
+    expect(entity).toBeDefined();
+    // id should be relative path + '.' + name
+    expect(entity.id).toBe('src/cli/config.ts.Config');
+  });
+
+  it('should produce file-scoped id for interface when workspaceRoot is provided', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = 'export interface IService {}';
+
+    const result = parser.parseCode(code, '/project/src/core/service.ts');
+
+    const entity = result.entities.find((e) => e.name === 'IService');
+    expect(entity).toBeDefined();
+    expect(entity.id).toBe('src/core/service.ts.IService');
+  });
+
+  it('should produce file-scoped id for enum when workspaceRoot is provided', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = 'export enum Status { Active, Inactive }';
+
+    const result = parser.parseCode(code, '/project/src/types/status.ts');
+
+    const entity = result.entities.find((e) => e.name === 'Status');
+    expect(entity).toBeDefined();
+    expect(entity.id).toBe('src/types/status.ts.Status');
+  });
+
+  it('should use absolute path as id when no workspaceRoot provided', () => {
+    // Without workspaceRoot, filePath is used as-is (absolute path or relative)
+    const parser = new TypeScriptParser();
+    const code = 'export class Config {}';
+
+    const result = parser.parseCode(code, 'src/cli/config.ts');
+
+    const entity = result.entities.find((e) => e.name === 'Config');
+    expect(entity).toBeDefined();
+    // With no workspaceRoot, path is passed as-is
+    expect(entity.id).toBe('src/cli/config.ts.Config');
+  });
+
+  it('should produce distinct IDs for same class name in different files', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = 'export class Config {}';
+
+    const result1 = parser.parseCode(code, '/project/src/cli/config.ts');
+    const result2 = parser.parseCode(code, '/project/src/server/config.ts');
+
+    const id1 = result1.entities.find((e) => e.name === 'Config')?.id;
+    const id2 = result2.entities.find((e) => e.name === 'Config')?.id;
+
+    expect(id1).toBeDefined();
+    expect(id2).toBeDefined();
+    expect(id1).not.toBe(id2);
+    expect(id1).toBe('src/cli/config.ts.Config');
+    expect(id2).toBe('src/server/config.ts.Config');
+  });
+});
+
+describe('TypeScriptParser - cross-file relation resolution (B-P1 TDD)', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'archguard-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('resolves cross-file relation target to scoped ID', () => {
+    // Create src/types/base.ts with a base class
+    mkdirSync(path.join(tmpDir, 'src', 'types'), { recursive: true });
+    writeFileSync(path.join(tmpDir, 'src', 'types', 'base.ts'), 'export class BaseGenerator {}');
+    // Create src/mermaid/generator.ts that extends BaseGenerator via import.
+    // Using 'extends' gives a bare-name target (not import-qualified) from RelationExtractor.
+    mkdirSync(path.join(tmpDir, 'src', 'mermaid'), { recursive: true });
+    writeFileSync(
+      path.join(tmpDir, 'src', 'mermaid', 'generator.ts'),
+      'import { BaseGenerator } from "../types/base.js";\nexport class Generator extends BaseGenerator {}'
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    // After P1 fix: relation target should be scoped to the file where BaseGenerator is defined
+    const rel = result.relations.find((r) => r.target === 'src/types/base.ts.BaseGenerator');
+    expect(rel).toBeDefined();
+    // The bare 'BaseGenerator' should NOT remain as a target
+    const bareRel = result.relations.find((r) => r.target === 'BaseGenerator');
+    expect(bareRel).toBeUndefined();
+  });
+
+  it('filters out primitive type relations', () => {
+    mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    writeFileSync(
+      path.join(tmpDir, 'src', 'foo.ts'),
+      'export class Foo { name: string = ""; count: number = 0; }'
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    const stringRel = result.relations.find((r) => r.target === 'string');
+    expect(stringRel).toBeUndefined();
+    const numberRel = result.relations.find((r) => r.target === 'number');
+    expect(numberRel).toBeUndefined();
+  });
+
+  it('keeps unknown non-primitive relations for diagnostics', () => {
+    mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    writeFileSync(
+      path.join(tmpDir, 'src', 'foo.ts'),
+      'export class Foo { handler!: SomeExternalType; }'
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    // SomeExternalType is unknown (not a primitive, not in project) — kept for diagnostics
+    // Just assert no crash and entities exist
+    expect(result.entities.length).toBeGreaterThan(0);
+  });
+
+  it('resolves relation source to scoped ID matching entity IDs', () => {
+    mkdirSync(path.join(tmpDir, 'src', 'types'), { recursive: true });
+    writeFileSync(path.join(tmpDir, 'src', 'types', 'index.ts'), 'export interface IService {}');
+    mkdirSync(path.join(tmpDir, 'src', 'core'), { recursive: true });
+    writeFileSync(
+      path.join(tmpDir, 'src', 'core', 'service.ts'),
+      'import { IService } from "../types/index.js";\nexport class ServiceImpl implements IService {}'
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    // Source should be scoped to the file where ServiceImpl is defined
+    const implRel = result.relations.find(
+      (r) => r.type === 'implementation' && r.target === 'src/types/index.ts.IService'
+    );
+    expect(implRel).toBeDefined();
+    // Source should also be scoped
+    expect(implRel.source).toBe('src/core/service.ts.ServiceImpl');
   });
 });
