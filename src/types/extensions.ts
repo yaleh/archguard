@@ -17,7 +17,7 @@ export interface ArchJSONExtensions {
 
 // ========== Go Atlas Extension ==========
 
-export const GO_ATLAS_EXTENSION_VERSION = '1.0';
+export const GO_ATLAS_EXTENSION_VERSION = '1.1';
 
 /**
  * Go Architecture Atlas extension
@@ -114,6 +114,7 @@ export interface PackageDependency {
 export interface CapabilityGraph {
   nodes: CapabilityNode[];
   edges: CapabilityRelation[];
+  concreteUsageRisks?: ConcreteUsageRisk[];
 }
 
 export interface CapabilityNode {
@@ -122,6 +123,10 @@ export interface CapabilityNode {
   type: 'interface' | 'struct';
   package: string;
   exported: boolean;
+  methodCount?: number;
+  fieldCount?: number;
+  fanIn?: number;  // count of distinct source nodes pointing to this node
+  fanOut?: number; // count of distinct target nodes this node points to
 }
 
 export interface CapabilityRelation {
@@ -130,6 +135,7 @@ export interface CapabilityRelation {
   source: string; // struct or function id
   target: string; // interface id
   confidence: number; // 0.0 - 1.0
+  concreteUsage?: boolean; // true when target is a struct (not an interface)
   context?: {
     fieldType?: boolean;
     parameterType?: boolean;
@@ -138,13 +144,32 @@ export interface CapabilityRelation {
   };
 }
 
+export interface ConcreteUsageRisk {
+  owner: string;        // source node ID (the struct that holds the field)
+  fieldType: string;    // raw field type string, e.g. "*engine.Engine"
+  concreteType: string; // target node ID (the concrete struct being depended on)
+  location: string;     // "file:line" first usage location
+}
+
 // ========== Goroutine Topology ==========
+
+export interface GoroutineLifecycleSummary {
+  nodeId: string;                          // matches GoroutineNode.id (spawn-N format)
+  spawnTargetName: string;                 // resolved target function name, e.g. "handleConn"
+                                           // "<anonymous>" for closures
+  receivesContext: boolean;                // from function parameter list (always available)
+  cancellationCheckAvailable: boolean;     // false when function body was not extracted
+  hasCancellationCheck?: boolean;          // only present when cancellationCheckAvailable=true
+  cancellationMechanism?: 'context' | 'channel';
+  orphan: boolean;
+}
 
 export interface GoroutineTopology {
   nodes: GoroutineNode[];
   edges: SpawnRelation[];
   channels: ChannelInfo[];
   channelEdges: ChannelEdge[];
+  lifecycle?: GoroutineLifecycleSummary[];  // one entry per spawned GoroutineNode
 }
 
 export interface GoroutineNode {

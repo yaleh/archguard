@@ -18,6 +18,8 @@ export type {
   CapabilityGraph,
   CapabilityNode,
   CapabilityRelation,
+  ConcreteUsageRisk,
+  GoroutineLifecycleSummary,
   GoroutineTopology,
   GoroutineNode,
   GoroutinePattern,

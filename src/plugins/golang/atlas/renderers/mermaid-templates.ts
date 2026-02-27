@@ -5,6 +5,7 @@ import type {
   CapabilityGraph,
   CapabilityNode,
   GoroutineTopology,
+  GoroutineLifecycleSummary,
   FlowGraph,
   EntryPoint,
 } from '../types.js';
@@ -236,16 +237,38 @@ export class MermaidTemplates {
     output += '  classDef cycle    fill:#fd79a8,stroke:#e84393,stroke-width:3px\n';
 
     // Pass 3: edges (self-loops get dashed warning arrow per P2)
+    // Track (edgeIndex, strength) for non-self edges to compute linkStyle tiers.
+    const edgeThicknesses: Array<{ index: number; strength: number }> = [];
+    let edgeIndex = 0;
     output += '\n';
     for (const edge of graph.edges) {
       const fromId = MermaidTemplates.sanitizeId(edge.from);
       const toId   = MermaidTemplates.sanitizeId(edge.to);
       if (edge.from === edge.to) {
         output += `  ${fromId} -.->|"⚠ self"| ${toId}\n`;
+        edgeIndex++;
         continue;
       }
       const label = edge.strength > 1 ? `|"${edge.strength} refs"|` : '';
       output += `  ${fromId} -->${label} ${toId}\n`;
+      edgeThicknesses.push({ index: edgeIndex, strength: edge.strength });
+      edgeIndex++;
+    }
+
+    // Pass 3b: dynamic linkStyle for edge thickness tiers
+    if (edgeThicknesses.length > 0) {
+      const tiers = MermaidTemplates.computePackageEdgeTiers(
+        edgeThicknesses.map(e => e.strength)
+      );
+      if (tiers.size > 0) {
+        output += '\n';
+        for (const { index, strength } of edgeThicknesses) {
+          const width = tiers.get(strength);
+          if (width !== undefined) {
+            output += `  linkStyle ${index} stroke-width:${width}px\n`;
+          }
+        }
+      }
     }
 
     // Pass 4: cycle comment — MUST be retained (atlas-renderer.test.ts:282)
@@ -278,6 +301,9 @@ export class MermaidTemplates {
     const pkgList = Array.from(nodesByPkg.keys());
     const pkgRoots = MermaidTemplates.buildPackageTree(pkgList);
 
+    // Track whether any node qualifies for hotspot styling
+    let hasHotspot = false;
+
     // Recursive subgraph renderer for capability graph
     const renderCapNode = (treeNode: PkgTreeNode, indent: string): void => {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
@@ -290,10 +316,13 @@ export class MermaidTemplates {
       if (!treeNode.isVirtual) {
         for (const node of nodesByPkg.get(treeNode.pkg) ?? []) {
           const mId = MermaidTemplates.sanitizeId(node.id);
+          const label = MermaidTemplates.formatCapabilityLabel(node);
+          const hotspotSuffix = MermaidTemplates.isHotspot(node) ? ':::hotspot' : '';
+          if (hotspotSuffix) hasHotspot = true;
           if (node.type === 'interface') {
-            output += `${indent}  ${mId}{{"${node.name}"}}\n`;
+            output += `${indent}  ${mId}{{"${label}"}}${hotspotSuffix}\n`;
           } else {
-            output += `${indent}  ${mId}["${node.name}"]\n`;
+            output += `${indent}  ${mId}["${label}"]${hotspotSuffix}\n`;
           }
         }
       }
@@ -304,18 +333,92 @@ export class MermaidTemplates {
       renderCapNode(root, '');
     }
 
+    // Emit hotspot classDef only when at least one node qualifies
+    if (hasHotspot) {
+      output += '  classDef hotspot fill:#ff7675,stroke:#d63031,stroke-width:2px\n';
+    }
+
     // Render edges after all subgraphs
     for (const edge of graph.edges) {
       const src = MermaidTemplates.sanitizeId(edge.source);
       const tgt = MermaidTemplates.sanitizeId(edge.target);
       if (edge.type === 'implements') {
         output += `  ${src} -.->|impl| ${tgt}\n`;
+      } else if (edge.concreteUsage === true) {
+        output += `  ${src} ==>|conc| ${tgt}\n`;
       } else {
         output += `  ${src} -->|uses| ${tgt}\n`;
       }
     }
 
     return output;
+  }
+
+  private static formatCapabilityLabel(node: CapabilityNode): string {
+    const sizeParts: string[] = [];
+    if ((node.fieldCount ?? 0) > 0) sizeParts.push(`${node.fieldCount}f`);
+    if ((node.methodCount ?? 0) > 0) sizeParts.push(`${node.methodCount}m`);
+
+    const couplingParts: string[] = [];
+    if ((node.fanIn ?? 0) > 0) couplingParts.push(`fi:${node.fanIn}`);
+    if ((node.fanOut ?? 0) > 0) couplingParts.push(`fo:${node.fanOut}`);
+
+    if (sizeParts.length === 0 && couplingParts.length === 0) {
+      return node.name;
+    }
+
+    const sections: string[] = [];
+    if (sizeParts.length > 0) sections.push(sizeParts.join(' '));
+    if (couplingParts.length > 0) sections.push(couplingParts.join(' '));
+
+    return `${node.name} [${sections.join(' | ')}]`;
+  }
+
+  private static isHotspot(node: CapabilityNode): boolean {
+    return (node.methodCount ?? 0) > 10 || (node.fanIn ?? 0) > 5;
+  }
+
+  /**
+   * Compute dynamic stroke-width tiers for package-graph edges.
+   *
+   * Uses the 50th (median) and 85th percentile of the strength distribution
+   * as tier boundaries:
+   *   - strength ≤ median      → default (no linkStyle emitted)
+   *   - median < strength < p85 → medium  (3px)
+   *   - strength ≥ p85         → heavy   (5px)
+   *
+   * Falls back to a min / max split when the median equals the maximum
+   * (highly skewed or very few distinct values).
+   *
+   * Returns an empty map when all edges share the same strength (uniform).
+   */
+  static computePackageEdgeTiers(strengths: number[]): Map<number, number> {
+    if (strengths.length === 0) return new Map();
+    const sorted = [...strengths].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    if (max === min) return new Map();
+
+    const n = sorted.length;
+    let thMedium = sorted[Math.min(Math.floor(n * 0.50), n - 1)]; // median
+    let thHeavy  = sorted[Math.min(Math.floor(n * 0.85), n - 1)]; // 85th percentile
+
+    // Fallback: when median collapses to max, split on min / max instead
+    if (thMedium >= max) {
+      thMedium = min;
+      thHeavy  = max;
+    }
+
+    const result = new Map<number, number>();
+    for (const s of new Set(strengths)) {
+      if (s >= thHeavy) {
+        result.set(s, 5.0);   // heavy: top ~15%
+      } else if (s > thMedium) {
+        result.set(s, 3.0);   // medium: p50–p85
+      }
+      // ≤ thMedium: default stroke (no linkStyle)
+    }
+    return result;
   }
 
   static renderGoroutineTopology(topology: GoroutineTopology): string {
@@ -348,9 +451,12 @@ export class MermaidTemplates {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
+      const lifecycleTag = node.type === 'spawned'
+        ? MermaidTemplates.getLifecycleTag(node.id, topology.lifecycle)
+        : '';
       addDecl(node.package || undefined, {
         rawId: node.id,
-        label: `${displayName}${patternLabel}`,
+        label: `${displayName}${patternLabel}${lifecycleTag}`,
         style,
       });
     }
@@ -610,6 +716,18 @@ export class MermaidTemplates {
     const afterSlash = stripped.slice(stripped.lastIndexOf('/') + 1);
     const parts = afterSlash.split('.');
     return parts.slice(-2).join('.');
+  }
+
+  private static getLifecycleTag(
+    nodeId: string,
+    lifecycle: GoroutineLifecycleSummary[] | undefined
+  ): string {
+    const entry = lifecycle?.find(l => l.nodeId === nodeId);
+    if (!entry) return '';
+    if (entry.receivesContext && entry.hasCancellationCheck) return ' \u2713ctx';
+    if (entry.receivesContext && !entry.cancellationCheckAvailable) return ' ctx?';
+    if (entry.orphan) return ' \u26a0 no exit';
+    return '';
   }
 
   private static sanitizeId(id: string): string {

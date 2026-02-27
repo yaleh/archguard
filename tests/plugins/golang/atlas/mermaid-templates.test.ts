@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
 import { FlowGraphBuilder } from '@/plugins/golang/atlas/builders/flow-graph-builder.js';
-import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
+import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineLifecycleSummary, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
 import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '@/plugins/golang/atlas/types.js';
 import type { GoRawData, GoRawPackage } from '@/plugins/golang/types.js';
 
@@ -312,6 +312,148 @@ describe('MermaidTemplates.renderPackageGraph', () => {
     const result = MermaidTemplates.renderPackageGraph(graph);
     expect(result).toMatch(/pkg_hub\["pkg\/hub"\]:::internal/);
     expect(result).toMatch(/cmd_server\["cmd\/server"\]:::cmd/);
+  });
+});
+
+// ─── computePackageEdgeTiers ─────────────────────────────────────────────────
+
+describe('MermaidTemplates.computePackageEdgeTiers', () => {
+  it('returns empty map for empty input', () => {
+    expect(MermaidTemplates.computePackageEdgeTiers([])).toEqual(new Map());
+  });
+
+  it('returns empty map when all strengths are equal', () => {
+    expect(MermaidTemplates.computePackageEdgeTiers([3, 3, 3, 3])).toEqual(new Map());
+    expect(MermaidTemplates.computePackageEdgeTiers([1])).toEqual(new Map());
+  });
+
+  it('assigns heavy tier to max, no entry for min — two distinct values', () => {
+    // [1, 5]: p50=5 >= max=5 → fallback: thMedium=1, thHeavy=5
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 1, 5]);
+    expect(tiers.has(1)).toBe(false);    // at thMedium → default
+    expect(tiers.get(5)).toBe(5.0);      // >= thHeavy → heavy
+  });
+
+  it('assigns medium and heavy tiers for three distinct values', () => {
+    // [1, 3, 6]: p50=sorted[1]=3, p85=sorted[2]=6 → medium>3, heavy>=6
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 3, 6]);
+    expect(tiers.has(1)).toBe(false);
+    expect(tiers.get(3)).toBeUndefined(); // at p50, not > p50
+    expect(tiers.get(6)).toBe(5.0);       // >= p85 → heavy
+  });
+
+  it('handles skewed distribution (many low, few high)', () => {
+    // Twelve 1s, then 3,3,3,4,5,5,6,6 — typical Go package graph
+    const strengths = [1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,4,5,5,6,6];
+    const tiers = MermaidTemplates.computePackageEdgeTiers(strengths);
+    // median (p50) = 1; p85 ≥ 5
+    expect(tiers.has(1)).toBe(false);     // at median → default
+    expect(tiers.get(3)).toBe(3.0);       // > median but < p85 → medium
+    expect(tiers.get(4)).toBe(3.0);       // medium
+    const heavyVal = tiers.get(6);
+    expect(heavyVal).toBe(5.0);           // heavy
+    expect([3.0, 5.0]).toContain(tiers.get(5)); // 5 is either medium or heavy
+  });
+
+  it('fallback: median==max triggers min/max split', () => {
+    // All high: [4, 4, 4, 4, 8] — p50=4=max? No: max=8
+    // [4, 4, 8, 8, 8]: p50=sorted[2]=8 = max → fallback
+    const tiers = MermaidTemplates.computePackageEdgeTiers([8, 8, 8, 8, 4]);
+    // fallback: thMedium=4, thHeavy=8
+    expect(tiers.has(4)).toBe(false);   // at thMedium → default
+    expect(tiers.get(8)).toBe(5.0);     // >= thHeavy → heavy
+  });
+
+  it('assigns only heavy tier for two-element [1, N] input', () => {
+    // [1, 6]: p50=sorted[1]=6 >= max=6 → fallback: thMedium=1, thHeavy=6
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 6]);
+    expect(tiers.has(1)).toBe(false);
+    expect(tiers.get(6)).toBe(5.0);
+  });
+});
+
+// ─── renderPackageGraph — linkStyle (dynamic edge thickness) ─────────────────
+
+describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () => {
+  it('emits no linkStyle when all edges have the same strength', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 3 },
+        { from: 'a', to: 'c', strength: 3 },
+      ],
+      cycles: [],
+    });
+    expect(MermaidTemplates.renderPackageGraph(graph)).not.toContain('linkStyle');
+  });
+
+  it('emits linkStyle for heavy edges with the correct index', () => {
+    // Three edges: [1, 1, 8] — edge at index 2 is heavy
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+        { id: 'd', name: 'd', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 1 },
+        { from: 'a', to: 'c', strength: 1 },
+        { from: 'a', to: 'd', strength: 8 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // strength=8 is at index 2 (0-based)
+    expect(result).toContain('linkStyle 2 stroke-width:5px');
+    // strength=1 edges should not have linkStyle
+    expect(result).not.toContain('linkStyle 0');
+    expect(result).not.toContain('linkStyle 1');
+  });
+
+  it('self-loop counts toward linkStyle index but is not styled', () => {
+    // edges: [self-loop(0), regular(1), heavy(2)]
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'a', strength: 1 },   // index 0 — self-loop, not styled
+        { from: 'a', to: 'b', strength: 1 },   // index 1
+        { from: 'a', to: 'c', strength: 9 },   // index 2 — heavy
+      ],
+      cycles: [{ packages: ['a'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // heavy edge is at global index 2 (self-loop takes index 0)
+    expect(result).toContain('linkStyle 2 stroke-width:5px');
+    // self-loop (index 0) should not appear in linkStyle
+    expect(result).not.toContain('linkStyle 0');
+  });
+
+  it('linkStyle block appears after all edge declarations', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 1 },
+        { from: 'a', to: 'c', strength: 6 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const lastEdge  = result.lastIndexOf(' --> ');
+    const linkStyle = result.indexOf('linkStyle');
+    expect(linkStyle).toBeGreaterThan(lastEdge);
   });
 });
 
@@ -1338,5 +1480,241 @@ describe('renderFlowGraph - edge deduplication', () => {
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     expect(mmd).toContain('1 calls');
+  });
+});
+
+// ─── Phase B-render: capability graph metric labels and hotspot ───────────────
+
+describe('Phase B-render: capability graph metric labels and hotspot', () => {
+  function makeCapNode(overrides: Partial<CapabilityNode> & { id: string; name: string }): CapabilityNode {
+    return {
+      type: 'struct',
+      package: 'pkg/svc',
+      exported: true,
+      ...overrides,
+    };
+  }
+
+  function makeCapGraph(nodes: CapabilityNode[], edges: CapabilityRelation[] = []): CapabilityGraph {
+    return { nodes, edges };
+  }
+
+  // Test 1: struct node with methodCount=8, fieldCount=12
+  it('struct node with methodCount=8 fieldCount=12 renders label as "hub.Server [12f 8m]"', () => {
+    const node = makeCapNode({ id: 'n1', name: 'hub.Server', type: 'struct', methodCount: 8, fieldCount: 12 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain('["hub.Server [12f 8m]"]');
+  });
+
+  // Test 2: interface node with methodCount=20, fanIn=5
+  it('interface node with methodCount=20 fanIn=5 renders label as "{{"store.Store [20m | fi:5]"}}"', () => {
+    const node = makeCapNode({ id: 'n2', name: 'store.Store', type: 'interface', methodCount: 20, fanIn: 5 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain('{{"store.Store [20m | fi:5]"}}');
+  });
+
+  // Test 3: node with only fanOut=3
+  it('node with only fanOut=3 renders label as "Foo [fo:3]"', () => {
+    const node = makeCapNode({ id: 'n3', name: 'Foo', fanOut: 3 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain('["Foo [fo:3]"]');
+  });
+
+  // Test 4: node with zero/undefined metrics renders plain label
+  it('node with zero/undefined metrics renders plain label without brackets', () => {
+    const node = makeCapNode({ id: 'n4', name: 'Foo' });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain('["Foo"]');
+    expect(output).not.toContain('["Foo [');
+  });
+
+  // Test 5: node with methodCount > 10 receives :::hotspot CSS class
+  it('node with methodCount > 10 receives :::hotspot CSS class', () => {
+    const node = makeCapNode({ id: 'n5', name: 'BigStruct', methodCount: 11 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain(':::hotspot');
+  });
+
+  // Test 6: node with fanIn > 5 receives :::hotspot CSS class
+  it('node with fanIn > 5 receives :::hotspot CSS class', () => {
+    const node = makeCapNode({ id: 'n6', name: 'HotNode', fanIn: 6 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).toContain(':::hotspot');
+  });
+
+  // Test 7: node below both thresholds does NOT receive :::hotspot
+  it('node below both hotspot thresholds does NOT receive :::hotspot', () => {
+    const node = makeCapNode({ id: 'n7', name: 'CoolNode', methodCount: 10, fanIn: 5 });
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
+    expect(output).not.toContain(':::hotspot');
+  });
+
+  // Test 8: when NO node qualifies for hotspot, classDef hotspot is absent
+  it('classDef hotspot is absent when no node qualifies', () => {
+    const nodes = [
+      makeCapNode({ id: 'n8a', name: 'Small', methodCount: 3 }),
+      makeCapNode({ id: 'n8b', name: 'Medium', fanIn: 2 }),
+    ];
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes));
+    expect(output).not.toContain('classDef hotspot');
+  });
+
+  // Test 9: when at least one node qualifies, classDef hotspot is present
+  it('classDef hotspot fill:#ff7675,... is present when at least one node qualifies', () => {
+    const nodes = [
+      makeCapNode({ id: 'n9a', name: 'HotOne', methodCount: 15 }),
+      makeCapNode({ id: 'n9b', name: 'CoolOne', methodCount: 2 }),
+    ];
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes));
+    expect(output).toContain('classDef hotspot fill:#ff7675,stroke:#d63031,stroke-width:2px');
+  });
+
+  // Test 10: uses edge with concreteUsage: true renders as ==>|conc|
+  it('uses edge with concreteUsage:true renders as ==>|conc|', () => {
+    const nodes = [
+      makeCapNode({ id: 'src1', name: 'SvcImpl', type: 'struct' }),
+      makeCapNode({ id: 'tgt1', name: 'Store', type: 'struct' }),
+    ];
+    const edges: CapabilityRelation[] = [
+      { id: 'e1', type: 'uses', source: 'src1', target: 'tgt1', confidence: 0.9, concreteUsage: true },
+    ];
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
+    expect(output).toContain('==>|conc|');
+  });
+
+  // Test 11: uses edge with concreteUsage: false renders as -->|uses|
+  it('uses edge with concreteUsage:false renders as -->|uses|', () => {
+    const nodes = [
+      makeCapNode({ id: 'src2', name: 'SvcImpl', type: 'struct' }),
+      makeCapNode({ id: 'tgt2', name: 'IStore', type: 'interface' }),
+    ];
+    const edges: CapabilityRelation[] = [
+      { id: 'e2', type: 'uses', source: 'src2', target: 'tgt2', confidence: 0.8, concreteUsage: false },
+    ];
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
+    expect(output).toContain('-->|uses|');
+    expect(output).not.toContain('==>|conc|');
+  });
+
+  // Test 12: implements edge renders as -.->|impl| regardless of concreteUsage
+  it('implements edge renders as -.->|impl| regardless of concreteUsage', () => {
+    const nodes = [
+      makeCapNode({ id: 'src3', name: 'RepoImpl', type: 'struct' }),
+      makeCapNode({ id: 'tgt3', name: 'IRepo', type: 'interface' }),
+    ];
+    const edges: CapabilityRelation[] = [
+      { id: 'e3', type: 'implements', source: 'src3', target: 'tgt3', confidence: 1.0, concreteUsage: true },
+    ];
+    const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
+    expect(output).toContain('-.->|impl|');
+    expect(output).not.toContain('==>|conc|');
+  });
+});
+
+// ─── Phase C-2: goroutine lifecycle node annotations ─────────────────────────
+
+describe('Phase C-2: goroutine lifecycle node annotations', () => {
+  function makeTopology(
+    nodes: GoroutineNode[],
+    lifecycle?: GoroutineLifecycleSummary[]
+  ): GoroutineTopology {
+    return { nodes, edges: [], channels: [], channelEdges: [], lifecycle };
+  }
+
+  function makeSpawnedNode(id: string, name: string): GoroutineNode {
+    return {
+      id,
+      name,
+      type: 'spawned',
+      package: 'pkg/workers',
+      location: { file: 'worker.go', line: 10 },
+    };
+  }
+
+  // Test 1: spawned node with receivesContext:true, hasCancellationCheck:true → label contains " ✓ctx"
+  it('spawned node with receivesContext and hasCancellationCheck renders " ✓ctx" annotation', () => {
+    const node = makeSpawnedNode('worker1', 'runWorker');
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'worker1',
+      spawnTargetName: 'runWorker',
+      receivesContext: true,
+      cancellationCheckAvailable: true,
+      hasCancellationCheck: true,
+      orphan: false,
+    }];
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
+    expect(output).toContain(' ✓ctx');
+  });
+
+  // Test 2: spawned node with receivesContext:true, cancellationCheckAvailable:false → label contains " ctx?"
+  it('spawned node with receivesContext but cancellationCheckAvailable:false renders " ctx?" annotation', () => {
+    const node = makeSpawnedNode('worker2', 'processJob');
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'worker2',
+      spawnTargetName: 'processJob',
+      receivesContext: true,
+      cancellationCheckAvailable: false,
+      orphan: false,
+    }];
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
+    expect(output).toContain(' ctx?');
+  });
+
+  // Test 3: spawned node with orphan:true → label contains " ⚠ no exit"
+  it('spawned node with orphan:true renders " ⚠ no exit" annotation', () => {
+    const node = makeSpawnedNode('worker3', 'leakyWorker');
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'worker3',
+      spawnTargetName: 'leakyWorker',
+      receivesContext: false,
+      cancellationCheckAvailable: false,
+      orphan: true,
+    }];
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
+    expect(output).toContain(' ⚠ no exit');
+  });
+
+  // Test 4: spawned node with no matching lifecycle entry → label unchanged (no annotation)
+  it('spawned node with no matching lifecycle entry has no annotation', () => {
+    const node = makeSpawnedNode('worker4', 'cleanWorker');
+    // lifecycle has a different nodeId
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'other-worker',
+      spawnTargetName: 'otherFn',
+      receivesContext: true,
+      cancellationCheckAvailable: true,
+      hasCancellationCheck: true,
+      orphan: false,
+    }];
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
+    expect(output).not.toContain(' ✓ctx');
+    expect(output).not.toContain(' ctx?');
+    expect(output).not.toContain(' ⚠ no exit');
+  });
+
+  // Test 5: multiple spawned nodes each render their correct individual tag
+  it('multiple spawned nodes each render their correct lifecycle annotation', () => {
+    const node1 = makeSpawnedNode('w1', 'goodWorker');
+    const node2 = makeSpawnedNode('w2', 'orphanWorker');
+    const lifecycle: GoroutineLifecycleSummary[] = [
+      {
+        nodeId: 'w1',
+        spawnTargetName: 'goodWorker',
+        receivesContext: true,
+        cancellationCheckAvailable: true,
+        hasCancellationCheck: true,
+        orphan: false,
+      },
+      {
+        nodeId: 'w2',
+        spawnTargetName: 'orphanWorker',
+        receivesContext: false,
+        cancellationCheckAvailable: false,
+        orphan: true,
+      },
+    ];
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node1, node2], lifecycle));
+    expect(output).toContain(' ✓ctx');
+    expect(output).toContain(' ⚠ no exit');
   });
 });

@@ -544,8 +544,11 @@ export interface CLIOptions {
 
   // ========== Go Architecture Atlas ==========
 
-  /** Enable Go Architecture Atlas mode */
+  /** Enable Go Architecture Atlas mode (default: true when --lang go) */
   atlas?: boolean;
+
+  /** Disable Go Architecture Atlas mode (opt-out when --lang go) */
+  noAtlas?: boolean;
 
   /** Atlas layers to generate (comma-separated: package,capability,goroutine,flow) */
   atlasLayers?: string;
