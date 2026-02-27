@@ -54,3 +54,4 @@ archguard*.json
 /archguard-diagrams/
 /archguard-self-analysis/
 /codex-swarm-analysis/
+/.archguard/
