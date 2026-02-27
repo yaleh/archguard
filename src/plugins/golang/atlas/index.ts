@@ -111,20 +111,20 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     // Check Atlas config via languageSpecific (Proposal v5.1 §4.5.6)
     const atlasConfig = config.languageSpecific?.['atlas'] as AtlasConfig | undefined;
 
-    // Standard mode: delegate entirely to GoPlugin
-    if (!atlasConfig?.enabled) {
+    // Standard mode: delegate entirely to GoPlugin (only when explicitly disabled)
+    if (atlasConfig?.enabled === false) {
       return this.goPlugin.parseProject(workspaceRoot, config);
     }
 
     // Atlas mode: get base ArchJSON + generate Atlas extension
     const baseArchJSON = await this.goPlugin.parseProject(workspaceRoot, config);
     const atlas = await this.generateAtlas(workspaceRoot, {
-      functionBodyStrategy: atlasConfig.functionBodyStrategy ?? 'selective',
-      includeTests: atlasConfig.includeTests,
-      excludeTests: atlasConfig.excludeTests,
-      excludePatterns: atlasConfig.excludePatterns,
-      entryPointTypes: atlasConfig.entryPointTypes,
-      followIndirectCalls: atlasConfig.followIndirectCalls,
+      functionBodyStrategy: atlasConfig?.functionBodyStrategy ?? 'selective',
+      includeTests: atlasConfig?.includeTests,
+      excludeTests: atlasConfig?.excludeTests,
+      excludePatterns: atlasConfig?.excludePatterns,
+      entryPointTypes: atlasConfig?.entryPointTypes,
+      followIndirectCalls: atlasConfig?.followIndirectCalls,
     });
 
     return {

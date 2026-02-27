@@ -80,6 +80,12 @@ node dist/cli/index.js analyze -s ./src
 
 # Explicitly specify language (currently supports: typescript)
 node dist/cli/index.js analyze -s ./src --lang typescript
+
+# Go: atlas mode is enabled automatically (no --atlas flag needed)
+node dist/cli/index.js analyze -s ./src --lang go
+
+# Go: opt out of atlas mode (standard Go parsing only)
+node dist/cli/index.js analyze -s ./src --lang go --no-atlas
 ```
 
 #### Multi-Level Architecture Diagrams
@@ -236,7 +242,8 @@ node dist/cli/index.js analyze -s ./src
 
 # Explicitly specify language
 node dist/cli/index.js analyze -s ./src --lang typescript
-node dist/cli/index.js analyze -s ./src --lang go
+node dist/cli/index.js analyze -s ./src --lang go        # Atlas mode ON by default
+node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard mode opt-out
 node dist/cli/index.js analyze -s ./src --lang java
 node dist/cli/index.js analyze -s ./src --lang python
 ```

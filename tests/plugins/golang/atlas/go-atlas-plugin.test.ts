@@ -107,26 +107,33 @@ describe('GoAtlasPlugin', () => {
     });
   });
 
-  // ---- parseProject standard mode tests ----
+  // ---- parseProject default atlas mode tests ----
 
-  describe('parseProject standard mode', () => {
+  describe('parseProject default atlas mode', () => {
     beforeEach(async () => {
       vi.spyOn((plugin as any).goPlugin, 'initialize').mockResolvedValue(undefined);
       await plugin.initialize({ workspaceRoot: '/test' });
 
       vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
+      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(minimalRawData);
+      vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
     });
 
-    it('no atlas config → standard mode (result has no extensions)', async () => {
+    it('no atlas config → atlas mode by default (result has extensions.goAtlas)', async () => {
       const result = await plugin.parseProject('/test', {
         workspaceRoot: '/test',
-        // no languageSpecific
+        // no languageSpecific: atlas is ON by default
       });
 
-      expect((result as any).extensions).toBeUndefined();
+      const extensions = (result as any).extensions;
+      expect(extensions).toBeDefined();
+      expect(extensions.goAtlas).toBeDefined();
     });
 
-    it('atlas enabled=false → standard mode (result has no extensions)', async () => {
+    it('atlas enabled=false → standard mode (opt-out, result has no extensions)', async () => {
+      // Reset parseProject mock to avoid conflicts (not needed in atlas path)
+      vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
+
       const result = await plugin.parseProject('/test', {
         workspaceRoot: '/test',
         languageSpecific: {

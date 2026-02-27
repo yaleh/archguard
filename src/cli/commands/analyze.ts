@@ -42,14 +42,18 @@ export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): Dia
 
   // Priority 2: CLI shortcut
   if (cliOptions.sources && cliOptions.sources.length > 0) {
+    // Resolve effective language (--atlas implies 'go')
+    const language = cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined);
+    // Atlas is enabled by default for Go unless --no-atlas is passed
+    const atlasEnabled = language === 'go' && !cliOptions.noAtlas;
     const diagram: DiagramConfig = {
       name: cliOptions.name || 'architecture',
       sources: cliOptions.sources,
       level: cliOptions.level || 'class',
       format: cliOptions.format,
       exclude: cliOptions.exclude,
-      language: cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined),
-      languageSpecific: cliOptions.atlas
+      language,
+      languageSpecific: atlasEnabled
         ? {
             atlas: {
               enabled: true,
@@ -172,7 +176,8 @@ export function createAnalyzeCommand(): Command {
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
 
       // ========== Go Architecture Atlas ==========
-      .option('--atlas', 'Enable Go Architecture Atlas mode (Go projects only)')
+      .option('--atlas', 'Enable Go Architecture Atlas mode (default when --lang go)')
+      .option('--no-atlas', 'Disable Go Architecture Atlas mode (opt-out for --lang go)')
       .option(
         '--atlas-layers <layers>',
         'Atlas layers to generate (comma-separated): package,capability,goroutine,flow',
