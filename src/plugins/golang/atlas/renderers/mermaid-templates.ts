@@ -237,16 +237,38 @@ export class MermaidTemplates {
     output += '  classDef cycle    fill:#fd79a8,stroke:#e84393,stroke-width:3px\n';
 
     // Pass 3: edges (self-loops get dashed warning arrow per P2)
+    // Track (edgeIndex, strength) for non-self edges to compute linkStyle tiers.
+    const edgeThicknesses: Array<{ index: number; strength: number }> = [];
+    let edgeIndex = 0;
     output += '\n';
     for (const edge of graph.edges) {
       const fromId = MermaidTemplates.sanitizeId(edge.from);
       const toId   = MermaidTemplates.sanitizeId(edge.to);
       if (edge.from === edge.to) {
         output += `  ${fromId} -.->|"⚠ self"| ${toId}\n`;
+        edgeIndex++;
         continue;
       }
       const label = edge.strength > 1 ? `|"${edge.strength} refs"|` : '';
       output += `  ${fromId} -->${label} ${toId}\n`;
+      edgeThicknesses.push({ index: edgeIndex, strength: edge.strength });
+      edgeIndex++;
+    }
+
+    // Pass 3b: dynamic linkStyle for edge thickness tiers
+    if (edgeThicknesses.length > 0) {
+      const tiers = MermaidTemplates.computePackageEdgeTiers(
+        edgeThicknesses.map(e => e.strength)
+      );
+      if (tiers.size > 0) {
+        output += '\n';
+        for (const { index, strength } of edgeThicknesses) {
+          const width = tiers.get(strength);
+          if (width !== undefined) {
+            output += `  linkStyle ${index} stroke-width:${width}px\n`;
+          }
+        }
+      }
     }
 
     // Pass 4: cycle comment — MUST be retained (atlas-renderer.test.ts:282)
@@ -354,6 +376,49 @@ export class MermaidTemplates {
 
   private static isHotspot(node: CapabilityNode): boolean {
     return (node.methodCount ?? 0) > 10 || (node.fanIn ?? 0) > 5;
+  }
+
+  /**
+   * Compute dynamic stroke-width tiers for package-graph edges.
+   *
+   * Uses the 50th (median) and 85th percentile of the strength distribution
+   * as tier boundaries:
+   *   - strength ≤ median      → default (no linkStyle emitted)
+   *   - median < strength < p85 → medium  (3px)
+   *   - strength ≥ p85         → heavy   (5px)
+   *
+   * Falls back to a min / max split when the median equals the maximum
+   * (highly skewed or very few distinct values).
+   *
+   * Returns an empty map when all edges share the same strength (uniform).
+   */
+  static computePackageEdgeTiers(strengths: number[]): Map<number, number> {
+    if (strengths.length === 0) return new Map();
+    const sorted = [...strengths].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    if (max === min) return new Map();
+
+    const n = sorted.length;
+    let thMedium = sorted[Math.min(Math.floor(n * 0.50), n - 1)]; // median
+    let thHeavy  = sorted[Math.min(Math.floor(n * 0.85), n - 1)]; // 85th percentile
+
+    // Fallback: when median collapses to max, split on min / max instead
+    if (thMedium >= max) {
+      thMedium = min;
+      thHeavy  = max;
+    }
+
+    const result = new Map<number, number>();
+    for (const s of new Set(strengths)) {
+      if (s >= thHeavy) {
+        result.set(s, 5.0);   // heavy: top ~15%
+      } else if (s > thMedium) {
+        result.set(s, 3.0);   // medium: p50–p85
+      }
+      // ≤ thMedium: default stroke (no linkStyle)
+    }
+    return result;
   }
 
   static renderGoroutineTopology(topology: GoroutineTopology): string {

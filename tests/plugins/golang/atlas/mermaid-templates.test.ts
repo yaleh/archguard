@@ -315,6 +315,148 @@ describe('MermaidTemplates.renderPackageGraph', () => {
   });
 });
 
+// ─── computePackageEdgeTiers ─────────────────────────────────────────────────
+
+describe('MermaidTemplates.computePackageEdgeTiers', () => {
+  it('returns empty map for empty input', () => {
+    expect(MermaidTemplates.computePackageEdgeTiers([])).toEqual(new Map());
+  });
+
+  it('returns empty map when all strengths are equal', () => {
+    expect(MermaidTemplates.computePackageEdgeTiers([3, 3, 3, 3])).toEqual(new Map());
+    expect(MermaidTemplates.computePackageEdgeTiers([1])).toEqual(new Map());
+  });
+
+  it('assigns heavy tier to max, no entry for min — two distinct values', () => {
+    // [1, 5]: p50=5 >= max=5 → fallback: thMedium=1, thHeavy=5
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 1, 5]);
+    expect(tiers.has(1)).toBe(false);    // at thMedium → default
+    expect(tiers.get(5)).toBe(5.0);      // >= thHeavy → heavy
+  });
+
+  it('assigns medium and heavy tiers for three distinct values', () => {
+    // [1, 3, 6]: p50=sorted[1]=3, p85=sorted[2]=6 → medium>3, heavy>=6
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 3, 6]);
+    expect(tiers.has(1)).toBe(false);
+    expect(tiers.get(3)).toBeUndefined(); // at p50, not > p50
+    expect(tiers.get(6)).toBe(5.0);       // >= p85 → heavy
+  });
+
+  it('handles skewed distribution (many low, few high)', () => {
+    // Twelve 1s, then 3,3,3,4,5,5,6,6 — typical Go package graph
+    const strengths = [1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,4,5,5,6,6];
+    const tiers = MermaidTemplates.computePackageEdgeTiers(strengths);
+    // median (p50) = 1; p85 ≥ 5
+    expect(tiers.has(1)).toBe(false);     // at median → default
+    expect(tiers.get(3)).toBe(3.0);       // > median but < p85 → medium
+    expect(tiers.get(4)).toBe(3.0);       // medium
+    const heavyVal = tiers.get(6);
+    expect(heavyVal).toBe(5.0);           // heavy
+    expect([3.0, 5.0]).toContain(tiers.get(5)); // 5 is either medium or heavy
+  });
+
+  it('fallback: median==max triggers min/max split', () => {
+    // All high: [4, 4, 4, 4, 8] — p50=4=max? No: max=8
+    // [4, 4, 8, 8, 8]: p50=sorted[2]=8 = max → fallback
+    const tiers = MermaidTemplates.computePackageEdgeTiers([8, 8, 8, 8, 4]);
+    // fallback: thMedium=4, thHeavy=8
+    expect(tiers.has(4)).toBe(false);   // at thMedium → default
+    expect(tiers.get(8)).toBe(5.0);     // >= thHeavy → heavy
+  });
+
+  it('assigns only heavy tier for two-element [1, N] input', () => {
+    // [1, 6]: p50=sorted[1]=6 >= max=6 → fallback: thMedium=1, thHeavy=6
+    const tiers = MermaidTemplates.computePackageEdgeTiers([1, 6]);
+    expect(tiers.has(1)).toBe(false);
+    expect(tiers.get(6)).toBe(5.0);
+  });
+});
+
+// ─── renderPackageGraph — linkStyle (dynamic edge thickness) ─────────────────
+
+describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () => {
+  it('emits no linkStyle when all edges have the same strength', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 3 },
+        { from: 'a', to: 'c', strength: 3 },
+      ],
+      cycles: [],
+    });
+    expect(MermaidTemplates.renderPackageGraph(graph)).not.toContain('linkStyle');
+  });
+
+  it('emits linkStyle for heavy edges with the correct index', () => {
+    // Three edges: [1, 1, 8] — edge at index 2 is heavy
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+        { id: 'd', name: 'd', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 1 },
+        { from: 'a', to: 'c', strength: 1 },
+        { from: 'a', to: 'd', strength: 8 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // strength=8 is at index 2 (0-based)
+    expect(result).toContain('linkStyle 2 stroke-width:5px');
+    // strength=1 edges should not have linkStyle
+    expect(result).not.toContain('linkStyle 0');
+    expect(result).not.toContain('linkStyle 1');
+  });
+
+  it('self-loop counts toward linkStyle index but is not styled', () => {
+    // edges: [self-loop(0), regular(1), heavy(2)]
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'a', strength: 1 },   // index 0 — self-loop, not styled
+        { from: 'a', to: 'b', strength: 1 },   // index 1
+        { from: 'a', to: 'c', strength: 9 },   // index 2 — heavy
+      ],
+      cycles: [{ packages: ['a'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // heavy edge is at global index 2 (self-loop takes index 0)
+    expect(result).toContain('linkStyle 2 stroke-width:5px');
+    // self-loop (index 0) should not appear in linkStyle
+    expect(result).not.toContain('linkStyle 0');
+  });
+
+  it('linkStyle block appears after all edge declarations', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
+        { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
+        { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
+      ],
+      edges: [
+        { from: 'a', to: 'b', strength: 1 },
+        { from: 'a', to: 'c', strength: 6 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const lastEdge  = result.lastIndexOf(' --> ');
+    const linkStyle = result.indexOf('linkStyle');
+    expect(linkStyle).toBeGreaterThan(lastEdge);
+  });
+});
+
 // ─── renderPackageGraph — cycles (P2) ────────────────────────────────────────
 
 describe('MermaidTemplates.renderPackageGraph — cycles', () => {
