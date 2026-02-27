@@ -175,32 +175,56 @@ export class CapabilityGraphBuilder {
     ]);
 
     for (const pkg of rawData.packages) {
+      // Phase A: build import-qualifier → full-import-path map for this package.
+      // Used to resolve qualified field types unambiguously when two packages share
+      // the same short package name (e.g. both named "engine").
+      // Key: alias ?? last path segment (the qualifier used in Go source)
+      // Value: full import path (e.g. "github.com/org/project/pkg/hub/engine")
+      const qualifierToFullPath = new Map<string, string>();
+      for (const imp of pkg.imports) {
+        const qualifier = imp.alias ?? imp.path.split('/').pop()!;
+        qualifierToFullPath.set(qualifier, imp.path);
+      }
+
       for (const struct of pkg.structs) {
         for (const field of struct.fields) {
           const bareType = this.normalizeFieldType(field.type);
           if (allKnownTypeNames.has(bareType)) {
-            // Resolve field type to node ID with priority:
-            // 1. Explicit package qualifier (e.g. "models.Event" → qualifier="models")
-            // 2. Same-package by full import path (unqualified types are same-package in Go)
-            // 3. Same-package by short name
-            // 4. Cross-package fallback (first-match-wins — may be ambiguous)
             const qualifier = this.extractTypeQualifier(field.type);
-            // Resolution priority:
-            // 1. Explicit qualifier (e.g. "models.Event" → qualifier="models"):
-            //    look up in pkgTypeToNodeId by qualifier. If no match, the type is
-            //    external (stdlib / third-party) — do NOT fall through to bare-name lookup.
-            // 2. Same-package by full import path (unqualified → must be same-package in Go)
-            // 3. Same-package by short name
+            // Resolution strategy:
             //
-            // typeNameToNodeId (first-match-wins cross-package bare-name lookup) is
-            // intentionally NOT used as a fallback. In valid Go source, a cross-package
-            // type reference must carry a qualifier, so bare-name resolution would only
-            // produce false-positive edges (e.g. http.Client → examples/user-service.Client,
-            // or same-package func-type → a struct of the same name in another package).
-            const targetNodeId = (qualifier
-              ? pkgTypeToNodeId.get(`${qualifier}:${bareType}`)
-              : pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`) ??
-                pkgTypeToNodeId.get(`${pkg.name}:${bareType}`));
+            // With qualifier (e.g. "engine.Engine"):
+            //   1. If pkg.imports is non-empty, use import map to resolve qualifier →
+            //      full import path → module-relative path → unambiguous node ID.
+            //      If qualifier not found in imports, the type is external/stdlib → skip.
+            //   2. If pkg.imports is empty (no import data), fall back to best-effort
+            //      pkgTypeToNodeId.get("qualifier:bareType") for backward compatibility.
+            //
+            // Without qualifier (unqualified type in Go → must be same-package):
+            //   Resolve by full import path first, then by short name.
+            //   Do NOT use cross-package bare-name lookup (would produce false positives).
+            let targetNodeId: string | undefined;
+            if (qualifier) {
+              if (qualifierToFullPath.size > 0) {
+                // Import data available: use import map for unambiguous resolution
+                const fullImportPath = qualifierToFullPath.get(qualifier);
+                if (fullImportPath !== undefined) {
+                  // Strip module name prefix to get the module-relative path
+                  const moduleRelPath = fullImportPath.startsWith(rawData.moduleName + '/')
+                    ? fullImportPath.slice(rawData.moduleName.length + 1)
+                    : fullImportPath;
+                  targetNodeId = pkgTypeToNodeId.get(`${moduleRelPath}:${bareType}`)
+                    ?? pkgTypeToNodeId.get(`${qualifier}:${bareType}`);
+                }
+                // else: qualifier not found in imports → external/stdlib type → skip (targetNodeId stays undefined)
+              } else {
+                // No import data: best-effort fallback for backward compatibility
+                targetNodeId = pkgTypeToNodeId.get(`${qualifier}:${bareType}`);
+              }
+            } else {
+              targetNodeId = pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`)
+                ?? pkgTypeToNodeId.get(`${pkg.name}:${bareType}`);
+            }
             if (targetNodeId === undefined) continue;
             edges.push({
               id: `uses-${pkg.fullName}.${struct.name}-${field.type}`,

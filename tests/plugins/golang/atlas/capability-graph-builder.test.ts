@@ -2235,4 +2235,222 @@ describe('CapabilityGraphBuilder', () => {
       expect(orphanNode?.fanOut).toBe(0);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Phase A: import-map disambiguation for same short-name packages
+  // ---------------------------------------------------------------------------
+  describe('Phase A: uses edge - import-map disambiguation for same-short-name packages', () => {
+    it('resolves qualifier to correct package when two packages share the same pkg.name', async () => {
+      // Scenario: two packages both have name="engine" but different fullNames.
+      // pkg/hub imports pkg/hub/engine (not pkg/routing/engine).
+      // A field "engine *engine.Engine" in pkg/hub.Router must resolve to pkg/hub/engine.Engine,
+      // NOT to pkg/routing/engine.Engine.
+      //
+      // To expose the bug: pkg/hub/engine is registered FIRST in pkgTypeToNodeId, so
+      // pkgTypeToNodeId.set("engine:Engine", "pkg/hub/engine.Engine"). Then pkg/routing/engine
+      // overwrites it: pkgTypeToNodeId.set("engine:Engine", "pkg/routing/engine.Engine").
+      // Without the import-map fix, the lookup returns pkg/routing/engine.Engine — WRONG.
+      const rawData = makeRawData({
+        moduleName: 'github.com/test/project',
+        packages: [
+          makePackage({
+            id: 'pkg/hub/engine',
+            name: 'engine',              // same short name as pkg/routing/engine
+            fullName: 'pkg/hub/engine',
+            structs: [
+              {
+                name: 'Engine',
+                packageName: 'engine',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'engine.go', startLine: 1, endLine: 10 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            id: 'pkg/routing/engine',
+            name: 'engine',              // SAME short name — overwrites "engine:Engine" in pkgTypeToNodeId
+            fullName: 'pkg/routing/engine',
+            structs: [
+              {
+                name: 'Engine',
+                packageName: 'engine',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'engine.go', startLine: 1, endLine: 10 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            id: 'pkg/hub',
+            name: 'hub',
+            fullName: 'pkg/hub',
+            imports: [
+              // pkg/hub imports pkg/hub/engine — this is the import-map fix anchor
+              {
+                path: 'github.com/test/project/pkg/hub/engine',
+                location: { file: 'router.go', startLine: 3, endLine: 3 },
+              },
+            ],
+            structs: [
+              {
+                name: 'Router',
+                packageName: 'hub',
+                exported: true,
+                fields: [
+                  {
+                    name: 'engine',
+                    type: '*engine.Engine',  // qualifier = "engine" (ambiguous without import map)
+                    exported: false,
+                    location: { file: 'router.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'router.go', startLine: 1, endLine: 15 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      // MUST create edge to the CORRECT engine (the imported one)
+      const correctEdge = graph.edges.find(
+        (e) =>
+          e.type === 'uses' &&
+          e.source === 'pkg/hub.Router' &&
+          e.target === 'pkg/hub/engine.Engine'
+      );
+      expect(correctEdge).toBeDefined();
+
+      // MUST NOT create edge to the WRONG engine (pkg/routing/engine)
+      const wrongEdge = graph.edges.find(
+        (e) =>
+          e.type === 'uses' &&
+          e.source === 'pkg/hub.Router' &&
+          e.target === 'pkg/routing/engine.Engine'
+      );
+      expect(wrongEdge).toBeUndefined();
+    });
+
+    it('falls back to best-effort resolution when pkg.imports is empty (no import data available)', async () => {
+      // When a package has no imports data (empty array), the fix should fall back to the
+      // original qualifier-based resolution for backward compatibility.
+      const rawData = makeRawData({
+        moduleName: 'github.com/test/project',
+        packages: [
+          makePackage({
+            id: 'pkg/hub/engine',
+            name: 'engine',
+            fullName: 'pkg/hub/engine',
+            structs: [
+              {
+                name: 'Engine',
+                packageName: 'engine',
+                exported: true,
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'engine.go', startLine: 1, endLine: 10 },
+              },
+            ],
+            interfaces: [],
+          }),
+          makePackage({
+            id: 'pkg/hub',
+            name: 'hub',
+            fullName: 'pkg/hub',
+            imports: [],  // no imports data → best-effort fallback
+            structs: [
+              {
+                name: 'Server',
+                packageName: 'hub',
+                exported: true,
+                fields: [
+                  {
+                    name: 'engine',
+                    type: '*engine.Engine',
+                    exported: false,
+                    location: { file: 'server.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'server.go', startLine: 1, endLine: 15 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      // With empty imports, best-effort resolution should still find pkg/hub/engine.Engine
+      const edge = graph.edges.find(
+        (e) => e.type === 'uses' && e.source === 'pkg/hub.Server'
+      );
+      expect(edge).toBeDefined();
+      expect(edge?.target).toBe('pkg/hub/engine.Engine');
+    });
+
+    it('skips edge creation when qualifier is present in imports but resolves to external/stdlib package', async () => {
+      // If pkg.imports has entries but the qualifier doesn't match any of them,
+      // the type is external (stdlib or 3rd-party) → no edge should be created.
+      const rawData = makeRawData({
+        moduleName: 'github.com/test/project',
+        packages: [
+          makePackage({
+            id: 'pkg/hub',
+            name: 'hub',
+            fullName: 'pkg/hub',
+            imports: [
+              // Only imports pkg/hub/store — NOT anything "http"
+              {
+                path: 'github.com/test/project/pkg/hub/store',
+                location: { file: 'hub.go', startLine: 3, endLine: 3 },
+              },
+            ],
+            structs: [
+              {
+                name: 'Server',
+                packageName: 'hub',
+                exported: true,
+                fields: [
+                  {
+                    name: 'client',
+                    type: 'http.Client',  // qualifier "http" not in imports → external type
+                    exported: false,
+                    location: { file: 'hub.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                methods: [],
+                embeddedTypes: [],
+                location: { file: 'hub.go', startLine: 1, endLine: 15 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+        implementations: [],
+      });
+
+      const graph = await builder.build(rawData);
+
+      // No edge: "http.Client" is stdlib, not a known project type
+      const edge = graph.edges.find((e) => e.type === 'uses' && e.source === 'pkg/hub.Server');
+      expect(edge).toBeUndefined();
+    });
+  });
 });
