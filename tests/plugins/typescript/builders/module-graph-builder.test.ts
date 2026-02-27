@@ -116,6 +116,32 @@ export class B {}`
       expect(graph.cycles[0].modules).toContain('src/b');
       expect(graph.cycles[0].severity).toBe('warning');
     });
+
+    it('detects a 3-module cycle and reports severity: error', () => {
+      const project = makeProject();
+      project.createSourceFile(
+        '/root/src/a/index.ts',
+        `import { C } from '../c/index';
+export class A {}`
+      );
+      project.createSourceFile(
+        '/root/src/b/index.ts',
+        `import { A } from '../a/index';
+export class B {}`
+      );
+      project.createSourceFile(
+        '/root/src/c/index.ts',
+        `import { B } from '../b/index';
+export class C {}`
+      );
+
+      const builder = new ModuleGraphBuilder();
+      const graph = builder.build('/root', project.getSourceFiles(), []);
+
+      expect(graph.cycles).toHaveLength(1);
+      expect(graph.cycles[0].modules).toHaveLength(3);
+      expect(graph.cycles[0].severity).toBe('error');
+    });
   });
 
   describe('stats computation', () => {

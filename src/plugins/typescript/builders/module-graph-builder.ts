@@ -243,7 +243,7 @@ export class ModuleGraphBuilder {
       if (scc.length > 1) {
         cycles.push({
           modules: scc,
-          severity: scc.length <= 3 ? 'warning' : 'error',
+          severity: scc.length === 2 ? 'warning' : 'error',
         });
       }
     }
