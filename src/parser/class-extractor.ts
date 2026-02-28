@@ -4,7 +4,6 @@
  */
 
 import {
-  Project,
   type ClassDeclaration,
   type MethodDeclaration,
   type PropertyDeclaration,
@@ -14,21 +13,12 @@ import {
 } from 'ts-morph';
 import type { Entity, Visibility, Member, Parameter, Decorator } from '@/types';
 import { ParseError } from './errors.js';
+import { BaseExtractor } from './base-extractor.js';
 
 /**
  * Extracts class entities from TypeScript code using ts-morph
  */
-export class ClassExtractor {
-  private project: Project;
-
-  constructor() {
-    this.project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        target: 99, // ESNext
-      },
-    });
-  }
+export class ClassExtractor extends BaseExtractor {
 
   /**
    * Extract class entity from TypeScript code

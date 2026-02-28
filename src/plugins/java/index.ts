@@ -12,7 +12,7 @@ import type {
   PluginInitConfig,
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
-import type { IDependencyExtractor, Dependency } from '@/core/interfaces/dependency.js';
+import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import type { ArchJSON } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
@@ -52,12 +52,8 @@ export class JavaPlugin implements ILanguagePlugin {
    * Dependency extractor instance
    */
   get dependencyExtractor(): IDependencyExtractor | undefined {
-    return {
-      extractDependencies: async (workspaceRoot: string): Promise<Dependency[]> => {
-        this.ensureInitialized();
-        return this.depExtractor.extract(workspaceRoot);
-      },
-    };
+    this.ensureInitialized();
+    return this.depExtractor;
   }
 
   /**

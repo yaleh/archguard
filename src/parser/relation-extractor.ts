@@ -4,28 +4,18 @@
  */
 
 import {
-  Project,
   type SourceFile,
   type ClassDeclaration,
   type InterfaceDeclaration,
 } from 'ts-morph';
 import type { Relation } from '@/types';
+import { BaseExtractor } from './base-extractor.js';
 
 /**
  * Extracts relationships (inheritance, implementation, composition, dependency)
  * from TypeScript source code
  */
-export class RelationExtractor {
-  private project: Project;
-
-  constructor() {
-    this.project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        target: 99, // ESNext
-      },
-    });
-  }
+export class RelationExtractor extends BaseExtractor {
 
   /**
    * Extract all relations from TypeScript code

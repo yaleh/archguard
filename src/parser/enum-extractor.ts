@@ -3,24 +3,15 @@
  * Story 3: Interface & Enum Support
  */
 
-import { Project, type EnumDeclaration } from 'ts-morph';
+import { type EnumDeclaration } from 'ts-morph';
 import type { Entity, Member } from '@/types';
 import { ParseError } from './errors.js';
+import { BaseExtractor } from './base-extractor.js';
 
 /**
  * Extracts enum entities from TypeScript code using ts-morph
  */
-export class EnumExtractor {
-  private project: Project;
-
-  constructor() {
-    this.project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        target: 99, // ESNext
-      },
-    });
-  }
+export class EnumExtractor extends BaseExtractor {
 
   /**
    * Extract enum entity from TypeScript code

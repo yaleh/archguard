@@ -5,6 +5,7 @@ import type {
   CapabilityRelation,
   ConcreteUsageRisk,
 } from '../types.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Capability (interface usage) graph builder
@@ -15,7 +16,7 @@ import type {
  * NOTE: ADR-002 uses flat nodes/edges structure (no redundant
  * implementors/consumers fields on InterfaceCapability).
  */
-export class CapabilityGraphBuilder {
+export class CapabilityGraphBuilder implements IAtlasBuilder<CapabilityGraph> {
   build(rawData: GoRawData): Promise<CapabilityGraph> {
     const allNodes = this.buildNodes(rawData);
     const rawEdges = this.buildEdges(rawData, allNodes);

@@ -1,10 +1,12 @@
 import type { GoRawData } from '../types.js';
 import type { PackageGraph, CapabilityGraph, GoroutineTopology, FlowGraph } from './types.js';
 import type { AtlasGenerationOptions } from './types.js';
-import { PackageGraphBuilder } from './builders/package-graph-builder.js';
-import { CapabilityGraphBuilder } from './builders/capability-graph-builder.js';
-import { GoroutineTopologyBuilder } from './builders/goroutine-topology-builder.js';
-import { FlowGraphBuilder } from './builders/flow-graph-builder.js';
+import {
+  PackageGraphBuilder,
+  CapabilityGraphBuilder,
+  GoroutineTopologyBuilder,
+  FlowGraphBuilder,
+} from './builders/index.js';
 import { GoModResolver } from './go-mod-resolver.js';
 import { InterfaceMatcher } from '../interface-matcher.js';
 

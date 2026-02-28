@@ -1,13 +1,14 @@
 import type { GoRawData, GoRawPackage } from '../../types.js';
 import type { PackageGraph, PackageNode, PackageDependency, PackageCycle } from '../types.js';
 import { GoModResolver } from '../go-mod-resolver.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Package dependency graph builder
  *
  * Output types defined in ADR-002 (PackageGraph, PackageNode, etc.)
  */
-export class PackageGraphBuilder {
+export class PackageGraphBuilder implements IAtlasBuilder<PackageGraph> {
   private goModResolver: GoModResolver;
 
   constructor(goModResolver: GoModResolver) {

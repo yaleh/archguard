@@ -1,5 +1,6 @@
 import type { GoRawData, GoRawPackage, GoCallExpr } from '../../types.js';
 import type { FlowGraph, EntryPoint, CallChain, CallEdge, EntryPointType } from '../types.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Flow graph builder (entry points and call chains)
@@ -9,7 +10,7 @@ import type { FlowGraph, EntryPoint, CallChain, CallEdge, EntryPointType } from 
  * NOTE: For interface call resolution, gopls is REQUIRED (not optional).
  * Without gopls, Flow Graph accuracy drops to ~30%.
  */
-export class FlowGraphBuilder {
+export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
   private static readonly STDLIB_PREFIXES = new Set([
     'fmt',
     'json',
