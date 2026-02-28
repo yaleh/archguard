@@ -961,4 +961,159 @@ describe('ValidatedMermaidGenerator', () => {
       expect(result).not.toContain('=>');
     });
   });
+
+  /**
+   * Scoped entity ID support
+   *
+   * When parseTsProject() is used (triggered by a package-level diagram sharing the same
+   * source group), relation sources and targets are scoped IDs:
+   *   "src/mermaid/auto-repair.ts.MermaidAutoRepair"
+   * But entity names remain bare: "MermaidAutoRepair"
+   *
+   * The generator must resolve scoped IDs to bare names for both filtering and rendering.
+   */
+  describe('scoped entity ID relations (parseTsProject path)', () => {
+    const scopedGrouping: GroupingDecision = {
+      packages: [
+        {
+          name: 'Mermaid_Layer',
+          entities: [
+            'src/mermaid/auto-repair.ts.AutoRepair',
+            'src/mermaid/validator-parse.ts.ParseValidator',
+          ],
+          reasoning: 'Mermaid module',
+        },
+      ],
+      layout: { direction: 'TB', reasoning: '' },
+    };
+
+    const scopedArchJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-01-26T10:00:00Z',
+      sourceFiles: [
+        'src/mermaid/auto-repair.ts',
+        'src/mermaid/validator-parse.ts',
+      ],
+      entities: [
+        {
+          id: 'src/mermaid/auto-repair.ts.AutoRepair',
+          name: 'AutoRepair',
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: 'src/mermaid/auto-repair.ts', startLine: 1, endLine: 20 },
+        },
+        {
+          id: 'src/mermaid/validator-parse.ts.ParseValidator',
+          name: 'ParseValidator',
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: 'src/mermaid/validator-parse.ts', startLine: 1, endLine: 10 },
+        },
+      ],
+      relations: [
+        {
+          id: 'src/mermaid/auto-repair.ts.AutoRepair_dependency_src/mermaid/validator-parse.ts.ParseValidator',
+          type: 'dependency',
+          source: 'src/mermaid/auto-repair.ts.AutoRepair',
+          target: 'src/mermaid/validator-parse.ts.ParseValidator',
+        },
+      ],
+    };
+
+    it('should render relations when source is a scoped entity ID (class level)', () => {
+      const generator = new ValidatedMermaidGenerator(scopedArchJson, {
+        level: 'class',
+        grouping: scopedGrouping,
+      });
+      const result = generator.generate();
+
+      expect(result).toContain('AutoRepair');
+      expect(result).toContain('ParseValidator');
+      // Relation must be present with bare class names
+      expect(result).toContain('AutoRepair --> ParseValidator');
+    });
+
+    it('should render relations when source is a scoped entity ID (method level)', () => {
+      const generator = new ValidatedMermaidGenerator(scopedArchJson, {
+        level: 'method',
+        grouping: scopedGrouping,
+      });
+      const result = generator.generate();
+
+      expect(result).toContain('AutoRepair --> ParseValidator');
+    });
+
+    it('should render inheritance relations with scoped IDs in correct direction', () => {
+      const inheritanceGrouping: GroupingDecision = {
+        packages: [
+          {
+            name: 'Error_Layer',
+            entities: [
+              'src/errors/base.ts.BaseError',
+              'src/errors/parse.ts.ParseError',
+            ],
+            reasoning: 'Error classes',
+          },
+        ],
+        layout: { direction: 'TB', reasoning: '' },
+      };
+
+      const inheritanceArchJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: ['src/errors/base.ts', 'src/errors/parse.ts'],
+        entities: [
+          {
+            id: 'src/errors/base.ts.BaseError',
+            name: 'BaseError',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/errors/base.ts', startLine: 1, endLine: 5 },
+          },
+          {
+            id: 'src/errors/parse.ts.ParseError',
+            name: 'ParseError',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/errors/parse.ts', startLine: 1, endLine: 10 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-inherit',
+            type: 'inheritance',
+            source: 'src/errors/parse.ts.ParseError',
+            target: 'src/errors/base.ts.BaseError',
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(inheritanceArchJson, {
+        level: 'class',
+        grouping: inheritanceGrouping,
+      });
+      const result = generator.generate();
+
+      // Parent <|-- Child direction
+      expect(result).toContain('BaseError <|-- ParseError');
+    });
+
+    it('should not render scoped source IDs as literal text in output', () => {
+      const generator = new ValidatedMermaidGenerator(scopedArchJson, {
+        level: 'class',
+        grouping: scopedGrouping,
+      });
+      const result = generator.generate();
+
+      // Raw scoped IDs must not appear in the rendered Mermaid
+      expect(result).not.toContain('src/mermaid/auto-repair.ts.AutoRepair');
+      expect(result).not.toContain('src/mermaid/validator-parse.ts.ParseValidator');
+    });
+  });
 });
