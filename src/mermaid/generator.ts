@@ -225,6 +225,7 @@ export class ValidatedMermaidGenerator {
     const lines: string[] = ['classDiagram'];
 
     const packageGroups = this.groupEntitiesByPackage();
+    const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
 
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
@@ -241,9 +242,12 @@ export class ValidatedMermaidGenerator {
         lines.push('  }');
       }
 
-      // Add all relationships at the end
+      // Add relationships: source must be known; unknown targets render as ghost nodes.
+      // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        lines.push(`  ${this.generateRelationLine(relation)}`);
+        if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+          lines.push(`  ${this.generateRelationLine(relation)}`);
+        }
       }
     } else {
       // No grouping or default grouping, just list all classes
@@ -251,9 +255,12 @@ export class ValidatedMermaidGenerator {
         lines.push(...this.generateClassDefinition(entity, 1, true));
       }
 
-      // Add all relationships
+      // Add relationships: source must be known; unknown targets render as ghost nodes.
+      // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        lines.push(`  ${this.generateRelationLine(relation)}`);
+        if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+          lines.push(`  ${this.generateRelationLine(relation)}`);
+        }
       }
     }
 
@@ -267,6 +274,7 @@ export class ValidatedMermaidGenerator {
     const lines: string[] = ['classDiagram'];
 
     const packageGroups = this.groupEntitiesByPackage();
+    const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
 
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
@@ -287,9 +295,12 @@ export class ValidatedMermaidGenerator {
       }
     }
 
-    // Add relationships
+    // Add relationships: source must be known; unknown targets render as ghost nodes.
+    // Noisy targets (inline types, generics, literals) are filtered.
     for (const relation of this.archJson.relations) {
-      lines.push(`  ${this.generateRelationLine(relation)}`);
+      if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+        lines.push(`  ${this.generateRelationLine(relation)}`);
+      }
     }
 
     return lines.join('\n');
@@ -430,13 +441,35 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
+   * Returns true for relation targets that are too noisy/complex to render.
+   * These are inline types, string/numeric literals, arrow functions, single-letter generics,
+   * and namespace-qualified utility types (e.g. z.infer).
+   * Cross-module types (unknown entities) are allowed and rendered as Mermaid ghost nodes.
+   */
+  private isNoisyTarget(target: string): boolean {
+    return (
+      target.startsWith('{') || // inline object: { host: string }
+      target.startsWith('"') || // string literal: "200"
+      target.startsWith("'") || // string literal: '200'
+      target.startsWith('(') || // function type: (a: A) => B
+      target.includes('=>') || // arrow function type
+      /^\d/.test(target) || // numeric literal: 100, 200
+      /^[A-Z]$/.test(target) || // single-letter generic: T, K, V
+      /^[a-z]\w*\./.test(target) // namespace-qualified utility type: z.infer, zod.any
+    );
+  }
+
+  /**
    * Generate all relations for package level
    */
   private generateRelations(_packageGroups: PackageGroup[]): string[] {
     const lines: string[] = [];
+    const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
 
     for (const relation of this.archJson.relations) {
-      lines.push(`  ${this.generateRelationLine(relation)}`);
+      if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+        lines.push(`  ${this.generateRelationLine(relation)}`);
+      }
     }
 
     return lines;

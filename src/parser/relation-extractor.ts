@@ -12,6 +12,51 @@ import type { Relation } from '@/types';
 import { BaseExtractor } from './base-extractor.js';
 
 /**
+ * Returns true for module specifiers that refer to local source files:
+ *   - Relative:  './foo', '../bar'
+ *   - Absolute:  '/abs/path'
+ *   - Path alias: '@/something' (tsconfig `paths` aliases starting with '@/')
+ *
+ * Everything else (bare names 'foo', scoped packages '@scope/pkg') is external.
+ */
+function isLocalModuleSpecifier(specifier: string): boolean {
+  return specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('@/');
+}
+
+/**
+ * Collect all type names imported from external npm package module specifiers.
+ */
+function collectExternalImportedNames(sourceFile: SourceFile): Set<string> {
+  const externalNames = new Set<string>();
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    const specifier = importDecl.getModuleSpecifierValue();
+    if (isLocalModuleSpecifier(specifier)) {
+      continue; // local import – keep
+    }
+
+    // Named imports: import { Foo, type Bar } from 'pkg'
+    for (const named of importDecl.getNamedImports()) {
+      externalNames.add(named.getName());
+    }
+
+    // Default import: import Foo from 'pkg'
+    const defaultImport = importDecl.getDefaultImport();
+    if (defaultImport) {
+      externalNames.add(defaultImport.getText());
+    }
+
+    // Namespace import: import * as Foo from 'pkg'
+    const namespaceImport = importDecl.getNamespaceImport();
+    if (namespaceImport) {
+      externalNames.add(namespaceImport.getText());
+    }
+  }
+
+  return externalNames;
+}
+
+/**
  * Extracts relationships (inheritance, implementation, composition, dependency)
  * from TypeScript source code
  */
@@ -39,10 +84,11 @@ export class RelationExtractor extends BaseExtractor {
   extractFromSourceFile(sourceFile: SourceFile): Relation[] {
     const relations: Relation[] = [];
     const relationSet = new Set<string>();
+    const externalNames = collectExternalImportedNames(sourceFile);
 
     // Extract from classes
     for (const classDecl of sourceFile.getClasses()) {
-      relations.push(...this.extractClassRelations(classDecl, relationSet));
+      relations.push(...this.extractClassRelations(classDecl, relationSet, externalNames));
     }
 
     // Extract from interfaces
@@ -59,7 +105,11 @@ export class RelationExtractor extends BaseExtractor {
    * @param relationSet - Set to track unique relations
    * @returns Array of Relation objects
    */
-  private extractClassRelations(classDecl: ClassDeclaration, relationSet: Set<string>): Relation[] {
+  private extractClassRelations(
+    classDecl: ClassDeclaration,
+    relationSet: Set<string>,
+    externalNames: Set<string> = new Set()
+  ): Relation[] {
     const relations: Relation[] = [];
     const className = classDecl.getName();
 
@@ -81,7 +131,7 @@ export class RelationExtractor extends BaseExtractor {
     // Extract composition from properties
     for (const property of classDecl.getProperties()) {
       const propertyType = this.extractTypeName(property.getType().getText());
-      if (propertyType && this.isCustomType(propertyType)) {
+      if (propertyType && this.isCustomType(propertyType) && !externalNames.has(propertyType)) {
         this.addRelation(relations, relationSet, 'composition', className, propertyType);
       }
     }
@@ -90,7 +140,7 @@ export class RelationExtractor extends BaseExtractor {
     for (const constructor of classDecl.getConstructors()) {
       for (const param of constructor.getParameters()) {
         const paramType = this.extractTypeName(param.getType().getText());
-        if (paramType && this.isCustomType(paramType)) {
+        if (paramType && this.isCustomType(paramType) && !externalNames.has(paramType)) {
           this.addRelation(relations, relationSet, 'composition', className, paramType);
         }
       }
@@ -100,14 +150,14 @@ export class RelationExtractor extends BaseExtractor {
     for (const method of classDecl.getMethods()) {
       // Method return type
       const returnType = this.extractTypeName(method.getReturnType().getText());
-      if (returnType && this.isCustomType(returnType)) {
+      if (returnType && this.isCustomType(returnType) && !externalNames.has(returnType)) {
         this.addRelation(relations, relationSet, 'dependency', className, returnType);
       }
 
       // Method parameters
       for (const param of method.getParameters()) {
         const paramType = this.extractTypeName(param.getType().getText());
-        if (paramType && this.isCustomType(paramType)) {
+        if (paramType && this.isCustomType(paramType) && !externalNames.has(paramType)) {
           this.addRelation(relations, relationSet, 'dependency', className, paramType);
         }
       }

@@ -287,6 +287,26 @@ describe('HeuristicGrouper', () => {
         expect(pkg.entities.length).toBeLessThanOrEqual(2);
       });
     });
+
+    it('should not truncate entities when using default config (no maxEntitiesPerPackage set)', () => {
+      const manyEntities: ArchJSON = {
+        ...archJson,
+        entities: Array.from({ length: 26 }, (_, i) => ({
+          id: `Entity${i}`,
+          name: `Entity${i}`,
+          type: 'class' as const,
+          visibility: 'public' as const,
+          members: [],
+          sourceLocation: { file: `src/cli/entity${i}.ts`, startLine: 1, endLine: 10 },
+        })),
+      };
+
+      const grouper = new HeuristicGrouper();
+      const decision = grouper.group(manyEntities);
+
+      const totalEntities = decision.packages.reduce((sum, pkg) => sum + pkg.entities.length, 0);
+      expect(totalEntities).toBe(26);
+    });
   });
 
   describe('different project structures', () => {

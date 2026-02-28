@@ -806,4 +806,159 @@ describe('ValidatedMermaidGenerator', () => {
       expect(mermaidCode).not.toContain('-privateField');
     });
   });
+
+  describe('orphan relation filtering', () => {
+    it('should render cross-module targets as ghost nodes (source known, target unknown)', () => {
+      // Cross-module types (e.g. ArchJSON from another module) should appear as ghost nodes.
+      // Fix 3 (RelationExtractor) already removes npm-imported types, so unknown targets
+      // reaching the generator are cross-module references — they SHOULD be shown.
+      const archJsonWithCrossModule: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-valid', type: 'dependency', source: 'AuthService', target: 'User' },
+          { id: 'rel-cross', type: 'dependency', source: 'AuthService', target: 'CrossModuleType' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithCrossModule, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      expect(result).toContain('AuthService');
+      // Cross-module target appears as a Mermaid ghost node
+      expect(result).toContain('CrossModuleType');
+    });
+
+    it('should not render relations where source is not in archJson entities', () => {
+      const archJsonWithOrphan: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-orphan', type: 'dependency', source: 'GhostClass', target: 'User' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithOrphan, {
+        level: 'method',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      expect(result).not.toContain('GhostClass');
+    });
+
+    it('should still render valid relations between known entities', () => {
+      const generator = new ValidatedMermaidGenerator(archJson, {
+        level: 'class',
+        grouping: groupingDecision,
+      });
+      const result = generator.generate();
+
+      expect(result).toMatch(/AuthService.+-->|-->.+AuthService/s);
+    });
+
+    it('should render cross-module targets as ghost nodes in package-level diagrams', () => {
+      const archJsonWithCrossModule: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-valid', type: 'dependency', source: 'AuthService', target: 'User' },
+          { id: 'rel-cross', type: 'composition', source: 'AuthService', target: 'CrossModuleService' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithCrossModule, {
+        level: 'package',
+        grouping: groupingDecision,
+      });
+      const result = generator.generate();
+
+      // Cross-module target should be shown as ghost node
+      expect(result).toContain('CrossModuleService');
+    });
+
+    it('should filter noisy inline object type targets', () => {
+      const archJsonWithNoisy: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-noisy', type: 'dependency', source: 'AuthService', target: '{ host: string }' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithNoisy, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      expect(result).not.toContain('{ host: string }');
+    });
+
+    it('should filter single-letter generic targets', () => {
+      const archJsonWithNoisy: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-generic-T', type: 'dependency', source: 'AuthService', target: 'T' },
+          { id: 'rel-generic-K', type: 'dependency', source: 'AuthService', target: 'K' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithNoisy, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      // Single-letter generics should be filtered as noise
+      expect(result).not.toMatch(/\bT\b.*-->/);
+      expect(result).not.toMatch(/\bK\b.*-->/);
+    });
+
+    it('should allow Error class as a ghost node (not filtered as noise)', () => {
+      const archJsonWithError: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-error', type: 'inheritance', source: 'ParseError', target: 'Error' },
+        ],
+        entities: [
+          ...archJson.entities,
+          {
+            id: 'ParseError',
+            name: 'ParseError',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/errors.ts', startLine: 1, endLine: 5 },
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithError, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      // Error class should appear as a ghost node with inheritance arrow
+      expect(result).toContain('Error');
+      expect(result).toContain('<|--');
+    });
+
+    it('should filter arrow function type targets', () => {
+      const archJsonWithNoisy: ArchJSON = {
+        ...archJson,
+        relations: [
+          { id: 'rel-fn', type: 'dependency', source: 'AuthService', target: '(x: string) => boolean' },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonWithNoisy, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+
+      expect(result).not.toContain('=>');
+    });
+  });
 });

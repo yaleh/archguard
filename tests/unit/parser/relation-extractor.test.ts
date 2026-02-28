@@ -290,3 +290,84 @@ describe('RelationExtractor - Complex Scenarios', () => {
     expect(uniqueRelationKeys.size).toBe(userRelations.length);
   });
 });
+
+describe('RelationExtractor - External Import Filtering', () => {
+  let extractor: RelationExtractor;
+
+  beforeAll(() => {
+    extractor = new RelationExtractor();
+  });
+
+  it('should not create relation for type imported from an npm package (non-relative path)', () => {
+    const code = `
+      import type { Bar } from 'cli-progress';
+      import { MultiBar } from 'cli-progress';
+
+      class ParallelProgressReporter {
+        private bar: Bar;
+        private multiBar: MultiBar;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'Bar')).toBeUndefined();
+    expect(relations.find((r) => r.target === 'MultiBar')).toBeUndefined();
+  });
+
+  it('should not create relation for type imported from a scoped npm package', () => {
+    const code = `
+      import type { SomeType } from '@some/package';
+
+      class MyService {
+        private dep: SomeType;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'SomeType')).toBeUndefined();
+  });
+
+  it('should still create relation for type imported from a relative path', () => {
+    const code = `
+      import type { LocalConfig } from './local-config';
+
+      class MyService {
+        private config: LocalConfig;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'LocalConfig')).toBeDefined();
+  });
+
+  it('should still create relation for locally defined types (no import)', () => {
+    const code = `
+      class Engine {}
+
+      class Car {
+        private engine: Engine;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.source === 'Car' && r.target === 'Engine')).toBeDefined();
+  });
+
+  it('should filter external types from constructor parameters', () => {
+    const code = `
+      import { Ora } from 'ora';
+
+      class ProgressReporter {
+        constructor(private spinner: Ora) {}
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'Ora')).toBeUndefined();
+  });
+});
