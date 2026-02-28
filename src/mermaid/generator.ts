@@ -226,6 +226,7 @@ export class ValidatedMermaidGenerator {
 
     const packageGroups = this.groupEntitiesByPackage();
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
+    const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
 
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
@@ -242,10 +243,13 @@ export class ValidatedMermaidGenerator {
         lines.push('  }');
       }
 
-      // Add relationships: source must be known; unknown targets render as ghost nodes.
+      // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
       // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+        if (
+          (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
+          !this.isNoisyTarget(relation.target)
+        ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
       }
@@ -255,10 +259,13 @@ export class ValidatedMermaidGenerator {
         lines.push(...this.generateClassDefinition(entity, 1, true));
       }
 
-      // Add relationships: source must be known; unknown targets render as ghost nodes.
+      // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
       // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+        if (
+          (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
+          !this.isNoisyTarget(relation.target)
+        ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
       }
@@ -275,6 +282,7 @@ export class ValidatedMermaidGenerator {
 
     const packageGroups = this.groupEntitiesByPackage();
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
+    const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
 
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
@@ -295,10 +303,13 @@ export class ValidatedMermaidGenerator {
       }
     }
 
-    // Add relationships: source must be known; unknown targets render as ghost nodes.
+    // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
     // Noisy targets (inline types, generics, literals) are filtered.
     for (const relation of this.archJson.relations) {
-      if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+      if (
+        (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
+        !this.isNoisyTarget(relation.target)
+      ) {
         lines.push(`  ${this.generateRelationLine(relation)}`);
       }
     }
@@ -377,7 +388,8 @@ export class ValidatedMermaidGenerator {
 
   /**
    * Normalize entity name for Mermaid diagram
-   * Handles import___ path format and import() function format from ts-morph
+   * Handles import___ path format and import() function format from ts-morph,
+   * and scoped entity IDs produced by TypeScriptParser.parseProject().
    */
   private normalizeEntityName(name: string): string {
     // Remove special characters that aren't valid in Mermaid identifiers
@@ -402,6 +414,15 @@ export class ValidatedMermaidGenerator {
           return lastPart;
         }
       }
+    }
+
+    // ✅ Handle scoped entity IDs produced by TypeScriptParser.parseProject()
+    // Format: "src/mermaid/auto-repair.ts.MermaidAutoRepair"
+    // These are generated when parseTsProject() is used (e.g. when a package-level
+    // diagram shares the same source group with class/method diagrams).
+    const scopedMatch = name.match(/(?:\.ts|\.js)\.([A-Za-z_$][A-Za-z0-9_$]*)$/);
+    if (scopedMatch) {
+      return scopedMatch[1];
     }
 
     // Handle complex type objects
@@ -465,9 +486,13 @@ export class ValidatedMermaidGenerator {
   private generateRelations(_packageGroups: PackageGroup[]): string[] {
     const lines: string[] = [];
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
+    const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
 
     for (const relation of this.archJson.relations) {
-      if (knownEntityNames.has(relation.source) && !this.isNoisyTarget(relation.target)) {
+      if (
+        (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
+        !this.isNoisyTarget(relation.target)
+      ) {
         lines.push(`  ${this.generateRelationLine(relation)}`);
       }
     }
