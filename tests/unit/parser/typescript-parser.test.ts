@@ -433,3 +433,64 @@ describe('TypeScriptParser - cross-file relation resolution (B-P1 TDD)', () => {
     expect(implRel.source).toBe('src/core/service.ts.ServiceImpl');
   });
 });
+
+describe('TypeScriptParser - path alias resolution (tsconfig.json)', () => {
+  let tmpDir: string;
+
+  afterEach(() => {
+    if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('resolves @/ path alias imports to scoped entity IDs when tsconfig.json is present', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'archguard-alias-'));
+
+    // tsconfig.json with @/ paths alias (same structure as the real project)
+    writeFileSync(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          baseUrl: '.',
+          paths: { '@/*': ['src/*'] },
+        },
+      })
+    );
+
+    mkdirSync(path.join(tmpDir, 'src', 'types'), { recursive: true });
+    mkdirSync(path.join(tmpDir, 'src', 'app'), { recursive: true });
+
+    // types/index.ts exports interface Foo
+    writeFileSync(path.join(tmpDir, 'src', 'types', 'index.ts'), 'export interface Foo {}');
+
+    // app/index.ts imports Foo via @/ alias and implements it (triggers relation extraction)
+    writeFileSync(
+      path.join(tmpDir, 'src', 'app', 'index.ts'),
+      `import type { Foo } from '@/types/index';
+export class App implements Foo {}`
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    // Entity for Foo must exist with scoped ID
+    const fooEntity = result.entities.find((e) => e.name === 'Foo');
+    expect(fooEntity).toBeDefined();
+    expect(fooEntity?.id).toBe('src/types/index.ts.Foo');
+
+    // Relation from App → Foo must have SCOPED target (not bare 'Foo')
+    const rel = result.relations.find((r) => r.source.includes('App') && r.target.includes('Foo'));
+    expect(rel).toBeDefined();
+    expect(rel?.target).toBe('src/types/index.ts.Foo');
+  });
+
+  it('falls back gracefully when no tsconfig.json exists', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'archguard-notsconfig-'));
+    mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    writeFileSync(path.join(tmpDir, 'src', 'foo.ts'), 'export class Foo {}');
+
+    const parser = new TypeScriptParser(tmpDir);
+    // Should not throw even without tsconfig
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]?.name).toBe('Foo');
+  });
+});

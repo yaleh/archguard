@@ -5,6 +5,7 @@
 
 import path from 'path';
 import { Project } from 'ts-morph';
+import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { ClassExtractor } from './class-extractor';
 import { InterfaceExtractor } from './interface-extractor';
 import { EnumExtractor } from './enum-extractor';
@@ -131,12 +132,16 @@ export class TypeScriptParser {
     if (externalProject) {
       fsProject = externalProject;
     } else {
-      // Create a new project for filesystem parsing (not in-memory)
-      fsProject = new Project({
-        compilerOptions: {
-          target: 99, // ESNext
-        },
-      });
+      // Create a new project for filesystem parsing (not in-memory).
+      // Inject only baseUrl + paths from the nearest tsconfig.json so that path
+      // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
+      // (e.g. moduleResolution) are intentionally NOT inherited to preserve ts-morph's
+      // default .js → .ts resolution used by RelationExtractor.
+      const tsConfigFilePath = findTsConfigPath(rootDir);
+      const pathAliases = tsConfigFilePath ? loadPathAliases(tsConfigFilePath) : undefined;
+      fsProject = pathAliases
+        ? new Project({ compilerOptions: { target: 99, ...pathAliases } })
+        : new Project({ compilerOptions: { target: 99 } });
 
       // Add source files (exclude test files and node_modules)
       fsProject.addSourceFilesAtPaths([

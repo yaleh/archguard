@@ -210,6 +210,50 @@ describe('QualityValidator', () => {
       expect(result.metrics.completeness).toBeGreaterThanOrEqual(0);
       expect(result.metrics.completeness).toBeLessThanOrEqual(100);
     });
+
+    it('should score high completeness when many relations use scoped IDs matched by escaped Mermaid form', () => {
+      // Simulates the real-world scale problem:
+      // parseProject() produces scoped IDs like "src/core/service.ts.ServiceImpl"
+      // The Mermaid generator converts these via escapeId() (replaces /.- with _):
+      //   "src/core/service.ts.ServiceImpl" → "src_core_service_ts_ServiceImpl"
+      // With many relations all failing the validator's raw-string match, the
+      // completeness score tanks to 0 even though the diagram IS complete.
+      // After the fix, the validator applies the same escaping before matching.
+
+      // Create 20 entities and 20 relations with scoped IDs — enough that without the
+      // fix the score drops below 80 (20 × -5 = -100, so score = max(0, 100-100) = 0).
+      const entities: any[] = [];
+      const relations: any[] = [];
+      const mermaidLines = ['classDiagram'];
+
+      for (let i = 0; i < 20; i++) {
+        const srcFile = `src/module${i}/class${i}.ts`;
+        const tgtFile = `src/module${i}/base${i}.ts`;
+        const srcName = `Class${i}`;
+        const tgtName = `Base${i}`;
+
+        entities.push({ id: `${srcFile}.${srcName}`, name: srcName, type: 'class', visibility: 'public', members: [], sourceLocation: { file: srcFile, startLine: 1, endLine: 5 } });
+        entities.push({ id: `${tgtFile}.${tgtName}`, name: tgtName, type: 'class', visibility: 'public', members: [], sourceLocation: { file: tgtFile, startLine: 1, endLine: 5 } });
+
+        relations.push({ id: `rel${i}`, type: 'inheritance', source: `${srcFile}.${srcName}`, target: `${tgtFile}.${tgtName}` });
+
+        mermaidLines.push(`  class ${srcName}`);
+        mermaidLines.push(`  class ${tgtName}`);
+        // Mermaid uses the escaped form (/ and . → _)
+        const escapedSrc = `${srcFile}.${srcName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        const escapedTgt = `${tgtFile}.${tgtName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        mermaidLines.push(`  ${escapedTgt} <|-- ${escapedSrc}`);
+      }
+
+      const archJson = createMockArchJSON(entities, relations);
+      const mermaidCode = mermaidLines.join('\n');
+
+      const result = validator.validate(mermaidCode, archJson);
+
+      // After the fix: validator recognises escaped IDs → completeness ≥ 80
+      // Without the fix: 20 failing relations × -5 = -100 → completeness = 0
+      expect(result.metrics.completeness).toBeGreaterThanOrEqual(80);
+    });
   });
 
   describe('consistency analysis', () => {

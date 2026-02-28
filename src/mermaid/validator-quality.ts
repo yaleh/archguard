@@ -68,29 +68,59 @@ export class QualityValidator {
   }
 
   /**
-   * Calculate completeness score (0-100)
+   * Convert a scoped entity ID or raw name to the Mermaid diagram identifier.
+   * Mirrors the escapeId() + normalizeEntityName() pipeline in generator.ts so
+   * the completeness check can locate relation endpoints in the rendered diagram.
+   */
+  private toMermaidId(name: string): string {
+    // Strip generic parameters (e.g. "Container<T>" → "Container")
+    let id = name.replace(/<[^>]*>$/g, '');
+    // Replace all non-alphanumeric characters (/, ., -, etc.) with underscores
+    id = id.replace(/[^a-zA-Z0-9_]/g, '_');
+    return id;
+  }
+
+  /**
+   * Calculate completeness score (0-100) using proportional scoring.
+   *
+   * Proportional (ratio-based) scoring is used instead of deductive (-10/-5 per miss)
+   * because LLM-based diagram grouping intentionally excludes low-importance entities
+   * from the rendered diagram. Deductive scoring penalises every omission equally and
+   * quickly drives the score to 0 on large real-world projects.
+   *
+   * Score = average of:
+   *   - entityScore:   fraction of ArchJSON entities declared as `class X` in the diagram
+   *   - relationScore: fraction of ArchJSON relations whose source AND target appear in the diagram
+   *                    (source/target are converted via toMermaidId() to match the escaped form
+   *                    produced by the Mermaid generator's escapeId())
    */
   private calculateCompleteness(mermaidCode: string, archJson: ArchJSON): number {
-    let score = 100;
-
-    // Check if all entities are present
+    // Entity completeness
+    let entitiesFound = 0;
     for (const entity of archJson.entities) {
-      const entityPattern = new RegExp(`\\bclass\\s+${this.escapeRegex(entity.name)}\\b`, 'i');
-      if (!entityPattern.test(mermaidCode)) {
-        score -= 10;
+      const pat = new RegExp(`\\bclass\\s+${this.escapeRegex(entity.name)}\\b`, 'i');
+      if (pat.test(mermaidCode)) {
+        entitiesFound++;
       }
     }
+    const entityScore =
+      archJson.entities.length > 0 ? (entitiesFound / archJson.entities.length) * 100 : 100;
 
-    // Check if all relations are present
+    // Relation completeness — apply escapeId-equivalent transform before matching
+    let relationsFound = 0;
     for (const relation of archJson.relations) {
-      const sourcePattern = new RegExp(`\\b${this.escapeRegex(relation.source)}\\b`);
-      const targetPattern = new RegExp(`\\b${this.escapeRegex(relation.target)}\\b`);
-      if (!sourcePattern.test(mermaidCode) || !targetPattern.test(mermaidCode)) {
-        score -= 5;
+      const mermaidSource = this.toMermaidId(relation.source);
+      const mermaidTarget = this.toMermaidId(relation.target);
+      const srcPat = new RegExp(`\\b${this.escapeRegex(mermaidSource)}\\b`);
+      const tgtPat = new RegExp(`\\b${this.escapeRegex(mermaidTarget)}\\b`);
+      if (srcPat.test(mermaidCode) && tgtPat.test(mermaidCode)) {
+        relationsFound++;
       }
     }
+    const relationScore =
+      archJson.relations.length > 0 ? (relationsFound / archJson.relations.length) * 100 : 100;
 
-    return Math.max(0, Math.min(100, score));
+    return Math.round((entityScore + relationScore) / 2);
   }
 
   /**

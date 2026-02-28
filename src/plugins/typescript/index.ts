@@ -22,6 +22,7 @@ import type {
 } from '@/core/interfaces/validation.js';
 import { Project } from 'ts-morph';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
+import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { TypeScriptAnalyzer } from './typescript-analyzer.js';
 
@@ -113,9 +114,15 @@ export class TypeScriptPlugin implements ILanguagePlugin {
    * TypeScriptAnalyzer reuse this Project to avoid a second parse pass.
    */
   private initTsProject(workspaceRoot: string, pattern: string): Project {
-    const project = new Project({
-      compilerOptions: { target: 99 /* ESNext */ },
-    });
+    // Inject only baseUrl + paths from the nearest tsconfig.json so that path
+    // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
+    // (e.g. moduleResolution) are intentionally NOT inherited to preserve ts-morph's
+    // default .js → .ts resolution used by RelationExtractor.
+    const tsConfigFilePath = findTsConfigPath(workspaceRoot);
+    const pathAliases = tsConfigFilePath ? loadPathAliases(tsConfigFilePath) : undefined;
+    const project = pathAliases
+      ? new Project({ compilerOptions: { target: 99 /* ESNext */, ...pathAliases } })
+      : new Project({ compilerOptions: { target: 99 /* ESNext */ } });
     project.addSourceFilesAtPaths([
       `${workspaceRoot}/${pattern}`,
       `!${workspaceRoot}/**/*.test.ts`,
