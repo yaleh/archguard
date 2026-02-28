@@ -9,15 +9,9 @@
     "**/node_modules/**"
   ],
   "mermaid": {
-    "enableLLMGrouping": true,
     "renderer": "isomorphic",
     "theme": "default",
     "transparentBackground": false
-  },
-  "cli": {
-    "command": "claude",
-    "args": [],
-    "timeout": 300000
   },
   "cache": {
     "enabled": true,
@@ -80,7 +74,6 @@
               "cli",
               "parser",
               "mermaid",
-              "ai",
               "types",
               "utils"
             ],
@@ -305,10 +298,9 @@
             "name": "Strategy Pattern",
             "category": "behavioral",
             "participants": [
-              "HeuristicGrouper",
-              "LLMGrouper"
+              "HeuristicGrouper"
             ],
-            "description": "多种分组策略"
+            "description": "分组策略"
           },
           {
             "name": "Template Method Pattern",
@@ -435,68 +427,6 @@
               "<<Parallel>>"
             ],
             "responsibility": "并发解析多个文件"
-          }
-        ]
-      },
-      "annotations": {
-        "enableComments": true,
-        "highlightPatterns": true,
-        "enableVisibleTitle": true,
-        "titlePosition": "bottom"
-      }
-    },
-    {
-      "name": "method/ai-module",
-      "sources": [
-        "./src/ai"
-      ],
-      "level": "method",
-      "description": "Method-level detail for AI module",
-      "metadata": {
-        "title": "AI Integration Module Method-Level Architecture",
-        "subtitle": "AI 集成模块方法详解",
-        "purpose": "展示 Claude CLI 集成和 LLM 智能分组的详细实现",
-        "primaryActors": [
-          "开发者"
-        ],
-        "input": {
-          "type": "ArchJSON"
-        },
-        "output": {
-          "description": "分组决策"
-        }
-      },
-      "design": {
-        "patterns": [
-          {
-            "name": "Adapter Pattern",
-            "category": "structural",
-            "participants": [
-              "ClaudeCodeAdapter"
-            ],
-            "description": "适配 Claude CLI 接口"
-          }
-        ]
-      },
-      "classes": {
-        "highlightClasses": [
-          "LLMGrouper",
-          "ClaudeCodeAdapter"
-        ],
-        "annotateClasses": [
-          {
-            "className": "LLMGrouper",
-            "stereotypes": [
-              "<<Strategy>>"
-            ],
-            "responsibility": "使用 LLM 进行语义分组"
-          },
-          {
-            "className": "ClaudeCodeAdapter",
-            "stereotypes": [
-              "<<Adapter>>"
-            ],
-            "responsibility": "封装 Claude CLI 调用"
           }
         ]
       },
