@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EnumExtractor } from '@/parser/enum-extractor';
+import { ParseError } from '@/parser/errors';
 
 describe('EnumExtractor', () => {
   let extractor: EnumExtractor;
@@ -116,5 +117,37 @@ describe('EnumExtractor', () => {
     const result = extractor.extract(code);
 
     expect(result.visibility).toBe('public');
+  });
+});
+
+describe('EnumExtractor - Error handling', () => {
+  let extractor: EnumExtractor;
+
+  beforeEach(() => {
+    extractor = new EnumExtractor();
+  });
+
+  it('should throw ParseError when no enum is found', () => {
+    expect(() => extractor.extract('const x = 1;', 'src/no-enum.ts')).toThrow(ParseError);
+  });
+
+  it('should include the file path in the thrown ParseError', () => {
+    try {
+      extractor.extract('class Foo {}', 'src/no-enum.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).filePath).toBe('src/no-enum.ts');
+    }
+  });
+
+  it('should include a descriptive message in the thrown ParseError', () => {
+    try {
+      extractor.extract('interface Bar {}', 'src/only-interface.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).message).toMatch(/enum/i);
+    }
   });
 });

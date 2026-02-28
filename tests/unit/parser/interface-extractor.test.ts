@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { InterfaceExtractor } from '@/parser/interface-extractor';
+import { ParseError } from '@/parser/errors';
 
 describe('InterfaceExtractor - Simple Interfaces', () => {
   let extractor: InterfaceExtractor;
@@ -197,5 +198,37 @@ describe('InterfaceExtractor - File-scoped entity IDs (A-1 TDD)', () => {
     // id must be file-path prefixed, NOT bare 'IRepository'
     expect(result.id).toBe('src/core/interfaces.ts.IRepository');
     expect(result.name).toBe('IRepository');
+  });
+});
+
+describe('InterfaceExtractor - Error handling', () => {
+  let extractor: InterfaceExtractor;
+
+  beforeAll(() => {
+    extractor = new InterfaceExtractor();
+  });
+
+  it('should throw ParseError when no interface is found', () => {
+    expect(() => extractor.extract('const x = 1;', 'src/no-interface.ts')).toThrow(ParseError);
+  });
+
+  it('should include the file path in the thrown ParseError', () => {
+    try {
+      extractor.extract('class Foo {}', 'src/no-interface.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).filePath).toBe('src/no-interface.ts');
+    }
+  });
+
+  it('should include a descriptive message in the thrown ParseError', () => {
+    try {
+      extractor.extract('enum Color { Red }', 'src/only-enum.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).message).toMatch(/interface/i);
+    }
   });
 });

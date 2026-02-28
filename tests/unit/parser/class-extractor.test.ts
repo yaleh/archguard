@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
+import { ParseError } from '@/parser/errors';
 
 describe('ClassExtractor - Simple Classes', () => {
   let extractor: ClassExtractor;
@@ -138,5 +139,37 @@ describe('ClassExtractor - File-scoped entity IDs (A-1 TDD)', () => {
 
     expect(result.id).toBe('src/domain/user/user-service.ts.UserService');
     expect(result.name).toBe('UserService');
+  });
+});
+
+describe('ClassExtractor - Error handling', () => {
+  let extractor: ClassExtractor;
+
+  beforeAll(() => {
+    extractor = new ClassExtractor();
+  });
+
+  it('should throw ParseError when no class is found', () => {
+    expect(() => extractor.extract('const x = 1;', 'src/no-class.ts')).toThrow(ParseError);
+  });
+
+  it('should include the file path in the thrown ParseError', () => {
+    try {
+      extractor.extract('const x = 1;', 'src/no-class.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).filePath).toBe('src/no-class.ts');
+    }
+  });
+
+  it('should include a descriptive message in the thrown ParseError', () => {
+    try {
+      extractor.extract('interface Foo {}', 'src/only-interface.ts');
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ParseError);
+      expect((err as ParseError).message).toMatch(/class/i);
+    }
   });
 });

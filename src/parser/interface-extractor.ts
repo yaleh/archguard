@@ -10,7 +10,7 @@ import {
   type MethodSignature,
 } from 'ts-morph';
 import type { Entity, Member, Parameter } from '@/types';
-import { ParseError } from '../cli/errors.js';
+import { ParseError } from './errors.js';
 
 /**
  * Extracts interface entities from TypeScript code using ts-morph

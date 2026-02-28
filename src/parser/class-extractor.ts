@@ -13,7 +13,7 @@ import {
   SyntaxKind,
 } from 'ts-morph';
 import type { Entity, Visibility, Member, Parameter, Decorator } from '@/types';
-import { ParseError } from '../cli/errors.js';
+import { ParseError } from './errors.js';
 
 /**
  * Extracts class entities from TypeScript code using ts-morph

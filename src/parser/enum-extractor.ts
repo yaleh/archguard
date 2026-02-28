@@ -5,7 +5,7 @@
 
 import { Project, type EnumDeclaration } from 'ts-morph';
 import type { Entity, Member } from '@/types';
-import { ParseError } from '../cli/errors.js';
+import { ParseError } from './errors.js';
 
 /**
  * Extracts enum entities from TypeScript code using ts-morph

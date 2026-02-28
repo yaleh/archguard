@@ -486,7 +486,7 @@ export class DiagramProcessor {
           await this.generateTsModuleGraphOutput(archJSON, paths, diagram);
         } else {
           // Generate standard Mermaid classDiagram
-          const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig);
+          const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
           await mermaidGenerator.generateAndRender(
             archJSON,
             {
