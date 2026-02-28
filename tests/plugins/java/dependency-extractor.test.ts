@@ -90,7 +90,7 @@ describe('JavaDependencyExtractor', () => {
 
   describe('Auto-detection', () => {
     it('should auto-detect Maven project', async () => {
-      const dependencies = await extractor.extract(fixturesPath);
+      const dependencies = await extractor.extractDependencies(fixturesPath);
 
       expect(dependencies.length).toBeGreaterThan(0);
     });

@@ -1,12 +1,14 @@
 /**
  * Phase 4.2: CLI Parameter Integration Tests
- * TDD: Red phase - These tests should fail initially
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { createAnalyzeCommand } from '../../../src/cli/commands/analyze.js';
+import { ConfigLoader } from '../../../src/cli/config-loader.js';
+import '../../../src/cli/types.js';
 
 describe('Phase 4.2: CLI Parameter Integration', () => {
   let testDir: string;
@@ -29,9 +31,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
   });
 
   describe('CLI Command Options', () => {
-    it('should parse --cli-command option', async () => {
-      // This test will fail until we add the --cli-command option
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
+    it('should parse --cli-command option', () => {
       const command = createAnalyzeCommand();
 
       // Verify the option exists
@@ -40,9 +40,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(cliCommandOption?.description).toContain('Claude CLI command');
     });
 
-    it('should parse --cli-args option', async () => {
-      // This test will fail until we add the --cli-args option
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
+    it('should parse --cli-args option', () => {
       const command = createAnalyzeCommand();
 
       // Verify the option exists
@@ -51,9 +49,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(cliArgsOption?.description).toContain('Additional CLI arguments');
     });
 
-    it('should parse --output-dir option', async () => {
-      // This test will fail until we add the --output-dir option
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
+    it('should parse --output-dir option', () => {
       const command = createAnalyzeCommand();
 
       // Verify the option exists
@@ -62,8 +58,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(outputDirOption?.description).toContain('Output directory');
     });
 
-    it('should not have default value for --cli-command in CLI', async () => {
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
+    it('should not have default value for --cli-command in CLI', () => {
       const command = createAnalyzeCommand();
 
       const cliCommandOption = command.options.find((opt) => opt.long === '--cli-command');
@@ -71,8 +66,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(cliCommandOption?.defaultValue).toBeUndefined();
     });
 
-    it('should not have default value for --output-dir in CLI', async () => {
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
+    it('should not have default value for --output-dir in CLI', () => {
       const command = createAnalyzeCommand();
 
       const outputDirOption = command.options.find((opt) => opt.long === '--output-dir');
@@ -93,7 +87,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         },
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       // Simulate CLI options
@@ -129,7 +122,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         outputDir: './config-output',
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       // CLI options should override config file
@@ -157,7 +149,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         },
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       const config = await loader.load({
@@ -178,7 +169,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         },
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       const config = await loader.load({}); // No CLI override
@@ -187,7 +177,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
     });
 
     it('should use default value when neither CLI nor config file specify value', async () => {
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       const config = await loader.load({}); // No config file, no CLI override
@@ -206,7 +195,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         },
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       // CLI args should replace config file args (not merge)
@@ -237,7 +225,6 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
         },
       });
 
-      const { ConfigLoader } = await import('../../../src/cli/config-loader.js');
       const loader = new ConfigLoader(testDir);
 
       // CLI args override with empty array
@@ -296,11 +283,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       // This test verifies that the types module can be imported
       // and that AnalyzeOptions is properly defined as a type
 
-      // Import the types module to ensure it compiles
-      await import('../../../src/cli/types.js');
-
       // Verify by checking the command handler signature
-      const { createAnalyzeCommand } = await import('../../../src/cli/commands/analyze.js');
       const command = createAnalyzeCommand();
 
       // If we got here without TypeScript errors, the types are correct

@@ -5,6 +5,7 @@ import type {
   CapabilityRelation,
   ConcreteUsageRisk,
 } from '../types.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Capability (interface usage) graph builder
@@ -15,7 +16,7 @@ import type {
  * NOTE: ADR-002 uses flat nodes/edges structure (no redundant
  * implementors/consumers fields on InterfaceCapability).
  */
-export class CapabilityGraphBuilder {
+export class CapabilityGraphBuilder implements IAtlasBuilder<CapabilityGraph> {
   build(rawData: GoRawData): Promise<CapabilityGraph> {
     const allNodes = this.buildNodes(rawData);
     const rawEdges = this.buildEdges(rawData, allNodes);
@@ -45,16 +46,16 @@ export class CapabilityGraphBuilder {
     );
 
     // Post-process: compute fanIn / fanOut for each node (distinct node counts)
-    const fanInSources = new Map<string, Set<string>>();  // targetId → Set of sourceIds
+    const fanInSources = new Map<string, Set<string>>(); // targetId → Set of sourceIds
     const fanOutTargets = new Map<string, Set<string>>(); // sourceId → Set of targetIds
     for (const edge of edges) {
       if (!fanInSources.has(edge.target)) fanInSources.set(edge.target, new Set());
-      fanInSources.get(edge.target)!.add(edge.source);
+      fanInSources.get(edge.target).add(edge.source);
       if (!fanOutTargets.has(edge.source)) fanOutTargets.set(edge.source, new Set());
-      fanOutTargets.get(edge.source)!.add(edge.target);
+      fanOutTargets.get(edge.source).add(edge.target);
     }
     for (const node of nodes) {
-      node.fanIn  = fanInSources.get(node.id)?.size  ?? 0;
+      node.fanIn = fanInSources.get(node.id)?.size ?? 0;
       node.fanOut = fanOutTargets.get(node.id)?.size ?? 0;
     }
 
@@ -182,7 +183,7 @@ export class CapabilityGraphBuilder {
       // Value: full import path (e.g. "github.com/org/project/pkg/hub/engine")
       const qualifierToFullPath = new Map<string, string>();
       for (const imp of pkg.imports) {
-        const qualifier = imp.alias ?? imp.path.split('/').pop()!;
+        const qualifier = imp.alias ?? imp.path.split('/').pop();
         qualifierToFullPath.set(qualifier, imp.path);
       }
 
@@ -213,8 +214,9 @@ export class CapabilityGraphBuilder {
                   const moduleRelPath = fullImportPath.startsWith(rawData.moduleName + '/')
                     ? fullImportPath.slice(rawData.moduleName.length + 1)
                     : fullImportPath;
-                  targetNodeId = pkgTypeToNodeId.get(`${moduleRelPath}:${bareType}`)
-                    ?? pkgTypeToNodeId.get(`${qualifier}:${bareType}`);
+                  targetNodeId =
+                    pkgTypeToNodeId.get(`${moduleRelPath}:${bareType}`) ??
+                    pkgTypeToNodeId.get(`${qualifier}:${bareType}`);
                 }
                 // else: qualifier not found in imports → external/stdlib type → skip (targetNodeId stays undefined)
               } else {
@@ -222,8 +224,9 @@ export class CapabilityGraphBuilder {
                 targetNodeId = pkgTypeToNodeId.get(`${qualifier}:${bareType}`);
               }
             } else {
-              targetNodeId = pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`)
-                ?? pkgTypeToNodeId.get(`${pkg.name}:${bareType}`);
+              targetNodeId =
+                pkgTypeToNodeId.get(`${pkg.fullName}:${bareType}`) ??
+                pkgTypeToNodeId.get(`${pkg.name}:${bareType}`);
             }
             if (targetNodeId === undefined) continue;
             edges.push({
@@ -321,18 +324,14 @@ export class CapabilityGraphBuilder {
    * 2. Try last path segment of packageId (works when packageId is already a full path)
    * 3. Fallback: construct from packageId directly (preserves backward compat)
    */
-  private resolveNodeId(
-    packageId: string,
-    typeName: string,
-    lookup: Map<string, string>
-  ): string {
+  private resolveNodeId(packageId: string, typeName: string, lookup: Map<string, string>): string {
     // Try direct key (Go package name, e.g. "store:SQLiteStore")
     const direct = lookup.get(`${packageId}:${typeName}`);
     if (direct) return direct;
 
     // Try last path segment (full path like "pkg/hub/store" → "store")
     if (packageId.includes('/')) {
-      const lastSegment = packageId.split('/').pop()!;
+      const lastSegment = packageId.split('/').pop();
       const bySegment = lookup.get(`${lastSegment}:${typeName}`);
       if (bySegment) return bySegment;
     }

@@ -1067,12 +1067,12 @@ describe('traceCallsFromEntry - deduplication', () => {
 
     // Specifically confirm the chain for 'listItems' has only one store.Get edge
     const listItemsChain = result.callChains.find((c) =>
-      result.entryPoints.find((e) => e.id === c.entryPoint && e.handler === 'listItems'),
+      result.entryPoints.find((e) => e.id === c.entryPoint && e.handler === 'listItems')
     );
     expect(listItemsChain).toBeDefined();
-    expect(listItemsChain!.calls).toHaveLength(1);
-    expect(listItemsChain!.calls[0].from).toBe('listItems');
-    expect(listItemsChain!.calls[0].to).toBe('store.Get');
+    expect(listItemsChain.calls).toHaveLength(1);
+    expect(listItemsChain.calls[0].from).toBe('listItems');
+    expect(listItemsChain.calls[0].to).toBe('store.Get');
   });
 
   it('deduplicates duplicate (from, to) call pairs from a struct method handler', async () => {

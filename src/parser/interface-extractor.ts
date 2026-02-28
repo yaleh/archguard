@@ -4,28 +4,18 @@
  */
 
 import {
-  Project,
   type InterfaceDeclaration,
   type PropertySignature,
   type MethodSignature,
 } from 'ts-morph';
 import type { Entity, Member, Parameter } from '@/types';
-import { ParseError } from '../cli/errors.js';
+import { ParseError } from './errors.js';
+import { BaseExtractor } from './base-extractor.js';
 
 /**
  * Extracts interface entities from TypeScript code using ts-morph
  */
-export class InterfaceExtractor {
-  private project: Project;
-
-  constructor() {
-    this.project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        target: 99, // ESNext
-      },
-    });
-  }
+export class InterfaceExtractor extends BaseExtractor {
 
   /**
    * Extract interface entity from TypeScript code
@@ -58,7 +48,7 @@ export class InterfaceExtractor {
     const name = interfaceDecl.getName();
 
     return {
-      id: name,
+      id: `${filePath}.${name}`,
       name,
       type: 'interface',
       visibility: 'public',

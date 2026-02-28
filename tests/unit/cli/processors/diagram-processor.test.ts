@@ -6,6 +6,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DiagramProcessor } from '@/cli/processors/diagram-processor.js';
+import { PluginRegistry } from '@/core/plugin-registry.js';
+import type { ILanguagePlugin } from '@/core/interfaces/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import { ProgressReporter } from '@/cli/progress.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -539,6 +541,152 @@ describe('DiagramProcessor', () => {
       expect(results[0].stats?.entities).toBe(2);
       expect(results[0].stats?.relations).toBe(1);
       expect(results[0].stats?.parseTime).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('PluginRegistry routing', () => {
+    const createMockPlugin = (name: string): ILanguagePlugin => ({
+      metadata: {
+        name,
+        version: '1.0.0',
+        displayName: `Mock ${name} plugin`,
+        fileExtensions: ['.ts'],
+        author: 'test',
+        minCoreVersion: '1.0.0',
+        capabilities: {
+          singleFileParsing: false,
+          incrementalParsing: false,
+          dependencyExtraction: false,
+          typeInference: false,
+        },
+      },
+      initialize: vi.fn().mockResolvedValue(undefined),
+      parseProject: vi.fn().mockResolvedValue(createTestArchJSON()),
+      canHandle: vi.fn().mockReturnValue(true),
+      dispose: vi.fn().mockResolvedValue(undefined),
+    });
+
+    beforeEach(async () => {
+      // Mock OutputPathResolver for these tests
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      const mockResolve = vi.fn().mockReturnValue({
+        outputDir: './archguard',
+        baseName: 'test',
+        paths: {
+          mmd: './archguard/test.mmd',
+          png: './archguard/test.png',
+          svg: './archguard/test.svg',
+          json: './archguard/test.json',
+        },
+      });
+      const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: mockResolve,
+        ensureDirectory: mockEnsureDirectory,
+      }));
+
+      // Mock MermaidDiagramGenerator
+      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
+      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+        generateAndRender: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      // Mock ArchJSONAggregator
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+    });
+
+    it('uses registry golang plugin instead of dynamic import for Go diagrams', async () => {
+      const mockGoPlugin = createMockPlugin('golang');
+      const registry = new PluginRegistry();
+      registry.register(mockGoPlugin);
+
+      const diagrams: DiagramConfig[] = [
+        {
+          name: 'go-test',
+          sources: ['./src'],
+          level: 'class',
+          language: 'go',
+        },
+      ];
+
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      expect(mockGoPlugin.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceRoot: expect.any(String) })
+      );
+      expect(mockGoPlugin.parseProject).toHaveBeenCalled();
+    });
+
+    it('uses registry typescript plugin for package-level diagrams', async () => {
+      const mockTsPlugin = createMockPlugin('typescript');
+      const registry = new PluginRegistry();
+      registry.register(mockTsPlugin);
+
+      const diagrams: DiagramConfig[] = [
+        {
+          name: 'ts-package',
+          sources: ['./src'],
+          level: 'package',
+        },
+      ];
+
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      expect(mockTsPlugin.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceRoot: expect.any(String) })
+      );
+      expect(mockTsPlugin.parseProject).toHaveBeenCalled();
+    });
+
+    it('falls back gracefully when registry has no plugin for language', async () => {
+      // Empty registry — no plugins registered
+      const registry = new PluginRegistry();
+
+      // Mock ParallelParser as fallback for non-Go, non-package path
+      const { ParallelParser } = await import('@/parser/parallel-parser.js');
+      (ParallelParser as any).mockImplementation(() => ({
+        parseFiles: vi.fn().mockResolvedValue(createTestArchJSON()),
+      }));
+      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+      (FileDiscoveryService as any).mockImplementation(() => ({
+        discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      }));
+
+      // A standard class-level TypeScript diagram (no language field, no package level)
+      const diagrams: DiagramConfig[] = [
+        {
+          name: 'ts-class',
+          sources: ['./src'],
+          level: 'class',
+        },
+      ];
+
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
     });
   });
 });

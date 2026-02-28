@@ -8,6 +8,7 @@ import type {
   ChannelInfo,
   ChannelEdge,
 } from '../types.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Goroutine topology builder
@@ -15,7 +16,7 @@ import type {
  * Scans both functions AND methods for go spawn statements.
  * Output types from ADR-002 v1.2 (includes spawnType on GoroutineNode).
  */
-export class GoroutineTopologyBuilder {
+export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology> {
   build(rawData: GoRawData): Promise<GoroutineTopology> {
     const nodes = this.extractGoroutineNodes(rawData);
     const edges = this.buildSpawnRelations(rawData);
@@ -332,9 +333,7 @@ export class GoroutineTopologyBuilder {
         const hasCtxDone =
           receivesContext &&
           ctxVarName != null &&
-          (body.calls ?? []).some(
-            (c) => c.functionName === 'Done' && c.packageName === ctxVarName
-          );
+          (body.calls ?? []).some((c) => c.functionName === 'Done' && c.packageName === ctxVarName);
 
         // Stop-channel receive: a receive op on a well-known stop-channel variable name
         const hasStopChannel = (body.channelOps ?? []).some(

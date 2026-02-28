@@ -12,6 +12,7 @@
  */
 export interface ArchJSONExtensions {
   goAtlas?: GoAtlasExtension;
+  tsAnalysis?: TsAnalysis;
   // Future: javaAtlas?, rustAtlas?, ...
 }
 
@@ -90,8 +91,7 @@ export interface PackageCycle {
 export interface PackageNode {
   id: string; // e.g. "github.com/archguard/swarm-hub/pkg/hub"
   name: string; // e.g. "pkg/hub"
-  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd'
-      | 'tests' | 'examples' | 'testutil';
+  type: 'internal' | 'external' | 'vendor' | 'std' | 'cmd' | 'tests' | 'examples' | 'testutil';
   fileCount: number;
   stats?: PackageStats;
 }
@@ -125,7 +125,7 @@ export interface CapabilityNode {
   exported: boolean;
   methodCount?: number;
   fieldCount?: number;
-  fanIn?: number;  // count of distinct source nodes pointing to this node
+  fanIn?: number; // count of distinct source nodes pointing to this node
   fanOut?: number; // count of distinct target nodes this node points to
 }
 
@@ -145,21 +145,21 @@ export interface CapabilityRelation {
 }
 
 export interface ConcreteUsageRisk {
-  owner: string;        // source node ID (the struct that holds the field)
-  fieldType: string;    // raw field type string, e.g. "*engine.Engine"
+  owner: string; // source node ID (the struct that holds the field)
+  fieldType: string; // raw field type string, e.g. "*engine.Engine"
   concreteType: string; // target node ID (the concrete struct being depended on)
-  location: string;     // "file:line" first usage location
+  location: string; // "file:line" first usage location
 }
 
 // ========== Goroutine Topology ==========
 
 export interface GoroutineLifecycleSummary {
-  nodeId: string;                          // matches GoroutineNode.id (spawn-N format)
-  spawnTargetName: string;                 // resolved target function name, e.g. "handleConn"
-                                           // "<anonymous>" for closures
-  receivesContext: boolean;                // from function parameter list (always available)
-  cancellationCheckAvailable: boolean;     // false when function body was not extracted
-  hasCancellationCheck?: boolean;          // only present when cancellationCheckAvailable=true
+  nodeId: string; // matches GoroutineNode.id (spawn-N format)
+  spawnTargetName: string; // resolved target function name, e.g. "handleConn"
+  // "<anonymous>" for closures
+  receivesContext: boolean; // from function parameter list (always available)
+  cancellationCheckAvailable: boolean; // false when function body was not extracted
+  hasCancellationCheck?: boolean; // only present when cancellationCheckAvailable=true
   cancellationMechanism?: 'context' | 'channel';
   orphan: boolean;
 }
@@ -169,7 +169,7 @@ export interface GoroutineTopology {
   edges: SpawnRelation[];
   channels: ChannelInfo[];
   channelEdges: ChannelEdge[];
-  lifecycle?: GoroutineLifecycleSummary[];  // one entry per spawned GoroutineNode
+  lifecycle?: GoroutineLifecycleSummary[]; // one entry per spawned GoroutineNode
 }
 
 export interface GoroutineNode {
@@ -260,4 +260,39 @@ export interface CallEdge {
   to: string;
   type: 'direct' | 'interface' | 'indirect';
   confidence: number;
+}
+
+// ========== TypeScript Analysis Extension ==========
+
+export const TS_ANALYSIS_EXTENSION_VERSION = '1.0';
+
+export interface TsAnalysis {
+  version: string;
+  moduleGraph?: TsModuleGraph;
+}
+
+export interface TsModuleGraph {
+  nodes: TsModuleNode[];
+  edges: TsModuleDependency[];
+  cycles: TsModuleCycle[];
+}
+
+export interface TsModuleNode {
+  id: string;
+  name: string;
+  type: 'internal' | 'external' | 'node_modules';
+  fileCount: number;
+  stats: { classes: number; interfaces: number; functions: number; enums: number };
+}
+
+export interface TsModuleDependency {
+  from: string;
+  to: string;
+  strength: number;
+  importedNames: string[];
+}
+
+export interface TsModuleCycle {
+  modules: string[];
+  severity: 'warning' | 'error';
 }

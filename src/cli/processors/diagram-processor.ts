@@ -16,13 +16,14 @@
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
+import type { ParseCache } from '@/parser/parse-cache.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import type { DiagramConfig, GlobalConfig, OutputFormat, DetailLevel } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
-import type { RenderJob } from '@/mermaid/diagram-generator.js';
+import type { PluginRegistry } from '@/core/plugin-registry.js';
 import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
@@ -39,6 +40,18 @@ export interface DiagramProcessorOptions {
   globalConfig: GlobalConfig;
   /** Progress reporter for user feedback */
   progress: ProgressReporter;
+  /**
+   * Optional parse-time cache shared across all diagrams in this invocation.
+   * Eliminates redundant TypeScriptParser instantiation for files that appear
+   * in multiple overlapping source sets.
+   */
+  parseCache?: ParseCache;
+  /**
+   * Optional plugin registry for language routing.
+   * When provided, language-specific diagrams are routed through the registered
+   * plugins instead of hardcoded dynamic imports.
+   */
+  registry?: PluginRegistry;
 }
 
 /**
@@ -90,6 +103,8 @@ export class DiagramProcessor {
   private fileDiscovery: FileDiscoveryService;
   private aggregator: ArchJSONAggregator;
   private parallelProgress?: ParallelProgressReporter;
+  private parseCache?: ParseCache;
+  private registry?: PluginRegistry;
 
   constructor(options: DiagramProcessorOptions) {
     if (options.diagrams.length === 0) {
@@ -101,6 +116,8 @@ export class DiagramProcessor {
     this.progress = options.progress;
     this.fileDiscovery = new FileDiscoveryService();
     this.aggregator = new ArchJSONAggregator();
+    this.parseCache = options.parseCache;
+    this.registry = options.registry;
   }
 
   /**
@@ -225,6 +242,21 @@ export class DiagramProcessor {
         return results;
       }
 
+      // Route TypeScript package-level diagrams through TypeScriptPlugin so that
+      // tsAnalysis.moduleGraph is populated and the TsModuleGraph renderer can be used.
+      const needsModuleGraph = diagrams.some((d) => d.level === 'package');
+      if (needsModuleGraph && (!firstDiagram.language || firstDiagram.language === 'typescript')) {
+        const rawArchJSON = await this.parseTsProject(firstDiagram);
+        this.archJsonCache.set(sourceKey, rawArchJSON);
+
+        const results = await pMap(
+          diagrams,
+          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON),
+          { concurrency: this.globalConfig.concurrency || os.cpus().length }
+        );
+        return results;
+      }
+
       // Discover files from sources (all diagrams in group use same sources)
       const files = await this.fileDiscovery.discoverFiles({
         sources: diagrams[0].sources,
@@ -247,6 +279,7 @@ export class DiagramProcessor {
         const parser = new ParallelParser({
           concurrency: this.globalConfig.concurrency,
           continueOnError: true,
+          parseCache: this.parseCache,
         });
         rawArchJSON = await parser.parseFiles(files);
 
@@ -371,155 +404,54 @@ export class DiagramProcessor {
   }
 
   /**
-   * Process a source group using two-stage rendering approach
+   * Parse a Go project via the plugin registry (preferred) or GoAtlasPlugin directly.
    *
-   * Stage 1: Parse and generate all Mermaid codes (CPU intensive)
-   * Stage 2: Render all Mermaid codes in parallel (I/O intensive)
-   *
-   * @param sourceKey - Hash key for the sources
-   * @param diagrams - Array of diagrams sharing these sources
-   * @returns Array of DiagramResult
-   */
-  private async processSourceGroupWithTwoStageRendering(
-    sourceKey: string,
-    diagrams: DiagramConfig[]
-  ): Promise<DiagramResult[]> {
-    const startTime = Date.now();
-
-    try {
-      // Discover files from sources (all diagrams in group use same sources)
-      const files = await this.fileDiscovery.discoverFiles({
-        sources: diagrams[0].sources,
-        exclude: diagrams[0].exclude || this.globalConfig.exclude,
-        skipMissing: false,
-      });
-
-      if (files.length === 0) {
-        throw new Error(`No TypeScript files found in sources: ${diagrams[0].sources.join(', ')}`);
-      }
-
-      // Check cache for parsed ArchJSON
-      let rawArchJSON = this.archJsonCache.get(sourceKey);
-      if (!rawArchJSON) {
-        if (process.env.ArchGuardDebug === 'true') {
-          console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
-        }
-
-        // Parse files in parallel
-        const parser = new ParallelParser({
-          concurrency: this.globalConfig.concurrency,
-          continueOnError: true,
-        });
-        rawArchJSON = await parser.parseFiles(files);
-
-        // Cache the raw parsed result
-        this.archJsonCache.set(sourceKey, rawArchJSON);
-      } else if (process.env.ArchGuardDebug === 'true') {
-        console.debug(`📦 Cache hit for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
-      }
-
-      // Stage 1: Generate all Mermaid codes (CPU intensive)
-      this.progress.start('📝 Stage 1: Generating Mermaid code for all diagrams...');
-      const allRenderJobs: RenderJob[] = [];
-
-      for (const diagram of diagrams) {
-        const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
-
-        const format = diagram.format || this.globalConfig.format;
-        if (format === 'mermaid') {
-          const pathResolver = new OutputPathResolver({
-            outputDir: this.globalConfig.outputDir,
-            output: undefined,
-          });
-
-          const paths = pathResolver.resolve({ name: diagram.name });
-          await pathResolver.ensureDirectory({ name: diagram.name });
-
-          const generator = new MermaidDiagramGenerator(this.globalConfig);
-          const jobs = await generator.generateOnly(
-            aggregatedJSON,
-            {
-              outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
-              baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
-              paths: paths.paths,
-            },
-            diagram.level,
-            diagram
-          );
-
-          allRenderJobs.push(...jobs);
-        }
-      }
-
-      this.progress.succeed(
-        `✅ Generated ${allRenderJobs.length} Mermaid file${allRenderJobs.length > 1 ? 's' : ''}`
-      );
-
-      // Stage 2: Render all in parallel (I/O intensive)
-      if (allRenderJobs.length > 0) {
-        const renderConcurrency = (this.globalConfig.concurrency || os.cpus().length) * 2;
-        await MermaidDiagramGenerator.renderJobsInParallel(allRenderJobs, renderConcurrency);
-      }
-
-      const parseTime = Date.now() - startTime;
-
-      // Build results
-      return diagrams.map((diagram) => {
-        const pathResolver = new OutputPathResolver({
-          outputDir: this.globalConfig.outputDir,
-          output: undefined,
-        });
-
-        const paths = pathResolver.resolve({ name: diagram.name });
-        const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
-
-        return {
-          name: diagram.name,
-          success: true,
-          paths: {
-            mmd: paths.paths.mmd,
-            svg: paths.paths.svg,
-            png: paths.paths.png,
-          },
-          stats: {
-            entities: aggregatedJSON.entities.length,
-            relations: aggregatedJSON.relations.length,
-            parseTime,
-          },
-        };
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.progress.fail(`❌ Two-stage rendering failed: ${errorMessage}`);
-
-      return diagrams.map((diagram) => ({
-        name: diagram.name,
-        success: false,
-        error: errorMessage,
-      }));
-    }
-  }
-
-  /**
-   * Parse a Go project using GoAtlasPlugin
-   *
-   * Routes Go diagrams through the plugin system instead of ParallelParser.
-   * Uses GoAtlasPlugin which handles both standard Go parsing and Atlas mode.
+   * When a PluginRegistry is provided and has a 'golang' plugin registered, that
+   * plugin is used. Otherwise falls back to a dynamic import of GoAtlasPlugin.
    *
    * @param diagram - Diagram configuration with language === 'go'
    * @returns Parsed ArchJSON (with optional Atlas extensions)
    */
   private async parseGoProject(diagram: DiagramConfig): Promise<ArchJSON> {
-    // Dynamic import to avoid loading Go plugin when not needed
-    const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
-    const plugin = new GoAtlasPlugin();
-    await plugin.initialize({ workspaceRoot: diagram.sources[0] });
-
     const workspaceRoot = path.resolve(diagram.sources[0]);
+    const registryPlugin = this.registry?.getByName('golang');
+    const plugin = registryPlugin ?? await (async () => {
+      const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
+      return new GoAtlasPlugin();
+    })();
+
+    await plugin.initialize({ workspaceRoot });
     return plugin.parseProject(workspaceRoot, {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
       languageSpecific: diagram.languageSpecific,
+    });
+  }
+
+  /**
+   * Parse a TypeScript project via the plugin registry (preferred) or TypeScriptPlugin directly.
+   *
+   * This path is used when package-level diagrams are requested so that
+   * tsAnalysis.moduleGraph is attached to the resulting ArchJSON.
+   *
+   * When a PluginRegistry is provided and has a 'typescript' plugin registered, that
+   * plugin is used. Otherwise falls back to a dynamic import of TypeScriptPlugin.
+   *
+   * @param diagram - Diagram configuration
+   * @returns Parsed ArchJSON with tsAnalysis extension attached
+   */
+  private async parseTsProject(diagram: DiagramConfig): Promise<ArchJSON> {
+    const workspaceRoot = path.resolve(diagram.sources[0]);
+    const registryPlugin = this.registry?.getByName('typescript');
+    const plugin = registryPlugin ?? await (async () => {
+      const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+      return new TypeScriptPlugin();
+    })();
+
+    await plugin.initialize({ workspaceRoot });
+    return plugin.parseProject(workspaceRoot, {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
     });
   }
 
@@ -549,9 +481,12 @@ export class DiagramProcessor {
         // Route Go Atlas diagrams to AtlasRenderer (4-layer flowchart output)
         if (archJSON.extensions?.goAtlas) {
           await this.generateAtlasOutput(archJSON, paths, diagram);
+        } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
+          // Route TypeScript package-level diagrams to TsModuleGraph renderer
+          await this.generateTsModuleGraphOutput(archJSON, paths, diagram);
         } else {
           // Generate standard Mermaid classDiagram
-          const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig);
+          const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
           await mermaidGenerator.generateAndRender(
             archJSON,
             {
@@ -661,5 +596,55 @@ export class DiagramProcessor {
     await fs.writeJson(atlasJsonPath, atlas, { spaces: 2 });
     console.log(`  📊 Atlas JSON: ${atlasJsonPath}`);
     console.log(`\n✨ Atlas layers: ${availableLayers.join(', ')}`);
+  }
+
+  /**
+   * Generate TypeScript module dependency graph output.
+   *
+   * Renders a TsModuleGraph as a Mermaid flowchart diagram:
+   *   {name}.mmd  - Mermaid source
+   *   {name}.svg  - SVG rendering
+   *   {name}.png  - PNG rendering (best effort)
+   *
+   * @param archJSON - Architecture JSON with tsAnalysis extension
+   * @param paths - Base output paths
+   * @param diagram - Diagram configuration
+   */
+  private async generateTsModuleGraphOutput(
+    archJSON: ArchJSON,
+    paths: { paths: { json: string; mmd: string; png: string; svg: string } },
+    _diagram: DiagramConfig
+  ): Promise<void> {
+    const { renderTsModuleGraph } = await import('@/mermaid/ts-module-graph-renderer.js');
+    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+    const moduleGraph = archJSON.extensions.tsAnalysis.moduleGraph;
+    const mmdContent = renderTsModuleGraph(moduleGraph);
+
+    const rendererOptions: Record<string, unknown> = {};
+    if (this.globalConfig.mermaid?.theme) {
+      rendererOptions.theme =
+        typeof this.globalConfig.mermaid.theme === 'string'
+          ? { name: this.globalConfig.mermaid.theme }
+          : this.globalConfig.mermaid.theme;
+    }
+    if (this.globalConfig.mermaid?.transparentBackground) {
+      rendererOptions.backgroundColor = 'transparent';
+    }
+
+    const mermaidRenderer = new IsomorphicMermaidRenderer(rendererOptions as any);
+
+    await fs.ensureDir(path.dirname(paths.paths.mmd));
+    await fs.writeFile(paths.paths.mmd, mmdContent, 'utf-8');
+
+    const svg = await mermaidRenderer.renderSVG(mmdContent);
+    await fs.writeFile(paths.paths.svg, svg, 'utf-8');
+
+    try {
+      await mermaidRenderer.renderPNG(mmdContent, paths.paths.png);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
+    }
   }
 }

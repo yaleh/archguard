@@ -6,18 +6,18 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import type { Dependency, DependencyScope } from '@/core/interfaces/dependency.js';
+import type { Dependency, DependencyScope, IDependencyExtractor } from '@/core/interfaces/dependency.js';
 
 /**
  * Java-specific dependency scopes
  */
 type JavaDependencyScope = 'compile' | 'test' | 'runtime' | 'provided';
 
-export class DependencyExtractor {
+export class DependencyExtractor implements IDependencyExtractor {
   /**
    * Auto-detect and extract dependencies from Java project
    */
-  async extract(workspaceRoot: string): Promise<Dependency[]> {
+  async extractDependencies(workspaceRoot: string): Promise<Dependency[]> {
     const pomPath = path.join(workspaceRoot, 'pom.xml');
     const gradlePath = path.join(workspaceRoot, 'build.gradle');
 

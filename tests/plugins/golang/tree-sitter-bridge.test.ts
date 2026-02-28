@@ -458,10 +458,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
       // But should be captured as orphaned
       expect(result.orphanedMethods).toBeDefined();
       expect(result.orphanedMethods).toHaveLength(1);
-      expect(result.orphanedMethods![0].name).toBe('handleHealth');
-      expect(result.orphanedMethods![0].receiverType).toBe('Server');
+      expect(result.orphanedMethods[0].name).toBe('handleHealth');
+      expect(result.orphanedMethods[0].receiverType).toBe('Server');
       // Body should be extracted (ResponseWriter + Request signature triggers shouldExtractBody)
-      expect(result.orphanedMethods![0].body).toBeDefined();
+      expect(result.orphanedMethods[0].body).toBeDefined();
     });
   });
 

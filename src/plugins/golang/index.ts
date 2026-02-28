@@ -164,7 +164,7 @@ export class GoPlugin implements ILanguagePlugin {
       // Merge by fullName (prevents same-name package collision)
       const key = pkg.fullName;
       if (packages.has(key)) {
-        const existing = packages.get(key)!;
+        const existing = packages.get(key);
         existing.structs.push(...pkg.structs);
         existing.interfaces.push(...pkg.interfaces);
         existing.functions.push(...pkg.functions);

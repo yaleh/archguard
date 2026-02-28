@@ -283,7 +283,10 @@ describe('GoroutineTopologyBuilder', () => {
                 calls: [],
                 goSpawns: [
                   {
-                    call: { functionName: 'worker', location: { file: 'main.go', startLine: 5, endLine: 5 } },
+                    call: {
+                      functionName: 'worker',
+                      location: { file: 'main.go', startLine: 5, endLine: 5 },
+                    },
                     location: { file: 'main.go', startLine: 5, endLine: 5 },
                   },
                 ],
@@ -608,19 +611,30 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
       parameters?: Array<{ name: string; type: string }>;
       body?: {
         calls?: Array<{ functionName: string; packageName?: string }>;
-        channelOps?: Array<{ channelName: string; operation: 'send' | 'receive' | 'close' | 'make' }>;
+        channelOps?: Array<{
+          channelName: string;
+          operation: 'send' | 'receive' | 'close' | 'make';
+        }>;
       };
     };
   }): GoRawData {
     const parentFunction = {
       name: parentFuncName,
       packageName: pkgFullName,
-      parameters: [] as Array<{ name: string; type: string; exported: boolean; location: { file: string; startLine: number; endLine: number } }>,
+      parameters: [] as Array<{
+        name: string;
+        type: string;
+        exported: boolean;
+        location: { file: string; startLine: number; endLine: number };
+      }>,
       returnTypes: [] as string[],
       exported: true,
       location: { file: 'server.go', startLine: 1, endLine: 50 },
       body: {
-        calls: [] as Array<{ functionName: string; location: { file: string; startLine: number; endLine: number } }>,
+        calls: [] as Array<{
+          functionName: string;
+          location: { file: string; startLine: number; endLine: number };
+        }>,
         goSpawns: [
           {
             call: {
@@ -630,7 +644,11 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
             location: { file: 'server.go', startLine: spawnLine, endLine: spawnLine },
           },
         ],
-        channelOps: [] as Array<{ channelName: string; operation: 'send' | 'receive' | 'close' | 'make'; location: { file: string; startLine: number; endLine: number } }>,
+        channelOps: [] as Array<{
+          channelName: string;
+          operation: 'send' | 'receive' | 'close' | 'make';
+          location: { file: string; startLine: number; endLine: number };
+        }>,
       },
     };
 
@@ -701,9 +719,9 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    expect(topology.lifecycle!.length).toBeGreaterThan(0);
+    expect(topology.lifecycle.length).toBeGreaterThan(0);
 
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.spawnTargetName).toBe('handleConn');
     expect(summary.receivesContext).toBe(true);
     expect(summary.cancellationCheckAvailable).toBe(true);
@@ -714,7 +732,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     // nodeId must match the corresponding GoroutineNode.id
     const spawnedNode = topology.nodes.find((n) => n.type === 'spawned');
     expect(spawnedNode).toBeDefined();
-    expect(summary.nodeId).toBe(spawnedNode!.id);
+    expect(summary.nodeId).toBe(spawnedNode.id);
   });
 
   it('test 2: named function with context param, body extracted, no cancellation check', async () => {
@@ -732,7 +750,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.receivesContext).toBe(true);
     expect(summary.cancellationCheckAvailable).toBe(true);
     expect(summary.hasCancellationCheck).toBe(false);
@@ -754,7 +772,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.receivesContext).toBe(false);
     expect(summary.cancellationCheckAvailable).toBe(true);
     expect(summary.hasCancellationCheck).toBe(false);
@@ -774,7 +792,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.receivesContext).toBe(true);
     expect(summary.cancellationCheckAvailable).toBe(false);
     expect(summary.hasCancellationCheck).toBeUndefined();
@@ -794,7 +812,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.receivesContext).toBe(false);
     expect(summary.cancellationCheckAvailable).toBe(false);
     expect(summary.orphan).toBe(true);
@@ -844,7 +862,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.spawnTargetName).toBe('<anonymous>');
     expect(summary.receivesContext).toBe(false);
     expect(summary.cancellationCheckAvailable).toBe(false);
@@ -866,7 +884,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.hasCancellationCheck).toBe(true);
     expect(summary.cancellationMechanism).toBe('channel');
     expect(summary.orphan).toBe(false);
@@ -882,7 +900,7 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     expect(topology.lifecycle).toBeDefined();
-    const summary = topology.lifecycle![0];
+    const summary = topology.lifecycle[0];
     expect(summary.spawnTargetName).toBe('handleRemote');
     expect(summary.receivesContext).toBe(false);
     expect(summary.cancellationCheckAvailable).toBe(false);
@@ -925,6 +943,6 @@ describe('Phase C-1: goroutine lifecycle detection', () => {
     const topology = await builder.build(rawData);
 
     // lifecycle should be undefined or empty (no spawns)
-    expect(topology.lifecycle === undefined || topology.lifecycle!.length === 0).toBe(true);
+    expect(topology.lifecycle === undefined || topology.lifecycle.length === 0).toBe(true);
   });
 });

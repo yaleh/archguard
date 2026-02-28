@@ -18,6 +18,7 @@ import { ConfigLoader } from '../config-loader.js';
 import { ErrorHandler } from '../error-handler.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
+import { ParseCache } from '@/parser/parse-cache.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
@@ -188,8 +189,14 @@ export function createAnalyzeCommand(): Command {
         'Function body extraction strategy: none|selective|full',
         'selective'
       )
-      .option('--atlas-no-tests', 'Exclude test files from Atlas extraction (deprecated: now the default)')
-      .option('--atlas-include-tests', 'Include test packages in Atlas extraction (overrides default exclusion)')
+      .option(
+        '--atlas-no-tests',
+        'Exclude test files from Atlas extraction (deprecated: now the default)'
+      )
+      .option(
+        '--atlas-include-tests',
+        'Include test packages in Atlas extraction (overrides default exclusion)'
+      )
       .option(
         '--atlas-entry-points <types>',
         'Entry point types for flow graph (comma-separated)',
@@ -259,10 +266,12 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     }
 
     // Step 4: Unified processing (core!)
+    const parseCache = new ParseCache();
     const processor = new DiagramProcessor({
       diagrams: selectedDiagrams,
       globalConfig: config as any, // Config type is compatible with GlobalConfig at runtime
       progress,
+      parseCache,
     });
 
     const results = await processor.processAll();

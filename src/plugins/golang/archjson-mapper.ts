@@ -10,6 +10,7 @@ import type {
   GoFunction,
   InferredImplementation,
 } from './types.js';
+import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
 
 export class ArchJsonMapper {
   /**
@@ -64,7 +65,7 @@ export class ArchJsonMapper {
     }
 
     return {
-      id: `${packageName}.${struct.name}`,
+      id: generateEntityId(packageName, struct.name),
       name: struct.name,
       type: 'struct',
       visibility: struct.exported ? 'public' : 'private',
@@ -94,7 +95,7 @@ export class ArchJsonMapper {
     }
 
     return {
-      id: `${packageName}.${iface.name}`,
+      id: generateEntityId(packageName, iface.name),
       name: iface.name,
       type: 'interface',
       visibility: iface.exported ? 'public' : 'private',

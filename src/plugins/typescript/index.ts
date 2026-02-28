@@ -20,8 +20,11 @@ import type {
   ValidationError,
   ValidationWarning,
 } from '@/core/interfaces/validation.js';
+import { Project } from 'ts-morph';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
+import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
+import { TypeScriptAnalyzer } from './typescript-analyzer.js';
 
 /**
  * TypeScript/JavaScript plugin for ArchGuard
@@ -49,6 +52,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   private parser!: TypeScriptParser;
   private parallelParser!: ParallelParser;
   private initialized = false;
+  private workspaceRoot?: string;
 
   readonly dependencyExtractor: IDependencyExtractor = {
     extractDependencies: this.extractDeps.bind(this),
@@ -105,14 +109,70 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   }
 
   /**
+   * Create a shared ts-morph Project instance for the workspace.
+   * Source files are added once here; both TypeScriptParser and
+   * TypeScriptAnalyzer reuse this Project to avoid a second parse pass.
+   */
+  private initTsProject(workspaceRoot: string, pattern: string): Project {
+    // Inject only baseUrl + paths from the nearest tsconfig.json so that path
+    // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
+    // (e.g. moduleResolution) are intentionally NOT inherited to preserve ts-morph's
+    // default .js → .ts resolution used by RelationExtractor.
+    const tsConfigFilePath = findTsConfigPath(workspaceRoot);
+    const pathAliases = tsConfigFilePath ? loadPathAliases(tsConfigFilePath) : undefined;
+    const project = pathAliases
+      ? new Project({ compilerOptions: { target: 99 /* ESNext */, ...pathAliases } })
+      : new Project({ compilerOptions: { target: 99 /* ESNext */ } });
+    project.addSourceFilesAtPaths([
+      `${workspaceRoot}/${pattern}`,
+      `!${workspaceRoot}/**/*.test.ts`,
+      `!${workspaceRoot}/**/*.spec.ts`,
+      `!${workspaceRoot}/**/node_modules/**`,
+    ]);
+    return project;
+  }
+
+  /**
    * Parse entire project
-   * Delegates to TypeScriptParser.parseProject
+   * Delegates to TypeScriptParser.parseProject and TypeScriptAnalyzer.analyze
    */
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
     this.ensureInitialized();
 
+    // Store workspaceRoot so it can be passed to parsers for file-scoped entity IDs
+    this.workspaceRoot = workspaceRoot;
+
+    // Recreate parsers with workspaceRoot for correct relative path handling
+    this.parser = new TypeScriptParser(workspaceRoot);
+    this.parallelParser = new ParallelParser({
+      workspaceRoot,
+      continueOnError: true,
+    });
+
     const pattern = config.filePattern ?? '**/*.ts';
-    return this.parser.parseProject(workspaceRoot, pattern);
+
+    // Create a single shared ts-morph Project to avoid parsing twice
+    const tsProject = this.initTsProject(workspaceRoot, pattern);
+
+    // Parse ArchJSON using the shared Project
+    const archJson = this.parser.parseProject(workspaceRoot, pattern, tsProject);
+
+    // Run TypeScript-specific analysis (module graph, etc.) with same source files
+    const analyzer = new TypeScriptAnalyzer();
+    const tsAnalysis = analyzer.analyze(
+      workspaceRoot,
+      tsProject.getSourceFiles(),
+      archJson.entities
+    );
+
+    // Attach tsAnalysis to extensions
+    return {
+      ...archJson,
+      extensions: {
+        ...archJson.extensions,
+        tsAnalysis,
+      },
+    };
   }
 
   /**

@@ -10,6 +10,5 @@ export { TypeScriptParser } from './typescript-parser';
 export { ParallelParser } from './parallel-parser';
 export type { ParallelParserOptions, ParsingMetrics } from './parallel-parser';
 export { ArchJSONAggregator } from './archjson-aggregator';
-export { SourceCache } from './source-cache';
 
 export const parserVersion = '0.1.0';

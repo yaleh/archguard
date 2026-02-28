@@ -1,13 +1,14 @@
 import type { GoRawData, GoRawPackage } from '../../types.js';
 import type { PackageGraph, PackageNode, PackageDependency, PackageCycle } from '../types.js';
 import { GoModResolver } from '../go-mod-resolver.js';
+import type { IAtlasBuilder } from './i-atlas-builder.js';
 
 /**
  * Package dependency graph builder
  *
  * Output types defined in ADR-002 (PackageGraph, PackageNode, etc.)
  */
-export class PackageGraphBuilder {
+export class PackageGraphBuilder implements IAtlasBuilder<PackageGraph> {
   private goModResolver: GoModResolver;
 
   constructor(goModResolver: GoModResolver) {
@@ -125,7 +126,7 @@ export class PackageGraphBuilder {
   private classifyPackageType(pkg: GoRawPackage): PackageNode['type'] {
     const full = pkg.fullName;
     const segments = full.split('/');
-    const isTestutil = segments.some(s => s === 'testutil' || s === 'hubtest');
+    const isTestutil = segments.some((s) => s === 'testutil' || s === 'hubtest');
 
     if (full.startsWith('tests/') || full === 'tests') return 'tests';
     if (full.startsWith('examples/')) return 'examples';

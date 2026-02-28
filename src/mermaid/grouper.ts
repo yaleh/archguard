@@ -16,7 +16,7 @@ export class HeuristicGrouper {
     this.config = {
       strategy: 'heuristic',
       maxPackages: config?.maxPackages ?? 10,
-      maxEntitiesPerPackage: config?.maxEntitiesPerPackage ?? 20,
+      maxEntitiesPerPackage: config?.maxEntitiesPerPackage ?? Infinity,
       customRules: config?.customRules ?? [],
     };
   }

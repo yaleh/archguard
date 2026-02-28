@@ -4,6 +4,7 @@
 
 import type { Entity, Relation, Member, Visibility } from '@/types/index.js';
 import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from './types.js';
+import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
 
 export class ArchJsonMapper {
   /**
@@ -288,7 +289,7 @@ export class ArchJsonMapper {
    */
   private createEntityId(packageName: string, className: string): string {
     if (packageName) {
-      return `${packageName}.${className}`;
+      return generateEntityId(packageName, className);
     }
     return className;
   }

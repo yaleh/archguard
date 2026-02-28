@@ -19,7 +19,7 @@ import { ValidatedMermaidGenerator } from './generator.js';
 import { MermaidValidationPipeline } from './validation-pipeline.js';
 import { IsomorphicMermaidRenderer } from './renderer.js';
 import { MermaidAutoRepair } from './auto-repair.js';
-import { ProgressReporter } from '../cli/progress.js';
+import { type IProgressReporter, NoopProgressReporter } from './progress.js';
 
 /**
  * Output options for Mermaid diagram generation
@@ -66,7 +66,14 @@ export interface RenderJob {
  * ```
  */
 export class MermaidDiagramGenerator {
-  constructor(private config: GlobalConfig) {}
+  private progress: IProgressReporter;
+
+  constructor(
+    private config: GlobalConfig,
+    progress?: IProgressReporter
+  ) {
+    this.progress = progress ?? new NoopProgressReporter();
+  }
 
   /**
    * Stage 1: Generate Mermaid code only (no rendering)
@@ -94,7 +101,7 @@ export class MermaidDiagramGenerator {
       return [];
     }
 
-    const progress = new ProgressReporter();
+    const progress = this.progress;
 
     try {
       // 1. Decision Layer - Group entities using heuristic strategy
@@ -217,9 +224,12 @@ export class MermaidDiagramGenerator {
    * @param jobs - Array of render jobs from Stage 1
    * @param concurrency - Maximum number of concurrent renders
    */
-  static async renderJobsInParallel(jobs: RenderJob[], concurrency: number): Promise<void> {
+  static async renderJobsInParallel(
+    jobs: RenderJob[],
+    concurrency: number,
+    progress: IProgressReporter = new NoopProgressReporter()
+  ): Promise<void> {
     const pMap = (await import('p-map')).default;
-    const progress = new ProgressReporter();
 
     try {
       progress.start(
@@ -263,7 +273,7 @@ export class MermaidDiagramGenerator {
     level: DetailLevel,
     diagramConfig?: DiagramConfig
   ): Promise<void> {
-    const progress = new ProgressReporter();
+    const progress = this.progress;
 
     try {
       // Stage 1: Generate Mermaid code (CPU intensive)
