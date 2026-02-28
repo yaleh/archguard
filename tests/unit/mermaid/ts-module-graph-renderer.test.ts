@@ -137,3 +137,303 @@ describe('renderTsModuleGraph', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Subgraph hierarchy tests
+// ---------------------------------------------------------------------------
+describe('renderTsModuleGraph – subgraph hierarchy', () => {
+  it('wraps a parent and its direct children in a subgraph', () => {
+    // cli is the parent; cli/commands and cli/utils are its children
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('cli'),
+        makeNode('cli/commands'),
+        makeNode('cli/utils'),
+        makeNode('parser'),
+      ],
+      edges: [
+        makeEdge('cli/commands', 'parser', 1),
+        makeEdge('cli/utils', 'parser', 1),
+      ],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // The parent and children must be inside a subgraph block
+    expect(output).toContain('subgraph');
+    // subgraph label must show the parent path
+    expect(output).toMatch(/subgraph\s+\S+\s*\["?cli"?\]/);
+    // Both children must appear somewhere in the output
+    expect(output).toContain('cli/commands');
+    expect(output).toContain('cli/utils');
+  });
+
+  it('places children inside the parent subgraph, not at the top level', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('cli'), makeNode('cli/commands'), makeNode('cli/utils')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+    const lines = output.split('\n');
+
+    // Find the subgraph block boundaries
+    const subgraphStart = lines.findIndex((l) => l.match(/subgraph\s+\S+.*cli/));
+    const subgraphEnd = lines.findIndex((l, i) => i > subgraphStart && l.trim() === 'end');
+
+    expect(subgraphStart).toBeGreaterThanOrEqual(0);
+    expect(subgraphEnd).toBeGreaterThan(subgraphStart);
+
+    // cli/commands and cli/utils must appear between start and end
+    const inner = lines.slice(subgraphStart + 1, subgraphEnd).join('\n');
+    expect(inner).toContain('cli/commands');
+    expect(inner).toContain('cli/utils');
+  });
+
+  it('nodes without children are NOT wrapped in a subgraph', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('parser'), makeNode('types')],
+      edges: [makeEdge('parser', 'types', 1)],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // No subgraph block should be generated
+    expect(output).not.toContain('subgraph');
+    expect(output).not.toContain('end');
+  });
+
+  it('handles two-level nesting (parent > child > grandchild)', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('plugins/golang'),
+        makeNode('plugins/golang/atlas'),
+        makeNode('plugins/golang/atlas/builders'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // At least two subgraph blocks for the two nesting levels
+    const subgraphCount = (output.match(/\bsubgraph\b/g) ?? []).length;
+    expect(subgraphCount).toBeGreaterThanOrEqual(2);
+
+    // All three nodes must appear in the output
+    expect(output).toContain('plugins/golang/atlas/builders');
+    expect(output).toContain('plugins/golang/atlas');
+    expect(output).toContain('plugins/golang');
+  });
+
+  it('handles two independent hierarchies side by side', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('cli'),
+        makeNode('cli/commands'),
+        makeNode('plugins/golang'),
+        makeNode('plugins/golang/atlas'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // Both hierarchies should have their own subgraph
+    const subgraphCount = (output.match(/\bsubgraph\b/g) ?? []).length;
+    expect(subgraphCount).toBeGreaterThanOrEqual(2);
+
+    expect(output).toContain('cli/commands');
+    expect(output).toContain('plugins/golang/atlas');
+  });
+
+  it('subgraph identifiers must not contain slashes', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('cli'), makeNode('cli/commands')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+    const subgraphLines = output.split('\n').filter((l) => l.trimStart().startsWith('subgraph '));
+
+    for (const line of subgraphLines) {
+      // Extract the ID token (first word after "subgraph")
+      const match = line.match(/subgraph\s+(\S+)/);
+      expect(match).not.toBeNull();
+      expect(match![1]).not.toMatch(/\//);
+    }
+  });
+
+  it('edges between subgraph nodes are still emitted correctly', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('cli'),
+        makeNode('cli/commands'),
+        makeNode('parser'),
+      ],
+      edges: [makeEdge('cli/commands', 'parser', 2)],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // The edge must appear in the output (as arrow syntax)
+    expect(output).toMatch(/cli_commands\s*-->|cli\/commands/);
+    // Both endpoints of the edge must be referenced
+    expect(output).toContain('cli/commands');
+    expect(output).toContain('parser');
+  });
+
+  it('external (node_modules) nodes are grouped in a dedicated subgraph', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('cli'),
+        makeNode('path', 'node_modules'),
+        makeNode('os', 'node_modules'),
+        makeNode('zod', 'node_modules'),
+      ],
+      edges: [
+        makeEdge('cli', 'path', 1),
+        makeEdge('cli', 'os', 1),
+        makeEdge('cli', 'zod', 1),
+      ],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // External deps must be grouped in a subgraph (label contains "external" or "External")
+    expect(output).toMatch(/subgraph\s+\S+\s*\[.*[Ee]xternal.*\]/);
+    // All three external nodes must appear inside the output
+    expect(output).toContain('path');
+    expect(output).toContain('os');
+    expect(output).toContain('zod');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Virtual parent grouping tests
+// ---------------------------------------------------------------------------
+describe('renderTsModuleGraph – virtual parent grouping', () => {
+  it('groups sibling nodes sharing a prefix under a virtual subgraph when real parent is absent', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('plugins/golang'),
+        makeNode('plugins/java'),
+        makeNode('plugins/python'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // A virtual "plugins" subgraph must be created
+    expect(output).toMatch(/subgraph\s+\S+\s*\["?plugins"?\]/);
+    // All three nodes must appear
+    expect(output).toContain('plugins/golang');
+    expect(output).toContain('plugins/java');
+    expect(output).toContain('plugins/python');
+  });
+
+  it('does not create a virtual parent when only one node has that prefix', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('plugins/java'), makeNode('core')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // No subgraph since only one plugins/* node
+    expect(output).not.toContain('subgraph');
+  });
+
+  it('does not double-group when real parent node already exists', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('cli'), makeNode('cli/commands'), makeNode('cli/utils')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // Real parent "cli" provides one subgraph; no extra virtual subgraph
+    const subgraphCount = (output.match(/\bsubgraph\b/g) ?? []).length;
+    expect(subgraphCount).toBe(1);
+  });
+
+  it('places all prefix-sibling nodes inside the virtual subgraph, unrelated nodes outside', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('plugins/golang'),
+        makeNode('plugins/java'),
+        makeNode('plugins/python'),
+        makeNode('parser'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+    const lines = output.split('\n');
+
+    const subgraphStart = lines.findIndex((l) => l.match(/subgraph\s+\S+.*plugins/));
+    const subgraphEnd = lines.findIndex((l, i) => i > subgraphStart && l.trim() === 'end');
+
+    expect(subgraphStart).toBeGreaterThanOrEqual(0);
+    expect(subgraphEnd).toBeGreaterThan(subgraphStart);
+
+    const inner = lines.slice(subgraphStart + 1, subgraphEnd).join('\n');
+    expect(inner).toContain('plugins/golang');
+    expect(inner).toContain('plugins/java');
+    expect(inner).toContain('plugins/python');
+    // unrelated node must NOT be inside the virtual subgraph
+    expect(inner).not.toContain('parser');
+  });
+
+  it('virtual subgraph ID must not contain slashes', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('plugins/java'), makeNode('plugins/python')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+    const subgraphLines = output.split('\n').filter((l) => l.trimStart().startsWith('subgraph '));
+
+    for (const line of subgraphLines) {
+      const match = line.match(/subgraph\s+(\S+)/);
+      expect(match).not.toBeNull();
+      expect(match![1]).not.toMatch(/\//);
+    }
+  });
+
+  it('wraps real subgraph nodes within the virtual parent (mixed real-subgraph + leaf siblings)', () => {
+    // plugins/golang has a child, so it becomes a real subgraph
+    // plugins/java is a leaf
+    // Both should be inside a virtual "plugins" subgraph
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('plugins/golang'),
+        makeNode('plugins/golang/atlas'),
+        makeNode('plugins/java'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    // virtual plugins + real plugins/golang = at least 2 subgraphs
+    const subgraphCount = (output.match(/\bsubgraph\b/g) ?? []).length;
+    expect(subgraphCount).toBeGreaterThanOrEqual(2);
+    // virtual plugins subgraph must exist
+    expect(output).toMatch(/subgraph\s+\S+\s*\["?plugins"?\]/);
+  });
+});
