@@ -151,7 +151,7 @@ describe('GoplsClient', () => {
 
   beforeEach(() => {
     // Default spawn behaviour: version check → success, serve → full LSP fake.
-    let callCount = 0;
+    const callCount = 0;
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args && args[0] === 'version') {
         return createVersionProc();

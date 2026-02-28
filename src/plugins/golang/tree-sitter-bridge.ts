@@ -453,7 +453,9 @@ export class TreeSitterBridge {
       }
 
       // Don't walk past statement/block boundaries
-      if (['block', 'function_declaration', 'method_declaration', 'func_literal'].includes(node.type)) {
+      if (
+        ['block', 'function_declaration', 'method_declaration', 'func_literal'].includes(node.type)
+      ) {
         break;
       }
       node = node.parent;

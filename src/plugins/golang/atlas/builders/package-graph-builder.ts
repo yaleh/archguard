@@ -125,7 +125,7 @@ export class PackageGraphBuilder {
   private classifyPackageType(pkg: GoRawPackage): PackageNode['type'] {
     const full = pkg.fullName;
     const segments = full.split('/');
-    const isTestutil = segments.some(s => s === 'testutil' || s === 'hubtest');
+    const isTestutil = segments.some((s) => s === 'testutil' || s === 'hubtest');
 
     if (full.startsWith('tests/') || full === 'tests') return 'tests';
     if (full.startsWith('examples/')) return 'examples';

@@ -332,9 +332,7 @@ export class GoroutineTopologyBuilder {
         const hasCtxDone =
           receivesContext &&
           ctxVarName != null &&
-          (body.calls ?? []).some(
-            (c) => c.functionName === 'Done' && c.packageName === ctxVarName
-          );
+          (body.calls ?? []).some((c) => c.functionName === 'Done' && c.packageName === ctxVarName);
 
         // Stop-channel receive: a receive op on a well-known stop-channel variable name
         const hasStopChannel = (body.channelOps ?? []).some(

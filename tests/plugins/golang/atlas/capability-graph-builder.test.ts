@@ -1573,7 +1573,11 @@ describe('CapabilityGraphBuilder', () => {
                 methods: [],
                 embeddedInterfaces: [],
                 exported: true,
-                location: { file: '/x/examples/user-service/internal/catalog/store.go', startLine: 1, endLine: 5 },
+                location: {
+                  file: '/x/examples/user-service/internal/catalog/store.go',
+                  startLine: 1,
+                  endLine: 5,
+                },
               },
             ],
             structs: [
@@ -1586,12 +1590,20 @@ describe('CapabilityGraphBuilder', () => {
                     name: 'store',
                     type: 'Store', // no package qualifier — same-package reference
                     exported: false,
-                    location: { file: '/x/examples/user-service/internal/catalog/handler.go', startLine: 10, endLine: 10 },
+                    location: {
+                      file: '/x/examples/user-service/internal/catalog/handler.go',
+                      startLine: 10,
+                      endLine: 10,
+                    },
                   },
                 ],
                 methods: [],
                 embeddedTypes: [],
-                location: { file: '/x/examples/user-service/internal/catalog/handler.go', startLine: 5, endLine: 20 },
+                location: {
+                  file: '/x/examples/user-service/internal/catalog/handler.go',
+                  startLine: 5,
+                  endLine: 20,
+                },
               },
             ],
           }),
@@ -1741,8 +1753,8 @@ describe('CapabilityGraphBuilder', () => {
                 packageName: 'svc',
                 exported: true,
                 fields: [
-                  makeField('Name', 'string', true),   // exported
-                  makeField('size', 'int64', false),    // unexported
+                  makeField('Name', 'string', true), // exported
+                  makeField('size', 'int64', false), // unexported
                   makeField('Mode', 'os.FileMode', true), // exported
                 ],
                 methods: [],
@@ -1766,7 +1778,7 @@ describe('CapabilityGraphBuilder', () => {
       const graph = await builder.build(rawData);
       const structNode = graph.nodes.find((n) => n.name === 'FileWriter');
       const ifaceNode = graph.nodes.find((n) => n.name === 'Writer');
-      expect(structNode?.fieldCount).toBe(2);       // Name + Mode
+      expect(structNode?.fieldCount).toBe(2); // Name + Mode
       expect(ifaceNode?.fieldCount).toBeUndefined(); // interfaces have no fieldCount
     });
 
@@ -1872,10 +1884,7 @@ describe('CapabilityGraphBuilder', () => {
                 name: 'ServiceC',
                 packageName: 'svc',
                 exported: true,
-                fields: [
-                  makeField('foo', 'IFoo', false),
-                  makeField('bar', 'IBar', false),
-                ],
+                fields: [makeField('foo', 'IFoo', false), makeField('bar', 'IBar', false)],
                 methods: [],
                 embeddedTypes: [],
                 location: { file: 'service_c.go', startLine: 1, endLine: 20 },
@@ -1979,9 +1988,7 @@ describe('CapabilityGraphBuilder', () => {
                 name: 'Service',
                 packageName: 'svc',
                 exported: true,
-                fields: [
-                  makeField('eng', 'Engine', false),
-                ],
+                fields: [makeField('eng', 'Engine', false)],
                 methods: [],
                 embeddedTypes: [],
                 location: { file: 'service.go', startLine: 1, endLine: 20 },
@@ -2024,9 +2031,7 @@ describe('CapabilityGraphBuilder', () => {
                 name: 'Service',
                 packageName: 'svc',
                 exported: true,
-                fields: [
-                  makeField('eng', 'IEngine', false),
-                ],
+                fields: [makeField('eng', 'IEngine', false)],
                 methods: [],
                 embeddedTypes: [],
                 location: { file: 'service.go', startLine: 1, endLine: 20 },
@@ -2148,7 +2153,7 @@ describe('CapabilityGraphBuilder', () => {
       expect(graph.concreteUsageRisks).toBeDefined();
       expect(graph.concreteUsageRisks).toHaveLength(1);
 
-      const risk = graph.concreteUsageRisks![0];
+      const risk = graph.concreteUsageRisks[0];
       expect(risk.owner).toBe('pkg/svc.Service');
       expect(risk.fieldType).toBe('db.SQLiteStore');
       expect(risk.concreteType).toBe('pkg/db.SQLiteStore');
@@ -2180,9 +2185,7 @@ describe('CapabilityGraphBuilder', () => {
                 name: 'Service',
                 packageName: 'svc',
                 exported: true,
-                fields: [
-                  makeField('eng', 'Engine', false),
-                ],
+                fields: [makeField('eng', 'Engine', false)],
                 methods: [],
                 embeddedTypes: [],
                 location: { file: 'service.go', startLine: 1, endLine: 20 },
@@ -2255,7 +2258,7 @@ describe('CapabilityGraphBuilder', () => {
         packages: [
           makePackage({
             id: 'pkg/hub/engine',
-            name: 'engine',              // same short name as pkg/routing/engine
+            name: 'engine', // same short name as pkg/routing/engine
             fullName: 'pkg/hub/engine',
             structs: [
               {
@@ -2272,7 +2275,7 @@ describe('CapabilityGraphBuilder', () => {
           }),
           makePackage({
             id: 'pkg/routing/engine',
-            name: 'engine',              // SAME short name — overwrites "engine:Engine" in pkgTypeToNodeId
+            name: 'engine', // SAME short name — overwrites "engine:Engine" in pkgTypeToNodeId
             fullName: 'pkg/routing/engine',
             structs: [
               {
@@ -2306,7 +2309,7 @@ describe('CapabilityGraphBuilder', () => {
                 fields: [
                   {
                     name: 'engine',
-                    type: '*engine.Engine',  // qualifier = "engine" (ambiguous without import map)
+                    type: '*engine.Engine', // qualifier = "engine" (ambiguous without import map)
                     exported: false,
                     location: { file: 'router.go', startLine: 5, endLine: 5 },
                   },
@@ -2327,9 +2330,7 @@ describe('CapabilityGraphBuilder', () => {
       // MUST create edge to the CORRECT engine (the imported one)
       const correctEdge = graph.edges.find(
         (e) =>
-          e.type === 'uses' &&
-          e.source === 'pkg/hub.Router' &&
-          e.target === 'pkg/hub/engine.Engine'
+          e.type === 'uses' && e.source === 'pkg/hub.Router' && e.target === 'pkg/hub/engine.Engine'
       );
       expect(correctEdge).toBeDefined();
 
@@ -2370,7 +2371,7 @@ describe('CapabilityGraphBuilder', () => {
             id: 'pkg/hub',
             name: 'hub',
             fullName: 'pkg/hub',
-            imports: [],  // no imports data → best-effort fallback
+            imports: [], // no imports data → best-effort fallback
             structs: [
               {
                 name: 'Server',
@@ -2398,9 +2399,7 @@ describe('CapabilityGraphBuilder', () => {
       const graph = await builder.build(rawData);
 
       // With empty imports, best-effort resolution should still find pkg/hub/engine.Engine
-      const edge = graph.edges.find(
-        (e) => e.type === 'uses' && e.source === 'pkg/hub.Server'
-      );
+      const edge = graph.edges.find((e) => e.type === 'uses' && e.source === 'pkg/hub.Server');
       expect(edge).toBeDefined();
       expect(edge?.target).toBe('pkg/hub/engine.Engine');
     });
@@ -2430,7 +2429,7 @@ describe('CapabilityGraphBuilder', () => {
                 fields: [
                   {
                     name: 'client',
-                    type: 'http.Client',  // qualifier "http" not in imports → external type
+                    type: 'http.Client', // qualifier "http" not in imports → external type
                     exported: false,
                     location: { file: 'hub.go', startLine: 5, endLine: 5 },
                   },

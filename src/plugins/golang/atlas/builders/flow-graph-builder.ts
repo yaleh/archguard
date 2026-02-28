@@ -11,17 +11,61 @@ import type { FlowGraph, EntryPoint, CallChain, CallEdge, EntryPointType } from 
  */
 export class FlowGraphBuilder {
   private static readonly STDLIB_PREFIXES = new Set([
-    'fmt', 'json', 'strconv', 'time', 'errors', 'strings', 'sort',
-    'sync', 'io', 'bytes', 'math', 'os', 'log', 'context', 'net', 'http',
-    'reflect', 'unicode', 'filepath', 'path', 'regexp', 'bufio', 'runtime',
+    'fmt',
+    'json',
+    'strconv',
+    'time',
+    'errors',
+    'strings',
+    'sort',
+    'sync',
+    'io',
+    'bytes',
+    'math',
+    'os',
+    'log',
+    'context',
+    'net',
+    'http',
+    'reflect',
+    'unicode',
+    'filepath',
+    'path',
+    'regexp',
+    'bufio',
+    'runtime',
   ]);
 
   private static readonly BUILTINS = new Set([
-    'make', 'len', 'append', 'cap', 'new', 'delete', 'copy', 'close',
-    'panic', 'recover', 'print', 'println',
-    'int', 'int8', 'int16', 'int32', 'int64',
-    'uint', 'uint8', 'uint16', 'uint32', 'uint64',
-    'string', 'bool', 'float32', 'float64', 'byte', 'rune', 'error',
+    'make',
+    'len',
+    'append',
+    'cap',
+    'new',
+    'delete',
+    'copy',
+    'close',
+    'panic',
+    'recover',
+    'print',
+    'println',
+    'int',
+    'int8',
+    'int16',
+    'int32',
+    'int64',
+    'uint',
+    'uint8',
+    'uint16',
+    'uint32',
+    'uint64',
+    'string',
+    'bool',
+    'float32',
+    'float64',
+    'byte',
+    'rune',
+    'error',
   ]);
 
   /**
@@ -201,14 +245,16 @@ export class FlowGraphBuilder {
 
     // Deduplicate by (from, to) — keep first occurrence
     const seen = new Set<string>();
-    return calls
-      .filter((call) => {
-        const key = `${call.from}\x00${call.to}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      // Filter stdlib / HTTP-primitive / builtin noise — keep only business logic calls
-      .filter((call) => !FlowGraphBuilder.isNoisyCall(call));
+    return (
+      calls
+        .filter((call) => {
+          const key = `${call.from}\x00${call.to}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        // Filter stdlib / HTTP-primitive / builtin noise — keep only business logic calls
+        .filter((call) => !FlowGraphBuilder.isNoisyCall(call))
+    );
   }
 }

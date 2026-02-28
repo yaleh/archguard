@@ -1,8 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
 import { FlowGraphBuilder } from '@/plugins/golang/atlas/builders/flow-graph-builder.js';
-import type { FlowGraph, EntryPoint, GoroutineTopology, GoroutineLifecycleSummary, GoroutineNode, SpawnRelation, ChannelInfo, ChannelEdge, PackageGraph, PackageNode } from '@/types/extensions.js';
-import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '@/plugins/golang/atlas/types.js';
+import type {
+  FlowGraph,
+  EntryPoint,
+  GoroutineTopology,
+  GoroutineLifecycleSummary,
+  GoroutineNode,
+  SpawnRelation,
+  ChannelInfo,
+  ChannelEdge,
+  PackageGraph,
+  PackageNode,
+} from '@/types/extensions.js';
+import type {
+  CapabilityGraph,
+  CapabilityNode,
+  CapabilityRelation,
+} from '@/plugins/golang/atlas/types.js';
 import type { GoRawData, GoRawPackage } from '@/plugins/golang/types.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -70,7 +85,7 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
     // check for at least 2 subgraphs (one per entry group) rather than exactly 2.
     const subgraphMatches = result.match(/subgraph /g);
     expect(subgraphMatches).not.toBeNull();
-    expect(subgraphMatches!.length).toBeGreaterThanOrEqual(2);
+    expect(subgraphMatches.length).toBeGreaterThanOrEqual(2);
     // Both entry node ids should appear
     expect(result).toContain('ep1');
     expect(result).toContain('ep2');
@@ -88,16 +103,24 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
 describe('renderFlowGraph - node labels', () => {
   it('declares handler node with original dotted name as label', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
-        handler: 'r.handler.GetFoo',
-        middleware: [], package: 'pkg/hub',
-        location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [{ from: 'r.handler.GetFoo', to: 'store.Find', type: 'direct', confidence: 0.7 }]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-get',
+          path: '/foo',
+          handler: 'r.handler.GetFoo',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [{ from: 'r.handler.GetFoo', to: 'store.Find', type: 'direct', confidence: 0.7 }],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     // Handler node must be declared with original name as label
@@ -106,16 +129,24 @@ describe('renderFlowGraph - node labels', () => {
 
   it('declares callee node with original dotted name as label', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
-        handler: 'myHandler',
-        middleware: [], package: 'pkg/hub',
-        location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [{ from: 'myHandler', to: 'fmt.Sprintf', type: 'direct', confidence: 0.7 }]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-get',
+          path: '/foo',
+          handler: 'myHandler',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [{ from: 'myHandler', to: 'fmt.Sprintf', type: 'direct', confidence: 0.7 }],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     // Callee node must show original name
@@ -124,16 +155,24 @@ describe('renderFlowGraph - node labels', () => {
 
   it('does not redeclare entry nodes that are already in subgraphs', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo',
-        handler: 'myHandler',
-        middleware: [], package: 'pkg/hub',
-        location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [{ from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-get',
+          path: '/foo',
+          handler: 'myHandler',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [{ from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     // entry node id should appear exactly once as a declaration (inside subgraph)
@@ -228,7 +267,9 @@ describe('MermaidTemplates (private) formatGoroutineName', () => {
 
   it('strips path prefix from slashed id with method spawn', () => {
     // "cmd/swarm-mcp.startTestWorkersParallel.spawn-283" → "swarm-mcp.startTestWorkersParallel"
-    expect(fn({ id: 'cmd/swarm-mcp.startTestWorkersParallel.spawn-283', name: '' })).toBe('swarm-mcp.startTestWorkersParallel');
+    expect(fn({ id: 'cmd/swarm-mcp.startTestWorkersParallel.spawn-283', name: '' })).toBe(
+      'swarm-mcp.startTestWorkersParallel'
+    );
   });
 
   it('handles id with no spawn suffix — returns last 2 parts', () => {
@@ -245,12 +286,19 @@ describe('MermaidTemplates (private) formatGoroutineName', () => {
 
   it('strips package path prefix (slash) from non-empty name', () => {
     // "examples/user-service.NewTestHarness" → "NewTestHarness"
-    expect(fn({ id: 'examples_user_service_NewTestHarness_spawn_43', name: 'examples/user-service.NewTestHarness' })).toBe('NewTestHarness');
+    expect(
+      fn({
+        id: 'examples_user_service_NewTestHarness_spawn_43',
+        name: 'examples/user-service.NewTestHarness',
+      })
+    ).toBe('NewTestHarness');
   });
 
   it('leaves name unchanged when it contains no slash', () => {
     // "WorkerPool.Start" → "WorkerPool.Start" (unchanged)
-    expect(fn({ id: 'pkg_hub_WorkerPool_Start_spawn_98', name: 'WorkerPool.Start' })).toBe('WorkerPool.Start');
+    expect(fn({ id: 'pkg_hub_WorkerPool_Start_spawn_98', name: 'WorkerPool.Start' })).toBe(
+      'WorkerPool.Start'
+    );
   });
 
   it('strips slash prefix from cmd package main name', () => {
@@ -330,8 +378,8 @@ describe('MermaidTemplates.computePackageEdgeTiers', () => {
   it('assigns heavy tier to max, no entry for min — two distinct values', () => {
     // [1, 5]: p50=5 >= max=5 → fallback: thMedium=1, thHeavy=5
     const tiers = MermaidTemplates.computePackageEdgeTiers([1, 1, 5]);
-    expect(tiers.has(1)).toBe(false);    // at thMedium → default
-    expect(tiers.get(5)).toBe(5.0);      // >= thHeavy → heavy
+    expect(tiers.has(1)).toBe(false); // at thMedium → default
+    expect(tiers.get(5)).toBe(5.0); // >= thHeavy → heavy
   });
 
   it('assigns medium and heavy tiers for three distinct values', () => {
@@ -339,19 +387,19 @@ describe('MermaidTemplates.computePackageEdgeTiers', () => {
     const tiers = MermaidTemplates.computePackageEdgeTiers([1, 3, 6]);
     expect(tiers.has(1)).toBe(false);
     expect(tiers.get(3)).toBeUndefined(); // at p50, not > p50
-    expect(tiers.get(6)).toBe(5.0);       // >= p85 → heavy
+    expect(tiers.get(6)).toBe(5.0); // >= p85 → heavy
   });
 
   it('handles skewed distribution (many low, few high)', () => {
     // Twelve 1s, then 3,3,3,4,5,5,6,6 — typical Go package graph
-    const strengths = [1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,4,5,5,6,6];
+    const strengths = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 4, 5, 5, 6, 6];
     const tiers = MermaidTemplates.computePackageEdgeTiers(strengths);
     // median (p50) = 1; p85 ≥ 5
-    expect(tiers.has(1)).toBe(false);     // at median → default
-    expect(tiers.get(3)).toBe(3.0);       // > median but < p85 → medium
-    expect(tiers.get(4)).toBe(3.0);       // medium
+    expect(tiers.has(1)).toBe(false); // at median → default
+    expect(tiers.get(3)).toBe(3.0); // > median but < p85 → medium
+    expect(tiers.get(4)).toBe(3.0); // medium
     const heavyVal = tiers.get(6);
-    expect(heavyVal).toBe(5.0);           // heavy
+    expect(heavyVal).toBe(5.0); // heavy
     expect([3.0, 5.0]).toContain(tiers.get(5)); // 5 is either medium or heavy
   });
 
@@ -360,8 +408,8 @@ describe('MermaidTemplates.computePackageEdgeTiers', () => {
     // [4, 4, 8, 8, 8]: p50=sorted[2]=8 = max → fallback
     const tiers = MermaidTemplates.computePackageEdgeTiers([8, 8, 8, 8, 4]);
     // fallback: thMedium=4, thHeavy=8
-    expect(tiers.has(4)).toBe(false);   // at thMedium → default
-    expect(tiers.get(8)).toBe(5.0);     // >= thHeavy → heavy
+    expect(tiers.has(4)).toBe(false); // at thMedium → default
+    expect(tiers.get(8)).toBe(5.0); // >= thHeavy → heavy
   });
 
   it('assigns only heavy tier for two-element [1, N] input', () => {
@@ -424,9 +472,9 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
         { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'a', to: 'a', strength: 1 },   // index 0 — self-loop, not styled
-        { from: 'a', to: 'b', strength: 1 },   // index 1
-        { from: 'a', to: 'c', strength: 9 },   // index 2 — heavy
+        { from: 'a', to: 'a', strength: 1 }, // index 0 — self-loop, not styled
+        { from: 'a', to: 'b', strength: 1 }, // index 1
+        { from: 'a', to: 'c', strength: 9 }, // index 2 — heavy
       ],
       cycles: [{ packages: ['a'], severity: 'warning' }],
     });
@@ -451,7 +499,7 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
-    const lastEdge  = result.lastIndexOf(' --> ');
+    const lastEdge = result.lastIndexOf(' --> ');
     const linkStyle = result.indexOf('linkStyle');
     expect(linkStyle).toBeGreaterThan(lastEdge);
   });
@@ -514,7 +562,7 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
   it('wraps grouped nodes in subgraph blocks using grp_ prefix', () => {
     const graph = makePackageGraph({
       nodes: [
-        { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
         { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
       ],
       edges: [],
@@ -529,9 +577,7 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
 
   it('emits single-member packages as top-level nodes without subgraph', () => {
     const graph = makePackageGraph({
-      nodes: [
-        { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 2 },
-      ],
+      nodes: [{ id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 2 }],
       edges: [],
       cycles: [],
     });
@@ -543,7 +589,7 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
   it('emits all edges after all subgraph blocks', () => {
     const graph = makePackageGraph({
       nodes: [
-        { id: 'mod/pkg/hub',   name: 'pkg/hub',   type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
         { id: 'mod/pkg/hub/m', name: 'pkg/hub/m', type: 'internal', fileCount: 1 },
       ],
       edges: [{ from: 'mod/pkg/hub', to: 'mod/pkg/hub/m', strength: 3 }],
@@ -551,17 +597,17 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
     const subgraphEnd = result.lastIndexOf('end');
-    const edgeLine   = result.indexOf('mod_pkg_hub -->');
+    const edgeLine = result.indexOf('mod_pkg_hub -->');
     expect(edgeLine).toBeGreaterThan(subgraphEnd);
   });
 
   it('renders nested subgraphs: grp_pkg contains grp_pkg_hub', () => {
     const graph = makePackageGraph({
       nodes: [
-        { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
         { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
-        { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
-        { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 },
+        { id: 'mod/pkg/logging', name: 'pkg/logging', type: 'internal', fileCount: 1 },
       ],
       edges: [],
       cycles: [],
@@ -608,11 +654,11 @@ describe('MermaidTemplates (private) buildGroupTree', () => {
 
   it('builds a two-level tree: pkg contains pkg/hub sub-group', () => {
     const nodes: PackageNode[] = [
-      { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
       { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/hub/store',  name: 'pkg/hub/store',  type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub/store', name: 'pkg/hub/store', type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/logging', name: 'pkg/logging', type: 'internal', fileCount: 1 },
     ];
     const { roots, grouped } = buildGroupTree(nodes);
     // One root: pkg
@@ -632,14 +678,14 @@ describe('MermaidTemplates (private) buildGroupTree', () => {
 
   it('pkg/hub node belongs to pkg/hub group, not to pkg directly', () => {
     const nodes: PackageNode[] = [
-      { id: 'mod/pkg/hub',        name: 'pkg/hub',        type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
       { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/store',      name: 'pkg/store',      type: 'internal', fileCount: 1 },
-      { id: 'mod/pkg/logging',    name: 'pkg/logging',    type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 },
+      { id: 'mod/pkg/logging', name: 'pkg/logging', type: 'internal', fileCount: 1 },
     ];
     const { roots } = buildGroupTree(nodes);
     const pkgRoot = roots[0];
-    const hubGroup = pkgRoot.children.find(c => c.prefix === 'pkg/hub')!;
+    const hubGroup = pkgRoot.children.find((c) => c.prefix === 'pkg/hub');
     // mod/pkg/hub node is in pkg/hub group
     expect(hubGroup.nodeIds).toContain('mod/pkg/hub');
     // Not in pkg directly
@@ -707,7 +753,14 @@ describe('MermaidTemplates (private) formatChannelLabel', () => {
 // ─── renderGoroutineTopology — spawner node declarations ──────────────────────
 
 describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations', () => {
-  function makeTopology(overrides?: Partial<{ nodes: GoroutineNode[]; edges: SpawnRelation[]; channels: ChannelInfo[]; channelEdges: ChannelEdge[] }>) {
+  function makeTopology(
+    overrides?: Partial<{
+      nodes: GoroutineNode[];
+      edges: SpawnRelation[];
+      channels: ChannelInfo[];
+      channelEdges: ChannelEdge[];
+    }>
+  ) {
     return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
   }
 
@@ -768,7 +821,7 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
 
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     // "cmd_app_main" should appear exactly ONCE as a node declaration (the :::main one)
-    const lines = out.split('\n').filter(l => l.includes('cmd_app_main['));
+    const lines = out.split('\n').filter((l) => l.includes('cmd_app_main['));
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain(':::main');
     expect(lines[0]).not.toContain(':::spawner');
@@ -776,7 +829,15 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
 
   it('includes classDef for spawner style', () => {
     const topology = makeTopology({
-      nodes: [{ id: 'spawn1', name: 'fn', type: 'spawned' as const, package: 'p', location: { file: 'f.go', line: 1 } }],
+      nodes: [
+        {
+          id: 'spawn1',
+          name: 'fn',
+          type: 'spawned' as const,
+          package: 'p',
+          location: { file: 'f.go', line: 1 },
+        },
+      ],
       edges: [{ from: 'undeclared_spawner', to: 'spawn1', spawnType: 'go-stmt' as const }],
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
@@ -858,7 +919,7 @@ describe('MermaidTemplates.renderGoroutineTopology — spawner node declarations
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     // Find the pkg/hub subgraph block
     const lines = out.split('\n');
-    const sgStart = lines.findIndex(l => l.includes('grp_pkg_hub'));
+    const sgStart = lines.findIndex((l) => l.includes('grp_pkg_hub'));
     const sgEnd = lines.findIndex((l, i) => i > sgStart && l.trim() === 'end');
     const sgContent = lines.slice(sgStart, sgEnd).join('\n');
     expect(sgContent).toContain('["WorkerPool.Start"]:::spawner');
@@ -925,9 +986,7 @@ describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
 
   it('renders a make channelEdge as "-->|make|" arrow', () => {
     const topology = makeTopology({
-      channelEdges: [
-        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
-      ],
+      channelEdges: [{ from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' }],
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     expect(out).toContain('-->|make|');
@@ -1015,9 +1074,7 @@ describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
           location: { file: 'worker.go', line: 53 },
         },
       ],
-      channelEdges: [
-        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
-      ],
+      channelEdges: [{ from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' }],
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     // Spawner node should be declared with short label and :::spawner style
@@ -1052,15 +1109,15 @@ describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     // chan-pkg/hub-50 should appear only in channels subgraph, not as a spawner node declaration
     const lines = out.split('\n');
-    const spawnerLines = lines.filter(l => l.includes('chan_pkg_hub_50[') && l.includes(':::spawner'));
+    const spawnerLines = lines.filter(
+      (l) => l.includes('chan_pkg_hub_50[') && l.includes(':::spawner')
+    );
     expect(spawnerLines).toHaveLength(0);
   });
 
   it('sanitizes IDs in channelEdge arrows', () => {
     const topology = makeTopology({
-      channelEdges: [
-        { from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' },
-      ],
+      channelEdges: [{ from: 'pkg/hub.WorkerPool.Start', to: 'chan-pkg/hub-50', edgeType: 'make' }],
     });
     const out = MermaidTemplates.renderGoroutineTopology(topology);
     // Sanitized IDs should not contain slashes, dots, or hyphens
@@ -1072,11 +1129,20 @@ describe('MermaidTemplates.renderGoroutineTopology — channelEdges', () => {
 
 // ─── renderCapabilityGraph — hierarchical subgraph grouping ──────────────────
 
-function makeCapNode(id: string, name: string, type: 'interface' | 'struct', pkg: string): CapabilityNode {
+function makeCapNode(
+  id: string,
+  name: string,
+  type: 'interface' | 'struct',
+  pkg: string
+): CapabilityNode {
   return { id, name, type, package: pkg, exported: true };
 }
 
-function makeCapEdge(source: string, target: string, type: 'implements' | 'uses'): CapabilityRelation {
+function makeCapEdge(
+  source: string,
+  target: string,
+  type: 'implements' | 'uses'
+): CapabilityRelation {
   return { id: `${type}-${source}-${target}`, type, source, target, confidence: 1.0 };
 }
 
@@ -1176,7 +1242,12 @@ describe('renderCapabilityGraph', () => {
       nodes: [
         makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
         makeCapNode('pkg/hub/engine.Engine', 'Engine', 'struct', 'pkg/hub/engine'),
-        makeCapNode('pkg/hub/engine/store.SQLiteStore', 'SQLiteStore', 'struct', 'pkg/hub/engine/store'),
+        makeCapNode(
+          'pkg/hub/engine/store.SQLiteStore',
+          'SQLiteStore',
+          'struct',
+          'pkg/hub/engine/store'
+        ),
       ],
       edges: [],
     };
@@ -1225,7 +1296,12 @@ describe('renderCapabilityGraph - nested subgraphs', () => {
         makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
         makeCapNode('pkg/hub/store.Store', 'Store', 'interface', 'pkg/hub/store'),
         makeCapNode('pkg/catalog.Catalog', 'Catalog', 'struct', 'pkg/catalog'),
-        makeCapNode('pkg/catalog/store.CatalogStore', 'CatalogStore', 'struct', 'pkg/catalog/store'),
+        makeCapNode(
+          'pkg/catalog/store.CatalogStore',
+          'CatalogStore',
+          'struct',
+          'pkg/catalog/store'
+        ),
       ],
       edges: [],
     };
@@ -1273,8 +1349,8 @@ describe('renderGoroutineTopology - nested subgraphs', () => {
     const output = MermaidTemplates.renderGoroutineTopology(topology);
     // pkg/hub/store subgraph must appear inside pkg/hub subgraph
     const lines = output.split('\n');
-    const hubStart = lines.findIndex(l => l.includes('subgraph grp_pkg_hub['));
-    const storeStart = lines.findIndex(l => l.includes('subgraph grp_pkg_hub_store['));
+    const hubStart = lines.findIndex((l) => l.includes('subgraph grp_pkg_hub['));
+    const storeStart = lines.findIndex((l) => l.includes('subgraph grp_pkg_hub_store['));
     // Find the closing 'end' of grp_pkg_hub (first 'end' after hub, that is NOT the store's end)
     const hubEnd = lines.findIndex((l, i) => i > hubStart && l.trim() === 'end' && i > storeStart);
     expect(hubStart).toBeGreaterThan(-1);
@@ -1424,41 +1500,62 @@ describe('renderFlowGraph - nested subgraphs and labels', () => {
 describe('renderFlowGraph - edge deduplication', () => {
   it('emits entry→handler edge exactly once even when handler has many calls', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-get', path: '/foo', handler: 'myHandler',
-        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [
-          { from: 'myHandler', to: 'a.DoA', type: 'direct', confidence: 0.7 },
-          { from: 'myHandler', to: 'b.DoB', type: 'direct', confidence: 0.7 },
-          { from: 'myHandler', to: 'c.DoC', type: 'direct', confidence: 0.7 },
-        ]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-get',
+          path: '/foo',
+          handler: 'myHandler',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [
+            { from: 'myHandler', to: 'a.DoA', type: 'direct', confidence: 0.7 },
+            { from: 'myHandler', to: 'b.DoB', type: 'direct', confidence: 0.7 },
+            { from: 'myHandler', to: 'c.DoC', type: 'direct', confidence: 0.7 },
+          ],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     // entry→handler should appear exactly once
     const entryId = (MermaidTemplates as any).sanitizeId('entry-pkg/hub-1');
     const handlerId = (MermaidTemplates as any).sanitizeId('myHandler');
-    const entryToHandlerMatches = (mmd.match(new RegExp(`${entryId}.*${handlerId}`, 'g')) ?? []).length;
+    const entryToHandlerMatches = (mmd.match(new RegExp(`${entryId}.*${handlerId}`, 'g')) ?? [])
+      .length;
     expect(entryToHandlerMatches).toBe(1);
   });
 
   it('emits handler→callee edges without duplicates', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-get', path: '/bar', handler: 'myHandler',
-        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [
-          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 },
-          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
-          { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
-        ]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-get',
+          path: '/bar',
+          handler: 'myHandler',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [
+            { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 },
+            { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
+            { from: 'myHandler', to: 'store.Get', type: 'direct', confidence: 0.7 }, // duplicate
+          ],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     const handlerId = (MermaidTemplates as any).sanitizeId('myHandler');
@@ -1469,14 +1566,24 @@ describe('renderFlowGraph - edge deduplication', () => {
 
   it('adds entry label on entry→handler edge', () => {
     const graph: FlowGraph = {
-      entryPoints: [{
-        id: 'entry-pkg/hub-1', type: 'http-post', path: '/items', handler: 'myHandler',
-        middleware: [], package: 'pkg/hub', location: { file: '/x/pkg/hub/s.go', line: 1 }
-      }],
-      callChains: [{
-        id: 'chain-entry-pkg/hub-1', entryPoint: 'entry-pkg/hub-1',
-        calls: [{ from: 'myHandler', to: 'store.Create', type: 'direct', confidence: 0.7 }]
-      }]
+      entryPoints: [
+        {
+          id: 'entry-pkg/hub-1',
+          type: 'http-post',
+          path: '/items',
+          handler: 'myHandler',
+          middleware: [],
+          package: 'pkg/hub',
+          location: { file: '/x/pkg/hub/s.go', line: 1 },
+        },
+      ],
+      callChains: [
+        {
+          id: 'chain-entry-pkg/hub-1',
+          entryPoint: 'entry-pkg/hub-1',
+          calls: [{ from: 'myHandler', to: 'store.Create', type: 'direct', confidence: 0.7 }],
+        },
+      ],
     };
     const mmd = MermaidTemplates.renderFlowGraph(graph);
     expect(mmd).toContain('1 calls');
@@ -1486,7 +1593,9 @@ describe('renderFlowGraph - edge deduplication', () => {
 // ─── Phase B-render: capability graph metric labels and hotspot ───────────────
 
 describe('Phase B-render: capability graph metric labels and hotspot', () => {
-  function makeCapNode(overrides: Partial<CapabilityNode> & { id: string; name: string }): CapabilityNode {
+  function makeCapNode(
+    overrides: Partial<CapabilityNode> & { id: string; name: string }
+  ): CapabilityNode {
     return {
       type: 'struct',
       package: 'pkg/svc',
@@ -1495,20 +1604,35 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
     };
   }
 
-  function makeCapGraph(nodes: CapabilityNode[], edges: CapabilityRelation[] = []): CapabilityGraph {
+  function makeCapGraph(
+    nodes: CapabilityNode[],
+    edges: CapabilityRelation[] = []
+  ): CapabilityGraph {
     return { nodes, edges };
   }
 
   // Test 1: struct node with methodCount=8, fieldCount=12
   it('struct node with methodCount=8 fieldCount=12 renders label as "hub.Server [12f 8m]"', () => {
-    const node = makeCapNode({ id: 'n1', name: 'hub.Server', type: 'struct', methodCount: 8, fieldCount: 12 });
+    const node = makeCapNode({
+      id: 'n1',
+      name: 'hub.Server',
+      type: 'struct',
+      methodCount: 8,
+      fieldCount: 12,
+    });
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
     expect(output).toContain('["hub.Server [12f 8m]"]');
   });
 
   // Test 2: interface node with methodCount=20, fanIn=5
   it('interface node with methodCount=20 fanIn=5 renders label as "{{"store.Store [20m | fi:5]"}}"', () => {
-    const node = makeCapNode({ id: 'n2', name: 'store.Store', type: 'interface', methodCount: 20, fanIn: 5 });
+    const node = makeCapNode({
+      id: 'n2',
+      name: 'store.Store',
+      type: 'interface',
+      methodCount: 20,
+      fanIn: 5,
+    });
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph([node]));
     expect(output).toContain('{{"store.Store [20m | fi:5]"}}');
   });
@@ -1576,7 +1700,14 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
       makeCapNode({ id: 'tgt1', name: 'Store', type: 'struct' }),
     ];
     const edges: CapabilityRelation[] = [
-      { id: 'e1', type: 'uses', source: 'src1', target: 'tgt1', confidence: 0.9, concreteUsage: true },
+      {
+        id: 'e1',
+        type: 'uses',
+        source: 'src1',
+        target: 'tgt1',
+        confidence: 0.9,
+        concreteUsage: true,
+      },
     ];
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
     expect(output).toContain('==>|conc|');
@@ -1589,7 +1720,14 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
       makeCapNode({ id: 'tgt2', name: 'IStore', type: 'interface' }),
     ];
     const edges: CapabilityRelation[] = [
-      { id: 'e2', type: 'uses', source: 'src2', target: 'tgt2', confidence: 0.8, concreteUsage: false },
+      {
+        id: 'e2',
+        type: 'uses',
+        source: 'src2',
+        target: 'tgt2',
+        confidence: 0.8,
+        concreteUsage: false,
+      },
     ];
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
     expect(output).toContain('-->|uses|');
@@ -1603,7 +1741,14 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
       makeCapNode({ id: 'tgt3', name: 'IRepo', type: 'interface' }),
     ];
     const edges: CapabilityRelation[] = [
-      { id: 'e3', type: 'implements', source: 'src3', target: 'tgt3', confidence: 1.0, concreteUsage: true },
+      {
+        id: 'e3',
+        type: 'implements',
+        source: 'src3',
+        target: 'tgt3',
+        confidence: 1.0,
+        concreteUsage: true,
+      },
     ];
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
     expect(output).toContain('-.->|impl|');
@@ -1634,14 +1779,16 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
   // Test 1: spawned node with receivesContext:true, hasCancellationCheck:true → label contains " ✓ctx"
   it('spawned node with receivesContext and hasCancellationCheck renders " ✓ctx" annotation', () => {
     const node = makeSpawnedNode('worker1', 'runWorker');
-    const lifecycle: GoroutineLifecycleSummary[] = [{
-      nodeId: 'worker1',
-      spawnTargetName: 'runWorker',
-      receivesContext: true,
-      cancellationCheckAvailable: true,
-      hasCancellationCheck: true,
-      orphan: false,
-    }];
+    const lifecycle: GoroutineLifecycleSummary[] = [
+      {
+        nodeId: 'worker1',
+        spawnTargetName: 'runWorker',
+        receivesContext: true,
+        cancellationCheckAvailable: true,
+        hasCancellationCheck: true,
+        orphan: false,
+      },
+    ];
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).toContain(' ✓ctx');
   });
@@ -1649,13 +1796,15 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
   // Test 2: spawned node with receivesContext:true, cancellationCheckAvailable:false → label contains " ctx?"
   it('spawned node with receivesContext but cancellationCheckAvailable:false renders " ctx?" annotation', () => {
     const node = makeSpawnedNode('worker2', 'processJob');
-    const lifecycle: GoroutineLifecycleSummary[] = [{
-      nodeId: 'worker2',
-      spawnTargetName: 'processJob',
-      receivesContext: true,
-      cancellationCheckAvailable: false,
-      orphan: false,
-    }];
+    const lifecycle: GoroutineLifecycleSummary[] = [
+      {
+        nodeId: 'worker2',
+        spawnTargetName: 'processJob',
+        receivesContext: true,
+        cancellationCheckAvailable: false,
+        orphan: false,
+      },
+    ];
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).toContain(' ctx?');
   });
@@ -1663,13 +1812,15 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
   // Test 3: spawned node with orphan:true → label contains " ⚠ no exit"
   it('spawned node with orphan:true renders " ⚠ no exit" annotation', () => {
     const node = makeSpawnedNode('worker3', 'leakyWorker');
-    const lifecycle: GoroutineLifecycleSummary[] = [{
-      nodeId: 'worker3',
-      spawnTargetName: 'leakyWorker',
-      receivesContext: false,
-      cancellationCheckAvailable: false,
-      orphan: true,
-    }];
+    const lifecycle: GoroutineLifecycleSummary[] = [
+      {
+        nodeId: 'worker3',
+        spawnTargetName: 'leakyWorker',
+        receivesContext: false,
+        cancellationCheckAvailable: false,
+        orphan: true,
+      },
+    ];
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).toContain(' ⚠ no exit');
   });
@@ -1678,14 +1829,16 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
   it('spawned node with no matching lifecycle entry has no annotation', () => {
     const node = makeSpawnedNode('worker4', 'cleanWorker');
     // lifecycle has a different nodeId
-    const lifecycle: GoroutineLifecycleSummary[] = [{
-      nodeId: 'other-worker',
-      spawnTargetName: 'otherFn',
-      receivesContext: true,
-      cancellationCheckAvailable: true,
-      hasCancellationCheck: true,
-      orphan: false,
-    }];
+    const lifecycle: GoroutineLifecycleSummary[] = [
+      {
+        nodeId: 'other-worker',
+        spawnTargetName: 'otherFn',
+        receivesContext: true,
+        cancellationCheckAvailable: true,
+        hasCancellationCheck: true,
+        orphan: false,
+      },
+    ];
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).not.toContain(' ✓ctx');
     expect(output).not.toContain(' ctx?');
@@ -1713,7 +1866,9 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
         orphan: true,
       },
     ];
-    const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node1, node2], lifecycle));
+    const output = MermaidTemplates.renderGoroutineTopology(
+      makeTopology([node1, node2], lifecycle)
+    );
     expect(output).toContain(' ✓ctx');
     expect(output).toContain(' ⚠ no exit');
   });

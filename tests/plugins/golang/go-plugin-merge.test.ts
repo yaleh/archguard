@@ -124,17 +124,17 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const hubPkg = result.packages.find((p) => p.fullName === 'pkg/hub');
     expect(hubPkg).toBeDefined();
 
-    const server = hubPkg!.structs.find((s) => s.name === 'Server');
+    const server = hubPkg.structs.find((s) => s.name === 'Server');
     expect(server).toBeDefined();
 
     // The orphaned method must be re-attached to Server
-    expect(server!.methods).toHaveLength(1);
-    expect(server!.methods[0].name).toBe('handleHealth');
-    expect(server!.methods[0].body).toBeDefined();
-    expect(server!.methods[0].receiverType).toBe('Server');
+    expect(server.methods).toHaveLength(1);
+    expect(server.methods[0].name).toBe('handleHealth');
+    expect(server.methods[0].body).toBeDefined();
+    expect(server.methods[0].receiverType).toBe('Server');
 
     // orphanedMethods should be cleared after re-attachment
-    expect(hubPkg!.orphanedMethods).toHaveLength(0);
+    expect(hubPkg.orphanedMethods).toHaveLength(0);
   });
 
   it('leaves orphaned methods cleared when receiver struct does not exist in the package', async () => {
@@ -174,9 +174,9 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const apiPkg = result.packages.find((p) => p.fullName === 'pkg/api');
     expect(apiPkg).toBeDefined();
     // No structs to attach to - method is silently dropped (struct doesn't exist)
-    expect(apiPkg!.structs).toHaveLength(0);
+    expect(apiPkg.structs).toHaveLength(0);
     // orphanedMethods list is cleared after re-attachment pass
-    expect(apiPkg!.orphanedMethods).toHaveLength(0);
+    expect(apiPkg.orphanedMethods).toHaveLength(0);
   });
 
   it('accumulates orphaned methods from multiple files before re-attaching', async () => {
@@ -279,16 +279,16 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const svcPkg = result.packages.find((p) => p.fullName === 'pkg/service');
     expect(svcPkg).toBeDefined();
 
-    const userSvc = svcPkg!.structs.find((s) => s.name === 'UserService');
+    const userSvc = svcPkg.structs.find((s) => s.name === 'UserService');
     expect(userSvc).toBeDefined();
-    expect(userSvc!.methods).toHaveLength(1);
-    expect(userSvc!.methods[0].name).toBe('GetUser');
+    expect(userSvc.methods).toHaveLength(1);
+    expect(userSvc.methods[0].name).toBe('GetUser');
 
-    const authSvc = svcPkg!.structs.find((s) => s.name === 'AuthService');
+    const authSvc = svcPkg.structs.find((s) => s.name === 'AuthService');
     expect(authSvc).toBeDefined();
-    expect(authSvc!.methods).toHaveLength(1);
-    expect(authSvc!.methods[0].name).toBe('Login');
+    expect(authSvc.methods).toHaveLength(1);
+    expect(authSvc.methods[0].name).toBe('Login');
 
-    expect(svcPkg!.orphanedMethods).toHaveLength(0);
+    expect(svcPkg.orphanedMethods).toHaveLength(0);
   });
 });

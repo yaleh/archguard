@@ -221,69 +221,69 @@ describe('normalizeToDiagrams', () => {
 });
 
 describe('Go Atlas default mode', () => {
-    const baseConfig: Config = {
-      diagrams: [],
-      outputDir: './archguard',
-      format: 'mermaid',
-      exclude: [],
-      cli: { command: 'claude', args: [], timeout: 60000 },
-      cache: { enabled: true, ttl: 86400 },
-      concurrency: 8,
-      verbose: false,
-    };
+  const baseConfig: Config = {
+    diagrams: [],
+    outputDir: './archguard',
+    format: 'mermaid',
+    exclude: [],
+    cli: { command: 'claude', args: [], timeout: 60000 },
+    cache: { enabled: true, ttl: 86400 },
+    concurrency: 8,
+    verbose: false,
+  };
 
-    it('--lang go enables atlas by default without --atlas flag', () => {
-      const result = normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        lang: 'go',
-      });
-
-      expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
+  it('--lang go enables atlas by default without --atlas flag', () => {
+    const result = normalizeToDiagrams(baseConfig, {
+      sources: ['./src'],
+      lang: 'go',
     });
 
-    it('--lang go --no-atlas disables atlas (opt-out)', () => {
-      const result = normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        lang: 'go',
-        noAtlas: true,
-      });
-
-      expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific).toBeUndefined();
-    });
-
-    it('--atlas still works as before (implies --lang go + atlas)', () => {
-      const result = normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        atlas: true,
-      });
-
-      expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
-    });
-
-    it('--lang go uses selective strategy by default', () => {
-      const result = normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        lang: 'go',
-      });
-
-      const atlasConfig = result[0].languageSpecific?.['atlas'] as any;
-      expect(atlasConfig.functionBodyStrategy).toBe('selective');
-    });
-
-    it('--lang go --atlas-strategy full passes strategy through', () => {
-      const result = normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        lang: 'go',
-        atlasStrategy: 'full',
-      });
-
-      const atlasConfig = result[0].languageSpecific?.['atlas'] as any;
-      expect(atlasConfig.functionBodyStrategy).toBe('full');
-    });
+    expect(result[0].language).toBe('go');
+    expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
   });
+
+  it('--lang go --no-atlas disables atlas (opt-out)', () => {
+    const result = normalizeToDiagrams(baseConfig, {
+      sources: ['./src'],
+      lang: 'go',
+      noAtlas: true,
+    });
+
+    expect(result[0].language).toBe('go');
+    expect(result[0].languageSpecific).toBeUndefined();
+  });
+
+  it('--atlas still works as before (implies --lang go + atlas)', () => {
+    const result = normalizeToDiagrams(baseConfig, {
+      sources: ['./src'],
+      atlas: true,
+    });
+
+    expect(result[0].language).toBe('go');
+    expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
+  });
+
+  it('--lang go uses selective strategy by default', () => {
+    const result = normalizeToDiagrams(baseConfig, {
+      sources: ['./src'],
+      lang: 'go',
+    });
+
+    const atlasConfig = result[0].languageSpecific?.['atlas'] as any;
+    expect(atlasConfig.functionBodyStrategy).toBe('selective');
+  });
+
+  it('--lang go --atlas-strategy full passes strategy through', () => {
+    const result = normalizeToDiagrams(baseConfig, {
+      sources: ['./src'],
+      lang: 'go',
+      atlasStrategy: 'full',
+    });
+
+    const atlasConfig = result[0].languageSpecific?.['atlas'] as any;
+    expect(atlasConfig.functionBodyStrategy).toBe('full');
+  });
+});
 
 describe('filterDiagrams', () => {
   const diagrams: DiagramConfig[] = [

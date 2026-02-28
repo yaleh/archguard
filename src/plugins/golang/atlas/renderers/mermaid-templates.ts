@@ -18,7 +18,7 @@ interface GroupNode {
 
 /** A node in the package prefix tree for capability/goroutine renderers */
 interface PkgTreeNode {
-  pkg: string;        // full package path (empty string = virtual ancestor)
+  pkg: string; // full package path (empty string = virtual ancestor)
   isVirtual: boolean; // true = no real nodes, exists only as a grouping ancestor
   children: PkgTreeNode[];
 }
@@ -95,18 +95,19 @@ export class MermaidTemplates {
     for (const p of allPrefixes) {
       const parent = parentOf(p);
       if (parent && nodeMap.has(parent)) {
-        nodeMap.get(parent)!.children.push(nodeMap.get(p)!);
+        nodeMap.get(parent).children.push(nodeMap.get(p));
       } else {
-        roots.push(nodeMap.get(p)!);
+        roots.push(nodeMap.get(p));
       }
     }
 
     return roots;
   }
 
-  private static buildGroupTree(
-    nodes: Array<{ id: string; name: string }>
-  ): { roots: GroupNode[]; grouped: Set<string> } {
+  private static buildGroupTree(nodes: Array<{ id: string; name: string }>): {
+    roots: GroupNode[];
+    grouped: Set<string>;
+  } {
     // Count all nodes under every ancestor prefix
     const prefixMembers = new Map<string, string[]>();
     for (const node of nodes) {
@@ -156,9 +157,9 @@ export class MermaidTemplates {
     for (const prefix of validPrefixes) {
       const parent = parentGroupFor(prefix);
       if (parent && nodeObjects.has(parent)) {
-        nodeObjects.get(parent)!.children.push(nodeObjects.get(prefix)!);
+        nodeObjects.get(parent).children.push(nodeObjects.get(prefix));
       } else {
-        roots.push(nodeObjects.get(prefix)!);
+        roots.push(nodeObjects.get(prefix));
       }
     }
 
@@ -167,7 +168,7 @@ export class MermaidTemplates {
     for (const node of nodes) {
       const group = deepestGroupFor(node.name);
       if (group && nodeObjects.has(group)) {
-        nodeObjects.get(group)!.nodeIds.push(node.id);
+        nodeObjects.get(group).nodeIds.push(node.id);
         grouped.add(node.id);
       }
     }
@@ -187,10 +188,15 @@ export class MermaidTemplates {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(group.prefix);
       out += `\n${indent}subgraph ${sgId}["${group.prefix}"]\n`;
       // Recurse: emit nested child groups first
-      out += MermaidTemplates.renderGroupNodes(group.children, nodeMap, cycleNodeIds, indent + '  ');
+      out += MermaidTemplates.renderGroupNodes(
+        group.children,
+        nodeMap,
+        cycleNodeIds,
+        indent + '  '
+      );
       // Then emit this group's direct node members
       for (const nodeId of group.nodeIds) {
-        const node = nodeMap.get(nodeId)!;
+        const node = nodeMap.get(nodeId);
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         out += `${indent}  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
@@ -204,13 +210,11 @@ export class MermaidTemplates {
 
     // --- cycle detection (P2) ---
     const cycleNodeIds = new Set(
-      graph.cycles
-        .filter(c => c.packages.length > 1)
-        .flatMap(c => c.packages)
+      graph.cycles.filter((c) => c.packages.length > 1).flatMap((c) => c.packages)
     );
 
     // --- nested subgraph grouping (P4) ---
-    const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
     const { roots, grouped } = MermaidTemplates.buildGroupTree(graph.nodes);
 
     // Pass 1: ungrouped top-level nodes
@@ -243,7 +247,7 @@ export class MermaidTemplates {
     output += '\n';
     for (const edge of graph.edges) {
       const fromId = MermaidTemplates.sanitizeId(edge.from);
-      const toId   = MermaidTemplates.sanitizeId(edge.to);
+      const toId = MermaidTemplates.sanitizeId(edge.to);
       if (edge.from === edge.to) {
         output += `  ${fromId} -.->|"⚠ self"| ${toId}\n`;
         edgeIndex++;
@@ -258,7 +262,7 @@ export class MermaidTemplates {
     // Pass 3b: dynamic linkStyle for edge thickness tiers
     if (edgeThicknesses.length > 0) {
       const tiers = MermaidTemplates.computePackageEdgeTiers(
-        edgeThicknesses.map(e => e.strength)
+        edgeThicknesses.map((e) => e.strength)
       );
       if (tiers.size > 0) {
         output += '\n';
@@ -293,7 +297,7 @@ export class MermaidTemplates {
     const nodesByPkg = new Map<string, CapabilityNode[]>();
     for (const node of graph.nodes) {
       if (!nodesByPkg.has(node.package)) nodesByPkg.set(node.package, []);
-      nodesByPkg.get(node.package)!.push(node);
+      nodesByPkg.get(node.package).push(node);
     }
 
     // Build prefix-tree using buildPackageTree — every real package gets a
@@ -400,21 +404,21 @@ export class MermaidTemplates {
     if (max === min) return new Map();
 
     const n = sorted.length;
-    let thMedium = sorted[Math.min(Math.floor(n * 0.50), n - 1)]; // median
-    let thHeavy  = sorted[Math.min(Math.floor(n * 0.85), n - 1)]; // 85th percentile
+    let thMedium = sorted[Math.min(Math.floor(n * 0.5), n - 1)]; // median
+    let thHeavy = sorted[Math.min(Math.floor(n * 0.85), n - 1)]; // 85th percentile
 
     // Fallback: when median collapses to max, split on min / max instead
     if (thMedium >= max) {
       thMedium = min;
-      thHeavy  = max;
+      thHeavy = max;
     }
 
     const result = new Map<number, number>();
     for (const s of new Set(strengths)) {
       if (s >= thHeavy) {
-        result.set(s, 5.0);   // heavy: top ~15%
+        result.set(s, 5.0); // heavy: top ~15%
       } else if (s > thMedium) {
-        result.set(s, 3.0);   // medium: p50–p85
+        result.set(s, 3.0); // medium: p50–p85
       }
       // ≤ thMedium: default stroke (no linkStyle)
     }
@@ -433,7 +437,7 @@ export class MermaidTemplates {
     const addDecl = (pkg: string | undefined, decl: NodeDecl) => {
       if (pkg) {
         if (!packageGroups.has(pkg)) packageGroups.set(pkg, []);
-        packageGroups.get(pkg)!.push(decl);
+        packageGroups.get(pkg).push(decl);
       } else {
         ungrouped.push(decl);
       }
@@ -451,9 +455,10 @@ export class MermaidTemplates {
       const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
-      const lifecycleTag = node.type === 'spawned'
-        ? MermaidTemplates.getLifecycleTag(node.id, topology.lifecycle)
-        : '';
+      const lifecycleTag =
+        node.type === 'spawned'
+          ? MermaidTemplates.getLifecycleTag(node.id, topology.lifecycle)
+          : '';
       addDecl(node.package || undefined, {
         rawId: node.id,
         label: `${displayName}${patternLabel}${lifecycleTag}`,
@@ -571,7 +576,7 @@ export class MermaidTemplates {
     for (const entry of graph.entryPoints) {
       const pkg = entry.package ?? path.dirname(entry.location.file);
       if (!pkgGroups.has(pkg)) pkgGroups.set(pkg, []);
-      pkgGroups.get(pkg)!.push(entry);
+      pkgGroups.get(pkg).push(entry);
     }
 
     // Build nested package prefix tree (same as capability / goroutine renderers)
@@ -601,9 +606,7 @@ export class MermaidTemplates {
     }
 
     // Track nodes already declared inside subgraphs (entry point nodes)
-    const declaredNodeIds = new Set<string>(
-      graph.entryPoints.map((e) => this.sanitizeId(e.id))
-    );
+    const declaredNodeIds = new Set<string>(graph.entryPoints.map((e) => this.sanitizeId(e.id)));
 
     // Emit call-chain edges — deduplicated across all chains
     const emittedEdges = new Set<string>();
@@ -705,7 +708,11 @@ export class MermaidTemplates {
       const dotIdx = afterSlash.indexOf('.');
       if (dotIdx > 0 && afterSlash.slice(0, dotIdx).includes('-')) {
         const symbol = afterSlash.slice(dotIdx + 1);
-        if (symbol.length > 0 && symbol[0] === symbol[0].toUpperCase() && symbol[0] !== symbol[0].toLowerCase()) {
+        if (
+          symbol.length > 0 &&
+          symbol[0] === symbol[0].toUpperCase() &&
+          symbol[0] !== symbol[0].toLowerCase()
+        ) {
           return symbol;
         }
       }
@@ -722,7 +729,7 @@ export class MermaidTemplates {
     nodeId: string,
     lifecycle: GoroutineLifecycleSummary[] | undefined
   ): string {
-    const entry = lifecycle?.find(l => l.nodeId === nodeId);
+    const entry = lifecycle?.find((l) => l.nodeId === nodeId);
     if (!entry) return '';
     if (entry.receivesContext && entry.hasCancellationCheck) return ' \u2713ctx';
     if (entry.receivesContext && !entry.cancellationCheckAvailable) return ' ctx?';
