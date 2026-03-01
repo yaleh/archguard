@@ -73,7 +73,7 @@ describe('CLI Multi-language Support', () => {
   });
 
   // T1.3.1: Backward compatibility - normalizeToDiagrams still works
-  it('should maintain backward compatibility with normalizeToDiagrams', () => {
+  it('should maintain backward compatibility with normalizeToDiagrams', async () => {
     const config: Config = {
       source: './src',
       format: 'mermaid',
@@ -99,7 +99,7 @@ describe('CLI Multi-language Support', () => {
       format: 'mermaid',
     };
 
-    const diagrams = normalizeToDiagrams(config, cliOptions);
+    const diagrams = await normalizeToDiagrams(config, cliOptions);
 
     expect(diagrams).toBeDefined();
     expect(diagrams.length).toBe(1);

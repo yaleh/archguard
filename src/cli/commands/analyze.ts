@@ -18,6 +18,7 @@ import { ConfigLoader } from '../config-loader.js';
 import { ErrorHandler } from '../error-handler.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
+import { detectProjectStructure } from '../utils/project-structure-detector.js';
 import { ParseCache } from '@/parser/parse-cache.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
@@ -35,7 +36,11 @@ import type { DiagramResult } from '../processors/diagram-processor.js';
  * @param cliOptions - CLI options
  * @returns Array of DiagramConfig
  */
-export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): DiagramConfig[] {
+export async function normalizeToDiagrams(
+  config: Config,
+  cliOptions: CLIOptions,
+  rootDir?: string
+): Promise<DiagramConfig[]> {
   // Priority 1: Config file diagrams
   if (config.diagrams && config.diagrams.length > 0) {
     return config.diagrams as DiagramConfig[];
@@ -69,14 +74,8 @@ export function normalizeToDiagrams(config: Config, cliOptions: CLIOptions): Dia
     return [diagram];
   }
 
-  // Priority 3: Default diagram
-  return [
-    {
-      name: 'architecture',
-      sources: ['./src'],
-      level: 'class',
-    },
-  ];
+  // Priority 3: Auto-detect project structure
+  return detectProjectStructure(rootDir ?? process.cwd());
 }
 
 /**
@@ -250,7 +249,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     progress.succeed('Configuration loaded');
 
     // Step 2: Normalize to DiagramConfig[]
-    const diagrams = normalizeToDiagrams(config, cliOptions);
+    const diagrams = await normalizeToDiagrams(config, cliOptions, process.cwd());
     progress.info(`Found ${diagrams.length} diagram(s) to generate`);
 
     // Step 3: Filter diagrams if needed
