@@ -4,6 +4,7 @@
 
 // Export configuration types (v2.0)
 export * from './config.js';
+import type { DetailLevel } from './config.js';
 
 // Export extension types (ADR-002)
 export type { ArchJSONExtensions } from './extensions.js';
@@ -60,6 +61,12 @@ export interface ArchJSON {
 
   // Type-safe extensions (ADR-002)
   extensions?: import('./extensions.js').ArchJSONExtensions;
+
+  /**
+   * Structural proxy metrics, computed by MetricsCalculator after aggregation.
+   * Only present in json-format output. Bound to the aggregation level used.
+   */
+  metrics?: ArchJSONMetrics;
 }
 
 /**
@@ -169,4 +176,41 @@ export interface Relation {
   target: string;
   confidence?: number;
   inferenceSource?: 'explicit' | 'inferred' | 'gopls';
+}
+
+/**
+ * Structural proxy metrics for ArchJSON.
+ * Computed by MetricsCalculator after aggregation; all values are bound to `level`.
+ * Do NOT compare values across different levels.
+ */
+export interface ArchJSONMetrics {
+  /** The aggregation level that produced these metrics. Must be checked before interpreting any value. */
+  level: DetailLevel;
+
+  /** Total entity count at this level (= entities.length) */
+  entityCount: number;
+
+  /** Total relation count at this level (= relations.length) */
+  relationCount: number;
+
+  /**
+   * Per-type relation counts. Only types with count > 0 are present.
+   * Sum of all values equals relationCount.
+   */
+  relationTypeBreakdown: Partial<Record<RelationType, number>>;
+
+  /**
+   * Number of strongly connected components (Kosaraju algorithm) in the directed dependency graph.
+   * - Equals entityCount → no cyclic dependencies
+   * - Less than entityCount → cyclic dependencies exist
+   * - Equals 0 → entities array is empty
+   */
+  stronglyConnectedComponents: number;
+
+  /**
+   * Ratio of inferred relations (inferenceSource !== 'explicit') to total relations. Range: [0, 1].
+   * Higher values mean heavier reliance on static analysis inference, lower result confidence.
+   * Returns 0 when relationCount === 0.
+   */
+  inferredRelationRatio: number;
 }

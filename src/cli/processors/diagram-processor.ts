@@ -16,6 +16,7 @@
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
+import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import type { ParseCache } from '@/parser/parse-cache.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
@@ -102,6 +103,7 @@ export class DiagramProcessor {
   private progress: ProgressReporter;
   private fileDiscovery: FileDiscoveryService;
   private aggregator: ArchJSONAggregator;
+  private metricsCalculator: MetricsCalculator;
   private parallelProgress?: ParallelProgressReporter;
   private parseCache?: ParseCache;
   private registry?: PluginRegistry;
@@ -116,6 +118,7 @@ export class DiagramProcessor {
     this.progress = options.progress;
     this.fileDiscovery = new FileDiscoveryService();
     this.aggregator = new ArchJSONAggregator();
+    this.metricsCalculator = new MetricsCalculator();
     this.parseCache = options.parseCache;
     this.registry = options.registry;
   }
@@ -352,7 +355,15 @@ export class DiagramProcessor {
         this.parallelProgress.update(diagram.name, 70, 'Generating output');
       }
       const format = diagram.format || this.globalConfig.format;
-      await this.generateOutput(aggregatedJSON, paths, format, diagram.level, diagram);
+
+      // For json format: compute metrics and produce a new object (never mutate aggregatedJSON or rawArchJSON,
+      // as rawArchJSON may be a shared cached reference returned by the 'method'-level aggregator).
+      const outputJSON =
+        format === 'json'
+          ? { ...aggregatedJSON, metrics: this.metricsCalculator.calculate(aggregatedJSON, diagram.level) }
+          : aggregatedJSON;
+
+      await this.generateOutput(outputJSON, paths, format, diagram.level, diagram);
 
       if (this.parallelProgress) {
         this.parallelProgress.update(diagram.name, 90, 'Finalizing');

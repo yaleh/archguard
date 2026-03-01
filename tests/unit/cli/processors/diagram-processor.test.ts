@@ -689,4 +689,177 @@ describe('DiagramProcessor', () => {
       expect(results[0].success).toBe(true);
     });
   });
+
+  describe('DiagramProcessor — metrics integration', () => {
+    /**
+     * Shared setup: mock all dependencies for a single diagram processed with
+     * json format unless overridden.
+     */
+    const setupMocks = async (opts: {
+      format?: 'json' | 'mermaid';
+      level?: 'class' | 'package' | 'method';
+      archJSON?: ArchJSON;
+    } = {}) => {
+      const archJSON = opts.archJSON ?? createTestArchJSON();
+
+      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+      (FileDiscoveryService as any).mockImplementation(() => ({
+        discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      }));
+
+      const { ParallelParser } = await import('@/parser/parallel-parser.js');
+      (ParallelParser as any).mockImplementation(() => ({
+        parseFiles: vi.fn().mockResolvedValue(archJSON),
+      }));
+
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        // Return the same reference to simulate 'method'-level pass-through
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: vi.fn().mockReturnValue({
+          outputDir: './archguard',
+          baseName: 'test',
+          paths: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+            json: './archguard/test.json',
+          },
+        }),
+        ensureDirectory: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
+      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+        generateAndRender: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      return archJSON;
+    };
+
+    it('json format: output ArchJSON contains metrics field', async () => {
+      await setupMocks({ format: 'json' });
+
+      const fs = (await import('fs-extra')).default;
+      let writtenData: unknown;
+      (fs.writeJson as any).mockImplementation((_path: string, data: unknown) => {
+        writtenData = data;
+        return Promise.resolve();
+      });
+
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+      ];
+      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      expect(writtenData).toBeDefined();
+      expect((writtenData as any).metrics).toBeDefined();
+    });
+
+    it('json format: metrics.level matches diagram.level', async () => {
+      await setupMocks({ format: 'json' });
+
+      const fs = (await import('fs-extra')).default;
+      let writtenData: unknown;
+      (fs.writeJson as any).mockImplementation((_path: string, data: unknown) => {
+        writtenData = data;
+        return Promise.resolve();
+      });
+
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+      ];
+      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      await processor.processAll();
+
+      expect((writtenData as any).metrics.level).toBe('class');
+    });
+
+    it('json format: metrics.entityCount === aggregatedJSON.entities.length', async () => {
+      const archJSON = createTestArchJSON();
+      // 1 entity in createTestArchJSON
+      await setupMocks({ format: 'json', archJSON });
+
+      const fs = (await import('fs-extra')).default;
+      let writtenData: unknown;
+      (fs.writeJson as any).mockImplementation((_path: string, data: unknown) => {
+        writtenData = data;
+        return Promise.resolve();
+      });
+
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+      ];
+      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      await processor.processAll();
+
+      expect((writtenData as any).metrics.entityCount).toBe(archJSON.entities.length);
+    });
+
+    it('mermaid format: does not compute metrics, output object has no metrics field', async () => {
+      await setupMocks({ format: 'mermaid' });
+
+      const fs = (await import('fs-extra')).default;
+      let writtenData: unknown = undefined;
+      (fs.writeJson as any).mockImplementation((_path: string, data: unknown) => {
+        writtenData = data;
+        return Promise.resolve();
+      });
+
+      // globalConfig format is 'mermaid' by default; no diagram-level format override
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'class' as const },
+      ];
+      const globalConfig = { ...createGlobalConfig(), format: 'mermaid' as const };
+      const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
+      await processor.processAll();
+
+      // writeJson should NOT have been called for mermaid format
+      // (MermaidDiagramGenerator is mocked and doesn't call writeJson)
+      // writtenData remains undefined, confirming no JSON was written with metrics
+      expect(writtenData).toBeUndefined();
+    });
+
+    it('method level: does not mutate rawArchJSON (cached object has no metrics field)', async () => {
+      const rawArchJSON = createTestArchJSON();
+      await setupMocks({ format: 'json', archJSON: rawArchJSON });
+
+      const fs = (await import('fs-extra')).default;
+      (fs.writeJson as any).mockImplementation(() => Promise.resolve());
+
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'method' as const, format: 'json' as const },
+      ];
+      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      await processor.processAll();
+
+      // rawArchJSON must not have been mutated
+      expect((rawArchJSON as any).metrics).toBeUndefined();
+    });
+
+    it('metrics field does not affect existing DiagramResult.stats values', async () => {
+      const archJSON = createTestArchJSON();
+      // createTestArchJSON has 1 entity, 0 relations
+      await setupMocks({ format: 'json', archJSON });
+
+      const fs = (await import('fs-extra')).default;
+      (fs.writeJson as any).mockImplementation(() => Promise.resolve());
+
+      const diagrams = [
+        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+      ];
+      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      expect(results[0].stats?.entities).toBe(archJSON.entities.length);
+      expect(results[0].stats?.relations).toBe(archJSON.relations.length);
+    });
+  });
 });
