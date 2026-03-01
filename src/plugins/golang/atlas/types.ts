@@ -28,7 +28,6 @@ export type {
   ChannelEdge,
   FlowGraph,
   EntryPoint,
-  EntryPointType,
   CallChain,
   CallEdge,
 } from '@/types/extensions.js';
@@ -39,6 +38,42 @@ export { GO_ATLAS_EXTENSION_VERSION } from '@/types/extensions.js';
  * GoArchitectureAtlas is an alias for GoAtlasExtension
  */
 export type { GoAtlasExtension as GoArchitectureAtlas } from '@/types/extensions.js';
+
+// ========== Framework Detection Types ==========
+
+export interface CustomCallPattern {
+  method?: string;            // exact AST call functionName to match
+  methodSuffix?: string;      // suffix match: call.functionName.endsWith(methodSuffix)
+  receiverContains?: string;  // substring of GoCallExpr.receiverType for disambiguation
+                              // e.g. 'mux.Router' to distinguish gorilla/mux from net/http
+  pathArgIndex?: number;      // index into GoCallExpr.args for path
+  handlerArgIndex?: number;   // index into GoCallExpr.args for handler
+  topicArgIndex?: number;     // index for message topic
+}
+// At least one of `method` or `methodSuffix` must be set.
+
+export interface CustomFrameworkConfig {
+  name: string;
+  protocol: string;
+  patterns: CustomCallPattern[];
+}
+
+export interface ManualEntryPoint {
+  function: string;   // fully-qualified: "pkg/path.(*Receiver).Method"
+  protocol: string;
+}
+
+// DetectedFrameworks: set of active framework keys
+export type DetectedFrameworks = Set<string>;
+
+// FlowBuildOptions: passed to FlowGraphBuilder.build() and BehaviorAnalyzer.buildFlowGraph()
+export interface FlowBuildOptions {
+  detectedFrameworks: DetectedFrameworks;
+  protocols?: string[];
+  customFrameworks?: CustomFrameworkConfig[];
+  entryPoints?: ManualEntryPoint[];
+  followIndirectCalls?: boolean;
+}
 
 /**
  * Atlas layer names
@@ -70,7 +105,9 @@ export interface AtlasGenerationOptions {
   includeTests?: boolean;
   excludeTests?: boolean;
   excludePatterns?: string[];
-  entryPointTypes?: import('@/types/extensions.js').EntryPointType[];
+  protocols?: string[];
+  customFrameworks?: CustomFrameworkConfig[];
+  entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
 }
 
@@ -83,7 +120,9 @@ export interface AtlasConfig {
   layers?: AtlasLayer[];
   includeTests?: boolean;
   excludeTests?: boolean;
-  entryPointTypes?: import('@/types/extensions.js').EntryPointType[];
+  protocols?: string[];
+  customFrameworks?: CustomFrameworkConfig[];
+  entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
   excludePatterns?: string[];
 }

@@ -65,7 +65,7 @@ export async function normalizeToDiagrams(
               enabled: true,
               functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
               excludeTests: !cliOptions.atlasIncludeTests,
-              entryPointTypes: cliOptions.atlasEntryPoints?.split(',').map((s) => s.trim()),
+              protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
               layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             },
           }
@@ -197,9 +197,8 @@ export function createAnalyzeCommand(): Command {
         'Include test packages in Atlas extraction (overrides default exclusion)'
       )
       .option(
-        '--atlas-entry-points <types>',
-        'Entry point types for flow graph (comma-separated)',
-        'http-handler,http-get,http-post'
+        '--atlas-protocols <protocols>',
+        'Protocols to include in flow graph (comma-separated: http,grpc,cli,message,scheduler)'
       )
 
       .action(analyzeCommandHandler)

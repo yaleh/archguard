@@ -560,6 +560,6 @@ export interface CLIOptions {
   atlasNoTests?: boolean;
   atlasIncludeTests?: boolean;
 
-  /** Entry point types for flow graph (comma-separated) */
-  atlasEntryPoints?: string;
+  /** Protocols to include in flow graph (comma-separated: http,grpc,cli,message,scheduler) */
+  atlasProtocols?: string;
 }

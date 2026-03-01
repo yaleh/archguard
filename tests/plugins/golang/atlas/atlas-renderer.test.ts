@@ -446,7 +446,9 @@ describe('MermaidTemplates', () => {
       entryPoints: [
         {
           id: 'ep1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/api/users',
           handler: 'UserHandler',
           middleware: [],
@@ -464,7 +466,7 @@ describe('MermaidTemplates', () => {
     const output = MermaidTemplates.renderFlowGraph(graph, 'sequence');
 
     expect(output).toContain('Note over UserHandler');
-    expect(output).toContain('http-get /api/users');
+    expect(output).toContain('GET /api/users');
     expect(output).toContain('UserHandler->>+UserService: call');
     expect(output).toContain('UserService-->>-UserHandler: return');
   });

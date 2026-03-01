@@ -170,13 +170,13 @@ describe('BehaviorAnalyzer', () => {
       expect(result.callChains).toHaveLength(0);
     });
 
-    it('accepts options param (entryPointTypes, followIndirectCalls) without errors', async () => {
+    it('accepts FlowBuildOptions (detectedFrameworks, followIndirectCalls) without errors', async () => {
       const resolver = new GoModResolver();
       const analyzer = new BehaviorAnalyzer(resolver);
       const rawData = makeRawData();
 
       const result = await analyzer.buildFlowGraph(rawData, {
-        entryPointTypes: ['http-handler'],
+        detectedFrameworks: new Set(['net/http']),
         followIndirectCalls: true,
       });
 

@@ -10,6 +10,7 @@ import { GoPlugin } from '../index.js';
 import { BehaviorAnalyzer } from './behavior-analyzer.js';
 import { AtlasRenderer } from './renderers/atlas-renderer.js';
 import { GoModResolver } from './go-mod-resolver.js';
+import { FrameworkDetector } from './framework-detector.js';
 import type {
   GoArchitectureAtlas,
   AtlasConfig,
@@ -31,6 +32,15 @@ function isTestPackage(fullName: string): boolean {
   const segs = fullName.split('/');
   if (segs.some((s) => s === 'testutil' || s === 'hubtest')) return true;
   return false;
+}
+
+function inferBodyStrategy(
+  layers: AtlasLayer[],
+  explicit?: 'none' | 'selective' | 'full'
+): 'none' | 'selective' | 'full' {
+  if (explicit) return explicit;
+  const needsBody = layers.some(l => l === 'goroutine' || l === 'flow');
+  return needsBody ? 'selective' : 'none';
 }
 
 /**
@@ -118,12 +128,16 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
 
     // Atlas mode: get base ArchJSON + generate Atlas extension
     const baseArchJSON = await this.goPlugin.parseProject(workspaceRoot, config);
+    const layers = (atlasConfig?.layers ?? ['package', 'capability', 'goroutine', 'flow']) as AtlasLayer[];
+    const functionBodyStrategy = inferBodyStrategy(layers, atlasConfig?.functionBodyStrategy);
     const atlas = await this.generateAtlas(workspaceRoot, {
-      functionBodyStrategy: atlasConfig?.functionBodyStrategy ?? 'selective',
+      functionBodyStrategy,
       includeTests: atlasConfig?.includeTests,
-      excludeTests: atlasConfig?.excludeTests,
+      excludeTests: atlasConfig?.excludeTests ?? true,
       excludePatterns: atlasConfig?.excludePatterns,
-      entryPointTypes: atlasConfig?.entryPointTypes,
+      protocols: atlasConfig?.protocols,
+      customFrameworks: atlasConfig?.customFrameworks,
+      entryPoints: atlasConfig?.entryPoints,
       followIndirectCalls: atlasConfig?.followIndirectCalls,
     });
 
@@ -164,7 +178,10 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     }
 
     // 2. Resolve module info for import classification
-    await this.goModResolver.resolveProject(rootPath);
+    const moduleInfo = await this.goModResolver.resolveProject(rootPath);
+
+    // 2b. Detect frameworks from module info + raw data
+    const detectedFrameworks = new FrameworkDetector().detect(moduleInfo, rawData);
 
     // 3. Build all four layers in parallel (no second parsing pass needed)
     const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
@@ -174,12 +191,24 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
         includeTests: options.includeTests,
       }),
       this.behaviorAnalyzer.buildFlowGraph(rawData, {
-        entryPointTypes: options.entryPointTypes,
+        detectedFrameworks,
+        protocols: options.protocols,
+        customFrameworks: options.customFrameworks,
+        entryPoints: options.entryPoints,
         followIndirectCalls: options.followIndirectCalls,
       }),
     ]);
 
     const totalTime = performance.now() - startTime;
+
+    // 3b. Emit warnings when flow graph has no entry points
+    const warnings: string[] = [];
+    if (flowGraph.entryPoints.length === 0) {
+      warnings.push(
+        `Flow graph: no entry points detected. Frameworks found: ${[...detectedFrameworks].join(', ')}. ` +
+        `Add 'customFrameworks' or 'entryPoints' to archguard.config.json to configure detection.`
+      );
+    }
 
     // 4. Return GoAtlasExtension (ADR-002 structure)
     return {
@@ -194,7 +223,8 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
         generatedAt: new Date().toISOString(),
         generationStrategy: {
           functionBodyStrategy: options.functionBodyStrategy ?? 'none',
-          entryPointTypes: options.entryPointTypes ?? [],
+          detectedFrameworks: [...detectedFrameworks],
+          protocols: options.protocols,
           followIndirectCalls: options.followIndirectCalls ?? false,
           goplsEnabled: false,
         },
@@ -210,6 +240,7 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
           totalTime,
           memoryUsage: process.memoryUsage().heapUsed,
         },
+        warnings: warnings.length > 0 ? warnings : undefined,
       },
     };
   }

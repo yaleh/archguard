@@ -43,13 +43,13 @@ describe('FlowGraphBuilder', () => {
 
   it('should return empty entryPoints and callChains for empty rawData', async () => {
     const rawData = makeRawData();
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(0);
     expect(result.callChains).toHaveLength(0);
   });
 
-  it('should detect HandleFunc call in function body as http-handler entry point', async () => {
+  it('should detect HandleFunc call in function body as http entry point', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -72,14 +72,15 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-handler');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].framework).toBe('net/http');
     expect(result.entryPoints[0].id).toBe('entry-pkg/api-5');
   });
 
-  it('should detect Handle call in function body as http-handler entry point', async () => {
+  it('should detect Handle call in function body as http entry point', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -102,13 +103,14 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-handler');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].framework).toBe('net/http');
   });
 
-  it('should detect GET call as http-get entry point', async () => {
+  it('should detect GET call as http entry point with method GET (gin)', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -130,13 +132,15 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-get');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('GET');
+    expect(result.entryPoints[0].framework).toBe('gin');
   });
 
-  it('should detect POST call as http-post entry point', async () => {
+  it('should detect POST call as http entry point with method POST (gin)', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -158,13 +162,14 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-post');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('POST');
   });
 
-  it('should detect PUT call as http-put entry point', async () => {
+  it('should detect PUT call as http entry point with method PUT (gin)', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -186,13 +191,14 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-put');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('PUT');
   });
 
-  it('should detect DELETE call as http-delete entry point', async () => {
+  it('should detect DELETE call as http entry point with method DELETE (gin)', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -214,13 +220,14 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-delete');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('DELETE');
   });
 
-  it('should detect PATCH call as http-patch entry point', async () => {
+  it('should detect PATCH call as http entry point with method PATCH (gin)', async () => {
     const rawData = makeRawData({
       packages: [
         makePackage({
@@ -242,10 +249,11 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-patch');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('PATCH');
   });
 
   it('should NOT create entry point for unknown call names like connect or run', async () => {
@@ -274,7 +282,7 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(0);
   });
@@ -292,7 +300,7 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(0);
     expect(result.callChains).toHaveLength(0);
@@ -336,10 +344,11 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(1);
-    expect(result.entryPoints[0].type).toBe('http-handler');
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].framework).toBe('net/http');
     expect(result.entryPoints[0].id).toBe('entry-pkg/server-15');
   });
 
@@ -400,7 +409,7 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin', 'net/http']) });
 
     expect(result.entryPoints).toHaveLength(3);
   });
@@ -431,7 +440,7 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.callChains).toHaveLength(result.entryPoints.length);
     expect(result.callChains).toHaveLength(2);
@@ -460,7 +469,7 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.entryPoints).toHaveLength(1);
     expect(result.callChains).toHaveLength(1);
@@ -492,13 +501,80 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
 
     expect(result.entryPoints).toHaveLength(1);
     expect(result.entryPoints[0].location).toEqual({
       file: 'handlers/user.go',
       line: 42,
     });
+  });
+
+  it('detects gin GET as http entry point with method GET', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [{ functionName: 'GET', args: ['/users', 'handleUsers'], location: { file: 'router.go', startLine: 5, endLine: 5 } }],
+                goSpawns: [], channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('http');
+    expect(result.entryPoints[0].method).toBe('GET');
+    expect(result.entryPoints[0].framework).toBe('gin');
+  });
+
+  it('filters entry points by protocol', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  { functionName: 'HandleFunc', args: ['/api', 'h'], location: { file: 'srv.go', startLine: 3, endLine: 3 } },
+                  { functionName: 'AddCommand', args: ['serve'], location: { file: 'cli.go', startLine: 4, endLine: 4 } },
+                ],
+                goSpawns: [], channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(['net/http', 'cobra']),
+      protocols: ['http'],
+    });
+    expect(result.entryPoints.every(e => e.protocol === 'http')).toBe(true);
+    expect(result.callChains.every(c => result.entryPoints.some(e => e.id === c.entryPoint))).toBe(true);
+  });
+
+  it('injects main() as cli entry point when main framework detected', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'main',
+          fullName: 'cmd/server',
+          functions: [
+            makeFunction({ name: 'main' }),
+          ],
+        }),
+      ],
+    });
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http', 'main']) });
+    const mainEntry = result.entryPoints.find(e => e.framework === 'main');
+    expect(mainEntry).toBeDefined();
+    expect(mainEntry!.protocol).toBe('cli');
+    expect(mainEntry!.handler).toBe('main.main');
   });
 });
 
@@ -528,7 +604,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints[0].path).toBe('/v1/sessions');
     expect(result.entryPoints[0].handler).toBe('s.handleSessions');
   });
@@ -555,7 +631,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints[0].path).toBe('POST /products');
     expect(result.entryPoints[0].handler).toBe('r.handler.CreateProduct');
   });
@@ -582,7 +658,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin']) });
     expect(result.entryPoints[0].path).toBe('/users');
     expect(result.entryPoints[0].handler).toBe('listUsers');
   });
@@ -634,7 +710,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints[0].handler).toBe('listUsers');
     // json.Encode is filtered out; only business logic repo.FindAll remains
     expect(result.callChains[0].calls).toHaveLength(1);
@@ -664,7 +740,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints[0].path).toBe('');
     expect(result.entryPoints[0].handler).toBe('');
   });
@@ -725,7 +801,7 @@ describe('path and handler extraction from args', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     // The entry point for the HandleFunc call on line 5 should be detected
     expect(result.entryPoints).toHaveLength(1);
@@ -765,7 +841,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints).toHaveLength(1);
     expect(result.entryPoints[0].path).toBe('/api/v1/');
     expect(result.entryPoints[0].handler).toBe('');
@@ -793,7 +869,7 @@ describe('path and handler extraction from args', () => {
         }),
       ],
     });
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints[0].handler).toBe('s.handleHealth');
   });
 });
@@ -853,7 +929,7 @@ describe('traceCallsFromEntry - stdlib filtering', () => {
       ],
     });
     const builder = new FlowGraphBuilder();
-    const graph = await builder.build(rawData);
+    const graph = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     const chain = graph.callChains[0];
     expect(chain).toBeDefined();
     const toValues = chain.calls.map((c) => c.to);
@@ -915,7 +991,7 @@ describe('traceCallsFromEntry - stdlib filtering', () => {
       ],
     });
     const builder = new FlowGraphBuilder();
-    const graph = await builder.build(rawData);
+    const graph = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     const chain = graph.callChains[0];
     const toValues = chain.calls.map((c) => c.to);
     expect(toValues.some((t) => t.startsWith('w.'))).toBe(false);
@@ -988,7 +1064,7 @@ describe('traceCallsFromEntry - stdlib filtering', () => {
       ],
     });
     const builder = new FlowGraphBuilder();
-    const graph = await builder.build(rawData);
+    const graph = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     const chain = graph.callChains[0];
     const toValues = chain.calls.map((c) => c.to);
     expect(toValues).not.toContain('make');
@@ -1052,7 +1128,7 @@ describe('traceCallsFromEntry - deduplication', () => {
     });
 
     const builder = new FlowGraphBuilder();
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.callChains.length).toBeGreaterThan(0);
 
@@ -1147,7 +1223,7 @@ describe('traceCallsFromEntry - deduplication', () => {
     });
 
     const builder = new FlowGraphBuilder();
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
 
     expect(result.callChains.length).toBeGreaterThan(0);
 

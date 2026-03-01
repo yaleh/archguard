@@ -552,8 +552,8 @@ export class MermaidTemplates {
         // Only emit Note when handler is a valid non-empty identifier
         const handlerId = this.sanitizeId(entry.handler);
         if (handlerId) {
-          const pathLabel = entry.path || entry.id;
-          output += `\n  Note over ${handlerId}: ${entry.type} ${pathLabel}\n`;
+          const entryLabel = MermaidTemplates.formatEntryLabel(entry);
+          output += `\n  Note over ${handlerId}: ${entryLabel}\n`;
         }
 
         for (const call of chain.calls) {
@@ -658,22 +658,15 @@ export class MermaidTemplates {
   }
 
   private static formatEntryLabel(entry: EntryPoint): string {
-    if (entry.type === 'http-handler') {
-      return entry.path;
+    if (entry.protocol === 'http') {
+      const m = entry.method ?? 'HTTP';
+      return `${m} ${entry.path}`;
     }
-    // Map type to METHOD string
-    const methodMap: Record<string, string> = {
-      'http-get': 'GET',
-      'http-post': 'POST',
-      'http-put': 'PUT',
-      'http-delete': 'DELETE',
-      'http-patch': 'PATCH',
-      'grpc-unary': 'GRPC',
-      'grpc-stream': 'GRPC',
-      'cli-command': 'CMD',
-    };
-    const method = methodMap[entry.type] ?? entry.type.toUpperCase();
-    return `${method} ${entry.path}`;
+    if (entry.protocol === 'grpc')      return `gRPC ${entry.path}`;
+    if (entry.protocol === 'cli')       return `CMD ${entry.path || entry.handler}`;
+    if (entry.protocol === 'message')   return `MSG ${entry.path}`;
+    if (entry.protocol === 'scheduler') return `CRON ${entry.path}`;
+    return entry.path || entry.id;
   }
 
   private static formatSpawnerLabel(nodeId: string): string {

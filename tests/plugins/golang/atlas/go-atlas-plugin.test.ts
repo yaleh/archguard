@@ -75,9 +75,9 @@ describe('GoAtlasPlugin', () => {
       vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
     });
 
-    it('returns version "1.1"', async () => {
+    it('returns version "2.0"', async () => {
       const atlas = await plugin.generateAtlas('/test');
-      expect(atlas.version).toBe('1.1');
+      expect(atlas.version).toBe('2.0');
     });
 
     it('returns all 4 layers defined', async () => {
@@ -183,7 +183,7 @@ describe('GoAtlasPlugin', () => {
   describe('renderLayer', () => {
     it('delegates to AtlasRenderer and returns RenderResult with format and layer fields', async () => {
       const mockAtlas = {
-        version: '1.1',
+        version: '2.0',
         layers: {
           package: { nodes: [], edges: [], cycles: [] },
           capability: { nodes: [], edges: [] },
@@ -194,7 +194,7 @@ describe('GoAtlasPlugin', () => {
           generatedAt: new Date().toISOString(),
           generationStrategy: {
             functionBodyStrategy: 'none' as const,
-            entryPointTypes: [],
+            detectedFrameworks: [],
             followIndirectCalls: false,
             goplsEnabled: false,
           },

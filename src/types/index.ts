@@ -26,7 +26,6 @@ export type {
   ChannelInfo,
   FlowGraph,
   EntryPoint,
-  EntryPointType,
   CallChain,
   CallEdge,
 } from './extensions.js';

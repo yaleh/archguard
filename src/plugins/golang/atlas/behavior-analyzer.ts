@@ -1,5 +1,5 @@
 import type { GoRawData } from '../types.js';
-import type { PackageGraph, CapabilityGraph, GoroutineTopology, FlowGraph } from './types.js';
+import type { PackageGraph, CapabilityGraph, GoroutineTopology, FlowGraph, FlowBuildOptions } from './types.js';
 import type { AtlasGenerationOptions } from './types.js';
 import {
   PackageGraphBuilder,
@@ -62,8 +62,8 @@ export class BehaviorAnalyzer {
 
   async buildFlowGraph(
     rawData: GoRawData,
-    _options: Pick<AtlasGenerationOptions, 'entryPointTypes' | 'followIndirectCalls'> = {}
+    options: FlowBuildOptions = { detectedFrameworks: new Set(['net/http']) }
   ): Promise<FlowGraph> {
-    return this.flowGraphBuilder.build(rawData);
+    return this.flowGraphBuilder.build(rawData, options);
   }
 }

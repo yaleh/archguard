@@ -24,7 +24,9 @@ import type { GoRawData, GoRawPackage } from '@/plugins/golang/types.js';
 
 function makeEntry(overrides: Partial<EntryPoint> & { id: string }): EntryPoint {
   return {
-    type: 'http-get',
+    protocol: 'http',
+    method: 'GET',
+    framework: 'net/http',
     path: '/api/resource',
     handler: 'pkg.Handler',
     middleware: [],
@@ -75,7 +77,8 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
     const e2 = makeEntry({
       id: 'ep2',
       location: { file: '/srv/grpc/b.go', line: 2 },
-      type: 'grpc-unary',
+      protocol: 'grpc',
+      method: undefined,
       path: '/pkg.Svc/Method',
     });
     const graph = makeFlowGraph([e1, e2]);
@@ -106,7 +109,9 @@ describe('renderFlowGraph - node labels', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/foo',
           handler: 'r.handler.GetFoo',
           middleware: [],
@@ -132,7 +137,9 @@ describe('renderFlowGraph - node labels', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/foo',
           handler: 'myHandler',
           middleware: [],
@@ -158,7 +165,9 @@ describe('renderFlowGraph - node labels', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/foo',
           handler: 'myHandler',
           middleware: [],
@@ -206,41 +215,41 @@ describe('MermaidTemplates.renderFlowGraph (sequence)', () => {
 // ─── formatEntryLabel ─────────────────────────────────────────────────────────
 
 describe('formatEntryLabel (via renderFlowGraph node labels)', () => {
-  it('http-handler type uses only the path — no METHOD prefix', () => {
-    const entry = makeEntry({ id: 'ep1', type: 'http-handler', path: '/api/users' });
+  it('http protocol without method uses only "HTTP /path" format', () => {
+    const entry = makeEntry({ id: 'ep1', protocol: 'http', method: undefined, path: '/api/users' });
     const graph = makeFlowGraph([entry]);
     const result = MermaidTemplates.renderFlowGraph(graph);
-    // Label should be exactly the path, not "HTTP-HANDLER /api/users"
-    expect(result).toContain('"/api/users"');
+    // Label should be "HTTP /api/users" (no method → fallback to HTTP)
+    expect(result).toContain('"HTTP /api/users"');
     expect(result).not.toContain('HTTP-HANDLER');
   });
 
-  it('http-get type uses "GET /path" format', () => {
-    const entry = makeEntry({ id: 'ep1', type: 'http-get', path: '/api/users' });
+  it('http GET uses "GET /path" format', () => {
+    const entry = makeEntry({ id: 'ep1', protocol: 'http', method: 'GET', path: '/api/users' });
     const graph = makeFlowGraph([entry]);
     const result = MermaidTemplates.renderFlowGraph(graph);
     expect(result).toContain('"GET /api/users"');
   });
 
-  it('http-post type uses "POST /path" format', () => {
-    const entry = makeEntry({ id: 'ep2', type: 'http-post', path: '/api/items' });
+  it('http POST uses "POST /path" format', () => {
+    const entry = makeEntry({ id: 'ep2', protocol: 'http', method: 'POST', path: '/api/items' });
     const graph = makeFlowGraph([entry]);
     const result = MermaidTemplates.renderFlowGraph(graph);
     expect(result).toContain('"POST /api/items"');
   });
 
-  it('http-delete type uses "DELETE /path" format', () => {
-    const entry = makeEntry({ id: 'ep3', type: 'http-delete', path: '/api/items/1' });
+  it('http DELETE uses "DELETE /path" format', () => {
+    const entry = makeEntry({ id: 'ep3', protocol: 'http', method: 'DELETE', path: '/api/items/1' });
     const graph = makeFlowGraph([entry]);
     const result = MermaidTemplates.renderFlowGraph(graph);
     expect(result).toContain('"DELETE /api/items/1"');
   });
 
-  it('grpc-unary type uses "GRPC /path" format', () => {
-    const entry = makeEntry({ id: 'ep4', type: 'grpc-unary', path: '/pkg.Svc/Call' });
+  it('grpc protocol uses "gRPC /path" format', () => {
+    const entry = makeEntry({ id: 'ep4', protocol: 'grpc', method: undefined, path: '/pkg.Svc/Call' });
     const graph = makeFlowGraph([entry]);
     const result = MermaidTemplates.renderFlowGraph(graph);
-    expect(result).toContain('"GRPC /pkg.Svc/Call"');
+    expect(result).toContain('"gRPC /pkg.Svc/Call"');
   });
 });
 
@@ -1489,7 +1498,7 @@ describe('renderFlowGraph - nested subgraphs and labels', () => {
       ],
     });
 
-    const result = await builder.build(rawData);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
     expect(result.entryPoints).toHaveLength(1);
     expect(result.entryPoints[0].package).toBe('pkg/hub');
   });
@@ -1503,7 +1512,9 @@ describe('renderFlowGraph - edge deduplication', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/foo',
           handler: 'myHandler',
           middleware: [],
@@ -1537,7 +1548,9 @@ describe('renderFlowGraph - edge deduplication', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-get',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'net/http',
           path: '/bar',
           handler: 'myHandler',
           middleware: [],
@@ -1569,7 +1582,9 @@ describe('renderFlowGraph - edge deduplication', () => {
       entryPoints: [
         {
           id: 'entry-pkg/hub-1',
-          type: 'http-post',
+          protocol: 'http',
+          method: 'POST',
+          framework: 'net/http',
           path: '/items',
           handler: 'myHandler',
           middleware: [],

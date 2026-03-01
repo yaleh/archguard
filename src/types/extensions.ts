@@ -18,7 +18,7 @@ export interface ArchJSONExtensions {
 
 // ========== Go Atlas Extension ==========
 
-export const GO_ATLAS_EXTENSION_VERSION = '1.1';
+export const GO_ATLAS_EXTENSION_VERSION = '2.0';
 
 /**
  * Go Architecture Atlas extension
@@ -56,7 +56,8 @@ export interface GoAtlasMetadata {
       extractedFunctionCount: number;
       totalFunctionCount: number;
     };
-    entryPointTypes: EntryPointType[];
+    detectedFrameworks: string[];   // e.g. ['gin', 'net/http']
+    protocols?: string[];           // undefined = not filtered
     followIndirectCalls: boolean;
     goplsEnabled: boolean;
   };
@@ -226,7 +227,9 @@ export interface FlowGraph {
 
 export interface EntryPoint {
   id: string;
-  type: EntryPointType;
+  protocol: EntryPointProtocol;
+  method?: HttpMethod;          // only set when protocol === 'http'
+  framework: string;            // e.g. 'gin', 'net/http', 'cobra'
   path: string; // HTTP path or gRPC method
   handler: string; // function id
   middleware: string[]; // middleware function ids
@@ -237,16 +240,14 @@ export interface EntryPoint {
   };
 }
 
-export type EntryPointType =
-  | 'http-get'
-  | 'http-post'
-  | 'http-put'
-  | 'http-delete'
-  | 'http-patch'
-  | 'http-handler'
-  | 'grpc-unary'
-  | 'grpc-stream'
-  | 'cli-command';
+export type EntryPointProtocol = string; // built-ins: 'http'|'grpc'|'cli'|'message'|'scheduler'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'ANY';
+
+/**
+ * @deprecated Use EntryPointProtocol + HttpMethod instead.
+ * Kept as string alias for backward compatibility with GoAtlasMetadata.entryPointTypes.
+ */
+export type EntryPointType = string;
 
 export interface CallChain {
   id: string;
