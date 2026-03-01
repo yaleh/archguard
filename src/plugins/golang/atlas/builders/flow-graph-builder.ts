@@ -1,4 +1,4 @@
-import type { GoRawData, GoRawPackage, GoCallExpr } from '../../types.js';
+import type { GoRawData, GoRawPackage, GoCallExpr, GoField } from '../../types.js';
 import type { FlowGraph, EntryPoint, CallChain, CallEdge } from '../types.js';
 import type { FlowBuildOptions } from '../types.js';
 import type { IAtlasBuilder } from './i-atlas-builder.js';
@@ -92,6 +92,57 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     'int64', 'uint', 'uint8', 'uint16', 'uint32', 'uint64', 'string', 'bool',
     'float32', 'float64', 'byte', 'rune', 'error',
   ]);
+
+  /** Build the set of all interface names across all packages */
+  private static buildInterfaceNameSet(rawData: GoRawData): Set<string> {
+    const names = new Set<string>();
+    for (const pkg of rawData.packages) {
+      for (const iface of pkg.interfaces || []) {
+        names.add(iface.name);
+      }
+    }
+    return names;
+  }
+
+  /** Build varName→declaredType map from a list of GoField (fields or parameters) */
+  private static buildContextTypes(fields: GoField[]): Map<string, string> {
+    const map = new Map<string, string>();
+    for (const field of fields) {
+      if (field.name) {
+        map.set(field.name, field.type);
+      }
+    }
+    return map;
+  }
+
+  /** Classify a single call as 'direct' or 'interface' */
+  private static classifyCallType(
+    call: GoCallExpr,
+    contextTypes: Map<string, string>,
+    interfaceNames: Set<string>
+  ): 'direct' | 'interface' {
+    if (!call.packageName) return 'direct';
+
+    // Extract receiver variable: last segment of packageName split by '.'
+    // e.g. "s.store" → "store", "svc" → "svc"
+    const segments = call.packageName.split('.');
+    const receiverVar = segments[segments.length - 1];
+
+    const declaredType = contextTypes.get(receiverVar);
+    if (!declaredType) return 'direct';
+
+    // Strip pointer prefix: "*Store" → "Store"
+    const stripped = declaredType.startsWith('*') ? declaredType.slice(1) : declaredType;
+
+    // For qualified types "pkg.Store", also check the short name "Store"
+    const shortName = stripped.includes('.') ? stripped.split('.').at(-1)! : stripped;
+
+    if (interfaceNames.has(stripped) || interfaceNames.has(shortName)) {
+      return 'interface';
+    }
+
+    return 'direct';
+  }
 
   private static isNoisyCall(call: CallEdge): boolean {
     const to = call.to;
@@ -241,9 +292,10 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
   }
 
   private buildCallChains(rawData: GoRawData, entryPoints: EntryPoint[]): CallChain[] {
+    const interfaceNames = FlowGraphBuilder.buildInterfaceNameSet(rawData);
     const chains: CallChain[] = [];
     for (const entry of entryPoints) {
-      const calls = this.traceCallsFromEntry(rawData, entry);
+      const calls = this.traceCallsFromEntry(rawData, entry, interfaceNames);
       chains.push({
         id: `chain-${entry.id}`,
         entryPoint: entry.id,
@@ -253,7 +305,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     return chains;
   }
 
-  private traceCallsFromEntry(rawData: GoRawData, entry: EntryPoint): CallEdge[] {
+  private traceCallsFromEntry(rawData: GoRawData, entry: EntryPoint, interfaceNames: Set<string>): CallEdge[] {
     const calls: CallEdge[] = [];
     if (!entry.handler) return calls;
 
@@ -262,24 +314,31 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     for (const pkg of rawData.packages) {
       for (const func of pkg.functions) {
         if (func.name !== handlerFnName || !func.body) continue;
+        const contextTypes = FlowGraphBuilder.buildContextTypes(func.parameters);
         for (const call of func.body.calls) {
+          const callType = FlowGraphBuilder.classifyCallType(call, contextTypes, interfaceNames);
           calls.push({
             from: entry.handler,
             to: call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName,
-            type: 'direct',
-            confidence: 0.7,
+            type: callType,
+            confidence: callType === 'interface' ? 0.8 : 0.7,
           });
         }
       }
       for (const struct of pkg.structs || []) {
         const method = (struct.methods || []).find((m) => m.name === handlerFnName);
         if (!method || !method.body) continue;
+        const contextTypes = new Map([
+          ...FlowGraphBuilder.buildContextTypes(struct.fields),
+          ...FlowGraphBuilder.buildContextTypes(method.parameters),
+        ]);
         for (const call of method.body.calls) {
+          const callType = FlowGraphBuilder.classifyCallType(call, contextTypes, interfaceNames);
           calls.push({
             from: entry.handler,
             to: call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName,
-            type: 'direct',
-            confidence: 0.7,
+            type: callType,
+            confidence: callType === 'interface' ? 0.8 : 0.7,
           });
         }
       }

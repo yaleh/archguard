@@ -1243,3 +1243,548 @@ describe('traceCallsFromEntry - deduplication', () => {
     expect(chain.calls[0].to).toBe('store.doWork');
   });
 });
+
+describe('interface dispatch detection', () => {
+  const builder = new FlowGraphBuilder();
+  const loc = { file: 'test.go', startLine: 1, endLine: 1 };
+
+  it('detects interface dispatch through a struct field typed as an interface', async () => {
+    // Interface: Store with Find method
+    // Struct: Server with field `store Store`
+    // Method: Server.handleRequest calls s.store.Find()
+    // Entry point: HTTP handler pointing to handleRequest
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Store',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [
+                { name: 'store', type: 'Store', exported: false, location: loc },
+              ],
+              embeddedTypes: [],
+              exported: true,
+              location: loc,
+              methods: [
+                {
+                  name: 'handleRequest',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: false,
+                  location: loc,
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'Find',
+                        packageName: 's.store',
+                        args: [],
+                        location: loc,
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'handleRequest'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.to).toBe('s.store.Find');
+    expect(edge.type).toBe('interface');
+    expect(edge.confidence).toBe(0.8);
+  });
+
+  it('detects interface dispatch through a function parameter typed as an interface', async () => {
+    // Interface: Service with Process method
+    // Free function: handleRequest(svc Service, ...) that calls svc.Process()
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Service',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'handleRequest'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'handleRequest',
+              parameters: [
+                { name: 'svc', type: 'Service', exported: false, location: loc },
+                { name: 'w', type: 'http.ResponseWriter', exported: false, location: loc },
+              ],
+              body: {
+                calls: [
+                  {
+                    functionName: 'Process',
+                    packageName: 'svc',
+                    args: [],
+                    location: loc,
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.to).toBe('svc.Process');
+    expect(edge.type).toBe('interface');
+    expect(edge.confidence).toBe(0.8);
+  });
+
+  it('detects interface dispatch through a method parameter typed as an interface', async () => {
+    // Struct method: Server.handleSave(repo Repository) that calls repo.Save()
+    // Repository is an interface
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Repository',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [],
+              embeddedTypes: [],
+              exported: true,
+              location: loc,
+              methods: [
+                {
+                  name: 'handleSave',
+                  parameters: [
+                    { name: 'repo', type: 'Repository', exported: false, location: loc },
+                  ],
+                  returnTypes: [],
+                  exported: false,
+                  location: loc,
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'Save',
+                        packageName: 'repo',
+                        args: [],
+                        location: loc,
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/save', 'handleSave'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.to).toBe('repo.Save');
+    expect(edge.type).toBe('interface');
+    expect(edge.confidence).toBe(0.8);
+  });
+
+  it('detects interface dispatch when field type has pointer prefix *InterfaceName', async () => {
+    // Field type: "*Store" — strip * and check "Store" is an interface
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Store',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [
+                { name: 'store', type: '*Store', exported: false, location: loc },
+              ],
+              embeddedTypes: [],
+              exported: true,
+              location: loc,
+              methods: [
+                {
+                  name: 'handleRequest',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: false,
+                  location: loc,
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'Find',
+                        packageName: 's.store',
+                        args: [],
+                        location: loc,
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'handleRequest'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.type).toBe('interface');
+    expect(edge.confidence).toBe(0.8);
+  });
+
+  it('does not classify as interface when field type is a concrete struct', async () => {
+    // No interface named "DBClient" in any package — field type "DBClient" is a struct
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [], // no interfaces
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [
+                { name: 'db', type: 'DBClient', exported: false, location: loc },
+              ],
+              embeddedTypes: [],
+              exported: true,
+              location: loc,
+              methods: [
+                {
+                  name: 'handleList',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: false,
+                  location: loc,
+                  body: {
+                    calls: [
+                      {
+                        functionName: 'Query',
+                        packageName: 'db',
+                        args: [],
+                        location: loc,
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/list', 'handleList'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.type).toBe('direct');
+    expect(edge.confidence).toBe(0.7);
+  });
+
+  it('assigns confidence 0.8 to interface dispatch and 0.7 to direct calls', async () => {
+    // Mix of interface and direct calls in same handler
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Cache',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          structs: [
+            {
+              name: 'Server',
+              packageName: 'api',
+              fields: [
+                { name: 'cache', type: 'Cache', exported: false, location: loc },
+              ],
+              embeddedTypes: [],
+              exported: true,
+              location: loc,
+              methods: [
+                {
+                  name: 'handleGet',
+                  parameters: [],
+                  returnTypes: [],
+                  exported: false,
+                  location: loc,
+                  body: {
+                    calls: [
+                      {
+                        // interface dispatch: cache is a Cache interface field
+                        functionName: 'Get',
+                        packageName: 's.cache',
+                        args: [],
+                        location: loc,
+                      },
+                      {
+                        // direct call: metrics is not a known interface
+                        functionName: 'Record',
+                        packageName: 'metrics',
+                        args: [],
+                        location: { file: 'test.go', startLine: 2, endLine: 2 },
+                      },
+                    ],
+                    goSpawns: [],
+                    channelOps: [],
+                  },
+                },
+              ],
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/get', 'handleGet'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(2);
+
+    const cacheEdge = chain.calls.find(c => c.to === 's.cache.Get');
+    const metricsEdge = chain.calls.find(c => c.to === 'metrics.Record');
+
+    expect(cacheEdge).toBeDefined();
+    expect(cacheEdge!.type).toBe('interface');
+    expect(cacheEdge!.confidence).toBe(0.8);
+
+    expect(metricsEdge).toBeDefined();
+    expect(metricsEdge!.type).toBe('direct');
+    expect(metricsEdge!.confidence).toBe(0.7);
+  });
+
+  it('still marks calls through package names (not interface vars) as direct', async () => {
+    // Call: { functionName: 'Println', packageName: 'fmt' }
+    // "fmt" is not a struct field or parameter in context
+    // But fmt is also stdlib so it gets filtered — use a non-stdlib package instead
+    // Call to a package name that is not in context types → direct
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          fullName: 'pkg/api',
+          interfaces: [
+            {
+              name: 'Store',
+              packageName: 'api',
+              methods: [],
+              embeddedInterfaces: [],
+              exported: true,
+              location: loc,
+            },
+          ],
+          functions: [
+            makeFunction({
+              name: 'SetupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'handleRequest'],
+                    location: { file: 'test.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'handleRequest',
+              parameters: [], // no parameters — "repo" is NOT a known parameter
+              body: {
+                calls: [
+                  {
+                    functionName: 'FindAll',
+                    packageName: 'repo', // "repo" is a package name, not a var typed as interface
+                    args: [],
+                    location: loc,
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+
+    expect(result.entryPoints).toHaveLength(1);
+    const chain = result.callChains[0];
+    expect(chain.calls).toHaveLength(1);
+    const edge = chain.calls[0];
+    expect(edge.to).toBe('repo.FindAll');
+    expect(edge.type).toBe('direct');
+  });
+});

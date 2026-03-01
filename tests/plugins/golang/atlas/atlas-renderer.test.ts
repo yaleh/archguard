@@ -79,7 +79,7 @@ describe('AtlasRenderer', () => {
     const atlas = makeAtlas({ layers: { package: makePackageGraph() } });
     const result = await renderer.render(atlas, 'package', 'mermaid');
 
-    expect(result.content).toMatch(/^flowchart TB/);
+    expect(result.content).toContain('flowchart TB');
     expect(result.format).toBe('mermaid');
     expect(result.layer).toBe('package');
   });
@@ -89,7 +89,7 @@ describe('AtlasRenderer', () => {
     const atlas = makeAtlas({ layers: { capability: makeCapabilityGraph() } });
     const result = await renderer.render(atlas, 'capability', 'mermaid');
 
-    expect(result.content).toMatch(/^flowchart LR/);
+    expect(result.content).toContain('flowchart LR');
     expect(result.layer).toBe('capability');
     expect(result.format).toBe('mermaid');
   });
@@ -99,7 +99,7 @@ describe('AtlasRenderer', () => {
     const atlas = makeAtlas({ layers: { goroutine: makeGoroutineTopology() } });
     const result = await renderer.render(atlas, 'goroutine', 'mermaid');
 
-    expect(result.content).toMatch(/^flowchart TB/);
+    expect(result.content).toContain('flowchart TB');
     expect(result.content).toContain('classDef main');
     expect(result.layer).toBe('goroutine');
     expect(result.format).toBe('mermaid');
@@ -110,7 +110,7 @@ describe('AtlasRenderer', () => {
     const atlas = makeAtlas({ layers: { flow: makeFlowGraph() } });
     const result = await renderer.render(atlas, 'flow', 'mermaid');
 
-    expect(result.content).toMatch(/^flowchart LR/);
+    expect(result.content).toContain('flowchart LR');
     expect(result.layer).toBe('flow');
     expect(result.format).toBe('mermaid');
   });
@@ -129,10 +129,10 @@ describe('AtlasRenderer', () => {
 
     const parts = result.content.split('\n---\n');
     expect(parts).toHaveLength(4);
-    expect(parts[0]).toMatch(/^flowchart TB/);
-    expect(parts[1]).toMatch(/^flowchart LR/);
-    expect(parts[2]).toMatch(/^flowchart TB/);
-    expect(parts[3]).toMatch(/^flowchart LR/);
+    expect(parts[0]).toContain('flowchart TB');
+    expect(parts[1]).toContain('flowchart LR');
+    expect(parts[2]).toContain('flowchart TB');
+    expect(parts[3]).toContain('flowchart LR');
   });
 
   // 6. render 'all' with only partial layers present
@@ -148,8 +148,8 @@ describe('AtlasRenderer', () => {
 
     const parts = result.content.split('\n---\n');
     expect(parts).toHaveLength(2);
-    expect(parts[0]).toMatch(/^flowchart TB/);
-    expect(parts[1]).toMatch(/^flowchart LR/);
+    expect(parts[0]).toContain('flowchart TB');
+    expect(parts[1]).toContain('flowchart LR');
   });
 
   // 7. render 'package' in json
@@ -399,7 +399,8 @@ describe('MermaidTemplates', () => {
     const graph = makeFlowGraph();
     const output = MermaidTemplates.renderFlowGraph(graph);
 
-    expect(output).toBe('flowchart LR\n');
+    expect(output).toContain('flowchart LR\n');
+    expect(output).toMatch(/%%\{init:.*\}%%\nflowchart LR\n/);
   });
 
   // Additional coverage: renderGoroutineTopology with main node uses :::main style
@@ -485,7 +486,7 @@ describe('MermaidTemplates', () => {
     });
     const output = MermaidTemplates.renderFlowGraph(graph, 'sequence');
 
-    expect(output).toBe('sequenceDiagram\n');
+    expect(output).toContain('sequenceDiagram\n');
     expect(output).not.toContain('A->>');
   });
 

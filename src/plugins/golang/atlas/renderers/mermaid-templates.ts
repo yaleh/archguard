@@ -8,6 +8,7 @@ import type {
   GoroutineLifecycleSummary,
   FlowGraph,
   EntryPoint,
+  CallEdge,
 } from '../types.js';
 
 interface GroupNode {
@@ -27,6 +28,12 @@ interface PkgTreeNode {
  * Mermaid template renderer for Go Atlas layers
  */
 export class MermaidTemplates {
+  // ── Mermaid %%{init} spacing directives ───────────────────────────────────
+  private static readonly FLOWCHART_INIT =
+    "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%\n";
+  private static readonly SEQUENCE_INIT =
+    "%%{init: {'sequence': {'actorMargin': 50}}}%%\n";
+
   // ── nested subgraph grouping ───────────────────────────────────────────────
   //
   // Two complementary helpers build prefix-tree structures:
@@ -206,7 +213,7 @@ export class MermaidTemplates {
   }
 
   static renderPackageGraph(graph: PackageGraph): string {
-    let output = 'flowchart TB\n';
+    let output = MermaidTemplates.FLOWCHART_INIT + 'flowchart TB\n';
 
     // --- cycle detection (P2) ---
     const cycleNodeIds = new Set(
@@ -288,10 +295,10 @@ export class MermaidTemplates {
 
   static renderCapabilityGraph(graph: CapabilityGraph): string {
     if (graph.nodes.length === 0) {
-      return 'flowchart LR';
+      return MermaidTemplates.FLOWCHART_INIT + 'flowchart LR';
     }
 
-    let output = 'flowchart LR\n';
+    let output = MermaidTemplates.FLOWCHART_INIT + 'flowchart LR\n';
 
     // Group capability nodes by package
     const nodesByPkg = new Map<string, CapabilityNode[]>();
@@ -426,7 +433,7 @@ export class MermaidTemplates {
   }
 
   static renderGoroutineTopology(topology: GoroutineTopology): string {
-    let output = 'flowchart TB\n';
+    let output = MermaidTemplates.FLOWCHART_INIT + 'flowchart TB\n';
 
     // ── Build package groups ──────────────────────────────────────────────────
     type NodeDecl = { rawId: string; label: string; style: string };
@@ -543,7 +550,7 @@ export class MermaidTemplates {
 
   static renderFlowGraph(graph: FlowGraph, format: 'flowchart' | 'sequence' = 'flowchart'): string {
     if (format === 'sequence') {
-      let output = 'sequenceDiagram\n';
+      let output = MermaidTemplates.SEQUENCE_INIT + 'sequenceDiagram\n';
 
       for (const chain of graph.callChains) {
         const entry = graph.entryPoints.find((e) => e.id === chain.entryPoint);
@@ -569,7 +576,7 @@ export class MermaidTemplates {
     }
 
     // flowchart LR — group entry points by package using prefix tree
-    let output = 'flowchart LR\n';
+    let output = MermaidTemplates.FLOWCHART_INIT + 'flowchart LR\n';
 
     // Group entry points by package (fall back to dirname when package is absent)
     const pkgGroups = new Map<string, EntryPoint[]>();
@@ -610,11 +617,20 @@ export class MermaidTemplates {
 
     // Emit call-chain edges — deduplicated across all chains
     const emittedEdges = new Set<string>();
-    const addEdge = (from: string, to: string, label?: string): void => {
+    const addEdge = (from: string, to: string, label?: string, callEdge?: CallEdge): void => {
       const key = `${from}\x00${to}`;
       if (emittedEdges.has(key)) return;
       emittedEdges.add(key);
-      if (label) {
+      if (callEdge) {
+        if (callEdge.type === 'interface') {
+          output += `  ${from} -.->|iface| ${to}\n`;
+        } else if (callEdge.type === 'indirect') {
+          output += `  ${from} -.->|indir| ${to}\n`;
+        } else {
+          // 'direct' — solid arrow, no label
+          output += `  ${from} --> ${to}\n`;
+        }
+      } else if (label) {
         output += `  ${from} -->|${label}| ${to}\n`;
       } else {
         output += `  ${from} --> ${to}\n`;
@@ -638,11 +654,11 @@ export class MermaidTemplates {
       // Declare handler node with its original dotted name as label
       declareNode(handlerNodeId, entry.handler);
 
-      // entry → handler: emit exactly once, label = unique call count
+      // entry → handler: emit exactly once, label = unique call count (always solid arrow)
       const entryLabel = `"${chain.calls.length} calls"`;
       addEdge(entryNodeId, handlerNodeId, entryLabel);
 
-      // handler → callee: deduplicated
+      // handler → callee: deduplicated, arrow style from CallEdge.type
       for (const call of chain.calls) {
         const fromId = this.sanitizeId(call.from);
         const toId = this.sanitizeId(call.to);
@@ -650,7 +666,7 @@ export class MermaidTemplates {
         // Declare both endpoints with their original dotted names as labels
         declareNode(fromId, call.from);
         declareNode(toId, call.to);
-        addEdge(fromId, toId);
+        addEdge(fromId, toId, undefined, call);
       }
     }
 

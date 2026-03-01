@@ -49,7 +49,7 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
   it('starts with "flowchart LR"', () => {
     const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
     const result = MermaidTemplates.renderFlowGraph(graph);
-    expect(result).toMatch(/^flowchart LR\n/);
+    expect(result).toContain('flowchart LR\n');
   });
 
   it('renders entry point nodes inside a subgraph keyed by directory', () => {
@@ -97,7 +97,9 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
   it('renders empty graph with just "flowchart LR"', () => {
     const graph = makeFlowGraph([]);
     const result = MermaidTemplates.renderFlowGraph(graph);
-    expect(result.trim()).toBe('flowchart LR');
+    expect(result).toContain('flowchart LR');
+    // init directive is prepended, so the result is longer than just "flowchart LR"
+    expect(result).toMatch(/%%\{init:.*\}%%\nflowchart LR/);
   });
 });
 
@@ -197,7 +199,7 @@ describe('MermaidTemplates.renderFlowGraph (sequence)', () => {
   it('starts with "sequenceDiagram" when format is sequence', () => {
     const graph = makeFlowGraph([]);
     const result = MermaidTemplates.renderFlowGraph(graph, 'sequence');
-    expect(result).toMatch(/^sequenceDiagram\n/);
+    expect(result).toContain('sequenceDiagram\n');
   });
 
   it('emits Note over handler with path label', () => {
@@ -1274,7 +1276,8 @@ describe('renderCapabilityGraph', () => {
   it('renders empty graph as flowchart LR with no subgraphs', () => {
     const graph: CapabilityGraph = { nodes: [], edges: [] };
     const output = MermaidTemplates.renderCapabilityGraph(graph);
-    expect(output.trim()).toBe('flowchart LR');
+    expect(output).toContain('flowchart LR');
+    expect(output).not.toContain('subgraph');
   });
 });
 
@@ -1768,6 +1771,150 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes, edges));
     expect(output).toContain('-.->|impl|');
     expect(output).not.toContain('==>|conc|');
+  });
+});
+
+// ─── renderFlowGraph — CallEdge.type line styles ─────────────────────────────
+
+describe('renderFlowGraph — CallEdge.type line styles', () => {
+  const baseEntry: EntryPoint = {
+    id: 'ep1',
+    protocol: 'http',
+    method: 'GET',
+    framework: 'net/http',
+    path: '/api/test',
+    handler: 'pkg.Handler',
+    middleware: [],
+    package: 'pkg',
+    location: { file: '/srv/pkg/handler.go', line: 10 },
+  };
+
+  const chainWithTypedCalls = {
+    id: 'chain-ep1',
+    entryPoint: 'ep1',
+    calls: [
+      { from: 'pkg.Handler', to: 'store.Find', type: 'direct' as const, confidence: 0.9 },
+      { from: 'pkg.Handler', to: 'svc.Call', type: 'interface' as const, confidence: 0.8 },
+      { from: 'pkg.Handler', to: 'util.Do', type: 'indirect' as const, confidence: 0.6 },
+    ],
+  };
+
+  it('renders direct calls as solid arrows -->', () => {
+    const graph: FlowGraph = {
+      entryPoints: [baseEntry],
+      callChains: [
+        {
+          id: 'chain-ep1',
+          entryPoint: 'ep1',
+          calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'direct', confidence: 0.9 }],
+        },
+      ],
+    };
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    // direct call must use solid arrow (no dashes in arrow part)
+    expect(result).toContain('pkg_Handler --> store_Find');
+    expect(result).not.toContain('pkg_Handler -.->');
+  });
+
+  it('renders interface calls as dashed arrows -.-> with |iface| label', () => {
+    const graph: FlowGraph = {
+      entryPoints: [baseEntry],
+      callChains: [
+        {
+          id: 'chain-ep1',
+          entryPoint: 'ep1',
+          calls: [{ from: 'pkg.Handler', to: 'svc.Call', type: 'interface', confidence: 0.8 }],
+        },
+      ],
+    };
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    expect(result).toContain('pkg_Handler -.->|iface| svc_Call');
+    expect(result).not.toContain('pkg_Handler --> svc_Call');
+  });
+
+  it('renders indirect calls as dashed arrows -.-> with |indir| label', () => {
+    const graph: FlowGraph = {
+      entryPoints: [baseEntry],
+      callChains: [
+        {
+          id: 'chain-ep1',
+          entryPoint: 'ep1',
+          calls: [{ from: 'pkg.Handler', to: 'util.Do', type: 'indirect', confidence: 0.6 }],
+        },
+      ],
+    };
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    expect(result).toContain('pkg_Handler -.->|indir| util_Do');
+    expect(result).not.toContain('pkg_Handler --> util_Do');
+  });
+
+  it('entry→handler edge always uses --> regardless of calls', () => {
+    const graph: FlowGraph = {
+      entryPoints: [baseEntry],
+      callChains: [chainWithTypedCalls],
+    };
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    // entry→handler must be solid arrow with call count label
+    const epId = 'ep1';
+    const handlerId = 'pkg_Handler';
+    expect(result).toMatch(new RegExp(`${epId}.*-->.*${handlerId}`));
+    expect(result).toContain('3 calls');
+    // The entry→handler line must NOT be a dashed arrow
+    const lines = result.split('\n');
+    const entryToHandler = lines.find((l) => l.includes(epId) && l.includes(handlerId));
+    expect(entryToHandler).toBeDefined();
+    expect(entryToHandler).not.toContain('-.-');
+  });
+});
+
+// ─── %%{init} spacing directives ─────────────────────────────────────────────
+
+describe('%%{init} spacing directives', () => {
+  it('renderPackageGraph begins with %%{init: flowchart config', () => {
+    const graph: PackageGraph = { nodes: [], edges: [], cycles: [] };
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/^%%\{init:/);
+    expect(result).toContain("'nodeSpacing'");
+    expect(result).toContain("'rankSpacing'");
+  });
+
+  it('renderCapabilityGraph begins with %%{init: flowchart config', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const result = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(result).toMatch(/^%%\{init:/);
+    expect(result).toContain("'nodeSpacing'");
+    expect(result).toContain("'rankSpacing'");
+  });
+
+  it('renderGoroutineTopology begins with %%{init: flowchart config', () => {
+    const topology: GoroutineTopology = {
+      nodes: [],
+      edges: [],
+      channels: [],
+      channelEdges: [],
+    };
+    const result = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(result).toMatch(/^%%\{init:/);
+    expect(result).toContain("'nodeSpacing'");
+    expect(result).toContain("'rankSpacing'");
+  });
+
+  it('renderFlowGraph flowchart begins with %%{init: flowchart config', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    expect(result).toMatch(/^%%\{init:/);
+    expect(result).toContain("'nodeSpacing'");
+    expect(result).toContain("'rankSpacing'");
+  });
+
+  it('renderFlowGraph sequence begins with %%{init: sequence config', () => {
+    const graph = makeFlowGraph([]);
+    const result = MermaidTemplates.renderFlowGraph(graph, 'sequence');
+    expect(result).toMatch(/^%%\{init:/);
+    expect(result).toContain("'actorMargin'");
   });
 });
 
