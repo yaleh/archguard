@@ -207,8 +207,12 @@ export class GoPlugin implements ILanguagePlugin {
     const rawData = await this.parseToRawData(workspaceRoot, config);
 
     // Match interface implementations (using gopls if available)
-    const allStructs = rawData.packages.flatMap((p) => p.structs);
-    const allInterfaces = rawData.packages.flatMap((p) => p.interfaces);
+    const allStructs = rawData.packages.flatMap((p) =>
+      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
+    );
+    const allInterfaces = rawData.packages.flatMap((p) =>
+      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
+    );
     const implementations = await this.matcher.matchWithGopls(
       allStructs,
       allInterfaces,
@@ -218,6 +222,12 @@ export class GoPlugin implements ILanguagePlugin {
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(rawData.packages);
     const relations = this.mapper.mapRelations(rawData.packages, implementations);
+    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
+      entities,
+      relations,
+      rawData.packages
+    );
+    entities.push(...missingInterfaces);
 
     return {
       version: '1.0',
@@ -308,8 +318,12 @@ export class GoPlugin implements ILanguagePlugin {
     const packageList = Array.from(packages.values());
 
     // Match implementations (using gopls if available)
-    const allStructs = packageList.flatMap((p) => p.structs);
-    const allInterfaces = packageList.flatMap((p) => p.interfaces);
+    const allStructs = packageList.flatMap((p) =>
+      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
+    );
+    const allInterfaces = packageList.flatMap((p) =>
+      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
+    );
     const implementations = await this.matcher.matchWithGopls(
       allStructs,
       allInterfaces,
@@ -319,6 +333,12 @@ export class GoPlugin implements ILanguagePlugin {
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
     const relations = this.mapper.mapRelations(packageList, implementations);
+    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
+      entities,
+      relations,
+      packageList
+    );
+    entities.push(...missingInterfaces);
 
     return {
       version: '1.0',

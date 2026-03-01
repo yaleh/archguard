@@ -7,7 +7,6 @@ import type {
   GoRawPackage,
   GoRawStruct,
   GoRawInterface,
-  GoFunction,
   InferredImplementation,
 } from './types.js';
 import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
@@ -18,20 +17,72 @@ export class ArchJsonMapper {
    */
   mapEntities(packages: GoRawPackage[]): Entity[] {
     const entities: Entity[] = [];
+    const seenIds = new Set<string>();
 
     for (const pkg of packages) {
+      const pkgId = pkg.fullName || pkg.name;
+
       // Map structs
       for (const struct of pkg.structs) {
-        entities.push(this.mapStruct(struct, pkg.name));
+        const entity = this.mapStruct(struct, pkgId);
+        if (!seenIds.has(entity.id)) {
+          seenIds.add(entity.id);
+          entities.push(entity);
+        }
       }
 
       // Map interfaces
       for (const iface of pkg.interfaces) {
-        entities.push(this.mapInterface(iface, pkg.name));
+        const entity = this.mapInterface(iface, pkgId);
+        if (!seenIds.has(entity.id)) {
+          seenIds.add(entity.id);
+          entities.push(entity);
+        }
       }
     }
 
     return entities;
+  }
+
+  /**
+   * Scan implementation relation targets and return any interface entities
+   * that are referenced but not yet present in the entities array.
+   * External dependency interfaces (not found in any package) are skipped silently.
+   */
+  mapMissingInterfaceEntities(
+    entities: Entity[],
+    relations: Relation[],
+    packages: GoRawPackage[]
+  ): Entity[] {
+    const existingIds = new Set(entities.map((e) => e.id));
+    const added: Entity[] = [];
+    const addedIds = new Set<string>();
+
+    // Build a lookup: "pkgFullName.TypeName" → { iface, pkgId }
+    const ifaceLookup = new Map<string, { iface: GoRawInterface; pkgId: string }>();
+    for (const pkg of packages) {
+      const pkgId = pkg.fullName || pkg.name;
+      for (const iface of pkg.interfaces) {
+        ifaceLookup.set(`${pkgId}.${iface.name}`, { iface, pkgId });
+      }
+    }
+
+    // Scan implementation relation targets
+    for (const rel of relations) {
+      if (rel.type !== 'implementation') continue;
+      const targetId = rel.target as string;
+      if (existingIds.has(targetId) || addedIds.has(targetId)) continue;
+
+      const entry = ifaceLookup.get(targetId);
+      if (entry) {
+        const entity = this.mapInterface(entry.iface, entry.pkgId);
+        added.push(entity);
+        addedIds.add(targetId);
+      }
+      // If not found in packages (external dep), skip silently
+    }
+
+    return added;
   }
 
   /**
