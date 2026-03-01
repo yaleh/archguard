@@ -4,7 +4,9 @@
 **日期**: 2026-02-24
 **上下文**: Go Architecture Atlas 实施计划 Phase 4
 **决策者**: ArchGuard 架构团队
-**修订**: v1.2 - 修正 selectiveConfig 字段名、对齐 Proposal v5.1
+**修订**: v2.0 - 重构 EntryPoint 结构，移除 EntryPointType，引入 protocol/method/framework 三字段；
+          移除 generationStrategy.entryPointTypes；GO_ATLAS_EXTENSION_VERSION 升至 2.0
+          （破坏性变更，不考虑向后兼容）
 
 ---
 
@@ -141,8 +143,11 @@ export interface GoAtlasMetadata {
       totalFunctionCount: number;
     };
 
-    // 入口点检测类型
-    entryPointTypes: EntryPointType[];
+    // 检测到的框架列表（来自 go.mod + import 扫描）
+    detectedFrameworks: string[];       // e.g. ['gin', 'grpc', 'net/http']
+
+    // 协议过滤（undefined = 不过滤，输出全部）
+    protocols?: string[];               // e.g. ['http', 'grpc']
 
     // 是否启用间接调用追踪
     followIndirectCalls: boolean;
@@ -296,28 +301,38 @@ export interface FlowGraph {
   callChains: CallChain[];
 }
 
+/**
+ * Protocol surface of an entry point.
+ *
+ * Open string type — allows user-defined values (e.g. 'kafka', 'websocket')
+ * via customFrameworks config without requiring a source change to ArchGuard.
+ *
+ * Built-in values: 'http' | 'grpc' | 'cli' | 'message' | 'scheduler'
+ */
+export type EntryPointProtocol = string;
+
+/** HTTP method. Only set when protocol === 'http'. */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'ANY';
+
 export interface EntryPoint {
   id: string;
-  type: EntryPointType;
-  path: string;          // HTTP path or gRPC method
+  /** Architectural protocol surface — replaces the former `type` field. */
+  protocol: EntryPointProtocol;
+  /** HTTP method, only present when protocol === 'http'. */
+  method?: HttpMethod;
+  /** Which detector/framework produced this entry point (e.g. 'gin', 'net/http', 'cobra'). */
+  framework: string;
+  path: string;          // URL path, gRPC method name, topic name, command name, etc.
   handler: string;       // function id
   middleware: string[];  // middleware function ids
+  package?: string;      // Go package full path
   location: {
     file: string;
     line: number;
   };
 }
 
-export type EntryPointType =
-  | 'http-get'
-  | 'http-post'
-  | 'http-put'
-  | 'http-delete'
-  | 'http-patch'
-  | 'http-handler'
-  | 'grpc-unary'
-  | 'grpc-stream'
-  | 'cli-command';
+// EntryPointType is REMOVED. Use EntryPoint.protocol instead.
 
 export interface CallChain {
   id: string;
@@ -373,7 +388,19 @@ const archJSON: ArchJSON = {
           channels: [/* ... */],
         },
         flow: {
-          entryPoints: [/* ... */],
+          entryPoints: [
+            {
+              id: 'entry-pkg/hub-42',
+              protocol: 'http',
+              method: 'POST',
+              framework: 'gin',
+              path: '/api/sessions',
+              handler: 'handleCreateSession',
+              middleware: [],
+              package: 'pkg/hub',
+              location: { file: 'pkg/hub/server.go', line: 42 },
+            },
+          ],
           callChains: [/* ... */],
         },
       },
@@ -387,7 +414,8 @@ const archJSON: ArchJSON = {
             extractedFunctionCount: 42,
             totalFunctionCount: 156,
           },
-          entryPointTypes: ['http-get', 'http-post'],
+          detectedFrameworks: ['gin', 'net/http'],
+          protocols: undefined,       // not filtered
           followIndirectCalls: false,
           goplsEnabled: true,
         },
@@ -489,7 +517,7 @@ export type RelationType =
   - **补丁版本**: Bug 修复
 
 ```typescript
-export const GO_ATLAS_EXTENSION_VERSION = '1.1';  // v1.3: PackageNode.type widened
+export const GO_ATLAS_EXTENSION_VERSION = '2.0';  // v2.0: EntryPoint.type → protocol/method/framework
 
 export interface GoAtlasExtension {
   version: string;  // 与常量匹配
@@ -655,10 +683,21 @@ relations: [
 
 ---
 
-**文档版本**: 1.3
-**最后更新**: 2026-02-25
+**文档版本**: 2.0
+**最后更新**: 2026-03-01
 **状态**: 已采纳 - 待实施
 **变更记录**:
 - v1.1: `PackageGraph.cycles` 改为结构化 `PackageCycle[]`（含 severity）；`PackageNode.type` 新增 `'cmd'`；`PackageNode` 新增可选 `stats`；`GoroutineNode` 新增可选 `spawnType`
 - v1.2: `selectiveConfig.includedPatterns` 重命名为 `triggerNodeTypes`（语义修正：这是 AST 节点类型列表，非正则匹配模式）；更新示例对齐实际用法；交叉引用更新至 Proposal v5.1
-- v1.3: `PackageNode.type` union 扩展，新增 `'tests' | 'examples' | 'testutil'` 用于角色分类（原有 5 个值不变，向下兼容）；`GO_ATLAS_EXTENSION_VERSION` 从 `'1.0'` 升至 `'1.1'`（序列化格式新增字段值）；消费方处理 `type` 时需对未知值添加 default 分支。关联：Plan 18 Proposal
+- v1.3: `PackageNode.type` union 扩展，新增 `'tests' | 'examples' | 'testutil'` 用于角色分类；`GO_ATLAS_EXTENSION_VERSION` 升至 `'1.1'`
+- v2.0: **破坏性变更**（不考虑向后兼容）
+  - `EntryPoint.type: EntryPointType` 移除，拆分为三个字段：
+    - `protocol: EntryPointProtocol`（开放 string，架构层面协议分类）
+    - `method?: HttpMethod`（仅 HTTP 协议时存在）
+    - `framework: string`（产生该入口点的检测器/框架名称）
+  - `EntryPointType` 联合类型完全移除
+  - `GoAtlasMetadata.generationStrategy.entryPointTypes` 移除，替换为：
+    - `detectedFrameworks: string[]`（自动检测结果）
+    - `protocols?: string[]`（过滤配置，undefined = 不过滤）
+  - `GO_ATLAS_EXTENSION_VERSION` 升至 `'2.0'`
+  - 关联：Proposal go-flow-framework-detection v2
