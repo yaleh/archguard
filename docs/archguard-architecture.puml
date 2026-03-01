@@ -1,0 +1,536 @@
+@startuml Architecture
+!theme plain
+
+skinparam backgroundColor white
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageStyle rectangle
+
+package "AI Layer" {
+  class ClaudeCodeWrapper {
+    +options: Required<ClaudeCodeOptions>
+    +isClaudeCodeAvailable(): Promise<boolean>
+    +checkCLIAvailability(): Promise<void>
+    +createTempDir(): Promise<string>
+    +cleanup(tempDir: string): Promise<void>
+    +generatePlantUML(archJson: ArchJSON, previousPuml?: string): Promise<string>
+    -validatePlantUML(plantUML: string, archJson: ArchJSON): void
+    -classifyError(error: Error): { type: string; retryable: boolean; }
+    -enhanceError(error: Error, classification: { type: string; retryable: boolean; }): Error
+    -getBackoffDelay(attempt: number): number
+    -sleep(ms: number): Promise<void>
+    +callCLI(prompt: string): Promise<string>
+  }
+
+  interface ClaudeCodeOptions {
+    +timeout?: number
+    +maxRetries?: number
+    +workingDir?: string
+    +model?: string
+  }
+
+  class ClaudeAPIError {
+    +constructor(message: string, code: string, retryable?: boolean)
+  }
+
+  class ClaudeConnector {
+    +client: Anthropic
+    -model: string
+    -maxTokens: number
+    +INPUT_TOKEN_LIMIT: 100000
+    +getModel(): string
+    +getMaxTokens(): number
+    +estimateTokens(text: string): number
+    +validateInput(input: string): void
+    +chat(prompt: string, options?: ChatOptions): Promise<ChatResponse>
+    -extractTextFromResponse(response: Anthropic.Message): string
+  }
+
+  interface ClaudeConnectorConfig {
+    +model?: string
+    +maxTokens?: number
+    +timeout?: number
+  }
+
+  interface ChatResponse {
+    +text: string
+    +usage: { inputTokens: number; outputTokens: number; }
+  }
+
+  interface ChatOptions {
+    +systemPrompt?: string
+  }
+
+  class CostTracker {
+    -totalCalls: number
+    -totalInputTokens: number
+    -totalOutputTokens: number
+    -totalCost: number
+    -budget: number
+    -COST_PER_MILLION_INPUT: number
+    -COST_PER_MILLION_OUTPUT: number
+    +trackCall(inputTokens: number, outputTokens: number): void
+    +getReport(): CostReport
+    +getFormattedCost(): string
+    +setBudget(amount: number): void
+    +isOverBudget(): boolean
+    +getRemainingBudget(): number
+    +reset(): void
+  }
+
+  interface CostTrackerConfig {
+    +costPerMillionInputTokens?: number
+    +costPerMillionOutputTokens?: number
+  }
+
+  interface CostReport {
+    +totalCalls: number
+    +totalTokens: number
+    +totalInputTokens: number
+    +totalOutputTokens: number
+    +totalCost: number
+    +avgTokensPerCall: number
+    +avgCostPerCall: number
+  }
+
+  class OutputParser {
+    +extractPlantUML(output: string): string
+    -extractFromMarkdownBlock(output: string): string
+    -extractFromAnyMarkdownBlock(output: string): string
+    -extractRawPlantUML(output: string): string
+    -validateAndTrim(content: string): string
+    -truncateOutput(output: string, maxLength: number): string
+  }
+
+  class PlantUMLGenerator {
+    -wrapper: ClaudeCodeWrapper
+    -validator: PlantUMLValidator
+    +generate(archJson: ArchJSON, previousPuml?: string): Promise<string>
+  }
+
+  interface GeneratorConfig {
+    +model?: string
+    +maxRetries?: number
+    +timeout?: number
+    +workingDir?: string
+  }
+
+  class PlantUMLValidator {
+    +validate(puml: string, archJson: ArchJSON): ValidationResult
+    +validateSyntax(puml: string): ValidationResult
+    +validateCompleteness(puml: string, archJson: ArchJSON): ValidationResult
+    +validateStyle(puml: string): ValidationResult
+    -escapeRegex(str: string): string
+  }
+
+  interface ValidationResult {
+    +isValid: boolean
+    +issues: string[]
+    +errors?: string[]
+    +warnings?: string[]
+    +missingEntities?: string[]
+  }
+
+  class PromptBuilder {
+    -systemPrompt: string
+    +getSystemPrompt(): string
+    +buildClassDiagramPrompt(archJson: ArchJSON): string
+    -getFewShotExamples(): string
+    -getOutputConstraints(): string
+  }
+
+  class PromptTemplateManager {
+    -templatesDir: string
+    -templateCache: Map<string, string>
+    +loadTemplate(templateName: string): Promise<string>
+    +render(templateName: string, variables: TemplateVariables): Promise<string>
+    +clearCache(): void
+    +getTemplatesDir(): string
+    -processConditionals(content: string, variables: TemplateVariables): string
+    -replaceVariables(content: string, variables: TemplateVariables): string
+  }
+
+  interface TemplateVariables {
+    +ARCH_JSON: string
+    +PREVIOUS_PUML?: string
+  }
+}
+
+package "CLI Layer" {
+  class CacheManager {
+    +cacheDir: string
+    -stats: CacheStats
+    -defaultTTL: number
+    +computeFileHash(filePath: string): Promise<string>
+    +get(filePath: string, hash: string): Promise<T>
+    +set(filePath: string, hash: string, data: T, options?: CacheOptions): Promise<void>
+    +clear(): Promise<void>
+    +getStats(): CacheStats
+    +getCacheSize(): Promise<number>
+    -getAllCacheFiles(): Promise<string[]>
+    -getCacheKey(filePath: string, hash: string): string
+    -getCachePath(cacheKey: string): string
+    -updateHitRate(): void
+    +setDefaultTTL(ttl: number): void
+    +getDefaultTTL(): number
+  }
+
+  interface CacheStats {
+    +hits: number
+    +misses: number
+    +hitRate: number
+    +totalSize: number
+  }
+
+  interface CacheOptions {
+    +ttl?: number
+  }
+
+  interface CacheEntry<T> {
+    +data: T
+    +timestamp: number
+    +ttl: number
+  }
+
+  class ConfigLoader {
+    -configDir: string
+    +load(cliOptions?: z.infer<any>): Promise<z.infer<any>>
+    -loadFromFile(): Promise<z.infer<any>>
+    +init(options?: { format?: "json" | "js"; }): Promise<void>
+    +getConfigPath(): Promise<string>
+  }
+
+  class ErrorHandler {
+    +format(error: unknown, options?: ErrorFormatOptions): string
+    -formatParseError(error: ParseError, useColor: boolean): string
+    -formatAPIError(error: APIError, useColor: boolean): string
+    -formatValidationError(error: ValidationError, useColor: boolean): string
+    -formatFileError(error: FileError, useColor: boolean): string
+    -formatGenericError(error: Error, useColor: boolean, verbose: boolean): string
+    -formatStringError(error: string, useColor: boolean): string
+    -formatUnknownError(useColor: boolean): string
+  }
+
+  interface ErrorFormatOptions {
+    +color?: boolean
+    +verbose?: boolean
+  }
+
+  class ParseError {
+    +constructor(message: string, filePath: string, line?: number, column?: number)
+  }
+
+  class APIError {
+    +constructor(message: string, statusCode: number)
+  }
+
+  class ValidationError {
+    +constructor(message: string, suggestions?: string[])
+  }
+
+  class FileError {
+    +constructor(message: string, filePath: string, operation: "read" | "write" | "delete" | "create")
+  }
+
+  class ProgressReporter {
+    -spinner: Ora
+    -stages: Stage[]
+    -currentStage: Stage
+    +start(message: string): void
+    +update(completed: number, total: number): void
+    +succeed(message: string): void
+    +fail(message: string): void
+    +warn(message: string): void
+    +info(message: string): void
+    +getStages(): Stage[]
+    +getCurrentStage(): Stage
+    +getSummary(): ProgressSummary
+    +printSummary(): void
+    +stop(): void
+  }
+
+  interface Stage {
+    +name: string
+    +status: "pending" | "running" | "success" | "failed" | "warning"
+    +startTime?: number
+    +endTime?: number
+    +progress?: { completed: number; total: number; percentage: number; }
+  }
+
+  interface ProgressSummary {
+    +totalDuration: number
+    +totalDurationFormatted: string
+    +successCount: number
+    +failureCount: number
+    +warningCount: number
+  }
+
+  interface AnalyzeOptions {
+    +source: string
+    +output?: string
+    +format: "plantuml" | "json" | "svg"
+    +exclude?: string[]
+    +cache: boolean
+    +concurrency?: number
+    +verbose?: boolean
+  }
+}
+
+package "Parser Layer" {
+  class ClassExtractor {
+    -project: Project
+    +extract(code: string, filePath?: string): Entity
+    -extractClass(classDecl: ClassDeclaration, filePath: string): Entity
+    -getVisibility(_classDecl: ClassDeclaration): Visibility
+    -extractGenericParams(classDecl: ClassDeclaration): string[]
+    -extractMembers(classDecl: ClassDeclaration): Member[]
+    -extractProperty(property: PropertyDeclaration): Member
+    -extractMethod(method: MethodDeclaration): Member
+    -extractConstructor(constructor: ConstructorDeclaration): Member
+    -extractParameters(node: any): Parameter[]
+    -getMemberVisibility(node: any): Visibility
+    -getConstructorVisibility(constructor: ConstructorDeclaration): Visibility
+    -extractDecorators(decorators: TsMorphDecorator[]): Decorator[]
+  }
+
+  class EnumExtractor {
+    -project: Project
+    +extract(code: string, filePath?: string): Entity
+    +extractEnum(enumDecl: EnumDeclaration, filePath: string): Entity
+    -extractMembers(enumDecl: EnumDeclaration): Member[]
+  }
+
+  class InterfaceExtractor {
+    -project: Project
+    +extract(code: string, filePath?: string): Entity
+    +extractInterface(interfaceDecl: InterfaceDeclaration, filePath: string): Entity
+    -extractExtends(interfaceDecl: InterfaceDeclaration): string[]
+    -extractGenericParams(interfaceDecl: InterfaceDeclaration): string[]
+    -extractMembers(interfaceDecl: InterfaceDeclaration): Member[]
+    -extractPropertySignature(property: PropertySignature): Member
+    -extractMethodSignature(method: MethodSignature): Member
+    -extractParameters(method: MethodSignature): Parameter[]
+  }
+
+  class ParallelParser {
+    -concurrency: number
+    -continueOnError: boolean
+    -limit: any
+    +getConcurrency(): number
+    +getContinueOnError(): boolean
+    +parseFiles(filePaths: string[]): Promise<ArchJSON>
+    +parseFilesWithMetrics(filePaths: string[]): Promise<ParsingMetrics>
+    -parseFile(filePath: string): Promise<ArchJSON>
+    -mergeResults(results: ArchJSON[]): ArchJSON
+    -deduplicateRelations(relations: Relation[]): Relation[]
+    -createEmptyArchJSON(sourceFiles?: string[]): ArchJSON
+  }
+
+  interface ParallelParserOptions {
+    +concurrency?: number
+    +continueOnError?: boolean
+  }
+
+  interface ParsingMetrics {
+    +result: ArchJSON
+    +parseTime: number
+    +filesPerSecond: number
+    +fileCount: number
+    +memoryUsage: { heapUsed: number; heapTotal: number; external: number; rss: number; }
+  }
+
+  interface ProgressEvent {
+    +completed: number
+    +total: number
+    +percentage: number
+  }
+
+  interface FileCompleteEvent {
+    +file: string
+    +entityCount: number
+    +relationCount: number
+  }
+
+  interface CompletionEvent {
+    +totalFiles: number
+    +successCount: number
+    +errorCount: number
+    +parseTime: number
+  }
+
+  class RelationExtractor {
+    -project: Project
+    +extract(code: string, filePath?: string): Relation[]
+    +extractFromSourceFile(sourceFile: SourceFile): Relation[]
+    -extractClassRelations(classDecl: ClassDeclaration, relationSet: Set<string>): Relation[]
+    -extractInterfaceRelations(interfaceDecl: InterfaceDeclaration, relationSet: Set<string>): Relation[]
+    -addRelation(relations: Relation[], relationSet: Set<string>, type: Relation, source: string, target: string): void
+    -extractTypeName(typeText: string): string
+    -isCustomType(typeName: string): boolean
+    -isPrimitiveType(typeName: string): boolean
+  }
+
+  class TypeScriptParser {
+    -project: Project
+    -classExtractor: ClassExtractor
+    -interfaceExtractor: InterfaceExtractor
+    -enumExtractor: EnumExtractor
+    -relationExtractor: RelationExtractor
+    +parseCode(code: string, filePath?: string): ArchJSON
+    +parseProject(rootDir: string, pattern?: string): ArchJSON
+    -deduplicateRelations(relations: Relation[]): Relation[]
+    +toJSON(archJson: ArchJSON, pretty?: boolean): string
+  }
+}
+
+package "Types" {
+  interface ArchJSON {
+    +version: string
+    +language: "typescript"
+    +timestamp: string
+    +sourceFiles: string[]
+    +entities: Entity[]
+    +relations: Relation[]
+  }
+
+  interface Entity {
+    +id: string
+    +name: string
+    +type: EntityType
+    +visibility: Visibility
+    +members: Member[]
+    +sourceLocation: SourceLocation
+    +decorators?: Decorator[]
+    +isAbstract?: boolean
+    +isConst?: boolean
+    +genericParams?: string[]
+    +extends?: string[]
+    +implements?: string[]
+  }
+
+  interface Member {
+    +name: string
+    +type: MemberType
+    +visibility: Visibility
+    +returnType?: string
+    +parameters?: Parameter[]
+    +isStatic?: boolean
+    +isAbstract?: boolean
+    +isAsync?: boolean
+    +isReadonly?: boolean
+    +isOptional?: boolean
+    +fieldType?: string
+    +defaultValue?: string
+    +decorators?: Decorator[]
+  }
+
+  interface Parameter {
+    +name: string
+    +type: string
+    +isOptional?: boolean
+    +defaultValue?: string
+  }
+
+  interface SourceLocation {
+    +file: string
+    +startLine: number
+    +endLine: number
+  }
+
+  interface Decorator {
+    +name: string
+    +arguments?: string[]
+  }
+
+  interface Relation {
+    +id: string
+    +type: RelationType
+    +source: string
+    +target: string
+  }
+
+  interface CLIDetectionResult {
+    +available: boolean
+    +version?: string
+    +error?: string
+  }
+}
+
+' Inheritance relationships
+ClaudeAPIError --|> Error
+ParseError --|> Error
+APIError --|> Error
+ValidationError --|> Error
+FileError --|> Error
+ParallelParser --|> EventEmitter
+
+' Composition relationships
+ClaudeCodeWrapper *-- ClaudeCodeOptions
+ClaudeConnector *-- Anthropic
+ClaudeConnector *-- ClaudeConnectorConfig
+CostTracker *-- CostTrackerConfig
+PlantUMLGenerator *-- ClaudeCodeWrapper
+PlantUMLGenerator *-- PlantUMLValidator
+PlantUMLGenerator *-- GeneratorConfig
+PromptTemplateManager *-- TemplateCache
+CacheManager *-- CacheStats
+ClassExtractor *-- Project
+EnumExtractor *-- Project
+InterfaceExtractor *-- Project
+ParallelParser *-- ParallelParserOptions
+RelationExtractor *-- Project
+TypeScriptParser *-- Project
+TypeScriptParser *-- ClassExtractor
+TypeScriptParser *-- InterfaceExtractor
+TypeScriptParser *-- EnumExtractor
+TypeScriptParser *-- RelationExtractor
+
+' Dependency relationships
+ClaudeCodeWrapper ..> ArchJSON : uses
+PlantUMLGenerator ..> ArchJSON : uses
+PlantUMLValidator ..> ValidationResult : returns
+PlantUMLValidator ..> ArchJSON : uses
+PromptBuilder ..> ArchJSON : uses
+PromptTemplateManager ..> TemplateVariables : uses
+CacheManager ..> T : generic
+CacheManager ..> CacheOptions : uses
+CacheManager ..> CacheStats : returns
+ConfigLoader ..> "z.infer<any>" : uses
+ErrorHandler ..> ErrorFormatOptions : uses
+ErrorHandler ..> ParseError : handles
+ErrorHandler ..> APIError : handles
+ErrorHandler ..> ValidationError : handles
+ErrorHandler ..> FileError : handles
+ErrorHandler ..> Error : handles
+ProgressReporter ..> Stage : returns
+ProgressReporter ..> ProgressSummary : returns
+ClassExtractor ..> Entity : returns
+ClassExtractor ..> ClassDeclaration : uses
+ClassExtractor ..> Visibility : uses
+ClassExtractor ..> Member : returns
+ClassExtractor ..> PropertyDeclaration : uses
+ClassExtractor ..> MethodDeclaration : uses
+ClassExtractor ..> ConstructorDeclaration : uses
+ClassExtractor ..> Parameter : returns
+ClassExtractor ..> Decorator : returns
+ClassExtractor ..> TsMorphDecorator : uses
+EnumExtractor ..> Entity : returns
+EnumExtractor ..> EnumDeclaration : uses
+EnumExtractor ..> Member : returns
+InterfaceExtractor ..> Entity : returns
+InterfaceExtractor ..> InterfaceDeclaration : uses
+InterfaceExtractor ..> Member : returns
+InterfaceExtractor ..> PropertySignature : uses
+InterfaceExtractor ..> MethodSignature : uses
+InterfaceExtractor ..> Parameter : returns
+ParallelParser ..> ArchJSON : returns
+ParallelParser ..> ParsingMetrics : returns
+ParallelParser ..> Relation : uses
+RelationExtractor ..> Relation : returns
+RelationExtractor ..> SourceFile : uses
+RelationExtractor ..> ClassDeclaration : uses
+RelationExtractor ..> InterfaceDeclaration : uses
+TypeScriptParser ..> ArchJSON : returns
+TypeScriptParser ..> Relation : uses
+
+@enduml

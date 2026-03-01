@@ -45,9 +45,9 @@ tmp/
 
 # ArchGuard
 archguard/
-*.puml
-*.png
-*.svg
+/*.puml
+/*.png
+/*.svg
 .archguardrc.json
 /archguard-modules/
 archguard*.json

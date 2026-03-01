@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="370" height="590" viewBox="0 0 370 590">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <line x1="95" y1="70" x2="295" y2="70" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="95" y1="70" x2="95" y2="220" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="295" y1="70" x2="95" y2="370" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="295" y1="70" x2="95" y2="520" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="95" y1="220" x2="95" y2="370" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#666666"/>
+    </marker>
+  </defs>
+  <rect x="20" y="20" width="150" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="95" y="38" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Parser</text>
+  <line x1="25" y1="55" x2="165" y2="55" stroke="#01579b" stroke-width="1"/>
+  <text x="28" y="58" font-size="10" fill="#666666">+ parse(code: string): AST</text>
+  <text x="28" y="74" font-size="10" fill="#666666">- tokenize(input: string): Token[]</text>
+  <text x="28" y="90" font-size="10" fill="#666666"># validate(ast: AST): boolean</text>
+  <rect x="220" y="20" width="150" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="295" y="38" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">AST</text>
+  <line x1="225" y1="55" x2="365" y2="55" stroke="#01579b" stroke-width="1"/>
+  <text x="228" y="58" font-size="10" fill="#666666">+ nodes: Node[]</text>
+  <text x="228" y="74" font-size="10" fill="#666666">+ edges: Edge[]</text>
+  <rect x="20" y="170" width="150" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="95" y="188" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Token</text>
+  <line x1="25" y1="205" x2="165" y2="205" stroke="#01579b" stroke-width="1"/>
+  <text x="28" y="208" font-size="10" fill="#666666">+ type: string</text>
+  <text x="28" y="224" font-size="10" fill="#666666">+ value: string</text>
+  <rect x="20" y="320" width="150" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="95" y="338" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Node</text>
+  <line x1="25" y1="355" x2="165" y2="355" stroke="#01579b" stroke-width="1"/>
+  <text x="28" y="358" font-size="10" fill="#666666">+ id: string</text>
+  <text x="28" y="374" font-size="10" fill="#666666">+ type: string</text>
+  <rect x="20" y="470" width="150" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="95" y="488" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Edge</text>
+  <line x1="25" y1="505" x2="165" y2="505" stroke="#01579b" stroke-width="1"/>
+  <text x="28" y="508" font-size="10" fill="#666666">+ from: string</text>
+  <text x="28" y="524" font-size="10" fill="#666666">+ to: string</text>
+  <text x="28" y="540" font-size="10" fill="#666666">+ type: string</text>
+</svg>

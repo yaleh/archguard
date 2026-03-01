@@ -1,0 +1,303 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2962" height="2098" viewBox="0 0 2962 2098">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <line x1="885" y1="463.5" x2="832" y2="745" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="885" y1="463.5" x2="1082" y2="745" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="885" y1="463.5" x2="1332" y2="685" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="885" y1="463.5" x2="832" y2="745" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="362" y1="407.5" x2="112" y2="573" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="362" y1="407.5" x2="362" y2="633" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="362" y1="407.5" x2="612" y2="573" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="112" y2="1058" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="362" y2="1178" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="612" y2="1168" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="862" y2="1118" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="1083" y2="1068" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="848" y1="901.5" x2="862" y2="1298" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="362" y1="1178" x2="862" y2="1298" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="612" y1="1168" x2="862" y2="1298" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="862" y1="1118" x2="862" y2="1298" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1083" y1="1068" x2="862" y2="1298" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1083" y1="1068" x2="1116" y2="1248" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1612" y1="1762.5" x2="1882" y2="1976" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1612" y1="1762.5" x2="1382" y2="1986" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1612" y1="1762.5" x2="1382" y2="1986" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1612" y1="1762.5" x2="1632" y2="2036" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="862" y2="1669" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="2612" y2="1639" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="1612" y2="1762.5" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="1862" y2="1699" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="112" y2="1629" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="1112" y2="1689" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="362" y2="1639" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="862" y2="1669" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="612" y2="1649" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="1362" y2="1806" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="2362" y2="1639" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1120" y1="1463.5" x2="2112" y2="1649" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2678" y1="1438.5" x2="2612" y2="1639" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2678" y1="1438.5" x2="2862" y2="1639" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1862" y1="1699" x2="2382" y2="1819" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1862" y1="1699" x2="2132" y2="1829" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2052" y1="390.5" x2="1552" y2="539" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2052" y1="390.5" x2="1802" y2="549" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2052" y1="390.5" x2="2052" y2="599" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2052" y1="390.5" x2="2302" y2="549" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2052" y1="390.5" x2="2552" y2="539" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2752" y1="62" x2="2752" y2="242" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="2532" y1="62" x2="2532" y2="242" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#666666"/>
+    </marker>
+  </defs>
+  <rect x="785" y="312" width="200" height="303" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="885" y="330" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">CacheManager</text>
+  <line x1="790" y1="347" x2="980" y2="347" stroke="#01579b" stroke-width="1"/>
+  <text x="793" y="350" font-size="10" fill="#666666">+ cacheDir: string</text>
+  <text x="793" y="366" font-size="10" fill="#666666">- stats: any</text>
+  <text x="793" y="382" font-size="10" fill="#666666">- defaultTTL: number</text>
+  <line x1="790" y1="398" x2="980" y2="398" stroke="#01579b" stroke-width="1"/>
+  <text x="793" y="401" font-size="10" fill="#666666">+ computeFileHash(filePath: stri...</text>
+  <text x="793" y="417" font-size="10" fill="#666666">+ get(filePath: string, hash: st...</text>
+  <text x="793" y="433" font-size="10" fill="#666666">+ set(filePath: string, hash: st...</text>
+  <text x="793" y="449" font-size="10" fill="#666666">+ clear(): Promise</text>
+  <text x="793" y="465" font-size="10" fill="#666666">+ getStats(): any</text>
+  <text x="793" y="481" font-size="10" fill="#666666">+ getCacheSize(): Promise</text>
+  <text x="793" y="497" font-size="10" fill="#666666">- getAllCacheFiles(): Promise</text>
+  <text x="793" y="513" font-size="10" fill="#666666">- getCacheKey(filePath: string, ...</text>
+  <text x="793" y="529" font-size="10" fill="#666666">- getCachePath(cacheKey: string)...</text>
+  <text x="793" y="545" font-size="10" fill="#666666">- updateHitRate()</text>
+  <text x="793" y="561" font-size="10" fill="#666666">+ setDefaultTTL(ttl: number)</text>
+  <text x="793" y="577" font-size="10" fill="#666666">+ getDefaultTTL(): number</text>
+  <text x="793" y="593" font-size="10" fill="#666666">+ constructor(cacheDir?: string)</text>
+  <rect x="1772" y="12" width="200" height="110" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1872" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">CacheStats</text>
+  <line x1="1777" y1="47" x2="1967" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="1780" y="50" font-size="10" fill="#666666">+ hits: number</text>
+  <text x="1780" y="66" font-size="10" fill="#666666">+ misses: number</text>
+  <text x="1780" y="82" font-size="10" fill="#666666">+ hitRate: number</text>
+  <text x="1780" y="98" font-size="10" fill="#666666">+ totalSize: number</text>
+  <rect x="12" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="112" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">CacheOptions</text>
+  <rect x="232" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="332" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">CacheEntry</text>
+  <line x1="237" y1="47" x2="427" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="240" y="50" font-size="10" fill="#666666">+ data: T</text>
+  <text x="240" y="66" font-size="10" fill="#666666">+ timestamp: number</text>
+  <text x="240" y="82" font-size="10" fill="#666666">+ ttl: number</text>
+  <rect x="748" y="815" width="200" height="173" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="848" y="833" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ErrorHandler</text>
+  <line x1="753" y1="850" x2="943" y2="850" stroke="#01579b" stroke-width="1"/>
+  <text x="756" y="853" font-size="10" fill="#666666">+ format(error: unknown, options...</text>
+  <text x="756" y="869" font-size="10" fill="#666666">- formatParseError(error: ParseE...</text>
+  <text x="756" y="885" font-size="10" fill="#666666">- formatAPIError(error: APIError...</text>
+  <text x="756" y="901" font-size="10" fill="#666666">- formatValidationError(error: V...</text>
+  <text x="756" y="917" font-size="10" fill="#666666">- formatFileError(error: FileErr...</text>
+  <text x="756" y="933" font-size="10" fill="#666666">- formatGenericError(error: Erro...</text>
+  <text x="756" y="949" font-size="10" fill="#666666">- formatStringError(error: strin...</text>
+  <text x="756" y="965" font-size="10" fill="#666666">- formatUnknownError(useColor: b...</text>
+  <rect x="452" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="552" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ErrorFormatOptions</text>
+  <rect x="1512" y="1619" width="200" height="287" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1612" y="1637" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ProgressReporter</text>
+  <line x1="1517" y1="1654" x2="1707" y2="1654" stroke="#01579b" stroke-width="1"/>
+  <text x="1520" y="1657" font-size="10" fill="#666666">- spinner: Ora</text>
+  <text x="1520" y="1673" font-size="10" fill="#666666">- stages: any</text>
+  <text x="1520" y="1689" font-size="10" fill="#666666">- currentStage: any</text>
+  <line x1="1517" y1="1705" x2="1707" y2="1705" stroke="#01579b" stroke-width="1"/>
+  <text x="1520" y="1708" font-size="10" fill="#666666">+ start(message: string)</text>
+  <text x="1520" y="1724" font-size="10" fill="#666666">+ update(completed: number, tota...</text>
+  <text x="1520" y="1740" font-size="10" fill="#666666">+ succeed(message: string)</text>
+  <text x="1520" y="1756" font-size="10" fill="#666666">+ fail(message: string)</text>
+  <text x="1520" y="1772" font-size="10" fill="#666666">+ warn(message: string)</text>
+  <text x="1520" y="1788" font-size="10" fill="#666666">+ info(message: string)</text>
+  <text x="1520" y="1804" font-size="10" fill="#666666">+ getStages(): any</text>
+  <text x="1520" y="1820" font-size="10" fill="#666666">+ getCurrentStage(): any</text>
+  <text x="1520" y="1836" font-size="10" fill="#666666">+ getSummary(): any</text>
+  <text x="1520" y="1852" font-size="10" fill="#666666">+ printSummary()</text>
+  <text x="1520" y="1868" font-size="10" fill="#666666">+ stop()</text>
+  <text x="1520" y="1884" font-size="10" fill="#666666">+ constructor()</text>
+  <rect x="672" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="772" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Stage</text>
+  <line x1="677" y1="47" x2="867" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="680" y="50" font-size="10" fill="#666666">+ name: string</text>
+  <text x="680" y="66" font-size="10" fill="#666666">+ status: any</text>
+  <rect x="1992" y="12" width="200" height="126" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2092" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ProgressSummary</text>
+  <line x1="1997" y1="47" x2="2187" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="2000" y="50" font-size="10" fill="#666666">+ totalDuration: number</text>
+  <text x="2000" y="66" font-size="10" fill="#666666">+ totalDurationFormatted: string</text>
+  <text x="2000" y="82" font-size="10" fill="#666666">+ successCount: number</text>
+  <text x="2000" y="98" font-size="10" fill="#666666">+ failureCount: number</text>
+  <text x="2000" y="114" font-size="10" fill="#666666">+ warningCount: number</text>
+  <rect x="262" y="1128" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="362" y="1146" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ParseError</text>
+  <line x1="267" y1="1163" x2="457" y2="1163" stroke="#01579b" stroke-width="1"/>
+  <text x="270" y="1166" font-size="10" fill="#666666">+ constructor(message: string, f...</text>
+  <rect x="512" y="1118" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="612" y="1136" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">APIError</text>
+  <line x1="517" y1="1153" x2="707" y2="1153" stroke="#01579b" stroke-width="1"/>
+  <text x="520" y="1156" font-size="10" fill="#666666">+ constructor(message: string, s...</text>
+  <rect x="762" y="1068" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="862" y="1086" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ValidationError</text>
+  <line x1="767" y1="1103" x2="957" y2="1103" stroke="#01579b" stroke-width="1"/>
+  <text x="770" y="1106" font-size="10" fill="#666666">+ constructor(message: string, s...</text>
+  <rect x="983" y="1018" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1083" y="1036" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">FileError</text>
+  <line x1="988" y1="1053" x2="1178" y2="1053" stroke="#01579b" stroke-width="1"/>
+  <text x="991" y="1056" font-size="10" fill="#666666">+ constructor(message: string, f...</text>
+  <rect x="262" y="312" width="200" height="191" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="362" y="330" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ConfigLoader</text>
+  <line x1="267" y1="347" x2="457" y2="347" stroke="#01579b" stroke-width="1"/>
+  <text x="270" y="350" font-size="10" fill="#666666">- configDir: string</text>
+  <line x1="267" y1="366" x2="457" y2="366" stroke="#01579b" stroke-width="1"/>
+  <text x="270" y="369" font-size="10" fill="#666666">+ load(cliOptions?: z.infer~any,...</text>
+  <text x="270" y="385" font-size="10" fill="#666666">- normalizeConfig(config: FileCo...</text>
+  <text x="270" y="401" font-size="10" fill="#666666">- deepMerge(target: FileConfig, ...</text>
+  <text x="270" y="417" font-size="10" fill="#666666">- isObject(item: unknown): boolean</text>
+  <text x="270" y="433" font-size="10" fill="#666666">- loadFromFile(configPath?: stri...</text>
+  <text x="270" y="449" font-size="10" fill="#666666">+ init(options?: object): Promise</text>
+  <text x="270" y="465" font-size="10" fill="#666666">+ getConfigPath(): Promise</text>
+  <text x="270" y="481" font-size="10" fill="#666666">+ constructor(configDir?: string)</text>
+  <rect x="262" y="583" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="362" y="601" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">FileConfig</text>
+  <rect x="892" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="992" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">CLIConfig</text>
+  <line x1="897" y1="47" x2="1087" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="900" y="50" font-size="10" fill="#666666">+ command: string</text>
+  <text x="900" y="66" font-size="10" fill="#666666">+ args: Array</text>
+  <text x="900" y="82" font-size="10" fill="#666666">+ timeout: number</text>
+  <rect x="2212" y="12" width="200" height="142" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2312" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Config</text>
+  <line x1="2217" y1="47" x2="2407" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="2220" y="50" font-size="10" fill="#666666">+ source: any</text>
+  <text x="2220" y="66" font-size="10" fill="#666666">+ outputDir: string</text>
+  <text x="2220" y="82" font-size="10" fill="#666666">+ format: any</text>
+  <text x="2220" y="98" font-size="10" fill="#666666">+ exclude: Array</text>
+  <text x="2220" y="114" font-size="10" fill="#666666">+ cli: any</text>
+  <text x="2220" y="130" font-size="10" fill="#666666">+ cache: object</text>
+  <rect x="1112" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1212" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">AnalyzeOptions</text>
+  <line x1="1117" y1="47" x2="1307" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="1120" y="50" font-size="10" fill="#666666">+ source: any</text>
+  <text x="1120" y="66" font-size="10" fill="#666666">+ format: any</text>
+  <text x="1120" y="82" font-size="10" fill="#666666">+ cache: boolean</text>
+  <rect x="1020" y="1368" width="200" height="191" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1120" y="1386" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DiagramProcessor</text>
+  <line x1="1025" y1="1403" x2="1215" y2="1403" stroke="#01579b" stroke-width="1"/>
+  <text x="1028" y="1406" font-size="10" fill="#666666">- diagrams: Array</text>
+  <text x="1028" y="1422" font-size="10" fill="#666666">- globalConfig: GlobalConfig</text>
+  <text x="1028" y="1438" font-size="10" fill="#666666">- progress: ProgressReporter</text>
+  <text x="1028" y="1454" font-size="10" fill="#666666">- fileDiscovery: FileDiscoveryService</text>
+  <text x="1028" y="1470" font-size="10" fill="#666666">- aggregator: ArchJSONAggregator</text>
+  <line x1="1025" y1="1486" x2="1215" y2="1486" stroke="#01579b" stroke-width="1"/>
+  <text x="1028" y="1489" font-size="10" fill="#666666">+ processAll(): Promise</text>
+  <text x="1028" y="1505" font-size="10" fill="#666666">- processDiagram(diagram: Diagra...</text>
+  <text x="1028" y="1521" font-size="10" fill="#666666">- generateOutput(archJSON: ArchJ...</text>
+  <text x="1028" y="1537" font-size="10" fill="#666666">+ constructor(options: any)</text>
+  <rect x="1332" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1432" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DiagramProcessorOptions</text>
+  <line x1="1337" y1="47" x2="1527" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="1340" y="50" font-size="10" fill="#666666">+ diagrams: Array</text>
+  <text x="1340" y="66" font-size="10" fill="#666666">+ globalConfig: GlobalConfig</text>
+  <text x="1340" y="82" font-size="10" fill="#666666">+ progress: ProgressReporter</text>
+  <rect x="2762" y="1589" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2862" y="1607" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DiagramResult</text>
+  <line x1="2767" y1="1624" x2="2957" y2="1624" stroke="#01579b" stroke-width="1"/>
+  <text x="2770" y="1627" font-size="10" fill="#666666">+ name: string</text>
+  <text x="2770" y="1643" font-size="10" fill="#666666">+ success: boolean</text>
+  <rect x="2578" y="1368" width="200" height="141" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2678" y="1386" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DiagramIndexGenerator</text>
+  <line x1="2583" y1="1403" x2="2773" y2="1403" stroke="#01579b" stroke-width="1"/>
+  <text x="2586" y="1406" font-size="10" fill="#666666">+ generate(results: Array): Promise</text>
+  <text x="2586" y="1422" font-size="10" fill="#666666">- buildIndexContent(results: Arr...</text>
+  <text x="2586" y="1438" font-size="10" fill="#666666">- buildDiagramSection(result: Di...</text>
+  <text x="2586" y="1454" font-size="10" fill="#666666">- buildSummarySection(successful...</text>
+  <text x="2586" y="1470" font-size="10" fill="#666666">- buildFailedSection(failed: Arr...</text>
+  <text x="2586" y="1486" font-size="10" fill="#666666">+ constructor(globalConfig: Glob...</text>
+  <rect x="1762" y="1649" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1862" y="1667" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">FileDiscoveryService</text>
+  <line x1="1767" y1="1684" x2="1957" y2="1684" stroke="#01579b" stroke-width="1"/>
+  <text x="1770" y="1687" font-size="10" fill="#666666">+ discoverFiles(options?: any): ...</text>
+  <text x="1770" y="1703" font-size="10" fill="#666666">- discoverFromGlob(options: obje...</text>
+  <rect x="1552" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1652" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">FileDiscoveryOptions</text>
+  <rect x="1952" y="312" width="200" height="157" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2052" y="330" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">OutputPathResolver</text>
+  <line x1="1957" y1="347" x2="2147" y2="347" stroke="#01579b" stroke-width="1"/>
+  <text x="1960" y="350" font-size="10" fill="#666666">+ resolve(options?: any): any</text>
+  <text x="1960" y="366" font-size="10" fill="#666666">+ ensureDirectory(options?: any)...</text>
+  <text x="1960" y="382" font-size="10" fill="#666666">- buildPathResolution(outputDir:...</text>
+  <text x="1960" y="398" font-size="10" fill="#666666">- parseCustomName(customName: st...</text>
+  <text x="1960" y="414" font-size="10" fill="#666666">- determineBasePath(options: any...</text>
+  <text x="1960" y="430" font-size="10" fill="#666666">- parseBasePath(basePath: string...</text>
+  <text x="1960" y="446" font-size="10" fill="#666666">+ constructor(config: object)</text>
+  <rect x="2432" y="192" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2532" y="210" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">PathResolution</text>
+  <line x1="2437" y1="227" x2="2627" y2="227" stroke="#01579b" stroke-width="1"/>
+  <text x="2440" y="230" font-size="10" fill="#666666">+ outputDir: string</text>
+  <text x="2440" y="246" font-size="10" fill="#666666">+ baseName: string</text>
+  <text x="2440" y="262" font-size="10" fill="#666666">+ paths: object</text>
+  <rect x="2652" y="192" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2752" y="210" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ResolveOptions</text>
+  <rect x="2652" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2752" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">OutputPathOptions</text>
+  <rect x="2432" y="12" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2532" y="30" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ResolvedPaths</text>
+  <line x1="2437" y1="47" x2="2627" y2="47" stroke="#01579b" stroke-width="1"/>
+  <text x="2440" y="50" font-size="10" fill="#666666">+ dir: string</text>
+  <rect x="732" y="695" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="832" y="713" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_cache_manager___CacheStats</text>
+  <rect x="982" y="695" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1082" y="713" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">T</text>
+  <rect x="1232" y="635" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1332" y="653" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_cache_manager___CacheOptions</text>
+  <rect x="12" y="523" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="112" y="541" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">z_infer</text>
+  <rect x="512" y="523" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="612" y="541" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__format____json_</text>
+  <rect x="12" y="1008" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="112" y="1026" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_error_handler___ErrorFormatOptions</text>
+  <rect x="762" y="1248" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="862" y="1266" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Error</text>
+  <rect x="1016" y="1198" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1116" y="1216" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">_read_</text>
+  <rect x="1782" y="1926" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1882" y="1944" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">Ora</text>
+  <rect x="1282" y="1936" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1382" y="1954" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_progress___Stage</text>
+  <rect x="1532" y="1986" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1632" y="2004" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_progress___ProgressSummary</text>
+  <rect x="762" y="1619" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="862" y="1637" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DiagramConfig</text>
+  <rect x="2512" y="1589" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2612" y="1607" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">GlobalConfig</text>
+  <rect x="12" y="1579" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="112" y="1597" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ArchJSONAggregator</text>
+  <rect x="1012" y="1639" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1112" y="1657" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_processors_diagram_processor___DiagramProcessorOptions</text>
+  <rect x="262" y="1589" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="362" y="1607" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_processors_diagram_processor___DiagramResult</text>
+  <rect x="512" y="1599" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="612" y="1617" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">ArchJSON</text>
+  <rect x="1262" y="1756" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1362" y="1774" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__paths____json__string__mmd__string__png__string__svg__string______</text>
+  <rect x="2262" y="1589" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2362" y="1607" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">OutputFormat</text>
+  <rect x="2012" y="1599" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2112" y="1617" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">DetailLevel</text>
+  <rect x="2282" y="1769" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2382" y="1787" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_utils_file_discovery_service___FileDiscoveryOptions</text>
+  <rect x="2032" y="1779" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2132" y="1797" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__source__string__exclude__string____skipMissing__boolean___</text>
+  <rect x="1452" y="489" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1552" y="507" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__outputDir__string__output___string___</text>
+  <rect x="1702" y="499" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="1802" y="517" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_utils_output_path_resolver___PathResolution</text>
+  <rect x="1952" y="549" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2052" y="567" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">import___home_yale_work_archguard_src_cli_utils_output_path_resolver___ResolveOptions</text>
+  <rect x="2202" y="499" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2302" y="517" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__outputDir__string__fileName__string___</text>
+  <rect x="2452" y="489" width="200" height="100" fill="#e1f5fe" stroke="#01579b" stroke-width="2" rx="5"/>
+  <text x="2552" y="507" font-size="12" font-weight="bold" fill="#333333" text-anchor="middle">__dir__string__baseName__string___</text>
+</svg>
