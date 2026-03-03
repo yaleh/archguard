@@ -28,9 +28,18 @@ interface PkgTreeNode {
  * Mermaid template renderer for Go Atlas layers
  */
 export class MermaidTemplates {
+  // ── Subgraph depth styles: outer=lightest, inner=darkest (Plan 19) ─────────
+  // Index = nesting depth (clamped at SUBGRAPH_DEPTH_STYLES.length - 1).
+  private static readonly SUBGRAPH_DEPTH_STYLES = [
+    'fill:#ffffff,stroke:#d0d7de,stroke-width:1px', // depth 0 — outermost, pure white
+    'fill:#f6f8fa,stroke:#d0d7de,stroke-width:1px', // depth 1 — near-white gray
+    'fill:#eaeef2,stroke:#8b949e,stroke-width:1px', // depth 2 — light gray
+    'fill:#d0d7de,stroke:#57606a,stroke-width:1px', // depth 3+ — medium gray
+  ];
+
   // ── Mermaid %%{init} spacing directives ───────────────────────────────────
   private static readonly FLOWCHART_INIT =
-    "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%\n";
+    "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%\n";
   private static readonly SEQUENCE_INIT =
     "%%{init: {'sequence': {'actorMargin': 50}}}%%\n";
 
@@ -188,27 +197,67 @@ export class MermaidTemplates {
     groups: GroupNode[],
     nodeMap: Map<string, PackageNode>,
     cycleNodeIds: Set<string>,
-    indent: string
+    indent: string,
+    inDegree?: Map<string, number>,
+    depthMap?: Map<string, number>,
+    depth?: number
   ): string {
+    const currentDepth = depth ?? 0;
     let out = '';
     for (const group of groups) {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(group.prefix);
+      if (depthMap) depthMap.set(sgId, currentDepth);
       out += `\n${indent}subgraph ${sgId}["${group.prefix}"]\n`;
       // Recurse: emit nested child groups first
       out += MermaidTemplates.renderGroupNodes(
         group.children,
         nodeMap,
         cycleNodeIds,
-        indent + '  '
+        indent + '  ',
+        inDegree,
+        depthMap,
+        currentDepth + 1
       );
-      // Then emit this group's direct node members
-      for (const nodeId of group.nodeIds) {
+      // Then emit this group's direct node members (sorted by in-degree, then alphabetically)
+      const sortedIds = inDegree
+        ? [...group.nodeIds].sort((a, b) => {
+            const diff = (inDegree.get(b) ?? 0) - (inDegree.get(a) ?? 0);
+            return diff !== 0 ? diff : a.localeCompare(b);
+          })
+        : group.nodeIds;
+      for (const nodeId of sortedIds) {
         const node = nodeMap.get(nodeId);
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         out += `${indent}  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
       out += `${indent}end\n`;
     }
+    return out;
+  }
+
+  private static renderLegend(activeTypes: Set<string>): string {
+    const LEGEND_LABELS: Record<string, string> = {
+      cmd:      'cmd (entry point)',
+      tests:    'tests',
+      examples: 'examples',
+      testutil: 'testutil',
+      internal: 'internal',
+      vendor:   'vendor',
+      external: 'external (module boundary)',
+      cycle:    'cycle (circular dep)',
+    };
+    let out = '  subgraph legend["Legend"]\n';
+    out += '    direction LR\n';
+    for (const type of Object.keys(LEGEND_LABELS)) {
+      if (activeTypes.has(type)) {
+        out += `    legend_${type}["${LEGEND_LABELS[type]}"]:::${type}\n`;
+      }
+    }
+    out += '    legend_edge["--> depends on (bolder = more imports)"]\n';
+    out += '  end\n';
+    // Amber/yellow fill + golden dashed border — clearly distinct hue from
+    // the white→gray data subgraph depth scale
+    out += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n\n';
     return out;
   }
 
@@ -220,32 +269,65 @@ export class MermaidTemplates {
       graph.cycles.filter((c) => c.packages.length > 1).flatMap((c) => c.packages)
     );
 
+    // Active types for legend (Plan 19 P3)
+    const activeTypes = new Set(graph.nodes.map((n) => n.type as string));
+    if (cycleNodeIds.size > 0) activeTypes.add('cycle');
+
     // --- nested subgraph grouping (P4) ---
     const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
     const { roots, grouped } = MermaidTemplates.buildGroupTree(graph.nodes);
 
-    // Pass 1: ungrouped top-level nodes
-    for (const node of graph.nodes) {
+    // In-degree sort for source-file readability (Plan 19 P2)
+    // Scope: top-level ungrouped nodes only. Nodes inside subgraph groups
+    // are ordered by buildGroupTree, which is unchanged.
+    const inDegree = new Map<string, number>();
+    for (const node of graph.nodes) inDegree.set(node.id, 0);
+    for (const edge of graph.edges) {
+      if (edge.from !== edge.to) {
+        inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
+      }
+    }
+    const sortedNodes = [...graph.nodes].sort((a, b) => {
+      const diff = (inDegree.get(b.id) ?? 0) - (inDegree.get(a.id) ?? 0);
+      return diff !== 0 ? diff : a.id.localeCompare(b.id);
+    });
+
+    // Pass 1: ungrouped top-level nodes (sorted by in-degree)
+    for (const node of sortedNodes) {
       if (!grouped.has(node.id)) {
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         output += `  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
     }
 
-    // Pass 1 cont.: recursive subgraph tree
-    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ');
+    // Pass 1 cont.: recursive subgraph tree (pass inDegree for within-group sort)
+    // depthMap collects sgId → nesting depth for depth-style emission below
+    const subgraphDepthMap = new Map<string, number>();
+    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ', inDegree, subgraphDepthMap, 0);
+
+    // Legend subgraph (Plan 19 P3) — MUST be before edges for edge-ordering test
+    output += MermaidTemplates.renderLegend(activeTypes);
+
+    // Depth-based style directives for data subgraphs (Plan 19 Phase D)
+    // outer=lightest (#ffffff), inner=darkest (#d0d7de), clamped at index 3
+    for (const [sgId, sgDepth] of subgraphDepthMap) {
+      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+      ];
+      output += `  style ${sgId} ${styleStr}\n`;
+    }
 
     // Pass 2: classDef block — placed before edges so lastIndexOf('end') in
     // 'vendor' substring doesn't produce a false negative for the edge-ordering test
     output += '\n';
-    output += '  classDef cmd      fill:#ff6b6b,stroke:#c0392b,color:#000\n';
-    output += '  classDef tests    fill:#b2bec3,stroke:#636e72,color:#000\n';
-    output += '  classDef examples fill:#74b9ff,stroke:#0984e3,color:#000\n';
-    output += '  classDef testutil fill:#dfe6e9,stroke:#b2bec3,color:#000\n';
-    output += '  classDef internal fill:#55efc4,stroke:#00b894,color:#000\n';
-    output += '  classDef vendor   fill:#f0e6ff,stroke:#9b59b6,color:#000\n';
-    output += '  classDef external fill:#ffeaa7,stroke:#fdcb6e,color:#000\n';
-    output += '  classDef cycle    fill:#fd79a8,stroke:#e84393,stroke-width:3px\n';
+    output += '  classDef cmd      fill:#ffebe9,stroke:#cf222e,color:#82071e\n';
+    output += '  classDef tests    fill:#f6f8fa,stroke:#d0d7de,color:#57606a\n';
+    output += '  classDef examples fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
+    output += '  classDef testutil fill:#f6f8fa,stroke:#d0d7de,color:#57606a\n';
+    output += '  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329\n';
+    output += '  classDef vendor   fill:#fdf4ff,stroke:#d2a8ff,color:#6e40c9\n';
+    output += '  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01\n';
+    output += '  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:3px,color:#82071e,font-weight:bold\n';
 
     // Pass 3: edges (self-loops get dashed warning arrow per P2)
     // Track (edgeIndex, strength) for non-self edges to compute linkStyle tiers.
@@ -315,25 +397,34 @@ export class MermaidTemplates {
     // Track whether any node qualifies for hotspot styling
     let hasHotspot = false;
 
+    // Track subgraph depths for style directives (depth 0 = outermost)
+    const capDepthMap = new Map<string, number>();
+
     // Recursive subgraph renderer for capability graph
-    const renderCapNode = (treeNode: PkgTreeNode, indent: string): void => {
+    const renderCapNode = (treeNode: PkgTreeNode, indent: string, depth: number): void => {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
+      capDepthMap.set(sgId, depth);
       output += `${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;
       // Recurse into children first
       for (const child of treeNode.children) {
-        renderCapNode(child, indent + '  ');
+        renderCapNode(child, indent + '  ', depth + 1);
       }
       // Direct capability nodes for this real package (virtual nodes have none)
       if (!treeNode.isVirtual) {
         for (const node of nodesByPkg.get(treeNode.pkg) ?? []) {
           const mId = MermaidTemplates.sanitizeId(node.id);
           const label = MermaidTemplates.formatCapabilityLabel(node);
-          const hotspotSuffix = MermaidTemplates.isHotspot(node) ? ':::hotspot' : '';
-          if (hotspotSuffix) hasHotspot = true;
+          const isHot = MermaidTemplates.isHotspot(node);
+          if (isHot) hasHotspot = true;
+          const classSuffix = isHot
+            ? ':::hotspot'
+            : node.type === 'interface'
+              ? ':::interface'
+              : ':::concrete';
           if (node.type === 'interface') {
-            output += `${indent}  ${mId}{{"${label}"}}${hotspotSuffix}\n`;
+            output += `${indent}  ${mId}{{"${label}"}}${classSuffix}\n`;
           } else {
-            output += `${indent}  ${mId}["${label}"]${hotspotSuffix}\n`;
+            output += `${indent}  ${mId}["${label}"]${classSuffix}\n`;
           }
         }
       }
@@ -341,12 +432,41 @@ export class MermaidTemplates {
     };
 
     for (const root of pkgRoots) {
-      renderCapNode(root, '');
+      renderCapNode(root, '', 0);
     }
 
-    // Emit hotspot classDef only when at least one node qualifies
+    // Depth-based style directives for capability subgraphs
+    for (const [sgId, sgDepth] of capDepthMap) {
+      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+      ];
+      output += `  style ${sgId} ${styleStr}\n`;
+    }
+
+    // Determine if any concrete-usage edge exists
+    const hasConcreteEdge = graph.edges.some((e) => e.concreteUsage === true);
+
+    // Legend subgraph — node types first, then edge descriptions
+    output += '  subgraph legend["Legend"]\n';
+    output += '    direction LR\n';
+    output += '    legend_interface{{"interface"}}:::interface\n';
+    output += '    legend_concrete["concrete"]:::concrete\n';
     if (hasHotspot) {
-      output += '  classDef hotspot fill:#ff7675,stroke:#d63031,stroke-width:2px\n';
+      output += '    legend_hotspot["hotspot (≥11m or fi>5)"]:::hotspot\n';
+    }
+    output += '    legend_impl["-.-> implements"]\n';
+    output += '    legend_uses["--> uses"]\n';
+    if (hasConcreteEdge) {
+      output += '    legend_conc["==> concrete usage"]\n';
+    }
+    output += '  end\n';
+    output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
+
+    // classDef block — before edges
+    output += '  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
+    output += '  classDef concrete fill:#dafbe1,stroke:#2da44e,color:#116329\n';
+    if (hasHotspot) {
+      output += '  classDef hotspot fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e\n';
     }
 
     // Render edges after all subgraphs
@@ -459,16 +579,23 @@ export class MermaidTemplates {
 
     // Add topology nodes (main, spawned)
     for (const node of topology.nodes) {
-      const style = node.type === 'main' ? ':::main' : ':::spawned';
       const patternLabel = node.pattern ? ` (${node.pattern})` : '';
       const displayName = MermaidTemplates.formatGoroutineName(node);
       const lifecycleTag =
         node.type === 'spawned'
           ? MermaidTemplates.getLifecycleTag(node.id, topology.lifecycle)
           : '';
+      const label = `${displayName}${patternLabel}${lifecycleTag}`;
+      // spawned_noexit when label contains the orphan warning tag
+      const style =
+        node.type === 'main'
+          ? ':::main'
+          : label.includes('\u26a0 no exit')
+            ? ':::spawned_noexit'
+            : ':::spawned';
       addDecl(node.package || undefined, {
         rawId: node.id,
-        label: `${displayName}${patternLabel}${lifecycleTag}`,
+        label,
         style,
       });
     }
@@ -495,12 +622,16 @@ export class MermaidTemplates {
     const pkgList = Array.from(packageGroups.keys());
     const pkgRoots = MermaidTemplates.buildPackageTree(pkgList);
 
-    const renderGoroutineNode = (treeNode: PkgTreeNode, indent: string): void => {
+    // Track subgraph depths for style directives
+    const goroutineDepthMap = new Map<string, number>();
+
+    const renderGoroutineNode = (treeNode: PkgTreeNode, indent: string, depth: number): void => {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(treeNode.pkg);
+      goroutineDepthMap.set(sgId, depth);
       output += `\n${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;
       // Recurse into children first
       for (const child of treeNode.children) {
-        renderGoroutineNode(child, indent + '  ');
+        renderGoroutineNode(child, indent + '  ', depth + 1);
       }
       // Direct goroutine nodes for this real package (virtual nodes have none)
       if (!treeNode.isVirtual) {
@@ -512,12 +643,21 @@ export class MermaidTemplates {
     };
 
     for (const root of pkgRoots) {
-      renderGoroutineNode(root, '  ');
+      renderGoroutineNode(root, '  ', 0);
     }
 
     // ── Emit ungrouped nodes (no package) ────────────────────────────────────
     for (const decl of ungrouped) {
       output += `  ${this.sanitizeId(decl.rawId)}["${decl.label}"]${decl.style}\n`;
+    }
+
+    // ── Depth-based style directives for package subgraphs ────────────────────
+    output += '\n';
+    for (const [sgId, sgDepth] of goroutineDepthMap) {
+      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+      ];
+      output += `  style ${sgId} ${styleStr}\n`;
     }
 
     // ── Emit spawn edges ──────────────────────────────────────────────────────
@@ -533,6 +673,7 @@ export class MermaidTemplates {
         output += `    ${this.sanitizeId(ch.id)}[("${label}")]:::channel\n`;
       }
       output += '  end\n';
+      output += '  style channels fill:#ffffff,stroke:#d0d7de,stroke-width:1px\n';
     }
 
     // ── Emit channel edges (make / send / recv) ────────────────────────────────
@@ -540,10 +681,33 @@ export class MermaidTemplates {
       output += `  ${this.sanitizeId(edge.from)} -->|${edge.edgeType}| ${this.sanitizeId(edge.to)}\n`;
     }
 
-    output += '\n  classDef main fill:#f66,stroke:#333,stroke-width:2px\n';
-    output += '  classDef spawned fill:#6f6,stroke:#333,stroke-width:1px\n';
-    output += '  classDef spawner fill:#69f,stroke:#333,stroke-width:1px\n';
-    output += '  classDef channel fill:#ff6,stroke:#333,stroke-width:1px\n';
+    // ── Legend subgraph ────────────────────────────────────────────────────────
+    // Determine if any normal (non-noexit) spawned node was emitted
+    const hasNormalSpawned = [...packageGroups.values()].flat().concat(ungrouped)
+      .some((d) => d.style === ':::spawned');
+
+    output += '\n  subgraph legend["Legend"]\n';
+    output += '    direction LR\n';
+    output += '    legend_main["main"]:::main\n';
+    output += '    legend_spawner["spawner"]:::spawner\n';
+    if (hasNormalSpawned) {
+      output += '    legend_spawned["spawned \u2713"]:::spawned\n';
+    }
+    output += '    legend_spawned_noexit["spawned \u26a0 no exit"]:::spawned_noexit\n';
+    output += '    legend_channel["channel"]:::channel\n';
+    output += '    legend_go["--> go (goroutine launch)"]\n';
+    if (topology.channels.length > 0) {
+      output += '    legend_make["--> make/send/recv"]\n';
+    }
+    output += '  end\n';
+    output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
+
+    // ── classDef block ─────────────────────────────────────────────────────────
+    output += '\n  classDef main fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e\n';
+    output += '  classDef spawned fill:#dafbe1,stroke:#2da44e,color:#116329\n';
+    output += '  classDef spawner fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
+    output += '  classDef spawned_noexit fill:#fff3cd,stroke:#d4a72c,stroke-width:2px,color:#633c01\n';
+    output += '  classDef channel fill:#fff8c5,stroke:#d4a72c,color:#633c01\n';
 
     return output;
   }
@@ -590,30 +754,50 @@ export class MermaidTemplates {
     const pkgPaths = Array.from(pkgGroups.keys());
     const pkgTree = MermaidTemplates.buildPackageTree(pkgPaths);
 
+    // Track subgraph depths for style directives
+    const flowDepthMap = new Map<string, number>();
+
     // Recursive renderer: emit subgraph per tree node
-    const renderEntryPkg = (node: PkgTreeNode, indent: string): void => {
+    const renderEntryPkg = (node: PkgTreeNode, indent: string, depth: number): void => {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(node.pkg);
+      flowDepthMap.set(sgId, depth);
       output += `${indent}subgraph ${sgId}["${node.pkg}"]\n`;
       for (const child of node.children) {
-        renderEntryPkg(child, indent + '  ');
+        renderEntryPkg(child, indent + '  ', depth + 1);
       }
       // Only real package nodes have entry points (virtual ancestors have none)
       if (!node.isVirtual) {
         for (const entry of pkgGroups.get(node.pkg) ?? []) {
           const nodeId = MermaidTemplates.sanitizeId(entry.id);
           const label = MermaidTemplates.formatEntryLabel(entry);
-          output += `${indent}  ${nodeId}["${label}"]\n`;
+          output += `${indent}  ${nodeId}["${label}"]:::entry\n`;
         }
       }
       output += `${indent}end\n`;
     };
 
     for (const root of pkgTree) {
-      renderEntryPkg(root, '  ');
+      renderEntryPkg(root, '  ', 0);
     }
+
+    // Depth-based style directives for entry-point subgraphs
+    for (const [sgId, sgDepth] of flowDepthMap) {
+      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+      ];
+      output += `  style ${sgId} ${styleStr}\n`;
+    }
+
+    // Collect all handler node IDs (direct callee from each entry)
+    const handlerNodeIds = new Set<string>(
+      graph.entryPoints.map((e) => this.sanitizeId(e.handler))
+    );
 
     // Track nodes already declared inside subgraphs (entry point nodes)
     const declaredNodeIds = new Set<string>(graph.entryPoints.map((e) => this.sanitizeId(e.id)));
+
+    let hasIfaceEdge = false;
+    let hasIndirEdge = false;
 
     // Emit call-chain edges — deduplicated across all chains
     const emittedEdges = new Set<string>();
@@ -623,8 +807,10 @@ export class MermaidTemplates {
       emittedEdges.add(key);
       if (callEdge) {
         if (callEdge.type === 'interface') {
+          hasIfaceEdge = true;
           output += `  ${from} -.->|iface| ${to}\n`;
         } else if (callEdge.type === 'indirect') {
+          hasIndirEdge = true;
           output += `  ${from} -.->|indir| ${to}\n`;
         } else {
           // 'direct' — solid arrow, no label
@@ -638,10 +824,12 @@ export class MermaidTemplates {
     };
 
     // Declare a node with its original name as label (skip if already declared)
+    // handler nodes get :::handler; others get :::util
     const declareNode = (id: string, originalName: string): void => {
       if (declaredNodeIds.has(id)) return;
       declaredNodeIds.add(id);
-      output += `  ${id}["${originalName}"]\n`;
+      const classSuffix = handlerNodeIds.has(id) ? ':::handler' : ':::util';
+      output += `  ${id}["${originalName}"]${classSuffix}\n`;
     };
 
     for (const chain of graph.callChains) {
@@ -669,6 +857,28 @@ export class MermaidTemplates {
         addEdge(fromId, toId, undefined, call);
       }
     }
+
+    // Legend subgraph
+    output += '\n  subgraph legend["Legend"]\n';
+    output += '    direction LR\n';
+    output += '    legend_entry["entry point"]:::entry\n';
+    output += '    legend_handler["handler"]:::handler\n';
+    output += '    legend_util["utility"]:::util\n';
+    output += '    legend_edge_calls["\u2192|N calls| entry \u2192 handler"]\n';
+    output += '    legend_edge_direct["\u2192 direct call"]\n';
+    if (hasIfaceEdge) {
+      output += '    legend_edge_iface["-\u00b7\u2192|iface| interface dispatch"]\n';
+    }
+    if (hasIndirEdge) {
+      output += '    legend_edge_indir["-\u00b7\u2192|indir| indirect call"]\n';
+    }
+    output += '  end\n';
+    output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
+
+    // classDef block
+    output += '\n  classDef entry fill:#ffebe9,stroke:#cf222e,color:#82071e\n';
+    output += '  classDef handler fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
+    output += '  classDef util fill:#f6f8fa,stroke:#d0d7de,color:#57606a\n';
 
     return output;
   }
@@ -747,6 +957,6 @@ export class MermaidTemplates {
   }
 
   private static sanitizeId(id: string): string {
-    return id.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 64);
+    return id.replace(/[^a-zA-Z0-9_]/g, '_');
   }
 }

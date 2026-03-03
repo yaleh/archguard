@@ -5,7 +5,7 @@
  * v2.1.0: Integrated CommentGenerator for self-documenting diagrams
  */
 
-import type { ArchJSON, Entity, Member, Relation } from '../types/index.js';
+import type { ArchJSON, Entity, EntityType, Member, Relation } from '../types/index.js';
 import type { DiagramConfig } from '../types/config.js';
 import type {
   MermaidDetailLevel,
@@ -16,6 +16,24 @@ import type {
 } from './types.js';
 import { CommentGenerator } from './comment-generator.js';
 import { isExternalDependency } from './external-dependencies.js';
+
+// ── Semantic classDef styles for TypeScript class diagrams (Plan 19) ─────────
+// Maps classDef identifier → Mermaid style string.
+// EntityType 'class' maps to 'classNode' to avoid ambiguity with Mermaid's
+// 'class' keyword in classDiagram syntax.
+const ENTITY_CLASSDEF_STYLES: Record<string, string> = {
+  classNode:      'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
+  interface:      'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
+  enum:           'fill:#fff8c5,stroke:#d4a72c,color:#633c01',
+  struct:         'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
+  trait:          'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
+  abstract_class: 'fill:#fdf4ff,stroke:#d2a8ff,color:#8250df',
+  function:       'fill:#f6f8fa,stroke:#d0d7de,color:#57606a',
+};
+
+function entityTypeToClassDef(type: EntityType): string {
+  return type === 'class' ? 'classNode' : type;
+}
 
 /**
  * Validated Mermaid Generator
@@ -224,6 +242,12 @@ export class ValidatedMermaidGenerator {
   private generateClassLevel(): string {
     const lines: string[] = ['classDiagram'];
 
+    // Emit semantic classDef block (Plan 19)
+    for (const [name, style] of Object.entries(ENTITY_CLASSDEF_STYLES)) {
+      lines.push(`  classDef ${name} ${style}`);
+    }
+    lines.push('');
+
     const packageGroups = this.groupEntitiesByPackage();
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
     const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
@@ -271,6 +295,17 @@ export class ValidatedMermaidGenerator {
       }
     }
 
+    // Emit node type annotations (Plan 19)
+    lines.push('');
+    lines.push('  %% Node type annotations');
+    const seenAnnotationsClass = new Set<string>();
+    for (const entity of this.archJson.entities) {
+      const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
+      if (seenAnnotationsClass.has(normalizedId)) continue;
+      seenAnnotationsClass.add(normalizedId);
+      lines.push(`  ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
+    }
+
     return lines.join('\n');
   }
 
@@ -279,6 +314,12 @@ export class ValidatedMermaidGenerator {
    */
   private generateMethodLevel(): string {
     const lines: string[] = ['classDiagram'];
+
+    // Emit semantic classDef block (Plan 19)
+    for (const [name, style] of Object.entries(ENTITY_CLASSDEF_STYLES)) {
+      lines.push(`  classDef ${name} ${style}`);
+    }
+    lines.push('');
 
     const packageGroups = this.groupEntitiesByPackage();
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
@@ -314,6 +355,17 @@ export class ValidatedMermaidGenerator {
       }
     }
 
+    // Emit node type annotations (Plan 19)
+    lines.push('');
+    lines.push('  %% Node type annotations');
+    const seenAnnotationsMethod = new Set<string>();
+    for (const entity of this.archJson.entities) {
+      const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
+      if (seenAnnotationsMethod.has(normalizedId)) continue;
+      seenAnnotationsMethod.add(normalizedId);
+      lines.push(`  ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
+    }
+
     return lines.join('\n');
   }
 
@@ -328,7 +380,7 @@ export class ValidatedMermaidGenerator {
     // Remove generic parameters from the class name
     const className = this.escapeId(this.normalizeEntityName(entity.name));
     // Mermaid classDiagram only supports 'class' keyword; map all entity types accordingly
-    const classType = entity.type === 'interface' ? 'class' : 'class';
+    const classType = 'class'; // Mermaid classDiagram only uses the 'class' keyword
     lines.push(`${padding}${classType} ${className} {`);
 
     // Add members (with null check)

@@ -67,9 +67,9 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
     const e2 = makeEntry({ id: 'ep2', location: { file: '/srv/api/b.go', line: 2 } });
     const graph = makeFlowGraph([e1, e2]);
     const result = MermaidTemplates.renderFlowGraph(graph);
-    // Only one subgraph for /srv/api
-    const subgraphMatches = result.match(/subgraph /g);
-    expect(subgraphMatches).toHaveLength(1);
+    // Only one data subgraph for /srv/api (legend subgraph is separate)
+    const dataSubgraphMatches = result.match(/subgraph grp_/g);
+    expect(dataSubgraphMatches).toHaveLength(1);
   });
 
   it('puts entries from different directories in separate subgraphs', () => {
@@ -327,21 +327,68 @@ describe('MermaidTemplates (private) sanitizeId', () => {
     expect(fn('foo.bar/baz')).toBe('foo_bar_baz');
   });
 
-  it('truncates result to 64 characters for a 100-char input', () => {
+  it('does not truncate long IDs — no Mermaid hard limit on node ID length', () => {
     const long = 'a'.repeat(100);
     const result = fn(long);
-    expect(result.length).toBeLessThanOrEqual(64);
-    expect(result.length).toBe(64);
+    expect(result).toBe('a'.repeat(100));
+    expect(result.length).toBe(100);
   });
 
-  it('returns string as-is when already valid and short', () => {
+  it('returns string as-is when already valid', () => {
     expect(fn('validId_123')).toBe('validId_123');
   });
 
-  it('truncates sanitized result with special chars to ≤ 64 chars', () => {
-    const long = 'a-'.repeat(50); // 100 chars, all hyphens become underscores
+  it('preserves full length for long IDs with special chars', () => {
+    const long = 'a-'.repeat(50); // 100 chars → 100 chars after sanitize
     const result = fn(long);
-    expect(result.length).toBeLessThanOrEqual(64);
+    expect(result).toBe('a_'.repeat(50));
+    expect(result.length).toBe(100);
+  });
+
+  it('produces distinct IDs for two long paths that share the first 64 chars', () => {
+    // Reproduces the codex-swarm collision:
+    // github.com/yaleh/codex-swarm/examples/user-service/internal/catalog       (67 chars → was truncated same)
+    // github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store (73 chars → was truncated same)
+    const id1 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog';
+    const id2 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store';
+    expect(fn(id1)).not.toBe(fn(id2));
+  });
+
+  it('produces distinct IDs for internal/user and internal/userclient', () => {
+    const id1 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/user';
+    const id2 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/userclient';
+    expect(fn(id1)).not.toBe(fn(id2));
+  });
+
+  it('renderPackageGraph emits distinct node IDs for paths that differ only after 64 chars', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        {
+          id: 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog',
+          name: 'examples/user-service/internal/catalog',
+          type: 'examples',
+          fileCount: 1,
+        } as PackageNode,
+        {
+          id: 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store',
+          name: 'examples/user-service/internal/catalog/store',
+          type: 'examples',
+          fileCount: 1,
+        } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Each node must appear exactly once as a declaration
+    const catalogDecls = (result.match(/github_com_yaleh_codex_swarm_examples_user_service_internal_catalog\b/g) ?? []).length;
+    const storeDecls   = (result.match(/github_com_yaleh_codex_swarm_examples_user_service_internal_catalog_store\b/g) ?? []).length;
+    expect(catalogDecls).toBeGreaterThanOrEqual(1);
+    expect(storeDecls).toBeGreaterThanOrEqual(1);
+    // The two node IDs must not be identical (no collision)
+    expect(result).not.toMatch(
+      /(\bgithub_com_yaleh_codex_swarm_examples_user_service_internal_cata\b).*\1/s
+    );
   });
 });
 
@@ -593,7 +640,8 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
-    expect(result).not.toContain('subgraph');
+    // The node itself must not be wrapped in a group subgraph (only the legend subgraph is allowed)
+    expect(result).not.toContain('subgraph grp_');
     expect(result).toContain('mod_pkg_store["pkg/store"]:::internal');
   });
 
@@ -1701,14 +1749,14 @@ describe('Phase B-render: capability graph metric labels and hotspot', () => {
     expect(output).not.toContain('classDef hotspot');
   });
 
-  // Test 9: when at least one node qualifies, classDef hotspot is present
-  it('classDef hotspot fill:#ff7675,... is present when at least one node qualifies', () => {
+  // Test 9: when at least one node qualifies, classDef hotspot is present with GitHub-style amber
+  it('classDef hotspot fill:#ffebe9,... is present when at least one node qualifies', () => {
     const nodes = [
       makeCapNode({ id: 'n9a', name: 'HotOne', methodCount: 15 }),
       makeCapNode({ id: 'n9b', name: 'CoolOne', methodCount: 2 }),
     ];
     const output = MermaidTemplates.renderCapabilityGraph(makeCapGraph(nodes));
-    expect(output).toContain('classDef hotspot fill:#ff7675,stroke:#d63031,stroke-width:2px');
+    expect(output).toContain('classDef hotspot fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e');
   });
 
   // Test 10: uses edge with concreteUsage: true renders as ==>|conc|
@@ -2004,7 +2052,9 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).not.toContain(' ✓ctx');
     expect(output).not.toContain(' ctx?');
-    expect(output).not.toContain(' ⚠ no exit');
+    // The node itself should not have ⚠ no exit in its label (legend always has it)
+    expect(output).not.toContain('"cleanWorker ⚠ no exit"');
+    expect(output).not.toContain('worker4["cleanWorker ⚠');
   });
 
   // Test 5: multiple spawned nodes each render their correct individual tag
@@ -2033,5 +2083,1052 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
     );
     expect(output).toContain(' ✓ctx');
     expect(output).toContain(' ⚠ no exit');
+  });
+});
+
+// ─── renderPackageGraph — in-degree ordering (Plan 19 Phase B) ───────────────
+
+describe('renderPackageGraph — in-degree ordering', () => {
+  it('emits highest in-degree node before lower in-degree nodes in output text', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/leaf', name: 'pkg/leaf', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 3 } as PackageNode,
+        { id: 'pkg/util', name: 'pkg/util', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        { from: 'pkg/leaf', to: 'pkg/hub', strength: 1 },
+        { from: 'pkg/util', to: 'pkg/hub', strength: 1 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // pkg/hub has in-degree 2, others have 0 — hub must appear first
+    expect(result.indexOf('pkg_hub')).toBeLessThan(result.indexOf('pkg_leaf'));
+    expect(result.indexOf('pkg_hub')).toBeLessThan(result.indexOf('pkg_util'));
+  });
+
+  it('excludes self-loop edges from in-degree calculation', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        // Self-loop on pkg/a should NOT boost its in-degree
+        { from: 'pkg/a', to: 'pkg/a', strength: 5 },
+        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+      ],
+      cycles: [{ packages: ['pkg/a'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // pkg/b has real in-degree 1, pkg/a has 0 (self-loop excluded)
+    // So pkg/b appears before pkg/a in the output
+    expect(result.indexOf('pkg_b')).toBeLessThan(result.indexOf('pkg_a'));
+  });
+
+  it('breaks ties alphabetically for deterministic output', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/zebra', name: 'pkg/zebra', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/alpha', name: 'pkg/alpha', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/middle', name: 'pkg/middle', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // All zero in-degree → alphabetical order
+    expect(result.indexOf('pkg_alpha')).toBeLessThan(result.indexOf('pkg_middle'));
+    expect(result.indexOf('pkg_middle')).toBeLessThan(result.indexOf('pkg_zebra'));
+  });
+
+  it('flat graph (all in-degree 0) emits nodes in alphabetical order', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'z', name: 'z', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'm', name: 'm', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result.indexOf('"a"')).toBeLessThan(result.indexOf('"m"'));
+    expect(result.indexOf('"m"')).toBeLessThan(result.indexOf('"z"'));
+  });
+});
+
+// ─── renderPackageGraph — legend subgraph (Plan 19 Phase B) ──────────────────
+
+describe('renderPackageGraph — legend subgraph', () => {
+  it('includes legend node for each PackageNode.type present in graph', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('legend_internal');
+    expect(result).toContain('legend_cmd');
+    expect(result).not.toContain('legend_tests');
+    expect(result).not.toContain('legend_vendor');
+  });
+
+  it('includes legend_cycle entry when cycleNodeIds is non-empty (multi-package cycle)', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+        { from: 'pkg/b', to: 'pkg/a', strength: 1 },
+      ],
+      cycles: [{ packages: ['pkg/a', 'pkg/b'], severity: 'error' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('legend_cycle');
+  });
+
+  it('omits legend_cycle when cycleNodeIds is empty (no multi-package cycles)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).not.toContain('legend_cycle');
+  });
+
+  it('omits legend_cycle when graph.cycles contains only self-loops (packages.length === 1)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [{ from: 'pkg/x', to: 'pkg/x', strength: 1 }],
+      cycles: [{ packages: ['pkg/x'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).not.toContain('legend_cycle');
+  });
+
+  it('legend subgraph uses direction LR', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('subgraph legend["Legend"]');
+    expect(result).toContain('direction LR');
+  });
+
+  it('legend subgraph ID is "legend"', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('subgraph legend["Legend"]');
+  });
+
+  it('no edges exist between legend nodes and graph nodes', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'a', to: 'b', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // No arrow involving legend_ node IDs
+    expect(result).not.toMatch(/legend_\w+ -->/);
+    expect(result).not.toMatch(/--> legend_\w+/);
+  });
+
+  it('legend appears before classDef block in output (between Pass 1 and Pass 2)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const legendPos = result.indexOf('subgraph legend');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(legendPos).toBeGreaterThan(0);
+    expect(legendPos).toBeLessThan(classDefPos);
+  });
+
+  it('legend subgraph has a style directive with dashed border to distinguish from data subgraphs', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('style legend');
+    expect(result).toContain('stroke-dasharray');
+  });
+
+  it('legend style directive uses amber fill and golden stroke to distinguish from gray data subgraphs', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Amber/yellow fill — clearly different hue from the white/gray data subgraph scale
+    expect(result).toMatch(/style legend fill:#fff8c5/);
+    expect(result).toMatch(/style legend.*stroke:#d4a72c/);
+  });
+
+  it('legend style directive appears immediately after legend end and before classDef block', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style legend');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(stylePos).toBeLessThan(classDefPos);
+  });
+
+  it('edge-ordering constraint holds: all edges appear after style legend directive', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'mod/a', to: 'mod/b', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style legend');
+    const edgePos = result.indexOf('mod_a -->');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
+  });
+});
+
+// ─── renderPackageGraph — subgraph depth styles (Plan 19 Phase D) ─────────────
+
+describe('renderPackageGraph — subgraph depth styles', () => {
+  it('depth-0 subgraph gets white fill (#ffffff)', () => {
+    // grp_cmd is depth 0 (top-level group)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_cmd fill:#ffffff/);
+  });
+
+  it('depth-1 subgraph gets near-white fill (#f6f8fa)', () => {
+    // grp_pkg is depth 0; grp_pkg_hub is depth 1
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/logging', name: 'pkg/logging', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_pkg fill:#ffffff/);
+    expect(result).toMatch(/style grp_pkg_hub fill:#f6f8fa/);
+  });
+
+  it('depth-2 subgraph gets light-gray fill (#eaeef2)', () => {
+    // 3-level nesting: grp_a (0) → grp_a_b (1) → grp_a_b_c (2)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a/b/c/p', name: 'a/b/c/p', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/q', name: 'a/b/c/q', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/d',   name: 'a/b/d',   type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/e',     name: 'a/e',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/f/g',     name: 'f/g',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/f/h',     name: 'f/h',     type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_a fill:#ffffff/);
+    expect(result).toMatch(/style grp_a_b fill:#f6f8fa/);
+    expect(result).toMatch(/style grp_a_b_c fill:#eaeef2/);
+    expect(result).toMatch(/style grp_f fill:#ffffff/);
+  });
+
+  it('depth-3+ subgraph gets gray fill (#d0d7de), clamped at max depth index', () => {
+    // 4-level nesting: grp_a (0) → grp_a_b (1) → grp_a_b_c (2) → grp_a_b_c_d (3)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a/b/c/d/p', name: 'a/b/c/d/p', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/d/q', name: 'a/b/c/d/q', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/e',   name: 'a/b/c/e',   type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/f',     name: 'a/b/f',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/g',       name: 'a/g',       type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/h/i',       name: 'h/i',       type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/h/j',       name: 'h/j',       type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_a fill:#ffffff/);
+    expect(result).toMatch(/style grp_a_b fill:#f6f8fa/);
+    expect(result).toMatch(/style grp_a_b_c fill:#eaeef2/);
+    expect(result).toMatch(/style grp_a_b_c_d fill:#d0d7de/);
+  });
+
+  it('subgraph style directives appear before classDef block', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style grp_cmd');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(stylePos).toBeLessThan(classDefPos);
+  });
+
+  it('subgraph style directives appear before edges', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/y', name: 'pkg/y', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'mod/cmd/a', to: 'mod/pkg/x', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style grp_cmd');
+    const edgePos = result.indexOf('mod_cmd_a -->');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
+  });
+});
+
+// ─── renderCapabilityGraph — semantic classDef styling (Plan 20) ──────────────
+
+describe('renderCapabilityGraph — semantic classDef styling', () => {
+  function makeCapGraph2(nodes: CapabilityNode[], edges: CapabilityRelation[] = []): CapabilityGraph {
+    return { nodes, edges };
+  }
+
+  function makeCapNode3(
+    id: string,
+    name: string,
+    type: 'interface' | 'struct' = 'struct',
+    pkg: string = 'pkg/hub',
+    overrides: Partial<CapabilityNode> = {}
+  ): CapabilityNode {
+    return { id, name, type, package: pkg, exported: true, ...overrides };
+  }
+
+  it('classDef interface uses blue-green fill', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Store', 'Store', 'interface')]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0550ae');
+  });
+
+  it('classDef concrete uses green fill', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Server', 'Server', 'struct')]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('classDef concrete fill:#dafbe1,stroke:#2da44e,color:#116329');
+  });
+
+  it('classDef hotspot uses refined warning amber (#ffebe9, not #ff7675)', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.BigStruct', 'BigStruct', 'struct', 'pkg/hub', { methodCount: 15 })]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('classDef hotspot fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e');
+  });
+
+  it('interface node gets :::interface suffix when not hotspot', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Store', 'Store', 'interface')]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain(':::interface');
+    expect(output).not.toContain(':::hotspot');
+  });
+
+  it('struct node gets :::concrete suffix when not hotspot', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Server', 'Server', 'struct')]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain(':::concrete');
+    expect(output).not.toContain(':::hotspot');
+  });
+
+  it('hotspot overrides interface: hotspot interface node gets :::hotspot not :::interface', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Store', 'Store', 'interface', 'pkg/hub', { methodCount: 15 })]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain(':::hotspot');
+    // Data node must not use :::interface (legend may still have it)
+    expect(output).not.toMatch(/pkg_hub_Store.*:::interface/);
+  });
+
+  it('hotspot overrides concrete: hotspot struct node gets :::hotspot not :::concrete', () => {
+    const graph = makeCapGraph2([makeCapNode3('pkg/hub.Server', 'Server', 'struct', 'pkg/hub', { fanIn: 6 })]);
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain(':::hotspot');
+    // Data node must not use :::concrete (legend may still have it)
+    expect(output).not.toMatch(/pkg_hub_Server.*:::concrete/);
+  });
+});
+
+describe('renderCapabilityGraph — subgraph depth styles', () => {
+  it('depth-0 subgraph gets white fill (#ffffff)', () => {
+    // grp_pkg is a virtual ancestor at depth 0 when both pkg/hub and pkg/api exist
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/api.Router', 'Router', 'struct', 'pkg/api'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/style grp_pkg fill:#ffffff/);
+  });
+
+  it('depth-1 subgraph gets near-white fill (#f6f8fa)', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/api.Router', 'Router', 'struct', 'pkg/api'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/style grp_pkg_hub fill:#f6f8fa/);
+    expect(output).toMatch(/style grp_pkg_api fill:#f6f8fa/);
+  });
+
+  it('depth-2 subgraph gets light-gray fill (#eaeef2)', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub/store.Repo', 'Repo', 'struct', 'pkg/hub/store'),
+        makeCapNode('pkg/api.Router', 'Router', 'struct', 'pkg/api'),
+      ],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // grp_pkg_hub_store is at depth 2 (grp_pkg=0, grp_pkg_hub=1, grp_pkg_hub_store=2)
+    expect(output).toMatch(/style grp_pkg_hub_store fill:#eaeef2/);
+  });
+
+  it('subgraph style directives appear before edges', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/api.Router', 'Router', 'struct', 'pkg/api'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Server', 'pkg/api.Router', 'uses')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    const stylePos = output.indexOf('style grp_pkg');
+    const edgePos = output.indexOf('-->|uses|');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
+  });
+});
+
+describe('renderCapabilityGraph — legend subgraph', () => {
+  it('includes legend subgraph with direction LR', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('subgraph legend["Legend"]');
+    expect(output).toContain('direction LR');
+  });
+
+  it('legend contains nodes for impl, uses, conc', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_impl');
+    expect(output).toContain('legend_uses');
+    expect(output).toContain('legend_conc');
+  });
+
+  it('legend style uses amber fill with dashed border', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01/);
+  });
+
+  it('classDefs and legend appear before edges', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Engine', 'Engine', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Engine', 'pkg/hub.Store', 'implements')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    const classDefPos = output.indexOf('classDef');
+    const legendPos = output.indexOf('subgraph legend');
+    const edgePos = output.indexOf('-.->|impl|');
+    expect(classDefPos).toBeGreaterThan(0);
+    expect(legendPos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(classDefPos);
+    expect(edgePos).toBeGreaterThan(legendPos);
+  });
+
+  it('legend subgraph absent for empty graph', () => {
+    const graph: CapabilityGraph = { nodes: [], edges: [] };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).not.toContain('subgraph legend');
+  });
+});
+
+// ─── renderGoroutineTopology — semantic classDef styling (Plan 20) ────────────
+
+describe('renderGoroutineTopology — semantic classDef styling', () => {
+  function makeTopologyBasic(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('classDef main uses GitHub red (#ffebe9)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('classDef main fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e');
+  });
+
+  it('classDef spawner uses GitHub blue (#ddf4ff)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('classDef spawner fill:#ddf4ff,stroke:#54aeff,color:#0550ae');
+  });
+
+  it('classDef spawned uses GitHub green (#dafbe1)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('classDef spawned fill:#dafbe1,stroke:#2da44e,color:#116329');
+  });
+
+  it('classDef spawned_noexit uses orange warning (#fff3cd)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('classDef spawned_noexit fill:#fff3cd,stroke:#d4a72c,stroke-width:2px,color:#633c01');
+  });
+
+  it('classDef channel uses amber (#fff8c5)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('classDef channel fill:#fff8c5,stroke:#d4a72c,color:#633c01');
+  });
+
+  it('node with ⚠ no exit in label gets :::spawned_noexit class', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'orphan1',
+      spawnTargetName: 'RunWorker',
+      receivesContext: false,
+      cancellationCheckAvailable: false,
+      hasCancellationCheck: false,
+      orphan: true,
+    }];
+    const topology = makeTopologyBasic({
+      nodes: [{
+        id: 'orphan1',
+        name: 'RunWorker',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toContain(':::spawned_noexit');
+  });
+
+  it('node without ⚠ no exit keeps :::spawned class', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'worker1',
+      spawnTargetName: 'RunWorker',
+      receivesContext: true,
+      cancellationCheckAvailable: true,
+      hasCancellationCheck: true,
+      orphan: false,
+    }];
+    const topology = makeTopologyBasic({
+      nodes: [{
+        id: 'worker1',
+        name: 'RunWorker',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toContain(':::spawned');
+    // Data node must not use :::spawned_noexit (legend always has it)
+    expect(output).not.toMatch(/worker1\[.*\]:::spawned_noexit/);
+  });
+});
+
+describe('renderGoroutineTopology — subgraph depth styles', () => {
+  function makeTopologyBasic(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('depth-0 subgraph gets white fill (#ffffff)', () => {
+    const topology = makeTopologyBasic({
+      nodes: [
+        { id: 'n1', name: 'WorkerPool.Start', type: 'spawned', package: 'pkg/hub', location: { file: 'a.go', line: 1 } },
+        { id: 'n2', name: 'Repo.Save', type: 'spawned', package: 'pkg/store', location: { file: 'b.go', line: 2 } },
+      ],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // grp_pkg is virtual ancestor at depth 0 when both pkg/hub and pkg/store exist
+    expect(output).toMatch(/style grp_pkg fill:#ffffff/);
+  });
+
+  it('depth-1 subgraph gets near-white fill (#f6f8fa)', () => {
+    const topology = makeTopologyBasic({
+      nodes: [
+        { id: 'n1', name: 'WorkerPool.Start', type: 'spawned', package: 'pkg/hub', location: { file: 'a.go', line: 1 } },
+        { id: 'n2', name: 'Repo.Save', type: 'spawned', package: 'pkg/store', location: { file: 'b.go', line: 2 } },
+      ],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toMatch(/style grp_pkg_hub fill:#f6f8fa/);
+    expect(output).toMatch(/style grp_pkg_store fill:#f6f8fa/);
+  });
+
+  it('subgraph style directives appear before spawn edges', () => {
+    const topology = makeTopologyBasic({
+      nodes: [
+        { id: 'n1', name: 'WorkerPool.Start', type: 'spawned', package: 'pkg/hub', location: { file: 'a.go', line: 1 } },
+        { id: 'n2', name: 'Repo.Save', type: 'spawned', package: 'pkg/store', location: { file: 'b.go', line: 2 } },
+      ],
+      edges: [{ from: 'spawner1', to: 'n1', location: { file: 'a.go', line: 5 } }],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    const stylePos = output.indexOf('style grp_pkg');
+    const edgePos = output.indexOf('-->|go|');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
+  });
+});
+
+describe('renderGoroutineTopology — legend subgraph', () => {
+  function makeTopologyBasic(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('includes legend subgraph with direction LR', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('subgraph legend["Legend"]');
+    expect(output).toContain('direction LR');
+  });
+
+  it('legend contains nodes for main, spawner, spawned, channel', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toContain('legend_main');
+    expect(output).toContain('legend_spawner');
+    expect(output).toContain('legend_spawned');
+    expect(output).toContain('legend_channel');
+  });
+
+  it('legend style uses amber fill with dashed border', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic());
+    expect(output).toMatch(/style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01/);
+  });
+});
+
+describe('renderGoroutineTopology — channels subgraph style', () => {
+  it('channels subgraph gets a style directive', () => {
+    const topology: GoroutineTopology = {
+      nodes: [],
+      edges: [],
+      channels: [{ id: 'chan-pkg-hub-10', type: 'chan', capacity: 0, location: { file: 'hub.go', line: 10 } }],
+      channelEdges: [],
+    };
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toContain('style channels');
+  });
+});
+
+// ─── renderFlowGraph — semantic classDef styling (Plan 20) ───────────────────
+
+describe('renderFlowGraph — semantic classDef styling', () => {
+  it('classDef entry uses red fill', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('classDef entry fill:#ffebe9,stroke:#cf222e,color:#82071e');
+  });
+
+  it('classDef handler uses blue fill', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('classDef handler fill:#ddf4ff,stroke:#54aeff,color:#0550ae');
+  });
+
+  it('classDef util uses gray fill', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('classDef util fill:#f6f8fa,stroke:#d0d7de,color:#57606a');
+  });
+
+  it('entry point nodes get :::entry suffix', () => {
+    const entry = makeEntry({ id: 'ep1', package: 'pkg/api', location: { file: '/srv/api/handler.go', line: 10 } });
+    const graph = makeFlowGraph([entry]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toMatch(/ep1\["[^"]+"\]:::entry/);
+  });
+
+  it('handler nodes (direct callee from entry) get :::handler suffix', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'direct' as const, confidence: 0.9 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toMatch(/pkg_Handler\["[^"]+"\]:::handler/);
+  });
+
+  it('other callee nodes (non-handler) get :::util suffix', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'direct' as const, confidence: 0.9 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toMatch(/store_Find\["[^"]+"\]:::util/);
+  });
+});
+
+describe('renderFlowGraph — subgraph depth styles', () => {
+  it('depth-0 subgraph gets white fill (#ffffff)', () => {
+    const e1 = makeEntry({ id: 'ep1', package: 'pkg/api', location: { file: '/srv/api/a.go', line: 1 } });
+    const e2 = makeEntry({ id: 'ep2', package: 'pkg/grpc', location: { file: '/srv/grpc/b.go', line: 2 } });
+    const graph = makeFlowGraph([e1, e2]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    // grp_pkg is virtual ancestor at depth 0
+    expect(output).toMatch(/style grp_pkg fill:#ffffff/);
+  });
+
+  it('depth-1 subgraph gets near-white fill (#f6f8fa)', () => {
+    const e1 = makeEntry({ id: 'ep1', package: 'pkg/api', location: { file: '/srv/api/a.go', line: 1 } });
+    const e2 = makeEntry({ id: 'ep2', package: 'pkg/grpc', location: { file: '/srv/grpc/b.go', line: 2 } });
+    const graph = makeFlowGraph([e1, e2]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toMatch(/style grp_pkg_api fill:#f6f8fa/);
+    expect(output).toMatch(/style grp_pkg_grpc fill:#f6f8fa/);
+  });
+
+  it('subgraph style directives appear before classDef block', () => {
+    const e1 = makeEntry({ id: 'ep1', package: 'pkg/api', location: { file: '/srv/api/a.go', line: 1 } });
+    const e2 = makeEntry({ id: 'ep2', package: 'pkg/grpc', location: { file: '/srv/grpc/b.go', line: 2 } });
+    const graph = makeFlowGraph([e1, e2]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    const stylePos = output.indexOf('style grp_pkg');
+    const classDefPos = output.indexOf('classDef entry');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(stylePos).toBeLessThan(classDefPos);
+  });
+});
+
+describe('renderFlowGraph — legend subgraph', () => {
+  it('includes legend subgraph with direction LR', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('subgraph legend["Legend"]');
+    expect(output).toContain('direction LR');
+  });
+
+  it('legend contains nodes for entry, handler, util', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_entry');
+    expect(output).toContain('legend_handler');
+    expect(output).toContain('legend_util');
+  });
+
+  it('legend style uses amber fill with dashed border', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toMatch(/style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01/);
+  });
+
+  it('legend appears before classDef block', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    const legendPos = output.indexOf('subgraph legend');
+    const classDefPos = output.indexOf('classDef entry');
+    expect(legendPos).toBeGreaterThan(0);
+    expect(legendPos).toBeLessThan(classDefPos);
+  });
+});
+// ─── renderCapabilityGraph — legend node-type entries (Plan 21) ──────────────
+
+describe('renderCapabilityGraph — legend node-type entries', () => {
+  it('legend contains :::interface styled node for interface type', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/legend_interface\{.*\}:::interface/);
+  });
+
+  it('legend contains :::concrete styled node for concrete type', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_concrete');
+    expect(output).toMatch(/legend_concrete.*:::concrete/);
+  });
+
+  it('legend contains :::hotspot when at least one hotspot exists', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.BigStruct', 'BigStruct', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    // Inject methodCount to trigger hotspot (>10)
+    (graph.nodes[0] as any).methodCount = 15;
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/legend_hotspot.*:::hotspot/);
+  });
+
+  it('legend omits hotspot entry when no hotspot node exists', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Small', 'Small', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).not.toMatch(/legend_hotspot.*:::hotspot/);
+  });
+
+  it('legend always includes impl and uses edge descriptions', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_impl');
+    expect(output).toContain('legend_uses');
+  });
+
+  it('legend_conc appears when at least one edge has concreteUsage:true', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Svc', 'Svc', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'struct', 'pkg/hub'),
+      ],
+      edges: [{
+        id: 'e1',
+        type: 'uses',
+        source: 'pkg/hub.Svc',
+        target: 'pkg/hub.Store',
+        confidence: 0.9,
+        concreteUsage: true,
+      }],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_conc');
+  });
+
+  it('legend_conc absent when no edge has concreteUsage:true', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Engine', 'Engine', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Engine', 'pkg/hub.Store', 'uses')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // 'legend_concrete' always exists; check the conc entry specifically
+    expect(output).not.toContain('    legend_conc[');
+  });
+});
+
+// ─── renderGoroutineTopology — legend improvements (Plan 21) ─────────────────
+
+describe('renderGoroutineTopology — legend spawned_noexit entry', () => {
+  function makeTopologyBasic2(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('legend always contains legend_spawned_noexit:::spawned_noexit', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).toMatch(/legend_spawned_noexit.*:::spawned_noexit/);
+  });
+
+  it('legend_spawned present when at least one normal spawned node exists', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'w1',
+      spawnTargetName: 'runWorker',
+      receivesContext: true,
+      cancellationCheckAvailable: true,
+      hasCancellationCheck: true,
+      orphan: false,
+    }];
+    const topology = makeTopologyBasic2({
+      nodes: [{
+        id: 'w1',
+        name: 'runWorker',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // Should have legend_spawned (with :::spawned class) for normal spawned
+    expect(output).toMatch(/legend_spawned[^_].*:::spawned[^_]/);
+  });
+
+  it('legend_spawned absent when all spawned nodes have ⚠ no exit', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'orphan1',
+      spawnTargetName: 'runOrphan',
+      receivesContext: false,
+      cancellationCheckAvailable: false,
+      hasCancellationCheck: false,
+      orphan: true,
+    }];
+    const topology = makeTopologyBasic2({
+      nodes: [{
+        id: 'orphan1',
+        name: 'runOrphan',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // legend_spawned_noexit is fine, but legend_spawned[^_] should NOT appear
+    expect(output).not.toMatch(/legend_spawned[^_].*:::spawned[^_]/);
+  });
+
+  it('legend always contains edge description for goroutine spawn (go)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).toContain('legend_go');
+  });
+
+  it('legend contains edge description for channel ops when channels exist', () => {
+    const topology = makeTopologyBasic2({
+      channels: [{ id: 'chan-pkg-1', type: 'chan', capacity: 0, location: { file: 'f.go', line: 1 } }],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toContain('legend_make');
+  });
+
+  it('legend omits channel edge description when no channels', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).not.toContain('legend_make');
+  });
+});
+
+// ─── renderPackageGraph — legend edge-weight description (Plan 21) ───────────
+
+describe('renderPackageGraph — legend edge description', () => {
+  it('legend contains an edge-weight explanation entry', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Must have a legend node describing edge/import relationship
+    expect(result).toContain('legend_edge');
+  });
+});
+
+// ─── renderFlowGraph — legend edge-type descriptions (Plan 21) ───────────────
+
+describe('renderFlowGraph — legend edge descriptions', () => {
+  it('legend contains entry-to-handler call-count edge description', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_calls');
+  });
+
+  it('legend contains direct-call edge description', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_direct');
+  });
+
+  it('legend_edge_iface present when iface edges appear in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'interface' as const, confidence: 0.8 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_iface');
+  });
+
+  it('legend_edge_iface absent when no iface edges in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'direct' as const, confidence: 0.9 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).not.toContain('legend_edge_iface');
+  });
+
+  it('legend_edge_indir present when indir edges appear in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'util.Do', type: 'indirect' as const, confidence: 0.6 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_indir');
+  });
+
+  it('legend_edge_indir absent when no indir edges in graph', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).not.toContain('legend_edge_indir');
   });
 });

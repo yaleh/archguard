@@ -1117,3 +1117,118 @@ describe('ValidatedMermaidGenerator', () => {
     });
   });
 });
+
+// ─── semantic classDef (Plan 19 Phase C) ─────────────────────────────────────
+
+import type { EntityType } from '../../../src/types/index.js';
+
+const makeMinimalEntity = (name: string, type: EntityType) => ({
+  id: `src/test.ts.${name}`,
+  name,
+  type,
+  visibility: 'public' as const,
+  members: [],
+  sourceLocation: { file: 'src/test.ts', startLine: 1, endLine: 10 },
+});
+
+const makeMinimalArchJson = (entities: ReturnType<typeof makeMinimalEntity>[]) => ({
+  version: '1.0',
+  language: 'typescript' as const,
+  timestamp: new Date().toISOString(),
+  sourceFiles: ['src/test.ts'],
+  entities,
+  relations: [],
+});
+
+describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
+  const makeGen = (entities: ReturnType<typeof makeMinimalEntity>[], level: 'class' | 'method' | 'package' = 'class') =>
+    new ValidatedMermaidGenerator(
+      makeMinimalArchJson(entities),
+      { level, grouping: { strategy: 'none', packages: [] } }
+    );
+
+  it('emits classDef block with all 7 EntityType entries in class-level output', () => {
+    const gen = makeGen([makeMinimalEntity('Foo', 'class')]);
+    const output = gen.generate();
+    expect(output).toContain('classDef classNode');
+    expect(output).toContain('classDef interface');
+    expect(output).toContain('classDef enum');
+    expect(output).toContain('classDef struct');
+    expect(output).toContain('classDef trait');
+    expect(output).toContain('classDef abstract_class');
+    expect(output).toContain('classDef function');
+  });
+
+  it('emits classDef block in method-level output', () => {
+    const gen = makeGen([makeMinimalEntity('Foo', 'class')], 'method');
+    const output = gen.generate();
+    expect(output).toContain('classDef classNode');
+    expect(output).toContain('classDef interface');
+  });
+
+  it('does NOT emit classDef block in package-level output', () => {
+    const gen = makeGen([makeMinimalEntity('Foo', 'class')], 'package');
+    const output = gen.generate();
+    expect(output).not.toContain('classDef classNode');
+    expect(output).not.toContain('classDef interface');
+  });
+
+  it('annotates a class entity with :::classNode', () => {
+    const gen = makeGen([makeMinimalEntity('MyClass', 'class')]);
+    const output = gen.generate();
+    expect(output).toContain('MyClass:::classNode');
+  });
+
+  it('annotates an interface entity with :::interface', () => {
+    const gen = makeGen([makeMinimalEntity('IRepo', 'interface')]);
+    const output = gen.generate();
+    expect(output).toContain('IRepo:::interface');
+  });
+
+  it('annotates an enum entity with :::enum', () => {
+    const gen = makeGen([makeMinimalEntity('Status', 'enum')]);
+    const output = gen.generate();
+    expect(output).toContain('Status:::enum');
+  });
+
+  it('annotates a struct entity with :::struct', () => {
+    const gen = makeGen([makeMinimalEntity('Config', 'struct')]);
+    const output = gen.generate();
+    expect(output).toContain('Config:::struct');
+  });
+
+  it('annotates a trait entity with :::trait', () => {
+    const gen = makeGen([makeMinimalEntity('Printable', 'trait')]);
+    const output = gen.generate();
+    expect(output).toContain('Printable:::trait');
+  });
+
+  it('annotates an abstract_class entity with :::abstract_class', () => {
+    const gen = makeGen([makeMinimalEntity('BaseHandler', 'abstract_class')]);
+    const output = gen.generate();
+    expect(output).toContain('BaseHandler:::abstract_class');
+  });
+
+  it('annotates a function entity with :::function', () => {
+    const gen = makeGen([makeMinimalEntity('parseConfig', 'function')]);
+    const output = gen.generate();
+    expect(output).toContain('parseConfig:::function');
+  });
+
+  it('annotation ID matches the normalized entity name used in the class declaration', () => {
+    const gen = makeGen([makeMinimalEntity('MyService', 'class')]);
+    const output = gen.generate();
+    // Both declaration and annotation must use same ID
+    expect(output).toContain('class MyService {');
+    expect(output).toContain('MyService:::classNode');
+  });
+
+  it('emits no duplicate annotation lines for the same entity', () => {
+    const gen = makeGen([makeMinimalEntity('Foo', 'class'), makeMinimalEntity('Bar', 'interface')]);
+    const output = gen.generate();
+    const fooAnnotations = output.split('\n').filter(l => l.includes('Foo:::'));
+    const barAnnotations = output.split('\n').filter(l => l.includes('Bar:::'));
+    expect(fooAnnotations).toHaveLength(1);
+    expect(barAnnotations).toHaveLength(1);
+  });
+});
