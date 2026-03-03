@@ -30,7 +30,7 @@ interface PkgTreeNode {
 export class MermaidTemplates {
   // ── Mermaid %%{init} spacing directives ───────────────────────────────────
   private static readonly FLOWCHART_INIT =
-    "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%\n";
+    "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%\n";
   private static readonly SEQUENCE_INIT =
     "%%{init: {'sequence': {'actorMargin': 50}}}%%\n";
 
@@ -188,7 +188,8 @@ export class MermaidTemplates {
     groups: GroupNode[],
     nodeMap: Map<string, PackageNode>,
     cycleNodeIds: Set<string>,
-    indent: string
+    indent: string,
+    inDegree?: Map<string, number>
   ): string {
     let out = '';
     for (const group of groups) {
@@ -199,16 +200,48 @@ export class MermaidTemplates {
         group.children,
         nodeMap,
         cycleNodeIds,
-        indent + '  '
+        indent + '  ',
+        inDegree
       );
-      // Then emit this group's direct node members
-      for (const nodeId of group.nodeIds) {
+      // Then emit this group's direct node members (sorted by in-degree, then alphabetically)
+      const sortedIds = inDegree
+        ? [...group.nodeIds].sort((a, b) => {
+            const diff = (inDegree.get(b) ?? 0) - (inDegree.get(a) ?? 0);
+            return diff !== 0 ? diff : a.localeCompare(b);
+          })
+        : group.nodeIds;
+      for (const nodeId of sortedIds) {
         const node = nodeMap.get(nodeId);
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         out += `${indent}  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
       out += `${indent}end\n`;
     }
+    return out;
+  }
+
+  private static renderLegend(activeTypes: Set<string>): string {
+    const LEGEND_LABELS: Record<string, string> = {
+      cmd:      'cmd (entry point)',
+      tests:    'tests',
+      examples: 'examples',
+      testutil: 'testutil',
+      internal: 'internal',
+      vendor:   'vendor',
+      external: 'external (module boundary)',
+      cycle:    'cycle (circular dep)',
+    };
+    let out = '  subgraph legend["Legend"]\n';
+    out += '    direction LR\n';
+    for (const type of Object.keys(LEGEND_LABELS)) {
+      if (activeTypes.has(type)) {
+        out += `    legend_${type}["${LEGEND_LABELS[type]}"]:::${type}\n`;
+      }
+    }
+    out += '  end\n';
+    // style directive distinguishes legend from data subgraphs:
+    // gray fill + muted border + dashed stroke
+    out += '  style legend fill:#f6f8fa,stroke:#8b949e,stroke-dasharray:5 5,color:#57606a\n\n';
     return out;
   }
 
@@ -220,32 +253,54 @@ export class MermaidTemplates {
       graph.cycles.filter((c) => c.packages.length > 1).flatMap((c) => c.packages)
     );
 
+    // Active types for legend (Plan 19 P3)
+    const activeTypes = new Set(graph.nodes.map((n) => n.type as string));
+    if (cycleNodeIds.size > 0) activeTypes.add('cycle');
+
     // --- nested subgraph grouping (P4) ---
     const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
     const { roots, grouped } = MermaidTemplates.buildGroupTree(graph.nodes);
 
-    // Pass 1: ungrouped top-level nodes
-    for (const node of graph.nodes) {
+    // In-degree sort for source-file readability (Plan 19 P2)
+    // Scope: top-level ungrouped nodes only. Nodes inside subgraph groups
+    // are ordered by buildGroupTree, which is unchanged.
+    const inDegree = new Map<string, number>();
+    for (const node of graph.nodes) inDegree.set(node.id, 0);
+    for (const edge of graph.edges) {
+      if (edge.from !== edge.to) {
+        inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
+      }
+    }
+    const sortedNodes = [...graph.nodes].sort((a, b) => {
+      const diff = (inDegree.get(b.id) ?? 0) - (inDegree.get(a.id) ?? 0);
+      return diff !== 0 ? diff : a.id.localeCompare(b.id);
+    });
+
+    // Pass 1: ungrouped top-level nodes (sorted by in-degree)
+    for (const node of sortedNodes) {
       if (!grouped.has(node.id)) {
         const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
         output += `  ${MermaidTemplates.sanitizeId(node.id)}["${node.name}"]${style}\n`;
       }
     }
 
-    // Pass 1 cont.: recursive subgraph tree
-    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ');
+    // Pass 1 cont.: recursive subgraph tree (pass inDegree for within-group sort)
+    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ', inDegree);
+
+    // Legend subgraph (Plan 19 P3) — MUST be before edges for edge-ordering test
+    output += MermaidTemplates.renderLegend(activeTypes);
 
     // Pass 2: classDef block — placed before edges so lastIndexOf('end') in
     // 'vendor' substring doesn't produce a false negative for the edge-ordering test
     output += '\n';
-    output += '  classDef cmd      fill:#ff6b6b,stroke:#c0392b,color:#000\n';
-    output += '  classDef tests    fill:#b2bec3,stroke:#636e72,color:#000\n';
-    output += '  classDef examples fill:#74b9ff,stroke:#0984e3,color:#000\n';
-    output += '  classDef testutil fill:#dfe6e9,stroke:#b2bec3,color:#000\n';
-    output += '  classDef internal fill:#55efc4,stroke:#00b894,color:#000\n';
-    output += '  classDef vendor   fill:#f0e6ff,stroke:#9b59b6,color:#000\n';
-    output += '  classDef external fill:#ffeaa7,stroke:#fdcb6e,color:#000\n';
-    output += '  classDef cycle    fill:#fd79a8,stroke:#e84393,stroke-width:3px\n';
+    output += '  classDef cmd      fill:#ffebe9,stroke:#cf222e,color:#82071e\n';
+    output += '  classDef tests    fill:#f6f8fa,stroke:#d0d7de,color:#57606a\n';
+    output += '  classDef examples fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
+    output += '  classDef testutil fill:#f6f8fa,stroke:#d0d7de,color:#57606a\n';
+    output += '  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329\n';
+    output += '  classDef vendor   fill:#fdf4ff,stroke:#d2a8ff,color:#6e40c9\n';
+    output += '  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01\n';
+    output += '  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:3px,color:#82071e,font-weight:bold\n';
 
     // Pass 3: edges (self-loops get dashed warning arrow per P2)
     // Track (edgeIndex, strength) for non-self edges to compute linkStyle tiers.

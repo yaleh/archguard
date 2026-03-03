@@ -593,7 +593,8 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
-    expect(result).not.toContain('subgraph');
+    // The node itself must not be wrapped in a group subgraph (only the legend subgraph is allowed)
+    expect(result).not.toContain('subgraph grp_');
     expect(result).toContain('mod_pkg_store["pkg/store"]:::internal');
   });
 
@@ -2033,5 +2034,235 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
     );
     expect(output).toContain(' ✓ctx');
     expect(output).toContain(' ⚠ no exit');
+  });
+});
+
+// ─── renderPackageGraph — in-degree ordering (Plan 19 Phase B) ───────────────
+
+describe('renderPackageGraph — in-degree ordering', () => {
+  it('emits highest in-degree node before lower in-degree nodes in output text', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/leaf', name: 'pkg/leaf', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 3 } as PackageNode,
+        { id: 'pkg/util', name: 'pkg/util', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        { from: 'pkg/leaf', to: 'pkg/hub', strength: 1 },
+        { from: 'pkg/util', to: 'pkg/hub', strength: 1 },
+      ],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // pkg/hub has in-degree 2, others have 0 — hub must appear first
+    expect(result.indexOf('pkg_hub')).toBeLessThan(result.indexOf('pkg_leaf'));
+    expect(result.indexOf('pkg_hub')).toBeLessThan(result.indexOf('pkg_util'));
+  });
+
+  it('excludes self-loop edges from in-degree calculation', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        // Self-loop on pkg/a should NOT boost its in-degree
+        { from: 'pkg/a', to: 'pkg/a', strength: 5 },
+        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+      ],
+      cycles: [{ packages: ['pkg/a'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // pkg/b has real in-degree 1, pkg/a has 0 (self-loop excluded)
+    // So pkg/b appears before pkg/a in the output
+    expect(result.indexOf('pkg_b')).toBeLessThan(result.indexOf('pkg_a'));
+  });
+
+  it('breaks ties alphabetically for deterministic output', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/zebra', name: 'pkg/zebra', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/alpha', name: 'pkg/alpha', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/middle', name: 'pkg/middle', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // All zero in-degree → alphabetical order
+    expect(result.indexOf('pkg_alpha')).toBeLessThan(result.indexOf('pkg_middle'));
+    expect(result.indexOf('pkg_middle')).toBeLessThan(result.indexOf('pkg_zebra'));
+  });
+
+  it('flat graph (all in-degree 0) emits nodes in alphabetical order', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'z', name: 'z', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'm', name: 'm', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result.indexOf('"a"')).toBeLessThan(result.indexOf('"m"'));
+    expect(result.indexOf('"m"')).toBeLessThan(result.indexOf('"z"'));
+  });
+});
+
+// ─── renderPackageGraph — legend subgraph (Plan 19 Phase B) ──────────────────
+
+describe('renderPackageGraph — legend subgraph', () => {
+  it('includes legend node for each PackageNode.type present in graph', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('legend_internal');
+    expect(result).toContain('legend_cmd');
+    expect(result).not.toContain('legend_tests');
+    expect(result).not.toContain('legend_vendor');
+  });
+
+  it('includes legend_cycle entry when cycleNodeIds is non-empty (multi-package cycle)', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [
+        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+        { from: 'pkg/b', to: 'pkg/a', strength: 1 },
+      ],
+      cycles: [{ packages: ['pkg/a', 'pkg/b'], severity: 'error' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('legend_cycle');
+  });
+
+  it('omits legend_cycle when cycleNodeIds is empty (no multi-package cycles)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).not.toContain('legend_cycle');
+  });
+
+  it('omits legend_cycle when graph.cycles contains only self-loops (packages.length === 1)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [{ from: 'pkg/x', to: 'pkg/x', strength: 1 }],
+      cycles: [{ packages: ['pkg/x'], severity: 'warning' }],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).not.toContain('legend_cycle');
+  });
+
+  it('legend subgraph uses direction LR', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('subgraph legend["Legend"]');
+    expect(result).toContain('direction LR');
+  });
+
+  it('legend subgraph ID is "legend"', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('subgraph legend["Legend"]');
+  });
+
+  it('no edges exist between legend nodes and graph nodes', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'a', to: 'b', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // No arrow involving legend_ node IDs
+    expect(result).not.toMatch(/legend_\w+ -->/);
+    expect(result).not.toMatch(/--> legend_\w+/);
+  });
+
+  it('legend appears before classDef block in output (between Pass 1 and Pass 2)', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const legendPos = result.indexOf('subgraph legend');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(legendPos).toBeGreaterThan(0);
+    expect(legendPos).toBeLessThan(classDefPos);
+  });
+
+  it('legend subgraph has a style directive with dashed border to distinguish from data subgraphs', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toContain('style legend');
+    expect(result).toContain('stroke-dasharray');
+  });
+
+  it('legend style directive uses gray fill and muted stroke', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Gray fill to distinguish from data subgraphs
+    expect(result).toMatch(/style legend fill:#f6f8fa/);
+    expect(result).toMatch(/style legend.*stroke:#8b949e/);
+  });
+
+  it('legend style directive appears immediately after legend end and before classDef block', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style legend');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(stylePos).toBeLessThan(classDefPos);
+  });
+
+  it('edge-ordering constraint holds: all edges appear after style legend directive', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'mod/a', to: 'mod/b', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style legend');
+    const edgePos = result.indexOf('mod_a -->');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
   });
 });
