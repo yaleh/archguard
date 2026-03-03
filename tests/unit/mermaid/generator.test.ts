@@ -1173,46 +1173,46 @@ describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
     expect(output).not.toContain('classDef interface');
   });
 
-  it('annotates a class entity with :::classNode', () => {
+  it('annotates a class entity with classNode style', () => {
     const gen = makeGen([makeMinimalEntity('MyClass', 'class')]);
     const output = gen.generate();
-    expect(output).toContain('MyClass:::classNode');
+    expect(output).toContain('class MyClass classNode');
   });
 
-  it('annotates an interface entity with :::interface', () => {
+  it('annotates an interface entity with interface style', () => {
     const gen = makeGen([makeMinimalEntity('IRepo', 'interface')]);
     const output = gen.generate();
-    expect(output).toContain('IRepo:::interface');
+    expect(output).toContain('class IRepo interface');
   });
 
-  it('annotates an enum entity with :::enum', () => {
+  it('annotates an enum entity with enum style', () => {
     const gen = makeGen([makeMinimalEntity('Status', 'enum')]);
     const output = gen.generate();
-    expect(output).toContain('Status:::enum');
+    expect(output).toContain('class Status enum');
   });
 
-  it('annotates a struct entity with :::struct', () => {
+  it('annotates a struct entity with struct style', () => {
     const gen = makeGen([makeMinimalEntity('Config', 'struct')]);
     const output = gen.generate();
-    expect(output).toContain('Config:::struct');
+    expect(output).toContain('class Config struct');
   });
 
-  it('annotates a trait entity with :::trait', () => {
+  it('annotates a trait entity with trait style', () => {
     const gen = makeGen([makeMinimalEntity('Printable', 'trait')]);
     const output = gen.generate();
-    expect(output).toContain('Printable:::trait');
+    expect(output).toContain('class Printable trait');
   });
 
-  it('annotates an abstract_class entity with :::abstract_class', () => {
+  it('annotates an abstract_class entity with abstract_class style', () => {
     const gen = makeGen([makeMinimalEntity('BaseHandler', 'abstract_class')]);
     const output = gen.generate();
-    expect(output).toContain('BaseHandler:::abstract_class');
+    expect(output).toContain('class BaseHandler abstract_class');
   });
 
-  it('annotates a function entity with :::function', () => {
+  it('annotates a function entity with function style', () => {
     const gen = makeGen([makeMinimalEntity('parseConfig', 'function')]);
     const output = gen.generate();
-    expect(output).toContain('parseConfig:::function');
+    expect(output).toContain('class parseConfig function');
   });
 
   it('annotation ID matches the normalized entity name used in the class declaration', () => {
@@ -1220,14 +1220,15 @@ describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
     const output = gen.generate();
     // Both declaration and annotation must use same ID
     expect(output).toContain('class MyService {');
-    expect(output).toContain('MyService:::classNode');
+    expect(output).toContain('class MyService classNode');
   });
 
   it('emits no duplicate annotation lines for the same entity', () => {
     const gen = makeGen([makeMinimalEntity('Foo', 'class'), makeMinimalEntity('Bar', 'interface')]);
     const output = gen.generate();
-    const fooAnnotations = output.split('\n').filter(l => l.includes('Foo:::'));
-    const barAnnotations = output.split('\n').filter(l => l.includes('Bar:::'));
+    // Annotation lines: `  class Foo styleName` (lowercase style) vs declaration `  class Foo {`
+    const fooAnnotations = output.split('\n').filter(l => l.match(/^  class Foo [a-z]/));
+    const barAnnotations = output.split('\n').filter(l => l.match(/^  class Bar [a-z]/));
     expect(fooAnnotations).toHaveLength(1);
     expect(barAnnotations).toHaveLength(1);
   });
