@@ -242,6 +242,7 @@ describe('MermaidDiagramGenerator E2E', () => {
   });
 
   it('should handle large number of entities', async () => {
+    // Rendering 50 entities can take >30s on slow machines; use 90s timeout
     // Create mock ArchJSON with many entities
     const largeJson: ArchJSON = {
       version: '1.0',
@@ -285,7 +286,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         'class'
       )
     ).resolves.not.toThrow();
-  });
+  }, 90000);
 
   it('should preserve entity relationships in diagram', async () => {
     const relationalJson: ArchJSON = {

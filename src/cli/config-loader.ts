@@ -25,9 +25,9 @@ export type { ArchGuardConfig } from '../types/config.js';
 
 // Mermaid configuration schema
 const MermaidConfigSchema = z.object({
-  renderer: z.enum(['isomorphic', 'cli']).optional(),
-  theme: z.enum(['default', 'forest', 'dark', 'neutral']).optional(),
-  transparentBackground: z.boolean().optional(),
+  renderer: z.enum(['isomorphic', 'cli']).default('isomorphic'),
+  theme: z.enum(['default', 'forest', 'dark', 'neutral']).default('default'),
+  transparentBackground: z.boolean().default(false),
 });
 
 // v2.1.0: Diagram metadata schema
@@ -141,7 +141,7 @@ const configSchema = z.object({
   // ========== Global Configuration ==========
   outputDir: z.string().default('./archguard'),
   format: z.enum(['mermaid', 'json']).default('mermaid'),
-  mermaid: MermaidConfigSchema.optional(),
+  mermaid: MermaidConfigSchema.default({}),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
   // ========== CLI Configuration ==========
