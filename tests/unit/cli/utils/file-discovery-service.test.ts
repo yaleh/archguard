@@ -252,6 +252,96 @@ describe('FileDiscoveryService', () => {
     });
   });
 
+  describe('Single File Path Support', () => {
+    it('should return the file itself when source is a single .ts file', async () => {
+      const singleFilePath = path.join(testDir, 'src/index.ts');
+
+      const files = await service.discoverFiles({
+        sources: [singleFilePath],
+        baseDir: testDir,
+      });
+
+      expect(files).toEqual([singleFilePath]);
+    });
+
+    it('should return empty array when source is a non-.ts file', async () => {
+      const nonTsFile = path.join(testDir, 'README.md');
+      await fs.writeFile(nonTsFile, '# Test');
+
+      const files = await service.discoverFiles({
+        sources: [nonTsFile],
+        baseDir: testDir,
+      });
+
+      expect(files).toEqual([]);
+    });
+
+    it('should return empty array when source is a .js file', async () => {
+      const jsFile = path.join(testDir, 'script.js');
+      await fs.writeFile(jsFile, 'console.log("test");');
+
+      const files = await service.discoverFiles({
+        sources: [jsFile],
+        baseDir: testDir,
+      });
+
+      expect(files).toEqual([]);
+    });
+
+    it('should handle mixed file and directory sources', async () => {
+      const singleFilePath = path.join(testDir, 'src/app.ts');
+
+      const files = await service.discoverFiles({
+        sources: [singleFilePath, path.join(testDir, 'lib')],
+        baseDir: testDir,
+      });
+
+      expect(files.length).toBeGreaterThan(0);
+      // Should contain the single file
+      expect(files).toContain(singleFilePath);
+      // Should also contain files from lib directory
+      const fileNames = files.map((f) => path.basename(f));
+      expect(fileNames).toContain('helper.ts');
+      expect(fileNames).toContain('format.ts');
+    });
+
+    it('should deduplicate when single file appears in both file and directory sources', async () => {
+      const singleFilePath = path.join(testDir, 'src/index.ts');
+
+      const files = await service.discoverFiles({
+        sources: [singleFilePath, path.join(testDir, 'src')],
+        baseDir: testDir,
+      });
+
+      // The single file should appear only once
+      const indexCount = files.filter((f) => f.endsWith('index.ts')).length;
+      expect(indexCount).toBe(1);
+    });
+
+    it('should throw error when single file path does not exist', async () => {
+      const nonExistentFile = path.join(testDir, 'does-not-exist.ts');
+
+      await expect(
+        service.discoverFiles({
+          sources: [nonExistentFile],
+          baseDir: testDir,
+        })
+      ).rejects.toThrow('Source path does not exist');
+    });
+
+    it('should skip missing single file when skipMissing is true', async () => {
+      const nonExistentFile = path.join(testDir, 'does-not-exist.ts');
+
+      const files = await service.discoverFiles({
+        sources: [nonExistentFile],
+        baseDir: testDir,
+        skipMissing: true,
+      });
+
+      expect(files).toEqual([]);
+    });
+  });
+
   describe('Default Behavior', () => {
     it('should use default excludes for test files', async () => {
       const files = await service.discoverFiles({

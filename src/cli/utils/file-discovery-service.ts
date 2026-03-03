@@ -90,6 +90,17 @@ export class FileDiscoveryService {
       throw new Error(`Source path does not exist: ${sourcePath}`);
     }
 
+    // Check if source is a file (not a directory)
+    const stat = await fs.stat(sourcePath);
+    if (stat.isFile()) {
+      // If it's a TypeScript file, return it directly
+      if (sourcePath.endsWith('.ts')) {
+        return [sourcePath];
+      }
+      // If it's not a TypeScript file, return empty
+      return [];
+    }
+
     // Build glob pattern for TypeScript files
     const globPattern = `${sourcePath}/**/*.ts`;
 
