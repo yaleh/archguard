@@ -136,6 +136,48 @@ describe('renderTsModuleGraph', () => {
       expect(beforeLabel).not.toMatch(/\//);
     }
   });
+
+  it('produces a %%{init}%% layout header as the first line', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNode('src/parser')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    const lines = output.split('\n');
+    expect(lines[0]).toMatch(/^%%\{init:/);
+    expect(lines[1]).toMatch(/^flowchart LR/);
+    expect(output).toContain("'curve': 'basis'");
+  });
+
+  it('quotes edge labels for strength > 1', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('a'), makeNode('b'), makeNode('c')],
+      edges: [makeEdge('a', 'b', 1), makeEdge('a', 'c', 3)],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).not.toMatch(/\|"1 refs"\|/);
+    expect(output).toContain('|"3 refs"|');
+  });
+
+  it('classDef block has 3 entries, appears before edges, and has no stroke-dasharray syntax bug', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('a'), makeNode('b')],
+      edges: [makeEdge('a', 'b', 1)],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('classDef internal fill:#dafbe1');
+    expect(output).toContain('classDef external fill:#fff8c5');
+    expect(output).toContain('classDef cycle    fill:#ffebe9');
+    expect(output).not.toMatch(/stroke-dasharray: /);
+    const classDefPos = output.indexOf('classDef internal');
+    const firstEdgePos = output.search(/\n  \w+ -->/);
+    if (firstEdgePos !== -1) {
+      expect(classDefPos).toBeLessThan(firstEdgePos);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -201,9 +243,11 @@ describe('renderTsModuleGraph – subgraph hierarchy', () => {
 
     const output = renderTsModuleGraph(graph);
 
-    // No subgraph block should be generated
-    expect(output).not.toContain('subgraph');
-    expect(output).not.toContain('end');
+    // The legend is always present — verify no CONTENT subgraphs before legend
+    const legendIdx = output.indexOf('\n  subgraph legend[');
+    expect(legendIdx).toBeGreaterThan(0); // legend always present
+    const beforeLegend = output.slice(0, legendIdx);
+    expect(beforeLegend).not.toContain('subgraph'); // no content subgraphs before legend
   });
 
   it('handles two-level nesting (parent > child > grandchild)', () => {
@@ -350,8 +394,11 @@ describe('renderTsModuleGraph – virtual parent grouping', () => {
 
     const output = renderTsModuleGraph(graph);
 
-    // No subgraph since only one plugins/* node
-    expect(output).not.toContain('subgraph');
+    // The legend is always present — verify no CONTENT subgraphs before legend
+    const legendIdx = output.indexOf('\n  subgraph legend[');
+    expect(legendIdx).toBeGreaterThan(0); // legend always present
+    const beforeLegend = output.slice(0, legendIdx);
+    expect(beforeLegend).not.toContain('subgraph'); // no content subgraphs before legend
   });
 
   it('does not double-group when real parent node already exists', () => {
@@ -363,8 +410,12 @@ describe('renderTsModuleGraph – virtual parent grouping', () => {
 
     const output = renderTsModuleGraph(graph);
 
-    // Real parent "cli" provides one subgraph; no extra virtual subgraph
-    const subgraphCount = (output.match(/\bsubgraph\b/g) ?? []).length;
+    // Real parent "cli" provides one content subgraph; legend adds one more.
+    // Count subgraphs only in the portion before the legend.
+    const legendIdx = output.indexOf('\n  subgraph legend[');
+    expect(legendIdx).toBeGreaterThan(0); // legend always present
+    const beforeLegend = output.slice(0, legendIdx);
+    const subgraphCount = (beforeLegend.match(/\bsubgraph\b/g) ?? []).length;
     expect(subgraphCount).toBe(1);
   });
 
@@ -435,5 +486,370 @@ describe('renderTsModuleGraph – virtual parent grouping', () => {
     expect(subgraphCount).toBeGreaterThanOrEqual(2);
     // virtual plugins subgraph must exist
     expect(output).toMatch(/subgraph\s+\S+\s*\["?plugins"?\]/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Depth-based subgraph background style tests
+// ---------------------------------------------------------------------------
+
+function makeNodeExt(name: string): TsModuleNode {
+  return { id: name, name, type: 'node_modules', path: name };
+}
+
+describe('renderTsModuleGraph – subgraph depth styles', () => {
+  it('top-level (depth-1) subgraph receives fill:#ffffff style', () => {
+    // Two siblings under 'a' create a virtual 'a' subgraph at depth-1.
+    // Virtual grouping requires 2+ siblings sharing the same prefix.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('a/b'), makeNode('a/c')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // 'a' becomes a depth-1 virtual subgraph with id 'a_group'
+    expect(output).toMatch(/style a_group fill:#ffffff/);
+  });
+
+  it('depth-2 subgraph receives fill:#f6f8fa style', () => {
+    // plugins/golang (real parent) + plugins/golang/atlas (child) + plugins/java (sibling)
+    // => virtual 'plugins' subgraph at depth-1, real 'plugins/golang' subgraph at depth-2
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('plugins/golang'),
+        makeNode('plugins/golang/atlas'),
+        makeNode('plugins/java'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toMatch(/style plugins_golang_group fill:#f6f8fa/);
+  });
+
+  it('depth-3 subgraph receives fill:#eaeef2 style', () => {
+    // a/b/c (real parent) + a/b/c/x (child) + a/b/d (sibling of a/b/c)
+    // => virtual 'a/b' at depth-1, real 'a/b/c' at depth-2
+    // Wait — virtual 'a/b' is at depth-1, so 'a/b/c' is depth-2.
+    // To get depth-3 we need an outer wrapper: add a/g sibling of a/b -> virtual 'a' at d1,
+    // virtual 'a/b' at d2, real 'a/b/c' at d3.
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('a/b/c'),
+        makeNode('a/b/c/x'),
+        makeNode('a/b/d'),
+        makeNode('a/g'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // a=depth1, a/b=depth2, a/b/c=depth3
+    expect(output).toMatch(/style a_b_c_group fill:#eaeef2/);
+  });
+
+  it('depth-4+ subgraph receives fill:#d0d7de style (clamped)', () => {
+    // Need 4 nesting levels. Add siblings at each level to trigger virtual grouping:
+    // a/b/c/d (real) + a/b/c/d/x (child) + a/b/c/e (sibling) + a/b/f + a/g
+    // => a(d1), a/b(d2), a/b/c(d3), a/b/c/d(d4) — d4 clamped to fill:#d0d7de
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('a/b/c/d'),
+        makeNode('a/b/c/d/x'),
+        makeNode('a/b/c/e'),
+        makeNode('a/b/f'),
+        makeNode('a/g'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // a/b/c/d is depth-4, clamped to palette index 3 → fill:#d0d7de
+    expect(output).toMatch(/style a_b_c_d_group fill:#d0d7de/);
+  });
+
+  it('external_deps subgraph receives fill:#ffffff style when external nodes present', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNodeExt('lodash')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('style external_deps fill:#ffffff,stroke:#d0d7de,stroke-width:1px');
+  });
+
+  it('style directives appear after subgraph end blocks and before classDef lines', () => {
+    // Two siblings create a virtual subgraph, giving us both 'end' and 'style' lines to check.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('a/b'), makeNode('a/c')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Find positions
+    const lastEndBeforeClassDef = (() => {
+      const classDefIdx = output.indexOf('  classDef internal');
+      const beforeClassDef = output.slice(0, classDefIdx);
+      // last 'end' before classDef
+      return beforeClassDef.lastIndexOf('\n  end');
+    })();
+    const styleIdx = output.indexOf('\n  style a_group ');
+    const classDefIdx = output.indexOf('\n  classDef internal');
+    expect(lastEndBeforeClassDef).toBeLessThan(styleIdx);
+    expect(styleIdx).toBeLessThan(classDefIdx);
+  });
+
+  it('style directive ID matches the subgraph ID token in the subgraph declaration', () => {
+    // Two siblings under 'src/cli' create a virtual 'src/cli' subgraph.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli/utils'), makeNode('src/cli/commands')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Find the subgraph ID from the declaration
+    const subgraphMatch = output.match(/subgraph (src_cli_group)\[/);
+    expect(subgraphMatch).not.toBeNull();
+    const sgId = subgraphMatch![1];
+    // The style directive must use the same ID
+    expect(output).toContain(`style ${sgId} `);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Node role annotation tests
+// ---------------------------------------------------------------------------
+describe('renderTsModuleGraph – node role annotations', () => {
+  it('internal leaf node declaration contains :::internal', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNode('src/parser')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // 'src/cli' becomes a leaf in subgraph src_group; its declaration should have :::internal
+    expect(output).toMatch(/src_cli\["[^"]+"\]:::internal/);
+  });
+
+  it('internal real-parent self-declaration (inside its own subgraph) contains :::internal', () => {
+    // When a node is both a parent (has children) AND a real module (moduleNode !== null),
+    // it emits a self-declaration inside its own subgraph.
+    // To get a "real parent": need two nodes where one is a prefix of the other
+    // e.g., 'src' and 'src/cli' — 'src' may be a real module AND parent
+    // BUT the builder only creates real parents when a module exists at 'src' level.
+    // Simplest: 'src/cli/a' and 'src/cli/b' — 'src/cli' is a virtual parent (no real node).
+    // For real parent with self-decl: use 'src' as a node AND 'src/utils' as a child.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src'), makeNode('src/utils')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // 'src' is real parent: emits self-decl inside src_group subgraph
+    expect(output).toMatch(/src\["[^"]+"\]:::internal/);
+  });
+
+  it('virtual parent node declaration (subgraph wrapper) has NO ::: suffix', () => {
+    // 'src/cli/a' and 'src/cli/b' → 'src/cli' is a virtual parent (no real node for it)
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli/a'), makeNode('src/cli/b')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Virtual parent creates: subgraph src_cli_group["src/cli"]
+    // It should NOT emit a self-declaration (no node line for src_cli)
+    // And the subgraph line itself should not have :::
+    expect(output).not.toMatch(/subgraph src_cli_group\["[^"]+"\]:::/);
+    // No self-declaration for the virtual parent
+    expect(output).not.toMatch(/\bsrc_cli\["[^"]+"\]/);
+  });
+
+  it('node_modules leaf declaration contains :::external', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNodeExt('lodash')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toMatch(/lodash\["[^"]+"\]:::external/);
+  });
+
+  it('cycle-participating node contains :::cycle, not :::internal', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b')],
+      edges: [makeEdge('src/a', 'src/b', 1), makeEdge('src/b', 'src/a', 1)],
+      cycles: [{ modules: ['src/a', 'src/b'], severity: 'error' }],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toMatch(/src_a\["[^"]+"\]:::cycle/);
+    expect(output).toMatch(/src_b\["[^"]+"\]:::cycle/);
+  });
+
+  it('cycle annotation takes priority: a cycle node does NOT also have :::internal', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b')],
+      edges: [makeEdge('src/a', 'src/b', 1), makeEdge('src/b', 'src/a', 1)],
+      cycles: [{ modules: ['src/a', 'src/b'], severity: 'error' }],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Should have :::cycle, not :::internal
+    expect(output).not.toMatch(/src_a\["[^"]+"\]:::internal/);
+    expect(output).not.toMatch(/src_b\["[^"]+"\]:::internal/);
+  });
+
+  it('non-cycle node in a graph that has cycles still gets :::internal', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b'), makeNode('src/c')],
+      edges: [makeEdge('src/a', 'src/b', 1), makeEdge('src/b', 'src/a', 1)],
+      cycles: [{ modules: ['src/a', 'src/b'], severity: 'error' }],
+    };
+    const output = renderTsModuleGraph(graph);
+    // src/c is not in cycle
+    expect(output).toMatch(/src_c\["[^"]+"\]:::internal/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Legend subgraph tests
+// ---------------------------------------------------------------------------
+describe('renderTsModuleGraph – legend subgraph', () => {
+  it('legend subgraph is always present', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('subgraph legend["Legend"]');
+  });
+
+  it('legend always contains legend_internal["internal module"]:::internal', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('legend_internal["internal module"]:::internal');
+  });
+
+  it('legend always contains legend_edge node', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('legend_edge');
+  });
+
+  it('legend uses direction LR', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // direction LR must appear inside the legend subgraph
+    const legendStart = output.indexOf('subgraph legend["Legend"]');
+    // Search for '  end' as a line boundary (not 'end' as substring of 'legend_internal' etc.)
+    const legendEnd = output.indexOf('\n  end', legendStart);
+    const legendBlock = output.slice(legendStart, legendEnd);
+    expect(legendBlock).toContain('direction LR');
+  });
+
+  it('legend omits legend_external when no node_modules nodes', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNode('src/parser')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).not.toContain('legend_external');
+  });
+
+  it('legend includes legend_external["external dependency"]:::external when node_modules nodes exist', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli'), makeNodeExt('lodash')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('legend_external["external dependency"]:::external');
+  });
+
+  it('legend omits legend_cycle when no cycles', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).not.toContain('legend_cycle');
+  });
+
+  it('legend includes legend_cycle["cycle ⚠"]:::cycle when cycleNodeIds.size > 0', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b')],
+      edges: [makeEdge('src/a', 'src/b', 1), makeEdge('src/b', 'src/a', 1)],
+      cycles: [{ modules: ['src/a', 'src/b'], severity: 'error' }],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('legend_cycle');
+    expect(output).toContain(':::cycle');
+  });
+
+  it('legend has amber style: fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toContain('style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01');
+  });
+
+  it('legend subgraph appears before style grp_* directives in output', () => {
+    // Two siblings under 'src/cli' force a virtual parent subgraph with a _group style directive.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli/a'), makeNode('src/cli/b')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    const legendIdx = output.indexOf('subgraph legend["Legend"]');
+    const styleIdx = output.search(/style \w+_group /);
+    expect(legendIdx).toBeGreaterThan(0);
+    expect(styleIdx).toBeGreaterThan(0);
+    expect(legendIdx).toBeLessThan(styleIdx);
+  });
+
+  it('legend subgraph appears before classDef lines in output', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/cli')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    const legendIdx = output.indexOf('subgraph legend["Legend"]');
+    const classDefIdx = output.indexOf('classDef internal');
+    expect(legendIdx).toBeLessThan(classDefIdx);
+  });
+
+  it('no graph edges reference legend node IDs', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('src/a'), makeNode('src/b')],
+      edges: [makeEdge('src/a', 'src/b', 1)],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Extract actual graph edge lines: lines where --> appears as a graph arrow,
+    // not inside a label string. Real edge lines match: "  nodeId --> nodeId"
+    // (the --> is not preceded by a quote character).
+    const edgeLines = output.split('\n').filter(l => /^\s+\w[\w_]* (?:-->|==>|===>)/.test(l));
+    for (const line of edgeLines) {
+      expect(line).not.toContain('legend_');
+    }
   });
 });
