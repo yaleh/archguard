@@ -327,21 +327,68 @@ describe('MermaidTemplates (private) sanitizeId', () => {
     expect(fn('foo.bar/baz')).toBe('foo_bar_baz');
   });
 
-  it('truncates result to 64 characters for a 100-char input', () => {
+  it('does not truncate long IDs — no Mermaid hard limit on node ID length', () => {
     const long = 'a'.repeat(100);
     const result = fn(long);
-    expect(result.length).toBeLessThanOrEqual(64);
-    expect(result.length).toBe(64);
+    expect(result).toBe('a'.repeat(100));
+    expect(result.length).toBe(100);
   });
 
-  it('returns string as-is when already valid and short', () => {
+  it('returns string as-is when already valid', () => {
     expect(fn('validId_123')).toBe('validId_123');
   });
 
-  it('truncates sanitized result with special chars to ≤ 64 chars', () => {
-    const long = 'a-'.repeat(50); // 100 chars, all hyphens become underscores
+  it('preserves full length for long IDs with special chars', () => {
+    const long = 'a-'.repeat(50); // 100 chars → 100 chars after sanitize
     const result = fn(long);
-    expect(result.length).toBeLessThanOrEqual(64);
+    expect(result).toBe('a_'.repeat(50));
+    expect(result.length).toBe(100);
+  });
+
+  it('produces distinct IDs for two long paths that share the first 64 chars', () => {
+    // Reproduces the codex-swarm collision:
+    // github.com/yaleh/codex-swarm/examples/user-service/internal/catalog       (67 chars → was truncated same)
+    // github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store (73 chars → was truncated same)
+    const id1 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog';
+    const id2 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store';
+    expect(fn(id1)).not.toBe(fn(id2));
+  });
+
+  it('produces distinct IDs for internal/user and internal/userclient', () => {
+    const id1 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/user';
+    const id2 = 'github.com/yaleh/codex-swarm/examples/user-service/internal/userclient';
+    expect(fn(id1)).not.toBe(fn(id2));
+  });
+
+  it('renderPackageGraph emits distinct node IDs for paths that differ only after 64 chars', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        {
+          id: 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog',
+          name: 'examples/user-service/internal/catalog',
+          type: 'examples',
+          fileCount: 1,
+        } as PackageNode,
+        {
+          id: 'github.com/yaleh/codex-swarm/examples/user-service/internal/catalog/store',
+          name: 'examples/user-service/internal/catalog/store',
+          type: 'examples',
+          fileCount: 1,
+        } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Each node must appear exactly once as a declaration
+    const catalogDecls = (result.match(/github_com_yaleh_codex_swarm_examples_user_service_internal_catalog\b/g) ?? []).length;
+    const storeDecls   = (result.match(/github_com_yaleh_codex_swarm_examples_user_service_internal_catalog_store\b/g) ?? []).length;
+    expect(catalogDecls).toBeGreaterThanOrEqual(1);
+    expect(storeDecls).toBeGreaterThanOrEqual(1);
+    // The two node IDs must not be identical (no collision)
+    expect(result).not.toMatch(
+      /(\bgithub_com_yaleh_codex_swarm_examples_user_service_internal_cata\b).*\1/s
+    );
   });
 });
 
@@ -2225,16 +2272,16 @@ describe('renderPackageGraph — legend subgraph', () => {
     expect(result).toContain('stroke-dasharray');
   });
 
-  it('legend style directive uses gray fill and muted stroke', () => {
+  it('legend style directive uses amber fill and golden stroke to distinguish from gray data subgraphs', () => {
     const graph = makePackageGraph({
       nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
       edges: [],
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
-    // Gray fill to distinguish from data subgraphs
-    expect(result).toMatch(/style legend fill:#f6f8fa/);
-    expect(result).toMatch(/style legend.*stroke:#8b949e/);
+    // Amber/yellow fill — clearly different hue from the white/gray data subgraph scale
+    expect(result).toMatch(/style legend fill:#fff8c5/);
+    expect(result).toMatch(/style legend.*stroke:#d4a72c/);
   });
 
   it('legend style directive appears immediately after legend end and before classDef block', () => {
@@ -2262,6 +2309,118 @@ describe('renderPackageGraph — legend subgraph', () => {
     const result = MermaidTemplates.renderPackageGraph(graph);
     const stylePos = result.indexOf('style legend');
     const edgePos = result.indexOf('mod_a -->');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(edgePos).toBeGreaterThan(stylePos);
+  });
+});
+
+// ─── renderPackageGraph — subgraph depth styles (Plan 19 Phase D) ─────────────
+
+describe('renderPackageGraph — subgraph depth styles', () => {
+  it('depth-0 subgraph gets white fill (#ffffff)', () => {
+    // grp_cmd is depth 0 (top-level group)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_cmd fill:#ffffff/);
+  });
+
+  it('depth-1 subgraph gets near-white fill (#f6f8fa)', () => {
+    // grp_pkg is depth 0; grp_pkg_hub is depth 1
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/hub/models', name: 'pkg/hub/models', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/logging', name: 'pkg/logging', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_pkg fill:#ffffff/);
+    expect(result).toMatch(/style grp_pkg_hub fill:#f6f8fa/);
+  });
+
+  it('depth-2 subgraph gets light-gray fill (#eaeef2)', () => {
+    // 3-level nesting: grp_a (0) → grp_a_b (1) → grp_a_b_c (2)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a/b/c/p', name: 'a/b/c/p', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/q', name: 'a/b/c/q', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/d',   name: 'a/b/d',   type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/e',     name: 'a/e',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/f/g',     name: 'f/g',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/f/h',     name: 'f/h',     type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_a fill:#ffffff/);
+    expect(result).toMatch(/style grp_a_b fill:#f6f8fa/);
+    expect(result).toMatch(/style grp_a_b_c fill:#eaeef2/);
+    expect(result).toMatch(/style grp_f fill:#ffffff/);
+  });
+
+  it('depth-3+ subgraph gets gray fill (#d0d7de), clamped at max depth index', () => {
+    // 4-level nesting: grp_a (0) → grp_a_b (1) → grp_a_b_c (2) → grp_a_b_c_d (3)
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/a/b/c/d/p', name: 'a/b/c/d/p', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/d/q', name: 'a/b/c/d/q', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/c/e',   name: 'a/b/c/e',   type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/b/f',     name: 'a/b/f',     type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/a/g',       name: 'a/g',       type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/h/i',       name: 'h/i',       type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/h/j',       name: 'h/j',       type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    expect(result).toMatch(/style grp_a fill:#ffffff/);
+    expect(result).toMatch(/style grp_a_b fill:#f6f8fa/);
+    expect(result).toMatch(/style grp_a_b_c fill:#eaeef2/);
+    expect(result).toMatch(/style grp_a_b_c_d fill:#d0d7de/);
+  });
+
+  it('subgraph style directives appear before classDef block', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+      ],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style grp_cmd');
+    const classDefPos = result.indexOf('classDef cmd');
+    expect(stylePos).toBeGreaterThan(0);
+    expect(stylePos).toBeLessThan(classDefPos);
+  });
+
+  it('subgraph style directives appear before edges', () => {
+    const graph = makePackageGraph({
+      nodes: [
+        { id: 'mod/cmd/a', name: 'cmd/a', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/cmd/b', name: 'cmd/b', type: 'cmd', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode,
+        { id: 'mod/pkg/y', name: 'pkg/y', type: 'internal', fileCount: 1 } as PackageNode,
+      ],
+      edges: [{ from: 'mod/cmd/a', to: 'mod/pkg/x', strength: 1 }],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    const stylePos = result.indexOf('style grp_cmd');
+    const edgePos = result.indexOf('mod_cmd_a -->');
     expect(stylePos).toBeGreaterThan(0);
     expect(edgePos).toBeGreaterThan(stylePos);
   });

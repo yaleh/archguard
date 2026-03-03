@@ -28,6 +28,15 @@ interface PkgTreeNode {
  * Mermaid template renderer for Go Atlas layers
  */
 export class MermaidTemplates {
+  // ── Subgraph depth styles: outer=lightest, inner=darkest (Plan 19) ─────────
+  // Index = nesting depth (clamped at SUBGRAPH_DEPTH_STYLES.length - 1).
+  private static readonly SUBGRAPH_DEPTH_STYLES = [
+    'fill:#ffffff,stroke:#d0d7de,stroke-width:1px', // depth 0 — outermost, pure white
+    'fill:#f6f8fa,stroke:#d0d7de,stroke-width:1px', // depth 1 — near-white gray
+    'fill:#eaeef2,stroke:#8b949e,stroke-width:1px', // depth 2 — light gray
+    'fill:#d0d7de,stroke:#57606a,stroke-width:1px', // depth 3+ — medium gray
+  ];
+
   // ── Mermaid %%{init} spacing directives ───────────────────────────────────
   private static readonly FLOWCHART_INIT =
     "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%\n";
@@ -189,11 +198,15 @@ export class MermaidTemplates {
     nodeMap: Map<string, PackageNode>,
     cycleNodeIds: Set<string>,
     indent: string,
-    inDegree?: Map<string, number>
+    inDegree?: Map<string, number>,
+    depthMap?: Map<string, number>,
+    depth?: number
   ): string {
+    const currentDepth = depth ?? 0;
     let out = '';
     for (const group of groups) {
       const sgId = 'grp_' + MermaidTemplates.sanitizeId(group.prefix);
+      if (depthMap) depthMap.set(sgId, currentDepth);
       out += `\n${indent}subgraph ${sgId}["${group.prefix}"]\n`;
       // Recurse: emit nested child groups first
       out += MermaidTemplates.renderGroupNodes(
@@ -201,7 +214,9 @@ export class MermaidTemplates {
         nodeMap,
         cycleNodeIds,
         indent + '  ',
-        inDegree
+        inDegree,
+        depthMap,
+        currentDepth + 1
       );
       // Then emit this group's direct node members (sorted by in-degree, then alphabetically)
       const sortedIds = inDegree
@@ -239,9 +254,9 @@ export class MermaidTemplates {
       }
     }
     out += '  end\n';
-    // style directive distinguishes legend from data subgraphs:
-    // gray fill + muted border + dashed stroke
-    out += '  style legend fill:#f6f8fa,stroke:#8b949e,stroke-dasharray:5 5,color:#57606a\n\n';
+    // Amber/yellow fill + golden dashed border — clearly distinct hue from
+    // the white→gray data subgraph depth scale
+    out += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n\n';
     return out;
   }
 
@@ -285,10 +300,21 @@ export class MermaidTemplates {
     }
 
     // Pass 1 cont.: recursive subgraph tree (pass inDegree for within-group sort)
-    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ', inDegree);
+    // depthMap collects sgId → nesting depth for depth-style emission below
+    const subgraphDepthMap = new Map<string, number>();
+    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ', inDegree, subgraphDepthMap, 0);
 
     // Legend subgraph (Plan 19 P3) — MUST be before edges for edge-ordering test
     output += MermaidTemplates.renderLegend(activeTypes);
+
+    // Depth-based style directives for data subgraphs (Plan 19 Phase D)
+    // outer=lightest (#ffffff), inner=darkest (#d0d7de), clamped at index 3
+    for (const [sgId, sgDepth] of subgraphDepthMap) {
+      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+      ];
+      output += `  style ${sgId} ${styleStr}\n`;
+    }
 
     // Pass 2: classDef block — placed before edges so lastIndexOf('end') in
     // 'vendor' substring doesn't produce a false negative for the edge-ordering test
@@ -802,6 +828,6 @@ export class MermaidTemplates {
   }
 
   private static sanitizeId(id: string): string {
-    return id.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 64);
+    return id.replace(/[^a-zA-Z0-9_]/g, '_');
   }
 }
