@@ -2052,7 +2052,9 @@ describe('Phase C-2: goroutine lifecycle node annotations', () => {
     const output = MermaidTemplates.renderGoroutineTopology(makeTopology([node], lifecycle));
     expect(output).not.toContain(' ✓ctx');
     expect(output).not.toContain(' ctx?');
-    expect(output).not.toContain(' ⚠ no exit');
+    // The node itself should not have ⚠ no exit in its label (legend always has it)
+    expect(output).not.toContain('"cleanWorker ⚠ no exit"');
+    expect(output).not.toContain('worker4["cleanWorker ⚠');
   });
 
   // Test 5: multiple spawned nodes each render their correct individual tag
@@ -2479,14 +2481,16 @@ describe('renderCapabilityGraph — semantic classDef styling', () => {
     const graph = makeCapGraph2([makeCapNode3('pkg/hub.Store', 'Store', 'interface', 'pkg/hub', { methodCount: 15 })]);
     const output = MermaidTemplates.renderCapabilityGraph(graph);
     expect(output).toContain(':::hotspot');
-    expect(output).not.toContain(':::interface');
+    // Data node must not use :::interface (legend may still have it)
+    expect(output).not.toMatch(/pkg_hub_Store.*:::interface/);
   });
 
   it('hotspot overrides concrete: hotspot struct node gets :::hotspot not :::concrete', () => {
     const graph = makeCapGraph2([makeCapNode3('pkg/hub.Server', 'Server', 'struct', 'pkg/hub', { fanIn: 6 })]);
     const output = MermaidTemplates.renderCapabilityGraph(graph);
     expect(output).toContain(':::hotspot');
-    expect(output).not.toContain(':::concrete');
+    // Data node must not use :::concrete (legend may still have it)
+    expect(output).not.toMatch(/pkg_hub_Server.*:::concrete/);
   });
 });
 
@@ -2679,7 +2683,8 @@ describe('renderGoroutineTopology — semantic classDef styling', () => {
     });
     const output = MermaidTemplates.renderGoroutineTopology(topology);
     expect(output).toContain(':::spawned');
-    expect(output).not.toContain(':::spawned_noexit');
+    // Data node must not use :::spawned_noexit (legend always has it)
+    expect(output).not.toMatch(/worker1\[.*\]:::spawned_noexit/);
   });
 });
 
@@ -2883,5 +2888,247 @@ describe('renderFlowGraph — legend subgraph', () => {
     const classDefPos = output.indexOf('classDef entry');
     expect(legendPos).toBeGreaterThan(0);
     expect(legendPos).toBeLessThan(classDefPos);
+  });
+});
+// ─── renderCapabilityGraph — legend node-type entries (Plan 21) ──────────────
+
+describe('renderCapabilityGraph — legend node-type entries', () => {
+  it('legend contains :::interface styled node for interface type', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/legend_interface\{.*\}:::interface/);
+  });
+
+  it('legend contains :::concrete styled node for concrete type', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_concrete');
+    expect(output).toMatch(/legend_concrete.*:::concrete/);
+  });
+
+  it('legend contains :::hotspot when at least one hotspot exists', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.BigStruct', 'BigStruct', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    // Inject methodCount to trigger hotspot (>10)
+    (graph.nodes[0] as any).methodCount = 15;
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toMatch(/legend_hotspot.*:::hotspot/);
+  });
+
+  it('legend omits hotspot entry when no hotspot node exists', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Small', 'Small', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).not.toMatch(/legend_hotspot.*:::hotspot/);
+  });
+
+  it('legend always includes impl and uses edge descriptions', () => {
+    const graph: CapabilityGraph = {
+      nodes: [makeCapNode('pkg/hub.Server', 'Server', 'struct', 'pkg/hub')],
+      edges: [],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_impl');
+    expect(output).toContain('legend_uses');
+  });
+
+  it('legend_conc appears when at least one edge has concreteUsage:true', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Svc', 'Svc', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'struct', 'pkg/hub'),
+      ],
+      edges: [{
+        id: 'e1',
+        type: 'uses',
+        source: 'pkg/hub.Svc',
+        target: 'pkg/hub.Store',
+        confidence: 0.9,
+        concreteUsage: true,
+      }],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(output).toContain('legend_conc');
+  });
+
+  it('legend_conc absent when no edge has concreteUsage:true', () => {
+    const graph: CapabilityGraph = {
+      nodes: [
+        makeCapNode('pkg/hub.Engine', 'Engine', 'struct', 'pkg/hub'),
+        makeCapNode('pkg/hub.Store', 'Store', 'interface', 'pkg/hub'),
+      ],
+      edges: [makeCapEdge('pkg/hub.Engine', 'pkg/hub.Store', 'uses')],
+    };
+    const output = MermaidTemplates.renderCapabilityGraph(graph);
+    // 'legend_concrete' always exists; check the conc entry specifically
+    expect(output).not.toContain('    legend_conc[');
+  });
+});
+
+// ─── renderGoroutineTopology — legend improvements (Plan 21) ─────────────────
+
+describe('renderGoroutineTopology — legend spawned_noexit entry', () => {
+  function makeTopologyBasic2(overrides?: Partial<GoroutineTopology>): GoroutineTopology {
+    return { nodes: [], edges: [], channels: [], channelEdges: [], ...overrides };
+  }
+
+  it('legend always contains legend_spawned_noexit:::spawned_noexit', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).toMatch(/legend_spawned_noexit.*:::spawned_noexit/);
+  });
+
+  it('legend_spawned present when at least one normal spawned node exists', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'w1',
+      spawnTargetName: 'runWorker',
+      receivesContext: true,
+      cancellationCheckAvailable: true,
+      hasCancellationCheck: true,
+      orphan: false,
+    }];
+    const topology = makeTopologyBasic2({
+      nodes: [{
+        id: 'w1',
+        name: 'runWorker',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // Should have legend_spawned (with :::spawned class) for normal spawned
+    expect(output).toMatch(/legend_spawned[^_].*:::spawned[^_]/);
+  });
+
+  it('legend_spawned absent when all spawned nodes have ⚠ no exit', () => {
+    const lifecycle: GoroutineLifecycleSummary[] = [{
+      nodeId: 'orphan1',
+      spawnTargetName: 'runOrphan',
+      receivesContext: false,
+      cancellationCheckAvailable: false,
+      hasCancellationCheck: false,
+      orphan: true,
+    }];
+    const topology = makeTopologyBasic2({
+      nodes: [{
+        id: 'orphan1',
+        name: 'runOrphan',
+        type: 'spawned',
+        package: 'pkg/workers',
+        location: { file: 'worker.go', line: 5 },
+      }],
+      lifecycle,
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    // legend_spawned_noexit is fine, but legend_spawned[^_] should NOT appear
+    expect(output).not.toMatch(/legend_spawned[^_].*:::spawned[^_]/);
+  });
+
+  it('legend always contains edge description for goroutine spawn (go)', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).toContain('legend_go');
+  });
+
+  it('legend contains edge description for channel ops when channels exist', () => {
+    const topology = makeTopologyBasic2({
+      channels: [{ id: 'chan-pkg-1', type: 'chan', capacity: 0, location: { file: 'f.go', line: 1 } }],
+    });
+    const output = MermaidTemplates.renderGoroutineTopology(topology);
+    expect(output).toContain('legend_make');
+  });
+
+  it('legend omits channel edge description when no channels', () => {
+    const output = MermaidTemplates.renderGoroutineTopology(makeTopologyBasic2());
+    expect(output).not.toContain('legend_make');
+  });
+});
+
+// ─── renderPackageGraph — legend edge-weight description (Plan 21) ───────────
+
+describe('renderPackageGraph — legend edge description', () => {
+  it('legend contains an edge-weight explanation entry', () => {
+    const graph = makePackageGraph({
+      nodes: [{ id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode],
+      edges: [],
+      cycles: [],
+    });
+    const result = MermaidTemplates.renderPackageGraph(graph);
+    // Must have a legend node describing edge/import relationship
+    expect(result).toContain('legend_edge');
+  });
+});
+
+// ─── renderFlowGraph — legend edge-type descriptions (Plan 21) ───────────────
+
+describe('renderFlowGraph — legend edge descriptions', () => {
+  it('legend contains entry-to-handler call-count edge description', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_calls');
+  });
+
+  it('legend contains direct-call edge description', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_direct');
+  });
+
+  it('legend_edge_iface present when iface edges appear in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'interface' as const, confidence: 0.8 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_iface');
+  });
+
+  it('legend_edge_iface absent when no iface edges in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'store.Find', type: 'direct' as const, confidence: 0.9 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).not.toContain('legend_edge_iface');
+  });
+
+  it('legend_edge_indir present when indir edges appear in graph', () => {
+    const entry = makeEntry({ id: 'ep1', handler: 'pkg.Handler', package: 'pkg/api' });
+    const graph: FlowGraph = {
+      entryPoints: [entry],
+      callChains: [{
+        id: 'chain1',
+        entryPoint: 'ep1',
+        calls: [{ from: 'pkg.Handler', to: 'util.Do', type: 'indirect' as const, confidence: 0.6 }],
+      }],
+    };
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).toContain('legend_edge_indir');
+  });
+
+  it('legend_edge_indir absent when no indir edges in graph', () => {
+    const graph = makeFlowGraph([makeEntry({ id: 'ep1' })]);
+    const output = MermaidTemplates.renderFlowGraph(graph);
+    expect(output).not.toContain('legend_edge_indir');
   });
 });

@@ -253,6 +253,7 @@ export class MermaidTemplates {
         out += `    legend_${type}["${LEGEND_LABELS[type]}"]:::${type}\n`;
       }
     }
+    out += '    legend_edge["--> depends on (bolder = more imports)"]\n';
     out += '  end\n';
     // Amber/yellow fill + golden dashed border — clearly distinct hue from
     // the white→gray data subgraph depth scale
@@ -442,12 +443,22 @@ export class MermaidTemplates {
       output += `  style ${sgId} ${styleStr}\n`;
     }
 
-    // Legend subgraph
+    // Determine if any concrete-usage edge exists
+    const hasConcreteEdge = graph.edges.some((e) => e.concreteUsage === true);
+
+    // Legend subgraph — node types first, then edge descriptions
     output += '  subgraph legend["Legend"]\n';
     output += '    direction LR\n';
-    output += '    legend_impl["-.-> impl (implements)"]\n';
+    output += '    legend_interface{{"interface"}}:::interface\n';
+    output += '    legend_concrete["concrete"]:::concrete\n';
+    if (hasHotspot) {
+      output += '    legend_hotspot["hotspot (≥11m or fi>5)"]:::hotspot\n';
+    }
+    output += '    legend_impl["-.-> implements"]\n';
     output += '    legend_uses["--> uses"]\n';
-    output += '    legend_conc["==> conc (concrete usage)"]\n';
+    if (hasConcreteEdge) {
+      output += '    legend_conc["==> concrete usage"]\n';
+    }
     output += '  end\n';
     output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
 
@@ -671,12 +682,23 @@ export class MermaidTemplates {
     }
 
     // ── Legend subgraph ────────────────────────────────────────────────────────
+    // Determine if any normal (non-noexit) spawned node was emitted
+    const hasNormalSpawned = [...packageGroups.values()].flat().concat(ungrouped)
+      .some((d) => d.style === ':::spawned');
+
     output += '\n  subgraph legend["Legend"]\n';
     output += '    direction LR\n';
     output += '    legend_main["main"]:::main\n';
     output += '    legend_spawner["spawner"]:::spawner\n';
-    output += '    legend_spawned["spawned"]:::spawned\n';
+    if (hasNormalSpawned) {
+      output += '    legend_spawned["spawned \u2713"]:::spawned\n';
+    }
+    output += '    legend_spawned_noexit["spawned \u26a0 no exit"]:::spawned_noexit\n';
     output += '    legend_channel["channel"]:::channel\n';
+    output += '    legend_go["--> go (goroutine launch)"]\n';
+    if (topology.channels.length > 0) {
+      output += '    legend_make["--> make/send/recv"]\n';
+    }
     output += '  end\n';
     output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
 
@@ -774,6 +796,9 @@ export class MermaidTemplates {
     // Track nodes already declared inside subgraphs (entry point nodes)
     const declaredNodeIds = new Set<string>(graph.entryPoints.map((e) => this.sanitizeId(e.id)));
 
+    let hasIfaceEdge = false;
+    let hasIndirEdge = false;
+
     // Emit call-chain edges — deduplicated across all chains
     const emittedEdges = new Set<string>();
     const addEdge = (from: string, to: string, label?: string, callEdge?: CallEdge): void => {
@@ -782,8 +807,10 @@ export class MermaidTemplates {
       emittedEdges.add(key);
       if (callEdge) {
         if (callEdge.type === 'interface') {
+          hasIfaceEdge = true;
           output += `  ${from} -.->|iface| ${to}\n`;
         } else if (callEdge.type === 'indirect') {
+          hasIndirEdge = true;
           output += `  ${from} -.->|indir| ${to}\n`;
         } else {
           // 'direct' — solid arrow, no label
@@ -837,6 +864,14 @@ export class MermaidTemplates {
     output += '    legend_entry["entry point"]:::entry\n';
     output += '    legend_handler["handler"]:::handler\n';
     output += '    legend_util["utility"]:::util\n';
+    output += '    legend_edge_calls["\u2192|N calls| entry \u2192 handler"]\n';
+    output += '    legend_edge_direct["\u2192 direct call"]\n';
+    if (hasIfaceEdge) {
+      output += '    legend_edge_iface["-\u00b7\u2192|iface| interface dispatch"]\n';
+    }
+    if (hasIndirEdge) {
+      output += '    legend_edge_indir["-\u00b7\u2192|indir| indirect call"]\n';
+    }
     output += '  end\n';
     output += '  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01\n';
 
