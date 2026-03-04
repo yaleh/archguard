@@ -21,11 +21,23 @@ vi.mock('@/mermaid/diagram-generator.js');
 vi.mock('fs-extra', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
     ensureDir: vi.fn().mockResolvedValue(undefined),
     readJson: vi.fn().mockResolvedValue({}),
     pathExists: vi.fn().mockResolvedValue(false),
     remove: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+vi.mock('@/mermaid/ts-module-graph-renderer.js', () => ({
+  renderTsModuleGraph: vi.fn().mockReturnValue('flowchart LR\n  A --> B'),
+}));
+
+vi.mock('@/mermaid/renderer.js', () => ({
+  IsomorphicMermaidRenderer: vi.fn().mockImplementation(() => ({
+    renderSVG: vi.fn().mockResolvedValue('<svg/>'),
+    renderPNG: vi.fn().mockResolvedValue(undefined),
+  })),
 }));
 
 // Mock cli-progress for ParallelProgressReporter
@@ -860,6 +872,202 @@ describe('DiagramProcessor', () => {
       expect(results[0].success).toBe(true);
       expect(results[0].stats?.entities).toBe(archJSON.entities.length);
       expect(results[0].stats?.relations).toBe(archJSON.relations.length);
+    });
+  });
+
+  describe('regression: package-level TS stats must reflect moduleGraph, not aggregatedJSON', () => {
+    /**
+     * Regression test for the index.md stats inaccuracy bug.
+     *
+     * Bug: For `level === 'package'` TypeScript diagrams, the diagram is rendered
+     * from `extensions.tsAnalysis.moduleGraph` (nodes + edges), but DiagramResult.stats
+     * was reading from `aggregatedJSON.entities.length` / `.relations.length` — a
+     * different data source that gave wrong counts (e.g. Entities: 2, Relations: 0
+     * instead of Entities: 7, Relations: 7).
+     *
+     * Fix: When moduleGraph is present and level === 'package', stats derive from
+     * moduleGraph.nodes.length and moduleGraph.edges.length.
+     */
+    const buildArchJSONWithModuleGraph = (): ArchJSON => {
+      const base = createTestArchJSON();
+      return {
+        ...base,
+        // Standard aggregation gives 1 entity, 0 relations at package level
+        entities: base.entities.slice(0, 1),
+        relations: [],
+        extensions: {
+          tsAnalysis: {
+            version: '1.0',
+            moduleGraph: {
+              nodes: [
+                { id: '__root__', name: '(root)', type: 'internal', fileCount: 5, stats: { classes: 2, interfaces: 1, functions: 8, enums: 0 } },
+                { id: 'openai_api_protocols', name: 'openai_api_protocols', type: 'internal', fileCount: 3, stats: { classes: 4, interfaces: 6, functions: 0, enums: 0 } },
+                { id: 'shared', name: 'shared', type: 'internal', fileCount: 8, stats: { classes: 10, interfaces: 3, functions: 5, enums: 1 } },
+                { id: '@mlc-ai/web-runtime', name: '@mlc-ai/web-runtime', type: 'external', fileCount: 0, stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 } },
+              ],
+              edges: [
+                { from: '__root__', to: 'openai_api_protocols', strength: 12, importedNames: [] },
+                { from: '__root__', to: 'shared', strength: 22, importedNames: [] },
+                { from: '__root__', to: '@mlc-ai/web-runtime', strength: 8, importedNames: [] },
+                { from: 'openai_api_protocols', to: 'shared', strength: 5, importedNames: [] },
+              ],
+              cycles: [],
+            },
+          },
+        },
+      };
+    };
+
+    it('stats.entities reflects moduleGraph.nodes.length, not aggregatedJSON.entities.length', async () => {
+      const archJSONWithGraph = buildArchJSONWithModuleGraph();
+
+      // Sanity check: entity counts differ between the two data sources
+      expect(archJSONWithGraph.entities.length).toBe(1);
+      expect(archJSONWithGraph.extensions?.tsAnalysis?.moduleGraph?.nodes.length).toBe(4);
+
+      const registry = new PluginRegistry();
+      const mockTsPlugin: ILanguagePlugin = {
+        metadata: {
+          name: 'typescript',
+          version: '1.0.0',
+          displayName: 'Mock TypeScript plugin',
+          fileExtensions: ['.ts'],
+          author: 'test',
+          minCoreVersion: '1.0.0',
+          capabilities: { singleFileParsing: false, incrementalParsing: false, dependencyExtraction: false, typeInference: false },
+        },
+        initialize: vi.fn().mockResolvedValue(undefined),
+        parseProject: vi.fn().mockResolvedValue(archJSONWithGraph),
+        canHandle: vi.fn().mockReturnValue(true),
+        dispose: vi.fn().mockResolvedValue(undefined),
+      };
+      registry.register(mockTsPlugin);
+
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: vi.fn().mockReturnValue({
+          outputDir: './archguard',
+          baseName: 'package',
+          paths: { mmd: './archguard/overview/package.mmd', png: './archguard/overview/package.png', svg: './archguard/overview/package.svg', json: './archguard/overview/package.json' },
+        }),
+        ensureDirectory: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const processor = new DiagramProcessor({
+        diagrams: [{ name: 'overview/package', sources: ['./src'], level: 'package' }],
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      // Must use moduleGraph counts, NOT aggregatedJSON.entities.length (which is 1)
+      expect(results[0].stats?.entities).toBe(4); // moduleGraph.nodes.length
+      expect(results[0].stats?.relations).toBe(4); // moduleGraph.edges.length
+    });
+
+    it('stats.relations reflects moduleGraph.edges.length, not aggregatedJSON.relations.length', async () => {
+      const archJSONWithGraph = buildArchJSONWithModuleGraph();
+
+      // aggregatedJSON has 0 relations; moduleGraph has 4 edges
+      expect(archJSONWithGraph.relations.length).toBe(0);
+      expect(archJSONWithGraph.extensions?.tsAnalysis?.moduleGraph?.edges.length).toBe(4);
+
+      const registry = new PluginRegistry();
+      const mockTsPlugin: ILanguagePlugin = {
+        metadata: {
+          name: 'typescript', version: '1.0.0', displayName: 'Mock TypeScript plugin',
+          fileExtensions: ['.ts'], author: 'test', minCoreVersion: '1.0.0',
+          capabilities: { singleFileParsing: false, incrementalParsing: false, dependencyExtraction: false, typeInference: false },
+        },
+        initialize: vi.fn().mockResolvedValue(undefined),
+        parseProject: vi.fn().mockResolvedValue(archJSONWithGraph),
+        canHandle: vi.fn().mockReturnValue(true),
+        dispose: vi.fn().mockResolvedValue(undefined),
+      };
+      registry.register(mockTsPlugin);
+
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: vi.fn().mockReturnValue({
+          outputDir: './archguard',
+          baseName: 'package',
+          paths: { mmd: './archguard/overview/package.mmd', png: './archguard/overview/package.png', svg: './archguard/overview/package.svg', json: './archguard/overview/package.json' },
+        }),
+        ensureDirectory: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const processor = new DiagramProcessor({
+        diagrams: [{ name: 'overview/package', sources: ['./src'], level: 'package' }],
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      expect(results[0].stats?.relations).toBe(4); // moduleGraph.edges.length, NOT 0
+    });
+
+    it('non-package diagrams still use aggregatedJSON entity/relation counts', async () => {
+      // For class/method level, stats must still come from aggregatedJSON, not moduleGraph
+      const archJSONWithGraph = buildArchJSONWithModuleGraph();
+
+      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+      (FileDiscoveryService as any).mockImplementation(() => ({
+        discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      }));
+
+      const { ParallelParser } = await import('@/parser/parallel-parser.js');
+      (ParallelParser as any).mockImplementation(() => ({
+        parseFiles: vi.fn().mockResolvedValue(archJSONWithGraph),
+      }));
+
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: vi.fn().mockReturnValue({
+          outputDir: './archguard',
+          baseName: 'test',
+          paths: { mmd: './archguard/test.mmd', png: './archguard/test.png', svg: './archguard/test.svg', json: './archguard/test.json' },
+        }),
+        ensureDirectory: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
+      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+        generateAndRender: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const processor = new DiagramProcessor({
+        diagrams: [{ name: 'class/all', sources: ['./src'], level: 'class' }],
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
+
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      // class-level: stats from aggregatedJSON.entities (1), not moduleGraph.nodes (4)
+      expect(results[0].stats?.entities).toBe(archJSONWithGraph.entities.length);
+      expect(results[0].stats?.relations).toBe(archJSONWithGraph.relations.length);
     });
   });
 });

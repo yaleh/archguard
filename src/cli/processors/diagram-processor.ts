@@ -387,13 +387,19 @@ export class DiagramProcessor {
         resultPaths.png = paths.paths.png;
       }
 
+      // For package-level TS diagrams the rendered output comes from the
+      // TsModuleGraph extension, not from aggregatedJSON.entities/relations.
+      // Use moduleGraph counts so index.md reflects the actual diagram content.
+      const moduleGraph = aggregatedJSON.extensions?.tsAnalysis?.moduleGraph;
+      const usesModuleGraph = diagram.level === 'package' && !!moduleGraph;
+
       return {
         name: diagram.name,
         success: true,
         paths: resultPaths,
         stats: {
-          entities: aggregatedJSON.entities.length,
-          relations: aggregatedJSON.relations.length,
+          entities: usesModuleGraph ? moduleGraph.nodes.length : aggregatedJSON.entities.length,
+          relations: usesModuleGraph ? moduleGraph.edges.length : aggregatedJSON.relations.length,
           parseTime,
         },
       };
