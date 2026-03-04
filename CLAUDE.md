@@ -31,44 +31,49 @@ npm run type-check         # TypeScript type check
 
 ### Self-Validation
 ```bash
-# Build and analyze ArchGuard itself
+# Build and analyze ArchGuard itself (auto-detects structure, generates 3-tier diagrams)
 npm run build
 node dist/cli/index.js analyze -v
 
-# Batch mode: analyze multiple modules
-node dist/cli/index.js analyze -s ./src/cli -s ./src/parser --batch -v
+# Analyze specific external project
+node dist/cli/index.js analyze -s /path/to/project/src
 ```
 
 ## Using ArchGuard
 
 ### Basic Usage
 ```bash
-# Generate Mermaid diagram (default format)
+# Analyze current project (auto-detects structure → 3-tier diagrams: package/class/method)
 npm run build
 node dist/cli/index.js analyze -v
 
-# Generate ArchJSON only (no LLM required, fast)
-node dist/cli/index.js analyze -f json -o ./architecture.json
+# Analyze an external project (output goes to <project>/.archguard automatically)
+node dist/cli/index.js analyze -s /home/user/work/my-project/src
 
-# Custom source and output directory
-node dist/cli/index.js analyze -s ./src --output-dir ./diagrams
+# Generate ArchJSON only (no LLM required, fast)
+node dist/cli/index.js analyze -f json
+
+# Custom output directory
+node dist/cli/index.js analyze --output-dir ./diagrams
 ```
 
 ### Advanced Usage
 
-#### LLM Grouping
-By default, ArchGuard uses LLM-powered intelligent grouping for better diagram organization:
+#### Filtering Diagram Levels
+Use `--diagrams` to select which levels to generate (default: all):
 ```bash
-# Enable LLM grouping (default)
-node dist/cli/index.js analyze -s ./src
+# Only package and class diagrams
+node dist/cli/index.js analyze --diagrams package class
 
-# Disable LLM grouping (use heuristic)
-node dist/cli/index.js analyze --no-llm-grouping
+# Only method-level diagrams
+node dist/cli/index.js analyze -s ./src --diagrams method
+
+# Single level for external project
+node dist/cli/index.js analyze -s /path/to/project --diagrams class
 ```
 
 #### Mermaid Themes
 ```bash
-# Use different themes
 node dist/cli/index.js analyze --mermaid-theme dark
 node dist/cli/index.js analyze --mermaid-theme forest
 ```
@@ -78,73 +83,30 @@ node dist/cli/index.js analyze --mermaid-theme forest
 # Auto-detect language (default: TypeScript)
 node dist/cli/index.js analyze -s ./src
 
-# Explicitly specify language (currently supports: typescript)
+# Explicitly specify language
 node dist/cli/index.js analyze -s ./src --lang typescript
-
-# Go: atlas mode is enabled automatically (no --atlas flag needed)
-node dist/cli/index.js analyze -s ./src --lang go
-
-# Go: opt out of atlas mode (standard Go parsing only)
-node dist/cli/index.js analyze -s ./src --lang go --no-atlas
+node dist/cli/index.js analyze -s ./src --lang go        # Atlas mode ON by default (levels: package/capability/goroutine/flow)
+node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard Go parsing
+node dist/cli/index.js analyze -s ./src --lang java
+node dist/cli/index.js analyze -s ./src --lang python
 ```
 
-#### Multi-Level Architecture Diagrams
-Generate diagrams at different abstraction levels:
+#### Multiple Diagram Generation via Config File
 ```bash
-# Package-level overview (high-level)
-node dist/cli/index.js analyze -s ./src -l package -n overview
-
-# Class-level detail (default)
-node dist/cli/index.js analyze -s ./src -l class -n architecture
-
-# Method-level detail (low-level)
-node dist/cli/index.js analyze -s ./src/core -l method -n core-methods
-```
-
-#### Multiple Diagram Generation
-Use configuration file to generate multiple diagrams with different levels:
-```bash
-# Create archguard.config.json with diagrams array:
+# archguard.config.json
 {
   "diagrams": [
-    {
-      "name": "overview",
-      "sources": ["./src"],
-      "level": "package"
-    },
-    {
-      "name": "modules/frontend",
-      "sources": ["./src/frontend"],
-      "level": "class"
-    },
-    {
-      "name": "modules/backend",
-      "sources": ["./src/backend"],
-      "level": "class"
-    }
+    { "name": "overview/package", "sources": ["./src"], "level": "package" },
+    { "name": "class/all-classes", "sources": ["./src"], "level": "class" },
+    { "name": "method/frontend", "sources": ["./src/frontend"], "level": "method" }
   ]
 }
 
 # Generate all diagrams
 node dist/cli/index.js analyze
 
-# Generate specific diagrams
-node dist/cli/index.js analyze --diagrams overview frontend
-```
-
-#### Custom Output Organization
-Control output file names and locations:
-```bash
-# Custom name in default directory
-node dist/cli/index.js analyze --name my-architecture
-
-# Subdirectory organization
-node dist/cli/index.js analyze --name services/auth-api
-# Output: archguard/services/auth-api.png
-
-# Multiple levels
-node dist/cli/index.js analyze --name modules/frontend/components
-# Output: archguard/modules/frontend/components.png
+# Filter by level
+node dist/cli/index.js analyze --diagrams class method
 ```
 
 ### Available Commands
@@ -152,24 +114,22 @@ node dist/cli/index.js analyze --name modules/frontend/components
 #### analyze
 Analyze TypeScript project and generate architecture diagrams.
 
-**Configuration Options**:
+**Configuration File**:
 - `--config <path>` - Config file path (default: `archguard.config.json`)
-- `--diagrams <names...>` - Generate specific diagrams (comma-separated)
+- `--diagrams <levels...>` - Filter by level: `package`|`class`|`method` (language-dependent; default: all)
 
-**CLI Shortcut (Single Diagram)**:
-- `-s, --sources <paths...>` - Source directories (creates single diagram)
-- `-l, --level <level>` - Detail level: `package`|`class`|`method` (default: `class`)
-- `-n, --name <name>` - Diagram name (default: `architecture`)
+**Source Selection**:
+- `-s, --sources <paths...>` - Source directory; triggers auto-detection of project structure → multi-diagram output. When path is outside CWD, output defaults to `<project>/.archguard`
 
 **Global Config Overrides**:
 - `-f, --format <type>` - Output format: `mermaid`|`json` (default: `mermaid`)
-- `--output-dir <dir>` - Output directory for diagrams (default: `./archguard`)
+- `--output-dir <dir>` - Output directory for diagrams (default: `./.archguard`)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
-- `--no-llm-grouping` - Disable LLM-powered grouping (use heuristic)
 - `--mermaid-theme <theme>` - Mermaid theme: `default`|`forest`|`dark`|`neutral`
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
+- `--lang <language>` - Language plugin: `typescript`|`go`|`java`|`python`
 
 **Claude CLI Configuration**:
 - `--cli-command <command>` - Claude CLI command to use (default: `claude`)
@@ -198,7 +158,8 @@ node dist/cli/index.js cache stats
 ### Output Formats
 
 **Mermaid** (default):
-- Generates `archguard/architecture.mmd`, `archguard/architecture.svg`, and `archguard/architecture.png`
+- For TypeScript: generates 3-tier diagram set in `.archguard/` (overview/package, class/all-classes, method/* per module) + `index.md`
+- For Go (Atlas): generates 4-layer set (package, capability, goroutine, flow) in `.archguard/`
 - No external dependencies required
 - Supports local rendering with isomorphic-mermaid
 
@@ -312,7 +273,7 @@ When importing, use these aliases instead of relative paths:
 ## Development Workflow
 
 1. **Make changes** to source code
-2. **Run tests**: `npm test` (ensure 370+ tests pass)
+2. **Run tests**: `npm test` (ensure 1936+ tests pass)
 3. **Type check**: `npm run type-check`
 4. **Lint**: `npm run lint` and `npm run lint:fix`
 5. **Build**: `npm run build`

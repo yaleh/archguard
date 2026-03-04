@@ -47,22 +47,26 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(sourcesOption?.short).toBe('-s');
     });
 
-    it('should have --level option with default value class', () => {
+    it('should NOT have --level option (removed in v3.0)', () => {
       const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
       const levelOption = analyzeCmd?.options.find((opt) => opt.long === '--level');
 
-      expect(levelOption).toBeDefined();
-      expect(levelOption?.short).toBe('-l');
-      expect(levelOption?.defaultValue).toBe('class');
+      expect(levelOption).toBeUndefined();
     });
 
-    it('should have --name option with default value architecture', () => {
+    it('should NOT have --name option (removed in v3.0)', () => {
       const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
       const nameOption = analyzeCmd?.options.find((opt) => opt.long === '--name');
 
-      expect(nameOption).toBeDefined();
-      expect(nameOption?.short).toBe('-n');
-      expect(nameOption?.defaultValue).toBe('architecture');
+      expect(nameOption).toBeUndefined();
+    });
+
+    it('should have --diagrams option for level filtering', () => {
+      const analyzeCmd = program.commands.find((cmd) => cmd.name() === 'analyze');
+      const diagramsOption = analyzeCmd?.options.find((opt) => opt.long === '--diagrams');
+
+      expect(diagramsOption).toBeDefined();
+      expect(diagramsOption?.description).toContain('level');
     });
 
     it('should have --format option', () => {
@@ -133,7 +137,7 @@ describe('Story 1: Basic CLI Framework', () => {
       exitSpy.mockRestore();
     });
 
-    it('should parse level option', async () => {
+    it('should parse --diagrams level filter option', async () => {
       const mockAction = vi.fn();
       const testProgram = createCLI();
 
@@ -146,17 +150,17 @@ describe('Story 1: Basic CLI Framework', () => {
         analyzeCmd.action(mockAction);
       }
 
-      await testProgram.parseAsync(['analyze', '-l', 'package'], { from: 'user' });
+      await testProgram.parseAsync(['analyze', '--diagrams', 'package'], { from: 'user' });
 
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[0]).toMatchObject({ level: 'package' });
+      expect(callArgs[0]).toMatchObject({ diagrams: ['package'] });
 
       exitSpy.mockRestore();
     });
 
-    it('should parse name option', async () => {
+    it('should parse multiple --diagrams levels', async () => {
       const mockAction = vi.fn();
       const testProgram = createCLI();
 
@@ -169,12 +173,14 @@ describe('Story 1: Basic CLI Framework', () => {
         analyzeCmd.action(mockAction);
       }
 
-      await testProgram.parseAsync(['analyze', '-n', 'my-diagram'], { from: 'user' });
+      await testProgram.parseAsync(['analyze', '--diagrams', 'package', 'class'], {
+        from: 'user',
+      });
 
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[0]).toMatchObject({ name: 'my-diagram' });
+      expect(callArgs[0]).toMatchObject({ diagrams: ['package', 'class'] });
 
       exitSpy.mockRestore();
     });
@@ -220,11 +226,9 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      // v2.0 defaults: level=class, name=architecture
-      expect(callArgs[0]).toMatchObject({
-        level: 'class',
-        name: 'architecture',
-      });
+      // v3.0: level and name removed, verify they are not present
+      expect(callArgs[0]).not.toHaveProperty('level');
+      expect(callArgs[0]).not.toHaveProperty('name');
 
       exitSpy.mockRestore();
     });

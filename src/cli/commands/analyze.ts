@@ -1,17 +1,18 @@
 /**
- * Analyze Command v2.0 - Completely rewritten for unified diagram processing
+ * Analyze Command v3.0 - Redesigned flags for auto-detection-first workflow
  *
- * Breaking Changes from v1.x:
- * - Removed: --batch, --stdin, -o/--output, --base-dir, --skip-missing, --no-batch-index
- * - Changed: -s/--source renamed to --sources (plural)
- * - Added: -l/--level, --diagrams filter
+ * Breaking Changes from v2.x:
+ * - Removed: -l/--level, -n/--name
+ * - Changed: --diagrams now filters by level (not by diagram name)
+ * - Changed: -s/--sources triggers auto-detect then optional level filter
  * - Single processing path: Everything goes through DiagramProcessor
  *
  * @module cli/commands/analyze
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 import { Command } from 'commander';
+import path from 'path';
 import os from 'os';
 import { ProgressReporter } from '../progress.js';
 import { ConfigLoader } from '../config-loader.js';
@@ -28,12 +29,14 @@ import type { DiagramResult } from '../processors/diagram-processor.js';
  * Normalize CLI options to DiagramConfig[]
  *
  * Priority:
- * 1. If config.diagrams exists and not empty → use config file
- * 2. If CLI provides sources → create single diagram from CLI
- * 3. Otherwise → use default config
+ * 1. If config.diagrams exists and not empty → use config file (apply level filter)
+ * 2. If CLI provides sources → auto-detect from sources[0] path (apply level filter)
+ *    Special case: Go Atlas → return single atlas diagram (skip auto-detect)
+ * 3. Otherwise → auto-detect from rootDir (apply level filter)
  *
  * @param config - Loaded configuration
  * @param cliOptions - CLI options
+ * @param rootDir - Project root directory (default: process.cwd())
  * @returns Array of DiagramConfig
  */
 export async function normalizeToDiagrams(
@@ -43,57 +46,75 @@ export async function normalizeToDiagrams(
 ): Promise<DiagramConfig[]> {
   // Priority 1: Config file diagrams
   if (config.diagrams && config.diagrams.length > 0) {
-    return config.diagrams as DiagramConfig[];
+    return filterByLevels(config.diagrams as DiagramConfig[], cliOptions.diagrams);
   }
 
-  // Priority 2: CLI shortcut
+  // Priority 2: CLI sources → language-specific or auto-detect
   if (cliOptions.sources && cliOptions.sources.length > 0) {
     // Resolve effective language (--atlas implies 'go')
     const language = cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined);
     // Atlas is enabled by default for Go unless --no-atlas is passed
     const atlasEnabled = language === 'go' && !cliOptions.noAtlas;
-    const diagram: DiagramConfig = {
-      name: cliOptions.name || 'architecture',
-      sources: cliOptions.sources,
-      level: cliOptions.level || 'class',
-      format: cliOptions.format,
-      exclude: cliOptions.exclude,
-      language,
-      languageSpecific: atlasEnabled
-        ? {
-            atlas: {
-              enabled: true,
-              functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
-              excludeTests: !cliOptions.atlasIncludeTests,
-              protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
-              layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
-            },
-          }
-        : undefined,
-    };
-    return [diagram];
+
+    // Go Atlas special case: single diagram, skip auto-detection
+    if (atlasEnabled) {
+      const diagram: DiagramConfig = {
+        name: 'architecture',
+        sources: cliOptions.sources,
+        level: 'package',
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+        language,
+        languageSpecific: {
+          atlas: {
+            enabled: true,
+            functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
+            excludeTests: !cliOptions.atlasIncludeTests,
+            protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
+            layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
+          },
+        },
+      };
+      return [diagram];
+    }
+
+    // Go without atlas (--lang go --no-atlas): single diagram, no atlas config
+    if (language === 'go' && cliOptions.noAtlas) {
+      const diagram: DiagramConfig = {
+        name: 'architecture',
+        sources: cliOptions.sources,
+        level: 'class',
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+        language,
+      };
+      return [diagram];
+    }
+
+    // TypeScript/other: auto-detect from sources[0]
+    const externalSourceRoot = path.resolve(cliOptions.sources[0]);
+    const diagrams = await detectProjectStructure(process.cwd(), externalSourceRoot);
+    return filterByLevels(diagrams, cliOptions.diagrams);
   }
 
-  // Priority 3: Auto-detect project structure
-  return detectProjectStructure(rootDir ?? process.cwd());
+  // Priority 3: Auto-detect from rootDir
+  const diagrams = await detectProjectStructure(rootDir ?? process.cwd());
+  return filterByLevels(diagrams, cliOptions.diagrams);
 }
 
 /**
- * Filter diagrams by names
+ * Filter diagrams by level
  *
  * @param diagrams - All diagrams
- * @param selectedNames - Names to filter (undefined = return all)
+ * @param levels - Level values to filter by (undefined = return all)
  * @returns Filtered diagrams
  */
-export function filterDiagrams(
-  diagrams: DiagramConfig[],
-  selectedNames?: string[]
-): DiagramConfig[] {
-  if (!selectedNames || selectedNames.length === 0) {
+export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): DiagramConfig[] {
+  if (!levels || levels.length === 0) {
     return diagrams;
   }
 
-  return diagrams.filter((d) => selectedNames.includes(d.name));
+  return diagrams.filter((d) => levels.includes(d.level ?? 'class'));
 }
 
 /**
@@ -151,12 +172,16 @@ export function createAnalyzeCommand(): Command {
 
       // ========== Configuration File ==========
       .option('--config <path>', 'Config file path (default: archguard.config.json)')
-      .option('--diagrams <names...>', 'Generate specific diagrams (comma-separated)')
+      .option(
+        '--diagrams <levels...>',
+        'Filter by diagram level: package|class|method (language-dependent)'
+      )
 
-      // ========== CLI Shortcut (Single Diagram) ==========
-      .option('-s, --sources <paths...>', 'Source directories (creates single diagram)')
-      .option('-l, --level <level>', 'Detail level: package|class|method (default: class)', 'class')
-      .option('-n, --name <name>', 'Diagram name (default: architecture)', 'architecture')
+      // ========== Source Auto-Detection ==========
+      .option(
+        '-s, --sources <paths...>',
+        'Source directories (auto-detects project structure, generates multi-diagram)'
+      )
       .option('--lang <language>', 'Language plugin: typescript (default: auto-detect)')
 
       // ========== Global Config Overrides ==========
@@ -206,7 +231,7 @@ export function createAnalyzeCommand(): Command {
 }
 
 /**
- * Analyze command handler (v2.0 - completely rewritten)
+ * Analyze command handler (v3.0 - redesigned flags)
  */
 async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
   const progress = new ProgressReporter();
@@ -219,7 +244,6 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     // Build partial config for override
     const configOverrides: Partial<Config> = {};
     if (cliOptions.format) configOverrides.format = cliOptions.format;
-    if (cliOptions.outputDir) configOverrides.outputDir = cliOptions.outputDir;
     if (cliOptions.exclude) configOverrides.exclude = cliOptions.exclude;
     if (cliOptions.cache !== undefined) {
       configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 };
@@ -244,23 +268,33 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
       };
     }
 
+    // Smart outputDir inference: if sources point outside cwd, infer project root
+    if (cliOptions.sources && cliOptions.sources.length > 0 && !cliOptions.outputDir) {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      const cwd = process.cwd();
+      if (!sourcePath.startsWith(cwd)) {
+        const SOURCE_ROOT_NAMES = ['src', 'lib', 'app', 'source'];
+        const basename = path.basename(sourcePath);
+        const projectRoot = SOURCE_ROOT_NAMES.includes(basename)
+          ? path.dirname(sourcePath)
+          : sourcePath;
+        configOverrides.outputDir = path.join(projectRoot, '.archguard');
+      }
+    }
+
+    // Apply explicit outputDir override after smart inference (CLI wins)
+    if (cliOptions.outputDir) configOverrides.outputDir = cliOptions.outputDir;
+
     const config = await configLoader.load(configOverrides, cliOptions.config);
     progress.succeed('Configuration loaded');
 
-    // Step 2: Normalize to DiagramConfig[]
-    const diagrams = await normalizeToDiagrams(config, cliOptions, process.cwd());
-    progress.info(`Found ${diagrams.length} diagram(s) to generate`);
-
-    // Step 3: Filter diagrams if needed
-    const selectedDiagrams = filterDiagrams(diagrams, cliOptions.diagrams);
+    // Step 2: Normalize to DiagramConfig[] (filtering by level is handled inside)
+    const selectedDiagrams = await normalizeToDiagrams(config, cliOptions, process.cwd());
+    progress.info(`Found ${selectedDiagrams.length} diagram(s) to generate`);
 
     if (selectedDiagrams.length === 0) {
       progress.warn('No diagrams selected');
       process.exit(0);
-    }
-
-    if (selectedDiagrams.length !== diagrams.length) {
-      progress.info(`Filtered to ${selectedDiagrams.length} diagram(s)`);
     }
 
     // Step 4: Unified processing (core!)

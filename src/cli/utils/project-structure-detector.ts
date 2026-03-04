@@ -11,6 +11,7 @@
  * 4. If 2+ modules → three-layer set:
  *    - overview/package  (package level, full source root)
  *    - class/all-classes (class level, full source root)
+ *    - method/core       (method level, source root itself — only when top-level .ts files exist)
  *    - method/<name>     (method level, per module)
  *
  * @module cli/utils/project-structure-detector
@@ -65,10 +66,11 @@ export async function findSourceRoot(rootDir: string): Promise<string> {
  * Only immediate subdirectories are returned; empty directories are excluded.
  *
  * @param rootDir   - Project root directory (absolute path)
- * @param sourceRoot - Relative source root path (e.g. "./src")
+ * @param sourceRoot - Source root path — may be relative (e.g. "./src") or absolute
  * @returns Sorted array of module directory names (e.g. ["cli", "parser", "utils"])
  */
 export async function getTopLevelModules(rootDir: string, sourceRoot: string): Promise<string[]> {
+  // path.resolve with an absolute sourceRoot ignores rootDir, which is the desired behavior
   const absoluteRoot = path.resolve(rootDir, sourceRoot);
 
   let entries: fs.Dirent[];
@@ -93,6 +95,34 @@ export async function getTopLevelModules(rootDir: string, sourceRoot: string): P
   }
 
   return modules.sort();
+}
+
+/**
+ * Check whether the given directory has any direct (non-recursive) .ts or .js files.
+ *
+ * Used to decide whether to add a method/core diagram for top-level source files
+ * that live alongside subdirectory modules.
+ *
+ * @param sourceRootPath - Absolute path to the source root directory
+ * @returns true if at least one direct .ts or .js file exists
+ */
+export async function hasTopLevelSourceFiles(sourceRootPath: string): Promise<boolean> {
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(sourceRootPath, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const ext = path.extname(entry.name).toLowerCase();
+    if (ext === '.ts' || ext === '.js') {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -129,11 +159,42 @@ async function directoryHasSourceFiles(dir: string): Promise<boolean> {
  * This is the default (Priority 3) when neither config.diagrams nor CLI -s is set.
  *
  * @param rootDir - Project root directory (default: process.cwd())
+ * @param externalSourceRoot - Optional absolute path to an external source root.
+ *   When provided, `findSourceRoot()` is skipped and this path is used directly.
+ *   All generated DiagramConfig `sources` will contain absolute paths.
  * @returns Array of DiagramConfig representing the auto-detected diagram set
  */
-export async function detectProjectStructure(rootDir: string): Promise<DiagramConfig[]> {
-  const sourceRoot = await findSourceRoot(rootDir);
-  const modules = await getTopLevelModules(rootDir, sourceRoot);
+export async function detectProjectStructure(
+  rootDir: string,
+  externalSourceRoot?: string,
+): Promise<DiagramConfig[]> {
+  let sourceRoot: string;
+  let projectRoot: string;
+  let useAbsolutePaths: boolean;
+
+  if (externalSourceRoot !== undefined) {
+    // External mode: use the provided absolute path directly
+    sourceRoot = externalSourceRoot;
+    useAbsolutePaths = true;
+
+    // Derive projectRoot: if the basename is a known source dir, use the parent
+    const basename = path.basename(externalSourceRoot);
+    if ((SOURCE_ROOT_CANDIDATES as string[]).includes(basename)) {
+      projectRoot = path.dirname(externalSourceRoot);
+    } else {
+      projectRoot = externalSourceRoot;
+    }
+  } else {
+    // Default mode: detect relative source root from rootDir
+    sourceRoot = await findSourceRoot(rootDir);
+    projectRoot = rootDir;
+    useAbsolutePaths = false;
+  }
+
+  const modules = await getTopLevelModules(projectRoot, sourceRoot);
+
+  // Helper to build a source path for a module
+  const modulePath = (mod: string): string => `${sourceRoot}/${mod}`;
 
   // Fewer than 2 modules → degenerate to single-diagram mode
   if (modules.length < 2) {
@@ -145,6 +206,10 @@ export async function detectProjectStructure(rootDir: string): Promise<DiagramCo
       },
     ];
   }
+
+  // Check for top-level .ts files in the source root alongside subdirectory modules
+  const absoluteSourceRoot = useAbsolutePaths ? sourceRoot : path.resolve(projectRoot, sourceRoot);
+  const topLevelFiles = await hasTopLevelSourceFiles(absoluteSourceRoot);
 
   // 2+ modules → three-layer diagram set
   const diagrams: DiagramConfig[] = [
@@ -160,13 +225,27 @@ export async function detectProjectStructure(rootDir: string): Promise<DiagramCo
       level: 'class',
       description: 'Class-level view of entire project',
     },
+  ];
+
+  // Insert method/core before per-module method diagrams when top-level files exist
+  if (topLevelFiles) {
+    diagrams.push({
+      name: 'method/core',
+      sources: [sourceRoot],
+      level: 'method',
+      description: 'Method-level detail for top-level source files',
+    });
+  }
+
+  // Per-module method diagrams
+  diagrams.push(
     ...modules.map((mod) => ({
       name: `method/${mod}`,
-      sources: [`${sourceRoot}/${mod}`],
+      sources: [modulePath(mod)],
       level: 'method' as const,
       description: `Method-level detail for ${mod} module`,
     })),
-  ];
+  );
 
   return diagrams;
 }

@@ -455,33 +455,25 @@ export interface CLIOptions {
   config?: string;
 
   /**
-   * Filter specific diagrams by name
+   * Filter diagrams by level (package|class|method or language-dependent values)
    *
-   * Only generate diagrams matching these names.
+   * When provided, only diagrams at the specified levels are generated.
+   * Changed in v3.0: was "filter by diagram name", now "filter by level".
    */
   diagrams?: string[];
 
-  // ========== CLI Shortcut (generates single diagram) ==========
+  // ========== CLI Source Auto-Detection ==========
 
   /**
-   * Source directories (CLI shortcut)
+   * Source directories
    *
-   * When provided, generates a single diagram with these sources.
+   * When provided, auto-detects project structure from sources[0] and
+   * generates a multi-diagram set. Use --diagrams to filter by level.
    */
   sources?: string[];
 
   /**
-   * Detail level (CLI shortcut)
-   */
-  level?: DetailLevel;
-
-  /**
-   * Diagram name (CLI shortcut)
-   */
-  name?: string;
-
-  /**
-   * Language plugin to use (CLI shortcut)
+   * Language plugin to use
    *
    * If not specified, auto-detection is performed based on directory markers.
    * Available: 'typescript' (default)

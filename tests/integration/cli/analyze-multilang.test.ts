@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   createAnalyzeCommand,
   normalizeToDiagrams,
-  filterDiagrams,
+  filterByLevels,
 } from '@/cli/commands/analyze.js';
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
@@ -94,59 +94,30 @@ describe('CLI Multi-language Support', () => {
 
     const cliOptions: CLIOptions = {
       sources: ['./src/cli'],
-      level: 'class',
-      name: 'cli-diagram',
       format: 'mermaid',
     };
 
     const diagrams = await normalizeToDiagrams(config, cliOptions);
 
+    // New behavior: -s alone triggers auto-detect, returns multiple diagrams
     expect(diagrams).toBeDefined();
-    expect(diagrams.length).toBe(1);
-    expect(diagrams[0].name).toBe('cli-diagram');
-    expect(diagrams[0].sources).toEqual(['./src/cli']);
+    expect(diagrams.length).toBeGreaterThan(0);
   });
 
-  // T1.3.1: filterDiagrams still works
-  it('should filter diagrams correctly', () => {
-    const config: Config = {
-      source: './src',
-      format: 'mermaid',
-      exclude: [],
-      diagrams: [
-        {
-          name: 'overview',
-          sources: ['./src'],
-          level: 'package',
-        },
-        {
-          name: 'cli',
-          sources: ['./src/cli'],
-          level: 'class',
-        },
-      ],
-      outputDir: './archguard',
-      mermaid: {
-        enableLLMGrouping: false,
-        renderer: 'isomorphic',
-        theme: 'default',
-        transparentBackground: true,
-      },
-      cache: { enabled: true, ttl: 86400 },
-      concurrency: 4,
-      verbose: false,
-      cli: { command: 'claude', args: [], timeout: 60000 },
-    };
+  // T1.3.1: filterByLevels works as level filter
+  it('should filter diagrams correctly by level', () => {
+    const allDiagrams = [
+      { name: 'overview/package', sources: ['./src'], level: 'package' as const },
+      { name: 'class/all-classes', sources: ['./src'], level: 'class' as const },
+      { name: 'method/cli', sources: ['./src/cli'], level: 'method' as const },
+    ];
 
-    const cliOptions: CLIOptions = {
-      diagrams: ['overview'],
-    };
-
-    const diagrams = filterDiagrams(config.diagrams, cliOptions.diagrams);
+    const diagrams = filterByLevels(allDiagrams, ['package']);
 
     expect(diagrams).toBeDefined();
     expect(diagrams.length).toBe(1);
-    expect(diagrams[0].name).toBe('overview');
+    expect(diagrams[0].name).toBe('overview/package');
+    expect(diagrams[0].level).toBe('package');
   });
 
   // T1.2.2: Plugin can parse files

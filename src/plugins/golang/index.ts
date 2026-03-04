@@ -49,6 +49,8 @@ export class GoPlugin implements ILanguagePlugin {
     },
   };
 
+  readonly supportedLevels = ['package', 'class', 'method'] as const;
+
   readonly dependencyExtractor: IDependencyExtractor;
 
   private treeSitter!: TreeSitterBridge;

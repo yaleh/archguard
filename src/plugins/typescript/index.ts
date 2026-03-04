@@ -49,6 +49,8 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     } as PluginCapabilities,
   };
 
+  readonly supportedLevels = ['package', 'class', 'method'] as const;
+
   private parser!: TypeScriptParser;
   private parallelParser!: ParallelParser;
   private initialized = false;

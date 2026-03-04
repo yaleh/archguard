@@ -298,7 +298,7 @@ describe('Story 5: Configuration File Support', () => {
     describe('Output Directory Configuration', () => {
       it('should parse outputDir with default value', async () => {
         const config = await loader.load();
-        expect(config.outputDir).toBe('./archguard');
+        expect(config.outputDir).toBe('./.archguard');
       });
 
       it('should parse custom outputDir from config', async () => {

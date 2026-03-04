@@ -82,6 +82,8 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     },
   };
 
+  readonly supportedLevels = ['package', 'capability', 'goroutine', 'flow'] as const;
+
   // Composed components (ADR-001)
   private goPlugin: GoPlugin;
   private behaviorAnalyzer: BehaviorAnalyzer;

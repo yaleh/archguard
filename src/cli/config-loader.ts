@@ -139,7 +139,7 @@ const ClassHighlightConfigSchema = z.object({
 
 const configSchema = z.object({
   // ========== Global Configuration ==========
-  outputDir: z.string().default('./archguard'),
+  outputDir: z.string().default('./.archguard'),
   format: z.enum(['mermaid', 'json']).default('mermaid'),
   mermaid: MermaidConfigSchema.default({}),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),

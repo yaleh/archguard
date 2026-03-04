@@ -43,6 +43,8 @@ export class JavaPlugin implements ILanguagePlugin {
     },
   };
 
+  readonly supportedLevels = ['package', 'class', 'method'] as const;
+
   private treeSitter!: TreeSitterBridge;
   private mapper!: ArchJsonMapper;
   private depExtractor!: DependencyExtractor;

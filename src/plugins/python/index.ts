@@ -38,6 +38,8 @@ export class PythonPlugin implements ILanguagePlugin {
     } as PluginCapabilities,
   };
 
+  readonly supportedLevels = ['package', 'class', 'method'] as const;
+
   private treeSitterBridge!: TreeSitterBridge;
   private archJsonMapper!: ArchJsonMapper;
   private initialized = false;

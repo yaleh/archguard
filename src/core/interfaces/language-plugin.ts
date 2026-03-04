@@ -160,6 +160,14 @@ export interface ILanguagePlugin extends IParser {
   dispose(): Promise<void>;
 
   /**
+   * Diagram levels supported by this plugin.
+   * Used by the --diagrams CLI flag to filter diagram generation.
+   * @example ['package', 'class', 'method'] for TypeScript
+   * @example ['package', 'capability', 'goroutine', 'flow'] for Go Atlas
+   */
+  readonly supportedLevels: readonly string[];
+
+  /**
    * Optional dependency extractor
    *
    * If the plugin supports dependency extraction (capabilities.dependencyExtraction = true),
