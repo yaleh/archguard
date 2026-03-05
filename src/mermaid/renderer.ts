@@ -10,6 +10,23 @@ import sharp from 'sharp';
 import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
 
 /**
+ * Inlines fill:none on flowchart edge paths to work around librsvg's
+ * limited CSS class-selector support (sharp uses librsvg for SVG→PNG).
+ * Without this, <path class="... flowchart-link ..."> gets SVG default
+ * fill (black) instead of the CSS-specified fill:none.
+ */
+export function inlineEdgeStyles(svg: string): string {
+  return svg.replace(
+    /(<path\b[^>]*class="[^"]*\bflowchart-link\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+    (_, pre, style, post) => {
+      if (/\bfill\s*:\s*none\b/.test(style)) return _;
+      const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+      return `${pre}${trimmed ? trimmed + ';' : ''}fill:none;${post}`;
+    }
+  );
+}
+
+/**
  * Renderer for Mermaid diagrams supporting SVG and PNG output
  */
 export class IsomorphicMermaidRenderer {
@@ -83,7 +100,8 @@ export class IsomorphicMermaidRenderer {
    * Does NOT call renderSVG; the caller must supply the svg string.
    */
   async convertSVGToPNG(svg: string, outputPath: string): Promise<void> {
-    const svgBuffer = Buffer.from(svg);
+    const processed = inlineEdgeStyles(svg);
+    const svgBuffer = Buffer.from(processed);
     await fs.ensureDir(path.dirname(outputPath));
 
     const viewBoxMatch = svg.match(/viewBox="([^"]+)"/);
