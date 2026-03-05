@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DiagramProcessor } from '@/cli/processors/diagram-processor.js';
+import { DiagramProcessor, deriveSubModuleArchJSON } from '@/cli/processors/diagram-processor.js';
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import type { ILanguagePlugin } from '@/core/interfaces/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
@@ -37,6 +37,7 @@ vi.mock('@/mermaid/renderer.js', () => ({
   IsomorphicMermaidRenderer: vi.fn().mockImplementation(() => ({
     renderSVG: vi.fn().mockResolvedValue('<svg/>'),
     renderPNG: vi.fn().mockResolvedValue(undefined),
+    convertSVGToPNG: vi.fn().mockResolvedValue(undefined),
   })),
 }));
 
@@ -52,6 +53,91 @@ vi.mock('cli-progress', () => ({
     shades_classic: {},
   },
 }));
+
+describe('deriveSubModuleArchJSON', () => {
+  it('filters entities by filePath prefix', () => {
+    const parent = {
+      version: '1.0',
+      language: 'typescript' as const,
+      timestamp: '',
+      sourceFiles: [],
+      entities: [
+        { id: 'e1', name: 'A', type: 'class' as const, filePath: '/src/core/a.ts' },
+        { id: 'e2', name: 'B', type: 'class' as const, filePath: '/src/shared/b.ts' },
+        { id: 'e3', name: 'C', type: 'class' as const, filePath: '/src/core/c.ts' },
+      ],
+      relations: [
+        { source: 'e1', target: 'e2', type: 'dependency' as const },
+        { source: 'e1', target: 'e3', type: 'dependency' as const },
+        { source: 'e2', target: 'e3', type: 'dependency' as const },
+      ],
+    };
+    const result = deriveSubModuleArchJSON(parent as any, '/src/core');
+    expect(result.entities.map((e: any) => e.id)).toEqual(['e1', 'e3']);
+    expect(result.relations).toHaveLength(1);
+    expect(result.relations[0]).toMatchObject({ source: 'e1', target: 'e3' });
+  });
+
+  it('filters moduleGraph nodes and edges by path prefix', () => {
+    const parent = {
+      version: '1.0',
+      language: 'typescript' as const,
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              { id: 'src/core', name: 'core', type: 'internal' as const, fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
+              { id: 'src/shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+            ],
+            edges: [{ from: 'src/core', to: 'src/shared', strength: 1, importedNames: [] }],
+            cycles: [],
+          },
+        },
+      },
+    };
+    const result = deriveSubModuleArchJSON(parent as any, '/abs/path/src/core');
+    const mg = result.extensions?.tsAnalysis?.moduleGraph;
+    expect(mg?.nodes).toHaveLength(1);
+    expect(mg?.nodes[0].id).toBe('src/core');
+    expect(mg?.edges).toHaveLength(0);
+  });
+
+  it('preserves non-moduleGraph extension fields', () => {
+    const parent = {
+      version: '1.0',
+      language: 'typescript' as const,
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        tsAnalysis: { version: '1.0', moduleGraph: { nodes: [], edges: [], cycles: [] } },
+      },
+    };
+    const result = deriveSubModuleArchJSON(parent as any, '/src');
+    expect(result.version).toBe('1.0');
+    expect(result.extensions?.tsAnalysis).toBeDefined();
+  });
+
+  it('returns empty entities and relations when no filePath matches', () => {
+    const parent = {
+      version: '1.0',
+      language: 'typescript' as const,
+      timestamp: '',
+      sourceFiles: [],
+      entities: [{ id: 'e1', name: 'A', type: 'class' as const, filePath: '/src/core/a.ts' }],
+      relations: [],
+    };
+    const result = deriveSubModuleArchJSON(parent as any, '/src/other');
+    expect(result.entities).toHaveLength(0);
+    expect(result.relations).toHaveLength(0);
+  });
+});
 
 describe('DiagramProcessor', () => {
   // Test data

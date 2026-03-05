@@ -25,6 +25,7 @@ import type { ArchJSON } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
+import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
@@ -78,6 +79,62 @@ export interface DiagramResult {
   };
   /** Error message (if failed) */
   error?: string;
+}
+
+/**
+ * Derive a sub-module ArchJSON from a parent by filtering to entities
+ * whose filePath starts with subPath. Relations where both endpoints
+ * are in the sub-module are retained. moduleGraph is filtered similarly.
+ */
+export function deriveSubModuleArchJSON(parent: ArchJSON, subPath: string): ArchJSON {
+  const normSub = subPath.replace(/\\/g, '/').replace(/\/$/, '');
+
+  // Filter entities
+  const entities = parent.entities.filter((e) => {
+    const fp = ((e as unknown as { filePath?: string }).filePath ?? '').replace(/\\/g, '/');
+    return fp.startsWith(normSub + '/') || fp === normSub;
+  });
+  const ids = new Set(entities.map((e) => e.id));
+
+  // Filter relations
+  const relations = (parent.relations ?? []).filter(
+    (r) => ids.has(r.source) && ids.has(r.target)
+  );
+
+  // Filter moduleGraph if present
+  let extensions = parent.extensions;
+  const mg = parent.extensions?.tsAnalysis?.moduleGraph;
+  if (mg) {
+    // TsModuleNode.id is a relative module path (e.g. "src/core").
+    // Derive the relative prefix from normSub by taking the last 2 path segments
+    // (heuristic for standard src/* layout; works for web-llm case).
+    const parts = normSub.split('/').filter(Boolean);
+    const relPrefix = parts.length >= 2 ? parts.slice(-2).join('/') : parts[parts.length - 1] ?? normSub;
+
+    const filteredNodes = mg.nodes.filter(
+      (n) => n.id === relPrefix || n.id.startsWith(relPrefix + '/')
+    );
+    const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
+    const filteredEdges = mg.edges.filter(
+      (e) => filteredNodeIds.has(e.from) && filteredNodeIds.has(e.to)
+    );
+    const filteredCycles = (mg.cycles ?? []).filter(
+      (c) => c.modules.every((m) => filteredNodeIds.has(m))
+    );
+    extensions = {
+      ...parent.extensions,
+      tsAnalysis: {
+        ...parent.extensions!.tsAnalysis!,
+        moduleGraph: {
+          nodes: filteredNodes,
+          edges: filteredEdges,
+          cycles: filteredCycles,
+        } as import('@/types/extensions.js').TsModuleGraph,
+      },
+    };
+  }
+
+  return { ...parent, entities, relations, extensions };
 }
 
 /**
@@ -143,6 +200,21 @@ export class DiagramProcessor {
       this.parallelProgress = new ParallelProgressReporter(diagramNames);
     }
 
+    // Create worker pool for parallel SVG rendering (only when 2+ diagrams)
+    const diagramCount = this.diagrams.length;
+    const poolSize = diagramCount >= 2 ? Math.min(os.cpus().length, diagramCount, 4) : 0;
+    const poolTheme = typeof this.globalConfig.mermaid?.theme === 'string'
+      ? this.globalConfig.mermaid.theme
+      : (this.globalConfig.mermaid?.theme as any)?.name ?? 'default';
+    const pool = poolSize > 0
+      ? new MermaidRenderWorkerPool(poolSize, {
+          theme: poolTheme,
+          backgroundColor: this.globalConfig.mermaid?.transparentBackground ? 'transparent' : 'white',
+        })
+      : null;
+
+    if (pool) await pool.start();
+
     try {
       // Group diagrams by source hash to enable caching
       const sourceGroups = this.groupDiagramsBySource();
@@ -153,7 +225,7 @@ export class DiagramProcessor {
         async ([sourceKey, diagrams]) => {
           // All diagrams in this group share the same sources
           // Parse once and reuse ArchJSON
-          return await this.processSourceGroup(sourceKey, diagrams);
+          return await this.processSourceGroup(sourceKey, diagrams, pool);
         },
         { concurrency: Math.min(concurrency, sourceGroups.size) }
       );
@@ -168,6 +240,9 @@ export class DiagramProcessor {
 
       return results;
     } finally {
+      // Terminate the render pool first (drains in-flight/queued jobs)
+      await pool?.terminate();
+
       // Stop parallel progress when done
       if (this.parallelProgress) {
         this.parallelProgress.stop();
@@ -208,11 +283,80 @@ export class DiagramProcessor {
     return createHash('sha256').update(normalized).digest('hex').slice(0, 8);
   }
 
+  /** Atomically write to archJsonCache and archJsonPathIndex. */
+  private cacheArchJson(sources: string[], archJson: ArchJSON): void {
+    const key = this.hashSources(sources);
+    this.archJsonCache.set(key, archJson);
+    for (const s of sources) {
+      this.archJsonPathIndex.set(s.replace(/\\/g, '/'), key);
+    }
+  }
+
+  /**
+   * Register a parse promise in archJsonDeferred so concurrent sub-groups can await it.
+   * When the promise resolves, caches the result and removes the deferred entry.
+   */
+  private registerDeferred(
+    sources: string[],
+    parsePromise: Promise<ArchJSON>
+  ): Promise<ArchJSON> {
+    const key = this.hashSources(sources);
+    const withCaching = parsePromise.then((result) => {
+      this.cacheArchJson(sources, result);
+      this.archJsonDeferred.delete(key);
+      return result;
+    });
+    this.archJsonDeferred.set(key, { promise: withCaching, sources });
+    return withCaching;
+  }
+
+  /**
+   * Check whether a completed or in-progress parent parse covers all given sources.
+   * Returns deferred promise (if parent still parsing) or null (if already complete or not found),
+   * plus the matched parent path string.
+   */
+  private findParentCoverage(sources: string[]): {
+    deferred: Promise<ArchJSON> | null;
+    normParentPath: string | null;
+  } {
+    const normSources = sources.map((s) => s.replace(/\\/g, '/'));
+
+    // Check already-completed entries in the path index
+    for (const [indexedPath] of this.archJsonPathIndex) {
+      if (normSources.every((s) => s.startsWith(indexedPath + '/') || s === indexedPath)) {
+        return { deferred: null, normParentPath: indexedPath };
+      }
+    }
+
+    // Check in-progress deferred entries
+    for (const [, { promise, sources: parentSources }] of this.archJsonDeferred) {
+      const normParentSources = parentSources.map((ps) => ps.replace(/\\/g, '/'));
+      const matchedParent = normParentSources.find((ps) =>
+        normSources.every((s) => s.startsWith(ps + '/') || s === ps)
+      );
+      if (matchedParent) {
+        return { deferred: promise, normParentPath: matchedParent };
+      }
+    }
+
+    return { deferred: null, normParentPath: null };
+  }
+
   /**
    * Cache key for parsed ArchJSON results
    * Maps source hash to parsed ArchJSON
    */
   private archJsonCache = new Map<string, ArchJSON>();
+
+  /** Reverse index: normalised source path → archJsonCache key, for parent-path lookup */
+  private archJsonPathIndex = new Map<string, string>();
+
+  /**
+   * Deferred promises for in-progress parses.
+   * Each entry: { promise: resolves with the parsed ArchJSON, sources: the sources being parsed }
+   * Groups that detect a potential parent await this promise before checking the index.
+   */
+  private archJsonDeferred = new Map<string, { promise: Promise<ArchJSON>; sources: string[] }>();
 
   /**
    * Process a group of diagrams that share the same sources
@@ -223,7 +367,8 @@ export class DiagramProcessor {
    */
   private async processSourceGroup(
     sourceKey: string,
-    diagrams: DiagramConfig[]
+    diagrams: DiagramConfig[],
+    pool: MermaidRenderWorkerPool | null = null
   ): Promise<DiagramResult[]> {
     // For single diagram, use original progress reporter
     if (!this.parallelProgress && diagrams.length === 1) {
@@ -234,12 +379,14 @@ export class DiagramProcessor {
       // Route Go diagrams through the Go plugin system
       const firstDiagram = diagrams[0];
       if (firstDiagram.language === 'go') {
-        const rawArchJSON = await this.parseGoProject(firstDiagram);
-        this.archJsonCache.set(sourceKey, rawArchJSON);
+        const rawArchJSON = await this.registerDeferred(
+          firstDiagram.sources,
+          this.parseGoProject(firstDiagram)
+        );
 
         const results = await pMap(
           diagrams,
-          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON),
+          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
           { concurrency: this.globalConfig.concurrency || os.cpus().length }
         );
         return results;
@@ -249,12 +396,14 @@ export class DiagramProcessor {
       // tsAnalysis.moduleGraph is populated and the TsModuleGraph renderer can be used.
       const needsModuleGraph = diagrams.some((d) => d.level === 'package');
       if (needsModuleGraph && (!firstDiagram.language || firstDiagram.language === 'typescript')) {
-        const rawArchJSON = await this.parseTsProject(firstDiagram);
-        this.archJsonCache.set(sourceKey, rawArchJSON);
+        const rawArchJSON = await this.registerDeferred(
+          firstDiagram.sources,
+          this.parseTsProject(firstDiagram)
+        );
 
         const results = await pMap(
           diagrams,
-          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON),
+          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
           { concurrency: this.globalConfig.concurrency || os.cpus().length }
         );
         return results;
@@ -274,20 +423,40 @@ export class DiagramProcessor {
       // Check cache for parsed ArchJSON
       let rawArchJSON = this.archJsonCache.get(sourceKey);
       if (!rawArchJSON) {
-        if (process.env.ArchGuardDebug === 'true') {
-          console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+        // Check whether a parent parse (completed or in-progress) covers these sources
+        const { deferred, normParentPath } = this.findParentCoverage(diagrams[0].sources);
+
+        if (deferred) {
+          // Parent is still parsing; wait for it then derive sub-module ArchJSON
+          const parentArchJSON = await deferred;
+          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0]);
+          if (process.env.ArchGuardDebug === 'true') {
+            console.debug(`🔗 Awaited parent and derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
+          }
+        } else if (normParentPath) {
+          // Parent already complete; derive immediately from cache
+          const parentCacheKey = this.archJsonPathIndex.get(normParentPath)!;
+          const parentArchJSON = this.archJsonCache.get(parentCacheKey)!;
+          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0]);
+          if (process.env.ArchGuardDebug === 'true') {
+            console.debug(`🔗 Derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
+          }
+        } else {
+          if (process.env.ArchGuardDebug === 'true') {
+            console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
+          }
+
+          // Parse files in parallel
+          const parser = new ParallelParser({
+            concurrency: this.globalConfig.concurrency,
+            continueOnError: true,
+            parseCache: this.parseCache,
+          });
+          rawArchJSON = await parser.parseFiles(files);
+
+          // Cache the raw parsed result
+          this.cacheArchJson(diagrams[0].sources, rawArchJSON);
         }
-
-        // Parse files in parallel
-        const parser = new ParallelParser({
-          concurrency: this.globalConfig.concurrency,
-          continueOnError: true,
-          parseCache: this.parseCache,
-        });
-        rawArchJSON = await parser.parseFiles(files);
-
-        // Cache the raw parsed result
-        this.archJsonCache.set(sourceKey, rawArchJSON);
       } else if (process.env.ArchGuardDebug === 'true') {
         console.debug(`📦 Cache hit for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
       }
@@ -296,7 +465,7 @@ export class DiagramProcessor {
       const results = await pMap(
         diagrams,
         async (diagram) => {
-          return await this.processDiagramWithArchJSON(diagram, rawArchJSON);
+          return await this.processDiagramWithArchJSON(diagram, rawArchJSON, pool);
         },
         { concurrency: this.globalConfig.concurrency || os.cpus().length }
       );
@@ -322,7 +491,8 @@ export class DiagramProcessor {
    */
   private async processDiagramWithArchJSON(
     diagram: DiagramConfig,
-    rawArchJSON: ArchJSON
+    rawArchJSON: ArchJSON,
+    pool: MermaidRenderWorkerPool | null = null
   ): Promise<DiagramResult> {
     const startTime = Date.now();
 
@@ -363,7 +533,7 @@ export class DiagramProcessor {
           ? { ...aggregatedJSON, metrics: this.metricsCalculator.calculate(aggregatedJSON, diagram.level) }
           : aggregatedJSON;
 
-      await this.generateOutput(outputJSON, paths, format, diagram.level, diagram);
+      await this.generateOutput(outputJSON, paths, format, diagram.level, diagram, pool);
 
       if (this.parallelProgress) {
         this.parallelProgress.update(diagram.name, 90, 'Finalizing');
@@ -486,7 +656,8 @@ export class DiagramProcessor {
     paths: { paths: { json: string; mmd: string; png: string; svg: string } },
     format: OutputFormat,
     level: DetailLevel,
-    diagram: DiagramConfig
+    diagram: DiagramConfig,
+    pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
     switch (format) {
       case 'json':
@@ -497,10 +668,10 @@ export class DiagramProcessor {
       case 'mermaid':
         // Route Go Atlas diagrams to AtlasRenderer (4-layer flowchart output)
         if (archJSON.extensions?.goAtlas) {
-          await this.generateAtlasOutput(archJSON, paths, diagram);
+          await this.generateAtlasOutput(archJSON, paths, diagram, pool);
         } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
           // Route TypeScript package-level diagrams to TsModuleGraph renderer
-          await this.generateTsModuleGraphOutput(archJSON, paths, diagram);
+          await this.generateTsModuleGraphOutput(archJSON, paths, diagram, pool);
         } else {
           // Generate standard Mermaid classDiagram
           const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
@@ -540,7 +711,8 @@ export class DiagramProcessor {
   private async generateAtlasOutput(
     archJSON: ArchJSON,
     paths: { paths: { json: string; mmd: string; png: string; svg: string } },
-    diagram: DiagramConfig
+    diagram: DiagramConfig,
+    pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
     const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
@@ -595,17 +767,30 @@ export class DiagramProcessor {
       await fs.ensureDir(path.dirname(layerPaths.mmd));
       await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
 
-      const svg = await mermaidRenderer.renderSVG(result.content);
-      await fs.writeFile(layerPaths.svg, svg, 'utf-8');
-
-      try {
-        await mermaidRenderer.renderPNG(result.content, layerPaths.png);
-        console.log(`  ✅ ${layer}: ${layerPaths.mmd}`);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
-        console.log(`  ✅ ${layer}: ${layerPaths.mmd} (no PNG)`);
+      // Render SVG: use worker pool if available, fall back to main thread
+      let svg: string;
+      if (pool) {
+        const poolResult = await pool.render({ mermaidCode: result.content });
+        if (!poolResult.success) {
+          console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
+          svg = await mermaidRenderer.renderSVG(result.content);
+        } else {
+          svg = poolResult.svg!;
+        }
+      } else {
+        svg = await mermaidRenderer.renderSVG(result.content);
       }
+
+      let pngFailed = false;
+      await Promise.all([
+        fs.writeFile(layerPaths.svg, svg, 'utf-8'),
+        mermaidRenderer.convertSVGToPNG(svg, layerPaths.png).catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
+          pngFailed = true;
+        }),
+      ]);
+      console.log(`  ✅ ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
     }
 
     // Save full Atlas JSON alongside the layer diagrams
@@ -630,7 +815,8 @@ export class DiagramProcessor {
   private async generateTsModuleGraphOutput(
     archJSON: ArchJSON,
     paths: { paths: { json: string; mmd: string; png: string; svg: string } },
-    _diagram: DiagramConfig
+    _diagram: DiagramConfig,
+    pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
     const { renderTsModuleGraph } = await import('@/mermaid/ts-module-graph-renderer.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
@@ -654,14 +840,26 @@ export class DiagramProcessor {
     await fs.ensureDir(path.dirname(paths.paths.mmd));
     await fs.writeFile(paths.paths.mmd, mmdContent, 'utf-8');
 
-    const svg = await mermaidRenderer.renderSVG(mmdContent);
-    await fs.writeFile(paths.paths.svg, svg, 'utf-8');
-
-    try {
-      await mermaidRenderer.renderPNG(mmdContent, paths.paths.png);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
+    // Render SVG: use worker pool if available, fall back to main thread
+    let svg: string;
+    if (pool) {
+      const poolResult = await pool.render({ mermaidCode: mmdContent });
+      if (!poolResult.success) {
+        console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
+        svg = await mermaidRenderer.renderSVG(mmdContent);
+      } else {
+        svg = poolResult.svg!;
+      }
+    } else {
+      svg = await mermaidRenderer.renderSVG(mmdContent);
     }
+
+    await Promise.all([
+      fs.writeFile(paths.paths.svg, svg, 'utf-8'),
+      mermaidRenderer.convertSVGToPNG(svg, paths.paths.png).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
+      }),
+    ]);
   }
 }
