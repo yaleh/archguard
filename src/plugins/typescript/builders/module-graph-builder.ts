@@ -68,8 +68,11 @@ export class ModuleGraphBuilder {
             toModule = path.dirname(relTo).replace(/\\/g, '/');
           }
         } else {
-          // Unresolved → node_modules or ambient module
+          // Unresolved import
           const specifier = importDecl.getModuleSpecifierValue();
+          // Relative imports that failed to resolve are broken/missing files — skip them.
+          // They must not create phantom external nodes (e.g. id ".").
+          if (specifier.startsWith('.')) continue;
           // Use the bare package name (first path segment)
           toModule = specifier.startsWith('@')
             ? specifier.split('/').slice(0, 2).join('/')

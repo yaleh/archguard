@@ -453,7 +453,8 @@ export class DiagramProcessor {
           exclude: firstDiagram.exclude || this.globalConfig.exclude,
           skipMissing: false,
         });
-        const diskKey = tsFiles.length > 0 ? await this.archJsonDiskCache.computeKey(tsFiles) : null;
+        const diskCacheEnabled = this.globalConfig.cache?.enabled !== false;
+        const diskKey = diskCacheEnabled && tsFiles.length > 0 ? await this.archJsonDiskCache.computeKey(tsFiles) : null;
         let cachedArchJSON: ArchJSON | null = null;
         if (diskKey) {
           cachedArchJSON = await this.archJsonDiskCache.get(diskKey);
@@ -518,8 +519,9 @@ export class DiagramProcessor {
           }
 
           // Check disk cache before expensive parse
-          const diskKey = await this.archJsonDiskCache.computeKey(files);
-          const diskCached = await this.archJsonDiskCache.get(diskKey);
+          const diskCacheEnabled2 = this.globalConfig.cache?.enabled !== false;
+          const diskKey = diskCacheEnabled2 ? await this.archJsonDiskCache.computeKey(files) : null;
+          const diskCached = diskKey ? await this.archJsonDiskCache.get(diskKey) : null;
           if (diskCached) {
             rawArchJSON = diskCached;
             if (process.env.ArchGuardDebug === 'true') {
@@ -533,7 +535,7 @@ export class DiagramProcessor {
               parseCache: this.parseCache,
             });
             rawArchJSON = await parser.parseFiles(files);
-            await this.archJsonDiskCache.set(diskKey, rawArchJSON);
+            if (diskKey) await this.archJsonDiskCache.set(diskKey, rawArchJSON);
           }
 
           // Cache the raw parsed result

@@ -16,7 +16,9 @@ import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
  * fill (black) instead of the CSS-specified fill:none.
  */
 export function inlineEdgeStyles(svg: string): string {
-  return svg.replace(
+  // 1. Fix edge bezier path fills: flowchart-link paths have no inline fill:none,
+  //    relying on CSS which librsvg (used by sharp) doesn't apply for ID-scoped selectors.
+  let result = svg.replace(
     /(<path\b[^>]*class="[^"]*\bflowchart-link\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
     (_, pre, style, post) => {
       if (/\bfill\s*:\s*none\b/.test(style)) return _;
@@ -24,6 +26,21 @@ export function inlineEdgeStyles(svg: string): string {
       return `${pre}${trimmed ? trimmed + ';' : ''}fill:none;${post}`;
     }
   );
+
+  // 2. Fix edge-label background rects: <rect class="background" style=""> have no
+  //    inline fill, so librsvg renders them black instead of the CSS-intended transparent.
+  //    Only patch rects that have an explicit (possibly empty) style attribute — rects
+  //    without a style attribute are dimensionless placeholders and need no change.
+  result = result.replace(
+    /(<rect\b[^>]*class="[^"]*\bbackground\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+    (_, pre, style, post) => {
+      if (/\bfill\s*:/.test(style)) return _;
+      const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+      return `${pre}${trimmed ? trimmed + ';' : ''}fill:none;${post}`;
+    }
+  );
+
+  return result;
 }
 
 /**
