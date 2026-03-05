@@ -193,7 +193,7 @@ ArchGuard supports multiple programming languages through its plugin system:
 
 ### Adding Language Support
 
-To add a new language, create a plugin implementing `ILanguagePlugin`. See [Plugin Development Guide](docs/plugin-development-guide.md).
+To add a new language, create a plugin implementing `ILanguagePlugin`. See [Plugin Development Guide](docs/dev-guide/plugin-development-guide.md).
 
 ### Using Language Plugins
 
@@ -215,7 +215,7 @@ ArchGuard uses a plugin registry to manage language support. Plugins can be:
 - **Built-in**: TypeScript, Go, Java, Python plugins included
 - **External**: Load third-party plugins via configuration
 
-See [Plugin Registry Documentation](docs/plugin-registry.md) for details.
+See [Plugin Registry Documentation](docs/user-guide/plugin-registry.md) for details.
 
 ## Architecture Overview
 
@@ -319,6 +319,6 @@ progress.succeed('Done');
 
 ## Documentation
 
-- `docs/architecture.md` - System architecture
-- `docs/specs.md` - Requirements and specifications
-- `docs/MIGRATION-v2.0.md` - Migration guide from PlantUML to Mermaid
+- `docs/dev-guide/architecture.md` - System architecture
+- `docs/dev-guide/specs.md` - Requirements and specifications
+- `docs/user-guide/migration-v2.0.md` - Migration guide from PlantUML to Mermaid

@@ -667,7 +667,7 @@ relations: [
 ## 相关决策
 
 - [ADR-001: GoAtlasPlugin 组合模式](./001-goatlas-plugin-composition.md)
-- [Proposal 16: Go Architecture Atlas v5.1](../proposals/16-go-architecture-atlas.md)
+- [Proposal 16: Go Architecture Atlas v5.1](../archive/refactoring/proposals/16-go-architecture-atlas.md)
 
 ---
 

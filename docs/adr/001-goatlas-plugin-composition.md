@@ -398,7 +398,7 @@ class GoAtlasPlugin implements ILanguagePlugin { /* ... */ }
 ## 相关决策
 
 - [ADR-002: ArchJSON extensions 设计](./002-archjson-extensions.md)
-- [Proposal 16: Go Architecture Atlas v5.1](../proposals/16-go-architecture-atlas.md)
+- [Proposal 16: Go Architecture Atlas v5.1](../archive/refactoring/proposals/16-go-architecture-atlas.md)
 
 ---
 
