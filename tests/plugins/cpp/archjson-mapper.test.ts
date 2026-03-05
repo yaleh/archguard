@@ -75,5 +75,142 @@ describe('ArchJsonMapper', () => {
       const relations = mapper.mapRelations([derived], all);
       expect(relations[0].id).toMatch(/inheritance/);
     });
+
+    it('value-type field → composition relation', () => {
+      const target = makeEntity({ name: 'Engine', qualifiedName: 'Engine' });
+      const src = makeEntity({
+        name: 'Car',
+        qualifiedName: 'Car',
+        fields: [{ name: 'engine', fieldType: 'Engine', visibility: 'private', isStatic: false }],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(1);
+      expect(relations[0].type).toBe('composition');
+    });
+
+    it('unique_ptr field → composition relation', () => {
+      const target = makeEntity({ name: 'Widget', qualifiedName: 'Widget' });
+      const src = makeEntity({
+        name: 'Window',
+        qualifiedName: 'Window',
+        fields: [{ name: 'w', fieldType: 'std::unique_ptr<Widget>', visibility: 'private', isStatic: false }],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(1);
+      expect(relations[0].type).toBe('composition');
+    });
+
+    it('raw pointer field → aggregation relation', () => {
+      const target = makeEntity({ name: 'Context', qualifiedName: 'Context' });
+      const src = makeEntity({
+        name: 'Renderer',
+        qualifiedName: 'Renderer',
+        fields: [{ name: 'ctx', fieldType: 'Context*', visibility: 'private', isStatic: false }],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(1);
+      expect(relations[0].type).toBe('aggregation');
+    });
+
+    it('method param → dependency relation', () => {
+      const target = makeEntity({ name: 'Config', qualifiedName: 'Config' });
+      const src = makeEntity({
+        name: 'Loader',
+        qualifiedName: 'Loader',
+        methods: [{
+          name: 'load',
+          returnType: 'void',
+          parameters: [{ name: 'cfg', type: 'Config' }],
+          visibility: 'public',
+          isVirtual: false,
+          isStatic: false,
+          isPure: false,
+          isConst: false,
+          sourceFile: 'src/loader.hpp',
+          startLine: 1,
+        }],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(1);
+      expect(relations[0].type).toBe('dependency');
+    });
+
+    it('method return type → dependency relation', () => {
+      const target = makeEntity({ name: 'Result', qualifiedName: 'Result' });
+      const src = makeEntity({
+        name: 'Factory',
+        qualifiedName: 'Factory',
+        methods: [{
+          name: 'create',
+          returnType: 'Result',
+          parameters: [],
+          visibility: 'public',
+          isVirtual: false,
+          isStatic: false,
+          isPure: false,
+          isConst: false,
+          sourceFile: 'src/factory.hpp',
+          startLine: 1,
+        }],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(1);
+      expect(relations[0].type).toBe('dependency');
+    });
+
+    it('deduplicates identical relations', () => {
+      const target = makeEntity({ name: 'Dep', qualifiedName: 'Dep' });
+      const src = makeEntity({
+        name: 'Owner',
+        qualifiedName: 'Owner',
+        fields: [
+          { name: 'a', fieldType: 'Dep', visibility: 'private', isStatic: false },
+          { name: 'b', fieldType: 'Dep', visibility: 'private', isStatic: false },
+        ],
+      });
+      const all = mapper.mapEntities([target, src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      // Both fields produce composition:Owner→Dep but should be deduplicated
+      const compRels = relations.filter(r => r.type === 'composition');
+      expect(compRels).toHaveLength(1);
+    });
+
+    it('no self-relations', () => {
+      const src = makeEntity({
+        name: 'Node',
+        qualifiedName: 'Node',
+        fields: [{ name: 'next', fieldType: 'Node*', visibility: 'public', isStatic: false }],
+      });
+      const all = mapper.mapEntities([src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations.every(r => r.from !== r.to)).toBe(true);
+    });
+
+    it('unresolved field type → relation omitted', () => {
+      const src = makeEntity({
+        name: 'Foo',
+        qualifiedName: 'Foo',
+        fields: [{ name: 'x', fieldType: 'UnknownType', visibility: 'private', isStatic: false }],
+      });
+      const all = mapper.mapEntities([src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(0);
+    });
+
+    it('primitive field type → no relation', () => {
+      const src = makeEntity({
+        name: 'Foo',
+        qualifiedName: 'Foo',
+        fields: [{ name: 'count', fieldType: 'int', visibility: 'private', isStatic: false }],
+      });
+      const all = mapper.mapEntities([src], [], [], '');
+      const relations = mapper.mapRelations([src], all);
+      expect(relations).toHaveLength(0);
+    });
   });
 });

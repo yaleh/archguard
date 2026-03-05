@@ -272,7 +272,7 @@ export class ValidatedMermaidGenerator {
       for (const relation of this.archJson.relations) {
         if (
           (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          !this.isNoisyTarget(relation.target)
+          (knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target) || !this.isNoisyTarget(relation.target))
         ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
@@ -288,7 +288,7 @@ export class ValidatedMermaidGenerator {
       for (const relation of this.archJson.relations) {
         if (
           (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          !this.isNoisyTarget(relation.target)
+          (knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target) || !this.isNoisyTarget(relation.target))
         ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }

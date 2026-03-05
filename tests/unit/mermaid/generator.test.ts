@@ -944,6 +944,52 @@ describe('ValidatedMermaidGenerator', () => {
       expect(result).toContain('<|--');
     });
 
+    it('should NOT filter known entity IDs that match namespace.class pattern (C++ style)', () => {
+      // C++ entity IDs like "tests.test_case" match the /^[a-z]\w*\./ noisy-filter regex,
+      // but they are real entities and must not be suppressed.
+      const archJsonCpp: ArchJSON = {
+        ...archJson,
+        entities: [
+          ...archJson.entities,
+          {
+            id: 'tests.child_class',
+            name: 'child_class',
+            type: 'class' as const,
+            visibility: 'public' as const,
+            members: [],
+            sourceLocation: { file: 'tests/child.cpp', startLine: 1, endLine: 5 },
+          },
+          {
+            id: 'tests.base_class',
+            name: 'base_class',
+            type: 'class' as const,
+            visibility: 'public' as const,
+            members: [],
+            sourceLocation: { file: 'tests/base.cpp', startLine: 1, endLine: 5 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-cpp',
+            type: 'inheritance',
+            source: 'tests.child_class',
+            target: 'tests.base_class',
+            inferenceSource: 'explicit',
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonCpp, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+      // The inheritance relation must appear in the diagram
+      expect(result).toContain('<|--');
+      expect(result).toContain('base_class');
+      expect(result).toContain('child_class');
+    });
+
     it('should filter arrow function type targets', () => {
       const archJsonWithNoisy: ArchJSON = {
         ...archJson,

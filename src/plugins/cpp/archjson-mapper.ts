@@ -2,6 +2,7 @@ import path from 'path';
 import { generateEntityId, createRelation } from '@/plugins/shared/mapper-utils.js';
 import type { Entity, EntityType, Member, MemberType, Relation } from '@/types/index.js';
 import type { MergedCppEntity, RawEnum, RawFunction, RawMethod, RawField } from './types.js';
+import { CppTypeExtractor } from './cpp-type-extractor.js';
 
 export class ArchJsonMapper {
   mapEntities(
@@ -76,19 +77,64 @@ export class ArchJsonMapper {
       return [qn, e.id];
     }));
 
+    const extractor = new CppTypeExtractor();
+    const seen = new Set<string>();
     const relations: Relation[] = [];
+
+    const resolveType = (typeName: string): string | undefined =>
+      entityByQualifiedName.get(typeName) ?? entityByName.get(typeName);
+
+    const addRelation = (
+      type: 'inheritance' | 'composition' | 'aggregation' | 'dependency',
+      srcId: string,
+      targetId: string,
+    ): void => {
+      if (srcId === targetId) return;
+      const key = `${type}:${srcId}:${targetId}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const rel = createRelation(type, srcId, targetId);
+      relations.push({ ...rel, inferenceSource: 'explicit' as const });
+    };
 
     for (const cls of classes) {
       const ns = this.resolveNamespace(cls, '');
       const srcId = generateEntityId(ns, cls.qualifiedName || cls.name);
 
+      // Inheritance
       for (const base of cls.bases) {
-        // Try to resolve base by qualifiedName, then by name
-        const targetId = entityByQualifiedName.get(base.name) ?? entityByName.get(base.name);
-        if (!targetId) continue; // unresolved → skip
+        const targetId = resolveType(base.name);
+        if (!targetId) continue;
+        addRelation('inheritance', srcId, targetId);
+      }
 
-        const rel = createRelation('inheritance', srcId, targetId);
-        relations.push({ ...rel, inferenceSource: 'explicit' as const });
+      // Composition / Aggregation from fields
+      for (const field of cls.fields) {
+        const types = extractor.extractTypes(field.fieldType);
+        for (const typeName of types) {
+          const targetId = resolveType(typeName);
+          if (!targetId) continue;
+          const relType = extractor.classifyFieldRelation(field.fieldType);
+          addRelation(relType, srcId, targetId);
+        }
+      }
+
+      // Dependency from method parameters and return types
+      for (const method of cls.methods) {
+        for (const param of method.parameters) {
+          const types = extractor.extractTypes(param.type);
+          for (const typeName of types) {
+            const targetId = resolveType(typeName);
+            if (!targetId) continue;
+            addRelation('dependency', srcId, targetId);
+          }
+        }
+        const retTypes = extractor.extractTypes(method.returnType);
+        for (const typeName of retTypes) {
+          const targetId = resolveType(typeName);
+          if (!targetId) continue;
+          addRelation('dependency', srcId, targetId);
+        }
       }
     }
 
