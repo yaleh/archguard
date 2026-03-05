@@ -6,8 +6,9 @@ This directory contains Architecture Decision Records for the ArchGuard project.
 
 | ID | Title | Status | Date | Related |
 |----|-------|--------|------|---------|
-| [ADR-001](./001-goatlas-plugin-composition.md) | GoAtlasPlugin 使用组合模式 | 已采纳 | 2026-02-24 | [Proposal 16](../proposals/16-go-architecture-atlas.md), [Plan 16](../plans/16-go-architecture-atlas-implementation-plan.md) |
-| [ADR-002](./002-archjson-extensions.md) | ArchJSON extensions 字段设计 | 已采纳 | 2026-02-24 | [Proposal 16](../proposals/16-go-architecture-atlas.md), [Plan 16](../plans/16-go-architecture-atlas-implementation-plan.md) |
+| [ADR-001](./001-goatlas-plugin-composition.md) | GoAtlasPlugin 使用组合模式 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
+| [ADR-002](./002-archjson-extensions.md) | ArchJSON extensions 字段设计 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
+| [ADR-003](./003-librsvg-css-inline-patching.md) | Inline SVG Style Patching for librsvg Compatibility | Accepted | 2026-03-05 | `src/mermaid/renderer.ts`, `tests/unit/mermaid/edge-style-inline.test.ts` |
 
 ## How to Read ADRs
 
@@ -103,9 +104,9 @@ Proposed → Accepted → Implemented → Deprecated → Superseded
 ## Related Decisions
 
 - [ADR-XXX](./xxx-file.md)
-- [Proposal XX](../proposals/xx-file.md)
+- [Proposal XX](../archive/refactoring/proposals/xx-file.md)
 ```
 
 ---
 
-**Last Updated**: 2026-02-24
+**Last Updated**: 2026-03-05

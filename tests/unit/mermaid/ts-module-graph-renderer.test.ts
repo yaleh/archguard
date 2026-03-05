@@ -853,3 +853,90 @@ describe('renderTsModuleGraph – legend subgraph', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Option C — Multi-level subgraph hierarchy fix
+// ---------------------------------------------------------------------------
+describe('renderTsModuleGraph – Option C multi-level grouping', () => {
+  it('depth-2 uniform paths grouped under virtual parent', () => {
+    // All three nodes share the "examples" prefix with no real "examples" node.
+    // Expected: a single virtual "examples" subgraph containing all three.
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('examples/cache-usage/src'),
+        makeNode('examples/chrome-extension/src'),
+        makeNode('examples/embeddings/src'),
+      ],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    expect(output).toMatch(/subgraph examples_group\["examples"\]/);
+    const lines = output.split('\n');
+    const sgStart = lines.findIndex((l) => l.match(/subgraph examples_group/));
+    const sgEnd = lines.findIndex((l, i) => i > sgStart && l.trim() === 'end');
+    const inner = lines.slice(sgStart + 1, sgEnd).join('\n');
+    expect(inner).toContain('examples/cache-usage/src');
+    expect(inner).toContain('examples/chrome-extension/src');
+    expect(inner).toContain('examples/embeddings/src');
+  });
+
+  it('orphan deep path nested under real ancestor', () => {
+    // "tests" is a real node; "tests/scripts/sanity_checks" should be nested inside it.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('tests'), makeNode('tests/scripts/sanity_checks')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // tests_group subgraph must exist
+    expect(output).toMatch(/subgraph tests_group\["tests"\]/);
+    const lines = output.split('\n');
+    const sgStart = lines.findIndex((l) => l.match(/subgraph tests_group/));
+    const sgEnd = lines.findIndex((l, i) => i > sgStart && l.trim() === 'end');
+    const inner = lines.slice(sgStart + 1, sgEnd).join('\n');
+    expect(inner).toContain('tests/scripts/sanity_checks');
+  });
+
+  it('mixed-depth siblings under common virtual parent', () => {
+    // a/b/c and a/b/d share virtual a/b; a/e is a sibling under virtual a.
+    // Expected: virtual "a" containing virtual "a/b" (with c,d) AND leaf "a/e".
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('a/b/c'), makeNode('a/b/d'), makeNode('a/e')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // Virtual "a" subgraph must exist
+    expect(output).toMatch(/subgraph a_group\["a"\]/);
+    // Virtual "a/b" subgraph must exist (2+ siblings share that prefix)
+    expect(output).toMatch(/subgraph a_b_group\["a\/b"\]/);
+    // All three nodes must appear in the output
+    expect(output).toContain('a/b/c');
+    expect(output).toContain('a/b/d');
+    expect(output).toContain('a/e');
+    // "a/e" must appear AFTER a_group opening and before the legend
+    const lines = output.split('\n');
+    const aStart = lines.findIndex((l) => l.match(/subgraph a_group/));
+    const legendStart = lines.findIndex((l) => l.match(/subgraph legend/));
+    const aInner = lines.slice(aStart + 1, legendStart).join('\n');
+    expect(aInner).toContain('a/e');
+    expect(aInner).toContain('a/b/c');
+    expect(aInner).toContain('a/b/d');
+  });
+
+  it('regression: lone single-chain path stays flat (no wrapper subgraph)', () => {
+    // A single node with a deep path should not get spurious virtual wrappers.
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('utils/vram_requirements/src')],
+      edges: [],
+      cycles: [],
+    };
+    const output = renderTsModuleGraph(graph);
+    // No content subgraphs before the legend
+    const legendIdx = output.indexOf('\n  subgraph legend[');
+    expect(legendIdx).toBeGreaterThan(0);
+    const beforeLegend = output.slice(0, legendIdx);
+    expect(beforeLegend).not.toContain('subgraph');
+  });
+});

@@ -205,7 +205,7 @@ gopls is optional but improves interface detection accuracy from ~75% to ~95%:
 go install golang.org/x/tools/gopls@latest
 ```
 
-See [Go Plugin Usage Guide](docs/golang-plugin-usage.md) for details.
+See [Go Plugin Usage Guide](docs/user-guide/golang-plugin-usage.md) for details.
 
 ## Configuration
 
@@ -495,7 +495,7 @@ node dist/cli/index.js analyze -s ./src/cli -l method -n cli-module
 
 ## Troubleshooting
 
-See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
+See [TROUBLESHOOTING.md](docs/user-guide/troubleshooting.md) for common issues.
 
 Quick fixes:
 
@@ -506,12 +506,12 @@ Quick fixes:
 
 ## Documentation
 
-- [CLI Usage Guide](docs/CLI-USAGE.md)
-- [Configuration Reference](docs/CONFIGURATION.md)
-- [Go Plugin Usage Guide](docs/golang-plugin-usage.md)
-- [Plugin Development Guide](docs/plugin-development-guide.md)
-- [Plugin Registry](docs/plugin-registry.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [CLI Usage Guide](docs/user-guide/cli-usage.md)
+- [Configuration Reference](docs/user-guide/configuration.md)
+- [Go Plugin Usage Guide](docs/user-guide/golang-plugin-usage.md)
+- [Plugin Development Guide](docs/dev-guide/plugin-development-guide.md)
+- [Plugin Registry](docs/user-guide/plugin-registry.md)
+- [Troubleshooting](docs/user-guide/troubleshooting.md)
 
 ## Contributing
 
@@ -521,7 +521,7 @@ This project follows:
 - **Plugin System**: Add new languages via `ILanguagePlugin`
 - **Clean Code**: Readable, maintainable code
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details.
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for documentation management details.
 
 ## License
 

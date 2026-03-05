@@ -75,47 +75,14 @@ function nodeTreeId(node: TreeNode): string {
 }
 
 /**
- * After the initial forest is built, group root nodes that share a common
- * path prefix (when that prefix itself is NOT a real node) into a synthetic
- * virtual parent subgraph.  Only groups of 2+ nodes are merged; a lone node
- * is left ungrouped.  Applied recursively until stable.
- */
-function applyVirtualGrouping(roots: TreeNode[], realNodeIds: Set<string>): TreeNode[] {
-  const prefixGroups = new Map<string, TreeNode[]>();
-  const ungrouped: TreeNode[] = [];
-
-  for (const root of roots) {
-    const id = nodeTreeId(root);
-    const parent = parentPath(id);
-    if (parent !== null && !realNodeIds.has(parent)) {
-      const list = prefixGroups.get(parent) ?? [];
-      list.push(root);
-      prefixGroups.set(parent, list);
-    } else {
-      ungrouped.push(root);
-    }
-  }
-
-  let changed = false;
-  const result: TreeNode[] = [...ungrouped];
-  for (const [parentId, children] of prefixGroups) {
-    if (children.length >= 2) {
-      result.push({ moduleNode: null, virtualId: parentId, children });
-      changed = true;
-    } else {
-      result.push(...children);
-    }
-  }
-
-  // Re-apply until no more groupings can be formed (handles multi-level gaps)
-  return changed ? applyVirtualGrouping(result, realNodeIds) : result;
-}
-
-/**
- * Build a forest (list of root TreeNodes) from the internal nodes,
- * honouring only parent-child relationships where the parent is also
- * present in the node set.  After tree construction, virtual parent nodes
- * are injected for orphan sibling groups.
+ * Build a forest from internal nodes using a path-segment trie.
+ *
+ * Steps:
+ *  1. Register every node ID + all its ancestor segments into a trie
+ *     (Map<parentId|null → Set<childId>>).
+ *  2. Recursively build TreeNodes from trie root (null).
+ *     - Real nodes: add trie-children as node.children (natural ancestor attachment).
+ *     - Virtual nodes: path-compress if 1 child; create subgraph wrapper if 2+ children.
  */
 function buildForest(internalNodes: TsModuleNode[]): TreeNode[] {
   const realNodeIds = new Set(internalNodes.map((n) => n.id));
@@ -124,17 +91,40 @@ function buildForest(internalNodes: TsModuleNode[]): TreeNode[] {
     byId.set(n.id, { moduleNode: n, children: [] });
   }
 
-  const roots: TreeNode[] = [];
-  for (const n of internalNodes) {
-    const parent = parentPath(n.id);
-    if (parent !== null && byId.has(parent)) {
-      byId.get(parent)!.children.push(byId.get(n.id)!);
-    } else {
-      roots.push(byId.get(n.id)!);
+  // Build trie: parent path (null = root) → set of direct child path segments
+  const trieChildren = new Map<string | null, Set<string>>();
+  for (const id of realNodeIds) {
+    let cur: string = id;
+    let par: string | null = parentPath(cur);
+    while (true) {
+      if (!trieChildren.has(par)) trieChildren.set(par, new Set());
+      trieChildren.get(par)!.add(cur);
+      if (par === null) break;
+      cur = par;
+      par = parentPath(cur);
     }
   }
 
-  return applyVirtualGrouping(roots, realNodeIds);
+  function buildSubtree(parentId: string | null): TreeNode[] {
+    const children = trieChildren.get(parentId);
+    if (!children) return [];
+    const result: TreeNode[] = [];
+    for (const childId of children) {
+      if (realNodeIds.has(childId)) {
+        const treeNode = byId.get(childId)!;
+        for (const c of buildSubtree(childId)) treeNode.children.push(c);
+        result.push(treeNode);
+      } else {
+        const sub = buildSubtree(childId);
+        if (sub.length === 0) { /* no real descendants — skip */ }
+        else if (sub.length === 1) result.push(sub[0]); // path compression
+        else result.push({ moduleNode: null, virtualId: childId, children: sub });
+      }
+    }
+    return result;
+  }
+
+  return buildSubtree(null);
 }
 
 /**

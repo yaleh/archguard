@@ -204,6 +204,61 @@ export class C {}`
     });
   });
 
+  describe('unresolved relative imports', () => {
+    it('does not create a phantom external node for unresolved relative imports', () => {
+      // Scenario: a file imports from './missing-file' which does not exist in the project.
+      // ts-morph cannot resolve it → previously fell into the "unresolved" branch and
+      // created an external node with id "." (first segment of the specifier).
+      const project = makeProject();
+      project.createSourceFile(
+        '/root/src/utils/foo.ts',
+        `import config from './app-config';` // app-config.ts does not exist
+      );
+
+      const builder = new ModuleGraphBuilder();
+      const graph = builder.build('/root', project.getSourceFiles(), []);
+
+      // Must NOT create a node with id "." or any id starting with "."
+      const dotNode = graph.nodes.find((n) => n.id === '.' || n.id.startsWith('.'));
+      expect(dotNode).toBeUndefined();
+
+      // No edge should point to "."
+      const dotEdge = graph.edges.find((e) => e.to === '.' || e.to.startsWith('.'));
+      expect(dotEdge).toBeUndefined();
+    });
+
+    it('does not create a phantom node for unresolved bare-dot specifier', () => {
+      // Scenario: import from '.' — a relative self-reference that fails to resolve.
+      const project = makeProject();
+      project.createSourceFile(
+        '/root/src/example/index.ts',
+        `import { foo } from '.';` // resolves to nothing in this in-memory project
+      );
+
+      const builder = new ModuleGraphBuilder();
+      const graph = builder.build('/root', project.getSourceFiles(), []);
+
+      const dotNode = graph.nodes.find((n) => n.id === '.');
+      expect(dotNode).toBeUndefined();
+    });
+
+    it('still creates node_modules nodes for unresolved bare package names', () => {
+      // Real external packages (no leading dot) must still produce external nodes.
+      const project = makeProject();
+      project.createSourceFile(
+        '/root/src/cli/index.ts',
+        `import express from 'express';`
+      );
+
+      const builder = new ModuleGraphBuilder();
+      const graph = builder.build('/root', project.getSourceFiles(), []);
+
+      const extNode = graph.nodes.find((n) => n.id === 'express');
+      expect(extNode).toBeDefined();
+      expect(extNode!.type).toBe('node_modules');
+    });
+  });
+
   describe('module ID assignment', () => {
     it('assigns root-level files to root module id', () => {
       const project = makeProject();

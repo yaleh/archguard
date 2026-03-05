@@ -1,0 +1,80 @@
+import { describe, it, expect } from 'vitest';
+import { inlineEdgeStyles } from '@/mermaid/renderer.js';
+
+describe('inlineEdgeStyles', () => {
+  it('adds fill:none to empty style on flowchart-link path', () => {
+    const svg = `<path class="flowchart-link" style=";"></path>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toContain('style="fill:none;"');
+  });
+
+  it('preserves existing style values when adding fill:none', () => {
+    const svg = `<path class="flowchart-link" style="stroke-width:2;"></path>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toContain('style="stroke-width:2;fill:none;"');
+  });
+
+  it('does not modify paths without flowchart-link class', () => {
+    const svg = `<path class="other-class" style="stroke-width:2;"></path>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toBe(svg);
+  });
+
+  it('is idempotent when fill:none is already present', () => {
+    const svg = `<path class="flowchart-link" style="fill:none;stroke-width:2;"></path>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toBe(svg);
+    expect((result.match(/fill:none/g) ?? []).length).toBe(1);
+  });
+
+  it('works with realistic Mermaid SVG snippet', () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg">
+  <style>#graph .flowchart-link { fill: none; stroke: #333; }</style>
+  <g id="graph">
+    <path class="edge-thickness-normal edge-pattern-solid flowchart-link" style=";fill:none" d="M100,100 L200,200"></path>
+    <rect class="node-shape" style="fill:#fff;" width="100" height="50"></rect>
+  </g>
+</svg>`;
+    const result = inlineEdgeStyles(svg);
+    // The edge path should have fill:none inline
+    expect(result).toMatch(/<path[^>]*flowchart-link[^>]*style="[^"]*fill:none/);
+    // The rect should be unchanged
+    expect(result).toContain('<rect class="node-shape" style="fill:#fff;"');
+  });
+});
+
+describe('inlineEdgeStyles – background rect patching', () => {
+  it('adds fill:none to background rect with empty style', () => {
+    // Edge label background rects from Mermaid SVG have class="background" style=""
+    // Without CSS applied (librsvg), they render as solid black.
+    const svg = `<rect class="background" style="" x="-2" y="-18" width="46" height="26">`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toContain('style="fill:none;"');
+  });
+
+  it('does not modify background rect that already has a fill', () => {
+    const svg = `<rect class="background" style="fill:#dafbe1;" x="-2" y="-18" width="46" height="26">`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toBe(svg);
+  });
+
+  it('patches both flowchart-link paths and background rects in the same SVG', () => {
+    const svg = `<svg>
+  <path class="flowchart-link" style=";" d="M0,0 L100,100">
+  <g class="edgeLabel">
+    <rect class="background" style="" x="-2" y="-18" width="46" height="26">
+  </g>
+</svg>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toMatch(/<path[^>]*flowchart-link[^>]*style="fill:none;"/);
+    expect(result).toMatch(/<rect[^>]*background[^>]*style="fill:none;"/);
+  });
+
+  it('does not add fill to background rects without style attribute', () => {
+    // A background rect with no style attr at all should not be modified
+    // (these are typically dimensionless placeholders)
+    const svg = `<rect class="background">`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toBe(svg);
+  });
+});
