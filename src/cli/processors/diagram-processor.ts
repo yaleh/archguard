@@ -123,6 +123,10 @@ export function deriveSubModuleArchJSON(
     if (!fp && e.name && e.id.endsWith('.' + e.name)) {
       fp = e.id.slice(0, e.id.length - e.name.length - 1).replace(/\\/g, '/');
     }
+    // Last-resort fallback for C++ entities (sourceLocation.file is absolute)
+    if (!fp && e.sourceLocation?.file) {
+      fp = e.sourceLocation.file.replace(/\\/g, '/');
+    }
     if (!fp) return false;
     // Absolute path match (original behavior)
     if (fp.startsWith(normSub + '/') || fp === normSub) return true;
@@ -443,12 +447,35 @@ export class DiagramProcessor {
         return results;
       }
 
-      // Route C++ diagrams through the CppPlugin
+      // Route C++ diagrams through the CppPlugin (check parent-cache first)
       if (firstDiagram.language === 'cpp') {
-        const rawArchJSON = await this.registerDeferred(
-          firstDiagram.sources,
-          this.parseCppProject(firstDiagram)
-        );
+        const { deferred, normParentPath } = this.findParentCoverage(firstDiagram.sources);
+
+        let rawArchJSON: ArchJSON;
+        if (deferred) {
+          // Root parse in-progress: await it, then derive the sub-module view
+          const parentArchJSON = await deferred;
+          rawArchJSON = deriveSubModuleArchJSON(
+            parentArchJSON,
+            firstDiagram.sources[0],
+            normParentPath ?? undefined,
+          );
+        } else if (normParentPath) {
+          // Root parse already complete: derive from cache immediately
+          const parentCacheKey = this.archJsonPathIndex.get(normParentPath)!;
+          const parentArchJSON = this.archJsonCache.get(parentCacheKey)!;
+          rawArchJSON = deriveSubModuleArchJSON(
+            parentArchJSON,
+            firstDiagram.sources[0],
+            normParentPath,
+          );
+        } else {
+          // No parent found: this IS the root parse — parse in full and register deferred
+          rawArchJSON = await this.registerDeferred(
+            firstDiagram.sources,
+            this.parseCppProject(firstDiagram),
+          );
+        }
 
         const results = await pMap(
           diagrams,
