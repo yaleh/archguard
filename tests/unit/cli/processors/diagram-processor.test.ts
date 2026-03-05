@@ -18,6 +18,32 @@ vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
+
+// Mock ArchJsonDiskCache so disk I/O is skipped in unit tests
+vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
+  ArchJsonDiskCache: vi.fn().mockImplementation(() => ({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    computeKey: vi.fn().mockResolvedValue('mock-disk-cache-key'),
+    clear: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+// Mock render-worker-pool so DiagramProcessor can be instantiated without workers
+vi.mock('@/mermaid/render-worker-pool.js', () => ({
+  MermaidRenderWorkerPool: vi.fn().mockImplementation(() => ({
+    start: vi.fn().mockResolvedValue(undefined),
+    render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 100 100"/>' }),
+    terminate: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+// Mock AtlasRenderer for Go Atlas diagram tests
+vi.mock('@/plugins/golang/atlas/renderers/atlas-renderer.js', () => ({
+  AtlasRenderer: vi.fn().mockImplementation(() => ({
+    render: vi.fn().mockResolvedValue({ content: 'flowchart LR\n  A --> B', format: 'mermaid' }),
+  })),
+}));
 vi.mock('fs-extra', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
@@ -136,6 +162,41 @@ describe('deriveSubModuleArchJSON', () => {
     const result = deriveSubModuleArchJSON(parent as any, '/src/other');
     expect(result.entities).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
+  });
+});
+
+describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (workspaceRoot fix)', () => {
+  it('matches entities when filePath is relative and subPath is absolute with workspaceRoot', () => {
+    const parent: ArchJSON = {
+      version: '1.0', language: 'typescript', timestamp: '', sourceFiles: [],
+      entities: [
+        { id: 'e1', name: 'Error', type: 'class', filePath: 'shared/error.ts' },
+        { id: 'e2', name: 'Config', type: 'class', filePath: 'shared/config.ts' },
+        { id: 'e3', name: 'Engine', type: 'class', filePath: 'engine.ts' },
+      ],
+      relations: [
+        { source: 'e1', target: 'e3', type: 'dependency' },
+        { source: 'e1', target: 'e2', type: 'dependency' },
+      ],
+    };
+    // subPath is absolute, filePaths are relative to workspaceRoot='/abs/src'
+    const result = deriveSubModuleArchJSON(parent, '/abs/src/shared', '/abs/src');
+    expect(result.entities.map(e => e.id)).toEqual(['e1', 'e2']);
+    expect(result.relations).toHaveLength(1);
+    expect(result.relations[0]).toMatchObject({ source: 'e1', target: 'e2' });
+  });
+
+  it('still works without workspaceRoot when filePath is already absolute', () => {
+    const parent: ArchJSON = {
+      version: '1.0', language: 'typescript', timestamp: '', sourceFiles: [],
+      entities: [
+        { id: 'e1', name: 'A', type: 'class', filePath: '/abs/src/shared/a.ts' },
+        { id: 'e2', name: 'B', type: 'class', filePath: '/abs/src/b.ts' },
+      ],
+      relations: [],
+    };
+    const result = deriveSubModuleArchJSON(parent, '/abs/src/shared');
+    expect(result.entities.map(e => e.id)).toEqual(['e1']);
   });
 });
 
@@ -1155,5 +1216,215 @@ describe('DiagramProcessor', () => {
       expect(results[0].stats?.entities).toBe(archJSONWithGraph.entities.length);
       expect(results[0].stats?.relations).toBe(archJSONWithGraph.relations.length);
     });
+  });
+});
+
+describe('Atlas layer parallel rendering', () => {
+  /**
+   * Helper: create a minimal GoAtlas ArchJSON with all 4 layers present.
+   */
+  const createGoAtlasArchJSON = (): ArchJSON => ({
+    version: '1.0',
+    language: 'go' as const,
+    timestamp: new Date().toISOString(),
+    sourceFiles: ['main.go'],
+    entities: [],
+    relations: [],
+    extensions: {
+      goAtlas: {
+        version: '2.0',
+        layers: {
+          package: { nodes: [], edges: [] } as any,
+          capability: { nodes: [], edges: [] } as any,
+          goroutine: { nodes: [], edges: [] } as any,
+          flow: { nodes: [], edges: [] } as any,
+        },
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          generationStrategy: {
+            functionBodyStrategy: 'none',
+            detectedFrameworks: [],
+            followIndirectCalls: false,
+            goplsEnabled: false,
+          },
+          completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 },
+          performance: { fileCount: 1, parseTime: 10, totalTime: 20, memoryUsage: 1024 },
+        },
+      },
+    },
+  });
+
+  /**
+   * Create a mock Go plugin that returns a Go Atlas ArchJSON.
+   */
+  const createMockGoPlugin = (goAtlasArchJSON: ArchJSON) => ({
+    metadata: {
+      name: 'golang',
+      version: '1.0.0',
+      displayName: 'Mock Go plugin',
+      fileExtensions: ['.go'],
+      author: 'test',
+      minCoreVersion: '1.0.0',
+      capabilities: {
+        singleFileParsing: false,
+        incrementalParsing: false,
+        dependencyExtraction: false,
+        typeInference: false,
+      },
+    },
+    initialize: vi.fn().mockResolvedValue(undefined),
+    parseProject: vi.fn().mockResolvedValue(goAtlasArchJSON),
+    canHandle: vi.fn().mockReturnValue(true),
+    dispose: vi.fn().mockResolvedValue(undefined),
+  });
+
+  /**
+   * Setup standard mocks needed for Go Atlas processing.
+   */
+  const setupCommonMocks = async () => {
+    const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+    (ArchJSONAggregator as any).mockImplementation(() => ({
+      aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+    }));
+
+    const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+    (OutputPathResolver as any).mockImplementation(() => ({
+      resolve: vi.fn().mockReturnValue({
+        outputDir: './archguard',
+        baseName: 'go-atlas',
+        paths: {
+          mmd: './archguard/go-atlas.mmd',
+          png: './archguard/go-atlas.png',
+          svg: './archguard/go-atlas.svg',
+          json: './archguard/go-atlas.json',
+        },
+      }),
+      ensureDirectory: vi.fn().mockResolvedValue(undefined),
+    }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('generateAtlasOutput renders all 4 layers concurrently (maxConcurrent > 1)', async () => {
+    /**
+     * Verifies that all 4 Atlas layers are rendered concurrently with Promise.all.
+     *
+     * Strategy: use vi.spyOn on the dynamically-imported AtlasRenderer to intercept
+     * render() calls, introducing a small async delay. We track the peak number of
+     * simultaneously in-flight renders via a shared counter.
+     *
+     * - BEFORE fix (sequential for-loop):  maxConcurrent === 1  → test FAILS
+     * - AFTER fix  (Promise.all):          maxConcurrent === 4  → test PASSES
+     *
+     * Note: AtlasRenderer is dynamically imported inside generateAtlasOutput, so we
+     * use the module mock already set at file top. We override via mockImplementation.
+     */
+    const goAtlasArchJSON = createGoAtlasArchJSON();
+    const mockGoPlugin = createMockGoPlugin(goAtlasArchJSON);
+    await setupCommonMocks();
+
+    // Track concurrency of AtlasRenderer.render calls
+    let concurrentRenders = 0;
+    let maxConcurrent = 0;
+
+    // AtlasRenderer is dynamically imported in generateAtlasOutput.
+    // We mock the module using the factory pattern via vi.doMock (not hoisted).
+    const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js') as any;
+    (AtlasRenderer as any).mockImplementation(() => ({
+      render: vi.fn().mockImplementation(async () => {
+        concurrentRenders++;
+        maxConcurrent = Math.max(maxConcurrent, concurrentRenders);
+        // Introduce a small delay so concurrent calls can overlap
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        concurrentRenders--;
+        return { content: 'flowchart LR\n  A --> B', format: 'mermaid' };
+      }),
+    }));
+
+    const registry = new PluginRegistry();
+    registry.register(mockGoPlugin as any);
+
+    const processor = new DiagramProcessor({
+      diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'mermaid',
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+      registry,
+    });
+
+    const results = await processor.processAll();
+
+    expect(results[0].success).toBe(true);
+    // With parallel rendering all 4 layers should be in-flight simultaneously
+    expect(maxConcurrent).toBeGreaterThan(1);
+  });
+
+  it('processAll creates worker pool for a single Go Atlas diagram (MermaidRenderWorkerPool instantiated)', async () => {
+    /**
+     * Verifies that a worker pool is created even when diagramCount === 1,
+     * if the single diagram is a Go Atlas diagram.
+     *
+     * Strategy: verify that MermaidRenderWorkerPool constructor is called with a
+     * positive pool size. If poolSize === 0, the constructor would never be called.
+     *
+     * - BEFORE fix: poolSize === 0 for diagramCount === 1 → constructor never called
+     * - AFTER fix:  poolSize === 4 for Go Atlas → constructor called with size > 0
+     */
+    const goAtlasArchJSON = createGoAtlasArchJSON();
+    const mockGoPlugin = createMockGoPlugin(goAtlasArchJSON);
+    await setupCommonMocks();
+
+    // AtlasRenderer: simple mock that returns valid content
+    const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js') as any;
+    (AtlasRenderer as any).mockImplementation(() => ({
+      render: vi.fn().mockResolvedValue({ content: 'flowchart LR\n  A --> B', format: 'mermaid' }),
+    }));
+
+    // MermaidRenderWorkerPool: capture constructor arguments to verify pool size
+    const { MermaidRenderWorkerPool } = await import('@/mermaid/render-worker-pool.js') as any;
+    const constructorCalls: number[] = [];
+    (MermaidRenderWorkerPool as any).mockImplementation((size: number) => {
+      constructorCalls.push(size);
+      return {
+        start: vi.fn().mockResolvedValue(undefined),
+        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 100 100"/>' }),
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+    });
+
+    const registry = new PluginRegistry();
+    registry.register(mockGoPlugin as any);
+
+    const processor = new DiagramProcessor({
+      diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'mermaid',
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+      registry,
+    });
+
+    const results = await processor.processAll();
+
+    expect(results[0].success).toBe(true);
+    // MermaidRenderWorkerPool must have been instantiated with poolSize > 0
+    // (proves pool was created rather than set to null)
+    expect(constructorCalls.length).toBeGreaterThan(0);
+    expect(constructorCalls[0]).toBeGreaterThan(0);
   });
 });

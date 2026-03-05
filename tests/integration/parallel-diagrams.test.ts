@@ -16,6 +16,14 @@ vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
+vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
+  ArchJsonDiskCache: vi.fn().mockImplementation(() => ({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    computeKey: vi.fn().mockResolvedValue('mock-disk-cache-key'),
+    clear: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
 
 describe('DiagramProcessor.parallel', () => {
   const createGlobalConfig = (): GlobalConfig => ({

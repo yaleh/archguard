@@ -26,6 +26,7 @@ import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
+import { ArchJsonDiskCache } from '@/cli/cache/arch-json-disk-cache.js';
 import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
@@ -85,14 +86,52 @@ export interface DiagramResult {
  * Derive a sub-module ArchJSON from a parent by filtering to entities
  * whose filePath starts with subPath. Relations where both endpoints
  * are in the sub-module are retained. moduleGraph is filtered similarly.
+ *
+ * @param parent - The parent ArchJSON to derive from
+ * @param subPath - The sub-path to filter by (may be absolute)
+ * @param workspaceRoot - Optional workspace root; when provided, enables matching
+ *   of relative entity filePaths against an absolute subPath. TypeScriptParser
+ *   stores filePaths relative to the workspace root (source directory), so without
+ *   this parameter, absolute subPaths would never match relative filePaths.
  */
-export function deriveSubModuleArchJSON(parent: ArchJSON, subPath: string): ArchJSON {
+export function deriveSubModuleArchJSON(
+  parent: ArchJSON,
+  subPath: string,
+  workspaceRoot?: string,
+): ArchJSON {
   const normSub = subPath.replace(/\\/g, '/').replace(/\/$/, '');
 
-  // Filter entities
+  // Compute the relative sub-path for matching against relative entity filePaths.
+  // TypeScriptParser stores filePaths relative to workspaceRoot (the source directory).
+  let relSub: string | null = null;
+  if (workspaceRoot) {
+    const normRoot = workspaceRoot.replace(/\\/g, '/').replace(/\/$/, '');
+    if (normSub.startsWith(normRoot + '/')) {
+      relSub = normSub.slice(normRoot.length + 1); // e.g., 'shared'
+    } else if (normSub === normRoot) {
+      relSub = ''; // sub-path IS the root → match everything
+    }
+  }
+
+  // Filter entities: try absolute match first, then relative if workspaceRoot provided.
+  // TypeScriptParser encodes the relative file path in entity.id as "<relPath>.<name>".
+  // When filePath is absent, extract it from id: id.slice(0, id.length - name.length - 1).
   const entities = parent.entities.filter((e) => {
-    const fp = ((e as unknown as { filePath?: string }).filePath ?? '').replace(/\\/g, '/');
-    return fp.startsWith(normSub + '/') || fp === normSub;
+    // Primary: explicit filePath field (may be absent in TypeScript parser output)
+    let fp = ((e as unknown as { filePath?: string }).filePath ?? '').replace(/\\/g, '/');
+    // Fallback: extract relative file path from entity id ("<relPath>.<name>")
+    if (!fp && e.name && e.id.endsWith('.' + e.name)) {
+      fp = e.id.slice(0, e.id.length - e.name.length - 1).replace(/\\/g, '/');
+    }
+    if (!fp) return false;
+    // Absolute path match (original behavior)
+    if (fp.startsWith(normSub + '/') || fp === normSub) return true;
+    // Relative path match (when workspaceRoot is provided)
+    if (relSub !== null) {
+      if (relSub === '') return true; // root covers everything
+      if (fp.startsWith(relSub + '/') || fp === relSub) return true;
+    }
+    return false;
   });
   const ids = new Set(entities.map((e) => e.id));
 
@@ -164,6 +203,7 @@ export class DiagramProcessor {
   private parallelProgress?: ParallelProgressReporter;
   private parseCache?: ParseCache;
   private registry?: PluginRegistry;
+  private archJsonDiskCache: ArchJsonDiskCache;
 
   constructor(options: DiagramProcessorOptions) {
     if (options.diagrams.length === 0) {
@@ -178,6 +218,8 @@ export class DiagramProcessor {
     this.metricsCalculator = new MetricsCalculator();
     this.parseCache = options.parseCache;
     this.registry = options.registry;
+    const diskCacheDir = path.join(os.homedir(), '.archguard', 'cache', 'archjson');
+    this.archJsonDiskCache = new ArchJsonDiskCache(diskCacheDir);
   }
 
   /**
@@ -200,9 +242,18 @@ export class DiagramProcessor {
       this.parallelProgress = new ParallelProgressReporter(diagramNames);
     }
 
-    // Create worker pool for parallel SVG rendering (only when 2+ diagrams)
+    // Create worker pool for parallel SVG rendering.
+    // For single diagrams we normally skip the pool, but Go Atlas diagrams render
+    // 4 layers concurrently so we treat the layer count as the effective diagram count.
     const diagramCount = this.diagrams.length;
-    const poolSize = diagramCount >= 2 ? Math.min(os.cpus().length, diagramCount, 4) : 0;
+    const isGoAtlas =
+      diagramCount === 1 && this.diagrams[0].language === 'go';
+    const atlasLayerCount = isGoAtlas
+      ? ((this.diagrams[0].languageSpecific?.atlas as { layers?: string[] } | undefined)
+          ?.layers?.length ?? 4)
+      : 0;
+    const effectiveDiagramCount = Math.max(diagramCount, atlasLayerCount);
+    const poolSize = effectiveDiagramCount >= 2 ? Math.min(os.cpus().length, effectiveDiagramCount, 4) : 0;
     const poolTheme = typeof this.globalConfig.mermaid?.theme === 'string'
       ? this.globalConfig.mermaid.theme
       : (this.globalConfig.mermaid?.theme as any)?.name ?? 'default';
@@ -396,10 +447,30 @@ export class DiagramProcessor {
       // tsAnalysis.moduleGraph is populated and the TsModuleGraph renderer can be used.
       const needsModuleGraph = diagrams.some((d) => d.level === 'package');
       if (needsModuleGraph && (!firstDiagram.language || firstDiagram.language === 'typescript')) {
-        const rawArchJSON = await this.registerDeferred(
-          firstDiagram.sources,
-          this.parseTsProject(firstDiagram)
-        );
+        // Discover files for cache key before invoking ts-morph
+        const tsFiles = await this.fileDiscovery.discoverFiles({
+          sources: firstDiagram.sources,
+          exclude: firstDiagram.exclude || this.globalConfig.exclude,
+          skipMissing: false,
+        });
+        const diskKey = tsFiles.length > 0 ? await this.archJsonDiskCache.computeKey(tsFiles) : null;
+        let cachedArchJSON: ArchJSON | null = null;
+        if (diskKey) {
+          cachedArchJSON = await this.archJsonDiskCache.get(diskKey);
+          if (cachedArchJSON && process.env.ArchGuardDebug === 'true') {
+            console.debug(`💾 Disk cache hit for ts-morph path: ${firstDiagram.sources.join(', ')}`);
+          }
+        }
+
+        const rawArchJSON = cachedArchJSON
+          ? cachedArchJSON
+          : await this.registerDeferred(
+              firstDiagram.sources,
+              this.parseTsProject(firstDiagram).then(async (result) => {
+                if (diskKey) await this.archJsonDiskCache.set(diskKey, result);
+                return result;
+              })
+            );
 
         const results = await pMap(
           diagrams,
@@ -429,7 +500,7 @@ export class DiagramProcessor {
         if (deferred) {
           // Parent is still parsing; wait for it then derive sub-module ArchJSON
           const parentArchJSON = await deferred;
-          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0]);
+          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0], normParentPath ?? undefined);
           if (process.env.ArchGuardDebug === 'true') {
             console.debug(`🔗 Awaited parent and derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
           }
@@ -437,7 +508,7 @@ export class DiagramProcessor {
           // Parent already complete; derive immediately from cache
           const parentCacheKey = this.archJsonPathIndex.get(normParentPath)!;
           const parentArchJSON = this.archJsonCache.get(parentCacheKey)!;
-          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0]);
+          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0], normParentPath);
           if (process.env.ArchGuardDebug === 'true') {
             console.debug(`🔗 Derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
           }
@@ -446,13 +517,24 @@ export class DiagramProcessor {
             console.debug(`🔍 Cache miss for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
           }
 
-          // Parse files in parallel
-          const parser = new ParallelParser({
-            concurrency: this.globalConfig.concurrency,
-            continueOnError: true,
-            parseCache: this.parseCache,
-          });
-          rawArchJSON = await parser.parseFiles(files);
+          // Check disk cache before expensive parse
+          const diskKey = await this.archJsonDiskCache.computeKey(files);
+          const diskCached = await this.archJsonDiskCache.get(diskKey);
+          if (diskCached) {
+            rawArchJSON = diskCached;
+            if (process.env.ArchGuardDebug === 'true') {
+              console.debug(`💾 Disk cache hit for ParallelParser path: ${diagrams[0].sources.join(', ')}`);
+            }
+          } else {
+            // Parse files in parallel
+            const parser = new ParallelParser({
+              concurrency: this.globalConfig.concurrency,
+              continueOnError: true,
+              parseCache: this.parseCache,
+            });
+            rawArchJSON = await parser.parseFiles(files);
+            await this.archJsonDiskCache.set(diskKey, rawArchJSON);
+          }
 
           // Cache the raw parsed result
           this.cacheArchJson(diagrams[0].sources, rawArchJSON);
@@ -749,7 +831,7 @@ export class DiagramProcessor {
 
     console.log('\n🗺️  Generating Go Architecture Atlas...');
 
-    for (const layer of availableLayers) {
+    await Promise.all(availableLayers.map(async (layer) => {
       const result = await renderer.render(
         atlas,
         layer as Parameters<typeof renderer.render>[1],
@@ -791,7 +873,7 @@ export class DiagramProcessor {
         }),
       ]);
       console.log(`  ✅ ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
-    }
+    }));
 
     // Save full Atlas JSON alongside the layer diagrams
     const atlasJsonPath = `${basePath}-atlas.json`;
