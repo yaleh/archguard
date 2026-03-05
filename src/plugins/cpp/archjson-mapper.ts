@@ -15,7 +15,8 @@ export class ArchJsonMapper {
 
     for (const cls of classes) {
       const ns = this.resolveNamespace(cls, workspaceRoot);
-      const id = generateEntityId(ns, cls.qualifiedName || cls.name);
+      const entityName = this.getEntityName(cls.qualifiedName, cls.name);
+      const id = generateEntityId(ns, entityName);
       entities.push({
         id,
         name: cls.name,
@@ -36,8 +37,9 @@ export class ArchJsonMapper {
     }
 
     for (const e of enums) {
-      const ns = e.qualifiedName.includes('::') ? e.qualifiedName.split('::')[0] : '';
-      const id = generateEntityId(ns, e.qualifiedName || e.name);
+      const ns = this.resolveEntityNamespace(e.qualifiedName, e.sourceFile, workspaceRoot);
+      const entityName = this.getEntityName(e.qualifiedName, e.name);
+      const id = generateEntityId(ns, entityName);
       entities.push({
         id,
         name: e.name,
@@ -53,8 +55,9 @@ export class ArchJsonMapper {
     }
 
     for (const fn of functions) {
-      const ns = fn.qualifiedName.includes('::') ? fn.qualifiedName.split('::')[0] : '';
-      const id = generateEntityId(ns, fn.qualifiedName || fn.name);
+      const ns = this.resolveEntityNamespace(fn.qualifiedName, fn.sourceFile, workspaceRoot);
+      const entityName = this.getEntityName(fn.qualifiedName, fn.name);
+      const id = generateEntityId(ns, entityName);
       entities.push({
         id,
         name: fn.name,
@@ -68,21 +71,32 @@ export class ArchJsonMapper {
     return entities;
   }
 
-  mapRelations(classes: MergedCppEntity[], allEntities: Entity[]): Relation[] {
-    const entityByName = new Map(allEntities.map(e => [e.name, e.id]));
-    const entityByQualifiedName = new Map(allEntities.map(e => {
-      // id format: ns.qualifiedName — extract qualifiedName part after first dot
-      const dotIdx = e.id.indexOf('.');
-      const qn = dotIdx >= 0 ? e.id.slice(dotIdx + 1) : e.id;
-      return [qn, e.id];
-    }));
+  mapRelations(classes: MergedCppEntity[], allEntities: Entity[], workspaceRoot = ''): Relation[] {
+    // Build a unified lookup map from classes data using the same ID derivation logic
+    const entityByQualifiedName = new Map<string, string>();
+
+    for (const cls of classes) {
+      const ns = this.resolveNamespace(cls, workspaceRoot);
+      const entityName = this.getEntityName(cls.qualifiedName, cls.name);
+      const id = generateEntityId(ns, entityName);
+      entityByQualifiedName.set(cls.qualifiedName, id);  // lookup by 'engine::Renderer'
+      entityByQualifiedName.set(cls.name, id);            // lookup by 'Renderer'
+      entityByQualifiedName.set(entityName, id);          // lookup by sanitized 'Renderer'
+    }
+
+    // Also add from allEntities (covers enums/functions)
+    for (const e of allEntities) {
+      if (!entityByQualifiedName.has(e.name)) {
+        entityByQualifiedName.set(e.name, e.id);
+      }
+    }
 
     const extractor = new CppTypeExtractor();
     const seen = new Set<string>();
     const relations: Relation[] = [];
 
     const resolveType = (typeName: string): string | undefined =>
-      entityByQualifiedName.get(typeName) ?? entityByName.get(typeName);
+      entityByQualifiedName.get(typeName);
 
     const addRelation = (
       type: 'inheritance' | 'composition' | 'aggregation' | 'dependency',
@@ -98,8 +112,9 @@ export class ArchJsonMapper {
     };
 
     for (const cls of classes) {
-      const ns = this.resolveNamespace(cls, '');
-      const srcId = generateEntityId(ns, cls.qualifiedName || cls.name);
+      const ns = this.resolveNamespace(cls, workspaceRoot);
+      const entityName = this.getEntityName(cls.qualifiedName, cls.name);
+      const srcId = generateEntityId(ns, entityName);
 
       // Inheritance
       for (const base of cls.bases) {
@@ -141,15 +156,65 @@ export class ArchJsonMapper {
     return relations;
   }
 
+  /**
+   * Returns the simple entity name for use in ID generation.
+   * Strips the first namespace prefix (already captured in `ns`) and
+   * sanitizes any remaining '::' separators to '_'.
+   *
+   * Examples:
+   *   'engine::Renderer'      → 'Renderer'
+   *   'engine::Widget::Impl'  → 'Widget_Impl'
+   *   'Renderer'              → 'Renderer'
+   */
+  private getEntityName(qualifiedName: string, simpleName: string): string {
+    if (!qualifiedName || !qualifiedName.includes('::')) {
+      return qualifiedName || simpleName;
+    }
+    // Strip the first namespace prefix (which is already in `ns`)
+    const firstNsEnd = qualifiedName.indexOf('::');
+    const rest = qualifiedName.slice(firstNsEnd + 2);
+    return rest.replace(/::/g, '_');
+  }
+
+  /**
+   * Returns ONLY the first path component relative to workspaceRoot (fixes P3).
+   *
+   * Examples (workspaceRoot='/proj'):
+   *   '/proj/tools/server.cpp' → 'tools'  (not 'tools/server')
+   *   '/proj/src/llama.cpp'    → 'src'
+   *   '/proj/main.cpp'         → ''
+   */
+  private getFileNamespace(filePath: string, workspaceRoot: string): string {
+    const dir = path.dirname(filePath);
+    if (workspaceRoot) {
+      const rel = path.relative(workspaceRoot, dir).replace(/\\/g, '/');
+      return rel.split('/')[0] || '';
+    }
+    return dir.split(path.sep).pop() ?? '';
+  }
+
+  /**
+   * Resolves namespace for a class/struct entity (fixes P3).
+   * Uses C++ namespace from qualifiedName when present,
+   * otherwise falls back to the top-level directory of declarationFile.
+   */
   private resolveNamespace(cls: MergedCppEntity, workspaceRoot: string): string {
     if (cls.qualifiedName.includes('::')) {
       return cls.qualifiedName.split('::')[0];
     }
-    // Fallback: use directory relative to workspaceRoot
-    if (workspaceRoot) {
-      return path.relative(workspaceRoot, path.dirname(cls.declarationFile));
+    return this.getFileNamespace(cls.declarationFile, workspaceRoot);
+  }
+
+  /**
+   * Resolves namespace for enums and functions (fixes P1).
+   * Uses C++ namespace from qualifiedName when present,
+   * otherwise falls back to the top-level directory of the source file.
+   */
+  private resolveEntityNamespace(qualifiedName: string, sourceFile: string, workspaceRoot: string): string {
+    if (qualifiedName.includes('::')) {
+      return qualifiedName.split('::')[0];
     }
-    return path.dirname(cls.declarationFile).split(path.sep).pop() ?? '';
+    return this.getFileNamespace(sourceFile, workspaceRoot);
   }
 
   private mapMethod(m: RawMethod): Member {

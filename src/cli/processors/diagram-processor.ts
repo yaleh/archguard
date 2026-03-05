@@ -123,8 +123,11 @@ export function deriveSubModuleArchJSON(
     if (!fp && e.name && e.id.endsWith('.' + e.name)) {
       fp = e.id.slice(0, e.id.length - e.name.length - 1).replace(/\\/g, '/');
     }
-    // Last-resort fallback for C++ entities (sourceLocation.file is absolute)
-    if (!fp && e.sourceLocation?.file) {
+    // Last-resort fallback for C++ entities (sourceLocation.file is absolute).
+    // Also use sourceLocation when fp looks like a bare module prefix (no slash or
+    // file extension) — this means the id-heuristic extracted the package name,
+    // not an actual file path.
+    if (e.sourceLocation?.file && (!fp || (!fp.includes('/') && !fp.includes('.')))) {
       fp = e.sourceLocation.file.replace(/\\/g, '/');
     }
     if (!fp) return false;
@@ -139,10 +142,29 @@ export function deriveSubModuleArchJSON(
   });
   const ids = new Set(entities.map((e) => e.id));
 
-  // Filter relations
-  const relations = (parent.relations ?? []).filter(
-    (r) => ids.has(r.source) && ids.has(r.target)
+  // Step 1: Relations where source is in sub-module (outgoing relations only)
+  const outgoingRelations = (parent.relations ?? []).filter(
+    (r) => ids.has(r.source)
   );
+
+  // Step 2: Find cross-module targets (target NOT in sub-module)
+  const crossModuleTargetIds = new Set(
+    outgoingRelations
+      .filter((r) => !ids.has(r.target))
+      .map((r) => r.target)
+  );
+
+  // Step 3: Create stub entities for cross-module targets
+  // Stubs are minimal: keep id, name, type, sourceLocation but strip all members
+  const stubEntities = parent.entities
+    .filter((e) => crossModuleTargetIds.has(e.id))
+    .map((e) => ({ ...e, members: [] }));
+
+  // Step 4: Combined entity set (module entities + stubs for cross-module targets)
+  const allModuleEntities = [...entities, ...stubEntities];
+
+  // Step 5: All relations involving sub-module entities as source
+  const relations = outgoingRelations;
 
   // Filter moduleGraph if present
   let extensions = parent.extensions;
@@ -177,7 +199,7 @@ export function deriveSubModuleArchJSON(
     };
   }
 
-  return { ...parent, entities, relations, extensions };
+  return { ...parent, entities: allModuleEntities, relations, extensions };
 }
 
 /**
@@ -819,6 +841,9 @@ export class DiagramProcessor {
         } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
           // Route TypeScript package-level diagrams to TsModuleGraph renderer
           await this.generateTsModuleGraphOutput(archJSON, paths, diagram, pool);
+        } else if (level === 'package' && archJSON.language === 'cpp') {
+          // C++ package-level: use flowchart format
+          await this.generateCppPackageOutput(archJSON, paths, pool);
         } else {
           // Generate standard Mermaid classDiagram
           const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
@@ -1006,6 +1031,68 @@ export class DiagramProcessor {
       mermaidRenderer.convertSVGToPNG(svg, paths.paths.png).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
+      }),
+    ]);
+  }
+
+  /**
+   * Generate C++ package-level flowchart output.
+   *
+   * Renders a C++ package dependency graph as a Mermaid flowchart LR diagram:
+   *   {name}.mmd  - Mermaid source
+   *   {name}.svg  - SVG rendering
+   *   {name}.png  - PNG rendering (best effort)
+   *
+   * @param archJSON - Architecture JSON for C++ with package-level entities/relations
+   * @param paths - Base output paths
+   * @param pool - Optional worker pool for rendering
+   */
+  private async generateCppPackageOutput(
+    archJSON: ArchJSON,
+    paths: { paths: { json: string; mmd: string; png: string; svg: string } },
+    pool: MermaidRenderWorkerPool | null = null
+  ): Promise<void> {
+    const { CppPackageFlowchartGenerator } = await import('@/mermaid/cpp-package-flowchart-generator.js');
+    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+    const generator = new CppPackageFlowchartGenerator();
+    const mmdContent = generator.generate(archJSON);
+
+    const rendererOptions: Record<string, unknown> = {};
+    if (this.globalConfig.mermaid?.theme) {
+      rendererOptions.theme =
+        typeof this.globalConfig.mermaid.theme === 'string'
+          ? { name: this.globalConfig.mermaid.theme }
+          : this.globalConfig.mermaid.theme;
+    }
+    if (this.globalConfig.mermaid?.transparentBackground) {
+      rendererOptions.backgroundColor = 'transparent';
+    }
+
+    const mermaidRenderer = new IsomorphicMermaidRenderer(rendererOptions as any);
+
+    await fs.ensureDir(path.dirname(paths.paths.mmd));
+    await fs.writeFile(paths.paths.mmd, mmdContent, 'utf-8');
+
+    // Render SVG: use worker pool if available, fall back to main thread
+    let svg: string;
+    if (pool) {
+      const poolResult = await pool.render({ mermaidCode: mmdContent });
+      if (!poolResult.success) {
+        console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
+        svg = await mermaidRenderer.renderSVG(mmdContent);
+      } else {
+        svg = poolResult.svg!;
+      }
+    } else {
+      svg = await mermaidRenderer.renderSVG(mmdContent);
+    }
+
+    await Promise.all([
+      fs.writeFile(paths.paths.svg, svg, 'utf-8'),
+      mermaidRenderer.convertSVGToPNG(svg, paths.paths.png).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  C++ package graph PNG skipped (${msg}) — MMD + SVG saved`);
       }),
     ]);
   }

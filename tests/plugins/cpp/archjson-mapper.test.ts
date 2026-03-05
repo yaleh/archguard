@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/cpp/archjson-mapper.js';
-import type { MergedCppEntity } from '@/plugins/cpp/types.js';
+import type { MergedCppEntity, RawEnum, RawFunction } from '@/plugins/cpp/types.js';
 
 function makeEntity(overrides: Partial<MergedCppEntity> = {}): MergedCppEntity {
   return {
@@ -18,14 +18,41 @@ function makeEntity(overrides: Partial<MergedCppEntity> = {}): MergedCppEntity {
   };
 }
 
+function makeEnum(overrides: Partial<RawEnum> = {}): RawEnum {
+  return {
+    name: 'MyEnum',
+    qualifiedName: 'MyEnum',
+    isScoped: false,
+    members: ['A', 'B'],
+    sourceFile: '/proj/src/myenum.hpp',
+    startLine: 1,
+    endLine: 10,
+    ...overrides,
+  };
+}
+
+function makeFunction(overrides: Partial<RawFunction> = {}): RawFunction {
+  return {
+    name: 'myFunc',
+    qualifiedName: 'myFunc',
+    returnType: 'void',
+    parameters: [],
+    isStatic: false,
+    sourceFile: '/proj/src/utils.cpp',
+    startLine: 1,
+    endLine: 5,
+    ...overrides,
+  };
+}
+
 describe('ArchJsonMapper', () => {
   const mapper = new ArchJsonMapper();
 
   describe('mapEntities', () => {
-    it('uses generateEntityId format: ns.qualifiedName', () => {
+    it('uses generateEntityId format: ns.name (P4 fix)', () => {
       const entity = makeEntity({ qualifiedName: 'engine::Renderer', declarationFile: 'src/engine/renderer.hpp' });
       const entities = mapper.mapEntities([entity], [], [], 'src');
-      expect(entities[0].id).toBe('engine.engine::Renderer');
+      expect(entities[0].id).toBe('engine.Renderer');
     });
 
     it('maps class kind correctly', () => {
@@ -43,6 +70,82 @@ describe('ArchJsonMapper', () => {
       const entities = mapper.mapEntities([entity], [], [], '');
       expect(entities[0].sourceLocation.file).toBe('src/foo.hpp');
       expect(entities[0].sourceLocation.startLine).toBe(5);
+    });
+
+    describe('entity ID generation bugs', () => {
+      it('enum without C++ namespace gets file-based namespace (P1 fix)', () => {
+        // qualifiedName has no '::' → should use file path for namespace, not empty string
+        const e = makeEnum({ name: 'TestCaseStatus', qualifiedName: 'TestCaseStatus', sourceFile: '/proj/src/test.hpp' });
+        const entities = mapper.mapEntities([], [e], [], '/proj');
+        // Should be 'src.TestCaseStatus', not '.TestCaseStatus'
+        expect(entities[0].id).toBe('src.TestCaseStatus');
+      });
+
+      it('enum with C++ namespace uses that namespace (P1 fix — ns:: case)', () => {
+        const e = makeEnum({ name: 'Status', qualifiedName: 'net::Status', sourceFile: '/proj/net/status.hpp' });
+        const entities = mapper.mapEntities([], [e], [], '/proj');
+        expect(entities[0].id).toBe('net.Status');
+      });
+
+      it('function without C++ namespace gets file-based namespace (P1 fix)', () => {
+        const fn = makeFunction({ name: 'helper', qualifiedName: 'helper', sourceFile: '/proj/utils/helpers.cpp' });
+        const entities = mapper.mapEntities([], [], [fn], '/proj');
+        // Should be 'utils.helper', not '.helper'
+        expect(entities[0].id).toBe('utils.helper');
+      });
+
+      it('class in subdirectory gets top-level directory as namespace (P3 fix)', () => {
+        // declarationFile is in 'tools/server/...' — namespace should be 'tools', not 'tools/server'
+        const entity = makeEntity({
+          name: 'pipe_t',
+          qualifiedName: 'pipe_t',
+          declarationFile: '/proj/tools/server/pipe.hpp',
+        });
+        const entities = mapper.mapEntities([entity], [], [], '/proj');
+        expect(entities[0].id).toBe('tools.pipe_t');
+      });
+
+      it('class with :: gets simple name in ID (P4 fix)', () => {
+        // qualifiedName='engine::Renderer' → id='engine.Renderer', not 'engine.engine::Renderer'
+        const entity = makeEntity({
+          name: 'Renderer',
+          qualifiedName: 'engine::Renderer',
+          declarationFile: '/proj/src/engine/renderer.hpp',
+        });
+        const entities = mapper.mapEntities([entity], [], [], '/proj');
+        expect(entities[0].id).toBe('engine.Renderer');
+      });
+
+      it('nested class qualifiedName sanitizes inner :: to _ (P4 fix)', () => {
+        // qualifiedName='engine::Widget::Impl' → id='engine.Widget_Impl'
+        const entity = makeEntity({
+          name: 'Impl',
+          qualifiedName: 'engine::Widget::Impl',
+          declarationFile: '/proj/src/engine/widget.hpp',
+        });
+        const entities = mapper.mapEntities([entity], [], [], '/proj');
+        expect(entities[0].id).toBe('engine.Widget_Impl');
+      });
+
+      it('class with no :: and no workspaceRoot falls back to parent dir name', () => {
+        const entity = makeEntity({
+          name: 'Foo',
+          qualifiedName: 'Foo',
+          declarationFile: '/some/dir/foo.hpp',
+        });
+        const entities = mapper.mapEntities([entity], [], [], '');
+        expect(entities[0].id).toBe('dir.Foo');
+      });
+
+      it('file directly in workspaceRoot gets empty namespace', () => {
+        const entity = makeEntity({
+          name: 'Main',
+          qualifiedName: 'Main',
+          declarationFile: '/proj/main.hpp',
+        });
+        const entities = mapper.mapEntities([entity], [], [], '/proj');
+        expect(entities[0].id).toBe('.Main');
+      });
     });
   });
 

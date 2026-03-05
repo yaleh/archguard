@@ -4,6 +4,8 @@ import type { DiagramConfig } from '../../types/config.js';
 
 export const CPP_EXTENSIONS = ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.h', '.h++'];
 
+export const MIN_CPP_FILES_FOR_MODULE = 5;
+
 const CPP_EXCLUDED_DIRS = new Set([
   'build', '.cmake',
   'vendor', 'third_party', 'thirdparty', 'external',
@@ -37,6 +39,26 @@ export async function directoryHasCppFiles(dir: string): Promise<boolean> {
   return false;
 }
 
+/** Count C++ source/header files recursively in a directory */
+async function countCppFiles(dir: string): Promise<number> {
+  let count = 0;
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const entry of entries) {
+    if (entry.isFile() && CPP_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())) {
+      count++;
+    }
+    if (entry.isDirectory() && !isExcluded(entry.name)) {
+      count += await countCppFiles(path.join(dir, entry.name));
+    }
+  }
+  return count;
+}
+
 export async function getCppTopLevelModules(sourceRoot: string): Promise<string[]> {
   let entries: fs.Dirent[];
   try {
@@ -47,8 +69,12 @@ export async function getCppTopLevelModules(sourceRoot: string): Promise<string[
   const modules: string[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory() || isExcluded(entry.name)) continue;
-    if (await directoryHasCppFiles(path.join(sourceRoot, entry.name))) {
-      modules.push(entry.name);
+    const fullPath = path.join(sourceRoot, entry.name);
+    if (await directoryHasCppFiles(fullPath)) {
+      const fileCount = await countCppFiles(fullPath);
+      if (fileCount >= MIN_CPP_FILES_FOR_MODULE) {
+        modules.push(entry.name);
+      }
     }
   }
   return modules.sort();
@@ -66,8 +92,8 @@ export async function detectCppProjectStructure(
   };
 
   const root: DiagramConfig[] = [
-    { ...common, name: `${moduleName}/package`, sources: [sourceRoot], level: 'package' } as DiagramConfig,
-    { ...common, name: `${moduleName}/class`,   sources: [sourceRoot], level: 'class'   } as DiagramConfig,
+    { ...common, name: `${moduleName}/overview/package`, sources: [sourceRoot], level: 'package' } as DiagramConfig,
+    { ...common, name: `${moduleName}/class/all-classes`, sources: [sourceRoot], level: 'class'   } as DiagramConfig,
   ];
 
   const modules = await getCppTopLevelModules(sourceRoot);

@@ -316,8 +316,8 @@ describe('normalizeToDiagrams', () => {
         lang: 'cpp',
       });
 
-      expect(result[0].name).toBe('src/package');
-      expect(result[1].name).toBe('src/class');
+      expect(result[0].name).toBe('src/overview/package');
+      expect(result[1].name).toBe('src/class/all-classes');
     });
 
     it('--lang cpp with --diagrams package returns only package diagram', async () => {

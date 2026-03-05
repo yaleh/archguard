@@ -128,7 +128,7 @@ export class CppPlugin implements ILanguagePlugin {
     const allFunctions = rawFiles.flatMap((f) => f.functions);
 
     const entities = this.mapper.mapEntities(merged, allEnums, allFunctions, workspaceRoot);
-    const relations = this.mapper.mapRelations(merged, entities);
+    const relations = this.mapper.mapRelations(merged, entities, workspaceRoot);
 
     return {
       version: '1.0',
