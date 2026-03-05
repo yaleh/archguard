@@ -91,6 +91,31 @@ export async function normalizeToDiagrams(
       return [diagram];
     }
 
+    // C++: two diagrams (package + class), no auto-detect needed
+    if (language === 'cpp') {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      const moduleName = path.basename(sourcePath);
+      const diagrams: DiagramConfig[] = [
+        {
+          name: `${moduleName}/package`,
+          sources: cliOptions.sources,
+          level: 'package',
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+          language,
+        },
+        {
+          name: `${moduleName}/class`,
+          sources: cliOptions.sources,
+          level: 'class',
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+          language,
+        },
+      ];
+      return filterByLevels(diagrams, cliOptions.diagrams);
+    }
+
     // TypeScript/other: auto-detect from sources[0]
     const externalSourceRoot = path.resolve(cliOptions.sources[0]);
     const diagrams = await detectProjectStructure(process.cwd(), externalSourceRoot);

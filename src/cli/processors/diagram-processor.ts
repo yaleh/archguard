@@ -443,6 +443,21 @@ export class DiagramProcessor {
         return results;
       }
 
+      // Route C++ diagrams through the CppPlugin
+      if (firstDiagram.language === 'cpp') {
+        const rawArchJSON = await this.registerDeferred(
+          firstDiagram.sources,
+          this.parseCppProject(firstDiagram)
+        );
+
+        const results = await pMap(
+          diagrams,
+          async (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
+          { concurrency: this.globalConfig.concurrency || os.cpus().length }
+        );
+        return results;
+      }
+
       // Route TypeScript package-level diagrams through TypeScriptPlugin so that
       // tsAnalysis.moduleGraph is populated and the TsModuleGraph renderer can be used.
       const needsModuleGraph = diagrams.some((d) => d.level === 'package');
@@ -696,6 +711,27 @@ export class DiagramProcessor {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
       languageSpecific: diagram.languageSpecific,
+    });
+  }
+
+  /**
+   * Parse a C++ project via the CppPlugin.
+   *
+   * @param diagram - Diagram configuration with language === 'cpp'
+   * @returns Parsed ArchJSON
+   */
+  private async parseCppProject(diagram: DiagramConfig): Promise<ArchJSON> {
+    const workspaceRoot = path.resolve(diagram.sources[0]);
+    const registryPlugin = this.registry?.getByName('cpp');
+    const plugin = registryPlugin ?? await (async () => {
+      const { CppPlugin } = await import('@/plugins/cpp/index.js');
+      return new CppPlugin();
+    })();
+
+    await plugin.initialize({ workspaceRoot });
+    return plugin.parseProject(workspaceRoot, {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
     });
   }
 

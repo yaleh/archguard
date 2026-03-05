@@ -287,6 +287,76 @@ describe('normalizeToDiagrams', () => {
     });
   });
 
+  describe('C++ special case', () => {
+    it('--lang cpp returns two diagrams: package and class', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['./src'],
+        lang: 'cpp',
+      });
+
+      expect(detectProjectStructure).not.toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+      expect(result[0].level).toBe('package');
+      expect(result[1].level).toBe('class');
+    });
+
+    it('--lang cpp sets language: "cpp" on both diagrams', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['./src'],
+        lang: 'cpp',
+      });
+
+      expect(result[0].language).toBe('cpp');
+      expect(result[1].language).toBe('cpp');
+    });
+
+    it('--lang cpp derives module name from sources[0] basename', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['/home/user/myproject/src'],
+        lang: 'cpp',
+      });
+
+      expect(result[0].name).toBe('src/package');
+      expect(result[1].name).toBe('src/class');
+    });
+
+    it('--lang cpp with --diagrams package returns only package diagram', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['./src'],
+        lang: 'cpp',
+        diagrams: ['package'],
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].level).toBe('package');
+    });
+
+    it('--lang cpp with --diagrams class returns only class diagram', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['./src'],
+        lang: 'cpp',
+        diagrams: ['class'],
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].level).toBe('class');
+    });
+
+    it('--lang cpp passes format and exclude through to both diagrams', async () => {
+      const result = await normalizeToDiagrams(baseConfig, {
+        sources: ['./src'],
+        lang: 'cpp',
+        format: 'json',
+        exclude: ['**/*.test.cpp'],
+      });
+
+      expect(result[0].format).toBe('json');
+      expect(result[0].exclude).toEqual(['**/*.test.cpp']);
+      expect(result[1].format).toBe('json');
+      expect(result[1].exclude).toEqual(['**/*.test.cpp']);
+    });
+  });
+
   describe('Go Atlas special case (preserved)', () => {
     it('--lang go enables atlas by default without --atlas flag', async () => {
       const result = await normalizeToDiagrams(baseConfig, {

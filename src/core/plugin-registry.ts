@@ -147,7 +147,9 @@ export class PluginRegistry {
     { file: 'build.gradle', plugin: 'java' },
     { file: 'pyproject.toml', plugin: 'python' },
     { file: 'requirements.txt', plugin: 'python' },
-    { file: 'setup.py', plugin: 'python' },
+    { file: 'setup.py',        plugin: 'python'     },
+    { file: 'CMakeLists.txt',  plugin: 'cpp'        },
+    { file: 'Makefile',        plugin: 'cpp'        },
   ];
 
   /**
