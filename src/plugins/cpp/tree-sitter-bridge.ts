@@ -28,7 +28,7 @@ export class TreeSitterBridge {
       filePath,
       namespace,
       classes: this.extractClasses(root, filePath, namespace),
-      enums: this.extractEnums(root, namespace),
+      enums: this.extractEnums(root, filePath, namespace),
       functions: this.extractTopLevelFunctions(root, filePath, namespace),
       includes: this.extractIncludes(root),
     };
@@ -71,12 +71,26 @@ export class TreeSitterBridge {
         continue;
       }
 
+      // Recurse into preprocessor conditionals (#ifdef, #ifndef, #if, #else, #elif)
+      if (
+        child.type === 'preproc_ifdef' ||
+        child.type === 'preproc_if' ||
+        child.type === 'preproc_else' ||
+        child.type === 'preproc_elif'
+      ) {
+        this.visitForClasses(child, filePath, fileNamespace, currentNs, out);
+        continue;
+      }
+
       if (child.type === 'template_declaration') {
         const templateParams = this.extractTemplateParams(child);
         const innerClass = child.namedChildren.find(
           (n) => n.type === 'class_specifier' || n.type === 'struct_specifier'
         );
         if (innerClass) {
+          const innerNameNode = innerClass.childForFieldName('name');
+          // Skip template specializations (name is template_type, e.g. Foo<int>)
+          if (innerNameNode?.type === 'template_type') continue;
           const cls = this.extractOneClass(innerClass, filePath, currentNs);
           if (cls) {
             cls.templateParams = templateParams;
@@ -151,14 +165,15 @@ export class TreeSitterBridge {
     return bases;
   }
 
-  private extractEnums(root: Parser.SyntaxNode, namespace: string): RawEnum[] {
+  private extractEnums(root: Parser.SyntaxNode, filePath: string, namespace: string): RawEnum[] {
     const enums: RawEnum[] = [];
-    this.visitForEnums(root, namespace, enums);
+    this.visitForEnums(root, filePath, namespace, enums);
     return enums;
   }
 
   private visitForEnums(
     node: Parser.SyntaxNode,
+    filePath: string,
     namespace: string,
     out: RawEnum[]
   ): void {
@@ -167,7 +182,18 @@ export class TreeSitterBridge {
         const nsName = child.childForFieldName('name')?.text ?? '';
         const newNs = namespace ? `${namespace}::${nsName}` : nsName;
         const body = child.childForFieldName('body');
-        if (body) this.visitForEnums(body, newNs, out);
+        if (body) this.visitForEnums(body, filePath, newNs, out);
+        continue;
+      }
+
+      // Recurse into preprocessor conditionals
+      if (
+        child.type === 'preproc_ifdef' ||
+        child.type === 'preproc_if' ||
+        child.type === 'preproc_else' ||
+        child.type === 'preproc_elif'
+      ) {
+        this.visitForEnums(child, filePath, namespace, out);
         continue;
       }
 
@@ -194,7 +220,7 @@ export class TreeSitterBridge {
           qualifiedName,
           isScoped,
           members,
-          sourceFile: node.toString(),
+          sourceFile: filePath,
           startLine: child.startPosition.row + 1,
           endLine: child.endPosition.row + 1,
         });
@@ -214,6 +240,16 @@ export class TreeSitterBridge {
         const body = child.childForFieldName('body');
         const newNs = namespace ? `${namespace}::${nsName}` : nsName;
         if (body) fns.push(...this.extractTopLevelFunctions(body, filePath, newNs));
+        continue;
+      }
+      // Recurse into preprocessor conditionals
+      if (
+        child.type === 'preproc_ifdef' ||
+        child.type === 'preproc_if' ||
+        child.type === 'preproc_else' ||
+        child.type === 'preproc_elif'
+      ) {
+        fns.push(...this.extractTopLevelFunctions(child, filePath, namespace));
         continue;
       }
       if (child.type === 'function_definition') {

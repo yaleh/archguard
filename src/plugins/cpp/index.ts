@@ -137,6 +137,7 @@ export class CppPlugin implements ILanguagePlugin {
       sourceFiles: files,
       entities,
       relations,
+      workspaceRoot,
     };
   }
 

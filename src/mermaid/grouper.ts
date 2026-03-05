@@ -115,21 +115,37 @@ export class HeuristicGrouper {
    */
   private groupByPath(archJson: ArchJSON): PackageGroup[] {
     const packageMap = new Map<string, string[]>();
+    // Track whether a group was formed from path-based entity names (containing '/')
+    const pathGroupedMap = new Map<string, boolean>();
 
     for (const entity of archJson.entities) {
-      const packageName = this.extractPackageName(entity.sourceLocation.file);
+      // For path-based package names (e.g. "src", "src/models", "examples/batched"),
+      // group by the top-level path component using the entity name directly.
+      // Package entities from the aggregator always carry their canonical path as name.
+      // Note: 'package' is a valid entity type at runtime (e.g. C++ aggregator output)
+      // even though EntityType does not yet enumerate it — cast to string for comparison.
+      const isPathBased = (entity.type as string) === 'package' || entity.name.includes('/');
+      const packageName = isPathBased
+        ? entity.name.split('/')[0]
+        : this.extractPackageName(entity.sourceLocation.file);
 
       if (!packageMap.has(packageName)) {
         packageMap.set(packageName, []);
+        pathGroupedMap.set(packageName, false);
       }
 
       packageMap.get(packageName).push(entity.id);
+      if (isPathBased) {
+        pathGroupedMap.set(packageName, true);
+      }
     }
 
     return Array.from(packageMap.entries()).map(([rawName, entities]) => ({
       name: this.formatPackageName(rawName),
       entities,
-      reasoning: `Grouped by path: ${rawName}`,
+      reasoning: pathGroupedMap.get(rawName)
+        ? `Grouped by path: ${rawName}/`
+        : `Grouped by path: ${rawName}`,
     }));
   }
 
@@ -220,10 +236,13 @@ export class HeuristicGrouper {
       const current = packages[i];
       if (!current) continue;
 
-      if (current.entities.length <= threshold && i + 1 < packages.length) {
+      // Skip merging for path-grouped packages (reasoning contains '/')
+      // They already have meaningful grouping from the top-level component
+      const isPathGrouped = current.reasoning?.includes('/');
+      if (current.entities.length <= threshold && !isPathGrouped && i + 1 < packages.length) {
         // Merge with next package
         const next = packages[i + 1];
-        if (next && !skipIndices.has(i + 1)) {
+        if (next && !skipIndices.has(i + 1) && !next.reasoning?.includes('/')) {
           merged.push({
             name: `${current.name} & ${next.name}`,
             entities: [...current.entities, ...next.entities],

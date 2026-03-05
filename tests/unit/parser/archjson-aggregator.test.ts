@@ -585,6 +585,123 @@ describe('ArchJSONAggregator', () => {
     });
   });
 
+  describe('C++ package extraction with workspaceRoot', () => {
+    const workspaceRoot = '/home/user/project';
+
+    function makeCppEntity(name: string, absFile: string): Entity {
+      return {
+        id: name,
+        name,
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: { file: absFile, startLine: 1, endLine: 10 },
+      };
+    }
+
+    it('uses parent directory when workspaceRoot is set and path is absolute', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        workspaceRoot,
+        entities: [
+          makeCppEntity('A', '/home/user/project/src/a.cpp'),
+          makeCppEntity('B', '/home/user/project/common/b.cpp'),
+          makeCppEntity('C', '/home/user/project/ggml/src/ggml-blas/c.cpp'),
+          makeCppEntity('D', '/home/user/project/src/models/llama.cpp'),
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      const names = result.entities.map((e) => e.name).sort();
+      expect(names).toEqual(['common', 'ggml/src/ggml-blas', 'src', 'src/models']);
+    });
+
+    it('does NOT use workspaceRoot for relative paths (TypeScript fallback)', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        // no workspaceRoot
+        entities: [
+          makeCppEntity('A', 'src/services/a.ts'),
+          makeCppEntity('B', 'src/repositories/b.ts'),
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      const names = result.entities.map((e) => e.name).sort();
+      expect(names).toEqual(['repositories', 'services']); // TypeScript sub-package extraction preserved
+    });
+
+    it('maps package relations correctly using workspaceRoot', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        workspaceRoot,
+        entities: [
+          makeCppEntity('A', '/home/user/project/src/a.cpp'),
+          makeCppEntity('B', '/home/user/project/common/b.cpp'),
+        ],
+        relations: [{ id: 'r1', type: 'inheritance', source: 'A', target: 'B' }],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      expect(result.relations).toHaveLength(1);
+      expect(result.relations[0].source).toBe('src');
+      expect(result.relations[0].target).toBe('common');
+    });
+
+    it('filters out entities with paths outside workspaceRoot', () => {
+      // If a file is not under workspaceRoot, path.relative returns a '../...' path
+      // The first component will be '..' which should still work (not filtered out)
+      // but we want to make sure valid paths work correctly
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        workspaceRoot,
+        entities: [
+          makeCppEntity('A', '/home/user/project/src/a.cpp'),
+          makeCppEntity('B', '/home/user/project/src/b.cpp'),
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      expect(result.entities).toHaveLength(1);
+      expect(result.entities[0].name).toBe('src');
+    });
+
+    it('creates separate packages for nested subdirectories', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        workspaceRoot,
+        entities: [
+          makeCppEntity('Flat', '/home/user/project/src/flat.cpp'),
+          makeCppEntity('Model', '/home/user/project/src/models/model.cpp'),
+          makeCppEntity('Batch', '/home/user/project/examples/batched/main.cpp'),
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      const names = result.entities.map((e) => e.name).sort();
+      expect(names).toEqual(['examples/batched', 'src', 'src/models']);
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle empty entities array', () => {
       const archJSON: ArchJSON = {

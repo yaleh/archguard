@@ -58,6 +58,7 @@ export interface ArchJSON {
   relations: Relation[];
   modules?: Module[];
   metadata?: Record<string, unknown>;
+  workspaceRoot?: string;
 
   // Type-safe extensions (ADR-002)
   extensions?: import('./extensions.js').ArchJSONExtensions;

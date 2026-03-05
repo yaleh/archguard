@@ -59,6 +59,14 @@ describe('TreeSitterBridge', () => {
       const result = bridge.parseCode('enum class Direction { Up, Down };', 'test.hpp');
       expect(result.enums[0].isScoped).toBe(true);
     });
+
+    it('stores filePath (not AST dump) as sourceFile', () => {
+      const code = `enum Color { Red, Green, Blue };`;
+      const result = bridge.parseCode(code, '/my/project/colors.h');
+      expect(result.enums).toHaveLength(1);
+      expect(result.enums[0].sourceFile).toBe('/my/project/colors.h');
+      expect(result.enums[0].sourceFile).not.toContain('(');  // not AST dump
+    });
   });
 
   describe('include extraction', () => {
@@ -85,6 +93,75 @@ describe('TreeSitterBridge', () => {
       const result = bridge.parseCode('void doWork(int x) {}', 'test.cpp');
       expect(result.functions).toHaveLength(1);
       expect(result.functions[0].name).toBe('doWork');
+    });
+  });
+
+  describe('preprocessor conditional handling', () => {
+    it('extracts class inside #ifndef include guard', () => {
+      const code = `#ifndef MY_HEADER_H
+#define MY_HEADER_H
+class MyClass {
+  void method();
+};
+#endif`;
+      const result = bridge.parseCode(code, 'my_header.h');
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].name).toBe('MyClass');
+    });
+
+    it('extracts struct inside #if defined conditional', () => {
+      const code = `#if defined(__linux__)
+struct LinuxFeatures {
+  bool has_avx = false;
+};
+#endif`;
+      const result = bridge.parseCode(code, 'feats.cpp');
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].name).toBe('LinuxFeatures');
+      expect(result.classes[0].kind).toBe('struct');
+    });
+
+    it('extracts enum inside include guard', () => {
+      const code = `#ifndef COLOR_H
+#define COLOR_H
+enum class Color { Red, Green, Blue };
+#endif`;
+      const result = bridge.parseCode(code, 'color.h');
+      expect(result.enums).toHaveLength(1);
+      expect(result.enums[0].name).toBe('Color');
+    });
+
+    it('extracts function inside #ifdef block', () => {
+      const code = `#ifdef ENABLE_FEATURE
+void featureFunc() {}
+#endif`;
+      const result = bridge.parseCode(code, 'feature.cpp');
+      expect(result.functions).toHaveLength(1);
+      expect(result.functions[0].name).toBe('featureFunc');
+    });
+
+    it('skips partial template specializations (avoids double angle-bracket name)', () => {
+      const code = `
+template<typename T, typename B, typename Enable = void>
+struct vectorized_binary {};
+
+template<typename T, typename B>
+struct vectorized_binary<T, B, void> {};
+`;
+      const result = bridge.parseCode(code, 'test.h');
+      // Only the primary template should be extracted, not the specialization
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].name).toMatch(/^vectorized_binary</);
+    });
+
+    it('extracts class from #else branch', () => {
+      const code = `#ifdef PLATFORM_A
+struct PlatformA {};
+#else
+struct PlatformB {};
+#endif`;
+      const result = bridge.parseCode(code, 'platform.h');
+      expect(result.classes).toHaveLength(2);
     });
   });
 });

@@ -393,4 +393,106 @@ describe('HeuristicGrouper', () => {
       });
     });
   });
+
+  describe('C++ path-based package grouping', () => {
+    function makePackageEntity(name: string, file: string) {
+      return {
+        id: name,
+        name,
+        type: 'package' as any,
+        visibility: 'public' as const,
+        members: [],
+        sourceLocation: { file, startLine: 1, endLine: 1 },
+      };
+    }
+
+    it('groups path-based package entities by top-level component', () => {
+      const grouper = new HeuristicGrouper({ maxPackages: 20 });
+      const archJson: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        entities: [
+          makePackageEntity('src', '/project/src/a.cpp'),
+          makePackageEntity('src/models', '/project/src/models/m.cpp'),
+          makePackageEntity('examples/batched', '/project/examples/batched/main.cpp'),
+          makePackageEntity('examples/embedding', '/project/examples/embedding/main.cpp'),
+          makePackageEntity('common', '/project/common/arg.cpp'),
+        ],
+        relations: [],
+      };
+
+      const result = grouper.group(archJson);
+      const groupNames = result.packages.map((p) => p.name);
+
+      // src and src/models both go into 'Src Layer'
+      const srcGroup = result.packages.find((p) => p.name === 'Src Layer');
+      expect(srcGroup).toBeDefined();
+      expect(srcGroup!.entities).toHaveLength(2); // src + src/models
+
+      // examples/batched and examples/embedding both go into 'Examples Layer'
+      const examplesGroup = result.packages.find((p) => p.name === 'Examples Layer');
+      expect(examplesGroup).toBeDefined();
+      expect(examplesGroup!.entities).toHaveLength(2);
+
+      // common goes into 'Common Layer' (no slash, uses file path extraction)
+      // (or it might be 'Common Layer' from the entity name itself)
+      expect(groupNames.some((n) => n.toLowerCase().includes('common'))).toBe(true);
+    });
+
+    it('does NOT merge path-grouped packages with adjacent groups', () => {
+      const grouper = new HeuristicGrouper({ maxPackages: 20 });
+      const archJson: ArchJSON = {
+        version: '1.0',
+        language: 'cpp',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        entities: [
+          makePackageEntity('examples/batched', '/project/examples/batched/main.cpp'),
+          makePackageEntity('src', '/project/src/a.cpp'),
+        ],
+        relations: [],
+      };
+
+      const result = grouper.group(archJson);
+      // Should NOT be merged into a single group named "Examples Layer & Src Layer"
+      // examples/batched → Examples Layer; src → Src Layer (separate)
+      expect(result.packages.length).toBeGreaterThanOrEqual(2);
+      expect(result.packages.every((p) => !p.name.includes(' & '))).toBe(true);
+    });
+
+    it('still merges non-path groups with adjacent groups (TypeScript behavior preserved)', () => {
+      const grouper = new HeuristicGrouper({ maxPackages: 20 });
+      const archJson: ArchJSON = {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'A',
+            name: 'A',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/services/a.ts', startLine: 1, endLine: 1 },
+          },
+          {
+            id: 'B',
+            name: 'B',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/repos/b.ts', startLine: 1, endLine: 1 },
+          },
+        ],
+        relations: [],
+      };
+
+      const result = grouper.group(archJson);
+      // Both groups have 1 entity each → should merge (existing TypeScript behavior)
+      expect(result.packages.some((p) => p.name.includes(' & '))).toBe(true);
+    });
+  });
 });
