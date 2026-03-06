@@ -42,7 +42,7 @@
     "migrate": "node dist/scripts/migrate-to-mermaid.js"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0 <25"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
