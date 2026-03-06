@@ -108,7 +108,7 @@ getPrimaryArchJson(): ArchJSON | null {
 const results = await processor.processAll();
 const primaryArchJson = processor.getPrimaryArchJson();
 if (primaryArchJson) {
-  await persistArchArtifacts(config.outputDir, primaryArchJson);
+  await persistArchArtifacts(config.workDir, primaryArchJson);
 }
 ```
 
@@ -188,15 +188,10 @@ export interface ArchIndex {
 
   /**
    * 非平凡 SCC（size > 1），按 size 降序。
-   * 与 proposal-file-stats 的 CycleInfo 结构对齐（含 memberNames 和 files）
-   * 以避免消费方还需加载完整 arch.json。
+   * 直接复用 @/types/index.ts 中的 CycleInfo 类型（含 memberNames 和 files），
+   * 不另定义 ArchIndexCycle，以避免类型漂移。
    */
-  cycles: Array<{
-    size: number;
-    members: string[];       // entity ID 列表
-    memberNames: string[];   // entity name 列表（与 members 一一对应）
-    files: string[];         // 去重后的源文件路径
-  }>;
+  cycles: import('@/types/index.js').CycleInfo[];
 }
 ```
 
@@ -219,23 +214,27 @@ async function loadWithValidation(archDir: string): Promise<QueryEngine> {
   const archJsonContent = await fs.readFile(archJsonPath, 'utf-8');
   const archJsonHash = sha256(archJsonContent);
 
-  // 2. 若 arch-index.json 不存在，临时构建内存索引（不写入磁盘）
+  // 2. 若 arch-index.json 不存在，重建并持久化索引
   if (!await fs.pathExists(indexPath)) {
-    return QueryEngine.fromArchJson(JSON.parse(archJsonContent));
+    const newIndex = buildIndex(JSON.parse(archJsonContent), archJsonHash);
+    fs.writeJson(indexPath, newIndex).catch(() => {}); // fire-and-forget
+    return new QueryEngine(newIndex, JSON.parse(archJsonContent));
   }
 
   const index = await fs.readJson(indexPath) as ArchIndex;
 
-  // 3. 哈希不匹配：index 来自旧版 arch.json，重建内存索引
+  // 3. 哈希不匹配：index 来自旧版 arch.json，重建并写回
   if (index.archJsonHash !== archJsonHash) {
-    return QueryEngine.fromArchJson(JSON.parse(archJsonContent));
+    const newIndex = buildIndex(JSON.parse(archJsonContent), archJsonHash);
+    fs.writeJson(indexPath, newIndex).catch(() => {}); // fire-and-forget
+    return new QueryEngine(newIndex, JSON.parse(archJsonContent));
   }
 
   return new QueryEngine(index, JSON.parse(archJsonContent));
 }
 ```
 
-**写入顺序**：`persistArchArtifacts` 先写 `arch.json`，再写 `arch-index.json`。若进程在两次写入之间被 kill，下次 `QueryEngine.load` 会检测到哈希不匹配并从 `arch.json` 重建，不会产生错误结果。
+**写入顺序**：`persistArchArtifacts` 先写 `arch.json`，再写 `arch-index.json`。若进程在两次写入之间被 kill，下次 `QueryEngine.load` 会检测到哈希不匹配并从 `arch.json` 重建（fire-and-forget 写回），不会产生错误结果。
 
 **构建代价**：对 500 实体、500 关系的项目，构建时间 < 5ms；index 文件大小约 50–100 KB。
 
@@ -271,8 +270,8 @@ archguard query --cycles --entity "DiagramProcessor"
 # 全局指标摘要
 archguard query --summary
 
-# 显式指定 .archguard/ 目录（分析外部项目）
-archguard query --used-by "App" --source-dir /path/to/project/.archguard
+# 显式指定 .archguard/ 工作目录（分析外部项目）
+archguard query --used-by "App" --arch-dir /path/to/project/.archguard
 ```
 
 #### 深度展开的复杂度
@@ -309,9 +308,9 @@ CacheManager  [class]  src/cli/cache-manager.ts:36
 #### 数据源选择逻辑
 
 1. 优先读取 `{sourceDir}/arch-index.json`，校验 `archJsonHash`（见一致性节）
-2. 若 index 不存在或哈希不匹配，从 `arch.json` 临时构建内存索引（不写入磁盘）
+2. 若 index 不存在或哈希不匹配，从 `arch.json` 重建索引并 fire-and-forget 写回 `arch-index.json`
 3. 若 `arch.json` 也不存在，打印 `"Run 'archguard analyze' first"`，退出码 1
-4. `sourceDir` 默认为当前目录下的 `.archguard/`；`--source-dir` 可显式覆盖
+4. `archDir` 默认为当前目录下的 `.archguard/`；`--arch-dir` 可显式覆盖（命名为 `arch-dir` 而非 `source-dir`，以区别于 `analyze -s/--sources` 的源代码目录语义）
 
 **目录查找**：`query` 不向上层目录 walk（不同于 git）。若当前目录无 `.archguard/`，直接以退出码 1 退出并提示路径。
 
@@ -429,10 +428,10 @@ tools: [
 
 ```bash
 # stdio 模式（MCP 标准）
-archguard mcp --source-dir ./.archguard
+archguard mcp --arch-dir ./.archguard
 
 # 显式指定外部项目
-archguard mcp --source-dir /path/to/project/.archguard
+archguard mcp --arch-dir /path/to/project/.archguard
 ```
 
 启动时立即执行数据加载与一致性校验（同 `QueryEngine.load`）。若 `arch.json` 不存在，打印错误并以退出码 1 退出——不静默启动后在每次工具调用时返回错误。
@@ -447,7 +446,7 @@ archguard mcp --source-dir /path/to/project/.archguard
   "mcpServers": {
     "archguard": {
       "command": "archguard",
-      "args": ["mcp", "--source-dir", "./.archguard"]
+      "args": ["mcp", "--arch-dir", "./.archguard"]
     }
   }
 }
@@ -464,7 +463,7 @@ archguard analyze 完成
         → rawArchJSON（entities 最多的 source group；Go Atlas 返回 null）
         → null 时跳过，非 null 时：
 
-        persistArchArtifacts(outputDir, rawArchJSON)
+        persistArchArtifacts(config.workDir, rawArchJSON)
           ├─→ 写入 arch.json
           └─→ ArchIndexBuilder.build(rawArchJSON, archJsonHash)
                 └─→ 写入 arch-index.json（含 archJsonHash 字段）
@@ -472,12 +471,12 @@ archguard analyze 完成
 archguard query --used-by "Foo"           （新进程，每次调用独立）
   └─→ QueryEngine.load(".archguard/")
         ├─ arch-index.json 存在且哈希匹配 → 直接使用 index
-        ├─ index 不存在或哈希不匹配       → 从 arch.json 构建内存 index
+        ├─ index 不存在或哈希不匹配       → 重建 index + fire-and-forget 写回磁盘
         └─ arch.json 不存在               → 报错，退出码 1
   └─→ engine.getDependents("Foo")         ← O(1) map lookup（depth=1）
         └─→ stdout（JSON / text）
 
-archguard mcp --source-dir ./.archguard   （常驻进程）
+archguard mcp --arch-dir ./.archguard     （常驻进程）
   └─→ QueryEngine.load()（启动时一次性加载）
   └─→ 监听 stdin（@modelcontextprotocol/sdk）
         └─→ 各工具调用 engine 方法（同上）
@@ -491,13 +490,14 @@ archguard mcp --source-dir ./.archguard   （常驻进程）
 
 | 文件 | 说明 |
 |------|------|
-| `src/cli/query/arch-index.ts` | `ArchIndex` 接口定义 |
-| `src/cli/query/arch-index-builder.ts` | `ArchIndexBuilder`（纯函数：ArchJSON → ArchIndex） |
+| `src/cli/query/arch-index.ts` | `ArchIndex` 接口定义（`cycles` 复用 `CycleInfo`，无独立 `ArchIndexCycle`） |
+| `src/cli/query/arch-index-builder.ts` | `ArchIndexBuilder`（纯函数：ArchJSON → ArchIndex；优先复用 `metrics.cycles`） |
 | `src/cli/query/query-engine.ts` | `QueryEngine`（加载、校验、查询方法） |
-| `src/cli/query/arch-artifacts.ts` | `persistArchArtifacts(outputDir, archJson)`：写入 arch.json + arch-index.json |
-| `src/cli/commands/query.ts` | `query` 子命令（Commander） |
-| `src/cli/commands/search.ts` | `search` 子命令（Commander） |
-| `src/cli/commands/mcp.ts` | `mcp` 子命令：启动 MCP stdio server |
+| `src/cli/query/arch-artifacts.ts` | `persistArchArtifacts(archDir, archJson)`：写入 arch.json + arch-index.json |
+| `src/cli/query/engine-loader.ts` | 共享 `resolveArchDir()` + `loadEngine()`，供 query/search/mcp 三个命令复用 |
+| `src/cli/commands/query.ts` | `query` 子命令（Commander，`--arch-dir`） |
+| `src/cli/commands/search.ts` | `search` 子命令（Commander，`--arch-dir`） |
+| `src/cli/commands/mcp.ts` | `mcp` 子命令：启动 MCP stdio server（`--arch-dir`） |
 | `src/cli/mcp/mcp-server.ts` | MCP server（工具注册、请求分发，依赖 `@modelcontextprotocol/sdk`） |
 | `tests/unit/cli/query/arch-index-builder.test.ts` | `ArchIndexBuilder` 单元测试 |
 | `tests/unit/cli/query/query-engine.test.ts` | `QueryEngine`（含 hash 校验、回退逻辑）单元测试 |
@@ -554,8 +554,8 @@ archguard mcp --source-dir ./.archguard   （常驻进程）
 
 ### 一致性与回退
 
-12. `arch-index.json` 不存在时，`QueryEngine.load()` 从 `arch.json` 构建内存索引，查询结果正确，不写入磁盘
-13. `arch-index.json.archJsonHash` 与当前 `arch.json` 哈希不匹配时，`QueryEngine.load()` 从 `arch.json` 重建，不报错，不使用过期 index 数据
+12. `arch-index.json` 不存在时，`QueryEngine.load()` 从 `arch.json` 构建索引并 fire-and-forget 写回磁盘，查询结果正确
+13. `arch-index.json.archJsonHash` 与当前 `arch.json` 哈希不匹配时，`QueryEngine.load()` 从 `arch.json` 重建并 fire-and-forget 写回，不报错，不使用过期 index 数据
 14. `arch.json` 不存在时（index 也不存在），`QueryEngine.load()` 抛出 `QueryDataMissingError`，调用方打印 `"Run 'archguard analyze' first"`，退出码 1
 15. MCP server 启动时若 `arch.json` 不存在，打印错误并以退出码 1 退出，不静默启动
 
@@ -569,7 +569,7 @@ archguard mcp --source-dir ./.archguard   （常驻进程）
 21. `--impls-of "IParser"` 返回所有 `relation.type === 'implementation' && target === IParser.id` 的 source 实体
 22. `--file "src/foo.ts"` 返回该文件内所有实体；文件路径未出现在 index 时返回空结果
 23. `--format json` 输出合法 JSON；`--format text` 输出人类可读文本
-24. `.archguard/` 不存在时退出码 1；`--source-dir` 不存在时退出码 1（不向上层目录 walk）
+24. `.archguard/` 不存在时退出码 1；`--arch-dir` 指定路径不存在时退出码 1（不向上层目录 walk）
 
 ### `search` 命令
 

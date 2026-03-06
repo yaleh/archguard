@@ -45,7 +45,7 @@ ls .archguard/
 ### Objectives
 
 1. Expose `rawArchJSON` from `DiagramProcessor` via a new public getter
-2. Add `src/cli/query/arch-artifacts.ts` with `persistArchArtifacts(outputDir, archJson)`
+2. Add `src/cli/query/arch-artifacts.ts` with `persistArchArtifacts(archDir, archJson)`
 3. Wire into `analyzeCommandHandler` so `arch.json` is written after every successful analyze
 
 ### Files changed
@@ -53,7 +53,7 @@ ls .archguard/
 | File | Type | Description |
 |------|------|-------------|
 | `src/cli/processors/diagram-processor.ts` | Modify | Add `getPrimaryArchJson(): ArchJSON \| null` |
-| `src/cli/query/arch-artifacts.ts` | New | `persistArchArtifacts(outputDir, archJson)` |
+| `src/cli/query/arch-artifacts.ts` | New | `persistArchArtifacts(archDir, archJson)` |
 | `src/cli/commands/analyze.ts` | Modify | Call `persistArchArtifacts` after `processAll()` |
 | `tests/unit/cli/processors/diagram-processor-primary-arch.test.ts` | New | Unit tests for `getPrimaryArchJson()` |
 
@@ -75,7 +75,7 @@ grep -n "getPrimaryArchJson\|persistArchArtifacts" \
 
 ### Stage 1-1 — Add `getPrimaryArchJson()` to `DiagramProcessor`
 
-In `src/cli/processors/diagram-processor.ts`, after the closing `}` of `processAll()` (around line 328), add:
+In `src/cli/processors/diagram-processor.ts`, add the following method to the `DiagramProcessor` class body, after `processAll()`. The class is large (1000+ lines); use your editor's symbol search for `processAll` to locate the insertion point:
 
 ```typescript
 /**
@@ -154,8 +154,9 @@ Run:
 
 ```bash
 npm test -- tests/unit/cli/processors/diagram-processor-primary-arch.test.ts
-# Expected: 2 pass (null cases), 1 fail (cache access – cache is private Map)
-# Adjust test to use internal access pattern matching actual field name
+# Expected: all 3 tests pass
+# The private field is named archJsonCache (verified: diagram-processor.ts line 431).
+# (processor as any).archJsonCache accesses it correctly — no adjustment needed.
 ```
 
 ---
@@ -169,34 +170,26 @@ Create directory and file:
 
 import fs from 'fs-extra';
 import path from 'path';
-import { createHash } from 'crypto';
 import type { ArchJSON } from '@/types/index.js';
 
 export const ARCH_JSON_FILENAME  = 'arch.json';
 export const ARCH_INDEX_FILENAME = 'arch-index.json';
 
 /**
- * Persist rawArchJSON to <outputDir>/arch.json.
+ * Persist rawArchJSON to <archDir>/arch.json.
  * Does NOT write arch-index.json — that is handled by Phase 2's ArchIndexBuilder.
  * Phase 1 only writes arch.json; Phase 2 extends this function.
  *
  * Write order: arch.json first, arch-index.json second (see proposal §3).
  */
 export async function persistArchArtifacts(
-  outputDir: string,
+  archDir: string,
   archJson: ArchJSON,
 ): Promise<void> {
-  await fs.ensureDir(outputDir);
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
+  await fs.ensureDir(archDir);
+  const archJsonPath = path.join(archDir, ARCH_JSON_FILENAME);
   await fs.writeJson(archJsonPath, archJson);
   // arch-index.json written by ArchIndexBuilder in Phase 2
-}
-
-/** Compute SHA-256 of arch.json file content (used by ArchIndexBuilder). */
-export async function computeArchJsonHash(outputDir: string): Promise<string> {
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
-  const content = await fs.readFile(archJsonPath);
-  return createHash('sha256').update(content).digest('hex');
 }
 ```
 
@@ -210,15 +203,19 @@ In `src/cli/commands/analyze.ts`, add the import at the top:
 import { persistArchArtifacts } from '@/cli/query/arch-artifacts.js';
 ```
 
-In `analyzeCommandHandler`, after `const results = await processor.processAll();` (around line 322), insert:
+In `analyzeCommandHandler`, after `const results = await processor.processAll();` (line 338), insert:
 
 ```typescript
 // Persist rawArchJSON for query/search/mcp commands
 const primaryArchJson = processor.getPrimaryArchJson();
 if (primaryArchJson) {
-  await persistArchArtifacts(config.outputDir, primaryArchJson);
+  await persistArchArtifacts(config.workDir, primaryArchJson);
 }
 ```
+
+> **Critical**: use `config.workDir` (default `.archguard`), **not** `config.outputDir`
+> (which defaults to `.archguard/output`). `arch.json` must live at the workDir root
+> so that `query`/`search`/`mcp` commands can find it with their default `--arch-dir`.
 
 Verify:
 
@@ -229,7 +226,8 @@ npm run type-check
 npm run build
 node dist/cli/index.js analyze -v
 ls .archguard/
-# Expected: arch.json now present alongside index.md, overview/, class/, method/
+# Expected: arch.json at workDir root (.archguard/arch.json)
+# Diagrams remain in .archguard/output/ as before
 
 node -e "const a = require('./.archguard/arch.json'); console.log(a.entities.length)"
 # Expected: 261 (or current entity count from self-analysis)
@@ -275,14 +273,10 @@ npm run type-check
 ```typescript
 // src/cli/query/arch-index.ts
 
-import type { RelationType } from '@/types/index.js';
+import type { RelationType, CycleInfo } from '@/types/index.js';
 
-export interface ArchIndexCycle {
-  size: number;
-  members: string[];       // entity IDs
-  memberNames: string[];   // entity names, parallel to members
-  files: string[];         // deduplicated source file paths
-}
+// Re-export for consumers who import from this module.
+export type { CycleInfo } from '@/types/index.js';
 
 export interface ArchIndex {
   /** Schema version for forward-compatibility checks. */
@@ -321,8 +315,11 @@ export interface ArchIndex {
   /** Source file relative path → entity ID list. */
   fileToIds: Record<string, string[]>;
 
-  /** Non-trivial SCCs (size > 1), sorted by size DESC. Aligns with CycleInfo in proposal-file-stats. */
-  cycles: ArchIndexCycle[];
+  /**
+   * Non-trivial SCCs (size > 1), sorted by size DESC.
+   * Reuses CycleInfo from @/types/index.ts — no separate ArchIndexCycle type.
+   */
+  cycles: CycleInfo[];
 }
 
 export const ARCH_INDEX_VERSION = '1.0';
@@ -336,25 +333,29 @@ export const ARCH_INDEX_VERSION = '1.0';
 // src/cli/query/arch-index-builder.ts
 
 import path from 'path';
-import { createHash } from 'crypto';
-import type { ArchJSON, RelationType } from '@/types/index.js';
+import type { ArchJSON, RelationType, CycleInfo } from '@/types/index.js';
 import { ARCH_INDEX_VERSION } from './arch-index.js';
-import type { ArchIndex, ArchIndexCycle } from './arch-index.js';
+import type { ArchIndex } from './arch-index.js';
 
 export class ArchIndexBuilder {
   /**
    * Build an ArchIndex from a rawArchJSON.
    *
-   * @param archJson  - The rawArchJSON returned by getPrimaryArchJson()
+   * @param archJson     - The rawArchJSON returned by getPrimaryArchJson()
    * @param archJsonHash - SHA-256 of the serialised arch.json file content
+   *
+   * Cycle detection: if archJson.metrics?.cycles is already populated
+   * (present when format=json after MetricsCalculator runs), it is reused
+   * directly to avoid a redundant Kosaraju pass. Otherwise, SCC is computed
+   * from the internal-relations graph (mirrors MetricsCalculator logic).
    */
   static build(archJson: ArchJSON, archJsonHash: string): ArchIndex {
     const { entities, relations, language, workspaceRoot } = archJson;
 
     const entityIds = new Set(entities.map(e => e.id));
 
-    // Internal relations only (both endpoints known)
-    const internalRelations = (relations ?? []).filter(
+    // Internal relations only (both endpoints in entity set)
+    const internalRelations = relations.filter(
       r => entityIds.has(r.source) && entityIds.has(r.target)
     );
 
@@ -405,14 +406,17 @@ export class ArchIndexBuilder {
       relationsByType[r.type] = bucket;
     }
 
-    // SCC (Kosaraju) — reuse logic pattern from MetricsCalculator
-    const cycles = ArchIndexBuilder.computeCycles(entities, internalRelations, idToFile, idToName);
+    // Reuse pre-computed cycles from MetricsCalculator when available;
+    // otherwise run Kosaraju on the internal-relations graph.
+    const cycles: CycleInfo[] =
+      archJson.metrics?.cycles ??
+      ArchIndexBuilder.computeCycles(entities, internalRelations, idToFile, idToName);
 
     return {
       version: ARCH_INDEX_VERSION,
       generatedAt: new Date().toISOString(),
       archJsonHash,
-      language: language ?? 'unknown',
+      language,
       nameToIds,
       idToFile,
       idToName,
@@ -424,12 +428,19 @@ export class ArchIndexBuilder {
     };
   }
 
+  /**
+   * Kosaraju SCC on the internal-relations graph.
+   * Only called when archJson.metrics?.cycles is absent (mermaid-format output).
+   * Mirrors MetricsCalculator.computeSCCGroups + buildCycleInfos.
+   *
+   * @param internalRelations - Relations where both source and target are in entityIds
+   */
   private static computeCycles(
     entities: ArchJSON['entities'],
-    relations: ArchJSON['relations'],
+    internalRelations: ArchJSON['relations'],
     idToFile: Record<string, string>,
     idToName: Record<string, string>,
-  ): ArchIndexCycle[] {
+  ): CycleInfo[] {
     if (entities.length === 0) return [];
 
     const graph      = new Map<string, string[]>();
@@ -438,7 +449,7 @@ export class ArchIndexBuilder {
       graph.set(e.id, []);
       transposed.set(e.id, []);
     }
-    for (const r of relations) {
+    for (const r of internalRelations) {
       graph.get(r.source)?.push(r.target);
       transposed.get(r.target)?.push(r.source);
     }
@@ -465,9 +476,9 @@ export class ArchIndexBuilder {
       if (!visited1.has(id)) dfs(id, graph, visited1, finishStack);
     }
 
-    // Pass 2: collect SCC members
+    // Pass 2: collect SCC members on transposed graph
     const visited2 = new Set<string>();
-    const result: ArchIndexCycle[] = [];
+    const result: CycleInfo[] = [];
     while (finishStack.length) {
       const node = finishStack.pop()!;
       if (!visited2.has(node)) {
@@ -499,7 +510,7 @@ export class ArchIndexBuilder {
 import fs from 'fs-extra';
 import path from 'path';
 import { createHash } from 'crypto';
-import type { ArchJSON } from '@/types/index.js';
+import type { ArchJSON, CycleInfo } from '@/types/index.js';
 import { ArchIndexBuilder } from './arch-index-builder.js';
 import { ARCH_INDEX_VERSION, type ArchIndex } from './arch-index.js';
 import { ARCH_JSON_FILENAME, ARCH_INDEX_FILENAME } from './arch-artifacts.js';
@@ -520,12 +531,8 @@ export interface EntityResult {
   members?: { name: string; type: string; visibility: string }[];
 }
 
-export interface CycleResult {
-  size: number;
-  members: string[];
-  memberNames: string[];
-  files: string[];
-}
+// CycleInfo from @/types/index.ts is the canonical cycle type; re-export for consumers.
+export type { CycleInfo } from '@/types/index.js';
 
 export interface SummaryResult {
   entityCount: number;
@@ -546,7 +553,7 @@ export class QueryEngine {
   // ----------------------------------------------------------------
 
   /**
-   * Load from disk. Validates archJsonHash; falls back to fromArchJson() on mismatch.
+   * Load from disk. Validates archJsonHash; rebuilds and re-persists index on mismatch.
    * Throws QueryDataMissingError if arch.json does not exist.
    */
   static async load(archDir: string): Promise<QueryEngine> {
@@ -573,8 +580,11 @@ export class QueryEngine {
       }
     }
 
-    // Build in-memory index (do NOT write to disk here)
-    return QueryEngine.fromArchJson(archJson, liveHash);
+    // Rebuild index and persist updated arch-index.json so subsequent calls are fast.
+    const newIndex = ArchIndexBuilder.build(archJson, liveHash);
+    // Fire-and-forget: write failure is non-fatal (next call will rebuild again).
+    fs.writeJson(archIndexPath, newIndex).catch(() => {});
+    return new QueryEngine(newIndex, archJson);
   }
 
   /** Build engine entirely from an ArchJSON (no disk I/O). */
@@ -621,7 +631,7 @@ export class QueryEngine {
     return ids.map(id => this.toEntityResult(id, true)).filter(Boolean) as EntityResult[];
   }
 
-  getCycles(entityName?: string): CycleResult[] {
+  getCycles(entityName?: string): CycleInfo[] {
     if (!entityName) return this.index.cycles;
     return this.index.cycles.filter(c => c.memberNames.includes(entityName));
   }
@@ -766,22 +776,22 @@ In `src/cli/query/arch-artifacts.ts`, update `persistArchArtifacts`:
 import { ArchIndexBuilder } from './arch-index-builder.js';
 
 export async function persistArchArtifacts(
-  outputDir: string,
+  archDir: string,
   archJson: ArchJSON,
 ): Promise<void> {
-  await fs.ensureDir(outputDir);
+  await fs.ensureDir(archDir);
 
   // 1. Write arch.json first
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
+  const archJsonPath = path.join(archDir, ARCH_JSON_FILENAME);
   const content = JSON.stringify(archJson);
   await fs.writeFile(archJsonPath, content, 'utf-8');
 
-  // 2. Compute hash of the just-written file
+  // 2. Compute hash of the just-written content (consistent with QueryEngine.load)
   const archJsonHash = createHash('sha256').update(content).digest('hex');
 
   // 3. Build and write arch-index.json
   const index = ArchIndexBuilder.build(archJson, archJsonHash);
-  const archIndexPath = path.join(outputDir, ARCH_INDEX_FILENAME);
+  const archIndexPath = path.join(archDir, ARCH_INDEX_FILENAME);
   await fs.writeJson(archIndexPath, index);
 }
 ```
@@ -1006,8 +1016,47 @@ Implement `archguard query` as a Commander subcommand backed by `QueryEngine`.
 
 | File | Type | Description |
 |------|------|-------------|
+| `src/cli/query/engine-loader.ts` | New | Shared `resolveArchDir()` + `loadEngine()` used by query, search, mcp |
 | `src/cli/commands/query.ts` | New | Commander command with all `--entity / --used-by / --deps-of / --impls-of / --file / --cycles / --summary` flags |
-| `src/cli/index.ts` | Modify | Register `query` subcommand |
+| `src/cli/index.ts` | Modify | Register `query` subcommand (also modified in Phase 4 and 5 for search and mcp) |
+
+---
+
+### Stage 3-0 — `src/cli/query/engine-loader.ts` (shared util)
+
+`query`, `search`, and `mcp` all need the same arch-dir resolution and error-exit logic. Extract it once here:
+
+```typescript
+// src/cli/query/engine-loader.ts
+
+import path from 'path';
+import { QueryEngine, QueryDataMissingError } from './query-engine.js';
+
+/**
+ * Resolve the .archguard work directory.
+ * --arch-dir overrides the default (<cwd>/.archguard).
+ *
+ * Named archDir (not sourceDir) to avoid confusion with source code directories
+ * (-s/--sources in the analyze command).
+ */
+export function resolveArchDir(archDir?: string): string {
+  return archDir ? path.resolve(archDir) : path.join(process.cwd(), '.archguard');
+}
+
+/** Load QueryEngine, printing an error and exiting on QueryDataMissingError. */
+export async function loadEngine(archDir?: string): Promise<QueryEngine> {
+  const dir = resolveArchDir(archDir);
+  try {
+    return await QueryEngine.load(dir);
+  } catch (err) {
+    if (err instanceof QueryDataMissingError) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
+}
+```
 
 ---
 
@@ -1017,25 +1066,7 @@ Implement `archguard query` as a Commander subcommand backed by `QueryEngine`.
 // src/cli/commands/query.ts
 
 import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-
-function resolveArchDir(sourceDir?: string): string {
-  return sourceDir ? path.resolve(sourceDir) : path.join(process.cwd(), '.archguard');
-}
-
-async function loadEngine(sourceDir?: string): Promise<QueryEngine> {
-  const archDir = resolveArchDir(sourceDir);
-  try {
-    return await QueryEngine.load(archDir);
-  } catch (err) {
-    if (err instanceof QueryDataMissingError) {
-      console.error(err.message);
-      process.exit(1);
-    }
-    throw err;
-  }
-}
+import { loadEngine } from '@/cli/query/engine-loader.js';
 
 function printJson(data: unknown): void { console.log(JSON.stringify(data, null, 2)); }
 function printText(label: string, items: { name: string; file: string; startLine?: number }[]): void {
@@ -1050,7 +1081,7 @@ function printText(label: string, items: { name: string; file: string; startLine
 export function createQueryCommand(): Command {
   return new Command('query')
     .description('Query the persisted ArchJSON index (run analyze first)')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
+    .option('--arch-dir <dir>', 'Path to .archguard/ work directory (default: ./.archguard)')
     .option('-f, --format <fmt>', 'Output format: json|text', 'json')
 
     .option('--entity <name>',   'Find entity by name (exact)')
@@ -1065,7 +1096,7 @@ export function createQueryCommand(): Command {
     .option('--summary',         'Show project structure summary')
 
     .action(async (opts) => {
-      const engine = await loadEngine(opts.sourceDir);
+      const engine = await loadEngine(opts.archDir);
       const fmt    = opts.format as 'json' | 'text';
       const depth  = Math.min(Math.max(parseInt(opts.depth, 10) || 1, 1), 5);
 
@@ -1120,7 +1151,7 @@ export function createQueryCommand(): Command {
 
 ### Stage 3-2 — Register in `src/cli/index.ts`
 
-Add import and register:
+Add import and register. `src/cli/index.ts` is also modified in Phase 4 (search) and Phase 5 (mcp); batch all three imports/addCommand calls into the file — described cumulatively here for clarity:
 
 ```typescript
 import { createQueryCommand } from './commands/query.js';
@@ -1158,7 +1189,7 @@ Implement `archguard search` for structure-pattern file discovery.
 | File | Type | Description |
 |------|------|-------------|
 | `src/cli/commands/search.ts` | New | Commander command: `--calls / --type / --high-coupling / --orphans / --in-cycles` |
-| `src/cli/index.ts` | Modify | Register `search` subcommand |
+| `src/cli/index.ts` | Modify | Register `search` subcommand (see Phase 3 note: all three registrations batch into same file) |
 
 ---
 
@@ -1168,28 +1199,10 @@ Implement `archguard search` for structure-pattern file discovery.
 // src/cli/commands/search.ts
 
 import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-
-function resolveArchDir(sourceDir?: string): string {
-  return sourceDir ? path.resolve(sourceDir) : path.join(process.cwd(), '.archguard');
-}
-
-async function loadEngine(sourceDir?: string): Promise<QueryEngine> {
-  const archDir = resolveArchDir(sourceDir);
-  try {
-    return await QueryEngine.load(archDir);
-  } catch (err) {
-    if (err instanceof QueryDataMissingError) {
-      console.error(err.message);
-      process.exit(1);
-    }
-    throw err;
-  }
-}
+import { loadEngine } from '@/cli/query/engine-loader.js';
 
 /** Deduplicate results by file, print one line per file. */
-function printFiles(results: { name: string; file: string; startLine?: number }[], fmt: string): void {
+function printFiles(results: { name: string; file: string }[], fmt: string): void {
   if (fmt === 'json') {
     console.log(JSON.stringify(results, null, 2));
     return;
@@ -1201,7 +1214,7 @@ function printFiles(results: { name: string; file: string; startLine?: number }[
 export function createSearchCommand(): Command {
   return new Command('search')
     .description('Find files by structural patterns (no re-parsing required)')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
+    .option('--arch-dir <dir>', 'Path to .archguard/ work directory (default: ./.archguard)')
     .option('-f, --format <fmt>', 'Output format: json|text', 'text')
 
     .option('--calls <name>',        'Files containing entities that depend on <name> (entity-level; see docs for precision limits)')
@@ -1213,7 +1226,7 @@ export function createSearchCommand(): Command {
     .option('--in-cycles',           'Files containing entities in circular dependencies')
 
     .action(async (opts) => {
-      const engine = await loadEngine(opts.sourceDir);
+      const engine = await loadEngine(opts.archDir);
       const fmt    = opts.format as 'json' | 'text';
 
       if (opts.calls !== undefined) {
@@ -1232,16 +1245,12 @@ export function createSearchCommand(): Command {
       if (opts.highCoupling) {
         const threshold = parseInt(opts.threshold, 10) || 8;
         const results = engine.findHighCoupling(threshold);
-        // For high-coupling, show entity + inDegree
         if (fmt === 'json') {
           console.log(JSON.stringify(results, null, 2));
         } else {
-          results
-            .sort((a, b) => {
-              const ia = engine.getSummary(); // inDegree not on EntityResult; compute via index
-              return 0; // placeholder — actual impl accesses index.dependents directly
-            })
-            .forEach(r => console.log(`${r.name.padEnd(40)} ${r.file}`));
+          // findHighCoupling already filters by threshold; list entity name + file.
+          // inDegree count is implicit (all results meet the threshold).
+          results.forEach(r => console.log(`${r.name.padEnd(40)} ${r.file}`));
         }
         return;
       }
@@ -1261,8 +1270,6 @@ export function createSearchCommand(): Command {
     });
 }
 ```
-
-> **Note**: The `--high-coupling` text output in the stub above is a placeholder. During implementation, expose `index.dependents` length via `QueryEngine` or add an `EntityResult.inDegree` field to surface the count cleanly.
 
 ### Stage 4-2 — Register in `src/cli/index.ts`
 
@@ -1299,8 +1306,9 @@ Expose `QueryEngine` methods as MCP tools via `@modelcontextprotocol/sdk`, acces
 ### Prerequisites
 
 ```bash
-npm install @modelcontextprotocol/sdk
-# Confirm it appears in package.json dependencies (not devDependencies)
+npm install @modelcontextprotocol/sdk@1
+# Pin to major version 1 to avoid unexpected breaking changes.
+# Confirm it appears in package.json dependencies (not devDependencies).
 ```
 
 ### Files changed
@@ -1463,31 +1471,16 @@ export async function startMcpServer(engine: QueryEngine): Promise<void> {
 // src/cli/commands/mcp.ts
 
 import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
+import { loadEngine } from '@/cli/query/engine-loader.js';
 import { startMcpServer } from '@/cli/mcp/mcp-server.js';
 
 export function createMcpCommand(): Command {
   return new Command('mcp')
     .description('Start an MCP stdio server exposing ArchGuard query tools to Claude Code')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
+    .option('--arch-dir <dir>', 'Path to .archguard/ work directory (default: ./.archguard)')
     .action(async (opts) => {
-      const archDir = opts.sourceDir
-        ? path.resolve(opts.sourceDir)
-        : path.join(process.cwd(), '.archguard');
-
-      let engine: QueryEngine;
-      try {
-        engine = await QueryEngine.load(archDir);
-      } catch (err) {
-        if (err instanceof QueryDataMissingError) {
-          // Startup failure: exit immediately with non-zero code (do not enter listen loop)
-          console.error(err.message);
-          process.exit(1);
-        }
-        throw err;
-      }
-
+      // loadEngine exits with code 1 on QueryDataMissingError — no silent start.
+      const engine = await loadEngine(opts.archDir);
       await startMcpServer(engine);
     });
 }
@@ -1513,7 +1506,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | \
 
 # Verify startup failure without arch.json
 rm -rf /tmp/empty-archguard && mkdir /tmp/empty-archguard
-node dist/cli/index.js mcp --source-dir /tmp/empty-archguard; echo "exit: $?"
+node dist/cli/index.js mcp --arch-dir /tmp/empty-archguard; echo "exit: $?"
 # Expected: error message + "exit: 1"
 ```
 
