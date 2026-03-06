@@ -57,7 +57,6 @@
     "p-limit": "^5.0.0",
     "p-map": "^7.0.4",
     "pino": "^8.17.0",
-    "sharp": "^0.34.5",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",
     "tree-sitter-java": "^0.23.5",
@@ -85,6 +84,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/yaleh/archguard.git"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.5"
   },
   "license": "MIT",
   "author": "yalehwang",

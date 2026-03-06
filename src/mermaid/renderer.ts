@@ -6,8 +6,21 @@
 import fs from 'fs-extra';
 import path from 'path';
 import mermaid from 'isomorphic-mermaid';
-import sharp from 'sharp';
 import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
+
+// sharp is an optional dependency — loaded lazily so install failures don't break the CLI.
+// When unavailable, PNG output is skipped; SVG + MMD are always produced.
+let _sharp: typeof import('sharp') | null | undefined = undefined;
+async function getSharp(): Promise<typeof import('sharp') | null> {
+  if (_sharp === undefined) {
+    try {
+      _sharp = (await import('sharp')).default as typeof import('sharp');
+    } catch {
+      _sharp = null;
+    }
+  }
+  return _sharp;
+}
 
 /**
  * Inlines fill:none on flowchart edge paths to work around librsvg's
@@ -168,6 +181,9 @@ export class IsomorphicMermaidRenderer {
         density = Math.max(72, Math.min(300, density));
       }
     }
+
+    const sharp = await getSharp();
+    if (!sharp) return; // sharp not installed — skip PNG silently
 
     let pipeline = sharp(svgBuffer, { density, limitInputPixels: false });
     const capWidth = resizeWidth ?? maxPixels;
