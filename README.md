@@ -31,13 +31,13 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 ### Installation
 
 ```bash
-npm install -g archguard
+npm install -g @yalehwang/archguard
 ```
 
 Or as a dev dependency:
 
 ```bash
-npm install --save-dev archguard
+npm install --save-dev @yalehwang/archguard
 ```
 
 ### Basic Usage
@@ -431,7 +431,7 @@ Optional, for enhanced features:
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/archguard.git
+git clone https://github.com/yaleh/archguard.git
 cd archguard
 npm install
 npm run build
