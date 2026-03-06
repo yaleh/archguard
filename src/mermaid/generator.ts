@@ -301,7 +301,7 @@ export class ValidatedMermaidGenerator {
     }
 
     // Emit node type annotations (Plan 19)
-    // classDiagram uses `class NodeId StyleName` not the flowchart `:::` syntax
+    // classDiagram uses `class NodeId:::StyleName` (STYLE_SEPARATOR) to apply classDef styles
     lines.push('');
     lines.push('  %% Node type annotations');
     const seenAnnotationsClass = new Set<string>();
@@ -309,7 +309,7 @@ export class ValidatedMermaidGenerator {
       const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
       if (seenAnnotationsClass.has(normalizedId)) continue;
       seenAnnotationsClass.add(normalizedId);
-      lines.push(`  class ${normalizedId} ${entityTypeToClassDef(entity.type)}`);
+      lines.push(`  class ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
     }
 
     return lines.join('\n');
@@ -366,7 +366,7 @@ export class ValidatedMermaidGenerator {
     }
 
     // Emit node type annotations (Plan 19)
-    // classDiagram uses `class NodeId StyleName` not the flowchart `:::` syntax
+    // classDiagram uses `class NodeId:::StyleName` (STYLE_SEPARATOR) to apply classDef styles
     lines.push('');
     lines.push('  %% Node type annotations');
     const seenAnnotationsMethod = new Set<string>();
@@ -374,7 +374,7 @@ export class ValidatedMermaidGenerator {
       const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
       if (seenAnnotationsMethod.has(normalizedId)) continue;
       seenAnnotationsMethod.add(normalizedId);
-      lines.push(`  class ${normalizedId} ${entityTypeToClassDef(entity.type)}`);
+      lines.push(`  class ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
     }
 
     return lines.join('\n');
@@ -826,7 +826,7 @@ export class ValidatedMermaidGenerator {
         const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
         if (seenAnnotations.has(normalizedId)) continue;
         seenAnnotations.add(normalizedId);
-        lines.push(`  class ${normalizedId} ${entityTypeToClassDef(entity.type)}`);
+        lines.push(`  class ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
       }
 
       results.push({ name: group.name, content: this.postProcess(lines.join('\n')) });
