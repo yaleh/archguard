@@ -1,6 +1,6 @@
 # Proposal: 面向代理的精准查询层
 
-**状态**: Draft (rev 2)
+**状态**: Draft (rev 3)
 **日期**: 2026-03-06
 **关联**: [proposal-file-stats-and-cycle-expansion.md](./proposal-file-stats-and-cycle-expansion.md)
 
@@ -8,478 +8,308 @@
 
 ## 背景与动机
 
-ArchGuard 的现有能力完全是**批量模式**：解析源代码 → 生成 ArchJSON → 渲染图表。这个流程在两类场景下工作良好：
+ArchGuard 现在的主路径仍然是批处理:
 
-- CI 中周期性生成架构快照
-- 人工阅读 `.archguard/` 产物
+1. 解析源代码
+2. 生成 ArchJSON
+3. 聚合并渲染图表
 
-但 Claude Code / Codex 这类 AI 代理在编辑代码时的需求截然不同。代理通常处于编辑循环中，需要**针对具体问题的即时答案**，而不是重新运行整个分析流程。典型问题包括：
+这个流程适合 CI 和人工阅读产物，但不适合 Claude Code / Codex 这类处于编辑循环中的代理。代理真正需要的是:
 
-| 代理场景 | 实际问题 | 当前能做什么 |
-|----------|----------|-------------|
-| 修改一个接口 | "谁实现了 `ILanguagePlugin`？" | 需重跑完整 analyze（数分钟） |
-| 重构一个类 | "哪些文件依赖 `DiagramProcessor`？" | 无查询接口 |
-| 评估改动影响 | "改 `ArchJSON` 类型会波及哪几层？" | 无 |
-| 定位实现 | "接口 `IParser.parseProject` 的所有实现在哪？" | 无 |
-| 找高耦合点 | "当前最被依赖的 5 个实体是什么？" | 需人工读 index.md |
+- 精确找实体
+- 看直接依赖和反向依赖
+- 看接口实现者或类继承关系
+- 看循环依赖参与者
+- 快速定位到文件和行号
 
-**核心矛盾**：ArchJSON 已经包含了回答上述所有问题所需的结构化信息（实体、关系、`sourceLocation`），但它目前只作为图渲染的中间产物，在用完后被丢弃，没有暴露为可查询的工具层。
+ArchJSON 已经包含这些问题的大部分结构化信息，但目前它只是渲染链路中的中间产物，没有被组织成稳定、可查询、可复用的工具层。
 
-本 Proposal 的目标是将 ArchJSON 从"内部中间产物"升级为"持久化索引"，并在此基础上提供：
-
-1. **持久化 `arch.json`**：原始 ArchJSON（聚合前的完整解析结果）在每次 analyze 后自动落盘
-2. **`arch-index.json` 反向索引**：构建一次，深度 1 查询 O(1)
-3. **`query` 子命令**：基于缓存数据的结构化查询，无需重新解析
-4. **`search` 子命令**：基于结构特征的文件发现（孤立实体、循环依赖参与者、高耦合点等）
-5. **MCP Server**：将上述工具暴露为 Claude Code 可直接调用的工具函数
+本 Proposal 的目标是把 ArchJSON 从“仅供渲染的中间数据”升级为“可持久化的查询数据源”，并为 CLI 与 MCP 暴露稳定接口。
 
 ---
 
-## 现有缓存层现状
+## 现状与约束
 
-ArchGuard 已有两层缓存：
+### 现有缓存层
+
+ArchGuard 已有两层缓存:
 
 | 缓存 | 位置 | 粒度 | 生命周期 |
 |------|------|------|----------|
-| `ArchJsonDiskCache` | `~/.archguard/cache/archjson` | source-set SHA256 | 跨 analyze 调用 |
-| `ParseCache`（内存） | 进程内 | 单文件内容 hash | 单次 analyze 会话，结束即丢弃 |
+| `ArchJsonDiskCache` | `<workDir>/cache/archjson` | 内容哈希 | 跨 analyze 调用 |
+| `ParseCache` | 进程内 | 单文件内容 hash | 单次 analyze 会话 |
 
-**存在的问题**：
+现有问题:
 
-- `ArchJsonDiskCache` 存储完整 ArchJSON，但键是不透明的 SHA256 哈希，外部工具无法定位
-- ArchJSON 落盘只在 `-f json` 时发生，且路径由用户指定，不是固定约定位置
-- 没有反向索引：查询"谁依赖了 X"需要线性扫描全部 `relations[]`
+- `ArchJsonDiskCache` 的 key 是内容哈希，外部工具不可直接发现
+- 原始 ArchJSON 没有约定式、可枚举的持久化位置
+- 没有反向索引，查询“谁依赖了 X”只能扫描 `relations[]`
 
----
+### 当前实现中的关键事实
 
-## 语言覆盖范围
+这次评审后，设计前提需要先和代码对齐:
 
-| 语言 | `arch.json` 写入 | 说明 |
-|------|-----------------|------|
-| TypeScript | ✓ | 标准实体（class/interface/function），实体数 > 0 时写入 |
-| Go（标准模式，`--no-atlas`） | ✓ | 标准实体，实体数 > 0 时写入 |
-| Go（Atlas 模式，默认） | ✗ | Atlas 数据在 `extensions.goAtlas`，`entities[]` 为空或极少；写入无意义，与 `proposal-file-stats` 一致 |
-| Java | ✓ | 同 TypeScript |
-| Python | ✓ | 同 TypeScript |
-| C++ | ✓ | 实体数 > 0 时写入；`workspaceRoot` 字段存在，文件路径归一化同 `proposal-file-stats` |
+1. `DiagramProcessor` 内部缓存的是“按 source group 分组”的多个 raw ArchJSON，不存在天然唯一的“项目全量 ArchJSON”
+2. Go Atlas 模式不是“空实体模式”；当前实现是在标准 Go `ArchJSON` 上附加 `extensions.goAtlas`
+3. `ArchJSON.relations[]` 是实体级关系，不是成员级调用图
+4. 默认目录语义是 `workDir=.archguard`、`outputDir=.archguard/output`
+
+因此，本 Proposal 不再使用“挑一个 primary arch.json 代表整个项目”的模型，也不承诺方法级调用查询。
 
 ---
 
-## 设计
+## 设计目标
 
-### 一、rawArchJSON 的获取：`DiagramProcessor.getPrimaryArchJson()`
+1. 持久化每个 source group 的 raw ArchJSON，而不是只持久化一个“最大”分组
+2. 为每个持久化 scope 构建对应的 `arch-index.json`
+3. 明确 scope 选择规则，避免把“部分项目”伪装成“全项目”
+4. 只承诺实体级查询能力；成员级调用图不在本次范围
+5. CLI 和 MCP 共用同一套查询引擎与持久化约定
 
-**现状**：`DiagramProcessor.processAll()` 仅返回 `DiagramResult[]`，内部的 `archJsonCache`（`Map<string, ArchJSON>`）是 private 字段，外部无法访问。
+---
 
-**选择的方案**：在 `DiagramProcessor` 上新增一个 public getter：
+## 不在本次范围内
 
-```typescript
-// src/cli/processors/diagram-processor.ts
+- 成员级调用图
+- AST 重扫式精确 `calls` 查询
+- 向量检索 / embedding / 语义相似搜索
+- 增量失效与单文件重建
+- 历史版本对比
+- HTTP 模式 MCP，仅实现 stdio
 
-/**
- * Returns the "primary" rawArchJSON after processAll() completes.
- *
- * Selection rule: among all entries in archJsonCache (keyed by source hash),
- * return the one with the highest entity count. For standard projects this is
- * the root source group (e.g. './src') that covers the most files.
- *
- * Returns null if:
- * - processAll() has not been called yet
- * - all cached ArchJSONs have 0 entities (e.g. Go Atlas mode)
- * - archJsonCache is empty (all groups failed)
- */
-getPrimaryArchJson(): ArchJSON | null {
-  let best: ArchJSON | null = null;
-  for (const archJson of this.archJsonCache.values()) {
-    if (!best || archJson.entities.length > best.entities.length) {
-      best = archJson;
-    }
-  }
-  return best && best.entities.length > 0 ? best : null;
-}
-```
+---
 
-**选取规则**：实体数最多的条目 = 覆盖范围最广的根 source group。这适用于典型分析场景（一个根 `./src` + 多个派生子模块）。对于多个独立 source group 共存的情况（如 C++ 多根目录），选取最大的一个，其他忽略——此场景本就不存在单一的"全量"视图。
+## 核心设计
 
-**调用时机**：在 `analyze.ts` 的 action handler 中，`processor.processAll()` 返回后立即调用：
+### 一、持久化模型: 多 scope，而不是单一 `arch.json`
 
-```typescript
-// analyze.ts — analyzeCommandHandler 中
-const results = await processor.processAll();
-const primaryArchJson = processor.getPrimaryArchJson();
-if (primaryArchJson) {
-  await persistArchArtifacts(config.workDir, primaryArchJson);
-}
-```
+每个成功解析且 `entities.length > 0` 的 source group 都会持久化为一个独立查询 scope。
 
-`persistArchArtifacts` 顺序写入 `arch.json` → `arch-index.json`（见一致性节）。
+目录结构:
 
-### 二、持久化 `arch.json`
-
-写入固定路径，内容为 `getPrimaryArchJson()` 返回的 rawArchJSON（聚合前，等价于完整的解析结果）：
-
-```
+```text
 .archguard/
-  arch.json          ← 新增：rawArchJSON（聚合前，含完整实体/关系/成员）
-  arch-index.json    ← 新增：反向索引（见下）
-  overview/
-  class/
-  method/
-  index.md
+  output/                         # 现有图表输出，保持不变
+  query/
+    manifest.json
+    <scope-key>/
+      arch.json
+      arch-index.json
 ```
 
-**与 `-f json` 模式的关系**：
-
-`-f json` 模式下，`processDiagramWithArchJSON` 将每个图的**聚合后** ArchJSON（含 metrics）写入各自路径（如 `.archguard/class/all-classes.json`）。`arch.json` 是**独立写入的 rawArchJSON**，两者内容不同：
-
-| 文件 | 内容 | 用途 |
-|------|------|------|
-| `.archguard/arch.json` | rawArchJSON（聚合前，无 metrics） | 供 `query`/`search` 查询 |
-| `.archguard/class/all-classes.json` | class-level 聚合 ArchJSON（含 metrics） | 工具链消费、格式输出 |
-
-两者并存，不冲突。`index.md` 不引用 `arch.json`。
-
-**写入条件**：`getPrimaryArchJson()` 返回非 null 时写入。不写入的情况：
-
-- Go Atlas 模式（`entities[]` 为空）
-- 所有 source group 解析失败
-- `entities.length === 0`（空项目）
-
-### 三、`arch-index.json` 反向索引与一致性保证
-
-#### 数据结构
+`manifest.json` 负责列出可查询的 scope:
 
 ```typescript
-// src/cli/query/arch-index.ts
+export interface QueryManifest {
+  version: string;                // "1.0"
+  generatedAt: string;
+  scopes: Array<{
+    key: string;                  // source-group hash 或稳定 key
+    language: string;
+    sources: string[];
+    entityCount: number;
+    relationCount: number;
+    hasAtlasExtension: boolean;
+  }>;
+}
+```
 
+设计意图:
+
+- 不再假装存在天然唯一的“项目全量 ArchJSON”
+- 多根目录、多 source group、混合语言都能被明确列举
+- `query/search/mcp` 面向一个明确 scope 工作
+
+### 二、analyze 集成方式
+
+`DiagramProcessor` 不再暴露 `getPrimaryArchJson()`，而是暴露所有可持久化的 source group 结果，例如:
+
+```typescript
+interface QuerySourceGroup {
+  key: string;
+  sources: string[];
+  archJson: ArchJSON;
+}
+
+getQuerySourceGroups(): QuerySourceGroup[]
+```
+
+约束:
+
+- 仅返回成功解析的 raw ArchJSON
+- `entities.length === 0` 的 group 跳过
+- Go Atlas 只要实体非空，就和其他语言一样持久化
+
+### 三、写入规则
+
+写入位置固定在 `config.workDir/query/`，而不是 `outputDir`。
+
+- `outputDir` 继续服务渲染产物
+- `workDir/query/` 专门服务查询产物
+
+这和当前配置模型一致:
+
+- `workDir` 默认 `.archguard`
+- `outputDir` 默认 `.archguard/output`
+
+### 四、`arch-index.json` 数据结构
+
+每个 scope 各自拥有一个 `arch-index.json`:
+
+```typescript
 export interface ArchIndex {
-  /** Schema 版本，用于格式演进 */
-  version: string;                              // "1.0"
-
-  /** 生成时间 */
-  generatedAt: string;                          // ISO 8601
-
-  /** 对应的 arch.json 内容 SHA-256，用于一致性校验 */
+  version: string;
+  generatedAt: string;
   archJsonHash: string;
-
-  /** 解析语言 */
   language: string;
-
-  /** 实体名（大小写敏感）→ entity ID 列表（处理跨模块同名） */
   nameToIds: Record<string, string[]>;
-
-  /** 实体 ID → 源文件相对路径（来自 entity.sourceLocation.file，C++ 绝对路径已归一化） */
   idToFile: Record<string, string>;
-
-  /** 实体 ID → entity name（供展示用，避免加载完整 arch.json） */
   idToName: Record<string, string>;
-
-  /** 实体 ID → 反向依赖实体 ID 列表（谁依赖了它） */
   dependents: Record<string, string[]>;
-
-  /** 实体 ID → 正向依赖实体 ID 列表（它依赖了谁） */
   dependencies: Record<string, string[]>;
-
-  /** 关系类型 → [source ID, target ID][] */
   relationsByType: Partial<Record<import('@/types/index.js').RelationType, [string, string][]>>;
-
-  /** 源文件相对路径 → 该文件内的 entity ID 列表 */
   fileToIds: Record<string, string[]>;
-
-  /**
-   * 非平凡 SCC（size > 1），按 size 降序。
-   * 直接复用 @/types/index.ts 中的 CycleInfo 类型（含 memberNames 和 files），
-   * 不另定义 ArchIndexCycle，以避免类型漂移。
-   */
   cycles: import('@/types/index.js').CycleInfo[];
 }
 ```
 
-注：移除了 `idToIndex`（entities[] 下标）——在 500–5000 实体规模下，O(n) 线性查找耗时可忽略，而该字段在 arch.json 与 arch-index.json 不同步时会引发难以排查的错误。
+说明:
 
-#### 一致性保证机制
+- 只索引 entity-level 数据
+- 只保留 internal relations
+- 不引入 `idToIndex`
+- `cycles` 复用 `CycleInfo`
 
-`arch-index.json` 的 `archJsonHash` 字段存储写入时 `arch.json` 的 SHA-256（对文件内容）。`QueryEngine` 加载时执行以下校验：
+### 五、一致性策略: 原子写，不做 fire-and-forget
 
-```typescript
-async function loadWithValidation(archDir: string): Promise<QueryEngine> {
-  const archJsonPath = path.join(archDir, 'arch.json');
-  const indexPath    = path.join(archDir, 'arch-index.json');
+旧版文档中的“后台写回、失败吞掉”不适合正式索引层。新方案要求:
 
-  // 1. arch.json 必须存在
-  if (!await fs.pathExists(archJsonPath)) {
-    throw new QueryDataMissingError("Run 'archguard analyze' first");
-  }
+1. 先写 `arch.json.tmp`
+2. `rename` 到 `arch.json`
+3. 基于最终写入内容计算 hash
+4. 生成 `arch-index.json.tmp`
+5. `rename` 到 `arch-index.json`
+6. 最后原子更新 `manifest.json`
 
-  const archJsonContent = await fs.readFile(archJsonPath, 'utf-8');
-  const archJsonHash = sha256(archJsonContent);
+`QueryEngine.load()` 规则:
 
-  // 2. 若 arch-index.json 不存在，重建并持久化索引
-  if (!await fs.pathExists(indexPath)) {
-    const newIndex = buildIndex(JSON.parse(archJsonContent), archJsonHash);
-    fs.writeJson(indexPath, newIndex).catch(() => {}); // fire-and-forget
-    return new QueryEngine(newIndex, JSON.parse(archJsonContent));
-  }
+1. 先读 `manifest.json`
+2. 确定 scope
+3. 读对应 scope 的 `arch.json`
+4. 若 `arch-index.json` 缺失、损坏、version 不匹配或 hash 不匹配，则同步重建并原子写回
+5. 若 `arch.json` 缺失，则报错退出
 
-  const index = await fs.readJson(indexPath) as ArchIndex;
+这里的关键变化是:
 
-  // 3. 哈希不匹配：index 来自旧版 arch.json，重建并写回
-  if (index.archJsonHash !== archJsonHash) {
-    const newIndex = buildIndex(JSON.parse(archJsonContent), archJsonHash);
-    fs.writeJson(indexPath, newIndex).catch(() => {}); // fire-and-forget
-    return new QueryEngine(newIndex, JSON.parse(archJsonContent));
-  }
+- 重建索引可以是回退路径
+- 但索引写回必须是同步、原子的
+- 查询结果与磁盘状态不能分叉
 
-  return new QueryEngine(index, JSON.parse(archJsonContent));
-}
-```
+### 六、scope 选择规则
 
-**写入顺序**：`persistArchArtifacts` 先写 `arch.json`，再写 `arch-index.json`。若进程在两次写入之间被 kill，下次 `QueryEngine.load` 会检测到哈希不匹配并从 `arch.json` 重建（fire-and-forget 写回），不会产生错误结果。
+`query/search/mcp` 都针对一个 scope 工作。
 
-**构建代价**：对 500 实体、500 关系的项目，构建时间 < 5ms；index 文件大小约 50–100 KB。
+规则:
 
-### 四、`query` 子命令
+1. `manifest.scopes.length === 0` 时，报错: 需要先执行 analyze
+2. `manifest.scopes.length === 1` 时，默认选中该 scope
+3. `manifest.scopes.length > 1` 时，必须显式 `--scope <key>`
 
-基于磁盘上的 `arch.json` + `arch-index.json` 提供结构化查询，**无需重新解析任何源文件**：
+这一步是故意提高约束，避免把某个 source group 误当成全局真相。
 
-#### 命令设计
+### 七、`query` 子命令
+
+只提供实体级查询:
 
 ```bash
-# 查找实体（精确名称匹配；--fuzzy 支持子串匹配）
 archguard query --entity "CacheManager"
-archguard query --entity "Cache" --fuzzy
-
-# 正向依赖（X 依赖了谁；--depth 指定 BFS 层数，默认 1，上限 5）
 archguard query --deps-of "DiagramProcessor"
-archguard query --deps-of "DiagramProcessor" --depth 2
-
-# 反向依赖（谁依赖了 X，变更影响分析；同支持 --depth，含义为传递依赖方）
 archguard query --used-by "ArchJSON"
-archguard query --used-by "ArchJSON" --depth 2
-
-# 接口/抽象类的所有实现（relation.type === 'implementation'）
-archguard query --impls-of "ILanguagePlugin"
-
-# 文件内实体列表
+archguard query --implementers-of "ILanguagePlugin"
+archguard query --subclasses-of "BaseProcessor"
 archguard query --file "src/cli/processors/diagram-processor.ts"
-
-# 循环依赖（可选过滤到包含指定实体的循环）
 archguard query --cycles
-archguard query --cycles --entity "DiagramProcessor"
-
-# 全局指标摘要
 archguard query --summary
-
-# 显式指定 .archguard/ 工作目录（分析外部项目）
-archguard query --used-by "App" --arch-dir /path/to/project/.archguard
 ```
 
-#### 深度展开的复杂度
+说明:
 
-`--depth 1` 查询（直接依赖/被依赖）通过 `arch-index.json` 的 `dependencies`/`dependents` 字段完成，单次 O(1) map 查找。
+- `--implementers-of` 只看 `relation.type === 'implementation'`
+- `--subclasses-of` 只看 `relation.type === 'inheritance'`
+- 不再用一个命令同时混合“实现者”和“子类”
 
-`--depth N`（N > 1）需要 BFS 展开，复杂度为 O(nodes × avgFanOut × depth)。BFS 使用 visited 集合防止在有环依赖图中无限展开。`depth` 上限为 5（硬上限，超过此值的传递依赖集合通常过大，对代理无意义）。
+深度展开:
 
-#### 输出格式
+- `--depth` 只适用于 `--deps-of` / `--used-by`
+- 默认 1，硬上限 5
+- 使用 BFS + visited 防环
 
-默认 JSON（代理可解析），`--format text` 时输出人类可读格式：
+### 八、`search` 子命令
 
-```bash
-$ archguard query --used-by "ArchJSON" --format text
-
-ArchJSON  ←  used by 12 entities
-
-  DiagramProcessor         src/cli/processors/diagram-processor.ts:45
-  MetricsCalculator        src/parser/metrics-calculator.ts:4
-  ArchJSONAggregator       src/parser/archjson-aggregator.ts:23
-  MermaidDiagramGenerator  src/mermaid/diagram-generator.ts:12
-  ... (8 more, use --format json for full list)
-```
+`search` 也只做实体级结构发现:
 
 ```bash
-$ archguard query --entity "CacheManager" --format text
-
-CacheManager  [class]  src/cli/cache-manager.ts:36
-  public methods: computeFileHash, get, set, clear, getStats, getCacheSize
-  depends on:  3 entities
-  used by:     1 entity  (AnalyzeCommand)
-```
-
-#### 数据源选择逻辑
-
-1. 优先读取 `{sourceDir}/arch-index.json`，校验 `archJsonHash`（见一致性节）
-2. 若 index 不存在或哈希不匹配，从 `arch.json` 重建索引并 fire-and-forget 写回 `arch-index.json`
-3. 若 `arch.json` 也不存在，打印 `"Run 'archguard analyze' first"`，退出码 1
-4. `archDir` 默认为当前目录下的 `.archguard/`；`--arch-dir` 可显式覆盖（命名为 `arch-dir` 而非 `source-dir`，以区别于 `analyze -s/--sources` 的源代码目录语义）
-
-**目录查找**：`query` 不向上层目录 walk（不同于 git）。若当前目录无 `.archguard/`，直接以退出码 1 退出并提示路径。
-
-### 五、`search` 子命令
-
-`search` 的定位与 `query` 互补：**不需要知道具体实体名称，而是按结构特征发现文件**。所有过滤均基于 `arch-index.json`，无 AST 重扫。
-
-```bash
-# 找所有调用了某实体的文件（基于 dependency relation，见精度说明）
-archguard search --calls "parseProject"
-
-# 找某 EntityType 的所有实体所在文件
-archguard search --type abstract_class
-archguard search --type interface --module "src/core"
-
-# 找高入度实体（被大量实体依赖；--threshold 指定 dependents 数下限，默认 8）
-archguard search --high-coupling [--threshold 8]
-
-# 找孤立实体（dependents 为空，可能是死代码）
+archguard search --type interface
+archguard search --high-coupling --threshold 8
 archguard search --orphans
-
-# 找参与循环依赖的文件
 archguard search --in-cycles
 ```
 
-#### `--calls` 精度说明（重要约束）
+本次明确移除 `--calls`。
 
-当前 ArchJSON 的 `relations[]` 记录"A 依赖 B（实体级别）"，不记录具体调用了 B 的哪个方法。`--calls "parseProject"` 的实现是：
+原因:
 
-- 在 `arch-index.json.nameToIds` 中查找名称包含 `parseProject` 的实体 ID
-- 返回所有在 `dependencies` 中引用了这些 ID 的 source 实体所在文件
+- 当前模型没有成员级调用边
+- `parseProject` 这类方法名不是稳定的实体索引键
+- 用 entity-level dependency 去模拟 method-call，会让工具语义失真
 
-**已知限制**：
+### 九、MCP Server
 
-1. **匹配单位是实体，不是方法调用**：若 A 依赖了类 B（B 中恰好有名为 `parseProject` 的方法），A 会出现在结果中，但 A 并不一定实际调用了 `parseProject`
-2. **TypeScript 的 cross-file 解析质量**：当前 TS 解析有 45 个"undefined entity"警告（见 typescript-atlas-proposal.md）。这些悬空 relation 在 `--calls` 结果中会造成漏报。此限制在 TypeScript Atlas 提案落地后才能改善
-
-**结论**：`--calls` 在当前版本提供的是"疑似依赖方"列表，适合作为 grep 的补充，不适合作为精确调用图使用。
-
-#### `--type` 与 EntityType 编码
-
-`EntityType` 的合法值来自 `src/types/index.ts`：`'class'`、`'interface'`、`'enum'`、`'struct'`、`'trait'`、`'abstract_class'`、`'function'`。
-
-`abstract_class` 是独立的 `EntityType` 值，不是 `isAbstract + class` 的组合。`--type abstract_class` 的过滤条件为：
-
-```typescript
-entity.type === 'abstract_class' || (entity.isAbstract === true && entity.type === 'class')
-```
-
-两种编码在不同语言插件中均有出现，过滤时需同时覆盖。
-
-#### `--high-coupling` 粒度说明
-
-`--high-coupling` 返回的是**实体级别**的高入度（`dependents[id].length >= threshold`），展示时附带源文件路径。这不同于 `proposal-file-stats` 的 `FileStats.inDegree`（文件内所有实体的入度之和）。两者均基于 arch-index，但粒度不同：
-
-- 实体级高入度 = 该实体被多少个其他实体引用（本 Proposal）
-- 文件级高入度 = 该文件内所有实体的入度总和（proposal-file-stats）
-
-### 六、MCP Server
-
-将 `query` 和 `search` 能力包装为 MCP（Model Context Protocol）工具，让 Claude Code 在编辑会话中**无需切换终端**即可调用。
-
-#### 依赖声明
-
-MCP Server 实现需要新增运行时依赖：
-
-```json
-// package.json — 新增到 dependencies
-"@modelcontextprotocol/sdk": "^1.x"
-```
-
-#### 工具列表
+MCP 暴露与 CLI 完全一致的实体级能力:
 
 ```typescript
 tools: [
-  {
-    name: "archguard_find_entity",
-    description: "按名称查找实体，返回类型、源文件位置、成员列表",
-    inputSchema: { name: "string", fuzzy: "boolean?" }
-  },
-  {
-    name: "archguard_get_dependents",
-    description: "返回依赖了指定实体的所有实体（变更影响分析）；depth > 1 时返回传递依赖方",
-    inputSchema: { entityName: "string", depth: "number? (1–5)" }
-  },
-  {
-    name: "archguard_get_dependencies",
-    description: "返回指定实体的直接或传递依赖；depth > 1 时 BFS 展开（上限 5）",
-    inputSchema: { entityName: "string", depth: "number? (1–5)" }
-  },
-  {
-    name: "archguard_find_implementations",
-    description: "返回接口或抽象类的所有实现/子类（relation.type === 'implementation'）",
-    inputSchema: { interfaceName: "string" }
-  },
-  {
-    name: "archguard_get_file_entities",
-    description: "返回一个文件中定义的所有实体及其公开成员",
-    inputSchema: { filePath: "string" }
-  },
-  {
-    name: "archguard_detect_cycles",
-    description: "返回所有循环依赖（SCC size > 1），可选过滤到包含指定实体名的循环",
-    inputSchema: { entityName: "string?" }
-  },
-  {
-    name: "archguard_summary",
-    description: "返回项目结构摘要：实体数、关系数、循环数、高入度实体 Top 5",
-    inputSchema: {}
-  },
+  { name: "archguard_find_entity" },
+  { name: "archguard_get_dependents" },
+  { name: "archguard_get_dependencies" },
+  { name: "archguard_find_implementers" },
+  { name: "archguard_find_subclasses" },
+  { name: "archguard_get_file_entities" },
+  { name: "archguard_detect_cycles" },
+  { name: "archguard_summary" }
 ]
 ```
 
-#### 启动方式
+启动参数增加 scope:
 
 ```bash
-# stdio 模式（MCP 标准）
-archguard mcp --arch-dir ./.archguard
-
-# 显式指定外部项目
-archguard mcp --arch-dir /path/to/project/.archguard
+archguard mcp --arch-dir ./.archguard --scope <scope-key>
 ```
 
-启动时立即执行数据加载与一致性校验（同 `QueryEngine.load`）。若 `arch.json` 不存在，打印错误并以退出码 1 退出——不静默启动后在每次工具调用时返回错误。
-
-#### 与 Claude Code 的集成
-
-> **注意**：以下配置路径为当前已知约定，需在 Claude Code 官方 MCP 文档稳定后确认。
-
-```json
-// .mcp.json（项目根目录，路径待 Claude Code 官方确认）
-{
-  "mcpServers": {
-    "archguard": {
-      "command": "archguard",
-      "args": ["mcp", "--arch-dir", "./.archguard"]
-    }
-  }
-}
-```
+如果只有一个 scope，`--scope` 可省略；多个 scope 时必须显式指定。
 
 ---
 
 ## 数据流
 
-```
+```text
 archguard analyze 完成
-  └─→ processor.processAll() → DiagramResult[]
-  └─→ processor.getPrimaryArchJson()
-        → rawArchJSON（entities 最多的 source group；Go Atlas 返回 null）
-        → null 时跳过，非 null 时：
+  └─→ processor.processAll()
+  └─→ processor.getQuerySourceGroups()
+        └─→ 对每个 group:
+              persistQueryScope(workDir/query/<scope-key>/, archJson)
+                ├─→ 原子写 arch.json
+                ├─→ 构建 arch-index.json
+                └─→ 原子写 arch-index.json
+        └─→ 原子写 manifest.json
 
-        persistArchArtifacts(config.workDir, rawArchJSON)
-          ├─→ 写入 arch.json
-          └─→ ArchIndexBuilder.build(rawArchJSON, archJsonHash)
-                └─→ 写入 arch-index.json（含 archJsonHash 字段）
-
-archguard query --used-by "Foo"           （新进程，每次调用独立）
-  └─→ QueryEngine.load(".archguard/")
-        ├─ arch-index.json 存在且哈希匹配 → 直接使用 index
-        ├─ index 不存在或哈希不匹配       → 重建 index + fire-and-forget 写回磁盘
-        └─ arch.json 不存在               → 报错，退出码 1
-  └─→ engine.getDependents("Foo")         ← O(1) map lookup（depth=1）
-        └─→ stdout（JSON / text）
-
-archguard mcp --arch-dir ./.archguard     （常驻进程）
-  └─→ QueryEngine.load()（启动时一次性加载）
-  └─→ 监听 stdin（@modelcontextprotocol/sdk）
-        └─→ 各工具调用 engine 方法（同上）
+archguard query --used-by "Foo" --scope abc123
+  └─→ QueryEngine.load(workDir/query, scope=abc123)
+        ├─→ 读 manifest.json
+        ├─→ 读 abc123/arch.json
+        ├─→ 校验 abc123/arch-index.json
+        └─→ 必要时同步重建 index
+  └─→ engine.getDependents("Foo")
 ```
 
 ---
@@ -490,116 +320,75 @@ archguard mcp --arch-dir ./.archguard     （常驻进程）
 
 | 文件 | 说明 |
 |------|------|
-| `src/cli/query/arch-index.ts` | `ArchIndex` 接口定义（`cycles` 复用 `CycleInfo`，无独立 `ArchIndexCycle`） |
-| `src/cli/query/arch-index-builder.ts` | `ArchIndexBuilder`（纯函数：ArchJSON → ArchIndex；优先复用 `metrics.cycles`） |
-| `src/cli/query/query-engine.ts` | `QueryEngine`（加载、校验、查询方法） |
-| `src/cli/query/arch-artifacts.ts` | `persistArchArtifacts(archDir, archJson)`：写入 arch.json + arch-index.json |
-| `src/cli/query/engine-loader.ts` | 共享 `resolveArchDir()` + `loadEngine()`，供 query/search/mcp 三个命令复用 |
-| `src/cli/commands/query.ts` | `query` 子命令（Commander，`--arch-dir`） |
-| `src/cli/commands/search.ts` | `search` 子命令（Commander，`--arch-dir`） |
-| `src/cli/commands/mcp.ts` | `mcp` 子命令：启动 MCP stdio server（`--arch-dir`） |
-| `src/cli/mcp/mcp-server.ts` | MCP server（工具注册、请求分发，依赖 `@modelcontextprotocol/sdk`） |
-| `tests/unit/cli/query/arch-index-builder.test.ts` | `ArchIndexBuilder` 单元测试 |
-| `tests/unit/cli/query/query-engine.test.ts` | `QueryEngine`（含 hash 校验、回退逻辑）单元测试 |
-| `tests/unit/cli/commands/query.test.ts` | `query` 命令集成测试 |
-| `tests/unit/cli/commands/search.test.ts` | `search` 命令集成测试 |
+| `src/cli/query/query-manifest.ts` | `QueryManifest` 类型 |
+| `src/cli/query/arch-index.ts` | `ArchIndex` 类型 |
+| `src/cli/query/arch-index-builder.ts` | `ArchJSON -> ArchIndex` |
+| `src/cli/query/query-artifacts.ts` | scope 持久化、manifest 持久化、原子写 |
+| `src/cli/query/query-engine.ts` | 读取 manifest/scope，校验并查询 |
+| `src/cli/query/engine-loader.ts` | 共享 `resolveArchDir()` / `resolveScope()` / `loadEngine()` |
+| `src/cli/commands/query.ts` | `query` 子命令 |
+| `src/cli/commands/search.ts` | `search` 子命令 |
+| `src/cli/commands/mcp.ts` | `mcp` 子命令 |
+| `src/cli/mcp/mcp-server.ts` | MCP server |
 
 ### 修改文件
 
 | 文件 | 变更说明 |
 |------|---------|
-| `src/cli/processors/diagram-processor.ts` | 新增 public `getPrimaryArchJson(): ArchJSON \| null`；private `archJsonCache` 保持不变 |
-| `src/cli/commands/analyze.ts` | `analyzeCommandHandler` 中：`processAll()` 后调用 `processor.getPrimaryArchJson()`，非 null 时调用 `persistArchArtifacts` |
-| `src/cli/index.ts` | 注册 `query`、`search`、`mcp` 三个子命令 |
-| `package.json` | `dependencies` 新增 `@modelcontextprotocol/sdk` |
-
-### 不在本次范围内
-
-- 增量缓存失效（文件级重解析）：不实现
-- `--calls` 基于 AST 重扫的精确方法调用图：当前基于 entity-level dependency relation
-- `search --similar`（语义相似搜索）：需 embedding，不实现
-- MCP 的 HTTP transport 模式：仅实现 stdio
-- `arch.json` 历史版本管理（git 时序对比）：不实现
-- `arch-index.json` 与 `ArchJsonDiskCache` 的合并：两者 TTL 语义不同，暂时双写
+| `src/cli/processors/diagram-processor.ts` | 暴露 `getQuerySourceGroups()`，不再暴露 `getPrimaryArchJson()` |
+| `src/cli/commands/analyze.ts` | `processAll()` 后持久化 query scopes + manifest |
+| `src/cli/index.ts` | 注册 `query`、`search`、`mcp` |
+| `package.json` | 新增 `@modelcontextprotocol/sdk` |
 
 ---
 
 ## 向后兼容性
 
-- `arch.json` 和 `arch-index.json` 是新增文件，不影响现有 `.archguard/` 内容
-- `query`、`search`、`mcp` 是新增子命令，不影响现有 `analyze`、`init`、`cache`
-- `DiagramProcessor.getPrimaryArchJson()` 为新增 public 方法，不改变 `processAll()` 签名，对现有调用方零影响
-- `arch-index.json` 的 `version` 字段用于后续格式演进；`QueryEngine` 遇到不认识的 version 时回退到从 `arch.json` 重建，不崩溃
+- 现有图表产物目录不变，仍在 `outputDir`
+- 查询产物是新增目录 `.archguard/query/`
+- 不影响 `analyze` / `init` / `cache` 现有用法
+- 多 scope 项目新增 `--scope` 约束，是刻意引入的显式性，不视为兼容性问题
 
 ---
 
 ## 验收标准
 
-### `arch.json` 持久化
+### 持久化
 
-1. 运行 `archguard analyze` 后，`.archguard/arch.json` 存在且为有效 JSON（TypeScript、Go 标准模式、Java、Python、C++ 项目均如此）
-2. `arch.json` 的 `entities` 数量等于 `DiagramProcessor.getPrimaryArchJson()` 返回对象的 `entities.length`，与任何图的聚合级别无关
-3. Go Atlas 模式（`extensions.goAtlas` 存在，`entities.length === 0`）：不生成 `arch.json`，不报错
-4. 所有 source group 解析失败或 `entities` 均为空时：不生成 `arch.json`，不报错
-5. `-f json` 模式下：`arch.json`（rawArchJSON）与 `.archguard/class/all-classes.json`（聚合后 ArchJSON）并存，互不干扰
+1. `archguard analyze` 成功后，`.archguard/query/manifest.json` 存在且为有效 JSON
+2. 每个成功解析且 `entities.length > 0` 的 source group 都有独立 `<scope-key>/arch.json`
+3. 每个 `<scope-key>/arch.json` 都有对应 `<scope-key>/arch-index.json`
+4. Go Atlas 模式下，只要实体非空，也会持久化 query scope
+5. 所有 source group 都失败或实体都为空时，不生成 scope 文件，但不报错
 
-### `arch-index.json` 构建与一致性
+### 一致性
 
-6. `arch-index.json` 中每个 entity ID 在 `nameToIds`、`idToFile`、`idToName` 中均有对应条目
-7. `dependents[id]` 的集合等于 `relations[].source where target === id`（仅含 entities 集合内的端点）
-8. `dependencies[id]` 的集合等于 `relations[].target where source === id`
-9. `fileToIds[file]` 的集合等于 `entities[].id where sourceLocation.file === file`（C++ 绝对路径归一化为相对路径后）
-10. `cycles` 仅包含 size > 1 的 SCC；`cycles[i].memberNames[k]` 与 `cycles[i].members[k]` 一一对应
-11. `arch-index.json.archJsonHash` 等于写入时 `arch.json` 文件内容的 SHA-256
+6. `arch-index.json.archJsonHash` 等于对应 `arch.json` 文件内容的 SHA-256
+7. index 缺失、损坏、version 不匹配或 hash 不匹配时，`QueryEngine.load()` 会同步重建并原子写回
+8. `arch.json` 缺失时，`QueryEngine.load()` 抛出错误并退出码 1
+9. manifest 存在多个 scope 且未提供 `--scope` 时，CLI 与 MCP 都应报错并列出可选 scope
 
-### 一致性与回退
+### 查询语义
 
-12. `arch-index.json` 不存在时，`QueryEngine.load()` 从 `arch.json` 构建索引并 fire-and-forget 写回磁盘，查询结果正确
-13. `arch-index.json.archJsonHash` 与当前 `arch.json` 哈希不匹配时，`QueryEngine.load()` 从 `arch.json` 重建并 fire-and-forget 写回，不报错，不使用过期 index 数据
-14. `arch.json` 不存在时（index 也不存在），`QueryEngine.load()` 抛出 `QueryDataMissingError`，调用方打印 `"Run 'archguard analyze' first"`，退出码 1
-15. MCP server 启动时若 `arch.json` 不存在，打印错误并以退出码 1 退出，不静默启动
-
-### `query` 命令
-
-16. `--entity "X"` 返回名称完全匹配的实体；`--fuzzy` 时返回所有 name 包含该字符串的实体
-17. `--entity "X"` 找不到时返回空结果，退出码 0
-18. `--used-by "X"` 与手工过滤 `arch-index.json.dependents["X"]` 结果相同（depth=1）
-19. `--deps-of "X" --depth 2` 返回 X 的直接依赖及其直接依赖（BFS，visited 集合去重，不含 X 自身）；依赖图有环时不死循环
-20. `--used-by "X" --depth 2` 返回 X 的直接依赖方及其直接依赖方（BFS，有环保护）
-21. `--impls-of "IParser"` 返回所有 `relation.type === 'implementation' && target === IParser.id` 的 source 实体
-22. `--file "src/foo.ts"` 返回该文件内所有实体；文件路径未出现在 index 时返回空结果
-23. `--format json` 输出合法 JSON；`--format text` 输出人类可读文本
-24. `.archguard/` 不存在时退出码 1；`--arch-dir` 指定路径不存在时退出码 1（不向上层目录 walk）
-
-### `search` 命令
-
-25. `--type abstract_class` 返回所有满足 `entity.type === 'abstract_class' || (entity.isAbstract === true && entity.type === 'class')` 的实体所在文件
-26. `--orphans` 返回所有 `dependents[id].length === 0` 的实体所在文件（不含 Go Atlas stub 实体）
-27. `--in-cycles` 返回参与至少一个非平凡 SCC 的实体所在文件；无循环依赖时返回空结果
-28. `--high-coupling --threshold N` 返回 `dependents[id].length >= N` 的实体及其源文件（实体级粒度，非文件级）
-29. `--calls "X"` 返回 `dependencies[id] ∩ nameToIds["X"]` 非空的实体所在文件；若 X 在 index 中不存在，返回空结果
-
-### MCP Server
-
-30. `archguard mcp` 启动时立即加载数据（不懒加载）；数据不存在时退出码 1，不进入监听循环
-31. 启动成功后响应 `initialize` 消息，返回包含所有 7 个工具的工具列表
-32. `archguard_find_entity` 工具的响应结构与工具定义的 inputSchema 匹配
-33. `archguard_get_dependents` 工具调用结果与 `query --used-by`（相同 depth）一致
-34. `archguard_get_dependencies` 的 depth > 1 时 BFS 有环保护（visited set），不死循环
+10. `--used-by` / `--deps-of` 结果仅基于 entity-level relations
+11. `--implementers-of` 仅返回 `implementation` 边
+12. `--subclasses-of` 仅返回 `inheritance` 边
+13. `--type abstract_class` 同时覆盖 `type === 'abstract_class'` 与 `isAbstract === true && type === 'class'`
+14. `--orphans` / `--high-coupling` / `--in-cycles` 都以实体为计算粒度，展示时可投影为文件
+15. 不提供 `--calls`，也不对方法级调用图做任何能力承诺
 
 ### 回归
 
-35. 现有所有测试通过（无回归）
-36. `npm run type-check` 零错误
+16. 现有测试通过
+17. `npm run type-check` 零错误
 
 ---
 
 ## 开放问题
 
-| 问题 | 说明 | 建议处理时机 |
-|------|------|------------|
-| `--calls` 精度上限 | 当前 relation 不记录具体调用的方法名；`--calls "parseProject"` 只能定位到"依赖了含 parseProject 的实体"的文件，不是精确调用图。TypeScript Atlas 提案落地（cross-file 关系解析 + function entity 提取）后可提升精度 | TypeScript Atlas 提案实现后 |
-| `getPrimaryArchJson()` 在多独立 source group 下的语义 | 选取 entities 最多的 source group 是合理的启发式，但对于两个同等大小的独立根目录（如 monorepo 中两个平级包），写入其中一个会遗漏另一个。此场景下 `arch.json` 仅代表部分项目 | 后续考虑 `arch-{hash}.json` 多份并存方案 |
-| `arch.json` 与 `ArchJsonDiskCache` 内容重叠 | 两者存储相同的 rawArchJSON，`arch.json` 是固定约定位置，`ArchJsonDiskCache` 是按内容 hash 的跨调用缓存。可考虑后者直接复用前者，但两者的读取路径（固定路径 vs hash 路径）和过期语义不同 | 后续 enhancement |
-| MCP 配置文件路径 | `.mcp.json` 为当前已知路径，Claude Code 官方 MCP 集成文档发布后需核对 | 随官方文档更新 |
-| `--depth` 上限的合理值 | 当前硬上限 5。对于 500+ 实体的项目，depth=3 已可能返回数百条结果。可考虑同时限制结果集大小（如 max 100 条）而非仅限制深度 | 实现阶段调整 |
+| 问题 | 说明 | 建议时机 |
+|------|------|----------|
+| 是否需要“跨 scope 聚合查询” | 当前版本显式按 scope 查询，避免语义欺骗。后续若要做全局查询，需要定义跨 scope 去重、命名冲突和结果排序规则 | 后续独立提案 |
+| `scope-key` 的稳定性 | 目前可直接复用 source-group hash；若后续需要更好的人类可读性，可增加 label 字段 | 实现阶段 |
+| 成员级查询模型 | 若后续要支持 `calls`、方法实现、符号级引用，必须先扩展 ArchJSON / index 模型 | 后续独立提案 |
+| `arch.json` 与 `ArchJsonDiskCache` 的重叠 | 两者职责不同: 一个是可发现持久化工件，一个是内容缓存 | 暂不合并 |
