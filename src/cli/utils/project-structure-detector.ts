@@ -166,7 +166,7 @@ async function directoryHasSourceFiles(dir: string): Promise<boolean> {
  */
 export async function detectProjectStructure(
   rootDir: string,
-  externalSourceRoot?: string,
+  externalSourceRoot?: string
 ): Promise<DiagramConfig[]> {
   let sourceRoot: string;
   let projectRoot: string;
@@ -179,7 +179,7 @@ export async function detectProjectStructure(
 
     // Derive projectRoot: if the basename is a known source dir, use the parent
     const basename = path.basename(externalSourceRoot);
-    if ((SOURCE_ROOT_CANDIDATES as string[]).includes(basename)) {
+    if (SOURCE_ROOT_CANDIDATES.includes(basename)) {
       projectRoot = path.dirname(externalSourceRoot);
     } else {
       projectRoot = externalSourceRoot;
@@ -244,7 +244,7 @@ export async function detectProjectStructure(
       sources: [modulePath(mod)],
       level: 'method' as const,
       description: `Method-level detail for ${mod} module`,
-    })),
+    }))
   );
 
   return diagrams;

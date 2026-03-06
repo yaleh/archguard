@@ -103,8 +103,12 @@ describe('deriveSubModuleArchJSON', () => {
     expect(result.entities.map((e: any) => e.id)).toEqual(['e1', 'e3', 'e2']);
     // e1→e2 (cross-module outgoing) + e1→e3 (intra-module); e2→e3 excluded (e2 not in sub-module)
     expect(result.relations).toHaveLength(2);
-    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e3' }));
-    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e2' }));
+    expect(result.relations).toContainEqual(
+      expect.objectContaining({ source: 'e1', target: 'e3' })
+    );
+    expect(result.relations).toContainEqual(
+      expect.objectContaining({ source: 'e1', target: 'e2' })
+    );
   });
 
   it('filters moduleGraph nodes and edges by path prefix', () => {
@@ -120,8 +124,20 @@ describe('deriveSubModuleArchJSON', () => {
           version: '1.0',
           moduleGraph: {
             nodes: [
-              { id: 'src/core', name: 'core', type: 'internal' as const, fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
-              { id: 'src/shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+              {
+                id: 'src/core',
+                name: 'core',
+                type: 'internal' as const,
+                fileCount: 2,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'src/shared',
+                name: 'shared',
+                type: 'internal' as const,
+                fileCount: 1,
+                stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 },
+              },
             ],
             edges: [{ from: 'src/core', to: 'src/shared', strength: 1, importedNames: [] }],
             cycles: [],
@@ -169,22 +185,36 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('includes cross-module relations when source is in sub-module', () => {
     const parent: ArchJSON = {
-      version: '1.0', language: 'cpp', timestamp: '',
+      version: '1.0',
+      language: 'cpp',
+      timestamp: '',
       sourceFiles: [],
       entities: [
         {
-          id: 'src.Renderer', name: 'Renderer', type: 'class' as any,
-          visibility: 'public', members: [{ name: 'ctx', type: 'field' as any, visibility: 'public' }],
+          id: 'src.Renderer',
+          name: 'Renderer',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [{ name: 'ctx', type: 'field' as any, visibility: 'public' }],
           sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
         },
         {
-          id: 'ggml.ggml_context', name: 'ggml_context', type: 'struct' as any,
-          visibility: 'public', members: [{ name: 'mem_size', type: 'field' as any, visibility: 'public' }],
+          id: 'ggml.ggml_context',
+          name: 'ggml_context',
+          type: 'struct' as any,
+          visibility: 'public',
+          members: [{ name: 'mem_size', type: 'field' as any, visibility: 'public' }],
           sourceLocation: { file: '/proj/ggml/ggml.h', startLine: 1, endLine: 20 },
         },
       ],
       relations: [
-        { id: 'r1', type: 'composition', source: 'src.Renderer', target: 'ggml.ggml_context', inferenceSource: 'explicit' },
+        {
+          id: 'r1',
+          type: 'composition',
+          source: 'src.Renderer',
+          target: 'ggml.ggml_context',
+          inferenceSource: 'explicit',
+        },
       ],
     };
     const derived = deriveSubModuleArchJSON(parent, '/proj/src');
@@ -197,17 +227,25 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('adds stub entity for cross-module relation target', () => {
     const parent: ArchJSON = {
-      version: '1.0', language: 'cpp', timestamp: '',
+      version: '1.0',
+      language: 'cpp',
+      timestamp: '',
       sourceFiles: [],
       entities: [
         {
-          id: 'src.Renderer', name: 'Renderer', type: 'class' as any,
-          visibility: 'public', members: [],
+          id: 'src.Renderer',
+          name: 'Renderer',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [],
           sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
         },
         {
-          id: 'ggml.ggml_context', name: 'ggml_context', type: 'struct' as any,
-          visibility: 'public', members: [
+          id: 'ggml.ggml_context',
+          name: 'ggml_context',
+          type: 'struct' as any,
+          visibility: 'public',
+          members: [
             { name: 'mem_size', type: 'field' as any, visibility: 'public' },
             { name: 'alloc', type: 'field' as any, visibility: 'public' },
           ],
@@ -215,40 +253,60 @@ describe('deriveSubModuleArchJSON', () => {
         },
       ],
       relations: [
-        { id: 'r1', type: 'composition', source: 'src.Renderer', target: 'ggml.ggml_context', inferenceSource: 'explicit' },
+        {
+          id: 'r1',
+          type: 'composition',
+          source: 'src.Renderer',
+          target: 'ggml.ggml_context',
+          inferenceSource: 'explicit',
+        },
       ],
     };
     const derived = deriveSubModuleArchJSON(parent, '/proj/src');
 
     // Both entities appear in derived ArchJSON (Renderer as full, ggml_context as stub)
     expect(derived.entities).toHaveLength(2);
-    const stub = derived.entities.find(e => e.id === 'ggml.ggml_context');
+    const stub = derived.entities.find((e) => e.id === 'ggml.ggml_context');
     expect(stub).toBeDefined();
-    expect(stub!.members).toHaveLength(0);  // stub has no members
+    expect(stub.members).toHaveLength(0); // stub has no members
 
     // Original in sub-module entity is unchanged
-    const renderer = derived.entities.find(e => e.id === 'src.Renderer');
+    const renderer = derived.entities.find((e) => e.id === 'src.Renderer');
     expect(renderer).toBeDefined();
   });
 
   it('does not add stub for intra-module relations (already in entity set)', () => {
     const parent: ArchJSON = {
-      version: '1.0', language: 'cpp', timestamp: '',
+      version: '1.0',
+      language: 'cpp',
+      timestamp: '',
       sourceFiles: [],
       entities: [
         {
-          id: 'src.A', name: 'A', type: 'class' as any,
-          visibility: 'public', members: [],
+          id: 'src.A',
+          name: 'A',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [],
           sourceLocation: { file: '/proj/src/a.h', startLine: 1, endLine: 5 },
         },
         {
-          id: 'src.B', name: 'B', type: 'class' as any,
-          visibility: 'public', members: [],
+          id: 'src.B',
+          name: 'B',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [],
           sourceLocation: { file: '/proj/src/b.h', startLine: 1, endLine: 5 },
         },
       ],
       relations: [
-        { id: 'r1', type: 'dependency', source: 'src.A', target: 'src.B', inferenceSource: 'explicit' },
+        {
+          id: 'r1',
+          type: 'dependency',
+          source: 'src.A',
+          target: 'src.B',
+          inferenceSource: 'explicit',
+        },
       ],
     };
     const derived = deriveSubModuleArchJSON(parent, '/proj/src');
@@ -262,22 +320,36 @@ describe('deriveSubModuleArchJSON', () => {
     // Relations FROM other modules TO this module's entities should NOT appear
     // (only outgoing are included to keep diagram focused on THIS module's dependencies)
     const parent: ArchJSON = {
-      version: '1.0', language: 'cpp', timestamp: '',
+      version: '1.0',
+      language: 'cpp',
+      timestamp: '',
       sourceFiles: [],
       entities: [
         {
-          id: 'src.Base', name: 'Base', type: 'class' as any,
-          visibility: 'public', members: [],
+          id: 'src.Base',
+          name: 'Base',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [],
           sourceLocation: { file: '/proj/src/base.h', startLine: 1, endLine: 5 },
         },
         {
-          id: 'tools.Derived', name: 'Derived', type: 'class' as any,
-          visibility: 'public', members: [],
+          id: 'tools.Derived',
+          name: 'Derived',
+          type: 'class' as any,
+          visibility: 'public',
+          members: [],
           sourceLocation: { file: '/proj/tools/derived.h', startLine: 1, endLine: 5 },
         },
       ],
       relations: [
-        { id: 'r1', type: 'inheritance', source: 'tools.Derived', target: 'src.Base', inferenceSource: 'explicit' },
+        {
+          id: 'r1',
+          type: 'inheritance',
+          source: 'tools.Derived',
+          target: 'src.Base',
+          inferenceSource: 'explicit',
+        },
       ],
     };
     // Derive the src sub-module
@@ -295,7 +367,10 @@ describe('deriveSubModuleArchJSON', () => {
 describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (workspaceRoot fix)', () => {
   it('matches entities when filePath is relative and subPath is absolute with workspaceRoot', () => {
     const parent: ArchJSON = {
-      version: '1.0', language: 'typescript', timestamp: '', sourceFiles: [],
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
       entities: [
         { id: 'e1', name: 'Error', type: 'class', filePath: 'shared/error.ts' },
         { id: 'e2', name: 'Config', type: 'class', filePath: 'shared/config.ts' },
@@ -309,15 +384,22 @@ describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (work
     // subPath is absolute, filePaths are relative to workspaceRoot='/abs/src'
     const result = deriveSubModuleArchJSON(parent, '/abs/src/shared', '/abs/src');
     // e1 and e2 are in sub-module; e3 is a cross-module stub (target of e1→e3)
-    expect(result.entities.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
+    expect(result.entities.map((e) => e.id)).toEqual(['e1', 'e2', 'e3']);
     expect(result.relations).toHaveLength(2);
-    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e2' }));
-    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e3' }));
+    expect(result.relations).toContainEqual(
+      expect.objectContaining({ source: 'e1', target: 'e2' })
+    );
+    expect(result.relations).toContainEqual(
+      expect.objectContaining({ source: 'e1', target: 'e3' })
+    );
   });
 
   it('still works without workspaceRoot when filePath is already absolute', () => {
     const parent: ArchJSON = {
-      version: '1.0', language: 'typescript', timestamp: '', sourceFiles: [],
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
       entities: [
         { id: 'e1', name: 'A', type: 'class', filePath: '/abs/src/shared/a.ts' },
         { id: 'e2', name: 'B', type: 'class', filePath: '/abs/src/b.ts' },
@@ -325,7 +407,7 @@ describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (work
       relations: [],
     };
     const result = deriveSubModuleArchJSON(parent, '/abs/src/shared');
-    expect(result.entities.map(e => e.id)).toEqual(['e1']);
+    expect(result.entities.map((e) => e.id)).toEqual(['e1']);
   });
 });
 
@@ -983,11 +1065,13 @@ describe('DiagramProcessor', () => {
      * Shared setup: mock all dependencies for a single diagram processed with
      * json format unless overridden.
      */
-    const setupMocks = async (opts: {
-      format?: 'json' | 'mermaid';
-      level?: 'class' | 'package' | 'method';
-      archJSON?: ArchJSON;
-    } = {}) => {
+    const setupMocks = async (
+      opts: {
+        format?: 'json' | 'mermaid';
+        level?: 'class' | 'package' | 'method';
+        archJSON?: ArchJSON;
+      } = {}
+    ) => {
       const archJSON = opts.archJSON ?? createTestArchJSON();
 
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
@@ -1042,7 +1126,11 @@ describe('DiagramProcessor', () => {
       const diagrams = [
         { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
       ];
-      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
       const results = await processor.processAll();
 
       expect(results[0].success).toBe(true);
@@ -1063,7 +1151,11 @@ describe('DiagramProcessor', () => {
       const diagrams = [
         { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
       ];
-      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
       await processor.processAll();
 
       expect((writtenData as any).metrics.level).toBe('class');
@@ -1084,7 +1176,11 @@ describe('DiagramProcessor', () => {
       const diagrams = [
         { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
       ];
-      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
       await processor.processAll();
 
       expect((writtenData as any).metrics.entityCount).toBe(archJSON.entities.length);
@@ -1101,9 +1197,7 @@ describe('DiagramProcessor', () => {
       });
 
       // globalConfig format is 'mermaid' by default; no diagram-level format override
-      const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'class' as const },
-      ];
+      const diagrams = [{ name: 'test', sources: ['./src'], level: 'class' as const }];
       const globalConfig = { ...createGlobalConfig(), format: 'mermaid' as const };
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
       await processor.processAll();
@@ -1124,7 +1218,11 @@ describe('DiagramProcessor', () => {
       const diagrams = [
         { name: 'test', sources: ['./src'], level: 'method' as const, format: 'json' as const },
       ];
-      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
       await processor.processAll();
 
       // rawArchJSON must not have been mutated
@@ -1142,7 +1240,11 @@ describe('DiagramProcessor', () => {
       const diagrams = [
         { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
       ];
-      const processor = new DiagramProcessor({ diagrams, globalConfig: createGlobalConfig(), progress });
+      const processor = new DiagramProcessor({
+        diagrams,
+        globalConfig: createGlobalConfig(),
+        progress,
+      });
       const results = await processor.processAll();
 
       expect(results[0].success).toBe(true);
@@ -1176,10 +1278,34 @@ describe('DiagramProcessor', () => {
             version: '1.0',
             moduleGraph: {
               nodes: [
-                { id: '__root__', name: '(root)', type: 'internal', fileCount: 5, stats: { classes: 2, interfaces: 1, functions: 8, enums: 0 } },
-                { id: 'openai_api_protocols', name: 'openai_api_protocols', type: 'internal', fileCount: 3, stats: { classes: 4, interfaces: 6, functions: 0, enums: 0 } },
-                { id: 'shared', name: 'shared', type: 'internal', fileCount: 8, stats: { classes: 10, interfaces: 3, functions: 5, enums: 1 } },
-                { id: '@mlc-ai/web-runtime', name: '@mlc-ai/web-runtime', type: 'external', fileCount: 0, stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 } },
+                {
+                  id: '__root__',
+                  name: '(root)',
+                  type: 'internal',
+                  fileCount: 5,
+                  stats: { classes: 2, interfaces: 1, functions: 8, enums: 0 },
+                },
+                {
+                  id: 'openai_api_protocols',
+                  name: 'openai_api_protocols',
+                  type: 'internal',
+                  fileCount: 3,
+                  stats: { classes: 4, interfaces: 6, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'shared',
+                  name: 'shared',
+                  type: 'internal',
+                  fileCount: 8,
+                  stats: { classes: 10, interfaces: 3, functions: 5, enums: 1 },
+                },
+                {
+                  id: '@mlc-ai/web-runtime',
+                  name: '@mlc-ai/web-runtime',
+                  type: 'external',
+                  fileCount: 0,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
               ],
               edges: [
                 { from: '__root__', to: 'openai_api_protocols', strength: 12, importedNames: [] },
@@ -1210,7 +1336,12 @@ describe('DiagramProcessor', () => {
           fileExtensions: ['.ts'],
           author: 'test',
           minCoreVersion: '1.0.0',
-          capabilities: { singleFileParsing: false, incrementalParsing: false, dependencyExtraction: false, typeInference: false },
+          capabilities: {
+            singleFileParsing: false,
+            incrementalParsing: false,
+            dependencyExtraction: false,
+            typeInference: false,
+          },
         },
         initialize: vi.fn().mockResolvedValue(undefined),
         parseProject: vi.fn().mockResolvedValue(archJSONWithGraph),
@@ -1229,7 +1360,12 @@ describe('DiagramProcessor', () => {
         resolve: vi.fn().mockReturnValue({
           outputDir: './archguard',
           baseName: 'package',
-          paths: { mmd: './archguard/overview/package.mmd', png: './archguard/overview/package.png', svg: './archguard/overview/package.svg', json: './archguard/overview/package.json' },
+          paths: {
+            mmd: './archguard/overview/package.mmd',
+            png: './archguard/overview/package.png',
+            svg: './archguard/overview/package.svg',
+            json: './archguard/overview/package.json',
+          },
         }),
         ensureDirectory: vi.fn().mockResolvedValue(undefined),
       }));
@@ -1259,9 +1395,18 @@ describe('DiagramProcessor', () => {
       const registry = new PluginRegistry();
       const mockTsPlugin: ILanguagePlugin = {
         metadata: {
-          name: 'typescript', version: '1.0.0', displayName: 'Mock TypeScript plugin',
-          fileExtensions: ['.ts'], author: 'test', minCoreVersion: '1.0.0',
-          capabilities: { singleFileParsing: false, incrementalParsing: false, dependencyExtraction: false, typeInference: false },
+          name: 'typescript',
+          version: '1.0.0',
+          displayName: 'Mock TypeScript plugin',
+          fileExtensions: ['.ts'],
+          author: 'test',
+          minCoreVersion: '1.0.0',
+          capabilities: {
+            singleFileParsing: false,
+            incrementalParsing: false,
+            dependencyExtraction: false,
+            typeInference: false,
+          },
         },
         initialize: vi.fn().mockResolvedValue(undefined),
         parseProject: vi.fn().mockResolvedValue(archJSONWithGraph),
@@ -1280,7 +1425,12 @@ describe('DiagramProcessor', () => {
         resolve: vi.fn().mockReturnValue({
           outputDir: './archguard',
           baseName: 'package',
-          paths: { mmd: './archguard/overview/package.mmd', png: './archguard/overview/package.png', svg: './archguard/overview/package.svg', json: './archguard/overview/package.json' },
+          paths: {
+            mmd: './archguard/overview/package.mmd',
+            png: './archguard/overview/package.png',
+            svg: './archguard/overview/package.svg',
+            json: './archguard/overview/package.json',
+          },
         }),
         ensureDirectory: vi.fn().mockResolvedValue(undefined),
       }));
@@ -1322,7 +1472,12 @@ describe('DiagramProcessor', () => {
         resolve: vi.fn().mockReturnValue({
           outputDir: './archguard',
           baseName: 'test',
-          paths: { mmd: './archguard/test.mmd', png: './archguard/test.png', svg: './archguard/test.svg', json: './archguard/test.json' },
+          paths: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+            json: './archguard/test.json',
+          },
         }),
         ensureDirectory: vi.fn().mockResolvedValue(undefined),
       }));
@@ -1460,8 +1615,9 @@ describe('Atlas layer parallel rendering', () => {
 
     // AtlasRenderer is dynamically imported in generateAtlasOutput.
     // We mock the module using the factory pattern via vi.doMock (not hoisted).
-    const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js') as any;
-    (AtlasRenderer as any).mockImplementation(() => ({
+    const { AtlasRenderer } =
+      (await import('@/plugins/golang/atlas/renderers/atlas-renderer.js')) as any;
+    AtlasRenderer.mockImplementation(() => ({
       render: vi.fn().mockImplementation(async () => {
         concurrentRenders++;
         maxConcurrent = Math.max(maxConcurrent, concurrentRenders);
@@ -1513,15 +1669,16 @@ describe('Atlas layer parallel rendering', () => {
     await setupCommonMocks();
 
     // AtlasRenderer: simple mock that returns valid content
-    const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js') as any;
-    (AtlasRenderer as any).mockImplementation(() => ({
+    const { AtlasRenderer } =
+      (await import('@/plugins/golang/atlas/renderers/atlas-renderer.js')) as any;
+    AtlasRenderer.mockImplementation(() => ({
       render: vi.fn().mockResolvedValue({ content: 'flowchart LR\n  A --> B', format: 'mermaid' }),
     }));
 
     // MermaidRenderWorkerPool: capture constructor arguments to verify pool size
-    const { MermaidRenderWorkerPool } = await import('@/mermaid/render-worker-pool.js') as any;
+    const { MermaidRenderWorkerPool } = (await import('@/mermaid/render-worker-pool.js')) as any;
     const constructorCalls: number[] = [];
-    (MermaidRenderWorkerPool as any).mockImplementation((size: number) => {
+    MermaidRenderWorkerPool.mockImplementation((size: number) => {
       constructorCalls.push(size);
       return {
         start: vi.fn().mockResolvedValue(undefined),

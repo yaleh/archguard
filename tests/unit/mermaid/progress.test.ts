@@ -43,12 +43,12 @@ describe('NoopProgressReporter', () => {
 
   it('warn() should not throw', () => {
     const reporter = new NoopProgressReporter();
-    expect(() => reporter.warn!('Watch out')).not.toThrow();
+    expect(() => reporter.warn('Watch out')).not.toThrow();
   });
 
   it('info() should not throw', () => {
     const reporter = new NoopProgressReporter();
-    expect(() => reporter.info!('FYI')).not.toThrow();
+    expect(() => reporter.info('FYI')).not.toThrow();
   });
 
   it('all methods should return undefined (fire-and-forget)', () => {
@@ -56,8 +56,8 @@ describe('NoopProgressReporter', () => {
     expect(reporter.start('msg')).toBeUndefined();
     expect(reporter.succeed('msg')).toBeUndefined();
     expect(reporter.fail('msg')).toBeUndefined();
-    expect(reporter.warn!('msg')).toBeUndefined();
-    expect(reporter.info!('msg')).toBeUndefined();
+    expect(reporter.warn('msg')).toBeUndefined();
+    expect(reporter.info('msg')).toBeUndefined();
   });
 
   it('should be callable in sequence without side-effects', () => {

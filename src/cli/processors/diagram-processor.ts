@@ -103,7 +103,7 @@ export interface DiagramResult {
 export function deriveSubModuleArchJSON(
   parent: ArchJSON,
   subPath: string,
-  workspaceRoot?: string,
+  workspaceRoot?: string
 ): ArchJSON {
   const normSub = subPath.replace(/\\/g, '/').replace(/\/$/, '');
 
@@ -149,15 +149,11 @@ export function deriveSubModuleArchJSON(
   const ids = new Set(entities.map((e) => e.id));
 
   // Step 1: Relations where source is in sub-module (outgoing relations only)
-  const outgoingRelations = (parent.relations ?? []).filter(
-    (r) => ids.has(r.source)
-  );
+  const outgoingRelations = (parent.relations ?? []).filter((r) => ids.has(r.source));
 
   // Step 2: Find cross-module targets (target NOT in sub-module)
   const crossModuleTargetIds = new Set(
-    outgoingRelations
-      .filter((r) => !ids.has(r.target))
-      .map((r) => r.target)
+    outgoingRelations.filter((r) => !ids.has(r.target)).map((r) => r.target)
   );
 
   // Step 3: Create stub entities for cross-module targets
@@ -180,7 +176,8 @@ export function deriveSubModuleArchJSON(
     // Derive the relative prefix from normSub by taking the last 2 path segments
     // (heuristic for standard src/* layout; works for web-llm case).
     const parts = normSub.split('/').filter(Boolean);
-    const relPrefix = parts.length >= 2 ? parts.slice(-2).join('/') : parts[parts.length - 1] ?? normSub;
+    const relPrefix =
+      parts.length >= 2 ? parts.slice(-2).join('/') : (parts[parts.length - 1] ?? normSub);
 
     const filteredNodes = mg.nodes.filter(
       (n) => n.id === relPrefix || n.id.startsWith(relPrefix + '/')
@@ -189,13 +186,13 @@ export function deriveSubModuleArchJSON(
     const filteredEdges = mg.edges.filter(
       (e) => filteredNodeIds.has(e.from) && filteredNodeIds.has(e.to)
     );
-    const filteredCycles = (mg.cycles ?? []).filter(
-      (c) => c.modules.every((m) => filteredNodeIds.has(m))
+    const filteredCycles = (mg.cycles ?? []).filter((c) =>
+      c.modules.every((m) => filteredNodeIds.has(m))
     );
     extensions = {
       ...parent.extensions,
       tsAnalysis: {
-        ...parent.extensions!.tsAnalysis!,
+        ...parent.extensions.tsAnalysis,
         moduleGraph: {
           nodes: filteredNodes,
           edges: filteredEdges,
@@ -278,23 +275,27 @@ export class DiagramProcessor {
     // For single diagrams we normally skip the pool, but Go Atlas diagrams render
     // 4 layers concurrently so we treat the layer count as the effective diagram count.
     const diagramCount = this.diagrams.length;
-    const isGoAtlas =
-      diagramCount === 1 && this.diagrams[0].language === 'go';
+    const isGoAtlas = diagramCount === 1 && this.diagrams[0].language === 'go';
     const atlasLayerCount = isGoAtlas
-      ? ((this.diagrams[0].languageSpecific?.atlas as { layers?: string[] } | undefined)
-          ?.layers?.length ?? 4)
+      ? ((this.diagrams[0].languageSpecific?.atlas as { layers?: string[] } | undefined)?.layers
+          ?.length ?? 4)
       : 0;
     const effectiveDiagramCount = Math.max(diagramCount, atlasLayerCount);
-    const poolSize = effectiveDiagramCount >= 2 ? Math.min(os.cpus().length, effectiveDiagramCount, 4) : 0;
-    const poolTheme = typeof this.globalConfig.mermaid?.theme === 'string'
-      ? this.globalConfig.mermaid.theme
-      : (this.globalConfig.mermaid?.theme as any)?.name ?? 'default';
-    const pool = poolSize > 0
-      ? new MermaidRenderWorkerPool(poolSize, {
-          theme: poolTheme,
-          backgroundColor: this.globalConfig.mermaid?.transparentBackground ? 'transparent' : 'white',
-        })
-      : null;
+    const poolSize =
+      effectiveDiagramCount >= 2 ? Math.min(os.cpus().length, effectiveDiagramCount, 4) : 0;
+    const poolTheme =
+      typeof this.globalConfig.mermaid?.theme === 'string'
+        ? this.globalConfig.mermaid.theme
+        : ((this.globalConfig.mermaid?.theme as any)?.name ?? 'default');
+    const pool =
+      poolSize > 0
+        ? new MermaidRenderWorkerPool(poolSize, {
+            theme: poolTheme,
+            backgroundColor: this.globalConfig.mermaid?.transparentBackground
+              ? 'transparent'
+              : 'white',
+          })
+        : null;
 
     if (pool) await pool.start();
 
@@ -379,10 +380,7 @@ export class DiagramProcessor {
    * Register a parse promise in archJsonDeferred so concurrent sub-groups can await it.
    * When the promise resolves, caches the result and removes the deferred entry.
    */
-  private registerDeferred(
-    sources: string[],
-    parsePromise: Promise<ArchJSON>
-  ): Promise<ArchJSON> {
+  private registerDeferred(sources: string[], parsePromise: Promise<ArchJSON>): Promise<ArchJSON> {
     const key = this.hashSources(sources);
     const withCaching = parsePromise.then((result) => {
       this.cacheArchJson(sources, result);
@@ -486,22 +484,22 @@ export class DiagramProcessor {
           rawArchJSON = deriveSubModuleArchJSON(
             parentArchJSON,
             firstDiagram.sources[0],
-            normParentPath ?? undefined,
+            normParentPath ?? undefined
           );
         } else if (normParentPath) {
           // Root parse already complete: derive from cache immediately
-          const parentCacheKey = this.archJsonPathIndex.get(normParentPath)!;
-          const parentArchJSON = this.archJsonCache.get(parentCacheKey)!;
+          const parentCacheKey = this.archJsonPathIndex.get(normParentPath);
+          const parentArchJSON = this.archJsonCache.get(parentCacheKey);
           rawArchJSON = deriveSubModuleArchJSON(
             parentArchJSON,
             firstDiagram.sources[0],
-            normParentPath,
+            normParentPath
           );
         } else {
           // No parent found: this IS the root parse — parse in full and register deferred
           rawArchJSON = await this.registerDeferred(
             firstDiagram.sources,
-            this.parseCppProject(firstDiagram),
+            this.parseCppProject(firstDiagram)
           );
         }
 
@@ -524,12 +522,17 @@ export class DiagramProcessor {
           skipMissing: false,
         });
         const diskCacheEnabled = this.globalConfig.cache?.enabled !== false;
-        const diskKey = diskCacheEnabled && tsFiles.length > 0 ? await this.archJsonDiskCache.computeKey(tsFiles) : null;
+        const diskKey =
+          diskCacheEnabled && tsFiles.length > 0
+            ? await this.archJsonDiskCache.computeKey(tsFiles)
+            : null;
         let cachedArchJSON: ArchJSON | null = null;
         if (diskKey) {
           cachedArchJSON = await this.archJsonDiskCache.get(diskKey);
           if (cachedArchJSON && process.env.ArchGuardDebug === 'true') {
-            console.debug(`💾 Disk cache hit for ts-morph path: ${firstDiagram.sources.join(', ')}`);
+            console.debug(
+              `💾 Disk cache hit for ts-morph path: ${firstDiagram.sources.join(', ')}`
+            );
           }
         }
 
@@ -571,17 +574,29 @@ export class DiagramProcessor {
         if (deferred) {
           // Parent is still parsing; wait for it then derive sub-module ArchJSON
           const parentArchJSON = await deferred;
-          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0], normParentPath ?? undefined);
+          rawArchJSON = deriveSubModuleArchJSON(
+            parentArchJSON,
+            diagrams[0].sources[0],
+            normParentPath ?? undefined
+          );
           if (process.env.ArchGuardDebug === 'true') {
-            console.debug(`🔗 Awaited parent and derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
+            console.debug(
+              `🔗 Awaited parent and derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`
+            );
           }
         } else if (normParentPath) {
           // Parent already complete; derive immediately from cache
-          const parentCacheKey = this.archJsonPathIndex.get(normParentPath)!;
-          const parentArchJSON = this.archJsonCache.get(parentCacheKey)!;
-          rawArchJSON = deriveSubModuleArchJSON(parentArchJSON, diagrams[0].sources[0], normParentPath);
+          const parentCacheKey = this.archJsonPathIndex.get(normParentPath);
+          const parentArchJSON = this.archJsonCache.get(parentCacheKey);
+          rawArchJSON = deriveSubModuleArchJSON(
+            parentArchJSON,
+            diagrams[0].sources[0],
+            normParentPath
+          );
           if (process.env.ArchGuardDebug === 'true') {
-            console.debug(`🔗 Derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`);
+            console.debug(
+              `🔗 Derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`
+            );
           }
         } else {
           if (process.env.ArchGuardDebug === 'true') {
@@ -595,7 +610,9 @@ export class DiagramProcessor {
           if (diskCached) {
             rawArchJSON = diskCached;
             if (process.env.ArchGuardDebug === 'true') {
-              console.debug(`💾 Disk cache hit for ParallelParser path: ${diagrams[0].sources.join(', ')}`);
+              console.debug(
+                `💾 Disk cache hit for ParallelParser path: ${diagrams[0].sources.join(', ')}`
+              );
             }
           } else {
             // Parse files in parallel
@@ -684,11 +701,12 @@ export class DiagramProcessor {
       // (consumers like DiagramIndexGenerator need them regardless of output format).
       // For json format: also embed metrics in the output object (never mutate aggregatedJSON or
       // rawArchJSON, as rawArchJSON may be a shared cached reference returned by the 'method'-level aggregator).
-      const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(aggregatedJSON, diagram.level);
+      const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(
+        aggregatedJSON,
+        diagram.level
+      );
       const outputJSON =
-        format === 'json'
-          ? { ...aggregatedJSON, metrics: computedMetrics }
-          : aggregatedJSON;
+        format === 'json' ? { ...aggregatedJSON, metrics: computedMetrics } : aggregatedJSON;
 
       await this.generateOutput(outputJSON, paths, format, diagram.level, diagram, pool);
 
@@ -760,10 +778,12 @@ export class DiagramProcessor {
   private async parseGoProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
     const registryPlugin = this.registry?.getByName('golang');
-    const plugin = registryPlugin ?? await (async () => {
-      const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
-      return new GoAtlasPlugin();
-    })();
+    const plugin =
+      registryPlugin ??
+      (await (async () => {
+        const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
+        return new GoAtlasPlugin();
+      })());
 
     await plugin.initialize({ workspaceRoot });
     return plugin.parseProject(workspaceRoot, {
@@ -782,10 +802,12 @@ export class DiagramProcessor {
   private async parseCppProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
     const registryPlugin = this.registry?.getByName('cpp');
-    const plugin = registryPlugin ?? await (async () => {
-      const { CppPlugin } = await import('@/plugins/cpp/index.js');
-      return new CppPlugin();
-    })();
+    const plugin =
+      registryPlugin ??
+      (await (async () => {
+        const { CppPlugin } = await import('@/plugins/cpp/index.js');
+        return new CppPlugin();
+      })());
 
     await plugin.initialize({ workspaceRoot });
     return plugin.parseProject(workspaceRoot, {
@@ -809,10 +831,12 @@ export class DiagramProcessor {
   private async parseTsProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
     const registryPlugin = this.registry?.getByName('typescript');
-    const plugin = registryPlugin ?? await (async () => {
-      const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
-      return new TypeScriptPlugin();
-    })();
+    const plugin =
+      registryPlugin ??
+      (await (async () => {
+        const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+        return new TypeScriptPlugin();
+      })());
 
     await plugin.initialize({ workspaceRoot });
     return plugin.parseProject(workspaceRoot, {
@@ -931,49 +955,53 @@ export class DiagramProcessor {
 
     console.log('\n🗺️  Generating Go Architecture Atlas...');
 
-    await Promise.all(availableLayers.map(async (layer) => {
-      const result = await renderer.render(
-        atlas,
-        layer as Parameters<typeof renderer.render>[1],
-        'mermaid'
-      );
+    await Promise.all(
+      availableLayers.map(async (layer) => {
+        const result = await renderer.render(
+          atlas,
+          layer as Parameters<typeof renderer.render>[1],
+          'mermaid'
+        );
 
-      const layerPaths = {
-        mmd: `${basePath}-${layer}.mmd`,
-        svg: `${basePath}-${layer}.svg`,
-        png: `${basePath}-${layer}.png`,
-      };
+        const layerPaths = {
+          mmd: `${basePath}-${layer}.mmd`,
+          svg: `${basePath}-${layer}.svg`,
+          png: `${basePath}-${layer}.png`,
+        };
 
-      // Write MMD and SVG unconditionally; attempt PNG separately so large
-      // diagrams that exceed the pixel limit still produce MMD + SVG.
-      await fs.ensureDir(path.dirname(layerPaths.mmd));
-      await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
+        // Write MMD and SVG unconditionally; attempt PNG separately so large
+        // diagrams that exceed the pixel limit still produce MMD + SVG.
+        await fs.ensureDir(path.dirname(layerPaths.mmd));
+        await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
 
-      // Render SVG: use worker pool if available, fall back to main thread
-      let svg: string;
-      if (pool) {
-        const poolResult = await pool.render({ mermaidCode: result.content });
-        if (!poolResult.success) {
-          console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
-          svg = await mermaidRenderer.renderSVG(result.content);
+        // Render SVG: use worker pool if available, fall back to main thread
+        let svg: string;
+        if (pool) {
+          const poolResult = await pool.render({ mermaidCode: result.content });
+          if (!poolResult.success) {
+            console.warn(
+              `  Worker render failed: ${poolResult.error} — falling back to main thread`
+            );
+            svg = await mermaidRenderer.renderSVG(result.content);
+          } else {
+            svg = poolResult.svg!;
+          }
         } else {
-          svg = poolResult.svg!;
+          svg = await mermaidRenderer.renderSVG(result.content);
         }
-      } else {
-        svg = await mermaidRenderer.renderSVG(result.content);
-      }
 
-      let pngFailed = false;
-      await Promise.all([
-        fs.writeFile(layerPaths.svg, svg, 'utf-8'),
-        mermaidRenderer.convertSVGToPNG(svg, layerPaths.png).catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
-          pngFailed = true;
-        }),
-      ]);
-      console.log(`  ✅ ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
-    }));
+        let pngFailed = false;
+        await Promise.all([
+          fs.writeFile(layerPaths.svg, svg, 'utf-8'),
+          mermaidRenderer.convertSVGToPNG(svg, layerPaths.png).catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
+            pngFailed = true;
+          }),
+        ]);
+        console.log(`  ✅ ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
+      })
+    );
 
     // Save full Atlas JSON alongside the layer diagrams
     const atlasJsonPath = `${basePath}-atlas.json`;
@@ -1062,7 +1090,8 @@ export class DiagramProcessor {
     paths: { paths: { json: string; mmd: string; png: string; svg: string } },
     pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
-    const { CppPackageFlowchartGenerator } = await import('@/mermaid/cpp-package-flowchart-generator.js');
+    const { CppPackageFlowchartGenerator } =
+      await import('@/mermaid/cpp-package-flowchart-generator.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
     const generator = new CppPackageFlowchartGenerator();

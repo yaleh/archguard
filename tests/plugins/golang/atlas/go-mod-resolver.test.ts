@@ -89,9 +89,21 @@ require (
       try {
         const info = await resolver.resolveProject(tmpDir);
         expect(info.requires).toHaveLength(3);
-        expect(info.requires[0]).toEqual({ path: 'github.com/gin-gonic/gin', version: 'v1.9.1', indirect: false });
-        expect(info.requires[1]).toEqual({ path: 'google.golang.org/grpc', version: 'v1.60.0', indirect: true });
-        expect(info.requires[2]).toEqual({ path: 'github.com/spf13/cobra', version: 'v1.8.0', indirect: false });
+        expect(info.requires[0]).toEqual({
+          path: 'github.com/gin-gonic/gin',
+          version: 'v1.9.1',
+          indirect: false,
+        });
+        expect(info.requires[1]).toEqual({
+          path: 'google.golang.org/grpc',
+          version: 'v1.60.0',
+          indirect: true,
+        });
+        expect(info.requires[2]).toEqual({
+          path: 'github.com/spf13/cobra',
+          version: 'v1.8.0',
+          indirect: false,
+        });
       } finally {
         await fs.remove(tmpDir);
       }
@@ -111,7 +123,11 @@ require github.com/pkg/errors v0.9.1
       try {
         const info = await resolver.resolveProject(tmpDir);
         expect(info.requires).toHaveLength(1);
-        expect(info.requires[0]).toEqual({ path: 'github.com/pkg/errors', version: 'v0.9.1', indirect: false });
+        expect(info.requires[0]).toEqual({
+          path: 'github.com/pkg/errors',
+          version: 'v0.9.1',
+          indirect: false,
+        });
       } finally {
         await fs.remove(tmpDir);
       }

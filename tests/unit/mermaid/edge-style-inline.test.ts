@@ -85,7 +85,9 @@ describe('inlineEdgeStyles – flowchart node rect patching', () => {
   it('injects fill/stroke into basic label-container rect with empty style', () => {
     const svg = `<svg>${cssStyle}<rect class="basic label-container" style="" width="126" height="52"></rect></svg>`;
     const result = inlineEdgeStyles(svg);
-    expect(result).toMatch(/<rect[^>]*label-container[^>]*style="fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/);
+    expect(result).toMatch(
+      /<rect[^>]*label-container[^>]*style="fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/
+    );
   });
 
   it('does not patch label-container rect that already has inline fill (idempotent)', () => {
@@ -103,7 +105,9 @@ describe('inlineEdgeStyles – flowchart node rect patching', () => {
   it('preserves existing non-fill style properties', () => {
     const svg = `<svg>${cssStyle}<rect class="basic label-container" style="stroke-dasharray:4;" width="126" height="52"></rect></svg>`;
     const result = inlineEdgeStyles(svg);
-    expect(result).toMatch(/style="stroke-dasharray:4;fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/);
+    expect(result).toMatch(
+      /style="stroke-dasharray:4;fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/
+    );
   });
 
   it('patches all three element types in a combined flowchart SVG', () => {
@@ -116,6 +120,8 @@ describe('inlineEdgeStyles – flowchart node rect patching', () => {
     const result = inlineEdgeStyles(svg);
     expect(result).toMatch(/<path[^>]*flowchart-link[^>]*style="fill:none;"/);
     expect(result).toMatch(/<rect[^>]*background[^>]*style="stroke: none;fill:none;"/);
-    expect(result).toMatch(/<rect[^>]*label-container[^>]*style="fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/);
+    expect(result).toMatch(
+      /<rect[^>]*label-container[^>]*style="fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"/
+    );
   });
 });

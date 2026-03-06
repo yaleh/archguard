@@ -218,7 +218,6 @@ describe('ConfigLoader Schema Validation - v2.0 API', () => {
 
     it('should reject invalid level value', async () => {
       await expect(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         configLoader.load({
           diagrams: [{ name: 'test', sources: ['./src'], level: 'invalid' as any }],
         })

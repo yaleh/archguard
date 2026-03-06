@@ -75,10 +75,7 @@ export class ClassBuilder {
     };
   }
 
-  private tryExtractField(
-    node: Parser.SyntaxNode,
-    visibility: Visibility
-  ): RawField | null {
+  private tryExtractField(node: Parser.SyntaxNode, visibility: Visibility): RawField | null {
     const typeNode = node.childForFieldName('type');
     const declarator = node.childForFieldName('declarator');
     if (!typeNode || !declarator) return null;
@@ -96,9 +93,7 @@ export class ClassBuilder {
     };
   }
 
-  private extractParams(
-    declaratorNode: Parser.SyntaxNode
-  ): Array<{ name: string; type: string }> {
+  private extractParams(declaratorNode: Parser.SyntaxNode): Array<{ name: string; type: string }> {
     const paramsNode = declaratorNode.childForFieldName('parameters');
     if (!paramsNode) return [];
 
@@ -108,7 +103,7 @@ export class ClassBuilder {
         const typeNode = n.childForFieldName('type');
         const declNode = n.childForFieldName('declarator');
         const nameNode = declNode
-          ? this.findDescendant(declNode, 'identifier') ?? declNode
+          ? (this.findDescendant(declNode, 'identifier') ?? declNode)
           : null;
         return {
           name: nameNode?.text ?? '',

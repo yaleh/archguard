@@ -141,7 +141,7 @@ const configSchema = z.object({
   // ========== Global Configuration ==========
   outputDir: z.string().default('./.archguard'),
   format: z.enum(['mermaid', 'json']).default('mermaid'),
-  mermaid: MermaidConfigSchema.default({}),
+  mermaid: MermaidConfigSchema.default({ renderer: 'isomorphic', theme: 'default', transparentBackground: false }),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
   // ========== CLI Configuration ==========
@@ -336,12 +336,12 @@ export class ConfigLoader {
         const sourceValue = source[key];
         if (sourceValue && this.isObject(sourceValue)) {
           if (!(key in target)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
             (output as any)[key] = sourceValue;
           } else {
             const targetValue = target[key];
             if (targetValue && this.isObject(targetValue)) {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
               (output as any)[key] = this.deepMerge(
                 targetValue as FileConfig,
                 sourceValue as Partial<Config>
@@ -349,7 +349,7 @@ export class ConfigLoader {
             }
           }
         } else if (sourceValue !== undefined) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
           (output as any)[key] = sourceValue;
         }
       });
@@ -381,7 +381,7 @@ export class ConfigLoader {
           return await fs.readJson(resolvedPath);
         } else if (resolvedPath.endsWith('.js')) {
           // Dynamic import for ES modules
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const module = await import(`file://${resolvedPath}`);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
           return module.default ?? module;
@@ -402,7 +402,7 @@ export class ConfigLoader {
     const jsPath = path.join(this.configDir, 'archguard.config.js');
     if (await fs.pathExists(jsPath)) {
       // Dynamic import for ES modules
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const module = await import(`file://${jsPath}`);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
       return module.default ?? module;

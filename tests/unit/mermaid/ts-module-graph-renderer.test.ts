@@ -101,7 +101,11 @@ describe('renderTsModuleGraph', () => {
 
   it('generates valid node identifiers for node: built-in modules (replaces colons)', () => {
     const graph: TsModuleGraph = {
-      nodes: [makeNode('src/cli'), makeNode('node:url', 'node_modules'), makeNode('node:crypto', 'node_modules')],
+      nodes: [
+        makeNode('src/cli'),
+        makeNode('node:url', 'node_modules'),
+        makeNode('node:crypto', 'node_modules'),
+      ],
       edges: [makeEdge('src/cli', 'node:url', 1), makeEdge('src/cli', 'node:crypto', 1)],
       cycles: [],
     };
@@ -173,7 +177,7 @@ describe('renderTsModuleGraph', () => {
     expect(output).toContain('classDef cycle    fill:#ffebe9');
     expect(output).not.toMatch(/stroke-dasharray: /);
     const classDefPos = output.indexOf('classDef internal');
-    const firstEdgePos = output.search(/\n  \w+ -->/);
+    const firstEdgePos = output.search(/\n {2}\w+ -->/);
     if (firstEdgePos !== -1) {
       expect(classDefPos).toBeLessThan(firstEdgePos);
     }
@@ -187,16 +191,8 @@ describe('renderTsModuleGraph – subgraph hierarchy', () => {
   it('wraps a parent and its direct children in a subgraph', () => {
     // cli is the parent; cli/commands and cli/utils are its children
     const graph: TsModuleGraph = {
-      nodes: [
-        makeNode('cli'),
-        makeNode('cli/commands'),
-        makeNode('cli/utils'),
-        makeNode('parser'),
-      ],
-      edges: [
-        makeEdge('cli/commands', 'parser', 1),
-        makeEdge('cli/utils', 'parser', 1),
-      ],
+      nodes: [makeNode('cli'), makeNode('cli/commands'), makeNode('cli/utils'), makeNode('parser')],
+      edges: [makeEdge('cli/commands', 'parser', 1), makeEdge('cli/utils', 'parser', 1)],
       cycles: [],
     };
 
@@ -309,17 +305,13 @@ describe('renderTsModuleGraph – subgraph hierarchy', () => {
       // Extract the ID token (first word after "subgraph")
       const match = line.match(/subgraph\s+(\S+)/);
       expect(match).not.toBeNull();
-      expect(match![1]).not.toMatch(/\//);
+      expect(match[1]).not.toMatch(/\//);
     }
   });
 
   it('edges between subgraph nodes are still emitted correctly', () => {
     const graph: TsModuleGraph = {
-      nodes: [
-        makeNode('cli'),
-        makeNode('cli/commands'),
-        makeNode('parser'),
-      ],
+      nodes: [makeNode('cli'), makeNode('cli/commands'), makeNode('parser')],
       edges: [makeEdge('cli/commands', 'parser', 2)],
       cycles: [],
     };
@@ -341,11 +333,7 @@ describe('renderTsModuleGraph – subgraph hierarchy', () => {
         makeNode('os', 'node_modules'),
         makeNode('zod', 'node_modules'),
       ],
-      edges: [
-        makeEdge('cli', 'path', 1),
-        makeEdge('cli', 'os', 1),
-        makeEdge('cli', 'zod', 1),
-      ],
+      edges: [makeEdge('cli', 'path', 1), makeEdge('cli', 'os', 1), makeEdge('cli', 'zod', 1)],
       cycles: [],
     };
 
@@ -366,11 +354,7 @@ describe('renderTsModuleGraph – subgraph hierarchy', () => {
 describe('renderTsModuleGraph – virtual parent grouping', () => {
   it('groups sibling nodes sharing a prefix under a virtual subgraph when real parent is absent', () => {
     const graph: TsModuleGraph = {
-      nodes: [
-        makeNode('plugins/golang'),
-        makeNode('plugins/java'),
-        makeNode('plugins/python'),
-      ],
+      nodes: [makeNode('plugins/golang'), makeNode('plugins/java'), makeNode('plugins/python')],
       edges: [],
       cycles: [],
     };
@@ -461,7 +445,7 @@ describe('renderTsModuleGraph – virtual parent grouping', () => {
     for (const line of subgraphLines) {
       const match = line.match(/subgraph\s+(\S+)/);
       expect(match).not.toBeNull();
-      expect(match![1]).not.toMatch(/\//);
+      expect(match[1]).not.toMatch(/\//);
     }
   });
 
@@ -534,12 +518,7 @@ describe('renderTsModuleGraph – subgraph depth styles', () => {
     // To get depth-3 we need an outer wrapper: add a/g sibling of a/b -> virtual 'a' at d1,
     // virtual 'a/b' at d2, real 'a/b/c' at d3.
     const graph: TsModuleGraph = {
-      nodes: [
-        makeNode('a/b/c'),
-        makeNode('a/b/c/x'),
-        makeNode('a/b/d'),
-        makeNode('a/g'),
-      ],
+      nodes: [makeNode('a/b/c'), makeNode('a/b/c/x'), makeNode('a/b/d'), makeNode('a/g')],
       edges: [],
       cycles: [],
     };
@@ -610,7 +589,7 @@ describe('renderTsModuleGraph – subgraph depth styles', () => {
     // Find the subgraph ID from the declaration
     const subgraphMatch = output.match(/subgraph (src_cli_group)\[/);
     expect(subgraphMatch).not.toBeNull();
-    const sgId = subgraphMatch![1];
+    const sgId = subgraphMatch[1];
     // The style directive must use the same ID
     expect(output).toContain(`style ${sgId} `);
   });
@@ -807,7 +786,9 @@ describe('renderTsModuleGraph – legend subgraph', () => {
       cycles: [],
     };
     const output = renderTsModuleGraph(graph);
-    expect(output).toContain('style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01');
+    expect(output).toContain(
+      'style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01'
+    );
   });
 
   it('legend subgraph appears before style grp_* directives in output', () => {
@@ -847,7 +828,7 @@ describe('renderTsModuleGraph – legend subgraph', () => {
     // Extract actual graph edge lines: lines where --> appears as a graph arrow,
     // not inside a label string. Real edge lines match: "  nodeId --> nodeId"
     // (the --> is not preceded by a quote character).
-    const edgeLines = output.split('\n').filter(l => /^\s+\w[\w_]* (?:-->|==>|===>)/.test(l));
+    const edgeLines = output.split('\n').filter((l) => /^\s+\w[\w_]* (?:-->|==>|===>)/.test(l));
     for (const line of edgeLines) {
       expect(line).not.toContain('legend_');
     }

@@ -34,7 +34,11 @@ describe('MermaidRenderWorkerPool', () => {
     // Simulate worker response
     const workerInstance = (Worker as any).mock.results[0].value;
     const sentJob: RenderJob = workerInstance.postMessage.mock.calls[0][0];
-    workerInstance.emit('message', { jobId: sentJob.jobId, success: true, svg: '<svg/>' } satisfies RenderResult);
+    workerInstance.emit('message', {
+      jobId: sentJob.jobId,
+      success: true,
+      svg: '<svg/>',
+    } satisfies RenderResult);
 
     const result = await renderPromise;
     expect(result.success).toBe(true);
@@ -55,7 +59,11 @@ describe('MermaidRenderWorkerPool', () => {
     const firstCall = worker.postMessage.mock.calls[0][0] as RenderJob;
 
     // Respond to first job with failure - worker becomes idle again
-    worker.emit('message', { jobId: firstCall.jobId, success: false, error: 'parse error' } satisfies RenderResult);
+    worker.emit('message', {
+      jobId: firstCall.jobId,
+      success: false,
+      error: 'parse error',
+    } satisfies RenderResult);
 
     const failResult = await failPromise;
     expect(failResult.success).toBe(false);
@@ -64,7 +72,11 @@ describe('MermaidRenderWorkerPool', () => {
     // Pool should still be usable - submit a second job
     const successPromise = pool.render({ mermaidCode: 'flowchart LR\n  A --> B' });
     const secondCall = worker.postMessage.mock.calls[1][0] as RenderJob;
-    worker.emit('message', { jobId: secondCall.jobId, success: true, svg: '<svg/>' } satisfies RenderResult);
+    worker.emit('message', {
+      jobId: secondCall.jobId,
+      success: true,
+      svg: '<svg/>',
+    } satisfies RenderResult);
 
     const successResult = await successPromise;
     expect(successResult.success).toBe(true);

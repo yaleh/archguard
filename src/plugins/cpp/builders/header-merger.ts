@@ -5,8 +5,8 @@ export class HeaderMerger {
   private static readonly HEADER_EXTS = new Set(['.h', '.hpp', '.hxx', '.h++']);
 
   merge(files: RawCppFile[]): MergedCppEntity[] {
-    const headers = files.filter(f => this.isHeader(f.filePath));
-    const impls = files.filter(f => !this.isHeader(f.filePath));
+    const headers = files.filter((f) => this.isHeader(f.filePath));
+    const impls = files.filter((f) => !this.isHeader(f.filePath));
 
     // Index header classes by qualifiedName
     const headerIndex = new Map<string, { entity: RawClass; file: RawCppFile }>();
@@ -28,8 +28,10 @@ export class HeaderMerger {
         if (headerMatch) {
           // Merge: declaration from header, body methods from impl
           const merged = this.mergeEntities(
-            headerMatch.entity, headerMatch.file.filePath,
-            cls, iFile.filePath,
+            headerMatch.entity,
+            headerMatch.file.filePath,
+            cls,
+            iFile.filePath
           );
           result.push(merged);
           consumed.add(key);
@@ -60,8 +62,10 @@ export class HeaderMerger {
   }
 
   private mergeEntities(
-    headerCls: RawClass, headerFile: string,
-    implCls: RawClass, implFile: string,
+    headerCls: RawClass,
+    headerFile: string,
+    implCls: RawClass,
+    implFile: string
   ): MergedCppEntity {
     // Union of methods by name; header entry wins on collision (preserves declaration metadata)
     const methodMap = new Map<string, RawMethod>();

@@ -119,7 +119,10 @@ describe('FrameworkDetector', () => {
         packages: [
           makePkg({
             imports: [
-              { path: 'github.com/beego/beego/v2/server/web', location: { file: 'app.go', startLine: 1, endLine: 1 } },
+              {
+                path: 'github.com/beego/beego/v2/server/web',
+                location: { file: 'app.go', startLine: 1, endLine: 1 },
+              },
             ],
           }),
         ],
@@ -133,7 +136,10 @@ describe('FrameworkDetector', () => {
         packages: [
           makePkg({
             imports: [
-              { path: 'github.com/cloudwego/hertz/pkg/app', location: { file: 'app.go', startLine: 1, endLine: 1 } },
+              {
+                path: 'github.com/cloudwego/hertz/pkg/app',
+                location: { file: 'app.go', startLine: 1, endLine: 1 },
+              },
             ],
           }),
         ],
@@ -147,7 +153,10 @@ describe('FrameworkDetector', () => {
         packages: [
           makePkg({
             imports: [
-              { path: 'github.com/gin-gonic/gin', location: { file: 'router.go', startLine: 1, endLine: 1 } },
+              {
+                path: 'github.com/gin-gonic/gin',
+                location: { file: 'router.go', startLine: 1, endLine: 1 },
+              },
             ],
           }),
         ],
@@ -160,9 +169,7 @@ describe('FrameworkDetector', () => {
   describe('Layer 3 — signature-based fallback', () => {
     it('detects main from package named main', () => {
       const rawData = makeRawData({
-        packages: [
-          makePkg({ name: 'main', fullName: 'cmd/server' }),
-        ],
+        packages: [makePkg({ name: 'main', fullName: 'cmd/server' })],
       });
       const result = detector.detect(makeModuleInfo(), rawData);
       expect(result.has('main')).toBe(true);
@@ -170,9 +177,7 @@ describe('FrameworkDetector', () => {
 
     it('does not add main for non-main packages', () => {
       const rawData = makeRawData({
-        packages: [
-          makePkg({ name: 'api', fullName: 'pkg/api' }),
-        ],
+        packages: [makePkg({ name: 'api', fullName: 'pkg/api' })],
       });
       const result = detector.detect(makeModuleInfo(), rawData);
       expect(result.has('main')).toBe(false);
@@ -195,8 +200,18 @@ describe('FrameworkDetector', () => {
                     packageName: 'api',
                     receiverType: 'MyHandler',
                     parameters: [
-                      { name: 'w', type: 'http.ResponseWriter', exported: false, location: { file: 'handler.go', startLine: 10, endLine: 10 } },
-                      { name: 'r', type: '*http.Request', exported: false, location: { file: 'handler.go', startLine: 10, endLine: 10 } },
+                      {
+                        name: 'w',
+                        type: 'http.ResponseWriter',
+                        exported: false,
+                        location: { file: 'handler.go', startLine: 10, endLine: 10 },
+                      },
+                      {
+                        name: 'r',
+                        type: '*http.Request',
+                        exported: false,
+                        location: { file: 'handler.go', startLine: 10, endLine: 10 },
+                      },
                     ],
                     returnTypes: [],
                     exported: true,
@@ -230,7 +245,12 @@ describe('FrameworkDetector', () => {
                     packageName: 'api',
                     receiverType: 'MyHandler',
                     parameters: [
-                      { name: 'w', type: 'http.ResponseWriter', exported: false, location: { file: 'handler.go', startLine: 10, endLine: 10 } },
+                      {
+                        name: 'w',
+                        type: 'http.ResponseWriter',
+                        exported: false,
+                        location: { file: 'handler.go', startLine: 10, endLine: 10 },
+                      },
                     ],
                     returnTypes: [],
                     exported: true,
@@ -264,8 +284,18 @@ describe('FrameworkDetector', () => {
                     packageName: 'api',
                     receiverType: 'MyHandler',
                     parameters: [
-                      { name: 'w', type: 'http.ResponseWriter', exported: false, location: { file: 'handler.go', startLine: 10, endLine: 10 } },
-                      { name: 'r', type: '*http.Request', exported: false, location: { file: 'handler.go', startLine: 10, endLine: 10 } },
+                      {
+                        name: 'w',
+                        type: 'http.ResponseWriter',
+                        exported: false,
+                        location: { file: 'handler.go', startLine: 10, endLine: 10 },
+                      },
+                      {
+                        name: 'r',
+                        type: '*http.Request',
+                        exported: false,
+                        location: { file: 'handler.go', startLine: 10, endLine: 10 },
+                      },
                     ],
                     returnTypes: [],
                     exported: true,
@@ -294,7 +324,10 @@ describe('FrameworkDetector', () => {
             name: 'main',
             fullName: 'cmd/server',
             imports: [
-              { path: 'github.com/cloudwego/hertz/pkg/app', location: { file: 'main.go', startLine: 1, endLine: 1 } },
+              {
+                path: 'github.com/cloudwego/hertz/pkg/app',
+                location: { file: 'main.go', startLine: 1, endLine: 1 },
+              },
             ],
           }),
         ],

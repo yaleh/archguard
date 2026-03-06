@@ -126,7 +126,11 @@ describe('MermaidDiagramGenerator - progress injection', () => {
       const generator = new MermaidDiagramGenerator(config, reporter);
       const emptyArchJSON: ArchJSON = { ...makeArchJSON(), entities: [] };
 
-      const jobs = await generator.generateOnly(emptyArchJSON, { mmdPath: '/tmp/test.mmd' }, 'class');
+      const jobs = await generator.generateOnly(
+        emptyArchJSON,
+        { mmdPath: '/tmp/test.mmd' },
+        'class'
+      );
 
       expect(jobs).toEqual([]);
       expect(reporter.start).not.toHaveBeenCalled();

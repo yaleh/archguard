@@ -7,12 +7,24 @@ export const CPP_EXTENSIONS = ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.h', '.h+
 export const MIN_CPP_FILES_FOR_MODULE = 5;
 
 const CPP_EXCLUDED_DIRS = new Set([
-  'build', '.cmake',
-  'vendor', 'third_party', 'thirdparty', 'external',
-  'node_modules', '.git', 'dist',
-  '.cache', '.tmp', 'tmp',
-  'docs', 'doc', 'media', 'licenses',
-  'scripts', 'ci',
+  'build',
+  '.cmake',
+  'vendor',
+  'third_party',
+  'thirdparty',
+  'external',
+  'node_modules',
+  '.git',
+  'dist',
+  '.cache',
+  '.tmp',
+  'tmp',
+  'docs',
+  'doc',
+  'media',
+  'licenses',
+  'scripts',
+  'ci',
 ]);
 
 function isExcluded(name: string): boolean {
@@ -83,27 +95,40 @@ export async function getCppTopLevelModules(sourceRoot: string): Promise<string[
 export async function detectCppProjectStructure(
   sourceRoot: string,
   moduleName: string,
-  options?: { format?: string; exclude?: string[] },
+  options?: { format?: string; exclude?: string[] }
 ): Promise<DiagramConfig[]> {
   const common: Partial<DiagramConfig> = {
     language: 'cpp',
-    ...(options?.format  !== undefined && { format:  options.format  as DiagramConfig['format'] }),
+    ...(options?.format !== undefined && { format: options.format as DiagramConfig['format'] }),
     ...(options?.exclude !== undefined && { exclude: options.exclude }),
   };
 
   const root: DiagramConfig[] = [
-    { ...common, name: `${moduleName}/overview/package`, sources: [sourceRoot], level: 'package' } as DiagramConfig,
-    { ...common, name: `${moduleName}/class/all-classes`, sources: [sourceRoot], level: 'class'   } as DiagramConfig,
+    {
+      ...common,
+      name: `${moduleName}/overview/package`,
+      sources: [sourceRoot],
+      level: 'package',
+    } as DiagramConfig,
+    {
+      ...common,
+      name: `${moduleName}/class/all-classes`,
+      sources: [sourceRoot],
+      level: 'class',
+    } as DiagramConfig,
   ];
 
   const modules = await getCppTopLevelModules(sourceRoot);
 
-  const perModule: DiagramConfig[] = modules.map((mod) => ({
-    ...common,
-    name: `${moduleName}/class/${mod}`,
-    sources: [path.join(sourceRoot, mod)],
-    level: 'class',
-  } as DiagramConfig));
+  const perModule: DiagramConfig[] = modules.map(
+    (mod) =>
+      ({
+        ...common,
+        name: `${moduleName}/class/${mod}`,
+        sources: [path.join(sourceRoot, mod)],
+        level: 'class',
+      }) as DiagramConfig
+  );
 
   return [...root, ...perModule];
 }

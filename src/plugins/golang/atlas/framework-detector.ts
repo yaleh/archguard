@@ -4,27 +4,27 @@ import type { DetectedFrameworks } from './types.js';
 
 // Built-in go.mod module-path → framework key mapping (Layer 1)
 const GO_MOD_FRAMEWORK_MAP: ReadonlyMap<string, string> = new Map([
-  ['github.com/gin-gonic/gin',           'gin'],
-  ['github.com/labstack/echo',           'echo'],
-  ['github.com/go-chi/chi',              'chi'],
-  ['github.com/gorilla/mux',             'gorilla/mux'],
-  ['github.com/gofiber/fiber',           'fiber'],
-  ['google.golang.org/grpc',             'grpc'],
-  ['github.com/spf13/cobra',             'cobra'],
-  ['github.com/urfave/cli',              'urfave/cli'],
-  ['github.com/segmentio/kafka-go',      'kafka-go'],
-  ['github.com/Shopify/sarama',          'sarama'],
-  ['github.com/IBM/sarama',              'sarama'],
-  ['github.com/nats-io/nats.go',         'nats'],
-  ['github.com/robfig/cron',             'cron'],
+  ['github.com/gin-gonic/gin', 'gin'],
+  ['github.com/labstack/echo', 'echo'],
+  ['github.com/go-chi/chi', 'chi'],
+  ['github.com/gorilla/mux', 'gorilla/mux'],
+  ['github.com/gofiber/fiber', 'fiber'],
+  ['google.golang.org/grpc', 'grpc'],
+  ['github.com/spf13/cobra', 'cobra'],
+  ['github.com/urfave/cli', 'urfave/cli'],
+  ['github.com/segmentio/kafka-go', 'kafka-go'],
+  ['github.com/Shopify/sarama', 'sarama'],
+  ['github.com/IBM/sarama', 'sarama'],
+  ['github.com/nats-io/nats.go', 'nats'],
+  ['github.com/robfig/cron', 'cron'],
 ]);
 
 // Extended import-path prefix table for Layer 2 (catches frameworks not in go.mod directly)
 const IMPORT_PATH_FRAMEWORK_MAP: ReadonlyMap<string, string> = new Map([
-  ['github.com/beego/beego',                      'beego'],
-  ['github.com/cloudwego/hertz',                  'hertz'],
-  ['github.com/kataras/iris',                     'iris'],
-  ['github.com/confluentinc/confluent-kafka-go',  'confluent-kafka'],
+  ['github.com/beego/beego', 'beego'],
+  ['github.com/cloudwego/hertz', 'hertz'],
+  ['github.com/kataras/iris', 'iris'],
+  ['github.com/confluentinc/confluent-kafka-go', 'confluent-kafka'],
 ]);
 
 export class FrameworkDetector {
@@ -95,7 +95,9 @@ export class FrameworkDetector {
     if (method.parameters.length !== 2) return false;
     const p0 = method.parameters[0].type;
     const p1 = method.parameters[1].type;
-    return (p0 === 'http.ResponseWriter' || p0.endsWith('.ResponseWriter')) &&
-           (p1 === '*http.Request' || p1.endsWith('.Request'));
+    return (
+      (p0 === 'http.ResponseWriter' || p0.endsWith('.ResponseWriter')) &&
+      (p1 === '*http.Request' || p1.endsWith('.Request'))
+    );
   }
 }

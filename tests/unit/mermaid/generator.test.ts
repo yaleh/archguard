@@ -834,9 +834,7 @@ describe('ValidatedMermaidGenerator', () => {
     it('should not render relations where source is not in archJson entities', () => {
       const archJsonWithOrphan: ArchJSON = {
         ...archJson,
-        relations: [
-          { id: 'rel-orphan', type: 'dependency', source: 'GhostClass', target: 'User' },
-        ],
+        relations: [{ id: 'rel-orphan', type: 'dependency', source: 'GhostClass', target: 'User' }],
       };
 
       const generator = new ValidatedMermaidGenerator(archJsonWithOrphan, {
@@ -863,7 +861,12 @@ describe('ValidatedMermaidGenerator', () => {
         ...archJson,
         relations: [
           { id: 'rel-valid', type: 'dependency', source: 'AuthService', target: 'User' },
-          { id: 'rel-cross', type: 'composition', source: 'AuthService', target: 'CrossModuleService' },
+          {
+            id: 'rel-cross',
+            type: 'composition',
+            source: 'AuthService',
+            target: 'CrossModuleService',
+          },
         ],
       };
 
@@ -881,7 +884,12 @@ describe('ValidatedMermaidGenerator', () => {
       const archJsonWithNoisy: ArchJSON = {
         ...archJson,
         relations: [
-          { id: 'rel-noisy', type: 'dependency', source: 'AuthService', target: '{ host: string }' },
+          {
+            id: 'rel-noisy',
+            type: 'dependency',
+            source: 'AuthService',
+            target: '{ host: string }',
+          },
         ],
       };
 
@@ -994,7 +1002,12 @@ describe('ValidatedMermaidGenerator', () => {
       const archJsonWithNoisy: ArchJSON = {
         ...archJson,
         relations: [
-          { id: 'rel-fn', type: 'dependency', source: 'AuthService', target: '(x: string) => boolean' },
+          {
+            id: 'rel-fn',
+            type: 'dependency',
+            source: 'AuthService',
+            target: '(x: string) => boolean',
+          },
         ],
       };
 
@@ -1037,10 +1050,7 @@ describe('ValidatedMermaidGenerator', () => {
       version: '1.0',
       language: 'typescript',
       timestamp: '2026-01-26T10:00:00Z',
-      sourceFiles: [
-        'src/mermaid/auto-repair.ts',
-        'src/mermaid/validator-parse.ts',
-      ],
+      sourceFiles: ['src/mermaid/auto-repair.ts', 'src/mermaid/validator-parse.ts'],
       entities: [
         {
           id: 'src/mermaid/auto-repair.ts.AutoRepair',
@@ -1097,10 +1107,7 @@ describe('ValidatedMermaidGenerator', () => {
         packages: [
           {
             name: 'Error_Layer',
-            entities: [
-              'src/errors/base.ts.BaseError',
-              'src/errors/parse.ts.ParseError',
-            ],
+            entities: ['src/errors/base.ts.BaseError', 'src/errors/parse.ts.ParseError'],
             reasoning: 'Error classes',
           },
         ],
@@ -1187,11 +1194,14 @@ const makeMinimalArchJson = (entities: ReturnType<typeof makeMinimalEntity>[]) =
 });
 
 describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
-  const makeGen = (entities: ReturnType<typeof makeMinimalEntity>[], level: 'class' | 'method' | 'package' = 'class') =>
-    new ValidatedMermaidGenerator(
-      makeMinimalArchJson(entities),
-      { level, grouping: { strategy: 'none', packages: [] } }
-    );
+  const makeGen = (
+    entities: ReturnType<typeof makeMinimalEntity>[],
+    level: 'class' | 'method' | 'package' = 'class'
+  ) =>
+    new ValidatedMermaidGenerator(makeMinimalArchJson(entities), {
+      level,
+      grouping: { strategy: 'none', packages: [] },
+    });
 
   it('emits classDef block with all 7 EntityType entries in class-level output', () => {
     const gen = makeGen([makeMinimalEntity('Foo', 'class')]);
@@ -1274,8 +1284,8 @@ describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
     const gen = makeGen([makeMinimalEntity('Foo', 'class'), makeMinimalEntity('Bar', 'interface')]);
     const output = gen.generate();
     // Annotation lines: `  class Foo styleName` (lowercase style) vs declaration `  class Foo {`
-    const fooAnnotations = output.split('\n').filter(l => l.match(/^  class Foo:::[a-z]/));
-    const barAnnotations = output.split('\n').filter(l => l.match(/^  class Bar:::[a-z]/));
+    const fooAnnotations = output.split('\n').filter((l) => l.match(/^ {2}class Foo:::[a-z]/));
+    const barAnnotations = output.split('\n').filter((l) => l.match(/^ {2}class Bar:::[a-z]/));
     expect(fooAnnotations).toHaveLength(1);
     expect(barAnnotations).toHaveLength(1);
   });
@@ -1288,11 +1298,11 @@ describe('ValidatedMermaidGenerator — function entity filtering', () => {
     entities: ReturnType<typeof makeMinimalEntity>[],
     relations: ArchJSON['relations'] = [],
     level: 'class' | 'method' = 'class',
-    grouping: GroupingDecision = { packages: [] },
+    grouping: GroupingDecision = { packages: [] }
   ) =>
     new ValidatedMermaidGenerator(
       { ...makeMinimalArchJson(entities), relations },
-      { level, grouping },
+      { level, grouping }
     );
 
   it('excludes function-type entities from class diagram', () => {
@@ -1314,9 +1324,7 @@ describe('ValidatedMermaidGenerator — function entity filtering', () => {
   it('excludes function-type entities from relations in class diagram', () => {
     // A relation where the source is a function entity should be suppressed
     // because the function is not in knownEntityNames/knownEntityIds after filtering.
-    const entities = [
-      makeMinimalEntity('myFreeFunc', 'function'),
-    ];
+    const entities = [makeMinimalEntity('myFreeFunc', 'function')];
     const relations: ArchJSON['relations'] = [
       {
         id: 'rel-fn',
@@ -1390,11 +1398,11 @@ describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
   const makeGenWithGrouping = (
     entities: ReturnType<typeof makeMinimalEntity>[],
     relations: ArchJSON['relations'] = [],
-    grouping: GroupingDecision = { packages: [] },
+    grouping: GroupingDecision = { packages: [] }
   ) =>
     new ValidatedMermaidGenerator(
       { ...makeMinimalArchJson(entities), relations },
-      { level: 'class', grouping },
+      { level: 'class', grouping }
     );
 
   it('returns single diagram when node count is at or below maxNodesPerDiagram', () => {
@@ -1421,9 +1429,7 @@ describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
     // 10 entities in 1 group, limit = 2 (10 > 2, but only 1 group)
     const entities = Array.from({ length: 10 }, (_, i) => makeMinimalEntity(`Class${i}`, 'class'));
     const grouping: GroupingDecision = {
-      packages: [
-        { name: 'OnlyGroup', entities: entities.map(e => e.id), reasoning: '' },
-      ],
+      packages: [{ name: 'OnlyGroup', entities: entities.map((e) => e.id), reasoning: '' }],
     };
     const gen = makeGenWithGrouping(entities, [], grouping);
     const result = gen.generateClassDiagrams(2);
@@ -1440,16 +1446,16 @@ describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
     const allEntities = [...entitiesA, ...entitiesB, ...entitiesC];
     const grouping: GroupingDecision = {
       packages: [
-        { name: 'A', entities: entitiesA.map(e => e.id), reasoning: '' },
-        { name: 'B', entities: entitiesB.map(e => e.id), reasoning: '' },
-        { name: 'C', entities: entitiesC.map(e => e.id), reasoning: '' },
+        { name: 'A', entities: entitiesA.map((e) => e.id), reasoning: '' },
+        { name: 'B', entities: entitiesB.map((e) => e.id), reasoning: '' },
+        { name: 'C', entities: entitiesC.map((e) => e.id), reasoning: '' },
       ],
     };
     const gen = makeGenWithGrouping(allEntities, [], grouping);
     const result = gen.generateClassDiagrams(4);
 
     expect(result.length).toBe(3);
-    expect(result.map(r => r.name)).toEqual(['A', 'B', 'C']);
+    expect(result.map((r) => r.name)).toEqual(['A', 'B', 'C']);
     for (const r of result) {
       expect(r.content).toContain('classDiagram');
     }
@@ -1465,9 +1471,9 @@ describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
     const allEntities = [...entitiesA, ...entitiesB, ...entitiesC];
     const grouping: GroupingDecision = {
       packages: [
-        { name: 'A', entities: entitiesA.map(e => e.id), reasoning: '' },
-        { name: 'B', entities: entitiesB.map(e => e.id), reasoning: '' },
-        { name: 'C', entities: entitiesC.map(e => e.id), reasoning: '' },
+        { name: 'A', entities: entitiesA.map((e) => e.id), reasoning: '' },
+        { name: 'B', entities: entitiesB.map((e) => e.id), reasoning: '' },
+        { name: 'C', entities: entitiesC.map((e) => e.id), reasoning: '' },
       ],
     };
     const gen = makeGenWithGrouping(allEntities, [], grouping);
@@ -1496,8 +1502,8 @@ describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
     const result = gen.generateClassDiagrams(1);
 
     expect(result.length).toBe(2);
-    const diagA = result.find(r => r.name === 'GroupA')!;
-    const diagB = result.find(r => r.name === 'GroupB')!;
+    const diagA = result.find((r) => r.name === 'GroupA');
+    const diagB = result.find((r) => r.name === 'GroupB');
 
     // GroupA's diagram should contain the relation (source EntityA is in GroupA)
     expect(diagA.content).toContain('EntityA --> EntityB');
@@ -1538,8 +1544,14 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     sourceLocation: { file: `${namespace}/${name}.cpp`, startLine: 1, endLine: 10 },
   });
 
-  const makeGrouping = (groups: Array<{ name: string; entities: Array<{ id: string }> }>): GroupingDecision => ({
-    packages: groups.map(g => ({ name: g.name, entities: g.entities.map(e => e.id), reasoning: '' })),
+  const makeGrouping = (
+    groups: Array<{ name: string; entities: Array<{ id: string }> }>
+  ): GroupingDecision => ({
+    packages: groups.map((g) => ({
+      name: g.name,
+      entities: g.entities.map((e) => e.id),
+      reasoning: '',
+    })),
   });
 
   it('uses entity simple name (not escaped ID) in split diagram relation lines', () => {
@@ -1557,16 +1569,25 @@ describe('generateClassDiagrams — relation ID resolution', () => {
       { name: 'common', entities: [entityC] },
     ]);
     const gen = new ValidatedMermaidGenerator(
-      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
-      { level: 'class', grouping },
+      {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: new Date().toISOString(),
+        sourceFiles: [],
+        entities,
+        relations,
+      },
+      { level: 'class', grouping }
     );
     // 3 entities, limit = 2 → split
     const result = gen.generateClassDiagrams(2);
-    const diagGgml = result.find(r => r.name === 'ggml')!;
+    const diagGgml = result.find((r) => r.name === 'ggml');
 
     // Namespace block uses entity.name directly: "ggml_backend_opencl_buffer_context"
     // Relation must also use simple name, not "ggml_ggml_backend_opencl_buffer_context"
-    expect(diagGgml.content).toContain('ggml_backend_opencl_buffer_context --> ggml_backend_opencl_device');
+    expect(diagGgml.content).toContain(
+      'ggml_backend_opencl_buffer_context --> ggml_backend_opencl_device'
+    );
     expect(diagGgml.content).not.toContain('ggml_ggml_backend_opencl_buffer_context');
   });
 
@@ -1584,19 +1605,24 @@ describe('generateClassDiagrams — relation ID resolution', () => {
       { name: 'other', entities: [entityC] },
     ]);
     const gen = new ValidatedMermaidGenerator(
-      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
-      { level: 'class', grouping },
+      {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: new Date().toISOString(),
+        sourceFiles: [],
+        entities,
+        relations,
+      },
+      { level: 'class', grouping }
     );
     // 3 entities, limit = 2 → split
     const result = gen.generateClassDiagrams(2);
-    const diag = result.find(r => r.name === 'mod')!;
+    const diag = result.find((r) => r.name === 'mod');
     const lines = diag.content.split('\n');
 
     // Collect all class node definitions from namespace block
     const classDefs = new Set(
-      lines
-        .filter(l => /^\s+class \w+\s*\{/.test(l))
-        .map(l => l.match(/class (\w+)\s*\{/)![1])
+      lines.filter((l) => /^\s+class \w+\s*\{/.test(l)).map((l) => l.match(/class (\w+)\s*\{/)[1])
     );
 
     // Collect all node IDs referenced in relations
@@ -1604,7 +1630,10 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     for (const line of lines) {
       // inheritance: "MyBase <|-- MyClass" → ["MyBase", "MyClass"]
       const m = line.match(/(\w+)\s+(?:<\|--|<\|\.\.|\*--|o--|-->)\s+(\w+)/);
-      if (m) { relationNodeIds.add(m[1]); relationNodeIds.add(m[2]); }
+      if (m) {
+        relationNodeIds.add(m[1]);
+        relationNodeIds.add(m[2]);
+      }
     }
 
     // Every relation node ID must appear in namespace block definitions
@@ -1642,12 +1671,19 @@ describe('generateClassDiagrams — relation ID resolution', () => {
       ],
     };
     const gen = new ValidatedMermaidGenerator(
-      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
-      { level: 'class', grouping },
+      {
+        version: '1.0',
+        language: 'typescript',
+        timestamp: new Date().toISOString(),
+        sourceFiles: [],
+        entities,
+        relations,
+      },
+      { level: 'class', grouping }
     );
     // 2 entities, limit = 1 → split
     const result = gen.generateClassDiagrams(1);
-    const diagFoo = result.find(r => r.name === 'foo')!;
+    const diagFoo = result.find((r) => r.name === 'foo');
 
     // Should use simple names "MyService" and "IRepo", not "src_foo_ts_MyService"
     expect(diagFoo.content).toContain('MyService --> IRepo');

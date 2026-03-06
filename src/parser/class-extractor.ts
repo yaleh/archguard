@@ -19,7 +19,6 @@ import { BaseExtractor } from './base-extractor.js';
  * Extracts class entities from TypeScript code using ts-morph
  */
 export class ClassExtractor extends BaseExtractor {
-
   /**
    * Extract class entity from TypeScript code
    * @param code - TypeScript source code string

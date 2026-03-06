@@ -161,7 +161,7 @@ export class MermaidDiagramGenerator {
       }
 
       // Single diagram path: full validation + repair pipeline
-      let mermaidCode = splitDiagrams[0]!.content;
+      let mermaidCode = splitDiagrams[0].content;
 
       // 3. Five-Layer Validation
       progress.start('🔍 Validating generated code...');

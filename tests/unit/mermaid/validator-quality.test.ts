@@ -232,10 +232,29 @@ describe('QualityValidator', () => {
         const srcName = `Class${i}`;
         const tgtName = `Base${i}`;
 
-        entities.push({ id: `${srcFile}.${srcName}`, name: srcName, type: 'class', visibility: 'public', members: [], sourceLocation: { file: srcFile, startLine: 1, endLine: 5 } });
-        entities.push({ id: `${tgtFile}.${tgtName}`, name: tgtName, type: 'class', visibility: 'public', members: [], sourceLocation: { file: tgtFile, startLine: 1, endLine: 5 } });
+        entities.push({
+          id: `${srcFile}.${srcName}`,
+          name: srcName,
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: srcFile, startLine: 1, endLine: 5 },
+        });
+        entities.push({
+          id: `${tgtFile}.${tgtName}`,
+          name: tgtName,
+          type: 'class',
+          visibility: 'public',
+          members: [],
+          sourceLocation: { file: tgtFile, startLine: 1, endLine: 5 },
+        });
 
-        relations.push({ id: `rel${i}`, type: 'inheritance', source: `${srcFile}.${srcName}`, target: `${tgtFile}.${tgtName}` });
+        relations.push({
+          id: `rel${i}`,
+          type: 'inheritance',
+          source: `${srcFile}.${srcName}`,
+          target: `${tgtFile}.${tgtName}`,
+        });
 
         mermaidLines.push(`  class ${srcName}`);
         mermaidLines.push(`  class ${tgtName}`);

@@ -12,7 +12,6 @@ import { BaseExtractor } from './base-extractor.js';
  * Extracts enum entities from TypeScript code using ts-morph
  */
 export class EnumExtractor extends BaseExtractor {
-
   /**
    * Extract enum entity from TypeScript code
    * @param code - TypeScript source code string

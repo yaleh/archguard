@@ -36,9 +36,9 @@ describe('ArchJsonDiskCache', () => {
     await cache.set('test-key-123', mockArchJson);
     const result = await cache.get('test-key-123');
     expect(result).not.toBeNull();
-    expect(result!.entities).toHaveLength(1);
-    expect(result!.entities[0].id).toBe('e1');
-    expect(result!.language).toBe('typescript');
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0].id).toBe('e1');
+    expect(result.language).toBe('typescript');
   });
 
   it('returns null for corrupted cache entry', async () => {

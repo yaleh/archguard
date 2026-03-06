@@ -27,7 +27,9 @@ describe('IAtlasBuilder contract', () => {
     });
 
     it('can be assigned to IAtlasBuilder<PackageGraph>', () => {
-      const builder: IAtlasBuilder<PackageGraph> = new PackageGraphBuilder(new GoModResolver('test'));
+      const builder: IAtlasBuilder<PackageGraph> = new PackageGraphBuilder(
+        new GoModResolver('test')
+      );
       expect(builder).toBeDefined();
     });
 

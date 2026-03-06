@@ -49,12 +49,25 @@ vi.mock('@/plugins/cpp/tree-sitter-bridge.js', () => ({
 vi.mock('@/plugins/cpp/builders/header-merger.js', () => ({
   HeaderMerger: vi.fn().mockImplementation(() => ({
     merge: vi.fn().mockImplementation((rawFiles) =>
-      rawFiles.flatMap((f: { classes: Array<{ name: string; qualifiedName: string; kind: 'class' | 'struct'; bases: Array<{ name: string; access: 'public' | 'private' | 'protected' }>; fields: unknown[]; methods: unknown[]; sourceFile: string; startLine: number; endLine: number }> }) =>
-        f.classes.map((cls) => ({
-          ...cls,
-          declarationFile: f.classes[0]?.sourceFile ?? '',
-          implementationFile: undefined,
-        }))
+      rawFiles.flatMap(
+        (f: {
+          classes: Array<{
+            name: string;
+            qualifiedName: string;
+            kind: 'class' | 'struct';
+            bases: Array<{ name: string; access: 'public' | 'private' | 'protected' }>;
+            fields: unknown[];
+            methods: unknown[];
+            sourceFile: string;
+            startLine: number;
+            endLine: number;
+          }>;
+        }) =>
+          f.classes.map((cls) => ({
+            ...cls,
+            declarationFile: f.classes[0]?.sourceFile ?? '',
+            implementationFile: undefined,
+          }))
       )
     ),
   })),
@@ -174,9 +187,7 @@ public:
 
     it('throws when not initialized', async () => {
       const fresh = new CppPlugin();
-      expect(() => fresh.parseCode('class A {};', 'a.cpp')).toThrow(
-        'CppPlugin not initialized'
-      );
+      expect(() => fresh.parseCode('class A {};', 'a.cpp')).toThrow('CppPlugin not initialized');
     });
   });
 
@@ -221,9 +232,7 @@ public:
     it('returns true for directory containing CMakeLists.txt', () => {
       mockedFs.existsSync = vi
         .fn()
-        .mockImplementation((p: string) =>
-          p === '/myproject' || p === '/myproject/CMakeLists.txt'
-        );
+        .mockImplementation((p: string) => p === '/myproject' || p === '/myproject/CMakeLists.txt');
       mockedFs.statSync = vi.fn().mockReturnValue({ isDirectory: () => true });
       expect(plugin.canHandle('/myproject')).toBe(true);
     });
@@ -231,17 +240,13 @@ public:
     it('returns true for directory containing Makefile', () => {
       mockedFs.existsSync = vi
         .fn()
-        .mockImplementation(
-          (p: string) => p === '/myproject' || p === '/myproject/Makefile'
-        );
+        .mockImplementation((p: string) => p === '/myproject' || p === '/myproject/Makefile');
       mockedFs.statSync = vi.fn().mockReturnValue({ isDirectory: () => true });
       expect(plugin.canHandle('/myproject')).toBe(true);
     });
 
     it('returns false for directory without CMakeLists.txt or Makefile', () => {
-      mockedFs.existsSync = vi
-        .fn()
-        .mockImplementation((p: string) => p === '/myproject');
+      mockedFs.existsSync = vi.fn().mockImplementation((p: string) => p === '/myproject');
       mockedFs.statSync = vi.fn().mockReturnValue({ isDirectory: () => true });
       expect(plugin.canHandle('/myproject')).toBe(false);
     });

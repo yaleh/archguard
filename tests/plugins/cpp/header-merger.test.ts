@@ -6,7 +6,7 @@ function makeFile(filePath: string, classes: Partial<RawClass>[] = []): RawCppFi
   return {
     filePath,
     namespace: '',
-    classes: classes.map(c => ({
+    classes: classes.map((c) => ({
       name: c.name ?? 'Foo',
       qualifiedName: c.qualifiedName ?? c.name ?? 'Foo',
       kind: c.kind ?? 'class',
@@ -44,20 +44,33 @@ describe('HeaderMerger', () => {
 
   it('method list is union, deduped by name', () => {
     const method = (name: string, sourceFile: string) => ({
-      name, returnType: 'void', parameters: [], visibility: 'public' as const,
-      isVirtual: false, isStatic: false, isPure: false, isConst: false,
-      sourceFile, startLine: 1,
+      name,
+      returnType: 'void',
+      parameters: [],
+      visibility: 'public' as const,
+      isVirtual: false,
+      isStatic: false,
+      isPure: false,
+      isConst: false,
+      sourceFile,
+      startLine: 1,
     });
-    const header = makeFile('Foo.hpp', [{
-      name: 'Foo', qualifiedName: 'Foo',
-      methods: [method('doWork', 'Foo.hpp'), method('init', 'Foo.hpp')],
-    }]);
-    const impl = makeFile('Foo.cpp', [{
-      name: 'Foo', qualifiedName: 'Foo',
-      methods: [method('doWork', 'Foo.cpp')],  // duplicate
-    }]);
+    const header = makeFile('Foo.hpp', [
+      {
+        name: 'Foo',
+        qualifiedName: 'Foo',
+        methods: [method('doWork', 'Foo.hpp'), method('init', 'Foo.hpp')],
+      },
+    ]);
+    const impl = makeFile('Foo.cpp', [
+      {
+        name: 'Foo',
+        qualifiedName: 'Foo',
+        methods: [method('doWork', 'Foo.cpp')], // duplicate
+      },
+    ]);
     const [entity] = merger.merge([header, impl]);
-    expect(entity.methods).toHaveLength(2);  // doWork + init, no duplicate
+    expect(entity.methods).toHaveLength(2); // doWork + init, no duplicate
   });
 
   it('ns1::Foo and ns2::Foo are NOT merged', () => {

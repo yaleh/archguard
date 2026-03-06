@@ -3,12 +3,7 @@
  */
 
 import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
-import type {
-  GoRawPackage,
-  GoRawStruct,
-  GoRawInterface,
-  InferredImplementation,
-} from './types.js';
+import type { GoRawPackage, GoRawStruct, GoRawInterface, InferredImplementation } from './types.js';
 import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
 
 export class ArchJsonMapper {
@@ -70,7 +65,7 @@ export class ArchJsonMapper {
     // Scan implementation relation targets
     for (const rel of relations) {
       if (rel.type !== 'implementation') continue;
-      const targetId = rel.target as string;
+      const targetId = rel.target;
       if (existingIds.has(targetId) || addedIds.has(targetId)) continue;
 
       const entry = ifaceLookup.get(targetId);

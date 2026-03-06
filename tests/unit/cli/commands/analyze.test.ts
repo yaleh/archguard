@@ -16,9 +16,9 @@ import type { CLIOptions, DiagramConfig } from '@/types/config.js';
 
 // Mock detectProjectStructure so Priority 3 tests are deterministic
 vi.mock('@/cli/utils/project-structure-detector.js', () => ({
-  detectProjectStructure: vi.fn().mockResolvedValue([
-    { name: 'architecture', sources: ['./src'], level: 'class' },
-  ]),
+  detectProjectStructure: vi
+    .fn()
+    .mockResolvedValue([{ name: 'architecture', sources: ['./src'], level: 'class' }]),
 }));
 
 import { detectProjectStructure } from '@/cli/utils/project-structure-detector.js';
@@ -496,18 +496,14 @@ describe('createAnalyzeCommand — flag presence', () => {
   it('should NOT have -l/--level flag', async () => {
     const { createAnalyzeCommand } = await import('@/cli/commands/analyze.js');
     const command = createAnalyzeCommand();
-    const levelOption = command.options.find(
-      (opt) => opt.short === '-l' || opt.long === '--level'
-    );
+    const levelOption = command.options.find((opt) => opt.short === '-l' || opt.long === '--level');
     expect(levelOption).toBeUndefined();
   });
 
   it('should NOT have -n/--name flag', async () => {
     const { createAnalyzeCommand } = await import('@/cli/commands/analyze.js');
     const command = createAnalyzeCommand();
-    const nameOption = command.options.find(
-      (opt) => opt.short === '-n' || opt.long === '--name'
-    );
+    const nameOption = command.options.find((opt) => opt.short === '-n' || opt.long === '--name');
     expect(nameOption).toBeUndefined();
   });
 
@@ -567,7 +563,11 @@ describe('regression: external source module paths must be absolute', () => {
   it('should call detectProjectStructure with (cwd, absoluteSourceRoot) not (absoluteSourceRoot)', async () => {
     vi.mocked(detectProjectStructure).mockResolvedValue([
       { name: 'overview/package', sources: ['/external/project/src'], level: 'package' },
-      { name: 'method/openai_api_protocols', sources: ['/external/project/src/openai_api_protocols'], level: 'method' },
+      {
+        name: 'method/openai_api_protocols',
+        sources: ['/external/project/src/openai_api_protocols'],
+        level: 'method',
+      },
     ]);
 
     const cliOptions: CLIOptions = {

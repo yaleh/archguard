@@ -72,7 +72,11 @@ export class ArchJSONAggregator {
   private aggregateToPackageLevel(archJSON: ArchJSON): ArchJSON {
     const { workspaceRoot } = archJSON;
     const packages = this.extractPackages(archJSON.entities, workspaceRoot);
-    const packageRelations = this.analyzePackageDependencies(archJSON.entities, archJSON.relations, workspaceRoot);
+    const packageRelations = this.analyzePackageDependencies(
+      archJSON.entities,
+      archJSON.relations,
+      workspaceRoot
+    );
 
     // Create package entities
     const packageEntities: Entity[] = packages.map((pkg) => {
@@ -180,7 +184,11 @@ export class ArchJSONAggregator {
    * @param relations - Array of class-level relations
    * @returns Array of package-level relations
    */
-  private analyzePackageDependencies(entities: Entity[], relations: Relation[], workspaceRoot?: string): Relation[] {
+  private analyzePackageDependencies(
+    entities: Entity[],
+    relations: Relation[],
+    workspaceRoot?: string
+  ): Relation[] {
     // Create entity ID to package mapping (using file paths)
     const entityToPackage = new Map<string, string>();
     for (const entity of entities) {

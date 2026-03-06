@@ -42,13 +42,13 @@ export type { GoAtlasExtension as GoArchitectureAtlas } from '@/types/extensions
 // ========== Framework Detection Types ==========
 
 export interface CustomCallPattern {
-  method?: string;            // exact AST call functionName to match
-  methodSuffix?: string;      // suffix match: call.functionName.endsWith(methodSuffix)
-  receiverContains?: string;  // substring of GoCallExpr.receiverType for disambiguation
-                              // e.g. 'mux.Router' to distinguish gorilla/mux from net/http
-  pathArgIndex?: number;      // index into GoCallExpr.args for path
-  handlerArgIndex?: number;   // index into GoCallExpr.args for handler
-  topicArgIndex?: number;     // index for message topic
+  method?: string; // exact AST call functionName to match
+  methodSuffix?: string; // suffix match: call.functionName.endsWith(methodSuffix)
+  receiverContains?: string; // substring of GoCallExpr.receiverType for disambiguation
+  // e.g. 'mux.Router' to distinguish gorilla/mux from net/http
+  pathArgIndex?: number; // index into GoCallExpr.args for path
+  handlerArgIndex?: number; // index into GoCallExpr.args for handler
+  topicArgIndex?: number; // index for message topic
 }
 // At least one of `method` or `methodSuffix` must be set.
 
@@ -59,7 +59,7 @@ export interface CustomFrameworkConfig {
 }
 
 export interface ManualEntryPoint {
-  function: string;   // fully-qualified: "pkg/path.(*Receiver).Method"
+  function: string; // fully-qualified: "pkg/path.(*Receiver).Method"
   protocol: string;
 }
 

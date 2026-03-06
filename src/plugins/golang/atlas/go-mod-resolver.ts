@@ -100,7 +100,8 @@ export class GoModResolver {
   }
 
   getModuleInfo(): ModuleInfo {
-    if (!this.moduleInfo) throw new Error('GoModResolver not initialized. Call resolveProject() first.');
+    if (!this.moduleInfo)
+      throw new Error('GoModResolver not initialized. Call resolveProject() first.');
     return this.moduleInfo;
   }
 
@@ -121,8 +122,8 @@ export class GoModResolver {
 }
 
 export interface GoModRequire {
-  path: string;      // e.g. "github.com/gin-gonic/gin"
-  version: string;   // e.g. "v1.9.1"
+  path: string; // e.g. "github.com/gin-gonic/gin"
+  version: string; // e.g. "v1.9.1"
   indirect: boolean; // true if line ends with "// indirect"
 }
 

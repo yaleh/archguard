@@ -22,13 +22,13 @@ import { isExternalDependency } from './external-dependencies.js';
 // EntityType 'class' maps to 'classNode' to avoid ambiguity with Mermaid's
 // 'class' keyword in classDiagram syntax.
 const ENTITY_CLASSDEF_STYLES: Record<string, string> = {
-  classNode:      'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
-  interface:      'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
-  enum:           'fill:#fff8c5,stroke:#d4a72c,color:#633c01',
-  struct:         'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
-  trait:          'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
+  classNode: 'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
+  interface: 'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
+  enum: 'fill:#fff8c5,stroke:#d4a72c,color:#633c01',
+  struct: 'fill:#f6f8fa,stroke:#d0d7de,color:#24292f',
+  trait: 'fill:#ddf4ff,stroke:#54aeff,color:#0969da',
   abstract_class: 'fill:#fdf4ff,stroke:#d2a8ff,color:#8250df',
-  function:       'fill:#f6f8fa,stroke:#d0d7de,color:#57606a',
+  function: 'fill:#f6f8fa,stroke:#d0d7de,color:#57606a',
 };
 
 function entityTypeToClassDef(type: EntityType): string {
@@ -277,7 +277,9 @@ export class ValidatedMermaidGenerator {
       for (const relation of this.archJson.relations) {
         if (
           (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          (knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target) || !this.isNoisyTarget(relation.target))
+          (knownEntityIds.has(relation.target) ||
+            knownEntityNames.has(relation.target) ||
+            !this.isNoisyTarget(relation.target))
         ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
@@ -293,7 +295,9 @@ export class ValidatedMermaidGenerator {
       for (const relation of this.archJson.relations) {
         if (
           (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          (knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target) || !this.isNoisyTarget(relation.target))
+          (knownEntityIds.has(relation.target) ||
+            knownEntityNames.has(relation.target) ||
+            !this.isNoisyTarget(relation.target))
         ) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
@@ -753,7 +757,9 @@ export class ValidatedMermaidGenerator {
    *   [{ name: null, content }]        → not split; caller uses original diagram name
    *   [{ name: 'groupA', content }, …] → split; caller appends group name to path
    */
-  public generateClassDiagrams(maxNodesPerDiagram: number): Array<{ name: string | null; content: string }> {
+  public generateClassDiagrams(
+    maxNodesPerDiagram: number
+  ): Array<{ name: string | null; content: string }> {
     const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
     const packageGroups = this.groupEntitiesByPackage();
 

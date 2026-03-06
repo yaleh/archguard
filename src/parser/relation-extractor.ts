@@ -3,11 +3,7 @@
  * Story 5: Relationship Extraction
  */
 
-import {
-  type SourceFile,
-  type ClassDeclaration,
-  type InterfaceDeclaration,
-} from 'ts-morph';
+import { type SourceFile, type ClassDeclaration, type InterfaceDeclaration } from 'ts-morph';
 import type { Relation } from '@/types';
 import { BaseExtractor } from './base-extractor.js';
 
@@ -61,7 +57,6 @@ function collectExternalImportedNames(sourceFile: SourceFile): Set<string> {
  * from TypeScript source code
  */
 export class RelationExtractor extends BaseExtractor {
-
   /**
    * Extract all relations from TypeScript code
    * @param code - TypeScript source code string

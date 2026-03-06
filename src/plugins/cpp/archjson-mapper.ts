@@ -23,16 +23,16 @@ export class ArchJsonMapper {
         type: cls.kind as EntityType,
         visibility: 'public',
         members: [
-          ...cls.fields.map(f => this.mapField(f)),
-          ...cls.methods.map(m => this.mapMethod(m)),
+          ...cls.fields.map((f) => this.mapField(f)),
+          ...cls.methods.map((m) => this.mapMethod(m)),
         ],
         sourceLocation: {
           file: cls.declarationFile,
           startLine: cls.startLine,
           endLine: cls.endLine,
         },
-        extends: cls.bases.map(b => b.name),
-        isAbstract: cls.methods.some(m => m.isPure),
+        extends: cls.bases.map((b) => b.name),
+        isAbstract: cls.methods.some((m) => m.isPure),
       });
     }
 
@@ -45,7 +45,7 @@ export class ArchJsonMapper {
         name: e.name,
         type: 'enum',
         visibility: 'public',
-        members: e.members.map(m => ({
+        members: e.members.map((m) => ({
           name: m,
           type: 'field' as MemberType,
           visibility: 'public' as const,
@@ -79,9 +79,9 @@ export class ArchJsonMapper {
       const ns = this.resolveNamespace(cls, workspaceRoot);
       const entityName = this.getEntityName(cls.qualifiedName, cls.name);
       const id = generateEntityId(ns, entityName);
-      entityByQualifiedName.set(cls.qualifiedName, id);  // lookup by 'engine::Renderer'
-      entityByQualifiedName.set(cls.name, id);            // lookup by 'Renderer'
-      entityByQualifiedName.set(entityName, id);          // lookup by sanitized 'Renderer'
+      entityByQualifiedName.set(cls.qualifiedName, id); // lookup by 'engine::Renderer'
+      entityByQualifiedName.set(cls.name, id); // lookup by 'Renderer'
+      entityByQualifiedName.set(entityName, id); // lookup by sanitized 'Renderer'
     }
 
     // Also add from allEntities (covers enums/functions)
@@ -101,7 +101,7 @@ export class ArchJsonMapper {
     const addRelation = (
       type: 'inheritance' | 'composition' | 'aggregation' | 'dependency',
       srcId: string,
-      targetId: string,
+      targetId: string
     ): void => {
       if (srcId === targetId) return;
       const key = `${type}:${srcId}:${targetId}`;
@@ -210,7 +210,11 @@ export class ArchJsonMapper {
    * Uses C++ namespace from qualifiedName when present,
    * otherwise falls back to the top-level directory of the source file.
    */
-  private resolveEntityNamespace(qualifiedName: string, sourceFile: string, workspaceRoot: string): string {
+  private resolveEntityNamespace(
+    qualifiedName: string,
+    sourceFile: string,
+    workspaceRoot: string
+  ): string {
     if (qualifiedName.includes('::')) {
       return qualifiedName.split('::')[0];
     }
@@ -223,7 +227,7 @@ export class ArchJsonMapper {
       type: 'method',
       visibility: m.visibility,
       returnType: m.returnType,
-      parameters: m.parameters.map(p => ({ name: p.name, type: p.type })),
+      parameters: m.parameters.map((p) => ({ name: p.name, type: p.type })),
       isStatic: m.isStatic,
       isAbstract: m.isPure,
     };

@@ -4,48 +4,130 @@
  */
 
 const PRIMITIVES = new Set([
-  'void', 'bool', 'char', 'wchar_t', 'char8_t', 'char16_t', 'char32_t',
-  'short', 'int', 'long', 'float', 'double', 'auto', 'nullptr_t',
-  'int8_t', 'int16_t', 'int32_t', 'int64_t',
-  'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t',
-  'int_fast8_t', 'int_fast16_t', 'int_fast32_t', 'int_fast64_t',
-  'uint_fast8_t', 'uint_fast16_t', 'uint_fast32_t', 'uint_fast64_t',
-  'int_least8_t', 'int_least16_t', 'int_least32_t', 'int_least64_t',
-  'uint_least8_t', 'uint_least16_t', 'uint_least32_t', 'uint_least64_t',
-  'intptr_t', 'uintptr_t', 'intmax_t', 'uintmax_t',
-  'size_t', 'ssize_t', 'ptrdiff_t', 'off_t',
-  'unsigned', 'signed',
+  'void',
+  'bool',
+  'char',
+  'wchar_t',
+  'char8_t',
+  'char16_t',
+  'char32_t',
+  'short',
+  'int',
+  'long',
+  'float',
+  'double',
+  'auto',
+  'nullptr_t',
+  'int8_t',
+  'int16_t',
+  'int32_t',
+  'int64_t',
+  'uint8_t',
+  'uint16_t',
+  'uint32_t',
+  'uint64_t',
+  'int_fast8_t',
+  'int_fast16_t',
+  'int_fast32_t',
+  'int_fast64_t',
+  'uint_fast8_t',
+  'uint_fast16_t',
+  'uint_fast32_t',
+  'uint_fast64_t',
+  'int_least8_t',
+  'int_least16_t',
+  'int_least32_t',
+  'int_least64_t',
+  'uint_least8_t',
+  'uint_least16_t',
+  'uint_least32_t',
+  'uint_least64_t',
+  'intptr_t',
+  'uintptr_t',
+  'intmax_t',
+  'uintmax_t',
+  'size_t',
+  'ssize_t',
+  'ptrdiff_t',
+  'off_t',
+  'unsigned',
+  'signed',
 ]);
 
 const STL_TYPES = new Set([
-  'string', 'wstring', 'u8string', 'u16string', 'u32string',
-  'string_view', 'wstring_view',
-  'mutex', 'recursive_mutex', 'timed_mutex', 'recursive_timed_mutex',
-  'shared_mutex', 'shared_timed_mutex',
-  'condition_variable', 'condition_variable_any',
-  'thread', 'jthread',
-  'exception', 'runtime_error', 'logic_error', 'bad_alloc',
-  'error_code', 'error_condition',
-  'ios_base', 'istream', 'ostream', 'iostream', 'ifstream', 'ofstream', 'fstream',
-  'istringstream', 'ostringstream', 'stringstream',
-  'regex', 'smatch', 'cmatch',
+  'string',
+  'wstring',
+  'u8string',
+  'u16string',
+  'u32string',
+  'string_view',
+  'wstring_view',
+  'mutex',
+  'recursive_mutex',
+  'timed_mutex',
+  'recursive_timed_mutex',
+  'shared_mutex',
+  'shared_timed_mutex',
+  'condition_variable',
+  'condition_variable_any',
+  'thread',
+  'jthread',
+  'exception',
+  'runtime_error',
+  'logic_error',
+  'bad_alloc',
+  'error_code',
+  'error_condition',
+  'ios_base',
+  'istream',
+  'ostream',
+  'iostream',
+  'ifstream',
+  'ofstream',
+  'fstream',
+  'istringstream',
+  'ostringstream',
+  'stringstream',
+  'regex',
+  'smatch',
+  'cmatch',
   'filesystem',
-  'any', 'monostate', 'nullopt_t', 'byte',
+  'any',
+  'monostate',
+  'nullopt_t',
+  'byte',
 ]);
 
 /** std:: container / smart-pointer templates that wrap a value type */
-const SMART_PTR_TEMPLATES = new Set([
-  'unique_ptr', 'shared_ptr', 'weak_ptr',
-]);
+const SMART_PTR_TEMPLATES = new Set(['unique_ptr', 'shared_ptr', 'weak_ptr']);
 
 /** Templates whose LAST type arg is the value element type */
 const CONTAINER_TEMPLATES = new Set([
-  'vector', 'list', 'deque', 'queue', 'stack', 'priority_queue',
-  'set', 'multiset', 'unordered_set', 'unordered_multiset',
-  'map', 'multimap', 'unordered_map', 'unordered_multimap',
-  'array', 'span', 'initializer_list',
-  'optional', 'variant', 'tuple',
-  'function', 'packaged_task', 'promise', 'future', 'shared_future',
+  'vector',
+  'list',
+  'deque',
+  'queue',
+  'stack',
+  'priority_queue',
+  'set',
+  'multiset',
+  'unordered_set',
+  'unordered_multiset',
+  'map',
+  'multimap',
+  'unordered_map',
+  'unordered_multimap',
+  'array',
+  'span',
+  'initializer_list',
+  'optional',
+  'variant',
+  'tuple',
+  'function',
+  'packaged_task',
+  'promise',
+  'future',
+  'shared_future',
 ]);
 
 export class CppTypeExtractor {
@@ -92,7 +174,12 @@ export class CppTypeExtractor {
     let s = raw.trim();
 
     // Strip leading keywords
-    s = s.replace(/^\b(struct|class|const|volatile|mutable|explicit|inline|extern|static|register)\b\s*/g, '').trim();
+    s = s
+      .replace(
+        /^\b(struct|class|const|volatile|mutable|explicit|inline|extern|static|register)\b\s*/g,
+        ''
+      )
+      .trim();
     s = s.replace(/^\b(const|volatile)\b\s*/g, '').trim();
 
     // Strip trailing const/volatile/ptr/ref (outside angle brackets)
@@ -152,9 +239,13 @@ export class CppTypeExtractor {
     let depth = 0;
     let current = '';
     for (const ch of argsStr) {
-      if (ch === '<') { depth++; current += ch; }
-      else if (ch === '>') { depth--; current += ch; }
-      else if (ch === ',' && depth === 0) {
+      if (ch === '<') {
+        depth++;
+        current += ch;
+      } else if (ch === '>') {
+        depth--;
+        current += ch;
+      } else if (ch === ',' && depth === 0) {
         args.push(current.trim());
         current = '';
       } else {
@@ -180,8 +271,10 @@ export class CppTypeExtractor {
   }
 
   private isSmartPointer(raw: string): boolean {
-    return /\bstd::(unique_ptr|shared_ptr|weak_ptr)\b/.test(raw) ||
-      /\b(unique_ptr|shared_ptr|weak_ptr)\b/.test(raw);
+    return (
+      /\bstd::(unique_ptr|shared_ptr|weak_ptr)\b/.test(raw) ||
+      /\b(unique_ptr|shared_ptr|weak_ptr)\b/.test(raw)
+    );
   }
 
   private isRawPointerOrRef(raw: string): boolean {

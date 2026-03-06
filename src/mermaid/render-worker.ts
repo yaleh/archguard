@@ -10,12 +10,12 @@ mermaid.initialize({
   securityLevel: 'loose',
 });
 
-parentPort!.on('message', async (job: RenderJob) => {
+parentPort.on('message', async (job: RenderJob) => {
   try {
     const { svg } = await mermaid.render(job.jobId, job.mermaidCode);
-    parentPort!.postMessage({ jobId: job.jobId, success: true, svg } satisfies RenderResult);
+    parentPort.postMessage({ jobId: job.jobId, success: true, svg } satisfies RenderResult);
   } catch (e) {
-    parentPort!.postMessage({
+    parentPort.postMessage({
       jobId: job.jobId,
       success: false,
       error: e instanceof Error ? e.message : String(e),

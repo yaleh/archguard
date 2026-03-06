@@ -1,5 +1,12 @@
 import path from 'path';
-import type { ArchJSON, ArchJSONMetrics, RelationType, DetailLevel, FileStats, CycleInfo } from '@/types/index.js';
+import type {
+  ArchJSON,
+  ArchJSONMetrics,
+  RelationType,
+  DetailLevel,
+  FileStats,
+  CycleInfo,
+} from '@/types/index.js';
 
 export class MetricsCalculator {
   calculate(archJSON: ArchJSON, level: DetailLevel): ArchJSONMetrics {
@@ -11,7 +18,7 @@ export class MetricsCalculator {
 
     // cycles and fileStats only make sense for class/method, non-Atlas.
     const computeDetails = !isAtlas && level !== 'package';
-    const cycles    = computeDetails ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
+    const cycles = computeDetails ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
     const fileStats = computeDetails ? this.computeFileStats(archJSON, nonTrivialSCCs) : undefined;
 
     return {
@@ -29,7 +36,7 @@ export class MetricsCalculator {
   // ── Private: type breakdown ───────────────────────────────────────────────
 
   private buildTypeBreakdown(
-    relations: ArchJSON['relations'],
+    relations: ArchJSON['relations']
   ): Partial<Record<RelationType, number>> {
     const breakdown: Partial<Record<RelationType, number>> = {};
     for (const r of relations) {
@@ -41,7 +48,7 @@ export class MetricsCalculator {
   private calcInferredRatio(relations: ArchJSON['relations']): number {
     if (relations.length === 0) return 0;
     const inferredCount = relations.filter(
-      r => r.inferenceSource !== undefined && r.inferenceSource !== 'explicit',
+      (r) => r.inferenceSource !== undefined && r.inferenceSource !== 'explicit'
     ).length;
     return Math.round((inferredCount / relations.length) * 100) / 100;
   }
@@ -57,16 +64,21 @@ export class MetricsCalculator {
     const { entities, relations } = archJSON;
     if (entities.length === 0) return { sccCount: 0, nonTrivialSCCs: [] };
 
-    const entityIds = new Set(entities.map(e => e.id));
-    const validRelations = relations.filter(r => entityIds.has(r.source) && entityIds.has(r.target));
+    const entityIds = new Set(entities.map((e) => e.id));
+    const validRelations = relations.filter(
+      (r) => entityIds.has(r.source) && entityIds.has(r.target)
+    );
 
     // Build forward and transposed adjacency lists
     const graph = new Map<string, string[]>();
     const transposed = new Map<string, string[]>();
-    for (const id of entityIds) { graph.set(id, []); transposed.set(id, []); }
+    for (const id of entityIds) {
+      graph.set(id, []);
+      transposed.set(id, []);
+    }
     for (const r of validRelations) {
-      graph.get(r.source)!.push(r.target);
-      transposed.get(r.target)!.push(r.source);
+      graph.get(r.source).push(r.target);
+      transposed.get(r.target).push(r.source);
     }
 
     // Pass 1: collect finish order on forward graph
@@ -80,7 +92,7 @@ export class MetricsCalculator {
     const visited2 = new Set<string>();
     const sccGroups: string[][] = [];
     while (finishStack.length > 0) {
-      const node = finishStack.pop()!;
+      const node = finishStack.pop();
       if (!visited2.has(node)) {
         const members: string[] = [];
         this.dfsIterative(node, transposed, visited2, members);
@@ -90,7 +102,7 @@ export class MetricsCalculator {
 
     return {
       sccCount: sccGroups.length,
-      nonTrivialSCCs: sccGroups.filter(g => g.length > 1),
+      nonTrivialSCCs: sccGroups.filter((g) => g.length > 1),
     };
   }
 
@@ -117,11 +129,11 @@ export class MetricsCalculator {
     }
 
     return nonTrivialSCCs
-      .map(members => ({
+      .map((members) => ({
         size: members.length,
         members,
-        memberNames: members.map(id => entityNameMap.get(id) ?? id),
-        files: [...new Set(members.map(id => entityFileMap.get(id) ?? '').filter(Boolean))],
+        memberNames: members.map((id) => entityNameMap.get(id) ?? id),
+        files: [...new Set(members.map((id) => entityFileMap.get(id) ?? '').filter(Boolean))],
       }))
       .sort((a, b) => b.size - a.size);
   }
@@ -145,11 +157,11 @@ export class MetricsCalculator {
       const file = normalise(e.sourceLocation?.file ?? '');
       if (!file) continue;
       if (!fileEntityMap.has(file)) fileEntityMap.set(file, []);
-      fileEntityMap.get(file)!.push(e);
+      fileEntityMap.get(file).push(e);
     }
 
     // Build per-entity degree maps (internal relations only)
-    const entityIds = new Set(entities.map(e => e.id));
+    const entityIds = new Set(entities.map((e) => e.id));
     const inDegree = new Map<string, number>();
     const outDegree = new Map<string, number>();
     for (const r of relations) {
@@ -166,7 +178,7 @@ export class MetricsCalculator {
     const cycleCountPerFile = new Map<string, number>();
     for (const scc of nonTrivialSCCs) {
       // Collect distinct files touched by this SCC, then increment each once
-      const filesInSCC = new Set(scc.map(id => entityFileMap.get(id) ?? '').filter(Boolean));
+      const filesInSCC = new Set(scc.map((id) => entityFileMap.get(id) ?? '').filter(Boolean));
       for (const f of filesInSCC) {
         cycleCountPerFile.set(f, (cycleCountPerFile.get(f) ?? 0) + 1);
       }
@@ -187,7 +199,7 @@ export class MetricsCalculator {
           if (m.type === 'method' || m.type === 'constructor') methodCount++;
           else if (m.type === 'property' || m.type === 'field') fieldCount++;
         }
-        filInDegree  += inDegree.get(e.id)  ?? 0;
+        filInDegree += inDegree.get(e.id) ?? 0;
         filOutDegree += outDegree.get(e.id) ?? 0;
       }
 
@@ -197,7 +209,7 @@ export class MetricsCalculator {
         entityCount: ents.length,
         methodCount,
         fieldCount,
-        inDegree:  filInDegree,
+        inDegree: filInDegree,
         outDegree: filOutDegree,
         cycleCount: cycleCountPerFile.get(file) ?? 0,
       });
@@ -218,7 +230,7 @@ export class MetricsCalculator {
     start: string,
     graph: Map<string, string[]>,
     visited: Set<string>,
-    finishList: string[] | null,
+    finishList: string[] | null
   ): void {
     const stack: [string, number][] = [[start, 0]];
     visited.add(start);
@@ -229,7 +241,10 @@ export class MetricsCalculator {
       if (idx < neighbors.length) {
         top[1]++;
         const next = neighbors[idx];
-        if (!visited.has(next)) { visited.add(next); stack.push([next, 0]); }
+        if (!visited.has(next)) {
+          visited.add(next);
+          stack.push([next, 0]);
+        }
       } else {
         stack.pop();
         if (finishList !== null) finishList.push(node);

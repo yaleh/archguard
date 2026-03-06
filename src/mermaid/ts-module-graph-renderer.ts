@@ -71,7 +71,7 @@ interface TreeNode {
 
 /** Return the canonical ID of a tree node (real or virtual). */
 function nodeTreeId(node: TreeNode): string {
-  return node.moduleNode ? node.moduleNode.id : node.virtualId!;
+  return node.moduleNode ? node.moduleNode.id : node.virtualId;
 }
 
 /**
@@ -98,7 +98,7 @@ function buildForest(internalNodes: TsModuleNode[]): TreeNode[] {
     let par: string | null = parentPath(cur);
     while (true) {
       if (!trieChildren.has(par)) trieChildren.set(par, new Set());
-      trieChildren.get(par)!.add(cur);
+      trieChildren.get(par).add(cur);
       if (par === null) break;
       cur = par;
       par = parentPath(cur);
@@ -111,13 +111,15 @@ function buildForest(internalNodes: TsModuleNode[]): TreeNode[] {
     const result: TreeNode[] = [];
     for (const childId of children) {
       if (realNodeIds.has(childId)) {
-        const treeNode = byId.get(childId)!;
+        const treeNode = byId.get(childId);
         for (const c of buildSubtree(childId)) treeNode.children.push(c);
         result.push(treeNode);
       } else {
         const sub = buildSubtree(childId);
-        if (sub.length === 0) { /* no real descendants — skip */ }
-        else if (sub.length === 1) result.push(sub[0]); // path compression
+        if (sub.length === 0) {
+          /* no real descendants — skip */
+        } else if (sub.length === 1)
+          result.push(sub[0]); // path compression
         else result.push({ moduleNode: null, virtualId: childId, children: sub });
       }
     }
@@ -153,9 +155,8 @@ function emitTreeNode(
 
   // Role annotation only for real module nodes (moduleNode !== null).
   // Virtual (synthetic) parent nodes get no annotation.
-  const roleClass = node.moduleNode !== null
-    ? (cycleNodeIds.has(id) ? ':::cycle' : ':::internal')
-    : '';
+  const roleClass =
+    node.moduleNode !== null ? (cycleNodeIds.has(id) ? ':::cycle' : ':::internal') : '';
 
   if (node.children.length === 0) {
     // Leaf node – plain declaration with role annotation
@@ -240,7 +241,9 @@ export function renderTsModuleGraph(graph: TsModuleGraph): string {
   // --- classDef block (before edges — matches Go Atlas output order) ---
   lines.push('  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329');
   lines.push('  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01');
-  lines.push('  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e,font-weight:bold');
+  lines.push(
+    '  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e,font-weight:bold'
+  );
   lines.push('');
 
   // --- Edges ---

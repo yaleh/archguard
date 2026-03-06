@@ -6,9 +6,9 @@ import type { HttpMethod } from '@/types/extensions.js';
 
 // Internal call pattern — not user-facing
 interface CallPattern {
-  method?: string;            // exact functionName match
-  methodSuffix?: string;      // suffix match: call.functionName.endsWith(methodSuffix)
-  receiverContains?: string;  // substring of GoCallExpr.receiverType for disambiguation
+  method?: string; // exact functionName match
+  methodSuffix?: string; // suffix match: call.functionName.endsWith(methodSuffix)
+  receiverContains?: string; // substring of GoCallExpr.receiverType for disambiguation
   protocol: string;
   httpMethod?: HttpMethod;
 }
@@ -17,53 +17,45 @@ interface CallPattern {
 const FRAMEWORK_PATTERNS: Record<string, CallPattern[]> = {
   'net/http': [
     { method: 'HandleFunc', protocol: 'http' },
-    { method: 'Handle',     protocol: 'http' },
+    { method: 'Handle', protocol: 'http' },
   ],
-  'gin': [
-    { method: 'GET',    protocol: 'http', httpMethod: 'GET' },
-    { method: 'POST',   protocol: 'http', httpMethod: 'POST' },
-    { method: 'PUT',    protocol: 'http', httpMethod: 'PUT' },
+  gin: [
+    { method: 'GET', protocol: 'http', httpMethod: 'GET' },
+    { method: 'POST', protocol: 'http', httpMethod: 'POST' },
+    { method: 'PUT', protocol: 'http', httpMethod: 'PUT' },
     { method: 'DELETE', protocol: 'http', httpMethod: 'DELETE' },
-    { method: 'PATCH',  protocol: 'http', httpMethod: 'PATCH' },
-    { method: 'Any',    protocol: 'http', httpMethod: 'ANY' },
+    { method: 'PATCH', protocol: 'http', httpMethod: 'PATCH' },
+    { method: 'Any', protocol: 'http', httpMethod: 'ANY' },
   ],
   'gorilla/mux': [
-    { method: 'Handle',     receiverContains: 'mux.Router', protocol: 'http' },
+    { method: 'Handle', receiverContains: 'mux.Router', protocol: 'http' },
     { method: 'HandleFunc', receiverContains: 'mux.Router', protocol: 'http' },
   ],
-  'echo': [
-    { method: 'GET',    protocol: 'http', httpMethod: 'GET' },
-    { method: 'POST',   protocol: 'http', httpMethod: 'POST' },
-    { method: 'PUT',    protocol: 'http', httpMethod: 'PUT' },
+  echo: [
+    { method: 'GET', protocol: 'http', httpMethod: 'GET' },
+    { method: 'POST', protocol: 'http', httpMethod: 'POST' },
+    { method: 'PUT', protocol: 'http', httpMethod: 'PUT' },
     { method: 'DELETE', protocol: 'http', httpMethod: 'DELETE' },
-    { method: 'PATCH',  protocol: 'http', httpMethod: 'PATCH' },
+    { method: 'PATCH', protocol: 'http', httpMethod: 'PATCH' },
   ],
-  'chi': [
-    { method: 'Get',    protocol: 'http', httpMethod: 'GET' },
-    { method: 'Post',   protocol: 'http', httpMethod: 'POST' },
-    { method: 'Put',    protocol: 'http', httpMethod: 'PUT' },
+  chi: [
+    { method: 'Get', protocol: 'http', httpMethod: 'GET' },
+    { method: 'Post', protocol: 'http', httpMethod: 'POST' },
+    { method: 'Put', protocol: 'http', httpMethod: 'PUT' },
     { method: 'Delete', protocol: 'http', httpMethod: 'DELETE' },
-    { method: 'Patch',  protocol: 'http', httpMethod: 'PATCH' },
+    { method: 'Patch', protocol: 'http', httpMethod: 'PATCH' },
   ],
-  'cobra': [
-    { method: 'AddCommand', protocol: 'cli' },
-  ],
-  'grpc': [
-    { methodSuffix: 'Server', protocol: 'grpc' },
-  ],
-  'kafka-go': [
-    { method: 'ConsumePartition', protocol: 'message' },
-  ],
-  'sarama': [
-    { method: 'ConsumePartition', protocol: 'message' },
-  ],
-  'nats': [
-    { method: 'Subscribe',      protocol: 'message' },
+  cobra: [{ method: 'AddCommand', protocol: 'cli' }],
+  grpc: [{ methodSuffix: 'Server', protocol: 'grpc' }],
+  'kafka-go': [{ method: 'ConsumePartition', protocol: 'message' }],
+  sarama: [{ method: 'ConsumePartition', protocol: 'message' }],
+  nats: [
+    { method: 'Subscribe', protocol: 'message' },
     { method: 'QueueSubscribe', protocol: 'message' },
   ],
-  'cron': [
+  cron: [
     { method: 'AddFunc', protocol: 'scheduler' },
-    { method: 'AddJob',  protocol: 'scheduler' },
+    { method: 'AddJob', protocol: 'scheduler' },
   ],
 };
 
@@ -81,16 +73,61 @@ function matchesPattern(call: GoCallExpr, p: CallPattern): boolean {
 
 export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
   private static readonly STDLIB_PREFIXES = new Set([
-    'fmt', 'json', 'strconv', 'time', 'errors', 'strings', 'sort', 'sync',
-    'io', 'bytes', 'math', 'os', 'log', 'context', 'net', 'http', 'reflect',
-    'unicode', 'filepath', 'path', 'regexp', 'bufio', 'runtime',
+    'fmt',
+    'json',
+    'strconv',
+    'time',
+    'errors',
+    'strings',
+    'sort',
+    'sync',
+    'io',
+    'bytes',
+    'math',
+    'os',
+    'log',
+    'context',
+    'net',
+    'http',
+    'reflect',
+    'unicode',
+    'filepath',
+    'path',
+    'regexp',
+    'bufio',
+    'runtime',
   ]);
 
   private static readonly BUILTINS = new Set([
-    'make', 'len', 'append', 'cap', 'new', 'delete', 'copy', 'close',
-    'panic', 'recover', 'print', 'println', 'int', 'int8', 'int16', 'int32',
-    'int64', 'uint', 'uint8', 'uint16', 'uint32', 'uint64', 'string', 'bool',
-    'float32', 'float64', 'byte', 'rune', 'error',
+    'make',
+    'len',
+    'append',
+    'cap',
+    'new',
+    'delete',
+    'copy',
+    'close',
+    'panic',
+    'recover',
+    'print',
+    'println',
+    'int',
+    'int8',
+    'int16',
+    'int32',
+    'int64',
+    'uint',
+    'uint8',
+    'uint16',
+    'uint32',
+    'uint64',
+    'string',
+    'bool',
+    'float32',
+    'float64',
+    'byte',
+    'rune',
+    'error',
   ]);
 
   /** Build the set of all interface names across all packages */
@@ -135,7 +172,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     const stripped = declaredType.startsWith('*') ? declaredType.slice(1) : declaredType;
 
     // For qualified types "pkg.Store", also check the short name "Store"
-    const shortName = stripped.includes('.') ? stripped.split('.').at(-1)! : stripped;
+    const shortName = stripped.includes('.') ? stripped.split('.').at(-1) : stripped;
 
     if (interfaceNames.has(stripped) || interfaceNames.has(shortName)) {
       return 'interface';
@@ -166,14 +203,14 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     const entryPoints = this.detectEntryPoints(rawData, options);
     const callChains = this.buildCallChains(rawData, entryPoints);
 
-    let graph: FlowGraph = { entryPoints, callChains };
+    const graph: FlowGraph = { entryPoints, callChains };
 
     // Protocol filter — applied after all detection
     if (options.protocols && options.protocols.length > 0) {
       const allowed = new Set(options.protocols);
-      graph.entryPoints = graph.entryPoints.filter(e => allowed.has(e.protocol));
-      const kept = new Set(graph.entryPoints.map(e => e.id));
-      graph.callChains = graph.callChains.filter(c => kept.has(c.entryPoint));
+      graph.entryPoints = graph.entryPoints.filter((e) => allowed.has(e.protocol));
+      const kept = new Set(graph.entryPoints.map((e) => e.id));
+      graph.callChains = graph.callChains.filter((c) => kept.has(c.entryPoint));
     }
 
     return Promise.resolve(graph);
@@ -181,7 +218,11 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
 
   private detectEntryPoints(rawData: GoRawData, options: FlowBuildOptions): EntryPoint[] {
     const entryPoints: EntryPoint[] = [];
-    const { detectedFrameworks, customFrameworks = [], entryPoints: manualEntryPoints = [] } = options;
+    const {
+      detectedFrameworks,
+      customFrameworks = [],
+      entryPoints: manualEntryPoints = [],
+    } = options;
 
     // Collect active patterns from detected frameworks
     const activePatterns: Array<{ frameworkKey: string; pattern: CallPattern }> = [];
@@ -305,7 +346,11 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     return chains;
   }
 
-  private traceCallsFromEntry(rawData: GoRawData, entry: EntryPoint, interfaceNames: Set<string>): CallEdge[] {
+  private traceCallsFromEntry(
+    rawData: GoRawData,
+    entry: EntryPoint,
+    interfaceNames: Set<string>
+  ): CallEdge[] {
     const calls: CallEdge[] = [];
     if (!entry.handler) return calls;
 

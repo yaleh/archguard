@@ -82,7 +82,7 @@ describe('ArchGuard Self Test - Integration', () => {
     expect(() => JSON.parse(json)).not.toThrow();
 
     // Should be parseable back
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const parsed = JSON.parse(json) as { version: string; language: string };
     expect(parsed.version).toBe('1.0');
     expect(parsed.language).toBe('typescript');

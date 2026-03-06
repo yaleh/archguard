@@ -409,7 +409,9 @@ describe('FlowGraphBuilder', () => {
       ],
     });
 
-    const result = await builder.build(rawData, { detectedFrameworks: new Set(['gin', 'net/http']) });
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(['gin', 'net/http']),
+    });
 
     expect(result.entryPoints).toHaveLength(3);
   });
@@ -517,8 +519,15 @@ describe('FlowGraphBuilder', () => {
           functions: [
             makeFunction({
               body: {
-                calls: [{ functionName: 'GET', args: ['/users', 'handleUsers'], location: { file: 'router.go', startLine: 5, endLine: 5 } }],
-                goSpawns: [], channelOps: [],
+                calls: [
+                  {
+                    functionName: 'GET',
+                    args: ['/users', 'handleUsers'],
+                    location: { file: 'router.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
               },
             }),
           ],
@@ -540,10 +549,19 @@ describe('FlowGraphBuilder', () => {
             makeFunction({
               body: {
                 calls: [
-                  { functionName: 'HandleFunc', args: ['/api', 'h'], location: { file: 'srv.go', startLine: 3, endLine: 3 } },
-                  { functionName: 'AddCommand', args: ['serve'], location: { file: 'cli.go', startLine: 4, endLine: 4 } },
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'h'],
+                    location: { file: 'srv.go', startLine: 3, endLine: 3 },
+                  },
+                  {
+                    functionName: 'AddCommand',
+                    args: ['serve'],
+                    location: { file: 'cli.go', startLine: 4, endLine: 4 },
+                  },
                 ],
-                goSpawns: [], channelOps: [],
+                goSpawns: [],
+                channelOps: [],
               },
             }),
           ],
@@ -554,8 +572,10 @@ describe('FlowGraphBuilder', () => {
       detectedFrameworks: new Set(['net/http', 'cobra']),
       protocols: ['http'],
     });
-    expect(result.entryPoints.every(e => e.protocol === 'http')).toBe(true);
-    expect(result.callChains.every(c => result.entryPoints.some(e => e.id === c.entryPoint))).toBe(true);
+    expect(result.entryPoints.every((e) => e.protocol === 'http')).toBe(true);
+    expect(
+      result.callChains.every((c) => result.entryPoints.some((e) => e.id === c.entryPoint))
+    ).toBe(true);
   });
 
   it('injects main() as cli entry point when main framework detected', async () => {
@@ -564,17 +584,17 @@ describe('FlowGraphBuilder', () => {
         makePackage({
           name: 'main',
           fullName: 'cmd/server',
-          functions: [
-            makeFunction({ name: 'main' }),
-          ],
+          functions: [makeFunction({ name: 'main' })],
         }),
       ],
     });
-    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http', 'main']) });
-    const mainEntry = result.entryPoints.find(e => e.framework === 'main');
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(['net/http', 'main']),
+    });
+    const mainEntry = result.entryPoints.find((e) => e.framework === 'main');
     expect(mainEntry).toBeDefined();
-    expect(mainEntry!.protocol).toBe('cli');
-    expect(mainEntry!.handler).toBe('main.main');
+    expect(mainEntry.protocol).toBe('cli');
+    expect(mainEntry.handler).toBe('main.main');
   });
 });
 
@@ -1271,9 +1291,7 @@ describe('interface dispatch detection', () => {
             {
               name: 'Server',
               packageName: 'api',
-              fields: [
-                { name: 'store', type: 'Store', exported: false, location: loc },
-              ],
+              fields: [{ name: 'store', type: 'Store', exported: false, location: loc }],
               embeddedTypes: [],
               exported: true,
               location: loc,
@@ -1499,9 +1517,7 @@ describe('interface dispatch detection', () => {
             {
               name: 'Server',
               packageName: 'api',
-              fields: [
-                { name: 'store', type: '*Store', exported: false, location: loc },
-              ],
+              fields: [{ name: 'store', type: '*Store', exported: false, location: loc }],
               embeddedTypes: [],
               exported: true,
               location: loc,
@@ -1569,9 +1585,7 @@ describe('interface dispatch detection', () => {
             {
               name: 'Server',
               packageName: 'api',
-              fields: [
-                { name: 'db', type: 'DBClient', exported: false, location: loc },
-              ],
+              fields: [{ name: 'db', type: 'DBClient', exported: false, location: loc }],
               embeddedTypes: [],
               exported: true,
               location: loc,
@@ -1648,9 +1662,7 @@ describe('interface dispatch detection', () => {
             {
               name: 'Server',
               packageName: 'api',
-              fields: [
-                { name: 'cache', type: 'Cache', exported: false, location: loc },
-              ],
+              fields: [{ name: 'cache', type: 'Cache', exported: false, location: loc }],
               embeddedTypes: [],
               exported: true,
               location: loc,
@@ -1711,16 +1723,16 @@ describe('interface dispatch detection', () => {
     const chain = result.callChains[0];
     expect(chain.calls).toHaveLength(2);
 
-    const cacheEdge = chain.calls.find(c => c.to === 's.cache.Get');
-    const metricsEdge = chain.calls.find(c => c.to === 'metrics.Record');
+    const cacheEdge = chain.calls.find((c) => c.to === 's.cache.Get');
+    const metricsEdge = chain.calls.find((c) => c.to === 'metrics.Record');
 
     expect(cacheEdge).toBeDefined();
-    expect(cacheEdge!.type).toBe('interface');
-    expect(cacheEdge!.confidence).toBe(0.8);
+    expect(cacheEdge.type).toBe('interface');
+    expect(cacheEdge.confidence).toBe(0.8);
 
     expect(metricsEdge).toBeDefined();
-    expect(metricsEdge!.type).toBe('direct');
-    expect(metricsEdge!.confidence).toBe(0.7);
+    expect(metricsEdge.type).toBe('direct');
+    expect(metricsEdge.confidence).toBe(0.7);
   });
 
   it('still marks calls through package names (not interface vars) as direct', async () => {

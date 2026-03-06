@@ -50,7 +50,10 @@ describe('ArchJsonMapper', () => {
 
   describe('mapEntities', () => {
     it('uses generateEntityId format: ns.name (P4 fix)', () => {
-      const entity = makeEntity({ qualifiedName: 'engine::Renderer', declarationFile: 'src/engine/renderer.hpp' });
+      const entity = makeEntity({
+        qualifiedName: 'engine::Renderer',
+        declarationFile: 'src/engine/renderer.hpp',
+      });
       const entities = mapper.mapEntities([entity], [], [], 'src');
       expect(entities[0].id).toBe('engine.Renderer');
     });
@@ -75,20 +78,32 @@ describe('ArchJsonMapper', () => {
     describe('entity ID generation bugs', () => {
       it('enum without C++ namespace gets file-based namespace (P1 fix)', () => {
         // qualifiedName has no '::' → should use file path for namespace, not empty string
-        const e = makeEnum({ name: 'TestCaseStatus', qualifiedName: 'TestCaseStatus', sourceFile: '/proj/src/test.hpp' });
+        const e = makeEnum({
+          name: 'TestCaseStatus',
+          qualifiedName: 'TestCaseStatus',
+          sourceFile: '/proj/src/test.hpp',
+        });
         const entities = mapper.mapEntities([], [e], [], '/proj');
         // Should be 'src.TestCaseStatus', not '.TestCaseStatus'
         expect(entities[0].id).toBe('src.TestCaseStatus');
       });
 
       it('enum with C++ namespace uses that namespace (P1 fix — ns:: case)', () => {
-        const e = makeEnum({ name: 'Status', qualifiedName: 'net::Status', sourceFile: '/proj/net/status.hpp' });
+        const e = makeEnum({
+          name: 'Status',
+          qualifiedName: 'net::Status',
+          sourceFile: '/proj/net/status.hpp',
+        });
         const entities = mapper.mapEntities([], [e], [], '/proj');
         expect(entities[0].id).toBe('net.Status');
       });
 
       it('function without C++ namespace gets file-based namespace (P1 fix)', () => {
-        const fn = makeFunction({ name: 'helper', qualifiedName: 'helper', sourceFile: '/proj/utils/helpers.cpp' });
+        const fn = makeFunction({
+          name: 'helper',
+          qualifiedName: 'helper',
+          sourceFile: '/proj/utils/helpers.cpp',
+        });
         const entities = mapper.mapEntities([], [], [fn], '/proj');
         // Should be 'utils.helper', not '.helper'
         expect(entities[0].id).toBe('utils.helper');
@@ -173,7 +188,11 @@ describe('ArchJsonMapper', () => {
 
     it('relation id uses source_type_target format', () => {
       const baseE = makeEntity({ name: 'A', qualifiedName: 'A' });
-      const derived = makeEntity({ name: 'B', qualifiedName: 'B', bases: [{ name: 'A', access: 'public' }] });
+      const derived = makeEntity({
+        name: 'B',
+        qualifiedName: 'B',
+        bases: [{ name: 'A', access: 'public' }],
+      });
       const all = mapper.mapEntities([baseE, derived], [], [], '');
       const relations = mapper.mapRelations([derived], all);
       expect(relations[0].id).toMatch(/inheritance/);
@@ -197,7 +216,14 @@ describe('ArchJsonMapper', () => {
       const src = makeEntity({
         name: 'Window',
         qualifiedName: 'Window',
-        fields: [{ name: 'w', fieldType: 'std::unique_ptr<Widget>', visibility: 'private', isStatic: false }],
+        fields: [
+          {
+            name: 'w',
+            fieldType: 'std::unique_ptr<Widget>',
+            visibility: 'private',
+            isStatic: false,
+          },
+        ],
       });
       const all = mapper.mapEntities([target, src], [], [], '');
       const relations = mapper.mapRelations([src], all);
@@ -223,18 +249,20 @@ describe('ArchJsonMapper', () => {
       const src = makeEntity({
         name: 'Loader',
         qualifiedName: 'Loader',
-        methods: [{
-          name: 'load',
-          returnType: 'void',
-          parameters: [{ name: 'cfg', type: 'Config' }],
-          visibility: 'public',
-          isVirtual: false,
-          isStatic: false,
-          isPure: false,
-          isConst: false,
-          sourceFile: 'src/loader.hpp',
-          startLine: 1,
-        }],
+        methods: [
+          {
+            name: 'load',
+            returnType: 'void',
+            parameters: [{ name: 'cfg', type: 'Config' }],
+            visibility: 'public',
+            isVirtual: false,
+            isStatic: false,
+            isPure: false,
+            isConst: false,
+            sourceFile: 'src/loader.hpp',
+            startLine: 1,
+          },
+        ],
       });
       const all = mapper.mapEntities([target, src], [], [], '');
       const relations = mapper.mapRelations([src], all);
@@ -247,18 +275,20 @@ describe('ArchJsonMapper', () => {
       const src = makeEntity({
         name: 'Factory',
         qualifiedName: 'Factory',
-        methods: [{
-          name: 'create',
-          returnType: 'Result',
-          parameters: [],
-          visibility: 'public',
-          isVirtual: false,
-          isStatic: false,
-          isPure: false,
-          isConst: false,
-          sourceFile: 'src/factory.hpp',
-          startLine: 1,
-        }],
+        methods: [
+          {
+            name: 'create',
+            returnType: 'Result',
+            parameters: [],
+            visibility: 'public',
+            isVirtual: false,
+            isStatic: false,
+            isPure: false,
+            isConst: false,
+            sourceFile: 'src/factory.hpp',
+            startLine: 1,
+          },
+        ],
       });
       const all = mapper.mapEntities([target, src], [], [], '');
       const relations = mapper.mapRelations([src], all);
@@ -279,7 +309,7 @@ describe('ArchJsonMapper', () => {
       const all = mapper.mapEntities([target, src], [], [], '');
       const relations = mapper.mapRelations([src], all);
       // Both fields produce composition:Owner→Dep but should be deduplicated
-      const compRels = relations.filter(r => r.type === 'composition');
+      const compRels = relations.filter((r) => r.type === 'composition');
       expect(compRels).toHaveLength(1);
     });
 
@@ -291,7 +321,7 @@ describe('ArchJsonMapper', () => {
       });
       const all = mapper.mapEntities([src], [], [], '');
       const relations = mapper.mapRelations([src], all);
-      expect(relations.every(r => r.from !== r.to)).toBe(true);
+      expect(relations.every((r) => r.from !== r.to)).toBe(true);
     });
 
     it('unresolved field type → relation omitted', () => {

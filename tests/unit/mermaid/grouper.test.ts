@@ -429,12 +429,12 @@ describe('HeuristicGrouper', () => {
       // src and src/models both go into 'Src Layer'
       const srcGroup = result.packages.find((p) => p.name === 'Src Layer');
       expect(srcGroup).toBeDefined();
-      expect(srcGroup!.entities).toHaveLength(2); // src + src/models
+      expect(srcGroup.entities).toHaveLength(2); // src + src/models
 
       // examples/batched and examples/embedding both go into 'Examples Layer'
       const examplesGroup = result.packages.find((p) => p.name === 'Examples Layer');
       expect(examplesGroup).toBeDefined();
-      expect(examplesGroup!.entities).toHaveLength(2);
+      expect(examplesGroup.entities).toHaveLength(2);
 
       // common goes into 'Common Layer' (no slash, uses file path extraction)
       // (or it might be 'Common Layer' from the entity name itself)

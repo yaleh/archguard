@@ -43,7 +43,7 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         format: 'plantuml',
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|plantuml/);
+      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
     });
 
     it('should reject "svg" format in global config', async () => {
@@ -59,7 +59,7 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         format: 'svg',
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|svg/);
+      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
     });
 
     it('should reject "plantuml" format in diagram config', async () => {
@@ -75,7 +75,7 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         ],
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|plantuml/);
+      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
     });
 
     it('should reject "svg" format in diagram config', async () => {
@@ -91,7 +91,7 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         ],
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|svg/);
+      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
     });
 
     it('should accept "mermaid" format', async () => {
@@ -159,7 +159,7 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
       });
 
       await expect(loader.load({ format: 'plantuml' as any })).rejects.toThrow(
-        /Invalid enum value|plantuml/
+        /Invalid enum value|Invalid option|plantuml/
       );
     });
 
@@ -175,7 +175,9 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         ],
       });
 
-      await expect(loader.load({ format: 'svg' as any })).rejects.toThrow(/Invalid enum value|svg/);
+      await expect(loader.load({ format: 'svg' as any })).rejects.toThrow(
+        /Invalid enum value|Invalid option|svg/
+      );
     });
 
     it('should accept "mermaid" format via CLI override', async () => {

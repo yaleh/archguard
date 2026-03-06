@@ -40,8 +40,7 @@ export class MermaidTemplates {
   // ── Mermaid %%{init} spacing directives ───────────────────────────────────
   private static readonly FLOWCHART_INIT =
     "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%\n";
-  private static readonly SEQUENCE_INIT =
-    "%%{init: {'sequence': {'actorMargin': 50}}}%%\n";
+  private static readonly SEQUENCE_INIT = "%%{init: {'sequence': {'actorMargin': 50}}}%%\n";
 
   // ── nested subgraph grouping ───────────────────────────────────────────────
   //
@@ -237,14 +236,14 @@ export class MermaidTemplates {
 
   private static renderLegend(activeTypes: Set<string>): string {
     const LEGEND_LABELS: Record<string, string> = {
-      cmd:      'cmd (entry point)',
-      tests:    'tests',
+      cmd: 'cmd (entry point)',
+      tests: 'tests',
       examples: 'examples',
       testutil: 'testutil',
       internal: 'internal',
-      vendor:   'vendor',
+      vendor: 'vendor',
       external: 'external (module boundary)',
-      cycle:    'cycle (circular dep)',
+      cycle: 'cycle (circular dep)',
     };
     let out = '  subgraph legend["Legend"]\n';
     out += '    direction LR\n';
@@ -303,7 +302,15 @@ export class MermaidTemplates {
     // Pass 1 cont.: recursive subgraph tree (pass inDegree for within-group sort)
     // depthMap collects sgId → nesting depth for depth-style emission below
     const subgraphDepthMap = new Map<string, number>();
-    output += MermaidTemplates.renderGroupNodes(roots, nodeMap, cycleNodeIds, '  ', inDegree, subgraphDepthMap, 0);
+    output += MermaidTemplates.renderGroupNodes(
+      roots,
+      nodeMap,
+      cycleNodeIds,
+      '  ',
+      inDegree,
+      subgraphDepthMap,
+      0
+    );
 
     // Legend subgraph (Plan 19 P3) — MUST be before edges for edge-ordering test
     output += MermaidTemplates.renderLegend(activeTypes);
@@ -311,9 +318,10 @@ export class MermaidTemplates {
     // Depth-based style directives for data subgraphs (Plan 19 Phase D)
     // outer=lightest (#ffffff), inner=darkest (#d0d7de), clamped at index 3
     for (const [sgId, sgDepth] of subgraphDepthMap) {
-      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
-        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
-      ];
+      const styleStr =
+        MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+          Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+        ];
       output += `  style ${sgId} ${styleStr}\n`;
     }
 
@@ -327,7 +335,8 @@ export class MermaidTemplates {
     output += '  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329\n';
     output += '  classDef vendor   fill:#fdf4ff,stroke:#d2a8ff,color:#6e40c9\n';
     output += '  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01\n';
-    output += '  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:3px,color:#82071e,font-weight:bold\n';
+    output +=
+      '  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:3px,color:#82071e,font-weight:bold\n';
 
     // Pass 3: edges (self-loops get dashed warning arrow per P2)
     // Track (edgeIndex, strength) for non-self edges to compute linkStyle tiers.
@@ -437,9 +446,10 @@ export class MermaidTemplates {
 
     // Depth-based style directives for capability subgraphs
     for (const [sgId, sgDepth] of capDepthMap) {
-      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
-        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
-      ];
+      const styleStr =
+        MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+          Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+        ];
       output += `  style ${sgId} ${styleStr}\n`;
     }
 
@@ -654,9 +664,10 @@ export class MermaidTemplates {
     // ── Depth-based style directives for package subgraphs ────────────────────
     output += '\n';
     for (const [sgId, sgDepth] of goroutineDepthMap) {
-      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
-        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
-      ];
+      const styleStr =
+        MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+          Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+        ];
       output += `  style ${sgId} ${styleStr}\n`;
     }
 
@@ -683,7 +694,9 @@ export class MermaidTemplates {
 
     // ── Legend subgraph ────────────────────────────────────────────────────────
     // Determine if any normal (non-noexit) spawned node was emitted
-    const hasNormalSpawned = [...packageGroups.values()].flat().concat(ungrouped)
+    const hasNormalSpawned = [...packageGroups.values()]
+      .flat()
+      .concat(ungrouped)
       .some((d) => d.style === ':::spawned');
 
     output += '\n  subgraph legend["Legend"]\n';
@@ -706,7 +719,8 @@ export class MermaidTemplates {
     output += '\n  classDef main fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e\n';
     output += '  classDef spawned fill:#dafbe1,stroke:#2da44e,color:#116329\n';
     output += '  classDef spawner fill:#ddf4ff,stroke:#54aeff,color:#0550ae\n';
-    output += '  classDef spawned_noexit fill:#fff3cd,stroke:#d4a72c,stroke-width:2px,color:#633c01\n';
+    output +=
+      '  classDef spawned_noexit fill:#fff3cd,stroke:#d4a72c,stroke-width:2px,color:#633c01\n';
     output += '  classDef channel fill:#fff8c5,stroke:#d4a72c,color:#633c01\n';
 
     return output;
@@ -782,9 +796,10 @@ export class MermaidTemplates {
 
     // Depth-based style directives for entry-point subgraphs
     for (const [sgId, sgDepth] of flowDepthMap) {
-      const styleStr = MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
-        Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
-      ];
+      const styleStr =
+        MermaidTemplates.SUBGRAPH_DEPTH_STYLES[
+          Math.min(sgDepth, MermaidTemplates.SUBGRAPH_DEPTH_STYLES.length - 1)
+        ];
       output += `  style ${sgId} ${styleStr}\n`;
     }
 
@@ -888,9 +903,9 @@ export class MermaidTemplates {
       const m = entry.method ?? 'HTTP';
       return `${m} ${entry.path}`;
     }
-    if (entry.protocol === 'grpc')      return `gRPC ${entry.path}`;
-    if (entry.protocol === 'cli')       return `CMD ${entry.path || entry.handler}`;
-    if (entry.protocol === 'message')   return `MSG ${entry.path}`;
+    if (entry.protocol === 'grpc') return `gRPC ${entry.path}`;
+    if (entry.protocol === 'cli') return `CMD ${entry.path || entry.handler}`;
+    if (entry.protocol === 'message') return `MSG ${entry.path}`;
     if (entry.protocol === 'scheduler') return `CRON ${entry.path}`;
     return entry.path || entry.id;
   }

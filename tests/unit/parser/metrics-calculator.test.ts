@@ -36,10 +36,7 @@ const makeRelation = (
   ...(inferenceSource !== undefined ? { inferenceSource } : {}),
 });
 
-const makeArchJSON = (
-  entities: Entity[],
-  relations: Relation[]
-): ArchJSON => ({
+const makeArchJSON = (entities: Entity[], relations: Relation[]): ArchJSON => ({
   version: '1.0',
   language: 'typescript',
   timestamp: '2024-01-01T00:00:00.000Z',
@@ -52,7 +49,7 @@ const makeEntityInFile = (
   id: string,
   file: string,
   endLine = 10,
-  members: import('@/types/index.js').Member[] = [],
+  members: import('@/types/index.js').Member[] = []
 ): Entity => ({
   id,
   name: id,
@@ -63,7 +60,7 @@ const makeEntityInFile = (
 });
 
 const makeMember = (
-  type: import('@/types/index.js').MemberType,
+  type: import('@/types/index.js').MemberType
 ): import('@/types/index.js').Member => ({
   name: 'x',
   type,
@@ -88,19 +85,13 @@ describe('MetricsCalculator — basic metrics', () => {
   });
 
   it('entityCount === entities.length', () => {
-    const arch = makeArchJSON(
-      [makeEntity('A'), makeEntity('B'), makeEntity('C')],
-      []
-    );
+    const arch = makeArchJSON([makeEntity('A'), makeEntity('B'), makeEntity('C')], []);
     const result = calc.calculate(arch, 'class');
     expect(result.entityCount).toBe(3);
   });
 
   it('relationCount === relations.length', () => {
-    const arch = makeArchJSON(
-      [makeEntity('A'), makeEntity('B')],
-      [makeRelation('r1', 'A', 'B')]
-    );
+    const arch = makeArchJSON([makeEntity('A'), makeEntity('B')], [makeRelation('r1', 'A', 'B')]);
     const result = calc.calculate(arch, 'class');
     expect(result.relationCount).toBe(1);
   });
@@ -137,10 +128,7 @@ describe('MetricsCalculator — basic metrics', () => {
     ];
     const arch = makeArchJSON(entities, relations);
     const result = calc.calculate(arch, 'class');
-    const breakdownSum = Object.values(result.relationTypeBreakdown).reduce(
-      (a, b) => a + b,
-      0
-    );
+    const breakdownSum = Object.values(result.relationTypeBreakdown).reduce((a, b) => a + b, 0);
     expect(breakdownSum).toBe(result.relationCount);
   });
 
@@ -189,10 +177,7 @@ describe('MetricsCalculator — basic metrics', () => {
     // Relations without inferenceSource should count as explicit (ratio stays 0)
     const entities = [makeEntity('A'), makeEntity('B')];
     // makeRelation without 4th arg omits inferenceSource
-    const relations: Relation[] = [
-      makeRelation('r1', 'A', 'B'),
-      makeRelation('r2', 'B', 'A'),
-    ];
+    const relations: Relation[] = [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')];
     const arch = makeArchJSON(entities, relations);
     const result = calc.calculate(arch, 'class');
     expect(result.inferredRelationRatio).toBe(0);
@@ -207,20 +192,14 @@ describe('MetricsCalculator — SCC', () => {
   const calc = new MetricsCalculator();
 
   it('no relations: SCC === entityCount (each node is its own SCC)', () => {
-    const arch = makeArchJSON(
-      [makeEntity('A'), makeEntity('B'), makeEntity('C')],
-      []
-    );
+    const arch = makeArchJSON([makeEntity('A'), makeEntity('B'), makeEntity('C')], []);
     const result = calc.calculate(arch, 'class');
     expect(result.stronglyConnectedComponents).toBe(3);
   });
 
   it('DAG A→B→C: SCC === entityCount (no cycles)', () => {
     const entities = [makeEntity('A'), makeEntity('B'), makeEntity('C')];
-    const relations = [
-      makeRelation('r1', 'A', 'B'),
-      makeRelation('r2', 'B', 'C'),
-    ];
+    const relations = [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'C')];
     const arch = makeArchJSON(entities, relations);
     const result = calc.calculate(arch, 'class');
     expect(result.stronglyConnectedComponents).toBe(3);
@@ -237,10 +216,7 @@ describe('MetricsCalculator — SCC', () => {
 
   it('two nodes mutually dependent (A→B, B→A): SCC === 1', () => {
     const entities = [makeEntity('A'), makeEntity('B')];
-    const relations = [
-      makeRelation('r1', 'A', 'B'),
-      makeRelation('r2', 'B', 'A'),
-    ];
+    const relations = [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')];
     const arch = makeArchJSON(entities, relations);
     const result = calc.calculate(arch, 'class');
     expect(result.stronglyConnectedComponents).toBe(1);
@@ -259,12 +235,7 @@ describe('MetricsCalculator — SCC', () => {
   });
 
   it('two independent cycles (A→B→A, C→D→C): SCC === 2', () => {
-    const entities = [
-      makeEntity('A'),
-      makeEntity('B'),
-      makeEntity('C'),
-      makeEntity('D'),
-    ];
+    const entities = [makeEntity('A'), makeEntity('B'), makeEntity('C'), makeEntity('D')];
     const relations = [
       makeRelation('r1', 'A', 'B'),
       makeRelation('r2', 'B', 'A'),
@@ -315,18 +286,14 @@ describe('MetricsCalculator — SCC', () => {
     for (const [entities, relations] of graphs) {
       const arch = makeArchJSON(entities, relations);
       const result = calc.calculate(arch, 'class');
-      expect(result.stronglyConnectedComponents).toBeLessThanOrEqual(
-        result.entityCount
-      );
+      expect(result.stronglyConnectedComponents).toBeLessThanOrEqual(result.entityCount);
     }
   });
 
   it('large graph (100-node linear chain): no stack overflow', () => {
     // Build a 100-node linear DAG: N0→N1→N2→...→N99
     const count = 100;
-    const entities = Array.from({ length: count }, (_, i) =>
-      makeEntity(`N${i}`)
-    );
+    const entities = Array.from({ length: count }, (_, i) => makeEntity(`N${i}`));
     const relations = Array.from({ length: count - 1 }, (_, i) =>
       makeRelation(`r${i}`, `N${i}`, `N${i + 1}`)
     );
@@ -346,25 +313,19 @@ describe('MetricsCalculator — cycles', () => {
   const calc = new MetricsCalculator();
 
   it('no cycle: cycles = []', () => {
-    const arch = makeArchJSON(
-      [makeEntity('A'), makeEntity('B')],
-      [makeRelation('r1', 'A', 'B')],
-    );
+    const arch = makeArchJSON([makeEntity('A'), makeEntity('B')], [makeRelation('r1', 'A', 'B')]);
     const r = calc.calculate(arch, 'class');
     expect(r.cycles).toEqual([]);
   });
 
   it('simple 2-node cycle: one CycleInfo with correct fields', () => {
     const arch = makeArchJSON(
-      [
-        makeEntityInFile('A', 'src/a.ts'),
-        makeEntityInFile('B', 'src/b.ts'),
-      ],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/b.ts')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
     expect(r.cycles).toHaveLength(1);
-    const c = r.cycles![0];
+    const c = r.cycles[0];
     expect(c.size).toBe(2);
     expect(c.members.sort()).toEqual(['A', 'B']);
     expect(c.memberNames.sort()).toEqual(['A', 'B']);
@@ -372,43 +333,45 @@ describe('MetricsCalculator — cycles', () => {
   });
 
   it('self-loop A→A: not in cycles (size = 1)', () => {
-    const arch = makeArchJSON(
-      [makeEntityInFile('A', 'src/a.ts')],
-      [makeRelation('r1', 'A', 'A')],
-    );
+    const arch = makeArchJSON([makeEntityInFile('A', 'src/a.ts')], [makeRelation('r1', 'A', 'A')]);
     const r = calc.calculate(arch, 'class');
     expect(r.cycles).toEqual([]);
   });
 
   it('two independent cycles: both appear, sorted by size DESC', () => {
     // Cycle 1: A→B→C→A (size 3), Cycle 2: D→E→D (size 2)
-    const entities = ['A', 'B', 'C', 'D', 'E'].map(id => makeEntityInFile(id, `src/${id.toLowerCase()}.ts`));
+    const entities = ['A', 'B', 'C', 'D', 'E'].map((id) =>
+      makeEntityInFile(id, `src/${id.toLowerCase()}.ts`)
+    );
     const relations = [
-      makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'C'), makeRelation('r3', 'C', 'A'),
-      makeRelation('r4', 'D', 'E'), makeRelation('r5', 'E', 'D'),
+      makeRelation('r1', 'A', 'B'),
+      makeRelation('r2', 'B', 'C'),
+      makeRelation('r3', 'C', 'A'),
+      makeRelation('r4', 'D', 'E'),
+      makeRelation('r5', 'E', 'D'),
     ];
     const r = calc.calculate(makeArchJSON(entities, relations), 'class');
     expect(r.cycles).toHaveLength(2);
-    expect(r.cycles![0].size).toBe(3);
-    expect(r.cycles![1].size).toBe(2);
+    expect(r.cycles[0].size).toBe(3);
+    expect(r.cycles[1].size).toBe(2);
   });
 
   it('intra-file cycle: files list has length 1', () => {
     const arch = makeArchJSON(
       [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/a.ts')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
-    expect(r.cycles![0].files).toEqual(['src/a.ts']);
+    expect(r.cycles[0].files).toEqual(['src/a.ts']);
   });
 
   it('memberNames parallel to members (id === name in test fixtures)', () => {
     const arch = makeArchJSON(
       [makeEntityInFile('Alpha', 'src/a.ts'), makeEntityInFile('Beta', 'src/b.ts')],
-      [makeRelation('r1', 'Alpha', 'Beta'), makeRelation('r2', 'Beta', 'Alpha')],
+      [makeRelation('r1', 'Alpha', 'Beta'), makeRelation('r2', 'Beta', 'Alpha')]
     );
     const r = calc.calculate(arch, 'class');
-    const c = r.cycles![0];
+    const c = r.cycles[0];
     const pairs = c.members.map((id, i) => [id, c.memberNames[i]]);
     for (const [id, name] of pairs) {
       expect(id).toBe(name); // in test fixtures entity.id === entity.name
@@ -418,7 +381,7 @@ describe('MetricsCalculator — cycles', () => {
   it('cycles undefined when level === package', () => {
     const arch = makeArchJSON(
       [makeEntity('A'), makeEntity('B')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'package');
     expect(r.cycles).toBeUndefined();
@@ -435,12 +398,14 @@ describe('MetricsCalculator — cycles', () => {
 
   it('Kosaraju partition: sum of cycle sizes equals non-trivial entity count exactly', () => {
     // A→B→C→A (size 3), D isolated
-    const entities = ['A', 'B', 'C', 'D'].map(id => makeEntityInFile(id, 'src/a.ts'));
+    const entities = ['A', 'B', 'C', 'D'].map((id) => makeEntityInFile(id, 'src/a.ts'));
     const relations = [
-      makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'C'), makeRelation('r3', 'C', 'A'),
+      makeRelation('r1', 'A', 'B'),
+      makeRelation('r2', 'B', 'C'),
+      makeRelation('r3', 'C', 'A'),
     ];
     const r = calc.calculate(makeArchJSON(entities, relations), 'class');
-    const sum = r.cycles!.reduce((acc, c) => acc + c.size, 0);
+    const sum = r.cycles.reduce((acc, c) => acc + c.size, 0);
     expect(sum).toBe(3); // exactly 3, not >=
   });
 
@@ -451,17 +416,21 @@ describe('MetricsCalculator — cycles', () => {
 
   it('CycleInfo.files: no empty strings when some members lack sourceLocation', () => {
     const noFile: Entity = {
-      id: 'A', name: 'A', type: 'class', visibility: 'public', members: [],
+      id: 'A',
+      name: 'A',
+      type: 'class',
+      visibility: 'public',
+      members: [],
       sourceLocation: { file: '', startLine: 0, endLine: 0 },
     };
     const arch = makeArchJSON(
       [noFile, makeEntityInFile('B', 'src/b.ts')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
-    const c = r.cycles![0];
+    const c = r.cycles[0];
     // empty string must be filtered — files must not contain ''
-    expect(c.files.every(f => f.length > 0)).toBe(true);
+    expect(c.files.every((f) => f.length > 0)).toBe(true);
     expect(c.files).toEqual(['src/b.ts']);
   });
 
@@ -469,7 +438,7 @@ describe('MetricsCalculator — cycles', () => {
     // Regression guard: computeSCCGroups must run for all levels
     const arch = makeArchJSON(
       [makeEntity('A'), makeEntity('B')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'package');
     expect(r.stronglyConnectedComponents).toBe(1); // A→B→A forms one SCC
@@ -486,13 +455,10 @@ describe('MetricsCalculator — fileStats', () => {
   const calc = new MetricsCalculator();
 
   it('single file: one FileStats entry', () => {
-    const arch = makeArchJSON(
-      [makeEntityInFile('A', 'src/a.ts', 50)],
-      [],
-    );
+    const arch = makeArchJSON([makeEntityInFile('A', 'src/a.ts', 50)], []);
     const r = calc.calculate(arch, 'class');
     expect(r.fileStats).toHaveLength(1);
-    expect(r.fileStats![0].file).toBe('src/a.ts');
+    expect(r.fileStats[0].file).toBe('src/a.ts');
   });
 
   it('entityCount === number of entities in that file', () => {
@@ -502,11 +468,11 @@ describe('MetricsCalculator — fileStats', () => {
         makeEntityInFile('B', 'src/a.ts'),
         makeEntityInFile('C', 'src/b.ts'),
       ],
-      [],
+      []
     );
     const r = calc.calculate(arch, 'class');
-    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
-    const b = r.fileStats!.find(f => f.file === 'src/b.ts')!;
+    const a = r.fileStats.find((f) => f.file === 'src/a.ts');
+    const b = r.fileStats.find((f) => f.file === 'src/b.ts');
     expect(a.entityCount).toBe(2);
     expect(b.entityCount).toBe(1);
   });
@@ -518,10 +484,10 @@ describe('MetricsCalculator — fileStats', () => {
         makeEntityInFile('B', 'src/a.ts', 80),
         makeEntityInFile('C', 'src/a.ts', 50),
       ],
-      [],
+      []
     );
     const r = calc.calculate(arch, 'class');
-    expect(r.fileStats![0].loc).toBe(80);
+    expect(r.fileStats[0].loc).toBe(80);
   });
 
   it('methodCount counts method and constructor, not property or field', () => {
@@ -532,8 +498,8 @@ describe('MetricsCalculator — fileStats', () => {
       makeMember('field'),
     ]);
     const r = calc.calculate(makeArchJSON([entity], []), 'class');
-    expect(r.fileStats![0].methodCount).toBe(2);
-    expect(r.fileStats![0].fieldCount).toBe(2);
+    expect(r.fileStats[0].methodCount).toBe(2);
+    expect(r.fileStats[0].fieldCount).toBe(2);
   });
 
   it('fieldCount counts property and field, not method or constructor', () => {
@@ -543,7 +509,7 @@ describe('MetricsCalculator — fileStats', () => {
       makeMember('method'),
     ]);
     const r = calc.calculate(makeArchJSON([entity], []), 'class');
-    expect(r.fileStats![0].fieldCount).toBe(2);
+    expect(r.fileStats[0].fieldCount).toBe(2);
   });
 
   it('inDegree: only internal relations count (external targets excluded)', () => {
@@ -551,13 +517,13 @@ describe('MetricsCalculator — fileStats', () => {
       ...makeArchJSON(
         [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/b.ts')],
         [
-          makeRelation('r1', 'B', 'A'),       // internal → counts
-          makeRelation('r2', 'Z', 'A'),       // Z external → skipped
-        ],
+          makeRelation('r1', 'B', 'A'), // internal → counts
+          makeRelation('r2', 'Z', 'A'), // Z external → skipped
+        ]
       ),
     };
     const r = calc.calculate(arch, 'class');
-    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
+    const a = r.fileStats.find((f) => f.file === 'src/a.ts');
     expect(a.inDegree).toBe(1);
   });
 
@@ -565,23 +531,23 @@ describe('MetricsCalculator — fileStats', () => {
     const arch = makeArchJSON(
       [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/b.ts')],
       [
-        makeRelation('r1', 'A', 'B'),         // internal → counts
-        makeRelation('r2', 'A', 'EXTERNAL'),  // external target → skipped
-      ],
+        makeRelation('r1', 'A', 'B'), // internal → counts
+        makeRelation('r2', 'A', 'EXTERNAL'), // external target → skipped
+      ]
     );
     const r = calc.calculate(arch, 'class');
-    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
+    const a = r.fileStats.find((f) => f.file === 'src/a.ts');
     expect(a.outDegree).toBe(1);
   });
 
   it('cycleCount: files with entities in a non-trivial SCC get count 1', () => {
     const arch = makeArchJSON(
       [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/b.ts')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
-    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
-    const b = r.fileStats!.find(f => f.file === 'src/b.ts')!;
+    const a = r.fileStats.find((f) => f.file === 'src/a.ts');
+    const b = r.fileStats.find((f) => f.file === 'src/b.ts');
     expect(a.cycleCount).toBe(1);
     expect(b.cycleCount).toBe(1);
   });
@@ -593,10 +559,10 @@ describe('MetricsCalculator — fileStats', () => {
         makeEntityInFile('B', 'src/b.ts'),
         makeEntityInFile('C', 'src/c.ts'), // C not in any cycle
       ],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
-    const c = r.fileStats!.find(f => f.file === 'src/c.ts')!;
+    const c = r.fileStats.find((f) => f.file === 'src/c.ts');
     expect(c.cycleCount).toBe(0);
   });
 
@@ -605,10 +571,10 @@ describe('MetricsCalculator — fileStats', () => {
     // cycleCount must count distinct SCCs containing the file, not entity memberships.
     const arch = makeArchJSON(
       [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/a.ts')],
-      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')]
     );
     const r = calc.calculate(arch, 'class');
-    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
+    const a = r.fileStats.find((f) => f.file === 'src/a.ts');
     expect(a.cycleCount).toBe(1); // one SCC, not two entity memberships
   });
 
@@ -616,17 +582,22 @@ describe('MetricsCalculator — fileStats', () => {
     // src/a.ts inDegree 3, src/b.ts inDegree 1
     const arch = makeArchJSON(
       [
-        makeEntityInFile('A1', 'src/a.ts'), makeEntityInFile('A2', 'src/a.ts'),
-        makeEntityInFile('B',  'src/b.ts'),
-        makeEntityInFile('C1', 'src/c.ts'), makeEntityInFile('C2', 'src/c.ts'), makeEntityInFile('C3', 'src/c.ts'),
+        makeEntityInFile('A1', 'src/a.ts'),
+        makeEntityInFile('A2', 'src/a.ts'),
+        makeEntityInFile('B', 'src/b.ts'),
+        makeEntityInFile('C1', 'src/c.ts'),
+        makeEntityInFile('C2', 'src/c.ts'),
+        makeEntityInFile('C3', 'src/c.ts'),
       ],
       [
-        makeRelation('r1', 'C1', 'A1'), makeRelation('r2', 'C2', 'A1'), makeRelation('r3', 'C3', 'A2'),
+        makeRelation('r1', 'C1', 'A1'),
+        makeRelation('r2', 'C2', 'A1'),
+        makeRelation('r3', 'C3', 'A2'),
         makeRelation('r4', 'C1', 'B'),
-      ],
+      ]
     );
     const r = calc.calculate(arch, 'class');
-    const files = r.fileStats!.map(f => f.file);
+    const files = r.fileStats.map((f) => f.file);
     expect(files[0]).toBe('src/a.ts'); // inDegree 3
     expect(files[1]).toBe('src/b.ts'); // inDegree 1
     expect(files[2]).toBe('src/c.ts'); // inDegree 0
@@ -654,25 +625,26 @@ describe('MetricsCalculator — fileStats', () => {
 
   it('C++ absolute path normalised via workspaceRoot', () => {
     const arch: ArchJSON = {
-      ...makeArchJSON(
-        [makeEntityInFile('Foo', '/home/user/proj/src/foo.cpp', 20)],
-        [],
-      ),
+      ...makeArchJSON([makeEntityInFile('Foo', '/home/user/proj/src/foo.cpp', 20)], []),
       workspaceRoot: '/home/user/proj',
     };
     const r = calc.calculate(arch, 'class');
-    expect(r.fileStats![0].file).toBe('src/foo.cpp');
+    expect(r.fileStats[0].file).toBe('src/foo.cpp');
   });
 
   it('entity without sourceLocation file is skipped gracefully', () => {
     const broken: Entity = {
-      id: 'X', name: 'X', type: 'class', visibility: 'public', members: [],
+      id: 'X',
+      name: 'X',
+      type: 'class',
+      visibility: 'public',
+      members: [],
       sourceLocation: { file: '', startLine: 0, endLine: 0 },
     };
     const arch = makeArchJSON([broken, makeEntityInFile('A', 'src/a.ts')], []);
     expect(() => calc.calculate(arch, 'class')).not.toThrow();
     // broken entity (empty file) is skipped; only src/a.ts appears
     const r = calc.calculate(arch, 'class');
-    expect(r.fileStats!.every(f => f.file.length > 0)).toBe(true);
+    expect(r.fileStats.every((f) => f.file.length > 0)).toBe(true);
   });
 });

@@ -14,7 +14,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { ArchJsonMapper } from '../../../src/plugins/golang/archjson-mapper.js';
-import type { GoRawPackage, GoRawInterface, InferredImplementation } from '../../../src/plugins/golang/types.js';
+import type {
+  GoRawPackage,
+  GoRawInterface,
+  InferredImplementation,
+} from '../../../src/plugins/golang/types.js';
 
 // ---------------------------------------------------------------------------
 // Shared fixture helpers
@@ -362,19 +366,12 @@ describe('ArchJsonMapper - mapMissingInterfaceEntities', () => {
     const entities = mapper.mapEntities([stressPkg]);
 
     // Target refers to an external package not present in the packages list
-    const impl = makeImpl(
-      'tests/stress',
-      'Runner',
-      'github.com/external/pkg',
-      'SomeInterface'
-    );
+    const impl = makeImpl('tests/stress', 'Runner', 'github.com/external/pkg', 'SomeInterface');
     const relations = mapper.mapRelations([stressPkg], [impl]);
 
     // Must not crash; external dep cannot be resolved → no new entity added
     expect(() => {
-      const missing = (mapper as any).mapMissingInterfaceEntities(entities, relations, [
-        stressPkg,
-      ]);
+      const missing = (mapper as any).mapMissingInterfaceEntities(entities, relations, [stressPkg]);
       expect(missing).toHaveLength(0);
     }).not.toThrow();
   });

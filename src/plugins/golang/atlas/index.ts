@@ -39,7 +39,7 @@ function inferBodyStrategy(
   explicit?: 'none' | 'selective' | 'full'
 ): 'none' | 'selective' | 'full' {
   if (explicit) return explicit;
-  const needsBody = layers.some(l => l === 'goroutine' || l === 'flow');
+  const needsBody = layers.some((l) => l === 'goroutine' || l === 'flow');
   return needsBody ? 'selective' : 'none';
 }
 
@@ -130,7 +130,7 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
 
     // Atlas mode: get base ArchJSON + generate Atlas extension
     const baseArchJSON = await this.goPlugin.parseProject(workspaceRoot, config);
-    const layers = (atlasConfig?.layers ?? ['package', 'capability', 'goroutine', 'flow']) as AtlasLayer[];
+    const layers = atlasConfig?.layers ?? ['package', 'capability', 'goroutine', 'flow'];
     const functionBodyStrategy = inferBodyStrategy(layers, atlasConfig?.functionBodyStrategy);
     const atlas = await this.generateAtlas(workspaceRoot, {
       functionBodyStrategy,
@@ -208,7 +208,7 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     if (flowGraph.entryPoints.length === 0) {
       warnings.push(
         `Flow graph: no entry points detected. Frameworks found: ${[...detectedFrameworks].join(', ')}. ` +
-        `Add 'customFrameworks' or 'entryPoints' to archguard.config.json to configure detection.`
+          `Add 'customFrameworks' or 'entryPoints' to archguard.config.json to configure detection.`
       );
     }
 

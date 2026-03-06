@@ -6,7 +6,11 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import type { Dependency, DependencyScope, IDependencyExtractor } from '@/core/interfaces/dependency.js';
+import type {
+  Dependency,
+  DependencyScope,
+  IDependencyExtractor,
+} from '@/core/interfaces/dependency.js';
 
 /**
  * Java-specific dependency scopes

@@ -13,7 +13,7 @@ export class CppPackageFlowchartGenerator {
     }
 
     const lines: string[] = [
-      '%%{init: {\'flowchart\': {\'nodeSpacing\': 50, \'rankSpacing\': 80}}}%%',
+      "%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%",
       'flowchart LR',
     ];
 
@@ -28,8 +28,8 @@ export class CppPackageFlowchartGenerator {
     }
 
     // Edge declarations
-    const entityIds = new Set(entities.map(e => sanitize(e.id || e.name)));
-    for (const rel of (relations ?? [])) {
+    const entityIds = new Set(entities.map((e) => sanitize(e.id || e.name)));
+    for (const rel of relations ?? []) {
       const srcId = sanitize(rel.source);
       const tgtId = sanitize(rel.target);
       // Only render edges where both ends are known nodes

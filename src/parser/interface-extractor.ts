@@ -3,11 +3,7 @@
  * Story 3: Interface & Enum Support
  */
 
-import {
-  type InterfaceDeclaration,
-  type PropertySignature,
-  type MethodSignature,
-} from 'ts-morph';
+import { type InterfaceDeclaration, type PropertySignature, type MethodSignature } from 'ts-morph';
 import type { Entity, Member, Parameter } from '@/types';
 import { ParseError } from './errors.js';
 import { BaseExtractor } from './base-extractor.js';
@@ -16,7 +12,6 @@ import { BaseExtractor } from './base-extractor.js';
  * Extracts interface entities from TypeScript code using ts-morph
  */
 export class InterfaceExtractor extends BaseExtractor {
-
   /**
    * Extract interface entity from TypeScript code
    * @param code - TypeScript source code string

@@ -1,5 +1,11 @@
 import type { GoRawData } from '../types.js';
-import type { PackageGraph, CapabilityGraph, GoroutineTopology, FlowGraph, FlowBuildOptions } from './types.js';
+import type {
+  PackageGraph,
+  CapabilityGraph,
+  GoroutineTopology,
+  FlowGraph,
+  FlowBuildOptions,
+} from './types.js';
 import type { AtlasGenerationOptions } from './types.js';
 import {
   PackageGraphBuilder,

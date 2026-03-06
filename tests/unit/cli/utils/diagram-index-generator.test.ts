@@ -11,14 +11,13 @@ import fs from 'fs-extra';
 
 const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-idx-'));
 
-const baseConfig = (outputDir: string): GlobalConfig =>
-  ({ outputDir } as GlobalConfig);
+const baseConfig = (outputDir: string): GlobalConfig => ({ outputDir }) as GlobalConfig;
 
 const makeResult = (
   name: string,
   level: ArchJSONMetrics['level'],
   fileStats?: FileStats[],
-  cycles?: CycleInfo[],
+  cycles?: CycleInfo[]
 ): DiagramResult => ({
   name,
   success: true,
@@ -60,7 +59,9 @@ describe('DiagramIndexGenerator — stats tables', () => {
   it('no metrics in any result: no stats sections in index.md', async () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));
-    await gen.generate([{ name: 'pkg', success: true, stats: { entities: 1, relations: 0, parseTime: 0 } }]);
+    await gen.generate([
+      { name: 'pkg', success: true, stats: { entities: 1, relations: 0, parseTime: 0 } },
+    ]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
     expect(content).not.toContain('## File Statistics');
     expect(content).not.toContain('## Circular Dependencies');
@@ -81,9 +82,7 @@ describe('DiagramIndexGenerator — stats tables', () => {
   it('class-level metrics: File Statistics section appears', async () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));
-    await gen.generate([
-      makeResult('cls', 'class', [makeFileStats('src/a.ts')], []),
-    ]);
+    await gen.generate([makeResult('cls', 'class', [makeFileStats('src/a.ts')], [])]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
     expect(content).toContain('## File Statistics');
     expect(content).toContain('src/a.ts');
@@ -94,9 +93,11 @@ describe('DiagramIndexGenerator — stats tables', () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));
     await gen.generate([
-      makeResult('cls', 'class',
+      makeResult(
+        'cls',
+        'class',
         [makeFileStats('src/a.ts')],
-        [makeCycle(2, ['src/a.ts', 'src/b.ts'], ['A', 'B'])],
+        [makeCycle(2, ['src/a.ts', 'src/b.ts'], ['A', 'B'])]
       ),
     ]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
@@ -142,7 +143,7 @@ describe('DiagramIndexGenerator — stats tables', () => {
     const gen = new DiagramIndexGenerator(baseConfig(dir));
     await gen.generate([
       makeResult('method-diag', 'method', [makeFileStats('src/x.ts')], []),
-      makeResult('class-diag',  'class',  [makeFileStats('src/y.ts')], []),
+      makeResult('class-diag', 'class', [makeFileStats('src/y.ts')], []),
     ]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
     expect(content).toContain('src/y.ts');
@@ -164,9 +165,9 @@ describe('DiagramIndexGenerator — stats tables', () => {
     const gen = new DiagramIndexGenerator(baseConfig(dir));
     await gen.generate([makeResult('cls', 'class', [makeFileStats('src/a.ts')], [])]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
-    const diagramsIdx    = content.indexOf('## Diagrams');
-    const fileStatsIdx   = content.indexOf('## File Statistics');
-    const circularIdx    = content.indexOf('## Circular Dependencies');
+    const diagramsIdx = content.indexOf('## Diagrams');
+    const fileStatsIdx = content.indexOf('## File Statistics');
+    const circularIdx = content.indexOf('## Circular Dependencies');
     expect(diagramsIdx).toBeGreaterThan(-1);
     expect(fileStatsIdx).toBeGreaterThan(diagramsIdx);
     expect(circularIdx).toBeGreaterThan(fileStatsIdx);
@@ -193,7 +194,7 @@ describe('DiagramIndexGenerator — stats tables', () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));
     const manyFiles = Array.from({ length: 35 }, (_, i) =>
-      makeFileStats(`src/file${String(i).padStart(2, '0')}.ts`, { inDegree: 35 - i }),
+      makeFileStats(`src/file${String(i).padStart(2, '0')}.ts`, { inDegree: 35 - i })
     );
     await gen.generate([makeResult('cls', 'class', manyFiles, [])]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');

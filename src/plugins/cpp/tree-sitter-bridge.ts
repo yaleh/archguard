@@ -150,7 +150,7 @@ export class TreeSitterBridge {
     for (const child of baseClause.children) {
       const text = child.text.toLowerCase();
       if (text === 'public' || text === 'private' || text === 'protected') {
-        currentAccess = text as 'public' | 'private' | 'protected';
+        currentAccess = text;
       } else if (
         child.type === 'type_identifier' ||
         child.type === 'qualified_identifier' ||
@@ -310,9 +310,7 @@ export class TreeSitterBridge {
   }
 
   private extractTemplateParams(templateNode: Parser.SyntaxNode): string[] {
-    const paramList = templateNode.namedChildren.find(
-      (n) => n.type === 'template_parameter_list'
-    );
+    const paramList = templateNode.namedChildren.find((n) => n.type === 'template_parameter_list');
     if (!paramList) return [];
     return paramList.namedChildren
       .filter((n) => n.type === 'type_parameter_declaration')

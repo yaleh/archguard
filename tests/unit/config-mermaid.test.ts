@@ -132,7 +132,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
         format: 'plantuml' as any,
       };
 
-      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|plantuml/);
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
       await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
     });
 
@@ -143,7 +143,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
         format: 'svg' as any,
       };
 
-      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|svg/);
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
       await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
     });
 
@@ -162,7 +162,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
         ],
       };
 
-      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|plantuml/);
+      await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
     });
   });
 

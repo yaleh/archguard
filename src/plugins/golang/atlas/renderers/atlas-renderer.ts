@@ -56,8 +56,7 @@ export class AtlasRenderer {
   }
 
   private renderJson(atlas: GoArchitectureAtlas, layer: AtlasLayer): RenderResult {
-    const layerData =
-      layer !== 'all' ? atlas.layers[layer as Exclude<AtlasLayer, 'all'>] : atlas.layers;
+    const layerData = layer !== 'all' ? atlas.layers[layer] : atlas.layers;
     return {
       content: JSON.stringify(layerData, null, 2),
       format: 'json',

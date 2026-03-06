@@ -65,7 +65,7 @@ describe('TreeSitterBridge', () => {
       const result = bridge.parseCode(code, '/my/project/colors.h');
       expect(result.enums).toHaveLength(1);
       expect(result.enums[0].sourceFile).toBe('/my/project/colors.h');
-      expect(result.enums[0].sourceFile).not.toContain('(');  // not AST dump
+      expect(result.enums[0].sourceFile).not.toContain('('); // not AST dump
     });
   });
 

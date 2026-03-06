@@ -56,8 +56,8 @@ export interface GoAtlasMetadata {
       extractedFunctionCount: number;
       totalFunctionCount: number;
     };
-    detectedFrameworks: string[];   // e.g. ['gin', 'net/http']
-    protocols?: string[];           // undefined = not filtered
+    detectedFrameworks: string[]; // e.g. ['gin', 'net/http']
+    protocols?: string[]; // undefined = not filtered
     followIndirectCalls: boolean;
     goplsEnabled: boolean;
   };
@@ -228,8 +228,8 @@ export interface FlowGraph {
 export interface EntryPoint {
   id: string;
   protocol: EntryPointProtocol;
-  method?: HttpMethod;          // only set when protocol === 'http'
-  framework: string;            // e.g. 'gin', 'net/http', 'cobra'
+  method?: HttpMethod; // only set when protocol === 'http'
+  framework: string; // e.g. 'gin', 'net/http', 'cobra'
   path: string; // HTTP path or gRPC method
   handler: string; // function id
   middleware: string[]; // middleware function ids

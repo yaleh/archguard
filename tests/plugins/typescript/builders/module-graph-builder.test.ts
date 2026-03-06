@@ -245,17 +245,14 @@ export class C {}`
     it('still creates node_modules nodes for unresolved bare package names', () => {
       // Real external packages (no leading dot) must still produce external nodes.
       const project = makeProject();
-      project.createSourceFile(
-        '/root/src/cli/index.ts',
-        `import express from 'express';`
-      );
+      project.createSourceFile('/root/src/cli/index.ts', `import express from 'express';`);
 
       const builder = new ModuleGraphBuilder();
       const graph = builder.build('/root', project.getSourceFiles(), []);
 
       const extNode = graph.nodes.find((n) => n.id === 'express');
       expect(extNode).toBeDefined();
-      expect(extNode!.type).toBe('node_modules');
+      expect(extNode.type).toBe('node_modules');
     });
   });
 
