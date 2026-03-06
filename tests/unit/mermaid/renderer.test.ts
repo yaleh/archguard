@@ -2,7 +2,7 @@
  * Unit tests for IsomorphicMermaidRenderer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -214,6 +214,23 @@ describe('IsomorphicMermaidRenderer', () => {
       expect(await fs.pathExists(paths.mmd)).toBe(true);
       expect(await fs.pathExists(paths.svg)).toBe(true);
       expect(await fs.pathExists(paths.png)).toBe(true);
+    });
+
+    it('should save patched SVG content to disk', async () => {
+      const rawSvg = `<svg><style>#id .node rect{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}</style><rect class="basic label-container" style="" width="126" height="52"></rect></svg>`;
+      const paths = {
+        mmd: path.join(tempDir, 'patched.mmd'),
+        svg: path.join(tempDir, 'patched.svg'),
+        png: path.join(tempDir, 'patched.png'),
+      };
+
+      vi.spyOn(renderer, 'renderSVG').mockResolvedValue(rawSvg);
+      vi.spyOn(renderer, 'convertSVGToPNG').mockResolvedValue(undefined);
+
+      await renderer.renderAndSave('flowchart LR\n  A --> B', paths);
+
+      const savedSvg = await fs.readFile(paths.svg, 'utf-8');
+      expect(savedSvg).toContain('style="fill:#ECECFF;stroke:#9370DB;stroke-width:1px;"');
     });
   });
 

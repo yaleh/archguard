@@ -16,14 +16,35 @@ import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
  * fill (black) instead of the CSS-specified fill:none.
  */
 export function inlineEdgeStyles(svg: string): string {
+  const flowchartLinkRuleMatch = svg.match(/\.flowchart-link[^{]*\{([^}]+)\}/);
+  let flowchartLinkFill = 'none';
+  let flowchartLinkStroke = '';
+  if (flowchartLinkRuleMatch) {
+    for (const decl of flowchartLinkRuleMatch[1].split(';')) {
+      const [rawProp, ...rawValueParts] = decl.split(':');
+      if (!rawProp || rawValueParts.length === 0) continue;
+      const prop = rawProp.trim().toLowerCase();
+      const value = rawValueParts.join(':').trim();
+      if (!value) continue;
+      if (prop === 'fill') flowchartLinkFill = value;
+      if (prop === 'stroke') flowchartLinkStroke = value;
+    }
+  }
+
   // 1. Fix edge bezier path fills: flowchart-link paths have no inline fill:none,
   //    relying on CSS which librsvg (used by sharp) doesn't apply for ID-scoped selectors.
   let result = svg.replace(
     /(<path\b[^>]*class="[^"]*\bflowchart-link\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
     (_, pre, style, post) => {
-      if (/\bfill\s*:\s*none\b/.test(style)) return _;
+      const hasFill = /\bfill\s*:/.test(style);
+      const hasStroke = /\bstroke\s*:/.test(style);
+      if (hasFill && (hasStroke || flowchartLinkStroke.length === 0)) return _;
       const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
-      return `${pre}${trimmed ? trimmed + ';' : ''}fill:none;${post}`;
+      const injected = [
+        !hasFill ? `fill:${flowchartLinkFill};` : '',
+        !hasStroke && flowchartLinkStroke ? `stroke:${flowchartLinkStroke};` : '',
+      ].join('');
+      return `${pre}${trimmed ? trimmed + ';' : ''}${injected}${post}`;
     }
   );
 
@@ -203,10 +224,12 @@ export class IsomorphicMermaidRenderer {
         fs.writeFile(paths.mmd, mermaidCode, 'utf-8'),
       ]);
 
+      const processedSvg = inlineEdgeStyles(svg);
+
       // Stage 2: write .svg and convert to PNG concurrently
       await Promise.all([
-        fs.writeFile(paths.svg, svg, 'utf-8'),
-        this.convertSVGToPNG(svg, paths.png),
+        fs.writeFile(paths.svg, processedSvg, 'utf-8'),
+        this.convertSVGToPNG(processedSvg, paths.png),
       ]);
     } catch (error) {
       throw new Error(

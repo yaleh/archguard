@@ -41,6 +41,12 @@ describe('inlineEdgeStyles', () => {
     // The rect should be unchanged
     expect(result).toContain('<rect class="node-shape" style="fill:#fff;"');
   });
+
+  it('adds stroke from .flowchart-link CSS when inline style has no stroke', () => {
+    const svg = `<svg><style>#id .flowchart-link{stroke:#333333;fill:none;}</style><path class="flowchart-link" style=";" d="M0,0 L100,100"></path></svg>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toMatch(/style="fill:none;stroke:#333333;"/);
+  });
 });
 
 describe('inlineEdgeStyles – background rect patching', () => {

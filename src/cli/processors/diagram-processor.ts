@@ -921,7 +921,7 @@ export class DiagramProcessor {
     pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
     const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
-    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+    const { IsomorphicMermaidRenderer, inlineEdgeStyles } = await import('@/mermaid/renderer.js');
 
     const atlas = archJSON.extensions.goAtlas;
     const renderer = new AtlasRenderer();
@@ -990,10 +990,12 @@ export class DiagramProcessor {
           svg = await mermaidRenderer.renderSVG(result.content);
         }
 
+        const processedSvg =
+          typeof inlineEdgeStyles === 'function' ? inlineEdgeStyles(svg) : svg;
         let pngFailed = false;
         await Promise.all([
-          fs.writeFile(layerPaths.svg, svg, 'utf-8'),
-          mermaidRenderer.convertSVGToPNG(svg, layerPaths.png).catch((err: unknown) => {
+          fs.writeFile(layerPaths.svg, processedSvg, 'utf-8'),
+          mermaidRenderer.convertSVGToPNG(processedSvg, layerPaths.png).catch((err: unknown) => {
             const msg = err instanceof Error ? err.message : String(err);
             console.warn(`  ⚠️  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
             pngFailed = true;
@@ -1029,7 +1031,7 @@ export class DiagramProcessor {
     pool: MermaidRenderWorkerPool | null = null
   ): Promise<void> {
     const { renderTsModuleGraph } = await import('@/mermaid/ts-module-graph-renderer.js');
-    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+    const { IsomorphicMermaidRenderer, inlineEdgeStyles } = await import('@/mermaid/renderer.js');
 
     const moduleGraph = archJSON.extensions.tsAnalysis.moduleGraph;
     const mmdContent = renderTsModuleGraph(moduleGraph);
@@ -1064,9 +1066,10 @@ export class DiagramProcessor {
       svg = await mermaidRenderer.renderSVG(mmdContent);
     }
 
+    const processedSvg = typeof inlineEdgeStyles === 'function' ? inlineEdgeStyles(svg) : svg;
     await Promise.all([
-      fs.writeFile(paths.paths.svg, svg, 'utf-8'),
-      mermaidRenderer.convertSVGToPNG(svg, paths.paths.png).catch((err: unknown) => {
+      fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
+      mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
       }),
@@ -1092,7 +1095,7 @@ export class DiagramProcessor {
   ): Promise<void> {
     const { CppPackageFlowchartGenerator } =
       await import('@/mermaid/cpp-package-flowchart-generator.js');
-    const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+    const { IsomorphicMermaidRenderer, inlineEdgeStyles } = await import('@/mermaid/renderer.js');
 
     const generator = new CppPackageFlowchartGenerator();
     const mmdContent = generator.generate(archJSON);
@@ -1127,9 +1130,10 @@ export class DiagramProcessor {
       svg = await mermaidRenderer.renderSVG(mmdContent);
     }
 
+    const processedSvg = typeof inlineEdgeStyles === 'function' ? inlineEdgeStyles(svg) : svg;
     await Promise.all([
-      fs.writeFile(paths.paths.svg, svg, 'utf-8'),
-      mermaidRenderer.convertSVGToPNG(svg, paths.paths.png).catch((err: unknown) => {
+      fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
+      mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`  C++ package graph PNG skipped (${msg}) — MMD + SVG saved`);
       }),
