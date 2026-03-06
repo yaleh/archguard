@@ -503,6 +503,7 @@ Quick fixes:
 - **Go interface detection low** — install gopls: `go install golang.org/x/tools/gopls@latest`
 - **Slow first run** — normal; subsequent runs use cache (80%+ hit rate)
 - **Render errors** — the five-layer validator auto-repairs most issues; run with `-v` for details
+- **Install fails on macOS arm64 + Node.js 25** — `tree-sitter` native addon compilation requires C++20; use `npm install -g @yalehwang/archguard --ignore-scripts` to skip native build (JS functionality unaffected), or use Node.js 22 LTS
 
 ## Documentation
 
