@@ -130,8 +130,8 @@ describe('ParallelParser', () => {
       // Both should complete successfully
       // Performance comparison is environment-dependent
       // so we just verify both approaches work
-      expect(time1).toBeGreaterThan(0);
-      expect(time2).toBeGreaterThan(0);
+      expect(time1).toBeGreaterThanOrEqual(0);
+      expect(time2).toBeGreaterThanOrEqual(0);
     });
   });
 

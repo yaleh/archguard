@@ -37,7 +37,7 @@ export default defineConfig({
     pool: 'forks',        // Native modules (tree-sitter, sharp) require process isolation
     poolOptions: {
       forks: {
-        singleFork: false,
+        singleFork: true,
         isolate: true,
       }
     },

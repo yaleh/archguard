@@ -3,7 +3,7 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CacheManager } from '@/cli/cache-manager';
 import fs from 'fs-extra';
 import path from 'path';
@@ -230,7 +230,12 @@ describe('Story 3: Cache Mechanism', () => {
   });
 
   describe('TTL Support', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should check if cache entry is expired', async () => {
+      vi.useFakeTimers();
       const filePath = 'src/test.ts';
       const hash = 'testhash';
       const data = { entities: [] };
@@ -242,8 +247,8 @@ describe('Story 3: Cache Mechanism', () => {
       let cached = await cache.get(filePath, hash);
       expect(cached).toEqual(data);
 
-      // Wait for TTL to expire
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      // Advance fake clock by 1100ms so TTL expires
+      vi.setSystemTime(Date.now() + 1100);
 
       // Should be expired now
       cached = await cache.get(filePath, hash);

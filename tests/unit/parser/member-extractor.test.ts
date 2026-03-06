@@ -3,16 +3,12 @@
  * Testing methods, properties, and constructors
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
 
+const extractor = new ClassExtractor();
+
 describe('ClassExtractor - Methods', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract simple method', () => {
     const code = `
       class UserService {
@@ -139,12 +135,6 @@ describe('ClassExtractor - Methods', () => {
 });
 
 describe('ClassExtractor - Properties', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract simple property', () => {
     const code = `
       class User {
@@ -219,12 +209,6 @@ describe('ClassExtractor - Properties', () => {
 });
 
 describe('ClassExtractor - Constructors', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract constructor', () => {
     const code = `
       class User {
@@ -277,12 +261,6 @@ describe('ClassExtractor - Constructors', () => {
 });
 
 describe('ClassExtractor - Mixed Members', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract all member types together', () => {
     const code = `
       class UserService {

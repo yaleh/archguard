@@ -9,13 +9,13 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { TypeScriptParser } from '@/parser/typescript-parser';
 
+let sharedParser: TypeScriptParser;
+
+beforeAll(() => {
+  sharedParser = new TypeScriptParser();
+});
+
 describe('TypeScriptParser - Single File', () => {
-  let parser: TypeScriptParser;
-
-  beforeAll(() => {
-    parser = new TypeScriptParser();
-  });
-
   it('should parse a simple class file', () => {
     const code = `
       export class User {
@@ -33,7 +33,7 @@ describe('TypeScriptParser - Single File', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.version).toBe('1.0');
     expect(result.language).toBe('typescript');
@@ -59,7 +59,7 @@ describe('TypeScriptParser - Single File', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.entities).toHaveLength(3);
 
@@ -91,7 +91,7 @@ describe('TypeScriptParser - Single File', () => {
       export class User {}
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.relations.length).toBeGreaterThan(0);
 
@@ -108,12 +108,6 @@ describe('TypeScriptParser - Single File', () => {
 });
 
 describe('TypeScriptParser - JSON Serialization', () => {
-  let parser: TypeScriptParser;
-
-  beforeAll(() => {
-    parser = new TypeScriptParser();
-  });
-
   it('should generate valid JSON', () => {
     const code = `
       export class User {
@@ -121,7 +115,7 @@ describe('TypeScriptParser - JSON Serialization', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
     const json = JSON.stringify(result);
 
     // Verify JSON is valid
@@ -140,7 +134,7 @@ describe('TypeScriptParser - JSON Serialization', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result).toHaveProperty('version');
     expect(result).toHaveProperty('language');
@@ -152,12 +146,6 @@ describe('TypeScriptParser - JSON Serialization', () => {
 });
 
 describe('TypeScriptParser - Complex Scenarios', () => {
-  let parser: TypeScriptParser;
-
-  beforeAll(() => {
-    parser = new TypeScriptParser();
-  });
-
   it('should handle decorators', () => {
     const code = `
       @Injectable()
@@ -171,7 +159,7 @@ describe('TypeScriptParser - Complex Scenarios', () => {
       export class User {}
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     const userService = result.entities.find((e) => e.name === 'UserService');
     expect(userService?.decorators).toHaveLength(1);
@@ -197,7 +185,7 @@ describe('TypeScriptParser - Complex Scenarios', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     const container = result.entities.find((e) => e.name === 'Container');
     expect(container?.genericParams).toEqual(['T']);
@@ -217,7 +205,7 @@ describe('TypeScriptParser - Complex Scenarios', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     const baseService = result.entities.find((e) => e.name === 'BaseService');
     expect(baseService?.isAbstract).toBe(true);
@@ -236,7 +224,7 @@ describe('TypeScriptParser - Complex Scenarios', () => {
       }
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     const direction = result.entities.find((e) => e.name === 'Direction');
     expect(direction?.isConst).toBe(true);
@@ -244,16 +232,10 @@ describe('TypeScriptParser - Complex Scenarios', () => {
 });
 
 describe('TypeScriptParser - Empty Cases', () => {
-  let parser: TypeScriptParser;
-
-  beforeAll(() => {
-    parser = new TypeScriptParser();
-  });
-
   it('should handle empty code', () => {
     const code = '';
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.entities).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
@@ -264,7 +246,7 @@ describe('TypeScriptParser - Empty Cases', () => {
       import { Something } from 'somewhere';
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.entities).toHaveLength(0);
   });
@@ -275,7 +257,7 @@ describe('TypeScriptParser - Empty Cases', () => {
       export const y = 2;
     `;
 
-    const result = parser.parseCode(code);
+    const result = sharedParser.parseCode(code);
 
     expect(result.entities).toHaveLength(0);
   });

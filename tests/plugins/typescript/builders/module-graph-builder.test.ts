@@ -5,7 +5,7 @@
  * All tests must FAIL before implementation exists.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Project } from 'ts-morph';
 import type { Entity } from '@/types/index.js';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
@@ -18,9 +18,21 @@ function makeProject(): Project {
 }
 
 describe('ModuleGraphBuilder', () => {
+  let project: Project;
+
+  beforeAll(() => {
+    project = new Project({
+      useInMemoryFileSystem: true,
+      compilerOptions: { target: 99 },
+    });
+  });
+
+  beforeEach(() => {
+    project.getSourceFiles().forEach((sf) => project.removeSourceFile(sf));
+  });
+
   describe('basic graph construction', () => {
     it('creates two module nodes and one edge when one file imports from another directory', () => {
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/cli/index.ts',
         `import { parseProject } from '../parser/index';`
@@ -41,7 +53,6 @@ describe('ModuleGraphBuilder', () => {
     });
 
     it('accumulates strength=2 when two files in the same module both import from another module', () => {
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/cli/cmd-a.ts',
         `import { ConfigType } from '../types/index';`
@@ -67,7 +78,6 @@ export interface ParseConfig {}`
     });
 
     it('creates node_modules type node for external package imports', () => {
-      const project = makeProject();
       project.createSourceFile('/root/src/cli/index.ts', `import path from 'path';`);
 
       const builder = new ModuleGraphBuilder();
@@ -82,7 +92,6 @@ export interface ParseConfig {}`
     });
 
     it('returns only nodes and empty edges/cycles when no imports exist', () => {
-      const project = makeProject();
       project.createSourceFile('/root/src/parser/index.ts', `export function parse() {}`);
 
       const builder = new ModuleGraphBuilder();
@@ -96,7 +105,6 @@ export interface ParseConfig {}`
 
   describe('cycle detection', () => {
     it('detects a 2-module cycle and reports severity: warning', () => {
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/a/index.ts',
         `import { B } from '../b/index';
@@ -118,7 +126,6 @@ export class B {}`
     });
 
     it('detects a 3-module cycle and reports severity: error', () => {
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/a/index.ts',
         `import { C } from '../c/index';
@@ -146,7 +153,6 @@ export class C {}`
 
   describe('stats computation', () => {
     it('counts stats.classes from entities whose id starts with module path prefix', () => {
-      const project = makeProject();
       project.createSourceFile('/root/src/cli/index.ts', `export class CliRunner {}`);
 
       const entities: Entity[] = [
@@ -185,7 +191,6 @@ export class C {}`
 
   describe('edge deduplication', () => {
     it('deduplicates importedNames across multiple imports from the same module', () => {
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/cli/cmd.ts',
         `import { ConfigType, ConfigType } from '../types/index';`
@@ -209,7 +214,6 @@ export class C {}`
       // Scenario: a file imports from './missing-file' which does not exist in the project.
       // ts-morph cannot resolve it → previously fell into the "unresolved" branch and
       // created an external node with id "." (first segment of the specifier).
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/utils/foo.ts',
         `import config from './app-config';` // app-config.ts does not exist
@@ -229,7 +233,6 @@ export class C {}`
 
     it('does not create a phantom node for unresolved bare-dot specifier', () => {
       // Scenario: import from '.' — a relative self-reference that fails to resolve.
-      const project = makeProject();
       project.createSourceFile(
         '/root/src/example/index.ts',
         `import { foo } from '.';` // resolves to nothing in this in-memory project
@@ -244,7 +247,6 @@ export class C {}`
 
     it('still creates node_modules nodes for unresolved bare package names', () => {
       // Real external packages (no leading dot) must still produce external nodes.
-      const project = makeProject();
       project.createSourceFile('/root/src/cli/index.ts', `import express from 'express';`);
 
       const builder = new ModuleGraphBuilder();
@@ -258,7 +260,6 @@ export class C {}`
 
   describe('module ID assignment', () => {
     it('assigns root-level files to root module id', () => {
-      const project = makeProject();
       project.createSourceFile('/root/index.ts', `export function main() {}`);
 
       const builder = new ModuleGraphBuilder();
@@ -271,7 +272,6 @@ export class C {}`
     });
 
     it('assigns files in the same directory to the same module node', () => {
-      const project = makeProject();
       project.createSourceFile('/root/src/cli/a.ts', `export class A {}`);
       project.createSourceFile('/root/src/cli/b.ts', `export class B {}`);
 

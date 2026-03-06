@@ -3,16 +3,12 @@
  * Testing decorator extraction from classes, methods, and properties
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ClassExtractor } from '@/parser/class-extractor';
 
+const extractor = new ClassExtractor();
+
 describe('Decorator Extraction - Class Decorators', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract simple class decorator', () => {
     const code = `
       @Injectable()
@@ -70,12 +66,6 @@ describe('Decorator Extraction - Class Decorators', () => {
 });
 
 describe('Decorator Extraction - Method Decorators', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract method decorators', () => {
     const code = `
       class UserService {
@@ -114,12 +104,6 @@ describe('Decorator Extraction - Method Decorators', () => {
 });
 
 describe('Decorator Extraction - Property Decorators', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract property decorators', () => {
     const code = `
       class User {
@@ -152,12 +136,6 @@ describe('Decorator Extraction - Property Decorators', () => {
 });
 
 describe('Decorator Extraction - Mixed', () => {
-  let extractor: ClassExtractor;
-
-  beforeAll(() => {
-    extractor = new ClassExtractor();
-  });
-
   it('should extract decorators from class, properties, and methods', () => {
     const code = `
       @Injectable()

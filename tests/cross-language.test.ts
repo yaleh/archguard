@@ -7,7 +7,7 @@
  * Based on Proposal 03 §6.3-6.4 for multi-language support
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { PluginRegistry } from '@/core/plugin-registry.js';
@@ -52,7 +52,7 @@ describe('Cross-Language Consistency', () => {
   let typescriptPlugin: TypeScriptPlugin;
   let goPlugin: GoPlugin;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Initialize plugins
     typescriptPlugin = new TypeScriptPlugin();
     goPlugin = new GoPlugin();
@@ -66,7 +66,7 @@ describe('Cross-Language Consistency', () => {
     registry.register(goPlugin);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     // Cleanup plugins
     await typescriptPlugin.dispose();
     await goPlugin.dispose();

@@ -3,17 +3,13 @@
  * Testing interface and enum extraction
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { InterfaceExtractor } from '@/parser/interface-extractor';
 import { ParseError } from '@/parser/errors';
 
+const extractor = new InterfaceExtractor();
+
 describe('InterfaceExtractor - Simple Interfaces', () => {
-  let extractor: InterfaceExtractor;
-
-  beforeAll(() => {
-    extractor = new InterfaceExtractor();
-  });
-
   it('should extract simple interface', () => {
     const code = `
       interface User {
@@ -131,12 +127,6 @@ describe('InterfaceExtractor - Simple Interfaces', () => {
 });
 
 describe('InterfaceExtractor - Complex Interfaces', () => {
-  let extractor: InterfaceExtractor;
-
-  beforeAll(() => {
-    extractor = new InterfaceExtractor();
-  });
-
   it('should handle mixed property and method signatures', () => {
     const code = `
       interface Repository<T> {
@@ -175,12 +165,6 @@ describe('InterfaceExtractor - Complex Interfaces', () => {
 });
 
 describe('InterfaceExtractor - File-scoped entity IDs (A-1 TDD)', () => {
-  let extractor: InterfaceExtractor;
-
-  beforeAll(() => {
-    extractor = new InterfaceExtractor();
-  });
-
   it('should produce distinct IDs for same interface name in different files', () => {
     const code = 'export interface IConfig {}';
 
@@ -202,12 +186,6 @@ describe('InterfaceExtractor - File-scoped entity IDs (A-1 TDD)', () => {
 });
 
 describe('InterfaceExtractor - Error handling', () => {
-  let extractor: InterfaceExtractor;
-
-  beforeAll(() => {
-    extractor = new InterfaceExtractor();
-  });
-
   it('should throw ParseError when no interface is found', () => {
     expect(() => extractor.extract('const x = 1;', 'src/no-interface.ts')).toThrow(ParseError);
   });

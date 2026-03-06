@@ -494,30 +494,40 @@ describe('DiagramProcessor', () => {
   });
 
   describe('processAll', () => {
+    let FileDiscoveryService: any;
+    let ParallelParser: any;
+    let ArchJSONAggregator: any;
+    let OutputPathResolver: any;
+    let MermaidDiagramGenerator: any;
+
+    beforeEach(async () => {
+      ({ FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js'));
+      ({ ParallelParser } = await import('@/parser/parallel-parser.js'));
+      ({ ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js'));
+      ({ OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js'));
+      ({ MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js'));
+    });
+
     it('should process single diagram successfully', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -535,7 +545,6 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
         generateAndRender: mockGenerateAndRender,
@@ -560,28 +569,24 @@ describe('DiagramProcessor', () => {
 
     it('should process multiple diagrams independently', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi
         .fn()
         .mockReturnValueOnce({
@@ -631,7 +636,6 @@ describe('DiagramProcessor', () => {
 
     it('should handle diagram processing failure without affecting others', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockImplementation(({ sources }: { sources: string[] }) => {
         // Fail for module2, succeed for others
         if (sources.includes('./src/module2')) {
@@ -644,21 +648,18 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -676,7 +677,6 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
         generateAndRender: mockGenerateAndRender,
@@ -707,28 +707,24 @@ describe('DiagramProcessor', () => {
 
     it('should correctly apply level aggregation', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -746,7 +742,6 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
         generateAndRender: mockGenerateAndRender,
@@ -772,28 +767,24 @@ describe('DiagramProcessor', () => {
 
     it('should support different output formats', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -811,7 +802,6 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
         generateAndRender: mockGenerateAndRender,
@@ -840,14 +830,12 @@ describe('DiagramProcessor', () => {
 
     it('should report detailed statistics', async () => {
       // Mock FileDiscoveryService
-      const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
-      const { ParallelParser } = await import('@/parser/parallel-parser.js');
       const testArchJSON = createTestArchJSON();
       testArchJSON.entities = [
         testArchJSON.entities[0],
@@ -867,14 +855,12 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
       (ArchJSONAggregator as any).mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
       // Mock OutputPathResolver
-      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       const mockResolve = vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -892,7 +878,6 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
         generateAndRender: mockGenerateAndRender,
