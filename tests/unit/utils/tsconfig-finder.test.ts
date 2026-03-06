@@ -83,7 +83,10 @@ describe('loadPathAliases', () => {
 
   it('returns undefined when tsconfig has no paths or baseUrl', () => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-finder-'));
-    writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ESNext' } }));
+    writeFileSync(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({ compilerOptions: { target: 'ESNext' } })
+    );
 
     const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
 
