@@ -60,6 +60,7 @@ vi.mock('@/mermaid/ts-module-graph-renderer.js', () => ({
 }));
 
 vi.mock('@/mermaid/renderer.js', () => ({
+  inlineEdgeStyles: vi.fn().mockImplementation((svg: string) => svg),
   IsomorphicMermaidRenderer: vi.fn().mockImplementation(() => ({
     renderSVG: vi.fn().mockResolvedValue('<svg/>'),
     renderPNG: vi.fn().mockResolvedValue(undefined),
