@@ -4,9 +4,8 @@
  * Uses tree-sitter-python to parse Python source code into raw AST data
  */
 
-import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-python doesn't have proper type definitions
-import Python from 'tree-sitter-python';
+import { Parser, Node } from 'web-tree-sitter';
+import { initTreeSitter, loadLanguage } from '../shared/wasm-loader.js';
 import path from 'path';
 import type {
   PythonRawModule,
@@ -19,12 +18,17 @@ import type {
 } from './types.js';
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private parser!: Parser;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-ignore - tree-sitter-python language definition compatibility
-    this.parser.setLanguage(Python);
+  private constructor() {}
+
+  static async create(): Promise<TreeSitterBridge> {
+    const bridge = new TreeSitterBridge();
+    await initTreeSitter();
+    const lang = await loadLanguage('tree-sitter-python', 'tree-sitter-python.wasm');
+    bridge.parser = new Parser();
+    bridge.parser.setLanguage(lang);
+    return bridge;
   }
 
   /**
@@ -100,7 +104,7 @@ export class TreeSitterBridge {
    * Extract class definition
    */
   private extractClass(
-    node: Parser.SyntaxNode,
+    node: Node,
     moduleName: string,
     code: string,
     filePath: string
@@ -177,7 +181,7 @@ export class TreeSitterBridge {
   /**
    * Extract method definition
    */
-  private extractMethod(node: Parser.SyntaxNode, code: string): PythonRawMethod | null {
+  private extractMethod(node: Node, code: string): PythonRawMethod | null {
     const nameNode = node.childForFieldName('name');
     if (!nameNode) return null;
 
@@ -219,7 +223,7 @@ export class TreeSitterBridge {
    * Extract function definition
    */
   private extractFunction(
-    node: Parser.SyntaxNode,
+    node: Node,
     moduleName: string,
     code: string,
     filePath: string
@@ -259,7 +263,7 @@ export class TreeSitterBridge {
   /**
    * Extract function/method parameters
    */
-  private extractParameters(node: Parser.SyntaxNode, code: string): PythonRawParameter[] {
+  private extractParameters(node: Node, code: string): PythonRawParameter[] {
     const parameters: PythonRawParameter[] = [];
     const paramsNode = node.childForFieldName('parameters');
 
@@ -352,7 +356,7 @@ export class TreeSitterBridge {
   /**
    * Extract return type annotation
    */
-  private extractReturnType(node: Parser.SyntaxNode, code: string): string | undefined {
+  private extractReturnType(node: Node, code: string): string | undefined {
     const returnTypeNode = node.childForFieldName('return_type');
     if (!returnTypeNode) return undefined;
 
@@ -362,7 +366,7 @@ export class TreeSitterBridge {
   /**
    * Extract decorators from decorated_definition
    */
-  private extractDecorators(node: Parser.SyntaxNode, code: string): PythonRawDecorator[] {
+  private extractDecorators(node: Node, code: string): PythonRawDecorator[] {
     const decorators: PythonRawDecorator[] = [];
 
     for (const child of node.children) {
@@ -402,7 +406,7 @@ export class TreeSitterBridge {
   /**
    * Extract docstring from body
    */
-  private extractDocstring(bodyNode: Parser.SyntaxNode | null, code: string): string | undefined {
+  private extractDocstring(bodyNode: Node | null, code: string): string | undefined {
     if (!bodyNode) return undefined;
 
     // Look for first expression_statement containing a string
@@ -436,7 +440,7 @@ export class TreeSitterBridge {
   /**
    * Extract import statement
    */
-  private extractImport(node: Parser.SyntaxNode, code: string): PythonRawImport | null {
+  private extractImport(node: Node, code: string): PythonRawImport | null {
     try {
       if (node.type === 'import_statement') {
         // import module [as alias]

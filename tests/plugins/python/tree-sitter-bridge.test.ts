@@ -9,8 +9,8 @@ import path from 'path';
 describe('PythonTreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = await TreeSitterBridge.create();
   });
 
   describe('Simple class parsing', () => {

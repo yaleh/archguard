@@ -58,12 +58,12 @@
     "p-map": "^7.0.4",
     "pino": "^8.17.0",
     "sharp": "^0.34.5",
-    "tree-sitter": "^0.25.0",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",
     "tree-sitter-java": "^0.23.5",
     "tree-sitter-python": "^0.25.0",
-    "ts-morph": "^21.0.0"
+    "ts-morph": "^21.0.0",
+    "web-tree-sitter": "^0.26.6"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.6",

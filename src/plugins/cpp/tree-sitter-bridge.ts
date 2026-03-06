@@ -1,21 +1,26 @@
 /**
  * Tree-sitter bridge for C++ language parsing
  */
-import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-cpp doesn't have proper type definitions
-import Cpp from 'tree-sitter-cpp';
+import { Parser, Node } from 'web-tree-sitter';
+import { initTreeSitter, loadLanguage } from '../shared/wasm-loader.js';
 import { ClassBuilder } from './builders/class-builder.js';
 import type { RawCppFile, RawClass, RawEnum, RawFunction } from './types.js';
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private parser!: Parser;
   private classBuilder: ClassBuilder;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-ignore - tree-sitter-cpp language definition compatibility
-    this.parser.setLanguage(Cpp);
+  private constructor() {
     this.classBuilder = new ClassBuilder();
+  }
+
+  static async create(): Promise<TreeSitterBridge> {
+    const bridge = new TreeSitterBridge();
+    await initTreeSitter();
+    const lang = await loadLanguage('tree-sitter-cpp', 'tree-sitter-cpp.wasm');
+    bridge.parser = new Parser();
+    bridge.parser.setLanguage(lang);
+    return bridge;
   }
 
   parseCode(code: string, filePath: string): RawCppFile {
@@ -34,7 +39,7 @@ export class TreeSitterBridge {
     };
   }
 
-  private extractTopLevelNamespace(root: Parser.SyntaxNode): string {
+  private extractTopLevelNamespace(root: Node): string {
     for (const child of root.namedChildren) {
       if (child.type === 'namespace_definition') {
         const nameNode = child.childForFieldName('name');
@@ -45,7 +50,7 @@ export class TreeSitterBridge {
   }
 
   private extractClasses(
-    root: Parser.SyntaxNode,
+    root: Node,
     filePath: string,
     fileNamespace: string
   ): RawClass[] {
@@ -55,7 +60,7 @@ export class TreeSitterBridge {
   }
 
   private visitForClasses(
-    node: Parser.SyntaxNode,
+    node: Node,
     filePath: string,
     fileNamespace: string,
     currentNs: string,
@@ -110,7 +115,7 @@ export class TreeSitterBridge {
   }
 
   private extractOneClass(
-    node: Parser.SyntaxNode,
+    node: Node,
     filePath: string,
     currentNs: string
   ): RawClass | null {
@@ -140,7 +145,7 @@ export class TreeSitterBridge {
     };
   }
 
-  private extractBases(classNode: Parser.SyntaxNode): RawClass['bases'] {
+  private extractBases(classNode: Node): RawClass['bases'] {
     const bases: RawClass['bases'] = [];
     const baseClause = classNode.namedChildren.find((n) => n.type === 'base_class_clause');
     if (!baseClause) return bases;
@@ -165,14 +170,14 @@ export class TreeSitterBridge {
     return bases;
   }
 
-  private extractEnums(root: Parser.SyntaxNode, filePath: string, namespace: string): RawEnum[] {
+  private extractEnums(root: Node, filePath: string, namespace: string): RawEnum[] {
     const enums: RawEnum[] = [];
     this.visitForEnums(root, filePath, namespace, enums);
     return enums;
   }
 
   private visitForEnums(
-    node: Parser.SyntaxNode,
+    node: Node,
     filePath: string,
     namespace: string,
     out: RawEnum[]
@@ -229,7 +234,7 @@ export class TreeSitterBridge {
   }
 
   private extractTopLevelFunctions(
-    root: Parser.SyntaxNode,
+    root: Node,
     filePath: string,
     namespace: string
   ): RawFunction[] {
@@ -261,7 +266,7 @@ export class TreeSitterBridge {
   }
 
   private extractFunction(
-    node: Parser.SyntaxNode,
+    node: Node,
     filePath: string,
     namespace: string
   ): RawFunction | null {
@@ -291,7 +296,7 @@ export class TreeSitterBridge {
     };
   }
 
-  private extractIncludes(root: Parser.SyntaxNode): string[] {
+  private extractIncludes(root: Node): string[] {
     const includes: string[] = [];
     for (const child of root.children) {
       if (child.type === 'preproc_include') {
@@ -309,7 +314,7 @@ export class TreeSitterBridge {
     return includes;
   }
 
-  private extractTemplateParams(templateNode: Parser.SyntaxNode): string[] {
+  private extractTemplateParams(templateNode: Node): string[] {
     const paramList = templateNode.namedChildren.find(
       (n) => n.type === 'template_parameter_list'
     );
@@ -322,7 +327,7 @@ export class TreeSitterBridge {
       });
   }
 
-  private findDescendant(node: Parser.SyntaxNode, type: string): Parser.SyntaxNode | null {
+  private findDescendant(node: Node, type: string): Node | null {
     if (node.type === type) return node;
     for (const child of node.namedChildren) {
       const found = this.findDescendant(child, type);

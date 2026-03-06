@@ -4,8 +4,8 @@ import { TreeSitterBridge } from '@/plugins/java/tree-sitter-bridge.js';
 describe('JavaTreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = await TreeSitterBridge.create();
   });
 
   describe('Simple Class Parsing', () => {

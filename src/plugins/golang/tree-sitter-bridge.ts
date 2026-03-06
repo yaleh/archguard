@@ -4,9 +4,8 @@
  * Uses tree-sitter-go to parse Go source code into raw AST data
  */
 
-import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-go doesn't have proper type definitions
-import Go from 'tree-sitter-go';
+import { Parser, Node } from 'web-tree-sitter';
+import { initTreeSitter, loadLanguage } from '../shared/wasm-loader.js';
 import type {
   GoRawPackage,
   GoRawStruct,
@@ -36,12 +35,17 @@ export interface TreeSitterParseOptions {
 }
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private parser!: Parser;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-ignore - tree-sitter-go language definition compatibility
-    this.parser.setLanguage(Go);
+  private constructor() {}
+
+  static async create(): Promise<TreeSitterBridge> {
+    const bridge = new TreeSitterBridge();
+    await initTreeSitter();
+    const lang = await loadLanguage('tree-sitter-go', 'tree-sitter-go.wasm');
+    bridge.parser = new Parser();
+    bridge.parser.setLanguage(lang);
+    return bridge;
   }
 
   /**
@@ -123,7 +127,7 @@ export class TreeSitterBridge {
    * Extract standalone functions (without bodies)
    */
   private extractFunctions(
-    rootNode: Parser.SyntaxNode,
+    rootNode: Node,
     code: string,
     filePath: string,
     packageName: string
@@ -142,7 +146,7 @@ export class TreeSitterBridge {
    * Extract functions with optional body data
    */
   private extractFunctionsWithBodies(
-    rootNode: Parser.SyntaxNode,
+    rootNode: Node,
     code: string,
     filePath: string,
     packageName: string,
@@ -178,7 +182,7 @@ export class TreeSitterBridge {
    * Extract a function's signature (name, params, return types)
    */
   private extractFunctionSignature(
-    funcDecl: Parser.SyntaxNode,
+    funcDecl: Node,
     code: string,
     filePath: string,
     packageName: string
@@ -209,7 +213,7 @@ export class TreeSitterBridge {
    * - Goroutine/channel patterns (go_statement, send_statement, receive_expression)
    * - HTTP handler registration calls (HandleFunc, Handle, GET, POST, ...)
    */
-  private shouldExtractBody(blockNode: Parser.SyntaxNode, code: string): boolean {
+  private shouldExtractBody(blockNode: Node, code: string): boolean {
     const targetNodeTypes = [
       'go_statement', // go func() / go namedFunc()
       'send_statement', // ch <- value
@@ -265,7 +269,7 @@ export class TreeSitterBridge {
    * Extract function body behavior data
    */
   private extractFunctionBody(
-    blockNode: Parser.SyntaxNode,
+    blockNode: Node,
     code: string,
     filePath: string
   ): GoFunctionBody {
@@ -279,7 +283,7 @@ export class TreeSitterBridge {
   /**
    * Extract goroutine spawn statements
    */
-  private extractGoSpawns(block: Parser.SyntaxNode, code: string, filePath: string): GoSpawnStmt[] {
+  private extractGoSpawns(block: Node, code: string, filePath: string): GoSpawnStmt[] {
     const spawns: GoSpawnStmt[] = [];
     const goStmts = block.descendantsOfType('go_statement');
 
@@ -307,7 +311,7 @@ export class TreeSitterBridge {
   /**
    * Extract call expressions from a block
    */
-  private extractCallExprs(block: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr[] {
+  private extractCallExprs(block: Node, code: string, filePath: string): GoCallExpr[] {
     const calls: GoCallExpr[] = [];
     const callExprs = block.descendantsOfType('call_expression');
 
@@ -318,7 +322,7 @@ export class TreeSitterBridge {
     return calls;
   }
 
-  private extractCallExpr(callExpr: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr {
+  private extractCallExpr(callExpr: Node, code: string, filePath: string): GoCallExpr {
     const funcNode = callExpr.childForFieldName('function');
     let functionName = '';
     let packageName: string | undefined;
@@ -366,7 +370,7 @@ export class TreeSitterBridge {
    * Extract channel operations
    */
   private extractChannelOps(
-    block: Parser.SyntaxNode,
+    block: Node,
     code: string,
     filePath: string
   ): GoChannelOp[] {
@@ -424,8 +428,8 @@ export class TreeSitterBridge {
    *   jobs = make(chan Job)                → "jobs"
    *   s.jobs = make(chan Job)              → "jobs" (selector field name)
    */
-  private extractMakeChanVarName(callExpr: Parser.SyntaxNode, code: string): string {
-    let node: Parser.SyntaxNode | null = callExpr.parent;
+  private extractMakeChanVarName(callExpr: Node, code: string): string {
+    let node: Node | null = callExpr.parent;
 
     while (node) {
       if (node.type === 'short_var_declaration' || node.type === 'assignment_statement') {
@@ -466,7 +470,7 @@ export class TreeSitterBridge {
   /**
    * Extract package name from AST
    */
-  private extractPackageName(rootNode: Parser.SyntaxNode, code: string): string {
+  private extractPackageName(rootNode: Node, code: string): string {
     // In tree-sitter-go, package_clause is the first named child of source_file,
     // not a named field. Use namedChildren.find() to locate it.
     const packageClause = rootNode.namedChildren.find((c) => c.type === 'package_clause');
@@ -486,7 +490,7 @@ export class TreeSitterBridge {
   /**
    * Extract imports from AST
    */
-  private extractImports(rootNode: Parser.SyntaxNode, code: string, filePath: string): GoImport[] {
+  private extractImports(rootNode: Node, code: string, filePath: string): GoImport[] {
     const imports: GoImport[] = [];
     const importDecls = rootNode.descendantsOfType('import_declaration');
 
@@ -520,7 +524,7 @@ export class TreeSitterBridge {
    */
   private extractStruct(
     name: string,
-    structNode: Parser.SyntaxNode,
+    structNode: Node,
     packageName: string,
     code: string,
     filePath: string
@@ -603,7 +607,7 @@ export class TreeSitterBridge {
    */
   private extractInterface(
     name: string,
-    interfaceNode: Parser.SyntaxNode,
+    interfaceNode: Node,
     packageName: string,
     code: string,
     filePath: string
@@ -652,7 +656,7 @@ export class TreeSitterBridge {
    * Extract parameters from method_elem (interface method)
    */
   private extractParametersFromElem(
-    node: Parser.SyntaxNode,
+    node: Node,
     code: string,
     filePath: string
   ): GoField[] {
@@ -702,7 +706,7 @@ export class TreeSitterBridge {
   /**
    * Extract return types from method_elem (interface method)
    */
-  private extractReturnTypesFromElem(node: Parser.SyntaxNode, code: string): string[] {
+  private extractReturnTypesFromElem(node: Node, code: string): string[] {
     const returnTypes: string[] = [];
 
     // Look for type nodes after the parameter_list
@@ -740,7 +744,7 @@ export class TreeSitterBridge {
    * Extract method declaration
    */
   private extractMethod(
-    methodDecl: Parser.SyntaxNode,
+    methodDecl: Node,
     code: string,
     filePath: string,
     options?: TreeSitterParseOptions
@@ -795,7 +799,7 @@ export class TreeSitterBridge {
   /**
    * Extract parameters from method/function
    */
-  private extractParameters(node: Parser.SyntaxNode, code: string, filePath: string): GoField[] {
+  private extractParameters(node: Node, code: string, filePath: string): GoField[] {
     const parameters: GoField[] = [];
     const paramsNode = node.childForFieldName('parameters');
 
@@ -839,7 +843,7 @@ export class TreeSitterBridge {
   /**
    * Extract return types from method/function
    */
-  private extractReturnTypes(node: Parser.SyntaxNode, code: string): string[] {
+  private extractReturnTypes(node: Node, code: string): string[] {
     const resultNode = node.childForFieldName('result');
     if (!resultNode) return [];
 
@@ -872,7 +876,7 @@ export class TreeSitterBridge {
   /**
    * Convert tree-sitter node to source location
    */
-  private nodeToLocation(node: Parser.SyntaxNode, filePath: string): GoSourceLocation {
+  private nodeToLocation(node: Node, filePath: string): GoSourceLocation {
     return {
       file: filePath,
       startLine: node.startPosition.row + 1,

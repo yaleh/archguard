@@ -66,7 +66,7 @@ export class JavaPlugin implements ILanguagePlugin {
       return;
     }
 
-    this.treeSitter = new TreeSitterBridge();
+    this.treeSitter = await TreeSitterBridge.create();
     this.mapper = new ArchJsonMapper();
     this.depExtractor = new DependencyExtractor();
 

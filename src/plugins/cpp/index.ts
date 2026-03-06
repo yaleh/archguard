@@ -58,7 +58,7 @@ export class CppPlugin implements ILanguagePlugin {
    */
   async initialize(_config: PluginInitConfig): Promise<void> {
     if (this.initialized) return;
-    this.bridge = new TreeSitterBridge();
+    this.bridge = await TreeSitterBridge.create();
     this.merger = new HeaderMerger();
     this.mapper = new ArchJsonMapper();
     this.initialized = true;

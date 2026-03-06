@@ -1,11 +1,11 @@
-import type Parser from 'tree-sitter';
+import { type Node } from 'web-tree-sitter';
 import type { RawField, RawMethod } from '../types.js';
 
 type Visibility = 'public' | 'private' | 'protected';
 
 export class ClassBuilder {
   extractMembers(
-    bodyNode: Parser.SyntaxNode,
+    bodyNode: Node,
     sourceFile: string,
     defaultVisibility: Visibility = 'private'
   ): { fields: RawField[]; methods: RawMethod[] } {
@@ -40,7 +40,7 @@ export class ClassBuilder {
   }
 
   private tryExtractMethod(
-    node: Parser.SyntaxNode,
+    node: Node,
     sourceFile: string,
     visibility: Visibility
   ): RawMethod | null {
@@ -76,7 +76,7 @@ export class ClassBuilder {
   }
 
   private tryExtractField(
-    node: Parser.SyntaxNode,
+    node: Node,
     visibility: Visibility
   ): RawField | null {
     const typeNode = node.childForFieldName('type');
@@ -97,7 +97,7 @@ export class ClassBuilder {
   }
 
   private extractParams(
-    declaratorNode: Parser.SyntaxNode
+    declaratorNode: Node
   ): Array<{ name: string; type: string }> {
     const paramsNode = declaratorNode.childForFieldName('parameters');
     if (!paramsNode) return [];
@@ -117,7 +117,7 @@ export class ClassBuilder {
       });
   }
 
-  private findDescendant(node: Parser.SyntaxNode, type: string): Parser.SyntaxNode | null {
+  private findDescendant(node: Node, type: string): Node | null {
     if (node.type === type) return node;
     for (const child of node.namedChildren) {
       const found = this.findDescendant(child, type);

@@ -3,8 +3,8 @@ import { TreeSitterBridge } from '@/plugins/cpp/tree-sitter-bridge.js';
 
 describe('TreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = await TreeSitterBridge.create();
   });
 
   describe('class extraction', () => {

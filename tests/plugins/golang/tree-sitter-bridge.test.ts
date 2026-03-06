@@ -2,15 +2,15 @@
  * Tests for TreeSitterBridge (Go parser using tree-sitter)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { TreeSitterBridge } from '../../../src/plugins/golang/tree-sitter-bridge.js';
 import type { GoRawPackage } from '../../../src/plugins/golang/types.js';
 
 describe('TreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = await TreeSitterBridge.create();
   });
 
   describe('parseCode', () => {
@@ -438,8 +438,8 @@ func start() chan int {
   });
 
   describe('orphaned methods — receiver struct in another file', () => {
-    it('should store methods whose receiver struct is defined in another file as orphanedMethods', () => {
-      const bridge = new TreeSitterBridge();
+    it('should store methods whose receiver struct is defined in another file as orphanedMethods', async () => {
+      const bridge = await TreeSitterBridge.create();
       // File contains ONLY a method — no struct definition
       const code = `package hub
 

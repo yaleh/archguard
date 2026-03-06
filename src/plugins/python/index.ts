@@ -54,7 +54,7 @@ export class PythonPlugin implements ILanguagePlugin {
       return;
     }
 
-    this.treeSitterBridge = new TreeSitterBridge();
+    this.treeSitterBridge = await TreeSitterBridge.create();
     this.archJsonMapper = new ArchJsonMapper();
     this.initialized = true;
   }

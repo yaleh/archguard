@@ -21,28 +21,30 @@ vi.mock('glob', () => ({
 
 // Mock tree-sitter-bridge to isolate plugin logic from native bindings
 vi.mock('@/plugins/cpp/tree-sitter-bridge.js', () => ({
-  TreeSitterBridge: vi.fn().mockImplementation(() => ({
-    parseCode: vi.fn().mockReturnValue({
-      filePath: '/proj/src/foo.cpp',
-      namespace: '',
-      classes: [
-        {
-          name: 'Foo',
-          qualifiedName: 'Foo',
-          kind: 'class' as const,
-          bases: [],
-          fields: [],
-          methods: [],
-          sourceFile: '/proj/src/foo.cpp',
-          startLine: 1,
-          endLine: 10,
-        },
-      ],
-      enums: [],
-      functions: [],
-      includes: [],
+  TreeSitterBridge: {
+    create: vi.fn().mockResolvedValue({
+      parseCode: vi.fn().mockReturnValue({
+        filePath: '/proj/src/foo.cpp',
+        namespace: '',
+        classes: [
+          {
+            name: 'Foo',
+            qualifiedName: 'Foo',
+            kind: 'class' as const,
+            bases: [],
+            fields: [],
+            methods: [],
+            sourceFile: '/proj/src/foo.cpp',
+            startLine: 1,
+            endLine: 10,
+          },
+        ],
+        enums: [],
+        functions: [],
+        includes: [],
+      }),
     }),
-  })),
+  },
 }));
 
 // Mock HeaderMerger

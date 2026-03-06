@@ -72,7 +72,7 @@ export class GoPlugin implements ILanguagePlugin {
       return;
     }
 
-    this.treeSitter = new TreeSitterBridge();
+    this.treeSitter = await TreeSitterBridge.create();
     this.matcher = new InterfaceMatcher();
     this.mapper = new ArchJsonMapper();
 
