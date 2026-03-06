@@ -45,6 +45,7 @@ export class ValidatedMermaidGenerator {
   private readonly diagramConfig?: DiagramConfig;
   private readonly commentGenerator: CommentGenerator;
   private readonly verbose: boolean;
+  private _entityIdToName: Map<string, string> | null = null;
 
   constructor(
     archJson: ArchJSON,
@@ -249,21 +250,25 @@ export class ValidatedMermaidGenerator {
     lines.push('');
 
     const packageGroups = this.groupEntitiesByPackage();
-    const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
-    const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
+    // Filter out standalone free functions — they appear as empty class nodes in diagrams
+    const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
+    const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
+    const knownEntityIds = new Set(visibleEntities.map((e) => e.id));
 
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace ${this.escapeId(group.name)} {`);
-
+        const entityLines: string[] = [];
         for (const entityId of group.entities) {
-          const entity = this.archJson.entities.find((e) => e.id === entityId);
+          const entity = visibleEntities.find((e) => e.id === entityId);
           if (entity) {
-            lines.push(...this.generateClassDefinition(entity, 2, true));
+            entityLines.push(...this.generateClassDefinition(entity, 2, true));
           }
         }
-
+        // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
+        if (entityLines.length === 0) continue;
+        lines.push(`  namespace ${this.escapeId(group.name)} {`);
+        lines.push(...entityLines);
         lines.push('  }');
       }
 
@@ -279,7 +284,7 @@ export class ValidatedMermaidGenerator {
       }
     } else {
       // No grouping or default grouping, just list all classes
-      for (const entity of this.archJson.entities) {
+      for (const entity of visibleEntities) {
         lines.push(...this.generateClassDefinition(entity, 1, true));
       }
 
@@ -300,7 +305,7 @@ export class ValidatedMermaidGenerator {
     lines.push('');
     lines.push('  %% Node type annotations');
     const seenAnnotationsClass = new Set<string>();
-    for (const entity of this.archJson.entities) {
+    for (const entity of visibleEntities) {
       const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
       if (seenAnnotationsClass.has(normalizedId)) continue;
       seenAnnotationsClass.add(normalizedId);
@@ -323,24 +328,28 @@ export class ValidatedMermaidGenerator {
     lines.push('');
 
     const packageGroups = this.groupEntitiesByPackage();
-    const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
-    const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
+    // Filter out standalone free functions — they appear as empty class nodes in diagrams
+    const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
+    const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
+    const knownEntityIds = new Set(visibleEntities.map((e) => e.id));
 
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
-        lines.push(`  namespace ${this.escapeId(group.name)} {`);
-
+        const entityLines: string[] = [];
         for (const entityId of group.entities) {
-          const entity = this.archJson.entities.find((e) => e.id === entityId);
+          const entity = visibleEntities.find((e) => e.id === entityId);
           if (entity) {
-            lines.push(...this.generateClassDefinition(entity, 2, true));
+            entityLines.push(...this.generateClassDefinition(entity, 2, true));
           }
         }
-
+        // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
+        if (entityLines.length === 0) continue;
+        lines.push(`  namespace ${this.escapeId(group.name)} {`);
+        lines.push(...entityLines);
         lines.push('  }');
       }
     } else {
-      for (const entity of this.archJson.entities) {
+      for (const entity of visibleEntities) {
         lines.push(...this.generateClassDefinition(entity, 1, true));
       }
     }
@@ -361,7 +370,7 @@ export class ValidatedMermaidGenerator {
     lines.push('');
     lines.push('  %% Node type annotations');
     const seenAnnotationsMethod = new Set<string>();
-    for (const entity of this.archJson.entities) {
+    for (const entity of visibleEntities) {
       const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
       if (seenAnnotationsMethod.has(normalizedId)) continue;
       seenAnnotationsMethod.add(normalizedId);
@@ -487,12 +496,23 @@ export class ValidatedMermaidGenerator {
     return name;
   }
 
+  private get entityIdToName(): Map<string, string> {
+    if (!this._entityIdToName) {
+      this._entityIdToName = new Map(this.archJson.entities.map((e) => [e.id, e.name]));
+    }
+    return this._entityIdToName;
+  }
+
   /**
    * Generate relation line
    */
   private generateRelationLine(relation: Relation): string {
-    const source = this.escapeId(this.normalizeEntityName(relation.source));
-    const target = this.escapeId(this.normalizeEntityName(relation.target));
+    const resolve = (id: string): string => {
+      const simpleName = this.entityIdToName.get(id);
+      return this.escapeId(this.normalizeEntityName(simpleName ?? id));
+    };
+    const source = resolve(relation.source);
+    const target = resolve(relation.target);
 
     switch (relation.type) {
       case 'inheritance':
@@ -723,6 +743,96 @@ export class ValidatedMermaidGenerator {
     type = type.replace(importPathPattern, '$1');
 
     return type;
+  }
+
+  /**
+   * Generate one or more class diagrams, splitting by package group when the total
+   * number of visible entities exceeds maxNodesPerDiagram.
+   *
+   * Return semantics:
+   *   [{ name: null, content }]        → not split; caller uses original diagram name
+   *   [{ name: 'groupA', content }, …] → split; caller appends group name to path
+   */
+  public generateClassDiagrams(maxNodesPerDiagram: number): Array<{ name: string | null; content: string }> {
+    const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
+    const packageGroups = this.groupEntitiesByPackage();
+
+    // Only keep groups that have at least one visible entity
+    const visibleEntityIdSet = new Set(visibleEntities.map((e) => e.id));
+    const visibleGroups = packageGroups.filter((g) =>
+      g.entities.some((id) => visibleEntityIdSet.has(id))
+    );
+
+    const totalNodes = visibleEntities.length;
+
+    // Determine if we should split:
+    // - not split if at or below limit
+    // - not split if 0 or 1 visible groups
+    // - not split if the only group is 'Default'
+    const shouldSplit =
+      totalNodes > maxNodesPerDiagram &&
+      visibleGroups.length > 1 &&
+      !(visibleGroups.length === 1 && visibleGroups[0].name === 'Default');
+
+    if (!shouldSplit) {
+      return [{ name: null, content: this.generate() }];
+    }
+
+    // Split: build one diagram per visible group
+    const knownEntityIds = new Set(visibleEntities.map((e) => e.id));
+    const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
+
+    const results: Array<{ name: string | null; content: string }> = [];
+
+    for (const group of visibleGroups) {
+      const groupEntityIdSet = new Set(group.entities);
+      const groupEntities = visibleEntities.filter((e) => groupEntityIdSet.has(e.id));
+
+      if (groupEntities.length === 0) continue;
+
+      const groupEntityNames = new Set(groupEntities.map((e) => e.name));
+
+      const lines: string[] = ['classDiagram'];
+
+      // Emit semantic classDef block
+      for (const [name, style] of Object.entries(ENTITY_CLASSDEF_STYLES)) {
+        lines.push(`  classDef ${name} ${style}`);
+      }
+      lines.push('');
+
+      // Emit namespace block for this group
+      lines.push(`  namespace ${this.escapeId(group.name)} {`);
+      for (const entity of groupEntities) {
+        lines.push(...this.generateClassDefinition(entity, 2, true));
+      }
+      lines.push('  }');
+
+      // Emit relations: source must be in this group; target must be a known entity
+      for (const relation of this.archJson.relations) {
+        const sourceInGroup =
+          groupEntityIdSet.has(relation.source) || groupEntityNames.has(relation.source);
+        const targetKnown =
+          knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target);
+        if (sourceInGroup && (targetKnown || !this.isNoisyTarget(relation.target))) {
+          lines.push(`  ${this.generateRelationLine(relation)}`);
+        }
+      }
+
+      // Emit node type annotations
+      lines.push('');
+      lines.push('  %% Node type annotations');
+      const seenAnnotations = new Set<string>();
+      for (const entity of groupEntities) {
+        const normalizedId = this.escapeId(this.normalizeEntityName(entity.name));
+        if (seenAnnotations.has(normalizedId)) continue;
+        seenAnnotations.add(normalizedId);
+        lines.push(`  class ${normalizedId} ${entityTypeToClassDef(entity.type)}`);
+      }
+
+      results.push({ name: group.name, content: this.postProcess(lines.join('\n')) });
+    }
+
+    return results;
   }
 
   /**

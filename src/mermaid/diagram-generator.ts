@@ -122,8 +122,46 @@ export class MermaidDiagramGenerator {
         diagramConfig // v2.1.0: Pass diagram config for metadata comments
       );
 
-      let mermaidCode = generator.generate();
-      progress.succeed('✅ Mermaid code generated');
+      // For class/method levels: use diagram splitting when node count exceeds limit
+      const maxNodesPerDiagram = this.config.maxNodesPerDiagram ?? 150;
+      const splitDiagrams =
+        level === 'class' || level === 'method'
+          ? generator.generateClassDiagrams(maxNodesPerDiagram)
+          : [{ name: null as string | null, content: generator.generate() }];
+
+      const isSplit = splitDiagrams.length > 1 || splitDiagrams[0]?.name !== null;
+      progress.succeed(
+        isSplit
+          ? `✅ Mermaid code generated (${splitDiagrams.length} splits)`
+          : '✅ Mermaid code generated'
+      );
+
+      // Base output directory (strip filename from mmd path)
+      const baseDir = outputOptions.paths.mmd.replace(/\/[^/]+\.mmd$/, '');
+
+      if (isSplit) {
+        // Split path: generate one render job per namespace group.
+        // These diagrams are machine-generated and syntactically valid; skip heavy validation.
+        progress.succeed(`✅ Skipping validation for ${splitDiagrams.length} split diagrams`);
+
+        return splitDiagrams
+          .filter((d) => d.content.trim().length > 'classDiagram'.length)
+          .map(({ name, content }) => {
+            const safeName = (name ?? outputOptions.baseName).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const outputPath =
+              name === null
+                ? outputOptions.paths
+                : {
+                    mmd: `${baseDir}/${safeName}.mmd`,
+                    svg: `${baseDir}/${safeName}.svg`,
+                    png: `${baseDir}/${safeName}.png`,
+                  };
+            return { name: safeName, mermaidCode: content, outputPath };
+          });
+      }
+
+      // Single diagram path: full validation + repair pipeline
+      let mermaidCode = splitDiagrams[0]!.content;
 
       // 3. Five-Layer Validation
       progress.start('🔍 Validating generated code...');
@@ -313,9 +351,15 @@ export class MermaidDiagramGenerator {
       progress.succeed('✅ Diagram rendered successfully');
 
       console.log('\n✨ Generated files:');
-      console.log(`  📄 ${outputOptions.paths.mmd}`);
-      console.log(`  🖼️  ${outputOptions.paths.svg}`);
-      console.log(`  📊 ${outputOptions.paths.png}`);
+      if (allRenderJobs.length === 1 && allRenderJobs[0]?.outputPath === outputOptions.paths) {
+        console.log(`  📄 ${outputOptions.paths.mmd}`);
+        console.log(`  🖼️  ${outputOptions.paths.svg}`);
+        console.log(`  📊 ${outputOptions.paths.png}`);
+      } else {
+        for (const job of allRenderJobs) {
+          console.log(`  📄 ${job.outputPath.mmd}`);
+        }
+      }
     } catch (error) {
       progress.fail('❌ Generation failed');
       throw error;

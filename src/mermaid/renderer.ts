@@ -225,6 +225,7 @@ export class IsomorphicMermaidRenderer {
         theme: this.options.theme.name ?? 'default',
         securityLevel: 'loose' as const,
         themeVariables: this.options.theme.variables,
+        maxTextSize: 200000,
       };
 
       mermaid.initialize(config);
