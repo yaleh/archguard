@@ -40,6 +40,29 @@ export function inlineEdgeStyles(svg: string): string {
     }
   );
 
+  // 3. Fix flowchart node container rects: <rect class="basic label-container" style="">
+  //    in flowchart LR diagrams rely on the CSS rule ".node rect { fill:X; stroke:Y; }"
+  //    which librsvg does not apply for ID-scoped selectors, causing black node boxes.
+  //    Extract those properties from the embedded <style> block and inject them inline.
+  const nodeRectRuleMatch = svg.match(/\.node\s+rect[^{]*\{([^}]+)\}/);
+  if (nodeRectRuleMatch) {
+    const nodeProps = nodeRectRuleMatch[1]
+      .split(';')
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .join(';');
+    if (nodeProps) {
+      result = result.replace(
+        /(<rect\b[^>]*class="[^"]*\bbasic\b[^"]*\blabel-container\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+        (_, pre, style, post) => {
+          if (/\bfill\s*:/.test(style)) return _;
+          const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+          return `${pre}${trimmed ? trimmed + ';' : ''}${nodeProps};${post}`;
+        }
+      );
+    }
+  }
+
   return result;
 }
 
@@ -202,6 +225,7 @@ export class IsomorphicMermaidRenderer {
         theme: this.options.theme.name ?? 'default',
         securityLevel: 'loose' as const,
         themeVariables: this.options.theme.variables,
+        maxTextSize: 200000,
       };
 
       mermaid.initialize(config);

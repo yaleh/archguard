@@ -20,6 +20,7 @@ import { ErrorHandler } from '../error-handler.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
 import { detectProjectStructure } from '../utils/project-structure-detector.js';
+import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
 import { ParseCache } from '@/parser/parse-cache.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
@@ -89,6 +90,18 @@ export async function normalizeToDiagrams(
         language,
       };
       return [diagram];
+    }
+
+    // C++: auto-detect module structure (package + class + per-module class diagrams)
+    // NOTE: only sources[0] is used; multiple --sources paths are not supported for C++
+    if (language === 'cpp') {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      const moduleName = path.basename(sourcePath);
+      const diagrams = await detectCppProjectStructure(sourcePath, moduleName, {
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      });
+      return filterByLevels(diagrams, cliOptions.diagrams);
     }
 
     // TypeScript/other: auto-detect from sources[0]

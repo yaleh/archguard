@@ -10,6 +10,7 @@
  * @version 2.0.0
  */
 
+import path from 'path';
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { DetailLevel } from '@/types/config.js';
 
@@ -69,13 +70,14 @@ export class ArchJSONAggregator {
    * @returns ArchJSON with package-level entities and relations
    */
   private aggregateToPackageLevel(archJSON: ArchJSON): ArchJSON {
-    const packages = this.extractPackages(archJSON.entities);
-    const packageRelations = this.analyzePackageDependencies(archJSON.entities, archJSON.relations);
+    const { workspaceRoot } = archJSON;
+    const packages = this.extractPackages(archJSON.entities, workspaceRoot);
+    const packageRelations = this.analyzePackageDependencies(archJSON.entities, archJSON.relations, workspaceRoot);
 
     // Create package entities
     const packageEntities: Entity[] = packages.map((pkg) => {
       const firstEntityInPackage = archJSON.entities.find(
-        (e) => this.extractPackageFromFile(e.sourceLocation.file) === pkg
+        (e) => this.extractPackageFromFile(e.sourceLocation.file, workspaceRoot) === pkg
       );
 
       return {
@@ -107,11 +109,11 @@ export class ArchJSONAggregator {
    * @param entities - Array of entities
    * @returns Array of unique package names
    */
-  private extractPackages(entities: Entity[]): string[] {
+  private extractPackages(entities: Entity[], workspaceRoot?: string): string[] {
     const packages = new Set<string>();
 
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(entity.sourceLocation.file);
+      const packageName = this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot);
       packages.add(packageName);
     }
 
@@ -131,7 +133,16 @@ export class ArchJSONAggregator {
    * @param filePath - File path to extract package from
    * @returns Package name or empty string if not found
    */
-  private extractPackageFromFile(filePath: string): string {
+  private extractPackageFromFile(filePath: string, workspaceRoot?: string): string {
+    // When workspaceRoot provided and file is absolute, use parent directory path
+    if (workspaceRoot && path.isAbsolute(filePath)) {
+      const rel = path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+      const parts = rel.split('/');
+      if (parts.length <= 1) return ''; // file directly in workspaceRoot
+      // Return parent directory path (all components except the filename)
+      return parts.slice(0, -1).join('/');
+    }
+
     // Normalize path separators to forward slashes
     const normalizedPath = filePath.replace(/\\/g, '/');
 
@@ -169,11 +180,11 @@ export class ArchJSONAggregator {
    * @param relations - Array of class-level relations
    * @returns Array of package-level relations
    */
-  private analyzePackageDependencies(entities: Entity[], relations: Relation[]): Relation[] {
+  private analyzePackageDependencies(entities: Entity[], relations: Relation[], workspaceRoot?: string): Relation[] {
     // Create entity ID to package mapping (using file paths)
     const entityToPackage = new Map<string, string>();
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(entity.sourceLocation.file);
+      const packageName = this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot);
       entityToPackage.set(entity.id, packageName);
     }
 

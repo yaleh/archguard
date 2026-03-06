@@ -99,9 +99,12 @@ describe('deriveSubModuleArchJSON', () => {
       ],
     };
     const result = deriveSubModuleArchJSON(parent as any, '/src/core');
-    expect(result.entities.map((e: any) => e.id)).toEqual(['e1', 'e3']);
-    expect(result.relations).toHaveLength(1);
-    expect(result.relations[0]).toMatchObject({ source: 'e1', target: 'e3' });
+    // e1, e3 are in sub-module; e2 is a cross-module stub (target of e1→e2)
+    expect(result.entities.map((e: any) => e.id)).toEqual(['e1', 'e3', 'e2']);
+    // e1→e2 (cross-module outgoing) + e1→e3 (intra-module); e2→e3 excluded (e2 not in sub-module)
+    expect(result.relations).toHaveLength(2);
+    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e3' }));
+    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e2' }));
   });
 
   it('filters moduleGraph nodes and edges by path prefix', () => {
@@ -163,6 +166,130 @@ describe('deriveSubModuleArchJSON', () => {
     expect(result.entities).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
   });
+
+  it('includes cross-module relations when source is in sub-module', () => {
+    const parent: ArchJSON = {
+      version: '1.0', language: 'cpp', timestamp: '',
+      sourceFiles: [],
+      entities: [
+        {
+          id: 'src.Renderer', name: 'Renderer', type: 'class' as any,
+          visibility: 'public', members: [{ name: 'ctx', type: 'field' as any, visibility: 'public' }],
+          sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
+        },
+        {
+          id: 'ggml.ggml_context', name: 'ggml_context', type: 'struct' as any,
+          visibility: 'public', members: [{ name: 'mem_size', type: 'field' as any, visibility: 'public' }],
+          sourceLocation: { file: '/proj/ggml/ggml.h', startLine: 1, endLine: 20 },
+        },
+      ],
+      relations: [
+        { id: 'r1', type: 'composition', source: 'src.Renderer', target: 'ggml.ggml_context', inferenceSource: 'explicit' },
+      ],
+    };
+    const derived = deriveSubModuleArchJSON(parent, '/proj/src');
+
+    // The relation should be included (source is in sub-module)
+    expect(derived.relations).toHaveLength(1);
+    expect(derived.relations[0].source).toBe('src.Renderer');
+    expect(derived.relations[0].target).toBe('ggml.ggml_context');
+  });
+
+  it('adds stub entity for cross-module relation target', () => {
+    const parent: ArchJSON = {
+      version: '1.0', language: 'cpp', timestamp: '',
+      sourceFiles: [],
+      entities: [
+        {
+          id: 'src.Renderer', name: 'Renderer', type: 'class' as any,
+          visibility: 'public', members: [],
+          sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
+        },
+        {
+          id: 'ggml.ggml_context', name: 'ggml_context', type: 'struct' as any,
+          visibility: 'public', members: [
+            { name: 'mem_size', type: 'field' as any, visibility: 'public' },
+            { name: 'alloc', type: 'field' as any, visibility: 'public' },
+          ],
+          sourceLocation: { file: '/proj/ggml/ggml.h', startLine: 1, endLine: 20 },
+        },
+      ],
+      relations: [
+        { id: 'r1', type: 'composition', source: 'src.Renderer', target: 'ggml.ggml_context', inferenceSource: 'explicit' },
+      ],
+    };
+    const derived = deriveSubModuleArchJSON(parent, '/proj/src');
+
+    // Both entities appear in derived ArchJSON (Renderer as full, ggml_context as stub)
+    expect(derived.entities).toHaveLength(2);
+    const stub = derived.entities.find(e => e.id === 'ggml.ggml_context');
+    expect(stub).toBeDefined();
+    expect(stub!.members).toHaveLength(0);  // stub has no members
+
+    // Original in sub-module entity is unchanged
+    const renderer = derived.entities.find(e => e.id === 'src.Renderer');
+    expect(renderer).toBeDefined();
+  });
+
+  it('does not add stub for intra-module relations (already in entity set)', () => {
+    const parent: ArchJSON = {
+      version: '1.0', language: 'cpp', timestamp: '',
+      sourceFiles: [],
+      entities: [
+        {
+          id: 'src.A', name: 'A', type: 'class' as any,
+          visibility: 'public', members: [],
+          sourceLocation: { file: '/proj/src/a.h', startLine: 1, endLine: 5 },
+        },
+        {
+          id: 'src.B', name: 'B', type: 'class' as any,
+          visibility: 'public', members: [],
+          sourceLocation: { file: '/proj/src/b.h', startLine: 1, endLine: 5 },
+        },
+      ],
+      relations: [
+        { id: 'r1', type: 'dependency', source: 'src.A', target: 'src.B', inferenceSource: 'explicit' },
+      ],
+    };
+    const derived = deriveSubModuleArchJSON(parent, '/proj/src');
+
+    // Only 2 entities (no stub needed since both are in sub-module)
+    expect(derived.entities).toHaveLength(2);
+    expect(derived.relations).toHaveLength(1);
+  });
+
+  it('does not include relations where source is outside sub-module', () => {
+    // Relations FROM other modules TO this module's entities should NOT appear
+    // (only outgoing are included to keep diagram focused on THIS module's dependencies)
+    const parent: ArchJSON = {
+      version: '1.0', language: 'cpp', timestamp: '',
+      sourceFiles: [],
+      entities: [
+        {
+          id: 'src.Base', name: 'Base', type: 'class' as any,
+          visibility: 'public', members: [],
+          sourceLocation: { file: '/proj/src/base.h', startLine: 1, endLine: 5 },
+        },
+        {
+          id: 'tools.Derived', name: 'Derived', type: 'class' as any,
+          visibility: 'public', members: [],
+          sourceLocation: { file: '/proj/tools/derived.h', startLine: 1, endLine: 5 },
+        },
+      ],
+      relations: [
+        { id: 'r1', type: 'inheritance', source: 'tools.Derived', target: 'src.Base', inferenceSource: 'explicit' },
+      ],
+    };
+    // Derive the src sub-module
+    const derived = deriveSubModuleArchJSON(parent, '/proj/src');
+
+    // src.Base is in sub-module but the relation source (tools.Derived) is NOT
+    // So the relation should NOT appear in the src sub-module diagram
+    expect(derived.relations).toHaveLength(0);
+    // src.Base appears as normal entity
+    expect(derived.entities).toHaveLength(1);
+    expect(derived.entities[0].id).toBe('src.Base');
+  });
 });
 
 describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (workspaceRoot fix)', () => {
@@ -181,9 +308,11 @@ describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (work
     };
     // subPath is absolute, filePaths are relative to workspaceRoot='/abs/src'
     const result = deriveSubModuleArchJSON(parent, '/abs/src/shared', '/abs/src');
-    expect(result.entities.map(e => e.id)).toEqual(['e1', 'e2']);
-    expect(result.relations).toHaveLength(1);
-    expect(result.relations[0]).toMatchObject({ source: 'e1', target: 'e2' });
+    // e1 and e2 are in sub-module; e3 is a cross-module stub (target of e1→e3)
+    expect(result.entities.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
+    expect(result.relations).toHaveLength(2);
+    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e2' }));
+    expect(result.relations).toContainEqual(expect.objectContaining({ source: 'e1', target: 'e3' }));
   });
 
   it('still works without workspaceRoot when filePath is already absolute', () => {

@@ -149,6 +149,47 @@ The fix pattern is therefore:
 
 ---
 
+---
+
+## Problem 3 — Flowchart Node Box Fill (discovered 2026-03-05)
+
+### Symptom
+
+For `flowchart LR` diagrams (e.g., C++ package diagrams), all 79 node boxes rendered as solid black rectangles. In `classDiagram` output the same element classes carried an inline `style="fill:#faa !important"` override — but `flowchart LR` output leaves them with `style=""`.
+
+### Root cause
+
+```svg
+<!-- Mermaid flowchart output: node rect has empty inline style -->
+<rect class="basic label-container" style="" x="-63" y="-25" width="126" height="51">
+```
+
+- CSS rule `#id .node rect { fill: #ECECFF; stroke: #9370DB; stroke-width: 1px; }` was not applied by librsvg.
+- SVG default fill = `black` → node box rendered as a solid black rectangle.
+
+### Fix
+
+A third replace pass added to `inlineEdgeStyles()` dynamically extracts the `fill`/`stroke` properties from the embedded `<style>` block's `.node rect` rule and injects them inline:
+
+```typescript
+const nodeRectRuleMatch = svg.match(/\.node\s+rect[^{]*\{([^}]+)\}/);
+if (nodeRectRuleMatch) {
+  const nodeProps = nodeRectRuleMatch[1].split(';').map(p => p.trim()).filter(p => p.length > 0).join(';');
+  result = result.replace(
+    /(<rect\b[^>]*class="[^"]*\bbasic\b[^"]*\blabel-container\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+    (_, pre, style, post) => {
+      if (/\bfill\s*:/.test(style)) return _;
+      const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+      return `${pre}${trimmed ? trimmed + ';' : ''}${nodeProps};${post}`;
+    }
+  );
+}
+```
+
+Extracting from the embedded CSS (rather than hardcoding `#ECECFF`) ensures correctness across all Mermaid themes.
+
+---
+
 ## Known Remaining Gaps
 
 The following element classes are styled only via embedded CSS and may be affected if librsvg support degrades further:
@@ -156,8 +197,9 @@ The following element classes are styled only via embedded CSS and may be affect
 | Class | CSS rule | Current status |
 |---|---|---|
 | `arrowMarkerPath` | `.marker { fill: #333333 }` (inherited) | librsvg appears to inherit correctly today |
-| `.internal rect` (node fill) | `.internal rect { fill: #dafbe1 !important }` | Overridden by `!important` inline `style=` on `basic label-container` rects → not affected |
+| `.internal rect` (node fill in classDiagram) | `.internal rect { fill: #dafbe1 !important }` | Overridden by `!important` inline `style=` on `basic label-container` rects → not affected |
 | `.flowchart-link` stroke | `.flowchart-link { stroke: #333333 }` | librsvg applies this today; monitor on librsvg upgrades |
+| `basic label-container` (flowchart LR nodes) | `.node rect { fill: #ECECFF; stroke: #9370DB }` | **Fixed** by Problem 3 patch — extracted from embedded CSS |
 
 ---
 

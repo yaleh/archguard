@@ -944,6 +944,52 @@ describe('ValidatedMermaidGenerator', () => {
       expect(result).toContain('<|--');
     });
 
+    it('should NOT filter known entity IDs that match namespace.class pattern (C++ style)', () => {
+      // C++ entity IDs like "tests.test_case" match the /^[a-z]\w*\./ noisy-filter regex,
+      // but they are real entities and must not be suppressed.
+      const archJsonCpp: ArchJSON = {
+        ...archJson,
+        entities: [
+          ...archJson.entities,
+          {
+            id: 'tests.child_class',
+            name: 'child_class',
+            type: 'class' as const,
+            visibility: 'public' as const,
+            members: [],
+            sourceLocation: { file: 'tests/child.cpp', startLine: 1, endLine: 5 },
+          },
+          {
+            id: 'tests.base_class',
+            name: 'base_class',
+            type: 'class' as const,
+            visibility: 'public' as const,
+            members: [],
+            sourceLocation: { file: 'tests/base.cpp', startLine: 1, endLine: 5 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-cpp',
+            type: 'inheritance',
+            source: 'tests.child_class',
+            target: 'tests.base_class',
+            inferenceSource: 'explicit',
+          },
+        ],
+      };
+
+      const generator = new ValidatedMermaidGenerator(archJsonCpp, {
+        level: 'class',
+        grouping: { packages: [] },
+      });
+      const result = generator.generate();
+      // The inheritance relation must appear in the diagram
+      expect(result).toContain('<|--');
+      expect(result).toContain('base_class');
+      expect(result).toContain('child_class');
+    });
+
     it('should filter arrow function type targets', () => {
       const archJsonWithNoisy: ArchJSON = {
         ...archJson,
@@ -1176,43 +1222,44 @@ describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
   it('annotates a class entity with classNode style', () => {
     const gen = makeGen([makeMinimalEntity('MyClass', 'class')]);
     const output = gen.generate();
-    expect(output).toContain('class MyClass classNode');
+    expect(output).toContain('class MyClass:::classNode');
   });
 
   it('annotates an interface entity with interface style', () => {
     const gen = makeGen([makeMinimalEntity('IRepo', 'interface')]);
     const output = gen.generate();
-    expect(output).toContain('class IRepo interface');
+    expect(output).toContain('class IRepo:::interface');
   });
 
   it('annotates an enum entity with enum style', () => {
     const gen = makeGen([makeMinimalEntity('Status', 'enum')]);
     const output = gen.generate();
-    expect(output).toContain('class Status enum');
+    expect(output).toContain('class Status:::enum');
   });
 
   it('annotates a struct entity with struct style', () => {
     const gen = makeGen([makeMinimalEntity('Config', 'struct')]);
     const output = gen.generate();
-    expect(output).toContain('class Config struct');
+    expect(output).toContain('class Config:::struct');
   });
 
   it('annotates a trait entity with trait style', () => {
     const gen = makeGen([makeMinimalEntity('Printable', 'trait')]);
     const output = gen.generate();
-    expect(output).toContain('class Printable trait');
+    expect(output).toContain('class Printable:::trait');
   });
 
   it('annotates an abstract_class entity with abstract_class style', () => {
     const gen = makeGen([makeMinimalEntity('BaseHandler', 'abstract_class')]);
     const output = gen.generate();
-    expect(output).toContain('class BaseHandler abstract_class');
+    expect(output).toContain('class BaseHandler:::abstract_class');
   });
 
-  it('annotates a function entity with function style', () => {
+  it('does NOT annotate a function entity (function-type entities are filtered from diagrams)', () => {
     const gen = makeGen([makeMinimalEntity('parseConfig', 'function')]);
     const output = gen.generate();
-    expect(output).toContain('class parseConfig function');
+    // Function entities must not appear as class nodes or annotations
+    expect(output).not.toContain('class parseConfig');
   });
 
   it('annotation ID matches the normalized entity name used in the class declaration', () => {
@@ -1220,16 +1267,390 @@ describe('ValidatedMermaidGenerator — semantic classDef (Plan 19)', () => {
     const output = gen.generate();
     // Both declaration and annotation must use same ID
     expect(output).toContain('class MyService {');
-    expect(output).toContain('class MyService classNode');
+    expect(output).toContain('class MyService:::classNode');
   });
 
   it('emits no duplicate annotation lines for the same entity', () => {
     const gen = makeGen([makeMinimalEntity('Foo', 'class'), makeMinimalEntity('Bar', 'interface')]);
     const output = gen.generate();
     // Annotation lines: `  class Foo styleName` (lowercase style) vs declaration `  class Foo {`
-    const fooAnnotations = output.split('\n').filter(l => l.match(/^  class Foo [a-z]/));
-    const barAnnotations = output.split('\n').filter(l => l.match(/^  class Bar [a-z]/));
+    const fooAnnotations = output.split('\n').filter(l => l.match(/^  class Foo:::[a-z]/));
+    const barAnnotations = output.split('\n').filter(l => l.match(/^  class Bar:::[a-z]/));
     expect(fooAnnotations).toHaveLength(1);
     expect(barAnnotations).toHaveLength(1);
+  });
+});
+
+// ─── function entity filtering ────────────────────────────────────────────────
+
+describe('ValidatedMermaidGenerator — function entity filtering', () => {
+  const makeGen = (
+    entities: ReturnType<typeof makeMinimalEntity>[],
+    relations: ArchJSON['relations'] = [],
+    level: 'class' | 'method' = 'class',
+    grouping: GroupingDecision = { packages: [] },
+  ) =>
+    new ValidatedMermaidGenerator(
+      { ...makeMinimalArchJson(entities), relations },
+      { level, grouping },
+    );
+
+  it('excludes function-type entities from class diagram', () => {
+    const entities = [
+      makeMinimalEntity('MyClass', 'class'),
+      makeMinimalEntity('myFreeFunc', 'function'),
+    ];
+    const gen = makeGen(entities);
+    const output = gen.generate();
+
+    // The class node must appear
+    expect(output).toContain('class MyClass {');
+    // The function entity must NOT appear as a class node declaration
+    expect(output).not.toContain('class myFreeFunc {');
+    // The function entity must NOT appear as a classDef annotation
+    expect(output).not.toContain('class myFreeFunc');
+  });
+
+  it('excludes function-type entities from relations in class diagram', () => {
+    // A relation where the source is a function entity should be suppressed
+    // because the function is not in knownEntityNames/knownEntityIds after filtering.
+    const entities = [
+      makeMinimalEntity('myFreeFunc', 'function'),
+    ];
+    const relations: ArchJSON['relations'] = [
+      {
+        id: 'rel-fn',
+        type: 'dependency',
+        source: 'myFreeFunc',
+        target: 'MyClass',
+      },
+    ];
+    const gen = makeGen(entities, relations);
+    const output = gen.generate();
+
+    // The relation must not appear because the source is a filtered-out function entity
+    expect(output).not.toContain('myFreeFunc');
+    expect(output).not.toContain('-->');
+  });
+
+  it('excludes function-type entities from method diagram', () => {
+    const entities = [
+      makeMinimalEntity('MyService', 'class'),
+      makeMinimalEntity('helperFunc', 'function'),
+    ];
+    const gen = makeGen(entities, [], 'method');
+    const output = gen.generate();
+
+    expect(output).toContain('class MyService {');
+    expect(output).not.toContain('class helperFunc {');
+    expect(output).not.toContain('class helperFunc');
+  });
+
+  it('excludes function-type entities from namespace blocks in grouped class diagram', () => {
+    const entities = [
+      makeMinimalEntity('MyClass', 'class'),
+      makeMinimalEntity('myFreeFunc', 'function'),
+    ];
+    const grouping: GroupingDecision = {
+      packages: [
+        {
+          name: 'Core',
+          entities: ['src/test.ts.MyClass', 'src/test.ts.myFreeFunc'],
+          reasoning: 'Core layer',
+        },
+      ],
+    };
+    const gen = makeGen(entities, [], 'class', grouping);
+    const output = gen.generate();
+
+    // Namespace must still be rendered (MyClass is in it)
+    expect(output).toContain('namespace Core');
+    expect(output).toContain('class MyClass {');
+    // Function entity must not appear in namespace block
+    expect(output).not.toContain('class myFreeFunc {');
+    expect(output).not.toContain('class myFreeFunc');
+  });
+
+  it('still emits classDef function in the style block even though function nodes are filtered', () => {
+    const entities = [
+      makeMinimalEntity('MyClass', 'class'),
+      makeMinimalEntity('myFreeFunc', 'function'),
+    ];
+    const gen = makeGen(entities);
+    const output = gen.generate();
+
+    // The classDef style declaration must still exist (it is part of the style block)
+    expect(output).toContain('classDef function');
+  });
+});
+
+// ─── generateClassDiagrams ────────────────────────────────────────────────────
+
+describe('ValidatedMermaidGenerator — generateClassDiagrams', () => {
+  const makeGenWithGrouping = (
+    entities: ReturnType<typeof makeMinimalEntity>[],
+    relations: ArchJSON['relations'] = [],
+    grouping: GroupingDecision = { packages: [] },
+  ) =>
+    new ValidatedMermaidGenerator(
+      { ...makeMinimalArchJson(entities), relations },
+      { level: 'class', grouping },
+    );
+
+  it('returns single diagram when node count is at or below maxNodesPerDiagram', () => {
+    // 3 class entities in 2 groups, limit = 3 (not split)
+    const entities = [
+      makeMinimalEntity('ClassA', 'class'),
+      makeMinimalEntity('ClassB', 'class'),
+      makeMinimalEntity('ClassC', 'class'),
+    ];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'GroupOne', entities: ['src/test.ts.ClassA', 'src/test.ts.ClassB'], reasoning: '' },
+        { name: 'GroupTwo', entities: ['src/test.ts.ClassC'], reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping(entities, [], grouping);
+    const result = gen.generateClassDiagrams(3);
+
+    expect(result.length).toBe(1);
+    expect(result[0].name).toBeNull();
+  });
+
+  it('returns single diagram when there is only one group', () => {
+    // 10 entities in 1 group, limit = 2 (10 > 2, but only 1 group)
+    const entities = Array.from({ length: 10 }, (_, i) => makeMinimalEntity(`Class${i}`, 'class'));
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'OnlyGroup', entities: entities.map(e => e.id), reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping(entities, [], grouping);
+    const result = gen.generateClassDiagrams(2);
+
+    expect(result.length).toBe(1);
+    expect(result[0].name).toBeNull();
+  });
+
+  it('splits into multiple diagrams when node count exceeds limit and multiple groups exist', () => {
+    // 6 entities in 3 groups (A:2, B:2, C:2), limit = 4 (6 > 4)
+    const entitiesA = [makeMinimalEntity('A1', 'class'), makeMinimalEntity('A2', 'class')];
+    const entitiesB = [makeMinimalEntity('B1', 'class'), makeMinimalEntity('B2', 'class')];
+    const entitiesC = [makeMinimalEntity('C1', 'class'), makeMinimalEntity('C2', 'class')];
+    const allEntities = [...entitiesA, ...entitiesB, ...entitiesC];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'A', entities: entitiesA.map(e => e.id), reasoning: '' },
+        { name: 'B', entities: entitiesB.map(e => e.id), reasoning: '' },
+        { name: 'C', entities: entitiesC.map(e => e.id), reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping(allEntities, [], grouping);
+    const result = gen.generateClassDiagrams(4);
+
+    expect(result.length).toBe(3);
+    expect(result.map(r => r.name)).toEqual(['A', 'B', 'C']);
+    for (const r of result) {
+      expect(r.content).toContain('classDiagram');
+    }
+    expect(result[0].content).toContain('namespace A {');
+    expect(result[1].content).toContain('namespace B {');
+    expect(result[2].content).toContain('namespace C {');
+  });
+
+  it('each split diagram contains classDef styles', () => {
+    const entitiesA = [makeMinimalEntity('A1', 'class'), makeMinimalEntity('A2', 'class')];
+    const entitiesB = [makeMinimalEntity('B1', 'class'), makeMinimalEntity('B2', 'class')];
+    const entitiesC = [makeMinimalEntity('C1', 'class'), makeMinimalEntity('C2', 'class')];
+    const allEntities = [...entitiesA, ...entitiesB, ...entitiesC];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'A', entities: entitiesA.map(e => e.id), reasoning: '' },
+        { name: 'B', entities: entitiesB.map(e => e.id), reasoning: '' },
+        { name: 'C', entities: entitiesC.map(e => e.id), reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping(allEntities, [], grouping);
+    const result = gen.generateClassDiagrams(4);
+
+    for (const r of result) {
+      expect(r.content).toContain('classDef classNode');
+    }
+  });
+
+  it('each split diagram contains only relations from that group', () => {
+    // Group A has EntityA, Group B has EntityB; relation A --> B
+    const entityA = makeMinimalEntity('EntityA', 'class');
+    const entityB = makeMinimalEntity('EntityB', 'class');
+    const relations: ArchJSON['relations'] = [
+      { id: 'rel-ab', type: 'dependency', source: 'EntityA', target: 'EntityB' },
+    ];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'GroupA', entities: [entityA.id], reasoning: '' },
+        { name: 'GroupB', entities: [entityB.id], reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping([entityA, entityB], relations, grouping);
+    // limit = 1, total visible = 2 → split
+    const result = gen.generateClassDiagrams(1);
+
+    expect(result.length).toBe(2);
+    const diagA = result.find(r => r.name === 'GroupA')!;
+    const diagB = result.find(r => r.name === 'GroupB')!;
+
+    // GroupA's diagram should contain the relation (source EntityA is in GroupA)
+    expect(diagA.content).toContain('EntityA --> EntityB');
+    // GroupB's diagram should NOT contain the relation (source EntityA is NOT in GroupB)
+    expect(diagB.content).not.toContain('EntityA --> EntityB');
+  });
+
+  it('excludes function-type entities from split count and content', () => {
+    // 2 class entities + 3 function entities, 2 groups; visible = 2, limit = 3 → NOT split
+    const classA = makeMinimalEntity('ClassA', 'class');
+    const classB = makeMinimalEntity('ClassB', 'class');
+    const fn1 = makeMinimalEntity('fn1', 'function');
+    const fn2 = makeMinimalEntity('fn2', 'function');
+    const fn3 = makeMinimalEntity('fn3', 'function');
+    const allEntities = [classA, classB, fn1, fn2, fn3];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'GroupA', entities: [classA.id, fn1.id, fn2.id], reasoning: '' },
+        { name: 'GroupB', entities: [classB.id, fn3.id], reasoning: '' },
+      ],
+    };
+    const gen = makeGenWithGrouping(allEntities, [], grouping);
+    const result = gen.generateClassDiagrams(3);
+
+    expect(result.length).toBe(1);
+    expect(result[0].name).toBeNull();
+  });
+});
+
+describe('generateClassDiagrams — relation ID resolution', () => {
+  // C++ entities have IDs like "namespace.ClassName" and names like "ClassName"
+  const makeCppEntity = (namespace: string, name: string) => ({
+    id: `${namespace}.${name}`,
+    name,
+    type: 'class' as const,
+    visibility: 'public' as const,
+    members: [],
+    sourceLocation: { file: `${namespace}/${name}.cpp`, startLine: 1, endLine: 10 },
+  });
+
+  const makeGrouping = (groups: Array<{ name: string; entities: Array<{ id: string }> }>): GroupingDecision => ({
+    packages: groups.map(g => ({ name: g.name, entities: g.entities.map(e => e.id), reasoning: '' })),
+  });
+
+  it('uses entity simple name (not escaped ID) in split diagram relation lines', () => {
+    // C++ entity: id="ggml.ggml_backend_opencl_buffer_context" name="ggml_backend_opencl_buffer_context"
+    const entityA = makeCppEntity('ggml', 'ggml_backend_opencl_buffer_context');
+    const entityB = makeCppEntity('ggml', 'ggml_backend_opencl_device');
+    // A third entity in a different group is needed to trigger splitting (requires ≥2 groups)
+    const entityC = makeCppEntity('common', 'common_utils');
+    const entities = [entityA, entityB, entityC];
+    const relations: ArchJSON['relations'] = [
+      { source: entityA.id, target: entityB.id, type: 'dependency' },
+    ];
+    const grouping = makeGrouping([
+      { name: 'ggml', entities: [entityA, entityB] },
+      { name: 'common', entities: [entityC] },
+    ]);
+    const gen = new ValidatedMermaidGenerator(
+      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
+      { level: 'class', grouping },
+    );
+    // 3 entities, limit = 2 → split
+    const result = gen.generateClassDiagrams(2);
+    const diagGgml = result.find(r => r.name === 'ggml')!;
+
+    // Namespace block uses entity.name directly: "ggml_backend_opencl_buffer_context"
+    // Relation must also use simple name, not "ggml_ggml_backend_opencl_buffer_context"
+    expect(diagGgml.content).toContain('ggml_backend_opencl_buffer_context --> ggml_backend_opencl_device');
+    expect(diagGgml.content).not.toContain('ggml_ggml_backend_opencl_buffer_context');
+  });
+
+  it('produces no ghost nodes — relation node IDs match namespace block node IDs', () => {
+    const entityA = makeCppEntity('mod', 'MyClass');
+    const entityB = makeCppEntity('mod', 'MyBase');
+    // Third entity in another group to trigger splitting
+    const entityC = makeCppEntity('other', 'OtherClass');
+    const entities = [entityA, entityB, entityC];
+    const relations: ArchJSON['relations'] = [
+      { source: entityA.id, target: entityB.id, type: 'inheritance' },
+    ];
+    const grouping = makeGrouping([
+      { name: 'mod', entities: [entityA, entityB] },
+      { name: 'other', entities: [entityC] },
+    ]);
+    const gen = new ValidatedMermaidGenerator(
+      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
+      { level: 'class', grouping },
+    );
+    // 3 entities, limit = 2 → split
+    const result = gen.generateClassDiagrams(2);
+    const diag = result.find(r => r.name === 'mod')!;
+    const lines = diag.content.split('\n');
+
+    // Collect all class node definitions from namespace block
+    const classDefs = new Set(
+      lines
+        .filter(l => /^\s+class \w+\s*\{/.test(l))
+        .map(l => l.match(/class (\w+)\s*\{/)![1])
+    );
+
+    // Collect all node IDs referenced in relations
+    const relationNodeIds = new Set<string>();
+    for (const line of lines) {
+      // inheritance: "MyBase <|-- MyClass" → ["MyBase", "MyClass"]
+      const m = line.match(/(\w+)\s+(?:<\|--|<\|\.\.|\*--|o--|-->)\s+(\w+)/);
+      if (m) { relationNodeIds.add(m[1]); relationNodeIds.add(m[2]); }
+    }
+
+    // Every relation node ID must appear in namespace block definitions
+    for (const id of relationNodeIds) {
+      expect(classDefs).toContain(id);
+    }
+  });
+
+  it('backward compat: TypeScript scoped IDs (.ts.ClassName) still normalise correctly', () => {
+    // TypeScript entities: id="src/foo.ts.MyService" name="MyService"
+    const entityA = {
+      id: 'src/foo.ts.MyService',
+      name: 'MyService',
+      type: 'class' as const,
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 10 },
+    };
+    const entityB = {
+      id: 'src/bar.ts.IRepo',
+      name: 'IRepo',
+      type: 'interface' as const,
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: { file: 'src/bar.ts', startLine: 1, endLine: 5 },
+    };
+    const entities = [entityA, entityB];
+    const relations: ArchJSON['relations'] = [
+      { source: entityA.id, target: entityB.id, type: 'dependency' },
+    ];
+    const grouping: GroupingDecision = {
+      packages: [
+        { name: 'foo', entities: [entityA.id], reasoning: '' },
+        { name: 'bar', entities: [entityB.id], reasoning: '' },
+      ],
+    };
+    const gen = new ValidatedMermaidGenerator(
+      { version: '1.0', language: 'typescript', timestamp: new Date().toISOString(), sourceFiles: [], entities, relations },
+      { level: 'class', grouping },
+    );
+    // 2 entities, limit = 1 → split
+    const result = gen.generateClassDiagrams(1);
+    const diagFoo = result.find(r => r.name === 'foo')!;
+
+    // Should use simple names "MyService" and "IRepo", not "src_foo_ts_MyService"
+    expect(diagFoo.content).toContain('MyService --> IRepo');
+    expect(diagFoo.content).not.toContain('src_foo_ts_MyService');
   });
 });

@@ -414,6 +414,14 @@ export interface GlobalConfig {
    * Enable verbose output
    */
   verbose: boolean;
+
+  /**
+   * Maximum number of visible class/interface nodes per generated diagram.
+   * When a class or method diagram exceeds this limit AND has more than one
+   * namespace group, it is automatically split into one diagram per group.
+   * @default 150
+   */
+  maxNodesPerDiagram?: number;
 }
 
 /**

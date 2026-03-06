@@ -35,7 +35,7 @@ export { GO_ATLAS_EXTENSION_VERSION } from './extensions.js';
 /**
  * Supported programming languages
  */
-export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust';
+export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust' | 'cpp';
 
 /**
  * Module structure for organizing entities
@@ -58,6 +58,7 @@ export interface ArchJSON {
   relations: Relation[];
   modules?: Module[];
   metadata?: Record<string, unknown>;
+  workspaceRoot?: string;
 
   // Type-safe extensions (ADR-002)
   extensions?: import('./extensions.js').ArchJSONExtensions;
