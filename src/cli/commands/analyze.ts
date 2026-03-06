@@ -278,6 +278,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
       configOverrides.mermaid = {
         theme: cliOptions.mermaidTheme,
         renderer: cliOptions.mermaidRenderer,
+        transparentBackground: true,
       };
     }
 
