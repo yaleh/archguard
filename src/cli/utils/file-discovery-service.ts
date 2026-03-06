@@ -3,7 +3,7 @@
  * Handles file pattern matching, deduplication, and exclusion
  */
 
-import globby from 'globby';
+import { globby } from 'globby';
 import path from 'path';
 import fs from 'fs-extra';
 

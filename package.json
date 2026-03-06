@@ -45,29 +45,30 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "@eslint/eslintrc": "^3.3.4",
-    "@eslint/js": "^10.0.1",
     "chalk": "^5.6.2",
     "cli-progress": "^3.12.0",
     "commander": "^14.0.3",
     "execa": "^9.6.1",
     "fs-extra": "^11.3.4",
     "glob": "^13.0.6",
+    "globby": "^16.1.1",
     "isomorphic-mermaid": "^0.1.1",
     "ora": "^9.3.0",
     "p-limit": "^7.3.0",
     "p-map": "^7.0.4",
-    "pino": "^10.3.1",
     "sharp": "^0.34.5",
     "tree-sitter": "^0.25.0",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",
     "tree-sitter-java": "^0.23.5",
     "tree-sitter-python": "^0.25.0",
-    "ts-morph": "^27.0.2"
+    "ts-morph": "^27.0.2",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.4",
+    "@eslint/js": "^10.0.1",
     "@types/cli-progress": "^3.11.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.19.37",
@@ -81,8 +82,7 @@
     "prettier": "^3.1.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.3.0",
-    "vitest": "^3.2.4",
-    "zod": "^4.3.6"
+    "vitest": "^3.2.4"
   },
   "repository": {
     "type": "git",
