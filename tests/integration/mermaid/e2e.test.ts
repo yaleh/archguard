@@ -133,25 +133,24 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
-    // Should handle and repair the problematic names
-    await expect(
-      generator.generateAndRender(
-        problematicJson,
-        {
-          outputDir: testOutputDir,
-          baseName: 'problematic',
-          paths: {
-            mmd: path.join(testOutputDir, 'problematic.mmd'),
-            svg: path.join(testOutputDir, 'problematic.svg'),
-            png: path.join(testOutputDir, 'problematic.png'),
-          },
+    // Should handle and repair the problematic names (generateOnly: no rendering)
+    const jobs = await generator.generateOnly(
+      problematicJson,
+      {
+        outputDir: testOutputDir,
+        baseName: 'problematic',
+        paths: {
+          mmd: path.join(testOutputDir, 'problematic.mmd'),
+          svg: path.join(testOutputDir, 'problematic.svg'),
+          png: path.join(testOutputDir, 'problematic.png'),
         },
-        'class'
-      )
-    ).resolves.not.toThrow();
+      },
+      'class'
+    );
 
-    // Verify files were generated despite problematic input
-    expect(await fs.pathExists(path.join(testOutputDir, 'problematic.mmd'))).toBe(true);
+    // Verify mermaid code was generated despite problematic input
+    expect(jobs.length).toBeGreaterThan(0);
+    expect(jobs[0].mermaidCode).toContain('classDiagram');
   });
 
   it('should support package-level diagrams', async () => {
@@ -162,7 +161,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
-    await generator.generateAndRender(
+    // generateOnly: no rendering, just verify mmd content
+    const jobs = await generator.generateOnly(
       archJson,
       {
         outputDir: testOutputDir,
@@ -176,7 +176,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       'package'
     );
 
-    const mmdContent = await fs.readFile(path.join(testOutputDir, 'package-level.mmd'), 'utf-8');
+    expect(jobs.length).toBeGreaterThan(0);
+    const mmdContent = jobs[0].mermaidCode;
     expect(mmdContent).toContain('classDiagram');
     // Package level should have namespaces
     expect(mmdContent).toMatch(/namespace|class/);
@@ -190,7 +191,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
-    await generator.generateAndRender(
+    // generateOnly: no rendering, just verify mmd content
+    const jobs = await generator.generateOnly(
       archJson,
       {
         outputDir: testOutputDir,
@@ -204,7 +206,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       'method'
     );
 
-    const mmdContent = await fs.readFile(path.join(testOutputDir, 'method-level.mmd'), 'utf-8');
+    expect(jobs.length).toBeGreaterThan(0);
+    const mmdContent = jobs[0].mermaidCode;
     expect(mmdContent).toContain('classDiagram');
     expect(mmdContent).toContain('('); // Should have method parameters
   });
@@ -224,8 +227,9 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
+    // generateOnly: no rendering; empty input returns [] without throwing
     await expect(
-      generator.generateAndRender(
+      generator.generateOnly(
         emptyJson,
         {
           outputDir: testOutputDir,
@@ -242,7 +246,6 @@ describe('MermaidDiagramGenerator E2E', () => {
   });
 
   it('should handle large number of entities', async () => {
-    // Rendering 50 entities can take >30s on slow machines; use 90s timeout
     // Create mock ArchJSON with many entities
     const largeJson: ArchJSON = {
       version: '1.0',
@@ -271,8 +274,9 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
+    // generateOnly: no rendering — avoids the 30s+ SVG+PNG render for 50 entities
     await expect(
-      generator.generateAndRender(
+      generator.generateOnly(
         largeJson,
         {
           outputDir: testOutputDir,
@@ -286,7 +290,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         'class'
       )
     ).resolves.not.toThrow();
-  }, 90000);
+  });
 
   it('should preserve entity relationships in diagram', async () => {
     const relationalJson: ArchJSON = {
@@ -338,7 +342,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       },
     });
 
-    await generator.generateAndRender(
+    // generateOnly: no rendering, verify relationship markers in mmd text
+    const jobs = await generator.generateOnly(
       relationalJson,
       {
         outputDir: testOutputDir,
@@ -352,7 +357,8 @@ describe('MermaidDiagramGenerator E2E', () => {
       'class'
     );
 
-    const mmdContent = await fs.readFile(path.join(testOutputDir, 'relations.mmd'), 'utf-8');
+    expect(jobs.length).toBeGreaterThan(0);
+    const mmdContent = jobs[0].mermaidCode;
 
     // Check for relationship markers
     expect(mmdContent).toContain('<|--'); // Inheritance

@@ -3,23 +3,30 @@
  * Parse the ArchGuard project itself to validate Phase 1
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { TypeScriptParser } from '@/parser/typescript-parser';
+import type { ArchJSON } from '@/types';
 import * as path from 'path';
 
 describe('ArchGuard Self Test - Integration', () => {
-  it('should parse ArchGuard project src directory', () => {
-    const parser = new TypeScriptParser();
-    const srcDir = path.resolve(__dirname, '../../src');
+  let parser: TypeScriptParser;
+  let archJson: ArchJSON;
+  let parseDuration: number;
 
+  const srcDir = path.resolve(__dirname, '../../src');
+
+  beforeAll(() => {
+    parser = new TypeScriptParser();
     const startTime = Date.now();
-    const archJson = parser.parseProject(srcDir);
-    const duration = Date.now() - startTime;
+    archJson = parser.parseProject(srcDir);
+    parseDuration = Date.now() - startTime;
+  }, 30000); // 30 second timeout for the shared parse
 
+  it('should parse ArchGuard project src directory', () => {
     // Performance: Should parse in < 30 seconds (with coverage instrumentation)
     // Normal run: ~5 seconds, with coverage: ~12 seconds
     // Future optimization target: < 2 seconds
-    expect(duration).toBeLessThan(30000);
+    expect(parseDuration).toBeLessThan(30000);
 
     // Should have entities
     expect(archJson.entities.length).toBeGreaterThan(0);
@@ -68,13 +75,9 @@ describe('ArchGuard Self Test - Integration', () => {
       r.source.endsWith('.TypeScriptParser')
     );
     expect(parserRelations.length).toBeGreaterThan(0);
-  }, 10000); // 10 second timeout for integration test
+  });
 
   it('should generate valid JSON', () => {
-    const parser = new TypeScriptParser();
-    const srcDir = path.resolve(__dirname, '../../src');
-
-    const archJson = parser.parseProject(srcDir);
     const json = parser.toJSON(archJson);
 
     // Should be valid JSON
@@ -86,14 +89,9 @@ describe('ArchGuard Self Test - Integration', () => {
     const parsed = JSON.parse(json) as { version: string; language: string };
     expect(parsed.version).toBe('1.0');
     expect(parsed.language).toBe('typescript');
-  }, 10000);
+  });
 
   it('should have correct entity types', () => {
-    const parser = new TypeScriptParser();
-    const srcDir = path.resolve(__dirname, '../../src');
-
-    const archJson = parser.parseProject(srcDir);
-
     // Should have classes
     const classes = archJson.entities.filter((e) => e.type === 'class');
     expect(classes.length).toBeGreaterThan(0);
@@ -114,14 +112,9 @@ describe('ArchGuard Self Test - Integration', () => {
       expect(entity.sourceLocation.startLine).toBeGreaterThan(0);
       expect(entity.sourceLocation.endLine).toBeGreaterThan(0);
     });
-  }, 10000);
+  });
 
   it('should have correct relation types', () => {
-    const parser = new TypeScriptParser();
-    const srcDir = path.resolve(__dirname, '../../src');
-
-    const archJson = parser.parseProject(srcDir);
-
     // Each relation should have required fields
     archJson.relations.forEach((relation) => {
       expect(relation.id).toBeDefined();
@@ -142,5 +135,5 @@ describe('ArchGuard Self Test - Integration', () => {
     // Should have composition relations (classes using other classes)
     const compositions = archJson.relations.filter((r) => r.type === 'composition');
     expect(compositions.length).toBeGreaterThan(0);
-  }, 10000);
+  });
 });

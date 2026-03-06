@@ -2,16 +2,12 @@
  * Tests for RelationExtractor - import name normalization
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { RelationExtractor } from '@/parser/relation-extractor.js';
 
+const extractor = new RelationExtractor();
+
 describe('RelationExtractor - Import Name Normalization', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   describe('extractTypeName', () => {
     // 注意：extractTypeName 是私有方法，我们需要通过公共接口测试
     // 或者我们可以创建一个测试辅助方法

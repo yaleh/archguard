@@ -5,16 +5,12 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { RelationExtractor } from '@/parser/relation-extractor';
 
+const extractor = new RelationExtractor();
+
 describe('RelationExtractor - Inheritance', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should detect class inheritance', () => {
     const code = `
       class User {}
@@ -48,12 +44,6 @@ describe('RelationExtractor - Inheritance', () => {
 });
 
 describe('RelationExtractor - Implementation', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should detect interface implementation', () => {
     const code = `
       interface IUserService {
@@ -103,12 +93,6 @@ describe('RelationExtractor - Implementation', () => {
 });
 
 describe('RelationExtractor - Interface Extends', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should detect interface extension', () => {
     const code = `
       interface User {}
@@ -129,12 +113,6 @@ describe('RelationExtractor - Interface Extends', () => {
 });
 
 describe('RelationExtractor - Composition', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should detect composition through properties', () => {
     const code = `
       class Database {}
@@ -173,12 +151,6 @@ describe('RelationExtractor - Composition', () => {
 });
 
 describe('RelationExtractor - Dependency', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should detect dependency through method parameters', () => {
     const code = `
       class User {}
@@ -217,12 +189,6 @@ describe('RelationExtractor - Dependency', () => {
 });
 
 describe('RelationExtractor - Complex Scenarios', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should handle multiple relationship types in one class', () => {
     const code = `
       class BaseService {}
@@ -292,12 +258,6 @@ describe('RelationExtractor - Complex Scenarios', () => {
 });
 
 describe('RelationExtractor - External Import Filtering', () => {
-  let extractor: RelationExtractor;
-
-  beforeAll(() => {
-    extractor = new RelationExtractor();
-  });
-
   it('should not create relation for type imported from an npm package (non-relative path)', () => {
     const code = `
       import type { Bar } from 'cli-progress';

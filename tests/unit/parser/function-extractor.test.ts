@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { FunctionExtractor } from '../../../src/parser/function-extractor.js';
 import { Project } from 'ts-morph';
 
 describe('FunctionExtractor', () => {
+  let project: Project;
+
+  beforeAll(() => {
+    project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+  });
+
   function extractFromCode(code: string, filePath = 'src/cli/foo.ts') {
-    const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
     const sourceFile = project.createSourceFile(filePath, code, { overwrite: true });
     const extractor = new FunctionExtractor();
     return extractor.extract(sourceFile, filePath);
