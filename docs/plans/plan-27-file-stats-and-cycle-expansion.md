@@ -276,6 +276,34 @@ describe('MetricsCalculator — cycles', () => {
     const r = calc.calculate(makeArchJSON([], []), 'class');
     expect(r.cycles).toEqual([]);
   });
+
+  it('CycleInfo.files: no empty strings when some members lack sourceLocation', () => {
+    const noFile: Entity = {
+      id: 'A', name: 'A', type: 'class', visibility: 'public', members: [],
+      sourceLocation: { file: '', startLine: 0, endLine: 0 },
+    };
+    const arch = makeArchJSON(
+      [noFile, makeEntityInFile('B', 'src/b.ts')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+    );
+    const r = calc.calculate(arch, 'class');
+    const c = r.cycles![0];
+    // empty string must be filtered — files must not contain ''
+    expect(c.files.every(f => f.length > 0)).toBe(true);
+    expect(c.files).toEqual(['src/b.ts']);
+  });
+
+  it('package level: stronglyConnectedComponents still computed, cycles undefined', () => {
+    // Regression guard: computeSCCGroups must run for all levels
+    const arch = makeArchJSON(
+      [makeEntity('A'), makeEntity('B')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+    );
+    const r = calc.calculate(arch, 'package');
+    expect(r.stronglyConnectedComponents).toBe(1); // A→B→A forms one SCC
+    expect(r.cycles).toBeUndefined();
+    expect(r.fileStats).toBeUndefined();
+  });
 });
 ```
 
@@ -401,6 +429,18 @@ describe('MetricsCalculator — fileStats', () => {
     expect(c.cycleCount).toBe(0);
   });
 
+  it('cycleCount: two entities in same file forming one SCC → cycleCount 1, not 2', () => {
+    // A and B are both in src/a.ts and together form one non-trivial SCC.
+    // cycleCount must count distinct SCCs containing the file, not entity memberships.
+    const arch = makeArchJSON(
+      [makeEntityInFile('A', 'src/a.ts'), makeEntityInFile('B', 'src/a.ts')],
+      [makeRelation('r1', 'A', 'B'), makeRelation('r2', 'B', 'A')],
+    );
+    const r = calc.calculate(arch, 'class');
+    const a = r.fileStats!.find(f => f.file === 'src/a.ts')!;
+    expect(a.cycleCount).toBe(1); // one SCC, not two entity memberships
+  });
+
   it('sorted by inDegree DESC (then outDegree DESC)', () => {
     // src/a.ts inDegree 3, src/b.ts inDegree 1
     const arch = makeArchJSON(
@@ -477,6 +517,12 @@ npx vitest run tests/unit/parser/metrics-calculator.test.ts
 
 Replace the body of `metrics-calculator.ts` with the following (preserve existing import):
 
+> **Design note**: `computeSCCGroups` always runs regardless of `level` or Atlas mode,
+> so that `stronglyConnectedComponents` is computed for every diagram level (including
+> `package`). Only `buildCycleInfos` and `computeFileStats` are gated on level/mode.
+> This separates Kosaraju from cycle-info construction and removes the package-level
+> SCC regression introduced by an early-return pattern.
+
 ```typescript
 import path from 'path';
 import type { ArchJSON, ArchJSONMetrics, RelationType, DetailLevel, FileStats, CycleInfo } from '@/types/index.js';
@@ -485,25 +531,24 @@ export class MetricsCalculator {
   calculate(archJSON: ArchJSON, level: DetailLevel): ArchJSONMetrics {
     const { entities, relations } = archJSON;
     const isAtlas = !!archJSON.extensions?.goAtlas;
-    const entityCount = entities.length;
-    const relationCount = relations.length;
 
-    const { sccCount, cycles, nonTrivialSCCs } = this.computeCycles(archJSON, level, isAtlas);
+    // Always compute SCC count — preserves existing behaviour for all levels.
+    const { sccCount, nonTrivialSCCs } = this.computeSCCGroups(archJSON);
 
-    const fileStats =
-      !isAtlas && level !== 'package'
-        ? this.computeFileStats(archJSON, nonTrivialSCCs)
-        : undefined;
+    // cycles and fileStats only make sense for class/method, non-Atlas.
+    const computeDetails = !isAtlas && level !== 'package';
+    const cycles    = computeDetails ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
+    const fileStats = computeDetails ? this.computeFileStats(archJSON, nonTrivialSCCs) : undefined;
 
     return {
       level,
-      entityCount,
-      relationCount,
+      entityCount: entities.length,
+      relationCount: relations.length,
       relationTypeBreakdown: this.buildTypeBreakdown(relations),
       stronglyConnectedComponents: sccCount,
       inferredRelationRatio: this.calcInferredRatio(relations),
       fileStats,
-      cycles: !isAtlas && level !== 'package' ? cycles : undefined,
+      cycles,
     };
   }
 
@@ -527,18 +572,15 @@ export class MetricsCalculator {
     return Math.round((inferredCount / relations.length) * 100) / 100;
   }
 
-  // ── Private: SCC / cycles ─────────────────────────────────────────────────
+  // ── Private: Kosaraju SCC ─────────────────────────────────────────────────
 
-  private computeCycles(
-    archJSON: ArchJSON,
-    level: DetailLevel,
-    isAtlas: boolean,
-  ): { sccCount: number; cycles: CycleInfo[]; nonTrivialSCCs: string[][] } {
-    const empty = { sccCount: 0, cycles: [] as CycleInfo[], nonTrivialSCCs: [] as string[][] };
-    if (isAtlas || level === 'package') return empty;
-
-    const { entities, relations, workspaceRoot } = archJSON;
-    if (entities.length === 0) return { sccCount: 0, cycles: [], nonTrivialSCCs: [] };
+  /**
+   * Runs Kosaraju on the full entity graph and returns the SCC count and all
+   * non-trivial SCC groups (size > 1). Always runs regardless of level or mode.
+   */
+  private computeSCCGroups(archJSON: ArchJSON): { sccCount: number; nonTrivialSCCs: string[][] } {
+    const { entities, relations } = archJSON;
+    if (entities.length === 0) return { sccCount: 0, nonTrivialSCCs: [] };
 
     const entityIds = new Set(entities.map(e => e.id));
     const validRelations = relations.filter(r => entityIds.has(r.source) && entityIds.has(r.target));
@@ -559,7 +601,7 @@ export class MetricsCalculator {
       if (!visited1.has(id)) this.dfsIterative(id, graph, visited1, finishStack);
     }
 
-    // Pass 2: collect SCC members
+    // Pass 2: collect SCC members on transposed graph
     const visited2 = new Set<string>();
     const sccGroups: string[][] = [];
     while (finishStack.length > 0) {
@@ -571,23 +613,35 @@ export class MetricsCalculator {
       }
     }
 
-    const sccCount = sccGroups.length;
-    const nonTrivialSCCs = sccGroups.filter(g => g.length > 1);
+    return {
+      sccCount: sccGroups.length,
+      nonTrivialSCCs: sccGroups.filter(g => g.length > 1),
+    };
+  }
 
-    // Build entity maps for CycleInfo construction
+  /**
+   * Maps non-trivial SCC groups to CycleInfo objects (names, files).
+   * Only called when level === 'class' | 'method' and not Atlas mode.
+   */
+  private buildCycleInfos(archJSON: ArchJSON, nonTrivialSCCs: string[][]): CycleInfo[] {
+    const { entities, workspaceRoot } = archJSON;
+
+    const normalise = (rawFile: string): string => {
+      if (!rawFile) return '';
+      if (workspaceRoot && path.isAbsolute(rawFile)) {
+        return path.relative(workspaceRoot, rawFile).replace(/\\/g, '/');
+      }
+      return rawFile;
+    };
+
     const entityFileMap = new Map<string, string>();
     const entityNameMap = new Map<string, string>();
     for (const e of entities) {
-      const rawFile = e.sourceLocation?.file ?? '';
-      const file =
-        workspaceRoot && rawFile && path.isAbsolute(rawFile)
-          ? path.relative(workspaceRoot, rawFile).replace(/\\/g, '/')
-          : rawFile;
-      entityFileMap.set(e.id, file);
+      entityFileMap.set(e.id, normalise(e.sourceLocation?.file ?? ''));
       entityNameMap.set(e.id, e.name);
     }
 
-    const cycles: CycleInfo[] = nonTrivialSCCs
+    return nonTrivialSCCs
       .map(members => ({
         size: members.length,
         members,
@@ -595,8 +649,6 @@ export class MetricsCalculator {
         files: [...new Set(members.map(id => entityFileMap.get(id) ?? '').filter(Boolean))],
       }))
       .sort((a, b) => b.size - a.size);
-
-    return { sccCount, cycles, nonTrivialSCCs };
   }
 
   // ── Private: file stats ───────────────────────────────────────────────────
@@ -758,6 +810,15 @@ grep -n "DiagramResult\|metricsCalculator\|format === 'json'" \
 ### Stage 2-1 — Extend `DiagramResult` + decouple metrics computation
 
 **`src/cli/processors/diagram-processor.ts`**
+
+> **Before modifying**, confirm every success return point in `processDiagramWithArchJSON()`.
+> Metrics must be attached to **all** success returns — cache-hit paths included.
+>
+> ```bash
+> grep -n "success: true" src/cli/processors/diagram-processor.ts
+> # Every success: true return inside processDiagramWithArchJSON must receive metrics: computedMetrics.
+> # Move the computedMetrics computation above any early success returns if needed.
+> ```
 
 Step A — Add `metrics` field to `DiagramResult`:
 
@@ -937,12 +998,25 @@ describe('DiagramIndexGenerator — stats tables', () => {
     await fs.remove(dir);
   });
 
-  it('fileStats undefined (Go Atlas): File Statistics section omitted', async () => {
+  it('fileStats undefined (Go Atlas): both stats sections omitted', async () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));
     await gen.generate([makeResult('atlas', 'class', undefined, undefined)]);
     const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
     expect(content).not.toContain('## File Statistics');
+    expect(content).not.toContain('## Circular Dependencies'); // cycles also undefined
+    await fs.remove(dir);
+  });
+
+  it('fileStats empty array: File Statistics omitted, Circular Dependencies still rendered', async () => {
+    // fileStats=[] means no entities to show; cycles=[] still produces "No circular dependencies".
+    const dir = tmpDir();
+    const gen = new DiagramIndexGenerator(baseConfig(dir));
+    await gen.generate([makeResult('cls', 'class', [], [])]);
+    const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
+    expect(content).not.toContain('## File Statistics');
+    expect(content).toContain('## Circular Dependencies');
+    expect(content).toContain('No circular dependencies detected');
     await fs.remove(dir);
   });
 
@@ -1081,8 +1155,8 @@ New private methods:
     s += `Level: \`${level}\``;
     if (truncated) s += `. Showing top ${TOP_N} of ${fileStats.length} files.`;
     s += '\n\n';
-    s += '| File | LOC | Entities | Methods | Fields | InDegree | OutDegree | Cycles |\n';
-    s += '|------|-----|----------|---------|--------|----------|-----------|--------|\n';
+    s += '| File | ~LOC | Entities | Methods | Fields | InDegree | OutDegree | Cycles |\n';
+    s += '|------|------|----------|---------|--------|----------|-----------|--------|\n';
     for (const f of rows) {
       s += `| ${f.file} | ${f.loc} | ${f.entityCount} | ${f.methodCount} | ${f.fieldCount} | ${f.inDegree} | ${f.outDegree} | ${f.cycleCount} |\n`;
     }
@@ -1215,6 +1289,7 @@ npm test
 | `fileStats` in JSON output | `data.metrics?.fileStats?.length` | > 0 for class/method level |
 | `cycles` in JSON output | `data.metrics?.cycles?.length` | integer ≥ 0 |
 | `fileStats` absent at package level | `data.metrics?.fileStats` | `undefined` |
+| package-level `stronglyConnectedComponents` non-zero | `data.metrics?.stronglyConnectedComponents` | > 0 when cycles exist (regression guard) |
 | C++ absolute paths normalised | no `f.file.startsWith('/')` | `false` |
 | `index.md` has File Statistics | `grep "## File Statistics"` | present |
 | `index.md` has Circular Dependencies | `grep "## Circular Dependencies"` | present |

@@ -214,4 +214,62 @@ export interface ArchJSONMetrics {
    * Returns 0 when relationCount === 0.
    */
   inferredRelationRatio: number;
+
+  /**
+   * Per-file statistics, sorted by inDegree DESC.
+   * undefined when level === 'package', Go Atlas mode, or entities array is empty.
+   */
+  fileStats?: FileStats[];
+
+  /**
+   * Non-trivial SCCs (size > 1), sorted by size DESC.
+   * Empty array = no size > 1 cycles. Self-loops (size = 1) are excluded.
+   */
+  cycles?: CycleInfo[];
+}
+
+/**
+ * Per-source-file statistics. Only present when level === 'class' | 'method'
+ * and not in Go Atlas mode. All values are raw counts with no thresholds.
+ */
+export interface FileStats {
+  /** Source file path, relative to workspaceRoot (C++ absolute paths normalised). */
+  file: string;
+  /** Approximate line count: max(entity.sourceLocation.endLine) for entities in this file. */
+  loc: number;
+  /** Number of entities (class / interface / struct / enum / …) defined in this file. */
+  entityCount: number;
+  /** Total methods: members where type === 'method' || type === 'constructor'. */
+  methodCount: number;
+  /** Total fields: members where type === 'property' || type === 'field'. */
+  fieldCount: number;
+  /**
+   * Number of internal relations whose target is an entity in this file.
+   * "Internal" means both source and target are in the parsed entity set.
+   * Counts edges, not distinct neighbour files.
+   */
+  inDegree: number;
+  /**
+   * Number of internal relations whose source is an entity in this file.
+   * "Internal" means both source and target are in the parsed entity set.
+   * Counts edges, not distinct neighbour files.
+   */
+  outDegree: number;
+  /** Count of distinct non-trivial SCCs (size > 1) that contain an entity from this file. */
+  cycleCount: number;
+}
+
+/**
+ * One strongly connected component of size > 1 (non-trivial cycle).
+ * Kosaraju produces a partition — members across different CycleInfo entries never overlap.
+ */
+export interface CycleInfo {
+  /** Number of entities in this cycle. */
+  size: number;
+  /** Entity IDs (ArchJSON entities[].id) — for programmatic lookup. */
+  members: string[];
+  /** Entity names, parallel to members — for human-readable rendering in index.md. */
+  memberNames: string[];
+  /** Deduplicated source file paths (relative) of all members. Empty strings filtered out. */
+  files: string[];
 }

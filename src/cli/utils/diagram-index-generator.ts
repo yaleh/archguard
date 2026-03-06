@@ -12,6 +12,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { GlobalConfig } from '@/types/config.js';
+import type { ArchJSONMetrics, FileStats, CycleInfo } from '@/types/index.js';
 
 /**
  * IndexGenerator for v2.0 DiagramProcessor
@@ -63,6 +64,9 @@ export class DiagramIndexGenerator {
 
     // Summary statistics
     content += this.buildSummarySection(successful);
+
+    // File stats + cycle tables
+    content += this.buildStatsSection(results);
 
     // Failed diagrams section
     if (failed.length > 0) {
@@ -146,5 +150,75 @@ export class DiagramIndexGenerator {
 
     section += '---\n\n';
     return section;
+  }
+
+  /**
+   * Select metrics for stats tables: class level preferred, then method.
+   * package level and missing metrics are excluded.
+   */
+  private selectMetrics(results: DiagramResult[]): ArchJSONMetrics | undefined {
+    return (
+      results.find(r => r.success && r.metrics?.level === 'class')?.metrics ??
+      results.find(r => r.success && r.metrics?.level === 'method')?.metrics
+    );
+  }
+
+  /**
+   * Build the File Statistics and Circular Dependencies sections.
+   * Returns '' when no applicable metrics are available.
+   */
+  private buildStatsSection(results: DiagramResult[]): string {
+    const metrics = this.selectMetrics(results);
+    if (!metrics) return '';
+
+    let section = '';
+    section += this.buildFileStatsTable(metrics);
+    section += this.buildCyclesTable(metrics);
+    return section;
+  }
+
+  private buildFileStatsTable(metrics: ArchJSONMetrics): string {
+    const { fileStats, level } = metrics;
+    if (!fileStats || fileStats.length === 0) return '';
+
+    const TOP_N = 30;
+    const rows = fileStats.slice(0, TOP_N);
+    const truncated = fileStats.length > TOP_N;
+
+    let s = '## File Statistics (sorted by InDegree ↓)\n\n';
+    s += `> \`~LOC\` is approximate (max entity endLine). `;
+    s += `\`InDegree\`/\`OutDegree\` count relations within parsed scope. `;
+    s += `Level: \`${level}\``;
+    if (truncated) s += `. Showing top ${TOP_N} of ${fileStats.length} files.`;
+    s += '\n\n';
+    s += '| File | ~LOC | Entities | Methods | Fields | InDegree | OutDegree | Cycles |\n';
+    s += '|------|------|----------|---------|--------|----------|-----------|--------|\n';
+    for (const f of rows) {
+      s += `| ${f.file} | ${f.loc} | ${f.entityCount} | ${f.methodCount} | ${f.fieldCount} | ${f.inDegree} | ${f.outDegree} | ${f.cycleCount} |\n`;
+    }
+    s += '\n';
+    return s;
+  }
+
+  private buildCyclesTable(metrics: ArchJSONMetrics): string {
+    const { cycles } = metrics;
+    if (cycles === undefined) return '';
+
+    let s = '## Circular Dependencies\n\n';
+    if (cycles.length === 0) {
+      s += 'No circular dependencies detected.\n\n';
+      return s;
+    }
+
+    const noun = cycles.length === 1 ? 'cycle' : 'cycles';
+    s += `${cycles.length} ${noun} detected.\n\n`;
+    s += '| # | Size | Files | Members |\n';
+    s += '|---|------|-------|----------|\n';
+    for (let i = 0; i < cycles.length; i++) {
+      const c = cycles[i];
+      s += `| ${i + 1} | ${c.size} | ${c.files.join(', ')} | ${c.memberNames.join(', ')} |\n`;
+    }
+    s += '\n';
+    return s;
   }
 }

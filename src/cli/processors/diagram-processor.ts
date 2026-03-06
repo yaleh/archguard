@@ -21,7 +21,7 @@ import type { ParseCache } from '@/parser/parse-cache.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import type { DiagramConfig, GlobalConfig, OutputFormat, DetailLevel } from '@/types/config.js';
-import type { ArchJSON } from '@/types/index.js';
+import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
@@ -80,6 +80,12 @@ export interface DiagramResult {
   };
   /** Error message (if failed) */
   error?: string;
+  /**
+   * Structural metrics for this diagram (computed regardless of output format).
+   * Used by DiagramIndexGenerator to render index.md stats tables.
+   * Only present when success === true.
+   */
+  metrics?: ArchJSONMetrics;
 }
 
 /**
@@ -674,11 +680,14 @@ export class DiagramProcessor {
       }
       const format = diagram.format || this.globalConfig.format;
 
-      // For json format: compute metrics and produce a new object (never mutate aggregatedJSON or rawArchJSON,
-      // as rawArchJSON may be a shared cached reference returned by the 'method'-level aggregator).
+      // Compute metrics unconditionally so they can be attached to the DiagramResult
+      // (consumers like DiagramIndexGenerator need them regardless of output format).
+      // For json format: also embed metrics in the output object (never mutate aggregatedJSON or
+      // rawArchJSON, as rawArchJSON may be a shared cached reference returned by the 'method'-level aggregator).
+      const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(aggregatedJSON, diagram.level);
       const outputJSON =
         format === 'json'
-          ? { ...aggregatedJSON, metrics: this.metricsCalculator.calculate(aggregatedJSON, diagram.level) }
+          ? { ...aggregatedJSON, metrics: computedMetrics }
           : aggregatedJSON;
 
       await this.generateOutput(outputJSON, paths, format, diagram.level, diagram, pool);
@@ -714,6 +723,7 @@ export class DiagramProcessor {
       return {
         name: diagram.name,
         success: true,
+        metrics: computedMetrics,
         paths: resultPaths,
         stats: {
           entities: usesModuleGraph ? moduleGraph.nodes.length : aggregatedJSON.entities.length,
