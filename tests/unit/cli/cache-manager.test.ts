@@ -219,9 +219,9 @@ describe('Story 3: Cache Mechanism', () => {
   });
 
   describe('Default Cache Directory', () => {
-    it('should use ~/.archguard/cache as default directory', () => {
+    it('should use ./.archguard/cache as default directory', () => {
       const defaultCache = new CacheManager();
-      const expectedPath = path.join(os.homedir(), '.archguard', 'cache');
+      const expectedPath = path.join('.archguard', 'cache');
 
       // Access private property for testing (using type assertion)
       const cacheDir = (defaultCache as unknown as { cacheDir: string }).cacheDir;

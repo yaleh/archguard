@@ -296,9 +296,23 @@ describe('Story 5: Configuration File Support', () => {
     });
 
     describe('Output Directory Configuration', () => {
+      it('should derive outputDir and cache.dir from default workDir', async () => {
+        const config = await loader.load();
+        expect(config.workDir).toBe('./.archguard');
+        expect(config.outputDir).toBe('.archguard/output');
+        expect(config.cache.dir).toBe('.archguard/cache');
+      });
+
+      it('should derive outputDir and cache.dir from custom workDir', async () => {
+        const config = await loader.load({ workDir: './custom-work' });
+        expect(config.workDir).toBe('./custom-work');
+        expect(config.outputDir).toBe('custom-work/output');
+        expect(config.cache.dir).toBe('custom-work/cache');
+      });
+
       it('should parse outputDir with default value', async () => {
         const config = await loader.load();
-        expect(config.outputDir).toBe('./.archguard');
+        expect(config.outputDir).toBe('.archguard/output');
       });
 
       it('should parse custom outputDir from config', async () => {

@@ -139,7 +139,8 @@ const ClassHighlightConfigSchema = z.object({
 
 const configSchema = z.object({
   // ========== Global Configuration ==========
-  outputDir: z.string().default('./.archguard'),
+  workDir: z.string().default('./.archguard'),
+  outputDir: z.string().default('./.archguard/output'),
   format: z.enum(['mermaid', 'json']).default('mermaid'),
   mermaid: MermaidConfigSchema.default({ renderer: 'isomorphic', theme: 'default', transparentBackground: false }),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
@@ -162,10 +163,12 @@ const configSchema = z.object({
     .object({
       enabled: z.boolean().default(true),
       ttl: z.number().default(86400), // 24 hours in seconds
+      dir: z.string().default('./.archguard/cache'),
     })
     .default({
       enabled: true,
       ttl: 86400,
+      dir: './.archguard/cache',
     }),
 
   // ========== Other Configuration ==========
@@ -231,6 +234,7 @@ export type Config = z.infer<typeof configSchema>;
  * Breaking Change: Removed all deprecated fields
  */
 interface FileConfig {
+  workDir?: string;
   outputDir?: string;
   format?: 'mermaid' | 'json';
   mermaid?: {
@@ -247,6 +251,7 @@ interface FileConfig {
   cache?: {
     enabled?: boolean;
     ttl?: number;
+    dir?: string;
   };
   concurrency?: number;
   verbose?: boolean;
@@ -293,9 +298,10 @@ export class ConfigLoader {
     const fileConfig = await this.loadFromFile(configPath);
     const normalized = this.normalizeConfig(fileConfig);
     const merged = this.deepMerge(normalized, cliOptions);
+    const resolvedDirs = this.resolveDirectoryDefaults(merged);
 
     try {
-      return configSchema.parse(merged);
+      return configSchema.parse(resolvedDirs);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const issues = error.issues
@@ -320,6 +326,31 @@ export class ConfigLoader {
     // Simply return the config as-is
     // All validation is handled by Zod schema
     return { ...config };
+  }
+
+  /**
+   * Resolve work/output/cache directories with deterministic defaults.
+   *
+   * Precedence:
+   * 1) Explicit outputDir/cache.dir from config/CLI
+   * 2) workDir-derived defaults
+   * 3) built-in default workDir (.archguard)
+   */
+  private resolveDirectoryDefaults(config: FileConfig): FileConfig {
+    const workDir = config.workDir ?? './.archguard';
+    const outputDir = config.outputDir ?? path.join(workDir, 'output');
+    const cacheDir = config.cache?.dir ?? path.join(workDir, 'cache');
+
+    return {
+      ...config,
+      workDir,
+      outputDir,
+      cache: {
+        enabled: config.cache?.enabled ?? true,
+        ttl: config.cache?.ttl ?? 86400,
+        dir: cacheDir,
+      },
+    };
   }
 
   /**

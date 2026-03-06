@@ -11,6 +11,7 @@ export interface CLIConfig {
 export interface Config {
   source: string | string[];
   output?: string;
+  workDir?: string;
   outputDir: string;
   format: 'mermaid' | 'json';
   exclude: string[];
@@ -22,6 +23,7 @@ export interface Config {
   cache: {
     enabled: boolean;
     ttl: number;
+    dir?: string;
   };
   concurrency?: number;
   verbose?: boolean;
@@ -39,5 +41,7 @@ export interface AnalyzeOptions {
   cliCommand?: string;
   cliArgs?: string;
   outputDir?: string;
+  workDir?: string;
+  cacheDir?: string;
   name?: string;
 }

@@ -199,6 +199,8 @@ export function createAnalyzeCommand(): Command {
 
       // ========== Global Config Overrides ==========
       .option('-f, --format <type>', 'Output format: mermaid|json (default: mermaid)')
+      .option('--work-dir <dir>', 'ArchGuard work directory (default: ./.archguard)')
+      .option('--cache-dir <dir>', 'Cache directory (default: <work-dir>/cache)')
       .option('--output-dir <dir>', 'Output directory')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
       .option('--no-cache', 'Disable cache')
@@ -258,8 +260,16 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     const configOverrides: Partial<Config> = {};
     if (cliOptions.format) configOverrides.format = cliOptions.format;
     if (cliOptions.exclude) configOverrides.exclude = cliOptions.exclude;
+    if (cliOptions.workDir) configOverrides.workDir = cliOptions.workDir;
     if (cliOptions.cache !== undefined) {
-      configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 };
+      configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 } as Config['cache'];
+    }
+    if (cliOptions.cacheDir) {
+      configOverrides.cache = {
+        enabled: cliOptions.cache ?? true,
+        ttl: 86400,
+        dir: cliOptions.cacheDir,
+      };
     }
     if (cliOptions.concurrency) {
       configOverrides.concurrency = parseInt(String(cliOptions.concurrency), 10);
@@ -283,7 +293,12 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     }
 
     // Smart outputDir inference: if sources point outside cwd, infer project root
-    if (cliOptions.sources && cliOptions.sources.length > 0 && !cliOptions.outputDir) {
+    if (
+      cliOptions.sources &&
+      cliOptions.sources.length > 0 &&
+      !cliOptions.outputDir &&
+      !cliOptions.workDir
+    ) {
       const sourcePath = path.resolve(cliOptions.sources[0]);
       const cwd = process.cwd();
       if (!sourcePath.startsWith(cwd)) {
@@ -292,7 +307,7 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
         const projectRoot = SOURCE_ROOT_NAMES.includes(basename)
           ? path.dirname(sourcePath)
           : sourcePath;
-        configOverrides.outputDir = path.join(projectRoot, '.archguard');
+        configOverrides.workDir = path.join(projectRoot, '.archguard');
       }
     }
 

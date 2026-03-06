@@ -247,7 +247,8 @@ export class DiagramProcessor {
     this.metricsCalculator = new MetricsCalculator();
     this.parseCache = options.parseCache;
     this.registry = options.registry;
-    const diskCacheDir = path.join(os.homedir(), '.archguard', 'cache', 'archjson');
+    const diskCacheRoot = this.globalConfig.cache?.dir ?? path.join('.archguard', 'cache');
+    const diskCacheDir = path.join(diskCacheRoot, 'archjson');
     this.archJsonDiskCache = new ArchJsonDiskCache(diskCacheDir);
   }
 

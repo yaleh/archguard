@@ -5,7 +5,6 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
-import os from 'os';
 
 export interface CacheStats {
   hits: number;
@@ -28,7 +27,7 @@ interface CacheEntry<T> {
  * CacheManager provides file-based caching with TTL support
  * Features:
  * - SHA-256 file content hashing
- * - Cache storage in ~/.archguard/cache (or custom directory)
+ * - Cache storage in ./.archguard/cache (or custom directory)
  * - Cache validation and invalidation
  * - Hit/miss statistics tracking
  * - TTL (time to live) support with default 24 hours
@@ -44,7 +43,7 @@ export class CacheManager {
   private defaultTTL: number = 86400; // 24 hours in seconds
 
   constructor(cacheDir?: string) {
-    this.cacheDir = cacheDir ?? path.join(os.homedir(), '.archguard', 'cache');
+    this.cacheDir = cacheDir ?? path.join('.archguard', 'cache');
   }
 
   /**

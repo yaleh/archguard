@@ -362,8 +362,14 @@ export interface DiagramConfig {
  */
 export interface GlobalConfig {
   /**
+   * Working directory for ArchGuard artifacts
+   * @default './.archguard'
+   */
+  workDir?: string;
+
+  /**
    * Output root directory for all generated diagrams
-   * @default './archguard'
+   * @default '<workDir>/output'
    */
   outputDir: string;
 
@@ -403,6 +409,8 @@ export interface GlobalConfig {
     enabled: boolean;
     /** Cache time-to-live in seconds */
     ttl: number;
+    /** Cache directory path */
+    dir?: string;
   };
 
   /**
@@ -499,6 +507,16 @@ export interface CLIOptions {
    * Output directory override
    */
   outputDir?: string;
+
+  /**
+   * Work directory override
+   */
+  workDir?: string;
+
+  /**
+   * Cache directory override
+   */
+  cacheDir?: string;
 
   /**
    * Exclude patterns override

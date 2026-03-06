@@ -182,7 +182,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       const config = await loader.load({}); // No config file, no CLI override
 
       expect(config.cli.command).toBe('claude'); // Default wins
-      expect(config.outputDir).toBe('./.archguard'); // Default wins
+      expect(config.outputDir).toBe('.archguard/output'); // Default wins
     });
   });
 

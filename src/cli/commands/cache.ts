@@ -5,6 +5,7 @@
 import { Command } from 'commander';
 import { CacheManager } from '../cache-manager.js';
 import { ErrorHandler } from '../error-handler.js';
+import { ConfigLoader } from '../config-loader.js';
 import chalk from 'chalk';
 
 /**
@@ -19,7 +20,8 @@ export function createCacheCommand(): Command {
     .description('Clear all cached data')
     .action(async () => {
       try {
-        const cache = new CacheManager();
+        const config = await new ConfigLoader(process.cwd()).load();
+        const cache = new CacheManager(config.cache.dir);
         await cache.clear();
         console.log(chalk.green('✓ Cache cleared successfully'));
       } catch (error) {
@@ -36,7 +38,8 @@ export function createCacheCommand(): Command {
     .description('Show cache statistics')
     .action(async () => {
       try {
-        const cache = new CacheManager();
+        const config = await new ConfigLoader(process.cwd()).load();
+        const cache = new CacheManager(config.cache.dir);
         const stats = cache.getStats();
         const size = await cache.getCacheSize();
 
