@@ -421,7 +421,7 @@ Valid .mmd
 
 ### Prerequisites
 
-- Node.js 18.x, 20.x, or 22.x LTS (Node.js 25+ not yet supported due to `tree-sitter` native addon compatibility)
+- Node.js >= 18.0.0
 - npm or yarn
 
 Optional, for enhanced features:
