@@ -124,14 +124,18 @@ const projectRootParam = z.string().optional().describe(
 
 ```typescript
 function resolveRoot(projectRoot: string | undefined, defaultRoot: string): string {
-  return projectRoot ? path.resolve(projectRoot) : defaultRoot;
+  if (!projectRoot) return defaultRoot;
+  return path.isAbsolute(projectRoot)
+    ? projectRoot
+    : path.resolve(defaultRoot, projectRoot);
 }
 ```
 
 规则：
 
 - 缺省时使用 `defaultRoot`
-- 显式传入时使用 `path.resolve(projectRoot)`
+- 绝对路径直接使用
+- **相对路径相对于 `defaultRoot` 解析**（而非 `process.cwd()`，因为 MCP server 运行期间 cwd 可能被改变）
 - `projectRoot` 决定：
   - config 发现根目录
   - 相对 `sources` 的解析根目录
@@ -315,7 +319,7 @@ async ({ projectRoot, sources, lang, diagrams, format, noCache }) => {
 - 不保留任何 `setActiveScope()` / `invalidateEngine()` 接口
 - 不再根据 `persistedScopeKeys` 修改 server 内状态
 - `runAnalysis()` 仍然是唯一写盘入口
-- `formatAnalyzeResponse` 的签名从当前的 `{ elapsedMs, sessionRoot, currentScope, nextScope }` 简化为 `{ projectRoot, elapsedMs }`，移除 scope 状态相关字段
+- `formatAnalyzeResponse` 的签名从当前的 `{ elapsedMs, sessionRoot, currentScope, nextScope }` 简化为 `{ projectRoot, elapsedMs }`，移除 scope 状态相关字段。理由：无状态设计下不再有"当前 scope → 下一 scope"的状态转换；analyze 完成后 query tools 会从磁盘自动加载最新 scope，调用方无需感知 scope 切换
 
 ### 6. 并发控制改为 per-projectRoot
 
@@ -353,8 +357,13 @@ async function withPerProjectLock<T>(
 
 - 同一项目并发分析：拒绝，返回明确错误文本（包含项目路径）
 - 不同项目并发分析：允许
-- 查询与分析并发：允许
+- 查询与分析并发：允许（query 读到旧数据是可接受的，因为 query artifact 使用原子 rename 写入）
 - 无超时机制；锁在 `finally` 中释放，即使分析抛错也不会泄漏
+
+限制：
+
+- 此锁仅在**单一 MCP server 进程内**有效；同一项目若由多个 server 进程服务，仍可能并发写盘（需在部署层面保证单一 server）
+- `path.resolve(root)` 不处理符号链接；指向同一目录的不同符号链接路径会被视为不同 key
 
 这是无状态 cross-project 设计的最低要求；否则 server 虽然能”指向多个项目”，却仍被全局单锁串行化。
 
@@ -408,6 +417,28 @@ async function withPerProjectLock<T>(
 ```text
 No query data found at /path/to/project/.archguard/query.
 Run archguard_analyze({ projectRoot: "/path/to/project" }) first.
+```
+
+实现方式：在每个 query tool 的 handler 中包装 `loadEngine` 的错误：
+
+```typescript
+async ({ projectRoot, scope, ...rest }) => {
+  const root = resolveRoot(projectRoot, defaultRoot);
+  const archDir = path.join(root, '.archguard');
+  try {
+    const engine = await loadEngine(archDir, scope);
+    // ... 执行查询
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('No query data found')) {
+      return textResponse(
+        `No query data found at ${archDir}/query.\n` +
+        `Run archguard_analyze({ projectRoot: "${root}" }) first.`
+      );
+    }
+    return textResponse(`Query failed for ${root}: ${msg}`);
+  }
+}
 ```
 
 ### 2. scope 解析失败
@@ -494,13 +525,21 @@ Run archguard_analyze({ projectRoot: "/path/to/project" }) first.
 ## 残余风险
 
 1. **每次查询重载磁盘的性能回归**
-   当前数据规模下问题不大，但应以真实 fixture 补一组基线测试，而不是凭估算拍板。
+   每次 query tool 调用都会从磁盘加载 `arch.json` + `arch-index.json` 并构建 `QueryEngine`。当前数据规模下预计 <10ms（OS page cache 热时），但以下场景需要监控：
+   - 高并发 query（100+ 并发请求同一项目）→ 频繁 GC 压力
+   - 大型 ArchJSON（>10MB）→ parse + index 构建时间可能显著
+   - 网络文件系统（NFS）→ I/O 延迟可能达 100ms+
+
+   暂不引入 engine 缓存；应在实现后以真实 fixture 补基线测试，若出现回归再引入带 TTL 的 per-projectRoot LRU cache。
 
 2. **CLI 现有“跨 sessionRoot 的 sources 会推导 workDir”语义**
    `runAnalysis()` / `analyze.ts` 目前对外部 sources 有一段特殊 workDir 推导逻辑。迁移后，MCP 路径必须明确压制这段漂移行为，保证 `workDir` 始终是 `<projectRoot>/.archguard`。
 
 3. **`archguard_summary` 的扩展方式仍需最终定稿**
    如果团队不接受给 summary 做加法扩展，就应拆出 `archguard_list_scopes`，不要在实现阶段临时发明第三种方案。
+
+4. **跨项目查询的文件路径混淆**
+   `archguard_get_file_entities` 接收相对文件路径（如 `src/cache.ts`），当前 `QueryEngine` 直接按路径查 `index.fileToIds[filePath]`，不做路径规范化。如果两个项目都有 `src/cache.ts`，只要 `projectRoot` 正确传递就不会混淆（各自加载独立的 `QueryEngine`）。但 tool 的参数描述应明确说明 `filePath` 是相对于项目根的路径。
 
 ---
 
