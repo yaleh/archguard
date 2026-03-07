@@ -9,6 +9,7 @@ This directory contains Architecture Decision Records for the ArchGuard project.
 | [ADR-001](./001-goatlas-plugin-composition.md) | GoAtlasPlugin 使用组合模式 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
 | [ADR-002](./002-archjson-extensions.md) | ArchJSON extensions 字段设计 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
 | [ADR-003](./003-librsvg-css-inline-patching.md) | Inline SVG Style Patching for librsvg Compatibility | Accepted | 2026-03-05 | `src/mermaid/renderer.ts`, `tests/unit/mermaid/edge-style-inline.test.ts` |
+| [ADR-004](./004-single-analysis-write-path-for-cli-and-mcp.md) | CLI 与 MCP 必须共享单一分析写盘路径 | Proposed | 2026-03-07 | [proposal-mcp-analyze-tool.md](../proposals/proposal-mcp-analyze-tool.md) |
 
 ## How to Read ADRs
 
@@ -109,4 +110,4 @@ Proposed → Accepted → Implemented → Deprecated → Superseded
 
 ---
 
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-03-07
