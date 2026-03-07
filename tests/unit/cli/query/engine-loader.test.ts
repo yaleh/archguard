@@ -147,6 +147,7 @@ describe('resolveScope', () => {
     });
 
     await expect(resolveScope(tmpDir)).rejects.toThrow(/No global query scope configured/);
+    await expect(resolveScope(tmpDir)).rejects.not.toThrow(/--scope/);
   });
 
   it('throws when unknown scope key is given', async () => {
@@ -154,6 +155,19 @@ describe('resolveScope', () => {
     await expect(resolveScope(tmpDir, 'nonexistent')).rejects.toThrow(
       'Scope "nonexistent" not found',
     );
+  });
+
+  it('uses MCP-neutral guidance when the global alias is unavailable', async () => {
+    const manifestDir = path.join(tmpDir, 'query');
+    await fs.ensureDir(manifestDir);
+    await fs.writeJson(path.join(manifestDir, 'manifest.json'), {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      scopes: [scope1, scope2],
+    });
+
+    await expect(resolveScope(tmpDir, 'global')).rejects.toThrow(/pass scope parameter explicitly/i);
+    await expect(resolveScope(tmpDir, 'global')).rejects.not.toThrow(/--scope/);
   });
 
   it('selects the correct scope when key matches', async () => {

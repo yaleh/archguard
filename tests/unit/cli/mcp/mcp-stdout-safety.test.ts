@@ -31,11 +31,7 @@ describe('MCP analyze stdout safety', () => {
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => undefined,
-      setActiveScope: vi.fn(),
-      invalidateEngine: vi.fn(),
+      defaultRoot: '/project',
     });
 
     const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;

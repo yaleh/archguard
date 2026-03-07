@@ -103,7 +103,7 @@ describe('CLI / MCP analyze equivalence', () => {
 
     try {
       process.chdir(root);
-      const server = createMcpServer('.archguard', undefined, root);
+      const server = createMcpServer(root);
       const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
       const client = new Client({ name: 'test-client', version: '1.0.0' });
 

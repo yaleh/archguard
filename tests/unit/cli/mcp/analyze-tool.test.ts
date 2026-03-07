@@ -13,11 +13,11 @@ describe('registerAnalyzeTool', () => {
     runAnalysisMock.mockReset();
   });
 
-  it('registers archguard_analyze and invalidates engine when there is no fixed scope', async () => {
+  it('registers archguard_analyze and resolves projectRoot for sessionRoot/workDir/sources', async () => {
     runAnalysisMock.mockResolvedValue({
       config: {
-        workDir: '/project/.archguard',
-        outputDir: '/project/.archguard/output',
+        workDir: '/other/project/.archguard',
+        outputDir: '/other/project/.archguard/output',
       },
       diagrams: [],
       results: [],
@@ -28,67 +28,57 @@ describe('registerAnalyzeTool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const toolSpy = vi.spyOn(server, 'tool');
-    const invalidateEngine = vi.fn();
-    const setActiveScope = vi.fn();
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => undefined,
-      setActiveScope,
-      invalidateEngine,
+      defaultRoot: '/workspace',
     });
 
     const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
-    const result = await callback({ sources: ['./src'] });
+    const result = await callback({ projectRoot: '../other/project', sources: ['./src'] });
 
-    expect(invalidateEngine).toHaveBeenCalledTimes(1);
-    expect(setActiveScope).not.toHaveBeenCalled();
     expect(runAnalysisMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionRoot: '/project',
-        workDir: '/project/.archguard',
-        cliOptions: expect.objectContaining({ sources: ['/project/src'] }),
+        sessionRoot: '/other/project',
+        workDir: '/other/project/.archguard',
+        cliOptions: expect.objectContaining({ sources: ['/other/project/src'] }),
       }),
     );
     expect(result.content[0].text).toContain('Analysis completed');
+    expect(result.content[0].text).not.toContain('Scope:');
   });
 
-  it('updates fixed scope only when the persisted scope key exists', async () => {
-    const { hashSources } = await import('@/cli/processors/arch-json-provider.js');
-    const expectedScopeKey = hashSources(['/project/src']);
+  it('uses defaultRoot when projectRoot is omitted', async () => {
     runAnalysisMock.mockResolvedValue({
       config: {
-        workDir: '/project/.archguard',
-        outputDir: '/project/.archguard/output',
+        workDir: '/workspace/.archguard',
+        outputDir: '/workspace/.archguard/output',
       },
       diagrams: [],
       results: [],
       queryScopesPersisted: 1,
-      persistedScopeKeys: [expectedScopeKey],
+      persistedScopeKeys: ['abcd1234'],
       hasDiagramFailures: false,
     });
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const toolSpy = vi.spyOn(server, 'tool');
-    const invalidateEngine = vi.fn();
-    const setActiveScope = vi.fn();
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => 'oldscope',
-      setActiveScope,
-      invalidateEngine,
+      defaultRoot: '/workspace',
     });
 
     const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
     await callback({ sources: ['./src'] });
 
-    expect(setActiveScope).toHaveBeenCalledWith(expectedScopeKey);
-    expect(invalidateEngine).not.toHaveBeenCalled();
+    expect(runAnalysisMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionRoot: '/workspace',
+        workDir: '/workspace/.archguard',
+        cliOptions: expect.objectContaining({ sources: ['/workspace/src'] }),
+      }),
+    );
   });
 
   it('returns failure text when runAnalysis throws', async () => {
@@ -99,11 +89,7 @@ describe('registerAnalyzeTool', () => {
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => undefined,
-      setActiveScope: vi.fn(),
-      invalidateEngine: vi.fn(),
+      defaultRoot: '/project',
     });
 
     const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
@@ -117,11 +103,7 @@ describe('registerAnalyzeTool', () => {
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => undefined,
-      setActiveScope: vi.fn(),
-      invalidateEngine: vi.fn(),
+      defaultRoot: '/project',
     });
 
     const registration = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze');
@@ -134,7 +116,7 @@ describe('registerAnalyzeTool', () => {
     expect(schema.lang.safeParse('zh-CN').success).toBe(false);
   });
 
-  it('rejects concurrent calls while an analysis is running', async () => {
+  it('rejects concurrent calls for the same project while an analysis is running', async () => {
     let resolveRun: ((value: unknown) => void) | undefined;
     runAnalysisMock.mockImplementation(
       () =>
@@ -148,21 +130,17 @@ describe('registerAnalyzeTool', () => {
 
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, {
-      sessionRoot: '/project',
-      archDir: '/project/.archguard',
-      getActiveScope: () => undefined,
-      setActiveScope: vi.fn(),
-      invalidateEngine: vi.fn(),
+      defaultRoot: '/workspace',
     });
 
     const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
-    const first = callback({});
-    const second = await callback({});
+    const first = callback({ projectRoot: '/repo-a' });
+    const second = await callback({ projectRoot: '/repo-a' });
 
     expect(second.content[0].text).toContain('already running');
 
     resolveRun?.({
-      config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+      config: { workDir: '/repo-a/.archguard', outputDir: '/repo-a/.archguard/output' },
       diagrams: [],
       results: [],
       queryScopesPersisted: 0,
@@ -170,5 +148,81 @@ describe('registerAnalyzeTool', () => {
       hasDiagramFailures: false,
     });
     await first;
+  });
+
+  it('allows concurrent calls for different projects', async () => {
+    let releaseA: (() => void) | undefined;
+    let releaseB: (() => void) | undefined;
+    runAnalysisMock.mockImplementation(({ sessionRoot }: { sessionRoot: string }) => {
+      return new Promise((resolve) => {
+        if (sessionRoot === '/repo-a') {
+          releaseA = () =>
+            resolve({
+              config: { workDir: '/repo-a/.archguard', outputDir: '/repo-a/.archguard/output' },
+              diagrams: [],
+              results: [],
+              queryScopesPersisted: 1,
+              persistedScopeKeys: ['a'],
+              hasDiagramFailures: false,
+            });
+          return;
+        }
+        releaseB = () =>
+          resolve({
+            config: { workDir: '/repo-b/.archguard', outputDir: '/repo-b/.archguard/output' },
+            diagrams: [],
+            results: [],
+            queryScopesPersisted: 1,
+            persistedScopeKeys: ['b'],
+            hasDiagramFailures: false,
+          });
+      });
+    });
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, {
+      defaultRoot: '/workspace',
+    });
+
+    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const first = callback({ projectRoot: '/repo-a' });
+    const second = callback({ projectRoot: '/repo-b' });
+
+    releaseA?.();
+    releaseB?.();
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    expect(firstResult.content[0].text).toContain('Analysis completed');
+    expect(secondResult.content[0].text).toContain('Analysis completed');
+    expect(runAnalysisMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases the project lock after a failed analysis', async () => {
+    runAnalysisMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({
+      config: { workDir: '/repo-a/.archguard', outputDir: '/repo-a/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: ['ok'],
+      hasDiagramFailures: false,
+    });
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, {
+      defaultRoot: '/workspace',
+    });
+
+    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const first = await callback({ projectRoot: '/repo-a' });
+    const second = await callback({ projectRoot: '/repo-a' });
+
+    expect(first.content[0].text).toContain('Analysis failed: boom');
+    expect(second.content[0].text).toContain('Analysis completed');
   });
 });

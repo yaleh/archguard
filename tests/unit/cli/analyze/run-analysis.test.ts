@@ -12,6 +12,7 @@ const persistQueryScopesMock = vi.fn();
 const processAllMock = vi.fn();
 const getQuerySourceGroupsMock = vi.fn();
 const indexGenerateMock = vi.fn();
+const diagramProcessorCtorMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -39,6 +40,9 @@ vi.mock('@/cli/query/query-artifacts.js', () => ({
 
 vi.mock('@/cli/processors/diagram-processor.js', () => ({
   DiagramProcessor: class {
+    constructor(options: unknown) {
+      diagramProcessorCtorMock(options);
+    }
     processAll = processAllMock;
     getQuerySourceGroups = getQuerySourceGroupsMock;
   },
@@ -93,6 +97,7 @@ describe('runAnalysis', () => {
     processAllMock.mockReset();
     getQuerySourceGroupsMock.mockReset();
     indexGenerateMock.mockReset();
+    diagramProcessorCtorMock.mockReset();
 
     loadMock.mockResolvedValue(baseConfig);
     normalizeToDiagramsMock.mockResolvedValue([
@@ -178,6 +183,30 @@ describe('runAnalysis', () => {
     expect(result.queryScopesPersisted).toBe(0);
     expect(result.persistedScopeKeys).toEqual([]);
     expect(result.results).toHaveLength(1);
+  });
+
+  it('resolves config-defined relative sources against sessionRoot before processing', async () => {
+    normalizeToDiagramsMock.mockResolvedValue([
+      { name: 'class/all-classes', sources: ['./src'], level: 'class' },
+    ]);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/external-project',
+      workDir: '/tmp/external-project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(diagramProcessorCtorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        diagrams: [
+          expect.objectContaining({
+            sources: ['/tmp/external-project/src'],
+          }),
+        ],
+      }),
+    );
   });
 });
 

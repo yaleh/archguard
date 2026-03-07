@@ -3,23 +3,23 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
 import { StderrReporter } from '../progress.js';
-import { hashSources } from '../processors/arch-json-provider.js';
 
 export interface AnalyzeToolContext {
-  sessionRoot: string;
-  archDir: string;
-  getActiveScope(): string | undefined;
-  setActiveScope(scopeKey?: string): void;
-  invalidateEngine(): void;
+  defaultRoot: string;
 }
 
 const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp'] as const;
+const analyzeLocks = new Set<string>();
 
 const analyzeSchema = {
+  projectRoot: z
+    .string()
+    .optional()
+    .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
   sources: z
     .array(z.string())
     .optional()
-    .describe('Source paths relative to the MCP session root. Omit to analyze the session root.'),
+    .describe('Source paths relative to the target project root. Omit to analyze the project root.'),
   lang: z
     .enum(supportedAnalyzeLanguages)
     .optional()
@@ -41,64 +41,46 @@ const analyzeSchema = {
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
-  let analyzeInProgress = false;
-
   server.tool(
     'archguard_analyze',
-    'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the current MCP session.',
+    'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
     analyzeSchema,
-    async ({ sources, lang, diagrams, format, noCache }) => {
-      if (analyzeInProgress) {
-        return textResponse('An analysis is already running in this MCP session.');
-      }
-
-      analyzeInProgress = true;
+    async ({ projectRoot, sources, lang, diagrams, format, noCache }) => {
+      const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
 
       try {
-        const normalizedSources = sources?.map((source) => path.resolve(ctx.sessionRoot, source));
-        const result = await runAnalysis({
-          sessionRoot: ctx.sessionRoot,
-          workDir: ctx.archDir,
-          cliOptions: {
-            sources: normalizedSources,
-            lang,
-            diagrams,
-            format,
-            cache: noCache ? false : undefined,
-          },
-          reporter: new StderrReporter(),
-        });
+        return await withPerProjectLock(root, async () => {
+          const normalizedSources = sources?.map((source) => path.resolve(root, source));
+          const result = await runAnalysis({
+            sessionRoot: root,
+            workDir: path.join(root, '.archguard'),
+            cliOptions: {
+              sources: normalizedSources,
+              lang,
+              diagrams,
+              format,
+              cache: noCache ? false : undefined,
+            },
+            reporter: new StderrReporter(),
+          });
 
-        if (result.queryScopesPersisted === 0) {
-          return textResponse(
-            'Analysis failed: No query scopes were persisted.\nPrevious query state is unchanged.',
-          );
-        }
-
-        const currentScope = ctx.getActiveScope();
-        if (!currentScope) {
-          ctx.invalidateEngine();
-        } else if (normalizedSources && normalizedSources.length > 0) {
-          const nextScope = hashSources(normalizedSources);
-          if (result.persistedScopeKeys.includes(nextScope)) {
-            ctx.setActiveScope(nextScope);
+          if (result.queryScopesPersisted === 0) {
+            return textResponse(
+              'Analysis failed: No query scopes were persisted.\nPrevious query state is unchanged.',
+            );
           }
-        }
 
-        return textResponse(
-          formatAnalyzeResponse(result, {
-            elapsedMs: Date.now() - startedAt,
-            sessionRoot: ctx.sessionRoot,
-            currentScope,
-            nextScope: ctx.getActiveScope(),
-          }),
-        );
+          return textResponse(
+            formatAnalyzeResponse(result, {
+              elapsedMs: Date.now() - startedAt,
+              projectRoot: root,
+            }),
+          );
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return textResponse(`Analysis failed: ${message}\nPrevious query state is unchanged.`);
-      } finally {
-        analyzeInProgress = false;
       }
     },
   );
@@ -108,22 +90,35 @@ function textResponse(text: string) {
   return { content: [{ type: 'text' as const, text }] };
 }
 
+function resolveRoot(projectRoot: string | undefined, defaultRoot: string): string {
+  if (!projectRoot) return defaultRoot;
+  return path.isAbsolute(projectRoot) ? projectRoot : path.resolve(defaultRoot, projectRoot);
+}
+
+async function withPerProjectLock<T>(root: string, fn: () => Promise<T>): Promise<T> {
+  const key = path.resolve(root);
+  if (analyzeLocks.has(key)) {
+    throw new Error(
+      `An analysis is already running for ${key}. Wait for it to complete or analyze a different project.`,
+    );
+  }
+  analyzeLocks.add(key);
+  try {
+    return await fn();
+  } finally {
+    analyzeLocks.delete(key);
+  }
+}
+
 function formatAnalyzeResponse(
   result: Awaited<ReturnType<typeof runAnalysis>>,
-  meta: { elapsedMs: number; sessionRoot: string; currentScope?: string; nextScope?: string },
+  meta: { elapsedMs: number; projectRoot: string },
 ): string {
   const lines = [`Analysis completed in ${(meta.elapsedMs / 1000).toFixed(1)}s`, ''];
-  lines.push(`Session root: ${meta.sessionRoot}`);
+  lines.push(`Project root: ${meta.projectRoot}`);
   lines.push(`Work dir:     ${result.config.workDir}`);
   lines.push(`Output:       ${result.config.outputDir}`);
   lines.push(`Query:        ${result.queryScopesPersisted} scopes written`);
-  if (!meta.currentScope) {
-    lines.push('Scope:        auto-select on next query');
-  } else if (meta.nextScope && meta.nextScope !== meta.currentScope) {
-    lines.push(`Scope:        ${meta.currentScope} -> ${meta.nextScope}`);
-  } else {
-    lines.push(`Scope:        ${meta.currentScope} (unchanged)`);
-  }
   if (result.results.length > 0) {
     lines.push('', 'Diagrams:');
     for (const diagram of result.results) {

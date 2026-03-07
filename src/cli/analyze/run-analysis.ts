@@ -36,7 +36,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const config = await configLoader.load(configOverrides, cliOptions.config);
   reporter.succeed('Configuration loaded');
 
-  const selectedDiagrams = await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot);
+  const selectedDiagrams = (await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot)).map(
+    (diagram) => ({
+      ...diagram,
+      sources: diagram.sources.map((source) => path.resolve(sessionRoot, source)),
+    }),
+  );
   reporter.info(`Found ${selectedDiagrams.length} diagram(s) to generate`);
 
   if (selectedDiagrams.length === 0) {

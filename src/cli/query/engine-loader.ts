@@ -59,7 +59,7 @@ export async function resolveScope(
   if (scopeKey === 'global') {
     if (!manifest.globalScopeKey) {
       throw new Error(
-        'No global query scope configured. Run `archguard analyze` to regenerate a global view or use `--scope`.',
+        'No global query scope configured. Run archguard_analyze to regenerate a global view, or pass scope parameter explicitly.',
       );
     }
     const globalScope = manifest.scopes.find(s => s.key === manifest.globalScopeKey);
@@ -94,7 +94,7 @@ export async function resolveScope(
 
   if (!manifest.globalScopeKey) {
     throw new Error(
-      'No global query scope configured. Available scopes exist, but none is marked global. Use `--scope` or rerun `archguard analyze`.',
+      'No global query scope configured. Available scopes exist, but none is marked global. Pass scope parameter explicitly, or rerun archguard_analyze.',
     );
   }
 
