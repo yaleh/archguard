@@ -136,7 +136,8 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
       functionBodyStrategy,
       includeTests: atlasConfig?.includeTests,
       excludeTests: atlasConfig?.excludeTests ?? true,
-      excludePatterns: atlasConfig?.excludePatterns,
+      includePatterns: config.includePatterns,
+      excludePatterns: [...(config.excludePatterns ?? []), ...(atlasConfig?.excludePatterns ?? [])],
       protocols: atlasConfig?.protocols,
       customFrameworks: atlasConfig?.customFrameworks,
       entryPoints: atlasConfig?.entryPoints,
@@ -166,6 +167,7 @@ export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
     ];
     let rawData = await this.goPlugin.parseToRawData(rootPath, {
       workspaceRoot: rootPath,
+      includePatterns: options.includePatterns,
       excludePatterns,
       extractBodies: options.functionBodyStrategy !== 'none',
       selectiveExtraction: options.functionBodyStrategy === 'selective',

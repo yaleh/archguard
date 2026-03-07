@@ -176,6 +176,31 @@ describe('GoAtlasPlugin', () => {
       expect(goAtlas.layers.goroutine).toBeDefined();
       expect(goAtlas.layers.flow).toBeDefined();
     });
+
+    it('passes includePatterns through to atlas raw-data generation', async () => {
+      const parseToRawData = vi
+        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .mockResolvedValue(minimalRawData);
+
+      await plugin.parseProject('/test', {
+        workspaceRoot: '/test',
+        includePatterns: ['pkg/**/*.go'],
+        excludePatterns: ['examples/**'],
+        languageSpecific: {
+          atlas: { enabled: true },
+        },
+      });
+
+      expect(parseToRawData).toHaveBeenCalled();
+      const atlasCall = parseToRawData.mock.calls.at(-1)?.[1] as {
+        includePatterns?: string[];
+        excludePatterns?: string[];
+      };
+      expect(atlasCall.includePatterns).toEqual(['pkg/**/*.go']);
+      expect(atlasCall.excludePatterns).toEqual(
+        expect.arrayContaining(['examples/**', '**/vendor/**', '**/testdata/**', '**/*_test.go']),
+      );
+    });
   });
 
   // ---- renderLayer test ----

@@ -104,6 +104,7 @@ export interface AtlasGenerationOptions {
   };
   includeTests?: boolean;
   excludeTests?: boolean;
+  includePatterns?: string[];
   excludePatterns?: string[];
   protocols?: string[];
   customFrameworks?: CustomFrameworkConfig[];

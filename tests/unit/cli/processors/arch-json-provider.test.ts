@@ -19,6 +19,13 @@ import type { ArchJSON } from '@/types/index.js';
 
 vi.mock('@/cli/utils/file-discovery-service.js');
 vi.mock('@/parser/parallel-parser.js');
+vi.mock('@/plugins/golang/source-scope.js', () => ({
+  planGoAnalysisScope: vi.fn().mockResolvedValue({
+    workspaceRoot: '/project',
+    includePatterns: ['src/**/*.go'],
+    excludePatterns: [],
+  }),
+}));
 vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
   ArchJsonDiskCache: vi.fn().mockImplementation(() => ({
     get: vi.fn().mockResolvedValue(null),

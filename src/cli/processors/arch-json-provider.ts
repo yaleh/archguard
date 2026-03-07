@@ -22,6 +22,7 @@ import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { ArchJsonDiskCache } from '@/cli/cache/arch-json-disk-cache.js';
+import { planGoAnalysisScope } from '@/plugins/golang/source-scope.js';
 import { createHash } from 'crypto';
 import path from 'path';
 
@@ -440,7 +441,8 @@ export class ArchJsonProvider {
    * Parse a Go project via the plugin registry (preferred) or GoAtlasPlugin directly.
    */
   private async parseGoProject(diagram: DiagramConfig): Promise<ArchJSON> {
-    const workspaceRoot = path.resolve(diagram.sources[0]);
+    const plan = await planGoAnalysisScope(diagram.sources);
+    const workspaceRoot = plan.workspaceRoot;
     const registryPlugin = this.registry?.getByName('golang');
     const plugin =
       registryPlugin ??
@@ -452,7 +454,11 @@ export class ArchJsonProvider {
     await plugin.initialize({ workspaceRoot });
     return plugin.parseProject(workspaceRoot, {
       workspaceRoot,
-      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      includePatterns: plan.includePatterns,
+      excludePatterns: [
+        ...(diagram.exclude ?? this.globalConfig.exclude ?? []),
+        ...plan.excludePatterns,
+      ],
       languageSpecific: diagram.languageSpecific,
     });
   }

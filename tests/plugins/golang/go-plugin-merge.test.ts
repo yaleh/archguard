@@ -291,4 +291,54 @@ describe('GoPlugin - orphaned method re-attachment', () => {
 
     expect(svcPkg.orphanedMethods).toHaveLength(0);
   });
+
+  it('limits parsing to includePatterns and skips nested modules', async () => {
+    const rootFile = `${WS}/pkg/hub/server.go`;
+    const nestedFile = `${WS}/examples/user-service/main.go`;
+
+    const { glob } = await import('glob');
+    vi.mocked(glob).mockImplementation(async (pattern: any, options: any) => {
+      if (pattern === 'pkg/**/*.go') {
+        expect(options.cwd).toBe(WS);
+        expect(options.ignore).toContain('examples/user-service/**');
+        return [rootFile] as any;
+      }
+      throw new Error(`unexpected pattern: ${String(pattern)}`);
+    });
+
+    const bridge = (plugin as any).treeSitter;
+    const parseSpy = vi.spyOn(bridge, 'parseCode').mockImplementation(
+      (_code: string, filePath: string): GoRawPackage => ({
+        name: 'hub',
+        fullName: '',
+        id: '',
+        dirPath: '',
+        sourceFiles: [filePath],
+        imports: [],
+        structs: [],
+        interfaces: [],
+        functions: [],
+      })
+    );
+
+    const result = await plugin.parseToRawData(WS, {
+      workspaceRoot: WS,
+      includePatterns: ['pkg/**/*.go'],
+      excludePatterns: ['examples/user-service/**'],
+      extractBodies: false,
+    });
+
+    expect(result.packages).toHaveLength(1);
+    expect(parseSpy).toHaveBeenCalledTimes(1);
+    expect(parseSpy).toHaveBeenCalledWith(
+      undefined,
+      rootFile,
+      expect.objectContaining({ extractBodies: false })
+    );
+    expect(parseSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      nestedFile,
+      expect.anything()
+    );
+  });
 });

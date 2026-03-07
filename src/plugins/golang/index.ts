@@ -138,12 +138,30 @@ export class GoPlugin implements ILanguagePlugin {
     }
 
     // Find all .go files
-    const pattern = config.filePattern ?? '**/*.go';
-    const files = await glob(pattern, {
-      cwd: workspaceRoot,
-      absolute: true,
-      ignore: ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])],
-    });
+    const ignore = ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])];
+    const files = config.includePatterns?.length
+      ? Array.from(
+          new Set(
+            (
+              await Promise.all(
+                config.includePatterns.map((pattern) =>
+                  glob(pattern, {
+                    cwd: workspaceRoot,
+                    absolute: true,
+                    ignore,
+                  })
+                )
+              )
+            )
+              .flat()
+              .sort()
+          )
+        )
+      : await glob(config.filePattern ?? '**/*.go', {
+          cwd: workspaceRoot,
+          absolute: true,
+          ignore,
+        });
 
     const moduleName = await this.readModuleName(workspaceRoot);
 
