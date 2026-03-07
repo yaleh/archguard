@@ -177,6 +177,30 @@ describe('archguard_get_dependencies', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.map((e: { name: string }) => e.name)).toContain('CacheManager');
   });
+
+  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_dependencies')!;
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: 'false' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect('members' in parsed[0]).toBe(true);
+    expect('methodCount' in parsed[0]).toBe(false);
+  });
+
+  it('accepts compact as string "true" (MCP stdio string coercion)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_dependencies')!;
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: 'true' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect('members' in parsed[0]).toBe(false);
+    expect('methodCount' in parsed[0]).toBe(true);
+  });
 });
 
 describe('archguard_get_dependents', () => {
@@ -217,6 +241,18 @@ describe('archguard_get_dependents', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.map((e: { name: string }) => e.name)).toContain('DiagramProcessor');
   });
+
+  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_dependents')!;
+    const result = await cb({ name: 'CacheManager', depth: 1, compact: 'false' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect('members' in parsed[0]).toBe(true);
+    expect('methodCount' in parsed[0]).toBe(false);
+  });
 });
 
 describe('archguard_find_implementers', () => {
@@ -244,6 +280,19 @@ describe('archguard_find_implementers', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
     expect('members' in parsed[0]).toBe(true);
+  });
+
+  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_find_implementers')!;
+    const result = await cb({ name: 'ILanguagePlugin', compact: 'false' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed[0].name).toBe('TypeScriptPlugin');
+    expect('members' in parsed[0]).toBe(true);
+    expect('methodCount' in parsed[0]).toBe(false);
   });
 });
 

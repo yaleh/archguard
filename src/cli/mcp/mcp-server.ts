@@ -47,16 +47,19 @@ function serializeEntities(entities: unknown[]): string {
 }
 
 const compactParam = z
-  .boolean()
-  .default(true)
+  .preprocess(
+    v => (v === 'true' ? true : v === 'false' ? false : v),
+    z.boolean().default(true),
+  )
   .describe('Return summary only (name/type/file/counts). Set false for full members.');
 
 function applyCompact(
   engine: QueryEngine,
   entities: Entity[],
-  compact: boolean | undefined,
+  compact: boolean | string | undefined,
 ): Entity[] | EntitySummary[] {
-  return (compact ?? true) ? entities.map(e => engine.toSummary(e)) : entities;
+  const isCompact = compact === 'false' ? false : (compact ?? true);
+  return isCompact ? entities.map(e => engine.toSummary(e)) : entities;
 }
 
 /**
