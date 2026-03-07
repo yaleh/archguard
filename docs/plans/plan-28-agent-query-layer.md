@@ -63,18 +63,20 @@ node dist/cli/index.js analyze -v
 ### Objectives
 
 1. `DiagramProcessor` 暴露全部可持久化的 raw ArchJSON source groups
-2. 新增 `.archguard/query/manifest.json`
-3. 为每个 scope 写入独立 `<scope-key>/arch.json`
-4. 不再引入 `getPrimaryArchJson()`
+2. 修复 disk-cache-hit 路径不写 `archJsonCache` 的问题（TypeScript package-level）
+3. scope-key 基于 normalized paths（`path.resolve()` + `path.relative(workDir)`）生成
+4. 新增 `.archguard/query/manifest.json`
+5. 为每个 scope 写入独立 `<scope-key>/arch.json`
+6. 不再引入 `getPrimaryArchJson()`
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/processors/diagram-processor.ts` | Modify | Add `getQuerySourceGroups()` |
+| `src/cli/processors/diagram-processor.ts` | Modify | Fix disk-cache-hit path to write `archJsonCache`; add `getQuerySourceGroups()` with normalized scope-key |
 | `src/cli/query/query-manifest.ts` | New | `QueryManifest` types |
-| `src/cli/query/query-artifacts.ts` | New | Persist manifest + per-scope `arch.json` |
-| `src/cli/commands/analyze.ts` | Modify | Persist all scopes after `processAll()` |
+| `src/cli/query/query-artifacts.ts` | New | Persist manifest + per-scope `arch.json` (atomic writes with random tmp suffix) |
+| `src/cli/commands/analyze.ts` | Modify | Persist all scopes after `processAll()` (including partial success) |
 | `tests/unit/cli/processors/diagram-processor-query-scopes.test.ts` | New | Unit tests for `getQuerySourceGroups()` |
 
 ### Implementation notes
@@ -95,11 +97,26 @@ export interface QuerySourceGroup {
 - 仅包含 `entities.length > 0` 的 group
 - 不因为 `extensions.goAtlas` 存在而过滤
 
+**前置修复: disk-cache-hit 路径**
+
+当前 `processSourceGroup` 的 TypeScript package-level 路径在 disk cache 命中时（`diagram-processor.ts` 约 540 行），直接使用 `cachedArchJSON`，不调用 `cacheArchJson()`。这导致 `archJsonCache` Map 缺少该 scope。必须在此路径补上 `cacheArchJson()` 调用，确保 `getQuerySourceGroups()` 能遍历到所有 scope。
+
+**scope-key 标准化**
+
+当前 `hashSources()` 直接使用 CLI 传入的路径字符串，导致同一项目用不同路径（`./src` vs `/abs/path/src`）analyze 产生不同 scope-key。修改 `hashSources()` 或在 `getQuerySourceGroups()` 中:
+
+1. 对每个 source 执行 `path.resolve()`
+2. 再执行 `path.relative(workDir)`
+3. 排序后拼接计算 SHA-256 前 8 位
+
+manifest 中的 `sources[]` 也存储标准化后的路径。
+
 `query-artifacts.ts` 先实现 Phase 1 最小集:
 
 - `persistQueryScopes(workDir, scopes)`
 - 写 `.archguard/query/manifest.json`
 - 写 `.archguard/query/<scope-key>/arch.json`
+- 所有写入使用随机后缀 tmp 文件 + rename（`arch.json.tmp.<random>`）
 
 此阶段先不写 `arch-index.json`，Phase 2 接入。
 
@@ -118,6 +135,8 @@ ls .archguard/query
 - 单 scope 项目: `manifest.scopes.length === 1`
 - 多 scope 项目: `manifest.scopes.length > 1`
 - Go Atlas 项目只要实体非空，就会生成 scope
+- 部分 diagram 失败时，成功的 scope 仍然持久化
+- 同一项目用相对路径和绝对路径 analyze，产生相同的 scope-key
 
 ---
 
@@ -134,9 +153,10 @@ ls .archguard/query
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/query/arch-index.ts` | New | `ArchIndex` type |
+| `src/cli/query/arch-index.ts` | New | `ArchIndex` type (use normal import, not inline `import()`) |
 | `src/cli/query/arch-index-builder.ts` | New | `ArchJSON -> ArchIndex` |
-| `src/cli/query/query-engine.ts` | New | Load manifest/scope and execute queries |
+| `src/cli/query/query-engine.ts` | New | Load manifest/scope, validate index, execute queries |
+| `src/cli/query/engine-loader.ts` | New | `resolveArchDir()` / `resolveScope()` / `loadEngine()` (提前到 Phase 2，Phase 3 的 CLI 只做参数解析到此模块的桥接) |
 | `src/cli/query/query-artifacts.ts` | Modify | Also persist `arch-index.json` |
 | `tests/unit/cli/query/arch-index-builder.test.ts` | New | Builder tests |
 | `tests/unit/cli/query/query-engine.test.ts` | New | Scope selection and fallback tests |
@@ -147,7 +167,7 @@ ls .archguard/query
 
 不要使用 fire-and-forget。所有写入必须走:
 
-1. write temp file
+1. write temp file with random suffix (`<target>.tmp.<crypto.randomUUID().slice(0,8)>`)
 2. rename to target
 
 至少覆盖:
@@ -156,7 +176,19 @@ ls .archguard/query
 - `arch-index.json`
 - `manifest.json`
 
-#### 2. Scope-aware loading
+随机后缀确保并发进程（如 `query` 和 `mcp` 同时重建 index）不会互相截断 tmp 文件。
+
+#### 2. Hash 基于磁盘字节
+
+`archJsonHash` 必须基于 `arch.json` 的**磁盘字节**计算，不是 parsed object 再 stringify:
+
+- 写入时: `const buf = Buffer.from(JSON.stringify(archJson, null, 2))` → 写 buf → `SHA-256(buf)`
+- 加载时: `const buf = await fs.readFile(archJsonPath)` → `SHA-256(buf)` → 与 index 中的 hash 比对
+- parse 用 `JSON.parse(buf.toString())`
+
+这避免了 JSON key 顺序变化导致的不必要 index 重建。
+
+#### 3. Scope-aware loading
 
 `QueryEngine.load(queryRoot, scope?)` 逻辑:
 
@@ -164,9 +196,10 @@ ls .archguard/query
 2. `scopes.length === 0` -> 报错
 3. `scopes.length === 1 && scope 未指定` -> 自动选中
 4. `scopes.length > 1 && scope 未指定` -> 报错并列出可选 scope
-5. 校验 `<scope-key>/arch.json`
-6. 校验 `<scope-key>/arch-index.json`
-7. 必要时同步重建 index
+5. 读取 `<scope-key>/arch.json` 为原始 `Buffer`
+6. 计算 `Buffer` 的 SHA-256
+7. 校验 `<scope-key>/arch-index.json`（hash 比对）
+8. 必要时同步重建 index 并原子写回
 
 #### 3. 查询边界
 
@@ -215,9 +248,10 @@ find .archguard/query -name arch-index.json
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/query/engine-loader.ts` | New | Resolve `archDir` + `scope` |
-| `src/cli/commands/query.ts` | New | Commander query command |
+| `src/cli/commands/query.ts` | New | Commander query command (参数解析 → `engine-loader` 桥接) |
 | `src/cli/index.ts` | Modify | Register command |
+
+注意: `engine-loader.ts` 已在 Phase 2 实现。本阶段只做 CLI 参数到 `loadEngine()` 的桥接。
 
 ### Command surface
 
@@ -244,7 +278,12 @@ archguard query --summary
 
 - `--implementers-of` 仅看 `implementation`
 - `--subclasses-of` 仅看 `inheritance`
-- `--depth` 仅用于 `--deps-of` / `--used-by`
+- `--depth` 仅用于 `--deps-of` / `--used-by`:
+  - depth=1 = 一跳直接邻居（不包含起始实体本身）
+  - 默认 1，硬上限 5
+  - `--deps-of` 沿 `dependencies` 方向，`--used-by` 沿 `dependents` 方向
+  - **所有 relation type 都参与 BFS 遍历**（不做类型过滤）
+  - BFS + visited set 防环
 - 如果多个 scope 且未指定 `--scope`，退出码 1
 
 ### Verify
@@ -310,6 +349,17 @@ node dist/cli/index.js search --type interface --scope <scope-key>
 
 ## Phase 5 — MCP Server
 
+### Pre-requisite: SDK Spike
+
+在开始 Phase 5 实现前，必须先完成一个 spike 验证 `@modelcontextprotocol/sdk`:
+
+1. ESM 兼容性: 项目是 `"type": "module"`，确认 SDK 支持纯 ESM import
+2. stdio transport: 确认 SDK 提供 stdio server transport（不需要 HTTP）
+3. bundle size: 评估对 CLI 安装体积的影响
+4. optional dependency: 评估是否应设为 `optionalDependencies`（不用 MCP 的用户无需安装）
+
+spike 失败时，考虑手写轻量 JSON-RPC stdio server 替代。
+
 ### Objectives
 
 通过 MCP 暴露与 CLI 一致的 scope-aware 实体级查询能力。
@@ -321,7 +371,7 @@ node dist/cli/index.js search --type interface --scope <scope-key>
 | `src/cli/mcp/mcp-server.ts` | New | MCP server |
 | `src/cli/commands/mcp.ts` | New | Commander wrapper |
 | `src/cli/index.ts` | Modify | Register command |
-| `package.json` | Modify | Add `@modelcontextprotocol/sdk` |
+| `package.json` | Modify | Add `@modelcontextprotocol/sdk` (or lightweight alternative per spike result) |
 
 ### Tool surface
 
@@ -367,18 +417,24 @@ node dist/cli/index.js mcp --help
 | 2 | One `arch.json` per non-empty source group | 1 |
 | 3 | Go Atlas with non-empty entities persists a scope | 1 |
 | 4 | All-empty/all-failed groups produce no scopes and no crash | 1 |
-| 5 | One `arch-index.json` per scope | 2 |
-| 6 | `archJsonHash` matches persisted `arch.json` | 2 |
-| 7 | Missing index rebuilds synchronously and persists | 2 |
-| 8 | Hash mismatch rebuilds synchronously and persists | 2 |
-| 9 | Multiple scopes without `--scope` fail fast | 2/3/4/5 |
-| 10 | `--implementers-of` only follows `implementation` edges | 3 |
-| 11 | `--subclasses-of` only follows `inheritance` edges | 3 |
-| 12 | `--deps-of` / `--used-by` BFS does not loop on cycles | 3 |
-| 13 | `search --type` / `--orphans` / `--high-coupling` / `--in-cycles` work | 4 |
-| 14 | No `--calls` flag is exposed | 4 |
-| 15 | MCP startup fails fast when scope is ambiguous | 5 |
-| 16 | Existing test suite remains green | all |
+| 5 | Disk-cache-hit TypeScript scopes appear in `getQuerySourceGroups()` | 1 |
+| 6 | Same sources via relative/absolute paths produce identical scope-key | 1 |
+| 7 | Partial diagram failure still persists successful scopes | 1 |
+| 8 | One `arch-index.json` per scope | 2 |
+| 9 | `archJsonHash` matches `arch.json` disk bytes (not re-serialized) | 2 |
+| 10 | Missing index rebuilds synchronously and persists | 2 |
+| 11 | Hash mismatch rebuilds synchronously and persists | 2 |
+| 12 | Concurrent index rebuild uses random tmp suffix (no file collision) | 2 |
+| 13 | Multiple scopes without `--scope` fail fast | 2/3/4/5 |
+| 14 | `--implementers-of` only follows `implementation` edges | 3 |
+| 15 | `--subclasses-of` only follows `inheritance` edges | 3 |
+| 16 | `--deps-of` / `--used-by` BFS does not loop on cycles | 3 |
+| 17 | `--depth 1` returns one-hop neighbors only | 3 |
+| 18 | `search --type` / `--orphans` / `--high-coupling` / `--in-cycles` work | 4 |
+| 19 | No `--calls` flag is exposed | 4 |
+| 20 | MCP SDK spike passes (ESM + stdio + bundle size) | 5 |
+| 21 | MCP startup fails fast when scope is ambiguous | 5 |
+| 22 | Existing test suite remains green | all |
 
 ---
 
@@ -387,9 +443,11 @@ node dist/cli/index.js mcp --help
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Source-group key 不够可读 | CLI 体验一般 | 在 manifest 中加 `label` 字段，但 key 仍保持稳定 |
-| 多 scope 项目需要显式 `--scope` | 命令更长 | 这是刻意的精度约束，优先于“省事” |
-| 原子写实现不完整 | 可能留下半写状态 | 统一封装到 `query-artifacts.ts`，不要在各处手写 |
+| 多 scope 项目需要显式 `--scope` | 命令更长 | 这是刻意的精度约束，优先于”省事” |
+| 原子写实现不完整 | 可能留下半写状态 | 统一封装到 `query-artifacts.ts`，随机 tmp 后缀，不要在各处手写 |
 | 后续有人重新加回 `--calls` | 工具语义退化 | 在 proposal 与 tests 中都明确禁止 |
+| `@modelcontextprotocol/sdk` ESM 不兼容 | Phase 5 阻塞 | 前置 spike 验证；备选方案: 手写轻量 JSON-RPC stdio |
+| disk-cache-hit scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 必须修复所有 `processSourceGroup` 路径统一写入 `archJsonCache` |
 
 ---
 
