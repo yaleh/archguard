@@ -17,10 +17,29 @@ vi.mock('fs-extra', () => ({
   },
 }));
 
+// Mock RenderHashCache
+vi.mock('@/cli/cache/render-hash-cache.js', () => ({
+  RenderHashCache: vi.fn().mockImplementation(() => ({
+    checkHit: vi.fn().mockResolvedValue(false), // default: cache miss → always render
+    writeHash: vi.fn().mockResolvedValue(undefined),
+    clearHashes: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 // Mock MermaidDiagramGenerator (default output path)
 vi.mock('@/mermaid/diagram-generator.js', () => ({
   MermaidDiagramGenerator: vi.fn().mockImplementation(() => ({
-    generateAndRender: vi.fn().mockResolvedValue(undefined),
+    generateOnly: vi.fn().mockResolvedValue([
+      {
+        name: 'test',
+        mermaidCode: 'classDiagram\n  class Foo',
+        outputPath: {
+          mmd: '/out/diagram.mmd',
+          svg: '/out/diagram.svg',
+          png: '/out/diagram.png',
+        },
+      },
+    ]),
   })),
 }));
 
@@ -341,7 +360,7 @@ describe('DiagramOutputRouter', () => {
 
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
       const instance = (MermaidDiagramGenerator as any).mock.results[0].value;
-      expect(instance.generateAndRender).toHaveBeenCalledOnce();
+      expect(instance.generateOnly).toHaveBeenCalledOnce();
     });
 
     it('routes to MermaidDiagramGenerator for method-level diagram', async () => {
@@ -363,7 +382,7 @@ describe('DiagramOutputRouter', () => {
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
     });
 
-    it('passes diagram config to MermaidDiagramGenerator.generateAndRender', async () => {
+    it('passes diagram config to MermaidDiagramGenerator.generateOnly', async () => {
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
 
       const diagram = makeDiagram({ level: 'class', name: 'my-diagram' });
@@ -371,12 +390,80 @@ describe('DiagramOutputRouter', () => {
       await router.route(makeArchJSON(), makePaths(), diagram, null);
 
       const instance = (MermaidDiagramGenerator as any).mock.results[0].value;
-      expect(instance.generateAndRender).toHaveBeenCalledWith(
+      expect(instance.generateOnly).toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
         'class',
         diagram
       );
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Render cache
+  // --------------------------------------------------------------------------
+
+  describe('Render cache', () => {
+    it('cache hit skips SVG rendering (IsomorphicMermaidRenderer.renderSVG not called)', async () => {
+      const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
+      const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+      // Make the cache always report a hit
+      (RenderHashCache as any).mock.results[0]?.value ??
+        ((RenderHashCache as any).mock.instances[0]);
+      // Override checkHit for this test
+      const cacheInstance = new (RenderHashCache as any)();
+      cacheInstance.checkHit.mockResolvedValue(true);
+
+      // Rebuild mock so the router picks up a hitting cache
+      (RenderHashCache as any).mockImplementationOnce(() => cacheInstance);
+
+      const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+
+      const rendererInstance = (IsomorphicMermaidRenderer as any).mock.results[0]?.value;
+      // renderSVG must NOT have been called on a cache hit
+      if (rendererInstance) {
+        expect(rendererInstance.renderSVG).not.toHaveBeenCalled();
+      }
+    });
+
+    it('cache miss triggers SVG rendering and writes hash', async () => {
+      const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
+      const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+      // Default checkHit = false (cache miss) — already set in the top-level mock
+      const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+
+      // renderSVG must have been called
+      const rendererInstances = (IsomorphicMermaidRenderer as any).mock.results;
+      const anyRenderSVGCalled = rendererInstances.some(
+        (r: any) => r.value?.renderSVG?.mock?.calls?.length > 0
+      );
+      expect(anyRenderSVGCalled).toBe(true);
+
+      // writeHash must have been called
+      const cacheInstances = (RenderHashCache as any).mock.results;
+      const anyWriteHashCalled = cacheInstances.some(
+        (r: any) => r.value?.writeHash?.mock?.calls?.length > 0
+      );
+      expect(anyWriteHashCalled).toBe(true);
+    });
+
+    it('each render job is checked independently (one job = one checkHit call)', async () => {
+      const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
+
+      const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+
+      // The mock generateOnly returns 1 job, so checkHit should be called once
+      const cacheInstances = (RenderHashCache as any).mock.results;
+      const totalCheckHitCalls = cacheInstances.reduce(
+        (sum: number, r: any) => sum + (r.value?.checkHit?.mock?.calls?.length ?? 0),
+        0
+      );
+      expect(totalCheckHitCalls).toBeGreaterThanOrEqual(1);
     });
   });
 

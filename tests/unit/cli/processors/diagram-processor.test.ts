@@ -29,6 +29,15 @@ vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
   })),
 }));
 
+// Mock RenderHashCache so render sidecar files are never touched in unit tests
+vi.mock('@/cli/cache/render-hash-cache.js', () => ({
+  RenderHashCache: vi.fn().mockImplementation(() => ({
+    checkHit: vi.fn().mockResolvedValue(false), // always miss → always render
+    writeHash: vi.fn().mockResolvedValue(undefined),
+    clearHashes: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 // Mock render-worker-pool so DiagramProcessor can be instantiated without workers
 vi.mock('@/mermaid/render-worker-pool.js', () => ({
   MermaidRenderWorkerPool: vi.fn().mockImplementation(() => ({
@@ -546,9 +555,9 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateAndRender,
       }));
 
       // Create processor
@@ -678,9 +687,9 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateAndRender,
       }));
 
       // Create processor with multiple diagrams
@@ -743,9 +752,9 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateAndRender,
       }));
 
       // Create processor with package level
@@ -803,9 +812,9 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateAndRender,
       }));
 
       // Create processor with JSON format
@@ -879,9 +888,9 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock MermaidDiagramGenerator
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateAndRender,
       }));
 
       // Create processor
@@ -944,7 +953,7 @@ describe('DiagramProcessor', () => {
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: vi.fn().mockResolvedValue(undefined),
+        generateOnly: vi.fn().mockResolvedValue([]),
       }));
 
       // Mock ArchJSONAggregator
@@ -1093,7 +1102,7 @@ describe('DiagramProcessor', () => {
 
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: vi.fn().mockResolvedValue(undefined),
+        generateOnly: vi.fn().mockResolvedValue([]),
       }));
 
       return archJSON;
@@ -1470,7 +1479,7 @@ describe('DiagramProcessor', () => {
 
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: vi.fn().mockResolvedValue(undefined),
+        generateOnly: vi.fn().mockResolvedValue([]),
       }));
 
       const processor = new DiagramProcessor({

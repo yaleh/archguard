@@ -3,9 +3,11 @@
  */
 
 import { Command } from 'commander';
+import path from 'path';
 import { CacheManager } from '../cache-manager.js';
 import { ErrorHandler } from '../error-handler.js';
 import { ConfigLoader } from '../config-loader.js';
+import { clearRenderHashes } from '../cache/diagram-manifest.js';
 import chalk from 'chalk';
 
 /**
@@ -23,6 +25,13 @@ export function createCacheCommand(): Command {
         const config = await new ConfigLoader(process.cwd()).load();
         const cache = new CacheManager(config.cache.dir);
         await cache.clear();
+
+        // Also clear render hash sidecars from the output directory
+        const outputDir = config.outputDir || path.join(config.workDir || '.archguard', 'output');
+        const hashCount = await clearRenderHashes(outputDir);
+        if (hashCount > 0) {
+          console.log(chalk.green(`✓ Cleared ${hashCount} render hash file(s)`));
+        }
         console.log(chalk.green('✓ Cache cleared successfully'));
       } catch (error) {
         const errorHandler = new ErrorHandler();

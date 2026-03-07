@@ -26,6 +26,7 @@ import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
 import { persistQueryScopes } from '../query/query-artifacts.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
+import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 
 /**
  * Normalize CLI options to DiagramConfig[]
@@ -327,6 +328,18 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
       process.exit(0);
     }
 
+    // Step 3: Clean stale outputs from previous runs
+    const cacheDir = config.cache?.dir || path.join(config.workDir || '.archguard', 'cache');
+    const outputDir = config.outputDir || path.join(config.workDir || '.archguard', 'output');
+    const existingManifest = await readManifest(cacheDir);
+    if (existingManifest) {
+      const currentNames = selectedDiagrams.map((d) => d.name);
+      const stale = await cleanStaleDiagrams(currentNames, existingManifest, outputDir);
+      if (stale.length > 0 && config.verbose) {
+        progress.info(`Cleaned ${stale.length} stale diagram(s): ${stale.join(', ')}`);
+      }
+    }
+
     // Step 4: Unified processing (core!)
     const parseCache = new ParseCache();
     const processor = new DiagramProcessor({
@@ -337,6 +350,20 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     });
 
     const results = await processor.processAll();
+
+    // Step 5: Write diagram manifest (non-blocking)
+    const successfulNames = results.filter((r) => r.success).map((r) => r.name);
+    if (successfulNames.length > 0) {
+      try {
+        await writeManifest(cacheDir, successfulNames, outputDir);
+      } catch (err) {
+        // Non-blocking — manifest write failure should not fail the analysis
+        if (config.verbose) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`[manifest] Failed to write diagram manifest: ${msg}`);
+        }
+      }
+    }
 
     // Step 5.5: Persist query scopes (non-blocking — warnings only on failure)
     const queryScopes = processor.getQuerySourceGroups();

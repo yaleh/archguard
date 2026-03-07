@@ -11,6 +11,8 @@
 
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
+import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
+import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
 import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ProgressReporter } from '@/cli/progress.js';
@@ -45,10 +47,12 @@ export type OutputPaths = {
 export class DiagramOutputRouter {
   private readonly globalConfig: GlobalConfig;
   private readonly progress: ProgressReporter;
+  private readonly renderCache: RenderHashCache;
 
   constructor(globalConfig: GlobalConfig, progress: ProgressReporter) {
     this.globalConfig = globalConfig;
     this.progress = progress;
+    this.renderCache = new RenderHashCache();
   }
 
   /**
@@ -90,6 +94,25 @@ export class DiagramOutputRouter {
   }
 
   /**
+   * Build RenderOptions (theme string + transparentBackground) from the global config.
+   * Used as input to RenderHashCache key computation.
+   */
+  private buildRenderOptions(): RenderOptions {
+    const mermaid = this.globalConfig.mermaid;
+    let theme = 'default';
+    if (mermaid?.theme) {
+      theme =
+        typeof mermaid.theme === 'string'
+          ? mermaid.theme
+          : (mermaid.theme as { name?: string }).name ?? 'default';
+    }
+    return {
+      theme,
+      transparentBackground: mermaid?.transparentBackground ?? false,
+    };
+  }
+
+  /**
    * Build IsomorphicMermaidRenderer options from the global config.
    * Theme is wrapped as { name: string } when it is a bare string.
    */
@@ -109,6 +132,7 @@ export class DiagramOutputRouter {
 
   /**
    * Generate standard Mermaid class/method/package diagram output via MermaidDiagramGenerator.
+   * Uses generateOnly + manual render so we can apply RenderHashCache per job.
    */
   private async generateDefaultOutput(
     archJSON: ArchJSON,
@@ -117,8 +141,10 @@ export class DiagramOutputRouter {
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool | null
   ): Promise<void> {
+    const renderOptions = this.buildRenderOptions();
     const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
-    await mermaidGenerator.generateAndRender(
+
+    const jobs = await mermaidGenerator.generateOnly(
       archJSON,
       {
         outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
@@ -128,6 +154,47 @@ export class DiagramOutputRouter {
       level,
       diagram
     );
+
+    const { IsomorphicMermaidRenderer, inlineEdgeStyles } = await import('@/mermaid/renderer.js');
+    const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions() as any);
+
+    for (const job of jobs) {
+      await fs.ensureDir(path.dirname(job.outputPath.mmd));
+      await fs.writeFile(job.outputPath.mmd, job.mermaidCode, 'utf-8');
+
+      if (await this.renderCache.checkHit(job.outputPath.mmd, job.mermaidCode, renderOptions)) {
+        continue; // Cache hit — skip rendering
+      }
+
+      // Render SVG: use worker pool if available, fall back to main thread
+      let svg: string;
+      if (pool) {
+        const poolResult = await pool.render({ mermaidCode: job.mermaidCode });
+        if (!poolResult.success) {
+          console.warn(
+            `  Worker render failed: ${poolResult.error} — falling back to main thread`
+          );
+          svg = await mermaidRenderer.renderSVG(job.mermaidCode);
+        } else {
+          svg = poolResult.svg!;
+        }
+      } else {
+        svg = await mermaidRenderer.renderSVG(job.mermaidCode);
+      }
+
+      const processedSvg = typeof inlineEdgeStyles === 'function' ? inlineEdgeStyles(svg) : svg;
+      await Promise.all([
+        fs.writeFile(job.outputPath.svg, processedSvg, 'utf-8'),
+        mermaidRenderer
+          .convertSVGToPNG(processedSvg, job.outputPath.png)
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`  ${job.name} PNG skipped (${msg}) — MMD + SVG saved`);
+          }),
+      ]);
+
+      await this.renderCache.writeHash(job.outputPath.mmd, job.mermaidCode, renderOptions);
+    }
   }
 
   /**
@@ -183,10 +250,16 @@ export class DiagramOutputRouter {
           png: `${basePath}-${layer}.png`,
         };
 
-        // Write MMD and SVG unconditionally; attempt PNG separately so large
+        // Write MMD unconditionally; attempt PNG separately so large
         // diagrams that exceed the pixel limit still produce MMD + SVG.
         await fs.ensureDir(path.dirname(layerPaths.mmd));
         await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
+
+        const renderOptions = this.buildRenderOptions();
+        if (await this.renderCache.checkHit(layerPaths.mmd, result.content, renderOptions)) {
+          console.log(`  ${layer}: cached`);
+          return; // Cache hit — skip rendering this layer
+        }
 
         // Render SVG: use worker pool if available, fall back to main thread
         let svg: string;
@@ -215,6 +288,7 @@ export class DiagramOutputRouter {
             pngFailed = true;
           }),
         ]);
+        await this.renderCache.writeHash(layerPaths.mmd, result.content, renderOptions);
         console.log(`  ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
       })
     );
@@ -251,6 +325,11 @@ export class DiagramOutputRouter {
     await fs.ensureDir(path.dirname(paths.paths.mmd));
     await fs.writeFile(paths.paths.mmd, mmdContent, 'utf-8');
 
+    const renderOptions = this.buildRenderOptions();
+    if (await this.renderCache.checkHit(paths.paths.mmd, mmdContent, renderOptions)) {
+      return; // Cache hit
+    }
+
     // Render SVG: use worker pool if available, fall back to main thread
     let svg: string;
     if (pool) {
@@ -273,6 +352,8 @@ export class DiagramOutputRouter {
         console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
       }),
     ]);
+
+    await this.renderCache.writeHash(paths.paths.mmd, mmdContent, renderOptions);
   }
 
   /**
@@ -300,6 +381,11 @@ export class DiagramOutputRouter {
     await fs.ensureDir(path.dirname(paths.paths.mmd));
     await fs.writeFile(paths.paths.mmd, mmdContent, 'utf-8');
 
+    const renderOptions = this.buildRenderOptions();
+    if (await this.renderCache.checkHit(paths.paths.mmd, mmdContent, renderOptions)) {
+      return; // Cache hit
+    }
+
     // Render SVG: use worker pool if available, fall back to main thread
     let svg: string;
     if (pool) {
@@ -322,5 +408,7 @@ export class DiagramOutputRouter {
         console.warn(`  C++ package graph PNG skipped (${msg}) — MMD + SVG saved`);
       }),
     ]);
+
+    await this.renderCache.writeHash(paths.paths.mmd, mmdContent, renderOptions);
   }
 }
