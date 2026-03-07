@@ -148,7 +148,30 @@ describe('DiagramOutputRouter', () => {
       await router.route(archJSON, paths, makeDiagram(), null);
 
       expect(fsMock.writeJson).toHaveBeenCalledOnce();
+      expect(fsMock.ensureDir).toHaveBeenCalledWith('/out');
       expect(fsMock.writeJson).toHaveBeenCalledWith(paths.paths.json, archJSON, { spaces: 2 });
+    });
+
+    it('ensures the JSON parent directory before writing nested output paths', async () => {
+      const fs = await import('fs-extra');
+      const fsMock = (fs as any).default;
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const paths: OutputPaths = {
+        paths: {
+          json: '/out/method/utils.json',
+          mmd: '/out/method/utils.mmd',
+          svg: '/out/method/utils.svg',
+          png: '/out/method/utils.png',
+        },
+      };
+
+      await router.route(makeArchJSON(), paths, makeDiagram({ level: 'method' }), null);
+
+      expect(fsMock.ensureDir).toHaveBeenCalledWith('/out/method');
+      expect(fsMock.writeJson).toHaveBeenCalledWith(paths.paths.json, expect.any(Object), {
+        spaces: 2,
+      });
     });
 
     it('canonicalizes JSON output before writing it to disk', async () => {

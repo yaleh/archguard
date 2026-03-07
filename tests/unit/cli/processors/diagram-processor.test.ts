@@ -18,6 +18,13 @@ vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
+vi.mock('@/plugins/golang/source-scope.js', () => ({
+  planGoAnalysisScope: vi.fn().mockResolvedValue({
+    workspaceRoot: '/project',
+    includePatterns: ['src/**/*.go'],
+    excludePatterns: [],
+  }),
+}));
 
 // Mock ArchJsonDiskCache so disk I/O is skipped in unit tests
 vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({

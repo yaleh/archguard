@@ -77,6 +77,7 @@ export class DiagramOutputRouter {
 
     // Step 1: json format
     if (format === 'json') {
+      await fs.ensureDir(path.dirname(paths.paths.json));
       await fs.writeJson(paths.paths.json, canonicalizeArchJson(archJSON), { spaces: 2 });
       return;
     }
