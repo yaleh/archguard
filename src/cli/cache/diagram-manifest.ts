@@ -42,8 +42,8 @@ export async function writeManifest(
   const manifest: DiagramManifest = {
     version: MANIFEST_VERSION,
     lastRun: new Date().toISOString(),
-    outputDir,
-    diagrams,
+    outputDir: path.resolve(outputDir),
+    diagrams: [...diagrams],
   };
   await fs.writeJson(filePath, manifest, { spaces: 2 });
 }

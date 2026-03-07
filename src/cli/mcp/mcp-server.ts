@@ -11,6 +11,44 @@ import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
 import type { QueryEngine, EntitySummary } from '../query/query-engine.js';
 import type { Entity } from '@/types/index.js';
+import { registerAnalyzeTool } from './analyze-tool.js';
+
+export function createMcpServer(
+  archDir: string,
+  scopeKey?: string,
+  sessionRoot: string = process.cwd(),
+): McpServer {
+  const server = new McpServer({
+    name: 'archguard',
+    version: '1.0.0',
+  });
+
+  // Lazy engine: loaded once on first tool call, cached as a Promise.
+  // Errors surface as tool-call failures rather than process exit.
+  let activeScopeKey: string | undefined = scopeKey;
+  let enginePromise: ReturnType<typeof loadEngine> | null = null;
+  const getEngine = () => {
+    if (!enginePromise) enginePromise = loadEngine(archDir, activeScopeKey);
+    return enginePromise;
+  };
+  const invalidateEngine = () => {
+    enginePromise = null;
+  };
+  const setActiveScope = (nextScopeKey?: string) => {
+    activeScopeKey = nextScopeKey;
+    invalidateEngine();
+  };
+
+  registerTools(server, getEngine);
+  registerAnalyzeTool(server, {
+    sessionRoot,
+    archDir,
+    getActiveScope: () => activeScopeKey,
+    setActiveScope,
+    invalidateEngine,
+  });
+  return server;
+}
 
 /**
  * Create and start the MCP server.
@@ -21,20 +59,7 @@ import type { Entity } from '@/types/index.js';
  * when arch data is missing or the scope is ambiguous.
  */
 export async function startMcpServer(archDir: string, scopeKey?: string): Promise<void> {
-  const server = new McpServer({
-    name: 'archguard',
-    version: '1.0.0',
-  });
-
-  // Lazy engine: loaded once on first tool call, cached as a Promise.
-  // Errors surface as tool-call failures rather than process exit.
-  let enginePromise: ReturnType<typeof loadEngine> | null = null;
-  const getEngine = () => {
-    if (!enginePromise) enginePromise = loadEngine(archDir, scopeKey);
-    return enginePromise;
-  };
-
-  registerTools(server, getEngine);
+  const server = createMcpServer(archDir, scopeKey);
 
   // Connect transport before any I/O so Claude Code can complete the handshake.
   const transport = new StdioServerTransport();

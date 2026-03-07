@@ -86,6 +86,14 @@ describe('diagram-manifest', () => {
       await writeManifest(newCacheDir, ['overview/package'], outputDir);
       expect(await fs.pathExists(path.join(newCacheDir, MANIFEST_FILENAME))).toBe(true);
     });
+
+    it('normalizes outputDir to an absolute path', async () => {
+      const relativeOutputDir = path.relative(process.cwd(), outputDir);
+      await writeManifest(cacheDir, ['overview/package'], relativeOutputDir);
+
+      const result = await readManifest(cacheDir);
+      expect(result?.outputDir).toBe(path.resolve(relativeOutputDir));
+    });
   });
 
   // ── cleanStaleDiagrams ─────────────────────────────────────────────────────

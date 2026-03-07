@@ -20,7 +20,7 @@ import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { QuerySourceGroup } from '@/cli/query/query-manifest.js';
-import type { ProgressReporter } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
@@ -48,7 +48,7 @@ export interface DiagramProcessorOptions {
   /** Global configuration settings */
   globalConfig: GlobalConfig;
   /** Progress reporter for user feedback */
-  progress: ProgressReporter;
+  progress: ProgressReporterLike;
   /**
    * Optional parse-time cache shared across all diagrams in this invocation.
    * Eliminates redundant TypeScriptParser instantiation for files that appear
@@ -114,7 +114,7 @@ export interface DiagramResult {
 export class DiagramProcessor {
   private diagrams: DiagramConfig[];
   private globalConfig: GlobalConfig;
-  private progress: ProgressReporter;
+  private progress: ProgressReporterLike;
   private aggregator: ArchJSONAggregator;
   private metricsCalculator: MetricsCalculator;
   private parallelProgress?: ParallelProgressReporter;

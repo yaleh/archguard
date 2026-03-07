@@ -15,18 +15,11 @@ import { Command } from 'commander';
 import path from 'path';
 import os from 'os';
 import { ProgressReporter } from '../progress.js';
-import { ConfigLoader } from '../config-loader.js';
 import { ErrorHandler } from '../error-handler.js';
-import { DiagramProcessor } from '../processors/diagram-processor.js';
-import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
-import { detectProjectStructure } from '../utils/project-structure-detector.js';
-import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
-import { ParseCache } from '@/parser/parse-cache.js';
 import type { Config } from '../config-loader.js';
-import type { CLIOptions, DiagramConfig } from '../../types/config.js';
-import { persistQueryScopes } from '../query/query-artifacts.js';
+import type { CLIOptions } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
-import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
+import { runAnalysis } from '../analyze/run-analysis.js';
 
 /**
  * Normalize CLI options to DiagramConfig[]
@@ -42,95 +35,7 @@ import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagra
  * @param rootDir - Project root directory (default: process.cwd())
  * @returns Array of DiagramConfig
  */
-export async function normalizeToDiagrams(
-  config: Config,
-  cliOptions: CLIOptions,
-  rootDir?: string
-): Promise<DiagramConfig[]> {
-  // Priority 1: Config file diagrams
-  if (config.diagrams && config.diagrams.length > 0) {
-    return filterByLevels(config.diagrams as DiagramConfig[], cliOptions.diagrams);
-  }
-
-  // Priority 2: CLI sources → language-specific or auto-detect
-  if (cliOptions.sources && cliOptions.sources.length > 0) {
-    // Resolve effective language (--atlas implies 'go')
-    const language = cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined);
-    // Atlas is enabled by default for Go unless --no-atlas is passed
-    const atlasEnabled = language === 'go' && !cliOptions.noAtlas;
-
-    // Go Atlas special case: single diagram, skip auto-detection
-    if (atlasEnabled) {
-      const diagram: DiagramConfig = {
-        name: 'architecture',
-        sources: cliOptions.sources,
-        level: 'package',
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-        language,
-        languageSpecific: {
-          atlas: {
-            enabled: true,
-            functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
-            excludeTests: !cliOptions.atlasIncludeTests,
-            protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
-            layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
-          },
-        },
-      };
-      return [diagram];
-    }
-
-    // Go without atlas (--lang go --no-atlas): single diagram, no atlas config
-    if (language === 'go' && cliOptions.noAtlas) {
-      const diagram: DiagramConfig = {
-        name: 'architecture',
-        sources: cliOptions.sources,
-        level: 'class',
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-        language,
-      };
-      return [diagram];
-    }
-
-    // C++: auto-detect module structure (package + class + per-module class diagrams)
-    // NOTE: only sources[0] is used; multiple --sources paths are not supported for C++
-    if (language === 'cpp') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      const moduleName = path.basename(sourcePath);
-      const diagrams = await detectCppProjectStructure(sourcePath, moduleName, {
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      });
-      return filterByLevels(diagrams, cliOptions.diagrams);
-    }
-
-    // TypeScript/other: auto-detect from sources[0]
-    const externalSourceRoot = path.resolve(cliOptions.sources[0]);
-    const diagrams = await detectProjectStructure(process.cwd(), externalSourceRoot);
-    return filterByLevels(diagrams, cliOptions.diagrams);
-  }
-
-  // Priority 3: Auto-detect from rootDir
-  const diagrams = await detectProjectStructure(rootDir ?? process.cwd());
-  return filterByLevels(diagrams, cliOptions.diagrams);
-}
-
-/**
- * Filter diagrams by level
- *
- * @param diagrams - All diagrams
- * @param levels - Level values to filter by (undefined = return all)
- * @returns Filtered diagrams
- */
-export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): DiagramConfig[] {
-  if (!levels || levels.length === 0) {
-    return diagrams;
-  }
-
-  return diagrams.filter((d) => levels.includes(d.level ?? 'class'));
-}
+export { normalizeToDiagrams, filterByLevels } from '../analyze/normalize-to-diagrams.js';
 
 /**
  * Display results summary
@@ -254,150 +159,39 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
   const progress = new ProgressReporter();
 
   try {
-    // Step 1: Load configuration
-    progress.start('Loading configuration...');
-    const configLoader = new ConfigLoader(process.cwd());
+    const result = await runAnalysis({
+      sessionRoot: process.cwd(),
+      workDir: inferCliWorkDir(process.cwd(), cliOptions),
+      cliOptions,
+      reporter: progress,
+    });
 
-    // Build partial config for override
-    const configOverrides: Partial<Config> = {};
-    if (cliOptions.format) configOverrides.format = cliOptions.format;
-    if (cliOptions.exclude) configOverrides.exclude = cliOptions.exclude;
-    if (cliOptions.workDir) configOverrides.workDir = cliOptions.workDir;
-    if (cliOptions.cache !== undefined) {
-      configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 } as Config['cache'];
-    }
-    if (cliOptions.cacheDir) {
-      configOverrides.cache = {
-        enabled: cliOptions.cache ?? true,
-        ttl: 86400,
-        dir: cliOptions.cacheDir,
-      };
-    }
-    if (cliOptions.concurrency) {
-      configOverrides.concurrency = parseInt(String(cliOptions.concurrency), 10);
-    }
-    if (cliOptions.verbose !== undefined) configOverrides.verbose = cliOptions.verbose;
-    if (cliOptions.cliCommand || cliOptions.cliArgs) {
-      configOverrides.cli = {
-        command: cliOptions.cliCommand || 'claude',
-        args: cliOptions.cliArgs ? cliOptions.cliArgs.split(' ') : [],
-        timeout: 60000,
-      };
-    }
-
-    // Mermaid-specific options
-    if (cliOptions.mermaidTheme !== undefined || cliOptions.mermaidRenderer !== undefined) {
-      configOverrides.mermaid = {
-        theme: cliOptions.mermaidTheme,
-        renderer: cliOptions.mermaidRenderer,
-        transparentBackground: true,
-      };
-    }
-
-    // Smart outputDir inference: if sources point outside cwd, infer project root
-    if (
-      cliOptions.sources &&
-      cliOptions.sources.length > 0 &&
-      !cliOptions.outputDir &&
-      !cliOptions.workDir
-    ) {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      const cwd = process.cwd();
-      if (!sourcePath.startsWith(cwd)) {
-        const SOURCE_ROOT_NAMES = ['src', 'lib', 'app', 'source'];
-        const basename = path.basename(sourcePath);
-        const projectRoot = SOURCE_ROOT_NAMES.includes(basename)
-          ? path.dirname(sourcePath)
-          : sourcePath;
-        configOverrides.workDir = path.join(projectRoot, '.archguard');
-      }
-    }
-
-    // Apply explicit outputDir override after smart inference (CLI wins)
-    if (cliOptions.outputDir) configOverrides.outputDir = cliOptions.outputDir;
-
-    const config = await configLoader.load(configOverrides, cliOptions.config);
-    progress.succeed('Configuration loaded');
-
-    // Step 2: Normalize to DiagramConfig[] (filtering by level is handled inside)
-    const selectedDiagrams = await normalizeToDiagrams(config, cliOptions, process.cwd());
-    progress.info(`Found ${selectedDiagrams.length} diagram(s) to generate`);
-
-    if (selectedDiagrams.length === 0) {
+    if (result.diagrams.length === 0) {
       progress.warn('No diagrams selected');
       process.exit(0);
     }
-
-    // Step 3: Clean stale outputs from previous runs
-    const cacheDir = config.cache?.dir || path.join(config.workDir || '.archguard', 'cache');
-    const outputDir = config.outputDir || path.join(config.workDir || '.archguard', 'output');
-    const existingManifest = await readManifest(cacheDir);
-    if (existingManifest) {
-      const currentNames = selectedDiagrams.map((d) => d.name);
-      const stale = await cleanStaleDiagrams(currentNames, existingManifest, outputDir);
-      if (stale.length > 0 && config.verbose) {
-        progress.info(`Cleaned ${stale.length} stale diagram(s): ${stale.join(', ')}`);
-      }
-    }
-
-    // Step 4: Unified processing (core!)
-    const parseCache = new ParseCache();
-    const processor = new DiagramProcessor({
-      diagrams: selectedDiagrams,
-      globalConfig: config as any, // Config type is compatible with GlobalConfig at runtime
-      progress,
-      parseCache,
-    });
-
-    const results = await processor.processAll();
-
-    // Step 5: Write diagram manifest (non-blocking)
-    const successfulNames = results.filter((r) => r.success).map((r) => r.name);
-    if (successfulNames.length > 0) {
-      try {
-        await writeManifest(cacheDir, successfulNames, outputDir);
-      } catch (err) {
-        // Non-blocking — manifest write failure should not fail the analysis
-        if (config.verbose) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[manifest] Failed to write diagram manifest: ${msg}`);
-        }
-      }
-    }
-
-    // Step 5.5: Persist query scopes (non-blocking — warnings only on failure)
-    const queryScopes = processor.getQuerySourceGroups();
-    if (queryScopes.length > 0) {
-      try {
-        const workDir = config.workDir || '.archguard';
-        await persistQueryScopes(workDir, queryScopes);
-        if (config.verbose) {
-          progress.info(`Persisted ${queryScopes.length} query scope(s) to ${workDir}/query/`);
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[query] Failed to persist query scopes: ${msg}`);
-      }
-    }
-
-    // Step 6: Generate index (if multiple diagrams)
-    if (results.length > 1) {
-      progress.start('Generating index...');
-      const indexGenerator = new DiagramIndexGenerator(config as any);
-      await indexGenerator.generate(results);
-      progress.succeed('Index generated');
-    }
-
-    // Step 7: Display results
-    displayResults(results, config);
-
-    // Exit with error if any diagram failed
-    const hasFailed = results.some((r) => !r.success);
-    process.exit(hasFailed ? 1 : 0);
+    displayResults(result.results, result.config);
+    process.exit(result.hasDiagramFailures ? 1 : 0);
   } catch (error) {
     progress.fail('Analysis failed');
     const errorHandler = new ErrorHandler();
     console.error(errorHandler.format(error, { verbose: cliOptions.verbose || false }));
     process.exit(1);
   }
+}
+
+function inferCliWorkDir(sessionRoot: string, cliOptions: CLIOptions): string {
+  if (cliOptions.workDir) {
+    return cliOptions.workDir;
+  }
+  if (cliOptions.sources && cliOptions.sources.length > 0 && !cliOptions.outputDir) {
+    const sourcePath = path.resolve(sessionRoot, cliOptions.sources[0]);
+    if (!sourcePath.startsWith(sessionRoot)) {
+      const SOURCE_ROOT_NAMES = ['src', 'lib', 'app', 'source'];
+      const basename = path.basename(sourcePath);
+      const projectRoot = SOURCE_ROOT_NAMES.includes(basename) ? path.dirname(sourcePath) : sourcePath;
+      return path.join(projectRoot, '.archguard');
+    }
+  }
+  return path.join(sessionRoot, '.archguard');
 }

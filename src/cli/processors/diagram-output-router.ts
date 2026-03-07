@@ -15,7 +15,8 @@ import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
 import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
 import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { ProgressReporter } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress.js';
+import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -46,10 +47,10 @@ export type OutputPaths = {
  */
 export class DiagramOutputRouter {
   private readonly globalConfig: GlobalConfig;
-  private readonly progress: ProgressReporter;
+  private readonly progress: ProgressReporterLike;
   private readonly renderCache: RenderHashCache;
 
-  constructor(globalConfig: GlobalConfig, progress: ProgressReporter) {
+  constructor(globalConfig: GlobalConfig, progress: ProgressReporterLike) {
     this.globalConfig = globalConfig;
     this.progress = progress;
     this.renderCache = new RenderHashCache();
@@ -76,7 +77,7 @@ export class DiagramOutputRouter {
 
     // Step 1: json format
     if (format === 'json') {
-      await fs.writeJson(paths.paths.json, archJSON, { spaces: 2 });
+      await fs.writeJson(paths.paths.json, canonicalizeArchJson(archJSON), { spaces: 2 });
       return;
     }
 
@@ -234,7 +235,7 @@ export class DiagramOutputRouter {
 
     const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions() as any);
 
-    console.log('\n  Generating Go Architecture Atlas...');
+    console.error('\n  Generating Go Architecture Atlas...');
 
     await Promise.all(
       availableLayers.map(async (layer) => {
@@ -257,7 +258,7 @@ export class DiagramOutputRouter {
 
         const renderOptions = this.buildRenderOptions();
         if (await this.renderCache.checkHit(layerPaths.mmd, result.content, renderOptions)) {
-          console.log(`  ${layer}: cached`);
+          console.error(`  ${layer}: cached`);
           return; // Cache hit — skip rendering this layer
         }
 
@@ -289,15 +290,15 @@ export class DiagramOutputRouter {
           }),
         ]);
         await this.renderCache.writeHash(layerPaths.mmd, result.content, renderOptions);
-        console.log(`  ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
+        console.error(`  ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
       })
     );
 
     // Save full Atlas JSON alongside the layer diagrams
     const atlasJsonPath = `${basePath}-atlas.json`;
     await fs.writeJson(atlasJsonPath, atlas, { spaces: 2 });
-    console.log(`  Atlas JSON: ${atlasJsonPath}`);
-    console.log(`\n  Atlas layers: ${availableLayers.join(', ')}`);
+    console.error(`  Atlas JSON: ${atlasJsonPath}`);
+    console.error(`\n  Atlas layers: ${availableLayers.join(', ')}`);
   }
 
   /**

@@ -151,6 +151,45 @@ describe('DiagramOutputRouter', () => {
       expect(fsMock.writeJson).toHaveBeenCalledWith(paths.paths.json, archJSON, { spaces: 2 });
     });
 
+    it('canonicalizes JSON output before writing it to disk', async () => {
+      const fs = await import('fs-extra');
+      const fsMock = (fs as any).default;
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const archJSON = makeArchJSON({
+        sourceFiles: ['src/z.ts', 'src/a.ts'],
+        entities: [
+          {
+            id: 'b',
+            name: 'B',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/z.ts', startLine: 1, endLine: 2 },
+          },
+          {
+            id: 'a',
+            name: 'A',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/a.ts', startLine: 1, endLine: 2 },
+          },
+        ],
+        relations: [
+          { id: 'r2', type: 'dependency', source: 'b', target: 'a' },
+          { id: 'r1', type: 'dependency', source: 'a', target: 'b' },
+        ],
+      } as any);
+
+      await router.route(archJSON, makePaths(), makeDiagram(), null);
+
+      const writtenJson = fsMock.writeJson.mock.calls[0][1];
+      expect(writtenJson.sourceFiles).toEqual(['src/a.ts', 'src/z.ts']);
+      expect(writtenJson.entities.map((entity: any) => entity.id)).toEqual(['a', 'b']);
+      expect(writtenJson.relations.map((relation: any) => relation.id)).toEqual(['r1', 'r2']);
+    });
+
     it('respects diagram.format over globalConfig.format', async () => {
       const fs = await import('fs-extra');
       const fsMock = (fs as any).default;

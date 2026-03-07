@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import type { QueryManifest, QueryScopeEntry, QuerySourceGroup } from './query-manifest.js';
 import { buildArchIndex } from './arch-index-builder.js';
+import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
 
 /**
  * Input type for scope persistence. Equivalent to QuerySourceGroup.
@@ -99,7 +100,7 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
 export async function persistQueryScopes(
   workDir: string,
   scopes: QueryScopeInput[],
-): Promise<void> {
+): Promise<QueryScopeEntry[]> {
   const resolvedDir = workDir || path.join(process.cwd(), '.archguard');
   const queryDir = path.join(resolvedDir, 'query');
   await fs.ensureDir(queryDir);
@@ -112,16 +113,17 @@ export async function persistQueryScopes(
       await fs.ensureDir(scopeDir);
 
       const archJsonPath = path.join(scopeDir, 'arch.json');
-      const buf = Buffer.from(JSON.stringify(scope.archJson, null, 2));
+      const canonicalArchJson = canonicalizeArchJson(scope.archJson);
+      const buf = Buffer.from(JSON.stringify(canonicalArchJson, null, 2));
       await atomicWriteFile(archJsonPath, buf);
 
       // Build and persist arch-index.json (hash based on disk bytes)
       const archJsonHash = crypto.createHash('sha256').update(buf).digest('hex');
-      const archIndex = buildArchIndex(scope.archJson, archJsonHash);
+      const archIndex = buildArchIndex(canonicalArchJson, archJsonHash);
       const indexPath = path.join(scopeDir, 'arch-index.json');
       await atomicWriteFile(indexPath, JSON.stringify(archIndex, null, 2));
 
-      writtenEntries.push(buildManifestEntry(scope));
+      writtenEntries.push(buildManifestEntry({ ...scope, archJson: canonicalArchJson }));
     } catch (err) {
       // Log warning but continue with remaining scopes
       const message = err instanceof Error ? err.message : String(err);
@@ -132,9 +134,10 @@ export async function persistQueryScopes(
   const manifest: QueryManifest = {
     version: '1.0',
     generatedAt: new Date().toISOString(),
-    scopes: writtenEntries,
+    scopes: [...writtenEntries].sort((a, b) => a.key.localeCompare(b.key)),
   };
 
   const manifestPath = path.join(queryDir, 'manifest.json');
   await atomicWriteFile(manifestPath, JSON.stringify(manifest, null, 2));
+  return writtenEntries;
 }

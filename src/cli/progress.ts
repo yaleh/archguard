@@ -5,6 +5,14 @@
 import ora, { type Ora } from 'ora';
 import chalk from 'chalk';
 
+export interface ProgressReporterLike {
+  start(message: string): void;
+  succeed(message: string): void;
+  fail(message: string): void;
+  warn(message: string): void;
+  info(message: string): void;
+}
+
 export interface Stage {
   name: string;
   status: 'pending' | 'running' | 'success' | 'failed' | 'warning';
@@ -34,7 +42,7 @@ export interface ProgressSummary {
  * - Progress percentage display
  * - Elapsed time tracking
  */
-export class ProgressReporter {
+export class ProgressReporter implements ProgressReporterLike {
   private spinner: Ora;
   private stages: Stage[] = [];
   private currentStage: Stage | null = null;
@@ -213,4 +221,34 @@ export class ProgressReporter {
   stop(): void {
     this.spinner.stop();
   }
+}
+
+export class StderrReporter implements ProgressReporterLike {
+  start(message: string): void {
+    console.error(message);
+  }
+
+  succeed(message: string): void {
+    console.error(message);
+  }
+
+  fail(message: string): void {
+    console.error(message);
+  }
+
+  warn(message: string): void {
+    console.error(message);
+  }
+
+  info(message: string): void {
+    console.error(message);
+  }
+}
+
+export class NoopReporter implements ProgressReporterLike {
+  start(_message: string): void {}
+  succeed(_message: string): void {}
+  fail(_message: string): void {}
+  warn(_message: string): void {}
+  info(_message: string): void {}
 }

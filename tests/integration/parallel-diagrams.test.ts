@@ -16,6 +16,37 @@ vi.mock('@/parser/parallel-parser.js');
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/mermaid/diagram-generator.js');
+vi.mock('@/cli/cache/render-hash-cache.js', () => ({
+  RenderHashCache: vi.fn().mockImplementation(() => ({
+    checkHit: vi.fn().mockResolvedValue(false),
+    writeHash: vi.fn().mockResolvedValue(undefined),
+    clearHashes: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+vi.mock('@/mermaid/render-worker-pool.js', () => ({
+  MermaidRenderWorkerPool: vi.fn().mockImplementation(() => ({
+    start: vi.fn().mockResolvedValue(undefined),
+    render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 100 100"/>' }),
+    terminate: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+vi.mock('fs-extra', () => ({
+  default: {
+    writeJson: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    ensureDir: vi.fn().mockResolvedValue(undefined),
+    readJson: vi.fn().mockResolvedValue({}),
+    pathExists: vi.fn().mockResolvedValue(false),
+    remove: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+vi.mock('@/mermaid/renderer.js', () => ({
+  inlineEdgeStyles: vi.fn().mockImplementation((svg: string) => svg),
+  IsomorphicMermaidRenderer: vi.fn().mockImplementation(() => ({
+    renderSVG: vi.fn().mockResolvedValue('<svg/>'),
+    convertSVGToPNG: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
 vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
   ArchJsonDiskCache: vi.fn().mockImplementation(() => ({
     get: vi.fn().mockResolvedValue(null),
@@ -122,9 +153,19 @@ describe('DiagramProcessor.parallel', () => {
 
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateOnly = vi.fn().mockResolvedValue([
+        {
+          name: 'test',
+          mermaidCode: 'classDiagram\n  class TestClass',
+          outputPath: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+          },
+        },
+      ]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateOnly,
       }));
 
       // Create processor with 3 diagrams
@@ -203,9 +244,19 @@ describe('DiagramProcessor.parallel', () => {
 
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateOnly = vi.fn().mockResolvedValue([
+        {
+          name: 'test',
+          mermaidCode: 'classDiagram\n  class TestClass',
+          outputPath: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+          },
+        },
+      ]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateOnly,
       }));
 
       // Create processor with 3 diagrams
@@ -290,9 +341,19 @@ describe('DiagramProcessor.parallel', () => {
 
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateOnly = vi.fn().mockResolvedValue([
+        {
+          name: 'test',
+          mermaidCode: 'classDiagram\n  class TestClass',
+          outputPath: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+          },
+        },
+      ]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateOnly,
       }));
 
       // Create processor with concurrency limit of 2
@@ -359,9 +420,19 @@ describe('DiagramProcessor.parallel', () => {
 
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateOnly = vi.fn().mockResolvedValue([
+        {
+          name: 'test',
+          mermaidCode: 'classDiagram\n  class TestClass',
+          outputPath: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+          },
+        },
+      ]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateOnly,
       }));
 
       // Create processor with undefined concurrency
@@ -432,9 +503,19 @@ describe('DiagramProcessor.parallel', () => {
 
       // Mock MermaidDiagramGenerator
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
-      const mockGenerateAndRender = vi.fn().mockResolvedValue(undefined);
+      const mockGenerateOnly = vi.fn().mockResolvedValue([
+        {
+          name: 'test',
+          mermaidCode: 'classDiagram\n  class TestClass',
+          outputPath: {
+            mmd: './archguard/test.mmd',
+            png: './archguard/test.png',
+            svg: './archguard/test.svg',
+          },
+        },
+      ]);
       (MermaidDiagramGenerator as any).mockImplementation(() => ({
-        generateAndRender: mockGenerateAndRender,
+        generateOnly: mockGenerateOnly,
       }));
 
       // Create processor with 3 diagrams
