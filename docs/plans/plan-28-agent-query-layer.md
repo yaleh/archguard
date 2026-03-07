@@ -10,7 +10,7 @@
 
 本计划按“先纠正数据模型，再暴露命令”的顺序推进。核心变化有三点:
 
-1. 持久化对象从“单一 primary arch.json”改为“每个 source group 一个 query scope”
+1. 持久化对象从“单一 primary arch.json”改为“每个可查询 source group 一个 query scope”，并区分 parsed / derived
 2. 查询全部显式绑定到 scope；多 scope 时必须 `--scope`
 3. 只实现实体级查询；移除 `--calls`
 
@@ -62,9 +62,9 @@ node dist/cli/index.js analyze -v
 
 ### Objectives
 
-1. `DiagramProcessor` 暴露全部可持久化的 raw ArchJSON source groups
-2. 修复 disk-cache-hit 路径不写 `archJsonCache` 的问题（TypeScript package-level）
-3. scope-key 基于 normalized paths（`path.resolve()` + `path.relative(workDir)`）生成
+1. `DiagramProcessor` 暴露全部可持久化的 query source groups，并标记 `kind: parsed | derived`
+2. 修复所有会遗漏 scope 的路径，而不只是 TypeScript package-level disk-cache-hit
+3. scope-key 基于稳定源码路径标准化生成，而不是 `path.relative(workDir)`
 4. 新增 `.archguard/query/manifest.json`
 5. 为每个 scope 写入独立 `<scope-key>/arch.json`
 6. 不再引入 `getPrimaryArchJson()`
@@ -73,7 +73,7 @@ node dist/cli/index.js analyze -v
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/processors/diagram-processor.ts` | Modify | Fix disk-cache-hit path to write `archJsonCache`; add `getQuerySourceGroups()` with normalized scope-key |
+| `src/cli/processors/diagram-processor.ts` | Modify | Register all final query scopes (parsed + derived); fix missing-scope paths; add `getQuerySourceGroups()` |
 | `src/cli/query/query-manifest.ts` | New | `QueryManifest` types |
 | `src/cli/query/query-artifacts.ts` | New | Persist manifest + per-scope `arch.json` (atomic writes with random tmp suffix) |
 | `src/cli/commands/analyze.ts` | Modify | Persist all scopes after `processAll()` (including partial success) |
@@ -88,25 +88,33 @@ export interface QuerySourceGroup {
   key: string;
   sources: string[];
   archJson: ArchJSON;
+  kind: 'parsed' | 'derived';
 }
 ```
 
 `getQuerySourceGroups()` 行为要求:
 
-- 返回所有已缓存的 raw ArchJSON
+- 返回所有最终可查询的 `ArchJSON` 视图
 - 仅包含 `entities.length > 0` 的 group
 - 不因为 `extensions.goAtlas` 存在而过滤
+- 对派生自父级 scope 的结果标记 `kind: 'derived'`
 
-**前置修复: disk-cache-hit 路径**
+**前置修复: 所有遗漏 scope 的路径**
 
-当前 `processSourceGroup` 的 TypeScript package-level 路径在 disk cache 命中时（`diagram-processor.ts` 约 540 行），直接使用 `cachedArchJSON`，不调用 `cacheArchJson()`。这导致 `archJsonCache` Map 缺少该 scope。必须在此路径补上 `cacheArchJson()` 调用，确保 `getQuerySourceGroups()` 能遍历到所有 scope。
+当前 `processSourceGroup` 的 scope 丢失不止一条路径:
+
+- TypeScript package-level disk cache 命中时直接使用 `cachedArchJSON`
+- C++ 子模块由父级 `ArchJSON` 裁剪得到时，没有统一登记
+- 普通 TypeScript 子目录由父级 `ArchJSON` 裁剪得到时，也没有统一登记
+
+因此不能只修一个 disk-cache-hit 分支。必须把“最终用于该 source group 的 `ArchJSON`”统一登记到 query scope 集合，来源可以是解析、内存缓存、磁盘缓存或父级派生。
 
 **scope-key 标准化**
 
-当前 `hashSources()` 直接使用 CLI 传入的路径字符串，导致同一项目用不同路径（`./src` vs `/abs/path/src`）analyze 产生不同 scope-key。修改 `hashSources()` 或在 `getQuerySourceGroups()` 中:
+当前 `hashSources()` 直接使用 CLI 传入的路径字符串，导致同一项目用不同路径（`./src` vs `/abs/path/src`）analyze 产生不同 scope-key。并且 `workDir` 不是稳定源码锚点，不能作为 `path.relative()` 基准。修改 `hashSources()` 或在 `getQuerySourceGroups()` 中:
 
 1. 对每个 source 执行 `path.resolve()`
-2. 再执行 `path.relative(workDir)`
+2. 再相对于源码工程根（`workspaceRoot` / detected project root / source root parent）做标准化；若无法确定稳定源码根，则退回 canonical absolute path
 3. 排序后拼接计算 SHA-256 前 8 位
 
 manifest 中的 `sources[]` 也存储标准化后的路径。
@@ -137,6 +145,7 @@ ls .archguard/query
 - Go Atlas 项目只要实体非空，就会生成 scope
 - 部分 diagram 失败时，成功的 scope 仍然持久化
 - 同一项目用相对路径和绝对路径 analyze，产生相同的 scope-key
+- derived scope 会被显式标记，不再伪装成 raw parse 结果
 
 ---
 
@@ -148,6 +157,7 @@ ls .archguard/query
 2. 引入 manifest-aware 的 `QueryEngine`
 3. 缺失或陈旧索引时，同步重建并原子写回
 4. 多 scope 时要求显式 `scope`
+5. 提供最小可用的 scope discovery 信息（至少 `key + label + kind + sources`）
 
 ### Files changed
 
@@ -220,6 +230,11 @@ ls .archguard/query
 
 本阶段不实现 `findCallers`
 
+补充约束:
+
+- 对 `kind: "derived"` 的 scope，查询语义按“裁剪后的局部视图”解释
+- CLI/MCP 输出中必须显式标注该 scope 为 derived，避免把局部结果当成全局事实
+
 ### Verify
 
 ```bash
@@ -235,6 +250,7 @@ find .archguard/query -name arch-index.json
 - 缺失 `arch-index.json` -> rebuild and persist
 - hash mismatch -> rebuild and persist
 - manifest 多 scope 且未指定 scope -> hard error
+- 多 scope 报错信息包含 `key + label + kind + sources`
 
 ---
 
@@ -274,6 +290,11 @@ archguard query --summary
 --format json|text
 ```
 
+需要配套一个 scope 发现入口，至少满足其一:
+
+- `archguard query --list-scopes`
+- 或在多 scope 报错时打印完整候选列表
+
 ### Semantics
 
 - `--implementers-of` 仅看 `implementation`
@@ -282,9 +303,10 @@ archguard query --summary
   - depth=1 = 一跳直接邻居（不包含起始实体本身）
   - 默认 1，硬上限 5
   - `--deps-of` 沿 `dependencies` 方向，`--used-by` 沿 `dependents` 方向
-  - **所有 relation type 都参与 BFS 遍历**（不做类型过滤）
+- **所有 relation type 都参与 BFS 遍历**（不做类型过滤）
   - BFS + visited set 防环
 - 如果多个 scope 且未指定 `--scope`，退出码 1
+- 若选中的 scope 是 `derived`，输出中显式提示这是裁剪视图
 
 ### Verify
 
@@ -442,12 +464,13 @@ node dist/cli/index.js mcp --help
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Source-group key 不够可读 | CLI 体验一般 | 在 manifest 中加 `label` 字段，但 key 仍保持稳定 |
+| Parsed / derived scope 混用导致语义误读 | 查询结果被误当成全局事实 | 在 manifest 与 CLI/MCP 输出里强制显示 `kind`，必要时只默认暴露 parsed scope |
 | 多 scope 项目需要显式 `--scope` | 命令更长 | 这是刻意的精度约束，优先于”省事” |
 | 原子写实现不完整 | 可能留下半写状态 | 统一封装到 `query-artifacts.ts`，随机 tmp 后缀，不要在各处手写 |
 | 后续有人重新加回 `--calls` | 工具语义退化 | 在 proposal 与 tests 中都明确禁止 |
 | `@modelcontextprotocol/sdk` ESM 不兼容 | Phase 5 阻塞 | 前置 spike 验证；备选方案: 手写轻量 JSON-RPC stdio |
-| disk-cache-hit scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 必须修复所有 `processSourceGroup` 路径统一写入 `archJsonCache` |
+| `scope-key` 对 `workDir` 敏感 | 同项目不同入口产生不同 key | 改为基于稳定源码根标准化，不再使用 `path.relative(workDir)` |
+| scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 必须覆盖所有 `processSourceGroup` 路径统一登记最终 query scope，而不只是修 disk-cache-hit |
 
 ---
 

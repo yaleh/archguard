@@ -49,10 +49,11 @@ ArchGuard 已有两层缓存:
 
 这次评审后，设计前提需要先和代码对齐:
 
-1. `DiagramProcessor` 内部缓存的是“按 source group 分组”的多个 raw ArchJSON，不存在天然唯一的“项目全量 ArchJSON”
+1. `DiagramProcessor` 内部处理的是“按 source group 分组”的多个 `ArchJSON` 视图，不存在天然唯一的“项目全量 ArchJSON”
 2. Go Atlas 模式不是“空实体模式”；当前实现是在标准 Go `ArchJSON` 上附加 `extensions.goAtlas`
 3. `ArchJSON.relations[]` 是实体级关系，不是成员级调用图
 4. 默认目录语义是 `workDir=.archguard`、`outputDir=.archguard/output`
+5. 并非所有 source group 都对应一次真实 parse；当前 C++/TypeScript 子目录场景里，部分 group 是由父级结果裁剪得到的派生视图
 
 因此，本 Proposal 不再使用“挑一个 primary arch.json 代表整个项目”的模型，也不承诺方法级调用查询。
 
@@ -60,7 +61,7 @@ ArchGuard 已有两层缓存:
 
 ## 设计目标
 
-1. 持久化每个 source group 的 raw ArchJSON，而不是只持久化一个“最大”分组
+1. 持久化每个可查询 source group 的 `ArchJSON` 视图，并显式区分 parsed scope 与 derived scope
 2. 为每个持久化 scope 构建对应的 `arch-index.json`
 3. 明确 scope 选择规则，避免把“部分项目”伪装成“全项目”
 4. 只承诺实体级查询能力；成员级调用图不在本次范围
@@ -83,7 +84,7 @@ ArchGuard 已有两层缓存:
 
 ### 一、持久化模型: 多 scope，而不是单一 `arch.json`
 
-每个成功解析且 `entities.length > 0` 的 source group 都会持久化为一个独立查询 scope。
+每个可查询且 `entities.length > 0` 的 source group 都会持久化为一个独立查询 scope。
 
 目录结构:
 
@@ -105,8 +106,10 @@ export interface QueryManifest {
   generatedAt: string;
   scopes: Array<{
     key: string;                  // normalized-sources hash (见下文)
+    label: string;                // 人类可读展示名
     language: string;
-    sources: string[];            // 已标准化: path.resolve() + path.relative(workDir)
+    kind: "parsed" | "derived";
+    sources: string[];            // 已标准化: stable source-root relative path（见下文）
     entityCount: number;
     relationCount: number;
     hasAtlasExtension: boolean;
@@ -122,11 +125,12 @@ export interface QueryManifest {
 
 `scope-key` 生成规则:
 
-1. 对 `sources[]` 中每个路径执行 `path.resolve()` 后再 `path.relative(workDir)`
-2. 排序后拼接，计算 SHA-256，取前 8 位 hex
-3. manifest 中的 `sources[]` 也存储标准化后的路径
+1. 对 `sources[]` 中每个路径执行 `path.resolve()`
+2. 再相对于源码工程根（`workspaceRoot` / detected project root / source root parent）做标准化；若无法确定稳定源码根，则退回 canonical absolute path
+3. 排序后拼接，计算 SHA-256，取前 8 位 hex
+4. manifest 中的 `sources[]` 也存储同样的标准化结果
 
-这保证同一组源文件不论用相对路径还是绝对路径 analyze，都产生相同的 scope-key。
+`workDir` 不是源码路径锚点，不能作为标准化基准；否则同一项目仅因 `workDir` 位置变化就会生成不同 key。上述规则的目标是保证同一组源文件不论用相对路径还是绝对路径 analyze，都产生相同的 scope-key。
 
 ### 二、analyze 集成方式
 
@@ -137,6 +141,7 @@ interface QuerySourceGroup {
   key: string;
   sources: string[];
   archJson: ArchJSON;
+  kind: "parsed" | "derived";
 }
 
 getQuerySourceGroups(): QuerySourceGroup[]
@@ -144,11 +149,12 @@ getQuerySourceGroups(): QuerySourceGroup[]
 
 约束:
 
-- 仅返回成功解析的 raw ArchJSON
+- 返回所有可查询的 `ArchJSON` 视图，而不是假定它们全都是 raw parse 结果
 - `entities.length === 0` 的 group 跳过
 - Go Atlas 只要实体非空，就和其他语言一样持久化
+- 若 scope 来自父级结果裁剪，必须标记为 `kind: "derived"`
 
-实现注意: 当前 `DiagramProcessor` 的 `archJsonCache`（内存 Map）在 TypeScript package-level disk-cache-hit 路径上**不会被写入**（命中 `ArchJsonDiskCache` 后直接使用，不调用 `cacheArchJson()`）。`getQuerySourceGroups()` 必须同时覆盖 `archJsonCache` 和 disk-cache-hit 路径，否则这些 scope 会丢失。最简方案: 在所有 `processSourceGroup` 路径中，无论 ArchJSON 来源（解析、内存缓存、磁盘缓存），都统一写入 `archJsonCache`。
+实现注意: 当前 scope 丢失问题不只发生在 TypeScript package-level disk-cache-hit。除了磁盘缓存命中路径外，C++/TypeScript 子目录场景中由父级 scope 裁剪出的 derived 结果目前也没有统一登记。`getQuerySourceGroups()` 不能只依赖单一路径，而必须覆盖所有会产出最终可查询 `ArchJSON` 的 `processSourceGroup` 分支。最简方案: 在所有 `processSourceGroup` 路径中，无论 ArchJSON 来源是解析、内存缓存、磁盘缓存还是父级派生视图，都统一登记到查询 scope 集合。
 
 ### 三、写入规则
 
@@ -193,6 +199,7 @@ export interface ArchIndex {
 - 只保留 internal relations
 - 不引入 `idToIndex`
 - `cycles` 复用 `CycleInfo`
+- 对 `kind: "derived"` 的 scope，索引与查询都必须按“局部裁剪视图”解释，不能伪装成完整项目事实
 
 ### 五、一致性策略: 原子写，不做 fire-and-forget
 
@@ -235,6 +242,12 @@ export interface ArchIndex {
 3. `manifest.scopes.length > 1` 时，必须显式 `--scope <key>`
 
 这一步是故意提高约束，避免把某个 source group 误当成全局真相。
+
+但要配套提供 scope 可发现性:
+
+- CLI 至少要能列出 `key + label + kind + sources`
+- MCP 在多 scope 报错时也要返回同样的候选信息
+- `label` 不是可选优化，而是多 scope 方案可用性的最低配套
 
 ### 七、`query` 子命令
 
@@ -377,7 +390,7 @@ archguard query --used-by "Foo" --scope abc123
 ### 持久化
 
 1. `archguard analyze` 成功后，`.archguard/query/manifest.json` 存在且为有效 JSON
-2. 每个成功解析且 `entities.length > 0` 的 source group 都有独立 `<scope-key>/arch.json`
+2. 每个可查询且 `entities.length > 0` 的 source group 都有独立 `<scope-key>/arch.json`
 3. 每个 `<scope-key>/arch.json` 都有对应 `<scope-key>/arch-index.json`
 4. Go Atlas 模式下，只要实体非空，也会持久化 query scope
 5. 部分 source group 失败时，成功的 scope 仍然持久化（不因部分失败而跳过全部）
@@ -398,11 +411,12 @@ archguard query --used-by "Foo" --scope abc123
 14. `--type abstract_class` 同时覆盖 `type === 'abstract_class'` 与 `isAbstract === true && type === 'class'`
 15. `--orphans` / `--high-coupling` / `--in-cycles` 都以实体为计算粒度，展示时可投影为文件
 16. 不提供 `--calls`，也不对方法级调用图做任何能力承诺
+17. `kind: "derived"` 的 scope 在结果展示中必须显式标注其为裁剪视图，避免被误读为完整工程事实
 
 ### 回归
 
-17. 现有测试通过
-18. `npm run type-check` 零错误
+18. 现有测试通过
+19. `npm run type-check` 零错误
 
 ---
 
@@ -411,7 +425,7 @@ archguard query --used-by "Foo" --scope abc123
 | 问题 | 说明 | 建议时机 |
 |------|------|----------|
 | 是否需要”跨 scope 聚合查询” | 当前版本显式按 scope 查询，避免语义欺骗。后续若要做全局查询，需要定义跨 scope 去重、命名冲突和结果排序规则 | 后续独立提案 |
-| `scope-key` 的人类可读性 | 当前 key 是 8 位 hex hash，稳定但不直观。后续可增加 `label` 字段用于展示 | 实现阶段 |
+| `parsed scope` 与 `derived scope` 是否都默认暴露 | 当前实现里二者都存在，但 derived scope 语义更弱。可选方案: 全部暴露并显式标注；或仅默认暴露 parsed scope，把 derived scope 作为扩展模式 | 实现阶段 |
 | 成员级查询模型 | 若后续要支持 `calls`、方法实现、符号级引用，必须先扩展 ArchJSON / index 模型 | 后续独立提案 |
 | `arch.json` 与 `ArchJsonDiskCache` 的重叠 | 两者职责不同: 一个是可发现持久化工件，一个是内容缓存 | 暂不合并 |
 | `@modelcontextprotocol/sdk` 可行性 | 需验证: ESM 兼容性（项目 `”type”: “module”`）、stdio transport 支持、bundle size、是否应设为 optional dependency | Phase 5 前置 spike |
