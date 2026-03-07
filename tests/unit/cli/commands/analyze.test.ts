@@ -14,6 +14,12 @@ import { normalizeToDiagrams, filterByLevels } from '@/cli/commands/analyze.js';
 import type { Config } from '@/cli/config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
 
+vi.mock('fs-extra', () => ({
+  default: {
+    pathExists: vi.fn(),
+  },
+}));
+
 // Mock detectProjectStructure so Priority 3 tests are deterministic
 vi.mock('@/cli/utils/project-structure-detector.js', () => ({
   detectProjectStructure: vi
@@ -22,6 +28,7 @@ vi.mock('@/cli/utils/project-structure-detector.js', () => ({
 }));
 
 import { detectProjectStructure } from '@/cli/utils/project-structure-detector.js';
+import fs from 'fs-extra';
 
 const baseConfig: Config = {
   diagrams: [],
@@ -39,6 +46,8 @@ beforeEach(() => {
   vi.mocked(detectProjectStructure).mockResolvedValue([
     { name: 'architecture', sources: ['./src'], level: 'class' },
   ]);
+  vi.mocked(fs.pathExists).mockReset();
+  vi.mocked(fs.pathExists).mockResolvedValue(false);
 });
 
 describe('normalizeToDiagrams', () => {
@@ -284,6 +293,22 @@ describe('normalizeToDiagrams', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].level).toBe('method');
+    });
+
+    it('defaults to Go Atlas when the project root contains go.mod', async () => {
+      vi.mocked(fs.pathExists).mockImplementation(async (candidate: string) => candidate === '/go-project/go.mod');
+
+      const result = await normalizeToDiagrams(baseConfig, {}, '/go-project');
+
+      expect(detectProjectStructure).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        name: 'architecture',
+        sources: ['.'],
+        level: 'package',
+        language: 'go',
+      });
+      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
     });
   });
 
