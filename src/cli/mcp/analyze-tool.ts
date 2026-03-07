@@ -13,12 +13,31 @@ export interface AnalyzeToolContext {
   invalidateEngine(): void;
 }
 
+const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp'] as const;
+
 const analyzeSchema = {
-  sources: z.array(z.string()).optional(),
-  lang: z.string().optional(),
-  diagrams: z.array(z.enum(['package', 'class', 'method'])).optional(),
-  format: z.enum(['mermaid', 'json']).optional(),
-  noCache: z.boolean().default(false),
+  sources: z
+    .array(z.string())
+    .optional()
+    .describe('Source paths relative to the MCP session root. Omit to analyze the session root.'),
+  lang: z
+    .enum(supportedAnalyzeLanguages)
+    .optional()
+    .describe(
+      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp. This is not a natural-language locale.',
+    ),
+  diagrams: z
+    .array(z.enum(['package', 'class', 'method']))
+    .optional()
+    .describe('Diagram levels to generate. Omit to use the detected/default set for the target sources.'),
+  format: z
+    .enum(['mermaid', 'json'])
+    .optional()
+    .describe('Output artifact format. Use json for query/index refresh without Mermaid rendering.'),
+  noCache: z
+    .boolean()
+    .default(false)
+    .describe('Disable analysis caches for this run.'),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -26,7 +45,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
 
   server.tool(
     'archguard_analyze',
-    'Analyze project sources and refresh query artifacts for the current MCP session',
+    'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the current MCP session.',
     analyzeSchema,
     async ({ sources, lang, diagrams, format, noCache }) => {
       if (analyzeInProgress) {

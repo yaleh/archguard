@@ -156,6 +156,7 @@ describe('createQueryCommand', () => {
     expect(optionNames).toContain('--threshold');
     expect(optionNames).toContain('--orphans');
     expect(optionNames).toContain('--in-cycles');
+    expect(optionNames).toContain('--verbose');
   });
 
   it('does NOT expose --calls', () => {
@@ -197,6 +198,25 @@ describe('query --entity', () => {
     await runQuery('--entity', 'NonExistent');
     const output = consoleOutput.join('\n');
     expect(output).toContain('none');
+  });
+
+  it('outputs summary JSON by default', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'CacheManager', '--format', 'json');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeUndefined();
+    expect(parsed[0].methodCount).toBeDefined();
+  });
+
+  it('outputs full entities when --verbose is set', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'CacheManager', '--format', 'json', '--verbose');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeDefined();
   });
 });
 
@@ -332,5 +352,33 @@ describe('error handling', () => {
     await runQuery('--entity', 'Foo', '--arch-dir', '/custom', '--scope', 'my-scope');
     expect(resolveArchDir).toHaveBeenCalledWith('/custom');
     expect(loadEngine).toHaveBeenCalledWith(expect.any(String), 'my-scope');
+  });
+
+  it('rejects conflicting primary query options', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'Foo', '--summary');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Specify exactly one primary query option');
+  });
+
+  it('rejects invalid depth values', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--deps-of', 'Foo', '--depth', 'abc');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Invalid --depth');
+  });
+
+  it('rejects out-of-range depth values', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--deps-of', 'Foo', '--depth', '7');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Invalid --depth');
+  });
+
+  it('rejects invalid threshold values', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--high-coupling', '--threshold', 'abc');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Invalid --threshold');
   });
 });

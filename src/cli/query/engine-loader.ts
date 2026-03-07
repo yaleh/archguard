@@ -55,6 +55,22 @@ export async function resolveScope(
     throw new Error('No query scopes available. Run `archguard analyze` first.');
   }
 
+  // Explicit scope: synthetic "global" alias
+  if (scopeKey === 'global') {
+    if (!manifest.globalScopeKey) {
+      throw new Error(
+        'No global query scope configured. Run `archguard analyze` to regenerate a global view or use `--scope`.',
+      );
+    }
+    const globalScope = manifest.scopes.find(s => s.key === manifest.globalScopeKey);
+    if (!globalScope) {
+      throw new Error(
+        `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`,
+      );
+    }
+    return globalScope;
+  }
+
   // Explicit scope: match by key or label
   if (scopeKey) {
     const lower = scopeKey.toLowerCase();
@@ -72,21 +88,24 @@ export async function resolveScope(
     return found;
   }
 
-  // Auto-select: widest parsed scope by entity count.
-  // Parsed scopes represent complete source views; derived are subsets.
-  const parsed = manifest.scopes.filter(s => s.kind === 'parsed');
-  const candidates = parsed.length > 0 ? parsed : manifest.scopes;
-  const best = candidates.reduce((a, b) =>
-    b.entityCount > a.entityCount ? b : a,
-  );
+  if (manifest.scopes.length === 1) {
+    return manifest.scopes[0];
+  }
 
-  if (manifest.scopes.length > 1) {
-    console.error(
-      `[archguard] Auto-selected scope: ${best.label} (${best.entityCount} entities). Use --scope to override.`,
+  if (!manifest.globalScopeKey) {
+    throw new Error(
+      'No global query scope configured. Available scopes exist, but none is marked global. Use `--scope` or rerun `archguard analyze`.',
     );
   }
 
-  return best;
+  const globalScope = manifest.scopes.find(s => s.key === manifest.globalScopeKey);
+  if (!globalScope) {
+    throw new Error(
+      `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`,
+    );
+  }
+
+  return globalScope;
 }
 
 /**

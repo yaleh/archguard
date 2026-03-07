@@ -16,6 +16,7 @@ interface QueryOptions {
   archDir?: string;
   scope?: string;
   format: string;
+  verbose?: boolean;
 
   // Phase 3: entity queries
   entity?: string;
@@ -48,6 +49,7 @@ export function createQueryCommand(): Command {
     .option('--arch-dir <dir>', 'ArchGuard work directory')
     .option('--scope <key>', 'Query scope key')
     .option('--format <type>', 'Output format: json|text', 'text')
+    .option('--verbose', 'Return full entities in JSON output instead of summary')
 
     // Phase 3: entity queries
     .option('--entity <name>', 'Find entity by name')
@@ -76,6 +78,8 @@ export function createQueryCommand(): Command {
  */
 async function queryHandler(opts: QueryOptions): Promise<void> {
   try {
+    validateQueryOptions(opts);
+
     // --list-scopes: read manifest directly, no engine needed
     if (opts.listScopes) {
       await handleListScopes(opts);
@@ -93,29 +97,29 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
 
     if (opts.entity) {
       const entities = engine.findEntity(opts.entity);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities matching "${opts.entity}"`);
     } else if (opts.depsOf) {
-      const depth = parseInt(opts.depth, 10);
+      const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const entities = engine.getDependencies(opts.depsOf, depth);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependencies of "${opts.depsOf}" (depth: ${depth})`);
     } else if (opts.usedBy) {
-      const depth = parseInt(opts.depth, 10);
+      const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const entities = engine.getDependents(opts.usedBy, depth);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependents of "${opts.usedBy}" (depth: ${depth})`);
     } else if (opts.implementersOf) {
       const entities = engine.findImplementers(opts.implementersOf);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Implementers of "${opts.implementersOf}"`);
     } else if (opts.subclassesOf) {
       const entities = engine.findSubclasses(opts.subclassesOf);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Subclasses of "${opts.subclassesOf}"`);
     } else if (opts.file) {
       const entities = engine.getFileEntities(opts.file);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities in ${opts.file}`);
     } else if (opts.cycles) {
       const cycles = engine.getCycles();
@@ -127,20 +131,20 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) formatSummary(summary);
     } else if (opts.type) {
       const entities = engine.findByType(opts.type);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities of type "${opts.type}"`);
     } else if (opts.highCoupling) {
-      const threshold = parseInt(opts.threshold, 10);
+      const threshold = parseBoundedInt(opts.threshold, '--threshold', 1);
       const entities = engine.findHighCoupling(threshold);
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `High-coupling entities (threshold: ${threshold})`);
     } else if (opts.orphans) {
       const entities = engine.findOrphans();
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, 'Orphan entities (no relations)');
     } else if (opts.inCycles) {
       const entities = engine.findInCycles();
-      result = entities;
+      result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, 'Entities in dependency cycles');
     } else {
       console.error('No query option specified. Use --help to see available options.');
@@ -160,6 +164,58 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     console.error(`Error: ${message}`);
     process.exit(1);
   }
+}
+
+function validateQueryOptions(opts: QueryOptions): void {
+  const primaryOptions = [
+    opts.entity,
+    opts.depsOf,
+    opts.usedBy,
+    opts.implementersOf,
+    opts.subclassesOf,
+    opts.file,
+    opts.cycles,
+    opts.summary,
+    opts.listScopes,
+    opts.type,
+    opts.highCoupling,
+    opts.orphans,
+    opts.inCycles,
+  ].filter(Boolean);
+
+  if (primaryOptions.length > 1) {
+    throw new Error('Specify exactly one primary query option.');
+  }
+
+  if (opts.depsOf || opts.usedBy) {
+    parseBoundedInt(opts.depth, '--depth', 1, 5);
+  }
+
+  if (opts.highCoupling) {
+    parseBoundedInt(opts.threshold, '--threshold', 1);
+  }
+}
+
+function parseBoundedInt(
+  value: string,
+  flagName: string,
+  min: number,
+  max?: number,
+): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || (max !== undefined && parsed > max)) {
+    const range = max !== undefined ? ` (${min}-${max})` : ` (>= ${min})`;
+    throw new Error(`Invalid ${flagName}: "${value}". Expected an integer${range}.`);
+  }
+  return parsed;
+}
+
+function projectEntitiesForOutput(
+  engine: QueryEngine,
+  entities: Entity[],
+  verbose: boolean | undefined,
+): Entity[] | ReturnType<QueryEngine['toSummary']>[] {
+  return verbose ? entities : entities.map((entity) => engine.toSummary(entity));
 }
 
 // -- List scopes handler --

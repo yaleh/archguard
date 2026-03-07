@@ -158,6 +158,8 @@ Common examples:
 ```bash
 archguard query --summary
 archguard query --entity "DiagramProcessor"
+archguard query --entity "DiagramProcessor" --format json
+archguard query --entity "DiagramProcessor" --format json --verbose
 archguard query --deps-of "DiagramProcessor" --depth 2
 archguard query --implementers-of "ILanguagePlugin"
 archguard query --list-scopes
@@ -171,7 +173,7 @@ Start the ArchGuard MCP server over stdio.
 archguard mcp [--arch-dir <dir>] [--scope <key>]
 ```
 
-The MCP server exposes the query tools plus `archguard_analyze`, which refreshes query artifacts for the current MCP session.
+The MCP server exposes the query tools plus `archguard_analyze`, which refreshes query artifacts for the current MCP session. Query tools default to the persisted global scope and return summary entities unless `verbose: true` is requested.
 
 ### `init`
 

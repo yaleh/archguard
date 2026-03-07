@@ -111,6 +111,29 @@ describe('registerAnalyzeTool', () => {
     expect(result.content[0].text).toContain('Analysis failed: boom');
   });
 
+  it('documents and validates lang as a code language enum', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, {
+      sessionRoot: '/project',
+      archDir: '/project/.archguard',
+      getActiveScope: () => undefined,
+      setActiveScope: vi.fn(),
+      invalidateEngine: vi.fn(),
+    });
+
+    const registration = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze');
+    const description = registration?.[1] as string;
+    const schema = registration?.[2] as Record<string, { safeParse: (value: unknown) => { success: boolean } }>;
+
+    expect(description).toContain('code-language plugin override');
+    expect(schema.lang.safeParse('typescript').success).toBe(true);
+    expect(schema.lang.safeParse('go').success).toBe(true);
+    expect(schema.lang.safeParse('zh-CN').success).toBe(false);
+  });
+
   it('rejects concurrent calls while an analysis is running', async () => {
     let resolveRun: ((value: unknown) => void) | undefined;
     runAnalysisMock.mockImplementation(

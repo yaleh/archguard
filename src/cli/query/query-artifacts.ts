@@ -74,6 +74,20 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
   };
 }
 
+function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
+  if (entries.length === 0) return undefined;
+  if (entries.length === 1) return entries[0].key;
+
+  const parsed = entries.filter((entry) => entry.kind === 'parsed');
+  const candidates = parsed.length > 0 ? parsed : entries;
+  return candidates.reduce((best, current) => {
+    if (current.entityCount !== best.entityCount) {
+      return current.entityCount > best.entityCount ? current : best;
+    }
+    return current.key.localeCompare(best.key) < 0 ? current : best;
+  }).key;
+}
+
 // ---------------------------------------------------------------------------
 // Persist query scopes + manifest
 // ---------------------------------------------------------------------------
@@ -134,6 +148,7 @@ export async function persistQueryScopes(
   const manifest: QueryManifest = {
     version: '1.0',
     generatedAt: new Date().toISOString(),
+    globalScopeKey: selectGlobalScopeKey(writtenEntries),
     scopes: [...writtenEntries].sort((a, b) => a.key.localeCompare(b.key)),
   };
 

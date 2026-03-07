@@ -161,21 +161,22 @@ archguard query [options]
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `--arch-dir <dir>` | string | `./.archguard` | ArchGuard work directory |
-| `--scope <key>` | string | auto | Query scope key |
+| `--scope <key>` | string | `global` | Query scope key. Omit to use the persisted global view |
 | `--format <type>` | string | text | Output format: `json`\|`text` |
+| `--verbose` | boolean | false | For JSON entity queries, return full entities instead of summary |
 | `--entity <name>` | string | - | Find entity by exact name |
 | `--deps-of <name>` | string | - | Find dependencies of an entity |
 | `--used-by <name>` | string | - | Find dependents of an entity |
 | `--implementers-of <name>` | string | - | Find implementers of an interface |
 | `--subclasses-of <name>` | string | - | Find subclasses of a class |
 | `--file <path>` | string | - | Find entities defined in a file |
-| `--depth <n>` | number | 1 | BFS depth for dependency queries |
+| `--depth <n>` | number | 1 | BFS depth for dependency queries (must be 1-5) |
 | `--cycles` | boolean | false | Show dependency cycles |
 | `--summary` | boolean | false | Show scope summary |
 | `--list-scopes` | boolean | false | List available query scopes |
 | `--type <entityType>` | string | - | Filter entities by type |
 | `--high-coupling` | boolean | false | Find high-coupling entities |
-| `--threshold <n>` | number | 8 | Coupling threshold |
+| `--threshold <n>` | number | 8 | Coupling threshold (must be >= 1) |
 | `--orphans` | boolean | false | Find orphan entities |
 | `--in-cycles` | boolean | false | Find entities participating in cycles |
 
@@ -184,6 +185,8 @@ archguard query [options]
 ```bash
 archguard query --summary
 archguard query --entity "QueryEngine"
+archguard query --entity "QueryEngine" --format json
+archguard query --entity "QueryEngine" --format json --verbose
 archguard query --deps-of "DiagramProcessor" --depth 2
 archguard query --implementers-of "ILanguagePlugin"
 archguard query --list-scopes
@@ -204,9 +207,9 @@ archguard mcp [options]
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `--arch-dir <dir>` | string | `./.archguard` | ArchGuard work directory |
-| `--scope <key>` | string | auto | Initial query scope |
+| `--scope <key>` | string | `global` | Initial query scope. Omit to use the persisted global view |
 
-The MCP server exposes the query toolset and `archguard_analyze`, which reruns analysis and refreshes query artifacts inside the current MCP session.
+The MCP server exposes the query toolset and `archguard_analyze`, which reruns analysis and refreshes query artifacts inside the current MCP session. Query tools return summary entities by default; pass `verbose: true` to receive full entities.
 
 ---
 

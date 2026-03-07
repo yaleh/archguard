@@ -71,20 +71,20 @@ function serializeEntities(entities: unknown[]): string {
   return JSON.stringify(entities, null, 2);
 }
 
-const compactParam = z
+const verboseParam = z
   .preprocess(
     v => (v === 'true' ? true : v === 'false' ? false : v),
-    z.boolean().default(true),
+    z.boolean().default(false),
   )
-  .describe('Return summary only (name/type/file/counts). Set false for full members.');
+  .describe('Return full entities with members. Default false returns summary only.');
 
-function applyCompact(
+function applyView(
   engine: QueryEngine,
   entities: Entity[],
-  compact: boolean | string | undefined,
+  verbose: boolean | string | undefined,
 ): Entity[] | EntitySummary[] {
-  const isCompact = compact === 'false' ? false : (compact ?? true);
-  return isCompact ? entities.map(e => engine.toSummary(e)) : entities;
+  const isVerbose = verbose === 'true' ? true : (verbose ?? false);
+  return isVerbose ? entities : entities.map(e => engine.toSummary(e));
 }
 
 /**
@@ -105,10 +105,14 @@ export function registerTools(
   server.tool(
     'archguard_find_entity',
     'Find architecture entities by exact name match',
-    { name: z.string().describe('Entity name to search for') },
-    async ({ name }) => {
+    {
+      name: z.string().describe('Entity name to search for'),
+      verbose: verboseParam,
+    },
+    async ({ name, verbose }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.findEntity(name)) }] };
+      const payload = applyView(engine, engine.findEntity(name), verbose);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 
@@ -118,11 +122,11 @@ export function registerTools(
     {
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
-      compact: compactParam,
+      verbose: verboseParam,
     },
-    async ({ name, depth, compact }) => {
+    async ({ name, depth, verbose }) => {
       const engine = await get();
-      const payload = applyCompact(engine, engine.getDependencies(name, depth), compact);
+      const payload = applyView(engine, engine.getDependencies(name, depth), verbose);
       return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
@@ -133,11 +137,11 @@ export function registerTools(
     {
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
-      compact: compactParam,
+      verbose: verboseParam,
     },
-    async ({ name, depth, compact }) => {
+    async ({ name, depth, verbose }) => {
       const engine = await get();
-      const payload = applyCompact(engine, engine.getDependents(name, depth), compact);
+      const payload = applyView(engine, engine.getDependents(name, depth), verbose);
       return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
@@ -147,11 +151,11 @@ export function registerTools(
     'Find classes that implement a given interface',
     {
       name: z.string().describe('Interface name'),
-      compact: compactParam,
+      verbose: verboseParam,
     },
-    async ({ name, compact }) => {
+    async ({ name, verbose }) => {
       const engine = await get();
-      const payload = applyCompact(engine, engine.findImplementers(name), compact);
+      const payload = applyView(engine, engine.findImplementers(name), verbose);
       return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
@@ -161,11 +165,11 @@ export function registerTools(
     'Find subclasses of a given class',
     {
       name: z.string().describe('Class name'),
-      compact: compactParam,
+      verbose: verboseParam,
     },
-    async ({ name, compact }) => {
+    async ({ name, verbose }) => {
       const engine = await get();
-      const payload = applyCompact(engine, engine.findSubclasses(name), compact);
+      const payload = applyView(engine, engine.findSubclasses(name), verbose);
       return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
@@ -173,10 +177,14 @@ export function registerTools(
   server.tool(
     'archguard_get_file_entities',
     'Get all entities defined in a specific file',
-    { filePath: z.string().describe('Source file path (e.g. "cli/query/query-engine.ts")') },
-    async ({ filePath }) => {
+    {
+      filePath: z.string().describe('Source file path (e.g. "cli/query/query-engine.ts")'),
+      verbose: verboseParam,
+    },
+    async ({ filePath, verbose }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.getFileEntities(filePath)) }] };
+      const payload = applyView(engine, engine.getFileEntities(filePath), verbose);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 

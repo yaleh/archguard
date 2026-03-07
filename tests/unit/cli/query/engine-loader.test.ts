@@ -59,6 +59,7 @@ function makeManifest(scopes: QueryScopeEntry[]): QueryManifest {
   return {
     version: '1.0',
     generatedAt: new Date().toISOString(),
+    globalScopeKey: scopes[0]?.key,
     scopes,
   };
 }
@@ -114,19 +115,38 @@ describe('resolveScope', () => {
     expect(result.label).toBe('src');
   });
 
-  it('auto-selects widest parsed scope when multiple scopes and no --scope', async () => {
+  it('uses globalScopeKey when multiple scopes and no --scope', async () => {
     await writeManifest([scope1, scope2]);
-    // scope1: parsed, 100 entities — should win over scope2: derived, 30 entities
     const result = await resolveScope(tmpDir);
     expect(result.key).toBe('scope-1');
   });
 
-  it('auto-selects by entity count among parsed scopes only', async () => {
+  it('accepts the synthetic "global" scope alias', async () => {
     const big: QueryScopeEntry = { ...scope1, key: 'big', label: 'full src', entityCount: 300 };
     const small: QueryScopeEntry = { ...scope1, key: 'small', label: 'partial', entityCount: 50 };
-    await writeManifest([small, big]);
-    const result = await resolveScope(tmpDir);
+    const manifest: QueryManifest = {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      globalScopeKey: 'big',
+      scopes: [small, big],
+    };
+    const manifestDir = path.join(tmpDir, 'query');
+    await fs.ensureDir(manifestDir);
+    await fs.writeJson(path.join(manifestDir, 'manifest.json'), manifest);
+    const result = await resolveScope(tmpDir, 'global');
     expect(result.key).toBe('big');
+  });
+
+  it('throws when multiple scopes exist but no global scope is defined', async () => {
+    const manifestDir = path.join(tmpDir, 'query');
+    await fs.ensureDir(manifestDir);
+    await fs.writeJson(path.join(manifestDir, 'manifest.json'), {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      scopes: [scope1, scope2],
+    });
+
+    await expect(resolveScope(tmpDir)).rejects.toThrow(/No global query scope configured/);
   });
 
   it('throws when unknown scope key is given', async () => {

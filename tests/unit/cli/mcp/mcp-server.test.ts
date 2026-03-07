@@ -111,7 +111,7 @@ describe('MCP server tool registration', () => {
 });
 
 describe('archguard_find_entity', () => {
-  it('finds entity by name', async () => {
+  it('finds entity by name as summary by default', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -121,6 +121,8 @@ describe('archguard_find_entity', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeUndefined();
+    expect(parsed[0].methodCount).toBeDefined();
   });
 
   it('returns empty array when not found', async () => {
@@ -133,10 +135,22 @@ describe('archguard_find_entity', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(0);
   });
+
+  it('returns full entities when verbose=true', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_find_entity')!;
+    const result = await cb({ name: 'CacheManager', verbose: true });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeDefined();
+  });
 });
 
 describe('archguard_get_dependencies', () => {
-  it('returns dependencies as summary by default (compact=true)', async () => {
+  it('returns dependencies as summary by default', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -147,21 +161,21 @@ describe('archguard_get_dependencies', () => {
     const names = parsed.map((e: { name: string }) => e.name);
     expect(names).toContain('CacheManager');
     expect(names).toContain('ILanguagePlugin');
-    // compact: no members array
+    // summary: no members array
     expect('members' in parsed[0]).toBe(false);
-    // compact: has summary fields
+    // summary: has summary fields
     expect('methodCount' in parsed[0]).toBe(true);
     expect('fieldCount' in parsed[0]).toBe(true);
     expect('file' in parsed[0]).toBe(true);
   });
 
-  it('returns full entities when compact=false', async () => {
+  it('returns full entities when verbose=true', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_get_dependencies')!;
-    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: false });
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
     expect('methodCount' in parsed[0]).toBe(false);
@@ -178,33 +192,21 @@ describe('archguard_get_dependencies', () => {
     expect(parsed.map((e: { name: string }) => e.name)).toContain('CacheManager');
   });
 
-  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+  it('accepts verbose as string "true" (MCP stdio string coercion)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_get_dependencies')!;
-    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: 'false' });
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
     expect('methodCount' in parsed[0]).toBe(false);
   });
-
-  it('accepts compact as string "true" (MCP stdio string coercion)', async () => {
-    const server = new McpServer({ name: 'test', version: '1.0.0' });
-    const engine = createTestEngine();
-    const tools = collectTools(server, engine);
-
-    const cb = tools.get('archguard_get_dependencies')!;
-    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: 'true' });
-    const parsed = JSON.parse(result.content[0].text);
-    expect('members' in parsed[0]).toBe(false);
-    expect('methodCount' in parsed[0]).toBe(true);
-  });
 });
 
 describe('archguard_get_dependents', () => {
-  it('returns dependents as summary by default (compact=true)', async () => {
+  it('returns dependents as summary by default', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -214,18 +216,18 @@ describe('archguard_get_dependents', () => {
     const parsed = JSON.parse(result.content[0].text);
     const names = parsed.map((e: { name: string }) => e.name);
     expect(names).toContain('DiagramProcessor');
-    // compact: no members array
+    // summary: no members array
     expect('members' in parsed[0]).toBe(false);
     expect('methodCount' in parsed[0]).toBe(true);
   });
 
-  it('returns full entities when compact=false', async () => {
+  it('returns full entities when verbose=true', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_get_dependents')!;
-    const result = await cb({ name: 'CacheManager', depth: 1, compact: false });
+    const result = await cb({ name: 'CacheManager', depth: 1, verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
     expect('methodCount' in parsed[0]).toBe(false);
@@ -242,13 +244,13 @@ describe('archguard_get_dependents', () => {
     expect(parsed.map((e: { name: string }) => e.name)).toContain('DiagramProcessor');
   });
 
-  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+  it('accepts verbose as string "true" (MCP stdio string coercion)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_get_dependents')!;
-    const result = await cb({ name: 'CacheManager', depth: 1, compact: 'false' });
+    const result = await cb({ name: 'CacheManager', depth: 1, verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
     expect('methodCount' in parsed[0]).toBe(false);
@@ -256,7 +258,7 @@ describe('archguard_get_dependents', () => {
 });
 
 describe('archguard_find_implementers', () => {
-  it('returns implementers as summary by default (compact=true)', async () => {
+  it('returns implementers as summary by default', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -270,25 +272,25 @@ describe('archguard_find_implementers', () => {
     expect('methodCount' in parsed[0]).toBe(true);
   });
 
-  it('returns full entities when compact=false', async () => {
+  it('returns full entities when verbose=true', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_find_implementers')!;
-    const result = await cb({ name: 'ILanguagePlugin', compact: false });
+    const result = await cb({ name: 'ILanguagePlugin', verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
     expect('members' in parsed[0]).toBe(true);
   });
 
-  it('accepts compact as string "false" (MCP stdio string coercion)', async () => {
+  it('accepts verbose as string "true" (MCP stdio string coercion)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_find_implementers')!;
-    const result = await cb({ name: 'ILanguagePlugin', compact: 'false' });
+    const result = await cb({ name: 'ILanguagePlugin', verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
     expect('members' in parsed[0]).toBe(true);
@@ -348,6 +350,19 @@ describe('archguard_get_file_entities', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeUndefined();
+  });
+
+  it('returns full file entities when verbose=true', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_file_entities')!;
+    const result = await cb({ filePath: 'src/cache.ts', verbose: true });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed[0].name).toBe('CacheManager');
+    expect(parsed[0].members).toBeDefined();
   });
 });
 

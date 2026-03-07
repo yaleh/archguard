@@ -19,6 +19,12 @@ export interface QueryManifest {
   /** ISO-8601 timestamp of when the manifest was generated. */
   generatedAt: string;
 
+  /**
+   * The default "global" scope for this query dataset.
+   * When omitted and multiple scopes exist, callers must not guess.
+   */
+  globalScopeKey?: string;
+
   /** Available query scopes. */
   scopes: QueryScopeEntry[];
 }

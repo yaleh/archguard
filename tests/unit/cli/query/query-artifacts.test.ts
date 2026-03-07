@@ -198,6 +198,33 @@ describe('persistQueryScopes', () => {
     const manifest = await fs.readJson(manifestPath);
     expect(manifest.scopes).toHaveLength(1);
     expect(manifest.scopes[0].key).toBe('scope-a');
+    expect(manifest.globalScopeKey).toBe('scope-a');
+  });
+
+  it('selects a global scope key for multi-scope manifests', async () => {
+    const dir = makeTmpDir();
+    tmpDirs.push(dir);
+
+    await persistQueryScopes(dir, [
+      {
+        key: 'derived-small',
+        sources: ['/project/src/feature'],
+        archJson: makeArchJson({
+          entities: [makeArchJson().entities[0]],
+          relations: [],
+        }),
+        kind: 'derived',
+      },
+      {
+        key: 'parsed-large',
+        sources: ['/project/src'],
+        archJson: makeArchJson(),
+        kind: 'parsed',
+      },
+    ]);
+
+    const manifest = await fs.readJson(path.join(dir, 'query', 'manifest.json'));
+    expect(manifest.globalScopeKey).toBe('parsed-large');
   });
 
   it('creates <key>/arch.json for each scope', async () => {
