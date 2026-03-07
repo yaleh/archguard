@@ -22,6 +22,7 @@ import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import type { DiagramConfig, GlobalConfig, OutputFormat, DetailLevel } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
+import type { QuerySourceGroup } from '@/cli/query/query-manifest.js';
 import type { ProgressReporter } from '@/cli/progress.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
@@ -32,6 +33,12 @@ import pMap from 'p-map';
 import os from 'os';
 import { createHash } from 'crypto';
 import path from 'path';
+
+/**
+ * Internal representation of a query scope collected during diagram processing.
+ * Re-exported from QuerySourceGroup for backward compatibility.
+ */
+export type InternalQueryScope = QuerySourceGroup;
 
 /**
  * Options for DiagramProcessor
@@ -440,6 +447,35 @@ export class DiagramProcessor {
    */
   private archJsonDeferred = new Map<string, { promise: Promise<ArchJSON>; sources: string[] }>();
 
+  /** Collector for query-layer scopes: one entry per unique source set that produced ArchJSON. */
+  private queryScopes = new Map<string, InternalQueryScope>();
+
+  /**
+   * Register a query scope for the query layer.
+   * Only registers if the ArchJSON has at least one entity and the key is not already present
+   * (first registration wins to avoid overwriting with a derived copy).
+   */
+  private registerQueryScope(sources: string[], archJson: ArchJSON, kind: 'parsed' | 'derived'): void {
+    if (!archJson.entities || archJson.entities.length === 0) return;
+    const key = this.hashSources(sources);
+    if (this.queryScopes.has(key)) return;
+    const normalizedSources = sources.map((s) => path.resolve(s));
+    this.queryScopes.set(key, {
+      key,
+      sources: normalizedSources,
+      archJson,
+      kind,
+    });
+  }
+
+  /**
+   * Return collected query scopes. Each scope represents a unique set of source
+   * directories and the ArchJSON produced for them during processAll().
+   */
+  public getQuerySourceGroups(): InternalQueryScope[] {
+    return Array.from(this.queryScopes.values());
+  }
+
   /**
    * Process a group of diagrams that share the same sources
    *
@@ -465,6 +501,7 @@ export class DiagramProcessor {
           firstDiagram.sources,
           this.parseGoProject(firstDiagram)
         );
+        this.registerQueryScope(firstDiagram.sources, rawArchJSON, 'parsed');
 
         const results = await pMap(
           diagrams,
@@ -503,6 +540,11 @@ export class DiagramProcessor {
             this.parseCppProject(firstDiagram)
           );
         }
+        this.registerQueryScope(
+          firstDiagram.sources,
+          rawArchJSON,
+          normParentPath ? 'derived' : 'parsed'
+        );
 
         const results = await pMap(
           diagrams,
@@ -546,6 +588,7 @@ export class DiagramProcessor {
                 return result;
               })
             );
+        this.registerQueryScope(firstDiagram.sources, rawArchJSON, 'parsed');
 
         const results = await pMap(
           diagrams,
@@ -568,6 +611,7 @@ export class DiagramProcessor {
 
       // Check cache for parsed ArchJSON
       let rawArchJSON = this.archJsonCache.get(sourceKey);
+      let queryKind: 'parsed' | 'derived' = 'parsed';
       if (!rawArchJSON) {
         // Check whether a parent parse (completed or in-progress) covers these sources
         const { deferred, normParentPath } = this.findParentCoverage(diagrams[0].sources);
@@ -580,6 +624,7 @@ export class DiagramProcessor {
             diagrams[0].sources[0],
             normParentPath ?? undefined
           );
+          queryKind = 'derived';
           if (process.env.ArchGuardDebug === 'true') {
             console.debug(
               `🔗 Awaited parent and derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`
@@ -594,6 +639,7 @@ export class DiagramProcessor {
             diagrams[0].sources[0],
             normParentPath
           );
+          queryKind = 'derived';
           if (process.env.ArchGuardDebug === 'true') {
             console.debug(
               `🔗 Derived ArchJSON for ${diagrams[0].sources.join(', ')} from ${normParentPath}`
@@ -632,6 +678,7 @@ export class DiagramProcessor {
       } else if (process.env.ArchGuardDebug === 'true') {
         console.debug(`📦 Cache hit for ${sourceKey}: ${diagrams[0].sources.join(', ')}`);
       }
+      this.registerQueryScope(diagrams[0].sources, rawArchJSON, queryKind);
 
       // Process all diagrams in this group in parallel, using cached ArchJSON
       const results = await pMap(

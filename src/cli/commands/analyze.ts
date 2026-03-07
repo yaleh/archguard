@@ -24,6 +24,7 @@ import { detectCppProjectStructure } from '../utils/cpp-project-structure-detect
 import { ParseCache } from '@/parser/parse-cache.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
+import { persistQueryScopes } from '../query/query-artifacts.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 
 /**
@@ -336,6 +337,21 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     });
 
     const results = await processor.processAll();
+
+    // Step 5.5: Persist query scopes (non-blocking — warnings only on failure)
+    const queryScopes = processor.getQuerySourceGroups();
+    if (queryScopes.length > 0) {
+      try {
+        const workDir = config.workDir || '.archguard';
+        await persistQueryScopes(workDir, queryScopes);
+        if (config.verbose) {
+          progress.info(`Persisted ${queryScopes.length} query scope(s) to ${workDir}/query/`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[query] Failed to persist query scopes: ${msg}`);
+      }
+    }
 
     // Step 6: Generate index (if multiple diagrams)
     if (results.length > 1) {
