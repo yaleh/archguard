@@ -167,7 +167,7 @@ export class ArchJsonProvider {
   private readonly diskCache: ArchJsonDiskCache;
   private readonly parseCache?: ParseCache;
   private readonly registry?: PluginRegistry;
-  private readonly fileDiscovery: FileDiscoveryService;
+  private readonly fileDiscovery: FileDiscoveryService;   // 在构造函数中 new FileDiscoveryService() 初始化，不通过 options 注入
   private readonly globalConfig: GlobalConfig;
 
   constructor(options: ArchJsonProviderOptions) { ... }
@@ -178,8 +178,13 @@ export class ArchJsonProvider {
    * 调度规则（按优先级）：
    *   go  → parseGoProject()
    *   cpp → parseCppProject() 或从父级派生
-   *   ts，opts.needsModuleGraph=true  → parseTsPlugin()（TypeScriptPlugin，含 moduleGraph）
-   *   ts，opts.needsModuleGraph=false → parseWithParallelParser()（ParallelParser，无 moduleGraph）
+   *   ts，opts.needsModuleGraph=true  AND diagram.language 为 'typescript' 或未指定
+   *        → parseTsPlugin()（TypeScriptPlugin，含 moduleGraph）
+   *   其余 → parseWithParallelParser()（ParallelParser，无 moduleGraph）
+   *
+   * 语言守卫说明：opts.needsModuleGraph=true 必须同时满足语言为 TypeScript（或未指定）才走路径 A。
+   * 这与原代码 line 560 的条件 (!firstDiagram.language || firstDiagram.language === 'typescript')
+   * 保持一致——Java/Python 等语言的 package-level 图表不应调用 TypeScriptPlugin。
    *
    * 缓存策略（见下文"缓存策略说明"）：
    *   - 所有路径在入口统一检查内存缓存
@@ -223,7 +228,8 @@ export class ArchJsonProvider {
 
   /**
    * TypeScript 路径 A：通过 TypeScriptPlugin 解析，产出含 tsAnalysis.moduleGraph 的 ArchJSON。
-   * 仅在 opts.needsModuleGraph=true 时调用。
+   * 仅在 opts.needsModuleGraph=true AND (diagram.language === 'typescript' || diagram.language === undefined) 时调用。
+   * Java/Python 即使 needsModuleGraph=true 也不进入此路径，而是继续走路径 B（ParallelParser）。
    * 原名 parseTsProject()，重命名以明确其特化用途。
    */
   private async parseTsPlugin(diagram: DiagramConfig): Promise<ArchJSON> { ... }
@@ -264,12 +270,20 @@ get(diagram, opts):
       return { archJson: await registerDeferred(sources, parseCppProject(diagram)), kind: 'parsed' }
 
   // TypeScript
-  if opts.needsModuleGraph:
+  // 语言守卫：仅当语言为 TypeScript（或未指定）时才走路径 A（与原代码 line 560 保持一致）
+  // Java/Python 等语言的 package-level 图表 needsModuleGraph 可能为 true，但不应调用 TypeScriptPlugin
+  if opts.needsModuleGraph AND (diagram.language is undefined OR diagram.language === 'typescript'):
     // 路径 A：检查磁盘缓存，否则走 TypeScriptPlugin
     files = await fileDiscovery.discoverFiles(...)
-    diskKey = diskCacheEnabled ? await diskCache.computeKey(files) : null
+    // files.length > 0 守卫与原代码 line 569 保持一致：空文件列表时禁用磁盘缓存
+    // （TypeScriptPlugin 可自行发现文件，但空列表会使 computeKey 语义不确定）
+    diskKey = (diskCacheEnabled AND files.length > 0) ? await diskCache.computeKey(files) : null
     cached = diskKey ? await diskCache.get(diskKey) : null
-    if cached: return { archJson: cached, kind: 'parsed' }
+    if cached:
+      // 注：路径 A 磁盘命中后不调用 cacheArchJson——与当前代码行为（line 582）保持一致。
+      // groupDiagramsBySource 保证每个 source key 在单次运行内只被 get() 一次，
+      // 故路径 A 磁盘命中后内存缓存未更新不影响正确性（不会有第二次命中同一 key 的调用）。
+      return { archJson: cached, kind: 'parsed' }
     archJson = await registerDeferred(
       sources,
       parseTsPlugin(diagram).then(result => { if diskKey: diskCache.set(diskKey, result); return result })
@@ -331,10 +345,12 @@ export type OutputPaths = { paths: { json: string; mmd: string; png: string; svg
 
 export interface OutputRouterOptions {
   globalConfig: GlobalConfig;
+  progress: ProgressReporter;   // 用于 MermaidDiagramGenerator(globalConfig, progress)
 }
 
 export class DiagramOutputRouter {
   private readonly globalConfig: GlobalConfig;
+  private readonly progress: ProgressReporter;
 
   constructor(options: OutputRouterOptions) { ... }
 
@@ -343,7 +359,15 @@ export class DiagramOutputRouter {
    *
    * 接收已经过 aggregator.aggregate() 处理的 ArchJSON（聚合发生在
    * DiagramProcessor.processDiagramWithArchJSON() 中，早于此调用）。
-   * 按 extensions × language × format × level 路由到对应生成器。
+   *
+   * 路由规则（按优先级）：
+   * 1. format === 'json' → 直接写出 JSON 文件，返回（不进入 mermaid 分支）
+   * 2. format === 'mermaid'，路由依据为 **ArchJSON extensions 和 archJSON.language**
+   *    （不是 diagram.language——language 信息已内嵌到 ArchJSON 中）：
+   *    - archJSON.extensions?.goAtlas 存在                              → generateAtlasOutput()
+   *    - level==='package' && archJSON.extensions?.tsAnalysis?.moduleGraph → generateTsModuleGraphOutput()
+   *    - level==='package' && archJSON.language==='cpp'                 → generateCppPackageOutput()
+   *    - 其余                                                           → generateDefaultOutput()
    *
    * @param archJSON - 已聚合的 ArchJSON（含 metrics 字段，extensions 必须完整保留）
    * @param paths    - OutputPathResolver.resolve() 的返回值
@@ -357,8 +381,9 @@ export class DiagramOutputRouter {
     pool: MermaidRenderWorkerPool | null
   ): Promise<void> { ... }
 
-  // 以下从 DiagramProcessor 原样迁移
-  private async generateOutput(
+  // 以下从 DiagramProcessor 迁移；generateOutput() 重命名为 generateDefaultOutput()
+  // 以区分"公开入口 route()"与"标准 classDiagram 的具体实现"
+  private async generateDefaultOutput(
     archJSON: ArchJSON,
     paths: OutputPaths,
     format: OutputFormat,
@@ -390,6 +415,14 @@ export class DiagramOutputRouter {
   /**
    * 新增：从 globalConfig 构造 IsomorphicMermaidRenderer 初始化选项。
    * 消除三个 generate* 方法中完全相同的 8–10 行重复代码。
+   *
+   * 实现合约（不可简化为直接透传 theme 字段）：
+   *   theme: string  → { name: theme }  // IsomorphicMermaidRenderer 期望对象格式，不接受裸字符串
+   *   theme: object  → 原样传入
+   *   theme: undefined → 不设置 theme 键（使用渲染器默认值）
+   *   transparentBackground: true  → backgroundColor = 'transparent'
+   *   transparentBackground: false/undefined → 不设置 backgroundColor 键
+   * 直接透传原始字符串会导致 IsomorphicMermaidRenderer 忽略主题配置，静默使用默认主题。
    */
   private buildRendererOptions(): Record<string, unknown> { ... }
 }
@@ -425,7 +458,10 @@ export class DiagramProcessor {
       parseCache: options.parseCache,
       registry: options.registry,
     });
-    this.outputRouter = new DiagramOutputRouter({ globalConfig: options.globalConfig });
+    this.outputRouter = new DiagramOutputRouter({
+      globalConfig: options.globalConfig,
+      progress: options.progress,   // required: DiagramOutputRouter passes it to MermaidDiagramGenerator
+    });
     // aggregator、metricsCalculator 留在此处，与 processDiagramWithArchJSON 同属
     ...
   }
@@ -454,6 +490,11 @@ export class DiagramProcessor {
     diagrams: DiagramConfig[],
     pool: MermaidRenderWorkerPool | null
   ): Promise<DiagramResult[]> {
+    // 注：当前代码在此处有一个 progress.start 调用（原 lines 491–494），
+    // 在解析**之前**触发，用于单图场景的进度指示。重构后该调用不保留于此；
+    // processDiagramWithArchJSON 内部已有 progress.start（解析**之后**触发）。
+    // 净效果：单图运行时，解析阶段无进度提示（改为解析完成后才显示）。
+    // 这是刻意接受的微小行为变更，不影响多图场景（多图走 parallelProgress）。
     try {
       // 计算 needsModuleGraph（必须从整个 group 推导，不能只看 firstDiagram）
       const needsModuleGraph = diagrams.some((d) => d.level === 'package');
@@ -583,14 +624,15 @@ export { deriveSubModuleArchJSON } from './arch-json-provider.js';
 - 将 `parseTsProject`（重命名为 `parseTsPlugin`）、`parseGoProject`、`parseCppProject`、`cacheArchJson`、`registerDeferred`、`findParentCoverage` 及对应字段剪切到 `ArchJsonProvider`
 - 将 `processSourceGroup` 中内联的 `ParallelParser` 逻辑提取为 `parseWithParallelParser()`，将 `files.length === 0` 检查移入其中
 - 同步移入 `deriveSubModuleArchJSON`，在原文件保留 re-export
-- 实现 `get(diagram, opts)` 统一入口（`opts.needsModuleGraph` 替换当前各分支内联的 `needsModuleGraph` 判断）
+- 实现 `get(diagram, opts)` 统一入口（`opts.needsModuleGraph` 替换当前各分支内联的 `needsModuleGraph` 判断）；保留原代码 line 560 的语言守卫：`needsModuleGraph` 路径 A 仅在 `diagram.language` 为 `'typescript'` 或未指定时触发，防止 Java/Python 等语言误走 TypeScriptPlugin
 - `processSourceGroup` 改为：计算 `needsModuleGraph = diagrams.some(...)` → 调用 `provider.get(firstDiagram, { needsModuleGraph })` → `registerQueryScope` → `pMap`
 - `processSourceGroup` 保留 catch 块（source group 级隔离保障）
 - 确保所有现有测试通过后再进行下一步
 
 **Step 2**（提取 `DiagramOutputRouter`）
 - 将 4 个 `generate*Output` 方法剪切到 `DiagramOutputRouter`，提取 `buildRendererOptions()`
-- 实现 `route()` 入口（路由逻辑从 `generateOutput()` 的 switch/if 中提取）
+- 将原 `generateOutput()` 中的"标准 classDiagram"else 分支提取为私有方法 `generateDefaultOutput()`（重命名以避免与公开入口 `route()` 混淆）
+- 实现 `route()` 入口：先处理 json 格式，再按 `archJSON.extensions` / `archJSON.language` / `level` 做 mermaid 路由（不依赖 `diagram.language`）
 - `processDiagramWithArchJSON` 替换 `generateOutput()` 调用为 `this.outputRouter.route(...)`
 - 确认 `route()` 接收的是已聚合、extensions 完整的 ArchJSON
 - 确保所有现有测试通过后再进行下一步
@@ -616,7 +658,7 @@ export { deriveSubModuleArchJSON } from './arch-json-provider.js';
 |------|------|
 | 内存缓存命中 | 无 parse 方法被调用 |
 | Go：全新 source | `parseGoProject` 被调用；`kind === 'parsed'` |
-| TS `needsModuleGraph=true`：磁盘缓存命中 | `parseTsPlugin` 未调用；内存缓存更新 |
+| TS `needsModuleGraph=true`：磁盘缓存命中 | `parseTsPlugin` 未调用；内存缓存**不更新**（路径 A 磁盘命中不调用 `cacheArchJson`，与原代码行 582 行为一致） |
 | TS `needsModuleGraph=true`：全新 source | `parseTsPlugin` 被调用；结果写入磁盘缓存 |
 | TS `needsModuleGraph=false`：父级派生 | `parseWithParallelParser` 未调用；`kind === 'derived'` |
 | TS `needsModuleGraph=false`：磁盘缓存命中 | `parseWithParallelParser` 未调用；内存缓存更新；`kind === 'parsed'` |
