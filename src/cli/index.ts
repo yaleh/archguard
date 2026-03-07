@@ -7,6 +7,8 @@ import { Command } from 'commander';
 import { createAnalyzeCommand } from './commands/analyze.js';
 import { createCacheCommand } from './commands/cache.js';
 import { createInitCommand } from './commands/init.js';
+import { createQueryCommand } from './commands/query.js';
+import { createMcpCommand } from './commands/mcp.js';
 import { createRequire } from 'module';
 
 // Read package.json for version
@@ -28,6 +30,8 @@ export function createCLI(): Command {
   program.addCommand(createAnalyzeCommand());
   program.addCommand(createCacheCommand());
   program.addCommand(createInitCommand());
+  program.addCommand(createQueryCommand());
+  program.addCommand(createMcpCommand());
 
   return program;
 }

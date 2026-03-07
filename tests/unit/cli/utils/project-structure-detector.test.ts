@@ -250,9 +250,7 @@ describe('detectProjectStructure', () => {
       // directoryHasSourceFiles for cli, parser, utils
       .mockResolvedValueOnce([makeTsFile('index.ts')])
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs, no direct .ts files
-      .mockResolvedValueOnce([makeDirent('cli', true), makeDirent('parser', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project');
 
@@ -297,9 +295,7 @@ describe('detectProjectStructure', () => {
       .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)])
       // directoryHasSourceFiles for core, api
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs
-      .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project');
 
@@ -315,9 +311,7 @@ describe('detectProjectStructure', () => {
       .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)])
       // directoryHasSourceFiles for core, api
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs
-      .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project');
 
@@ -389,9 +383,7 @@ describe('detectProjectStructure with externalSourceRoot', () => {
       // directoryHasSourceFiles for cli
       .mockResolvedValueOnce([makeTsFile('index.ts')])
       // directoryHasSourceFiles for parser
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs, no direct .ts files
-      .mockResolvedValueOnce([makeDirent('cli', true), makeDirent('parser', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project', '/home/yale/work/web-llm/src');
 
@@ -430,9 +422,7 @@ describe('detectProjectStructure with externalSourceRoot', () => {
       .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)])
       // directoryHasSourceFiles for api, core (sorted)
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs
-      .mockResolvedValueOnce([makeDirent('core', true), makeDirent('api', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project', '/home/yale/work/web-llm/src');
 
@@ -451,9 +441,7 @@ describe('detectProjectStructure with externalSourceRoot', () => {
       .mockResolvedValueOnce([makeDirent('services', true), makeDirent('models', true)])
       // directoryHasSourceFiles for models, services (sorted)
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: only subdirs
-      .mockResolvedValueOnce([makeDirent('services', true), makeDirent('models', true)]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure(
       '/project',
@@ -476,13 +464,7 @@ describe('detectProjectStructure with externalSourceRoot', () => {
       // directoryHasSourceFiles for cli, parser, utils
       .mockResolvedValueOnce([makeTsFile('index.ts')])
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // hasTopLevelSourceFiles: no direct files
-      .mockResolvedValueOnce([
-        makeDirent('cli', true),
-        makeDirent('parser', true),
-        makeDirent('utils', true),
-      ]);
+      .mockResolvedValueOnce([makeTsFile('index.ts')]);
 
     const diagrams = await detectProjectStructure('/project', '/abs/proj/src');
 
@@ -520,46 +502,13 @@ describe('detectProjectStructure with externalSourceRoot', () => {
 // ---------------------------------------------------------------------------
 
 describe('detectProjectStructure — top-level files bonus diagram', () => {
-  it('adds method/core diagram when 2+ modules AND top-level .ts files exist', async () => {
-    mockStat.mockResolvedValue({ isDirectory: () => true } as any);
-
-    mockReaddir
-      // getTopLevelModules: 2 subdirs
-      .mockResolvedValueOnce([makeDirent('cli', true), makeDirent('parser', true)])
-      // directoryHasSourceFiles for cli
-      .mockResolvedValueOnce([makeTsFile('index.ts')])
-      // directoryHasSourceFiles for parser
-      .mockResolvedValueOnce([makeTsFile('parser.ts')])
-      // hasTopLevelSourceFiles: has a direct .ts file
-      .mockResolvedValueOnce([makeTsFile('index.ts'), makeDirent('cli', true)]);
-
-    const diagrams = await detectProjectStructure('/project');
-
-    // overview/package + class/all-classes + method/core + method/cli + method/parser = 5
-    expect(diagrams).toHaveLength(5);
-    const coreIdx = diagrams.findIndex((d) => d.name === 'method/core');
-    expect(coreIdx).toBeGreaterThanOrEqual(0);
-    expect(diagrams[coreIdx]).toMatchObject({
-      name: 'method/core',
-      sources: ['./src'],
-      level: 'method',
-    });
-    // method/core must come before other method/ diagrams
-    const firstMethodIdx = diagrams.findIndex(
-      (d) => d.name.startsWith('method/') && d.name !== 'method/core'
-    );
-    expect(coreIdx).toBeLessThan(firstMethodIdx);
-  });
-
-  it('does NOT add method/core when 2+ modules but no top-level .ts files', async () => {
+  it('does NOT add method/core even when top-level .ts files exist (feature removed)', async () => {
     mockStat.mockResolvedValue({ isDirectory: () => true } as any);
 
     mockReaddir
       .mockResolvedValueOnce([makeDirent('cli', true), makeDirent('parser', true)])
       .mockResolvedValueOnce([makeTsFile('index.ts')])
-      .mockResolvedValueOnce([makeTsFile('parser.ts')])
-      // hasTopLevelSourceFiles: only subdirs, no direct .ts files
-      .mockResolvedValueOnce([makeDirent('cli', true), makeDirent('parser', true)]);
+      .mockResolvedValueOnce([makeTsFile('parser.ts')]);
 
     const diagrams = await detectProjectStructure('/project');
 
@@ -576,34 +525,11 @@ describe('detectProjectStructure — top-level files bonus diagram', () => {
       .mockResolvedValueOnce([makeDirent('cli', true)])
       // directoryHasSourceFiles for cli
       .mockResolvedValueOnce([makeTsFile('index.ts')]);
-    // No hasTopLevelSourceFiles call — early return before it (< 2 modules)
 
     const diagrams = await detectProjectStructure('/project');
 
     // Falls back to single diagram
     expect(diagrams).toHaveLength(1);
     expect(diagrams[0].name).toBe('architecture');
-  });
-
-  it('adds method/core with absolute path when externalSourceRoot is provided and top-level files exist', async () => {
-    mockReaddir
-      // getTopLevelModules: 2 subdirs
-      .mockResolvedValueOnce([makeDirent('models', true), makeDirent('services', true)])
-      // directoryHasSourceFiles for models
-      .mockResolvedValueOnce([makeTsFile('model.ts')])
-      // directoryHasSourceFiles for services
-      .mockResolvedValueOnce([makeTsFile('service.ts')])
-      // hasTopLevelSourceFiles: has a direct .ts file
-      .mockResolvedValueOnce([makeTsFile('index.ts'), makeDirent('models', true)]);
-
-    const diagrams = await detectProjectStructure('/project', '/abs/ext/src');
-
-    const coreIdx = diagrams.findIndex((d) => d.name === 'method/core');
-    expect(coreIdx).toBeGreaterThanOrEqual(0);
-    expect(diagrams[coreIdx]).toMatchObject({
-      name: 'method/core',
-      sources: ['/abs/ext/src'],
-      level: 'method',
-    });
   });
 });

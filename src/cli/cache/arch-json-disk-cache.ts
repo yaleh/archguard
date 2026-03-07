@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { createHash } from 'crypto';
 import type { ArchJSON } from '@/types/index.js';
+import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
 
 export const CACHE_VERSION = '1.0.0';
 
@@ -37,7 +38,7 @@ export class ArchJsonDiskCache {
     const entry: CacheEntry = {
       version: CACHE_VERSION,
       createdAt: new Date().toISOString(),
-      archJson,
+      archJson: canonicalizeArchJson(archJson),
     };
     await fs.writeJson(filePath, entry);
   }

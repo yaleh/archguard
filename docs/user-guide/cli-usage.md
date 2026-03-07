@@ -7,6 +7,8 @@ Complete reference for ArchGuard command-line interface.
 - [Installation](#installation)
 - [Commands](#commands)
   - [analyze](#analyze)
+  - [query](#query)
+  - [mcp](#mcp)
   - [init](#init)
   - [cache](#cache)
 - [Configuration](#configuration)
@@ -56,6 +58,8 @@ archguard analyze [options]
 | `--mermaid-renderer <renderer>` | string | isomorphic | Mermaid renderer: `isomorphic`\|`cli` |
 | `--cli-command <command>` | string | claude | Claude CLI command |
 | `--cli-args <args>` | string | - | Additional CLI arguments (space-separated) |
+| `--work-dir <dir>` | string | `./.archguard` | Work directory for cache and query artifacts |
+| `--cache-dir <dir>` | string | `<work-dir>/cache` | Cache directory |
 | `--no-atlas` | boolean | false | Disable Go Atlas mode (Go only) |
 
 #### Default behavior (no flags)
@@ -141,6 +145,71 @@ Go Atlas:
 ├── architecture-flow.mmd / .svg / .png
 └── architecture-atlas.json
 ```
+
+---
+
+### query
+
+Query persisted architecture entities and relationships.
+
+```bash
+archguard query [options]
+```
+
+#### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--arch-dir <dir>` | string | `./.archguard` | ArchGuard work directory |
+| `--scope <key>` | string | `global` | Query scope key. Omit to use the persisted global view |
+| `--format <type>` | string | text | Output format: `json`\|`text` |
+| `--verbose` | boolean | false | For JSON entity queries, return full entities instead of summary |
+| `--entity <name>` | string | - | Find entity by exact name |
+| `--deps-of <name>` | string | - | Find dependencies of an entity |
+| `--used-by <name>` | string | - | Find dependents of an entity |
+| `--implementers-of <name>` | string | - | Find implementers of an interface |
+| `--subclasses-of <name>` | string | - | Find subclasses of a class |
+| `--file <path>` | string | - | Find entities defined in a file |
+| `--depth <n>` | number | 1 | BFS depth for dependency queries (must be 1-5) |
+| `--cycles` | boolean | false | Show dependency cycles |
+| `--summary` | boolean | false | Show scope summary |
+| `--list-scopes` | boolean | false | List available query scopes |
+| `--type <entityType>` | string | - | Filter entities by type |
+| `--high-coupling` | boolean | false | Find high-coupling entities |
+| `--threshold <n>` | number | 8 | Coupling threshold (must be >= 1) |
+| `--orphans` | boolean | false | Find orphan entities |
+| `--in-cycles` | boolean | false | Find entities participating in cycles |
+
+#### Examples
+
+```bash
+archguard query --summary
+archguard query --entity "QueryEngine"
+archguard query --entity "QueryEngine" --format json
+archguard query --entity "QueryEngine" --format json --verbose
+archguard query --deps-of "DiagramProcessor" --depth 2
+archguard query --implementers-of "ILanguagePlugin"
+archguard query --list-scopes
+```
+
+---
+
+### mcp
+
+Start the ArchGuard MCP server over stdio.
+
+```bash
+archguard mcp [options]
+```
+
+#### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--arch-dir <dir>` | string | `./.archguard` | ArchGuard work directory |
+| `--scope <key>` | string | `global` | Initial query scope. Omit to use the persisted global view |
+
+The MCP server exposes the query toolset and `archguard_analyze`, which reruns analysis and refreshes query artifacts inside the current MCP session. Query tools return summary entities by default; pass `verbose: true` to receive full entities.
 
 ---
 
@@ -259,7 +328,15 @@ archguard analyze -s ./packages/api --output-dir ./docs/api
 - run: git add docs/diagrams/ && git commit -m "Update architecture diagrams"
 ```
 
-### Example 5: NPM Scripts
+### Example 5: Query persisted results
+
+```bash
+archguard analyze
+archguard query --summary
+archguard query --used-by "ArchJSON"
+```
+
+### Example 6: NPM Scripts
 
 ```json
 {

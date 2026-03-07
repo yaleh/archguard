@@ -11,7 +11,6 @@
  * 4. If 2+ modules → three-layer set:
  *    - overview/package  (package level, full source root)
  *    - class/all-classes (class level, full source root)
- *    - method/core       (method level, source root itself — only when top-level .ts files exist)
  *    - method/<name>     (method level, per module)
  *
  * @module cli/utils/project-structure-detector
@@ -99,9 +98,6 @@ export async function getTopLevelModules(rootDir: string, sourceRoot: string): P
 
 /**
  * Check whether the given directory has any direct (non-recursive) .ts or .js files.
- *
- * Used to decide whether to add a method/core diagram for top-level source files
- * that live alongside subdirectory modules.
  *
  * @param sourceRootPath - Absolute path to the source root directory
  * @returns true if at least one direct .ts or .js file exists
@@ -207,10 +203,6 @@ export async function detectProjectStructure(
     ];
   }
 
-  // Check for top-level .ts files in the source root alongside subdirectory modules
-  const absoluteSourceRoot = useAbsolutePaths ? sourceRoot : path.resolve(projectRoot, sourceRoot);
-  const topLevelFiles = await hasTopLevelSourceFiles(absoluteSourceRoot);
-
   // 2+ modules → three-layer diagram set
   const diagrams: DiagramConfig[] = [
     {
@@ -226,16 +218,6 @@ export async function detectProjectStructure(
       description: 'Class-level view of entire project',
     },
   ];
-
-  // Insert method/core before per-module method diagrams when top-level files exist
-  if (topLevelFiles) {
-    diagrams.push({
-      name: 'method/core',
-      sources: [sourceRoot],
-      level: 'method',
-      description: 'Method-level detail for top-level source files',
-    });
-  }
 
   // Per-module method diagrams
   diagrams.push(

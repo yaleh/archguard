@@ -174,6 +174,17 @@ describe('DiagramIndexGenerator — stats tables', () => {
     await fs.remove(dir);
   });
 
+  it('omits runtime-dependent timestamps and parse durations from index.md', async () => {
+    const dir = tmpDir();
+    const gen = new DiagramIndexGenerator(baseConfig(dir));
+    await gen.generate([makeResult('cls', 'class', [makeFileStats('src/a.ts')], [])]);
+    const content = await fs.readFile(path.join(dir, 'index.md'), 'utf-8');
+    expect(content).not.toContain('**Generated**:');
+    expect(content).not.toContain('**Parse Time**:');
+    expect(content).not.toContain('**Total Parse Time**:');
+    await fs.remove(dir);
+  });
+
   it('file stats table header contains expected columns', async () => {
     const dir = tmpDir();
     const gen = new DiagramIndexGenerator(baseConfig(dir));

@@ -2,1579 +2,501 @@
 
 > Source proposal: `docs/proposals/proposal-agent-query-layer.md`
 > Branch: `feat/agent-query-layer`
-> Status: Draft
+> Status: Draft (aligned with proposal rev 3)
 
 ---
 
 ## Overview
 
-Five phases. Each phase must pass `npm test` independently before the next begins.
+本计划按“先纠正数据模型，再暴露命令”的顺序推进。核心变化有三点:
 
-| Phase | Scope | New files | Modified files | Dependency |
-|-------|-------|-----------|----------------|------------|
-| Phase 1 | `DiagramProcessor.getPrimaryArchJson()` + `persistArchArtifacts` | 1 | 2 | None |
-| Phase 2 | `ArchIndex` types + `ArchIndexBuilder` + `QueryEngine` | 3 | 0 | Phase 1 complete |
-| Phase 3 | `query` subcommand | 1 | 1 | Phase 2 complete |
-| Phase 4 | `search` subcommand | 1 | 1 | Phase 2 complete |
-| Phase 5 | MCP Server (`mcp` subcommand) | 2 | 2 | Phase 3 + 4 complete |
+1. 持久化对象从“单一 primary arch.json”改为“每个可查询 source group 一个 query scope”，并区分 parsed / derived
+2. 查询全部显式绑定到 scope；多 scope 时必须 `--scope`
+3. 只实现实体级查询；移除 `--calls`
 
-**Recommended order**: 1 → 2 → 3 → 4 → 5.
+五个 Phase:
+
+| Phase | Scope | Dependency |
+|------|------|------------|
+| Phase 1 | 暴露 query source groups + 持久化 `manifest.json` / per-scope `arch.json` | None |
+| Phase 2 | `ArchIndexBuilder` + `QueryEngine` + 原子一致性 | Phase 1 |
+| Phase 3 | `query` 子命令（实体关系查询） | Phase 2 |
+| Phase 4 | `query` 命令追加结构发现选项（`--type`/`--orphans`/`--high-coupling`/`--in-cycles`） | Phase 3 |
+| Phase 5 | MCP Server | Phase 4 |
+| Spike | `@modelcontextprotocol/sdk` 可行性验证 | 与 Phase 1-2 并行 |
+
+每个 Phase 都必须独立通过:
+
+```bash
+npm test
+npm run type-check
+```
 
 ---
 
 ## Pre-flight
 
+先确认当前实现事实，不要再沿用旧文档的错误前提:
+
 ```bash
 npm test
-# Note current passing count (expected: 2165+)
-
 npm run type-check
-# Expected: 0 errors
-
 npm run build
+
 node dist/cli/index.js analyze -v
-# Baseline: confirm .archguard/ generated, arch.json absent
-ls .archguard/
-# Expected: index.md, overview/, class/, method/ — no arch.json
+
+# 重点确认:
+# 1. workDir 默认是 .archguard
+# 2. outputDir 默认是 .archguard/output
+# 3. 当前没有 .archguard/query/
 ```
+
+基线观察点:
+
+- `src/cli/config-loader.ts` 中 `workDir` 与 `outputDir` 的默认值
+- `src/cli/processors/diagram-processor.ts` 的 `archJsonCache` 是多 source-group 缓存
+- Go Atlas 不是空实体模式
 
 ---
 
-## Phase 1 — `DiagramProcessor.getPrimaryArchJson()` + `persistArchArtifacts`
+## Phase 1 — Query Scope 持久化
 
 ### Objectives
 
-1. Expose `rawArchJSON` from `DiagramProcessor` via a new public getter
-2. Add `src/cli/query/arch-artifacts.ts` with `persistArchArtifacts(outputDir, archJson)`
-3. Wire into `analyzeCommandHandler` so `arch.json` is written after every successful analyze
+1. `DiagramProcessor` 暴露全部可持久化的 query source groups，并标记 `kind: parsed | derived`
+2. 修复所有会遗漏 scope 的路径，而不只是 TypeScript package-level disk-cache-hit
+3. scope-key 基于稳定源码路径标准化生成，而不是 `path.relative(workDir)`
+4. 新增 `.archguard/query/manifest.json`
+5. 为每个 scope 写入独立 `<scope-key>/arch.json`
+6. 不再引入 `getPrimaryArchJson()`
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/processors/diagram-processor.ts` | Modify | Add `getPrimaryArchJson(): ArchJSON \| null` |
-| `src/cli/query/arch-artifacts.ts` | New | `persistArchArtifacts(outputDir, archJson)` |
-| `src/cli/commands/analyze.ts` | Modify | Call `persistArchArtifacts` after `processAll()` |
-| `tests/unit/cli/processors/diagram-processor-primary-arch.test.ts` | New | Unit tests for `getPrimaryArchJson()` |
+| `src/cli/processors/diagram-processor.ts` | Modify | Register all final query scopes (parsed + derived); fix missing-scope paths; add `getQuerySourceGroups()` |
+| `src/cli/query/query-manifest.ts` | New | `QueryManifest` types |
+| `src/cli/query/query-artifacts.ts` | New | Persist manifest + per-scope `arch.json` (atomic writes with random tmp suffix) |
+| `src/cli/commands/analyze.ts` | Modify | 在 `processAll()` 返回后、`displayResults()` 之前（即当前 line 338 与 line 341 之间）插入 `persistQueryScopes()` 调用。持久化本身失败时 log warning 但不改变退出码（query 产物是附加产出，不应阻塞主流程） |
+| `tests/unit/cli/processors/diagram-processor-query-scopes.test.ts` | New | Unit tests for `getQuerySourceGroups()` |
 
----
+### Implementation notes
 
-### Stage 1-0 — Verify baseline
-
-```bash
-npm test -- --reporter=verbose 2>&1 | tail -5
-# 0 failures
-
-grep -n "getPrimaryArchJson\|persistArchArtifacts" \
-  src/cli/processors/diagram-processor.ts \
-  src/cli/commands/analyze.ts 2>/dev/null
-# Expected: no matches (features absent)
-```
-
----
-
-### Stage 1-1 — Add `getPrimaryArchJson()` to `DiagramProcessor`
-
-In `src/cli/processors/diagram-processor.ts`, after the closing `}` of `processAll()` (around line 328), add:
+`DiagramProcessor` 公开的新结构建议如下:
 
 ```typescript
-/**
- * Returns the "primary" rawArchJSON after processAll() completes.
- *
- * Selection rule: the entry in archJsonCache with the highest entity count.
- * For standard projects this is the root source group (e.g. './src').
- *
- * Returns null when:
- * - processAll() has not been called
- * - all cached ArchJSONs have 0 entities (e.g. Go Atlas mode)
- * - archJsonCache is empty (all source groups failed)
- */
-getPrimaryArchJson(): ArchJSON | null {
-  let best: ArchJSON | null = null;
-  for (const archJson of this.archJsonCache.values()) {
-    if (!best || archJson.entities.length > best.entities.length) {
-      best = archJson;
-    }
-  }
-  return best && best.entities.length > 0 ? best : null;
+export interface QuerySourceGroup {
+  key: string;
+  sources: string[];
+  archJson: ArchJSON;
+  kind: 'parsed' | 'derived';
 }
 ```
 
-Verify type-check:
+`getQuerySourceGroups()` 行为要求:
+
+- 返回所有最终可查询的 `ArchJSON` 视图
+- 仅包含 `entities.length > 0` 的 group
+- 不因为 `extensions.goAtlas` 存在而过滤
+- 对派生自父级 scope 的结果标记 `kind: 'derived'`
+
+**前置修复: 所有遗漏 scope 的路径（必须逐条确认）**
+
+当前 `processSourceGroup` 的 scope 丢失不止一条路径。以下是 `diagram-processor.ts` 中所有产出最终 ArchJSON 的分支，以及各自是否进入 `archJsonCache`:
+
+| # | 分支 | 行号 | ArchJSON 来源 | 是否进入 `archJsonCache` | 需修复 |
+|---|------|------|--------------|------------------------|--------|
+| 1 | Go | 464 | `registerDeferred(parseGoProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 2 | C++ root parse | 501 | `registerDeferred(parseCppProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 3 | C++ derived (deferred) | 485 | `deriveSubModuleArchJSON(await deferred)` | ❌ 不入缓存 | **是** |
+| 4 | C++ derived (cached) | 494 | `deriveSubModuleArchJSON(cache.get())` | ❌ 不入缓存 | **是** |
+| 5 | TS package-level (fresh parse) | 542 | `registerDeferred(parseTsProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 6 | TS package-level (disk cache hit) | 540 | `cachedArchJSON` 直接使用 | ❌ 不入缓存 | **是** |
+| 7 | Generic (fresh parse) | 625 | `ParallelParser.parseFiles()` → `cacheArchJson()` | ✅ 手动调用 | 否 |
+| 8 | Generic (disk cache hit) | 611 | `archJsonDiskCache.get()` | ❌ 不入缓存 | **是** |
+| 9 | Generic derived (deferred) | 578 | `deriveSubModuleArchJSON(await deferred)` | ❌ 不入缓存 | **是** |
+| 10 | Generic derived (cached) | 592 | `deriveSubModuleArchJSON(cache.get())` | ❌ 不入缓存 | **是** |
+
+共 6 条路径需要修复。`getQuerySourceGroups()` 的实现不能依赖 `archJsonCache` 的完整性，而必须在所有 10 条分支中统一登记 query scope。
+
+推荐方案: 在 `DiagramProcessor` 中增加一个实例级 `queryScopes: Map<string, QuerySourceGroup>` 收集器。在每个分支确定最终 `rawArchJSON` 后、调用 `processDiagramWithArchJSON` 之前，统一登记。`getQuerySourceGroups()` 返回该 Map 的值，**仅在 `processAll()` 完成后调用有效**。
+
+**Python/Java 路径**: 当前 Python 和 Java 通过 Generic 分支（`ParallelParser` fallback）处理，对应上表中的 #7-#10。无需额外分支处理，但测试应覆盖 `--lang java`/`--lang python` 场景下 query scope 的正确登记。
+
+**scope-key 标准化**
+
+当前 `hashSources()` 直接使用 CLI 传入的路径字符串，导致同一项目用不同路径（`./src` vs `/abs/path/src`）analyze 产生不同 scope-key。并且 `workDir` 不是稳定源码锚点，不能作为 `path.relative()` 基准。修改 `hashSources()` 或在 `getQuerySourceGroups()` 中:
+
+1. 对每个 source 执行 `path.resolve()` 得到 canonical absolute path
+2. 尝试相对于源码工程根做标准化；当前项目中无通用的项目根检测机制（Go/C++/TS plugin 的 `workspaceRoot` 均来自 `path.resolve(diagram.sources[0])`），因此 `path.resolve()` 就是实际的标准化上限
+3. 排序后拼接计算 SHA-256 前 8 位
+
+manifest 中的 `sources[]` 也存储标准化后的路径。
+
+**已知限制**: 同一项目从不同 CWD 用相对路径 analyze 仍可能产生不同 scope-key。后续若引入项目根检测（如检测 `package.json`/`go.mod`/`CMakeLists.txt` 的最近祖先），可以改进。
+
+`query-artifacts.ts` 先实现 Phase 1 最小集:
+
+- `persistQueryScopes(workDir, scopes)` — 注意 `GlobalConfig.workDir` 类型为 `string | undefined`（`config.ts:368`），但 `Config` schema 有 `.default('./.archguard')`。`analyze.ts` 中 `config` 被 `as any` cast 到 `GlobalConfig`，因此 `persistQueryScopes` 必须处理 `workDir` 为 undefined 的 case（fallback 到 `.archguard`）
+- 写 `.archguard/query/manifest.json`
+- 写 `.archguard/query/<scope-key>/arch.json`
+- 所有写入使用随机后缀 tmp 文件 + rename（`arch.json.tmp.<random>`）
+
+此阶段先不写 `arch-index.json`，Phase 2 接入。
+
+### Verify
 
 ```bash
-npm run type-check
-# Expected: 0 errors
-```
-
----
-
-### Stage 1-2 — Write tests for `getPrimaryArchJson()` (red)
-
-Create `tests/unit/cli/processors/diagram-processor-primary-arch.test.ts`:
-
-```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DiagramProcessor } from '@/cli/processors/diagram-processor.js';
-import type { DiagramProcessorOptions } from '@/cli/processors/diagram-processor.js';
-
-// Minimal stubs — avoid heavy imports
-const makeOptions = (overrides: Partial<DiagramProcessorOptions> = {}): DiagramProcessorOptions => ({
-  diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-  globalConfig: { outputDir: '/tmp/out', format: 'mermaid' } as any,
-  progress: { start: vi.fn(), succeed: vi.fn(), fail: vi.fn(), info: vi.fn(), warn: vi.fn() } as any,
-  ...overrides,
-});
-
-describe('DiagramProcessor.getPrimaryArchJson()', () => {
-  it('returns null before processAll() is called', () => {
-    const processor = new DiagramProcessor(makeOptions());
-    expect(processor.getPrimaryArchJson()).toBeNull();
-  });
-
-  it('returns null when all cached ArchJSONs have 0 entities', () => {
-    const processor = new DiagramProcessor(makeOptions());
-    // Directly set private cache via type cast
-    (processor as any).archJsonCache.set('key1', { entities: [], relations: [] });
-    expect(processor.getPrimaryArchJson()).toBeNull();
-  });
-
-  it('returns the entry with the most entities', () => {
-    const processor = new DiagramProcessor(makeOptions());
-    const small = { entities: [{ id: 'A' }], relations: [] } as any;
-    const large = { entities: [{ id: 'B' }, { id: 'C' }], relations: [] } as any;
-    (processor as any).archJsonCache.set('key1', small);
-    (processor as any).archJsonCache.set('key2', large);
-    expect(processor.getPrimaryArchJson()).toBe(large);
-  });
-});
-```
-
-Run:
-
-```bash
-npm test -- tests/unit/cli/processors/diagram-processor-primary-arch.test.ts
-# Expected: 2 pass (null cases), 1 fail (cache access – cache is private Map)
-# Adjust test to use internal access pattern matching actual field name
-```
-
----
-
-### Stage 1-3 — Create `src/cli/query/arch-artifacts.ts`
-
-Create directory and file:
-
-```typescript
-// src/cli/query/arch-artifacts.ts
-
-import fs from 'fs-extra';
-import path from 'path';
-import { createHash } from 'crypto';
-import type { ArchJSON } from '@/types/index.js';
-
-export const ARCH_JSON_FILENAME  = 'arch.json';
-export const ARCH_INDEX_FILENAME = 'arch-index.json';
-
-/**
- * Persist rawArchJSON to <outputDir>/arch.json.
- * Does NOT write arch-index.json — that is handled by Phase 2's ArchIndexBuilder.
- * Phase 1 only writes arch.json; Phase 2 extends this function.
- *
- * Write order: arch.json first, arch-index.json second (see proposal §3).
- */
-export async function persistArchArtifacts(
-  outputDir: string,
-  archJson: ArchJSON,
-): Promise<void> {
-  await fs.ensureDir(outputDir);
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
-  await fs.writeJson(archJsonPath, archJson);
-  // arch-index.json written by ArchIndexBuilder in Phase 2
-}
-
-/** Compute SHA-256 of arch.json file content (used by ArchIndexBuilder). */
-export async function computeArchJsonHash(outputDir: string): Promise<string> {
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
-  const content = await fs.readFile(archJsonPath);
-  return createHash('sha256').update(content).digest('hex');
-}
-```
-
----
-
-### Stage 1-4 — Wire into `analyzeCommandHandler`
-
-In `src/cli/commands/analyze.ts`, add the import at the top:
-
-```typescript
-import { persistArchArtifacts } from '@/cli/query/arch-artifacts.js';
-```
-
-In `analyzeCommandHandler`, after `const results = await processor.processAll();` (around line 322), insert:
-
-```typescript
-// Persist rawArchJSON for query/search/mcp commands
-const primaryArchJson = processor.getPrimaryArchJson();
-if (primaryArchJson) {
-  await persistArchArtifacts(config.outputDir, primaryArchJson);
-}
-```
-
-Verify:
-
-```bash
-npm run type-check
-# Expected: 0 errors
-
 npm run build
 node dist/cli/index.js analyze -v
-ls .archguard/
-# Expected: arch.json now present alongside index.md, overview/, class/, method/
 
-node -e "const a = require('./.archguard/arch.json'); console.log(a.entities.length)"
-# Expected: 261 (or current entity count from self-analysis)
+ls .archguard/query
+# Expected: manifest.json + one or more scope directories
 ```
+
+验收点:
+
+- 单 scope 项目: `manifest.scopes.length === 1`
+- 多 scope 项目: `manifest.scopes.length > 1`
+- Go Atlas 项目只要实体非空，就会生成 scope
+- 部分 diagram 失败时，成功的 scope 仍然持久化
+- 同一项目用相对路径和绝对路径 analyze，产生相同的 scope-key
+- derived scope 会被显式标记，不再伪装成 raw parse 结果
 
 ---
 
-### Stage 1-5 — Full test suite
-
-```bash
-npm test
-# Expected: same count as baseline or higher, 0 failures
-npm run type-check
-# 0 errors
-```
-
----
-
-## Phase 2 — `ArchIndex` types + `ArchIndexBuilder` + `QueryEngine`
+## Phase 2 — Arch Index + Query Engine
 
 ### Objectives
 
-1. Define the `ArchIndex` interface in `src/cli/query/arch-index.ts`
-2. Implement `ArchIndexBuilder.build(archJson, archJsonHash)` as a pure function
-3. Implement `QueryEngine` with load/validate/fallback logic and all query methods
-4. Extend `persistArchArtifacts` to also write `arch-index.json`
+1. 为每个 scope 构建 `arch-index.json`
+2. 引入 manifest-aware 的 `QueryEngine`
+3. 缺失或陈旧索引时，同步重建并原子写回
+4. 多 scope 时要求显式 `scope`
+5. 提供最小可用的 scope discovery 信息（至少 `key + label + kind + sources`）
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/query/arch-index.ts` | New | `ArchIndex` interface |
-| `src/cli/query/arch-index-builder.ts` | New | `ArchIndexBuilder.build()` pure function |
-| `src/cli/query/query-engine.ts` | New | `QueryEngine` with `load()`, `fromArchJson()`, all query methods |
-| `src/cli/query/arch-artifacts.ts` | Modify | Extend to write `arch-index.json` after `arch.json` |
-| `tests/unit/cli/query/arch-index-builder.test.ts` | New | Unit tests for `ArchIndexBuilder` |
-| `tests/unit/cli/query/query-engine.test.ts` | New | Unit tests for `QueryEngine` (load, hash mismatch, BFS, cycles) |
+| `src/cli/query/arch-index.ts` | New | `ArchIndex` type (use normal import, not inline `import()`) |
+| `src/cli/query/arch-index-builder.ts` | New | `ArchJSON -> ArchIndex` |
+| `src/cli/query/query-engine.ts` | New | Load manifest/scope, validate index, execute queries |
+| `src/cli/query/engine-loader.ts` | New | `resolveArchDir()` / `resolveScope()` / `loadEngine()` (提前到 Phase 2，Phase 3 的 CLI 只做参数解析到此模块的桥接) |
+| `src/cli/query/query-artifacts.ts` | Modify | Also persist `arch-index.json` |
+| `tests/unit/cli/query/arch-index-builder.test.ts` | New | Builder tests |
+| `tests/unit/cli/query/query-engine.test.ts` | New | Scope selection and fallback tests |
 
----
+### Required design constraints
 
-### Stage 2-1 — `src/cli/query/arch-index.ts`
+#### 1. Atomic writes
 
-```typescript
-// src/cli/query/arch-index.ts
+不要使用 fire-and-forget。所有写入必须走:
 
-import type { RelationType } from '@/types/index.js';
+1. write temp file with random suffix (`<target>.tmp.<crypto.randomUUID().slice(0,8)>`)
+2. rename to target
 
-export interface ArchIndexCycle {
-  size: number;
-  members: string[];       // entity IDs
-  memberNames: string[];   // entity names, parallel to members
-  files: string[];         // deduplicated source file paths
-}
+至少覆盖:
 
-export interface ArchIndex {
-  /** Schema version for forward-compatibility checks. */
-  version: string;          // "1.0"
+- `arch.json`
+- `arch-index.json`
+- `manifest.json`
 
-  /** ISO 8601 build time. */
-  generatedAt: string;
+随机后缀确保并发进程（如 `query` 和 `mcp` 同时重建 index）不会互相截断 tmp 文件。
 
-  /**
-   * SHA-256 of the arch.json file content at the time this index was built.
-   * QueryEngine compares this against the live arch.json to detect staleness.
-   */
-  archJsonHash: string;
+#### 2. Hash 基于磁盘字节
 
-  /** Language reported by arch.json. */
-  language: string;
+`archJsonHash` 必须基于 `arch.json` 的**磁盘字节**计算，不是 parsed object 再 stringify:
 
-  /** entity.name (case-sensitive) → entity ID list (handles cross-module duplicates). */
-  nameToIds: Record<string, string[]>;
+- 写入时: `const buf = Buffer.from(JSON.stringify(archJson, null, 2))` → 写 buf → `SHA-256(buf)`
+- 加载时: `const buf = await fs.readFile(archJsonPath)` → `SHA-256(buf)` → 与 index 中的 hash 比对
+- parse 用 `JSON.parse(buf.toString())`
 
-  /** entity ID → source file relative path (C++ absolute paths normalised). */
-  idToFile: Record<string, string>;
+这避免了 JSON key 顺序变化导致的不必要 index 重建。
 
-  /** entity ID → entity name (for display without loading full arch.json). */
-  idToName: Record<string, string>;
+#### 3. Scope-aware loading
 
-  /** entity ID → list of entity IDs that depend on it (reverse edges). */
-  dependents: Record<string, string[]>;
+`QueryEngine.load(queryRoot, scope?)` 逻辑:
 
-  /** entity ID → list of entity IDs it depends on (forward edges). */
-  dependencies: Record<string, string[]>;
+1. 读取 `manifest.json`
+2. `scopes.length === 0` -> 报错
+3. `scopes.length === 1 && scope 未指定` -> 自动选中
+4. `scopes.length > 1 && scope 未指定` -> 报错并列出可选 scope
+5. 读取 `<scope-key>/arch.json` 为原始 `Buffer`
+6. 计算 `Buffer` 的 SHA-256
+7. 校验 `<scope-key>/arch-index.json`（hash 比对）
+8. 必要时同步重建 index 并原子写回
 
-  /** Relation type → [source ID, target ID][] (only internal relations). */
-  relationsByType: Partial<Record<RelationType, [string, string][]>>;
+#### 3. 查询边界
 
-  /** Source file relative path → entity ID list. */
-  fileToIds: Record<string, string[]>;
+只实现 entity-level:
 
-  /** Non-trivial SCCs (size > 1), sorted by size DESC. Aligns with CycleInfo in proposal-file-stats. */
-  cycles: ArchIndexCycle[];
-}
+- `findEntity`
+- `getDependents`
+- `getDependencies`
+- `findImplementers`
+- `findSubclasses`
+- `getFileEntities`
+- `getCycles`
+- `getSummary`
+- `findByType`
+- `findHighCoupling`
+- `findOrphans`
+- `findInCycles`
 
-export const ARCH_INDEX_VERSION = '1.0';
-```
+本阶段不实现 `findCallers`
 
----
+`ArchIndexBuilder` 实现约束:
 
-### Stage 2-2 — `src/cli/query/arch-index-builder.ts`
+- `ArchIndex.cycles` 复用 `CycleInfo` 类型，其中 `memberNames` 和 `files` 需要从 entities 反查（通过 `idToName` 和 `idToFile` 索引），构建时必须在 entities 索引完成后再构建 cycles
+- `QueryEngine.load()` 读取 `manifest.json` 时应使用 zod schema validation，与现有 `config-loader.ts` 保持一致
 
-```typescript
-// src/cli/query/arch-index-builder.ts
+补充约束:
 
-import path from 'path';
-import { createHash } from 'crypto';
-import type { ArchJSON, RelationType } from '@/types/index.js';
-import { ARCH_INDEX_VERSION } from './arch-index.js';
-import type { ArchIndex, ArchIndexCycle } from './arch-index.js';
+- 对 `kind: "derived"` 的 scope，查询语义按“裁剪后的局部视图”解释
+- CLI/MCP 输出中必须显式标注该 scope 为 derived，避免把局部结果当成全局事实
 
-export class ArchIndexBuilder {
-  /**
-   * Build an ArchIndex from a rawArchJSON.
-   *
-   * @param archJson  - The rawArchJSON returned by getPrimaryArchJson()
-   * @param archJsonHash - SHA-256 of the serialised arch.json file content
-   */
-  static build(archJson: ArchJSON, archJsonHash: string): ArchIndex {
-    const { entities, relations, language, workspaceRoot } = archJson;
-
-    const entityIds = new Set(entities.map(e => e.id));
-
-    // Internal relations only (both endpoints known)
-    const internalRelations = (relations ?? []).filter(
-      r => entityIds.has(r.source) && entityIds.has(r.target)
-    );
-
-    // Build forward maps
-    const nameToIds: Record<string, string[]> = {};
-    const idToFile: Record<string, string> = {};
-    const idToName: Record<string, string> = {};
-    const dependents: Record<string, string[]> = {};
-    const dependencies: Record<string, string[]> = {};
-    const fileToIds: Record<string, string[]> = {};
-
-    for (const entity of entities) {
-      // nameToIds
-      const bucket = nameToIds[entity.name] ?? [];
-      bucket.push(entity.id);
-      nameToIds[entity.name] = bucket;
-
-      // idToFile (normalise C++ absolute paths)
-      let file = entity.sourceLocation?.file ?? '';
-      if (workspaceRoot && path.isAbsolute(file)) {
-        file = path.relative(workspaceRoot, file);
-      }
-      idToFile[entity.id] = file;
-
-      // idToName
-      idToName[entity.id] = entity.name;
-
-      // seed empty adjacency lists
-      dependents[entity.id] = [];
-      dependencies[entity.id] = [];
-
-      // fileToIds
-      if (file) {
-        const fb = fileToIds[file] ?? [];
-        fb.push(entity.id);
-        fileToIds[file] = fb;
-      }
-    }
-
-    // Populate adjacency + relationsByType
-    const relationsByType: Partial<Record<RelationType, [string, string][]>> = {};
-    for (const r of internalRelations) {
-      dependents[r.target].push(r.source);
-      dependencies[r.source].push(r.target);
-
-      const bucket = relationsByType[r.type] ?? [];
-      bucket.push([r.source, r.target]);
-      relationsByType[r.type] = bucket;
-    }
-
-    // SCC (Kosaraju) — reuse logic pattern from MetricsCalculator
-    const cycles = ArchIndexBuilder.computeCycles(entities, internalRelations, idToFile, idToName);
-
-    return {
-      version: ARCH_INDEX_VERSION,
-      generatedAt: new Date().toISOString(),
-      archJsonHash,
-      language: language ?? 'unknown',
-      nameToIds,
-      idToFile,
-      idToName,
-      dependents,
-      dependencies,
-      relationsByType,
-      fileToIds,
-      cycles,
-    };
-  }
-
-  private static computeCycles(
-    entities: ArchJSON['entities'],
-    relations: ArchJSON['relations'],
-    idToFile: Record<string, string>,
-    idToName: Record<string, string>,
-  ): ArchIndexCycle[] {
-    if (entities.length === 0) return [];
-
-    const graph      = new Map<string, string[]>();
-    const transposed = new Map<string, string[]>();
-    for (const e of entities) {
-      graph.set(e.id, []);
-      transposed.set(e.id, []);
-    }
-    for (const r of relations) {
-      graph.get(r.source)?.push(r.target);
-      transposed.get(r.target)?.push(r.source);
-    }
-
-    // Pass 1: finish-order DFS
-    const visited1 = new Set<string>();
-    const finishStack: string[] = [];
-    const dfs = (start: string, adj: Map<string, string[]>, vis: Set<string>, out: string[] | null) => {
-      const stack: [string, number][] = [[start, 0]];
-      vis.add(start);
-      while (stack.length) {
-        const top = stack[stack.length - 1];
-        const neighbors = adj.get(top[0]) ?? [];
-        if (top[1] < neighbors.length) {
-          const next = neighbors[top[1]++];
-          if (!vis.has(next)) { vis.add(next); stack.push([next, 0]); }
-        } else {
-          stack.pop();
-          out?.push(top[0]);
-        }
-      }
-    };
-    for (const id of graph.keys()) {
-      if (!visited1.has(id)) dfs(id, graph, visited1, finishStack);
-    }
-
-    // Pass 2: collect SCC members
-    const visited2 = new Set<string>();
-    const result: ArchIndexCycle[] = [];
-    while (finishStack.length) {
-      const node = finishStack.pop()!;
-      if (!visited2.has(node)) {
-        const members: string[] = [];
-        dfs(node, transposed, visited2, members);
-        if (members.length > 1) {
-          result.push({
-            size: members.length,
-            members,
-            memberNames: members.map(id => idToName[id] ?? id),
-            files: [...new Set(members.map(id => idToFile[id] ?? '').filter(Boolean))],
-          });
-        }
-      }
-    }
-
-    return result.sort((a, b) => b.size - a.size);
-  }
-}
-```
-
----
-
-### Stage 2-3 — `src/cli/query/query-engine.ts`
-
-```typescript
-// src/cli/query/query-engine.ts
-
-import fs from 'fs-extra';
-import path from 'path';
-import { createHash } from 'crypto';
-import type { ArchJSON } from '@/types/index.js';
-import { ArchIndexBuilder } from './arch-index-builder.js';
-import { ARCH_INDEX_VERSION, type ArchIndex } from './arch-index.js';
-import { ARCH_JSON_FILENAME, ARCH_INDEX_FILENAME } from './arch-artifacts.js';
-
-export class QueryDataMissingError extends Error {
-  constructor(archDir: string) {
-    super(`No arch.json found in ${archDir}. Run 'archguard analyze' first.`);
-    this.name = 'QueryDataMissingError';
-  }
-}
-
-export interface EntityResult {
-  id: string;
-  name: string;
-  type: string;
-  file: string;
-  startLine: number;
-  members?: { name: string; type: string; visibility: string }[];
-}
-
-export interface CycleResult {
-  size: number;
-  members: string[];
-  memberNames: string[];
-  files: string[];
-}
-
-export interface SummaryResult {
-  entityCount: number;
-  relationCount: number;
-  cycleCount: number;
-  language: string;
-  topDependents: { name: string; file: string; inDegree: number }[];
-}
-
-export class QueryEngine {
-  private constructor(
-    private readonly index: ArchIndex,
-    private readonly archJson: ArchJSON,
-  ) {}
-
-  // ----------------------------------------------------------------
-  // Factory
-  // ----------------------------------------------------------------
-
-  /**
-   * Load from disk. Validates archJsonHash; falls back to fromArchJson() on mismatch.
-   * Throws QueryDataMissingError if arch.json does not exist.
-   */
-  static async load(archDir: string): Promise<QueryEngine> {
-    const archJsonPath  = path.join(archDir, ARCH_JSON_FILENAME);
-    const archIndexPath = path.join(archDir, ARCH_INDEX_FILENAME);
-
-    if (!(await fs.pathExists(archJsonPath))) {
-      throw new QueryDataMissingError(archDir);
-    }
-
-    const archJsonContent = await fs.readFile(archJsonPath, 'utf-8');
-    const archJson        = JSON.parse(archJsonContent) as ArchJSON;
-    const liveHash        = createHash('sha256').update(archJsonContent).digest('hex');
-
-    if (await fs.pathExists(archIndexPath)) {
-      try {
-        const index = await fs.readJson(archIndexPath) as ArchIndex;
-        if (index.version === ARCH_INDEX_VERSION && index.archJsonHash === liveHash) {
-          return new QueryEngine(index, archJson);
-        }
-        // Hash mismatch or version mismatch: fall through to rebuild
-      } catch {
-        // Corrupt index: fall through to rebuild
-      }
-    }
-
-    // Build in-memory index (do NOT write to disk here)
-    return QueryEngine.fromArchJson(archJson, liveHash);
-  }
-
-  /** Build engine entirely from an ArchJSON (no disk I/O). */
-  static fromArchJson(archJson: ArchJSON, archJsonHash = ''): QueryEngine {
-    const index = ArchIndexBuilder.build(archJson, archJsonHash);
-    return new QueryEngine(index, archJson);
-  }
-
-  // ----------------------------------------------------------------
-  // Queries
-  // ----------------------------------------------------------------
-
-  findEntity(name: string, fuzzy = false): EntityResult[] {
-    const ids = fuzzy
-      ? Object.keys(this.index.nameToIds)
-          .filter(n => n.includes(name))
-          .flatMap(n => this.index.nameToIds[n])
-      : (this.index.nameToIds[name] ?? []);
-
-    return ids.map(id => this.toEntityResult(id)).filter(Boolean) as EntityResult[];
-  }
-
-  getDependents(entityName: string, depth = 1): EntityResult[] {
-    const rootIds = this.index.nameToIds[entityName] ?? [];
-    return this.bfsRelation(rootIds, depth, 'dependents');
-  }
-
-  getDependencies(entityName: string, depth = 1): EntityResult[] {
-    const rootIds = this.index.nameToIds[entityName] ?? [];
-    return this.bfsRelation(rootIds, depth, 'dependencies');
-  }
-
-  findImplementations(interfaceName: string): EntityResult[] {
-    const targetIds = new Set(this.index.nameToIds[interfaceName] ?? []);
-    const impls = (this.index.relationsByType['implementation'] ?? [])
-      .filter(([, target]) => targetIds.has(target))
-      .map(([source]) => this.toEntityResult(source))
-      .filter(Boolean) as EntityResult[];
-    return impls;
-  }
-
-  getFileEntities(filePath: string): EntityResult[] {
-    const ids = this.index.fileToIds[filePath] ?? [];
-    return ids.map(id => this.toEntityResult(id, true)).filter(Boolean) as EntityResult[];
-  }
-
-  getCycles(entityName?: string): CycleResult[] {
-    if (!entityName) return this.index.cycles;
-    return this.index.cycles.filter(c => c.memberNames.includes(entityName));
-  }
-
-  getSummary(): SummaryResult {
-    const totalRelations = Object.values(this.index.relationsByType)
-      .reduce((sum, arr) => sum + (arr?.length ?? 0), 0);
-
-    const topDependents = Object.entries(this.index.dependents)
-      .map(([id, deps]) => ({ id, inDegree: deps.length }))
-      .sort((a, b) => b.inDegree - a.inDegree)
-      .slice(0, 5)
-      .map(({ id, inDegree }) => ({
-        name: this.index.idToName[id] ?? id,
-        file: this.index.idToFile[id] ?? '',
-        inDegree,
-      }));
-
-    return {
-      entityCount: Object.keys(this.index.idToName).length,
-      relationCount: totalRelations,
-      cycleCount: this.index.cycles.length,
-      language: this.index.language,
-      topDependents,
-    };
-  }
-
-  // ----------------------------------------------------------------
-  // Search helpers (used by `search` subcommand)
-  // ----------------------------------------------------------------
-
-  /** Returns entity results where dependents[id].length >= threshold. */
-  findHighCoupling(threshold: number): EntityResult[] {
-    return Object.entries(this.index.dependents)
-      .filter(([, deps]) => deps.length >= threshold)
-      .map(([id]) => this.toEntityResult(id))
-      .filter(Boolean) as EntityResult[];
-  }
-
-  /** Returns entity results with no dependents. */
-  findOrphans(): EntityResult[] {
-    return Object.entries(this.index.dependents)
-      .filter(([, deps]) => deps.length === 0)
-      .map(([id]) => this.toEntityResult(id))
-      .filter(Boolean) as EntityResult[];
-  }
-
-  /** Returns entities that participate in at least one non-trivial SCC. */
-  findInCycles(): EntityResult[] {
-    const cycleIds = new Set(this.index.cycles.flatMap(c => c.members));
-    return [...cycleIds].map(id => this.toEntityResult(id)).filter(Boolean) as EntityResult[];
-  }
-
-  /**
-   * Returns entities whose dependency list intersects the entity IDs for `callTarget`.
-   * Precision is entity-level (not method-level) — see proposal §5 for limitations.
-   */
-  findCallers(callTarget: string): EntityResult[] {
-    const targetIds = new Set(this.index.nameToIds[callTarget] ?? []);
-    if (targetIds.size === 0) return [];
-    return Object.entries(this.index.dependencies)
-      .filter(([, deps]) => deps.some(d => targetIds.has(d)))
-      .map(([id]) => this.toEntityResult(id))
-      .filter(Boolean) as EntityResult[];
-  }
-
-  /**
-   * Returns entities matching the given EntityType string.
-   * Handles both `abstract_class` as a type AND `isAbstract === true && type === 'class'`.
-   */
-  findByType(entityType: string): EntityResult[] {
-    return this.archJson.entities
-      .filter(e =>
-        e.type === entityType ||
-        (entityType === 'abstract_class' && (e as any).isAbstract === true && e.type === 'class')
-      )
-      .map(e => this.toEntityResult(e.id))
-      .filter(Boolean) as EntityResult[];
-  }
-
-  // ----------------------------------------------------------------
-  // Internal helpers
-  // ----------------------------------------------------------------
-
-  private bfsRelation(
-    startIds: string[],
-    depth: number,
-    direction: 'dependents' | 'dependencies',
-  ): EntityResult[] {
-    const MAX_DEPTH = Math.min(depth, 5);
-    const visited = new Set<string>(startIds);
-    let frontier = [...startIds];
-    const result: EntityResult[] = [];
-
-    for (let d = 0; d < MAX_DEPTH; d++) {
-      const next: string[] = [];
-      for (const id of frontier) {
-        for (const neighbor of (this.index[direction][id] ?? [])) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            next.push(neighbor);
-            const er = this.toEntityResult(neighbor);
-            if (er) result.push(er);
-          }
-        }
-      }
-      frontier = next;
-      if (frontier.length === 0) break;
-    }
-
-    return result;
-  }
-
-  private toEntityResult(id: string, includeMembers = false): EntityResult | null {
-    const entity = this.archJson.entities.find(e => e.id === id);
-    if (!entity) return null;
-    return {
-      id: entity.id,
-      name: entity.name,
-      type: entity.type,
-      file: this.index.idToFile[id] ?? '',
-      startLine: entity.sourceLocation?.startLine ?? 0,
-      ...(includeMembers
-        ? {
-            members: entity.members
-              .filter(m => m.visibility === 'public')
-              .map(m => ({ name: m.name, type: m.type, visibility: m.visibility })),
-          }
-        : {}),
-    };
-  }
-}
-```
-
----
-
-### Stage 2-4 — Extend `persistArchArtifacts` to write `arch-index.json`
-
-In `src/cli/query/arch-artifacts.ts`, update `persistArchArtifacts`:
-
-```typescript
-import { ArchIndexBuilder } from './arch-index-builder.js';
-
-export async function persistArchArtifacts(
-  outputDir: string,
-  archJson: ArchJSON,
-): Promise<void> {
-  await fs.ensureDir(outputDir);
-
-  // 1. Write arch.json first
-  const archJsonPath = path.join(outputDir, ARCH_JSON_FILENAME);
-  const content = JSON.stringify(archJson);
-  await fs.writeFile(archJsonPath, content, 'utf-8');
-
-  // 2. Compute hash of the just-written file
-  const archJsonHash = createHash('sha256').update(content).digest('hex');
-
-  // 3. Build and write arch-index.json
-  const index = ArchIndexBuilder.build(archJson, archJsonHash);
-  const archIndexPath = path.join(outputDir, ARCH_INDEX_FILENAME);
-  await fs.writeJson(archIndexPath, index);
-}
-```
-
-Verify:
+### Verify
 
 ```bash
-npm run type-check
-# Expected: 0 errors
-
 npm run build
 node dist/cli/index.js analyze -v
-ls .archguard/
-# Expected: arch.json AND arch-index.json present
 
-node -e "
-  const idx = require('./.archguard/arch-index.json');
-  console.log('version:', idx.version);
-  console.log('entities:', Object.keys(idx.idToName).length);
-  console.log('cycles:', idx.cycles.length);
-"
-# Expected: version 1.0, entities > 0
+find .archguard/query -name arch-index.json
+# Expected: one file per scope
 ```
+
+关键测试:
+
+- 缺失 `arch-index.json` -> rebuild and persist
+- hash mismatch -> rebuild and persist
+- manifest 多 scope 且未指定 scope -> hard error
+- 多 scope 报错信息包含 `key + label + kind + sources`
 
 ---
 
-### Stage 2-5 — Write tests (red → green)
-
-Create `tests/unit/cli/query/arch-index-builder.test.ts`:
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { ArchIndexBuilder } from '@/cli/query/arch-index-builder.js';
-import type { ArchJSON } from '@/types/index.js';
-
-const makeArchJson = (overrides: Partial<ArchJSON> = {}): ArchJSON => ({
-  version: '1.0',
-  language: 'typescript',
-  timestamp: new Date().toISOString(),
-  sourceFiles: [],
-  entities: [],
-  relations: [],
-  ...overrides,
-});
-
-describe('ArchIndexBuilder.build()', () => {
-  it('produces empty index for empty ArchJSON', () => {
-    const index = ArchIndexBuilder.build(makeArchJson(), 'hash');
-    expect(Object.keys(index.nameToIds)).toHaveLength(0);
-    expect(index.cycles).toHaveLength(0);
-  });
-
-  it('maps entity name → ID', () => {
-    const archJson = makeArchJson({
-      entities: [
-        { id: 'src/foo.ts.Foo', name: 'Foo', type: 'class', visibility: 'public',
-          members: [], sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 10 } }
-      ],
-    });
-    const index = ArchIndexBuilder.build(archJson, 'h');
-    expect(index.nameToIds['Foo']).toEqual(['src/foo.ts.Foo']);
-    expect(index.idToFile['src/foo.ts.Foo']).toBe('src/foo.ts');
-    expect(index.fileToIds['src/foo.ts']).toEqual(['src/foo.ts.Foo']);
-  });
-
-  it('builds dependents and dependencies from internal relations', () => {
-    const archJson = makeArchJson({
-      entities: [
-        { id: 'A', name: 'A', type: 'class', visibility: 'public', members: [],
-          sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } },
-        { id: 'B', name: 'B', type: 'class', visibility: 'public', members: [],
-          sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } },
-      ],
-      relations: [{ id: 'r1', type: 'dependency', source: 'A', target: 'B' }],
-    });
-    const index = ArchIndexBuilder.build(archJson, 'h');
-    expect(index.dependencies['A']).toContain('B');
-    expect(index.dependents['B']).toContain('A');
-    expect(index.dependencies['B']).toHaveLength(0);
-    expect(index.dependents['A']).toHaveLength(0);
-  });
-
-  it('detects non-trivial SCC (size > 1)', () => {
-    const archJson = makeArchJson({
-      entities: [
-        { id: 'A', name: 'A', type: 'class', visibility: 'public', members: [],
-          sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } },
-        { id: 'B', name: 'B', type: 'class', visibility: 'public', members: [],
-          sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } },
-      ],
-      relations: [
-        { id: 'r1', type: 'dependency', source: 'A', target: 'B' },
-        { id: 'r2', type: 'dependency', source: 'B', target: 'A' },
-      ],
-    });
-    const index = ArchIndexBuilder.build(archJson, 'h');
-    expect(index.cycles).toHaveLength(1);
-    expect(index.cycles[0].size).toBe(2);
-    expect(index.cycles[0].memberNames).toContain('A');
-    expect(index.cycles[0].memberNames).toContain('B');
-  });
-
-  it('stores archJsonHash', () => {
-    const index = ArchIndexBuilder.build(makeArchJson(), 'abc123');
-    expect(index.archJsonHash).toBe('abc123');
-  });
-});
-```
-
-Create `tests/unit/cli/query/query-engine.test.ts`:
-
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-import type { ArchJSON } from '@/types/index.js';
-
-const baseArchJson: ArchJSON = {
-  version: '1.0', language: 'typescript', timestamp: '', sourceFiles: [],
-  entities: [
-    { id: 'A', name: 'Alpha', type: 'class', visibility: 'public', members: [],
-      sourceLocation: { file: 'src/alpha.ts', startLine: 1, endLine: 20 } },
-    { id: 'B', name: 'Beta', type: 'interface', visibility: 'public', members: [],
-      sourceLocation: { file: 'src/beta.ts', startLine: 1, endLine: 10 } },
-    { id: 'C', name: 'Gamma', type: 'class', visibility: 'public', members: [],
-      sourceLocation: { file: 'src/gamma.ts', startLine: 1, endLine: 15 } },
-  ],
-  relations: [
-    { id: 'r1', type: 'dependency',     source: 'A', target: 'B' },
-    { id: 'r2', type: 'implementation', source: 'C', target: 'B' },
-  ],
-};
-
-describe('QueryEngine.fromArchJson()', () => {
-  it('findEntity — exact match', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.findEntity('Alpha');
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe('A');
-  });
-
-  it('findEntity — fuzzy match', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.findEntity('lpha', true);
-    expect(results.map(r => r.id)).toContain('A');
-  });
-
-  it('getDependents — depth 1', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.getDependents('Beta');
-    expect(results.map(r => r.id)).toContain('A'); // A depends on B
-    expect(results.map(r => r.id)).toContain('C'); // C implements B
-  });
-
-  it('getDependencies — depth 1', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.getDependencies('Alpha');
-    expect(results.map(r => r.id)).toContain('B');
-  });
-
-  it('findImplementations', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.findImplementations('Beta');
-    expect(results.map(r => r.id)).toContain('C');
-    expect(results.map(r => r.id)).not.toContain('A'); // dependency, not implementation
-  });
-
-  it('getFileEntities', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const results = engine.getFileEntities('src/alpha.ts');
-    expect(results.map(r => r.id)).toEqual(['A']);
-  });
-
-  it('getSummary returns correct counts', () => {
-    const engine = QueryEngine.fromArchJson(baseArchJson);
-    const summary = engine.getSummary();
-    expect(summary.entityCount).toBe(3);
-    expect(summary.relationCount).toBe(2);
-    expect(summary.language).toBe('typescript');
-  });
-
-  it('getDependents BFS with cycle does not loop infinitely', () => {
-    const cycleJson: ArchJSON = {
-      ...baseArchJson,
-      relations: [
-        { id: 'r1', type: 'dependency', source: 'A', target: 'B' },
-        { id: 'r2', type: 'dependency', source: 'B', target: 'A' }, // cycle
-      ],
-    };
-    const engine = QueryEngine.fromArchJson(cycleJson);
-    // Should not throw or hang
-    const results = engine.getDependents('Alpha', 3);
-    expect(Array.isArray(results)).toBe(true);
-  });
-});
-
-describe('QueryEngine.load()', () => {
-  it('throws QueryDataMissingError when arch.json absent', async () => {
-    await expect(QueryEngine.load('/nonexistent/path')).rejects.toThrow(QueryDataMissingError);
-  });
-});
-```
-
-Run tests:
-
-```bash
-npm test -- tests/unit/cli/query/
-# Expected: all tests pass
-
-npm test
-# Expected: no regressions
-```
-
----
-
-## Phase 3 — `query` subcommand
+## Phase 3 — `query` Subcommand
 
 ### Objectives
 
-Implement `archguard query` as a Commander subcommand backed by `QueryEngine`.
+实现 scope-aware 的实体级查询命令。
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/commands/query.ts` | New | Commander command with all `--entity / --used-by / --deps-of / --impls-of / --file / --cycles / --summary` flags |
-| `src/cli/index.ts` | Modify | Register `query` subcommand |
+| `src/cli/commands/query.ts` | New | Commander query command (参数解析 → `engine-loader` 桥接) |
+| `src/cli/index.ts` | Modify | Register command |
 
----
+注意: `engine-loader.ts` 已在 Phase 2 实现。本阶段只做 CLI 参数到 `loadEngine()` 的桥接。
 
-### Stage 3-1 — `src/cli/commands/query.ts`
+### Command surface
 
-```typescript
-// src/cli/commands/query.ts
-
-import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-
-function resolveArchDir(sourceDir?: string): string {
-  return sourceDir ? path.resolve(sourceDir) : path.join(process.cwd(), '.archguard');
-}
-
-async function loadEngine(sourceDir?: string): Promise<QueryEngine> {
-  const archDir = resolveArchDir(sourceDir);
-  try {
-    return await QueryEngine.load(archDir);
-  } catch (err) {
-    if (err instanceof QueryDataMissingError) {
-      console.error(err.message);
-      process.exit(1);
-    }
-    throw err;
-  }
-}
-
-function printJson(data: unknown): void { console.log(JSON.stringify(data, null, 2)); }
-function printText(label: string, items: { name: string; file: string; startLine?: number }[]): void {
-  console.log(`\n${label}\n`);
-  for (const item of items) {
-    const loc = item.startLine ? `:${item.startLine}` : '';
-    console.log(`  ${item.name.padEnd(40)} ${item.file}${loc}`);
-  }
-  console.log('');
-}
-
-export function createQueryCommand(): Command {
-  return new Command('query')
-    .description('Query the persisted ArchJSON index (run analyze first)')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
-    .option('-f, --format <fmt>', 'Output format: json|text', 'json')
-
-    .option('--entity <name>',   'Find entity by name (exact)')
-    .option('--fuzzy',           'Use substring matching with --entity')
-    .option('--used-by <name>',  'Find entities that depend on <name>')
-    .option('--deps-of <name>',  'Find entities that <name> depends on')
-    .option('--depth <n>',       'BFS depth for --used-by / --deps-of (1–5)', '1')
-    .option('--impls-of <name>', 'Find implementations of interface/abstract class')
-    .option('--file <path>',     'List all entities in a source file')
-    .option('--cycles',          'Show all circular dependencies')
-    .option('--entity-filter <name>', 'Filter --cycles to those containing this entity name')
-    .option('--summary',         'Show project structure summary')
-
-    .action(async (opts) => {
-      const engine = await loadEngine(opts.sourceDir);
-      const fmt    = opts.format as 'json' | 'text';
-      const depth  = Math.min(Math.max(parseInt(opts.depth, 10) || 1, 1), 5);
-
-      if (opts.entity !== undefined) {
-        const results = engine.findEntity(opts.entity, !!opts.fuzzy);
-        fmt === 'json' ? printJson(results) : printText(`"${opts.entity}" — ${results.length} match(es)`, results);
-        return;
-      }
-      if (opts.usedBy !== undefined) {
-        const results = engine.getDependents(opts.usedBy, depth);
-        fmt === 'json' ? printJson(results) : printText(`${opts.usedBy}  ←  used by ${results.length} entities`, results);
-        return;
-      }
-      if (opts.depsOf !== undefined) {
-        const results = engine.getDependencies(opts.depsOf, depth);
-        fmt === 'json' ? printJson(results) : printText(`${opts.depsOf}  →  depends on ${results.length} entities`, results);
-        return;
-      }
-      if (opts.implsOf !== undefined) {
-        const results = engine.findImplementations(opts.implsOf);
-        fmt === 'json' ? printJson(results) : printText(`Implementations of ${opts.implsOf}`, results);
-        return;
-      }
-      if (opts.file !== undefined) {
-        const results = engine.getFileEntities(opts.file);
-        fmt === 'json' ? printJson(results) : printText(`Entities in ${opts.file}`, results);
-        return;
-      }
-      if (opts.cycles) {
-        const results = engine.getCycles(opts.entityFilter);
-        fmt === 'json'
-          ? printJson(results)
-          : results.length === 0
-            ? console.log('No circular dependencies detected.')
-            : results.forEach((c, i) =>
-                console.log(`#${i + 1} [size=${c.size}] ${c.memberNames.join(' → ')}  (${c.files.join(', ')})`)
-              );
-        return;
-      }
-      if (opts.summary) {
-        const summary = engine.getSummary();
-        fmt === 'json' ? printJson(summary) : console.log(JSON.stringify(summary, null, 2));
-        return;
-      }
-
-      // No flag provided
-      console.error("Specify a query flag. Run 'archguard query --help' for options.");
-      process.exit(1);
-    });
-}
+```bash
+archguard query --entity "CacheManager"
+archguard query --deps-of "DiagramProcessor" --depth 2
+archguard query --used-by "ArchJSON"
+archguard query --implementers-of "ILanguagePlugin"
+archguard query --subclasses-of "BaseProcessor"
+archguard query --file "src/foo.ts"
+archguard query --cycles
+archguard query --summary
 ```
 
-### Stage 3-2 — Register in `src/cli/index.ts`
+新增公共参数:
 
-Add import and register:
-
-```typescript
-import { createQueryCommand } from './commands/query.js';
-// ...
-program.addCommand(createQueryCommand());
+```bash
+--arch-dir <dir>
+--scope <scope-key>
+--format json|text
 ```
 
-Verify:
+需要配套一个 scope 发现入口，至少满足其一:
+
+- `archguard query --list-scopes`
+- 或在多 scope 报错时打印完整候选列表
+
+### Semantics
+
+- `--implementers-of` 仅看 `implementation`
+- `--subclasses-of` 仅看 `inheritance`
+- `--depth` 仅用于 `--deps-of` / `--used-by`:
+  - depth=1 = 一跳直接邻居（不包含起始实体本身）
+  - 默认 1，硬上限 5
+  - `--deps-of` 沿 `dependencies` 方向，`--used-by` 沿 `dependents` 方向
+- **所有 relation type 都参与 BFS 遍历**（不做类型过滤）
+  - BFS + visited set 防环
+- 如果多个 scope 且未指定 `--scope`，退出码 1
+- 若选中的 scope 是 `derived`，输出中显式提示这是裁剪视图
+
+### Verify
 
 ```bash
 npm run build
 node dist/cli/index.js query --help
-# Expected: lists all flags
-
-node dist/cli/index.js query --entity "DiagramProcessor" --format text
-# Expected: entity found with file path
-
-node dist/cli/index.js query --used-by "ArchJSON" --format text
-# Expected: list of dependent entities
-
-node dist/cli/index.js query --cycles
-# Expected: JSON array (may be empty)
+node dist/cli/index.js query --summary --scope <scope-key>
 ```
 
 ---
 
-## Phase 4 — `search` subcommand
+## Phase 4 — 结构发现查询（合并入 `query` 命令）
 
 ### Objectives
 
-Implement `archguard search` for structure-pattern file discovery.
+将实体级结构发现能力合并入 Phase 3 的 `query` 命令，而不是创建独立的 `search` 子命令。
+
+**合并理由**: `query` 与 `search` 共享 `--arch-dir` + `--scope` + `--format` + 同一个 `QueryEngine`，分成两个命令对 agent 增加不必要的工具选择认知负担。MCP 层已经是扁平的 8 个 tool，CLI 层也应避免人为分裂。
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/commands/search.ts` | New | Commander command: `--calls / --type / --high-coupling / --orphans / --in-cycles` |
-| `src/cli/index.ts` | Modify | Register `search` subcommand |
+| `src/cli/commands/query.ts` | Modify | 增加 `--type`、`--high-coupling`、`--orphans`、`--in-cycles` 选项 |
 
----
+不再创建 `src/cli/commands/search.ts`，不再在 `index.ts` 注册 `search` 命令。
 
-### Stage 4-1 — `src/cli/commands/search.ts`
+### Command surface (追加到 Phase 3 的 query 命令)
 
-```typescript
-// src/cli/commands/search.ts
-
-import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-
-function resolveArchDir(sourceDir?: string): string {
-  return sourceDir ? path.resolve(sourceDir) : path.join(process.cwd(), '.archguard');
-}
-
-async function loadEngine(sourceDir?: string): Promise<QueryEngine> {
-  const archDir = resolveArchDir(sourceDir);
-  try {
-    return await QueryEngine.load(archDir);
-  } catch (err) {
-    if (err instanceof QueryDataMissingError) {
-      console.error(err.message);
-      process.exit(1);
-    }
-    throw err;
-  }
-}
-
-/** Deduplicate results by file, print one line per file. */
-function printFiles(results: { name: string; file: string; startLine?: number }[], fmt: string): void {
-  if (fmt === 'json') {
-    console.log(JSON.stringify(results, null, 2));
-    return;
-  }
-  const files = [...new Set(results.map(r => r.file))].sort();
-  files.forEach(f => console.log(f));
-}
-
-export function createSearchCommand(): Command {
-  return new Command('search')
-    .description('Find files by structural patterns (no re-parsing required)')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
-    .option('-f, --format <fmt>', 'Output format: json|text', 'text')
-
-    .option('--calls <name>',        'Files containing entities that depend on <name> (entity-level; see docs for precision limits)')
-    .option('--type <entityType>',   'Files containing entities of given EntityType (class, interface, abstract_class, enum, function, struct, trait)')
-    .option('--module <prefix>',     'Restrict --type results to files under this path prefix')
-    .option('--high-coupling',       'Entities with inDegree >= threshold')
-    .option('--threshold <n>',       'Minimum dependents count for --high-coupling', '8')
-    .option('--orphans',             'Entities with no dependents (potential dead code)')
-    .option('--in-cycles',           'Files containing entities in circular dependencies')
-
-    .action(async (opts) => {
-      const engine = await loadEngine(opts.sourceDir);
-      const fmt    = opts.format as 'json' | 'text';
-
-      if (opts.calls !== undefined) {
-        const results = engine.findCallers(opts.calls);
-        printFiles(results, fmt);
-        return;
-      }
-      if (opts.type !== undefined) {
-        let results = engine.findByType(opts.type);
-        if (opts.module) {
-          results = results.filter(r => r.file.startsWith(opts.module));
-        }
-        printFiles(results, fmt);
-        return;
-      }
-      if (opts.highCoupling) {
-        const threshold = parseInt(opts.threshold, 10) || 8;
-        const results = engine.findHighCoupling(threshold);
-        // For high-coupling, show entity + inDegree
-        if (fmt === 'json') {
-          console.log(JSON.stringify(results, null, 2));
-        } else {
-          results
-            .sort((a, b) => {
-              const ia = engine.getSummary(); // inDegree not on EntityResult; compute via index
-              return 0; // placeholder — actual impl accesses index.dependents directly
-            })
-            .forEach(r => console.log(`${r.name.padEnd(40)} ${r.file}`));
-        }
-        return;
-      }
-      if (opts.orphans) {
-        const results = engine.findOrphans();
-        printFiles(results, fmt);
-        return;
-      }
-      if (opts.inCycles) {
-        const results = engine.findInCycles();
-        printFiles(results, fmt);
-        return;
-      }
-
-      console.error("Specify a search flag. Run 'archguard search --help' for options.");
-      process.exit(1);
-    });
-}
+```bash
+archguard query --type interface
+archguard query --high-coupling --threshold 8
+archguard query --orphans
+archguard query --in-cycles
 ```
 
-> **Note**: The `--high-coupling` text output in the stub above is a placeholder. During implementation, expose `index.dependents` length via `QueryEngine` or add an `EntityResult.inDegree` field to surface the count cleanly.
+明确不实现:
 
-### Stage 4-2 — Register in `src/cli/index.ts`
-
-```typescript
-import { createSearchCommand } from './commands/search.js';
-// ...
-program.addCommand(createSearchCommand());
+```bash
+archguard query --calls ...
 ```
 
-Verify:
+原因:
+
+- 当前 `ArchJSON` 不包含成员级调用边
+- 不应让命令名暗示方法调用精度
+
+### Verify
 
 ```bash
 npm run build
-node dist/cli/index.js search --help
-
-node dist/cli/index.js search --orphans
-# Expected: list of files (text format, one per line)
-
-node dist/cli/index.js search --in-cycles
-# Expected: files in circular deps (may be empty)
-
-node dist/cli/index.js search --type interface
-# Expected: files containing interface entities
+node dist/cli/index.js query --help
+node dist/cli/index.js query --type interface --scope <scope-key>
 ```
 
 ---
 
 ## Phase 5 — MCP Server
 
+### Pre-requisite: SDK Spike（与 Phase 1-2 并行执行）
+
+**重要**: 此 spike 应与 Phase 1-2 并行执行，而非等到 Phase 5 开始前。如果 spike 失败需要手写轻量 JSON-RPC stdio server，工作量差异显著，必须尽早发现。
+
+验证 `@modelcontextprotocol/sdk`:
+
+1. ESM 兼容性: 项目是 `"type": "module"`，确认 SDK 支持纯 ESM import
+2. stdio transport: 确认 SDK 提供 stdio server transport（不需要 HTTP）
+3. bundle size: 评估对 CLI 安装体积的影响
+4. optional dependency: 评估是否应设为 `optionalDependencies`（不用 MCP 的用户无需安装）
+
+spike 失败时，考虑手写轻量 JSON-RPC stdio server 替代。
+
 ### Objectives
 
-Expose `QueryEngine` methods as MCP tools via `@modelcontextprotocol/sdk`, accessible from Claude Code sessions.
-
-### Prerequisites
-
-```bash
-npm install @modelcontextprotocol/sdk
-# Confirm it appears in package.json dependencies (not devDependencies)
-```
+通过 MCP 暴露与 CLI 一致的 scope-aware 实体级查询能力。
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/mcp/mcp-server.ts` | New | MCP Server: registers 7 tools, delegates to `QueryEngine` |
-| `src/cli/commands/mcp.ts` | New | `mcp` Commander subcommand: loads engine, starts server |
-| `src/cli/index.ts` | Modify | Register `mcp` subcommand |
-| `package.json` | Modify | `@modelcontextprotocol/sdk` in `dependencies` |
+| `src/cli/mcp/mcp-server.ts` | New | MCP server |
+| `src/cli/commands/mcp.ts` | New | Commander wrapper |
+| `src/cli/index.ts` | Modify | Register command |
+| `package.json` | Modify | Add `@modelcontextprotocol/sdk` (or lightweight alternative per spike result) |
 
----
+### Tool surface
 
-### Stage 5-1 — `src/cli/mcp/mcp-server.ts`
+建议工具集:
 
-```typescript
-// src/cli/mcp/mcp-server.ts
-
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import type { QueryEngine } from '@/cli/query/query-engine.js';
-
-const TOOLS = [
-  {
-    name: 'archguard_find_entity',
-    description: 'Find entities by name. Returns type, source file, line number, and public members.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        name:  { type: 'string', description: 'Entity name (exact or fuzzy)' },
-        fuzzy: { type: 'boolean', description: 'Use substring matching', default: false },
-      },
-      required: ['name'],
-    },
-  },
-  {
-    name: 'archguard_get_dependents',
-    description: 'Return entities that depend on the named entity (change impact analysis).',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        entityName: { type: 'string' },
-        depth: { type: 'number', description: 'BFS depth (1–5)', default: 1 },
-      },
-      required: ['entityName'],
-    },
-  },
-  {
-    name: 'archguard_get_dependencies',
-    description: 'Return entities that the named entity depends on.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        entityName: { type: 'string' },
-        depth: { type: 'number', description: 'BFS depth (1–5)', default: 1 },
-      },
-      required: ['entityName'],
-    },
-  },
-  {
-    name: 'archguard_find_implementations',
-    description: 'Return all implementations of an interface or subclasses of an abstract class.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        interfaceName: { type: 'string' },
-      },
-      required: ['interfaceName'],
-    },
-  },
-  {
-    name: 'archguard_get_file_entities',
-    description: 'Return all entities defined in a source file, with their public members.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        filePath: { type: 'string', description: 'Project-relative file path' },
-      },
-      required: ['filePath'],
-    },
-  },
-  {
-    name: 'archguard_detect_cycles',
-    description: 'Return circular dependencies (SCCs of size > 1). Optionally filter to those containing a specific entity.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        entityName: { type: 'string', description: 'Optional: filter to cycles containing this entity name' },
-      },
-    },
-  },
-  {
-    name: 'archguard_summary',
-    description: 'Return a project-level summary: entity count, relation count, cycle count, language, and top-5 most-depended-on entities.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {},
-    },
-  },
-];
-
-export async function startMcpServer(engine: QueryEngine): Promise<void> {
-  const server = new Server(
-    { name: 'archguard', version: '1.0.0' },
-    { capabilities: { tools: {} } }
-  );
-
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args = {} } = request.params;
-
-    let result: unknown;
-
-    switch (name) {
-      case 'archguard_find_entity':
-        result = engine.findEntity(args.name as string, !!(args.fuzzy));
-        break;
-      case 'archguard_get_dependents':
-        result = engine.getDependents(args.entityName as string, (args.depth as number) ?? 1);
-        break;
-      case 'archguard_get_dependencies':
-        result = engine.getDependencies(args.entityName as string, (args.depth as number) ?? 1);
-        break;
-      case 'archguard_find_implementations':
-        result = engine.findImplementations(args.interfaceName as string);
-        break;
-      case 'archguard_get_file_entities':
-        result = engine.getFileEntities(args.filePath as string);
-        break;
-      case 'archguard_detect_cycles':
-        result = engine.getCycles(args.entityName as string | undefined);
-        break;
-      case 'archguard_summary':
-        result = engine.getSummary();
-        break;
-      default:
-        return { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true };
-    }
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    };
-  });
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-}
+```text
+archguard_find_entity
+archguard_get_dependents
+archguard_get_dependencies
+archguard_find_implementers
+archguard_find_subclasses
+archguard_get_file_entities
+archguard_detect_cycles
+archguard_summary
 ```
 
----
+启动参数:
 
-### Stage 5-2 — `src/cli/commands/mcp.ts`
-
-```typescript
-// src/cli/commands/mcp.ts
-
-import { Command } from 'commander';
-import path from 'path';
-import { QueryEngine, QueryDataMissingError } from '@/cli/query/query-engine.js';
-import { startMcpServer } from '@/cli/mcp/mcp-server.js';
-
-export function createMcpCommand(): Command {
-  return new Command('mcp')
-    .description('Start an MCP stdio server exposing ArchGuard query tools to Claude Code')
-    .option('--source-dir <dir>', 'Path to .archguard/ directory (default: ./.archguard)')
-    .action(async (opts) => {
-      const archDir = opts.sourceDir
-        ? path.resolve(opts.sourceDir)
-        : path.join(process.cwd(), '.archguard');
-
-      let engine: QueryEngine;
-      try {
-        engine = await QueryEngine.load(archDir);
-      } catch (err) {
-        if (err instanceof QueryDataMissingError) {
-          // Startup failure: exit immediately with non-zero code (do not enter listen loop)
-          console.error(err.message);
-          process.exit(1);
-        }
-        throw err;
-      }
-
-      await startMcpServer(engine);
-    });
-}
+```bash
+archguard mcp --arch-dir ./.archguard --scope <scope-key>
 ```
 
-### Stage 5-3 — Register in `src/cli/index.ts`
+规则:
 
-```typescript
-import { createMcpCommand } from './commands/mcp.js';
-// ...
-program.addCommand(createMcpCommand());
-```
+- 单 scope 时可省略 `--scope`
+- 多 scope 时必须显式指定
+- 启动时立即加载并校验数据
 
-### Stage 5-4 — Verify
+### Verify
 
 ```bash
 npm run build
-
-# Smoke test: should print tool list then hang (ctrl-c to exit)
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | \
-  node dist/cli/index.js mcp 2>/dev/null | head -1
-# Expected: JSON with tools array containing 7 entries
-
-# Verify startup failure without arch.json
-rm -rf /tmp/empty-archguard && mkdir /tmp/empty-archguard
-node dist/cli/index.js mcp --source-dir /tmp/empty-archguard; echo "exit: $?"
-# Expected: error message + "exit: 1"
+node dist/cli/index.js mcp --help
 ```
 
 ---
 
-## Final Validation
+## Test Matrix
 
-```bash
-npm test
-# Expected: no regressions, all new tests pass
-
-npm run type-check
-# Expected: 0 errors
-
-npm run build
-node dist/cli/index.js analyze -v
-
-# Full query smoke test
-node dist/cli/index.js query --summary --format text
-node dist/cli/index.js query --entity "DiagramProcessor" --format text
-node dist/cli/index.js query --used-by "ArchJSON" --format text
-node dist/cli/index.js query --impls-of "IParser" --format text
-node dist/cli/index.js query --cycles
-
-# Search smoke test
-node dist/cli/index.js search --type interface
-node dist/cli/index.js search --orphans
-node dist/cli/index.js search --in-cycles
-
-# Index consistency: re-run analyze and verify archJsonHash matches
-node dist/cli/index.js analyze -v
-node -e "
-  const crypto = require('crypto');
-  const fs = require('fs');
-  const hash = crypto.createHash('sha256').update(fs.readFileSync('.archguard/arch.json')).digest('hex');
-  const idx  = JSON.parse(fs.readFileSync('.archguard/arch-index.json', 'utf-8'));
-  console.log('hash match:', hash === idx.archJsonHash);
-"
-# Expected: hash match: true
-```
+| # | Check | Phase |
+|---|-------|------|
+| 1 | `manifest.json` created after analyze | 1 |
+| 2 | One `arch.json` per non-empty source group | 1 |
+| 3 | Go Atlas with non-empty entities persists a scope | 1 |
+| 4 | All-empty/all-failed groups produce no scopes and no crash | 1 |
+| 5 | Disk-cache-hit TypeScript scopes appear in `getQuerySourceGroups()` | 1 |
+| 6 | Same sources via relative/absolute paths produce identical scope-key | 1 |
+| 7 | Partial diagram failure still persists successful scopes | 1 |
+| 8 | One `arch-index.json` per scope | 2 |
+| 9 | `archJsonHash` matches `arch.json` disk bytes (not re-serialized) | 2 |
+| 10 | Missing index rebuilds synchronously and persists | 2 |
+| 11 | Hash mismatch rebuilds synchronously and persists | 2 |
+| 12 | Concurrent index rebuild uses random tmp suffix (no file collision) | 2 |
+| 13 | Multiple scopes without `--scope` fail fast | 2/3/4 |
+| 14 | `--implementers-of` only follows `implementation` edges | 3 |
+| 15 | `--subclasses-of` only follows `inheritance` edges | 3 |
+| 16 | `--deps-of` / `--used-by` BFS does not loop on cycles | 3 |
+| 17 | `--depth 1` returns one-hop neighbors only | 3 |
+| 18 | `query --type` / `--orphans` / `--high-coupling` / `--in-cycles` work | 4 |
+| 19 | No `--calls` flag is exposed | 4 |
+| 20 | MCP SDK spike passes (ESM + stdio + bundle size) | 5 |
+| 21 | MCP startup fails fast when scope is ambiguous | 5 |
+| 22 | Existing test suite remains green | all |
 
 ---
 
-## Acceptance Criteria Checklist
+## Risks
 
-Cross-reference with proposal §"验收标准". Each item maps to a numbered criterion.
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Parsed / derived scope 混用导致语义误读 | 查询结果被误当成全局事实 | 在 manifest 与 CLI/MCP 输出里强制显示 `kind`，必要时只默认暴露 parsed scope |
+| 多 scope 项目需要显式 `--scope` | 命令更长 | 这是刻意的精度约束，优先于”省事” |
+| 原子写实现不完整 | 可能留下半写状态 | 统一封装到 `query-artifacts.ts`，随机 tmp 后缀，不要在各处手写 |
+| 后续有人重新加回 `--calls` | 工具语义退化 | 在 proposal 与 tests 中都明确禁止 |
+| `@modelcontextprotocol/sdk` ESM 不兼容 | Phase 5 阻塞 | 前置 spike 验证；备选方案: 手写轻量 JSON-RPC stdio |
+| `scope-key` 对 `workDir` 敏感 | 同项目不同入口产生不同 key | 改为基于稳定源码根标准化，不再使用 `path.relative(workDir)` |
+| scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 前置修复清单已列出 10 条分支中的 6 条遗漏路径；使用实例级 `queryScopes` 收集器统一登记，不依赖 `archJsonCache` 的完整性 |
 
-| # | Criterion | Phase | Verified by |
-|---|-----------|-------|-------------|
-| 1 | `arch.json` present after analyze (TS/Go/Java/Python/C++) | 1 | Self-analysis smoke test |
-| 2 | `arch.json` entity count = `getPrimaryArchJson().entities.length` | 1 | Console check |
-| 3 | Go Atlas: no `arch.json`, no error | 1 | Go Atlas project test |
-| 4 | All groups fail: no `arch.json`, no error | 1 | Error-path test |
-| 5 | `-f json`: both files coexist without conflict | 1 | Self-analysis `-f json` run |
-| 6–10 | index field correctness | 2 | `arch-index-builder.test.ts` |
-| 11 | `archJsonHash` matches written `arch.json` | 2 | Final validation script |
-| 12 | Missing index: rebuild from `arch.json`, no disk write | 2 | `query-engine.test.ts` |
-| 13 | Hash mismatch: rebuild from `arch.json`, no stale data | 2 | `query-engine.test.ts` |
-| 14 | `arch.json` absent: `QueryDataMissingError`, exit 1 | 2 | `query-engine.test.ts` |
-| 15 | MCP: exit 1 if `arch.json` absent (no silent start) | 5 | Stage 5-4 smoke test |
-| 16–24 | `query` flag correctness | 3 | `query.test.ts` + smoke tests |
-| 25–29 | `search` flag correctness | 4 | `search.test.ts` + smoke tests |
-| 30–34 | MCP tool correctness | 5 | MCP smoke test + unit tests |
-| 35–36 | No regressions, type-check clean | All | `npm test`, `npm run type-check` |
+---
+
+## Exit Criteria
+
+只有在以下条件全部满足时，本计划才算完成:
+
+1. Proposal 与 plan 对 scope 模型、Atlas 语义、目录结构、命令边界完全一致
+2. 代码实现不再依赖“primary arch.json”假设
+3. CLI / MCP 都不会在多 scope 下做隐式猜测
+4. 文档中不再出现方法级调用查询承诺

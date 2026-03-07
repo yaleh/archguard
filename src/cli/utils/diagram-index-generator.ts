@@ -19,7 +19,7 @@ import type { ArchJSONMetrics } from '@/types/index.js';
  *
  * Generates index.md with:
  * - List of all diagrams with links
- * - Statistics (entities, relations, parse time)
+ * - Stable diagram statistics (entities, relations)
  * - Failed diagrams section
  * - Summary statistics
  */
@@ -43,12 +43,10 @@ export class DiagramIndexGenerator {
    * Build markdown content for index
    */
   private buildIndexContent(results: DiagramResult[]): string {
-    const timestamp = new Date().toISOString();
     const successful = results.filter((r) => r.success);
     const failed = results.filter((r) => !r.success);
 
     let content = '# Architecture Diagrams\n\n';
-    content += `**Generated**: ${timestamp}\n`;
     content += `**Total Diagrams**: ${results.length}\n`;
     content += `**Successful**: ${successful.length}\n`;
     content += `**Failed**: ${failed.length}\n\n`;
@@ -87,7 +85,6 @@ export class DiagramIndexGenerator {
     if (result.stats) {
       section += `- **Entities**: ${result.stats.entities}\n`;
       section += `- **Relations**: ${result.stats.relations}\n`;
-      section += `- **Parse Time**: ${(result.stats.parseTime / 1000).toFixed(2)}s\n`;
     }
 
     // Add links to generated files
@@ -122,14 +119,12 @@ export class DiagramIndexGenerator {
 
     const totalEntities = successful.reduce((sum, r) => sum + (r.stats?.entities || 0), 0);
     const totalRelations = successful.reduce((sum, r) => sum + (r.stats?.relations || 0), 0);
-    const totalTime = successful.reduce((sum, r) => sum + (r.stats?.parseTime || 0), 0);
     const avgEntities = totalEntities / successful.length;
     const avgRelations = totalRelations / successful.length;
 
     let section = '## Summary Statistics\n\n';
     section += `- **Total Entities**: ${totalEntities}\n`;
     section += `- **Total Relations**: ${totalRelations}\n`;
-    section += `- **Total Parse Time**: ${(totalTime / 1000).toFixed(2)}s\n`;
     section += `- **Average Entities per Diagram**: ${avgEntities.toFixed(1)}\n`;
     section += `- **Average Relations per Diagram**: ${avgRelations.toFixed(1)}\n\n`;
 

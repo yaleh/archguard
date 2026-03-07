@@ -131,3 +131,48 @@ describe('inlineEdgeStyles – flowchart node rect patching', () => {
     );
   });
 });
+
+describe('inlineEdgeStyles – text anchor patching', () => {
+  it('injects text-anchor:middle into flowchart node label text', () => {
+    const svg = `<svg>
+  <style>#id .node .label text,#id .icon-shape .label{text-anchor:middle;}</style>
+  <g class="node default">
+    <g class="label" transform="translate(0,-10.89453125)">
+      <text y="-10.1" style=""><tspan x="0">internal module</tspan></text>
+    </g>
+  </g>
+</svg>`;
+
+    const result = inlineEdgeStyles(svg);
+    expect(result).toContain('<text y="-10.1" style="text-anchor:middle;">');
+  });
+
+  it('injects text-anchor:middle into cluster label text', () => {
+    const svg = `<svg>
+  <style>#id .cluster-label text{fill:#333;text-anchor:middle;}</style>
+  <g class="cluster-label">
+    <g>
+      <text y="-10.1" style=""><tspan x="0">plugins</tspan></text>
+    </g>
+  </g>
+</svg>`;
+
+    const result = inlineEdgeStyles(svg);
+    expect(result).toContain('<text y="-10.1" style="text-anchor:middle;">');
+  });
+
+  it('does not duplicate text-anchor when already present inline', () => {
+    const svg = `<svg>
+  <style>#id .node .label text{text-anchor:middle;}</style>
+  <g class="node default">
+    <g class="label">
+      <text y="-10.1" style="text-anchor:middle;"><tspan x="0">core</tspan></text>
+    </g>
+  </g>
+</svg>`;
+
+    const result = inlineEdgeStyles(svg);
+    expect(result).toBe(svg);
+    expect((result.match(/text-anchor:middle/g) ?? []).length).toBe(2);
+  });
+});
