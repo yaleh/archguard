@@ -125,16 +125,18 @@ export interface QueryManifest {
 
 `scope-key` 生成规则:
 
-1. 对 `sources[]` 中每个路径执行 `path.resolve()`
-2. 再相对于源码工程根（`workspaceRoot` / detected project root / source root parent）做标准化；若无法确定稳定源码根，则退回 canonical absolute path
+1. 对 `sources[]` 中每个路径执行 `path.resolve()` 得到 canonical absolute path
+2. 尝试相对于源码工程根（`workspaceRoot` / detected project root / source root parent）做标准化
 3. 排序后拼接，计算 SHA-256，取前 8 位 hex
 4. manifest 中的 `sources[]` 也存储同样的标准化结果
 
 `workDir` 不是源码路径锚点，不能作为标准化基准；否则同一项目仅因 `workDir` 位置变化就会生成不同 key。上述规则的目标是保证同一组源文件不论用相对路径还是绝对路径 analyze，都产生相同的 scope-key。
 
+**当前限制**: 项目中尚无通用的"源码工程根检测"机制。Go/C++ plugin 的 `workspaceRoot` 来自 `path.resolve(diagram.sources[0])`，TypeScript 同理。这意味着在没有显式 config 的情况下，`path.resolve()` 就是实际的标准化上限——同一项目从不同 CWD 用相对路径 analyze 仍可能产生不同 scope-key。后续若引入项目根检测（如检测 `package.json`/`go.mod`/`CMakeLists.txt` 的最近祖先），可以改进此处。
+
 ### 二、analyze 集成方式
 
-`DiagramProcessor` 不再暴露 `getPrimaryArchJson()`，而是暴露所有可持久化的 source group 结果，例如:
+`DiagramProcessor` 不引入 `getPrimaryArchJson()`（该方法从未存在），而是暴露所有可持久化的 source group 结果，例如:
 
 ```typescript
 interface QuerySourceGroup {
@@ -276,7 +278,7 @@ archguard query --summary
 - 默认 1，硬上限 5
 - depth=1 表示一跳直接邻居（不包含起始实体本身）；depth=2 表示邻居的邻居，以此类推
 - 使用 BFS + visited 防环
-- BFS 遍历的边: `--deps-of` 沿 `dependencies` 方向（source → target），`--used-by` 沿 `dependents` 方向（target → source），**所有 relation type 都参与遍历**（inheritance、implementation、dependency 等不做过滤）
+- BFS 遍历的边: `--deps-of` 沿 `dependencies` 方向（source → target），`--used-by` 沿 `dependents` 方向（target → source），**所有 6 种 relation type 都参与遍历**（inheritance、implementation、composition、aggregation、dependency、association，不做过滤）
 
 ### 八、`search` 子命令
 
@@ -360,8 +362,7 @@ archguard query --used-by "Foo" --scope abc123
 | `src/cli/query/query-artifacts.ts` | scope 持久化、manifest 持久化、原子写 |
 | `src/cli/query/query-engine.ts` | 读取 manifest/scope，校验并查询 |
 | `src/cli/query/engine-loader.ts` | 共享 `resolveArchDir()` / `resolveScope()` / `loadEngine()` |
-| `src/cli/commands/query.ts` | `query` 子命令 |
-| `src/cli/commands/search.ts` | `search` 子命令 |
+| `src/cli/commands/query.ts` | `query` 子命令（包含实体关系查询 + 结构发现） |
 | `src/cli/commands/mcp.ts` | `mcp` 子命令 |
 | `src/cli/mcp/mcp-server.ts` | MCP server |
 
@@ -428,5 +429,5 @@ archguard query --used-by "Foo" --scope abc123
 | `parsed scope` 与 `derived scope` 是否都默认暴露 | 当前实现里二者都存在，但 derived scope 语义更弱。可选方案: 全部暴露并显式标注；或仅默认暴露 parsed scope，把 derived scope 作为扩展模式 | 实现阶段 |
 | 成员级查询模型 | 若后续要支持 `calls`、方法实现、符号级引用，必须先扩展 ArchJSON / index 模型 | 后续独立提案 |
 | `arch.json` 与 `ArchJsonDiskCache` 的重叠 | 两者职责不同: 一个是可发现持久化工件，一个是内容缓存 | 暂不合并 |
-| `@modelcontextprotocol/sdk` 可行性 | 需验证: ESM 兼容性（项目 `”type”: “module”`）、stdio transport 支持、bundle size、是否应设为 optional dependency | Phase 5 前置 spike |
-| `query` 与 `search` 是否合并 | 两个命令共享 `--arch-dir` + `--scope` + `--format` + 同一个 `QueryEngine`。对 agent 增加工具选择认知负担。MCP 层已是扁平工具集不受影响 | 实现阶段评估 |
+| `@modelcontextprotocol/sdk` 可行性 | 需验证: ESM 兼容性（项目 `”type”: “module”`）、stdio transport 支持、bundle size、是否应设为 optional dependency | **与 Phase 1-2 并行执行 spike**，避免 Phase 5 发现不兼容时无调整余地 |
+| `query` 与 `search` 是否合并 | 两个命令共享 `--arch-dir` + `--scope` + `--format` + 同一个 `QueryEngine`。对 agent 增加工具选择认知负担。MCP 层已是扁平工具集不受影响。**建议在 Phase 3 直接合并为单一 `query` 命令**，将 `--type`/`--orphans`/`--high-coupling`/`--in-cycles` 作为 `query` 的子选项，避免 Phase 3 + Phase 4 分别实现后再合并的浪费 | Phase 3 设计阶段决定 |

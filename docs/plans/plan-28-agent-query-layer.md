@@ -20,9 +20,10 @@
 |------|------|------------|
 | Phase 1 | 暴露 query source groups + 持久化 `manifest.json` / per-scope `arch.json` | None |
 | Phase 2 | `ArchIndexBuilder` + `QueryEngine` + 原子一致性 | Phase 1 |
-| Phase 3 | `query` 子命令 | Phase 2 |
-| Phase 4 | `search` 子命令 | Phase 2 |
-| Phase 5 | MCP Server | Phase 3 + 4 |
+| Phase 3 | `query` 子命令（实体关系查询） | Phase 2 |
+| Phase 4 | `query` 命令追加结构发现选项（`--type`/`--orphans`/`--high-coupling`/`--in-cycles`） | Phase 3 |
+| Phase 5 | MCP Server | Phase 4 |
+| Spike | `@modelcontextprotocol/sdk` 可行性验证 | 与 Phase 1-2 并行 |
 
 每个 Phase 都必须独立通过:
 
@@ -76,7 +77,7 @@ node dist/cli/index.js analyze -v
 | `src/cli/processors/diagram-processor.ts` | Modify | Register all final query scopes (parsed + derived); fix missing-scope paths; add `getQuerySourceGroups()` |
 | `src/cli/query/query-manifest.ts` | New | `QueryManifest` types |
 | `src/cli/query/query-artifacts.ts` | New | Persist manifest + per-scope `arch.json` (atomic writes with random tmp suffix) |
-| `src/cli/commands/analyze.ts` | Modify | Persist all scopes after `processAll()` (including partial success) |
+| `src/cli/commands/analyze.ts` | Modify | 在 `processAll()` 返回后、`displayResults()` 之前（即当前 line 338 与 line 341 之间）插入 `persistQueryScopes()` 调用。持久化本身失败时 log warning 但不改变退出码（query 产物是附加产出，不应阻塞主流程） |
 | `tests/unit/cli/processors/diagram-processor-query-scopes.test.ts` | New | Unit tests for `getQuerySourceGroups()` |
 
 ### Implementation notes
@@ -99,29 +100,44 @@ export interface QuerySourceGroup {
 - 不因为 `extensions.goAtlas` 存在而过滤
 - 对派生自父级 scope 的结果标记 `kind: 'derived'`
 
-**前置修复: 所有遗漏 scope 的路径**
+**前置修复: 所有遗漏 scope 的路径（必须逐条确认）**
 
-当前 `processSourceGroup` 的 scope 丢失不止一条路径:
+当前 `processSourceGroup` 的 scope 丢失不止一条路径。以下是 `diagram-processor.ts` 中所有产出最终 ArchJSON 的分支，以及各自是否进入 `archJsonCache`:
 
-- TypeScript package-level disk cache 命中时直接使用 `cachedArchJSON`
-- C++ 子模块由父级 `ArchJSON` 裁剪得到时，没有统一登记
-- 普通 TypeScript 子目录由父级 `ArchJSON` 裁剪得到时，也没有统一登记
+| # | 分支 | 行号 | ArchJSON 来源 | 是否进入 `archJsonCache` | 需修复 |
+|---|------|------|--------------|------------------------|--------|
+| 1 | Go | 464 | `registerDeferred(parseGoProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 2 | C++ root parse | 501 | `registerDeferred(parseCppProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 3 | C++ derived (deferred) | 485 | `deriveSubModuleArchJSON(await deferred)` | ❌ 不入缓存 | **是** |
+| 4 | C++ derived (cached) | 494 | `deriveSubModuleArchJSON(cache.get())` | ❌ 不入缓存 | **是** |
+| 5 | TS package-level (fresh parse) | 542 | `registerDeferred(parseTsProject())` | ✅ 通过 `registerDeferred` | 否 |
+| 6 | TS package-level (disk cache hit) | 540 | `cachedArchJSON` 直接使用 | ❌ 不入缓存 | **是** |
+| 7 | Generic (fresh parse) | 625 | `ParallelParser.parseFiles()` → `cacheArchJson()` | ✅ 手动调用 | 否 |
+| 8 | Generic (disk cache hit) | 611 | `archJsonDiskCache.get()` | ❌ 不入缓存 | **是** |
+| 9 | Generic derived (deferred) | 578 | `deriveSubModuleArchJSON(await deferred)` | ❌ 不入缓存 | **是** |
+| 10 | Generic derived (cached) | 592 | `deriveSubModuleArchJSON(cache.get())` | ❌ 不入缓存 | **是** |
 
-因此不能只修一个 disk-cache-hit 分支。必须把“最终用于该 source group 的 `ArchJSON`”统一登记到 query scope 集合，来源可以是解析、内存缓存、磁盘缓存或父级派生。
+共 6 条路径需要修复。`getQuerySourceGroups()` 的实现不能依赖 `archJsonCache` 的完整性，而必须在所有 10 条分支中统一登记 query scope。
+
+推荐方案: 在 `DiagramProcessor` 中增加一个实例级 `queryScopes: Map<string, QuerySourceGroup>` 收集器。在每个分支确定最终 `rawArchJSON` 后、调用 `processDiagramWithArchJSON` 之前，统一登记。`getQuerySourceGroups()` 返回该 Map 的值，**仅在 `processAll()` 完成后调用有效**。
+
+**Python/Java 路径**: 当前 Python 和 Java 通过 Generic 分支（`ParallelParser` fallback）处理，对应上表中的 #7-#10。无需额外分支处理，但测试应覆盖 `--lang java`/`--lang python` 场景下 query scope 的正确登记。
 
 **scope-key 标准化**
 
 当前 `hashSources()` 直接使用 CLI 传入的路径字符串，导致同一项目用不同路径（`./src` vs `/abs/path/src`）analyze 产生不同 scope-key。并且 `workDir` 不是稳定源码锚点，不能作为 `path.relative()` 基准。修改 `hashSources()` 或在 `getQuerySourceGroups()` 中:
 
-1. 对每个 source 执行 `path.resolve()`
-2. 再相对于源码工程根（`workspaceRoot` / detected project root / source root parent）做标准化；若无法确定稳定源码根，则退回 canonical absolute path
+1. 对每个 source 执行 `path.resolve()` 得到 canonical absolute path
+2. 尝试相对于源码工程根做标准化；当前项目中无通用的项目根检测机制（Go/C++/TS plugin 的 `workspaceRoot` 均来自 `path.resolve(diagram.sources[0])`），因此 `path.resolve()` 就是实际的标准化上限
 3. 排序后拼接计算 SHA-256 前 8 位
 
 manifest 中的 `sources[]` 也存储标准化后的路径。
 
+**已知限制**: 同一项目从不同 CWD 用相对路径 analyze 仍可能产生不同 scope-key。后续若引入项目根检测（如检测 `package.json`/`go.mod`/`CMakeLists.txt` 的最近祖先），可以改进。
+
 `query-artifacts.ts` 先实现 Phase 1 最小集:
 
-- `persistQueryScopes(workDir, scopes)`
+- `persistQueryScopes(workDir, scopes)` — 注意 `GlobalConfig.workDir` 类型为 `string | undefined`（`config.ts:368`），但 `Config` schema 有 `.default('./.archguard')`。`analyze.ts` 中 `config` 被 `as any` cast 到 `GlobalConfig`，因此 `persistQueryScopes` 必须处理 `workDir` 为 undefined 的 case（fallback 到 `.archguard`）
 - 写 `.archguard/query/manifest.json`
 - 写 `.archguard/query/<scope-key>/arch.json`
 - 所有写入使用随机后缀 tmp 文件 + rename（`arch.json.tmp.<random>`）
@@ -230,6 +246,11 @@ ls .archguard/query
 
 本阶段不实现 `findCallers`
 
+`ArchIndexBuilder` 实现约束:
+
+- `ArchIndex.cycles` 复用 `CycleInfo` 类型，其中 `memberNames` 和 `files` 需要从 entities 反查（通过 `idToName` 和 `idToFile` 索引），构建时必须在 entities 索引完成后再构建 cycles
+- `QueryEngine.load()` 读取 `manifest.json` 时应使用 zod schema validation，与现有 `config-loader.ts` 保持一致
+
 补充约束:
 
 - 对 `kind: "derived"` 的 scope，查询语义按“裁剪后的局部视图”解释
@@ -318,40 +339,35 @@ node dist/cli/index.js query --summary --scope <scope-key>
 
 ---
 
-## Phase 4 — `search` Subcommand
+## Phase 4 — 结构发现查询（合并入 `query` 命令）
 
 ### Objectives
 
-实现实体级结构发现命令，不越界承诺调用图。
+将实体级结构发现能力合并入 Phase 3 的 `query` 命令，而不是创建独立的 `search` 子命令。
+
+**合并理由**: `query` 与 `search` 共享 `--arch-dir` + `--scope` + `--format` + 同一个 `QueryEngine`，分成两个命令对 agent 增加不必要的工具选择认知负担。MCP 层已经是扁平的 8 个 tool，CLI 层也应避免人为分裂。
 
 ### Files changed
 
 | File | Type | Description |
 |------|------|-------------|
-| `src/cli/commands/search.ts` | New | Commander search command |
-| `src/cli/index.ts` | Modify | Register command |
+| `src/cli/commands/query.ts` | Modify | 增加 `--type`、`--high-coupling`、`--orphans`、`--in-cycles` 选项 |
 
-### Command surface
+不再创建 `src/cli/commands/search.ts`，不再在 `index.ts` 注册 `search` 命令。
 
-```bash
-archguard search --type interface
-archguard search --high-coupling --threshold 8
-archguard search --orphans
-archguard search --in-cycles
-```
-
-公共参数:
+### Command surface (追加到 Phase 3 的 query 命令)
 
 ```bash
---arch-dir <dir>
---scope <scope-key>
---format json|text
+archguard query --type interface
+archguard query --high-coupling --threshold 8
+archguard query --orphans
+archguard query --in-cycles
 ```
 
 明确不实现:
 
 ```bash
-archguard search --calls ...
+archguard query --calls ...
 ```
 
 原因:
@@ -363,17 +379,19 @@ archguard search --calls ...
 
 ```bash
 npm run build
-node dist/cli/index.js search --help
-node dist/cli/index.js search --type interface --scope <scope-key>
+node dist/cli/index.js query --help
+node dist/cli/index.js query --type interface --scope <scope-key>
 ```
 
 ---
 
 ## Phase 5 — MCP Server
 
-### Pre-requisite: SDK Spike
+### Pre-requisite: SDK Spike（与 Phase 1-2 并行执行）
 
-在开始 Phase 5 实现前，必须先完成一个 spike 验证 `@modelcontextprotocol/sdk`:
+**重要**: 此 spike 应与 Phase 1-2 并行执行，而非等到 Phase 5 开始前。如果 spike 失败需要手写轻量 JSON-RPC stdio server，工作量差异显著，必须尽早发现。
+
+验证 `@modelcontextprotocol/sdk`:
 
 1. ESM 兼容性: 项目是 `"type": "module"`，确认 SDK 支持纯 ESM import
 2. stdio transport: 确认 SDK 提供 stdio server transport（不需要 HTTP）
@@ -447,12 +465,12 @@ node dist/cli/index.js mcp --help
 | 10 | Missing index rebuilds synchronously and persists | 2 |
 | 11 | Hash mismatch rebuilds synchronously and persists | 2 |
 | 12 | Concurrent index rebuild uses random tmp suffix (no file collision) | 2 |
-| 13 | Multiple scopes without `--scope` fail fast | 2/3/4/5 |
+| 13 | Multiple scopes without `--scope` fail fast | 2/3/4 |
 | 14 | `--implementers-of` only follows `implementation` edges | 3 |
 | 15 | `--subclasses-of` only follows `inheritance` edges | 3 |
 | 16 | `--deps-of` / `--used-by` BFS does not loop on cycles | 3 |
 | 17 | `--depth 1` returns one-hop neighbors only | 3 |
-| 18 | `search --type` / `--orphans` / `--high-coupling` / `--in-cycles` work | 4 |
+| 18 | `query --type` / `--orphans` / `--high-coupling` / `--in-cycles` work | 4 |
 | 19 | No `--calls` flag is exposed | 4 |
 | 20 | MCP SDK spike passes (ESM + stdio + bundle size) | 5 |
 | 21 | MCP startup fails fast when scope is ambiguous | 5 |
@@ -470,7 +488,7 @@ node dist/cli/index.js mcp --help
 | 后续有人重新加回 `--calls` | 工具语义退化 | 在 proposal 与 tests 中都明确禁止 |
 | `@modelcontextprotocol/sdk` ESM 不兼容 | Phase 5 阻塞 | 前置 spike 验证；备选方案: 手写轻量 JSON-RPC stdio |
 | `scope-key` 对 `workDir` 敏感 | 同项目不同入口产生不同 key | 改为基于稳定源码根标准化，不再使用 `path.relative(workDir)` |
-| scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 必须覆盖所有 `processSourceGroup` 路径统一登记最终 query scope，而不只是修 disk-cache-hit |
+| scope 丢失 | `getQuerySourceGroups()` 返回不完整 | Phase 1 前置修复清单已列出 10 条分支中的 6 条遗漏路径；使用实例级 `queryScopes` 收集器统一登记，不依赖 `archJsonCache` 的完整性 |
 
 ---
 
