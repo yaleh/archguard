@@ -325,9 +325,9 @@ describe('ArchJsonProvider', () => {
     expect(mockParseFiles).toHaveBeenCalledTimes(1);
   });
 
-  // ---- 9. Path A disk cache hit → no cacheSize increment ------------------
+  // ---- 9. Path A disk cache hit → populates memory cache -----------------
 
-  it('path A disk cache hit does not populate memory cache (cacheSize stays 0)', async () => {
+  it('path A disk cache hit populates memory cache for sub-group derivation', async () => {
     const cachedArchJson = makeArchJSON();
     const mockDiskGet = vi.fn().mockResolvedValue(cachedArchJson);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts']);
@@ -349,8 +349,48 @@ describe('ArchJsonProvider', () => {
 
     expect(kind).toBe('parsed');
     expect(archJson).toBe(cachedArchJson);
-    // Path A intentionally skips cacheArchJson; memory cache stays empty
-    expect(provider.cacheSize()).toBe(0);
+    // Path A disk hit must call cacheArchJson so sub-groups can derive from it
+    expect(provider.cacheSize()).toBe(1);
+  });
+
+  // ---- 9a. Path A disk cache hit enables sub-group derivation -------------
+
+  it('path A disk cache hit enables sub-group derivation via path index', async () => {
+    // Build a parent ArchJSON whose entity id encodes the sub-path
+    const parentEntity = {
+      id: 'src/sub/module.ts.SubClass',
+      name: 'SubClass',
+      type: 'class' as const,
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: { file: 'src/sub/module.ts', startLine: 1, endLine: 10 },
+    };
+    const cachedArchJson = makeArchJSON({ entities: [parentEntity] });
+
+    const mockDiskGet = vi.fn().mockResolvedValue(cachedArchJson);
+    const mockDiscoverFiles = vi.fn().mockResolvedValue(['/project/src/sub/module.ts']);
+
+    (ArchJsonDiskCache as any).mockImplementation(() => ({
+      get: mockDiskGet,
+      set: vi.fn().mockResolvedValue(undefined),
+      computeKey: vi.fn().mockResolvedValue('disk-key-A'),
+    }));
+    (FileDiscoveryService as any).mockImplementation(() => ({
+      discoverFiles: mockDiscoverFiles,
+    }));
+
+    const provider = new ArchJsonProvider({ globalConfig: makeGlobalConfig() });
+
+    // Step 1: Path A disk cache hit for parent sources ['/project/src']
+    const parentDiagram = makeDiagram({ sources: ['/project/src'], level: 'package' });
+    await provider.get(parentDiagram, { needsModuleGraph: true });
+
+    // Step 2: sub-group sources ['/project/src/sub'] should derive from parent
+    const subDiagram = makeDiagram({ sources: ['/project/src/sub'], level: 'method' });
+    const { kind } = await provider.get(subDiagram, { needsModuleGraph: false });
+
+    // Should derive (not parse independently)
+    expect(kind).toBe('derived');
   });
 
   // ---- 10. Path B disk cache hit → cacheSize increments -------------------

@@ -299,8 +299,9 @@ export class ArchJsonProvider {
             `💾 Disk cache hit for ts-morph path: ${diagram.sources.join(', ')}`
           );
         }
-        // Path A disk hit: intentionally do NOT call cacheArchJson (mirrors original behaviour).
-        // groupDiagramsBySource guarantees each source key is get()-ed once per run.
+        // Populate memory cache and path index so sub-groups can derive from this result
+        // via findParentCoverage() without re-parsing independently.
+        this.cacheArchJson(diagram.sources, cachedFromDisk);
         return { archJson: cachedFromDisk, kind: 'parsed' };
       }
       const archJson = await this.registerDeferred(
