@@ -1,0 +1,291 @@
+# Architecture Checking Scenarios
+
+This guide organizes ArchGuard around common architecture review tasks instead of individual commands.
+
+Use it when you want to answer questions like:
+
+- What are the major modules in this codebase?
+- Which classes or packages are tightly coupled?
+- Are there circular dependencies?
+- Which implementations exist for an interface?
+- Which files or entities look oversized or isolated?
+- How can an agent query architecture data through MCP?
+
+## Before You Start
+
+Generate analysis artifacts first:
+
+```bash
+archguard analyze
+```
+
+If you want to inspect a specific source set:
+
+```bash
+archguard analyze -s ./src
+archguard analyze -s ./src/plugins
+```
+
+This writes diagrams to `.archguard/output/` and query artifacts to `.archguard/query/`.
+
+## 1. Build a High-Level Architecture View
+
+Use this when you need a quick map of the codebase before drilling into details.
+
+```bash
+archguard analyze
+archguard analyze --diagrams package class
+```
+
+What to inspect:
+
+- Package diagrams for top-level module boundaries
+- Class diagrams for main abstractions and ownership
+- Method-level diagrams for dense submodules
+
+Good fit for:
+
+- New-team onboarding
+- Design reviews
+- Large refactoring kickoff
+
+Related docs:
+
+- [CLI Usage](./cli-usage.md)
+- [Configuration Reference](./configuration.md)
+
+## 2. Trace Dependencies Around a Critical Component
+
+Use this when you want to understand the blast radius of a change.
+
+```bash
+archguard query --entity "DiagramProcessor"
+archguard query --deps-of "DiagramProcessor" --depth 2
+archguard query --used-by "DiagramProcessor" --depth 2
+```
+
+What to inspect:
+
+- Direct dependencies for local complexity
+- Dependents for change impact
+- Depth-2 traversals for subsystem-level influence
+
+Good fit for:
+
+- Refactoring planning
+- PR risk analysis
+- Ownership mapping
+
+## 3. Check Interface Implementations and Inheritance Trees
+
+Use this when you want to validate extension points or polymorphic design.
+
+```bash
+archguard query --implementers-of "ILanguagePlugin"
+archguard query --subclasses-of "BaseExtractor"
+```
+
+What to inspect:
+
+- Whether an abstraction is actually used
+- Whether implementations are clustered or scattered
+- Whether inheritance is shallow and intentional
+
+Good fit for:
+
+- Plugin architecture review
+- Framework extension audits
+- Base-class cleanup
+
+## 4. Detect Circular Dependencies
+
+Use this when you suspect layer violations or tightly tangled modules.
+
+```bash
+archguard query --cycles
+archguard query --in-cycles
+```
+
+What to inspect:
+
+- Which entities participate in cycles
+- Whether cycles stay inside one submodule or cross subsystem boundaries
+- Whether method-level cycles point to missing interfaces or incorrect ownership
+
+Good fit for:
+
+- Layered architecture enforcement
+- Pre-release cleanup
+- Monolith modularization
+
+## 5. Find High-Coupling Hotspots
+
+Use this when you want to identify likely refactoring targets.
+
+```bash
+archguard query --high-coupling
+archguard query --high-coupling --threshold 12
+```
+
+What to inspect:
+
+- Entities with many incoming and outgoing relationships
+- Utility classes that became de facto coordinators
+- Components that combine orchestration and domain logic
+
+Good fit for:
+
+- God-object detection
+- Simplification work
+- Architecture debt triage
+
+## 6. Find Orphans and Under-Integrated Code
+
+Use this when you want to identify dead code, unfinished integration, or isolated helpers.
+
+```bash
+archguard query --orphans
+archguard query --file "src/cli/mcp/mcp-server.ts"
+```
+
+What to inspect:
+
+- Entities with zero incoming and outgoing edges
+- Files that contain many unrelated entities
+- Modules that exist in diagrams but are not connected to the main flow
+
+Good fit for:
+
+- Dead-code review
+- Cleanup after migrations
+- Code organization review
+
+## 7. Compare Subsystems with Query Scopes
+
+Use this when you want to inspect one part of a repository without loading the entire architecture into a single graph.
+
+Example configuration:
+
+```json
+{
+  "diagrams": [
+    { "name": "cli", "sources": ["./src/cli"], "level": "method" },
+    { "name": "parser", "sources": ["./src/parser"], "level": "method" },
+    { "name": "plugins", "sources": ["./src/plugins"], "level": "method" }
+  ]
+}
+```
+
+Then inspect available scopes:
+
+```bash
+archguard analyze
+archguard query --list-scopes
+archguard query --scope <scope-key> --summary
+```
+
+What to inspect:
+
+- Whether one subsystem has much higher entity density than others
+- Whether a specific source set has local cycles or hotspots
+- Whether generated scopes match intended module boundaries
+
+Good fit for:
+
+- Monorepos
+- Layer-by-layer review
+- Team ownership boundaries
+
+## 8. Review Go Projects with Atlas Layers
+
+Use this when a standard package/class/method view is not enough for Go systems.
+
+```bash
+archguard analyze -s ./cmd --lang go
+archguard analyze -s ./cmd --lang go --atlas-layers package,capability
+archguard analyze -s ./cmd --lang go --no-atlas
+```
+
+What to inspect:
+
+- Package dependency structure
+- Capability clustering
+- Goroutine topology
+- Flow entry points and execution paths
+
+Good fit for:
+
+- Service topology review
+- Concurrency review
+- Architecture deep-dives for Go systems
+
+Related docs:
+
+- [Go Plugin Usage](./golang-plugin-usage.md)
+
+## 9. Query Architecture Data Through MCP
+
+Use this when an agent, IDE assistant, or automation pipeline needs structured architecture answers.
+
+```bash
+archguard mcp
+```
+
+The MCP server exposes:
+
+- Query tools such as entity lookup, dependency traversal, implementer search, file lookup, cycle detection, and summary
+- `archguard_analyze` to refresh query artifacts in the current session
+
+Good fit for:
+
+- Agent-assisted code review
+- Architecture-aware development workflows
+- Automated repository inspection
+
+## Typical Review Playbooks
+
+### Refactoring Review
+
+1. `archguard analyze`
+2. `archguard query --high-coupling`
+3. `archguard query --deps-of "<target>" --depth 2`
+4. `archguard query --used-by "<target>" --depth 2`
+
+### Layer Violation Review
+
+1. `archguard analyze`
+2. `archguard query --cycles`
+3. `archguard query --in-cycles`
+4. Inspect package and method diagrams for the affected scope
+
+### Extension Point Review
+
+1. `archguard analyze`
+2. `archguard query --implementers-of "<interface>"`
+3. `archguard query --subclasses-of "<base-class>"`
+4. Inspect whether implementations remain cohesive
+
+### Agent Workflow Review
+
+1. `archguard analyze`
+2. `archguard mcp`
+3. Let the agent call query tools against persisted scopes
+4. Re-run `archguard_analyze` after meaningful code changes
+
+## Limits
+
+ArchGuard is strongest for structural inspection:
+
+- entities
+- relations
+- dependency shape
+- scope summaries
+- language-specific architecture views such as Go Atlas
+
+It does not yet provide first-class architectural rule enforcement such as:
+
+- "controller must not call repository directly"
+- "package A may only depend on package B"
+- "all implementations must live under a specific module"
+
+Those checks can still be approximated today with query workflows, but they are not yet a dedicated policy engine.

@@ -1,6 +1,6 @@
 # ArchGuard
 
-ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), and Python (beta) through a plugin system, with optional LLM-powered grouping for better diagram organization.
+ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), and Python (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
 
 ## Screenshots
 
@@ -20,7 +20,7 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
 - **Parallel Processing**: High-performance parsing with configurable concurrency
 - **Smart Caching**: File-based caching with SHA-256 hashing for fast repeated runs
-- **AI-Powered Grouping**: Optional LLM-powered intelligent grouping via Claude API
+- **Query & MCP Workflows**: Persisted architecture data can be inspected via CLI query tools or MCP
 - **Zero External Dependencies**: Local Mermaid rendering using isomorphic-mermaid
 - **Five-Layer Validation**: Automatic syntax, structure, render, quality, and auto-repair validation
 - **Configuration Files**: Project-level config with `archguard.config.json` support
@@ -164,6 +164,17 @@ archguard query --deps-of "DiagramProcessor" --depth 2
 archguard query --implementers-of "ILanguagePlugin"
 archguard query --list-scopes
 ```
+
+Typical architecture checking tasks:
+
+- Dependency impact: `archguard query --deps-of "DiagramProcessor" --depth 2`
+- Reverse impact: `archguard query --used-by "DiagramProcessor" --depth 2`
+- Extension points: `archguard query --implementers-of "ILanguagePlugin"`
+- Circular dependencies: `archguard query --cycles`
+- Refactoring hotspots: `archguard query --high-coupling`
+- Orphans: `archguard query --orphans`
+
+See [Architecture Checking Scenarios](docs/user-guide/architecture-checking-scenarios.md) for task-oriented workflows.
 
 ### `mcp`
 
@@ -377,6 +388,12 @@ archguard analyze -s ./src -c 1     # sequential (debugging)
 
 ## Architecture
 
+For current implementation details, see:
+
+- [Architecture Checking Scenarios](docs/user-guide/architecture-checking-scenarios.md)
+- [Architecture Overview](docs/dev-guide/architecture.md)
+- [CLI Usage](docs/user-guide/cli-usage.md)
+
 ### Project Structure
 
 ```
@@ -416,27 +433,22 @@ archguard/
 ### Data Flow
 
 ```
-Source Files
+CLI / MCP entrypoint
     │
-    ▼ Language Plugin (TypeScript / Go / Java / Python)
-AST / Tree-sitter Parse
+    ▼ Shared analysis core (`runAnalysis`)
+Config normalization + diagram selection
     │
-    ▼ Extractors
-ArchJSON (entities + relations)
+    ▼ DiagramProcessor
+ArchJsonProvider + language plugins
     │
-    ├─► (Go) Atlas Builders → 4-layer extension
+    ▼ ArchJSON (entities + relations + optional extensions)
     │
-    ▼ LLM Grouper (optional, Claude API)
-Grouped ArchJSON
+    ├─► Query artifacts (`.archguard/query/*`)
+    ├─► Mermaid / JSON outputs (`.archguard/output/*`)
+    └─► Go Atlas extension (package / capability / goroutine / flow)
     │
-    ▼ Mermaid Generator
-.mmd syntax
-    │
-    ▼ Five-Layer Validator + Auto-repair
-Valid .mmd
-    │
-    ▼ isomorphic-mermaid + sharp
-.svg + .png
+    ▼ QueryEngine / MCP query tools
+Architecture inspection workflows
 ```
 
 ## Development
@@ -447,7 +459,6 @@ Valid .mmd
 - npm or yarn
 
 Optional, for enhanced features:
-- **Claude CLI** — LLM-powered diagram grouping
 - **gopls** — Semantic interface detection for Go projects
 
 ### Setup
@@ -507,7 +518,6 @@ node dist/cli/index.js analyze -s ./src/cli -l method -n cli-module
 | Go LSP | gopls | latest | Semantic interface detection |
 | Diagram Generation | isomorphic-mermaid | ^0.1.1 | Local Mermaid rendering |
 | Image Processing | sharp | ^0.34.5 | SVG → PNG conversion |
-| LLM Integration | @anthropic-ai/sdk | ^0.20.0 | Optional LLM grouping |
 | Process Management | execa | ^8.0.0 | Subprocess execution |
 | Testing | Vitest | ^1.2.0 | Unit/integration tests |
 | CLI | commander | ^11.1.0 | Command-line interface |
@@ -521,17 +531,18 @@ See [TROUBLESHOOTING.md](docs/user-guide/troubleshooting.md) for common issues.
 
 Quick fixes:
 
-- **LLM grouping fails** — run with `--no-llm-grouping` to use heuristic mode
 - **Go interface detection low** — install gopls: `go install golang.org/x/tools/gopls@latest`
 - **Slow first run** — normal; subsequent runs use cache (80%+ hit rate)
 - **Render errors** — the five-layer validator auto-repairs most issues; run with `-v` for details
-- **Install fails on macOS arm64 + Node.js 25** — `tree-sitter` native addon compilation requires C++20; use `npm install -g @yalehwang/archguard --ignore-scripts` to skip native build (JS functionality unaffected), or use Node.js 22 LTS
+- **Install fails with missing `tree-sitter` binding** — use the packaged release tarball that bundles the required prebuilt `tree-sitter` binary for your platform/runtime; source rebuild fallback is disabled
 
 ## Documentation
 
 - [CLI Usage Guide](docs/user-guide/cli-usage.md)
+- [Architecture Checking Scenarios](docs/user-guide/architecture-checking-scenarios.md)
 - [Configuration Reference](docs/user-guide/configuration.md)
 - [Go Plugin Usage Guide](docs/user-guide/golang-plugin-usage.md)
+- [Architecture Overview](docs/dev-guide/architecture.md)
 - [Plugin Development Guide](docs/dev-guide/plugin-development-guide.md)
 - [Plugin Registry](docs/user-guide/plugin-registry.md)
 - [Troubleshooting](docs/user-guide/troubleshooting.md)
@@ -557,4 +568,3 @@ Built with:
 - [tree-sitter](https://tree-sitter.github.io/) for Go/Java/Python parsing
 - [Mermaid](https://mermaid.js.org/) for diagram syntax
 - [isomorphic-mermaid](https://github.com/brede95/isomorphic-mermaid) for rendering
-- [Claude AI](https://www.anthropic.com/claude) for optional LLM-powered grouping

@@ -55,3 +55,4 @@ archguard*.json
 /archguard-self-analysis/
 /codex-swarm-analysis/
 /.archguard/
+/*-archguard-*.tgz

@@ -18,7 +18,7 @@ export async function normalizeToDiagrams(
 
   if (cliOptions.sources && cliOptions.sources.length > 0) {
     const language = cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined);
-    const atlasEnabled = language === 'go' && !cliOptions.noAtlas;
+    const atlasEnabled = language === 'go' && cliOptions.atlas !== false;
 
     if (atlasEnabled) {
       const diagram: DiagramConfig = {
@@ -41,7 +41,7 @@ export async function normalizeToDiagrams(
       return [diagram];
     }
 
-    if (language === 'go' && cliOptions.noAtlas) {
+    if (language === 'go' && cliOptions.atlas === false) {
       const diagram: DiagramConfig = {
         name: 'architecture',
         sources: cliOptions.sources,

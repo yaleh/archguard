@@ -3,6 +3,7 @@
 ## User Guide
 
 - [CLI Usage](user-guide/cli-usage.md)
+- [Architecture Checking Scenarios](user-guide/architecture-checking-scenarios.md)
 - [Configuration Reference](user-guide/configuration.md)
 - [Troubleshooting](user-guide/troubleshooting.md)
 - [Migration from v1 (PlantUML)](user-guide/migration-v2.0.md)

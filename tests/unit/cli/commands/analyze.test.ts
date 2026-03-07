@@ -369,10 +369,11 @@ describe('normalizeToDiagrams', () => {
     });
 
     it('--lang go --no-atlas disables atlas (opt-out)', async () => {
+      // Commander.js sets atlas: false when --no-atlas is passed (negatable option)
       const result = await normalizeToDiagrams(baseConfig, {
         sources: ['./src'],
         lang: 'go',
-        noAtlas: true,
+        atlas: false,
       });
 
       expect(result[0].language).toBe('go');

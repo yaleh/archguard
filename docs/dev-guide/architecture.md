@@ -1,136 +1,251 @@
-# **ArchGuard: 系统架构设计文档**
+# ArchGuard Architecture Overview
 
-## **1\. 系统组件概览**
+This document describes the current implementation architecture of ArchGuard as of March 2026.
 
-ArchGuard 由三个主要层级组成，形成一个完整的自动化流水线：
+It replaces older descriptions that were centered on a TypeScript-only pipeline, hook listeners, and default LLM grouping. The current system is a plugin-based, multi-language analysis tool with a shared analysis core, persisted query artifacts, and MCP integration.
 
-### **1.1 触发层 (Trigger Layer)**
+## 1. System Shape
 
-* **Hook Listener**: 监听本地环境事件。  
-* **Config Loader**: 读取 archguard.config.json，确定扫描范围、排除目录及 AI 配置。
+ArchGuard is organized around five major areas:
 
-### **1.2 引擎层 (Core Engine)**
+1. Entry layer
+2. Shared analysis core
+3. Query layer
+4. Language plugin layer
+5. Output and rendering layer
 
-* **TS-Scanner**: 基于 ts-morph 构建。负责扫描 TS 文件并构建 AST。  
-* **Snippet Extractor**: 核心过滤逻辑。将 AST 转换为“架构摘要 JSON”（Arch-JSON）。  
-* **Relationship Resolver**: 分析 import/export，建立跨文件的依赖链接。
+At the center is a stable intermediate representation: `ArchJSON`.
 
-### **1.3 集成层 (Integration Layer)**
+`ArchJSON` is the contract shared by parsers, query tools, diagram generation, and language-specific extensions such as Go Atlas.
 
-* **LLM Grouping Service**: 可选的 LLM 驱动的智能分组服务，优化实体组织。
-* **Mermaid Generator**: 本地生成 Mermaid 语法，不依赖外部服务。
-* **Validation Pipeline**: 五层验证确保生成的图表质量（语法、结构、渲染、质量、自动修复）。
-* **Isomorphic Mermaid Renderer**: 使用 isomorphic-mermaid 进行本地渲染，生成 SVG 和 PNG。
+## 2. Major Components
 
-## **2\. 核心工作流**
+### 2.1 Entry Layer
 
-1. **事件触发**：用户运行 `archguard analyze -s ./src`。
-2. **静态解析**：
-   * TS-Scanner 扫描所有 TS 文件并构建 AST。
-   * 提取这些文件的 class definition, public methods, injected dependencies。
-   * 生成摘要：{ "class": "AuthService", "dependsOn": \["UserRepository"\], "methods": \["login", "signup"\] }。
-3. **可选分组**：
-   * 使用 LLM 进行智能实体分组（可选，默认启用）。
-   * 或使用启发式算法进行快速分组（`--no-llm-grouping`）。
-4. **Mermaid 生成**：
-   * Arch-JSON → Mermaid 语法生成器。
-   * 输出：Mermaid 代码块。
-5. **五层验证**：
-   * Parse Validation: 语法检查
-   * Structural Validation: 实体引用、关系对称性
-   * Render Validation: 可渲染性测试
-   * Quality Analysis: 可读性、完整性、复杂度评分
-   * Auto-Repair: 自动语法修复
-6. **本地渲染**：
-   * 使用 isomorphic-mermaid 渲染为 SVG。
-   * 使用 sharp 转换为 PNG。
-7. **输出**：
-   * 写入 `archguard/architecture.mmd`（Mermaid 源代码）。
-   * 写入 `archguard/architecture.svg`（矢量图）。
-   * 写入 `archguard/architecture.png`（位图）。
+Primary entrypoints:
 
-## **3\. 技术栈选择**
+- CLI commands under `src/cli/commands/`
+- MCP server under `src/cli/mcp/`
 
-* **Runtime**: Node.js (TypeScript)
-* **Static Analysis**: ts-morph (封装了 TypeScript Compiler API，更易用)
-* **Diagram Generation**: 本地 Mermaid 生成器（无需外部服务）
-* **Rendering**: isomorphic-mermaid (SVG渲染) + sharp (PNG转换)
-* **LLM Integration**: @anthropic-ai/sdk (可选，用于智能分组)
-* **CLI Framework**: commander.js
-* **Process Management**: Node.js child_process / execa (执行 Claude CLI 命令)
+Responsibilities:
 
-## **4\. LLM 智能分组（可选）**
+- parse user input
+- choose work/output directories
+- call the shared analysis core or query layer
+- present results to terminals or MCP clients
 
-ArchGuard v2.0 提供可选的 LLM 驱动智能分组功能，用于优化实体组织。
+Important rule:
 
-**启用 LLM 分组**（默认）：
-```bash
-archguard analyze -s ./src
-# 消耗约 2000 tokens，生成更好的分组结构
+- CLI and MCP must not maintain separate analysis write paths
+
+That constraint is captured in [ADR-004](../adr/004-single-analysis-write-path-for-cli-and-mcp.md).
+
+### 2.2 Shared Analysis Core
+
+The shared orchestration entrypoint is `runAnalysis()` in `src/cli/analyze/run-analysis.ts`.
+
+Responsibilities:
+
+- load configuration
+- normalize diagram selection
+- invoke diagram processing
+- write diagram manifests
+- persist query scopes
+- generate output indexes
+
+This is the write-path authority for both CLI and MCP analysis.
+
+### 2.3 Diagram Processing Pipeline
+
+`DiagramProcessor` in `src/cli/processors/diagram-processor.ts` is the main batch execution component.
+
+Responsibilities:
+
+- group diagrams by source set
+- reuse parsed `ArchJSON` where possible
+- isolate failures per diagram
+- coordinate render worker pools
+- collect query scopes for later persistence
+
+Supporting components include:
+
+- `ArchJsonProvider`
+- `DiagramOutputRouter`
+- `ParallelProgressReporter`
+- `MermaidRenderWorkerPool`
+
+### 2.4 Query Layer
+
+The query layer turns persisted analysis artifacts into architecture inspection tools.
+
+Core components:
+
+- `persistQueryScopes()` in `src/cli/query/query-artifacts.ts`
+- `loadEngine()` in `src/cli/query/engine-loader.ts`
+- `QueryEngine` in `src/cli/query/query-engine.ts`
+- MCP query registration in `src/cli/mcp/mcp-server.ts`
+
+Responsibilities:
+
+- persist `ArchJSON` and indexes per scope
+- expose summaries, dependencies, dependents, implementers, subclasses, cycles, and file-level views
+- provide a stable architecture query surface for CLI and MCP clients
+
+This is what makes ArchGuard usable for architecture review, not just diagram generation.
+
+### 2.5 Language Plugin Layer
+
+Language support is built around `ILanguagePlugin` in `src/core/interfaces/language-plugin.ts` and `PluginRegistry` in `src/core/plugin-registry.ts`.
+
+The plugin contract includes:
+
+- initialization
+- project and file parsing
+- supported diagram levels
+- optional dependency extraction
+- optional validation
+
+Current in-repo plugin implementations:
+
+- TypeScript
+- Go
+- Go Atlas
+- Java
+- Python
+- C++
+
+The registry handles:
+
+- plugin registration
+- version lookup
+- extension routing
+- directory marker detection
+- dynamic loading
+
+### 2.6 Parsing Backends
+
+ArchGuard uses different backends depending on language:
+
+- TypeScript: `ts-morph`
+- Go / Java / Python / C++: `tree-sitter`-based parsing
+- Go optionally integrates `gopls` for better semantic accuracy
+
+The TypeScript path includes `TypeScriptParser`, extractor components, and `ParallelParser` for concurrent file parsing.
+
+### 2.7 Output and Rendering Layer
+
+ArchGuard can produce:
+
+- Mermaid source
+- SVG
+- PNG
+- JSON
+- query artifacts
+- Go Atlas extension data
+
+Core rendering and validation components live under `src/mermaid/`.
+
+Responsibilities include:
+
+- Mermaid generation
+- syntax validation
+- structural validation
+- render validation
+- quality checks
+- auto-repair
+- SVG-to-PNG conversion
+
+## 3. Core Data Flow
+
+### 3.1 Analysis Flow
+
+```text
+CLI or MCP analyze request
+  -> runAnalysis()
+  -> normalize selected diagrams
+  -> DiagramProcessor
+  -> ArchJsonProvider
+  -> Language plugin
+  -> ArchJSON
+  -> output artifacts + query artifacts
 ```
 
-**禁用 LLM 分组**（使用启发式算法）：
-```bash
-archguard analyze -s ./src --no-llm-grouping
-# 免费，速度更快
+### 3.2 Query Flow
+
+```text
+CLI query or MCP query request
+  -> loadEngine()
+  -> QueryEngine
+  -> in-memory ArchJSON + ArchIndex
+  -> structured architecture answers
 ```
 
-**LLM 分组优势**：
-- 语义理解：基于代码语义而非文件路径分组
-- 更好的可读性：减少跨模块关系的复杂度
-- 智能命名：自动生成有意义的分组名称
+### 3.3 Go Atlas Flow
 
-## **5\. 五层验证策略**
-
-ArchGuard v2.0 实现了全面的五层验证管道：
-
-1. **Parse Validation (语法验证)**
-   * 使用 mermaid.parse() 检查语法正确性
-   * 捕获并修复常见语法错误
-
-2. **Structural Validation (结构验证)**
-   * 验证所有实体引用都存在
-   * 检查关系对称性
-   * 验证命名空间一致性
-
-3. **Render Validation (渲染验证)**
-   * 实际尝试渲染图表
-   * 检测渲染时的错误
-   * 验证输出有效性
-
-4. **Quality Analysis (质量分析)**
-   * Readability Score: 可读性评分 (0-100)
-   * Completeness Score: 完整性评分 (0-100)
-   * Consistency Score: 一致性评分 (0-100)
-   * Complexity Score: 复杂度评分 (0-100, 越低越好)
-
-5. **Auto-Repair (自动修复)**
-   * 自动修复常见语法错误
-   * 修复泛型语法（`<T>` → `~T~`）
-   * 修复特殊字符转义
-
-## **6\. 数据结构定义 (Arch-JSON)**
-
-```json
-{
-  "version": "1.0",
-  "entities": [
-    {
-      "name": "OrderService",
-      "type": "class",
-      "decorators": ["@Injectable"],
-      "methods": ["createOrder", "cancelOrder"],
-      "dependencies": ["PaymentProvider", "OrderRepo"]
-    }
-  ],
-  "relations": [
-    { "from": "OrderController", "to": "OrderService", "type": "composition" }
-  ]
-}
+```text
+GoAtlasPlugin
+  -> delegate base parsing to GoPlugin
+  -> build package / capability / goroutine / flow layers
+  -> attach atlas result under ArchJSON.extensions.goAtlas
 ```
 
-## **7\. 后续扩展**
+The Go Atlas branch is intentionally built with composition rather than inheritance. See [ADR-001](../adr/001-goatlas-plugin-composition.md).
 
-* **架构测试 (Architecture-as-Code)**：允许用户定义约束（如"Controller 不准直接调用 Repo"），由 LLM 在生成文档时进行合规性检查。
-* **多语言支持**：通过集成 Tree-sitter 扩展到 Java, Go, Python。
-* **自定义主题**：支持用户自定义 Mermaid 主题配置。
+## 4. Architectural Boundaries
+
+The intended boundaries are:
+
+- Entry layer adapts commands and protocols
+- Shared analysis core owns write-side orchestration
+- Query layer owns read-side architecture inspection
+- Plugins own language-specific parsing and optional enrichments
+- Mermaid layer owns rendering and validation concerns
+
+This separation is mostly healthy in the current codebase. In particular:
+
+- query logic is separated from disk loading
+- analysis write-side is centralized
+- plugin interfaces are explicit
+- no circular dependency cycles were detected in the `src/` architecture scope during self-analysis
+
+## 5. What Changed From Earlier Designs
+
+The current implementation differs from older architecture descriptions in several important ways:
+
+- It is no longer TypeScript-only
+- It no longer revolves around a hook-listener trigger model
+- It does not depend on an always-on LLM grouping stage
+- It includes a persisted query layer
+- It exposes MCP tools for architecture inspection
+- It includes Go Atlas as a language-specific extension path
+- It centralizes CLI and MCP analysis through a shared write path
+
+## 6. Strengths
+
+Current strengths of the architecture:
+
+- Stable intermediate representation around `ArchJSON`
+- Clear plugin extension mechanism
+- Shared analysis core for CLI and MCP consistency
+- Query layer suitable for agent workflows
+- Multi-language support without collapsing into command-specific branching
+- Good alignment between rendered outputs and queryable artifacts
+
+## 7. Current Risks
+
+The most important risks are architectural growth risks, not immediate correctness failures:
+
+- `DiagramProcessor` is accumulating orchestration responsibilities
+- advanced features such as Go Atlas stretch the basic language plugin contract
+- some user and developer docs can drift when new architecture capabilities land
+
+These are manageable, but they are the right places to watch during future refactors.
+
+## 8. Related Documents
+
+- [Architecture Checking Scenarios](../user-guide/architecture-checking-scenarios.md)
+- [CLI Usage](../user-guide/cli-usage.md)
+- [Plugin Development Guide](./plugin-development-guide.md)
+- [ArchJSON Levels](./archjson-levels.md)
+- [ADR-001: GoAtlasPlugin Composition](../adr/001-goatlas-plugin-composition.md)
+- [ADR-004: Single Analysis Write Path for CLI and MCP](../adr/004-single-analysis-write-path-for-cli-and-mcp.md)

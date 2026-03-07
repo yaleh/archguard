@@ -236,6 +236,7 @@ export class GoPlugin implements ILanguagePlugin {
       language: 'go',
       timestamp: new Date().toISOString(),
       sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),
+      workspaceRoot,
       entities,
       relations,
     };

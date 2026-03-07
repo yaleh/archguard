@@ -13,6 +13,7 @@
   ],
   "files": [
     "dist/",
+    "scripts/postinstall-tree-sitter.mjs",
     "README.md",
     "LICENSE"
   ],
@@ -22,8 +23,10 @@
     "archguard": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck",
+    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck && chmod +x dist/cli/index.js",
     "dev": "tsc --watch",
+    "postinstall": "node scripts/postinstall-tree-sitter.mjs",
+    "prepack": "node scripts/stage-tree-sitter-prebuild.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -85,6 +88,9 @@
     "typescript": "^5.3.0",
     "vitest": "^3.2.4"
   },
+  "bundleDependencies": [
+    "tree-sitter"
+  ],
   "overrides": {
     "tree-sitter": "^0.25.0"
   },
