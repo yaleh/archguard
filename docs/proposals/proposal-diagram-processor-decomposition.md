@@ -1,6 +1,6 @@
 # Proposal: DiagramProcessor 拆分重构
 
-**状态**: Draft (rev 4)
+**状态**: Draft (rev 5)
 **日期**: 2026-03-07
 **关联**: [proposal-agent-query-layer.md](./proposal-agent-query-layer.md)
 
@@ -369,7 +369,8 @@ export class DiagramOutputRouter {
    *    - level==='package' && archJSON.language==='cpp'                 → generateCppPackageOutput()
    *    - 其余                                                           → generateDefaultOutput()
    *
-   * @param archJSON - 已聚合的 ArchJSON（含 metrics 字段，extensions 必须完整保留）
+   * @param archJSON - 已聚合的 ArchJSON（extensions 必须完整保留供路由判断；
+   *   json 格式时调用方须预先嵌入 metrics 字段，mermaid 格式无此要求）
    * @param paths    - OutputPathResolver.resolve() 的返回值
    * @param diagram  - 原始 DiagramConfig（提供 format、level、languageSpecific 等）
    * @param pool     - 可选 Worker Pool，生命周期由 DiagramProcessor 管理，此处不存储
@@ -386,11 +387,11 @@ export class DiagramOutputRouter {
   private async generateDefaultOutput(
     archJSON: ArchJSON,
     paths: OutputPaths,
-    format: OutputFormat,
     level: DetailLevel,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool | null
   ): Promise<void> { ... }
+  // 注：无 format 参数——此方法仅在 route() 的 mermaid 分支内被调用，format 已由调用方确认为 'mermaid'
 
   private async generateAtlasOutput(
     archJSON: ArchJSON,
