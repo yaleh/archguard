@@ -35,7 +35,7 @@ Create a custom configuration file `my-project.config.json`:
 ```json
 {
   "outputDir": "./docs/architecture",
-  "format": "plantuml",
+  "format": "mermaid",
   "diagrams": [
     {
       "name": "overview",
@@ -90,10 +90,10 @@ CLI options always override config file values:
 
 ```bash
 # Config file has format: "json"
-# CLI overrides with format: "plantuml"
-node dist/cli/index.js analyze --config my-config.json --format plantuml
+# CLI overrides with format: "mermaid"
+node dist/cli/index.js analyze --config my-config.json --format mermaid
 
-# Result: format will be "plantuml"
+# Result: format will be "mermaid"
 ```
 
 ## Error Handling
@@ -128,7 +128,7 @@ Output:
 
 Error
   Configuration validation failed:
-  - format: Invalid enum value. Expected 'plantuml' | 'json' | 'svg', received 'invalid'
+  - format: Invalid enum value. Expected 'mermaid' | 'json', received 'invalid'
 ```
 
 ## Use Cases

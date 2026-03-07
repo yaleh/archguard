@@ -55,12 +55,11 @@ This creates `archguard.config.json` with default settings.
     "**/build/**"
   ],
   "concurrency": 4,
-  "cache": true,
-  "cacheDir": "~/.archguard/cache",
-  "outputDir": "./archguard",
+  "workDir": "./.archguard",
+  "cache": { "enabled": true, "dir": "./.archguard/cache" },
+  "outputDir": "./.archguard/output",
   "verbose": false,
   "mermaid": {
-    "enableLLMGrouping": true,
     "renderer": "isomorphic",
     "theme": "default",
     "transparentBackground": true
@@ -474,16 +473,16 @@ Command-line options have the highest priority and override both configuration f
 
 ```bash
 archguard analyze \
-  --source ./src \
-  --output ./docs/architecture.puml \
-  --format plantuml \
+  --sources ./src \
+  --output-dir ./docs/architecture \
+  --format mermaid \
   --exclude "**/*.test.ts" "**/*.spec.ts" \
   --concurrency 8 \
   --no-cache \
   --verbose
 ```
 
-See [CLI Usage Guide](CLI-USAGE.md) for complete CLI reference.
+See [CLI Usage Guide](cli-usage.md) for complete CLI reference.
 
 ---
 
@@ -774,7 +773,7 @@ Use JSON schema for IDE autocomplete and validation:
 // New (v2.1) - Use Mermaid
 {
   "format": "mermaid",
-  "outputDir": "./archguard"
+  "outputDir": "./.archguard/output"
 }
 ```
 
@@ -785,7 +784,7 @@ Use JSON schema for IDE autocomplete and validation:
 3. Add `mermaid` configuration section (optional)
 4. Remove any PlantUML-specific settings
 
-For detailed migration instructions, see [PlantUML Removal Notice](PLANTUML-REMOVAL-NOTICE.md).
+For detailed migration instructions, see [Migration from v1 (PlantUML)](migration-v2.0.md).
 
 ### From v1.0 to v1.1
 
@@ -861,6 +860,6 @@ Common configuration issues:
 ---
 
 For more information:
-- [CLI Usage Guide](CLI-USAGE.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [GitHub Issues](https://github.com/your-org/archguard/issues)
+- [CLI Usage Guide](cli-usage.md)
+- [Troubleshooting](troubleshooting.md)
+- [GitHub Issues](https://github.com/yaleh/archguard/issues)

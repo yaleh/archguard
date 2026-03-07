@@ -54,19 +54,16 @@ Analyze a Go project:
 archguard analyze -s ./cmd --lang go --output-dir ./docs/architecture
 ```
 
-This generates `architecture.mmd` (Mermaid source), `architecture.svg`, and `architecture.png`.
+This generates Mermaid diagrams or ArchJSON under the configured output directory, and query artifacts under the work directory.
 
-### Multi-Level Diagrams
+### Level Filtering
 
 ```bash
-# Package-level overview (high-level)
-archguard analyze -s ./src -l package -n overview
+# Generate only class and method diagrams
+archguard analyze --diagrams class method
 
-# Class-level detail (default)
-archguard analyze -s ./src -l class -n architecture
-
-# Method-level detail (granular)
-archguard analyze -s ./src/core -l method -n core-detail
+# Generate only package diagrams for a source set
+archguard analyze -s ./src --diagrams package
 ```
 
 ## CLI Commands
@@ -79,16 +76,18 @@ Analyze a project and generate architecture diagrams.
 archguard analyze [options]
 ```
 
-**Source & Level:**
+**Source & Selection:**
 
-- `-s, --sources <paths...>` - Source directories (repeatable)
-- `-l, --level <level>` - Detail level: `package` | `class` | `method` (default: `class`)
-- `-n, --name <name>` - Diagram name, supports paths like `modules/auth` (default: `architecture`)
+- `-s, --sources <paths...>` - Source directories; triggers auto-detection and multi-diagram generation
+- `--diagrams <levels...>` - Filter by level: `package` | `class` | `method` (language-dependent)
 - `--lang <language>` - Language: `typescript` | `go` | `java` | `python` (auto-detected)
+- `--config <path>` - Config file path (default: `archguard.config.json`)
 
 **Output:**
 
-- `--output-dir <dir>` - Output directory (default: `./archguard`)
+- `--work-dir <dir>` - ArchGuard work directory (default: `./.archguard`)
+- `--cache-dir <dir>` - Cache directory (default: `<work-dir>/cache`)
+- `--output-dir <dir>` - Output directory
 - `-f, --format <type>` - Output format: `mermaid` | `json` (default: `mermaid`)
 - `-e, --exclude <patterns...>` - Exclude glob patterns
 
@@ -101,20 +100,17 @@ archguard analyze [options]
 **Mermaid:**
 
 - `--mermaid-theme <theme>` - Theme: `default` | `forest` | `dark` | `neutral`
-- `--no-llm-grouping` - Use heuristic grouping instead of LLM
+- `--mermaid-renderer <renderer>` - Renderer: `isomorphic` | `cli`
 
 **Go Atlas** (enabled by default for Go):
 
+- `--atlas` - Enable Atlas mode
 - `--no-atlas` - Disable Atlas mode, use standard Go parsing
 - `--atlas-layers <layers>` - Comma-separated layers: `package,capability,goroutine,flow`
 - `--atlas-strategy <strategy>` - Analysis strategy: `none` | `selective` | `full`
-- `--atlas-entry-points <types>` - Entry point types to focus on
+- `--atlas-no-tests` - Exclude test files from Atlas extraction
 - `--atlas-include-tests` - Include test packages in Atlas
-
-**Multi-Diagram (config file):**
-
-- `--config <path>` - Config file path (default: `archguard.config.json`)
-- `--diagrams <names...>` - Generate only specific diagrams by name
+- `--atlas-protocols <protocols>` - Protocols included in flow graph
 
 **Claude CLI:**
 
@@ -127,8 +123,8 @@ archguard analyze [options]
 # Basic analysis
 archguard analyze
 
-# Analyze specific directory with custom output
-archguard analyze -s ./packages/core --output-dir ./docs/core-architecture
+# Filter generated diagrams by level
+archguard analyze --diagrams class method
 
 # Generate JSON for tooling integration
 archguard analyze -s ./src --output-dir . -f json
@@ -145,12 +141,37 @@ archguard analyze -s ./src -c 8 -v
 # Exclude test files
 archguard analyze -s ./src -e "**/*.test.ts" "**/*.spec.ts"
 
-# Disable LLM grouping (heuristic, no Claude needed)
-archguard analyze -s ./src --no-llm-grouping
-
 # Dark theme
 archguard analyze -s ./src --mermaid-theme dark
 ```
+
+### `query`
+
+Query persisted architecture entities and relationships.
+
+```bash
+archguard query [options]
+```
+
+Common examples:
+
+```bash
+archguard query --summary
+archguard query --entity "DiagramProcessor"
+archguard query --deps-of "DiagramProcessor" --depth 2
+archguard query --implementers-of "ILanguagePlugin"
+archguard query --list-scopes
+```
+
+### `mcp`
+
+Start the ArchGuard MCP server over stdio.
+
+```bash
+archguard mcp [--arch-dir <dir>] [--scope <key>]
+```
+
+The MCP server exposes the query tools plus `archguard_analyze`, which refreshes query artifacts for the current MCP session.
 
 ### `init`
 
@@ -213,14 +234,13 @@ See [Go Plugin Usage Guide](docs/user-guide/golang-plugin-usage.md) for details.
 
 ```json
 {
-  "source": "./src",
   "format": "mermaid",
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/node_modules/**"],
   "concurrency": 4,
-  "outputDir": "./archguard",
-  "cache": { "enabled": true },
+  "workDir": "./.archguard",
+  "outputDir": "./docs/architecture",
+  "cache": { "enabled": true, "dir": "./.archguard/cache" },
   "mermaid": {
-    "enableLLMGrouping": true,
     "renderer": "isomorphic",
     "theme": "default",
     "transparentBackground": true
@@ -264,22 +284,22 @@ Generate multiple diagrams with different sources and levels in one run:
 # Generate all diagrams
 archguard analyze
 
-# Generate specific diagrams only
-archguard analyze --diagrams overview modules/cli
+# Filter configured diagrams by level
+archguard analyze --diagrams class method
 ```
 
 ### Configuration Fields
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `source` | string | `./src` | Source directory (single diagram mode) |
+| `source` | string | `./src` | Source directory (single-diagram mode) |
 | `diagrams` | array | — | Multi-diagram config (overrides `source`) |
 | `format` | string | `mermaid` | Output format: `mermaid` or `json` |
 | `exclude` | string[] | `[]` | Glob patterns to exclude |
 | `concurrency` | number | CPU cores | Parallel parsing workers |
-| `outputDir` | string | `./archguard` | Output directory |
+| `workDir` | string | `./.archguard` | Work directory for cache and query artifacts |
+| `outputDir` | string | `./.archguard/output` | Output directory |
 | `cache.enabled` | boolean | `true` | Enable file-based caching |
-| `mermaid.enableLLMGrouping` | boolean | `true` | LLM-powered entity grouping |
 | `mermaid.theme` | string | `default` | Diagram theme |
 | `mermaid.transparentBackground` | boolean | `true` | Transparent PNG background |
 | `cli.command` | string | `claude` | Claude CLI executable |

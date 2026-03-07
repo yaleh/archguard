@@ -22,6 +22,7 @@
 - [ADR-001: GoAtlasPlugin Composition Pattern](adr/001-goatlas-plugin-composition.md)
 - [ADR-002: ArchJSON Extensions Design](adr/002-archjson-extensions.md)
 - [ADR-003: Inline SVG Style Patching for librsvg](adr/003-librsvg-css-inline-patching.md)
+- [ADR-004: Single Analysis Write Path for CLI and MCP](adr/004-single-analysis-write-path-for-cli-and-mcp.md)
 - [ADR Index & Template](adr/README.md)
 
 ## Active Plans
@@ -29,6 +30,7 @@
 - [Plan 19: Diagram Visual Quality](plans/plan-19-diagram-visual-quality.md)
 - [Plan 22: TS Module Graph Visual Parity](plans/plan-22-ts-module-graph-visual-parity.md)
 - [Plan 23: Rendering Performance Optimization](plans/plan-23-rendering-performance-optimization.md)
+- [Plan 30: MCP Analyze Tool](plans/plan-30-mcp-analyze-tool.md)
 
 ## Proposals
 
@@ -37,6 +39,7 @@ Design proposals under active consideration:
 - [Language Knowledge Registry](proposals/proposal-language-knowledge-registry.md)
 - [TypeScript Analysis Enhancement](proposals/typescript-atlas-proposal.md)
 - [ArchJSON Complexity Metrics](proposals/proposal-complexity-metrics-in-archjson.md)
+- [MCP Analyze Tool](proposals/proposal-mcp-analyze-tool.md)
 
 ## Contributing
 
