@@ -136,7 +136,7 @@ describe('archguard_find_entity', () => {
 });
 
 describe('archguard_get_dependencies', () => {
-  it('returns dependencies', async () => {
+  it('returns dependencies as summary by default (compact=true)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -144,9 +144,27 @@ describe('archguard_get_dependencies', () => {
     const cb = tools.get('archguard_get_dependencies')!;
     const result = await cb({ name: 'DiagramProcessor', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
-    const names = parsed.map((e: Entity) => e.name);
+    const names = parsed.map((e: { name: string }) => e.name);
     expect(names).toContain('CacheManager');
     expect(names).toContain('ILanguagePlugin');
+    // compact: no members array
+    expect('members' in parsed[0]).toBe(false);
+    // compact: has summary fields
+    expect('methodCount' in parsed[0]).toBe(true);
+    expect('fieldCount' in parsed[0]).toBe(true);
+    expect('file' in parsed[0]).toBe(true);
+  });
+
+  it('returns full entities when compact=false', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_dependencies')!;
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, compact: false });
+    const parsed = JSON.parse(result.content[0].text);
+    expect('members' in parsed[0]).toBe(true);
+    expect('methodCount' in parsed[0]).toBe(false);
   });
 
   it('accepts depth as string (MCP protocol coercion)', async () => {
@@ -157,12 +175,12 @@ describe('archguard_get_dependencies', () => {
     const cb = tools.get('archguard_get_dependencies')!;
     const result = await cb({ name: 'DiagramProcessor', depth: '1' });
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.map((e: Entity) => e.name)).toContain('CacheManager');
+    expect(parsed.map((e: { name: string }) => e.name)).toContain('CacheManager');
   });
 });
 
 describe('archguard_get_dependents', () => {
-  it('returns dependents', async () => {
+  it('returns dependents as summary by default (compact=true)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -170,8 +188,23 @@ describe('archguard_get_dependents', () => {
     const cb = tools.get('archguard_get_dependents')!;
     const result = await cb({ name: 'CacheManager', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
-    const names = parsed.map((e: Entity) => e.name);
+    const names = parsed.map((e: { name: string }) => e.name);
     expect(names).toContain('DiagramProcessor');
+    // compact: no members array
+    expect('members' in parsed[0]).toBe(false);
+    expect('methodCount' in parsed[0]).toBe(true);
+  });
+
+  it('returns full entities when compact=false', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_get_dependents')!;
+    const result = await cb({ name: 'CacheManager', depth: 1, compact: false });
+    const parsed = JSON.parse(result.content[0].text);
+    expect('members' in parsed[0]).toBe(true);
+    expect('methodCount' in parsed[0]).toBe(false);
   });
 
   it('accepts depth as string (MCP protocol coercion)', async () => {
@@ -182,12 +215,12 @@ describe('archguard_get_dependents', () => {
     const cb = tools.get('archguard_get_dependents')!;
     const result = await cb({ name: 'CacheManager', depth: '1' });
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.map((e: Entity) => e.name)).toContain('DiagramProcessor');
+    expect(parsed.map((e: { name: string }) => e.name)).toContain('DiagramProcessor');
   });
 });
 
 describe('archguard_find_implementers', () => {
-  it('finds implementers of interface', async () => {
+  it('returns implementers as summary by default (compact=true)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const engine = createTestEngine();
     const tools = collectTools(server, engine);
@@ -197,6 +230,20 @@ describe('archguard_find_implementers', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
+    expect('members' in parsed[0]).toBe(false);
+    expect('methodCount' in parsed[0]).toBe(true);
+  });
+
+  it('returns full entities when compact=false', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const engine = createTestEngine();
+    const tools = collectTools(server, engine);
+
+    const cb = tools.get('archguard_find_implementers')!;
+    const result = await cb({ name: 'ILanguagePlugin', compact: false });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed[0].name).toBe('TypeScriptPlugin');
+    expect('members' in parsed[0]).toBe(true);
   });
 });
 
@@ -211,6 +258,34 @@ describe('archguard_find_subclasses', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(0);
   });
+
+  it('returns summary by default when subclasses exist', async () => {
+    const subEntities: Entity[] = [
+      makeEntity('base', 'BaseProcessor', 'class', 'src/base.ts'),
+      makeEntity('sub', 'SubProcessor', 'class', 'src/sub.ts'),
+    ];
+    const subArchJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: subEntities,
+      relations: [{ id: 'r1', source: 'sub', target: 'base', type: 'inheritance' }],
+    };
+    const { buildArchIndex } = await import('@/cli/query/arch-index-builder.js');
+    const archIndex = buildArchIndex(subArchJson, 'h');
+    const subEngine = new QueryEngine({ archJson: subArchJson, archIndex, scopeEntry });
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server, subEngine);
+
+    const cb = tools.get('archguard_find_subclasses')!;
+    const result = await cb({ name: 'BaseProcessor' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].name).toBe('SubProcessor');
+    expect('members' in parsed[0]).toBe(false);
+    expect('methodCount' in parsed[0]).toBe(true);
+  });
 });
 
 describe('archguard_get_file_entities', () => {
@@ -220,7 +295,7 @@ describe('archguard_get_file_entities', () => {
     const tools = collectTools(server, engine);
 
     const cb = tools.get('archguard_get_file_entities')!;
-    const result = await cb({ path: 'src/cache.ts' });
+    const result = await cb({ filePath: 'src/cache.ts' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('CacheManager');

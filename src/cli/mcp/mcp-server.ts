@@ -9,7 +9,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
-import type { QueryEngine } from '../query/query-engine.js';
+import type { QueryEngine, EntitySummary } from '../query/query-engine.js';
+import type { Entity } from '@/types/index.js';
 
 /**
  * Create and start the MCP server.
@@ -45,6 +46,19 @@ function serializeEntities(entities: unknown[]): string {
   return JSON.stringify(entities, null, 2);
 }
 
+const compactParam = z
+  .boolean()
+  .default(true)
+  .describe('Return summary only (name/type/file/counts). Set false for full members.');
+
+function applyCompact(
+  engine: QueryEngine,
+  entities: Entity[],
+  compact: boolean | undefined,
+): Entity[] | EntitySummary[] {
+  return (compact ?? true) ? entities.map(e => engine.toSummary(e)) : entities;
+}
+
 /**
  * Register all 8 query tools on the MCP server.
  *
@@ -76,10 +90,12 @@ export function registerTools(
     {
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
+      compact: compactParam,
     },
-    async ({ name, depth }) => {
+    async ({ name, depth, compact }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.getDependencies(name, depth)) }] };
+      const payload = applyCompact(engine, engine.getDependencies(name, depth), compact);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 
@@ -89,40 +105,50 @@ export function registerTools(
     {
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
+      compact: compactParam,
     },
-    async ({ name, depth }) => {
+    async ({ name, depth, compact }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.getDependents(name, depth)) }] };
+      const payload = applyCompact(engine, engine.getDependents(name, depth), compact);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 
   server.tool(
     'archguard_find_implementers',
     'Find classes that implement a given interface',
-    { name: z.string().describe('Interface name') },
-    async ({ name }) => {
+    {
+      name: z.string().describe('Interface name'),
+      compact: compactParam,
+    },
+    async ({ name, compact }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.findImplementers(name)) }] };
+      const payload = applyCompact(engine, engine.findImplementers(name), compact);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 
   server.tool(
     'archguard_find_subclasses',
     'Find subclasses of a given class',
-    { name: z.string().describe('Class name') },
-    async ({ name }) => {
+    {
+      name: z.string().describe('Class name'),
+      compact: compactParam,
+    },
+    async ({ name, compact }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.findSubclasses(name)) }] };
+      const payload = applyCompact(engine, engine.findSubclasses(name), compact);
+      return { content: [{ type: 'text' as const, text: serializeEntities(payload) }] };
     },
   );
 
   server.tool(
     'archguard_get_file_entities',
     'Get all entities defined in a specific file',
-    { path: z.string().describe('Source file path') },
-    async ({ path }) => {
+    { filePath: z.string().describe('Source file path (e.g. "cli/query/query-engine.ts")') },
+    async ({ filePath }) => {
       const engine = await get();
-      return { content: [{ type: 'text' as const, text: serializeEntities(engine.getFileEntities(path)) }] };
+      return { content: [{ type: 'text' as const, text: serializeEntities(engine.getFileEntities(filePath)) }] };
     },
   );
 

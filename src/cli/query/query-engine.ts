@@ -8,6 +8,16 @@ import type { ArchJSON, Entity, Relation, RelationType, CycleInfo } from '@/type
 import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from './query-manifest.js';
 
+export interface EntitySummary {
+  id: string;
+  name: string;
+  type: string;
+  visibility: string;
+  file: string;
+  methodCount: number;
+  fieldCount: number;
+}
+
 export interface QueryEngineOptions {
   archJson: ArchJSON;
   archIndex: ArchIndex;
@@ -151,6 +161,20 @@ export class QueryEngine {
   /** Return the scope entry associated with this engine. */
   getScopeEntry(): QueryScopeEntry {
     return this.scopeEntry;
+  }
+
+  /** Project a full Entity to a compact EntitySummary (no members array). */
+  toSummary(entity: Entity): EntitySummary {
+    const members = entity.members ?? [];
+    return {
+      id: entity.id,
+      name: entity.name,
+      type: entity.type,
+      visibility: entity.visibility,
+      file: entity.sourceLocation.file,
+      methodCount: members.filter(m => m.type === 'method' || m.type === 'constructor').length,
+      fieldCount: members.filter(m => m.type === 'property' || m.type === 'field').length,
+    };
   }
 
   // ----------------------------------------------------------------

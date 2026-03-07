@@ -352,4 +352,56 @@ describe('QueryEngine', () => {
       expect(engine.getScopeEntry()).toBe(defaultScope);
     });
   });
+
+  describe('toSummary', () => {
+    it('maps entity to EntitySummary with id, name, type, visibility, file', () => {
+      const engine = createEngine(baseArchJson);
+      const summary = engine.toSummary(entityA);
+      expect(summary.id).toBe('A');
+      expect(summary.name).toBe('Alpha');
+      expect(summary.type).toBe('class');
+      expect(summary.visibility).toBe('public');
+      expect(summary.file).toBe('src/alpha.ts');
+    });
+
+    it('counts methods correctly', () => {
+      const entity = makeEntity('X', 'Foo', {
+        members: [
+          { name: 'doWork', type: 'method', visibility: 'public' },
+          { name: 'init', type: 'constructor', visibility: 'public' },
+          { name: 'count', type: 'property', visibility: 'private' },
+        ],
+      });
+      const engine = createEngine(makeArchJson({ entities: [entity] }));
+      const summary = engine.toSummary(entity);
+      expect(summary.methodCount).toBe(2); // method + constructor
+      expect(summary.fieldCount).toBe(1);  // property
+    });
+
+    it('counts fields correctly for field member type', () => {
+      const entity = makeEntity('Y', 'Bar', {
+        members: [
+          { name: 'data', type: 'field', visibility: 'public' },
+          { name: 'extra', type: 'field', visibility: 'private' },
+        ],
+      });
+      const engine = createEngine(makeArchJson({ entities: [entity] }));
+      const summary = engine.toSummary(entity);
+      expect(summary.fieldCount).toBe(2);
+      expect(summary.methodCount).toBe(0);
+    });
+
+    it('returns zero counts for entity with no members', () => {
+      const engine = createEngine(baseArchJson);
+      const summary = engine.toSummary(entityA); // members: []
+      expect(summary.methodCount).toBe(0);
+      expect(summary.fieldCount).toBe(0);
+    });
+
+    it('does not include members array in summary', () => {
+      const engine = createEngine(baseArchJson);
+      const summary = engine.toSummary(entityA);
+      expect('members' in summary).toBe(false);
+    });
+  });
 });
