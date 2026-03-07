@@ -16,6 +16,21 @@ import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
  * fill (black) instead of the CSS-specified fill:none.
  */
 export function inlineEdgeStyles(svg: string): string {
+  const extractCssProperty = (rulePattern: RegExp, property: string): string => {
+    const match = svg.match(rulePattern);
+    if (!match) return '';
+
+    for (const decl of match[1].split(';')) {
+      const [rawProp, ...rawValueParts] = decl.split(':');
+      if (!rawProp || rawValueParts.length === 0) continue;
+      if (rawProp.trim().toLowerCase() !== property) continue;
+      const value = rawValueParts.join(':').trim();
+      if (value) return value;
+    }
+
+    return '';
+  };
+
   const flowchartLinkRuleMatch = svg.match(/\.flowchart-link[^{]*\{([^}]+)\}/);
   let flowchartLinkFill = 'none';
   let flowchartLinkStroke = '';
@@ -82,6 +97,33 @@ export function inlineEdgeStyles(svg: string): string {
         }
       );
     }
+  }
+
+  // 4. Fix node and cluster title alignment: flowchart text labels rely on CSS
+  //    rules like ".node .label text { text-anchor: middle; }". Some SVG viewers
+  //    ignore these scoped selectors, so labels render from x=0 and appear shifted right.
+  const nodeTextAnchor = extractCssProperty(/\.node\s+\.label\s+text[^{]*\{([^}]+)\}/, 'text-anchor');
+  if (nodeTextAnchor) {
+    result = result.replace(
+      /(<g\b[^>]*class="[^"]*\bnode\b[^"]*"[^>]*>[\s\S]*?<g\b[^>]*class="[^"]*\blabel\b[^"]*"[^>]*>[\s\S]*?<text\b[^>]*\bstyle=")([^"]*?)(")/g,
+      (_, pre, style, post) => {
+        if (/\btext-anchor\s*:/.test(style)) return _;
+        const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+        return `${pre}${trimmed ? trimmed + ';' : ''}text-anchor:${nodeTextAnchor};${post}`;
+      }
+    );
+  }
+
+  const clusterTextAnchor = extractCssProperty(/\.cluster-label\s+text[^{]*\{([^}]+)\}/, 'text-anchor');
+  if (clusterTextAnchor) {
+    result = result.replace(
+      /(<g\b[^>]*class="[^"]*\bcluster-label\b[^"]*"[^>]*>[\s\S]*?<text\b[^>]*\bstyle=")([^"]*?)(")/g,
+      (_, pre, style, post) => {
+        if (/\btext-anchor\s*:/.test(style)) return _;
+        const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+        return `${pre}${trimmed ? trimmed + ';' : ''}text-anchor:${clusterTextAnchor};${post}`;
+      }
+    );
   }
 
   return result;
