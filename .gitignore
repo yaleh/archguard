@@ -56,3 +56,4 @@ archguard*.json
 /codex-swarm-analysis/
 /.archguard/
 /*-archguard-*.tgz
+/.agents/review/

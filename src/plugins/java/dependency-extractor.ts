@@ -64,7 +64,7 @@ export class DependencyExtractor implements IDependencyExtractor {
           version: version.trim(),
           type: 'maven',
           scope: this.mapMavenScope(scope?.trim() || 'compile'),
-          source: pomPath,
+          source: 'pom.xml',
           isDirect: true,
         });
       }
@@ -103,7 +103,7 @@ export class DependencyExtractor implements IDependencyExtractor {
           version: version.trim(),
           type: 'maven', // Gradle uses Maven repositories
           scope: this.mapGradleScope(scope.trim()),
-          source: gradlePath,
+          source: 'build.gradle',
           isDirect: true,
         });
       }

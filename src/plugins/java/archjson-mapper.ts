@@ -93,7 +93,7 @@ export class ArchJsonMapper {
     return {
       id: this.createEntityId(cls.packageName, cls.name),
       name: cls.name,
-      type: 'class',
+      type: cls.isAbstract ? 'abstract_class' : 'class',
       visibility: this.mapVisibility(cls.modifiers),
       members,
       sourceLocation: {

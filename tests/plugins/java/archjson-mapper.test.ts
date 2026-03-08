@@ -156,6 +156,7 @@ describe('JavaArchJsonMapper', () => {
 
       const entities = mapper.mapEntities([pkg]);
 
+      expect(entities[0].type).toBe('abstract_class');
       expect(entities[0].isAbstract).toBe(true);
     });
   });

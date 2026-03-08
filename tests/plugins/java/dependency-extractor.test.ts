@@ -1,10 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DependencyExtractor } from '@/plugins/java/dependency-extractor.js';
 import path from 'path';
+import fs from 'fs-extra';
 
 describe('JavaDependencyExtractor', () => {
-  const extractor = new DependencyExtractor();
+  let extractor: DependencyExtractor;
   const fixturesPath = path.join(process.cwd(), 'tests', 'fixtures', 'java');
+  let tempDir: string;
+
+  beforeEach(async () => {
+    extractor = new DependencyExtractor();
+    tempDir = path.join(process.cwd(), 'test-temp-java-deps');
+    await fs.ensureDir(tempDir);
+  });
+
+  afterEach(async () => {
+    await fs.remove(tempDir);
+  });
 
   describe('Maven Dependencies', () => {
     it('should extract dependencies from pom.xml', async () => {
@@ -17,6 +29,7 @@ describe('JavaDependencyExtractor', () => {
       expect(springDep).toBeDefined();
       expect(springDep?.version).toBe('3.2.0');
       expect(springDep?.scope).toBe('runtime');
+      expect(springDep?.source).toBe('pom.xml');
     });
 
     it('should extract test dependencies from pom.xml', async () => {
@@ -54,6 +67,7 @@ describe('JavaDependencyExtractor', () => {
 
       const springDep = dependencies.find((d) => d.name.includes('spring-boot-starter'));
       expect(springDep).toBeDefined();
+      expect(springDep?.source).toBe('build.gradle');
     });
 
     it('should map implementation scope correctly', async () => {
@@ -93,6 +107,38 @@ describe('JavaDependencyExtractor', () => {
       const dependencies = await extractor.extractDependencies(fixturesPath);
 
       expect(dependencies.length).toBeGreaterThan(0);
+    });
+
+    it('prefers pom.xml when both pom.xml and build.gradle exist', async () => {
+      await fs.writeFile(
+        path.join(tempDir, 'pom.xml'),
+        `<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>temp-project</artifactId>
+  <version>1.0.0</version>
+  <dependencies>
+    <dependency>
+      <groupId>org.example</groupId>
+      <artifactId>from-maven</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+  </dependencies>
+</project>`
+      );
+      await fs.writeFile(
+        path.join(tempDir, 'build.gradle'),
+        `dependencies {
+  implementation 'org.example:from-gradle:2.0.0'
+}`
+      );
+
+      const dependencies = await extractor.extractDependencies(tempDir);
+
+      expect(dependencies).toHaveLength(1);
+      expect(dependencies[0].name).toBe('from-maven');
+      expect(dependencies[0].source).toBe('pom.xml');
     });
   });
 });

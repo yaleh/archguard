@@ -115,6 +115,23 @@ describe('JavaPlugin Integration Tests', () => {
       expect(result.entities[0].name).toBe('AdminUser');
       expect(result.relations.length).toBeGreaterThan(0);
     });
+
+    it('maps abstract classes to abstract_class entities', () => {
+      const code = `
+package com.example;
+
+public abstract class AbstractService {
+  public abstract void execute();
+}
+      `;
+
+      const result = plugin.parseCode(code, 'AbstractService.java');
+
+      expect(result.entities).toHaveLength(1);
+      expect(result.entities[0].name).toBe('AbstractService');
+      expect(result.entities[0].type).toBe('abstract_class');
+      expect(result.entities[0].isAbstract).toBe(true);
+    });
   });
 
   describe('parseFiles Integration', () => {
@@ -162,13 +179,21 @@ describe('JavaPlugin Integration Tests', () => {
         throw new Error('Dependency extractor not available');
       }
 
-      // For Gradle-specific test, we can check if build.gradle exists
-      const gradlePath = path.join(fixturesPath, 'build.gradle');
-      if (await fs.pathExists(gradlePath)) {
-        const depExtractor = plugin.dependencyExtractor as any;
-        const dependencies = await depExtractor.extractDependencies(fixturesPath);
+      const gradleProjectPath = path.join(process.cwd(), 'temp-test-java-gradle-project');
+      await fs.ensureDir(gradleProjectPath);
+
+      try {
+        await fs.copyFile(
+          path.join(fixturesPath, 'build.gradle'),
+          path.join(gradleProjectPath, 'build.gradle')
+        );
+
+        const dependencies = await plugin.dependencyExtractor.extractDependencies(gradleProjectPath);
 
         expect(dependencies.length).toBeGreaterThan(0);
+        expect(dependencies.every((dep) => dep.source === 'build.gradle')).toBe(true);
+      } finally {
+        await fs.remove(gradleProjectPath);
       }
     });
   });
