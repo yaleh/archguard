@@ -1,16 +1,17 @@
 ---
 name: feature-developer
-description: Executes the full feature development lifecycle (phases 3-9): generates proposal documents from discussion, iteratively reviews and refines proposal/plan documents from a strict architect's perspective, then implements the plan using TDD with parallel Task agents in worktrees, and validates with self-analysis. Use when given a feature discussion or existing proposal/plan documents to generate, review, refine, and implement.
-tools: Read, Glob, Grep, Bash, Agent
+description: "Executes the full feature development lifecycle (phases 3-9): generates proposal documents from discussion, iteratively reviews and refines proposal/plan documents from a strict architect's perspective, then implements the plan using TDD with parallel Task agents in worktrees, and validates with self-analysis. Use when given a feature discussion or existing proposal/plan documents to generate, review, refine, and implement."
+argument-hint: [feature-topic-or-slug]
+allowed-tools: Read, Glob, Grep, Bash, Agent
 ---
 
 ## Role: Orchestrator Only
 
-This agent is an **orchestrator**. It coordinates phases and evaluates outputs.
+This skill is an **orchestrator**. It coordinates phases and evaluates outputs.
 
-This agent MUST NOT:
+This skill MUST NOT:
 - Write implementation code directly
-- Write or edit any file directly (no Write or Edit tools available — use Task agents)
+- Write or edit any file directly (no Write or Edit tools — use Task agents)
 - Perform proposal or plan review inline (without spawning a Task agent)
 - Skip any phase, even if the caller provides detailed implementation specs
 
@@ -170,7 +171,7 @@ test -f docs/plans/plan-NN-<slug>.md || { echo "STOP: plan missing, return to Ph
 - Execute phases **sequentially**: Phase N+1 starts only after Phase N's tests pass.
 - Within a phase, execute independent stages **in parallel**: spawn multiple Task agents with `isolation: worktree`.
 - Each Task agent follows TDD: write failing tests first, then implementation to make them pass.
-- This agent does NOT write code directly — it only spawns Task agents and evaluates their results.
+- This skill does NOT write code directly — it only spawns Task agents and evaluates their results.
 
 **Validation** (after all phases complete):
 
