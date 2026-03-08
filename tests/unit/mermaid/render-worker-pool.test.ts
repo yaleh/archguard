@@ -113,4 +113,29 @@ describe('MermaidRenderWorkerPool', () => {
     expect(Worker).not.toHaveBeenCalled();
     await pool.terminate();
   });
+
+  it('filters unsupported execArgv flags inherited from wrapper node processes', async () => {
+    const originalExecArgv = process.execArgv;
+    process.execArgv = ['--input-type=module', '-e', 'console.log("wrapper")'];
+
+    try {
+      const { Worker } = await import('worker_threads');
+      const { MermaidRenderWorkerPool } = await import('@/mermaid/render-worker-pool.js');
+      (Worker as any).mockClear();
+
+      const pool = new MermaidRenderWorkerPool(1, { theme: 'default', backgroundColor: 'white' });
+      await pool.start();
+
+      expect(Worker).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          execArgv: ['-e', 'console.log("wrapper")'],
+        })
+      );
+
+      await pool.terminate();
+    } finally {
+      process.execArgv = originalExecArgv;
+    }
+  });
 });

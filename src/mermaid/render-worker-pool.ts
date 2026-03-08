@@ -21,6 +21,10 @@ export interface RenderResult {
 
 const WORKER_FILE = fileURLToPath(new URL('./render-worker.js', import.meta.url));
 
+function sanitizeWorkerExecArgv(execArgv: string[]): string[] {
+  return execArgv.filter((arg) => !arg.startsWith('--input-type='));
+}
+
 export class MermaidRenderWorkerPool {
   private workers: Worker[] = [];
   private idle: Worker[] = [];
@@ -34,7 +38,10 @@ export class MermaidRenderWorkerPool {
 
   async start(): Promise<void> {
     for (let i = 0; i < this.poolSize; i++) {
-      const w = new Worker(WORKER_FILE, { workerData: this.initData });
+      const w = new Worker(WORKER_FILE, {
+        workerData: this.initData,
+        execArgv: sanitizeWorkerExecArgv(process.execArgv),
+      });
       w.on('message', (result: RenderResult) => this.onResult(w, result));
       w.on('error', (err) => {
         console.error(`[render-worker] worker error: ${err.message}`);
