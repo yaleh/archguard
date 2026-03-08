@@ -14,6 +14,23 @@ import { normalizeToDiagrams, filterByLevels } from '@/cli/commands/analyze.js';
 import type { Config } from '@/cli/config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
 
+const { createProjectRootLanguageDiagramsMock } = vi.hoisted(() => ({
+  createProjectRootLanguageDiagramsMock: vi.fn((projectRoot: string, language: string) => [
+    {
+      name: `${projectRoot}-${language}/overview/package`,
+      sources: ['.'],
+      level: 'package' as const,
+      language,
+    },
+    {
+      name: `${projectRoot}-${language}/class/all-classes`,
+      sources: ['.'],
+      level: 'class' as const,
+      language,
+    },
+  ]),
+}));
+
 vi.mock('fs-extra', () => ({
   default: {
     pathExists: vi.fn(),
@@ -27,6 +44,40 @@ vi.mock('@/cli/utils/project-structure-detector.js', () => ({
     .mockResolvedValue([{ name: 'architecture', sources: ['./src'], level: 'class' }]),
 }));
 
+vi.mock('@/cli/utils/java-project-structure-detector.js', () => ({
+  detectJavaProjectStructure: vi.fn().mockResolvedValue([
+    {
+      name: 'demo/overview/package',
+      sources: ['/project/demo'],
+      level: 'package',
+      language: 'java',
+    },
+    {
+      name: 'demo/class/all-classes',
+      sources: ['/project/demo'],
+      level: 'class',
+      language: 'java',
+    },
+    {
+      name: 'demo/class/demo-core',
+      sources: ['/project/demo/demo-core'],
+      level: 'class',
+      language: 'java',
+    },
+  ]),
+}));
+
+vi.mock('@/cli/utils/default-scope-planner.js', async (importActual) => {
+  const actual = await importActual<typeof import('@/cli/utils/default-scope-planner.js')>();
+  return {
+    ...actual,
+    createProjectRootLanguageDiagrams: (...args: Parameters<typeof actual.createProjectRootLanguageDiagrams>) => {
+      createProjectRootLanguageDiagramsMock(...args);
+      return actual.createProjectRootLanguageDiagrams(...args);
+    },
+  };
+});
+
 vi.mock('@/cli/utils/project-language-detector.js', () => ({
   detectProjectLanguages: vi.fn().mockResolvedValue([
     {
@@ -39,6 +90,7 @@ vi.mock('@/cli/utils/project-language-detector.js', () => ({
 }));
 
 import { detectProjectStructure } from '@/cli/utils/project-structure-detector.js';
+import { detectJavaProjectStructure } from '@/cli/utils/java-project-structure-detector.js';
 import { detectProjectLanguages } from '@/cli/utils/project-language-detector.js';
 import fs from 'fs-extra';
 
@@ -58,6 +110,28 @@ beforeEach(() => {
   vi.mocked(detectProjectStructure).mockResolvedValue([
     { name: 'architecture', sources: ['./src'], level: 'class' },
   ]);
+  vi.mocked(detectJavaProjectStructure).mockReset();
+  vi.mocked(detectJavaProjectStructure).mockResolvedValue([
+    {
+      name: 'demo/overview/package',
+      sources: ['/project/demo'],
+      level: 'package',
+      language: 'java',
+    },
+    {
+      name: 'demo/class/all-classes',
+      sources: ['/project/demo'],
+      level: 'class',
+      language: 'java',
+    },
+    {
+      name: 'demo/class/demo-core',
+      sources: ['/project/demo/demo-core'],
+      level: 'class',
+      language: 'java',
+    },
+  ]);
+  createProjectRootLanguageDiagramsMock.mockClear();
   vi.mocked(detectProjectLanguages).mockReset();
   vi.mocked(detectProjectLanguages).mockResolvedValue([
     {
@@ -152,6 +226,30 @@ describe('normalizeToDiagrams', () => {
   });
 
   describe('Priority 2: CLI sources → auto-detect from path', () => {
+    it('should use detectJavaProjectStructure for --lang java instead of root-language diagrams', async () => {
+      const cliOptions: CLIOptions = {
+        sources: ['./demo'],
+        lang: 'java',
+      };
+
+      const result = await normalizeToDiagrams(baseConfig, cliOptions, '/project');
+
+      expect(detectJavaProjectStructure).toHaveBeenCalledWith(
+        expect.stringMatching(/\/demo$/),
+        {
+          label: 'demo',
+          format: undefined,
+          exclude: undefined,
+        }
+      );
+      expect(createProjectRootLanguageDiagramsMock).not.toHaveBeenCalled();
+      expect(result.map((diagram) => diagram.name)).toEqual([
+        'demo/overview/package',
+        'demo/class/all-classes',
+        'demo/class/demo-core',
+      ]);
+    });
+
     it('should call detectProjectStructure with the resolved sources[0] path', async () => {
       vi.mocked(detectProjectStructure).mockResolvedValue([
         { name: 'overview/package', sources: ['./src'], level: 'package' },
@@ -463,6 +561,28 @@ describe('normalizeToDiagrams', () => {
   });
 
   describe('Explicit non-TypeScript language without sources', () => {
+    it('--lang java without sources uses Java project structure detection', async () => {
+      const result = await normalizeToDiagrams(
+        baseConfig,
+        {
+          lang: 'java',
+        },
+        '/workspace/demo'
+      );
+
+      expect(detectJavaProjectStructure).toHaveBeenCalledWith('/workspace/demo', {
+        format: undefined,
+        exclude: undefined,
+      });
+      expect(createProjectRootLanguageDiagramsMock).not.toHaveBeenCalled();
+      expect(result).toHaveLength(3);
+      expect(result[0]).toMatchObject({
+        name: 'demo/overview/package',
+        level: 'package',
+        language: 'java',
+      });
+    });
+
     it('--lang python without sources uses project-root diagrams', async () => {
       const result = await normalizeToDiagrams(
         baseConfig,

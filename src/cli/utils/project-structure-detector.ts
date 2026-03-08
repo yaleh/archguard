@@ -22,6 +22,7 @@ import type { DiagramConfig } from '../../types/config.js';
 
 /** Source root candidates, checked in priority order */
 const SOURCE_ROOT_CANDIDATES = ['src', 'lib', 'app', 'source'];
+export const DEFAULT_SOURCE_EXTENSIONS = ['.ts', '.js'];
 
 /** Directory names to skip when scanning for top-level modules */
 const EXCLUDED_DIRS = new Set([
@@ -68,7 +69,11 @@ export async function findSourceRoot(rootDir: string): Promise<string> {
  * @param sourceRoot - Source root path — may be relative (e.g. "./src") or absolute
  * @returns Sorted array of module directory names (e.g. ["cli", "parser", "utils"])
  */
-export async function getTopLevelModules(rootDir: string, sourceRoot: string): Promise<string[]> {
+export async function getTopLevelModules(
+  rootDir: string,
+  sourceRoot: string,
+  extensions: string[] = DEFAULT_SOURCE_EXTENSIONS
+): Promise<string[]> {
   // path.resolve with an absolute sourceRoot ignores rootDir, which is the desired behavior
   const absoluteRoot = path.resolve(rootDir, sourceRoot);
 
@@ -87,7 +92,7 @@ export async function getTopLevelModules(rootDir: string, sourceRoot: string): P
     if (entry.name.startsWith('.')) continue;
 
     // Check whether this subdirectory contains any source files
-    const hasSource = await directoryHasSourceFiles(path.join(absoluteRoot, entry.name));
+    const hasSource = await directoryHasSourceFiles(path.join(absoluteRoot, entry.name), extensions);
     if (hasSource) {
       modules.push(entry.name);
     }
@@ -102,7 +107,10 @@ export async function getTopLevelModules(rootDir: string, sourceRoot: string): P
  * @param sourceRootPath - Absolute path to the source root directory
  * @returns true if at least one direct .ts or .js file exists
  */
-export async function hasTopLevelSourceFiles(sourceRootPath: string): Promise<boolean> {
+export async function hasTopLevelSourceFiles(
+  sourceRootPath: string,
+  extensions: string[] = DEFAULT_SOURCE_EXTENSIONS
+): Promise<boolean> {
   let entries: fs.Dirent[];
   try {
     entries = await fs.readdir(sourceRootPath, { withFileTypes: true });
@@ -113,7 +121,7 @@ export async function hasTopLevelSourceFiles(sourceRootPath: string): Promise<bo
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     const ext = path.extname(entry.name).toLowerCase();
-    if (ext === '.ts' || ext === '.js') {
+    if (extensions.includes(ext)) {
       return true;
     }
   }
@@ -126,7 +134,10 @@ export async function hasTopLevelSourceFiles(sourceRootPath: string): Promise<bo
  *
  * Stops as soon as it finds one to keep IO minimal.
  */
-async function directoryHasSourceFiles(dir: string): Promise<boolean> {
+async function directoryHasSourceFiles(
+  dir: string,
+  extensions: string[] = DEFAULT_SOURCE_EXTENSIONS
+): Promise<boolean> {
   let entries: fs.Dirent[];
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
@@ -137,11 +148,11 @@ async function directoryHasSourceFiles(dir: string): Promise<boolean> {
   for (const entry of entries) {
     if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase();
-      if (ext === '.ts' || ext === '.js') {
+      if (extensions.includes(ext)) {
         return true;
       }
     } else if (entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name)) {
-      const nested = await directoryHasSourceFiles(path.join(dir, entry.name));
+      const nested = await directoryHasSourceFiles(path.join(dir, entry.name), extensions);
       if (nested) return true;
     }
   }

@@ -1,6 +1,7 @@
 import path from 'path';
 import { detectProjectStructure } from '../utils/project-structure-detector.js';
 import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
+import { detectJavaProjectStructure } from '../utils/java-project-structure-detector.js';
 import {
   createProjectRootLanguageDiagrams,
   planDefaultDiagrams,
@@ -70,7 +71,19 @@ export async function normalizeToDiagrams(
       return filterByLevels(diagrams, cliOptions.diagrams);
     }
 
-    if (language === 'python' || language === 'java' || language === 'typescript') {
+    if (language === 'java') {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      return filterByLevels(
+        await detectJavaProjectStructure(sourcePath, {
+          label: path.basename(sourcePath),
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+        }),
+        cliOptions.diagrams
+      );
+    }
+
+    if (language === 'python' || language === 'typescript') {
       const sourcePath = path.resolve(cliOptions.sources[0]);
       return filterByLevels(
         createProjectRootLanguageDiagrams(resolvedRoot, language, {
@@ -120,11 +133,17 @@ export async function normalizeToDiagrams(
     );
   }
 
-  if (
-    cliOptions.lang === 'python' ||
-    cliOptions.lang === 'java' ||
-    cliOptions.lang === 'typescript'
-  ) {
+  if (cliOptions.lang === 'java') {
+    return filterByLevels(
+      await detectJavaProjectStructure(resolvedRoot, {
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      }),
+      cliOptions.diagrams
+    );
+  }
+
+  if (cliOptions.lang === 'python' || cliOptions.lang === 'typescript') {
     return filterByLevels(
       createProjectRootLanguageDiagrams(resolvedRoot, cliOptions.lang, {
         format: cliOptions.format,

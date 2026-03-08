@@ -71,17 +71,20 @@ export class ArchJSONAggregator {
    */
   private aggregateToPackageLevel(archJSON: ArchJSON): ArchJSON {
     const { workspaceRoot } = archJSON;
-    const packages = this.extractPackages(archJSON.entities, workspaceRoot);
+    const packages = this.extractPackages(archJSON.entities, workspaceRoot, archJSON.language);
     const packageRelations = this.analyzePackageDependencies(
       archJSON.entities,
       archJSON.relations,
-      workspaceRoot
+      workspaceRoot,
+      archJSON.language
     );
 
     // Create package entities
     const packageEntities: Entity[] = packages.map((pkg) => {
       const firstEntityInPackage = archJSON.entities.find(
-        (e) => this.extractPackageFromFile(e.sourceLocation.file, workspaceRoot) === pkg
+        (e) =>
+          this.extractPackageFromFile(e.sourceLocation.file, workspaceRoot, archJSON.language) ===
+          pkg
       );
 
       return {
@@ -113,11 +116,19 @@ export class ArchJSONAggregator {
    * @param entities - Array of entities
    * @returns Array of unique package names
    */
-  private extractPackages(entities: Entity[], workspaceRoot?: string): string[] {
+  private extractPackages(
+    entities: Entity[],
+    workspaceRoot?: string,
+    language?: ArchJSON['language']
+  ): string[] {
     const packages = new Set<string>();
 
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot);
+      const packageName = this.extractPackageFromFile(
+        entity.sourceLocation.file,
+        workspaceRoot,
+        language
+      );
       packages.add(packageName);
     }
 
@@ -137,10 +148,23 @@ export class ArchJSONAggregator {
    * @param filePath - File path to extract package from
    * @returns Package name or empty string if not found
    */
-  private extractPackageFromFile(filePath: string, workspaceRoot?: string): string {
+  private extractPackageFromFile(
+    filePath: string,
+    workspaceRoot?: string,
+    language?: ArchJSON['language']
+  ): string {
+    const directJavaModule = this.extractJavaMavenModule(filePath.replace(/\\/g, '/'), language);
+    if (directJavaModule) {
+      return directJavaModule;
+    }
+
     // When workspaceRoot provided and file is absolute, use parent directory path
     if (workspaceRoot && path.isAbsolute(filePath)) {
       const rel = path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+      const javaModule = this.extractJavaMavenModule(rel, language);
+      if (javaModule) {
+        return javaModule;
+      }
       const parts = rel.split('/');
       if (parts.length <= 1) return ''; // file directly in workspaceRoot
       // Return parent directory path (all components except the filename)
@@ -174,6 +198,18 @@ export class ArchJSONAggregator {
     return afterSrc.substring(0, firstSlashIndex);
   }
 
+  private extractJavaMavenModule(relativePath: string, language?: ArchJSON['language']): string | null {
+    if (language !== 'java') {
+      return null;
+    }
+
+    const normalized = relativePath.replace(/\\/g, '/');
+    const match =
+      normalized.match(/^([^/]+)\/src\/(?:main|test)\/java\//) ??
+      normalized.match(/\/([^/]+)\/src\/(?:main|test)\/java\//);
+    return match?.[1] ?? null;
+  }
+
   /**
    * Analyze package-level dependencies from class-level relations
    *
@@ -187,12 +223,17 @@ export class ArchJSONAggregator {
   private analyzePackageDependencies(
     entities: Entity[],
     relations: Relation[],
-    workspaceRoot?: string
+    workspaceRoot?: string,
+    language?: ArchJSON['language']
   ): Relation[] {
     // Create entity ID to package mapping (using file paths)
     const entityToPackage = new Map<string, string>();
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot);
+      const packageName = this.extractPackageFromFile(
+        entity.sourceLocation.file,
+        workspaceRoot,
+        language
+      );
       entityToPackage.set(entity.id, packageName);
     }
 

@@ -201,6 +201,16 @@ describe('getTopLevelModules', () => {
     const modules = await getTopLevelModules('/project', './src');
     expect(modules).toContain('lib');
   });
+
+  it('supports custom extensions when scanning modules', async () => {
+    mockReaddir
+      .mockResolvedValueOnce([makeDirent('core', true), makeDirent('docs', true)])
+      .mockResolvedValueOnce([makeDirent('App.java', false)])
+      .mockResolvedValueOnce([makeDirent('README.md', false)]);
+
+    const modules = await getTopLevelModules('/project', './', ['.java']);
+    expect(modules).toEqual(['core']);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -335,6 +345,13 @@ describe('hasTopLevelSourceFiles', () => {
     mockReaddir.mockResolvedValueOnce([makeDirent('index.js', false), makeDirent('utils', true)]);
 
     const result = await hasTopLevelSourceFiles('/project/src');
+    expect(result).toBe(true);
+  });
+
+  it('supports custom extensions for top-level source files', async () => {
+    mockReaddir.mockResolvedValueOnce([makeDirent('App.java', false), makeDirent('docs', true)]);
+
+    const result = await hasTopLevelSourceFiles('/project/src', ['.java']);
     expect(result).toBe(true);
   });
 

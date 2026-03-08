@@ -360,6 +360,62 @@ describe('ArchJSONAggregator', () => {
       // Should not have any relations (both in same package)
       expect(result.relations).toHaveLength(0);
     });
+
+    it('groups Java Maven files by module name instead of main/test directories', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'java',
+        timestamp: '2026-03-08T00:00:00.000Z',
+        workspaceRoot: '/workspace/Jlama',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.acme.core.CoreService',
+            name: 'CoreService',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/Jlama/jlama-core/src/main/java/com/acme/core/CoreService.java',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+          {
+            id: 'com.acme.cli.CliTest',
+            name: 'CliTest',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/Jlama/jlama-cli/src/test/java/com/acme/cli/CliTest.java',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'dependency',
+            source: 'com.acme.cli.CliTest',
+            target: 'com.acme.core.CoreService',
+          },
+        ],
+      };
+
+      const result = aggregator['aggregateToPackageLevel'](archJSON);
+
+      expect(result.entities.map((entity) => entity.name).sort()).toEqual(['jlama-cli', 'jlama-core']);
+      expect(result.relations).toEqual([
+        {
+          id: 'pkg-jlama-cli-jlama-core',
+          type: 'dependency',
+          source: 'jlama-cli',
+          target: 'jlama-core',
+        },
+      ]);
+    });
   });
 
   describe('extractPackages', () => {
@@ -444,6 +500,58 @@ describe('ArchJSONAggregator', () => {
       const packages = aggregator['extractPackages'](entities);
       // Root level files (no directory) are filtered out
       expect(packages).toEqual([]);
+    });
+
+    it('extracts Java Maven module names when workspaceRoot is available', () => {
+      const entities: Entity[] = [
+        {
+          id: 'com.acme.core.CoreService',
+          name: 'CoreService',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/Jlama/jlama-core/src/main/java/com/acme/core/CoreService.java',
+            startLine: 1,
+            endLine: 10,
+          },
+          members: [],
+        },
+        {
+          id: 'com.acme.cli.CliTest',
+          name: 'CliTest',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/Jlama/jlama-cli/src/test/java/com/acme/cli/CliTest.java',
+            startLine: 1,
+            endLine: 10,
+          },
+          members: [],
+        },
+      ];
+
+      const packages = aggregator['extractPackages'](entities, '/workspace/Jlama', 'java');
+      expect(packages).toEqual(['jlama-cli', 'jlama-core']);
+    });
+
+    it('extracts Java Maven module names from absolute paths even without workspaceRoot', () => {
+      const entities: Entity[] = [
+        {
+          id: 'com.acme.core.CoreService',
+          name: 'CoreService',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/Jlama/jlama-core/src/main/java/com/acme/core/CoreService.java',
+            startLine: 1,
+            endLine: 10,
+          },
+          members: [],
+        },
+      ];
+
+      const packages = aggregator['extractPackages'](entities, undefined, 'java');
+      expect(packages).toEqual(['jlama-core']);
     });
   });
 

@@ -115,8 +115,7 @@ export class HeuristicGrouper {
    */
   private groupByPath(archJson: ArchJSON): PackageGroup[] {
     const packageMap = new Map<string, string[]>();
-    // Track whether a group was formed from path-based entity names (containing '/')
-    const pathGroupedMap = new Map<string, boolean>();
+    const reasoningMap = new Map<string, string>();
 
     for (const entity of archJson.entities) {
       // For path-based package names (e.g. "src", "src/models", "examples/batched"),
@@ -125,28 +124,52 @@ export class HeuristicGrouper {
       // Note: 'package' is a valid entity type at runtime (e.g. C++ aggregator output)
       // even though EntityType does not yet enumerate it — cast to string for comparison.
       const isPathBased = (entity.type as string) === 'package' || entity.name.includes('/');
+      const javaModuleName =
+        archJson.language === 'java'
+          ? this.extractJavaMavenModuleName(entity.sourceLocation.file)
+          : null;
       const packageName = isPathBased
         ? entity.name.split('/')[0]
-        : this.extractPackageName(entity.sourceLocation.file);
+        : javaModuleName ?? this.extractPackageName(entity.sourceLocation.file);
 
       if (!packageMap.has(packageName)) {
         packageMap.set(packageName, []);
-        pathGroupedMap.set(packageName, false);
+      }
+
+      if (javaModuleName) {
+        reasoningMap.set(packageName, `Grouped by Maven module: ${packageName}`);
       }
 
       packageMap.get(packageName).push(entity.id);
       if (isPathBased) {
-        pathGroupedMap.set(packageName, true);
+        reasoningMap.set(packageName, `Grouped by path: ${packageName}/`);
       }
     }
 
     return Array.from(packageMap.entries()).map(([rawName, entities]) => ({
       name: this.formatPackageName(rawName),
       entities,
-      reasoning: pathGroupedMap.get(rawName)
-        ? `Grouped by path: ${rawName}/`
-        : `Grouped by path: ${rawName}`,
+      reasoning: reasoningMap.get(rawName) ?? `Grouped by path: ${rawName}`,
     }));
+  }
+
+  private extractJavaMavenModuleName(filePath: string): string | null {
+    if (!filePath || filePath.trim() === '') {
+      return null;
+    }
+
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    const match = normalizedPath.match(/\/([^/]+)\/src\/(?:main|test)\/java\//);
+    if (!match) {
+      return null;
+    }
+
+    const moduleName = match[1];
+    if (!moduleName || moduleName === 'src') {
+      return null;
+    }
+
+    return moduleName;
   }
 
   /**
@@ -236,13 +259,17 @@ export class HeuristicGrouper {
       const current = packages[i];
       if (!current) continue;
 
-      // Skip merging for path-grouped packages (reasoning contains '/')
-      // They already have meaningful grouping from the top-level component
-      const isPathGrouped = current.reasoning?.includes('/');
-      if (current.entities.length <= threshold && !isPathGrouped && i + 1 < packages.length) {
+      // Skip merging for protected groups (path-based / Maven module based).
+      // They already represent meaningful project boundaries.
+      const isProtectedGroup =
+        current.reasoning?.includes('/') || current.reasoning?.startsWith('Grouped by Maven module:');
+      if (current.entities.length <= threshold && !isProtectedGroup && i + 1 < packages.length) {
         // Merge with next package
         const next = packages[i + 1];
-        if (next && !skipIndices.has(i + 1) && !next.reasoning?.includes('/')) {
+        const nextIsProtectedGroup =
+          next?.reasoning?.includes('/') ||
+          next?.reasoning?.startsWith('Grouped by Maven module:');
+        if (next && !skipIndices.has(i + 1) && !nextIsProtectedGroup) {
           merged.push({
             name: `${current.name} & ${next.name}`,
             entities: [...current.entities, ...next.entities],

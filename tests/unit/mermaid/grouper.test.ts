@@ -495,4 +495,51 @@ describe('HeuristicGrouper', () => {
       expect(result.packages.some((p) => p.name.includes(' & '))).toBe(true);
     });
   });
+
+  describe('Java Maven package grouping', () => {
+    it('groups Java entities by Maven module instead of main/test path segments', () => {
+      const grouper = new HeuristicGrouper({ maxPackages: 20 });
+      const javaArchJson: ArchJSON = {
+        version: '1.0',
+        language: 'java',
+        timestamp: '2026-03-08T00:00:00.000Z',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.acme.core.CoreService',
+            name: 'CoreService',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: {
+              file: '/workspace/Jlama/jlama-core/src/main/java/com/acme/core/CoreService.java',
+              startLine: 1,
+              endLine: 10,
+            },
+          },
+          {
+            id: 'com.acme.cli.CliTest',
+            name: 'CliTest',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: {
+              file: '/workspace/Jlama/jlama-cli/src/test/java/com/acme/cli/CliTest.java',
+              startLine: 1,
+              endLine: 10,
+            },
+          },
+        ],
+        relations: [],
+      };
+
+      const result = grouper.group(javaArchJson);
+      const names = result.packages.map((pkg) => pkg.name);
+
+      expect(names).toContain('Jlama Core Layer');
+      expect(names).toContain('Jlama Cli Layer');
+      expect(names).not.toContain('Main Layer');
+      expect(names).not.toContain('Test Layer');
+    });
+  });
 });
