@@ -72,7 +72,7 @@ ls .agents/review/proposal-round-1.done .agents/review/proposal-round-2.done 2>/
 
 Each round:
 
-1. Review the proposal against the real codebase.
+1. Review the proposal against the real codebase from the perspective of a strict architect (`以一个严苛的架构师的视角`).
 2. Read every source file, interface, and type referenced in the proposal.
 3. Verify:
    - API surface correctness
@@ -149,7 +149,7 @@ ls .agents/review/plan-round-1.done .agents/review/plan-round-2.done 2>/dev/null
 
 Each round:
 
-1. Review both the proposal and the plan.
+1. Review both the proposal and the plan from the perspective of a strict architect (`以一个严苛的架构师的视角`).
 2. Read all source files, interfaces, and types referenced in the plan.
 3. Verify:
    - Phases are complete, non-overlapping, and correctly sequenced
