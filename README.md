@@ -5,13 +5,13 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 ## Screenshots
 
 ### Package-Level Overview
-![Package Overview](docs/screenshots/overview-package.png)
+![Package Overview](docs/screenshots/overview-package.svg)
 
 ### Class-Level Diagram
-![Class Diagram](docs/screenshots/class-all-classes.png)
+![Class Diagram](docs/screenshots/class-all-classes.svg)
 
 ### Method-Level Detail (CLI Module)
-![CLI Module Methods](docs/screenshots/method-cli-module.png)
+![CLI Module Methods](docs/screenshots/method-cli-module.svg)
 
 ## Features
 
