@@ -10,12 +10,20 @@
 
 当前 `archguard_analyze` 在缺省参数下的行为，与“分析整个项目”的直觉预期不一致。
 
+这里的“缺省参数”特指：
+
+- 未显式传入 `sources`
+- 未显式传入 `lang`
+- 未通过配置文件提供 `config.diagrams`
+
+如果 `config.diagrams` 已存在，当前实现会优先使用显式配置；本提案不改变这一优先级。
+
 以 `~/work/llama.cpp` 为例：
 
 - 仓库主体是 C/C++
 - 同时包含 Python、TypeScript、Shell、Swift 等辅助代码
-- 当前默认路径会退化到 `detectProjectStructure()` 的 TypeScript/JavaScript 语义
-- 最终得到 `./src` 这样的单语言默认目录，而不是“项目的主实现范围”
+- 当前默认路径会退化到 `detectProjectStructure()` 的 TypeScript/JavaScript 文件检测逻辑，它只搜索 `.ts/.js` 文件，对非 TypeScript 项目会产生空或无意义的结果
+- 最终得到 `./src` 这样的单语言默认目录，而不是”项目的主实现范围”
 
 这会产生两个问题：
 
@@ -38,6 +46,8 @@
 2. 每个 scope 只属于一种语言，不混合多语言文件
 3. 默认查询只展示一个 scope，即 `globalScopeKey`
 4. 用户可以显式选择非主语言继续分析或查询
+
+注意：以上是目标状态，不是当前实现事实。
 
 ---
 
@@ -69,6 +79,7 @@
 - `python`
 - `typescript`
 - `go`
+- `java`
 
 `language` 用于“按语言检测”和“按语言请求分析”。
 
@@ -82,9 +93,13 @@
 - `label`
 - `language`
 - `sources`
-- `role`
 - `entityCount`
 - `relationCount`
+
+其中：
+
+- 以上是部分关键字段，完整定义参见 `src/cli/query/query-manifest.ts`。当前 `QueryScopeEntry` 还包含 `kind: 'parsed' | 'derived'`、`hasAtlasExtension: boolean` 等字段
+- `role` 是本提案建议新增的字段（不是当前实现事实），详细兼容性策略见下文"scope 元信息"一节
 
 ### 3. `primary language`
 
@@ -99,6 +114,16 @@
 表示缺省查询使用的 scope。其 key 存放于 `manifest.globalScopeKey`。
 
 `global scope` 通常等于 `primary scope`，但它是“默认展示选择”，不是语言类别本身。
+
+需要明确的是，当前实现里的 `globalScopeKey` 选择逻辑并不是“主语言 primary scope 优先”。当前 `selectGlobalScopeKey()` 的事实是：
+
+- 优先 `kind === 'parsed'`
+- 再按 `entityCount` 最大选择
+- 平局时按 `key` 字典序选择较小值
+
+本提案要求把该逻辑演进为”主语言 primary scope 优先”，这属于明确的行为变更。
+
+注意：此演进在当前实现中尚未完成。`selectGlobalScopeKey()` 目前仍沿用”优先 `kind === 'parsed'`，再按 `entityCount` 最大”的选择逻辑。该变更将在 Phase 3 中完成。
 
 ---
 
@@ -127,6 +152,8 @@
 
 该默认 scope 应由 `manifest.globalScopeKey` 指定。
 
+本提案不要求 query tools 在本轮直接引入 `lang` 查询参数；最小目标仍是保持 query 侧以 `scope` 为唯一正式选择器。
+
 ### 3. 用户可以显式分析非主语言
 
 用户应可通过显式参数覆盖默认主语言选择：
@@ -142,6 +169,10 @@
 `.archguard/query/` 下应允许同时存在多个语言的 query scopes。
 
 用户后续查询时可以在这些 scope 之间切换，而不要求重新分析或覆盖旧结果。
+
+这里的”并存”只直接约束 `query` 产物，不自动扩展到 `.archguard/output/` 下的 diagram 输出和 `cache/diagram-manifest.json`。
+
+> **注**: 当前 `query-manifest.ts` 中的注释所描述的写盘路径与实际写盘路径存在不一致，实施时需以实际代码行为为准并修正注释。
 
 ---
 
@@ -162,11 +193,7 @@
 - `summary(scope = "<scope-key>")`
 - `analyze(lang = "cpp")`
 
-如果未来需要“查某语言的默认 scope”，也应通过独立规则实现，例如：
-
-- `summary(lang = "cpp")`
-
-而不是复用 `scope` 参数。
+如果未来需要“查某语言的默认 scope”，应另开提案定义独立参数或 helper，而不是复用 `scope` 参数。
 
 ### 2. 一个 scope 只属于一种语言
 
@@ -226,6 +253,20 @@
 - 是否覆盖主实现目录
 - 是否仅存在于附属目录
 
+首版实现不必追求对所有受支持语言都做到同等精度。更现实的约束是：
+
+- 优先复用现有插件注册表中的项目标记和现有分析链路
+- 先保证 C++、Go、Python、TypeScript 这类已有明显检测信号的项目可稳定工作
+- 其他语言可在后续迭代增强
+
+但这里有一个重要边界：不能直接把 `PluginRegistry.detectPluginForDirectory()` 当成主语言探测器复用。它当前的语义是：
+
+- 只看单个目录
+- 按固定顺序首个匹配即返回
+- 面向“为一个目录选择一个插件”
+
+这与“多语言候选探测 + 主语言评分”不是同一个问题。首版实现最多只能复用其 marker file 集合与现有插件元信息，不能直接复用其返回语义。
+
 ### 阶段 3：scope 发现
 
 对每个候选语言，发现 1 个或多个语言级源码 scope。
@@ -246,6 +287,8 @@
 - 明显独立的大子系统可保留为 secondary scope
 - `vendor`、`third_party`、`build`、`.git` 默认不进入主 scope
 
+这里的“合并与裁剪”是分析规划层的概念，不等于当前 `persistQueryScopes()` 的 manifest merge 语义。后者需要单独定义磁盘更新策略。
+
 ### 阶段 5：选择 `globalScopeKey`
 
 规则建议为：
@@ -253,6 +296,14 @@
 1. 先确定主语言
 2. 再选择主语言中的 primary scope
 3. 将该 scope 设为 `manifest.globalScopeKey`
+
+**当前实现与此 5 阶段框架的对应关系**：
+
+- 阶段 1（仓库探测）：当前仅有 `detectRootLanguage()` 做极简检测。`lang = 'go'` 时检查 `go.mod`；`lang = 'cpp'` + 无 sources 时，`inferredLanguage` 被赋值为 `'cpp'`，但后续只有 `go` 分支有完整处理，`cpp` 会 fallthrough 到 `detectProjectStructure()` 的 TypeScript/JS 逻辑
+- 阶段 2（语言候选打分）：当前无此逻辑，Phase 2 中引入 `project-language-detector.ts`
+- 阶段 3（scope 发现）：有 `detectProjectStructure()`（TypeScript）和 `detectCppProjectStructure()`（C++），但尚未统一
+- 阶段 4（scope 合并与裁剪）：当前无此逻辑，Phase 2 中引入 `default-scope-planner.ts`
+- 阶段 5（选择 globalScopeKey）：当前通过 `selectGlobalScopeKey()` 实现，但选择逻辑尚未演进为"主语言优先"
 
 ---
 
@@ -269,7 +320,7 @@
 
 高权重信号：
 
-- 根目录 `CMakeLists.txt`、`Makefile`、`go.mod`、`pom.xml`
+- 根目录 `CMakeLists.txt`、`Makefile`、`go.mod`、`pom.xml`、`package.json`（注意：`package.json` 在多语言仓库中可能仅用于辅助工具链而非主语言，需结合其他信号综合判断以避免误判）
 - 主源码目录中的文件覆盖
 - 主要二进制/库的实现语言
 
@@ -323,6 +374,8 @@
 
 ### 1. Analyze
 
+以下为目标 API 语义（Phase 2-4 落地后），当前实现仅支持 sources 与 lang 的显式组合，全缺省时仅走 TypeScript/JavaScript 目录约定（Go 有特殊检测）。
+
 `analyze` 层的参数语义：
 
 - `projectRoot`
@@ -332,23 +385,21 @@
 - `sources`
   - 按路径限制分析范围
 
-建议优先级：
+**当前实现的优先级**（`normalizeToDiagrams()` 实际只有 3 层）：
 
-1. `sources + lang`
-2. `sources`
-3. `lang`
-4. 全缺省
+1. `config.diagrams`（显式配置文件）
+2. `sources`（显式路径，结合 `lang` 选择插件）
+3. 推断（根据 `lang` 或目录特征回退到 `detectProjectStructure()` / `detectCppProjectStructure()` 等）
 
-对应行为：
+**目标优先级**（本提案落地后）：
 
-- `sources + lang`
-  - 只分析指定路径中的指定语言
-- `sources`
-  - 对这些路径做语言探测；必要时生成多个 scope
-- `lang`
-  - 在项目内自动发现该语言的主/次级 scope
-- 全缺省
-  - 自动发现项目中的语言级 scope，并选择主语言主 scope 作为全局默认
+1. `config.diagrams`
+2. `sources + lang` — 只分析指定路径中的指定语言
+3. `sources` — 对这些路径做语言探测；必要时生成多个 scope
+4. `lang` — 在项目内自动发现该语言的主/次级 scope
+5. 全缺省 — 自动发现项目中的语言级 scope，并选择主语言主 scope 作为全局默认
+
+当前实现中第 2-4 层未做细粒度区分，`lang` 单独出现时（如 `lang = 'cpp'` 且无 `sources`）并不会触发独立的 scope 发现逻辑，而是直接 fallthrough 到现有的目录推断。这是本提案需要修正的核心缺陷之一。
 
 ### 2. Query
 
@@ -370,9 +421,13 @@
 
 不推荐：
 
-- `scope = "cpp"`
+- `scope = “cpp”`
 
-因为这会把“语言选择”和“scope 选择”混为一谈。
+因为这会把”语言选择”和”scope 选择”混为一谈。
+
+如果需要”查询某语言的默认 scope”，应通过读取 manifest 中该语言的 primary scope key 实现，而不是将语言名直接作为 scope 参数。可考虑在未来 helper 函数中封装这一逻辑（如 `getScopeByLanguage(lang)`），但不在本提案范围内。
+
+本提案不要求在 query MCP tools 中新增 `lang` 参数；那会扩大本轮范围，并把”默认分析”问题与”按语言查询”问题耦合起来。
 
 ---
 
@@ -403,6 +458,10 @@
 - `relationCount`
 - `role`（建议新增，如 `primary` / `secondary`）
 
+其中 `role` 属于新增字段，需作为向后兼容的加法字段引入，或通过显式版本升级引入。
+
+`role` 字段应作为**可选向后兼容字段**引入，旧版本缺少此字段时应视为 `'primary'`（即默认兼容现有 scope 均作为 primary）。该字段不触发 manifest version 升级，以 additive 方式引入。
+
 ### 3. `globalScopeKey`
 
 `globalScopeKey` 的语义应保持单一：
@@ -428,6 +487,19 @@
 1. 先默认分析 C++
 2. 再显式分析 Python
 3. 再切回查询 C++
+
+这里的 merge 语义仅指 `.archguard/query/manifest.json` 与 `query/<scope-key>/`。
+
+当前实现中：
+
+- `persistQueryScopes()` 每次会重写 query manifest
+- `cleanStaleDiagrams()` / `writeManifest()` 管理的是 diagram output 与 `cache/diagram-manifest.json`
+
+这两套磁盘语义不能混为一谈。若要实现 query scope merge，应先限定在 query artifacts 层，不应隐含要求 diagram output 立即改成相同策略。
+
+此外，当前 `persistQueryScopes()` 在覆盖写入时不会删除不再引用的 scope 目录，可能导致磁盘残留（orphaned scope 目录）。Phase 3 实现 merge 语义时需要明确策略：是保留孤立目录直到显式清理，还是在 merge 后主动清理不再被 manifest 引用的 scope 目录。
+
+以下 merge 语义为**目标行为**，当前 `persistQueryScopes()` 仍采用整体替换（覆盖）语义。将 merge 变更作为 Phase 3 的核心实现任务。
 
 ### 2. 保留显式重建能力
 
@@ -476,7 +548,7 @@ Reason:
 
 ## 实施建议
 
-建议分两步推进。
+建议分两步推进。此处两步是提案层面的粗粒度建议，实施计划（Plan 32）会进一步拆分为多个 Phase 以控制每轮变更的风险和范围。
 
 ### 第一步：修正当前错误默认行为
 
@@ -495,6 +567,20 @@ Reason:
 - 多 scope 生成
 - `globalScopeKey` 选择规则
 - 多语言并存的 query artifact 更新策略
+
+第二步不要求一次性把以下能力全部落地：
+
+- 自动发现多个非主语言 scope
+- query scope merge
+- 按语言查询 helper
+- diagram output merge
+
+更合理的顺序是：
+
+1. 主语言自动发现
+2. primary scope 选择
+3. query artifacts 多 scope 并存
+4. 其他辅助能力
 
 ---
 
@@ -527,4 +613,3 @@ Reason:
 3. `scope` 与 `lang` 必须语义分离
 4. 不同语言的分析产物与缓存应允许并存
 5. 用户应可显式分析非主语言，并在后续查询中交替使用不同 scope
-
