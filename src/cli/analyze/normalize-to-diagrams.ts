@@ -1,7 +1,11 @@
 import path from 'path';
-import fs from 'fs-extra';
 import { detectProjectStructure } from '../utils/project-structure-detector.js';
 import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
+import {
+  createProjectRootLanguageDiagrams,
+  planDefaultDiagrams,
+} from '../utils/default-scope-planner.js';
+import { detectProjectLanguages } from '../utils/project-language-detector.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
 
@@ -66,13 +70,25 @@ export async function normalizeToDiagrams(
       return filterByLevels(diagrams, cliOptions.diagrams);
     }
 
+    if (language === 'python' || language === 'java' || language === 'typescript') {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      return filterByLevels(
+        createProjectRootLanguageDiagrams(resolvedRoot, language, {
+          label: path.basename(sourcePath),
+          source: cliOptions.sources[0],
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+        }),
+        cliOptions.diagrams
+      );
+    }
+
     const externalSourceRoot = path.resolve(cliOptions.sources[0]);
     const diagrams = await detectProjectStructure(resolvedRoot, externalSourceRoot);
     return filterByLevels(diagrams, cliOptions.diagrams);
   }
 
-  const inferredLanguage = cliOptions.lang ?? (cliOptions.atlas ? 'go' : await detectRootLanguage(resolvedRoot));
-  if (inferredLanguage === 'go') {
+  if (cliOptions.lang === 'go' || (cliOptions.lang === undefined && cliOptions.atlas)) {
     return [
       {
         name: 'architecture',
@@ -94,15 +110,45 @@ export async function normalizeToDiagrams(
     ];
   }
 
-  const diagrams = await detectProjectStructure(resolvedRoot);
-  return filterByLevels(diagrams, cliOptions.diagrams);
-}
-
-async function detectRootLanguage(rootDir: string): Promise<'go' | undefined> {
-  if (await fs.pathExists(path.join(rootDir, 'go.mod'))) {
-    return 'go';
+  if (cliOptions.lang === 'cpp') {
+    return filterByLevels(
+      createProjectRootLanguageDiagrams(resolvedRoot, 'cpp', {
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      }),
+      cliOptions.diagrams
+    );
   }
-  return undefined;
+
+  if (
+    cliOptions.lang === 'python' ||
+    cliOptions.lang === 'java' ||
+    cliOptions.lang === 'typescript'
+  ) {
+    return filterByLevels(
+      createProjectRootLanguageDiagrams(resolvedRoot, cliOptions.lang, {
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      }),
+      cliOptions.diagrams
+    );
+  }
+
+  const candidates = await detectProjectLanguages(resolvedRoot);
+  if (
+    candidates.length === 1 &&
+    candidates[0].language === 'typescript' &&
+    candidates[0].score === 0
+  ) {
+    const fallbackDiagrams = await detectProjectStructure(resolvedRoot);
+    return filterByLevels(fallbackDiagrams, cliOptions.diagrams);
+  }
+
+  const diagrams = await planDefaultDiagrams(resolvedRoot, {
+    format: cliOptions.format,
+    exclude: cliOptions.exclude,
+  });
+  return filterByLevels(diagrams, cliOptions.diagrams);
 }
 
 export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): DiagramConfig[] {

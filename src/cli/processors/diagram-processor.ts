@@ -231,7 +231,7 @@ export class DiagramProcessor {
     const sourceGroups = new Map<string, DiagramConfig[]>();
 
     for (const diagram of this.diagrams) {
-      const key = hashSources(diagram.sources);
+      const key = hashSources(diagram.sources, diagram.language);
       if (!sourceGroups.has(key)) {
         sourceGroups.set(key, []);
       }
@@ -249,9 +249,14 @@ export class DiagramProcessor {
    * Only registers if the ArchJSON has at least one entity and the key is not already present
    * (first registration wins to avoid overwriting with a derived copy).
    */
-  private registerQueryScope(sources: string[], archJson: ArchJSON, kind: 'parsed' | 'derived'): void {
+  private registerQueryScope(
+    sources: string[],
+    archJson: ArchJSON,
+    kind: 'parsed' | 'derived',
+    role?: 'primary' | 'secondary'
+  ): void {
     if (!archJson.entities || archJson.entities.length === 0) return;
-    const key = hashSources(sources);
+    const key = hashSources(sources, archJson.language);
     if (this.queryScopes.has(key)) return;
     const normalizedSources = sources.map((s) => path.resolve(s));
     this.queryScopes.set(key, {
@@ -259,6 +264,7 @@ export class DiagramProcessor {
       sources: normalizedSources,
       archJson,
       kind,
+      role,
     });
   }
 
@@ -292,7 +298,7 @@ export class DiagramProcessor {
       const { archJson: rawArchJSON, kind } = await this.provider.get(firstDiagram, {
         needsModuleGraph,
       });
-      this.registerQueryScope(firstDiagram.sources, rawArchJSON, kind);
+      this.registerQueryScope(firstDiagram.sources, rawArchJSON, kind, firstDiagram.queryRole);
       return await pMap(
         diagrams,
         (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
@@ -300,7 +306,11 @@ export class DiagramProcessor {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      return diagrams.map((diagram) => ({ name: diagram.name, success: false, error: errorMessage }));
+      return diagrams.map((diagram) => ({
+        name: diagram.name,
+        success: false,
+        error: errorMessage,
+      }));
     }
   }
 
@@ -414,5 +424,4 @@ export class DiagramProcessor {
       };
     }
   }
-
 }

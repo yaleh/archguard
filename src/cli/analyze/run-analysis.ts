@@ -36,12 +36,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const config = await configLoader.load(configOverrides, cliOptions.config);
   reporter.succeed('Configuration loaded');
 
-  const selectedDiagrams = (await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot)).map(
-    (diagram) => ({
-      ...diagram,
-      sources: diagram.sources.map((source) => path.resolve(sessionRoot, source)),
-    }),
-  );
+  const selectedDiagrams = (
+    await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot)
+  ).map((diagram) => ({
+    ...diagram,
+    sources: diagram.sources.map((source) => path.resolve(sessionRoot, source)),
+  }));
   reporter.info(`Found ${selectedDiagrams.length} diagram(s) to generate`);
 
   if (selectedDiagrams.length === 0) {
@@ -93,11 +93,14 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const queryScopes = processor.getQuerySourceGroups();
   if (queryScopes.length > 0) {
     try {
-      const entries = await persistQueryScopes(config.workDir || workDir, queryScopes);
+      const preferredGlobalScopeKey = queryScopes.find((scope) => scope.role === 'primary')?.key;
+      const entries = await persistQueryScopes(config.workDir || workDir, queryScopes, {
+        preferredGlobalScopeKey,
+      });
       persistedScopeKeys = entries.map((entry) => entry.key);
       if (config.verbose) {
         reporter.info(
-          `Persisted ${entries.length} query scope(s) to ${(config.workDir || workDir)}/query/`,
+          `Persisted ${entries.length} query scope(s) to ${config.workDir || workDir}/query/`
         );
       }
     } catch (err) {
@@ -132,7 +135,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 function buildConfigOverrides(
   cliOptions: Partial<CLIOptions>,
   workDir: string,
-  sessionRoot: string,
+  sessionRoot: string
 ): Partial<Config> {
   const configOverrides: Partial<Config> = { workDir };
   if (cliOptions.format) configOverrides.format = cliOptions.format;
@@ -177,7 +180,9 @@ function buildConfigOverrides(
     if (!sourcePath.startsWith(sessionRoot)) {
       const SOURCE_ROOT_NAMES = ['src', 'lib', 'app', 'source'];
       const basename = path.basename(sourcePath);
-      const projectRoot = SOURCE_ROOT_NAMES.includes(basename) ? path.dirname(sourcePath) : sourcePath;
+      const projectRoot = SOURCE_ROOT_NAMES.includes(basename)
+        ? path.dirname(sourcePath)
+        : sourcePath;
       configOverrides.workDir = path.join(projectRoot, '.archguard');
     }
   }

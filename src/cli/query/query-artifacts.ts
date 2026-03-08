@@ -10,6 +10,11 @@ import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
  */
 export type QueryScopeInput = QuerySourceGroup;
 
+export interface PersistQueryScopesOptions {
+  merge?: boolean;
+  preferredGlobalScopeKey?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Atomic write
 // ---------------------------------------------------------------------------
@@ -24,10 +29,7 @@ export type QueryScopeInput = QuerySourceGroup;
  * The random suffix prevents collisions when multiple processes run
  * concurrently against the same output directory.
  */
-export async function atomicWriteFile(
-  filePath: string,
-  data: string | Buffer,
-): Promise<void> {
+export async function atomicWriteFile(filePath: string, data: string | Buffer): Promise<void> {
   await fs.ensureDir(path.dirname(filePath));
   const suffix = crypto.randomUUID().slice(0, 8);
   const tmpPath = `${filePath}.tmp.${suffix}`;
@@ -71,6 +73,7 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
     entityCount: archJson.entities.length,
     relationCount: archJson.relations.length,
     hasAtlasExtension: !!archJson.extensions?.goAtlas,
+    ...(scope.role ? { role: scope.role } : {}),
   };
 }
 
@@ -114,6 +117,7 @@ function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
 export async function persistQueryScopes(
   workDir: string,
   scopes: QueryScopeInput[],
+  options: PersistQueryScopesOptions = {}
 ): Promise<QueryScopeEntry[]> {
   const resolvedDir = workDir || path.join(process.cwd(), '.archguard');
   const queryDir = path.join(resolvedDir, 'query');
@@ -145,11 +149,34 @@ export async function persistQueryScopes(
     }
   }
 
+  const existingManifest =
+    options.merge !== false
+      ? await fs
+          .readJson(path.join(queryDir, 'manifest.json'))
+          .catch(() => null as QueryManifest | null)
+      : null;
+
+  const mergedEntries = new Map<string, QueryScopeEntry>();
+  for (const entry of existingManifest?.scopes ?? []) {
+    mergedEntries.set(entry.key, entry);
+  }
+  for (const entry of writtenEntries) {
+    mergedEntries.set(entry.key, entry);
+  }
+
+  const mergedList = Array.from(mergedEntries.values()).sort((a, b) => a.key.localeCompare(b.key));
+  const preferredGlobalScopeKey =
+    options.preferredGlobalScopeKey && mergedEntries.has(options.preferredGlobalScopeKey)
+      ? options.preferredGlobalScopeKey
+      : existingManifest?.globalScopeKey && mergedEntries.has(existingManifest.globalScopeKey)
+        ? existingManifest.globalScopeKey
+        : selectGlobalScopeKey(mergedList);
+
   const manifest: QueryManifest = {
     version: '1.0',
     generatedAt: new Date().toISOString(),
-    globalScopeKey: selectGlobalScopeKey(writtenEntries),
-    scopes: [...writtenEntries].sort((a, b) => a.key.localeCompare(b.key)),
+    globalScopeKey: preferredGlobalScopeKey,
+    scopes: mergedList,
   };
 
   const manifestPath = path.join(queryDir, 'manifest.json');

@@ -325,6 +325,13 @@ export interface DiagramConfig {
    */
   languageSpecific?: Record<string, unknown>;
 
+  /**
+   * Internal query role used to select the preferred default query scope.
+   *
+   * Not intended for end-user config files.
+   */
+  queryRole?: 'primary' | 'secondary';
+
   // ========== v2.1.0: Metadata Enhancement (Optional) ==========
 
   /**

@@ -104,10 +104,7 @@ describe('generateScopeLabel', () => {
   });
 
   it('uses first source basename when multiple sources given', () => {
-    const label = generateScopeLabel(
-      ['/home/user/project/lib', '/home/user/project/src'],
-      'go',
-    );
+    const label = generateScopeLabel(['/home/user/project/lib', '/home/user/project/src'], 'go');
     expect(label).toBe('lib (go)');
   });
 
@@ -225,6 +222,65 @@ describe('persistQueryScopes', () => {
 
     const manifest = await fs.readJson(path.join(dir, 'query', 'manifest.json'));
     expect(manifest.globalScopeKey).toBe('parsed-large');
+  });
+
+  it('merges new scopes with existing manifest entries by default', async () => {
+    const dir = makeTmpDir();
+    tmpDirs.push(dir);
+
+    await persistQueryScopes(dir, [
+      {
+        key: 'scope-a',
+        sources: ['/project/src'],
+        archJson: makeArchJson(),
+        kind: 'parsed',
+      },
+    ]);
+
+    await persistQueryScopes(dir, [
+      {
+        key: 'scope-b',
+        sources: ['/project/gguf-py'],
+        archJson: makeArchJson({ language: 'python' }),
+        kind: 'parsed',
+      },
+    ]);
+
+    const manifest = await fs.readJson(path.join(dir, 'query', 'manifest.json'));
+    expect(manifest.scopes.map((scope: { key: string }) => scope.key)).toEqual([
+      'scope-a',
+      'scope-b',
+    ]);
+  });
+
+  it('preserves the existing global scope key when adding non-primary scopes', async () => {
+    const dir = makeTmpDir();
+    tmpDirs.push(dir);
+
+    await persistQueryScopes(
+      dir,
+      [
+        {
+          key: 'cpp-core',
+          sources: ['/project'],
+          archJson: makeArchJson({ language: 'cpp' }),
+          kind: 'parsed',
+        },
+      ],
+      { preferredGlobalScopeKey: 'cpp-core' }
+    );
+
+    await persistQueryScopes(dir, [
+      {
+        key: 'python-tools',
+        sources: ['/project/gguf-py'],
+        archJson: makeArchJson({ language: 'python' }),
+        kind: 'parsed',
+      },
+    ]);
+
+    const manifest = await fs.readJson(path.join(dir, 'query', 'manifest.json'));
+    expect(manifest.globalScopeKey).toBe('cpp-core');
   });
 
   it('creates <key>/arch.json for each scope', async () => {

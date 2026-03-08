@@ -85,6 +85,17 @@ const persistedEntry: QueryScopeEntry = {
   hasAtlasExtension: false,
 };
 
+const persistedPythonEntry: QueryScopeEntry = {
+  key: 'python5678',
+  label: 'gguf-py (python)',
+  language: 'python',
+  kind: 'parsed',
+  sources: ['/tmp/project/gguf-py'],
+  entityCount: 4,
+  relationCount: 1,
+  hasAtlasExtension: false,
+};
+
 describe('runAnalysis', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -138,18 +149,90 @@ describe('runAnalysis', () => {
 
     expect(loadMock).toHaveBeenCalledWith(
       expect.objectContaining({ workDir: '/tmp/project/.archguard' }),
-      undefined,
+      undefined
     );
     expect(normalizeToDiagramsMock).toHaveBeenCalledWith(
       baseConfig,
       { sources: ['./src'] },
-      '/tmp/project',
+      '/tmp/project'
     );
     expect(persistQueryScopesMock).toHaveBeenCalledWith(
       '/tmp/project/.archguard',
       expect.any(Array),
+      expect.objectContaining({ preferredGlobalScopeKey: undefined })
     );
     expect(result.persistedScopeKeys).toEqual(['abcd1234']);
+  });
+
+  it('passes preferredGlobalScopeKey when normalized diagrams mark a primary scope', async () => {
+    normalizeToDiagramsMock.mockResolvedValue([
+      {
+        name: 'cpp/overview/package',
+        sources: ['./src'],
+        level: 'package',
+        language: 'cpp',
+        queryRole: 'primary',
+      },
+      {
+        name: 'cpp/class/all-classes',
+        sources: ['./src'],
+        level: 'class',
+        language: 'cpp',
+        queryRole: 'primary',
+      },
+      {
+        name: 'python/overview/package',
+        sources: ['./gguf-py'],
+        level: 'package',
+        language: 'python',
+        queryRole: 'secondary',
+      },
+    ]);
+    getQuerySourceGroupsMock.mockReturnValue([
+      {
+        key: 'abcd1234',
+        sources: ['/tmp/project/src'],
+        kind: 'parsed',
+        role: 'primary',
+        archJson: {
+          version: '1.0',
+          language: 'cpp',
+          timestamp: '2026-03-07T00:00:00Z',
+          sourceFiles: [],
+          entities: [],
+          relations: [],
+        },
+      },
+      {
+        key: 'python5678',
+        sources: ['/tmp/project/gguf-py'],
+        kind: 'parsed',
+        role: 'secondary',
+        archJson: {
+          version: '1.0',
+          language: 'python',
+          timestamp: '2026-03-07T00:00:00Z',
+          sourceFiles: [],
+          entities: [],
+          relations: [],
+        },
+      },
+    ]);
+    persistQueryScopesMock.mockResolvedValue([persistedEntry, persistedPythonEntry]);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(persistQueryScopesMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard',
+      expect.any(Array),
+      expect.objectContaining({ preferredGlobalScopeKey: 'abcd1234' })
+    );
   });
 
   it('generates index only when multiple results are present', async () => {
@@ -205,7 +288,7 @@ describe('runAnalysis', () => {
             sources: ['/tmp/external-project/src'],
           }),
         ],
-      }),
+      })
     );
   });
 });

@@ -27,7 +27,19 @@ vi.mock('@/cli/utils/project-structure-detector.js', () => ({
     .mockResolvedValue([{ name: 'architecture', sources: ['./src'], level: 'class' }]),
 }));
 
+vi.mock('@/cli/utils/project-language-detector.js', () => ({
+  detectProjectLanguages: vi.fn().mockResolvedValue([
+    {
+      language: 'typescript',
+      score: 0,
+      evidence: ['fallback'],
+      roots: ['/project/root'],
+    },
+  ]),
+}));
+
 import { detectProjectStructure } from '@/cli/utils/project-structure-detector.js';
+import { detectProjectLanguages } from '@/cli/utils/project-language-detector.js';
 import fs from 'fs-extra';
 
 const baseConfig: Config = {
@@ -45,6 +57,15 @@ beforeEach(() => {
   vi.mocked(detectProjectStructure).mockClear();
   vi.mocked(detectProjectStructure).mockResolvedValue([
     { name: 'architecture', sources: ['./src'], level: 'class' },
+  ]);
+  vi.mocked(detectProjectLanguages).mockReset();
+  vi.mocked(detectProjectLanguages).mockResolvedValue([
+    {
+      language: 'typescript',
+      score: 0,
+      evidence: ['fallback'],
+      roots: ['/project/root'],
+    },
   ]);
   vi.mocked(fs.pathExists).mockReset();
   vi.mocked(fs.pathExists).mockResolvedValue(false);
@@ -296,19 +317,54 @@ describe('normalizeToDiagrams', () => {
     });
 
     it('defaults to Go Atlas when the project root contains go.mod', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (candidate: string) => candidate === '/go-project/go.mod');
+      vi.mocked(detectProjectLanguages).mockResolvedValue([
+        {
+          language: 'go',
+          score: 100,
+          evidence: ['marker: go.mod'],
+          roots: ['/go-project'],
+        },
+      ]);
 
       const result = await normalizeToDiagrams(baseConfig, {}, '/go-project');
 
       expect(detectProjectStructure).not.toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
-        name: 'architecture',
+        name: 'go-project/overview/package',
         sources: ['.'],
         level: 'package',
         language: 'go',
       });
       expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
+    });
+
+    it('defaults to cpp project-root diagrams when the project root contains CMakeLists.txt', async () => {
+      vi.mocked(detectProjectLanguages).mockResolvedValue([
+        {
+          language: 'cpp',
+          score: 120,
+          evidence: ['marker: CMakeLists.txt'],
+          roots: ['/cpp-project'],
+        },
+      ]);
+
+      const result = await normalizeToDiagrams(baseConfig, {}, '/cpp-project');
+
+      expect(detectProjectStructure).not.toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        name: 'cpp-project/overview/package',
+        sources: ['.'],
+        level: 'package',
+        language: 'cpp',
+      });
+      expect(result[1]).toMatchObject({
+        name: 'cpp-project/class/all-classes',
+        sources: ['.'],
+        level: 'class',
+        language: 'cpp',
+      });
     });
   });
 
@@ -379,6 +435,81 @@ describe('normalizeToDiagrams', () => {
       expect(result[0].exclude).toEqual(['**/*.test.cpp']);
       expect(result[1].format).toBe('json');
       expect(result[1].exclude).toEqual(['**/*.test.cpp']);
+    });
+
+    it('--lang cpp without sources uses project root as the primary scope', async () => {
+      const result = await normalizeToDiagrams(
+        baseConfig,
+        {
+          lang: 'cpp',
+        },
+        '/home/user/myproject'
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        name: 'myproject/overview/package',
+        sources: ['.'],
+        level: 'package',
+        language: 'cpp',
+      });
+      expect(result[1]).toMatchObject({
+        name: 'myproject/class/all-classes',
+        sources: ['.'],
+        level: 'class',
+        language: 'cpp',
+      });
+    });
+  });
+
+  describe('Explicit non-TypeScript language without sources', () => {
+    it('--lang python without sources uses project-root diagrams', async () => {
+      const result = await normalizeToDiagrams(
+        baseConfig,
+        {
+          lang: 'python',
+        },
+        '/workspace/python-app'
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        name: 'python-app/overview/package',
+        sources: ['.'],
+        level: 'package',
+        language: 'python',
+      });
+      expect(result[1]).toMatchObject({
+        name: 'python-app/class/all-classes',
+        sources: ['.'],
+        level: 'class',
+        language: 'python',
+      });
+    });
+
+    it('--lang python with sources uses the explicit source root', async () => {
+      const result = await normalizeToDiagrams(
+        baseConfig,
+        {
+          lang: 'python',
+          sources: ['./gguf-py'],
+        },
+        '/workspace/project'
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        name: 'gguf-py/overview/package',
+        sources: ['./gguf-py'],
+        level: 'package',
+        language: 'python',
+      });
+      expect(result[1]).toMatchObject({
+        name: 'gguf-py/class/all-classes',
+        sources: ['./gguf-py'],
+        level: 'class',
+        language: 'python',
+      });
     });
   });
 

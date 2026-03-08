@@ -53,6 +53,9 @@ export interface QueryScopeEntry {
 
   /** Whether Go Atlas extensions are present. */
   hasAtlasExtension: boolean;
+
+  /** Optional role hint used to identify primary vs secondary scopes. */
+  role?: 'primary' | 'secondary';
 }
 
 // ---------------------------------------------------------------------------
@@ -71,4 +74,7 @@ export interface QuerySourceGroup {
 
   /** Whether this group was directly parsed or derived. */
   kind: 'parsed' | 'derived';
+
+  /** Optional role hint used when selecting the preferred global scope. */
+  role?: 'primary' | 'secondary';
 }

@@ -3,8 +3,7 @@
  *
  * Covers:
  * - Memory cache hit (no re-parse)
- * - Language routing: Go, C++, TypeScript Plugin (Path A), ParallelParser (Path B)
- * - Language guard: needsModuleGraph + java → Path B (not Path A)
+ * - Language routing: Go, C++, Python/Java plugin path, TypeScript Plugin (Path A), ParallelParser (Path B)
  * - Disk cache hits for Path A and Path B
  * - Parent-coverage derivation
  * - files.length === 0 error path
@@ -278,24 +277,17 @@ describe('ArchJsonProvider', () => {
     vi.doUnmock('@/plugins/typescript/index.js');
   });
 
-  // ---- 7. language guard: java + needsModuleGraph=true → Path B (not parseTsPlugin)
+  // ---- 7. explicit non-TS plugin languages use plugin routing -------------
 
-  it("routes java language with needsModuleGraph=true to ParallelParser (language guard)", async () => {
+  it('routes java language with needsModuleGraph=true to the Java plugin', async () => {
     const javaArchJson = makeArchJSON({ language: 'java' });
-    const mockParseFiles = vi.fn().mockResolvedValue(javaArchJson);
-    const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/Main.java']);
+    const mockParseProject = vi.fn().mockResolvedValue(javaArchJson);
+    const mockInitialize = vi.fn().mockResolvedValue(undefined);
 
-    (ParallelParser as any).mockImplementation(() => ({ parseFiles: mockParseFiles }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
-      discoverFiles: mockDiscoverFiles,
-    }));
-
-    // TypeScriptPlugin should NOT be called
-    const mockTsParseProject = vi.fn();
-    vi.doMock('@/plugins/typescript/index.js', () => ({
-      TypeScriptPlugin: vi.fn().mockImplementation(() => ({
-        initialize: vi.fn().mockResolvedValue(undefined),
-        parseProject: mockTsParseProject,
+    vi.doMock('@/plugins/java/index.js', () => ({
+      JavaPlugin: vi.fn().mockImplementation(() => ({
+        initialize: mockInitialize,
+        parseProject: mockParseProject,
       })),
     }));
 
@@ -305,10 +297,66 @@ describe('ArchJsonProvider', () => {
     const { kind } = await provider.get(diagram, { needsModuleGraph: true });
 
     expect(kind).toBe('parsed');
-    expect(mockParseFiles).toHaveBeenCalledTimes(1);
-    expect(mockTsParseProject).not.toHaveBeenCalled();
+    expect(mockParseProject).toHaveBeenCalledTimes(1);
 
-    vi.doUnmock('@/plugins/typescript/index.js');
+    vi.doUnmock('@/plugins/java/index.js');
+  });
+
+  it('routes python language to the Python plugin', async () => {
+    const pythonArchJson = makeArchJSON({ language: 'python' });
+    const mockParseProject = vi.fn().mockResolvedValue(pythonArchJson);
+    const mockInitialize = vi.fn().mockResolvedValue(undefined);
+
+    vi.doMock('@/plugins/python/index.js', () => ({
+      PythonPlugin: vi.fn().mockImplementation(() => ({
+        initialize: mockInitialize,
+        parseProject: mockParseProject,
+      })),
+    }));
+
+    const provider = new ArchJsonProvider({ globalConfig: makeGlobalConfig() });
+    const diagram = makeDiagram({ language: 'python', level: 'class' });
+
+    const { kind } = await provider.get(diagram, { needsModuleGraph: false });
+
+    expect(kind).toBe('parsed');
+    expect(mockParseProject).toHaveBeenCalledTimes(1);
+
+    vi.doUnmock('@/plugins/python/index.js');
+  });
+
+  it('does not reuse cache entries across different languages on the same source root', async () => {
+    const cppArchJson = makeArchJSON({ language: 'cpp' });
+    const pythonArchJson = makeArchJSON({ language: 'python' });
+    const mockCppParseProject = vi.fn().mockResolvedValue(cppArchJson);
+    const mockPythonParseProject = vi.fn().mockResolvedValue(pythonArchJson);
+
+    vi.doMock('@/plugins/cpp/index.js', () => ({
+      CppPlugin: vi.fn().mockImplementation(() => ({
+        initialize: vi.fn().mockResolvedValue(undefined),
+        parseProject: mockCppParseProject,
+      })),
+    }));
+    vi.doMock('@/plugins/python/index.js', () => ({
+      PythonPlugin: vi.fn().mockImplementation(() => ({
+        initialize: vi.fn().mockResolvedValue(undefined),
+        parseProject: mockPythonParseProject,
+      })),
+    }));
+
+    const provider = new ArchJsonProvider({ globalConfig: makeGlobalConfig() });
+    await provider.get(makeDiagram({ language: 'cpp', sources: ['/project'] }), {
+      needsModuleGraph: false,
+    });
+    await provider.get(makeDiagram({ language: 'python', sources: ['/project'] }), {
+      needsModuleGraph: false,
+    });
+
+    expect(mockCppParseProject).toHaveBeenCalledTimes(1);
+    expect(mockPythonParseProject).toHaveBeenCalledTimes(1);
+
+    vi.doUnmock('@/plugins/cpp/index.js');
+    vi.doUnmock('@/plugins/python/index.js');
   });
 
   // ---- 8. TS + needsModuleGraph=false → ParallelParser path ---------------

@@ -51,12 +51,13 @@ export interface ArchJsonGetOptions {
  * Utility: generate a short hash key from an array of source paths.
  * Exported so DiagramProcessor can use the same hashing logic for groupDiagramsBySource.
  */
-export function hashSources(sources: string[]): string {
+export function hashSources(sources: string[], language?: string): string {
   const normalized = sources
     .map((s) => s.replace(/\\/g, '/'))
     .sort()
     .join('|');
-  return createHash('sha256').update(normalized).digest('hex').slice(0, 8);
+  const identity = `${language ?? 'typescript'}::${normalized}`;
+  return createHash('sha256').update(identity).digest('hex').slice(0, 8);
 }
 
 /**
@@ -202,7 +203,10 @@ export class ArchJsonProvider {
    * Each entry: { promise: resolves with the parsed ArchJSON, sources: the sources being parsed }
    * Groups that detect a potential parent await this promise before checking the index.
    */
-  private archJsonDeferred = new Map<string, { promise: Promise<ArchJSON>; sources: string[] }>();
+  private archJsonDeferred = new Map<
+    string,
+    { promise: Promise<ArchJSON>; sources: string[]; language: string }
+  >();
 
   constructor(options: ArchJsonProviderOptions) {
     this.globalConfig = options.globalConfig;
@@ -237,7 +241,7 @@ export class ArchJsonProvider {
     diagram: DiagramConfig,
     opts: ArchJsonGetOptions
   ): Promise<{ archJson: ArchJSON; kind: 'parsed' | 'derived' }> {
-    const key = hashSources(diagram.sources);
+    const key = hashSources(diagram.sources, diagram.language);
 
     // ① Unified memory cache check
     // Safe because archJsonCache only contains truly parsed results, and
@@ -249,6 +253,7 @@ export class ArchJsonProvider {
     if (diagram.language === 'go') {
       const archJson = await this.registerDeferred(
         diagram.sources,
+        diagram.language,
         this.parseGoProject(diagram)
       );
       return { archJson, kind: 'parsed' };
@@ -256,15 +261,24 @@ export class ArchJsonProvider {
 
     // ③ Language routing: C++
     if (diagram.language === 'cpp') {
-      const { deferred, normParentPath } = this.findParentCoverage(diagram.sources);
+      const { deferred, normParentPath } = this.findParentCoverage(
+        diagram.sources,
+        diagram.language
+      );
       if (deferred) {
         const parent = await deferred;
         return {
-          archJson: deriveSubModuleArchJSON(parent, diagram.sources[0], normParentPath ?? undefined),
+          archJson: deriveSubModuleArchJSON(
+            parent,
+            diagram.sources[0],
+            normParentPath ?? undefined
+          ),
           kind: 'derived',
         };
       } else if (normParentPath) {
-        const parentKey = this.archJsonPathIndex.get(normParentPath)!;
+        const parentKey = this.archJsonPathIndex.get(
+          this.makePathIndexKey(diagram.language ?? 'typescript', normParentPath)
+        )!;
         const parent = this.archJsonCache.get(parentKey)!;
         return {
           archJson: deriveSubModuleArchJSON(parent, diagram.sources[0], normParentPath),
@@ -273,10 +287,20 @@ export class ArchJsonProvider {
       } else {
         const archJson = await this.registerDeferred(
           diagram.sources,
+          diagram.language,
           this.parseCppProject(diagram)
         );
         return { archJson, kind: 'parsed' };
       }
+    }
+
+    if (diagram.language === 'python' || diagram.language === 'java') {
+      const archJson = await this.registerDeferred(
+        diagram.sources,
+        diagram.language,
+        this.parseGenericLanguageProject(diagram)
+      );
+      return { archJson, kind: 'parsed' };
     }
 
     // ④ TypeScript Plugin path (Path A)
@@ -296,9 +320,7 @@ export class ArchJsonProvider {
       const cachedFromDisk = diskKey ? await this.archJsonDiskCache.get(diskKey) : null;
       if (cachedFromDisk) {
         if (process.env.ArchGuardDebug === 'true') {
-          console.debug(
-            `💾 Disk cache hit for ts-morph path: ${diagram.sources.join(', ')}`
-          );
+          console.debug(`💾 Disk cache hit for ts-morph path: ${diagram.sources.join(', ')}`);
         }
         // Populate memory cache and path index so sub-groups can derive from this result
         // via findParentCoverage() without re-parsing independently.
@@ -307,6 +329,7 @@ export class ArchJsonProvider {
       }
       const archJson = await this.registerDeferred(
         diagram.sources,
+        diagram.language,
         this.parseTsPlugin(diagram).then(async (result) => {
           if (diskKey) await this.archJsonDiskCache.set(diskKey, result);
           return result;
@@ -316,7 +339,7 @@ export class ArchJsonProvider {
     }
 
     // ⑤ General ParallelParser path (Path B)
-    const { deferred, normParentPath } = this.findParentCoverage(diagram.sources);
+    const { deferred, normParentPath } = this.findParentCoverage(diagram.sources, diagram.language);
     if (deferred) {
       const parent = await deferred;
       if (process.env.ArchGuardDebug === 'true') {
@@ -329,7 +352,9 @@ export class ArchJsonProvider {
         kind: 'derived',
       };
     } else if (normParentPath) {
-      const parentKey = this.archJsonPathIndex.get(normParentPath)!;
+      const parentKey = this.archJsonPathIndex.get(
+        this.makePathIndexKey(diagram.language ?? 'typescript', normParentPath)
+      )!;
       const parent = this.archJsonCache.get(parentKey)!;
       if (process.env.ArchGuardDebug === 'true') {
         console.debug(
@@ -362,9 +387,7 @@ export class ArchJsonProvider {
       const diskCached = diskKey ? await this.archJsonDiskCache.get(diskKey) : null;
       if (diskCached) {
         if (process.env.ArchGuardDebug === 'true') {
-          console.debug(
-            `💾 Disk cache hit for ParallelParser path: ${diagram.sources.join(', ')}`
-          );
+          console.debug(`💾 Disk cache hit for ParallelParser path: ${diagram.sources.join(', ')}`);
         }
         this.cacheArchJson(diagram.sources, diskCached);
         return { archJson: diskCached, kind: 'parsed' };
@@ -382,11 +405,12 @@ export class ArchJsonProvider {
   // ---------------------------------------------------------------------------
 
   /** Atomically write to archJsonCache and archJsonPathIndex. */
-  private cacheArchJson(sources: string[], archJson: ArchJSON): void {
-    const key = hashSources(sources);
+  private cacheArchJson(sources: string[], archJson: ArchJSON, language?: string): void {
+    const resolvedLanguage = language ?? archJson.language;
+    const key = hashSources(sources, resolvedLanguage);
     this.archJsonCache.set(key, archJson);
     for (const s of sources) {
-      this.archJsonPathIndex.set(s.replace(/\\/g, '/'), key);
+      this.archJsonPathIndex.set(this.makePathIndexKey(resolvedLanguage, s), key);
     }
   }
 
@@ -394,14 +418,22 @@ export class ArchJsonProvider {
    * Register a parse promise in archJsonDeferred so concurrent sub-groups can await it.
    * When the promise resolves, caches the result and removes the deferred entry.
    */
-  private registerDeferred(sources: string[], parsePromise: Promise<ArchJSON>): Promise<ArchJSON> {
-    const key = hashSources(sources);
+  private registerDeferred(
+    sources: string[],
+    language: string | undefined,
+    parsePromise: Promise<ArchJSON>
+  ): Promise<ArchJSON> {
+    const key = hashSources(sources, language);
     const withCaching = parsePromise.then((result) => {
-      this.cacheArchJson(sources, result);
+      this.cacheArchJson(sources, result, language);
       this.archJsonDeferred.delete(key);
       return result;
     });
-    this.archJsonDeferred.set(key, { promise: withCaching, sources });
+    this.archJsonDeferred.set(key, {
+      promise: withCaching,
+      sources,
+      language: language ?? 'typescript',
+    });
     return withCaching;
   }
 
@@ -410,21 +442,29 @@ export class ArchJsonProvider {
    * Returns deferred promise (if parent still parsing) or null (if already complete or not found),
    * plus the matched parent path string.
    */
-  private findParentCoverage(sources: string[]): {
+  private findParentCoverage(
+    sources: string[],
+    language?: string
+  ): {
     deferred: Promise<ArchJSON> | null;
     normParentPath: string | null;
   } {
     const normSources = sources.map((s) => s.replace(/\\/g, '/'));
+    const resolvedLanguage = language ?? 'typescript';
 
     // Check already-completed entries in the path index
     for (const [indexedPath] of this.archJsonPathIndex) {
-      if (normSources.every((s) => s.startsWith(indexedPath + '/') || s === indexedPath)) {
-        return { deferred: null, normParentPath: indexedPath };
+      const [entryLanguage, entryPath] = this.parsePathIndexKey(indexedPath);
+      if (entryLanguage !== resolvedLanguage) continue;
+      if (normSources.every((s) => s.startsWith(entryPath + '/') || s === entryPath)) {
+        return { deferred: null, normParentPath: entryPath };
       }
     }
 
     // Check in-progress deferred entries
-    for (const [, { promise, sources: parentSources }] of this.archJsonDeferred) {
+    for (const [, { promise, sources: parentSources, language: parentLanguage }] of this
+      .archJsonDeferred) {
+      if (parentLanguage !== resolvedLanguage) continue;
       const normParentSources = parentSources.map((ps) => ps.replace(/\\/g, '/'));
       const matchedParent = normParentSources.find((ps) =>
         normSources.every((s) => s.startsWith(ps + '/') || s === ps)
@@ -435,6 +475,18 @@ export class ArchJsonProvider {
     }
 
     return { deferred: null, normParentPath: null };
+  }
+
+  private makePathIndexKey(language: string, source: string): string {
+    return `${language}::${source.replace(/\\/g, '/')}`;
+  }
+
+  private parsePathIndexKey(key: string): [string, string] {
+    const separator = key.indexOf('::');
+    if (separator === -1) {
+      return ['typescript', key];
+    }
+    return [key.slice(0, separator), key.slice(separator + 2)];
   }
 
   /**
@@ -506,6 +558,45 @@ export class ArchJsonProvider {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
     });
+  }
+
+  private async parseGenericLanguageProject(diagram: DiagramConfig): Promise<ArchJSON> {
+    const workspaceRoot = path.resolve(diagram.sources[0]);
+    const pluginName = diagram.language!;
+
+    if (pluginName === 'python') {
+      const registryPlugin = this.registry?.getByName('python');
+      const plugin =
+        registryPlugin ??
+        (await (async () => {
+          const { PythonPlugin } = await import('@/plugins/python/index.js');
+          return new PythonPlugin();
+        })());
+
+      await plugin.initialize({ workspaceRoot });
+      return plugin.parseProject(workspaceRoot, {
+        workspaceRoot,
+        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      });
+    }
+
+    if (pluginName === 'java') {
+      const registryPlugin = this.registry?.getByName('java');
+      const plugin =
+        registryPlugin ??
+        (await (async () => {
+          const { JavaPlugin } = await import('@/plugins/java/index.js');
+          return new JavaPlugin();
+        })());
+
+      await plugin.initialize({ workspaceRoot });
+      return plugin.parseProject(workspaceRoot, {
+        workspaceRoot,
+        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      });
+    }
+
+    throw new Error(`Unsupported language plugin route: ${pluginName}`);
   }
 
   /**
