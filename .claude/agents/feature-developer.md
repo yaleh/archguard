@@ -12,62 +12,44 @@ tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 ## Phase 3: Generate Proposal
 
-If no proposal document exists yet, create `docs/proposals/proposal-<slug>.md`:
-
-- Derive slug from the feature topic (lowercase, hyphenated)
-- Structure: Problem Statement → Goals → Non-Goals → Design → Alternatives → Open Questions
-- Ground every design decision in the existing codebase (read relevant source files first)
-- Capture constraints, interfaces, data flows, and integration points with precision
-- Do not invent APIs or types that don't exist; reference actual file paths and class names
-
-If a proposal already exists, skip to Phase 4.
+λ(discussion) → docs/proposals/proposal-<slug>.md | ¬∃proposal:
+  ∧ slug := lowercase_hyphenated(topic)
+  ∧ read(src/**) → ground(design, ∃types ∧ ∃paths ∧ ∃interfaces)
+  ∧ structure = {problem, goals, ¬goals, design, alternatives, open_questions}
+  ∧ ¬invent(APIs | types | paths) ∧ ∀ref → verify(∃codebase)
 
 ## Phase 4+5: Proposal Review Loop
 
-As a strict architect (严苛架构师), review the proposal against current codebase and docs:
-
-- Compare every claim in the proposal against actual code (read relevant source files)
-- Check: API surface correctness, interface contracts, dependency accuracy, implementation feasibility
-- Check: naming consistency with existing codebase conventions
-- Check: no phantom types/methods that don't exist, no incorrect module paths
-- Check: edge cases, error handling, concurrency/locking issues
-- Produce a prioritized issue list (critical / warning / suggestion)
-
-Fix proposal: apply **only confirmed issues** (仅修改你确认有问题的部分). Do not rewrite sections that are correct.
-
-Use Task Agent for each check+fix round. Iterate until no critical/warning issues remain.
+λ(proposal) → proposal' | iterate(Task_agent):
+  ∧ check: ∀claim → verify(∃code) ∧ {API_surface, contracts, deps, feasibility}
+  ∧ check: naming ∈ conventions(codebase) ∧ ¬phantom(types | methods | paths)
+  ∧ check: {edge_cases, error_handling, concurrency}
+  ∧ issues := prioritize({critical, warning, suggestion})
+  ∧ fix: apply(confirmed_issues_only) ∧ ¬rewrite(correct_sections)
+  ∧ until: ¬∃{critical, warning}
 
 ## Phase 6: Generate Plan
 
-If no plan exists yet, generate `docs/plans/plan-NN-<slug>.md`:
-- Number sequentially (check existing plan files for next N)
-- Structure: Overview → Phases → per-Phase: objectives, stages, acceptance criteria, dependencies
-- Each stage must be independently testable (TDD-first)
-- Immediate phase: full detail; future phases: objectives only
+λ(proposal) → docs/plans/plan-NN-<slug>.md | ¬∃plan:
+  ∧ NN := next(∃plan_files)
+  ∧ structure = {overview, phases[]} ∧ ∀phase → {objectives, stages, criteria, deps}
+  ∧ ∀stage → independently_testable ∧ TDD_first
+  ∧ immediate_phase: full_detail ∧ future_phases: objectives_only
 
 ## Phase 7+8: Plan Review Loop
 
-Review proposal + plan together as a strict architect:
-
-- Check plan phases are complete, non-overlapping, correctly sequenced
-- Check each stage has clear acceptance criteria and test approach
-- Check no implementation detail contradicts the proposal
-- Check file paths, class names, interface names match existing codebase
-- Fix plan; if plan changes affect proposal intent, sync the proposal too (同步修改 proposal)
-
-Use Task Agent for each check+fix round. Iterate until no critical/warning issues remain.
+λ(proposal, plan) → (proposal', plan') | iterate(Task_agent):
+  ∧ check: phases = complete ∧ ¬overlap ∧ sequenced
+  ∧ check: ∀stage → {criteria, test_approach} ∧ ¬contradicts(proposal)
+  ∧ check: {paths, classes, interfaces} ∈ codebase
+  ∧ fix(plan) ∧ (plan_changes_intent → sync(proposal))
+  ∧ until: ¬∃{critical, warning}
 
 ## Phase 9: Implementation
 
-Execute the plan:
-
-∧ sequential across phases (Phase N+1 only after Phase N passes tests)
-∧ parallel within a phase: spawn Task agents with `isolation: worktree` for independent stages
-∧ TDD: write failing tests first, then implementation to pass
-∧ after all phases complete:
-  - `npm run build`
-  - clear `.archguard/` directory
-  - run `node dist/cli/index.js analyze -v` on this project
-  - use Task Agent to verify implementation matches plan and proposal
-  - if gaps found → fix and re-validate
-∧ iterate until convergence (迭代直至收敛)
+λ(plan) → merged_branch | iterate:
+  ∧ ∀phase: sequential(N+1 | tests(N) = pass)
+  ∧ ∀stage ∈ phase: parallel(Task_agent, isolation=worktree)
+  ∧ TDD: tests_fail_first → impl → tests_pass
+  ∧ validate: build ∧ clean(.archguard) ∧ analyze(self) ∧ Task_agent(verify_vs_plan)
+  ∧ gaps → fix ∧ until: convergence
