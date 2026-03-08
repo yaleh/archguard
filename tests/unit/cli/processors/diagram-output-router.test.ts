@@ -579,7 +579,7 @@ describe('DiagramOutputRouter', () => {
       );
     });
 
-    it('returns empty options when no mermaid config provided', async () => {
+    it('uses white background when no mermaid config provided', async () => {
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
@@ -588,7 +588,39 @@ describe('DiagramOutputRouter', () => {
       const router = new DiagramOutputRouter(config, progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
 
-      expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith({});
+      expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
+        expect.objectContaining({ backgroundColor: 'white' })
+      );
+    });
+
+    it('uses white background when transparentBackground is false', async () => {
+      const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+      const archJSON = makeArchJSON({ language: 'cpp' });
+      const config = makeGlobalConfig({
+        mermaid: { transparentBackground: false } as any,
+      });
+
+      const router = new DiagramOutputRouter(config, progress);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+
+      expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
+        expect.objectContaining({ backgroundColor: 'white' })
+      );
+    });
+
+    it('uses white background when transparentBackground is not set in mermaid config', async () => {
+      const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+
+      const archJSON = makeArchJSON({ language: 'cpp' });
+      const config = makeGlobalConfig({ mermaid: { theme: 'forest' } as any });
+
+      const router = new DiagramOutputRouter(config, progress);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+
+      expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
+        expect.objectContaining({ backgroundColor: 'white' })
+      );
     });
   });
 
@@ -644,6 +676,65 @@ describe('DiagramOutputRouter', () => {
       // IsomorphicMermaidRenderer.renderSVG should be called as fallback
       const instance = (IsomorphicMermaidRenderer as any).mock.results[0].value;
       expect(instance.renderSVG).toHaveBeenCalled();
+    });
+
+    it('injects white background into SVG returned by worker pool (no style attr)', async () => {
+      const fs = await import('fs-extra');
+      const pool = {
+        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 10 10"/>' }),
+      } as any;
+
+      const archJSON = makeArchJSON({ language: 'cpp' });
+      const config = makeGlobalConfig(); // transparentBackground unset → white
+      const router = new DiagramOutputRouter(config, progress);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
+
+      const svgCall = (fs.default.writeFile as any).mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
+      );
+      expect(svgCall).toBeDefined();
+      expect(svgCall[1]).toContain('background-color: white');
+    });
+
+    it('injects white background into SVG with existing style attribute from pool', async () => {
+      const fs = await import('fs-extra');
+      const pool = {
+        render: vi
+          .fn()
+          .mockResolvedValue({
+            success: true,
+            svg: '<svg style="max-width: 100px;" viewBox="0 0 10 10"/>',
+          }),
+      } as any;
+
+      const archJSON = makeArchJSON({ language: 'cpp' });
+      const config = makeGlobalConfig();
+      const router = new DiagramOutputRouter(config, progress);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
+
+      const svgCall = (fs.default.writeFile as any).mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
+      );
+      expect(svgCall).toBeDefined();
+      expect(svgCall[1]).toContain('background-color: white');
+    });
+
+    it('does NOT inject background when transparentBackground is true (pool path)', async () => {
+      const fs = await import('fs-extra');
+      const pool = {
+        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 10 10"/>' }),
+      } as any;
+
+      const archJSON = makeArchJSON({ language: 'cpp' });
+      const config = makeGlobalConfig({ mermaid: { transparentBackground: true } as any });
+      const router = new DiagramOutputRouter(config, progress);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
+
+      const svgCall = (fs.default.writeFile as any).mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
+      );
+      expect(svgCall).toBeDefined();
+      expect(svgCall[1]).not.toContain('background-color');
     });
   });
 });

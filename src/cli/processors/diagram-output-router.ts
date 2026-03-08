@@ -126,10 +126,26 @@ export class DiagramOutputRouter {
           ? { name: this.globalConfig.mermaid.theme }
           : this.globalConfig.mermaid.theme;
     }
-    if (this.globalConfig.mermaid?.transparentBackground) {
-      options.backgroundColor = 'transparent';
-    }
+    options.backgroundColor = this.globalConfig.mermaid?.transparentBackground
+      ? 'transparent'
+      : 'white';
     return options;
+  }
+
+  /**
+   * Inject background-color into the SVG root element style attribute.
+   * Used to post-process SVGs returned by the worker pool, which bypasses
+   * IsomorphicMermaidRenderer.renderSVG() and returns raw Mermaid output.
+   */
+  private injectBackground(svg: string): string {
+    const transparent = this.globalConfig.mermaid?.transparentBackground;
+    if (transparent) return svg;
+    const bg = 'white';
+    const styleMatch = svg.match(/<svg[^>]*style="([^"]*)"/);
+    if (styleMatch) {
+      return svg.replace(/(<svg[^>]*style=")([^"]*)(")/g, `$1$2; background-color: ${bg};$3`);
+    }
+    return svg.replace(/<svg/, `<svg style="background-color: ${bg};"`);
   }
 
   /**
@@ -178,7 +194,7 @@ export class DiagramOutputRouter {
           );
           svg = await mermaidRenderer.renderSVG(job.mermaidCode);
         } else {
-          svg = poolResult.svg!;
+          svg = this.injectBackground(poolResult.svg!);
         }
       } else {
         svg = await mermaidRenderer.renderSVG(job.mermaidCode);
@@ -273,7 +289,7 @@ export class DiagramOutputRouter {
             );
             svg = await mermaidRenderer.renderSVG(result.content);
           } else {
-            svg = poolResult.svg!;
+            svg = this.injectBackground(poolResult.svg!);
           }
         } else {
           svg = await mermaidRenderer.renderSVG(result.content);
@@ -340,7 +356,7 @@ export class DiagramOutputRouter {
         console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
         svg = await mermaidRenderer.renderSVG(mmdContent);
       } else {
-        svg = poolResult.svg!;
+        svg = this.injectBackground(poolResult.svg!);
       }
     } else {
       svg = await mermaidRenderer.renderSVG(mmdContent);
@@ -396,7 +412,7 @@ export class DiagramOutputRouter {
         console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
         svg = await mermaidRenderer.renderSVG(mmdContent);
       } else {
-        svg = poolResult.svg!;
+        svg = this.injectBackground(poolResult.svg!);
       }
     } else {
       svg = await mermaidRenderer.renderSVG(mmdContent);
