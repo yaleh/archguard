@@ -27,6 +27,12 @@ export interface RunAnalysisResult {
   hasDiagramFailures: boolean;
 }
 
+function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
+  const hasLevelFilter = Array.isArray(cliOptions.diagrams) && cliOptions.diagrams.length > 0;
+  const hasSourceOverride = Array.isArray(cliOptions.sources) && cliOptions.sources.length > 0;
+  return hasLevelFilter || hasSourceOverride;
+}
+
 export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnalysisResult> {
   const { sessionRoot, workDir, cliOptions, reporter } = options;
   reporter.start('Loading configuration...');
@@ -57,8 +63,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 
   const cacheDir = config.cache?.dir || path.join(config.workDir || '.archguard', 'cache');
   const outputDir = config.outputDir || path.join(config.workDir || '.archguard', 'output');
+  const partial = isPartialRun(cliOptions);
   const existingManifest = await readManifest(cacheDir);
-  if (existingManifest) {
+  if (existingManifest && !partial) {
     const currentNames = selectedDiagrams.map((d) => d.name);
     const stale = await cleanStaleDiagrams(currentNames, existingManifest, outputDir);
     if (stale.length > 0 && config.verbose) {
@@ -77,7 +84,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const results = await processor.processAll();
 
   const successfulNames = results.filter((r) => r.success).map((r) => r.name);
-  if (successfulNames.length > 0) {
+  if (successfulNames.length > 0 && !partial) {
     try {
       await writeManifest(cacheDir, successfulNames, outputDir);
     } catch (err) {

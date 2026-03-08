@@ -166,6 +166,30 @@ describe('diagram-manifest', () => {
       expect(stale).toEqual(['ghost/diagram']);
     });
 
+    it('removes .json file for stale diagrams', async () => {
+      const staleBase = path.join(outputDir, 'overview', 'package');
+      await fs.ensureDir(path.dirname(staleBase));
+      await fs.writeFile(`${staleBase}.json`, '{"version":"1.0"}');
+
+      const manifest = makeManifest(['overview/package']);
+      const stale = await cleanStaleDiagrams([], manifest, outputDir);
+
+      expect(stale).toEqual(['overview/package']);
+      expect(await fs.pathExists(`${staleBase}.json`)).toBe(false);
+    });
+
+    it('removes Atlas json sidecar file for stale diagrams', async () => {
+      const atlasDir = path.join(outputDir, 'arch');
+      await fs.ensureDir(atlasDir);
+      await fs.writeFile(path.join(atlasDir, 'architecture-atlas.json'), '{"layers":[]}');
+
+      const manifest = makeManifest(['arch/architecture']);
+      const stale = await cleanStaleDiagrams([], manifest, outputDir);
+
+      expect(stale).toEqual(['arch/architecture']);
+      expect(await fs.pathExists(path.join(atlasDir, 'architecture-atlas.json'))).toBe(false);
+    });
+
     it('removes Atlas layer .mmd and .mmd.render-hash files', async () => {
       // Simulate Atlas layers: name-package.mmd, name-capability.mmd
       const atlasDir = path.join(outputDir, 'arch');

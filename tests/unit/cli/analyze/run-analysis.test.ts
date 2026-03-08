@@ -291,6 +291,85 @@ describe('runAnalysis', () => {
       })
     );
   });
+
+  it('skips cleanStaleDiagrams when --diagrams level filter is set (partial run)', async () => {
+    readManifestMock.mockResolvedValue({
+      diagrams: ['archguard/overview/package', 'archguard/class/all-classes'],
+      outputDir: '/tmp/project/.archguard/output',
+      updatedAt: '2026-03-07T00:00:00Z',
+    });
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { diagrams: ['method'] },
+      reporter: silentReporter(),
+    });
+
+    expect(cleanStaleDiagramsMock).not.toHaveBeenCalled();
+  });
+
+  it('skips cleanStaleDiagrams when --sources override is set (partial run)', async () => {
+    readManifestMock.mockResolvedValue({
+      diagrams: ['archguard/overview/package', 'archguard/class/all-classes'],
+      outputDir: '/tmp/project/.archguard/output',
+      updatedAt: '2026-03-07T00:00:00Z',
+    });
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { sources: ['/some/path'] },
+      reporter: silentReporter(),
+    });
+
+    expect(cleanStaleDiagramsMock).not.toHaveBeenCalled();
+  });
+
+  it('skips writeManifest when --diagrams level filter is set (partial run)', async () => {
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { diagrams: ['method'] },
+      reporter: silentReporter(),
+    });
+
+    expect(writeManifestMock).not.toHaveBeenCalled();
+  });
+
+  it('skips writeManifest when --sources override is set (partial run)', async () => {
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { sources: ['/some/path'] },
+      reporter: silentReporter(),
+    });
+
+    expect(writeManifestMock).not.toHaveBeenCalled();
+  });
+
+  it('runs cleanStaleDiagrams and writeManifest on a full run (no diagrams, no sources)', async () => {
+    readManifestMock.mockResolvedValue({
+      diagrams: ['archguard/overview/package', 'archguard/class/all-classes'],
+      outputDir: '/tmp/project/.archguard/output',
+      updatedAt: '2026-03-07T00:00:00Z',
+    });
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(cleanStaleDiagramsMock).toHaveBeenCalledTimes(1);
+    expect(writeManifestMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 function silentReporter() {

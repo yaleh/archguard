@@ -80,6 +80,7 @@ export async function cleanStaleDiagrams(
         fs.remove(`${base}.mmd.render-hash`),
         fs.remove(`${base}.svg`),
         fs.remove(`${base}.png`),
+        fs.remove(`${base}.json`),
       ]);
 
       // Also handle Atlas layers: <outputDir>/<name>-*.mmd
@@ -90,6 +91,8 @@ export async function cleanStaleDiagrams(
         await Promise.all(
           atlasFiles.flatMap((f) => [fs.remove(f), fs.remove(`${f}.render-hash`)])
         );
+        const atlasJsonFiles = await glob(`${nameBase}-atlas.json`, { cwd: dir, absolute: true });
+        await Promise.all(atlasJsonFiles.map((f) => fs.remove(f)));
       }
     })
   );
