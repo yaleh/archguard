@@ -47,6 +47,12 @@ describe('inlineEdgeStyles', () => {
     const result = inlineEdgeStyles(svg);
     expect(result).toMatch(/style="fill:none;stroke:#333333;"/);
   });
+
+  it('adds fill:none and stroke for classDiagram relation paths from CSS', () => {
+    const svg = `<svg><style>#id .relation{stroke:#333333;stroke-width:1;fill:none;}</style><path class="edge-thickness-normal relation" style=";;;" d="M0,0 L100,100"></path></svg>`;
+    const result = inlineEdgeStyles(svg);
+    expect(result).toMatch(/style="fill:none;stroke:#333333;[^"]*"/);
+  });
 });
 
 describe('inlineEdgeStyles – background rect patching', () => {

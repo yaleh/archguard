@@ -46,6 +46,21 @@ export function inlineEdgeStyles(svg: string): string {
     }
   }
 
+  const relationRuleMatch = svg.match(/\.relation[^{]*\{([^}]+)\}/);
+  let relationFill = 'none';
+  let relationStroke = '';
+  if (relationRuleMatch) {
+    for (const decl of relationRuleMatch[1].split(';')) {
+      const [rawProp, ...rawValueParts] = decl.split(':');
+      if (!rawProp || rawValueParts.length === 0) continue;
+      const prop = rawProp.trim().toLowerCase();
+      const value = rawValueParts.join(':').trim();
+      if (!value) continue;
+      if (prop === 'fill') relationFill = value;
+      if (prop === 'stroke') relationStroke = value;
+    }
+  }
+
   // 1. Fix edge bezier path fills: flowchart-link paths have no inline fill:none,
   //    relying on CSS which librsvg (used by sharp) doesn't apply for ID-scoped selectors.
   let result = svg.replace(
@@ -58,6 +73,25 @@ export function inlineEdgeStyles(svg: string): string {
       const injected = [
         !hasFill ? `fill:${flowchartLinkFill};` : '',
         !hasStroke && flowchartLinkStroke ? `stroke:${flowchartLinkStroke};` : '',
+      ].join('');
+      return `${pre}${trimmed ? trimmed + ';' : ''}${injected}${post}`;
+    }
+  );
+
+  // 1b. Fix classDiagram relation paths: Mermaid emits <path class="... relation"
+  //     style=";;;"), relying on the CSS rule ".relation { stroke:X; fill:none; }".
+  //     When librsvg ignores the ID-scoped selector, the SVG default fill=black
+  //     turns the bezier into a thick black polygon in PNG output.
+  result = result.replace(
+    /(<path\b[^>]*class="[^"]*\brelation\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+    (_, pre, style, post) => {
+      const hasFill = /\bfill\s*:/.test(style);
+      const hasStroke = /\bstroke\s*:/.test(style);
+      if (hasFill && (hasStroke || relationStroke.length === 0)) return _;
+      const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+      const injected = [
+        !hasFill ? `fill:${relationFill};` : '',
+        !hasStroke && relationStroke ? `stroke:${relationStroke};` : '',
       ].join('');
       return `${pre}${trimmed ? trimmed + ';' : ''}${injected}${post}`;
     }

@@ -29,7 +29,7 @@ Mermaid generates SVG with an embedded `<style>` block whose selectors are scope
 | `fill`   | `black`     | `none` or a colour  |
 | `stroke` | `none`      | `#333333`           |
 
-This caused **two independently discovered classes of black-block rendering artefacts**.
+This caused **multiple independently discovered classes of black-block rendering artefacts**.
 
 ---
 
@@ -145,9 +145,7 @@ The fix pattern is therefore:
 - **Positive**: Clean, fast, zero-dependency fix; runs in O(SVG size); idempotent.
 - **Positive**: Contained in one function (`inlineEdgeStyles`) with full unit-test coverage.
 - **Negative**: Must be extended manually when Mermaid adds new element classes that rely solely on the embedded CSS for fill/stroke. Watch for new Mermaid major versions.
-- **Negative**: The on-disk `.svg` file is not patched (only the in-memory buffer passed to sharp is). Browsers apply the embedded CSS correctly, so the `.svg` files render correctly in browsers regardless.
-
----
+- **Negative**: Existing render-cache entries can preserve stale `.svg/.png` outputs after `inlineEdgeStyles()` changes unless the render cache version is bumped.
 
 ---
 
@@ -190,6 +188,88 @@ Extracting from the embedded CSS (rather than hardcoding `#ECECFF`) ensures corr
 
 ---
 
+## Problem 4 — classDiagram Relation Path Fill/Stroke (discovered 2026-03-08)
+
+### Symptom
+
+`classDiagram` outputs for Java module diagrams regressed with the same visual signature as Problem 1: thick black wedges or polygons crossing the canvas in PNG output, while the SVG rendered correctly in browsers.
+
+Affected examples included:
+
+- `class/jlama-cli.svg/png`
+- `class/jlama-net.svg/png`
+
+### Root cause
+
+Mermaid emits class-diagram relation edges as open paths like:
+
+```svg
+<path class="edge-thickness-normal edge-pattern-solid relation" style=";;;" d="M...">
+```
+
+Their intended styling comes only from the embedded CSS:
+
+```css
+#id .relation { stroke: #333333; stroke-width: 1; fill: none; }
+```
+
+When librsvg ignores that ID-scoped selector:
+
+- `fill:none` is lost, so the SVG default `fill=black` applies
+- `stroke:#333333` is also lost unless set inline
+
+The result is the same failure mode as Problem 1, but on `classDiagram` relation paths instead of `flowchart-link` paths.
+
+### Fix
+
+A fourth replace pass extends `inlineEdgeStyles()` to extract `fill` and `stroke` from the `.relation` CSS rule and inject them into every relation path lacking inline values:
+
+```typescript
+const relationRuleMatch = svg.match(/\.relation[^{]*\{([^}]+)\}/);
+let relationFill = 'none';
+let relationStroke = '';
+// parse rule declarations...
+
+result = result.replace(
+  /(<path\b[^>]*class="[^"]*\brelation\b[^"]*"[^>]*\bstyle=")([^"]*?)(")/g,
+  (_, pre, style, post) => {
+    const hasFill = /\bfill\s*:/.test(style);
+    const hasStroke = /\bstroke\s*:/.test(style);
+    if (hasFill && (hasStroke || relationStroke.length === 0)) return _;
+    const trimmed = style.replace(/^[\s;]+|[\s;]+$/g, '');
+    const injected = [
+      !hasFill ? `fill:${relationFill};` : '',
+      !hasStroke && relationStroke ? `stroke:${relationStroke};` : '',
+    ].join('');
+    return `${pre}${trimmed ? trimmed + ';' : ''}${injected}${post}`;
+  }
+);
+```
+
+Unlike the original 2026-03-05 implementation, the patched SVG is now also written to disk before PNG conversion, so `.svg` and `.png` stay consistent.
+
+### Secondary root cause — stale render cache
+
+During investigation, a second issue masked the fix:
+
+- `.mmd` content had not changed
+- render-hash cache still reported a hit
+- old `.svg/.png` files generated before the new `.relation` patch were retained
+
+This made the bug appear unresolved even after `inlineEdgeStyles()` was corrected.
+
+### Cache invalidation decision
+
+`RENDER_CACHE_VERSION` was bumped from `1.0` to `1.1` so any change to SVG/PNG post-processing can invalidate old rendered artefacts and force regeneration.
+
+This is now part of the maintenance contract for `inlineEdgeStyles()`:
+
+1. Extend the patcher.
+2. Add/update tests.
+3. Bump `RENDER_CACHE_VERSION` if existing rendered outputs would otherwise remain stale.
+
+---
+
 ## Known Remaining Gaps
 
 The following element classes are styled only via embedded CSS and may be affected if librsvg support degrades further:
@@ -199,6 +279,7 @@ The following element classes are styled only via embedded CSS and may be affect
 | `arrowMarkerPath` | `.marker { fill: #333333 }` (inherited) | librsvg appears to inherit correctly today |
 | `.internal rect` (node fill in classDiagram) | `.internal rect { fill: #dafbe1 !important }` | Overridden by `!important` inline `style=` on `basic label-container` rects → not affected |
 | `.flowchart-link` stroke | `.flowchart-link { stroke: #333333 }` | librsvg applies this today; monitor on librsvg upgrades |
+| `.relation` | `.relation { stroke: #333333; fill: none }` | **Fixed** by Problem 4 patch — extracted from embedded CSS |
 | `basic label-container` (flowchart LR nodes) | `.node rect { fill: #ECECFF; stroke: #9370DB }` | **Fixed** by Problem 3 patch — extracted from embedded CSS |
 
 ---
@@ -206,6 +287,7 @@ The following element classes are styled only via embedded CSS and may be affect
 ## Related
 
 - `src/mermaid/renderer.ts` — `inlineEdgeStyles()` implementation
+- `src/cli/cache/render-hash-cache.ts` — render cache versioning for regenerated SVG/PNG assets
 - `tests/unit/mermaid/edge-style-inline.test.ts` — unit tests
 - Commit `5573949` — Problem 1 fix
 - Commit `1bdd85a` — Problem 2 fix

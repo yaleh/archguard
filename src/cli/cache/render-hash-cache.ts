@@ -2,7 +2,8 @@ import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import path from 'path';
 
-export const RENDER_CACHE_VERSION = '1.0';
+// Bump when SVG/PNG post-processing changes so stale rendered assets are re-generated.
+export const RENDER_CACHE_VERSION = '1.1';
 
 export interface RenderOptions {
   theme: string;
