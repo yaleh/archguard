@@ -15,12 +15,12 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 
 ## Features
 
+- **AI-Native MCP Interface**: Query architecture in natural language from Claude Code or Codex — analyze projects, trace dependencies, find implementers, detect cycles
 - **Multi-Language Support**: TypeScript, Go, Java, Python via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
 - **Parallel Processing**: High-performance parsing with configurable concurrency
 - **Smart Caching**: File-based caching with SHA-256 hashing for fast repeated runs
-- **Query & MCP Workflows**: Persisted architecture data can be inspected via CLI query tools or MCP
 - **Zero External Dependencies**: Local Mermaid rendering using isomorphic-mermaid
 - **Five-Layer Validation**: Automatic syntax, structure, render, quality, and auto-repair validation
 - **Configuration Files**: Project-level config with `archguard.config.json` support
@@ -34,36 +34,73 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 npm install -g @yalehwang/archguard
 ```
 
-Or as a dev dependency:
+### Using with Claude Code
+
+Register the MCP server (project scope):
 
 ```bash
-npm install --save-dev @yalehwang/archguard
+claude mcp add --scope project archguard -- archguard mcp
 ```
 
-### Basic Usage
+Then ask Claude to analyze any project:
 
-Analyze a TypeScript project:
+> Analyze the architecture of `/path/to/my-project` using archguard MCP.
+
+Claude will call `archguard_analyze` to parse the project and build a query index. Once done, ask follow-up questions in natural language:
+
+> Find all classes that implement `ILanguagePlugin`.
+
+> Show me what depends on `ArchJSON`, depth 1.
+
+> Detect circular dependencies in this project.
+
+> Review this project's code and documentation using the archguard MCP and the `.archguard` output files.
+
+> Based on the archguard analysis, suggest refactoring directions for reducing coupling.
+
+**Re-using an existing analysis**: If the project was already analyzed in a previous session, query artifacts persist in `.archguard/query/`. You can skip re-analysis and query the cache directly:
+
+> Using the existing archguard cache, show me what depends on `DiagramProcessor`.
+
+### Using with Codex
+
+Register the MCP server:
 
 ```bash
-archguard analyze -s ./src --output-dir ./docs/architecture
+codex mcp add archguard -- archguard mcp
 ```
 
-Analyze a Go project:
+Or add to `~/.codex/config.toml`:
 
-```bash
-archguard analyze -s ./cmd --lang go --output-dir ./docs/architecture
+```toml
+[mcp_servers.archguard]
+command = "archguard"
+args = ["mcp"]
 ```
 
-This generates Mermaid diagrams or ArchJSON under the configured output directory, and query artifacts under the work directory.
+Then prompt Codex in the same way. The same MCP tools are available.
 
-### Level Filtering
+### Analyzing an External Project
+
+Point archguard at any project path — no configuration file needed:
+
+> Analyze the architecture of `/home/user/work/my-project` using archguard MCP.
+
+Archguard auto-detects the language and project structure, generates diagrams under `<project>/.archguard/`, and builds the query index for follow-up queries.
+
+### Standalone CLI
+
+Run directly without an AI assistant:
 
 ```bash
-# Generate only class and method diagrams
-archguard analyze --diagrams class method
+# Analyze current project (auto-detects language and structure)
+archguard analyze
 
-# Generate only package diagrams for a source set
-archguard analyze -s ./src --diagrams package
+# Analyze an external project
+archguard analyze -s /path/to/project/src
+
+# Go project
+archguard analyze -s ./cmd --lang go
 ```
 
 ## CLI Commands
@@ -185,6 +222,34 @@ archguard mcp [--arch-dir <dir>] [--scope <key>]
 ```
 
 The MCP server exposes the query tools plus `archguard_analyze`, which refreshes query artifacts for the current MCP session. Query tools default to the persisted global scope and return summary entities unless `verbose: true` is requested.
+
+**Claude Code** — add via CLI (project scope):
+
+```bash
+claude mcp add --scope project archguard -- archguard mcp
+```
+
+**Codex** — add via CLI or `~/.codex/config.toml`:
+
+```bash
+codex mcp add archguard -- archguard mcp
+```
+
+**Available MCP tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `archguard_summary` | Project overview: entity/relation counts, scope list |
+| `archguard_find_entity` | Look up a named class, interface, or function |
+| `archguard_get_dependencies` | Outgoing dependencies of an entity (what it uses) |
+| `archguard_get_dependents` | Incoming dependencies of an entity (who uses it) |
+| `archguard_find_implementers` | All implementations of an interface |
+| `archguard_find_subclasses` | All subclasses of a base class |
+| `archguard_get_file_entities` | All entities defined in a source file |
+| `archguard_detect_cycles` | Circular dependency detection |
+| `archguard_analyze` | Refresh query artifacts in the current session |
+
+See [MCP Usage Guide](docs/user-guide/mcp-usage.md) for setup, tool reference, and usage patterns.
 
 ### `init`
 
@@ -540,6 +605,7 @@ Quick fixes:
 
 - [CLI Usage Guide](docs/user-guide/cli-usage.md)
 - [Architecture Checking Scenarios](docs/user-guide/architecture-checking-scenarios.md)
+- [MCP Usage Guide](docs/user-guide/mcp-usage.md)
 - [Configuration Reference](docs/user-guide/configuration.md)
 - [Go Plugin Usage Guide](docs/user-guide/golang-plugin-usage.md)
 - [Architecture Overview](docs/dev-guide/architecture.md)

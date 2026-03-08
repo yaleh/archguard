@@ -231,16 +231,39 @@ Use this when an agent, IDE assistant, or automation pipeline needs structured a
 archguard mcp
 ```
 
-The MCP server exposes:
+The MCP server exposes query tools for entity lookup, dependency traversal, implementer search, file-level inspection, cycle detection, summary, and `archguard_analyze` to refresh query artifacts mid-session.
 
-- Query tools such as entity lookup, dependency traversal, implementer search, file lookup, cycle detection, and summary
-- `archguard_analyze` to refresh query artifacts in the current session
+Typical agent queries:
+
+```
+# What does this project contain?
+archguard_summary()
+
+# Who consumes a core type?
+archguard_get_dependents(name: "ArchJSON", depth: 1)
+
+# What implements an interface?
+archguard_find_implementers(name: "ILanguagePlugin")
+
+# What does a component depend on?
+archguard_get_dependencies(name: "QueryEngine", depth: 2)
+
+# Are there circular dependencies?
+archguard_detect_cycles()
+
+# Refresh after code changes
+archguard_analyze()
+```
 
 Good fit for:
 
 - Agent-assisted code review
 - Architecture-aware development workflows
 - Automated repository inspection
+
+Related docs:
+
+- [MCP Usage Guide](./mcp-usage.md)
 
 ## Typical Review Playbooks
 
