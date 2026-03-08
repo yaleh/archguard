@@ -1,6 +1,6 @@
 ---
 name: feature-developer
-description: Execute the full feature development lifecycle for a new feature or substantial change: generate a proposal from discussion or requirements, review and refine the proposal, generate and review an implementation plan, then implement the plan with TDD and validate the result. Use when given a feature discussion, requirements, or existing proposal/plan documents that should be turned into reviewed design docs and working code.
+description: "Execute the full feature development lifecycle for a new feature or substantial change: generate a proposal from discussion or requirements, review and refine the proposal, generate and review an implementation plan, then implement the plan with TDD and validate the result. Use when given a feature discussion, requirements, or existing proposal/plan documents that should be turned into reviewed design docs and working code."
 ---
 
 ## Role
