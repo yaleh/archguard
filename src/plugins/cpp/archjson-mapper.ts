@@ -1,10 +1,10 @@
 import path from 'path';
-import { generateEntityId, createRelation } from '@/plugins/shared/mapper-utils.js';
+import { BaseArchJsonMapper, createRelation } from '@/plugins/shared/mapper-utils.js';
 import type { Entity, EntityType, Member, MemberType, Relation } from '@/types/index.js';
 import type { MergedCppEntity, RawEnum, RawFunction, RawMethod, RawField } from './types.js';
 import { CppTypeExtractor } from './cpp-type-extractor.js';
 
-export class ArchJsonMapper {
+export class ArchJsonMapper extends BaseArchJsonMapper<MergedCppEntity> {
   mapEntities(
     classes: MergedCppEntity[],
     enums: RawEnum[],
@@ -16,7 +16,7 @@ export class ArchJsonMapper {
     for (const cls of classes) {
       const ns = this.resolveNamespace(cls, workspaceRoot);
       const entityName = this.getEntityName(cls.qualifiedName, cls.name);
-      const id = generateEntityId(ns, entityName);
+      const id = this.createEntityId(ns, entityName);
       entities.push({
         id,
         name: cls.name,
@@ -26,11 +26,7 @@ export class ArchJsonMapper {
           ...cls.fields.map((f) => this.mapField(f)),
           ...cls.methods.map((m) => this.mapMethod(m)),
         ],
-        sourceLocation: {
-          file: cls.declarationFile,
-          startLine: cls.startLine,
-          endLine: cls.endLine,
-        },
+        sourceLocation: this.createSourceLocation(cls.declarationFile, cls.startLine, cls.endLine),
         extends: cls.bases.map((b) => b.name),
         isAbstract: cls.methods.some((m) => m.isPure),
       });
@@ -39,7 +35,7 @@ export class ArchJsonMapper {
     for (const e of enums) {
       const ns = this.resolveEntityNamespace(e.qualifiedName, e.sourceFile, workspaceRoot);
       const entityName = this.getEntityName(e.qualifiedName, e.name);
-      const id = generateEntityId(ns, entityName);
+      const id = this.createEntityId(ns, entityName);
       entities.push({
         id,
         name: e.name,
@@ -50,21 +46,21 @@ export class ArchJsonMapper {
           type: 'field' as MemberType,
           visibility: 'public' as const,
         })),
-        sourceLocation: { file: e.sourceFile, startLine: e.startLine, endLine: e.endLine },
+        sourceLocation: this.createSourceLocation(e.sourceFile, e.startLine, e.endLine),
       });
     }
 
     for (const fn of functions) {
       const ns = this.resolveEntityNamespace(fn.qualifiedName, fn.sourceFile, workspaceRoot);
       const entityName = this.getEntityName(fn.qualifiedName, fn.name);
-      const id = generateEntityId(ns, entityName);
+      const id = this.createEntityId(ns, entityName);
       entities.push({
         id,
         name: fn.name,
         type: 'function',
         visibility: 'public',
         members: [],
-        sourceLocation: { file: fn.sourceFile, startLine: fn.startLine, endLine: fn.endLine },
+        sourceLocation: this.createSourceLocation(fn.sourceFile, fn.startLine, fn.endLine),
       });
     }
 
@@ -78,7 +74,7 @@ export class ArchJsonMapper {
     for (const cls of classes) {
       const ns = this.resolveNamespace(cls, workspaceRoot);
       const entityName = this.getEntityName(cls.qualifiedName, cls.name);
-      const id = generateEntityId(ns, entityName);
+      const id = this.createEntityId(ns, entityName);
       entityByQualifiedName.set(cls.qualifiedName, id); // lookup by 'engine::Renderer'
       entityByQualifiedName.set(cls.name, id); // lookup by 'Renderer'
       entityByQualifiedName.set(entityName, id); // lookup by sanitized 'Renderer'
@@ -114,7 +110,7 @@ export class ArchJsonMapper {
     for (const cls of classes) {
       const ns = this.resolveNamespace(cls, workspaceRoot);
       const entityName = this.getEntityName(cls.qualifiedName, cls.name);
-      const srcId = generateEntityId(ns, entityName);
+      const srcId = this.createEntityId(ns, entityName);
 
       // Inheritance
       for (const base of cls.bases) {

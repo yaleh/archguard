@@ -9,11 +9,8 @@ import type {
   Entity,
   Member,
   Relation,
-  SourceLocation,
   Decorator,
-  Parameter,
   Visibility,
-  RelationType,
 } from '@/types/index.js';
 import type {
   PythonRawModule,
@@ -23,12 +20,12 @@ import type {
   PythonRawParameter,
   PythonRawImport,
 } from './types.js';
-import { v4 as uuidv4 } from 'uuid';
+import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 
 /**
  * Maps Python raw AST data to ArchJSON format
  */
-export class ArchJsonMapper {
+export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
   /**
    * Map multiple Python modules to ArchJSON
    */
@@ -121,11 +118,7 @@ export class ArchJsonMapper {
       type: 'class',
       visibility,
       members,
-      sourceLocation: {
-        file: cls.filePath,
-        startLine: cls.startLine,
-        endLine: cls.endLine,
-      },
+      sourceLocation: this.createSourceLocation(cls.filePath, cls.startLine, cls.endLine),
       decorators,
       extends: cls.baseClasses.length > 0 ? cls.baseClasses : undefined,
     };
@@ -137,7 +130,7 @@ export class ArchJsonMapper {
   private mapMethod(method: PythonRawMethod): Member {
     const visibility: Visibility = method.isPrivate ? 'private' : 'public';
 
-    const parameters: Parameter[] = method.parameters.map((p) => this.mapParameter(p));
+    const parameters = method.parameters.map((p) => this.mapParameter(p));
 
     const decorators: Decorator[] | undefined =
       method.decorators.length > 0
@@ -185,7 +178,7 @@ export class ArchJsonMapper {
   private mapFunction(func: PythonRawFunction): Entity {
     const visibility: Visibility = func.name.startsWith('_') ? 'private' : 'public';
 
-    const parameters: Parameter[] = func.parameters.map((p) => this.mapParameter(p));
+    const parameters = func.parameters.map((p) => this.mapParameter(p));
 
     const decorators: Decorator[] | undefined =
       func.decorators.length > 0
@@ -212,11 +205,7 @@ export class ArchJsonMapper {
       type: 'function',
       visibility,
       members: [member],
-      sourceLocation: {
-        file: func.filePath,
-        startLine: func.startLine,
-        endLine: func.endLine,
-      },
+      sourceLocation: this.createSourceLocation(func.filePath, func.startLine, func.endLine),
       decorators,
     };
   }
@@ -224,13 +213,18 @@ export class ArchJsonMapper {
   /**
    * Map Python parameter to Parameter
    */
-  private mapParameter(param: PythonRawParameter): Parameter {
-    return {
-      name: param.name,
-      type: param.type || 'any',
-      isOptional: param.defaultValue !== undefined,
-      defaultValue: param.defaultValue,
-    };
+  private mapParameter(param: PythonRawParameter) {
+    return this.mapParameters(
+      [
+        {
+          name: param.name,
+          type: param.type,
+          isOptional: param.defaultValue !== undefined,
+          defaultValue: param.defaultValue,
+        },
+      ],
+      'any'
+    )[0];
   }
 
   /**
@@ -239,16 +233,12 @@ export class ArchJsonMapper {
   private createInheritanceRelation(
     sourceId: string,
     baseClassName: string,
-    filePath: string
+    _filePath: string
   ): Relation {
-    return {
-      id: uuidv4(),
-      type: 'inheritance' as RelationType,
-      source: sourceId,
-      target: baseClassName, // Will be resolved to full ID later if the base class is in scope
+    return this.createExplicitRelation('inheritance', sourceId, baseClassName, {
       confidence: 1.0,
       inferenceSource: 'explicit',
-    };
+    });
   }
 
   /**
@@ -263,14 +253,10 @@ export class ArchJsonMapper {
     // The source is a pseudo-entity representing the module
     const sourceId = this.generateModuleId(moduleName, filePath);
 
-    return {
-      id: uuidv4(),
-      type: 'dependency' as RelationType,
-      source: sourceId,
-      target: imp.module,
+    return this.createExplicitRelation('dependency', sourceId, imp.module, {
       confidence: 1.0,
       inferenceSource: 'explicit',
-    };
+    });
   }
 
   /**

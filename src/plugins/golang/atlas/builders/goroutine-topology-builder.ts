@@ -371,7 +371,8 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
     _edges: SpawnRelation[],
     _channels: ChannelInfo[]
   ): GoroutinePattern | undefined {
-    // TODO: Implement pattern detection (worker-pool, pipeline, fan-out, etc.)
+    // Backlog: atlas goroutine pattern detection is intentionally deferred.
+    // See docs/issues/go-atlas-pattern-detection.md for tracked follow-up scope.
     return undefined;
   }
 }

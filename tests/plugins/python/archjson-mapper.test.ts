@@ -134,6 +134,7 @@ describe('ArchJsonMapper', () => {
       expect(relation.type).toBe('inheritance');
       expect(relation.source).toContain('AdminUser');
       expect(relation.target).toContain('User');
+      expect(relation.id).toBe('test_module.AdminUser_inheritance_User');
     });
 
     it('should map multiple inheritance', () => {
@@ -516,6 +517,53 @@ describe('ArchJsonMapper', () => {
       expect(result.entities).toHaveLength(2);
       expect(result.entities[0].name).toBe('Class1');
       expect(result.entities[1].name).toBe('Class2');
+    });
+  });
+
+  describe('relation IDs', () => {
+    it('uses deterministic relation IDs instead of UUIDs', () => {
+      const module: PythonRawModule = {
+        name: 'pkg.service',
+        filePath: '/test/service.py',
+        classes: [
+          {
+            name: 'BaseService',
+            moduleName: 'pkg.service',
+            baseClasses: [],
+            methods: [],
+            properties: [],
+            classAttributes: [],
+            decorators: [],
+            filePath: '/test/service.py',
+            startLine: 1,
+            endLine: 5,
+          },
+          {
+            name: 'UserService',
+            moduleName: 'pkg.service',
+            baseClasses: ['BaseService'],
+            methods: [],
+            properties: [],
+            classAttributes: [],
+            decorators: [],
+            filePath: '/test/service.py',
+            startLine: 7,
+            endLine: 12,
+          },
+        ],
+        functions: [],
+        imports: [],
+      };
+
+      const result = mapper.mapModule(module);
+
+      expect(result.relations).toHaveLength(1);
+      expect(result.relations[0]).toMatchObject({
+        id: 'pkg.service.UserService_inheritance_BaseService',
+        source: 'pkg.service.UserService',
+        target: 'BaseService',
+        type: 'inheritance',
+      });
     });
   });
 });

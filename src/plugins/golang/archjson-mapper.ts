@@ -4,9 +4,9 @@
 
 import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
 import type { GoRawPackage, GoRawStruct, GoRawInterface, InferredImplementation } from './types.js';
-import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
+import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 
-export class ArchJsonMapper {
+export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
   /**
    * Map Go packages to ArchJSON entities
    */
@@ -20,19 +20,13 @@ export class ArchJsonMapper {
       // Map structs
       for (const struct of pkg.structs) {
         const entity = this.mapStruct(struct, pkgId);
-        if (!seenIds.has(entity.id)) {
-          seenIds.add(entity.id);
-          entities.push(entity);
-        }
+        this.pushUniqueEntity(entities, seenIds, entity);
       }
 
       // Map interfaces
       for (const iface of pkg.interfaces) {
         const entity = this.mapInterface(iface, pkgId);
-        if (!seenIds.has(entity.id)) {
-          seenIds.add(entity.id);
-          entities.push(entity);
-        }
+        this.pushUniqueEntity(entities, seenIds, entity);
       }
     }
 
@@ -91,7 +85,7 @@ export class ArchJsonMapper {
       members.push({
         name: field.name,
         type: 'field',
-        visibility: field.exported ? 'public' : 'private',
+        visibility: this.mapExportedVisibility(field.exported),
         fieldType: field.type,
       });
     }
@@ -101,20 +95,17 @@ export class ArchJsonMapper {
       members.push({
         name: method.name,
         type: 'method',
-        visibility: method.exported ? 'public' : 'private',
+        visibility: this.mapExportedVisibility(method.exported),
         returnType: method.returnTypes.join(', ') || 'void',
-        parameters: method.parameters.map((p) => ({
-          name: p.name,
-          type: p.type,
-        })),
+        parameters: this.mapParameters(method.parameters),
       });
     }
 
     return {
-      id: generateEntityId(packageName, struct.name),
+      id: this.createEntityId(packageName, struct.name),
       name: struct.name,
       type: 'struct',
-      visibility: struct.exported ? 'public' : 'private',
+      visibility: this.mapExportedVisibility(struct.exported),
       members,
       sourceLocation: struct.location,
     };
@@ -131,20 +122,17 @@ export class ArchJsonMapper {
       members.push({
         name: method.name,
         type: 'method',
-        visibility: method.exported ? 'public' : 'private',
+        visibility: this.mapExportedVisibility(method.exported),
         returnType: method.returnTypes.join(', ') || 'void',
-        parameters: method.parameters.map((p) => ({
-          name: p.name,
-          type: p.type,
-        })),
+        parameters: this.mapParameters(method.parameters),
       });
     }
 
     return {
-      id: generateEntityId(packageName, iface.name),
+      id: this.createEntityId(packageName, iface.name),
       name: iface.name,
       type: 'interface',
-      visibility: iface.exported ? 'public' : 'private',
+      visibility: this.mapExportedVisibility(iface.exported),
       members,
       sourceLocation: iface.location,
     };
@@ -155,18 +143,21 @@ export class ArchJsonMapper {
    */
   mapRelations(packages: GoRawPackage[], implementations: InferredImplementation[]): Relation[] {
     const relations: Relation[] = [];
+    const seen = new Set<string>();
 
     // Map implementations
     for (let i = 0; i < implementations.length; i++) {
       const impl = implementations[i];
-      relations.push({
-        id: `impl-${i}`,
-        type: 'implementation',
-        source: `${impl.structPackageId}.${impl.structName}`,
-        target: `${impl.interfacePackageId}.${impl.interfaceName}`,
-        confidence: impl.confidence,
-        inferenceSource: impl.source,
-      });
+      const source = `${impl.structPackageId}.${impl.structName}`;
+      const target = `${impl.interfacePackageId}.${impl.interfaceName}`;
+      this.pushUniqueRelation(
+        relations,
+        seen,
+        this.createExplicitRelation('implementation', source, target, {
+          confidence: impl.confidence,
+          inferenceSource: impl.source,
+        })
+      );
     }
 
     // TODO: Add dependency relations from imports

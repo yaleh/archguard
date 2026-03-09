@@ -2,11 +2,11 @@
  * ArchJSON Mapper - Convert Java raw data to ArchJSON format
  */
 
-import type { Entity, Relation, Member, Visibility } from '@/types/index.js';
+import type { Entity, Relation, Member } from '@/types/index.js';
 import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from './types.js';
-import { generateEntityId } from '@/plugins/shared/mapper-utils.js';
+import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 
-export class ArchJsonMapper {
+export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   /**
    * Map Java packages to ArchJSON entities
    */
@@ -96,11 +96,7 @@ export class ArchJsonMapper {
       type: cls.isAbstract ? 'abstract_class' : 'class',
       visibility: this.mapVisibility(cls.modifiers),
       members,
-      sourceLocation: {
-        file: cls.filePath,
-        startLine: cls.startLine,
-        endLine: cls.endLine,
-      },
+      sourceLocation: this.createSourceLocation(cls.filePath, cls.startLine, cls.endLine),
       decorators:
         cls.annotations.length > 0
           ? cls.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
@@ -124,10 +120,7 @@ export class ArchJsonMapper {
         type: 'method',
         visibility: this.mapVisibility(method.modifiers),
         returnType: method.returnType,
-        parameters: method.parameters.map((p) => ({
-          name: p.name,
-          type: p.type,
-        })),
+        parameters: this.mapParameters(method.parameters),
         isAbstract: true, // Interface methods are implicitly abstract
         decorators:
           method.annotations.length > 0
@@ -142,11 +135,7 @@ export class ArchJsonMapper {
       type: 'interface',
       visibility: this.mapVisibility(iface.modifiers),
       members,
-      sourceLocation: {
-        file: iface.filePath,
-        startLine: iface.startLine,
-        endLine: iface.endLine,
-      },
+      sourceLocation: this.createSourceLocation(iface.filePath, iface.startLine, iface.endLine),
       decorators:
         iface.annotations.length > 0
           ? iface.annotations.map((a) => ({ name: a.name, arguments: a.arguments }))
@@ -177,11 +166,11 @@ export class ArchJsonMapper {
       type: 'enum',
       visibility: this.mapVisibility(enumDecl.modifiers),
       members,
-      sourceLocation: {
-        file: enumDecl.filePath,
-        startLine: enumDecl.startLine,
-        endLine: enumDecl.endLine,
-      },
+      sourceLocation: this.createSourceLocation(
+        enumDecl.filePath,
+        enumDecl.startLine,
+        enumDecl.endLine
+      ),
     };
   }
 
@@ -190,6 +179,7 @@ export class ArchJsonMapper {
    */
   mapRelations(packages: JavaRawPackage[]): Relation[] {
     const relations: Relation[] = [];
+    const seen = new Set<string>();
 
     for (const pkg of packages) {
       // Process classes
@@ -199,23 +189,21 @@ export class ArchJsonMapper {
         // Inheritance (extends)
         if (cls.superClass) {
           const targetId = this.resolveTypeId(cls.superClass, cls.packageName);
-          relations.push({
-            id: `${sourceId}-extends-${targetId}`,
-            type: 'inheritance',
-            source: sourceId,
-            target: targetId,
-          });
+          this.pushUniqueRelation(
+            relations,
+            seen,
+            this.createExplicitRelation('inheritance', sourceId, targetId)
+          );
         }
 
         // Implementation (implements)
         for (const iface of cls.interfaces) {
           const targetId = this.resolveTypeId(iface, cls.packageName);
-          relations.push({
-            id: `${sourceId}-implements-${targetId}`,
-            type: 'implementation',
-            source: sourceId,
-            target: targetId,
-          });
+          this.pushUniqueRelation(
+            relations,
+            seen,
+            this.createExplicitRelation('implementation', sourceId, targetId)
+          );
         }
 
         // Field dependencies
@@ -223,12 +211,11 @@ export class ArchJsonMapper {
           const fieldType = this.extractTypeName(field.type);
           if (this.isUserDefinedType(fieldType)) {
             const targetId = this.resolveTypeId(fieldType, cls.packageName);
-            relations.push({
-              id: `${sourceId}-uses-${targetId}`,
-              type: 'dependency',
-              source: sourceId,
-              target: targetId,
-            });
+            this.pushUniqueRelation(
+              relations,
+              seen,
+              this.createExplicitRelation('dependency', sourceId, targetId)
+            );
           }
         }
 
@@ -238,12 +225,11 @@ export class ArchJsonMapper {
             const paramType = this.extractTypeName(param.type);
             if (this.isUserDefinedType(paramType)) {
               const targetId = this.resolveTypeId(paramType, cls.packageName);
-              relations.push({
-                id: `${sourceId}-uses-${targetId}`,
-                type: 'dependency',
-                source: sourceId,
-                target: targetId,
-              });
+              this.pushUniqueRelation(
+                relations,
+                seen,
+                this.createExplicitRelation('dependency', sourceId, targetId)
+              );
             }
           }
         }
@@ -256,12 +242,11 @@ export class ArchJsonMapper {
         // Interface inheritance (extends)
         for (const extendedIface of iface.extends) {
           const targetId = this.resolveTypeId(extendedIface, iface.packageName);
-          relations.push({
-            id: `${sourceId}-extends-${targetId}`,
-            type: 'inheritance',
-            source: sourceId,
-            target: targetId,
-          });
+          this.pushUniqueRelation(
+            relations,
+            seen,
+            this.createExplicitRelation('inheritance', sourceId, targetId)
+          );
         }
       }
     }
@@ -272,26 +257,16 @@ export class ArchJsonMapper {
   /**
    * Map Java modifiers to ArchJSON visibility
    */
-  private mapVisibility(modifiers: string[]): Visibility {
-    if (modifiers.includes('public')) {
-      return 'public';
-    } else if (modifiers.includes('private')) {
-      return 'private';
-    } else if (modifiers.includes('protected')) {
-      return 'protected';
-    }
-    // Java package-private (default) - map to public for simplicity
-    return 'public';
+  private mapVisibility(modifiers: string[]) {
+    // Java package-private (default) is normalized to public for current ArchJSON output.
+    return this.mapModifierVisibility(modifiers, 'public');
   }
 
   /**
    * Create entity ID from package and class name
    */
-  private createEntityId(packageName: string, className: string): string {
-    if (packageName) {
-      return generateEntityId(packageName, className);
-    }
-    return className;
+  protected override createEntityId(packageName: string, className: string): string {
+    return packageName ? super.createEntityId(packageName, className) : className;
   }
 
   /**

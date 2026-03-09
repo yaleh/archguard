@@ -101,6 +101,23 @@ describe('MermaidTemplates.renderFlowGraph (flowchart)', () => {
     // init directive is prepended, so the result is longer than just "flowchart LR"
     expect(result).toMatch(/%%\{init:.*\}%%\nflowchart LR/);
   });
+
+  it('assigns distinct subgraph IDs when directory labels sanitize to the same value', () => {
+    const graph = makeFlowGraph([
+      makeEntry({ id: 'ep1', location: { file: '/srv/api-a/handler.go', line: 1 } }),
+      makeEntry({ id: 'ep2', location: { file: '/srv/api_a/handler.go', line: 2 } }),
+    ]);
+
+    const result = MermaidTemplates.renderFlowGraph(graph);
+    const subgraphIds = Array.from(
+      result.matchAll(/subgraph (grp_[A-Za-z0-9_]+)/g),
+      (match) => match[1]
+    );
+    const dataSubgraphIds = subgraphIds.filter((id) => id !== 'grp_legend');
+
+    expect(dataSubgraphIds.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(dataSubgraphIds).size).toBe(dataSubgraphIds.length);
+  });
 });
 
 // ─── renderFlowGraph - node labels ────────────────────────────────────────────

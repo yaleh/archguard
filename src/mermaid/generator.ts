@@ -15,7 +15,8 @@ import type {
   MermaidTheme,
 } from './types.js';
 import { CommentGenerator } from './comment-generator.js';
-import { isExternalDependency } from './external-dependencies.js';
+import { groupEntitiesByPackage } from './generator-grouping.js';
+import { validateGeneratorInput } from './generator-validation.js';
 
 // ── Semantic classDef styles for TypeScript class diagrams (Plan 19) ─────────
 // Maps classDef identifier → Mermaid style string.
@@ -80,8 +81,7 @@ export class ValidatedMermaidGenerator {
    * v2.1.0: Adds comment generation if diagramConfig is provided
    */
   generate(): string {
-    // Validate before generation
-    this.validateBeforeGenerate();
+    validateGeneratorInput(this.archJson, this.verbose);
 
     // Start with comment header (v2.1.0)
     const lines: string[] = ['classDiagram'];
@@ -142,79 +142,13 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
-   * Validate ArchJSON before generation
-   */
-  private validateBeforeGenerate(): void {
-    // Check for circular references
-    const entityIds = new Set(this.archJson.entities.map((e) => e.id));
-    const filteredWarnings: string[] = [];
-
-    for (const relation of this.archJson.relations) {
-      const sourceExists = entityIds.has(relation.source);
-      const targetExists = entityIds.has(relation.target);
-
-      if (!sourceExists || !targetExists) {
-        // Check if the undefined entities are external dependencies
-        const sourceIsExternal = !sourceExists && isExternalDependency(relation.source);
-        const targetIsExternal = !targetExists && isExternalDependency(relation.target);
-
-        // Only warn if both are not external dependencies
-        if (!sourceIsExternal || !targetIsExternal) {
-          const warningParts: string[] = [];
-
-          if (!sourceExists && !sourceIsExternal) {
-            warningParts.push(`source: ${relation.source}`);
-          }
-          if (!targetExists && !targetIsExternal) {
-            warningParts.push(`target: ${relation.target}`);
-          }
-
-          if (warningParts.length > 0) {
-            filteredWarnings.push(
-              `  - ${relation.source} -> ${relation.target} (${warningParts.join(', ')})`
-            );
-          }
-        }
-      }
-    }
-
-    // Print warnings (if any)
-    if (filteredWarnings.length > 0) {
-      console.warn(
-        `⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`
-      );
-      console.warn(filteredWarnings.join('\n'));
-    }
-
-    // Log filtered warnings in verbose mode
-    if (this.verbose) {
-      const filteredCount = this.archJson.relations.filter(
-        (r) =>
-          (!entityIds.has(r.source) && isExternalDependency(r.source)) ||
-          (!entityIds.has(r.target) && isExternalDependency(r.target))
-      ).length;
-
-      if (filteredCount > 0) {
-        console.debug(`🔇 Filtered ${filteredCount} external dependency warning(s)`);
-      }
-    }
-
-    // Validate entity names don't contain problematic characters
-    for (const entity of this.archJson.entities) {
-      if (entity.name.includes('\n') || entity.name.includes('"')) {
-        throw new Error(`Invalid entity name: ${entity.name}`);
-      }
-    }
-  }
-
-  /**
    * Generate package-level diagram
    */
   private generatePackageLevel(): string {
     const lines: string[] = ['classDiagram'];
 
     // Group entities by packages
-    const packageGroups = this.groupEntitiesByPackage();
+    const packageGroups = groupEntitiesByPackage(this.archJson, this.options.grouping);
 
     for (const group of packageGroups) {
       const entityLines: string[] = [];
@@ -249,7 +183,7 @@ export class ValidatedMermaidGenerator {
     }
     lines.push('');
 
-    const packageGroups = this.groupEntitiesByPackage();
+    const packageGroups = groupEntitiesByPackage(this.archJson, this.options.grouping);
     // Filter out standalone free functions — they appear as empty class nodes in diagrams
     const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
     const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
@@ -331,7 +265,7 @@ export class ValidatedMermaidGenerator {
     }
     lines.push('');
 
-    const packageGroups = this.groupEntitiesByPackage();
+    const packageGroups = groupEntitiesByPackage(this.archJson, this.options.grouping);
     // Filter out standalone free functions — they appear as empty class nodes in diagrams
     const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
     const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
@@ -761,7 +695,7 @@ export class ValidatedMermaidGenerator {
     maxNodesPerDiagram: number
   ): Array<{ name: string | null; content: string }> {
     const visibleEntities = this.archJson.entities.filter((e) => e.type !== 'function');
-    const packageGroups = this.groupEntitiesByPackage();
+    const packageGroups = groupEntitiesByPackage(this.archJson, this.options.grouping);
 
     // Only keep groups that have at least one visible entity
     const visibleEntityIdSet = new Set(visibleEntities.map((e) => e.id));
