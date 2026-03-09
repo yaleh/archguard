@@ -12,6 +12,18 @@ import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import { ProgressReporter } from '@/cli/progress.js';
 import type { ArchJSON } from '@/types/index.js';
 
+// Mock os so we can control cpus() in pool-size tests
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      cpus: vi.fn(() => actual.cpus()),
+    },
+  };
+});
+
 // Mock dependencies
 vi.mock('@/cli/utils/file-discovery-service.js');
 vi.mock('@/parser/parallel-parser.js');
@@ -115,9 +127,9 @@ describe('deriveSubModuleArchJSON', () => {
         { source: 'e2', target: 'e3', type: 'dependency' as const },
       ],
     };
-    const result = deriveSubModuleArchJSON(parent as any, '/src/core');
+    const result = deriveSubModuleArchJSON(parent as unknown as ArchJSON, '/src/core');
     // e1, e3 are in sub-module; e2 is a cross-module stub (target of e1→e2)
-    expect(result.entities.map((e: any) => e.id)).toEqual(['e1', 'e3', 'e2']);
+    expect(result.entities.map((e) => e.id)).toEqual(['e1', 'e3', 'e2']);
     // e1→e2 (cross-module outgoing) + e1→e3 (intra-module); e2→e3 excluded (e2 not in sub-module)
     expect(result.relations).toHaveLength(2);
     expect(result.relations).toContainEqual(
@@ -162,7 +174,7 @@ describe('deriveSubModuleArchJSON', () => {
         },
       },
     };
-    const result = deriveSubModuleArchJSON(parent as any, '/abs/path/src/core');
+    const result = deriveSubModuleArchJSON(parent as unknown as ArchJSON, '/abs/path/src/core');
     const mg = result.extensions?.tsAnalysis?.moduleGraph;
     expect(mg?.nodes).toHaveLength(1);
     expect(mg?.nodes[0].id).toBe('src/core');
@@ -181,7 +193,7 @@ describe('deriveSubModuleArchJSON', () => {
         tsAnalysis: { version: '1.0', moduleGraph: { nodes: [], edges: [], cycles: [] } },
       },
     };
-    const result = deriveSubModuleArchJSON(parent as any, '/src');
+    const result = deriveSubModuleArchJSON(parent as unknown as ArchJSON, '/src');
     expect(result.version).toBe('1.0');
     expect(result.extensions?.tsAnalysis).toBeDefined();
   });
@@ -195,7 +207,7 @@ describe('deriveSubModuleArchJSON', () => {
       entities: [{ id: 'e1', name: 'A', type: 'class' as const, filePath: '/src/core/a.ts' }],
       relations: [],
     };
-    const result = deriveSubModuleArchJSON(parent as any, '/src/other');
+    const result = deriveSubModuleArchJSON(parent as unknown as ArchJSON, '/src/other');
     expect(result.entities).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
   });
@@ -210,17 +222,17 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'src.Renderer',
           name: 'Renderer',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
-          members: [{ name: 'ctx', type: 'field' as any, visibility: 'public' }],
+          members: [{ name: 'ctx', type: 'field', visibility: 'public' }],
           sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
         },
         {
           id: 'ggml.ggml_context',
           name: 'ggml_context',
-          type: 'struct' as any,
+          type: 'struct',
           visibility: 'public',
-          members: [{ name: 'mem_size', type: 'field' as any, visibility: 'public' }],
+          members: [{ name: 'mem_size', type: 'field', visibility: 'public' }],
           sourceLocation: { file: '/proj/ggml/ggml.h', startLine: 1, endLine: 20 },
         },
       ],
@@ -252,7 +264,7 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'src.Renderer',
           name: 'Renderer',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
           members: [],
           sourceLocation: { file: '/proj/src/renderer.h', startLine: 1, endLine: 10 },
@@ -260,11 +272,11 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'ggml.ggml_context',
           name: 'ggml_context',
-          type: 'struct' as any,
+          type: 'struct',
           visibility: 'public',
           members: [
-            { name: 'mem_size', type: 'field' as any, visibility: 'public' },
-            { name: 'alloc', type: 'field' as any, visibility: 'public' },
+            { name: 'mem_size', type: 'field', visibility: 'public' },
+            { name: 'alloc', type: 'field', visibility: 'public' },
           ],
           sourceLocation: { file: '/proj/ggml/ggml.h', startLine: 1, endLine: 20 },
         },
@@ -302,7 +314,7 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'src.A',
           name: 'A',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
           members: [],
           sourceLocation: { file: '/proj/src/a.h', startLine: 1, endLine: 5 },
@@ -310,7 +322,7 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'src.B',
           name: 'B',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
           members: [],
           sourceLocation: { file: '/proj/src/b.h', startLine: 1, endLine: 5 },
@@ -345,7 +357,7 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'src.Base',
           name: 'Base',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
           members: [],
           sourceLocation: { file: '/proj/src/base.h', startLine: 1, endLine: 5 },
@@ -353,7 +365,7 @@ describe('deriveSubModuleArchJSON', () => {
         {
           id: 'tools.Derived',
           name: 'Derived',
-          type: 'class' as any,
+          type: 'class',
           visibility: 'public',
           members: [],
           sourceLocation: { file: '/proj/tools/derived.h', startLine: 1, endLine: 5 },
@@ -511,6 +523,10 @@ describe('DiagramProcessor', () => {
   });
 
   describe('processAll', () => {
+    // These variables hold vi-mocked constructor functions for dependency injection testing.
+    // The mock pattern (assign from dynamic import + .mockImplementation()) requires `any` here
+    // because TypeScript cannot statically resolve the vi.Mock constructor type across modules.
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
     let FileDiscoveryService: any;
     let ParallelParser: any;
     let ArchJSONAggregator: any;
@@ -528,19 +544,19 @@ describe('DiagramProcessor', () => {
     it('should process single diagram successfully', async () => {
       // Mock FileDiscoveryService
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -556,14 +572,14 @@ describe('DiagramProcessor', () => {
         },
       });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
 
       // Mock MermaidDiagramGenerator
       const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
-      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      MermaidDiagramGenerator.mockImplementation(() => ({
         generateOnly: mockGenerateAndRender,
       }));
 
@@ -587,19 +603,19 @@ describe('DiagramProcessor', () => {
     it('should process multiple diagrams independently', async () => {
       // Mock FileDiscoveryService
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -627,7 +643,7 @@ describe('DiagramProcessor', () => {
           },
         });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
@@ -660,19 +676,19 @@ describe('DiagramProcessor', () => {
         }
         return Promise.resolve(['/src/test.ts']);
       });
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -688,14 +704,14 @@ describe('DiagramProcessor', () => {
         },
       });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
 
       // Mock MermaidDiagramGenerator
       const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
-      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      MermaidDiagramGenerator.mockImplementation(() => ({
         generateOnly: mockGenerateAndRender,
       }));
 
@@ -725,19 +741,19 @@ describe('DiagramProcessor', () => {
     it('should correctly apply level aggregation', async () => {
       // Mock FileDiscoveryService
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -753,14 +769,14 @@ describe('DiagramProcessor', () => {
         },
       });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
 
       // Mock MermaidDiagramGenerator
       const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
-      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      MermaidDiagramGenerator.mockImplementation(() => ({
         generateOnly: mockGenerateAndRender,
       }));
 
@@ -785,19 +801,19 @@ describe('DiagramProcessor', () => {
     it('should support different output formats', async () => {
       // Mock FileDiscoveryService
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
       // Mock ParallelParser
       const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -813,14 +829,14 @@ describe('DiagramProcessor', () => {
         },
       });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
 
       // Mock MermaidDiagramGenerator
       const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
-      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      MermaidDiagramGenerator.mockImplementation(() => ({
         generateOnly: mockGenerateAndRender,
       }));
 
@@ -848,7 +864,7 @@ describe('DiagramProcessor', () => {
     it('should report detailed statistics', async () => {
       // Mock FileDiscoveryService
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
-      (FileDiscoveryService as any).mockImplementation(() => ({
+      FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
@@ -867,13 +883,13 @@ describe('DiagramProcessor', () => {
         },
       ];
       const mockParseFiles = vi.fn().mockResolvedValue(testArchJSON);
-      (ParallelParser as any).mockImplementation(() => ({
+      ParallelParser.mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
+      ArchJSONAggregator.mockImplementation(() => ({
         aggregate: mockAggregate,
       }));
 
@@ -889,14 +905,14 @@ describe('DiagramProcessor', () => {
         },
       });
       const mockEnsureDirectory = vi.fn().mockResolvedValue(undefined);
-      (OutputPathResolver as any).mockImplementation(() => ({
+      OutputPathResolver.mockImplementation(() => ({
         resolve: mockResolve,
         ensureDirectory: mockEnsureDirectory,
       }));
 
       // Mock MermaidDiagramGenerator
       const mockGenerateAndRender = vi.fn().mockResolvedValue([]);
-      (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      MermaidDiagramGenerator.mockImplementation(() => ({
         generateOnly: mockGenerateAndRender,
       }));
 
@@ -993,9 +1009,11 @@ describe('DiagramProcessor', () => {
       const results = await processor.processAll();
 
       expect(results[0].success).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockGoPlugin.initialize).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceRoot: expect.any(String) })
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockGoPlugin.parseProject).toHaveBeenCalled();
     });
 
@@ -1021,9 +1039,11 @@ describe('DiagramProcessor', () => {
       const results = await processor.processAll();
 
       expect(results[0].success).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockTsPlugin.initialize).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceRoot: expect.any(String) })
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockTsPlugin.parseProject).toHaveBeenCalled();
     });
 
@@ -1543,7 +1563,7 @@ describe('Atlas layer parallel rendering', () => {
   /**
    * Create a mock Go plugin that returns a Go Atlas ArchJSON.
    */
-  const createMockGoPlugin = (goAtlasArchJSON: ArchJSON) => ({
+  const createMockGoPlugin = (goAtlasArchJSON: ArchJSON): ILanguagePlugin => ({
     metadata: {
       name: 'golang',
       version: '1.0.0',
@@ -1631,7 +1651,7 @@ describe('Atlas layer parallel rendering', () => {
     }));
 
     const registry = new PluginRegistry();
-    registry.register(mockGoPlugin as any);
+    registry.register(mockGoPlugin);
 
     const processor = new DiagramProcessor({
       diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
@@ -1653,6 +1673,241 @@ describe('Atlas layer parallel rendering', () => {
     expect(results[0].success).toBe(true);
     // With parallel rendering all 4 layers should be in-flight simultaneously
     expect(maxConcurrent).toBeGreaterThan(1);
+  });
+
+  it('creates worker pool for single diagram (poolSize=1)', async () => {
+    /**
+     * Phase C: pool is always created (poolSize >= 1), even for a single diagram.
+     * Verify MermaidRenderWorkerPool constructor is called with poolSize >= 1.
+     */
+    await setupCommonMocks();
+
+    // Setup mocks for a plain single TypeScript diagram (no Atlas)
+    const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+    (FileDiscoveryService as any).mockImplementation(() => ({
+      discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+    }));
+
+    const { ParallelParser } = await import('@/parser/parallel-parser.js');
+    (ParallelParser as any).mockImplementation(() => ({
+      parseFiles: vi.fn().mockResolvedValue({
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '',
+        sourceFiles: [],
+        entities: [],
+        relations: [],
+      }),
+    }));
+
+    const { MermaidRenderWorkerPool } = (await import('@/mermaid/render-worker-pool.js')) as any;
+    const constructorCalls: number[] = [];
+    MermaidRenderWorkerPool.mockImplementation((size: number) => {
+      constructorCalls.push(size);
+      return {
+        start: vi.fn().mockResolvedValue(undefined),
+        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 100 100"/>' }),
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+    });
+
+    const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
+    (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      generateOnly: vi.fn().mockResolvedValue([]),
+    }));
+
+    const processor = new DiagramProcessor({
+      diagrams: [{ name: 'single', sources: ['./src'], level: 'class' }],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'mermaid',
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+    });
+
+    await processor.processAll();
+
+    // Pool must be created even for a single diagram (poolSize >= 1)
+    expect(constructorCalls.length).toBeGreaterThan(0);
+    expect(constructorCalls[0]).toBeGreaterThanOrEqual(1);
+  });
+
+  it('skips pool.start() when all diagrams use json format', async () => {
+    /**
+     * Phase C: when format is json, no rendering is needed — pool.start() must NOT be called.
+     */
+    await setupCommonMocks();
+
+    const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+    (FileDiscoveryService as any).mockImplementation(() => ({
+      discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+    }));
+
+    const { ParallelParser } = await import('@/parser/parallel-parser.js');
+    (ParallelParser as any).mockImplementation(() => ({
+      parseFiles: vi.fn().mockResolvedValue({
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '',
+        sourceFiles: [],
+        entities: [],
+        relations: [],
+      }),
+    }));
+
+    const { MermaidRenderWorkerPool } = (await import('@/mermaid/render-worker-pool.js')) as any;
+    const startSpy = vi.fn().mockResolvedValue(undefined);
+    MermaidRenderWorkerPool.mockImplementation((_size: number) => ({
+      start: startSpy,
+      render: vi.fn().mockResolvedValue({ success: true, svg: '<svg/>' }),
+      terminate: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    const processor = new DiagramProcessor({
+      diagrams: [{ name: 'json-only', sources: ['./src'], level: 'class' }],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'json', // all diagrams are json
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+    });
+
+    await processor.processAll();
+
+    // Pool is created but start() must NOT be called when all diagrams are json
+    expect(MermaidRenderWorkerPool).toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+  });
+
+  it('calls pool.start() when at least one diagram uses mermaid format', async () => {
+    /**
+     * Phase C: even if globalConfig.format=json, a per-diagram format:'mermaid' override
+     * must trigger pool.start().
+     */
+    await setupCommonMocks();
+
+    const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
+    (FileDiscoveryService as any).mockImplementation(() => ({
+      discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+    }));
+
+    const { ParallelParser } = await import('@/parser/parallel-parser.js');
+    (ParallelParser as any).mockImplementation(() => ({
+      parseFiles: vi.fn().mockResolvedValue({
+        version: '1.0',
+        language: 'typescript',
+        timestamp: '',
+        sourceFiles: [],
+        entities: [],
+        relations: [],
+      }),
+    }));
+
+    const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
+    (MermaidDiagramGenerator as any).mockImplementation(() => ({
+      generateOnly: vi.fn().mockResolvedValue([]),
+    }));
+
+    const { MermaidRenderWorkerPool } = (await import('@/mermaid/render-worker-pool.js')) as any;
+    const startSpy = vi.fn().mockResolvedValue(undefined);
+    MermaidRenderWorkerPool.mockImplementation((_size: number) => ({
+      start: startSpy,
+      render: vi.fn().mockResolvedValue({ success: true, svg: '<svg/>' }),
+      terminate: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    const processor = new DiagramProcessor({
+      diagrams: [
+        // diagram-level format override to mermaid, while globalConfig is json
+        { name: 'mermaid-one', sources: ['./src'], level: 'class', format: 'mermaid' as const },
+      ],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'json', // global default is json
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+    });
+
+    await processor.processAll();
+
+    // start() MUST be called because one diagram has format:'mermaid'
+    expect(startSpy).toHaveBeenCalledOnce();
+  });
+
+  it('Go Atlas single diagram uses effectiveDiagramCount based on layer count', async () => {
+    /**
+     * Phase C: 1 Go Atlas diagram with 4 layers → poolSize = min(cpus-1, 4, 4).
+     * With 8 mocked CPUs → poolSize = min(7, 4, 4) = 4.
+     */
+    const goAtlasArchJSON = createGoAtlasArchJSON();
+    const mockGoPlugin = createMockGoPlugin(goAtlasArchJSON);
+    await setupCommonMocks();
+
+    // Mock os.cpus() to return 8 CPUs using the vi.mock('os') at the top
+    const osMod = await import('os');
+    (osMod.default.cpus as any).mockReturnValue(
+      new Array(8).fill({
+        model: '',
+        speed: 0,
+        times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 },
+      })
+    );
+
+    const { AtlasRenderer } =
+      (await import('@/plugins/golang/atlas/renderers/atlas-renderer.js')) as any;
+    AtlasRenderer.mockImplementation(() => ({
+      render: vi.fn().mockResolvedValue({ content: 'flowchart LR\n  A --> B', format: 'mermaid' }),
+    }));
+
+    const { MermaidRenderWorkerPool } = (await import('@/mermaid/render-worker-pool.js')) as any;
+    const constructorCalls: number[] = [];
+    MermaidRenderWorkerPool.mockImplementation((size: number) => {
+      constructorCalls.push(size);
+      return {
+        start: vi.fn().mockResolvedValue(undefined),
+        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 100 100"/>' }),
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+    });
+
+    const registry = new PluginRegistry();
+    registry.register(mockGoPlugin);
+
+    const processor = new DiagramProcessor({
+      diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
+      globalConfig: {
+        outputDir: './archguard',
+        format: 'mermaid',
+        exclude: [],
+        cli: { command: 'claude', args: [], timeout: 30000 },
+        cache: { enabled: false, ttl: 0 },
+        concurrency: 4,
+        verbose: false,
+      },
+      progress: new ProgressReporter(),
+      registry,
+    });
+
+    await processor.processAll();
+
+    // With 8 CPUs and 4 atlas layers: poolSize = min(8-1, 4, 4) = 4
+    expect(constructorCalls.length).toBeGreaterThan(0);
+    expect(constructorCalls[0]).toBe(4);
   });
 
   it('processAll creates worker pool for a single Go Atlas diagram (MermaidRenderWorkerPool instantiated)', async () => {
@@ -1690,7 +1945,7 @@ describe('Atlas layer parallel rendering', () => {
     });
 
     const registry = new PluginRegistry();
-    registry.register(mockGoPlugin as any);
+    registry.register(mockGoPlugin);
 
     const processor = new DiagramProcessor({
       diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],

@@ -4,7 +4,9 @@ import { randomUUID } from 'crypto';
 
 export interface WorkerInitData {
   theme: string;
-  backgroundColor: string;
+  maxTextSize: number;
+  transparentBackground: boolean;
+  themeVariables?: Record<string, string>;
 }
 
 export interface RenderJob {
@@ -30,25 +32,73 @@ export class MermaidRenderWorkerPool {
   private idle: Worker[] = [];
   private queue: Array<{ job: RenderJob }> = [];
   private pending = new Map<string, (r: RenderResult) => void>();
+  private workerInFlight = new Map<Worker, string>(); // worker → jobId
+  private workerRestarts = new Map<Worker, number>(); // restart count per slot
+  private terminating = false;
+  private readonly MAX_RESTARTS = 3;
 
   constructor(
     private readonly poolSize: number,
     private readonly initData: WorkerInitData
   ) {}
 
-  async start(): Promise<void> {
+  private spawnWorker(): Worker {
+    const w = new Worker(WORKER_FILE, {
+      workerData: this.initData,
+      execArgv: sanitizeWorkerExecArgv(process.execArgv),
+      resourceLimits: { maxOldGenerationSizeMb: 2048 },
+    });
+    w.on('message', (result: RenderResult) => this.onResult(w, result));
+    w.on('error', (err) => {
+      console.error(`[render-worker] worker error: ${err.message}`);
+    });
+    w.on('exit', (code) => this.onWorkerExit(w, code));
+    this.idle.push(w);
+    return w;
+  }
+
+  start(): void {
     for (let i = 0; i < this.poolSize; i++) {
-      const w = new Worker(WORKER_FILE, {
-        workerData: this.initData,
-        execArgv: sanitizeWorkerExecArgv(process.execArgv),
-      });
-      w.on('message', (result: RenderResult) => this.onResult(w, result));
-      w.on('error', (err) => {
-        console.error(`[render-worker] worker error: ${err.message}`);
-      });
-      this.workers.push(w);
-      this.idle.push(w);
+      this.workers.push(this.spawnWorker());
     }
+  }
+
+  private onWorkerExit(w: Worker, code: number): void {
+    if (code === 0 || this.terminating) return; // Normal/intentional exit
+
+    // Resolve in-flight job immediately to prevent Promise hanging
+    const jobId = this.workerInFlight.get(w);
+    if (jobId) {
+      const resolve = this.pending.get(jobId);
+      if (resolve) {
+        this.pending.delete(jobId);
+        resolve({ jobId, success: false, error: `Worker exited unexpectedly (code=${code})` });
+      }
+      this.workerInFlight.delete(w);
+    }
+
+    // Remove from idle if present
+    const idleIdx = this.idle.indexOf(w);
+    if (idleIdx !== -1) this.idle.splice(idleIdx, 1);
+
+    // Respawn (up to MAX_RESTARTS)
+    const restarts = this.workerRestarts.get(w) ?? 0;
+    if (restarts < this.MAX_RESTARTS) {
+      console.warn(
+        `[render-worker] worker exited (code=${code}), respawning (${restarts + 1}/${this.MAX_RESTARTS})`
+      );
+      const replacement = this.spawnWorker();
+      this.workerRestarts.set(replacement, restarts + 1);
+      const idx = this.workers.indexOf(w);
+      if (idx !== -1) this.workers[idx] = replacement;
+    } else {
+      console.error(
+        `[render-worker] worker reached max restarts (${this.MAX_RESTARTS}), not respawning`
+      );
+      const idx = this.workers.indexOf(w);
+      if (idx !== -1) this.workers.splice(idx, 1);
+    }
+    this.workerRestarts.delete(w);
   }
 
   render(job: Omit<RenderJob, 'jobId'>): Promise<RenderResult> {
@@ -62,6 +112,7 @@ export class MermaidRenderWorkerPool {
   private dispatch(job: RenderJob): void {
     const worker = this.idle.pop();
     if (worker) {
+      this.workerInFlight.set(worker, job.jobId);
       worker.postMessage(job);
     } else {
       this.queue.push({ job });
@@ -69,6 +120,7 @@ export class MermaidRenderWorkerPool {
   }
 
   private onResult(worker: Worker, result: RenderResult): void {
+    this.workerInFlight.delete(worker);
     const resolve = this.pending.get(result.jobId);
     if (resolve) {
       this.pending.delete(result.jobId);
@@ -76,6 +128,7 @@ export class MermaidRenderWorkerPool {
     }
     const next = this.queue.shift();
     if (next) {
+      this.workerInFlight.set(worker, next.job.jobId);
       worker.postMessage(next.job);
     } else {
       this.idle.push(worker);
@@ -83,6 +136,7 @@ export class MermaidRenderWorkerPool {
   }
 
   async terminate(): Promise<void> {
+    this.terminating = true;
     // 1. Terminate all workers in parallel
     await Promise.all(this.workers.map((w) => w.terminate()));
 

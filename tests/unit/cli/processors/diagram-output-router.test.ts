@@ -5,8 +5,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DiagramOutputRouter } from '@/cli/processors/diagram-output-router.js';
 import type { OutputPaths } from '@/cli/processors/diagram-output-router.js';
-import type { GlobalConfig } from '@/types/config.js';
+import type { GlobalConfig, DiagramConfig, MermaidConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { ProgressReporterLike } from '@/cli/progress.js';
+import type { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 
 // Mock fs-extra
 vi.mock('fs-extra', () => ({
@@ -54,9 +56,17 @@ vi.mock('@/plugins/golang/atlas/renderers/atlas-renderer.js', () => ({
 vi.mock('@/mermaid/renderer.js', () => ({
   inlineEdgeStyles: vi.fn().mockImplementation((svg: string) => svg),
   IsomorphicMermaidRenderer: vi.fn().mockImplementation(() => ({
-    renderSVG: vi.fn().mockResolvedValue('<svg viewBox="0 0 100 100"/>'),
+    renderSVGRaw: vi.fn().mockResolvedValue('<svg viewBox="0 0 100 100"/>'),
+    renderSVG: vi
+      .fn()
+      .mockResolvedValue('<svg viewBox="0 0 100 100" style="background-color: white;"/>'),
     convertSVGToPNG: vi.fn().mockResolvedValue(undefined),
   })),
+}));
+
+// Mock postProcessSVG
+vi.mock('@/mermaid/post-process-svg.js', () => ({
+  postProcessSVG: vi.fn().mockImplementation((svg: string) => svg + '<!-- processed -->'),
 }));
 
 // Mock TS module graph renderer
@@ -70,6 +80,19 @@ vi.mock('@/mermaid/cpp-package-flowchart-generator.js', () => ({
     generate: vi.fn().mockReturnValue('flowchart LR\n  pkgA --> pkgB'),
   })),
 }));
+
+// ---- typed mock helpers -----------------------------------------------------
+
+interface FsMock {
+  writeJson: ReturnType<typeof vi.fn>;
+  writeFile: ReturnType<typeof vi.fn>;
+  ensureDir: ReturnType<typeof vi.fn>;
+}
+
+async function getFsMock(): Promise<FsMock> {
+  const fs = await import('fs-extra');
+  return (fs as unknown as { default: FsMock }).default;
+}
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -102,34 +125,40 @@ function makeArchJSON(overrides: Partial<ArchJSON> = {}): ArchJSON {
     entities: [],
     relations: [],
     ...overrides,
-  } as ArchJSON;
+  } as unknown as ArchJSON;
 }
 
-function makeDiagram(overrides: Record<string, unknown> = {}) {
+function makeDiagram(overrides: Partial<DiagramConfig> = {}): DiagramConfig {
   return {
     name: 'test',
     sources: ['./src'],
     level: 'class',
     ...overrides,
-  } as any;
+  } as DiagramConfig;
 }
 
-function makePool() {
+function makePool(): MermaidRenderWorkerPool {
   return {
     render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 10 10"/>' }),
-    start: vi.fn().mockResolvedValue(undefined),
+    start: vi.fn(),
     terminate: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  } as unknown as MermaidRenderWorkerPool;
 }
 
 // ---- tests ------------------------------------------------------------------
 
 describe('DiagramOutputRouter', () => {
-  let progress: any;
+  let progress: ProgressReporterLike;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    progress = { start: vi.fn(), succeed: vi.fn(), fail: vi.fn(), update: vi.fn() };
+    progress = {
+      start: vi.fn(),
+      succeed: vi.fn(),
+      fail: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+    };
   });
 
   // --------------------------------------------------------------------------
@@ -138,14 +167,13 @@ describe('DiagramOutputRouter', () => {
 
   describe('JSON format', () => {
     it('writes JSON file and returns without entering mermaid branch', async () => {
-      const fs = await import('fs-extra');
-      const fsMock = (fs as any).default;
+      const fsMock = await getFsMock();
 
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
       const archJSON = makeArchJSON();
       const paths = makePaths();
 
-      await router.route(archJSON, paths, makeDiagram(), null);
+      await router.route(archJSON, paths, makeDiagram(), makePool());
 
       expect(fsMock.writeJson).toHaveBeenCalledOnce();
       expect(fsMock.ensureDir).toHaveBeenCalledWith('/out');
@@ -153,8 +181,7 @@ describe('DiagramOutputRouter', () => {
     });
 
     it('ensures the JSON parent directory before writing nested output paths', async () => {
-      const fs = await import('fs-extra');
-      const fsMock = (fs as any).default;
+      const fsMock = await getFsMock();
 
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
       const paths: OutputPaths = {
@@ -166,7 +193,7 @@ describe('DiagramOutputRouter', () => {
         },
       };
 
-      await router.route(makeArchJSON(), paths, makeDiagram({ level: 'method' }), null);
+      await router.route(makeArchJSON(), paths, makeDiagram({ level: 'method' }), makePool());
 
       expect(fsMock.ensureDir).toHaveBeenCalledWith('/out/method');
       expect(fsMock.writeJson).toHaveBeenCalledWith(paths.paths.json, expect.any(Object), {
@@ -175,8 +202,7 @@ describe('DiagramOutputRouter', () => {
     });
 
     it('canonicalizes JSON output before writing it to disk', async () => {
-      const fs = await import('fs-extra');
-      const fsMock = (fs as any).default;
+      const fsMock = await getFsMock();
 
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
       const archJSON = makeArchJSON({
@@ -203,23 +229,22 @@ describe('DiagramOutputRouter', () => {
           { id: 'r2', type: 'dependency', source: 'b', target: 'a' },
           { id: 'r1', type: 'dependency', source: 'a', target: 'b' },
         ],
-      } as any);
+      });
 
-      await router.route(archJSON, makePaths(), makeDiagram(), null);
+      await router.route(archJSON, makePaths(), makeDiagram(), makePool());
 
-      const writtenJson = fsMock.writeJson.mock.calls[0][1];
+      const writtenJson = fsMock.writeJson.mock.calls[0][1] as ArchJSON;
       expect(writtenJson.sourceFiles).toEqual(['src/a.ts', 'src/z.ts']);
-      expect(writtenJson.entities.map((entity: any) => entity.id)).toEqual(['a', 'b']);
-      expect(writtenJson.relations.map((relation: any) => relation.id)).toEqual(['r1', 'r2']);
+      expect(writtenJson.entities.map((entity) => entity.id)).toEqual(['a', 'b']);
+      expect(writtenJson.relations.map((relation) => relation.id)).toEqual(['r1', 'r2']);
     });
 
     it('respects diagram.format over globalConfig.format', async () => {
-      const fs = await import('fs-extra');
-      const fsMock = (fs as any).default;
+      const fsMock = await getFsMock();
 
       // globalConfig is mermaid, but diagram overrides to json
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'mermaid' }), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ format: 'json' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ format: 'json' }), makePool());
 
       expect(fsMock.writeJson).toHaveBeenCalledOnce();
     });
@@ -229,7 +254,7 @@ describe('DiagramOutputRouter', () => {
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram(), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram(), makePool());
 
       expect(MermaidDiagramGenerator).not.toHaveBeenCalled();
       expect(IsomorphicMermaidRenderer).not.toHaveBeenCalled();
@@ -242,9 +267,7 @@ describe('DiagramOutputRouter', () => {
 
   describe('Atlas routing', () => {
     it('routes to generateAtlasOutput when archJSON.extensions.goAtlas is present', async () => {
-      const { AtlasRenderer } = await import(
-        '@/plugins/golang/atlas/renderers/atlas-renderer.js'
-      );
+      const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
 
       const archJSON = makeArchJSON({
         language: 'go',
@@ -254,11 +277,11 @@ describe('DiagramOutputRouter', () => {
               package: { nodes: [{ id: 'main', label: 'main', type: 'package' }], edges: [] },
             },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ language: 'go' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ language: 'go' }), makePool());
 
       expect(AtlasRenderer).toHaveBeenCalled();
     });
@@ -273,22 +296,22 @@ describe('DiagramOutputRouter', () => {
               package: { nodes: [{ id: 'main', label: 'main', type: 'package' }], edges: [] },
             },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ language: 'go' }), pool);
 
       // Pool.render should have been called for the package layer
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(pool.render).toHaveBeenCalledWith(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         expect.objectContaining({ mermaidCode: expect.any(String) })
       );
     });
 
     it('takes Atlas path regardless of diagram.language when goAtlas extension is present', async () => {
-      const { AtlasRenderer } = await import(
-        '@/plugins/golang/atlas/renderers/atlas-renderer.js'
-      );
+      const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
 
       const archJSON = makeArchJSON({
         language: 'go',
@@ -298,12 +321,12 @@ describe('DiagramOutputRouter', () => {
               package: { nodes: [{ id: 'main', label: 'main', type: 'package' }], edges: [] },
             },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       // diagram.language is deliberately unset — routing uses archJSON, not diagram
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ language: undefined }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ language: undefined }), makePool());
 
       expect(AtlasRenderer).toHaveBeenCalled();
     });
@@ -327,11 +350,11 @@ describe('DiagramOutputRouter', () => {
               cycles: [],
             },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(renderTsModuleGraph).toHaveBeenCalledOnce();
     });
@@ -346,11 +369,11 @@ describe('DiagramOutputRouter', () => {
             version: '1.0',
             moduleGraph: { nodes: [], edges: [], cycles: [] },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'class' }), makePool());
 
       expect(renderTsModuleGraph).not.toHaveBeenCalled();
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
@@ -363,37 +386,34 @@ describe('DiagramOutputRouter', () => {
 
   describe('C++ package routing', () => {
     it('routes to generateCppPackageOutput when language=cpp and level=package', async () => {
-      const { CppPackageFlowchartGenerator } = await import(
-        '@/mermaid/cpp-package-flowchart-generator.js'
-      );
+      const { CppPackageFlowchartGenerator } =
+        await import('@/mermaid/cpp-package-flowchart-generator.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(CppPackageFlowchartGenerator).toHaveBeenCalled();
     });
 
     it('does NOT route to C++ package generator when level is not package', async () => {
-      const { CppPackageFlowchartGenerator } = await import(
-        '@/mermaid/cpp-package-flowchart-generator.js'
-      );
+      const { CppPackageFlowchartGenerator } =
+        await import('@/mermaid/cpp-package-flowchart-generator.js');
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'class' }), makePool());
 
       expect(CppPackageFlowchartGenerator).not.toHaveBeenCalled();
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
     });
 
     it('uses archJSON.language not diagram.language for C++ routing decision', async () => {
-      const { CppPackageFlowchartGenerator } = await import(
-        '@/mermaid/cpp-package-flowchart-generator.js'
-      );
+      const { CppPackageFlowchartGenerator } =
+        await import('@/mermaid/cpp-package-flowchart-generator.js');
 
       // archJSON.language is 'cpp' but diagram.language is undefined
       const archJSON = makeArchJSON({ language: 'cpp' });
@@ -402,7 +422,7 @@ describe('DiagramOutputRouter', () => {
         archJSON,
         makePaths(),
         makeDiagram({ level: 'package', language: undefined }),
-        null
+        makePool()
       );
 
       expect(CppPackageFlowchartGenerator).toHaveBeenCalled();
@@ -418,18 +438,20 @@ describe('DiagramOutputRouter', () => {
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), makePool());
 
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
-      const instance = (MermaidDiagramGenerator as any).mock.results[0].value;
-      expect(instance.generateOnly).toHaveBeenCalledOnce();
+      const instance = vi.mocked(MermaidDiagramGenerator).mock.results[0]?.value as
+        | { generateOnly: ReturnType<typeof vi.fn> }
+        | undefined;
+      expect(instance?.generateOnly).toHaveBeenCalledOnce();
     });
 
     it('routes to MermaidDiagramGenerator for method-level diagram', async () => {
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'method' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'method' }), makePool());
 
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
     });
@@ -439,7 +461,7 @@ describe('DiagramOutputRouter', () => {
 
       const archJSON = makeArchJSON({ language: 'typescript' });
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
     });
@@ -449,10 +471,12 @@ describe('DiagramOutputRouter', () => {
 
       const diagram = makeDiagram({ level: 'class', name: 'my-diagram' });
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), diagram, null);
+      await router.route(makeArchJSON(), makePaths(), diagram, makePool());
 
-      const instance = (MermaidDiagramGenerator as any).mock.results[0].value;
-      expect(instance.generateOnly).toHaveBeenCalledWith(
+      const instance = vi.mocked(MermaidDiagramGenerator).mock.results[0]?.value as
+        | { generateOnly: ReturnType<typeof vi.fn> }
+        | undefined;
+      expect(instance?.generateOnly).toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
         'class',
@@ -470,20 +494,25 @@ describe('DiagramOutputRouter', () => {
       const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
-      // Make the cache always report a hit
-      (RenderHashCache as any).mock.results[0]?.value ??
-        ((RenderHashCache as any).mock.instances[0]);
       // Override checkHit for this test
-      const cacheInstance = new (RenderHashCache as any)();
+      const MockedRenderHashCache = vi.mocked(RenderHashCache);
+      const cacheInstance = new MockedRenderHashCache() as unknown as {
+        checkHit: ReturnType<typeof vi.fn>;
+        writeHash: ReturnType<typeof vi.fn>;
+      };
       cacheInstance.checkHit.mockResolvedValue(true);
 
       // Rebuild mock so the router picks up a hitting cache
-      (RenderHashCache as any).mockImplementationOnce(() => cacheInstance);
+      MockedRenderHashCache.mockImplementationOnce(
+        () => cacheInstance as unknown as InstanceType<typeof RenderHashCache>
+      );
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), makePool());
 
-      const rendererInstance = (IsomorphicMermaidRenderer as any).mock.results[0]?.value;
+      const rendererInstance = vi.mocked(IsomorphicMermaidRenderer).mock.results[0]?.value as
+        | { renderSVG: ReturnType<typeof vi.fn> }
+        | undefined;
       // renderSVG must NOT have been called on a cache hit
       if (rendererInstance) {
         expect(rendererInstance.renderSVG).not.toHaveBeenCalled();
@@ -492,23 +521,22 @@ describe('DiagramOutputRouter', () => {
 
     it('cache miss triggers SVG rendering and writes hash', async () => {
       const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
-      const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
       // Default checkHit = false (cache miss) — already set in the top-level mock
+      const pool = makePool();
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), pool);
 
-      // renderSVG must have been called
-      const rendererInstances = (IsomorphicMermaidRenderer as any).mock.results;
-      const anyRenderSVGCalled = rendererInstances.some(
-        (r: any) => r.value?.renderSVG?.mock?.calls?.length > 0
-      );
-      expect(anyRenderSVGCalled).toBe(true);
+      // pool.render must have been called (pool is the rendering path now)
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(pool.render).toHaveBeenCalled();
 
       // writeHash must have been called
-      const cacheInstances = (RenderHashCache as any).mock.results;
+      const cacheInstances = vi.mocked(RenderHashCache).mock.results;
       const anyWriteHashCalled = cacheInstances.some(
-        (r: any) => r.value?.writeHash?.mock?.calls?.length > 0
+        (r) =>
+          (r.value as unknown as { writeHash?: { mock?: { calls?: unknown[] } } })?.writeHash?.mock
+            ?.calls?.length ?? 0 > 0
       );
       expect(anyWriteHashCalled).toBe(true);
     });
@@ -517,12 +545,15 @@ describe('DiagramOutputRouter', () => {
       const { RenderHashCache } = await import('@/cli/cache/render-hash-cache.js');
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), null);
+      await router.route(makeArchJSON(), makePaths(), makeDiagram({ level: 'class' }), makePool());
 
       // The mock generateOnly returns 1 job, so checkHit should be called once
-      const cacheInstances = (RenderHashCache as any).mock.results;
+      const cacheInstances = vi.mocked(RenderHashCache).mock.results;
       const totalCheckHitCalls = cacheInstances.reduce(
-        (sum: number, r: any) => sum + (r.value?.checkHit?.mock?.calls?.length ?? 0),
+        (sum: number, r) =>
+          sum +
+          ((r.value as unknown as { checkHit?: { mock?: { calls?: unknown[] } } })?.checkHit?.mock
+            ?.calls?.length ?? 0),
         0
       );
       expect(totalCheckHitCalls).toBeGreaterThanOrEqual(1);
@@ -538,10 +569,10 @@ describe('DiagramOutputRouter', () => {
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
-      const config = makeGlobalConfig({ mermaid: { theme: 'dark' } as any });
+      const config = makeGlobalConfig({ mermaid: { theme: 'dark' } as MermaidConfig });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ theme: { name: 'dark' } })
@@ -553,11 +584,11 @@ describe('DiagramOutputRouter', () => {
 
       const archJSON = makeArchJSON({ language: 'cpp' });
       const config = makeGlobalConfig({
-        mermaid: { transparentBackground: true } as any,
+        mermaid: { transparentBackground: true } as MermaidConfig,
       });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ backgroundColor: 'transparent' })
@@ -569,10 +600,12 @@ describe('DiagramOutputRouter', () => {
 
       const archJSON = makeArchJSON({ language: 'cpp' });
       const themeObj = { name: 'forest', fontFamily: 'Arial' };
-      const config = makeGlobalConfig({ mermaid: { theme: themeObj as any } as any });
+      const config = makeGlobalConfig({
+        mermaid: { theme: themeObj as unknown as MermaidConfig['theme'] } as MermaidConfig,
+      });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ theme: themeObj })
@@ -586,7 +619,7 @@ describe('DiagramOutputRouter', () => {
       const config = makeGlobalConfig({ mermaid: undefined });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ backgroundColor: 'white' })
@@ -598,11 +631,11 @@ describe('DiagramOutputRouter', () => {
 
       const archJSON = makeArchJSON({ language: 'cpp' });
       const config = makeGlobalConfig({
-        mermaid: { transparentBackground: false } as any,
+        mermaid: { transparentBackground: false } as MermaidConfig,
       });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ backgroundColor: 'white' })
@@ -613,10 +646,10 @@ describe('DiagramOutputRouter', () => {
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
-      const config = makeGlobalConfig({ mermaid: { theme: 'forest' } as any });
+      const config = makeGlobalConfig({ mermaid: { theme: 'forest' } as MermaidConfig });
 
       const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), null);
+      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
       expect(IsomorphicMermaidRenderer).toHaveBeenCalledWith(
         expect.objectContaining({ backgroundColor: 'white' })
@@ -641,13 +674,15 @@ describe('DiagramOutputRouter', () => {
               cycles: [],
             },
           },
-        } as any,
+        } as unknown as ArchJSON['extensions'],
       });
 
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(pool.render).toHaveBeenCalledWith(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         expect.objectContaining({ mermaidCode: expect.any(String) })
       );
     });
@@ -659,82 +694,53 @@ describe('DiagramOutputRouter', () => {
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(pool.render).toHaveBeenCalled();
     });
 
-    it('falls back to main thread when pool.render reports failure', async () => {
+    it('falls back to main thread when pool.render reports failure — uses renderSVGRaw + postProcessSVG', async () => {
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
+      const { postProcessSVG } = await import('@/mermaid/post-process-svg.js');
 
       const pool = {
         render: vi.fn().mockResolvedValue({ success: false, error: 'worker crashed' }),
-      } as any;
+      } as unknown as MermaidRenderWorkerPool;
 
       const archJSON = makeArchJSON({ language: 'cpp' });
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
 
-      // IsomorphicMermaidRenderer.renderSVG should be called as fallback
-      const instance = (IsomorphicMermaidRenderer as any).mock.results[0].value;
-      expect(instance.renderSVG).toHaveBeenCalled();
+      // renderSVGRaw (not renderSVG) should be called as fallback
+      const instance = vi.mocked(IsomorphicMermaidRenderer).mock.results[0]?.value as
+        | { renderSVGRaw: ReturnType<typeof vi.fn>; renderSVG: ReturnType<typeof vi.fn> }
+        | undefined;
+      expect(instance?.renderSVGRaw).toHaveBeenCalled();
+      expect(instance?.renderSVG).not.toHaveBeenCalled();
+      // postProcessSVG must be called on the raw SVG
+      expect(postProcessSVG).toHaveBeenCalled();
     });
 
-    it('injects white background into SVG returned by worker pool (no style attr)', async () => {
-      const fs = await import('fs-extra');
+    it('pool success path: writes poolResult.svg directly (no additional inlineEdgeStyles wrapping)', async () => {
+      const fsMock = await getFsMock();
+      const { inlineEdgeStyles } = await import('@/mermaid/renderer.js');
+
+      const poolSvg = '<svg viewBox="0 0 10 10"><!-- worker-processed --></svg>';
       const pool = {
-        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 10 10"/>' }),
-      } as any;
+        render: vi.fn().mockResolvedValue({ success: true, svg: poolSvg }),
+      } as unknown as MermaidRenderWorkerPool;
 
       const archJSON = makeArchJSON({ language: 'cpp' });
-      const config = makeGlobalConfig(); // transparentBackground unset → white
-      const router = new DiagramOutputRouter(config, progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
 
-      const svgCall = (fs.default.writeFile as any).mock.calls.find(
-        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
-      );
+      // The exact poolSvg should be written (no background injection, no extra wrapping)
+      const svgCall = (fsMock.writeFile.mock.calls as unknown[]).find(
+        (call) => Array.isArray(call) && typeof call[0] === 'string' && call[0].endsWith('.svg')
+      ) as [string, string, string] | undefined;
       expect(svgCall).toBeDefined();
-      expect(svgCall[1]).toContain('background-color: white');
-    });
-
-    it('injects white background into SVG with existing style attribute from pool', async () => {
-      const fs = await import('fs-extra');
-      const pool = {
-        render: vi
-          .fn()
-          .mockResolvedValue({
-            success: true,
-            svg: '<svg style="max-width: 100px;" viewBox="0 0 10 10"/>',
-          }),
-      } as any;
-
-      const archJSON = makeArchJSON({ language: 'cpp' });
-      const config = makeGlobalConfig();
-      const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
-
-      const svgCall = (fs.default.writeFile as any).mock.calls.find(
-        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
-      );
-      expect(svgCall).toBeDefined();
-      expect(svgCall[1]).toContain('background-color: white');
-    });
-
-    it('does NOT inject background when transparentBackground is true (pool path)', async () => {
-      const fs = await import('fs-extra');
-      const pool = {
-        render: vi.fn().mockResolvedValue({ success: true, svg: '<svg viewBox="0 0 10 10"/>' }),
-      } as any;
-
-      const archJSON = makeArchJSON({ language: 'cpp' });
-      const config = makeGlobalConfig({ mermaid: { transparentBackground: true } as any });
-      const router = new DiagramOutputRouter(config, progress);
-      await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), pool);
-
-      const svgCall = (fs.default.writeFile as any).mock.calls.find(
-        (call: any[]) => typeof call[0] === 'string' && call[0].endsWith('.svg')
-      );
-      expect(svgCall).toBeDefined();
-      expect(svgCall[1]).not.toContain('background-color');
+      expect(svgCall?.[1]).toBe(poolSvg);
+      // inlineEdgeStyles should NOT be called (post-processing done inside worker)
+      expect(inlineEdgeStyles).not.toHaveBeenCalled();
     });
   });
 });

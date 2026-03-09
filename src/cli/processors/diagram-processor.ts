@@ -169,23 +169,19 @@ export class DiagramProcessor {
           ?.length ?? 4)
       : 0;
     const effectiveDiagramCount = Math.max(diagramCount, atlasLayerCount);
-    const poolSize =
-      effectiveDiagramCount >= 2 ? Math.min(os.cpus().length, effectiveDiagramCount, 4) : 0;
-    const poolTheme =
-      typeof this.globalConfig.mermaid?.theme === 'string'
-        ? this.globalConfig.mermaid.theme
-        : ((this.globalConfig.mermaid?.theme as any)?.name ?? 'default');
-    const pool =
-      poolSize > 0
-        ? new MermaidRenderWorkerPool(poolSize, {
-            theme: poolTheme,
-            backgroundColor: this.globalConfig.mermaid?.transparentBackground
-              ? 'transparent'
-              : 'white',
-          })
-        : null;
+    const poolSize = Math.max(1, Math.min(os.cpus().length - 1, effectiveDiagramCount, 4));
+    const poolTheme = this.globalConfig.mermaid?.theme ?? 'default';
+    const pool = new MermaidRenderWorkerPool(poolSize, {
+      theme: poolTheme,
+      maxTextSize: 200000,
+      transparentBackground: this.globalConfig.mermaid?.transparentBackground ?? false,
+      themeVariables: undefined,
+    });
 
-    if (pool) await pool.start();
+    const needsRendering = this.diagrams.some(
+      (d) => (d.format ?? this.globalConfig.format ?? 'mermaid') !== 'json'
+    );
+    if (needsRendering) pool.start();
 
     try {
       // Group diagrams by source hash to enable caching
@@ -213,7 +209,7 @@ export class DiagramProcessor {
       return results;
     } finally {
       // Terminate the render pool first (drains in-flight/queued jobs)
-      await pool?.terminate();
+      await pool.terminate();
 
       // Stop parallel progress when done
       if (this.parallelProgress) {
@@ -287,7 +283,7 @@ export class DiagramProcessor {
   private async processSourceGroup(
     _sourceKey: string,
     diagrams: DiagramConfig[],
-    pool: MermaidRenderWorkerPool | null = null
+    pool: MermaidRenderWorkerPool
   ): Promise<DiagramResult[]> {
     // NOTE: pre-parse progress.start (original behaviour for single-diagram runs) is intentionally
     // dropped; processDiagramWithArchJSON calls progress.start after parse. For single-diagram runs,
@@ -324,7 +320,7 @@ export class DiagramProcessor {
   private async processDiagramWithArchJSON(
     diagram: DiagramConfig,
     rawArchJSON: ArchJSON,
-    pool: MermaidRenderWorkerPool | null = null
+    pool: MermaidRenderWorkerPool
   ): Promise<DiagramResult> {
     const startTime = Date.now();
 

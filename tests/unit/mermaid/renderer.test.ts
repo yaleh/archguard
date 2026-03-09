@@ -7,7 +7,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import sharp from 'sharp';
-import { IsomorphicMermaidRenderer } from '../../../src/mermaid/renderer';
+import { IsomorphicMermaidRenderer, inlineEdgeStyles } from '../../../src/mermaid/renderer';
 
 describe('IsomorphicMermaidRenderer', () => {
   let renderer: IsomorphicMermaidRenderer;
@@ -513,5 +513,47 @@ ${classes}`;
       expect(metadata.width).toBeGreaterThan(200);
       expect(metadata.height).toBeGreaterThan(100);
     });
+  });
+});
+
+describe('renderSVGRaw', () => {
+  let renderer: IsomorphicMermaidRenderer;
+
+  beforeEach(() => {
+    renderer = new IsomorphicMermaidRenderer();
+  });
+
+  it('returns SVG string without background-color injection', async () => {
+    const mermaidCode = `classDiagram\n  class Test`;
+    const svg = await (renderer as any).renderSVGRaw(mermaidCode);
+    expect(typeof svg).toBe('string');
+    expect(svg).toContain('<svg');
+    expect(svg).not.toContain('background-color');
+  });
+
+  it('returns raw output (no background style manipulation)', async () => {
+    const mermaidCode = `classDiagram\n  class Raw`;
+    const svg = await (renderer as any).renderSVGRaw(mermaidCode);
+    // Should be a valid SVG but without background-color appended
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('</svg>');
+    expect(svg).not.toMatch(/background-color:\s*white/);
+  });
+
+  it('throws with descriptive error on invalid mermaid code', async () => {
+    const invalidCode = `this is not valid mermaid`;
+    await expect((renderer as any).renderSVGRaw(invalidCode)).rejects.toThrow(
+      'Failed to render SVG'
+    );
+  });
+});
+
+describe('inlineEdgeStyles re-export', () => {
+  it('inlineEdgeStyles can be imported from renderer (re-export compatibility)', () => {
+    expect(inlineEdgeStyles).toBeDefined();
+  });
+
+  it('inlineEdgeStyles is a function', () => {
+    expect(typeof inlineEdgeStyles).toBe('function');
   });
 });
