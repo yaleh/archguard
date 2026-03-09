@@ -112,7 +112,7 @@ function createScopeDiagrams(scope: PlannedScope, options?: DiagramOptions): Dia
 }
 
 function selectScopeRoot(candidate: LanguageCandidate, projectRoot: string): string {
-  if (candidate.language === 'cpp' || candidate.language === 'go') {
+  if (candidate.language === 'cpp') {
     return projectRoot;
   }
 
