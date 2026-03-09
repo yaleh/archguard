@@ -16,7 +16,7 @@ import type { ArchIndex } from './arch-index.js';
 export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIndex {
   const { entities, relations, language, workspaceRoot } = archJson;
 
-  const entityIds = new Set(entities.map(e => e.id));
+  const entityIds = new Set(entities.map((e) => e.id));
 
   // Build forward maps
   const nameToIds: Record<string, string[]> = {};
@@ -66,13 +66,13 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
   // (e.g. "cli/errors.ts.ParseError"), others are bare class names ("ArchJSON").
   // We resolve bare names when they map unambiguously to a single entity.
   const internalRelations = (relations ?? [])
-    .map(r => {
+    .map((r) => {
       const src = resolveId(r.source);
       const tgt = resolveId(r.target);
       if (!src || !tgt) return null;
       return src === r.source && tgt === r.target ? r : { ...r, source: src, target: tgt };
     })
-    .filter(Boolean) as typeof relations;
+    .filter(Boolean);
 
   // Populate adjacency + relationsByType
   const relationsByType: Partial<Record<RelationType, [string, string][]>> = {};
@@ -108,7 +108,7 @@ function computeCycles(
   entities: ArchJSON['entities'],
   relations: ArchJSON['relations'],
   idToFile: Record<string, string>,
-  idToName: Record<string, string>,
+  idToName: Record<string, string>
 ): CycleInfo[] {
   if (entities.length === 0) return [];
 
@@ -126,7 +126,12 @@ function computeCycles(
   // Pass 1: finish-order DFS
   const visited1 = new Set<string>();
   const finishStack: string[] = [];
-  const dfs = (start: string, adj: Map<string, string[]>, vis: Set<string>, out: string[] | null) => {
+  const dfs = (
+    start: string,
+    adj: Map<string, string[]>,
+    vis: Set<string>,
+    out: string[] | null
+  ) => {
     const stack: [string, number][] = [[start, 0]];
     vis.add(start);
     while (stack.length) {
@@ -152,7 +157,7 @@ function computeCycles(
   const visited2 = new Set<string>();
   const result: CycleInfo[] = [];
   while (finishStack.length) {
-    const node = finishStack.pop()!;
+    const node = finishStack.pop();
     if (!visited2.has(node)) {
       const members: string[] = [];
       dfs(node, transposed, visited2, members);
@@ -160,8 +165,8 @@ function computeCycles(
         result.push({
           size: members.length,
           members,
-          memberNames: members.map(id => idToName[id] ?? id),
-          files: [...new Set(members.map(id => idToFile[id] ?? '').filter(Boolean))],
+          memberNames: members.map((id) => idToName[id] ?? id),
+          files: [...new Set(members.map((id) => idToFile[id] ?? '').filter(Boolean))],
         });
       }
     }

@@ -335,10 +335,6 @@ describe('GoPlugin - orphaned method re-attachment', () => {
       rootFile,
       expect.objectContaining({ extractBodies: false })
     );
-    expect(parseSpy).not.toHaveBeenCalledWith(
-      expect.anything(),
-      nestedFile,
-      expect.anything()
-    );
+    expect(parseSpy).not.toHaveBeenCalledWith(expect.anything(), nestedFile, expect.anything());
   });
 });

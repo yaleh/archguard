@@ -406,7 +406,10 @@ describe('ArchJSONAggregator', () => {
 
       const result = aggregator['aggregateToPackageLevel'](archJSON);
 
-      expect(result.entities.map((entity) => entity.name).sort()).toEqual(['jlama-cli', 'jlama-core']);
+      expect(result.entities.map((entity) => entity.name).sort()).toEqual([
+        'jlama-cli',
+        'jlama-core',
+      ]);
       expect(result.relations).toEqual([
         {
           id: 'pkg-jlama-cli-jlama-core',

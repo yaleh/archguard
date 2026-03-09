@@ -89,9 +89,7 @@ const twoHopArchJson = makeArchJson({
 // Inheritance: C -inherits→ A
 const inheritanceArchJson = makeArchJson({
   entities: [entityA, entityC],
-  relations: [
-    { id: 'r1', type: 'inheritance', source: 'C', target: 'A' },
-  ],
+  relations: [{ id: 'r1', type: 'inheritance', source: 'C', target: 'A' }],
 });
 
 // ---------------------------------------------------------------------------
@@ -119,7 +117,7 @@ describe('QueryEngine', () => {
     it('returns one-hop dependencies', () => {
       const engine = createEngine(baseArchJson);
       const results = engine.getDependencies('Alpha');
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).toContain('C');
       expect(ids).not.toContain('A'); // does not include self
@@ -129,7 +127,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(twoHopArchJson);
       // A → B → C, D is disconnected
       const results = engine.getDependencies('Alpha', 2);
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B'); // hop 1
       expect(ids).toContain('C'); // hop 2
       expect(ids).not.toContain('D'); // disconnected
@@ -141,7 +139,7 @@ describe('QueryEngine', () => {
       const results = engine.getDependencies('Alpha', 5);
       expect(Array.isArray(results)).toBe(true);
       // Should find B and C but not loop
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).toContain('C');
       expect(results.length).toBe(2); // just B and C, not duplicates
@@ -151,7 +149,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(twoHopArchJson);
       // depth=100 should be clamped to 5 — still finds B and C
       const results = engine.getDependencies('Alpha', 100);
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).toContain('C');
     });
@@ -160,7 +158,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(twoHopArchJson);
       const results = engine.getDependencies('Alpha', 0);
       // depth clamped to 1, should find B only (one hop)
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).not.toContain('C');
     });
@@ -177,7 +175,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(baseArchJson);
       // B is depended on by A (dependency) and C (implementation)
       const results = engine.getDependents('Beta');
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('A');
       expect(ids).toContain('C');
     });
@@ -186,7 +184,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(twoHopArchJson);
       // A → B → C; dependents of Gamma (C): B at hop 1, A at hop 2
       const results = engine.getDependents('Gamma', 2);
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('B'); // hop 1
       expect(ids).toContain('A'); // hop 2
     });
@@ -196,7 +194,7 @@ describe('QueryEngine', () => {
     it('returns only entities with implementation relation', () => {
       const engine = createEngine(baseArchJson);
       const results = engine.findImplementers('Beta');
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('C'); // C implements B
       expect(ids).not.toContain('A'); // A has dependency on B, not implementation
     });
@@ -212,7 +210,7 @@ describe('QueryEngine', () => {
     it('returns only entities with inheritance relation', () => {
       const engine = createEngine(inheritanceArchJson);
       const results = engine.findSubclasses('Alpha');
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('C'); // C inherits A
     });
 
@@ -266,9 +264,9 @@ describe('QueryEngine', () => {
       expect(summary.kind).toBe('parsed');
       expect(summary.topDependedOn.length).toBeGreaterThan(0);
       // B should be in top depended-on (A depends on B, C implements B)
-      const betaEntry = summary.topDependedOn.find(e => e.name === 'Beta');
+      const betaEntry = summary.topDependedOn.find((e) => e.name === 'Beta');
       expect(betaEntry).toBeDefined();
-      expect(betaEntry!.dependentCount).toBe(2);
+      expect(betaEntry.dependentCount).toBe(2);
     });
   });
 
@@ -290,7 +288,7 @@ describe('QueryEngine', () => {
       });
       const engine = createEngine(archJson);
       const results = engine.findByType('abstract_class');
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('X');
       expect(ids).toContain('Y');
       expect(ids).not.toContain('Z');
@@ -303,7 +301,7 @@ describe('QueryEngine', () => {
       // A has 0 incoming + 2 outgoing (to B, to C) = 2
       const engine = createEngine(baseArchJson);
       const results = engine.findHighCoupling(2);
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('A'); // 2 outgoing
       expect(ids).toContain('B'); // 2 incoming
       expect(ids).toContain('C'); // 1 incoming (from A) + 1 outgoing (impl B) = 2
@@ -321,7 +319,7 @@ describe('QueryEngine', () => {
       // In twoHopArchJson: D has no relations at all
       const engine = createEngine(twoHopArchJson);
       const results = engine.findOrphans();
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('D');
       expect(ids).not.toContain('A');
       expect(ids).not.toContain('B');
@@ -333,7 +331,7 @@ describe('QueryEngine', () => {
     it('returns entities that appear in any cycle', () => {
       const engine = createEngine(cyclicArchJson);
       const results = engine.findInCycles();
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('A');
       expect(ids).toContain('B');
       expect(ids).toContain('C');
@@ -375,7 +373,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(makeArchJson({ entities: [entity] }));
       const summary = engine.toSummary(entity);
       expect(summary.methodCount).toBe(2); // method + constructor
-      expect(summary.fieldCount).toBe(1);  // property
+      expect(summary.fieldCount).toBe(1); // property
     });
 
     it('counts fields correctly for field member type', () => {

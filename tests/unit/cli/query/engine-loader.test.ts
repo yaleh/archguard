@@ -82,7 +82,7 @@ async function writeManifest(scopes: QueryScopeEntry[]): Promise<void> {
 
 async function writeScopeArchJson(
   scopeKey: string,
-  archJson: ArchJSON,
+  archJson: ArchJSON
 ): Promise<{ archJsonHash: string }> {
   const scopeDir = path.join(tmpDir, 'query', scopeKey);
   await fs.ensureDir(scopeDir);
@@ -95,7 +95,7 @@ async function writeScopeArchJson(
 async function writeScopeArchIndex(
   scopeKey: string,
   archJson: ArchJSON,
-  archJsonHash: string,
+  archJsonHash: string
 ): Promise<void> {
   const scopeDir = path.join(tmpDir, 'query', scopeKey);
   await fs.ensureDir(scopeDir);
@@ -153,7 +153,7 @@ describe('resolveScope', () => {
   it('throws when unknown scope key is given', async () => {
     await writeManifest([scope1]);
     await expect(resolveScope(tmpDir, 'nonexistent')).rejects.toThrow(
-      'Scope "nonexistent" not found',
+      'Scope "nonexistent" not found'
     );
   });
 
@@ -166,7 +166,9 @@ describe('resolveScope', () => {
       scopes: [scope1, scope2],
     });
 
-    await expect(resolveScope(tmpDir, 'global')).rejects.toThrow(/pass scope parameter explicitly/i);
+    await expect(resolveScope(tmpDir, 'global')).rejects.toThrow(
+      /pass scope parameter explicitly/i
+    );
     await expect(resolveScope(tmpDir, 'global')).rejects.not.toThrow(/--scope/);
   });
 
@@ -184,16 +186,12 @@ describe('resolveScope', () => {
   });
 
   it('throws when manifest does not exist', async () => {
-    await expect(resolveScope(tmpDir)).rejects.toThrow(
-      'No query data found',
-    );
+    await expect(resolveScope(tmpDir)).rejects.toThrow('No query data found');
   });
 
   it('throws when manifest has zero scopes', async () => {
     await writeManifest([]);
-    await expect(resolveScope(tmpDir)).rejects.toThrow(
-      'No query scopes available',
-    );
+    await expect(resolveScope(tmpDir)).rejects.toThrow('No query scopes available');
   });
 });
 
@@ -240,26 +238,16 @@ describe('loadEngine', () => {
     expect(engine.findEntity('Alpha')).toHaveLength(1);
 
     // Verify the index was rewritten with correct hash
-    const rewrittenIndex = await fs.readJson(
-      path.join(scopeDir, 'arch-index.json'),
-    );
-    const archJsonContent = await fs.readFile(
-      path.join(scopeDir, 'arch.json'),
-      'utf-8',
-    );
-    const correctHash = crypto
-      .createHash('sha256')
-      .update(archJsonContent)
-      .digest('hex');
+    const rewrittenIndex = await fs.readJson(path.join(scopeDir, 'arch-index.json'));
+    const archJsonContent = await fs.readFile(path.join(scopeDir, 'arch.json'), 'utf-8');
+    const correctHash = crypto.createHash('sha256').update(archJsonContent).digest('hex');
     expect(rewrittenIndex.archJsonHash).toBe(correctHash);
   });
 
   it('throws when arch.json is missing for the scope', async () => {
     await writeManifest([scope1]);
     // Don't write arch.json
-    await expect(loadEngine(tmpDir)).rejects.toThrow(
-      'arch.json missing for scope',
-    );
+    await expect(loadEngine(tmpDir)).rejects.toThrow('arch.json missing for scope');
   });
 
   it('rebuilds when arch-index.json is corrupted', async () => {
@@ -269,11 +257,7 @@ describe('loadEngine', () => {
 
     // Write corrupted index
     const scopeDir = path.join(tmpDir, 'query', scope1.key);
-    await fs.writeFile(
-      path.join(scopeDir, 'arch-index.json'),
-      'not valid json{{{',
-      'utf-8',
-    );
+    await fs.writeFile(path.join(scopeDir, 'arch-index.json'), 'not valid json{{{', 'utf-8');
 
     const engine = await loadEngine(tmpDir);
     expect(engine.findEntity('Alpha')).toHaveLength(1);

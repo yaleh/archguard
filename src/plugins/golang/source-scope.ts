@@ -18,19 +18,19 @@ export async function planGoAnalysisScope(sources: string[]): Promise<GoAnalysis
     resolvedSources.map(async (source) => ({
       source,
       moduleRoot: await findNearestGoModuleRoot(source),
-    })),
+    }))
   );
 
   const moduleRoots = dedupe(scoped.map((entry) => entry.moduleRoot));
   if (moduleRoots.length !== 1) {
     throw new Error(
-      `Go analysis sources span multiple Go modules: ${moduleRoots.join(', ')}. Analyze one module at a time.`,
+      `Go analysis sources span multiple Go modules: ${moduleRoots.join(', ')}. Analyze one module at a time.`
     );
   }
 
   const workspaceRoot = moduleRoots[0];
   const includePatterns = dedupe(
-    await Promise.all(scoped.map((entry) => toIncludePattern(workspaceRoot, entry.source))),
+    await Promise.all(scoped.map((entry) => toIncludePattern(workspaceRoot, entry.source)))
   );
   const excludePatterns = await findNestedModuleExcludePatterns(workspaceRoot);
 
@@ -95,7 +95,7 @@ async function findNestedModuleExcludePatterns(workspaceRoot: string): Promise<s
     goMods
       .map((goModPath) => toPosix(path.dirname(goModPath)))
       .filter((dir) => dir && dir !== '.')
-      .map((dir) => `${stripTrailingSlash(dir)}/**`),
+      .map((dir) => `${stripTrailingSlash(dir)}/**`)
   );
 }
 

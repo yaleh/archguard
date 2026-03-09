@@ -189,7 +189,9 @@ function inferCliWorkDir(sessionRoot: string, cliOptions: CLIOptions): string {
     if (!sourcePath.startsWith(sessionRoot)) {
       const SOURCE_ROOT_NAMES = ['src', 'lib', 'app', 'source'];
       const basename = path.basename(sourcePath);
-      const projectRoot = SOURCE_ROOT_NAMES.includes(basename) ? path.dirname(sourcePath) : sourcePath;
+      const projectRoot = SOURCE_ROOT_NAMES.includes(basename)
+        ? path.dirname(sourcePath)
+        : sourcePath;
       return path.join(projectRoot, '.archguard');
     }
   }

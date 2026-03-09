@@ -21,7 +21,12 @@ import { resolveArchDir, loadEngine, readManifest } from '@/cli/query/engine-loa
 
 // -- Test fixtures --
 
-function makeEntity(id: string, name: string, type: string = 'class', file: string = 'src/foo.ts'): Entity {
+function makeEntity(
+  id: string,
+  name: string,
+  type: string = 'class',
+  file: string = 'src/foo.ts'
+): Entity {
   return {
     id,
     name,
@@ -136,7 +141,7 @@ describe('createQueryCommand', () => {
 
   it('has all expected options registered', () => {
     const cmd = createQueryCommand();
-    const optionNames = cmd.options.map(o => o.long);
+    const optionNames = cmd.options.map((o) => o.long);
 
     expect(optionNames).toContain('--arch-dir');
     expect(optionNames).toContain('--scope');
@@ -161,7 +166,7 @@ describe('createQueryCommand', () => {
 
   it('does NOT expose --calls', () => {
     const cmd = createQueryCommand();
-    const optionNames = cmd.options.map(o => o.long);
+    const optionNames = cmd.options.map((o) => o.long);
     expect(optionNames).not.toContain('--calls');
   });
 });
@@ -340,7 +345,7 @@ describe('derived scope warning', () => {
 describe('error handling', () => {
   it('exits 1 when loadEngine fails (multiple scopes)', async () => {
     vi.mocked(loadEngine).mockRejectedValue(
-      new Error('Multiple scopes found. Use --scope to select one'),
+      new Error('Multiple scopes found. Use --scope to select one')
     );
     await runQuery('--summary');
     expect(process.exit).toHaveBeenCalledWith(1);

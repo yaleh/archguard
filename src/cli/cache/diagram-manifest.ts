@@ -88,9 +88,7 @@ export async function cleanStaleDiagrams(
       const nameBase = path.basename(name);
       if (await fs.pathExists(dir)) {
         const atlasFiles = await glob(`${nameBase}-*.mmd`, { cwd: dir, absolute: true });
-        await Promise.all(
-          atlasFiles.flatMap((f) => [fs.remove(f), fs.remove(`${f}.render-hash`)])
-        );
+        await Promise.all(atlasFiles.flatMap((f) => [fs.remove(f), fs.remove(`${f}.render-hash`)]));
         const atlasJsonFiles = await glob(`${nameBase}-atlas.json`, { cwd: dir, absolute: true });
         await Promise.all(atlasJsonFiles.map((f) => fs.remove(f)));
       }

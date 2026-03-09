@@ -18,7 +18,7 @@ function makeRelation(
   source: string,
   target: string,
   type: RelationType = 'dependency',
-  id?: string,
+  id?: string
 ): Relation {
   return {
     id: id ?? `${source}->${target}`,
@@ -31,7 +31,7 @@ function makeRelation(
 function makeArchJson(
   entities: Entity[] = [],
   relations: Relation[] = [],
-  overrides: Partial<ArchJSON> = {},
+  overrides: Partial<ArchJSON> = {}
 ): ArchJSON {
   return {
     version: '1.0',
@@ -80,8 +80,16 @@ describe('buildArchIndex', () => {
   });
 
   it('builds dependencies and dependents for two entities with a relation', () => {
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'B', name: 'B', sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'B',
+      name: 'B',
+      sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+    });
     const rel = makeRelation('A', 'B');
 
     const index = buildArchIndex(makeArchJson([a, b], [rel]), 'h');
@@ -94,8 +102,16 @@ describe('buildArchIndex', () => {
   });
 
   it('detects a cycle for bidirectional dependency', () => {
-    const a = makeEntity({ id: 'A', name: 'Alpha', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'B', name: 'Beta', sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'Alpha',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'B',
+      name: 'Beta',
+      sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+    });
     const r1 = makeRelation('A', 'B');
     const r2 = makeRelation('B', 'A');
 
@@ -112,7 +128,11 @@ describe('buildArchIndex', () => {
   });
 
   it('filters out relations where target is not in entity set', () => {
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
     // Relation to external entity "X" not in entities
     const rel = makeRelation('A', 'X');
 
@@ -125,8 +145,16 @@ describe('buildArchIndex', () => {
   });
 
   it('handles multiple entities with the same name', () => {
-    const e1 = makeEntity({ id: 'mod1.Foo', name: 'Foo', sourceLocation: { file: 'mod1/foo.ts', startLine: 1, endLine: 5 } });
-    const e2 = makeEntity({ id: 'mod2.Foo', name: 'Foo', sourceLocation: { file: 'mod2/foo.ts', startLine: 1, endLine: 5 } });
+    const e1 = makeEntity({
+      id: 'mod1.Foo',
+      name: 'Foo',
+      sourceLocation: { file: 'mod1/foo.ts', startLine: 1, endLine: 5 },
+    });
+    const e2 = makeEntity({
+      id: 'mod2.Foo',
+      name: 'Foo',
+      sourceLocation: { file: 'mod2/foo.ts', startLine: 1, endLine: 5 },
+    });
 
     const index = buildArchIndex(makeArchJson([e1, e2]), 'h');
 
@@ -134,9 +162,21 @@ describe('buildArchIndex', () => {
   });
 
   it('groups relationsByType correctly', () => {
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'B', name: 'B', sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } });
-    const c = makeEntity({ id: 'C', name: 'C', sourceLocation: { file: 'c.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'B',
+      name: 'B',
+      sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+    });
+    const c = makeEntity({
+      id: 'C',
+      name: 'C',
+      sourceLocation: { file: 'c.ts', startLine: 1, endLine: 5 },
+    });
     const r1 = makeRelation('A', 'B', 'inheritance');
     const r2 = makeRelation('A', 'C', 'dependency');
     const r3 = makeRelation('B', 'C', 'dependency');
@@ -144,7 +184,10 @@ describe('buildArchIndex', () => {
     const index = buildArchIndex(makeArchJson([a, b, c], [r1, r2, r3]), 'h');
 
     expect(index.relationsByType['inheritance']).toEqual([['A', 'B']]);
-    expect(index.relationsByType['dependency']).toEqual([['A', 'C'], ['B', 'C']]);
+    expect(index.relationsByType['dependency']).toEqual([
+      ['A', 'C'],
+      ['B', 'C'],
+    ]);
   });
 
   it('maps entity to sourceLocation.file via idToFile', () => {
@@ -159,9 +202,21 @@ describe('buildArchIndex', () => {
   });
 
   it('maps file to all entity IDs via fileToIds', () => {
-    const e1 = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'shared.ts', startLine: 1, endLine: 5 } });
-    const e2 = makeEntity({ id: 'B', name: 'B', sourceLocation: { file: 'shared.ts', startLine: 10, endLine: 20 } });
-    const e3 = makeEntity({ id: 'C', name: 'C', sourceLocation: { file: 'other.ts', startLine: 1, endLine: 5 } });
+    const e1 = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'shared.ts', startLine: 1, endLine: 5 },
+    });
+    const e2 = makeEntity({
+      id: 'B',
+      name: 'B',
+      sourceLocation: { file: 'shared.ts', startLine: 10, endLine: 20 },
+    });
+    const e3 = makeEntity({
+      id: 'C',
+      name: 'C',
+      sourceLocation: { file: 'other.ts', startLine: 1, endLine: 5 },
+    });
 
     const index = buildArchIndex(makeArchJson([e1, e2, e3]), 'h');
 
@@ -178,11 +233,31 @@ describe('buildArchIndex', () => {
 
   it('sorts cycles by size descending', () => {
     // Build a 3-node cycle (A→B→C→A) and a 2-node cycle (D↔E)
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'B', name: 'B', sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } });
-    const c = makeEntity({ id: 'C', name: 'C', sourceLocation: { file: 'c.ts', startLine: 1, endLine: 5 } });
-    const d = makeEntity({ id: 'D', name: 'D', sourceLocation: { file: 'd.ts', startLine: 1, endLine: 5 } });
-    const e = makeEntity({ id: 'E', name: 'E', sourceLocation: { file: 'e.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'B',
+      name: 'B',
+      sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+    });
+    const c = makeEntity({
+      id: 'C',
+      name: 'C',
+      sourceLocation: { file: 'c.ts', startLine: 1, endLine: 5 },
+    });
+    const d = makeEntity({
+      id: 'D',
+      name: 'D',
+      sourceLocation: { file: 'd.ts', startLine: 1, endLine: 5 },
+    });
+    const e = makeEntity({
+      id: 'E',
+      name: 'E',
+      sourceLocation: { file: 'e.ts', startLine: 1, endLine: 5 },
+    });
 
     const rels = [
       makeRelation('A', 'B'),
@@ -201,8 +276,16 @@ describe('buildArchIndex', () => {
 
   it('does not include singleton SCCs in cycles', () => {
     // A→B (no cycle, just a linear dependency)
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'B', name: 'B', sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'B',
+      name: 'B',
+      sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+    });
     const rel = makeRelation('A', 'B');
 
     const index = buildArchIndex(makeArchJson([a, b], [rel]), 'h');
@@ -211,7 +294,11 @@ describe('buildArchIndex', () => {
   });
 
   it('filters out relations where source is not in entity set', () => {
-    const a = makeEntity({ id: 'A', name: 'A', sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 } });
+    const a = makeEntity({
+      id: 'A',
+      name: 'A',
+      sourceLocation: { file: 'a.ts', startLine: 1, endLine: 5 },
+    });
     // Relation from external "X" to internal "A"
     const rel = makeRelation('X', 'A');
 
@@ -228,22 +315,46 @@ describe('buildArchIndex', () => {
     //   source: "src/query-engine.ts.QueryEngine"  (full ID)
     //   target: "ArchJSON"                         (bare class name, not a full ID)
     // The index builder must resolve "ArchJSON" → "types/index.ts.ArchJSON" via nameToIds.
-    const qe = makeEntity({ id: 'src/query-engine.ts.QueryEngine', name: 'QueryEngine', sourceLocation: { file: 'src/query-engine.ts', startLine: 1, endLine: 10 } });
-    const aj = makeEntity({ id: 'types/index.ts.ArchJSON', name: 'ArchJSON', sourceLocation: { file: 'types/index.ts', startLine: 1, endLine: 5 } });
+    const qe = makeEntity({
+      id: 'src/query-engine.ts.QueryEngine',
+      name: 'QueryEngine',
+      sourceLocation: { file: 'src/query-engine.ts', startLine: 1, endLine: 10 },
+    });
+    const aj = makeEntity({
+      id: 'types/index.ts.ArchJSON',
+      name: 'ArchJSON',
+      sourceLocation: { file: 'types/index.ts', startLine: 1, endLine: 5 },
+    });
     // target is bare name "ArchJSON", not the full ID
     const rel = makeRelation('src/query-engine.ts.QueryEngine', 'ArchJSON');
 
     const index = buildArchIndex(makeArchJson([qe, aj], [rel]), 'h');
 
     // Relation should be resolved and included
-    expect(index.dependencies['src/query-engine.ts.QueryEngine']).toEqual(['types/index.ts.ArchJSON']);
-    expect(index.dependents['types/index.ts.ArchJSON']).toEqual(['src/query-engine.ts.QueryEngine']);
+    expect(index.dependencies['src/query-engine.ts.QueryEngine']).toEqual([
+      'types/index.ts.ArchJSON',
+    ]);
+    expect(index.dependents['types/index.ts.ArchJSON']).toEqual([
+      'src/query-engine.ts.QueryEngine',
+    ]);
   });
 
   it('drops bare-name relation when name is ambiguous (multiple entities with same name)', () => {
-    const a1 = makeEntity({ id: 'mod1.Foo', name: 'Foo', sourceLocation: { file: 'mod1/foo.ts', startLine: 1, endLine: 5 } });
-    const a2 = makeEntity({ id: 'mod2.Foo', name: 'Foo', sourceLocation: { file: 'mod2/foo.ts', startLine: 1, endLine: 5 } });
-    const b = makeEntity({ id: 'Bar', name: 'Bar', sourceLocation: { file: 'bar.ts', startLine: 1, endLine: 5 } });
+    const a1 = makeEntity({
+      id: 'mod1.Foo',
+      name: 'Foo',
+      sourceLocation: { file: 'mod1/foo.ts', startLine: 1, endLine: 5 },
+    });
+    const a2 = makeEntity({
+      id: 'mod2.Foo',
+      name: 'Foo',
+      sourceLocation: { file: 'mod2/foo.ts', startLine: 1, endLine: 5 },
+    });
+    const b = makeEntity({
+      id: 'Bar',
+      name: 'Bar',
+      sourceLocation: { file: 'bar.ts', startLine: 1, endLine: 5 },
+    });
     // "Foo" is ambiguous — two entities with that name → should not resolve
     const rel = makeRelation('Bar', 'Foo');
 

@@ -152,16 +152,16 @@ describe('DiagramProcessor query scope collection', () => {
 
   /** Wire up all mocks so processAll() succeeds for the generic TS branch. */
   function setupMocks(archJson: ArchJSON = createTestArchJSON()) {
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
     }));
-    (ParallelParser as any).mockImplementation(() => ({
+    ParallelParser.mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue(archJson),
     }));
-    (ArchJSONAggregator as any).mockImplementation((json: any) => ({
+    ArchJSONAggregator.mockImplementation((json: any) => ({
       aggregate: vi.fn().mockImplementation(() => json),
     }));
-    (OutputPathResolver as any).mockImplementation(() => ({
+    OutputPathResolver.mockImplementation(() => ({
       resolve: vi.fn().mockReturnValue({
         outputDir: './archguard',
         baseName: 'test',
@@ -174,7 +174,7 @@ describe('DiagramProcessor query scope collection', () => {
       }),
       ensureDirectory: vi.fn().mockResolvedValue(undefined),
     }));
-    (MermaidDiagramGenerator as any).mockImplementation(() => ({
+    MermaidDiagramGenerator.mockImplementation(() => ({
       generateAndRender: vi.fn().mockResolvedValue(undefined),
     }));
   }
@@ -207,7 +207,7 @@ describe('DiagramProcessor query scope collection', () => {
     expect(scopes.length).toBeGreaterThanOrEqual(1);
     const parsed = scopes.find((s) => s.kind === 'parsed');
     expect(parsed).toBeDefined();
-    expect(parsed!.archJson.entities.length).toBe(3);
+    expect(parsed.archJson.entities.length).toBe(3);
   });
 
   it('does not register scopes for empty-entity ArchJSON', async () => {

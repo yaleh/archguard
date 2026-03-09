@@ -92,7 +92,10 @@ export async function getTopLevelModules(
     if (entry.name.startsWith('.')) continue;
 
     // Check whether this subdirectory contains any source files
-    const hasSource = await directoryHasSourceFiles(path.join(absoluteRoot, entry.name), extensions);
+    const hasSource = await directoryHasSourceFiles(
+      path.join(absoluteRoot, entry.name),
+      extensions
+    );
     if (hasSource) {
       modules.push(entry.name);
     }

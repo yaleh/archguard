@@ -198,7 +198,7 @@ describe('GoAtlasPlugin', () => {
       };
       expect(atlasCall.includePatterns).toEqual(['pkg/**/*.go']);
       expect(atlasCall.excludePatterns).toEqual(
-        expect.arrayContaining(['examples/**', '**/vendor/**', '**/testdata/**', '**/*_test.go']),
+        expect.arrayContaining(['examples/**', '**/vendor/**', '**/testdata/**', '**/*_test.go'])
       );
     });
   });

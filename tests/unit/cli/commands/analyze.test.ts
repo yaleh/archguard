@@ -71,7 +71,9 @@ vi.mock('@/cli/utils/default-scope-planner.js', async (importActual) => {
   const actual = await importActual<typeof import('@/cli/utils/default-scope-planner.js')>();
   return {
     ...actual,
-    createProjectRootLanguageDiagrams: (...args: Parameters<typeof actual.createProjectRootLanguageDiagrams>) => {
+    createProjectRootLanguageDiagrams: (
+      ...args: Parameters<typeof actual.createProjectRootLanguageDiagrams>
+    ) => {
       createProjectRootLanguageDiagramsMock(...args);
       return actual.createProjectRootLanguageDiagrams(...args);
     },
@@ -234,14 +236,11 @@ describe('normalizeToDiagrams', () => {
 
       const result = await normalizeToDiagrams(baseConfig, cliOptions, '/project');
 
-      expect(detectJavaProjectStructure).toHaveBeenCalledWith(
-        expect.stringMatching(/\/demo$/),
-        {
-          label: 'demo',
-          format: undefined,
-          exclude: undefined,
-        }
-      );
+      expect(detectJavaProjectStructure).toHaveBeenCalledWith(expect.stringMatching(/\/demo$/), {
+        label: 'demo',
+        format: undefined,
+        exclude: undefined,
+      });
       expect(createProjectRootLanguageDiagramsMock).not.toHaveBeenCalled();
       expect(result.map((diagram) => diagram.name)).toEqual([
         'demo/overview/package',

@@ -35,7 +35,7 @@ export class QueryEngine {
     this.index = options.archIndex;
     this.scopeEntry = options.scopeEntry;
     // Build entity map for fast lookup
-    this.entityMap = new Map(options.archJson.entities.map(e => [e.id, e]));
+    this.entityMap = new Map(options.archJson.entities.map((e) => [e.id, e]));
   }
 
   // ----------------------------------------------------------------
@@ -45,7 +45,7 @@ export class QueryEngine {
   /** Find entities by exact name match. */
   findEntity(name: string): Entity[] {
     const ids = this.index.nameToIds[name] ?? [];
-    return ids.map(id => this.entityMap.get(id)).filter(Boolean) as Entity[];
+    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** BFS along the dependencies direction (what entityName depends on). */
@@ -66,9 +66,7 @@ export class QueryEngine {
     const implementerIds = pairs
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
-    return [...new Set(implementerIds)]
-      .map(id => this.entityMap.get(id))
-      .filter(Boolean) as Entity[];
+    return [...new Set(implementerIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** Find subclasses of the given class (relation.type === 'inheritance'). */
@@ -79,15 +77,13 @@ export class QueryEngine {
     const subclassIds = pairs
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
-    return [...new Set(subclassIds)]
-      .map(id => this.entityMap.get(id))
-      .filter(Boolean) as Entity[];
+    return [...new Set(subclassIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** Get all entities defined in a given file. */
   getFileEntities(filePath: string): Entity[] {
     const ids = this.index.fileToIds[filePath] ?? [];
-    return ids.map(id => this.entityMap.get(id)).filter(Boolean) as Entity[];
+    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** Return all non-trivial cycles (SCCs with size > 1). */
@@ -126,7 +122,7 @@ export class QueryEngine {
 
   /** Find entities matching a given EntityType. */
   findByType(entityType: string): Entity[] {
-    return this.archJson.entities.filter(e => {
+    return this.archJson.entities.filter((e) => {
       if (entityType === 'abstract_class') {
         return e.type === 'abstract_class' || (e.isAbstract && e.type === 'class');
       }
@@ -136,7 +132,7 @@ export class QueryEngine {
 
   /** Find entities whose total incoming + outgoing edges >= threshold. */
   findHighCoupling(threshold: number = 8): Entity[] {
-    return this.archJson.entities.filter(e => {
+    return this.archJson.entities.filter((e) => {
       const incoming = (this.index.dependents[e.id] ?? []).length;
       const outgoing = (this.index.dependencies[e.id] ?? []).length;
       return incoming + outgoing >= threshold;
@@ -145,7 +141,7 @@ export class QueryEngine {
 
   /** Find entities with zero incoming AND zero outgoing edges. */
   findOrphans(): Entity[] {
-    return this.archJson.entities.filter(e => {
+    return this.archJson.entities.filter((e) => {
       const incoming = (this.index.dependents[e.id] ?? []).length;
       const outgoing = (this.index.dependencies[e.id] ?? []).length;
       return incoming === 0 && outgoing === 0;
@@ -154,8 +150,8 @@ export class QueryEngine {
 
   /** Find entities that appear in any cycle. */
   findInCycles(): Entity[] {
-    const cycleIds = new Set(this.index.cycles.flatMap(c => c.members));
-    return this.archJson.entities.filter(e => cycleIds.has(e.id));
+    const cycleIds = new Set(this.index.cycles.flatMap((c) => c.members));
+    return this.archJson.entities.filter((e) => cycleIds.has(e.id));
   }
 
   /** Return the scope entry associated with this engine. */
@@ -172,8 +168,8 @@ export class QueryEngine {
       type: entity.type,
       visibility: entity.visibility,
       file: entity.sourceLocation.file,
-      methodCount: members.filter(m => m.type === 'method' || m.type === 'constructor').length,
-      fieldCount: members.filter(m => m.type === 'property' || m.type === 'field').length,
+      methodCount: members.filter((m) => m.type === 'method' || m.type === 'constructor').length,
+      fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
     };
   }
 
@@ -184,7 +180,7 @@ export class QueryEngine {
   private bfs(
     startName: string,
     direction: 'dependencies' | 'dependents',
-    maxDepth: number,
+    maxDepth: number
   ): Entity[] {
     const clampedDepth = Math.max(1, Math.min(5, maxDepth));
     const startIds = this.index.nameToIds[startName] ?? [];

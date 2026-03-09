@@ -34,7 +34,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/workspace',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     const result = await callback({ projectRoot: '../other/project', sources: ['./src'] });
 
     expect(runAnalysisMock).toHaveBeenCalledWith(
@@ -42,7 +44,7 @@ describe('registerAnalyzeTool', () => {
         sessionRoot: '/other/project',
         workDir: '/other/project/.archguard',
         cliOptions: expect.objectContaining({ sources: ['/other/project/src'] }),
-      }),
+      })
     );
     expect(result.content[0].text).toContain('Analysis completed');
     expect(result.content[0].text).not.toContain('Scope:');
@@ -69,7 +71,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/workspace',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     await callback({ sources: ['./src'] });
 
     expect(runAnalysisMock).toHaveBeenCalledWith(
@@ -77,7 +81,7 @@ describe('registerAnalyzeTool', () => {
         sessionRoot: '/workspace',
         workDir: '/workspace/.archguard',
         cliOptions: expect.objectContaining({ sources: ['/workspace/src'] }),
-      }),
+      })
     );
   });
 
@@ -92,7 +96,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/project',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     const result = await callback({});
     expect(result.content[0].text).toContain('Analysis failed: boom');
   });
@@ -107,8 +113,11 @@ describe('registerAnalyzeTool', () => {
     });
 
     const registration = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze');
-    const description = registration?.[1] as string;
-    const schema = registration?.[2] as Record<string, { safeParse: (value: unknown) => { success: boolean } }>;
+    const description = registration?.[1];
+    const schema = registration?.[2] as Record<
+      string,
+      { safeParse: (value: unknown) => { success: boolean } }
+    >;
 
     expect(description).toContain('code-language plugin override');
     expect(schema.lang.safeParse('typescript').success).toBe(true);
@@ -122,7 +131,7 @@ describe('registerAnalyzeTool', () => {
       () =>
         new Promise((resolve) => {
           resolveRun = resolve;
-        }),
+        })
     );
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
@@ -133,7 +142,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/workspace',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     const first = callback({ projectRoot: '/repo-a' });
     const second = await callback({ projectRoot: '/repo-a' });
 
@@ -187,7 +198,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/workspace',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     const first = callback({ projectRoot: '/repo-a' });
     const second = callback({ projectRoot: '/repo-b' });
 
@@ -218,7 +231,9 @@ describe('registerAnalyzeTool', () => {
       defaultRoot: '/workspace',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     const first = await callback({ projectRoot: '/repo-a' });
     const second = await callback({ projectRoot: '/repo-a' });
 

@@ -18,7 +18,12 @@ describe('MCP cross-project queries', () => {
   });
 
   it('can alternate query and analyze across projects without restarting the server', async () => {
-    const projectA = await createFixtureProject(tmpDirs, 'alpha-project', 'AlphaApp', 'AlphaHelper');
+    const projectA = await createFixtureProject(
+      tmpDirs,
+      'alpha-project',
+      'AlphaApp',
+      'AlphaHelper'
+    );
     const projectB = await createFixtureProject(tmpDirs, 'beta-project', 'BetaApp', 'BetaHelper');
 
     await runCliAnalyze(projectA);
@@ -77,7 +82,7 @@ async function createFixtureProject(
   tmpDirs: string[],
   packageName: string,
   appName: string,
-  helperName: string,
+  helperName: string
 ): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-mcp-cross-project-'));
   tmpDirs.push(root);
@@ -114,7 +119,7 @@ async function createFixtureProject(
       '  }',
       '}',
       '',
-    ].join('\n'),
+    ].join('\n')
   );
   await fs.writeFile(
     path.join(root, 'src', 'helper.ts'),
@@ -125,7 +130,7 @@ async function createFixtureProject(
       '  }',
       '}',
       '',
-    ].join('\n'),
+    ].join('\n')
   );
   return root;
 }

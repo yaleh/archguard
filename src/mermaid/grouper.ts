@@ -130,7 +130,7 @@ export class HeuristicGrouper {
           : null;
       const packageName = isPathBased
         ? entity.name.split('/')[0]
-        : javaModuleName ?? this.extractPackageName(entity.sourceLocation.file);
+        : (javaModuleName ?? this.extractPackageName(entity.sourceLocation.file));
 
       if (!packageMap.has(packageName)) {
         packageMap.set(packageName, []);
@@ -262,13 +262,13 @@ export class HeuristicGrouper {
       // Skip merging for protected groups (path-based / Maven module based).
       // They already represent meaningful project boundaries.
       const isProtectedGroup =
-        current.reasoning?.includes('/') || current.reasoning?.startsWith('Grouped by Maven module:');
+        current.reasoning?.includes('/') ||
+        current.reasoning?.startsWith('Grouped by Maven module:');
       if (current.entities.length <= threshold && !isProtectedGroup && i + 1 < packages.length) {
         // Merge with next package
         const next = packages[i + 1];
         const nextIsProtectedGroup =
-          next?.reasoning?.includes('/') ||
-          next?.reasoning?.startsWith('Grouped by Maven module:');
+          next?.reasoning?.includes('/') || next?.reasoning?.startsWith('Grouped by Maven module:');
         if (next && !skipIndices.has(i + 1) && !nextIsProtectedGroup) {
           merged.push({
             name: `${current.name} & ${next.name}`,

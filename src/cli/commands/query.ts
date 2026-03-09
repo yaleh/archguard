@@ -42,35 +42,37 @@ interface QueryOptions {
  * Create the query command
  */
 export function createQueryCommand(): Command {
-  return new Command('query')
-    .description('Query architecture entities and relationships')
+  return (
+    new Command('query')
+      .description('Query architecture entities and relationships')
 
-    // Common options
-    .option('--arch-dir <dir>', 'ArchGuard work directory')
-    .option('--scope <key>', 'Query scope key')
-    .option('--format <type>', 'Output format: json|text', 'text')
-    .option('--verbose', 'Return full entities in JSON output instead of summary')
+      // Common options
+      .option('--arch-dir <dir>', 'ArchGuard work directory')
+      .option('--scope <key>', 'Query scope key')
+      .option('--format <type>', 'Output format: json|text', 'text')
+      .option('--verbose', 'Return full entities in JSON output instead of summary')
 
-    // Phase 3: entity queries
-    .option('--entity <name>', 'Find entity by name')
-    .option('--deps-of <name>', 'Find dependencies of entity')
-    .option('--used-by <name>', 'Find dependents of entity')
-    .option('--implementers-of <name>', 'Find implementers of interface')
-    .option('--subclasses-of <name>', 'Find subclasses of class')
-    .option('--file <path>', 'Find entities in file')
-    .option('--depth <n>', 'BFS depth for --deps-of/--used-by (1-5)', '1')
-    .option('--cycles', 'Show dependency cycles')
-    .option('--summary', 'Show scope summary')
-    .option('--list-scopes', 'List available query scopes')
+      // Phase 3: entity queries
+      .option('--entity <name>', 'Find entity by name')
+      .option('--deps-of <name>', 'Find dependencies of entity')
+      .option('--used-by <name>', 'Find dependents of entity')
+      .option('--implementers-of <name>', 'Find implementers of interface')
+      .option('--subclasses-of <name>', 'Find subclasses of class')
+      .option('--file <path>', 'Find entities in file')
+      .option('--depth <n>', 'BFS depth for --deps-of/--used-by (1-5)', '1')
+      .option('--cycles', 'Show dependency cycles')
+      .option('--summary', 'Show scope summary')
+      .option('--list-scopes', 'List available query scopes')
 
-    // Phase 4: structure discovery
-    .option('--type <entityType>', 'Filter entities by type')
-    .option('--high-coupling', 'Find high-coupling entities')
-    .option('--threshold <n>', 'Coupling threshold for --high-coupling', '8')
-    .option('--orphans', 'Find orphan entities (no relations)')
-    .option('--in-cycles', 'Find entities participating in cycles')
+      // Phase 4: structure discovery
+      .option('--type <entityType>', 'Filter entities by type')
+      .option('--high-coupling', 'Find high-coupling entities')
+      .option('--threshold <n>', 'Coupling threshold for --high-coupling', '8')
+      .option('--orphans', 'Find orphan entities (no relations)')
+      .option('--in-cycles', 'Find entities participating in cycles')
 
-    .action(queryHandler);
+      .action(queryHandler)
+  );
 }
 
 /**
@@ -157,7 +159,9 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
 
     // Derived scope note (after output)
     if (scopeEntry.kind === 'derived' && !isJson) {
-      console.log('\n[Note: This scope is a derived (partial) view, not a complete project analysis.]');
+      console.log(
+        '\n[Note: This scope is a derived (partial) view, not a complete project analysis.]'
+      );
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -196,12 +200,7 @@ function validateQueryOptions(opts: QueryOptions): void {
   }
 }
 
-function parseBoundedInt(
-  value: string,
-  flagName: string,
-  min: number,
-  max?: number,
-): number {
+function parseBoundedInt(value: string, flagName: string, min: number, max?: number): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || (max !== undefined && parsed > max)) {
     const range = max !== undefined ? ` (${min}-${max})` : ` (>= ${min})`;
@@ -213,7 +212,7 @@ function parseBoundedInt(
 function projectEntitiesForOutput(
   engine: QueryEngine,
   entities: Entity[],
-  verbose: boolean | undefined,
+  verbose: boolean | undefined
 ): Entity[] | ReturnType<QueryEngine['toSummary']>[] {
   return verbose ? entities : entities.map((entity) => engine.toSummary(entity));
 }

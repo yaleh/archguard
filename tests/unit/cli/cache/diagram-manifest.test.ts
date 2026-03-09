@@ -75,10 +75,10 @@ describe('diagram-manifest', () => {
 
       const result = await readManifest(cacheDir);
       expect(result).not.toBeNull();
-      expect(result!.version).toBe(MANIFEST_VERSION);
-      expect(result!.diagrams).toEqual(diagrams);
-      expect(result!.outputDir).toBe(outputDir);
-      expect(result!.lastRun).toBeTruthy();
+      expect(result.version).toBe(MANIFEST_VERSION);
+      expect(result.diagrams).toEqual(diagrams);
+      expect(result.outputDir).toBe(outputDir);
+      expect(result.lastRun).toBeTruthy();
     });
 
     it('creates cacheDir if it does not exist', async () => {
@@ -195,10 +195,7 @@ describe('diagram-manifest', () => {
       const atlasDir = path.join(outputDir, 'arch');
       await fs.ensureDir(atlasDir);
       await fs.writeFile(path.join(atlasDir, 'architecture-package.mmd'), 'graph LR\n  P');
-      await fs.writeFile(
-        path.join(atlasDir, 'architecture-package.mmd.render-hash'),
-        'hash1'
-      );
+      await fs.writeFile(path.join(atlasDir, 'architecture-package.mmd.render-hash'), 'hash1');
       await fs.writeFile(path.join(atlasDir, 'architecture-capability.mmd'), 'graph LR\n  C');
 
       const manifest = makeManifest(['arch/architecture']);
@@ -206,9 +203,9 @@ describe('diagram-manifest', () => {
 
       expect(stale).toEqual(['arch/architecture']);
       expect(await fs.pathExists(path.join(atlasDir, 'architecture-package.mmd'))).toBe(false);
-      expect(
-        await fs.pathExists(path.join(atlasDir, 'architecture-package.mmd.render-hash'))
-      ).toBe(false);
+      expect(await fs.pathExists(path.join(atlasDir, 'architecture-package.mmd.render-hash'))).toBe(
+        false
+      );
       expect(await fs.pathExists(path.join(atlasDir, 'architecture-capability.mmd'))).toBe(false);
     });
   });

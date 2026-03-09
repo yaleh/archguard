@@ -16,7 +16,7 @@ import { loadEngine } from '@/cli/query/engine-loader.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
-    '@/cli/query/engine-loader.js',
+    '@/cli/query/engine-loader.js'
   );
   return {
     ...actual,
@@ -26,7 +26,12 @@ vi.mock('@/cli/query/engine-loader.js', async () => {
 
 // -- Test fixtures --
 
-function makeEntity(id: string, name: string, type: string = 'class', file: string = 'src/foo.ts'): Entity {
+function makeEntity(
+  id: string,
+  name: string,
+  type: string = 'class',
+  file: string = 'src/foo.ts'
+): Entity {
   return {
     id,
     name,
@@ -86,7 +91,10 @@ function createTestEngine(): QueryEngine {
  * We capture tool registrations by spying on server.tool() and
  * then call the callbacks directly.
  */
-function collectTools(server: McpServer, defaultRoot: string = '/workspace'): Map<string, Function> {
+function collectTools(
+  server: McpServer,
+  defaultRoot: string = '/workspace'
+): Map<string, Function> {
   const tools = new Map<string, Function>();
   const originalTool = server.tool.bind(server);
 
@@ -132,7 +140,7 @@ describe('archguard_find_entity', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     const result = await cb({ name: 'CacheManager' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -145,7 +153,7 @@ describe('archguard_find_entity', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     const result = await cb({ name: 'NonExistent' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(0);
@@ -155,7 +163,7 @@ describe('archguard_find_entity', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     const result = await cb({ name: 'CacheManager', verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('CacheManager');
@@ -166,7 +174,7 @@ describe('archguard_find_entity', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace/default');
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     await cb({ name: 'CacheManager' });
 
     expect(loadEngineMock).toHaveBeenCalledWith('/workspace/default/.archguard', undefined);
@@ -176,21 +184,25 @@ describe('archguard_find_entity', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace/default');
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     await cb({ projectRoot: '../other-project', scope: 'frontend', name: 'CacheManager' });
 
     expect(loadEngineMock).toHaveBeenCalledWith('/workspace/other-project/.archguard', 'frontend');
   });
 
   it('adds projectRoot context when no query data exists', async () => {
-    loadEngineMock.mockRejectedValueOnce(new Error('No query data found. Run `archguard analyze` first.'));
+    loadEngineMock.mockRejectedValueOnce(
+      new Error('No query data found. Run `archguard analyze` first.')
+    );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace/default');
 
-    const cb = tools.get('archguard_find_entity')!;
+    const cb = tools.get('archguard_find_entity');
     const result = await cb({ projectRoot: '/tmp/project', name: 'CacheManager' });
 
-    expect(result.content[0].text).toContain('No query data found at /tmp/project/.archguard/query.');
+    expect(result.content[0].text).toContain(
+      'No query data found at /tmp/project/.archguard/query.'
+    );
     expect(result.content[0].text).toContain('archguard_analyze({ projectRoot: "/tmp/project" })');
   });
 });
@@ -200,7 +212,7 @@ describe('archguard_get_dependencies', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependencies')!;
+    const cb = tools.get('archguard_get_dependencies');
     const result = await cb({ name: 'DiagramProcessor', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
     const names = parsed.map((e: { name: string }) => e.name);
@@ -218,7 +230,7 @@ describe('archguard_get_dependencies', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependencies')!;
+    const cb = tools.get('archguard_get_dependencies');
     const result = await cb({ name: 'DiagramProcessor', depth: 1, verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
@@ -229,7 +241,7 @@ describe('archguard_get_dependencies', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependencies')!;
+    const cb = tools.get('archguard_get_dependencies');
     const result = await cb({ name: 'DiagramProcessor', depth: '1' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.map((e: { name: string }) => e.name)).toContain('CacheManager');
@@ -239,7 +251,7 @@ describe('archguard_get_dependencies', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependencies')!;
+    const cb = tools.get('archguard_get_dependencies');
     const result = await cb({ name: 'DiagramProcessor', depth: 1, verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
@@ -252,7 +264,7 @@ describe('archguard_get_dependents', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependents')!;
+    const cb = tools.get('archguard_get_dependents');
     const result = await cb({ name: 'CacheManager', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
     const names = parsed.map((e: { name: string }) => e.name);
@@ -266,7 +278,7 @@ describe('archguard_get_dependents', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependents')!;
+    const cb = tools.get('archguard_get_dependents');
     const result = await cb({ name: 'CacheManager', depth: 1, verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
@@ -277,7 +289,7 @@ describe('archguard_get_dependents', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependents')!;
+    const cb = tools.get('archguard_get_dependents');
     const result = await cb({ name: 'CacheManager', depth: '1' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.map((e: { name: string }) => e.name)).toContain('DiagramProcessor');
@@ -287,7 +299,7 @@ describe('archguard_get_dependents', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_dependents')!;
+    const cb = tools.get('archguard_get_dependents');
     const result = await cb({ name: 'CacheManager', depth: 1, verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect('members' in parsed[0]).toBe(true);
@@ -300,7 +312,7 @@ describe('archguard_find_implementers', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_implementers')!;
+    const cb = tools.get('archguard_find_implementers');
     const result = await cb({ name: 'ILanguagePlugin' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -313,7 +325,7 @@ describe('archguard_find_implementers', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_implementers')!;
+    const cb = tools.get('archguard_find_implementers');
     const result = await cb({ name: 'ILanguagePlugin', verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
@@ -324,7 +336,7 @@ describe('archguard_find_implementers', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_implementers')!;
+    const cb = tools.get('archguard_find_implementers');
     const result = await cb({ name: 'ILanguagePlugin', verbose: 'true' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('TypeScriptPlugin');
@@ -338,7 +350,7 @@ describe('archguard_find_subclasses', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_subclasses')!;
+    const cb = tools.get('archguard_find_subclasses');
     const result = await cb({ name: 'CacheManager' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(0);
@@ -364,7 +376,7 @@ describe('archguard_find_subclasses', () => {
     loadEngineMock.mockResolvedValueOnce(subEngine);
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_find_subclasses')!;
+    const cb = tools.get('archguard_find_subclasses');
     const result = await cb({ name: 'BaseProcessor' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -379,7 +391,7 @@ describe('archguard_get_file_entities', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_file_entities')!;
+    const cb = tools.get('archguard_get_file_entities');
     const result = await cb({ filePath: 'src/cache.ts' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -391,7 +403,7 @@ describe('archguard_get_file_entities', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_get_file_entities')!;
+    const cb = tools.get('archguard_get_file_entities');
     const result = await cb({ filePath: 'src/cache.ts', verbose: true });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed[0].name).toBe('CacheManager');
@@ -404,7 +416,7 @@ describe('archguard_detect_cycles', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_detect_cycles')!;
+    const cb = tools.get('archguard_detect_cycles');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.length).toBeGreaterThan(0);
@@ -419,7 +431,7 @@ describe('archguard_summary', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    const cb = tools.get('archguard_summary')!;
+    const cb = tools.get('archguard_summary');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.entityCount).toBe(5);
@@ -440,7 +452,7 @@ describe('createMcpCommand', () => {
   it('does not expose --arch-dir and --scope options', async () => {
     const { createMcpCommand } = await import('@/cli/commands/mcp.js');
     const cmd = createMcpCommand();
-    const optionNames = cmd.options.map(o => o.long);
+    const optionNames = cmd.options.map((o) => o.long);
     expect(optionNames).not.toContain('--arch-dir');
     expect(optionNames).not.toContain('--scope');
   });

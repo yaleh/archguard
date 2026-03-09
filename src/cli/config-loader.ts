@@ -142,7 +142,11 @@ const configSchema = z.object({
   workDir: z.string().default('./.archguard'),
   outputDir: z.string().default('./.archguard/output'),
   format: z.enum(['mermaid', 'json']).default('mermaid'),
-  mermaid: MermaidConfigSchema.default({ renderer: 'isomorphic', theme: 'default', transparentBackground: false }),
+  mermaid: MermaidConfigSchema.default({
+    renderer: 'isomorphic',
+    theme: 'default',
+    transparentBackground: false,
+  }),
   exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
 
   // ========== CLI Configuration ==========

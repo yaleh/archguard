@@ -202,9 +202,7 @@ describe('RenderHashCache', () => {
 
   describe('sidecarPath (static)', () => {
     it('appends .render-hash to the mmd path', () => {
-      expect(RenderHashCache.sidecarPath('/out/diagram.mmd')).toBe(
-        '/out/diagram.mmd.render-hash'
-      );
+      expect(RenderHashCache.sidecarPath('/out/diagram.mmd')).toBe('/out/diagram.mmd.render-hash');
     });
   });
 

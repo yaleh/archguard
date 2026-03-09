@@ -278,8 +278,8 @@ export class ArchJsonProvider {
       } else if (normParentPath) {
         const parentKey = this.archJsonPathIndex.get(
           this.makePathIndexKey(diagram.language ?? 'typescript', normParentPath)
-        )!;
-        const parent = this.archJsonCache.get(parentKey)!;
+        );
+        const parent = this.archJsonCache.get(parentKey);
         return {
           archJson: deriveSubModuleArchJSON(parent, diagram.sources[0], normParentPath),
           kind: 'derived',
@@ -354,8 +354,8 @@ export class ArchJsonProvider {
     } else if (normParentPath) {
       const parentKey = this.archJsonPathIndex.get(
         this.makePathIndexKey(diagram.language ?? 'typescript', normParentPath)
-      )!;
-      const parent = this.archJsonCache.get(parentKey)!;
+      );
+      const parent = this.archJsonCache.get(parentKey);
       if (process.env.ArchGuardDebug === 'true') {
         console.debug(
           `🔗 Derived ArchJSON for ${diagram.sources.join(', ')} from ${normParentPath}`
@@ -562,7 +562,7 @@ export class ArchJsonProvider {
 
   private async parseGenericLanguageProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
-    const pluginName = diagram.language!;
+    const pluginName = diagram.language;
 
     if (pluginName === 'python') {
       const registryPlugin = this.registry?.getByName('python');

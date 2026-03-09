@@ -34,7 +34,9 @@ describe('MCP analyze stdout safety', () => {
       defaultRoot: '/project',
     });
 
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
     await callback({ sources: ['./src'] });
 
     expect(stdoutSpy).not.toHaveBeenCalled();

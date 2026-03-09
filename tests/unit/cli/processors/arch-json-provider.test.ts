@@ -92,8 +92,8 @@ describe('ArchJsonProvider', () => {
   it('returns cached archJson on second call without parsing', async () => {
     const archJson = makeArchJSON();
     const mockParseFiles = vi.fn().mockResolvedValue(archJson);
-    (ParallelParser as any).mockImplementation(() => ({ parseFiles: mockParseFiles }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    ParallelParser.mockImplementation(() => ({ parseFiles: mockParseFiles }));
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/a.ts']),
     }));
 
@@ -225,7 +225,7 @@ describe('ArchJsonProvider', () => {
     const mockInitialize = vi.fn().mockResolvedValue(undefined);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts', '/src/b.ts']);
 
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -255,7 +255,7 @@ describe('ArchJsonProvider', () => {
     const mockInitialize = vi.fn().mockResolvedValue(undefined);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts']);
 
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -366,8 +366,8 @@ describe('ArchJsonProvider', () => {
     const mockParseFiles = vi.fn().mockResolvedValue(archJson);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts']);
 
-    (ParallelParser as any).mockImplementation(() => ({ parseFiles: mockParseFiles }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    ParallelParser.mockImplementation(() => ({ parseFiles: mockParseFiles }));
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -387,12 +387,12 @@ describe('ArchJsonProvider', () => {
     const mockDiskGet = vi.fn().mockResolvedValue(cachedArchJson);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts']);
 
-    (ArchJsonDiskCache as any).mockImplementation(() => ({
+    ArchJsonDiskCache.mockImplementation(() => ({
       get: mockDiskGet,
       set: vi.fn().mockResolvedValue(undefined),
       computeKey: vi.fn().mockResolvedValue('disk-key-A'),
     }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -425,12 +425,12 @@ describe('ArchJsonProvider', () => {
     const mockDiskGet = vi.fn().mockResolvedValue(cachedArchJson);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/project/src/sub/module.ts']);
 
-    (ArchJsonDiskCache as any).mockImplementation(() => ({
+    ArchJsonDiskCache.mockImplementation(() => ({
       get: mockDiskGet,
       set: vi.fn().mockResolvedValue(undefined),
       computeKey: vi.fn().mockResolvedValue('disk-key-A'),
     }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -455,12 +455,12 @@ describe('ArchJsonProvider', () => {
     const mockDiskGet = vi.fn().mockResolvedValue(cachedArchJson);
     const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/a.ts']);
 
-    (ArchJsonDiskCache as any).mockImplementation(() => ({
+    ArchJsonDiskCache.mockImplementation(() => ({
       get: mockDiskGet,
       set: vi.fn().mockResolvedValue(undefined),
       computeKey: vi.fn().mockResolvedValue('disk-key-B'),
     }));
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: mockDiscoverFiles,
     }));
 
@@ -478,10 +478,10 @@ describe('ArchJsonProvider', () => {
   // ---- 11. files.length === 0 with no parent → throws ---------------------
 
   it('throws when no files found and no parent coverage', async () => {
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue([]),
     }));
-    (ArchJsonDiskCache as any).mockImplementation(() => ({
+    ArchJsonDiskCache.mockImplementation(() => ({
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
       computeKey: vi.fn().mockResolvedValue('key'),
@@ -514,14 +514,14 @@ describe('ArchJsonProvider', () => {
 
     // Parent gets files; sub-path gets empty
     let callCount = 0;
-    (FileDiscoveryService as any).mockImplementation(() => ({
+    FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: vi.fn().mockImplementation(async () => {
         callCount++;
         return callCount === 1 ? ['/project/src/test.ts'] : [];
       }),
     }));
-    (ParallelParser as any).mockImplementation(() => ({ parseFiles: mockParseFiles }));
-    (ArchJsonDiskCache as any).mockImplementation(() => ({
+    ParallelParser.mockImplementation(() => ({ parseFiles: mockParseFiles }));
+    ArchJsonDiskCache.mockImplementation(() => ({
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
       computeKey: vi.fn().mockResolvedValue('key'),

@@ -23,7 +23,7 @@ const scopeParam = z
   .string()
   .optional()
   .describe(
-    'Query scope key, label fragment, or the synthetic alias "global". Omit to use manifest.globalScopeKey resolution.',
+    'Query scope key, label fragment, or the synthetic alias "global". Omit to use manifest.globalScopeKey resolution.'
   );
 
 function textResponse(text: string) {
@@ -37,7 +37,7 @@ export function resolveRoot(projectRoot: string | undefined, defaultRoot: string
 
 async function withEngineErrorContext<T>(
   root: string,
-  fn: () => Promise<T>,
+  fn: () => Promise<T>
 ): Promise<T | ReturnType<typeof textResponse>> {
   const archDir = path.join(root, '.archguard');
 
@@ -47,7 +47,7 @@ async function withEngineErrorContext<T>(
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('No query data found')) {
       return textResponse(
-        `No query data found at ${archDir}/query.\nRun archguard_analyze({ projectRoot: "${root}" }) first.`,
+        `No query data found at ${archDir}/query.\nRun archguard_analyze({ projectRoot: "${root}" }) first.`
       );
     }
     return textResponse(`Query failed for ${root}: ${message}`);
@@ -88,19 +88,16 @@ function serializeEntities(entities: unknown[]): string {
 }
 
 const verboseParam = z
-  .preprocess(
-    v => (v === 'true' ? true : v === 'false' ? false : v),
-    z.boolean().default(false),
-  )
+  .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().default(false))
   .describe('Return full entities with members. Default false returns summary only.');
 
 function applyView(
   engine: QueryEngine,
   entities: Entity[],
-  verbose: boolean | string | undefined,
+  verbose: boolean | string | undefined
 ): Entity[] | EntitySummary[] {
   const isVerbose = verbose === 'true' ? true : (verbose ?? false);
-  return isVerbose ? entities : entities.map(e => engine.toSummary(e));
+  return isVerbose ? entities : entities.map((e) => engine.toSummary(e));
 }
 
 /**
@@ -126,7 +123,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.findEntity(name), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -146,7 +143,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.getDependencies(name, depth), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -166,7 +163,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.getDependents(name, depth), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -185,7 +182,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.findImplementers(name), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -204,7 +201,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.findSubclasses(name), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -223,7 +220,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const payload = applyView(engine, engine.getFileEntities(filePath), verbose);
         return textResponse(serializeEntities(payload));
       });
-    },
+    }
   );
 
   server.tool(
@@ -239,7 +236,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
         return textResponse(JSON.stringify(engine.getCycles(), null, 2));
       });
-    },
+    }
   );
 
   server.tool(
@@ -255,6 +252,6 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
         return textResponse(JSON.stringify(engine.getSummary(), null, 2));
       });
-    },
+    }
   );
 }

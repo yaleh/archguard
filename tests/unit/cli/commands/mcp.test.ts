@@ -26,7 +26,7 @@ describe('createMcpCommand', () => {
     cmd.exitOverride();
 
     await expect(
-      cmd.parseAsync(['node', 'mcp', '--arch-dir', '/tmp/custom'], { from: 'node' }),
+      cmd.parseAsync(['node', 'mcp', '--arch-dir', '/tmp/custom'], { from: 'node' })
     ).rejects.toMatchObject({
       code: 'commander.unknownOption',
     });
@@ -38,7 +38,7 @@ describe('createMcpCommand', () => {
     cmd.exitOverride();
 
     await expect(
-      cmd.parseAsync(['node', 'mcp', '--scope', 'frontend'], { from: 'node' }),
+      cmd.parseAsync(['node', 'mcp', '--scope', 'frontend'], { from: 'node' })
     ).rejects.toMatchObject({
       code: 'commander.unknownOption',
     });

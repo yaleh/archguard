@@ -188,7 +188,8 @@ public abstract class AbstractService {
           path.join(gradleProjectPath, 'build.gradle')
         );
 
-        const dependencies = await plugin.dependencyExtractor.extractDependencies(gradleProjectPath);
+        const dependencies =
+          await plugin.dependencyExtractor.extractDependencies(gradleProjectPath);
 
         expect(dependencies.length).toBeGreaterThan(0);
         expect(dependencies.every((dep) => dep.source === 'build.gradle')).toBe(true);

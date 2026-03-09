@@ -63,22 +63,17 @@ describe('CLI / MCP analyze equivalence', () => {
         '  helper = new Helper();',
         '',
         '  run(): string {',
-        "    return this.helper.message();",
+        '    return this.helper.message();',
         '  }',
         '}',
         '',
-      ].join('\n'),
+      ].join('\n')
     );
     await fs.writeFile(
       path.join(root, 'src', 'helper.ts'),
-      [
-        'export class Helper {',
-        '  message(): string {',
-        "    return 'ok';",
-        '  }',
-        '}',
-        '',
-      ].join('\n'),
+      ['export class Helper {', '  message(): string {', "    return 'ok';", '  }', '}', ''].join(
+        '\n'
+      )
     );
     return root;
   }
@@ -120,7 +115,9 @@ describe('CLI / MCP analyze equivalence', () => {
     }
   }
 
-  async function snapshotArchguard(root: string): Promise<{ files: string[]; contents: Record<string, string> }> {
+  async function snapshotArchguard(
+    root: string
+  ): Promise<{ files: string[]; contents: Record<string, string> }> {
     const archRoot = path.join(root, '.archguard');
     const files = await collectFiles(archRoot);
     const contents: Record<string, string> = {};
@@ -151,7 +148,7 @@ describe('CLI / MCP analyze equivalence', () => {
 
   function normalizeArtifact(content: string, root: string): string {
     const normalizedRoot = root.replace(/\\/g, '/');
-    let value = content.replaceAll(normalizedRoot, '<ROOT>');
+    const value = content.replaceAll(normalizedRoot, '<ROOT>');
     try {
       const parsed = JSON.parse(value) as Record<string, unknown>;
       scrub(parsed);

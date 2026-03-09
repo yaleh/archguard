@@ -41,10 +41,7 @@ export async function readManifest(archDir: string): Promise<QueryManifest> {
  * - scopeKey provided: matches by key or by label (case-insensitive).
  * - Throws descriptive errors when data is missing or scope is not found.
  */
-export async function resolveScope(
-  queryRoot: string,
-  scopeKey?: string,
-): Promise<QueryScopeEntry> {
+export async function resolveScope(queryRoot: string, scopeKey?: string): Promise<QueryScopeEntry> {
   const manifestPath = path.join(queryRoot, 'query', 'manifest.json');
   if (!(await fs.pathExists(manifestPath))) {
     throw new Error('No query data found. Run `archguard analyze` first.');
@@ -59,13 +56,13 @@ export async function resolveScope(
   if (scopeKey === 'global') {
     if (!manifest.globalScopeKey) {
       throw new Error(
-        'No global query scope configured. Run archguard_analyze to regenerate a global view, or pass scope parameter explicitly.',
+        'No global query scope configured. Run archguard_analyze to regenerate a global view, or pass scope parameter explicitly.'
       );
     }
-    const globalScope = manifest.scopes.find(s => s.key === manifest.globalScopeKey);
+    const globalScope = manifest.scopes.find((s) => s.key === manifest.globalScopeKey);
     if (!globalScope) {
       throw new Error(
-        `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`,
+        `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`
       );
     }
     return globalScope;
@@ -75,15 +72,11 @@ export async function resolveScope(
   if (scopeKey) {
     const lower = scopeKey.toLowerCase();
     const found =
-      manifest.scopes.find(s => s.key === scopeKey) ??
-      manifest.scopes.find(s => s.label.toLowerCase().includes(lower));
+      manifest.scopes.find((s) => s.key === scopeKey) ??
+      manifest.scopes.find((s) => s.label.toLowerCase().includes(lower));
     if (!found) {
-      const scopeList = manifest.scopes
-        .map(s => `  ${s.key}  ${s.label}`)
-        .join('\n');
-      throw new Error(
-        `Scope "${scopeKey}" not found. Available scopes:\n${scopeList}`,
-      );
+      const scopeList = manifest.scopes.map((s) => `  ${s.key}  ${s.label}`).join('\n');
+      throw new Error(`Scope "${scopeKey}" not found. Available scopes:\n${scopeList}`);
     }
     return found;
   }
@@ -94,14 +87,14 @@ export async function resolveScope(
 
   if (!manifest.globalScopeKey) {
     throw new Error(
-      'No global query scope configured. Available scopes exist, but none is marked global. Pass scope parameter explicitly, or rerun archguard_analyze.',
+      'No global query scope configured. Available scopes exist, but none is marked global. Pass scope parameter explicitly, or rerun archguard_analyze.'
     );
   }
 
-  const globalScope = manifest.scopes.find(s => s.key === manifest.globalScopeKey);
+  const globalScope = manifest.scopes.find((s) => s.key === manifest.globalScopeKey);
   if (!globalScope) {
     throw new Error(
-      `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`,
+      `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`
     );
   }
 
@@ -116,65 +109,40 @@ export async function resolveScope(
  * 3. Loads or rebuilds arch-index.json (validates via SHA-256 hash)
  * 4. Returns a ready-to-use QueryEngine
  */
-export async function loadEngine(
-  archDir: string,
-  scopeKey?: string,
-): Promise<QueryEngine> {
+export async function loadEngine(archDir: string, scopeKey?: string): Promise<QueryEngine> {
   const queryRoot = archDir;
   const scopeEntry = await resolveScope(queryRoot, scopeKey);
 
-  const archJsonPath = path.join(
-    queryRoot,
-    'query',
-    scopeEntry.key,
-    'arch.json',
-  );
+  const archJsonPath = path.join(queryRoot, 'query', scopeEntry.key, 'arch.json');
   if (!(await fs.pathExists(archJsonPath))) {
     throw new Error(
-      `arch.json missing for scope "${scopeEntry.key}". Run \`archguard analyze\` to regenerate.`,
+      `arch.json missing for scope "${scopeEntry.key}". Run \`archguard analyze\` to regenerate.`
     );
   }
 
   // Read arch.json as raw Buffer for hash comparison
   const archJsonBuf = await fs.readFile(archJsonPath);
-  const archJsonHash = crypto
-    .createHash('sha256')
-    .update(archJsonBuf)
-    .digest('hex');
+  const archJsonHash = crypto.createHash('sha256').update(archJsonBuf).digest('hex');
   const archJson = JSON.parse(archJsonBuf.toString());
 
   // Try to load arch-index.json
-  const indexPath = path.join(
-    queryRoot,
-    'query',
-    scopeEntry.key,
-    'arch-index.json',
-  );
+  const indexPath = path.join(queryRoot, 'query', scopeEntry.key, 'arch-index.json');
   let archIndex: ArchIndex;
 
   if (await fs.pathExists(indexPath)) {
     try {
       const indexData: ArchIndex = await fs.readJson(indexPath);
-      if (
-        indexData.version === '1.0' &&
-        indexData.archJsonHash === archJsonHash
-      ) {
+      if (indexData.version === '1.0' && indexData.archJsonHash === archJsonHash) {
         archIndex = indexData;
       } else {
         // Version or hash mismatch — rebuild
         archIndex = buildArchIndex(archJson, archJsonHash);
-        await atomicWriteFile(
-          indexPath,
-          JSON.stringify(archIndex, null, 2),
-        );
+        await atomicWriteFile(indexPath, JSON.stringify(archIndex, null, 2));
       }
     } catch {
       // Corrupted — rebuild
       archIndex = buildArchIndex(archJson, archJsonHash);
-      await atomicWriteFile(
-        indexPath,
-        JSON.stringify(archIndex, null, 2),
-      );
+      await atomicWriteFile(indexPath, JSON.stringify(archIndex, null, 2));
     }
   } else {
     // Missing — build and persist

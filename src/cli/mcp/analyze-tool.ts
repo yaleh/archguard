@@ -19,25 +19,28 @@ const analyzeSchema = {
   sources: z
     .array(z.string())
     .optional()
-    .describe('Source paths relative to the target project root. Omit to analyze the project root.'),
+    .describe(
+      'Source paths relative to the target project root. Omit to analyze the project root.'
+    ),
   lang: z
     .enum(supportedAnalyzeLanguages)
     .optional()
     .describe(
-      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp. This is not a natural-language locale.',
+      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp. This is not a natural-language locale.'
     ),
   diagrams: z
     .array(z.enum(['package', 'class', 'method']))
     .optional()
-    .describe('Diagram levels to generate. Omit to use the detected/default set for the target sources.'),
+    .describe(
+      'Diagram levels to generate. Omit to use the detected/default set for the target sources.'
+    ),
   format: z
     .enum(['mermaid', 'json'])
     .optional()
-    .describe('Output artifact format. Use json for query/index refresh without Mermaid rendering.'),
-  noCache: z
-    .boolean()
-    .default(false)
-    .describe('Disable analysis caches for this run.'),
+    .describe(
+      'Output artifact format. Use json for query/index refresh without Mermaid rendering.'
+    ),
+  noCache: z.boolean().default(false).describe('Disable analysis caches for this run.'),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -67,7 +70,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
 
           if (result.queryScopesPersisted === 0) {
             return textResponse(
-              'Analysis failed: No query scopes were persisted.\nPrevious query state is unchanged.',
+              'Analysis failed: No query scopes were persisted.\nPrevious query state is unchanged.'
             );
           }
 
@@ -75,14 +78,14 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
             formatAnalyzeResponse(result, {
               elapsedMs: Date.now() - startedAt,
               projectRoot: root,
-            }),
+            })
           );
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return textResponse(`Analysis failed: ${message}\nPrevious query state is unchanged.`);
       }
-    },
+    }
   );
 }
 
@@ -99,7 +102,7 @@ async function withPerProjectLock<T>(root: string, fn: () => Promise<T>): Promis
   const key = path.resolve(root);
   if (analyzeLocks.has(key)) {
     throw new Error(
-      `An analysis is already running for ${key}. Wait for it to complete or analyze a different project.`,
+      `An analysis is already running for ${key}. Wait for it to complete or analyze a different project.`
     );
   }
   analyzeLocks.add(key);
@@ -112,7 +115,7 @@ async function withPerProjectLock<T>(root: string, fn: () => Promise<T>): Promis
 
 function formatAnalyzeResponse(
   result: Awaited<ReturnType<typeof runAnalysis>>,
-  meta: { elapsedMs: number; projectRoot: string },
+  meta: { elapsedMs: number; projectRoot: string }
 ): string {
   const lines = [`Analysis completed in ${(meta.elapsedMs / 1000).toFixed(1)}s`, ''];
   lines.push(`Project root: ${meta.projectRoot}`);
@@ -124,7 +127,7 @@ function formatAnalyzeResponse(
     for (const diagram of result.results) {
       if (diagram.success) {
         lines.push(
-          `  - ${diagram.name}  ok  ${diagram.stats?.entities ?? 0} entities  ${diagram.stats?.relations ?? 0} relations  ${((diagram.stats?.parseTime ?? 0) / 1000).toFixed(1)}s`,
+          `  - ${diagram.name}  ok  ${diagram.stats?.entities ?? 0} entities  ${diagram.stats?.relations ?? 0} relations  ${((diagram.stats?.parseTime ?? 0) / 1000).toFixed(1)}s`
         );
       } else {
         lines.push(`  - ${diagram.name}  failed  ${diagram.error ?? 'unknown error'}`);

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,8 +15,12 @@ const runIntegration = hasBuilt && process.env.ARCH_TEST_WORKERS === 'true';
 describe.skipIf(!runIntegration)('MermaidRenderWorkerPool integration (real workers)', () => {
   it('renders a simple diagram via worker thread', async () => {
     const { MermaidRenderWorkerPool } = await import('@/mermaid/render-worker-pool.js');
-    const pool = new MermaidRenderWorkerPool(1, { theme: 'default', backgroundColor: 'white' });
-    await pool.start();
+    const pool = new MermaidRenderWorkerPool(1, {
+      theme: 'default',
+      maxTextSize: 200000,
+      transparentBackground: false,
+    });
+    pool.start();
     try {
       const result = await pool.render({ mermaidCode: 'flowchart LR\n  A --> B' });
       expect(result.success).toBe(true);

@@ -6,7 +6,9 @@ export function canonicalizeArchJson(archJson: ArchJSON): ArchJSON {
     sourceFiles: [...(archJson.sourceFiles ?? [])].sort(),
     entities: [...(archJson.entities ?? [])].map(canonicalizeEntity).sort(compareEntity),
     relations: [...(archJson.relations ?? [])].sort(compareRelation),
-    modules: archJson.modules ? [...archJson.modules].map(canonicalizeModule).sort(compareModule) : undefined,
+    modules: archJson.modules
+      ? [...archJson.modules].map(canonicalizeModule).sort(compareModule)
+      : undefined,
     metrics: archJson.metrics ? canonicalizeMetrics(archJson.metrics) : archJson.metrics,
     extensions: canonicalizeExtensions(archJson.extensions),
   };
@@ -60,7 +62,9 @@ function canonicalizeExtensions(extensions: ArchJSON['extensions']): ArchJSON['e
   if (!extensions) return extensions;
 
   const next: Record<string, unknown> = { ...extensions };
-  const tsAnalysis = next.tsAnalysis as { moduleGraph?: { nodes?: unknown[]; edges?: unknown[] } } | undefined;
+  const tsAnalysis = next.tsAnalysis as
+    | { moduleGraph?: { nodes?: unknown[]; edges?: unknown[] } }
+    | undefined;
   if (tsAnalysis?.moduleGraph) {
     tsAnalysis.moduleGraph = {
       ...tsAnalysis.moduleGraph,
@@ -82,7 +86,7 @@ function compareMember(a: Member, b: Member): number {
 
 function compareRelation(a: Relation, b: Relation): number {
   return `${a.id}|${a.source}|${a.target}|${a.type}`.localeCompare(
-    `${b.id}|${b.source}|${b.target}|${b.type}`,
+    `${b.id}|${b.source}|${b.target}|${b.type}`
   );
 }
 

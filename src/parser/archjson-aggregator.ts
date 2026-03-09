@@ -198,7 +198,10 @@ export class ArchJSONAggregator {
     return afterSrc.substring(0, firstSlashIndex);
   }
 
-  private extractJavaMavenModule(relativePath: string, language?: ArchJSON['language']): string | null {
+  private extractJavaMavenModule(
+    relativePath: string,
+    language?: ArchJSON['language']
+  ): string | null {
     if (language !== 'java') {
       return null;
     }

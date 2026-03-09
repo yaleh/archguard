@@ -44,7 +44,7 @@ describe('planGoAnalysisScope', () => {
     await fs.writeFile(path.join(root, 'go.mod'), 'module example.com/root\n');
     await fs.writeFile(
       path.join(root, 'examples/user-service/go.mod'),
-      'module example.com/nested\n',
+      'module example.com/nested\n'
     );
 
     const plan = await planGoAnalysisScope([root]);
@@ -63,11 +63,11 @@ describe('planGoAnalysisScope', () => {
     await fs.writeFile(path.join(root, 'go.mod'), 'module example.com/root\n');
     await fs.writeFile(
       path.join(root, 'examples/user-service/go.mod'),
-      'module example.com/nested\n',
+      'module example.com/nested\n'
     );
 
     await expect(
-      planGoAnalysisScope([path.join(root, 'pkg'), path.join(root, 'examples/user-service')]),
+      planGoAnalysisScope([path.join(root, 'pkg'), path.join(root, 'examples/user-service')])
     ).rejects.toThrow(/span multiple Go modules/i);
   });
 });
