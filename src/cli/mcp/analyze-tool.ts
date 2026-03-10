@@ -8,6 +8,17 @@ export interface AnalyzeToolContext {
   defaultRoot: string;
 }
 
+export const PARADIGM_BLOCK_GO = `Paradigm: package (Go Atlas)
+  Applicable:  archguard_summary, archguard_find_entity, archguard_get_file_entities,
+               archguard_find_implementers, archguard_get_atlas_layer
+  Limited:     archguard_get_dependencies / get_dependents (entity-level only;
+               use get_atlas_layer for package deps)
+  Not useful:  archguard_find_subclasses (no inheritance), archguard_detect_cycles
+               (compiler-enforced; always empty)
+  Package graph: .archguard/output/architecture-package.mmd
+
+Next step: call archguard_summary or archguard_get_atlas_layer.`;
+
 const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp'] as const;
 const analyzeLocks = new Set<string>();
 
@@ -138,6 +149,11 @@ function formatAnalyzeResponse(
     lines.push('', 'Warnings:');
     lines.push('  - One or more diagrams failed, but query data was refreshed.');
   }
-  lines.push('', 'Next step: call archguard_summary or another query tool.');
+  const language = result.diagrams.find((d) => d.language)?.language;
+  if (language === 'go') {
+    lines.push('', PARADIGM_BLOCK_GO);
+  } else {
+    lines.push('', 'Next step: call archguard_summary or another query tool.');
+  }
   return lines.join('\n');
 }

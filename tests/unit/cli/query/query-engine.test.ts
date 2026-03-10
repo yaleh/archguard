@@ -4,6 +4,7 @@ import type { QueryEngineOptions } from '@/cli/query/query-engine.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
+import type { PackageGraph } from '@/types/extensions.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,6 +92,44 @@ const inheritanceArchJson = makeArchJson({
   entities: [entityA, entityC],
   relations: [{ id: 'r1', type: 'inheritance', source: 'C', target: 'A' }],
 });
+
+// Go Atlas fixture (package layer only)
+const goAtlasArchJson: ArchJSON = {
+  version: '1.0',
+  language: 'go',
+  timestamp: '2026-01-01T00:00:00Z',
+  sourceFiles: [],
+  entities: [],
+  relations: [],
+  extensions: {
+    goAtlas: {
+      version: '2.0',
+      layers: {
+        package: {
+          nodes: [
+            { id: 'github.com/example/app/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 3 },
+            { id: 'github.com/example/app/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 2 },
+          ],
+          edges: [
+            { from: 'github.com/example/app/pkg/hub', to: 'github.com/example/app/pkg/store', strength: 4 },
+          ],
+          cycles: [],
+        },
+      },
+      metadata: {
+        generatedAt: '2024-01-01T00:00:00Z',
+        generationStrategy: {
+          functionBodyStrategy: 'none',
+          detectedFrameworks: [],
+          followIndirectCalls: false,
+          goplsEnabled: false,
+        },
+        completeness: { package: 1.0, capability: 0, goroutine: 0, flow: 0 },
+        performance: { fileCount: 5, parseTime: 100, totalTime: 200, memoryUsage: 1024 },
+      },
+    },
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -268,6 +307,78 @@ describe('QueryEngine', () => {
       expect(betaEntry).toBeDefined();
       expect(betaEntry.dependentCount).toBe(2);
     });
+
+    it('Go Atlas ArchJSON: relationCount sums all Atlas layer edges', () => {
+      // package layer: 19 edges, capability layer: 23 edges, goroutine layer: 2 edges
+      // FlowGraph has no .edges, so flow layer contributes 0
+      const goAtlasArchJson = makeArchJson({
+        language: 'go',
+        relations: [], // empty — Atlas edges should take priority
+        extensions: {
+          goAtlas: {
+            version: '2.0',
+            layers: {
+              package: {
+                nodes: [],
+                edges: Array.from({ length: 19 }, (_, i) => ({
+                  from: `pkg${i}`,
+                  to: `pkg${i + 1}`,
+                  strength: 1,
+                })),
+                cycles: [],
+              } as any,
+              capability: {
+                nodes: [],
+                edges: Array.from({ length: 23 }, (_, i) => ({
+                  id: `r${i}`,
+                  type: 'uses',
+                  source: `s${i}`,
+                  target: `t${i}`,
+                  confidence: 1,
+                })),
+              } as any,
+              goroutine: {
+                nodes: [],
+                edges: [
+                  { from: 'main', to: 'spawn-1', spawnType: 'go-stmt' },
+                  { from: 'main', to: 'spawn-2', spawnType: 'go-stmt' },
+                ],
+                channels: [],
+                channelEdges: [],
+              } as any,
+              flow: {
+                // FlowGraph has no .edges — contributes 0
+                entryPoints: [],
+                callChains: [],
+              } as any,
+            },
+            metadata: {
+              generatedAt: new Date().toISOString(),
+              generationStrategy: {
+                functionBodyStrategy: 'none',
+                detectedFrameworks: [],
+                followIndirectCalls: false,
+                goplsEnabled: false,
+              },
+              completeness: { package: 1, capability: 1, goroutine: 1, flow: 0 },
+              performance: { fileCount: 10, parseTime: 50, totalTime: 100, memoryUsage: 2048 },
+            },
+          },
+        },
+      });
+
+      const engine = createEngine(goAtlasArchJson);
+      const summary = engine.getSummary();
+      // 19 + 23 + 2 + 0 (flow has no .edges) = 44
+      expect(summary.relationCount).toBe(44);
+    });
+
+    it('TypeScript ArchJSON (no Atlas extension): relationCount equals relations.length', () => {
+      // Existing behaviour: no goAtlas extension → fall through to relations.length
+      const engine = createEngine(baseArchJson);
+      const summary = engine.getSummary();
+      expect(summary.relationCount).toBe(baseArchJson.relations.length);
+    });
   });
 
   describe('findByType', () => {
@@ -351,6 +462,89 @@ describe('QueryEngine', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Group A: getAtlasLayer() tests
+  // ---------------------------------------------------------------------------
+
+  describe('getAtlasLayer', () => {
+    it('returns the PackageGraph when Atlas extension has a package layer', () => {
+      const engine = createEngine(goAtlasArchJson);
+      const layer = engine.getAtlasLayer('package');
+      expect(layer).toBeDefined();
+      expect((layer as PackageGraph).nodes).toHaveLength(2);
+      expect((layer as PackageGraph).edges).toHaveLength(1);
+    });
+
+    it('returns undefined for a layer absent from the fixture (flow)', () => {
+      const engine = createEngine(goAtlasArchJson);
+      const layer = engine.getAtlasLayer('flow');
+      expect(layer).toBeUndefined();
+    });
+
+    it('returns undefined when ArchJSON has no Atlas extension', () => {
+      const engine = createEngine(baseArchJson); // TypeScript, no extensions
+      const layer = engine.getAtlasLayer('package');
+      expect(layer).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group B: getSummary() capabilities tests
+  // ---------------------------------------------------------------------------
+
+  describe('getSummary capabilities', () => {
+    it('Go Atlas project: classHierarchy false, packageGraph true, cycleDetection false', () => {
+      const engine = createEngine(goAtlasArchJson);
+      const summary = engine.getSummary();
+      expect(summary.capabilities.classHierarchy).toBe(false);
+      expect(summary.capabilities.packageGraph).toBe(true);
+      expect(summary.capabilities.cycleDetection).toBe(false);
+    });
+
+    it('TypeScript project: classHierarchy true, packageGraph false, cycleDetection true', () => {
+      const engine = createEngine(baseArchJson);
+      const summary = engine.getSummary();
+      expect(summary.capabilities.classHierarchy).toBe(true);
+      expect(summary.capabilities.packageGraph).toBe(false);
+      expect(summary.capabilities.cycleDetection).toBe(true);
+    });
+
+    it('project with implementation relations: interfaceImplementation true', () => {
+      // baseArchJson has r2: implementation relation (C → B)
+      const engine = createEngine(baseArchJson);
+      const summary = engine.getSummary();
+      expect(summary.capabilities.interfaceImplementation).toBe(true);
+    });
+
+    it('standard-mode Go project (no Atlas extension): cycleDetection false', () => {
+      const standardGoArchJson = makeArchJson({ language: 'go' }); // no extensions
+      const engine = createEngine(standardGoArchJson);
+      const summary = engine.getSummary();
+      expect(summary.capabilities.cycleDetection).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group C: topDependedOn suppression tests
+  // ---------------------------------------------------------------------------
+
+  describe('getSummary topDependedOn suppression', () => {
+    it('Go Atlas project: topDependedOn is empty array, topDependedOnNote is non-empty string', () => {
+      const engine = createEngine(goAtlasArchJson);
+      const summary = engine.getSummary();
+      expect(summary.topDependedOn).toEqual([]);
+      expect(typeof summary.topDependedOnNote).toBe('string');
+      expect((summary.topDependedOnNote as string).length).toBeGreaterThan(0);
+    });
+
+    it('TypeScript project: topDependedOn is non-empty, topDependedOnNote is undefined', () => {
+      const engine = createEngine(baseArchJson);
+      const summary = engine.getSummary();
+      expect(summary.topDependedOn.length).toBeGreaterThan(0);
+      expect(summary.topDependedOnNote).toBeUndefined();
+    });
+  });
+
   describe('toSummary', () => {
     it('maps entity to EntitySummary with id, name, type, visibility, file', () => {
       const engine = createEngine(baseArchJson);
@@ -400,6 +594,467 @@ describe('QueryEngine', () => {
       const engine = createEngine(baseArchJson);
       const summary = engine.toSummary(entityA);
       expect('members' in summary).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Fixtures for getPackageStats tests
+  // ---------------------------------------------------------------------------
+
+  const goAtlasWithEntitiesArchJson: ArchJSON = {
+    version: '1.0',
+    language: 'go',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: ['internal/query/engine.go', 'internal/query/index.go', 'cmd/main.go'],
+    entities: [
+      {
+        id: 'internal/query/engine.go.QueryEngine',
+        name: 'QueryEngine',
+        type: 'struct',
+        visibility: 'public',
+        members: [
+          { name: 'Find',    type: 'method',   visibility: 'public'  },
+          { name: 'GetDeps', type: 'method',   visibility: 'public'  },
+          { name: 'index',   type: 'field',    visibility: 'private' },
+        ],
+        sourceLocation: { file: 'internal/query/engine.go', startLine: 10, endLine: 80 },
+      },
+      {
+        id: 'internal/query/index.go.ArchIndex',
+        name: 'ArchIndex',
+        type: 'interface',
+        visibility: 'public',
+        members: [
+          { name: 'Build', type: 'method', visibility: 'public' },
+        ],
+        sourceLocation: { file: 'internal/query/index.go', startLine: 5, endLine: 20 },
+      },
+      {
+        id: 'cmd/main.go.Server',
+        name: 'Server',
+        type: 'struct',
+        visibility: 'public',
+        members: [
+          { name: 'Run',  type: 'method', visibility: 'public'  },
+          { name: 'port', type: 'field',  visibility: 'private' },
+        ],
+        sourceLocation: { file: 'cmd/main.go', startLine: 8, endLine: 50 },
+      },
+    ],
+    relations: [],
+    extensions: {
+      goAtlas: {
+        version: '2.0',
+        layers: {
+          package: {
+            nodes: [
+              {
+                id: 'github.com/example/app/internal/query',
+                name: 'internal/query',
+                type: 'internal',
+                fileCount: 2,
+                stats: { structs: 1, interfaces: 1, functions: 3 },
+              },
+              {
+                id: 'github.com/example/app/cmd',
+                name: 'cmd',
+                type: 'cmd',
+                fileCount: 1,
+                stats: { structs: 1, interfaces: 0, functions: 1 },
+              },
+              {
+                id: 'github.com/example/app/internal/query_test',
+                name: 'internal/query_test',
+                type: 'tests',
+                fileCount: 3,
+              },
+            ],
+            edges: [
+              {
+                from: 'github.com/example/app/cmd',
+                to: 'github.com/example/app/internal/query',
+                strength: 5,
+              },
+            ],
+            cycles: [],
+          },
+        },
+        metadata: {
+          generatedAt: '2026-01-01T00:00:00Z',
+          generationStrategy: {
+            functionBodyStrategy: 'none',
+            detectedFrameworks: [],
+            followIndirectCalls: false,
+            goplsEnabled: false,
+          },
+          completeness: { package: 1.0, capability: 0, goroutine: 0, flow: 0 },
+          performance: { fileCount: 3, parseTime: 100, totalTime: 200, memoryUsage: 1024 },
+        },
+      },
+    },
+  };
+
+  const tsArchJson: ArchJSON = {
+    version: '1.0',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [
+      'src/cli/engine.ts',
+      'src/cli/loader.ts',
+      'src/cli/engine.test.ts',
+      'src/parser/index.ts',
+    ],
+    entities: [
+      {
+        id: 'src/cli/engine.ts.QueryEngine',
+        name: 'QueryEngine',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'find',    type: 'method',   visibility: 'public'  },
+          { name: 'index',   type: 'property', visibility: 'private' },
+          { name: 'load',    type: 'method',   visibility: 'private' },
+        ],
+        sourceLocation: { file: 'src/cli/engine.ts', startLine: 5, endLine: 120 },
+      },
+      {
+        id: 'src/cli/loader.ts.EngineLoader',
+        name: 'EngineLoader',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'load', type: 'method', visibility: 'public' },
+        ],
+        sourceLocation: { file: 'src/cli/loader.ts', startLine: 3, endLine: 40 },
+      },
+      {
+        id: 'src/parser/index.ts.Parser',
+        name: 'Parser',
+        type: 'interface',
+        visibility: 'public',
+        members: [
+          { name: 'parse', type: 'method', visibility: 'public' },
+        ],
+        sourceLocation: { file: 'src/parser/index.ts', startLine: 1, endLine: 15 },
+      },
+    ],
+    relations: [],
+    extensions: {
+      tsAnalysis: {
+        version: '1.0',
+        moduleGraph: {
+          nodes: [
+            {
+              id: 'src/cli',
+              name: 'src/cli',
+              type: 'internal',
+              fileCount: 3,
+              stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+            },
+            {
+              id: 'src/parser',
+              name: 'src/parser',
+              type: 'internal',
+              fileCount: 1,
+              stats: { classes: 0, interfaces: 1, functions: 0, enums: 0 },
+            },
+          ],
+          edges: [
+            { from: 'src/cli', to: 'src/parser', strength: 2, importedNames: ['Parser'] },
+          ],
+          cycles: [],
+        },
+      },
+    },
+  };
+
+  const javaArchJson: ArchJSON = {
+    version: '1.0',
+    language: 'java',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities: [
+      {
+        id: 'com/example/service/OrderService.java.OrderService',
+        name: 'OrderService',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'create',  type: 'method',   visibility: 'public'  },
+          { name: 'delete',  type: 'method',   visibility: 'public'  },
+          { name: 'orderId', type: 'field',    visibility: 'private' },
+        ],
+        sourceLocation: {
+          file: 'com/example/service/OrderService.java',
+          startLine: 5,
+          endLine: 200,
+        },
+      },
+      {
+        id: 'com/example/service/UserService.java.UserService',
+        name: 'UserService',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'find',   type: 'method', visibility: 'public'  },
+          { name: 'userId', type: 'field',  visibility: 'private' },
+        ],
+        sourceLocation: {
+          file: 'com/example/service/UserService.java',
+          startLine: 3,
+          endLine: 150,
+        },
+      },
+      {
+        id: 'com/example/service/OrderServiceTest.java.OrderServiceTest',
+        name: 'OrderServiceTest',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'testCreate', type: 'method', visibility: 'public' },
+        ],
+        sourceLocation: {
+          file: 'com/example/service/OrderServiceTest.java',
+          startLine: 1,
+          endLine: 60,
+        },
+      },
+      {
+        id: 'com/example/model/Order.java.Order',
+        name: 'Order',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'id',    type: 'field', visibility: 'private' },
+          { name: 'total', type: 'field', visibility: 'private' },
+        ],
+        sourceLocation: {
+          file: 'com/example/model/Order.java',
+          startLine: 1,
+          endLine: 80,
+        },
+      },
+    ],
+    relations: [],
+  };
+
+  // ---------------------------------------------------------------------------
+  // Group A: getPackageStats() — Go Atlas path
+  // ---------------------------------------------------------------------------
+
+  describe('getPackageStats — Go Atlas path', () => {
+    it('returns 2 entries (filters out tests node)', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      expect(result.packages).toHaveLength(2);
+    });
+
+    it('first entry is internal/query (fileCount=2, sorted DESC)', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      expect(result.packages[0].package).toBe('internal/query');
+      expect(result.packages[0].fileCount).toBe(2);
+    });
+
+    it('internal/query has methodCount=3 and fieldCount=1', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      const iq = result.packages.find((p) => p.package === 'internal/query');
+      expect(iq).toBeDefined();
+      expect(iq!.methodCount).toBe(3);
+      expect(iq!.fieldCount).toBe(1);
+    });
+
+    it('internal/query has languageStats with structs/interfaces/functions', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      const iq = result.packages.find((p) => p.package === 'internal/query');
+      expect(iq!.languageStats).toEqual({ structs: 1, interfaces: 1, functions: 3 });
+    });
+
+    it('internal/query has no loc field (loc === undefined)', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      const iq = result.packages.find((p) => p.package === 'internal/query');
+      expect(iq!.loc).toBeUndefined();
+    });
+
+    it('cmd entry has methodCount=1 and fieldCount=1', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      const cmd = result.packages.find((p) => p.package === 'cmd');
+      expect(cmd!.methodCount).toBe(1);
+      expect(cmd!.fieldCount).toBe(1);
+    });
+
+    it('meta.dataPath is go-atlas and locAvailable is false', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats();
+      expect(result.meta.dataPath).toBe('go-atlas');
+      expect(result.meta.locAvailable).toBe(false);
+    });
+
+    it('topN=1 returns only 1 entry', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const result = engine.getPackageStats(2, 1);
+      expect(result.packages).toHaveLength(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group B: getPackageStats() — TypeScript path
+  // ---------------------------------------------------------------------------
+
+  describe('getPackageStats — TypeScript path', () => {
+    it('returns 2 entries (src/cli and src/parser)', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      expect(result.packages).toHaveLength(2);
+    });
+
+    it('src/cli has fileCount=3 (from TsModuleNode.fileCount, includes test file)', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      const cli = result.packages.find((p) => p.package === 'src/cli');
+      expect(cli!.fileCount).toBe(3);
+    });
+
+    it('src/cli has testFileCount=1 (engine.test.ts absent from fileToIds but counted via sourceFiles)', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      const cli = result.packages.find((p) => p.package === 'src/cli');
+      expect(cli!.testFileCount).toBe(1);
+    });
+
+    it('src/cli has entityCount=2, methodCount=3, fieldCount=1', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      const cli = result.packages.find((p) => p.package === 'src/cli');
+      expect(cli!.entityCount).toBe(2);
+      expect(cli!.methodCount).toBe(3);
+      expect(cli!.fieldCount).toBe(1);
+    });
+
+    it('src/cli has languageStats with classes/interfaces/functions/enums', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      const cli = result.packages.find((p) => p.package === 'src/cli');
+      expect(cli!.languageStats).toEqual({ classes: 2, interfaces: 0, functions: 0, enums: 0 });
+    });
+
+    it('src/cli has no loc field', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      const cli = result.packages.find((p) => p.package === 'src/cli');
+      expect(cli!.loc).toBeUndefined();
+    });
+
+    it('meta.dataPath is ts-module-graph and locAvailable is false', () => {
+      const engine = createEngine(tsArchJson);
+      const result = engine.getPackageStats();
+      expect(result.meta.dataPath).toBe('ts-module-graph');
+      expect(result.meta.locAvailable).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group C: getPackageStats() — OO Fallback path (Java)
+  // ---------------------------------------------------------------------------
+
+  describe('getPackageStats — OO Fallback path (Java)', () => {
+    it('depth=3 returns 2 entries (com/example/service and com/example/model)', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(3);
+      expect(result.packages).toHaveLength(2);
+      const pkgNames = result.packages.map((p) => p.package);
+      expect(pkgNames).toContain('com/example/service');
+      expect(pkgNames).toContain('com/example/model');
+    });
+
+    it('com/example/service has fileCount=3, testFileCount=1, entityCount=3, methodCount=4, fieldCount=2, loc=410', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(3);
+      const svc = result.packages.find((p) => p.package === 'com/example/service');
+      expect(svc!.fileCount).toBe(3);
+      expect(svc!.testFileCount).toBe(1);
+      expect(svc!.entityCount).toBe(3);
+      expect(svc!.methodCount).toBe(4);
+      expect(svc!.fieldCount).toBe(2);
+      expect(svc!.loc).toBe(410);
+    });
+
+    it('com/example/model has fileCount=1, testFileCount=0, entityCount=1, fieldCount=2, loc=80', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(3);
+      const model = result.packages.find((p) => p.package === 'com/example/model');
+      expect(model!.fileCount).toBe(1);
+      expect(model!.testFileCount).toBe(0);
+      expect(model!.entityCount).toBe(1);
+      expect(model!.fieldCount).toBe(2);
+      expect(model!.loc).toBe(80);
+    });
+
+    it('meta.dataPath is oo-derived, locAvailable is true, locBasis is maxEndLine', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(3);
+      expect(result.meta.dataPath).toBe('oo-derived');
+      expect(result.meta.locAvailable).toBe(true);
+      expect(result.meta.locBasis).toBe('maxEndLine');
+    });
+
+    it('topN=1 with depth=3 returns the package with highest loc', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(3, 1);
+      expect(result.packages).toHaveLength(1);
+      expect(result.packages[0].package).toBe('com/example/service');
+    });
+
+    it('depth=2 merges service and model into com/example (1 entry)', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const result = engine.getPackageStats(2);
+      expect(result.packages).toHaveLength(1);
+      expect(result.packages[0].package).toBe('com/example');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group D: getSummary().topPackages
+  // ---------------------------------------------------------------------------
+
+  describe('getSummary topPackages', () => {
+    it('Go Atlas engine: topPackages is present, length <= 10, first entry has fileCount', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const summary = engine.getSummary();
+      expect(Array.isArray(summary.topPackages)).toBe(true);
+      expect(summary.topPackages.length).toBeLessThanOrEqual(10);
+      expect(summary.topPackages[0].fileCount).toBeGreaterThan(0);
+    });
+
+    it('Go Atlas engine: topPackages entries have no loc field', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const summary = engine.getSummary();
+      for (const entry of summary.topPackages) {
+        expect(entry.loc).toBeUndefined();
+      }
+    });
+
+    it('TypeScript engine: topPackages has fileCount and languageStats', () => {
+      const engine = createEngine(tsArchJson);
+      const summary = engine.getSummary();
+      expect(Array.isArray(summary.topPackages)).toBe(true);
+      expect(summary.topPackages.length).toBeGreaterThan(0);
+      const first = summary.topPackages[0];
+      expect(first.fileCount).toBeGreaterThan(0);
+      expect(first.languageStats).toBeDefined();
+    });
+
+    it('Java engine: topPackages has loc field', () => {
+      const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
+      const summary = engine.getSummary();
+      expect(Array.isArray(summary.topPackages)).toBe(true);
+      if (summary.topPackages.length > 0) {
+        expect(summary.topPackages[0].loc).toBeDefined();
+      }
     });
   });
 });

@@ -1523,6 +1523,118 @@ describe('DiagramProcessor', () => {
       expect(results[0].stats?.relations).toBe(archJSONWithGraph.relations.length);
     });
   });
+
+  describe('Go Atlas project — stats show Atlas package layer counts', () => {
+    it('stats.entities and stats.relations use Atlas package layer when goAtlas extension is present', async () => {
+      // Build a minimal AggregatedArchJSON mock with goAtlas extension
+      const goAtlasArchJSON: ArchJSON = {
+        version: '1.0',
+        language: 'go',
+        timestamp: new Date().toISOString(),
+        sourceFiles: ['main.go'],
+        entities: [],
+        relations: [],
+        extensions: {
+          goAtlas: {
+            version: '2.0',
+            layers: {
+              package: {
+                nodes: [
+                  { id: 'pkg/a', name: 'a', type: 'internal', fileCount: 1 },
+                  { id: 'pkg/b', name: 'b', type: 'internal', fileCount: 2 },
+                  { id: 'pkg/c', name: 'c', type: 'internal', fileCount: 1 },
+                ],
+                edges: [
+                  { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+                  { from: 'pkg/a', to: 'pkg/c', strength: 2 },
+                  { from: 'pkg/b', to: 'pkg/c', strength: 1 },
+                  { from: 'pkg/c', to: 'pkg/a', strength: 1 },
+                  { from: 'pkg/b', to: 'pkg/a', strength: 3 },
+                ],
+                cycles: [],
+              } as any,
+            },
+            metadata: {
+              generatedAt: new Date().toISOString(),
+              generationStrategy: {
+                functionBodyStrategy: 'none',
+                detectedFrameworks: [],
+                followIndirectCalls: false,
+                goplsEnabled: false,
+              },
+              completeness: { package: 1, capability: 0, goroutine: 0, flow: 0 },
+              performance: { fileCount: 3, parseTime: 5, totalTime: 10, memoryUsage: 512 },
+            },
+          },
+        },
+      };
+
+      const registry = new PluginRegistry();
+      const mockGoPlugin: ILanguagePlugin = {
+        metadata: {
+          name: 'golang',
+          version: '1.0.0',
+          displayName: 'Mock Go plugin',
+          fileExtensions: ['.go'],
+          author: 'test',
+          minCoreVersion: '1.0.0',
+          capabilities: {
+            singleFileParsing: false,
+            incrementalParsing: false,
+            dependencyExtraction: false,
+            typeInference: false,
+          },
+        },
+        initialize: vi.fn().mockResolvedValue(undefined),
+        parseProject: vi.fn().mockResolvedValue(goAtlasArchJSON),
+        canHandle: vi.fn().mockReturnValue(true),
+        dispose: vi.fn().mockResolvedValue(undefined),
+      };
+      registry.register(mockGoPlugin);
+
+      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      (ArchJSONAggregator as any).mockImplementation(() => ({
+        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
+      }));
+
+      const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
+      (OutputPathResolver as any).mockImplementation(() => ({
+        resolve: vi.fn().mockReturnValue({
+          outputDir: './archguard',
+          baseName: 'package',
+          paths: {
+            mmd: './archguard/overview/package.mmd',
+            png: './archguard/overview/package.png',
+            svg: './archguard/overview/package.svg',
+            json: './archguard/overview/package.json',
+          },
+        }),
+        ensureDirectory: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      const { AtlasRenderer } =
+        (await import('@/plugins/golang/atlas/renderers/atlas-renderer.js')) as any;
+      AtlasRenderer.mockImplementation(() => ({
+        render: vi
+          .fn()
+          .mockResolvedValue({ content: 'flowchart LR\n  A --> B', format: 'mermaid' }),
+      }));
+
+      const processor = new DiagramProcessor({
+        diagrams: [{ name: 'overview/package', sources: ['./src'], level: 'package', language: 'go' }],
+        globalConfig: createGlobalConfig(),
+        progress,
+        registry,
+      });
+
+      const results = await processor.processAll();
+
+      expect(results[0].success).toBe(true);
+      // Must use Atlas package layer counts, NOT aggregatedJSON.entities/relations (which are empty)
+      expect(results[0].stats?.entities).toBe(3); // atlasPackageLayer.nodes.length
+      expect(results[0].stats?.relations).toBe(5); // atlasPackageLayer.edges.length
+    });
+  });
 });
 
 describe('Atlas layer parallel rendering', () => {

@@ -393,14 +393,26 @@ export class DiagramProcessor {
       const moduleGraph = aggregatedJSON.extensions?.tsAnalysis?.moduleGraph;
       const usesModuleGraph = diagram.level === 'package' && !!moduleGraph;
 
+      // For Go Atlas diagrams the package layer is the source of truth at package level.
+      const atlasPackageLayer = aggregatedJSON.extensions?.goAtlas?.layers?.['package'];
+      const usesAtlas = !!atlasPackageLayer && !usesModuleGraph;
+
       return {
         name: diagram.name,
         success: true,
         metrics: computedMetrics,
         paths: resultPaths,
         stats: {
-          entities: usesModuleGraph ? moduleGraph.nodes.length : aggregatedJSON.entities.length,
-          relations: usesModuleGraph ? moduleGraph.edges.length : aggregatedJSON.relations.length,
+          entities: usesModuleGraph
+            ? moduleGraph.nodes.length
+            : usesAtlas
+              ? atlasPackageLayer.nodes.length
+              : aggregatedJSON.entities.length,
+          relations: usesModuleGraph
+            ? moduleGraph.edges.length
+            : usesAtlas
+              ? atlasPackageLayer.edges.length
+              : aggregatedJSON.relations.length,
           parseTime,
         },
       };

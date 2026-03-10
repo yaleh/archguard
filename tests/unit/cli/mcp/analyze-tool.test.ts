@@ -240,4 +240,94 @@ describe('registerAnalyzeTool', () => {
     expect(first.content[0].text).toContain('Analysis failed: boom');
     expect(second.content[0].text).toContain('Analysis completed');
   });
+
+  describe('formatAnalyzeResponse Paradigm block', () => {
+    it('Go project → output contains Paradigm block', async () => {
+      runAnalysisMock.mockResolvedValue({
+        config: {
+          workDir: '/project/.archguard',
+          outputDir: '/project/.archguard/output',
+        },
+        diagrams: [{ name: 'architecture', level: 'package', sources: [], language: 'go' }],
+        results: [],
+        queryScopesPersisted: 1,
+        persistedScopeKeys: ['abc123'],
+        hasDiagramFailures: false,
+      });
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      const result = await callback({ projectRoot: '/project' });
+      const text: string = result.content[0].text;
+
+      expect(text).toContain('Paradigm: package (Go Atlas)');
+      expect(text).toContain('Applicable:');
+      expect(text).toContain('Not useful:');
+    });
+
+    it('TypeScript project → output does NOT contain Paradigm block', async () => {
+      runAnalysisMock.mockResolvedValue({
+        config: {
+          workDir: '/project/.archguard',
+          outputDir: '/project/.archguard/output',
+        },
+        diagrams: [
+          { name: 'architecture', level: 'package', sources: [], language: 'typescript' },
+        ],
+        results: [],
+        queryScopesPersisted: 1,
+        persistedScopeKeys: ['abc123'],
+        hasDiagramFailures: false,
+      });
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      const result = await callback({ projectRoot: '/project' });
+      const text: string = result.content[0].text;
+
+      expect(text).not.toContain('Paradigm:');
+    });
+
+    it('empty diagrams → no Paradigm block (graceful fallback)', async () => {
+      runAnalysisMock.mockResolvedValue({
+        config: {
+          workDir: '/project/.archguard',
+          outputDir: '/project/.archguard/output',
+        },
+        diagrams: [],
+        results: [],
+        queryScopesPersisted: 1,
+        persistedScopeKeys: ['abc123'],
+        hasDiagramFailures: false,
+      });
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      const result = await callback({ projectRoot: '/project' });
+      const text: string = result.content[0].text;
+
+      expect(text).not.toContain('Paradigm:');
+    });
+  });
 });

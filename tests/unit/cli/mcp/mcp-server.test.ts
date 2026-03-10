@@ -10,6 +10,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Entity, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
+import type { ArchJSONExtensions } from '@/types/extensions.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTools } from '@/cli/mcp/mcp-server.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
@@ -119,11 +120,11 @@ beforeEach(() => {
 });
 
 describe('MCP server tool registration', () => {
-  it('registers all 8 tools', () => {
+  it('registers all 10 tools', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
-    expect(tools.size).toBe(8);
+    expect(tools.size).toBe(10);
     expect(tools.has('archguard_find_entity')).toBe(true);
     expect(tools.has('archguard_get_dependencies')).toBe(true);
     expect(tools.has('archguard_get_dependents')).toBe(true);
@@ -132,6 +133,8 @@ describe('MCP server tool registration', () => {
     expect(tools.has('archguard_get_file_entities')).toBe(true);
     expect(tools.has('archguard_detect_cycles')).toBe(true);
     expect(tools.has('archguard_summary')).toBe(true);
+    expect(tools.has('archguard_get_atlas_layer')).toBe(true);
+    expect(tools.has('archguard_get_package_stats')).toBe(true);
   });
 });
 
@@ -438,6 +441,380 @@ describe('archguard_summary', () => {
     expect(parsed.relationCount).toBe(4);
     expect(parsed.language).toBe('typescript');
     expect(parsed.kind).toBe('parsed');
+  });
+});
+
+// -- Go Atlas fixtures --
+
+const goAtlasScopeEntry: QueryScopeEntry = {
+  key: 'gotest456',
+  label: 'src (go)',
+  language: 'go',
+  kind: 'parsed',
+  sources: ['/project/src'],
+  entityCount: 0,
+  relationCount: 0,
+  hasAtlasExtension: true,
+};
+
+function makeGoAtlasArchJson(): ArchJSON {
+  const extensions: ArchJSONExtensions = {
+    goAtlas: {
+      version: '2.0',
+      layers: {
+        package: {
+          nodes: [
+            {
+              id: 'github.com/org/repo/internal/query',
+              name: 'internal/query',
+              type: 'internal',
+              fileCount: 3,
+            },
+            {
+              id: 'github.com/org/repo/internal/store',
+              name: 'internal/store',
+              type: 'internal',
+              fileCount: 2,
+            },
+          ],
+          edges: [
+            {
+              from: 'github.com/org/repo/internal/query',
+              to: 'github.com/org/repo/internal/store',
+              strength: 3,
+            },
+          ],
+          cycles: [],
+        },
+        capability: {
+          nodes: [
+            {
+              id: 'internal/query.Querier',
+              name: 'Querier',
+              type: 'interface',
+              package: 'internal/query',
+              exported: true,
+            },
+            {
+              id: 'internal/store.StoreImpl',
+              name: 'StoreImpl',
+              type: 'struct',
+              package: 'internal/store',
+              exported: true,
+            },
+          ],
+          edges: [
+            {
+              id: 'e1',
+              type: 'implements',
+              source: 'internal/store.StoreImpl',
+              target: 'internal/query.Querier',
+              confidence: 1.0,
+            },
+          ],
+        },
+        goroutine: {
+          nodes: [
+            {
+              id: 'spawn-1',
+              name: 'handleConn',
+              type: 'spawned',
+              package: 'internal/query',
+              location: { file: 'query.go', line: 42 },
+            },
+            {
+              id: 'spawn-2',
+              name: 'worker',
+              type: 'spawned',
+              package: 'internal/query',
+              location: { file: 'query.go', line: 55 },
+            },
+          ],
+          edges: [{ from: 'spawn-1', to: 'spawn-2', spawnType: 'go-stmt' }],
+          channels: [],
+          channelEdges: [],
+        },
+        // No flow layer intentionally
+      },
+      metadata: {
+        generatedAt: '2026-01-01T00:00:00Z',
+        generationStrategy: {
+          functionBodyStrategy: 'none',
+          detectedFrameworks: [],
+          followIndirectCalls: false,
+          goplsEnabled: false,
+        },
+        completeness: { package: 1.0, capability: 1.0, goroutine: 1.0, flow: 0 },
+        performance: { fileCount: 5, parseTime: 100, totalTime: 200, memoryUsage: 1024 },
+      },
+    },
+  };
+
+  return {
+    version: '1.0',
+    language: 'go',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities: [],
+    relations: [],
+    extensions,
+  };
+}
+
+function createGoAtlasEngine(): QueryEngine {
+  const archJson = makeGoAtlasArchJson();
+  const archIndex = buildArchIndex(archJson, 'goatlashash');
+  return new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
+}
+
+describe('archguard_get_atlas_layer', () => {
+  it('format=full + layer=package returns the raw PackageGraph JSON', async () => {
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'package', format: 'full' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.nodes).toBeDefined();
+    expect(parsed.edges).toBeDefined();
+    expect(Array.isArray(parsed.nodes)).toBe(true);
+    expect(Array.isArray(parsed.edges)).toBe(true);
+    expect(parsed.nodes).toHaveLength(2);
+    expect(parsed.edges).toHaveLength(1);
+  });
+
+  it('format=adjacency + layer=package returns [{from, to, label}] with short names', async () => {
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'package', format: 'adjacency' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].from).toBe('internal/query');
+    expect(parsed[0].to).toBe('internal/store');
+    expect(parsed[0].label).toBe('3 refs');
+  });
+
+  it('format=adjacency + layer=capability returns [{from, to, label}] with node names', async () => {
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'capability', format: 'adjacency' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].from).toBe('StoreImpl');
+    expect(parsed[0].to).toBe('Querier');
+    expect(parsed[0].label).toBe('implements');
+  });
+
+  it('format=adjacency + layer=goroutine returns [{from, to}] without label', async () => {
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'goroutine', format: 'adjacency' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].from).toBe('handleConn');
+    expect(parsed[0].to).toBe('worker');
+    expect(parsed[0].label).toBeUndefined();
+  });
+
+  it('format=adjacency + layer=flow returns error message', async () => {
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'flow', format: 'adjacency' });
+    const text = result.content[0].text;
+    expect(text).toMatch(/does not support adjacency|use format="full"/i);
+  });
+
+  it('no Atlas extension returns error message containing "No Atlas data"', async () => {
+    // Use default TypeScript engine (no Atlas extension)
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'package', format: 'full' });
+    const text = result.content[0].text;
+    expect(text).toMatch(/No Atlas data/i);
+  });
+
+  it('layer absent in Atlas fixture returns message containing "empty"', async () => {
+    // The fixture has no flow layer
+    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const result = await cb({ layer: 'flow', format: 'full' });
+    const text = result.content[0].text;
+    expect(text).toMatch(/empty/i);
+  });
+
+  it('default format is full — omitting format gives same result as format=full', async () => {
+    loadEngineMock
+      .mockResolvedValueOnce(createGoAtlasEngine())
+      .mockResolvedValueOnce(createGoAtlasEngine());
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_atlas_layer');
+    const withFull = await cb({ layer: 'package', format: 'full' });
+    const withoutFormat = await cb({ layer: 'package' });
+    expect(withoutFormat.content[0].text).toBe(withFull.content[0].text);
+  });
+});
+
+describe('archguard_get_package_stats', () => {
+  function makePackageStatsEngine(result: import('@/cli/query/query-engine.js').PackageStatsResult) {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(result);
+    return engine;
+  }
+
+  const goAtlasResult: import('@/cli/query/query-engine.js').PackageStatsResult = {
+    meta: { dataPath: 'go-atlas', locAvailable: false },
+    packages: [
+      { package: 'internal/query', fileCount: 5, entityCount: 10, methodCount: 15, fieldCount: 3 },
+      { package: 'internal/store', fileCount: 3, entityCount: 6, methodCount: 8, fieldCount: 2 },
+      { package: 'cmd', fileCount: 1, entityCount: 2, methodCount: 3, fieldCount: 0 },
+    ],
+  };
+
+  const ooResult: import('@/cli/query/query-engine.js').PackageStatsResult = {
+    meta: { dataPath: 'oo-derived', locAvailable: true, locBasis: 'maxEndLine' },
+    packages: [
+      { package: 'com/example/service', fileCount: 5, entityCount: 8, methodCount: 12, fieldCount: 4, loc: 800 },
+      { package: 'com/example/model', fileCount: 2, entityCount: 3, methodCount: 0, fieldCount: 6, loc: 200 },
+    ],
+  };
+
+  it('default call returns JSON with meta.dataPath and packages array', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'loc' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.meta.dataPath).toBe('go-atlas');
+    expect(Array.isArray(parsed.packages)).toBe(true);
+    expect(parsed.packages.length).toBeGreaterThan(0);
+  });
+
+  it('sortBy=fileCount returns packages sorted by fileCount DESC', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'fileCount' });
+    const parsed = JSON.parse(result.content[0].text);
+    const fileCounts = parsed.packages.map((p: { fileCount: number }) => p.fileCount);
+    for (let i = 1; i < fileCounts.length; i++) {
+      expect(fileCounts[i]).toBeLessThanOrEqual(fileCounts[i - 1]);
+    }
+  });
+
+  it('sortBy=entityCount returns packages sorted by entityCount DESC', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'entityCount' });
+    const parsed = JSON.parse(result.content[0].text);
+    const counts = parsed.packages.map((p: { entityCount: number }) => p.entityCount);
+    for (let i = 1; i < counts.length; i++) {
+      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
+    }
+  });
+
+  it('topN=2 limits output to 2 packages', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'loc', topN: 2 });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.packages.length).toBeLessThanOrEqual(2);
+  });
+
+  it('minFileCount=3 filters out packages with fewer than 3 files', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'loc', minFileCount: 3 });
+    const parsed = JSON.parse(result.content[0].text);
+    for (const pkg of parsed.packages) {
+      expect(pkg.fileCount).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('minLoc=500 with locAvailable=true filters packages below threshold', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(ooResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 3, sortBy: 'loc', minLoc: 500 });
+    const parsed = JSON.parse(result.content[0].text);
+    // Only com/example/service (loc=800) should pass; com/example/model (loc=200) is filtered
+    expect(parsed.packages.length).toBe(1);
+    expect(parsed.packages[0].package).toBe('com/example/service');
+  });
+
+  it('minLoc=500 with locAvailable=false (Go) does not filter any entry', async () => {
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'loc', minLoc: 500 });
+    const parsed = JSON.parse(result.content[0].text);
+    // goAtlasResult has locAvailable=false, so minLoc is ignored
+    expect(parsed.packages.length).toBe(goAtlasResult.packages.length);
+  });
+
+  it('empty packages returns "No package statistics available for this scope."', async () => {
+    const emptyResult: import('@/cli/query/query-engine.js').PackageStatsResult = {
+      meta: { dataPath: 'go-atlas', locAvailable: false },
+      packages: [],
+    };
+    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(emptyResult));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ depth: 2, sortBy: 'loc' });
+    expect(result.content[0].text).toBe('No package statistics available for this scope.');
+  });
+
+  it('no query data returns standard "No query data found" error', async () => {
+    loadEngineMock.mockRejectedValueOnce(
+      new Error('No query data found. Run `archguard analyze` first.')
+    );
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server, '/workspace/default');
+
+    const cb = tools.get('archguard_get_package_stats');
+    const result = await cb({ projectRoot: '/tmp/project', depth: 2, sortBy: 'loc' });
+    expect(result.content[0].text).toContain('No query data found');
   });
 });
 
