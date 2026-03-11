@@ -123,6 +123,47 @@ describe('TestAnalyzer - patternConfig override', () => {
   });
 });
 
+describe('TestAnalyzer - performance hint exemption', () => {
+  it('preserves performance testTypeHint even when assertionCount is 0 (JMH/benchmark files)', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/workspace';
+    const plugin = makePlugin();
+    const filePath = `${workspaceRoot}/VectorPerfBench.java`;
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'performance',
+        testCases: [{ name: 'benchDotProduct', isSkipped: false, assertionCount: 0 }],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    expect(result.testFiles[0].testType).toBe('performance');
+  });
+
+  it('does NOT emit zero_assertion issue for performance-typed files', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/workspace';
+    const plugin = makePlugin();
+    const filePath = `${workspaceRoot}/TensorBench.java`;
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'performance',
+        testCases: [{ name: 'benchMatmul', isSkipped: false, assertionCount: 0 }],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    expect(result.testFiles[0].testType).toBe('performance');
+    expect(result.metrics.issueCount.zero_assertion).toBe(0);
+  });
+});
+
 describe('TestAnalyzer - metrics computation', () => {
   it('computes correct byType counts', async () => {
     const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
@@ -175,11 +216,10 @@ describe('TestAnalyzer - metrics computation', () => {
       }),
     ]);
 
-    // zero-assertion test → testType becomes 'debug' → exempt from orphan_test
-    // but the debug testType is exempt from zero_assertion too
-    // so no issues expected for a debug file
+    // zero-assertion test → testType becomes 'debug'
+    // debug files EMIT zero_assertion (proposal: "同步输出 issue") but are EXEMPT from orphan_test
     const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
-    expect(result.metrics.issueCount.zero_assertion).toBe(0); // debug exempt
-    expect(result.metrics.issueCount.orphan_test).toBe(0);    // debug exempt
+    expect(result.metrics.issueCount.zero_assertion).toBe(1); // debug emits zero_assertion
+    expect(result.metrics.issueCount.orphan_test).toBe(0);    // debug exempt from orphan
   });
 });

@@ -10,10 +10,13 @@ import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
+  RawTestFile,
+  RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
@@ -40,6 +43,7 @@ export class JavaPlugin implements ILanguagePlugin {
       incrementalParsing: true,
       dependencyExtraction: true,
       typeInference: false,
+      testStructureExtraction: true,
     },
   };
 
@@ -150,6 +154,7 @@ export class JavaPlugin implements ILanguagePlugin {
       sourceFiles: files,
       entities,
       relations,
+      workspaceRoot,
     };
   }
 
@@ -232,18 +237,102 @@ export class JavaPlugin implements ILanguagePlugin {
     };
   }
 
-  /**
-   * Stub: Java test file detection not yet implemented.
-   */
-  isTestFile(_filePath: string): boolean {
+  isTestFile(filePath: string): boolean {
+    const parts = filePath.replace(/\\/g, '/').split('/');
+    const base = parts[parts.length - 1];
+    if (path.extname(base).toLowerCase() !== '.java') return false;
+    // directory convention
+    if (parts.some((p) => p === 'test' || p === 'tests')) return true;
+    // naming conventions
+    const name = base.slice(0, -5); // strip .java
+    if (/^Test[A-Z]/.test(name)) return true;
+    if (/(?:Test|Tests|TestCase|IT|Spec|Bench|Benchmark)$/.test(name)) return true;
     return false;
   }
 
-  /**
-   * Stub: Java test structure extraction not yet implemented.
-   */
-  extractTestStructure(_filePath: string, _code: string): null {
-    return null;
+  extractTestStructure(filePath: string, code: string, _patternConfig?: TestPatternConfig): RawTestFile | null {
+    // Detect frameworks
+    const hasJUnit5 = /import\s+org\.junit\.jupiter\.api\b/.test(code);
+    const hasJUnit4 = !hasJUnit5 && /import\s+org\.junit\b/.test(code);
+    const hasTestNG = /import\s+org\.testng\.annotations\b/.test(code);
+    const hasJMH = /import\s+org\.openjdk\.jmh\.annotations\b/.test(code);
+    const hasAssertJ = /import\s+org\.assertj\.core\.api\b/.test(code);
+
+    const frameworks: string[] = [];
+    if (hasJUnit5) frameworks.push('junit5');
+    else if (hasJUnit4) frameworks.push('junit4');
+    if (hasTestNG) frameworks.push('testng');
+    if (hasJMH) frameworks.push('jmh');
+    if (hasAssertJ) frameworks.push('assertj');
+
+    if (frameworks.length === 0) return null;
+
+    // Extract test/benchmark methods line-by-line
+    const lines = code.split('\n');
+    const testCases: RawTestCase[] = [];
+    let pendingAnnotation = false; // @Test or @Benchmark seen
+    let pendingSkip = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^@(?:Test|Benchmark)\b/.test(trimmed)) {
+        pendingAnnotation = true;
+      } else if (/^@(?:Ignore|Disabled)\b/.test(trimmed)) {
+        pendingSkip = true;
+      } else if (pendingAnnotation) {
+        if (trimmed.startsWith('@')) {
+          // Another annotation — keep pending
+        } else if (/\b(\w+)\s*\(/.test(trimmed)) {
+          // Method declaration
+          const nameMatch = /(?:(?:public|private|protected|static|final|void|\w+)\s+)+(\w+)\s*\(/.exec(trimmed);
+          if (nameMatch) {
+            testCases.push({ name: nameMatch[1], isSkipped: pendingSkip, assertionCount: 0 });
+          }
+          pendingAnnotation = false;
+          pendingSkip = false;
+        } else if (trimmed !== '' && !trimmed.startsWith('//') && !trimmed.startsWith('*')) {
+          pendingAnnotation = false;
+          pendingSkip = false;
+        }
+      }
+    }
+
+    if (testCases.length === 0) return null;
+
+    // Count total assertions and distribute evenly
+    const assertionTotal = this.countJavaAssertions(code);
+    const perCase = testCases.length > 0 ? Math.round(assertionTotal / testCases.length) : 0;
+    for (const tc of testCases) tc.assertionCount = perCase;
+
+    const isBenchmark = hasJMH || /benchmark|bench/i.test(path.basename(filePath, '.java'));
+    const testTypeHint: RawTestFile['testTypeHint'] = isBenchmark ? 'performance' : 'unit';
+
+    return {
+      filePath,
+      frameworks,
+      testTypeHint,
+      testCases,
+      importedSourceFiles: [],
+    };
+  }
+
+  private countJavaAssertions(code: string): number {
+    const patterns = [
+      /\bAssert\.\s*assert\w+\s*\(/g,
+      /\bAssertions\.\s*assert\w+\s*\(/g,
+      /\bassertEquals\s*\(/g,
+      /\bassertTrue\s*\(/g,
+      /\bassertFalse\s*\(/g,
+      /\bassertNotNull\s*\(/g,
+      /\bassertNull\s*\(/g,
+      /\bassertThat\s*\(/g,
+      /\bassertThrows\s*\(/g,
+      /\bassertSame\s*\(/g,
+      /\bassertNotSame\s*\(/g,
+    ];
+    let count = 0;
+    for (const pat of patterns) count += (code.match(pat) ?? []).length;
+    return count;
   }
 
   /**

@@ -66,6 +66,22 @@ describe('TestCoverageMapper', () => {
     expect(result).toHaveLength(0);
   });
 
+  // Deviation 5: coverage map must include ALL entities (score=0 for uncovered ones)
+  it('includes entities with no test coverage (score 0, empty coveredByTestIds)', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('foo.test.ts', ['entity-1'])];
+    const archJson = makeArchJson([
+      { id: 'entity-1', name: 'Covered', type: 'class', sourceLocation: { file: 'src/a.ts', startLine: 1, endLine: 5 } },
+      { id: 'entity-2', name: 'Uncovered', type: 'class', sourceLocation: { file: 'src/b.ts', startLine: 1, endLine: 5 } },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const uncovered = result.find((l: CoverageLink) => l.sourceEntityId === 'entity-2');
+    expect(uncovered).toBeDefined();
+    expect(uncovered!.coverageScore).toBe(0);
+    expect(uncovered!.coveredByTestIds).toHaveLength(0);
+  });
+
   it('path-convention matching creates link for test with matching name', async () => {
     const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
     const mapper = new TestCoverageMapper();

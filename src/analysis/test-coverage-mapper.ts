@@ -4,7 +4,10 @@ import type { ArchJSON } from '@/types/index.js';
 
 export class TestCoverageMapper {
   buildCoverageMap(testFiles: TestFileInfo[], archJson: ArchJSON, workspaceRoot: string): CoverageLink[] {
-    const linkMap = new Map<string, { testIds: Set<string>; score: number }>();
+    // Initialise with ALL entities at score 0 so callers can query uncovered entities
+    const linkMap = new Map<string, { testIds: Set<string>; score: number }>(
+      archJson.entities.map((e) => [e.id, { testIds: new Set<string>(), score: 0 }])
+    );
 
     for (const testFile of testFiles) {
       // Import-analysis layer: confidence weight 0.85

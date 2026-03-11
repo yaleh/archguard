@@ -235,6 +235,37 @@ describe('test analysis MCP tools — analysis present', () => {
     expect(parsed.detectedFrameworks.some((f: { name: string }) => f.name === 'vitest')).toBe(true);
   });
 
+  // Deviation 4: suggestedPatternConfig must contain assertionPatterns for detected frameworks
+  it('archguard_detect_test_patterns returns non-empty suggestedPatternConfig with assertionPatterns', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_detect_test_patterns')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.suggestedPatternConfig).toBeDefined();
+    expect(Array.isArray(parsed.suggestedPatternConfig.assertionPatterns)).toBe(true);
+    expect(parsed.suggestedPatternConfig.assertionPatterns.length).toBeGreaterThan(0);
+  });
+
+  it('archguard_detect_test_patterns returns assertionPatterns for junit4', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_detect_test_patterns')!;
+    loadEngineMock.mockResolvedValueOnce({
+      hasTestAnalysis: () => true,
+      getTestAnalysis: () => ({
+        testFiles: [{ frameworks: ['junit4'] }],
+        metrics: { totalTestFiles: 1 },
+        patternConfigSource: 'auto',
+      }),
+    } as any);
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed.suggestedPatternConfig.assertionPatterns)).toBe(true);
+    expect(parsed.suggestedPatternConfig.assertionPatterns.length).toBeGreaterThan(0);
+    expect(parsed.suggestedPatternConfig.assertionPatterns.some((p: string) => p.includes('assert'))).toBe(true);
+  });
+
   it('registers all four test analysis tools', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);

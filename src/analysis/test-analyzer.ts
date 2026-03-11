@@ -120,8 +120,9 @@ export class TestAnalyzer {
       const skipCount = raw.testCases.filter((c) => c.isSkipped).length;
 
       // Behaviour-first: zero assertions with at least one test case → 'debug'
+      // Exception: performance-hinted files (JMH benchmarks etc.) never have assertions by design
       const testType: TestFileInfo['testType'] =
-        assertionCount === 0 && testCaseCount > 0
+        assertionCount === 0 && testCaseCount > 0 && raw.testTypeHint !== 'performance'
           ? 'debug'
           : raw.testTypeHint !== 'unknown'
             ? raw.testTypeHint
@@ -196,7 +197,9 @@ export class TestAnalyzer {
       totalSkips += f.skipCount;
     }
 
-    const coveredEntities = new Set(coverageMap.map((l: any) => l.sourceEntityId));
+    const coveredEntities = new Set(
+      coverageMap.filter((l: any) => l.coverageScore > 0).map((l: any) => l.sourceEntityId)
+    );
     const totalEntities = archJson.entities.length;
 
     const issueCount: Record<string, number> = {

@@ -76,13 +76,58 @@ describe('TestIssueDetector', () => {
     expect(poverty.length).toBeGreaterThan(0);
   });
 
-  it('does NOT detect zero_assertion for debug-type files', async () => {
+  // Deviation 1 fix: debug files MUST emit zero_assertion (proposal: "同步输出 issue")
+  it('detects zero_assertion for debug-type files (behaviour-first)', async () => {
     const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
     const detector = new TestIssueDetector();
     const files = [makeTestFile({ assertionCount: 0, testCaseCount: 1, testType: 'debug' })];
     const issues = detector.detect(files, []);
     const zeroAssertion = issues.filter(i => i.type === 'zero_assertion');
-    expect(zeroAssertion).toHaveLength(0);
+    expect(zeroAssertion).toHaveLength(1);
+  });
+
+  // Deviation 2: orphan_test severity must be 'info'
+  it('orphan_test has severity info', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const files = [makeTestFile({ testType: 'unit', coveredEntityIds: [] })];
+    const issues = detector.detect(files, []);
+    const orphan = issues.find(i => i.type === 'orphan_test');
+    expect(orphan?.severity).toBe('info');
+  });
+
+  // Deviation 3a: skip_accumulation triggers at >20% threshold (not >30%)
+  it('detects skip_accumulation when skipCount > 20% (3/14 ≈ 21%)', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const files = [makeTestFile({ skipCount: 3, testCaseCount: 14 })]; // 21.4%
+    const issues = detector.detect(files, []);
+    const skip = issues.filter(i => i.type === 'skip_accumulation');
+    expect(skip).toHaveLength(1);
+  });
+
+  // Deviation 3b: skip_accumulation severity must be 'info'
+  it('skip_accumulation has severity info', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const files = [makeTestFile({ skipCount: 5, testCaseCount: 10 })]; // 50%
+    const issues = detector.detect(files, []);
+    const skip = issues.find(i => i.type === 'skip_accumulation');
+    expect(skip?.severity).toBe('info');
+  });
+
+  it('does NOT emit assertion_poverty for performance-typed files (JMH benchmarks)', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const files = [makeTestFile({
+      testCaseCount: 4,
+      assertionCount: 0,
+      assertionDensity: 0,
+      testType: 'performance',
+    })];
+    const issues = detector.detect(files, []);
+    expect(issues.filter(i => i.type === 'assertion_poverty')).toHaveLength(0);
+    expect(issues.filter(i => i.type === 'zero_assertion')).toHaveLength(0);
   });
 
   it('returns empty array for healthy test files', async () => {

@@ -176,4 +176,195 @@ public class Invalid {
       }
     });
   });
+
+  describe('isTestFile', () => {
+    it('has testStructureExtraction capability', () => {
+      expect(plugin.metadata.capabilities.testStructureExtraction).toBe(true);
+    });
+
+    it('recognizes files in /test/ directory', () => {
+      expect(plugin.isTestFile!('/project/src/test/java/com/example/FooTest.java')).toBe(true);
+      expect(plugin.isTestFile!('/project/src/tests/java/com/example/Foo.java')).toBe(true);
+    });
+
+    it('recognizes Test-prefixed filenames', () => {
+      expect(plugin.isTestFile!('/project/src/main/TestParser.java')).toBe(true);
+      expect(plugin.isTestFile!('/project/src/TestModels.java')).toBe(true);
+    });
+
+    it('recognizes *Test.java, *Tests.java, *TestCase.java', () => {
+      expect(plugin.isTestFile!('/project/FooTest.java')).toBe(true);
+      expect(plugin.isTestFile!('/project/OpenAIServiceTests.java')).toBe(true);
+      expect(plugin.isTestFile!('/project/FooTestCase.java')).toBe(true);
+    });
+
+    it('recognizes JMH benchmark files (*Bench.java, *Benchmark.java)', () => {
+      expect(plugin.isTestFile!('/project/VectorPerfBench.java')).toBe(true);
+      expect(plugin.isTestFile!('/project/TensorBenchmark.java')).toBe(true);
+    });
+
+    it('rejects non-Java and non-test files', () => {
+      expect(plugin.isTestFile!('/project/src/main/Foo.java')).toBe(false);
+      expect(plugin.isTestFile!('/project/src/MyService.java')).toBe(false);
+      expect(plugin.isTestFile!('/project/test/foo.ts')).toBe(false);
+    });
+  });
+
+  describe('extractTestStructure', () => {
+    it('detects JUnit 4 framework', () => {
+      const code = `
+import org.junit.Test;
+import org.junit.Assert;
+public class FooTest {
+  @Test
+  public void testSomething() {
+    Assert.assertEquals(1, 1);
+  }
+}`;
+      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.frameworks).toContain('junit4');
+      expect(result!.frameworks).not.toContain('junit5');
+    });
+
+    it('detects JUnit 5 framework', () => {
+      const code = `
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+public class ChatApiTest {
+  @Test
+  public void testChatCompletion() {
+    Assertions.assertEquals(200, response.getStatus());
+  }
+}`;
+      const result = plugin.extractTestStructure!('/project/ChatApiTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.frameworks).toContain('junit5');
+      expect(result!.frameworks).not.toContain('junit4');
+    });
+
+    it('detects JMH benchmark framework', () => {
+      const code = `
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
+public class VectorPerfBench {
+  @Benchmark
+  public void benchDotProduct(Blackhole bh) {
+    bh.consume(ops.dotProduct(a, b, 0, 0, SIZE));
+  }
+}`;
+      const result = plugin.extractTestStructure!('/project/VectorPerfBench.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.frameworks).toContain('jmh');
+      expect(result!.testTypeHint).toBe('performance');
+    });
+
+    it('extracts @Test-annotated methods as test cases', () => {
+      const code = `
+import org.junit.Test;
+public class TestParser {
+  @Test
+  public void testReadSafetensor() {
+    Assert.assertEquals(16, data.length);
+  }
+  @Test
+  public void testSlicing() {
+    Assert.assertEquals(2, t.dims());
+  }
+}`;
+      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.testCases).toHaveLength(2);
+      expect(result!.testCases.map((tc) => tc.name)).toContain('testReadSafetensor');
+      expect(result!.testCases.map((tc) => tc.name)).toContain('testSlicing');
+    });
+
+    it('counts assertions correctly', () => {
+      const code = `
+import org.junit.Test;
+import org.junit.Assert;
+public class TestParser {
+  @Test
+  public void testSomething() {
+    Assert.assertEquals(16, data.length);
+    Assert.assertTrue(result > 0);
+    Assert.assertNotNull(obj);
+  }
+}`;
+      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.testCases[0].assertionCount).toBeGreaterThanOrEqual(3);
+    });
+
+    it('detects @Ignore-skipped tests (JUnit 4)', () => {
+      const code = `
+import org.junit.Test;
+import org.junit.Ignore;
+public class FooTest {
+  @Test
+  public void testOk() { Assert.assertTrue(true); }
+  @Ignore
+  @Test
+  public void testSkipped() { Assert.assertTrue(false); }
+}`;
+      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      expect(result).not.toBeNull();
+      const skipped = result!.testCases.filter((tc) => tc.isSkipped);
+      expect(skipped).toHaveLength(1);
+      expect(skipped[0].name).toBe('testSkipped');
+    });
+
+    it('detects @Disabled-skipped tests (JUnit 5)', () => {
+      const code = `
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+public class FooTest {
+  @Test
+  public void testOk() { Assertions.assertTrue(true); }
+  @Disabled("not ready")
+  @Test
+  public void testSkipped() { }
+}`;
+      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      expect(result).not.toBeNull();
+      const skipped = result!.testCases.filter((tc) => tc.isSkipped);
+      expect(skipped).toHaveLength(1);
+      expect(skipped[0].name).toBe('testSkipped');
+    });
+
+    it('sets testTypeHint to unit for JUnit tests', () => {
+      const code = `
+import org.junit.Test;
+public class FooTest {
+  @Test
+  public void testFoo() { Assert.assertTrue(true); }
+}`;
+      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      expect(result!.testTypeHint).toBe('unit');
+    });
+
+    it('returns null when no known test framework is detected', () => {
+      const code = `
+package com.example;
+public class RegularClass {
+  public void doStuff() { }
+}`;
+      const result = plugin.extractTestStructure!('/project/RegularClass.java', code);
+      expect(result).toBeNull();
+    });
+
+    it('extracts @Benchmark methods as test cases', () => {
+      const code = `
+import org.openjdk.jmh.annotations.*;
+public class TensorBench {
+  @Benchmark
+  public void benchMatmul(Blackhole bh) { bh.consume(result); }
+  @Benchmark
+  public void benchDot(Blackhole bh) { bh.consume(result2); }
+}`;
+      const result = plugin.extractTestStructure!('/project/TensorBench.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.testCases).toHaveLength(2);
+    });
+  });
 });

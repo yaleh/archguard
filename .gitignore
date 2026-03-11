@@ -57,3 +57,4 @@ archguard*.json
 /.archguard/
 /*-archguard-*.tgz
 /.agents/review/
+/test-output/
