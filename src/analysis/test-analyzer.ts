@@ -58,6 +58,20 @@ export class TestAnalyzer {
       );
     }
 
+    // Java: scan entire workspace tree to handle Maven multi-module projects
+    // This mirrors the Go special case and avoids inferTestDirs scoping to a single module
+    if (plugin.metadata.fileExtensions.includes('.java')) {
+      const allJavaFiles = await globby(`${workspaceRoot}/**/*.java`, {
+        onlyFiles: true,
+        absolute: true,
+        ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
+      });
+      if (plugin.isTestFile) {
+        return allJavaFiles.filter((f) => plugin.isTestFile!(f, patternConfig));
+      }
+      return allJavaFiles;
+    }
+
     // Default: walk candidate dirs and filter with plugin.isTestFile
     const candidateDirs = await this.inferTestDirs(workspaceRoot);
     const allFiles: string[] = [];

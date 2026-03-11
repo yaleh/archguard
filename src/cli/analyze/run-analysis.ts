@@ -119,7 +119,10 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           await plugin.initialize?.({ workspaceRoot: archJson.workspaceRoot ?? sessionRoot });
         }
 
-        const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
+        // For Java (Maven multi-module), use sessionRoot so the Java glob in
+        // discoverTestFiles covers all sub-modules, not just the archJson's module.
+        const workspaceRoot =
+          archJson.language === 'java' ? sessionRoot : (archJson.workspaceRoot ?? sessionRoot);
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, { workspaceRoot });
 

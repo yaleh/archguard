@@ -1,6 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ILanguagePlugin, RawTestFile } from '@/core/interfaces/language-plugin.js';
 import type { ArchJSON } from '@/types/index.js';
+import { JavaPlugin } from '@/plugins/java/index.js';
+import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
+import os from 'os';
+import path from 'path';
 
 function makePlugin(fileExtensions: string[] = ['.ts', '.tsx']): ILanguagePlugin {
   return {
@@ -221,5 +225,73 @@ describe('TestAnalyzer - metrics computation', () => {
     const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
     expect(result.metrics.issueCount.zero_assertion).toBe(1); // debug emits zero_assertion
     expect(result.metrics.issueCount.orphan_test).toBe(0);    // debug exempt from orphan
+  });
+});
+
+describe('TestAnalyzer.discoverTestFiles — Java multi-module (real filesystem)', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'archguard-java-test-'));
+    // Create a root-level 'src/' to force inferTestDirs to scope to tmpDir/src (triggering the bug).
+    // With src/ present, inferTestDirs returns [tmpDir/src], so the glob only visits tmpDir/src/**/*
+    // and misses the sub-module test files in jlama-net/ and jlama-tests/.
+    await mkdir(path.join(tmpDir, 'src'), { recursive: true });
+    await mkdir(path.join(tmpDir, 'jlama-core/src/main/java/com/example'), { recursive: true });
+    await mkdir(path.join(tmpDir, 'jlama-net/src/test/java/com/example'), { recursive: true });
+    await mkdir(path.join(tmpDir, 'jlama-tests/src/test/java/com/example'), { recursive: true });
+
+    await writeFile(
+      path.join(tmpDir, 'jlama-core/src/main/java/com/example/Core.java'),
+      'public class Core {}'
+    );
+    await writeFile(
+      path.join(tmpDir, 'jlama-net/src/test/java/com/example/RestServiceTest.java'),
+      'import org.junit.Test;\npublic class RestServiceTest { @Test public void testGet() {} }'
+    );
+    await writeFile(
+      path.join(tmpDir, 'jlama-tests/src/test/java/com/example/IntegrationTest.java'),
+      'import org.junit.Test;\npublic class IntegrationTest { @Test public void testFlow() {} }'
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('discovers test files in all sub-modules when workspaceRoot is the project root', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const plugin = new JavaPlugin();
+    await plugin.initialize({ workspaceRoot: tmpDir });
+
+    const analyzer = new TestAnalyzer();
+    // collectRawTestFiles is mocked so tree-sitter is never invoked
+    const collectSpy = vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([]);
+
+    await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot: tmpDir });
+
+    const discoveredPaths: string[] = collectSpy.mock.calls[0][0];
+
+    expect(discoveredPaths.some((p) => p.includes('RestServiceTest.java'))).toBe(true);
+    expect(discoveredPaths.some((p) => p.includes('IntegrationTest.java'))).toBe(true);
+    // Non-test sources must be excluded
+    expect(discoveredPaths.some((p) => p.includes('Core.java'))).toBe(false);
+  });
+
+  it('discovers only test files within the given sub-module when workspaceRoot is a single sub-module root', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const plugin = new JavaPlugin();
+    const subRoot = path.join(tmpDir, 'jlama-tests');
+    await plugin.initialize({ workspaceRoot: subRoot });
+
+    const analyzer = new TestAnalyzer();
+    const collectSpy = vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([]);
+
+    await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot: subRoot });
+
+    const discoveredPaths: string[] = collectSpy.mock.calls[0][0];
+
+    expect(discoveredPaths.some((p) => p.includes('IntegrationTest.java'))).toBe(true);
+    expect(discoveredPaths.some((p) => p.includes('RestServiceTest.java'))).toBe(false);
   });
 });
