@@ -4,7 +4,8 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import crypto from 'crypto';
+import crypto, { createHash } from 'crypto';
+import type { TestAnalysis } from '@/types/extensions.js';
 
 export interface CacheStats {
   hits: number;
@@ -224,5 +225,37 @@ export class CacheManager {
    */
   getDefaultTTL(): number {
     return this.defaultTTL;
+  }
+
+  /**
+   * Generate a composite cache key from a list of file paths and a config blob string.
+   * Used to key test analysis results that depend on both source files and pattern config.
+   */
+  getCompositeKey(files: string[], configBlob: string): string {
+    const combined = files.sort().join('|') + '|' + configBlob;
+    return createHash('sha256').update(combined).digest('hex').slice(0, 16);
+  }
+
+  /**
+   * Load a cached TestAnalysis result.
+   * Returns null on cache miss or read error.
+   */
+  async loadCachedTestAnalysis(compositeKey: string): Promise<TestAnalysis | null> {
+    try {
+      const cachePath = path.join(this.cacheDir, `test-analysis-${compositeKey}.json`);
+      const data = await fs.readFile(cachePath, 'utf-8');
+      return JSON.parse(data) as TestAnalysis;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Persist a TestAnalysis result to the cache.
+   */
+  async saveCachedTestAnalysis(compositeKey: string, analysis: TestAnalysis): Promise<void> {
+    const cachePath = path.join(this.cacheDir, `test-analysis-${compositeKey}.json`);
+    await fs.ensureDir(path.dirname(cachePath));
+    await fs.writeFile(cachePath, JSON.stringify(analysis, null, 2), 'utf-8');
   }
 }

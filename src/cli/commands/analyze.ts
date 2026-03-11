@@ -122,6 +122,10 @@ export function createAnalyzeCommand(): Command {
       .option('--cli-command <command>', 'Claude CLI command')
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
 
+      // ========== Test Analysis ==========
+      .option('--include-tests', 'Include test system analysis in output')
+      .option('--tests-only', 'Run only test analysis (uses cached ArchJSON if available, skips diagram generation)')
+
       // ========== Go Architecture Atlas ==========
       .option(
         '--atlas-layers <layers>',

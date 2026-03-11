@@ -14,6 +14,7 @@ import type { QueryEngine, EntitySummary, PackageStatEntry, PackageStatsResult }
 import type { Entity } from '@/types/index.js';
 import type { PackageGraph, CapabilityGraph, GoroutineTopology } from '@/types/extensions.js';
 import { registerAnalyzeTool } from './analyze-tool.js';
+import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
 
 const projectRootParam = z
   .string()
@@ -65,6 +66,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerAnalyzeTool(server, {
     defaultRoot,
   });
+  registerTestAnalysisTools(server, defaultRoot);
   return server;
 }
 

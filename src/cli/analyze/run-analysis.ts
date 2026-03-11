@@ -10,6 +10,8 @@ import { persistQueryScopes } from '../query/query-artifacts.js';
 import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
+import { TestAnalyzer } from '@/analysis/test-analyzer.js';
+import { TestOutputWriter } from '../utils/test-output-writer.js';
 
 export interface RunAnalysisOptions {
   sessionRoot: string;
@@ -82,6 +84,77 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   });
 
   const results = await processor.processAll();
+
+  // Test analysis — invoked when --include-tests or --tests-only is set
+  if (cliOptions.includeTests || cliOptions.testsOnly) {
+    const archJson = processor.getLastArchJson();
+    if (archJson) {
+      try {
+        reporter.start('Running test analysis...');
+        const language = archJson.language ?? 'typescript';
+        // Dynamically load the plugin for this language
+        let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin | null = null;
+        try {
+          if (language === 'go') {
+            const { GoPlugin } = await import('@/plugins/golang/index.js');
+            plugin = new GoPlugin();
+          } else if (language === 'java') {
+            const { JavaPlugin } = await import('@/plugins/java/index.js');
+            plugin = new JavaPlugin();
+          } else if (language === 'python') {
+            const { PythonPlugin } = await import('@/plugins/python/index.js');
+            plugin = new PythonPlugin();
+          } else if (language === 'cpp') {
+            const { CppPlugin } = await import('@/plugins/cpp/index.js');
+            plugin = new CppPlugin();
+          } else {
+            const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+            plugin = new TypeScriptPlugin();
+          }
+          await plugin.initialize?.({ workspaceRoot: archJson.workspaceRoot ?? sessionRoot });
+        } catch {
+          // If plugin load fails, fall back to TypeScript plugin
+          const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+          plugin = new TypeScriptPlugin();
+          await plugin.initialize?.({ workspaceRoot: archJson.workspaceRoot ?? sessionRoot });
+        }
+
+        const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
+        const analyzer = new TestAnalyzer();
+        const testAnalysis = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+
+        // Attach result to archJson extensions
+        if (!archJson.extensions) {
+          (archJson as any).extensions = {};
+        }
+        archJson.extensions.testAnalysis = testAnalysis;
+
+        // Persist testAnalysis to a standalone query file so MCP tools can read it
+        // (arch.json extensions are not reliably updated after processAll in multi-source runs)
+        const queryDir = path.join(config.workDir || workDir, 'query');
+        await import('fs-extra').then((fs) =>
+          fs.default.outputJson(path.join(queryDir, 'test-analysis.json'), testAnalysis, { spaces: 2 })
+        );
+
+        // Write test output files
+        const testOutputDir = config.outputDir || path.join(config.workDir || workDir, 'output');
+        const writer = new TestOutputWriter();
+        await writer.write(testAnalysis, testOutputDir);
+
+        // Generate coverage heatmap
+        await processor.generateTestCoverageHeatmap(testAnalysis, archJson, testOutputDir);
+
+        reporter.succeed(
+          `Test analysis complete: ${testAnalysis.metrics.totalTestFiles} test files found`
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        reporter.warn(`[test-analysis] Failed: ${msg}`);
+      }
+    } else if (config.verbose) {
+      reporter.warn('[test-analysis] No ArchJSON available for test analysis');
+    }
+  }
 
   const successfulNames = results.filter((r) => r.success).map((r) => r.name);
   if (successfulNames.length > 0 && !partial) {

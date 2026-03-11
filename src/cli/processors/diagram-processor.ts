@@ -26,6 +26,9 @@ import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import { ArchJsonProvider, hashSources } from './arch-json-provider.js';
 import { DiagramOutputRouter } from './diagram-output-router.js';
+import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
+import type { TestAnalysis } from '@/types/extensions.js';
+import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
 import path from 'path';
@@ -120,6 +123,7 @@ export class DiagramProcessor {
   private parallelProgress?: ParallelProgressReporter;
   private readonly provider: ArchJsonProvider;
   private readonly router: DiagramOutputRouter;
+  private _lastArchJson: ArchJSON | null = null;
 
   constructor(options: DiagramProcessorOptions) {
     if (options.diagrams.length === 0) {
@@ -273,6 +277,16 @@ export class DiagramProcessor {
   }
 
   /**
+   * Return the first parsed ArchJSON from processAll().
+   * Prefers the scope group with role === 'primary'; falls back to the first
+   * successfully parsed ArchJSON if no primary role exists.
+   * Returns null before processAll() is called or if all groups failed.
+   */
+  public getLastArchJson(): ArchJSON | null {
+    return this._lastArchJson;
+  }
+
+  /**
    * Process a group of diagrams that share the same sources.
    * Delegates ArchJSON acquisition to ArchJsonProvider.
    *
@@ -295,6 +309,10 @@ export class DiagramProcessor {
         needsModuleGraph,
       });
       this.registerQueryScope(firstDiagram.sources, rawArchJSON, kind, firstDiagram.queryRole);
+      // Store ArchJSON for test analysis: first assignment wins, unless a primary role is found.
+      if (this._lastArchJson === null || firstDiagram.queryRole === 'primary') {
+        this._lastArchJson = rawArchJSON;
+      }
       return await pMap(
         diagrams,
         (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
@@ -308,6 +326,43 @@ export class DiagramProcessor {
         error: errorMessage,
       }));
     }
+  }
+
+  /**
+   * Generate a test coverage heatmap Markdown file with a four-bucket Mermaid diagram.
+   *
+   * Writes `test/coverage-heatmap.md` under the given outputDir. This method is
+   * intentionally NOT called from processAll() — it is called from run-analysis.ts
+   * after TestAnalyzer.analyze() completes and testAnalysis is available.
+   *
+   * @param analysis   The freshly computed TestAnalysis result.
+   * @param archJson   The ArchJSON from which entity coverage is read.
+   * @param outputDir  The base output directory (e.g. `.archguard`).
+   */
+  public async generateTestCoverageHeatmap(
+    analysis: TestAnalysis,
+    archJson: ArchJSON,
+    outputDir: string
+  ): Promise<void> {
+    const renderer = new TestCoverageRenderer();
+    const mermaidCode = renderer.render(analysis, archJson);
+
+    const heatmapDir = path.join(outputDir, 'test');
+    await fs.ensureDir(heatmapDir);
+
+    const heatmapPath = path.join(heatmapDir, 'coverage-heatmap.md');
+    const content = [
+      '# Test Coverage Heatmap',
+      '',
+      '> Generated from test analysis — four buckets by coverage score',
+      '',
+      '```mermaid',
+      mermaidCode,
+      '```',
+      '',
+    ].join('\n');
+
+    await fs.writeFile(heatmapPath, content, 'utf-8');
   }
 
   /**

@@ -8,6 +8,40 @@
 import type { IParser } from './parser.js';
 import type { IDependencyExtractor } from './dependency.js';
 import type { IValidator } from './validation.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
+
+/**
+ * A single test case's raw structure (plugin layer output).
+ */
+export interface RawTestCase {
+  /** Test name from the first argument of it()/test()/func Test...(). */
+  name: string;
+  /** True when the case is marked skip/todo/xtest/t.Skip. */
+  isSkipped: boolean;
+  /**
+   * Static lower-bound count of assertion calls matching patternConfig.assertionPatterns.
+   * Custom helpers not covered by patterns are not counted.
+   */
+  assertionCount: number;
+}
+
+/**
+ * A test file's raw structure (plugin layer output).
+ */
+export interface RawTestFile {
+  filePath: string;
+  /** Detected test frameworks; may be multiple (e.g. ['vitest', 'playwright']). */
+  frameworks: string[];
+  /**
+   * Plugin's path-based type hint.
+   * TestAnalyzer applies behaviour-first override (assertionCount === 0 → 'debug').
+   * Note: 'debug' is intentionally absent — it is only assigned by TestAnalyzer.
+   */
+  testTypeHint: 'unit' | 'integration' | 'e2e' | 'performance' | 'unknown';
+  testCases: RawTestCase[];
+  /** Absolute paths of project-internal source files imported by this test file. */
+  importedSourceFiles: string[];
+}
 
 /**
  * Plugin capabilities flags
@@ -38,6 +72,12 @@ export interface PluginCapabilities {
    * @example Python, JavaScript (without TypeScript)
    */
   typeInference: boolean;
+
+  /**
+   * Whether the plugin implements isTestFile() and extractTestStructure().
+   * Defaults to false for existing plugins that do not add these methods.
+   */
+  testStructureExtraction?: boolean;
 }
 
 /**
@@ -182,4 +222,37 @@ export interface ILanguagePlugin extends IParser {
    * this property should provide an IValidator implementation.
    */
   readonly validator?: IValidator;
+
+  /**
+   * Determine whether a given file path is a test file.
+   *
+   * When patternConfig.testFileGlobs is provided, those globs take precedence.
+   * Otherwise the plugin uses its built-in language defaults:
+   *   TypeScript: /\.(test|spec)\.(ts|tsx|js|jsx)$/
+   *   Go: /_test\.go$/
+   *
+   * Uses micromatch for glob matching.
+   */
+  isTestFile?(filePath: string, patternConfig?: TestPatternConfig): boolean;
+
+  /**
+   * Extract raw test structure from a single test file (pure static analysis).
+   *
+   * Requirements:
+   * - Must not execute any code.
+   * - When patternConfig is provided, use its assertionPatterns / testCasePatterns /
+   *   skipPatterns instead of built-in defaults.
+   * - importedSourceFiles must contain only project-internal absolute paths
+   *   (exclude node_modules, vendor).
+   * - Return null if the file cannot be parsed; TestAnalyzer will skip it.
+   *
+   * @param filePath     Absolute path to the test file.
+   * @param code         File content (avoid re-reading from disk).
+   * @param patternConfig Optional project-specific patterns from the AI caller.
+   */
+  extractTestStructure?(
+    filePath: string,
+    code: string,
+    patternConfig?: TestPatternConfig
+  ): RawTestFile | null;
 }

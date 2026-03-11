@@ -8,7 +8,7 @@ import path from 'path';
 import type { ArchJSON, Entity, Relation, RelationType, CycleInfo } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from './query-manifest.js';
-import type { GoAtlasLayers, TsModuleGraph } from '@/types/extensions.js';
+import type { GoAtlasLayers, TsModuleGraph, TestAnalysis } from '@/types/extensions.js';
 
 export interface EntitySummary {
   id: string;
@@ -231,6 +231,16 @@ export class QueryEngine {
   /** Returns true when the ArchJSON carries a goAtlas extension container. */
   hasAtlasExtension(): boolean {
     return !!this.archJson.extensions?.goAtlas;
+  }
+
+  /** Return the TestAnalysis extension, or undefined if not present. */
+  getTestAnalysis(): TestAnalysis | undefined {
+    return this.archJson.extensions?.testAnalysis;
+  }
+
+  /** Returns true when the ArchJSON carries a testAnalysis extension. */
+  hasTestAnalysis(): boolean {
+    return this.archJson.extensions?.testAnalysis !== undefined;
   }
 
   getPackageStats(depth: number = 2, topN?: number): PackageStatsResult {

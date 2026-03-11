@@ -5,12 +5,15 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import micromatch from 'micromatch';
 import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
   PluginCapabilities,
+  RawTestFile,
 } from '@/core/interfaces/language-plugin.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor, Dependency } from '@/core/interfaces/dependency.js';
@@ -46,6 +49,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       incrementalParsing: true,
       dependencyExtraction: true,
       typeInference: true,
+      testStructureExtraction: true,
     } as PluginCapabilities,
   };
 
@@ -344,6 +348,124 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       warnings,
       durationMs: Date.now() - startTime,
     };
+  }
+
+  /**
+   * Determine whether a given file path is a test file.
+   */
+  isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
+    if (patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0) {
+      return micromatch.isMatch(filePath, patternConfig.testFileGlobs);
+    }
+    return /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(filePath);
+  }
+
+  /**
+   * Extract raw test structure from a single TypeScript/JavaScript test file.
+   */
+  extractTestStructure(
+    filePath: string,
+    code: string,
+    patternConfig?: TestPatternConfig
+  ): RawTestFile | null {
+    try {
+      // Detect frameworks
+      const frameworks: string[] = [];
+      const frameworkPatterns: Array<[string, RegExp]> = [
+        ['vitest', /from ['"]vitest['"]/],
+        ['jest', /from ['"]@jest\/|require\(['"]jest['"]\)|jest\.fn\(/],
+        ['mocha', /from ['"]mocha['"]|require\(['"]mocha['"]\)/],
+        ['jasmine', /jasmine\.(describe|it|expect)\(/],
+        ['playwright', /from ['"]@playwright\/test['"]/],
+        ['cypress', /from ['"]cypress['"]/],
+        ['@testing-library', /from ['"]@testing-library\//],
+      ];
+      for (const [name, pattern] of frameworkPatterns) {
+        if (pattern.test(code)) {
+          frameworks.push(name);
+        }
+      }
+      if (frameworks.length === 0) {
+        frameworks.push('unknown');
+      }
+
+      // Determine testTypeHint from file path
+      let testTypeHint: RawTestFile['testTypeHint'] = 'unit';
+      if (/\/e2e\/|\/cypress\/|\/playwright\//.test(filePath)) {
+        testTypeHint = 'e2e';
+      } else if (/\/integration\/|\.integration\.test\./.test(filePath)) {
+        testTypeHint = 'integration';
+      } else if (/\/perf\/|\/performance\/|\/benchmark\//.test(filePath)) {
+        testTypeHint = 'performance';
+      }
+
+      // Assertion patterns
+      const assertionPatterns = patternConfig?.assertionPatterns ?? [
+        'expect(',
+        'assert(',
+        'assert.',
+      ];
+
+      // Skip patterns
+      const skipPatterns = patternConfig?.skipPatterns ?? [
+        'it.skip(',
+        'test.skip(',
+        'xit(',
+        'xtest(',
+        'it.todo(',
+        'test.todo(',
+        'describe.skip(',
+      ];
+
+      // Count test cases: lines matching it( or test(
+      const lines = code.split('\n');
+      const testCasePattern = /\bit\s*\(|\btest\s*\(/;
+
+      const testCases = lines
+        .map((line, _idx) => {
+          if (!testCasePattern.test(line)) return null;
+
+          const isSkipped = skipPatterns.some((p) => line.includes(p));
+          const assertionCount = lines
+            .slice(_idx, Math.min(_idx + 20, lines.length))
+            .filter((l) => assertionPatterns.some((ap) => l.includes(ap))).length;
+
+          // Extract name from first string argument
+          const nameMatch = line.match(/(?:it|test)\s*\(\s*['"`]([^'"`]+)['"`]/);
+          const name = nameMatch ? nameMatch[1] : `test at line ${_idx + 1}`;
+
+          return { name, isSkipped, assertionCount };
+        })
+        .filter((tc): tc is NonNullable<typeof tc> => tc !== null);
+
+      // Extract imported source files: relative imports not ending in .test/.spec
+      const importedSourceFiles: string[] = [];
+      const importPattern = /import\s+.*?from\s+['"](\.[^'"]+)['"]/g;
+      const dir = path.dirname(filePath);
+      let match: RegExpExecArray | null;
+      while ((match = importPattern.exec(code)) !== null) {
+        const importPath = match[1];
+        // Skip test/spec files
+        if (/\.(test|spec)\.(ts|tsx|js|jsx)$/.test(importPath)) continue;
+        // Resolve to absolute path
+        const resolved = path.resolve(dir, importPath);
+        // Try adding extensions if no extension present
+        const withExt = /\.(ts|tsx|js|jsx)$/.test(resolved)
+          ? resolved
+          : `${resolved}.ts`;
+        importedSourceFiles.push(withExt);
+      }
+
+      return {
+        filePath,
+        frameworks,
+        testTypeHint,
+        testCases,
+        importedSourceFiles,
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**

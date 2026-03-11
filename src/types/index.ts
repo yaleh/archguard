@@ -29,8 +29,15 @@ export type {
   EntryPoint,
   CallChain,
   CallEdge,
+  TestPatternConfig,
+  DetectedTestPatterns,
+  TestAnalysis,
+  TestFileInfo,
+  CoverageLink,
+  TestIssue,
+  TestMetrics,
 } from './extensions.js';
-export { GO_ATLAS_EXTENSION_VERSION } from './extensions.js';
+export { GO_ATLAS_EXTENSION_VERSION, TEST_ANALYSIS_VERSION, TS_ANALYSIS_EXTENSION_VERSION } from './extensions.js';
 
 /**
  * Supported programming languages

@@ -13,6 +13,7 @@
 export interface ArchJSONExtensions {
   goAtlas?: GoAtlasExtension;
   tsAnalysis?: TsAnalysis;
+  testAnalysis?: TestAnalysis;  // Phase A
   // Future: javaAtlas?, rustAtlas?, ...
 }
 
@@ -296,4 +297,77 @@ export interface TsModuleDependency {
 export interface TsModuleCycle {
   modules: string[];
   severity: 'warning' | 'error';
+}
+
+// ========== Test Analysis Extension ==========
+
+export const TEST_ANALYSIS_VERSION = '1.0';
+
+export interface TestPatternConfig {
+  assertionPatterns?: string[];
+  testCasePatterns?: string[];
+  skipPatterns?: string[];
+  testFileGlobs?: string[];
+  typeClassificationRules?: Array<{
+    pathPattern: string;
+    type: 'unit' | 'integration' | 'e2e' | 'performance';
+  }>;
+}
+
+export interface DetectedTestPatterns {
+  detectedFrameworks: Array<{
+    name: string;
+    confidence: 'high' | 'medium' | 'low';
+    evidenceFiles: string[];
+  }>;
+  suggestedPatternConfig: TestPatternConfig;
+  notes: string[];
+}
+
+export interface TestAnalysis {
+  version: string;
+  patternConfigSource: 'auto' | 'user';
+  testFiles: TestFileInfo[];
+  coverageMap: CoverageLink[];
+  issues: TestIssue[];
+  metrics: TestMetrics;
+}
+
+export interface TestFileInfo {
+  id: string;
+  filePath: string;
+  frameworks: string[];
+  testType: 'unit' | 'integration' | 'e2e' | 'performance' | 'debug' | 'unknown';
+  testCaseCount: number;
+  assertionCount: number;
+  skipCount: number;
+  assertionDensity: number;
+  coveredEntityIds: string[];
+}
+
+export interface CoverageLink {
+  sourceEntityId: string;
+  coveredByTestIds: string[];
+  coverageScore: number;
+}
+
+export interface TestIssue {
+  type:
+    | 'zero_assertion'
+    | 'orphan_test'
+    | 'skip_accumulation'
+    | 'assertion_poverty';
+  severity: 'warning' | 'info';
+  testFileId: string;
+  message: string;
+  suggestion?: string;
+}
+
+export interface TestMetrics {
+  totalTestFiles: number;
+  byType: Record<TestFileInfo['testType'], number>;
+  entityCoverageRatio: number;
+  assertionDensity: number;
+  skipRatio: number;
+  issueCount: Record<TestIssue['type'], number>;
 }

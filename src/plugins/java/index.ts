@@ -233,6 +233,20 @@ export class JavaPlugin implements ILanguagePlugin {
   }
 
   /**
+   * Stub: Java test file detection not yet implemented.
+   */
+  isTestFile(_filePath: string): boolean {
+    return false;
+  }
+
+  /**
+   * Stub: Java test structure extraction not yet implemented.
+   */
+  extractTestStructure(_filePath: string, _code: string): null {
+    return null;
+  }
+
+  /**
    * Dispose resources
    */
   async dispose(): Promise<void> {

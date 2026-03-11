@@ -60,6 +60,7 @@ describe('TypeScriptPlugin - T1.1.1 Skeleton', () => {
         incrementalParsing: true,
         dependencyExtraction: true,
         typeInference: true,
+        testStructureExtraction: true,
       });
     });
   });

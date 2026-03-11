@@ -53,7 +53,9 @@ export default defineConfig({
       '@/cli': resolve(__dirname, './src/cli'),
       '@/types': resolve(__dirname, './src/types'),
       '@/utils': resolve(__dirname, './src/utils'),
-      '@/ai': resolve(__dirname, './src/ai')
+      '@/ai': resolve(__dirname, './src/ai'),
+      '@/core': resolve(__dirname, './src/core'),       // NEW (Stage A-0)
+      '@/analysis': resolve(__dirname, './src/analysis'), // NEW (Stage A-0)
     }
   }
 });

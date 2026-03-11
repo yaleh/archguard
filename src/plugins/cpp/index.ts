@@ -176,6 +176,21 @@ export class CppPlugin implements ILanguagePlugin {
     this.initialized = false;
   }
 
+  /**
+   * Stub: C++ test file detection not yet implemented.
+   * (Test patterns: *_test.{cpp,cc}, *Test.cpp, *_test.h)
+   */
+  isTestFile(_filePath: string): boolean {
+    return false;
+  }
+
+  /**
+   * Stub: C++ test structure extraction not yet implemented.
+   */
+  extractTestStructure(_filePath: string, _code: string): null {
+    return null;
+  }
+
   private ensureInitialized(): void {
     if (!this.initialized) {
       throw new Error('CppPlugin not initialized. Call initialize() first.');

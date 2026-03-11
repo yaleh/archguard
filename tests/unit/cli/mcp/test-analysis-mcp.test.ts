@@ -1,0 +1,246 @@
+/**
+ * Unit tests for test analysis MCP tools.
+ *
+ * Tests that the four tools return the NOT_ANALYZED_MSG when hasTestAnalysis() is false,
+ * and return correct data when analysis is present.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Entity, ArchJSON } from '@/types/index.js';
+import { QueryEngine } from '@/cli/query/query-engine.js';
+import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
+import type { ArchJSONExtensions, TestAnalysis } from '@/types/extensions.js';
+import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import { registerTestAnalysisTools } from '@/cli/mcp/tools/test-analysis-tools.js';
+import { loadEngine } from '@/cli/query/engine-loader.js';
+
+vi.mock('@/cli/query/engine-loader.js', async () => {
+  const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
+    '@/cli/query/engine-loader.js'
+  );
+  return {
+    ...actual,
+    loadEngine: vi.fn(),
+  };
+});
+
+const scopeEntry: QueryScopeEntry = {
+  key: 'test-scope',
+  label: 'src (typescript)',
+  language: 'typescript',
+  kind: 'parsed',
+  sources: ['/project/src'],
+  entityCount: 1,
+  relationCount: 0,
+  hasAtlasExtension: false,
+};
+
+function makeEntity(id: string, name: string): Entity {
+  return {
+    id,
+    name,
+    type: 'class',
+    visibility: 'public',
+    members: [],
+    sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 10 },
+  };
+}
+
+const sampleAnalysis: TestAnalysis = {
+  version: '1.0',
+  patternConfigSource: 'auto',
+  testFiles: [
+    {
+      id: 'tests/unit/foo.test.ts',
+      filePath: '/project/tests/unit/foo.test.ts',
+      frameworks: ['vitest'],
+      testType: 'unit',
+      testCaseCount: 3,
+      assertionCount: 9,
+      skipCount: 0,
+      assertionDensity: 3.0,
+      coveredEntityIds: ['entity-1'],
+    },
+  ],
+  coverageMap: [
+    { sourceEntityId: 'entity-1', coveredByTestIds: ['tests/unit/foo.test.ts'], coverageScore: 0.9 },
+  ],
+  issues: [
+    {
+      type: 'orphan_test',
+      severity: 'info',
+      testFileId: 'tests/unit/bar.test.ts',
+      message: 'No coverage links found',
+    },
+  ],
+  metrics: {
+    totalTestFiles: 1,
+    byType: { unit: 1, integration: 0, e2e: 0, performance: 0, debug: 0, unknown: 0 },
+    entityCoverageRatio: 0.9,
+    assertionDensity: 3.0,
+    skipRatio: 0.0,
+    issueCount: { zero_assertion: 0, orphan_test: 1, skip_accumulation: 0, assertion_poverty: 0 },
+  },
+};
+
+function createEngineWithoutAnalysis(): QueryEngine {
+  const archJson: ArchJSON = {
+    version: '1.0',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities: [makeEntity('entity-1', 'Foo')],
+    relations: [],
+  };
+  const archIndex = buildArchIndex(archJson, 'hash');
+  return new QueryEngine({ archJson, archIndex, scopeEntry });
+}
+
+function createEngineWithAnalysis(): QueryEngine {
+  const extensions: ArchJSONExtensions = { testAnalysis: sampleAnalysis };
+  const archJson: ArchJSON = {
+    version: '1.0',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities: [makeEntity('entity-1', 'Foo')],
+    relations: [],
+    extensions,
+  };
+  const archIndex = buildArchIndex(archJson, 'hash');
+  return new QueryEngine({ archJson, archIndex, scopeEntry });
+}
+
+function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string, Function> {
+  const tools = new Map<string, Function>();
+  const originalTool = server.tool.bind(server);
+
+  vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+    const name = args[0] as string;
+    const cb = args[args.length - 1] as Function;
+    tools.set(name, cb);
+    return (originalTool as Function)(...args);
+  });
+
+  registerTestAnalysisTools(server, defaultRoot);
+  return tools;
+}
+
+const loadEngineMock = vi.mocked(loadEngine);
+
+beforeEach(() => {
+  loadEngineMock.mockReset();
+});
+
+const NOT_ANALYZED_MSG =
+  'No test analysis data found. Run `archguard_analyze` with `includeTests: true` first.';
+
+describe('test analysis MCP tools — no analysis present', () => {
+  beforeEach(() => {
+    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+  });
+
+  it('archguard_get_test_coverage returns NOT_ANALYZED_MSG', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_coverage')!;
+    const result = await cb({});
+    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
+  });
+
+  it('archguard_get_test_issues returns NOT_ANALYZED_MSG', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_issues')!;
+    const result = await cb({});
+    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
+  });
+
+  it('archguard_get_test_metrics returns NOT_ANALYZED_MSG', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+    const result = await cb({});
+    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
+  });
+
+  it('archguard_detect_test_patterns returns notes about missing analysis', async () => {
+    // loadEngine fails → falls back to package.json detection
+    loadEngineMock.mockRejectedValue(new Error('No query data found'));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_detect_test_patterns')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.notes[0]).toContain('No prior test analysis found');
+  });
+});
+
+describe('test analysis MCP tools — analysis present', () => {
+  beforeEach(() => {
+    loadEngineMock.mockResolvedValue(createEngineWithAnalysis());
+  });
+
+  it('archguard_get_test_coverage returns coverage map', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_coverage')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed[0].sourceEntityId).toBe('entity-1');
+  });
+
+  it('archguard_get_test_issues returns all issues when no severity filter', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_issues')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].type).toBe('orphan_test');
+  });
+
+  it('archguard_get_test_issues filters by severity', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_issues')!;
+
+    const infoResult = await cb({ severity: 'info' });
+    const infoParsed = JSON.parse(infoResult.content[0].text);
+    expect(infoParsed).toHaveLength(1);
+
+    const warnResult = await cb({ severity: 'warning' });
+    const warnParsed = JSON.parse(warnResult.content[0].text);
+    expect(warnParsed).toHaveLength(0);
+  });
+
+  it('archguard_get_test_metrics returns metrics', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.totalTestFiles).toBe(1);
+    expect(parsed.assertionDensity).toBe(3.0);
+  });
+
+  it('archguard_detect_test_patterns returns detected frameworks', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_detect_test_patterns')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.detectedFrameworks.some((f: { name: string }) => f.name === 'vitest')).toBe(true);
+  });
+
+  it('registers all four test analysis tools', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    expect(tools.has('archguard_detect_test_patterns')).toBe(true);
+    expect(tools.has('archguard_get_test_coverage')).toBe(true);
+    expect(tools.has('archguard_get_test_issues')).toBe(true);
+    expect(tools.has('archguard_get_test_metrics')).toBe(true);
+  });
+});

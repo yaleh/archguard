@@ -150,5 +150,17 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
     await atomicWriteFile(indexPath, JSON.stringify(archIndex, null, 2));
   }
 
+  // Inject standalone test-analysis.json if present (written by --include-tests)
+  const testAnalysisPath = path.join(queryRoot, 'query', 'test-analysis.json');
+  if (await fs.pathExists(testAnalysisPath)) {
+    try {
+      const testAnalysis = await fs.readJson(testAnalysisPath);
+      if (!archJson.extensions) archJson.extensions = {};
+      archJson.extensions.testAnalysis = testAnalysis;
+    } catch {
+      // ignore corrupt file
+    }
+  }
+
   return new QueryEngine({ archJson, archIndex, scopeEntry });
 }
