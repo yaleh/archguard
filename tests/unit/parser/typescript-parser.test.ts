@@ -476,3 +476,42 @@ export class App implements Foo {}`
     expect(result.entities[0]?.name).toBe('Foo');
   });
 });
+
+describe('TypeScriptParser - parseProject excludePatterns', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(tmpdir(), 'archguard-parser-test-'));
+    mkdirSync(path.join(tempDir, 'src'));
+    mkdirSync(path.join(tempDir, 'generated'));
+    writeFileSync(path.join(tempDir, 'src', 'service.ts'), 'export class Service {}');
+    writeFileSync(path.join(tempDir, 'generated', 'gen.ts'), 'export class Generated {}');
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('should exclude files matching caller-supplied patterns in the fallback branch', () => {
+    const parser = new TypeScriptParser(tempDir);
+    // Pass undefined for externalProject to force the else-branch
+    const result = parser.parseProject(tempDir, '**/*.ts', undefined, ['**/generated/**']);
+
+    const generatedFiles = result.sourceFiles.filter((f) => f.includes('/generated/'));
+    expect(generatedFiles).toHaveLength(0);
+    const generatedEntities = result.entities.filter((e) => e.name === 'Generated');
+    expect(generatedEntities).toHaveLength(0);
+    // src/service.ts must still be present
+    const serviceEntities = result.entities.filter((e) => e.name === 'Service');
+    expect(serviceEntities).toHaveLength(1);
+  });
+
+  it('should still exclude test files by default even with no excludePatterns', () => {
+    writeFileSync(path.join(tempDir, 'src', 'service.test.ts'), 'describe("x", () => {})');
+    const parser = new TypeScriptParser(tempDir);
+    const result = parser.parseProject(tempDir, '**/*.ts', undefined, []);
+
+    const testFiles = result.sourceFiles.filter((f) => f.endsWith('.test.ts'));
+    expect(testFiles).toHaveLength(0);
+  });
+});

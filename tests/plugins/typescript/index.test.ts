@@ -287,6 +287,32 @@ describe('TypeScriptPlugin - T1.1.2 Parser Wrapping', () => {
       const testFiles = result.sourceFiles.filter((f) => f.includes('.test.'));
       expect(testFiles.length).toBe(0);
     });
+
+    it('should exclude files matching excludePatterns from the result', async () => {
+      const srcDir = path.join(tempDir, 'src');
+      const distDir = path.join(tempDir, 'dist');
+      await fs.ensureDir(srcDir);
+      await fs.ensureDir(distDir);
+      await fs.writeFile(path.join(srcDir, 'main.ts'), 'export class Main {}');
+      await fs.writeFile(path.join(distDir, 'app.ts'), 'export class AppCompiled {}');
+
+      const config: ParseConfig = {
+        workspaceRoot: tempDir,
+        excludePatterns: ['**/dist/**'],
+      };
+
+      const result = await plugin.parseProject(tempDir, config);
+
+      // Positive control: non-excluded source must still produce one entity
+      const mainEntities = result.entities.filter((e) => e.name === 'Main');
+      expect(mainEntities).toHaveLength(1);
+
+      // Negative control: excluded dist/ file must produce no entities
+      const distFiles = result.sourceFiles.filter((f) => f.includes('/dist/'));
+      expect(distFiles).toHaveLength(0);
+      const distEntities = result.entities.filter((e) => e.name === 'AppCompiled');
+      expect(distEntities).toHaveLength(0);
+    });
   });
 
   describe('parseFiles', () => {

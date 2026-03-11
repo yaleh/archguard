@@ -17,8 +17,6 @@ export interface CLIOptions {
   cliArgs?: string;
   mermaidTheme?: 'default' | 'forest' | 'dark' | 'neutral';
   mermaidRenderer?: 'isomorphic' | 'cli';
-  atlas?: boolean;
-  noAtlas?: boolean;
   atlasLayers?: string;
   atlasStrategy?: string;
   atlasNoTests?: boolean;

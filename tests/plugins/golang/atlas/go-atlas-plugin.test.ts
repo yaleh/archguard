@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GoAtlasPlugin } from '@/plugins/golang/atlas/index.js';
+import { GoPlugin } from '@/plugins/golang/index.js';
 import type { GoRawData } from '@/plugins/golang/types.js';
 
 const minimalRawData: GoRawData = {
@@ -20,20 +20,11 @@ const minimalRawData: GoRawData = {
   moduleName: 'github.com/test/project',
 };
 
-const minimalArchJSON = {
-  version: '1.1',
-  language: 'go' as const,
-  timestamp: new Date().toISOString(),
-  sourceFiles: [],
-  entities: [],
-  relations: [],
-};
-
 describe('GoAtlasPlugin', () => {
-  let plugin: GoAtlasPlugin;
+  let plugin: GoPlugin;
 
   beforeEach(() => {
-    plugin = new GoAtlasPlugin();
+    plugin = new GoPlugin();
   });
 
   // ---- Metadata and delegation tests ----
@@ -43,15 +34,14 @@ describe('GoAtlasPlugin', () => {
       expect(plugin.metadata.name).toBe('golang');
     });
 
-    it('metadata.version is "5.0.0"', () => {
-      expect(plugin.metadata.version).toBe('5.0.0');
+    it('metadata.version is "6.0.0"', () => {
+      expect(plugin.metadata.version).toBe('6.0.0');
     });
   });
 
   describe('canHandle', () => {
     it('delegates canHandle to goPlugin', async () => {
-      const goPlugin = (plugin as any).goPlugin;
-      const spy = vi.spyOn(goPlugin, 'canHandle').mockReturnValue(true);
+      const spy = vi.spyOn(plugin, 'canHandle').mockReturnValue(true);
 
       const result = plugin.canHandle('/some/file.go');
 
@@ -64,12 +54,11 @@ describe('GoAtlasPlugin', () => {
 
   describe('generateAtlas', () => {
     beforeEach(async () => {
-      // Mock initialize to avoid real filesystem access
-      vi.spyOn((plugin as any).goPlugin, 'initialize').mockResolvedValue(undefined);
+      // Initialize without filesystem access (initialize() only creates instances)
       await plugin.initialize({ workspaceRoot: '/test' });
 
       // Mock parseToRawData to avoid real filesystem access
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(minimalRawData);
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
 
       // Mock resolveProject to avoid reading real go.mod
       vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
@@ -111,15 +100,15 @@ describe('GoAtlasPlugin', () => {
 
   describe('parseProject default atlas mode', () => {
     beforeEach(async () => {
-      vi.spyOn((plugin as any).goPlugin, 'initialize').mockResolvedValue(undefined);
       await plugin.initialize({ workspaceRoot: '/test' });
 
-      vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(minimalRawData);
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
       vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
     });
 
     it('no atlas config → atlas mode by default (result has extensions.goAtlas)', async () => {
+      const parseToRawData = vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
+
       const result = await plugin.parseProject('/test', {
         workspaceRoot: '/test',
         // no languageSpecific: atlas is ON by default
@@ -128,20 +117,7 @@ describe('GoAtlasPlugin', () => {
       const extensions = (result as any).extensions;
       expect(extensions).toBeDefined();
       expect(extensions.goAtlas).toBeDefined();
-    });
-
-    it('atlas enabled=false → standard mode (opt-out, result has no extensions)', async () => {
-      // Reset parseProject mock to avoid conflicts (not needed in atlas path)
-      vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
-
-      const result = await plugin.parseProject('/test', {
-        workspaceRoot: '/test',
-        languageSpecific: {
-          atlas: { enabled: false },
-        },
-      });
-
-      expect((result as any).extensions).toBeUndefined();
+      expect(parseToRawData).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -149,11 +125,9 @@ describe('GoAtlasPlugin', () => {
 
   describe('parseProject atlas mode', () => {
     beforeEach(async () => {
-      vi.spyOn((plugin as any).goPlugin, 'initialize').mockResolvedValue(undefined);
       await plugin.initialize({ workspaceRoot: '/test' });
 
-      vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(minimalRawData);
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
       vi.spyOn((plugin as any).goModResolver, 'resolveProject').mockResolvedValue(undefined);
     });
 
@@ -179,7 +153,7 @@ describe('GoAtlasPlugin', () => {
 
     it('passes includePatterns through to atlas raw-data generation', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(minimalRawData);
 
       await plugin.parseProject('/test', {
@@ -206,6 +180,10 @@ describe('GoAtlasPlugin', () => {
   // ---- renderLayer test ----
 
   describe('renderLayer', () => {
+    beforeEach(async () => {
+      await plugin.initialize({ workspaceRoot: '/test' });
+    });
+
     it('delegates to AtlasRenderer and returns RenderResult with format and layer fields', async () => {
       const mockAtlas = {
         version: '2.0',

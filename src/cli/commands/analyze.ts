@@ -123,8 +123,6 @@ export function createAnalyzeCommand(): Command {
       .option('--cli-args <args>', 'Additional CLI arguments (space-separated)')
 
       // ========== Go Architecture Atlas ==========
-      .option('--atlas', 'Enable Go Architecture Atlas mode (default when --lang go)')
-      .option('--no-atlas', 'Disable Go Architecture Atlas mode (opt-out for --lang go)')
       .option(
         '--atlas-layers <layers>',
         'Atlas layers to generate (comma-separated): package,capability,goroutine,flow',

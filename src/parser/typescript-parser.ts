@@ -121,7 +121,12 @@ export class TypeScriptParser {
    * @param pattern - Glob pattern for files (default: '**\/*.ts')
    * @returns Complete ArchJSON structure
    */
-  parseProject(rootDir: string, pattern: string = '**/*.ts', externalProject?: Project): ArchJSON {
+  parseProject(
+    rootDir: string,
+    pattern: string = '**/*.ts',
+    externalProject?: Project,
+    excludePatterns?: string[]
+  ): ArchJSON {
     // Set workspaceRoot so toRelPath() can relativize paths
     this.workspaceRoot = rootDir;
 
@@ -144,11 +149,18 @@ export class TypeScriptParser {
         : new Project({ compilerOptions: { target: 99 } });
 
       // Add source files (exclude test files and node_modules)
-      fsProject.addSourceFilesAtPaths([
-        `${rootDir}/${pattern}`,
+      const builtinExcludes = [
         `!${rootDir}/**/*.test.ts`,
         `!${rootDir}/**/*.spec.ts`,
         `!${rootDir}/**/node_modules/**`,
+      ];
+      const callerExcludes = (excludePatterns ?? []).map((p) =>
+        p.startsWith('!') || path.isAbsolute(p) ? p : `!${rootDir}/${p}`
+      );
+      fsProject.addSourceFilesAtPaths([
+        `${rootDir}/${pattern}`,
+        ...builtinExcludes,
+        ...callerExcludes,
       ]);
     }
 

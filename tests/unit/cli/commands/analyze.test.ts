@@ -433,7 +433,7 @@ describe('normalizeToDiagrams', () => {
         level: 'package',
         language: 'go',
       });
-      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
+      expect(result[0].languageSpecific?.['atlas']).toBeDefined();
     });
 
     it('defaults to cpp project-root diagrams when the project root contains CMakeLists.txt', async () => {
@@ -633,36 +633,14 @@ describe('normalizeToDiagrams', () => {
   });
 
   describe('Go Atlas special case (preserved)', () => {
-    it('--lang go enables atlas by default without --atlas flag', async () => {
+    it('--lang go enables atlas by default', async () => {
       const result = await normalizeToDiagrams(baseConfig, {
         sources: ['./src'],
         lang: 'go',
       });
 
       expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
-    });
-
-    it('--lang go --no-atlas disables atlas (opt-out)', async () => {
-      // Commander.js sets atlas: false when --no-atlas is passed (negatable option)
-      const result = await normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        lang: 'go',
-        atlas: false,
-      });
-
-      expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific).toBeUndefined();
-    });
-
-    it('--atlas still works as before (implies --lang go + atlas)', async () => {
-      const result = await normalizeToDiagrams(baseConfig, {
-        sources: ['./src'],
-        atlas: true,
-      });
-
-      expect(result[0].language).toBe('go');
-      expect(result[0].languageSpecific?.['atlas']).toMatchObject({ enabled: true });
+      expect(result[0].languageSpecific?.['atlas']).toBeDefined();
     });
 
     it('--lang go uses selective strategy by default', async () => {

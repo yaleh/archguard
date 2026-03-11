@@ -16,10 +16,15 @@ describe('GoPlugin', () => {
   describe('metadata', () => {
     it('should have correct metadata', () => {
       expect(plugin.metadata.name).toBe('golang');
-      expect(plugin.metadata.displayName).toBe('Go (Golang)');
+      expect(plugin.metadata.displayName).toBe('Go Architecture Atlas');
+      expect(plugin.metadata.version).toBe('6.0.0');
       expect(plugin.metadata.fileExtensions).toContain('.go');
       expect(plugin.metadata.capabilities.singleFileParsing).toBe(true);
       expect(plugin.metadata.capabilities.typeInference).toBe(true);
+    });
+
+    it('should have correct supportedLevels', () => {
+      expect(plugin.supportedLevels).toEqual(['package', 'capability', 'goroutine', 'flow']);
     });
 
     it('should have dependencyExtraction capability enabled', () => {

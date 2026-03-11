@@ -25,7 +25,7 @@ describe('Go Plugin Integration', () => {
       const registered = registry.getByName('golang');
       expect(registered).toBeDefined();
       expect(registered?.metadata.name).toBe('golang');
-      expect(registered?.metadata.displayName).toBe('Go (Golang)');
+      expect(registered?.metadata.displayName).toBe('Go Architecture Atlas');
     });
 
     it('should detect Go plugin by .go extension', () => {

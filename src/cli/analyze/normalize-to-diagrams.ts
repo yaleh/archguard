@@ -25,8 +25,8 @@ export async function normalizeToDiagrams(
   }
 
   if (cliOptions.sources && cliOptions.sources.length > 0) {
-    const language = cliOptions.lang ?? (cliOptions.atlas ? 'go' : undefined);
-    const atlasEnabled = language === 'go' && cliOptions.atlas !== false;
+    const language = cliOptions.lang;
+    const atlasEnabled = language === 'go';
 
     if (atlasEnabled) {
       const diagram: DiagramConfig = {
@@ -38,25 +38,12 @@ export async function normalizeToDiagrams(
         language,
         languageSpecific: {
           atlas: {
-            enabled: true,
             functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
             excludeTests: !cliOptions.atlasIncludeTests,
             protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
             layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
           },
         },
-      };
-      return [diagram];
-    }
-
-    if (language === 'go' && cliOptions.atlas === false) {
-      const diagram: DiagramConfig = {
-        name: 'architecture',
-        sources: cliOptions.sources,
-        level: 'class',
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-        language,
       };
       return [diagram];
     }
@@ -101,7 +88,7 @@ export async function normalizeToDiagrams(
     return filterByLevels(diagrams, cliOptions.diagrams);
   }
 
-  if (cliOptions.lang === 'go' || (cliOptions.lang === undefined && cliOptions.atlas)) {
+  if (cliOptions.lang === 'go') {
     return [
       {
         name: 'architecture',
@@ -112,7 +99,6 @@ export async function normalizeToDiagrams(
         language: 'go',
         languageSpecific: {
           atlas: {
-            enabled: cliOptions.atlas !== false,
             functionBodyStrategy: cliOptions.atlasStrategy ?? 'selective',
             excludeTests: !cliOptions.atlasIncludeTests,
             protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),

@@ -120,7 +120,6 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
   beforeEach(async () => {
     plugin = new GoAtlasPlugin();
 
-    vi.spyOn((plugin as any).goPlugin, 'initialize').mockResolvedValue(undefined);
     await plugin.initialize({ workspaceRoot: '/test' });
 
     // Mock resolveProject to avoid reading real go.mod
@@ -130,7 +129,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
   describe('excludeTests: false (default behaviour)', () => {
     it('does NOT add **/*_test.go to excludePatterns when excludeTests is false', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithTestFiles);
 
       await plugin.generateAtlas('/test', { excludeTests: false });
@@ -142,7 +141,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
 
     it('does NOT add **/*_test.go to excludePatterns when excludeTests is omitted', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithTestFiles);
 
       await plugin.generateAtlas('/test', {});
@@ -153,7 +152,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('rawData returned by parseToRawData may include test files when excludeTests is false', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(rawDataWithTestFiles);
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithTestFiles);
 
       const atlas = await plugin.generateAtlas('/test', { excludeTests: false });
 
@@ -165,7 +164,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
   describe('excludeTests: true', () => {
     it('adds **/*_test.go to excludePatterns when excludeTests is true', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithoutTestFiles);
 
       await plugin.generateAtlas('/test', { excludeTests: true });
@@ -177,7 +176,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
 
     it('still keeps default vendor/testdata patterns when excludeTests is true', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithoutTestFiles);
 
       await plugin.generateAtlas('/test', { excludeTests: true });
@@ -189,7 +188,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
 
     it('merges caller-supplied excludePatterns with test-file pattern', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithoutTestFiles);
 
       await plugin.generateAtlas('/test', {
@@ -204,9 +203,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('rawData used for atlas reflects what parseToRawData returns (test-free data)', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithoutTestFiles
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithoutTestFiles);
 
       const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
 
@@ -216,9 +213,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
 
   describe('package-level filtering (tests/* and */testutil)', () => {
     it('removes tests/* packages from rawData when excludeTests is true', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithTestPackages
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithTestPackages);
 
       const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
 
@@ -227,9 +222,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('keeps tests/* packages when excludeTests is false', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithTestPackages
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithTestPackages);
 
       const atlas = await plugin.generateAtlas('/test', { excludeTests: false });
 
@@ -238,9 +231,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('keeps tests/* packages when excludeTests is omitted (API default: include)', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithTestPackages
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithTestPackages);
 
       const atlas = await plugin.generateAtlas('/test', {});
 
@@ -249,9 +240,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('removes */testutil packages when excludeTests is true', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithTestPackages
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithTestPackages);
 
       const atlas = await plugin.generateAtlas('/test', { excludeTests: true });
 
@@ -261,22 +250,9 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
   });
 
   describe('AtlasConfig.excludeTests wired via parseProject', () => {
-    const minimalArchJSON = {
-      version: '1.0',
-      language: 'go' as const,
-      timestamp: new Date().toISOString(),
-      sourceFiles: [],
-      entities: [],
-      relations: [],
-    };
-
-    beforeEach(() => {
-      vi.spyOn((plugin as any).goPlugin, 'parseProject').mockResolvedValue(minimalArchJSON);
-    });
-
     it('passes excludeTests: true from AtlasConfig through to generateAtlas', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithoutTestFiles);
 
       await plugin.parseProject('/test', {
@@ -293,7 +269,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
 
     it('does NOT add test-file pattern when AtlasConfig.excludeTests is false', async () => {
       const parseToRawData = vi
-        .spyOn((plugin as any).goPlugin, 'parseToRawData')
+        .spyOn(plugin as any, 'parseToRawData')
         .mockResolvedValue(rawDataWithTestFiles);
 
       await plugin.parseProject('/test', {
@@ -309,9 +285,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     });
 
     it('result has extensions.goAtlas when atlas is enabled with excludeTests', async () => {
-      vi.spyOn((plugin as any).goPlugin, 'parseToRawData').mockResolvedValue(
-        rawDataWithoutTestFiles
-      );
+      vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(rawDataWithoutTestFiles);
 
       const result = await plugin.parseProject('/test', {
         workspaceRoot: '/test',

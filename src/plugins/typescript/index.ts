@@ -115,7 +115,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
    * Source files are added once here; both TypeScriptParser and
    * TypeScriptAnalyzer reuse this Project to avoid a second parse pass.
    */
-  private initTsProject(workspaceRoot: string, pattern: string): Project {
+  private initTsProject(workspaceRoot: string, pattern: string, excludePatterns?: string[]): Project {
     // Inject only baseUrl + paths from the nearest tsconfig.json so that path
     // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
     // (e.g. moduleResolution) are intentionally NOT inherited to preserve ts-morph's
@@ -125,11 +125,18 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const project = pathAliases
       ? new Project({ compilerOptions: { target: 99 /* ESNext */, ...pathAliases } })
       : new Project({ compilerOptions: { target: 99 /* ESNext */ } });
-    project.addSourceFilesAtPaths([
-      `${workspaceRoot}/${pattern}`,
+    const builtinExcludes = [
       `!${workspaceRoot}/**/*.test.ts`,
       `!${workspaceRoot}/**/*.spec.ts`,
       `!${workspaceRoot}/**/node_modules/**`,
+    ];
+    const callerExcludes = (excludePatterns ?? []).map((p) =>
+      p.startsWith('!') || path.isAbsolute(p) ? p : `!${workspaceRoot}/${p}`
+    );
+    project.addSourceFilesAtPaths([
+      `${workspaceRoot}/${pattern}`,
+      ...builtinExcludes,
+      ...callerExcludes,
     ]);
     return project;
   }
@@ -154,7 +161,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const pattern = config.filePattern ?? '**/*.ts';
 
     // Create a single shared ts-morph Project to avoid parsing twice
-    const tsProject = this.initTsProject(workspaceRoot, pattern);
+    const tsProject = this.initTsProject(workspaceRoot, pattern, config.excludePatterns);
 
     // Parse ArchJSON using the shared Project
     const archJson = this.parser.parseProject(workspaceRoot, pattern, tsProject);

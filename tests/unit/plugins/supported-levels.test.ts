@@ -15,12 +15,12 @@ describe('ILanguagePlugin.supportedLevels', () => {
     expect(plugin.supportedLevels).toEqual(['package', 'class', 'method']);
   });
 
-  it('GoPlugin has supportedLevels ["package", "class", "method"]', () => {
+  it('GoPlugin has supportedLevels ["package", "capability", "goroutine", "flow"]', () => {
     const plugin = new GoPlugin();
-    expect(plugin.supportedLevels).toEqual(['package', 'class', 'method']);
+    expect(plugin.supportedLevels).toEqual(['package', 'capability', 'goroutine', 'flow']);
   });
 
-  it('GoAtlasPlugin has supportedLevels ["package", "capability", "goroutine", "flow"]', () => {
+  it('GoAtlasPlugin (shim alias for GoPlugin) has supportedLevels ["package", "capability", "goroutine", "flow"]', () => {
     const plugin = new GoAtlasPlugin();
     expect(plugin.supportedLevels).toEqual(['package', 'capability', 'goroutine', 'flow']);
   });

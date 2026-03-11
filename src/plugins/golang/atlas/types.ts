@@ -116,7 +116,8 @@ export interface AtlasGenerationOptions {
  * Atlas configuration embedded in ParseConfig (from Proposal v5.1 §4.5.4)
  */
 export interface AtlasConfig {
-  enabled: boolean;
+  /** @deprecated Atlas mode is always active for Go. This field has no effect and will be removed in a future release. */
+  enabled?: boolean;
   functionBodyStrategy?: 'none' | 'selective' | 'full';
   layers?: AtlasLayer[];
   includeTests?: boolean;
