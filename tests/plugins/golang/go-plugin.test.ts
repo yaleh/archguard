@@ -211,4 +211,105 @@ func (u User) GetName() string {
       }).toThrow('GoPlugin not initialized');
     });
   });
+
+  describe('isTestFile', () => {
+    it('returns true for _test.go files', () => {
+      expect(plugin.isTestFile!('foo_test.go')).toBe(true);
+      expect(plugin.isTestFile!('/abs/path/bar_test.go')).toBe(true);
+    });
+
+    it('returns false for regular .go files', () => {
+      expect(plugin.isTestFile!('foo.go')).toBe(false);
+      expect(plugin.isTestFile!('test_helper.go')).toBe(false);
+    });
+
+    it('declares testStructureExtraction capability', () => {
+      expect(plugin.metadata.capabilities.testStructureExtraction).toBe(true);
+    });
+  });
+
+  describe('extractTestStructure', () => {
+    const testifyFile = `
+package mypkg_test
+
+import (
+  "testing"
+  "github.com/stretchr/testify/assert"
+  "github.com/stretchr/testify/require"
+)
+
+func TestFoo(t *testing.T) {
+  result := doSomething()
+  assert.Equal(t, 42, result)
+  require.NoError(t, err)
+}
+
+func TestBar(t *testing.T) {
+  t.Skip("not yet implemented")
+  assert.True(t, false)
+}
+`;
+
+    it('returns null for non-test files', () => {
+      expect(plugin.extractTestStructure!('foo.go', 'package main')).toBeNull();
+    });
+
+    it('detects testify framework', () => {
+      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
+      expect(raw).not.toBeNull();
+      expect(raw!.frameworks).toContain('testify');
+      // stdlib 'testing' is omitted when testify is detected (avoid duplicate attribution)
+      expect(raw!.frameworks).not.toContain('testing');
+    });
+
+    it('falls back to stdlib testing framework when no testify', () => {
+      const stdlibCode = `
+package mypkg_test
+import "testing"
+func TestPlain(t *testing.T) {
+  t.Error("fail")
+}
+`;
+      const raw = plugin.extractTestStructure!('plain_test.go', stdlibCode);
+      expect(raw!.frameworks).toContain('testing');
+      expect(raw!.frameworks).not.toContain('testify');
+    });
+
+    it('extracts test functions and counts assertions', () => {
+      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
+      expect(raw!.testCases).toHaveLength(2);
+      const foo = raw!.testCases.find((c) => c.name === 'TestFoo');
+      expect(foo).toBeDefined();
+      expect(foo!.assertionCount).toBeGreaterThan(0);
+      expect(foo!.isSkipped).toBe(false);
+    });
+
+    it('detects skipped tests', () => {
+      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
+      const bar = raw!.testCases.find((c) => c.name === 'TestBar');
+      expect(bar!.isSkipped).toBe(true);
+    });
+
+    it('marks benchmark files as performance type', () => {
+      const benchCode = `
+package mypkg_test
+import "testing"
+func BenchmarkFoo(b *testing.B) {
+  for i := 0; i < b.N; i++ { doWork() }
+}
+`;
+      const raw = plugin.extractTestStructure!('bench_test.go', benchCode);
+      expect(raw!.testTypeHint).toBe('performance');
+    });
+
+    it('returns null when no test functions found', () => {
+      const raw = plugin.extractTestStructure!('foo_test.go', 'package mypkg\n\nfunc helper() {}');
+      expect(raw).toBeNull();
+    });
+
+    it('sets unit testTypeHint for regular Test* functions', () => {
+      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
+      expect(raw!.testTypeHint).toBe('unit');
+    });
+  });
 });

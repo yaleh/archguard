@@ -14,7 +14,10 @@ import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
+  RawTestFile,
+  RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -102,6 +105,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       incrementalParsing: false,
       dependencyExtraction: true,
       typeInference: true,
+      testStructureExtraction: true,
     },
   };
 
@@ -630,6 +634,76 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     if (!this.initialized) {
       throw new Error('GoPlugin not initialized. Call initialize() first.');
     }
+  }
+
+  isTestFile(filePath: string, _patternConfig?: TestPatternConfig): boolean {
+    return filePath.endsWith('_test.go');
+  }
+
+  extractTestStructure(
+    filePath: string,
+    code: string,
+    _patternConfig?: TestPatternConfig
+  ): RawTestFile | null {
+    if (!this.isTestFile(filePath)) return null;
+
+    // Detect frameworks from import block
+    const frameworks: string[] = [];
+    const importBlock = code.match(/import\s*\(([^)]*)\)/s)?.[1] ?? '';
+    if (/testify\/assert|testify\/require/.test(importBlock)) frameworks.push('testify');
+    if (/testing\/quick/.test(importBlock)) frameworks.push('testing/quick');
+    if (!frameworks.includes('testify')) frameworks.push('testing'); // stdlib always present for _test.go
+
+    // Extract test functions (Test*, Benchmark*, Example*, Fuzz*)
+    const fnRegex = /^func\s+(Test\w*|Benchmark\w*|Example\w*|Fuzz\w*)\s*\(/gm;
+    const testCases: RawTestCase[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = fnRegex.exec(code)) !== null) {
+      const name = match[1];
+      const isSkipped = new RegExp(`func\\s+${name}[^{]*\\{[^}]*t\\.Skip`, 's').test(code);
+      const isBenchmark = name.startsWith('Benchmark');
+
+      // Count assertion calls: assert.*, require.*, t.Error*, t.Fatal*, t.Log*+Fail pattern
+      const assertPatterns = [
+        /\bassert\.\w+\s*\(/g,
+        /\brequire\.\w+\s*\(/g,
+        /\bt\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)\s*\(/g,
+      ];
+      let assertionCount = 0;
+      for (const pat of assertPatterns) {
+        const all = code.match(pat);
+        if (all) assertionCount += all.length;
+      }
+
+      testCases.push({ name, assertionCount: isBenchmark ? 0 : assertionCount, isSkipped });
+    }
+
+    if (testCases.length === 0) return null;
+
+    // Extract imported source files from same module (non-test packages)
+    const importedSourceFiles: string[] = [];
+    const importLineRegex = /^\s*(?:\w+\s+)?"([^"]+)"/gm;
+    while ((match = importLineRegex.exec(importBlock)) !== null) {
+      const pkg = match[1];
+      // Skip stdlib (no dots in first segment), testify, and external packages
+      if (!pkg.includes('/') || pkg.startsWith('github.com/') || pkg.startsWith('golang.org/')) {
+        // External package — not a local source file
+        continue;
+      }
+      importedSourceFiles.push(pkg);
+    }
+
+    // Infer overall testTypeHint: benchmark functions → performance
+    const hasBenchmark = /^func\s+Benchmark\w*\s*\(/m.test(code);
+    const testTypeHint: RawTestFile['testTypeHint'] = hasBenchmark ? 'performance' : 'unit';
+
+    return {
+      filePath,
+      frameworks,
+      testTypeHint,
+      testCases,
+      importedSourceFiles,
+    };
   }
 
   private async readModuleName(workspaceRoot: string): Promise<string> {
