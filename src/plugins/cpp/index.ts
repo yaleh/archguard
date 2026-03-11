@@ -13,7 +13,10 @@ import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
+  RawTestFile,
+  RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -35,6 +38,7 @@ export class CppPlugin implements ILanguagePlugin {
       incrementalParsing: false,
       dependencyExtraction: true,
       typeInference: false,
+      testStructureExtraction: true,
     },
   };
 
@@ -176,19 +180,103 @@ export class CppPlugin implements ILanguagePlugin {
     this.initialized = false;
   }
 
-  /**
-   * Stub: C++ test file detection not yet implemented.
-   * (Test patterns: *_test.{cpp,cc}, *Test.cpp, *_test.h)
-   */
-  isTestFile(_filePath: string): boolean {
-    return false;
+  isTestFile(filePath: string, _patternConfig?: TestPatternConfig): boolean {
+    const base = path.basename(filePath);
+    const ext = path.extname(base).toLowerCase();
+    if (!['.cpp', '.cxx', '.cc'].includes(ext)) return false;
+    // Named test-*.cpp / test_*.cpp / *_test.cpp / *Test.cpp
+    if (/^test[-_]/i.test(base) || /[-_]test\./i.test(base) || /Test\./.test(base)) return true;
+    // Inside a tests/ or test/ directory
+    const parts = filePath.replace(/\\/g, '/').split('/');
+    return parts.some((p) => p === 'tests' || p === 'test');
   }
 
-  /**
-   * Stub: C++ test structure extraction not yet implemented.
-   */
-  extractTestStructure(_filePath: string, _code: string): null {
-    return null;
+  extractTestStructure(
+    filePath: string,
+    code: string,
+    _patternConfig?: TestPatternConfig
+  ): RawTestFile | null {
+    if (!this.isTestFile(filePath)) return null;
+
+    // Framework detection
+    const frameworks: string[] = [];
+    if (/#include\s*[<"]gtest\/gtest/.test(code)) frameworks.push('gtest');
+    if (/#include\s*[<"]catch2\//.test(code) || /CATCH_CONFIG_MAIN/.test(code)) frameworks.push('catch2');
+    if (/#include\s*[<"]doctest\.h/.test(code)) frameworks.push('doctest');
+    if (frameworks.length === 0) frameworks.push('assert'); // custom main-based
+
+    // Assertion counting patterns
+    const assertionPatterns = [
+      /\bassert\s*\(/g,
+      /\bGGML_ASSERT\s*\(/g,
+      /\bLLAMA_ASSERT\s*\(/g,
+      /\bEXPECT_\w+\s*\(/g,
+      /\bASSERT_\w+\s*\(/g,
+      /\bREQUIRE\s*\(/g,
+      /\bCHECK\s*\(/g,
+    ];
+    let totalAssertions = 0;
+    for (const pat of assertionPatterns) {
+      const m = code.match(pat);
+      if (m) totalAssertions += m.length;
+    }
+
+    const testCases: RawTestCase[] = [];
+
+    if (frameworks.includes('gtest')) {
+      // TEST(suite, name) / TEST_F(fixture, name) / TEST_P(fixture, name)
+      const re = /\bTEST(?:_F|_P)?\s*\(\s*\w+\s*,\s*(\w+)\s*\)/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(code)) !== null) {
+        testCases.push({ name: m[1], assertionCount: 0, isSkipped: false });
+      }
+    } else if (frameworks.includes('catch2') || frameworks.includes('doctest')) {
+      // TEST_CASE("name") / SCENARIO("name")
+      const re = /\b(?:TEST_CASE|SCENARIO)\s*\(\s*"([^"]+)"/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(code)) !== null) {
+        testCases.push({ name: m[1], assertionCount: 0, isSkipped: false });
+      }
+    } else {
+      // Custom main-based: extract static/void/bool test_*() and verify_*() functions
+      const re = /^(?:static\s+)?(?:void|bool|int)\s+((?:test|verify|check)_?\w*)\s*\(/gm;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(code)) !== null) {
+        if (m[1] === 'main') continue;
+        testCases.push({ name: m[1], assertionCount: 0, isSkipped: false });
+      }
+      // If no named functions found but has main(), treat the whole file as one test
+      if (testCases.length === 0 && /\bint\s+main\s*\(/.test(code)) {
+        testCases.push({ name: path.basename(filePath, path.extname(filePath)), assertionCount: totalAssertions, isSkipped: false });
+      }
+    }
+
+    if (testCases.length === 0) return null;
+
+    // Distribute assertions evenly across cases (static analysis can't attribute per-function)
+    const assertionsPerCase = testCases.length > 0 ? Math.round(totalAssertions / testCases.length) : 0;
+    for (const tc of testCases) {
+      if (tc.assertionCount === 0) tc.assertionCount = assertionsPerCase;
+    }
+
+    // Imports: #include "local/*.h" patterns for coverage linking
+    const importedSourceFiles: string[] = [];
+    const includeRe = /^#include\s+"([^"]+)"/gm;
+    let im: RegExpExecArray | null;
+    while ((im = includeRe.exec(code)) !== null) {
+      importedSourceFiles.push(im[1]);
+    }
+
+    const isBenchmark = /benchmark|bench|perf/i.test(path.basename(filePath));
+    const testTypeHint: RawTestFile['testTypeHint'] = isBenchmark ? 'performance' : 'unit';
+
+    return {
+      filePath,
+      frameworks,
+      testTypeHint,
+      testCases,
+      importedSourceFiles,
+    };
   }
 
   private ensureInitialized(): void {

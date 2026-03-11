@@ -358,4 +358,149 @@ public:
       await expect(plugin.dispose()).resolves.not.toThrow();
     });
   });
+
+  // ---------------------------------------------------------------- isTestFile
+  describe('isTestFile()', () => {
+    it('returns true for test-*.cpp files', () => {
+      expect(plugin.isTestFile!('tests/test-grammar-parser.cpp')).toBe(true);
+      expect(plugin.isTestFile!('/abs/tests/test-alloc.cpp')).toBe(true);
+    });
+
+    it('returns true for *_test.cpp files', () => {
+      expect(plugin.isTestFile!('src/foo_test.cpp')).toBe(true);
+    });
+
+    it('returns true for files inside tests/ directory', () => {
+      expect(plugin.isTestFile!('/proj/tests/helper.cpp')).toBe(true);
+      expect(plugin.isTestFile!('/proj/test/runner.cpp')).toBe(true);
+    });
+
+    it('returns false for regular source files', () => {
+      expect(plugin.isTestFile!('src/llama.cpp')).toBe(false);
+      expect(plugin.isTestFile!('common/utils.h')).toBe(false);
+    });
+
+    it('returns false for header-only files', () => {
+      expect(plugin.isTestFile!('tests/test-helper.h')).toBe(false);
+    });
+
+    it('declares testStructureExtraction capability', () => {
+      expect(plugin.metadata.capabilities.testStructureExtraction).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------- extractTestStructure
+  describe('extractTestStructure()', () => {
+    const assertCode = `
+#include "llama.h"
+#include <cassert>
+
+static void verify_parsing(const char * s) {
+  assert(s != nullptr);
+  assert(strlen(s) > 0);
+}
+
+static void test_basic() {
+  verify_parsing("hello");
+  assert(1 == 1);
+}
+
+int main() {
+  test_basic();
+  return 0;
+}
+`;
+
+    const gtestCode = `
+#include <gtest/gtest.h>
+
+TEST(FooSuite, BasicTest) {
+  EXPECT_EQ(1, 1);
+  ASSERT_TRUE(true);
+}
+
+TEST_F(FooFixture, AdvancedTest) {
+  EXPECT_GT(2, 1);
+}
+`;
+
+    const catch2Code = `
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
+
+TEST_CASE("basic math") {
+  REQUIRE(1 + 1 == 2);
+  CHECK(2 * 2 == 4);
+}
+
+SCENARIO("scenario test") {
+  REQUIRE(true);
+}
+`;
+
+    it('returns null for non-test files', () => {
+      expect(plugin.extractTestStructure!('src/foo.cpp', 'class Foo {};')).toBeNull();
+    });
+
+    it('detects assert-based framework', () => {
+      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
+      expect(raw).not.toBeNull();
+      expect(raw!.frameworks).toContain('assert');
+    });
+
+    it('extracts named test/verify functions as test cases', () => {
+      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
+      expect(raw!.testCases.length).toBeGreaterThanOrEqual(2);
+      const names = raw!.testCases.map((c) => c.name);
+      expect(names).toContain('verify_parsing');
+      expect(names).toContain('test_basic');
+    });
+
+    it('counts assert() calls as assertions', () => {
+      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
+      const total = raw!.testCases.reduce((s, c) => s + c.assertionCount, 0);
+      expect(total).toBeGreaterThan(0);
+    });
+
+    it('detects gtest framework and TEST() macros', () => {
+      const raw = plugin.extractTestStructure!('tests/test-foo.cpp', gtestCode);
+      expect(raw!.frameworks).toContain('gtest');
+      expect(raw!.testCases).toHaveLength(2);
+      const names = raw!.testCases.map((c) => c.name);
+      expect(names).toContain('BasicTest');
+      expect(names).toContain('AdvancedTest');
+    });
+
+    it('counts EXPECT_* and ASSERT_* as gtest assertions', () => {
+      const raw = plugin.extractTestStructure!('tests/test-foo.cpp', gtestCode);
+      const total = raw!.testCases.reduce((s, c) => s + c.assertionCount, 0);
+      expect(total).toBeGreaterThan(0);
+    });
+
+    it('detects catch2 and extracts TEST_CASE / SCENARIO', () => {
+      const raw = plugin.extractTestStructure!('tests/test-catch.cpp', catch2Code);
+      expect(raw!.frameworks).toContain('catch2');
+      expect(raw!.testCases).toHaveLength(2);
+    });
+
+    it('marks benchmark files as performance type', () => {
+      const raw = plugin.extractTestStructure!('tests/test-bench-ops.cpp', assertCode);
+      expect(raw!.testTypeHint).toBe('performance');
+    });
+
+    it('returns unit testTypeHint for regular test files', () => {
+      const raw = plugin.extractTestStructure!('tests/test-grammar.cpp', assertCode);
+      expect(raw!.testTypeHint).toBe('unit');
+    });
+
+    it('extracts local #include paths for coverage linking', () => {
+      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
+      expect(raw!.importedSourceFiles).toContain('llama.h');
+    });
+
+    it('returns null when no test functions or main() found', () => {
+      const raw = plugin.extractTestStructure!('tests/test-empty.cpp', '#include <stdio.h>\n');
+      expect(raw).toBeNull();
+    });
+  });
 });
