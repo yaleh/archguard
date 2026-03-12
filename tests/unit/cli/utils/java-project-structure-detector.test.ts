@@ -54,6 +54,7 @@ describe('detectJavaProjectStructure', () => {
         sources: [root],
         level: 'class',
         language: 'java',
+        queryRole: 'primary',
       },
       {
         name: 'Jlama/class/jlama-cli',
@@ -141,6 +142,7 @@ describe('detectJavaProjectStructure', () => {
         sources: [root],
         level: 'class',
         language: 'java',
+        queryRole: 'primary',
       },
     ]);
   });

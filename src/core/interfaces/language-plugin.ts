@@ -41,6 +41,12 @@ export interface RawTestFile {
   testCases: RawTestCase[];
   /** Absolute paths of project-internal source files imported by this test file. */
   importedSourceFiles: string[];
+  /**
+   * File-level total assertion count. When set, TestAnalyzer uses this value
+   * instead of summing per-case assertionCounts (prevents rounding-to-zero loss
+   * when few assertions are spread across many test functions, e.g. C++).
+   */
+  totalAssertions?: number;
 }
 
 /**

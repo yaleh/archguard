@@ -21,11 +21,55 @@ export class TestCoverageMapper {
       }
 
       // Path-convention layer: confidence weight 0.6
-      // e.g. foo.test.ts → foo.ts convention
-      const testNameWithoutExt = path
-        .basename(testFile.id)
+      // TypeScript: foo.test.ts → foo, Python: test_foo.py or foo_test.py → foo
+      // Go: foo_test.go → foo
+      const testBasename = path.basename(testFile.id);
+      let testNameWithoutExt = testBasename
         .replace(/\.(test|spec)\.(ts|tsx|js|jsx)$/, '')
         .replace(/\.(test|spec)$/, '');
+      // Python convention: strip .py extension and test_ prefix / _test suffix
+      if (testNameWithoutExt === testBasename && testBasename.endsWith('.py')) {
+        testNameWithoutExt = testBasename
+          .replace(/\.py$/, '')
+          .replace(/^test_/, '')
+          .replace(/_test$/, '');
+      }
+      // Go convention: foo_test.go → foo
+      if (testNameWithoutExt === testBasename && testBasename.endsWith('_test.go')) {
+        testNameWithoutExt = testBasename.replace(/_test\.go$/, '');
+      }
+      // C++ convention: test-foo.cpp → foo, test_foo.cpp → foo, foo_test.cpp → foo
+      if (
+        testNameWithoutExt === testBasename &&
+        /\.(?:cpp|cc|cxx)$/.test(testBasename)
+      ) {
+        testNameWithoutExt = testBasename
+          .replace(/\.(?:cpp|cc|cxx)$/, '')
+          .replace(/^test[-_]/, '')
+          .replace(/[-_]test$/, '');
+      }
+
+      // Go directory-match layer (confidence weight 0.35):
+      // Any _test.go file in the same directory as an entity's source file is linked to that entity.
+      // This covers cases where a package has multiple test files but the entity's sourceLocation
+      // points to only one representative source file (Go Atlas package-level entity model).
+      if (testBasename.endsWith('_test.go')) {
+        const testDir = path.dirname(testFile.id);
+        for (const entity of archJson.entities) {
+          if (!entity.sourceLocation?.file) continue;
+          const relEntityFile = path.isAbsolute(entity.sourceLocation.file)
+            ? path.relative(workspaceRoot, entity.sourceLocation.file)
+            : entity.sourceLocation.file;
+          if (path.dirname(relEntityFile) === testDir) {
+            if (!linkMap.has(entity.id)) {
+              linkMap.set(entity.id, { testIds: new Set(), score: 0 });
+            }
+            const link = linkMap.get(entity.id)!;
+            link.testIds.add(testFile.id);
+            link.score = Math.min(1.0, link.score + 0.35 * 0.5);
+          }
+        }
+      }
 
       for (const entity of archJson.entities) {
         if (!entity.sourceLocation?.file) continue;

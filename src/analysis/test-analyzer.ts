@@ -129,7 +129,12 @@ export class TestAnalyzer {
     workspaceRoot: string
   ): TestFileInfo[] {
     return rawFiles.map((raw) => {
-      const assertionCount = raw.testCases.reduce((s, c) => s + c.assertionCount, 0);
+      // Use file-level totalAssertions when set (C++ rounding fix): prevents Math.round()
+      // distributing few assertions across many test functions from summing to 0.
+      const assertionCount =
+        raw.totalAssertions !== undefined
+          ? raw.totalAssertions
+          : raw.testCases.reduce((s, c) => s + c.assertionCount, 0);
       const testCaseCount = raw.testCases.length;
       const skipCount = raw.testCases.filter((c) => c.isSkipped).length;
 
@@ -145,7 +150,8 @@ export class TestAnalyzer {
       const coveredEntityIds = this.resolveImportedEntityIds(
         raw.importedSourceFiles,
         archJson,
-        workspaceRoot
+        workspaceRoot,
+        raw.filePath
       );
 
       return {
@@ -165,21 +171,57 @@ export class TestAnalyzer {
   private resolveImportedEntityIds(
     importedSourceFiles: string[],
     archJson: ArchJSON,
-    workspaceRoot: string
+    workspaceRoot: string,
+    testFilePath?: string
   ): string[] {
+    // Directory of the test file (relative to workspaceRoot), used to resolve ../relative includes.
+    const testRelDir = testFilePath
+      ? path.dirname(path.isAbsolute(testFilePath) ? path.relative(workspaceRoot, testFilePath) : testFilePath)
+      : '';
+
     const result: string[] = [];
     for (const srcFile of importedSourceFiles) {
-      const relSrc = path.isAbsolute(srcFile)
-        ? path.relative(workspaceRoot, srcFile)
-        : srcFile;
+      let relSrc: string;
+      if (path.isAbsolute(srcFile)) {
+        relSrc = path.relative(workspaceRoot, srcFile);
+      } else if (srcFile.startsWith('../') || srcFile.startsWith('./')) {
+        // Relative path with ../ or ./: resolve relative to the test file's directory.
+        // e.g. testRelDir="tests", srcFile="../src/foo.h" → normalize("tests/../src/foo.h") = "src/foo.h"
+        relSrc = path.normalize(path.join(testRelDir, srcFile));
+      } else {
+        relSrc = srcFile;
+      }
+
       for (const entity of archJson.entities) {
         const entityFile = entity.sourceLocation?.file;
         if (!entityFile) continue;
         const relEntity = path.isAbsolute(entityFile)
           ? path.relative(workspaceRoot, entityFile)
           : entityFile;
+        // Exact file match (TypeScript, etc.)
         if (relEntity === relSrc) {
           result.push(entity.id);
+          continue;
+        }
+        // Directory-prefix match for package-level imports (Go):
+        // importedSourceFiles entry has no extension → treat as package directory
+        if (!path.extname(relSrc) && relEntity.startsWith(relSrc + '/')) {
+          result.push(entity.id);
+          continue;
+        }
+        // Suffix match for Java Maven multi-module imports:
+        // import "com/foo/Bar.java" should match entity at "module/src/main/java/com/foo/Bar.java"
+        if (relSrc.endsWith('.java') && relEntity.endsWith('/' + relSrc)) {
+          result.push(entity.id);
+          continue;
+        }
+        // Package-level suffix match (no extension) for Java Maven:
+        // import dir "com/foo/bar" matches entity at "module/src/main/java/com/foo/bar/Class.java"
+        if (!path.extname(relSrc)) {
+          const entityDir = path.dirname(relEntity);
+          if (entityDir === relSrc || entityDir.endsWith('/' + relSrc)) {
+            result.push(entity.id);
+          }
         }
       }
     }

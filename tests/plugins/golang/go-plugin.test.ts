@@ -311,5 +311,76 @@ func BenchmarkFoo(b *testing.B) {
       const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
       expect(raw!.testTypeHint).toBe('unit');
     });
+
+    // Fix 2A: module-local imports must appear in importedSourceFiles
+    it('includes module-local imports in importedSourceFiles when module name is known', async () => {
+      const { mkdtemp, writeFile, rm } = await import('fs/promises');
+      const { tmpdir } = await import('os');
+      const pathMod = await import('path');
+      const tmpDir = await mkdtemp(pathMod.default.join(tmpdir(), 'gotest-'));
+      try {
+        await writeFile(
+          pathMod.default.join(tmpDir, 'go.mod'),
+          'module github.com/myorg/myapp\n\ngo 1.21\n'
+        );
+        const localPlugin = new GoPlugin();
+        await localPlugin.initialize({ workspaceRoot: tmpDir });
+
+        const code = `
+package mypkg_test
+
+import (
+  "testing"
+  "github.com/myorg/myapp/internal/service"
+  "github.com/stretchr/testify/assert"
+)
+
+func TestFoo(t *testing.T) {
+  assert.Equal(t, 1, 1)
+}
+`;
+        const raw = localPlugin.extractTestStructure!('service_test.go', code);
+        expect(raw).not.toBeNull();
+        expect(raw!.importedSourceFiles.some((f: string) => f.includes('internal/service'))).toBe(true);
+      } finally {
+        await rm(tmpDir, { recursive: true });
+      }
+    });
+
+    it('does NOT include external github.com packages in importedSourceFiles', async () => {
+      const { mkdtemp, writeFile, rm } = await import('fs/promises');
+      const { tmpdir } = await import('os');
+      const pathMod = await import('path');
+      const tmpDir = await mkdtemp(pathMod.default.join(tmpdir(), 'gotest-'));
+      try {
+        await writeFile(
+          pathMod.default.join(tmpDir, 'go.mod'),
+          'module github.com/myorg/myapp\n\ngo 1.21\n'
+        );
+        const localPlugin = new GoPlugin();
+        await localPlugin.initialize({ workspaceRoot: tmpDir });
+
+        const code = `
+package mypkg_test
+
+import (
+  "testing"
+  "github.com/stretchr/testify/assert"
+  "github.com/some/external/lib"
+)
+
+func TestFoo(t *testing.T) {
+  assert.Equal(t, 1, 1)
+}
+`;
+        const raw = localPlugin.extractTestStructure!('foo_test.go', code);
+        expect(raw).not.toBeNull();
+        // testify and external lib must NOT appear
+        expect(raw!.importedSourceFiles.some((f: string) => f.includes('testify'))).toBe(false);
+        expect(raw!.importedSourceFiles.some((f: string) => f.includes('external/lib'))).toBe(false);
+      } finally {
+        await rm(tmpDir, { recursive: true });
+      }
+    });
   });
 });

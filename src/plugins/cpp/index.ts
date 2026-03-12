@@ -208,6 +208,8 @@ export class CppPlugin implements ILanguagePlugin {
     // Assertion counting patterns
     const assertionPatterns = [
       /\bassert\s*\(/g,
+      /\bassert_\w+\s*\(/g,
+      /\bt\.assert_\w+\s*\(/g,
       /\bGGML_ASSERT\s*\(/g,
       /\bLLAMA_ASSERT\s*\(/g,
       /\bEXPECT_\w+\s*\(/g,
@@ -253,10 +255,16 @@ export class CppPlugin implements ILanguagePlugin {
 
     if (testCases.length === 0) return null;
 
-    // Distribute assertions evenly across cases (static analysis can't attribute per-function)
-    const assertionsPerCase = testCases.length > 0 ? Math.round(totalAssertions / testCases.length) : 0;
-    for (const tc of testCases) {
-      if (tc.assertionCount === 0) tc.assertionCount = assertionsPerCase;
+    // Distribute assertions across cases using remainder distribution to preserve the total.
+    // Math.round() would lose assertions when totalAssertions < testCases.length (e.g. 4/9→0).
+    if (totalAssertions > 0 && testCases.length > 0) {
+      const base = Math.floor(totalAssertions / testCases.length);
+      const remainder = totalAssertions % testCases.length;
+      for (let i = 0; i < testCases.length; i++) {
+        if (testCases[i].assertionCount === 0) {
+          testCases[i].assertionCount = base + (i < remainder ? 1 : 0);
+        }
+      }
     }
 
     // Imports: #include "local/*.h" patterns for coverage linking
@@ -276,6 +284,7 @@ export class CppPlugin implements ILanguagePlugin {
       testTypeHint,
       testCases,
       importedSourceFiles,
+      totalAssertions,
     };
   }
 

@@ -144,4 +144,47 @@ describe('TestIssueDetector', () => {
     const issues = detector.detect(files, []);
     expect(issues).toHaveLength(0);
   });
+
+  // Fix 3: orphan_test must use coverage MAP (path-convention links), not just coveredEntityIds
+  it('does NOT flag orphan_test when test is linked via coverage map (path-convention)', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const file = makeTestFile({
+      assertionCount: 5,
+      testCaseCount: 3,
+      assertionDensity: 1.67,
+      skipCount: 0,
+      coveredEntityIds: [],  // no import-based links
+      testType: 'unit',
+    });
+    // But the coverage MAP has a link for this test (via path-convention)
+    const coverageMap = [{
+      sourceEntityId: 'internal/filter.Filter',
+      coveredByTestIds: [file.id],
+      coverageScore: 0.3,
+    }];
+    const issues = detector.detect([file], coverageMap);
+    expect(issues.filter(i => i.type === 'orphan_test')).toHaveLength(0);
+  });
+
+  it('still flags orphan_test when test has no links in the coverage map either', async () => {
+    const { TestIssueDetector } = await import('@/analysis/test-issue-detector.js');
+    const detector = new TestIssueDetector();
+    const file = makeTestFile({
+      assertionCount: 5,
+      testCaseCount: 3,
+      assertionDensity: 1.67,
+      skipCount: 0,
+      coveredEntityIds: [],
+      testType: 'unit',
+    });
+    // Coverage map exists but does NOT include this test
+    const coverageMap = [{
+      sourceEntityId: 'other.Entity',
+      coveredByTestIds: ['other_test.go'],
+      coverageScore: 0.3,
+    }];
+    const issues = detector.detect([file], coverageMap);
+    expect(issues.filter(i => i.type === 'orphan_test')).toHaveLength(1);
+  });
 });

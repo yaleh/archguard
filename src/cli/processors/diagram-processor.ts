@@ -310,7 +310,9 @@ export class DiagramProcessor {
       });
       this.registerQueryScope(firstDiagram.sources, rawArchJSON, kind, firstDiagram.queryRole);
       // Store ArchJSON for test analysis: first assignment wins, unless a primary role is found.
-      if (this._lastArchJson === null || firstDiagram.queryRole === 'primary') {
+      // Check all diagrams in the group (they share sources, so any with queryRole='primary' wins).
+      const groupHasPrimary = diagrams.some((d) => d.queryRole === 'primary');
+      if (this._lastArchJson === null || groupHasPrimary) {
         this._lastArchJson = rawArchJSON;
       }
       return await pMap(

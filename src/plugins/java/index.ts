@@ -312,8 +312,60 @@ export class JavaPlugin implements ILanguagePlugin {
       frameworks,
       testTypeHint,
       testCases,
-      importedSourceFiles: [],
+      importedSourceFiles: this.extractJavaImports(code),
     };
+  }
+
+  /**
+   * Extract project-local imports from Java source and convert to relative file paths.
+   * e.g. "com.example.Foo" → "com/example/Foo.java"
+   * Well-known external/stdlib packages are filtered out so only project-internal imports remain.
+   * The caller (resolveImportedEntityIds) matches these paths against entity sourceLocation files
+   * using a suffix match for Maven multi-module projects.
+   */
+  private extractJavaImports(code: string): string[] {
+    // Known external package prefixes — anything matching these is skipped.
+    const EXTERNAL_PREFIXES = [
+      'java.', 'javax.', 'jakarta.', 'sun.', 'com.sun.',
+      'org.junit.', 'org.testng.', 'org.assertj.',
+      'org.openjdk.jmh.', 'org.mockito.',
+      'org.slf4j.', 'ch.qos.',
+      'com.fasterxml.', 'com.google.',
+      'io.grpc.', 'io.netty.', 'io.vertx.',
+      'org.apache.', 'org.springframework.',
+    ];
+
+    const imported: string[] = [];
+    // Matches both: import com.foo.Bar;  and  import static com.foo.Bar.*;
+    const importRegex = /^\s*import\s+(?:static\s+)?([a-zA-Z][\w.]*[\w*])\s*;/gm;
+    let m: RegExpExecArray | null;
+    while ((m = importRegex.exec(code)) !== null) {
+      let fqn = m[1];
+      // Strip trailing wildcard (import com.example.pkg.*)
+      if (fqn.endsWith('.*')) fqn = fqn.slice(0, -2);
+
+      // Skip external packages
+      if (EXTERNAL_PREFIXES.some((pfx) => fqn.startsWith(pfx))) continue;
+
+      // Heuristic: if last segment starts with uppercase it's a class → append .java
+      // if last segment is lowercase but second-to-last starts with uppercase, it's a
+      // static method/field import (e.g. import static com.example.MyClass.myMethod) → class file
+      // otherwise treat as package directory (no extension) for dir-level matching
+      const parts = fqn.split('.');
+      const last = parts[parts.length - 1];
+      let filePath: string;
+      if (/^[A-Z]/.test(last)) {
+        filePath = parts.join('/') + '.java';
+      } else if (parts.length >= 2 && /^[A-Z]/.test(parts[parts.length - 2])) {
+        // static method/field import — strip method name, use class file
+        filePath = parts.slice(0, -1).join('/') + '.java';
+      } else {
+        filePath = parts.join('/');
+      }
+
+      if (!imported.includes(filePath)) imported.push(filePath);
+    }
+    return imported;
   }
 
   private countJavaAssertions(code: string): number {

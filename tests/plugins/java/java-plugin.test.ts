@@ -367,4 +367,116 @@ public class TensorBench {
       expect(result!.testCases).toHaveLength(2);
     });
   });
+
+  describe('extractTestStructure - importedSourceFiles', () => {
+    it('converts project class imports to relative file paths', () => {
+      const code = `
+import org.junit.Test;
+import org.junit.Assert;
+import com.github.tjake.jlama.tensor.AbstractTensor;
+import com.github.tjake.jlama.tensor.FloatBufferTensor;
+import com.github.tjake.jlama.safetensors.SafeTensorSupport;
+public class TestParser {
+  @Test
+  public void testSomething() { Assert.assertEquals(1, 1); }
+}`;
+      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/tensor/AbstractTensor.java');
+      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/tensor/FloatBufferTensor.java');
+      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/safetensors/SafeTensorSupport.java');
+    });
+
+    it('excludes stdlib and test framework imports', () => {
+      const code = `
+import org.junit.Test;
+import org.junit.Assert;
+import org.assertj.core.api.Assertions;
+import java.util.List;
+import java.io.IOException;
+import javax.annotation.Nullable;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.MyProjectClass;
+public class MyTest {
+  @Test
+  public void testSomething() { Assert.assertEquals(1, 1); }
+}`;
+      const result = plugin.extractTestStructure!('/project/MyTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).not.toContain('org/junit/Test.java');
+      expect(result!.importedSourceFiles).not.toContain('org/junit/Assert.java');
+      expect(result!.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
+      expect(result!.importedSourceFiles).not.toContain('java/util/List.java');
+      expect(result!.importedSourceFiles).not.toContain('javax/annotation/Nullable.java');
+      expect(result!.importedSourceFiles).not.toContain('com/fasterxml/jackson/databind/ObjectMapper.java');
+      expect(result!.importedSourceFiles).toContain('com/example/MyProjectClass.java');
+    });
+
+    it('extracts static imports from project classes', () => {
+      const code = `
+import org.junit.Test;
+import static com.github.tjake.jlama.tensor.operations.NativeSimdTensorOperations.*;
+public class TestOperations {
+  @Test
+  public void testOps() { assertEquals(1, 1); }
+}`;
+      const result = plugin.extractTestStructure!('/project/TestOperations.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).toContain(
+        'com/github/tjake/jlama/tensor/operations/NativeSimdTensorOperations.java'
+      );
+    });
+
+    it('excludes static imports from test frameworks', () => {
+      const code = `
+import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import com.example.MyService;
+public class MyServiceTest {
+  @Test
+  public void testService() { assertThat(1).isEqualTo(1); }
+}`;
+      const result = plugin.extractTestStructure!('/project/MyServiceTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
+      expect(result!.importedSourceFiles).not.toContain('org/junit/Assert.java');
+      expect(result!.importedSourceFiles).toContain('com/example/MyService.java');
+    });
+
+    it('resolves static method imports to the containing class file', () => {
+      const code = `
+import org.junit.jupiter.api.Test;
+import static com.github.tjake.jlama.net.grpc.JlamaService.isPowerOfTwoUsingBitwiseOperation;
+import static com.github.tjake.jlama.net.grpc.JlamaService.nextPowerOfTwo;
+public class JlamaServiceUnitTest {
+  @Test
+  public void testPowerOfTwo() { }
+}`;
+      const result = plugin.extractTestStructure!('/project/JlamaServiceUnitTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).toContain(
+        'com/github/tjake/jlama/net/grpc/JlamaService.java'
+      );
+      // Should only appear once (deduped)
+      const count = result!.importedSourceFiles.filter(
+        (f) => f === 'com/github/tjake/jlama/net/grpc/JlamaService.java'
+      ).length;
+      expect(count).toBe(1);
+    });
+
+    it('returns empty importedSourceFiles when all imports are external', () => {
+      const code = `
+import org.junit.Test;
+import java.util.List;
+import org.slf4j.Logger;
+public class PureFrameworkTest {
+  @Test
+  public void testSomething() { }
+}`;
+      const result = plugin.extractTestStructure!('/project/PureFrameworkTest.java', code);
+      expect(result).not.toBeNull();
+      expect(result!.importedSourceFiles).toHaveLength(0);
+    });
+  });
 });

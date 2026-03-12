@@ -87,6 +87,7 @@ export async function detectJavaProjectStructure(
       name: `${label}/class/all-classes`,
       sources: [projectRoot],
       level: 'class',
+      queryRole: 'primary',
     } as DiagramConfig,
   ];
 

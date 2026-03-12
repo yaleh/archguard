@@ -1057,4 +1057,231 @@ describe('QueryEngine', () => {
       }
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Group E: getPackageStats() — OO Fallback path (Python) P0.4
+  // ---------------------------------------------------------------------------
+
+  const pythonWs = '/home/user/project';
+
+  /**
+   * A minimal Python ArchJSON fixture with workspaceRoot set.
+   * Files: pytorch/engine/engine.py, pytorch/models/llama.py, serve/server.py
+   */
+  const pythonArchJson: ArchJSON = {
+    version: '1.0',
+    language: 'python',
+    timestamp: '2026-01-01T00:00:00Z',
+    workspaceRoot: pythonWs,
+    sourceFiles: [
+      `${pythonWs}/pytorch/engine/engine.py`,
+      `${pythonWs}/pytorch/models/llama.py`,
+      `${pythonWs}/serve/server.py`,
+    ],
+    entities: [
+      {
+        id: 'pytorch.engine.engine.Engine',
+        name: 'Engine',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'run', type: 'method', visibility: 'public' },
+          { name: 'stop', type: 'method', visibility: 'public' },
+        ],
+        sourceLocation: {
+          file: `${pythonWs}/pytorch/engine/engine.py`,
+          startLine: 1,
+          endLine: 100,
+        },
+      },
+      {
+        id: 'pytorch.models.llama.LlamaModel',
+        name: 'LlamaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [{ name: 'forward', type: 'method', visibility: 'public' }],
+        sourceLocation: {
+          file: `${pythonWs}/pytorch/models/llama.py`,
+          startLine: 1,
+          endLine: 80,
+        },
+      },
+      {
+        id: 'serve.server.APIServer',
+        name: 'APIServer',
+        type: 'class',
+        visibility: 'public',
+        members: [
+          { name: 'start', type: 'method', visibility: 'public' },
+          { name: 'port', type: 'property', visibility: 'public' },
+        ],
+        sourceLocation: {
+          file: `${pythonWs}/serve/server.py`,
+          startLine: 1,
+          endLine: 60,
+        },
+      },
+    ],
+    relations: [],
+  };
+
+  describe('getPackageStats — Python (P0.4)', () => {
+    it('returns meaningful package names (not home/yale/...) when workspaceRoot is set', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const result = engine.getPackageStats(2);
+      const pkgNames = result.packages.map((p) => p.package);
+      // Must NOT start with filesystem path fragments
+      for (const name of pkgNames) {
+        expect(name).not.toMatch(/^home\//);
+        expect(name).not.toMatch(/^\/home\//);
+      }
+    });
+
+    it('depth=1 groups all pytorch files under "pytorch" and serve files under "serve"', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const result = engine.getPackageStats(1);
+      const pkgNames = result.packages.map((p) => p.package).sort();
+      expect(pkgNames).toContain('pytorch');
+      expect(pkgNames).toContain('serve');
+    });
+
+    it('depth=2 separates pytorch/engine and pytorch/models', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const result = engine.getPackageStats(2);
+      const pkgNames = result.packages.map((p) => p.package);
+      expect(pkgNames).toContain('pytorch/engine');
+      expect(pkgNames).toContain('pytorch/models');
+      expect(pkgNames).toContain('serve');
+    });
+
+    it('entityCount is populated correctly for each package', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const result = engine.getPackageStats(2);
+      const enginePkg = result.packages.find((p) => p.package === 'pytorch/engine');
+      expect(enginePkg).toBeDefined();
+      expect(enginePkg!.entityCount).toBe(1);
+      expect(enginePkg!.methodCount).toBe(2); // run + stop
+    });
+
+    it('meta.dataPath is oo-derived', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const result = engine.getPackageStats(2);
+      expect(result.meta.dataPath).toBe('oo-derived');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Group F: getSummary().totalPackageCount
+  // ---------------------------------------------------------------------------
+
+  describe('getSummary totalPackageCount', () => {
+    /**
+     * Build an ArchJSON with >10 distinct top-level packages so topPackages gets truncated.
+     * Each entity lives in a separate package (pkg00/ … pkg11/).
+     */
+    function makeManyPackageArchJson(count: number): ArchJSON {
+      const ws = '/ws';
+      const entities: Entity[] = Array.from({ length: count }, (_, i) => {
+        const pkg = `pkg${String(i).padStart(2, '0')}`;
+        return {
+          id: `${pkg}.module.Cls${i}`,
+          name: `Cls${i}`,
+          type: 'class' as const,
+          visibility: 'public' as const,
+          members: [],
+          sourceLocation: { file: `${ws}/${pkg}/module.py`, startLine: 1, endLine: 10 },
+        };
+      });
+      return {
+        version: '1.0',
+        language: 'python',
+        timestamp: '2026-01-01T00:00:00Z',
+        workspaceRoot: ws,
+        sourceFiles: entities.map((e) => e.sourceLocation.file),
+        entities,
+        relations: [],
+      };
+    }
+
+    it('totalPackageCount equals topPackages.length when <= 10 packages exist', () => {
+      const engine = createEngine(pythonArchJson, { ...defaultScope, language: 'python' });
+      const summary = engine.getSummary();
+      expect(summary.totalPackageCount).toBe(summary.topPackages.length);
+    });
+
+    it('totalPackageCount reflects the full package count when > 10 packages exist', () => {
+      const archJson = makeManyPackageArchJson(12);
+      const engine = createEngine(archJson, { ...defaultScope, language: 'python' });
+      const summary = engine.getSummary();
+      expect(summary.topPackages.length).toBeLessThanOrEqual(10);
+      expect(summary.totalPackageCount).toBe(12);
+      expect(summary.totalPackageCount).toBeGreaterThan(summary.topPackages.length);
+    });
+
+    it('totalPackageCount is present and a number for Go Atlas', () => {
+      const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
+      const summary = engine.getSummary();
+      expect(typeof summary.totalPackageCount).toBe('number');
+      expect(summary.totalPackageCount).toBeGreaterThan(0);
+    });
+
+    it('totalPackageCount is present and a number for TypeScript', () => {
+      const engine = createEngine(tsArchJson);
+      const summary = engine.getSummary();
+      expect(typeof summary.totalPackageCount).toBe('number');
+      expect(summary.totalPackageCount).toBeGreaterThan(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Fix A: OO Fallback fileCount includes entity-less source files (C++)
+  // ---------------------------------------------------------------------------
+  describe('getPackageStats — OO Fallback fileCount includes entity-less source files (C++)', () => {
+    const cppWs = '/workspace';
+    const cppArchJson: ArchJSON = {
+      version: '1.0',
+      language: 'cpp',
+      timestamp: '2026-01-01T00:00:00Z',
+      workspaceRoot: cppWs,
+      // 3 source files: only sampling.cpp has an entity; the other two are impl-only
+      sourceFiles: [
+        `${cppWs}/src/sampling.cpp`,
+        `${cppWs}/src/impl-detail.cpp`,
+        `${cppWs}/src/helper-util.cpp`,
+      ],
+      entities: [
+        {
+          id: 'src.Sampler',
+          name: 'Sampler',
+          type: 'struct',
+          visibility: 'public',
+          members: [{ name: 'sample', type: 'method', visibility: 'public' }],
+          sourceLocation: { file: `${cppWs}/src/sampling.cpp`, startLine: 5, endLine: 80 },
+        },
+      ],
+      relations: [],
+    };
+
+    it('fileCount for src package is 3 (includes entity-less C++ files)', () => {
+      const engine = createEngine(cppArchJson, { ...defaultScope, language: 'cpp' });
+      const result = engine.getPackageStats(1);
+      const src = result.packages.find((p) => p.package === 'src');
+      expect(src).toBeDefined();
+      expect(src!.fileCount).toBe(3);
+    });
+
+    it('entityCount for src package is still 1 (only entity-having file contributes)', () => {
+      const engine = createEngine(cppArchJson, { ...defaultScope, language: 'cpp' });
+      const result = engine.getPackageStats(1);
+      const src = result.packages.find((p) => p.package === 'src');
+      expect(src!.entityCount).toBe(1);
+    });
+
+    it('total fileCount across all packages equals sourceFiles.length (no double-counting)', () => {
+      const engine = createEngine(cppArchJson, { ...defaultScope, language: 'cpp' });
+      const result = engine.getPackageStats(1);
+      const total = result.packages.reduce((s, p) => s + p.fileCount, 0);
+      expect(total).toBe(3);
+    });
+  });
 });

@@ -274,4 +274,50 @@ describe('test analysis MCP tools — analysis present', () => {
     expect(tools.has('archguard_get_test_issues')).toBe(true);
     expect(tools.has('archguard_get_test_metrics')).toBe(true);
   });
+
+  // pytest framework should suggest patterns that cover torch.testing.assert_close style calls
+  it('archguard_detect_test_patterns: pytest framework suggests .assert style patterns', async () => {
+    loadEngineMock.mockResolvedValueOnce({
+      hasTestAnalysis: () => true,
+      getTestAnalysis: () => ({
+        testFiles: [{ frameworks: ['pytest'] }],
+        metrics: { totalTestFiles: 1 },
+        patternConfigSource: 'auto',
+      }),
+    } as any);
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_detect_test_patterns')!;
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    const patterns: string[] = parsed.suggestedPatternConfig.assertionPatterns ?? [];
+    // Must include a pattern that matches torch.testing.assert_close / np.testing.assert_allclose
+    expect(patterns.some((p) => p.includes('.assert'))).toBe(true);
+  });
+
+  // patternConfig must not be silently discarded — passing it must not cause an error
+  it('archguard_get_test_metrics accepts patternConfig without crashing', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+    const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
+    // Should return valid JSON (cached data is fine; what matters is no crash/ignored param)
+    expect(() => JSON.parse(result.content[0].text)).not.toThrow();
+  });
+
+  it('archguard_get_test_coverage accepts patternConfig without crashing', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_coverage')!;
+    const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
+    expect(() => JSON.parse(result.content[0].text)).not.toThrow();
+  });
+
+  it('archguard_get_test_issues accepts patternConfig without crashing', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_issues')!;
+    const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
+    expect(() => JSON.parse(result.content[0].text)).not.toThrow();
+  });
 });

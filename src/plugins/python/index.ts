@@ -6,14 +6,18 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import micromatch from 'micromatch';
 import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
   PluginCapabilities,
+  RawTestFile,
+  RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { TestPatternConfig } from '@/types/extensions.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
@@ -35,6 +39,7 @@ export class PythonPlugin implements ILanguagePlugin {
       incrementalParsing: true,
       dependencyExtraction: true,
       typeInference: false, // Python doesn't require type inference as it has type hints
+      testStructureExtraction: true,
     } as PluginCapabilities,
   };
 
@@ -98,8 +103,8 @@ export class PythonPlugin implements ILanguagePlugin {
     const pattern = config.filePattern ?? '**/*.py';
     const files = await this.findPythonFiles(workspaceRoot, pattern, config.excludePatterns);
 
-    // Parse all files
-    return this.parseFiles(files);
+    // Parse all files and include workspaceRoot in the output ArchJSON
+    return this.parseFiles(files, workspaceRoot);
   }
 
   /**
@@ -140,7 +145,7 @@ export class PythonPlugin implements ILanguagePlugin {
   /**
    * Parse multiple files
    */
-  async parseFiles(filePaths: string[]): Promise<ArchJSON> {
+  async parseFiles(filePaths: string[], workspaceRoot?: string): Promise<ArchJSON> {
     this.ensureInitialized();
 
     const modules = [];
@@ -155,22 +160,120 @@ export class PythonPlugin implements ILanguagePlugin {
       }
     }
 
-    // Map all modules to ArchJSON
-    return this.archJsonMapper.mapModules(modules);
+    // Map all modules to ArchJSON, propagating workspaceRoot for stable IDs and path resolution
+    return this.archJsonMapper.mapModules(modules, workspaceRoot);
   }
 
   /**
-   * Stub: Python test file detection not yet implemented.
+   * Determine whether a given file path is a Python test file.
+   *
+   * Default pytest conventions:
+   *   - Filename matches test_*.py or *_test.py
+   *   - File resides in a directory named "tests" or "test"
+   *   - conftest.py and __init__.py are excluded
+   *
+   * When patternConfig.testFileGlobs is provided those globs take precedence.
    */
-  isTestFile(_filePath: string): boolean {
-    return false;
+  isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
+    if (patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0) {
+      return micromatch.isMatch(filePath, patternConfig.testFileGlobs);
+    }
+    const base = path.basename(filePath);
+    if (base === 'conftest.py' || base === '__init__.py') return false;
+    if (/^test_.+\.py$/.test(base) || /^.+_test\.py$/.test(base)) return true;
+    // directory convention: any .py file inside tests/ or test/ directory
+    const parts = filePath.replace(/\\/g, '/').split('/');
+    return parts.some((p) => p === 'tests' || p === 'test');
   }
 
   /**
-   * Stub: Python test structure extraction not yet implemented.
+   * Extract raw test structure from a Python test file (static analysis only).
+   *
+   * Scans the source line-by-line for pytest / unittest test functions and
+   * classes, counts assertion statements, and detects skip decorators.
    */
-  extractTestStructure(_filePath: string, _code: string): null {
-    return null;
+  extractTestStructure(
+    filePath: string,
+    code: string,
+    patternConfig?: TestPatternConfig
+  ): RawTestFile | null {
+    if (!this.isTestFile(filePath, patternConfig)) return null;
+
+    try {
+      const lines = code.split('\n');
+
+      // --- Framework detection ---
+      const frameworks: string[] = [];
+      if (/^import pytest\b|^from pytest\b/m.test(code)) frameworks.push('pytest');
+      if (/^import unittest\b|^from unittest\b/m.test(code)) frameworks.push('unittest');
+      if (frameworks.length === 0) frameworks.push('unknown');
+
+      // --- testTypeHint from file path ---
+      let testTypeHint: RawTestFile['testTypeHint'] = 'unit';
+      if (/\/e2e\/|\/cypress\//.test(filePath)) testTypeHint = 'e2e';
+      else if (/\/integration\//.test(filePath)) testTypeHint = 'integration';
+      else if (/\/perf\/|\/performance\/|\/benchmark\//.test(filePath))
+        testTypeHint = 'performance';
+
+      // --- Configurable patterns ---
+      const assertionPatterns = patternConfig?.assertionPatterns ?? [
+        'assert ',        // Python assert statement: assert x == y
+        'assert(',        // assert(condition) call style
+        '.assert',        // self.assertX (unittest), torch.testing.assert_close, np.testing.assert_allclose
+      ];
+      const skipPatterns = patternConfig?.skipPatterns ?? [
+        '@pytest.mark.skip',
+        '@pytest.mark.skipif',
+        '@unittest.skip',
+        '@skip(',
+      ];
+
+      // --- Test case extraction (line-scan) ---
+      const testCases: RawTestCase[] = [];
+      let pendingSkip = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trimStart();
+
+        // Detect skip decorator on this line
+        if (skipPatterns.some((sp) => trimmed.startsWith(sp.startsWith('@') ? sp : sp))) {
+          pendingSkip = true;
+          continue;
+        }
+
+        // def test_* → a test case
+        const testFnMatch = trimmed.match(/^def\s+(test_\w+)\s*\(/);
+        if (testFnMatch) {
+          const name = testFnMatch[1];
+          const isSkipped = pendingSkip;
+          // Count assertions in the next 30 lines (body heuristic)
+          const bodyEnd = Math.min(i + 30, lines.length);
+          const assertionCount = lines
+            .slice(i + 1, bodyEnd)
+            .filter((l) => assertionPatterns.some((ap) => l.includes(ap))).length;
+          testCases.push({ name, isSkipped, assertionCount });
+          pendingSkip = false;
+          continue;
+        }
+
+        // Reset pending skip on any non-decorator, non-blank, non-comment line
+        if (trimmed !== '' && !trimmed.startsWith('@') && !trimmed.startsWith('#')) {
+          pendingSkip = false;
+        }
+      }
+
+      if (testCases.length === 0) return null;
+
+      return {
+        filePath,
+        frameworks,
+        testTypeHint,
+        testCases,
+        importedSourceFiles: [], // relative imports cannot be resolved without full pkg graph
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**

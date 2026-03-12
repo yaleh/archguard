@@ -52,6 +52,16 @@ const analyzeSchema = {
       'Output artifact format. Use json for query/index refresh without Mermaid rendering.'
     ),
   noCache: z.boolean().default(false).describe('Disable analysis caches for this run.'),
+  includeTests: z
+    .boolean()
+    .optional()
+    .describe(
+      'Run test analysis after parsing. Required before calling test analysis tools (get_test_metrics, get_test_coverage, get_test_issues).'
+    ),
+  testsOnly: z
+    .boolean()
+    .optional()
+    .describe('Run test analysis only, without generating architecture diagrams.'),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -59,7 +69,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
     'archguard_analyze',
     'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
     analyzeSchema,
-    async ({ projectRoot, sources, lang, diagrams, format, noCache }) => {
+    async ({ projectRoot, sources, lang, diagrams, format, noCache, includeTests, testsOnly }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
 
@@ -75,6 +85,8 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               diagrams,
               format,
               cache: noCache ? false : undefined,
+              includeTests,
+              testsOnly,
             },
             reporter: new StderrReporter(),
           });

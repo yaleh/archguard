@@ -136,6 +136,7 @@ export class QueryEngine {
       cycleDetection: boolean;
     };
     topPackages: PackageStatEntry[];
+    totalPackageCount: number;
   } {
     const computedTopDependedOn = Object.entries(this.index.dependents)
       .map(([id, deps]) => ({
@@ -165,8 +166,9 @@ export class QueryEngine {
       ? 'Not available for Go Atlas projects. Use archguard_get_atlas_layer({ layer: "package" }) to find the most-imported packages.'
       : undefined;
 
-    const topPackagesResult = this.getPackageStats(2, 10);
-    const topPackages = topPackagesResult.packages;
+    const topPackagesResult = this.getPackageStats(2);
+    const totalPackageCount = topPackagesResult.packages.length;
+    const topPackages = topPackagesResult.packages.slice(0, 10);
 
     return {
       entityCount: this.archJson.entities.length,
@@ -177,6 +179,7 @@ export class QueryEngine {
       topDependedOnNote,
       capabilities,
       topPackages,
+      totalPackageCount,
     };
   }
 
@@ -323,11 +326,28 @@ export class QueryEngine {
     const testPattern = this.buildTestPattern();
     const packageFiles = new Map<string, string[]>();
     const ooWs = this.archJson.workspaceRoot;
+    const addedRelFiles = new Set<string>();
     for (const rawFile of Object.keys(this.index.fileToIds)) {
       let file = rawFile;
       if (path.isAbsolute(file)) {
         file = ooWs ? path.relative(ooWs, file) : file.replace(/^.*?(?=\w)/, '');
       }
+      const parts = file.split('/');
+      const pkg =
+        parts.length <= clampedDepth
+          ? parts.slice(0, -1).join('/') || '.'
+          : parts.slice(0, clampedDepth).join('/');
+      packageFiles.set(pkg, [...(packageFiles.get(pkg) ?? []), file]);
+      addedRelFiles.add(file);
+    }
+    // Also include source files that have no entities (e.g. C++ impl-only files).
+    // These are tracked in archJson.sourceFiles but absent from fileToIds.
+    for (const rawFile of this.archJson.sourceFiles) {
+      let file = rawFile;
+      if (path.isAbsolute(file)) {
+        file = ooWs ? path.relative(ooWs, file) : file.replace(/^.*?(?=\w)/, '');
+      }
+      if (addedRelFiles.has(file)) continue; // already counted via fileToIds
       const parts = file.split('/');
       const pkg =
         parts.length <= clampedDepth

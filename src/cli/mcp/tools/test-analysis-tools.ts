@@ -59,10 +59,18 @@ function buildSuggestedPatternConfig(frameworks: string[]): Record<string, strin
         assertionPatterns.push('\\bREQUIRE\\s*\\(', '\\bCHECK\\s*\\(');
         break;
       case 'assert': // C++ custom / Node assert
-        assertionPatterns.push('\\bassert\\s*\\(', '\\bGGML_ASSERT\\s*\\(');
+        assertionPatterns.push(
+          '\\bassert\\s*\\(',
+          '\\bassert_\\w+\\s*\\(',        // assert_equal(), assert_true(), assert_equals()
+          '\\bt\\.assert_\\w+\\s*\\(',   // t.assert_equal(), t.assert_true()
+          '\\bGGML_ASSERT\\s*\\(',
+        );
         break;
       case 'pytest':
-        assertionPatterns.push('\\bassert\\b');
+        assertionPatterns.push(
+          '\\bassert\\b',
+          '.assert'   // torch.testing.assert_close, np.testing.assert_allclose, self.assertX
+        );
         break;
       case 'unittest':
         assertionPatterns.push('\\bself\\.assert\\w+\\s*\\(');

@@ -4,6 +4,17 @@ export class TestIssueDetector {
   detect(testFiles: TestFileInfo[], coverageMap: CoverageLink[]): TestIssue[] {
     const issues: TestIssue[] = [];
 
+    // Build a set of test file IDs that appear in the coverage map with score > 0.
+    // This covers path-convention matches that do not produce coveredEntityIds entries.
+    const filesWithMapLinks = new Set<string>();
+    for (const link of coverageMap) {
+      if (link.coverageScore > 0) {
+        for (const testId of link.coveredByTestIds) {
+          filesWithMapLinks.add(testId);
+        }
+      }
+    }
+
     for (const file of testFiles) {
       // zero_assertion: has test cases but zero assertions — emitted for ALL types including debug
       // Exception: performance files (JMH benchmarks etc.) intentionally have no assertions
@@ -19,8 +30,10 @@ export class TestIssueDetector {
         });
       }
 
-      // orphan_test: non-debug test with no covered entities (severity 'info' — static analysis limitation)
-      if (file.testType !== 'debug' && file.coveredEntityIds.length === 0) {
+      // orphan_test: non-debug test with no covered entities via either import-analysis or
+      // path-convention (coverage map). We check both sources to avoid false positives when
+      // path-convention matches succeed but do not produce coveredEntityIds entries.
+      if (file.testType !== 'debug' && file.coveredEntityIds.length === 0 && !filesWithMapLinks.has(file.id)) {
         issues.push({
           type: 'orphan_test',
           severity: 'info',

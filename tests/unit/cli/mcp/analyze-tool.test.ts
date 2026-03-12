@@ -241,6 +241,59 @@ describe('registerAnalyzeTool', () => {
     expect(second.content[0].text).toContain('Analysis completed');
   });
 
+  describe('includeTests / testsOnly forwarding', () => {
+    const baseResult = {
+      config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: ['abc'],
+      hasDiagramFailures: false,
+    };
+
+    it('passes includeTests: true to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', includeTests: true });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ includeTests: true }),
+        })
+      );
+    });
+
+    it('passes testsOnly: true to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', testsOnly: true });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ testsOnly: true }),
+        })
+      );
+    });
+  });
+
   describe('formatAnalyzeResponse Paradigm block', () => {
     it('Go project → output contains Paradigm block', async () => {
       runAnalysisMock.mockResolvedValue({

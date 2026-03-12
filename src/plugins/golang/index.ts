@@ -120,6 +120,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   private goplsClient: GoplsClient | null = null;
   private initialized = false;
   private workspaceRoot = '';
+  private cachedModuleName = '';
 
   // Atlas internals (from former GoAtlasPlugin)
   private behaviorAnalyzer!: BehaviorAnalyzer;
@@ -157,6 +158,9 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     this.atlasRenderer = new AtlasRenderer();
 
     this.initialized = true;
+
+    // Cache module name for use in extractTestStructure (import resolution)
+    this.cachedModuleName = await this.readModuleName(config.workspaceRoot);
   }
 
   /**
@@ -685,9 +689,14 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     const importLineRegex = /^\s*(?:\w+\s+)?"([^"]+)"/gm;
     while ((match = importLineRegex.exec(importBlock)) !== null) {
       const pkg = match[1];
-      // Skip stdlib (no dots in first segment), testify, and external packages
+      // If the import is from this module, strip the module prefix to get the
+      // package-relative directory path (e.g. "github.com/org/app/internal/svc" → "internal/svc")
+      if (this.cachedModuleName && pkg.startsWith(this.cachedModuleName + '/')) {
+        importedSourceFiles.push(pkg.slice(this.cachedModuleName.length + 1));
+        continue;
+      }
+      // Skip stdlib (no slash), testify, and other external packages
       if (!pkg.includes('/') || pkg.startsWith('github.com/') || pkg.startsWith('golang.org/')) {
-        // External package — not a local source file
         continue;
       }
       importedSourceFiles.push(pkg);
