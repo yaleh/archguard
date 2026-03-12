@@ -114,7 +114,7 @@ const patternConfigSchema = z
 export function registerTestAnalysisTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_detect_test_patterns',
-    'Pattern-First tool: call this FIRST before any other test analysis tool. Detects test frameworks and conventions in the project. Returns suggestedPatternConfig and notes. Review the notes and correct the config if needed before passing to other tools.',
+    'Detect test frameworks and assertion conventions in the project; call this before any other test analysis tool and pass the returned suggestedPatternConfig to subsequent calls.',
     {
       projectRoot: z
         .string()
@@ -195,7 +195,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_coverage',
-    'Get test coverage map for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
+    'Return per-entity coverage links inferred by static import-path matching and filename conventions, not runtime tracing; scores are an approximation and may miss coverage via path aliases or indirect imports. Call archguard_detect_test_patterns first.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       patternConfig: patternConfigSchema,
@@ -215,7 +215,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_issues',
-    'Get test quality issues for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
+    'Return static-analysis test quality issues (orphan tests, zero-assertion files, skip accumulation); orphan_test and zero_assertion may produce false positives when tests use import aliases, custom assertion helpers, or long setup blocks. Call archguard_detect_test_patterns first.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       patternConfig: patternConfigSchema,
@@ -242,7 +242,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_metrics',
-    'Get test metrics summary for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
+    'Return test quality metrics: file counts by type, entity coverage ratio, assertion density, and issue counts. All metrics are static approximations — entityCoverageRatio measures structural link detection, not runtime execution coverage. Call archguard_detect_test_patterns first.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       patternConfig: patternConfigSchema,
