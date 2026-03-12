@@ -269,11 +269,62 @@ export class PythonPlugin implements ILanguagePlugin {
         frameworks,
         testTypeHint,
         testCases,
-        importedSourceFiles: [], // relative imports cannot be resolved without full pkg graph
+        importedSourceFiles: this.extractAbsoluteImports(code),
       };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Extract absolute Python imports from source code and convert to relative file paths.
+   *
+   * Handles:
+   *   from pkg.sub.module import X  →  pkg/sub/module.py
+   *   import pkg.sub.module         →  pkg/sub/module.py  (multi-component only)
+   *
+   * Relative imports (from . import, from .. import, from .foo import) are skipped
+   * because they cannot be resolved without the full package graph.
+   * Single-component bare imports (import os, import sys) are also skipped to
+   * avoid spurious matches against stdlib/package-root names.
+   */
+  private extractAbsoluteImports(code: string): string[] {
+    const seen = new Set<string>();
+    const results: string[] = [];
+
+    // Match both top-level and inline import statements
+    // from pkg.sub.module import X[, Y]
+    const fromRe = /^\s*from\s+([\w.]+)\s+import\b/gm;
+    // import pkg.sub.module [as alias]
+    const importRe = /^\s*import\s+([\w.]+)(?:\s+as\s+\w+)?\s*$/gm;
+
+    let m: RegExpExecArray | null;
+
+    while ((m = fromRe.exec(code)) !== null) {
+      const modulePath = m[1];
+      // Skip relative imports (start with a dot captured as first char of the group)
+      // Note: the regex only captures word chars and dots, so a leading dot in
+      // the original "from .foo import" would not be captured — guard anyway.
+      if (modulePath.startsWith('.')) continue;
+      const filePath = modulePath.replace(/\./g, '/') + '.py';
+      if (!seen.has(filePath)) {
+        seen.add(filePath);
+        results.push(filePath);
+      }
+    }
+
+    while ((m = importRe.exec(code)) !== null) {
+      const modulePath = m[1];
+      // Skip single-component imports (stdlib, package root): no dot present
+      if (!modulePath.includes('.')) continue;
+      const filePath = modulePath.replace(/\./g, '/') + '.py';
+      if (!seen.has(filePath)) {
+        seen.add(filePath);
+        results.push(filePath);
+      }
+    }
+
+    return results;
   }
 
   /**

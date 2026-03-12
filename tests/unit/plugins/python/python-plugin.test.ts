@@ -225,13 +225,102 @@ def test_broken():
     expect(result!.testCases[0].isSkipped).toBe(true);
   });
 
-  it('returns importedSourceFiles as empty array (relative imports not resolvable)', () => {
+  it('returns empty importedSourceFiles for relative-only imports (not resolvable)', () => {
     const code = `from ..models import User
 
 def test_user():
     assert User is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_user.py', code);
+    expect(result!.importedSourceFiles).toEqual([]);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Fix 3 — importedSourceFiles: absolute Python import resolution
+  // ---------------------------------------------------------------------------
+
+  it('resolves "from pkg.sub.module import X" to pkg/sub/module.py', () => {
+    const code = `from lmdeploy.turbomind.deploy.source_model.base import INPUT_MODELS
+
+def test_registry():
+    assert INPUT_MODELS is not None
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_registry.py', code);
+    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
+  });
+
+  it('resolves "import pkg.sub.module" to pkg/sub/module.py', () => {
+    const code = `import lmdeploy.pytorch.models.llama
+
+def test_model():
+    assert True
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_model.py', code);
+    expect(result!.importedSourceFiles).toContain('lmdeploy/pytorch/models/llama.py');
+  });
+
+  it('excludes relative imports (from . import, from .. import) from importedSourceFiles', () => {
+    const code = `from . import helpers
+from ..utils import common
+from lmdeploy.pytorch.engine import request
+
+def test_mixed():
+    assert True
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_mixed.py', code);
+    expect(result!.importedSourceFiles).not.toContain('helpers.py');
+    expect(result!.importedSourceFiles).not.toContain('utils/common.py');
+    expect(result!.importedSourceFiles).toContain('lmdeploy/pytorch/engine.py');
+  });
+
+  it('deduplicates when the same module is imported multiple times', () => {
+    const code = `from lmdeploy.pytorch.config import CacheConfig
+from lmdeploy.pytorch.config import SchedulerConfig
+
+def test_config():
+    assert CacheConfig is not None
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_config.py', code);
+    const matches = result!.importedSourceFiles.filter((f) => f === 'lmdeploy/pytorch/config.py');
+    expect(matches).toHaveLength(1);
+  });
+
+  it('resolves multiple distinct absolute imports', () => {
+    const code = `from lmdeploy.turbomind.deploy.source_model.base import INPUT_MODELS
+from lmdeploy.turbomind.deploy.source_model.llama import LlamaReader
+from lmdeploy.turbomind.deploy.source_model.internlm2 import InternLM2Reader
+
+def test_readers():
+    assert LlamaReader is not None
+    assert InternLM2Reader is not None
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_converter.py', code);
+    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
+    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
+    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/internlm2.py');
+    expect(result!.importedSourceFiles).toHaveLength(3);
+  });
+
+  it('handles dynamic/inline imports inside function bodies', () => {
+    const code = `def test_ffn():
+    import re
+    from lmdeploy.turbomind.deploy.source_model.llama import LlamaReader
+    reader = LlamaReader.__new__(LlamaReader)
+    assert reader is not None
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_ffn.py', code);
+    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
+  });
+
+  it('ignores single-component imports (stdlib or package root) to avoid false positives', () => {
+    const code = `import os
+import sys
+import re
+
+def test_env():
+    assert os.path.exists('/')
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_env.py', code);
     expect(result!.importedSourceFiles).toEqual([]);
   });
 
