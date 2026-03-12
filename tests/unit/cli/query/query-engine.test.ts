@@ -4,7 +4,7 @@ import type { QueryEngineOptions } from '@/cli/query/query-engine.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
-import type { PackageGraph } from '@/types/extensions.js';
+import type { PackageGraph, PackageCoverage, TestAnalysis } from '@/types/extensions.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1282,6 +1282,99 @@ describe('QueryEngine', () => {
       const result = engine.getPackageStats(1);
       const total = result.packages.reduce((s, p) => s + p.fileCount, 0);
       expect(total).toBe(3);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Stage 1.3: getEntityCoverage
+  // ---------------------------------------------------------------------------
+  describe('getEntityCoverage', () => {
+    const coveredEntity = makeEntity('entity-covered', 'Covered', {
+      sourceLocation: { file: 'src/covered.ts', startLine: 1, endLine: 20 },
+    });
+    const uncoveredEntity = makeEntity('entity-uncovered', 'Uncovered', {
+      sourceLocation: { file: 'src/uncovered.ts', startLine: 1, endLine: 10 },
+    });
+
+    const testAnalysis: TestAnalysis = {
+      version: '1.0',
+      patternConfigSource: 'auto',
+      testFiles: [
+        {
+          id: 'tests/covered.test.ts',
+          filePath: '/ws/tests/covered.test.ts',
+          frameworks: ['vitest'],
+          testType: 'unit',
+          testCaseCount: 3,
+          assertionCount: 9,
+          skipCount: 0,
+          assertionDensity: 3.0,
+          coveredEntityIds: ['entity-covered'],
+        },
+      ],
+      coverageMap: [
+        { sourceEntityId: 'entity-covered', coveredByTestIds: ['tests/covered.test.ts'], coverageScore: 0.85 },
+        { sourceEntityId: 'entity-uncovered', coveredByTestIds: [], coverageScore: 0.0 },
+      ],
+      issues: [],
+      metrics: {
+        totalTestFiles: 1,
+        byType: { unit: 1, integration: 0, e2e: 0, performance: 0, debug: 0, unknown: 0 },
+        entityCoverageRatio: 0.5,
+        assertionDensity: 3.0,
+        skipRatio: 0,
+        issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+      },
+    };
+
+    function createEntityCoverageEngine(): QueryEngine {
+      return createEngine(
+        makeArchJson({
+          entities: [coveredEntity, uncoveredEntity],
+          extensions: { testAnalysis },
+        })
+      );
+    }
+
+    it('returns found=false with empty arrays when no test analysis is present', () => {
+      const engine = createEngine(baseArchJson);
+      const result = engine.getEntityCoverage('entity-covered');
+      expect(result.found).toBe(false);
+      expect(result.coverageScore).toBe(0);
+      expect(result.coveredByTestIds).toEqual([]);
+      expect(result.testFileDetails).toEqual([]);
+    });
+
+    it('returns found=false for an entity ID not in the coverage map', () => {
+      const engine = createEntityCoverageEngine();
+      const result = engine.getEntityCoverage('entity-does-not-exist');
+      expect(result.found).toBe(false);
+      expect(result.coverageScore).toBe(0);
+      expect(result.coveredByTestIds).toEqual([]);
+      expect(result.testFileDetails).toEqual([]);
+    });
+
+    it('returns found=true, coverageScore=0, empty testFileDetails for zero-coverage entity', () => {
+      const engine = createEntityCoverageEngine();
+      const result = engine.getEntityCoverage('entity-uncovered');
+      expect(result.found).toBe(true);
+      expect(result.coverageScore).toBe(0);
+      expect(result.coveredByTestIds).toEqual([]);
+      expect(result.testFileDetails).toEqual([]);
+    });
+
+    it('returns found=true, coverageScore, and testFileDetails for a covered entity', () => {
+      const engine = createEntityCoverageEngine();
+      const result = engine.getEntityCoverage('entity-covered');
+      expect(result.found).toBe(true);
+      expect(result.entityId).toBe('entity-covered');
+      expect(result.coverageScore).toBeCloseTo(0.85);
+      expect(result.coveredByTestIds).toContain('tests/covered.test.ts');
+      expect(result.testFileDetails).toHaveLength(1);
+      expect(result.testFileDetails[0].id).toBe('tests/covered.test.ts');
+      expect(result.testFileDetails[0].testType).toBe('unit');
+      expect(result.testFileDetails[0].assertionCount).toBe(9);
+      expect(result.testFileDetails[0].assertionDensity).toBeCloseTo(3.0);
     });
   });
 });

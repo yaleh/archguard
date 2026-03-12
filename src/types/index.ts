@@ -36,6 +36,7 @@ export type {
   CoverageLink,
   TestIssue,
   TestMetrics,
+  PackageCoverage,
 } from './extensions.js';
 export { GO_ATLAS_EXTENSION_VERSION, TEST_ANALYSIS_VERSION, TS_ANALYSIS_EXTENSION_VERSION } from './extensions.js';
 

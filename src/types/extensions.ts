@@ -371,3 +371,16 @@ export interface TestMetrics {
   skipRatio: number;
   issueCount: Record<TestIssue['type'], number>;
 }
+
+export interface PackageCoverage {
+  /** Package path derived from entity sourceLocation.file, e.g. "lmdeploy/pytorch/models" */
+  package: string;
+  /** Total number of entities whose sourceLocation.file falls under this package */
+  totalEntities: number;
+  /** Number of those entities with coverageScore > 0 in the coverageMap */
+  coveredEntities: number;
+  /** coveredEntities / totalEntities, 0 when totalEntities === 0 */
+  coverageRatio: number;
+  /** IDs of test files that contribute at least one coverage link to this package */
+  testFileIds: string[];
+}
