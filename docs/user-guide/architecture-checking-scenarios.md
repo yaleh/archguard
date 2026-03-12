@@ -251,7 +251,8 @@ archguard_analyze(includeTests: true)
 archguard_detect_test_patterns()
 archguard_get_test_metrics()
 archguard_get_test_issues(severity: "warning")
-archguard_get_test_coverage()
+archguard_get_test_metrics(includePackageBreakdown: true)
+archguard_get_entity_coverage(entityId: "<entity-id>")
 ```
 
 What to inspect:

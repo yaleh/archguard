@@ -231,7 +231,7 @@ These four tools provide static test quality analysis. They require test data to
 
 1. `archguard_analyze(includeTests: true)` — parse source and run test analysis
 2. `archguard_detect_test_patterns()` — inspect detected frameworks and suggested config
-3. `archguard_get_test_metrics()` / `archguard_get_test_issues()` / `archguard_get_test_coverage()` — query results
+3. `archguard_get_test_metrics()` / `archguard_get_test_issues()` / `archguard_get_entity_coverage()` — query results
 
 ---
 
@@ -264,9 +264,11 @@ Return a summary of test quality metrics: file counts by type, entity coverage r
 
 **Parameters**:
 - `patternConfig` *(optional)* — from `archguard_detect_test_patterns`; currently informational only
+- `includePackageBreakdown` *(optional, boolean)* — when `true`, appends a `packageCoverage` array to the response
 
 ```
 archguard_get_test_metrics()
+archguard_get_test_metrics(includePackageBreakdown: true)
 ```
 
 Key fields in the response:
@@ -279,6 +281,18 @@ Key fields in the response:
 | `assertionDensity` | Average assertions per test case across all test files |
 | `skipRatio` | Fraction of test cases marked skip/todo |
 | `issueCount` | Count per issue type |
+
+When `includePackageBreakdown: true`, the response also includes a `packageCoverage` array sorted ascending by `coverageRatio` (worst-covered packages first). Example entry:
+
+```json
+{
+  "package": "lmdeploy/pytorch",
+  "totalEntities": 1281,
+  "coveredEntities": 203,
+  "coverageRatio": 0.158,
+  "testFileIds": ["tests/pytorch/test_ops.py"]
+}
+```
 
 ---
 
@@ -306,18 +320,41 @@ Issue types:
 
 ---
 
-### `archguard_get_test_coverage`
+### `archguard_get_entity_coverage`
 
-Return the per-entity coverage map: which source entities are linked to which test files, and at what confidence score.
+Return coverage detail for a single source entity: coverage score, list of test file IDs that cover it, and key metadata for each test file.
 
 **Parameters**:
-- `patternConfig` *(optional)* — from `archguard_detect_test_patterns`
+- `entityId` — dotted-path or slash-separated entity ID (e.g. `lmdeploy.pytorch.models.LlamaModel`); use the exact ID from `archguard_find_entity` or `archguard_get_test_metrics`
+- `projectRoot` *(optional)* — project root directory
 
 ```
-archguard_get_test_coverage()
+archguard_get_entity_coverage(entityId: "lmdeploy.pytorch.models.LlamaModel")
 ```
 
-Coverage score is computed from two layers:
+Example response:
+
+```json
+{
+  "entityId": "lmdeploy.pytorch.models.LlamaModel",
+  "found": true,
+  "coverageScore": 0.85,
+  "coveredByTestIds": ["tests/pytorch/test_llama.py"],
+  "testFileDetails": [
+    {
+      "id": "tests/pytorch/test_llama.py",
+      "path": "tests/pytorch/test_llama.py",
+      "testType": "unit",
+      "testCaseCount": 12,
+      "assertionCount": 48,
+      "assertionDensity": 4.0,
+      "frameworks": ["pytest"]
+    }
+  ]
+}
+```
+
+When `found: false`, the entity ID is not present in the analysis data — either a typo or the entity was added after the last analysis run. Coverage score is computed from two layers:
 - **Import analysis** (weight 0.85): test file imports source file → entities in that file are linked
 - **Path-convention** (weight 0.6): `foo.test.ts` → `foo.ts`, `test_foo.py` → `foo.py`, `foo_test.go` → `foo.go`
 
@@ -388,7 +425,8 @@ Returns the set of entities participating in dependency cycles.
 3. `archguard_get_test_metrics()` — review coverage ratio and assertion density
 4. `archguard_get_test_issues(severity: "warning")` — address warnings first
 5. `archguard_get_test_issues()` — review all issues including orphan tests
-6. `archguard_get_test_coverage()` — identify which source entities lack test coverage
+6. `archguard_get_test_metrics(includePackageBreakdown: true)` — identify which packages lack coverage
+7. `archguard_get_entity_coverage(entityId: "<id>")` — drill into a specific entity's coverage detail
 
 ### Analyzing a project that is not the current working directory
 
@@ -473,7 +511,7 @@ You can guide the AI more specifically:
 ### Test Analysis
 
 **`patternConfig` is accepted but not re-applied at query time.**
-The `patternConfig` parameter on `archguard_get_test_metrics`, `archguard_get_test_issues`, and `archguard_get_test_coverage` is part of the tool schema but is not currently used at query time. All results come from data computed during the `archguard_analyze(includeTests: true)` call. Changing `patternConfig` at query time has no effect on the returned data.
+The `patternConfig` parameter on `archguard_get_test_metrics` and `archguard_get_test_issues` is part of the tool schema but is not currently used at query time. All results come from data computed during the `archguard_analyze(includeTests: true)` call. Changing `patternConfig` at query time has no effect on the returned data.
 
 Workaround: if the auto-detected patterns are wrong, re-run analysis with a corrected config via the CLI `--include-tests` flag and a custom `archguard.config.json`.
 

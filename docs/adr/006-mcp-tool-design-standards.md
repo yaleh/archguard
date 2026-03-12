@@ -221,7 +221,7 @@ try {
 | `archguard_detect_cycles` | ✅ | N/A | N/A | ✅ |
 | `archguard_detect_test_patterns` | ✅ | N/A | N/A | ✅ |
 | `archguard_get_test_metrics` | ✅ | ✅ | ✅ | ⚠️ patternConfig 待标注 |
-| `archguard_get_test_coverage` | ✅ | ✅ | ✅ | ⚠️ patternConfig 待标注 |
+| `archguard_get_entity_coverage` | ✅ | ✅ | ✅ | ✅ |
 | `archguard_get_test_issues` | ✅ | ✅ | ✅ | ⚠️ patternConfig 待标注 |
 | `archguard_analyze` | ✅ | N/A | N/A | ✅ |
 

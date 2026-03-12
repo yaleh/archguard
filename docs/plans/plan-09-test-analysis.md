@@ -3,6 +3,8 @@
 > Branch: `feat/test-analysis`
 > Proposal: `docs/proposals/proposal-test-analysis.md` (rev 2.2)
 > Status: Draft
+>
+> **Note (2026-03-12)**: The `archguard_get_test_coverage` MCP tool defined in Phase C (Component 5) of this plan has been superseded by `archguard_get_entity_coverage` (see `docs/plans/plan-31-mcp-test-coverage-redesign.md`). The underlying `TestAnalysis.coverageMap` data structure is unchanged. All other components of this plan remain in effect.
 
 ---
 

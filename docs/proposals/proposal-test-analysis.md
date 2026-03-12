@@ -1,10 +1,12 @@
 # Test System Analysis — Design Proposal
 
-> Status: Draft (rev 2)
+> Status: Draft (rev 2) — **Partially superseded**
 > Branch: `feat/test-analysis` (future)
 > Scope: 为 ArchGuard 增加测试体系分析能力。通过两阶段协作架构（方案 C），让 ArchGuard
 > 在不执行测试、不依赖覆盖率报告的前提下，从源码结构中提取测试体系的静态信息，
 > 输出测试覆盖关系图、测试质量问题清单和 MCP 查询工具。
+>
+> **Superseded notice (2026-03-12)**: The `archguard_get_test_coverage` MCP tool described in Component 5 of this proposal has been replaced by `archguard_get_entity_coverage` and the `includePackageBreakdown` parameter on `archguard_get_test_metrics`. See `docs/plans/plan-31-mcp-test-coverage-redesign.md` and `docs/proposals/proposal-mcp-test-coverage-redesign.md` for the redesign rationale. All other components of this proposal remain in effect.
 
 ---
 
