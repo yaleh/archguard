@@ -141,14 +141,6 @@ describe('test analysis MCP tools — no analysis present', () => {
     loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
   });
 
-  it('archguard_get_test_coverage returns NOT_ANALYZED_MSG', async () => {
-    const server = new McpServer({ name: 'test', version: '1.0.0' });
-    const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_coverage')!;
-    const result = await cb({});
-    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
-  });
-
   it('archguard_get_test_issues returns NOT_ANALYZED_MSG', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -180,16 +172,6 @@ describe('test analysis MCP tools — no analysis present', () => {
 describe('test analysis MCP tools — analysis present', () => {
   beforeEach(() => {
     loadEngineMock.mockResolvedValue(createEngineWithAnalysis());
-  });
-
-  it('archguard_get_test_coverage returns coverage map', async () => {
-    const server = new McpServer({ name: 'test', version: '1.0.0' });
-    const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_coverage')!;
-    const result = await cb({});
-    const parsed = JSON.parse(result.content[0].text);
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed[0].sourceEntityId).toBe('entity-1');
   });
 
   it('archguard_get_test_issues returns all issues when no severity filter', async () => {
@@ -266,13 +248,14 @@ describe('test analysis MCP tools — analysis present', () => {
     expect(parsed.suggestedPatternConfig.assertionPatterns.some((p: string) => p.includes('assert'))).toBe(true);
   });
 
-  it('registers all four test analysis tools', () => {
+  it('registers four test analysis tools', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     expect(tools.has('archguard_detect_test_patterns')).toBe(true);
-    expect(tools.has('archguard_get_test_coverage')).toBe(true);
     expect(tools.has('archguard_get_test_issues')).toBe(true);
     expect(tools.has('archguard_get_test_metrics')).toBe(true);
+    expect(tools.has('archguard_get_entity_coverage')).toBe(true);
+    expect(tools.has('archguard_get_test_coverage')).toBe(false);
   });
 
   // pytest framework should suggest patterns that cover torch.testing.assert_close style calls
@@ -305,19 +288,85 @@ describe('test analysis MCP tools — analysis present', () => {
     expect(() => JSON.parse(result.content[0].text)).not.toThrow();
   });
 
-  it('archguard_get_test_coverage accepts patternConfig without crashing', async () => {
-    const server = new McpServer({ name: 'test', version: '1.0.0' });
-    const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_coverage')!;
-    const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
-    expect(() => JSON.parse(result.content[0].text)).not.toThrow();
-  });
-
   it('archguard_get_test_issues accepts patternConfig without crashing', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_get_test_issues')!;
     const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
     expect(() => JSON.parse(result.content[0].text)).not.toThrow();
+  });
+
+  it('archguard_get_test_metrics includes packageCoverage when includePackageBreakdown=true', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+    const result = await cb({ includePackageBreakdown: true });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.totalTestFiles).toBe(1);
+    expect(Array.isArray(parsed.packageCoverage)).toBe(true);
+  });
+
+  it('archguard_get_test_metrics omits packageCoverage when includePackageBreakdown is false/absent', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+
+    const withFalse = await cb({ includePackageBreakdown: false });
+    const parsedFalse = JSON.parse(withFalse.content[0].text);
+    expect(parsedFalse.packageCoverage).toBeUndefined();
+
+    const withAbsent = await cb({});
+    const parsedAbsent = JSON.parse(withAbsent.content[0].text);
+    expect(parsedAbsent.packageCoverage).toBeUndefined();
+  });
+
+  it('archguard_get_entity_coverage returns coverage data for known entityId', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_entity_coverage')!;
+    const result = await cb({ entityId: 'entity-1' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.found).toBe(true);
+    expect(parsed.sourceEntityId ?? parsed.entityId).toBeDefined();
+    expect(Array.isArray(parsed.coveredByTestIds)).toBe(true);
+    expect(parsed.coveredByTestIds).toContain('tests/unit/foo.test.ts');
+    expect(typeof parsed.coverageScore).toBe('number');
+  });
+
+  it('archguard_get_entity_coverage returns found:false for unknown entityId', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_entity_coverage')!;
+    const result = await cb({ entityId: 'nonexistent.Entity' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.found).toBe(false);
+  });
+});
+
+describe('test analysis MCP tools — no analysis present (metrics)', () => {
+  beforeEach(() => {
+    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+  });
+
+  it('archguard_get_test_metrics returns NOT_ANALYZED_MSG when no analysis', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics')!;
+    const result = await cb({ includePackageBreakdown: true });
+    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
+  });
+});
+
+describe('archguard_get_entity_coverage — no analysis present', () => {
+  beforeEach(() => {
+    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+  });
+
+  it('archguard_get_entity_coverage returns NOT_ANALYZED_MSG when analysis absent', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_entity_coverage')!;
+    const result = await cb({ entityId: 'entity-1' });
+    expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });
 });

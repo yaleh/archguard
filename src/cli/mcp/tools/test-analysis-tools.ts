@@ -3,7 +3,7 @@
  *
  * Four tools following the Pattern-First workflow:
  * 1. archguard_detect_test_patterns  — MUST be called first
- * 2. archguard_get_test_coverage
+ * 2. archguard_get_entity_coverage
  * 3. archguard_get_test_issues
  * 4. archguard_get_test_metrics
  */
@@ -114,7 +114,7 @@ const patternConfigSchema = z
 export function registerTestAnalysisTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_detect_test_patterns',
-    'Detect test frameworks and assertion conventions in the project; call this before any other test analysis tool and pass the returned suggestedPatternConfig to subsequent calls.',
+    'Pattern-First tool: call this FIRST before any other test analysis tool. Detects test frameworks and conventions in the project. Returns suggestedPatternConfig and notes. Review the notes and correct the config if needed before passing to other tools.',
     {
       projectRoot: z
         .string()
@@ -194,28 +194,8 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
   );
 
   server.tool(
-    'archguard_get_test_coverage',
-    'Return per-entity coverage links inferred by static import-path matching and filename conventions, not runtime tracing; scores are an approximation and may miss coverage via path aliases or indirect imports. Call archguard_detect_test_patterns first.',
-    {
-      projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
-      patternConfig: patternConfigSchema,
-    },
-    async ({ projectRoot }) => {
-      try {
-        const root = resolveRoot(projectRoot, defaultRoot);
-        const engine = await loadEngine(path.join(root, '.archguard'));
-        if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
-        const analysis = engine.getTestAnalysis()!;
-        return textResponse(JSON.stringify(analysis.coverageMap, null, 2));
-      } catch (e: any) {
-        return textResponse(`Error: ${e.message}`);
-      }
-    }
-  );
-
-  server.tool(
     'archguard_get_test_issues',
-    'Return static-analysis test quality issues (orphan tests, zero-assertion files, skip accumulation); orphan_test and zero_assertion may produce false positives when tests use import aliases, custom assertion helpers, or long setup blocks. Call archguard_detect_test_patterns first.',
+    'Get test quality issues for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       patternConfig: patternConfigSchema,
@@ -242,18 +222,55 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_metrics',
-    'Return test quality metrics: file counts by type, entity coverage ratio, assertion density, and issue counts. All metrics are static approximations — entityCoverageRatio measures structural link detection, not runtime execution coverage. Call archguard_detect_test_patterns first.',
+    'Get test metrics summary for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       patternConfig: patternConfigSchema,
+      includePackageBreakdown: z.boolean().optional().describe(
+        'When true, includes per-package coverage breakdown sorted ascending by coverageRatio.'
+      ),
     },
-    async ({ projectRoot }) => {
+    async ({ projectRoot, includePackageBreakdown }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const engine = await loadEngine(path.join(root, '.archguard'));
         if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = engine.getTestAnalysis()!;
-        return textResponse(JSON.stringify(analysis.metrics, null, 2));
+        const result: Record<string, unknown> = { ...analysis.metrics };
+        if (includePackageBreakdown) {
+          result.packageCoverage = engine.getPackageCoverage();
+        }
+        return textResponse(JSON.stringify(result, null, 2));
+      } catch (e: any) {
+        return textResponse(`Error: ${e.message}`);
+      }
+    }
+  );
+
+  server.tool(
+    'archguard_get_entity_coverage',
+    'Return coverage details for a single source entity by its dotted-path ID. ' +
+      'Call archguard_detect_test_patterns first. Returns found:false when the entity ID ' +
+      'is unknown (not in analysis data) — this may mean a typo or entity added after last analysis.',
+    {
+      projectRoot: z
+        .string()
+        .optional()
+        .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
+      entityId: z
+        .string()
+        .describe(
+          'Dotted-path entity ID as reported by archguard_find_entity or archguard_get_test_coverage ' +
+            '(e.g. "lmdeploy.pytorch.models.LlamaModel").'
+        ),
+    },
+    async ({ projectRoot, entityId }) => {
+      try {
+        const root = resolveRoot(projectRoot, defaultRoot);
+        const engine = await loadEngine(path.join(root, '.archguard'));
+        if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
+        const result = engine.getEntityCoverage(entityId);
+        return textResponse(JSON.stringify(result, null, 2));
       } catch (e: any) {
         return textResponse(`Error: ${e.message}`);
       }
