@@ -1,6 +1,6 @@
 {
   "name": "@yalehwang/archguard",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "type": "module",
   "description": "Automated architecture documentation generation tool with AI-powered Mermaid diagrams",
   "keywords": [
