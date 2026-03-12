@@ -1286,6 +1286,160 @@ describe('QueryEngine', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Stage 1.2: getPackageCoverage
+  // ---------------------------------------------------------------------------
+  describe('getPackageCoverage', () => {
+    it('returns empty array when test analysis is absent', () => {
+      const engine = createEngine(baseArchJson);
+      expect(engine.getPackageCoverage()).toEqual([]);
+    });
+
+    it('groups entities by directory and computes coverage ratio', () => {
+      const entityA = makeEntity('entity-a', 'EntityA', {
+        sourceLocation: { file: 'src/utils/a.ts', startLine: 1, endLine: 10 },
+      });
+      const entityB = makeEntity('entity-b', 'EntityB', {
+        sourceLocation: { file: 'src/utils/b.ts', startLine: 1, endLine: 10 },
+      });
+      const entityC = makeEntity('entity-c', 'EntityC', {
+        sourceLocation: { file: 'src/core/c.ts', startLine: 1, endLine: 10 },
+      });
+
+      const testAnalysis: TestAnalysis = {
+        version: '1.0',
+        patternConfigSource: 'auto',
+        testFiles: [],
+        coverageMap: [
+          { sourceEntityId: 'entity-a', coveredByTestIds: ['tests/a.test.ts'], coverageScore: 0.9 },
+          { sourceEntityId: 'entity-b', coveredByTestIds: [], coverageScore: 0.0 },
+          { sourceEntityId: 'entity-c', coveredByTestIds: ['tests/c.test.ts'], coverageScore: 0.7 },
+        ],
+        issues: [],
+        metrics: {
+          totalTestFiles: 2,
+          byType: { unit: 2, integration: 0, e2e: 0, performance: 0, debug: 0, unknown: 0 },
+          entityCoverageRatio: 0.67,
+          assertionDensity: 3.0,
+          skipRatio: 0,
+          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+        },
+      };
+
+      const engine = createEngine(
+        makeArchJson({ entities: [entityA, entityB, entityC], extensions: { testAnalysis } })
+      );
+
+      const result = engine.getPackageCoverage();
+
+      const utilsPkg = result.find((p) => p.package === 'src/utils');
+      const corePkg = result.find((p) => p.package === 'src/core');
+
+      expect(utilsPkg).toBeDefined();
+      expect(utilsPkg!.totalEntities).toBe(2);
+      expect(utilsPkg!.coveredEntities).toBe(1);
+      expect(utilsPkg!.coverageRatio).toBeCloseTo(0.5);
+
+      expect(corePkg).toBeDefined();
+      expect(corePkg!.totalEntities).toBe(1);
+      expect(corePkg!.coveredEntities).toBe(1);
+      expect(corePkg!.coverageRatio).toBeCloseTo(1.0);
+    });
+
+    it('sorts results ascending by coverageRatio (worst-covered first)', () => {
+      const entityA = makeEntity('entity-a', 'EntityA', {
+        sourceLocation: { file: 'src/utils/a.ts', startLine: 1, endLine: 10 },
+      });
+      const entityB = makeEntity('entity-b', 'EntityB', {
+        sourceLocation: { file: 'src/core/b.ts', startLine: 1, endLine: 10 },
+      });
+      const entityC = makeEntity('entity-c', 'EntityC', {
+        sourceLocation: { file: 'src/models/c.ts', startLine: 1, endLine: 10 },
+      });
+
+      const testAnalysis: TestAnalysis = {
+        version: '1.0',
+        patternConfigSource: 'auto',
+        testFiles: [],
+        coverageMap: [
+          { sourceEntityId: 'entity-a', coveredByTestIds: [], coverageScore: 0.0 },
+          { sourceEntityId: 'entity-b', coveredByTestIds: ['tests/b.test.ts'], coverageScore: 0.5 },
+          { sourceEntityId: 'entity-c', coveredByTestIds: ['tests/c.test.ts'], coverageScore: 1.0 },
+        ],
+        issues: [],
+        metrics: {
+          totalTestFiles: 2,
+          byType: { unit: 2, integration: 0, e2e: 0, performance: 0, debug: 0, unknown: 0 },
+          entityCoverageRatio: 0.67,
+          assertionDensity: 3.0,
+          skipRatio: 0,
+          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+        },
+      };
+
+      const engine = createEngine(
+        makeArchJson({ entities: [entityA, entityB, entityC], extensions: { testAnalysis } })
+      );
+
+      const result = engine.getPackageCoverage();
+
+      expect(result.length).toBe(3);
+      expect(result[0].coverageRatio).toBeLessThanOrEqual(result[1].coverageRatio);
+      expect(result[1].coverageRatio).toBeLessThanOrEqual(result[2].coverageRatio);
+      expect(result[0].package).toBe('src/utils'); // 0.0
+      expect(result[2].package).toBe('src/models'); // 1.0
+    });
+
+    it('accumulates testFileIds across entities in the same package', () => {
+      const entityA = makeEntity('entity-a', 'EntityA', {
+        sourceLocation: { file: 'src/utils/a.ts', startLine: 1, endLine: 10 },
+      });
+      const entityB = makeEntity('entity-b', 'EntityB', {
+        sourceLocation: { file: 'src/utils/b.ts', startLine: 1, endLine: 10 },
+      });
+
+      const testAnalysis: TestAnalysis = {
+        version: '1.0',
+        patternConfigSource: 'auto',
+        testFiles: [],
+        coverageMap: [
+          {
+            sourceEntityId: 'entity-a',
+            coveredByTestIds: ['tests/a.test.ts', 'tests/shared.test.ts'],
+            coverageScore: 0.8,
+          },
+          {
+            sourceEntityId: 'entity-b',
+            coveredByTestIds: ['tests/b.test.ts', 'tests/shared.test.ts'],
+            coverageScore: 0.6,
+          },
+        ],
+        issues: [],
+        metrics: {
+          totalTestFiles: 3,
+          byType: { unit: 3, integration: 0, e2e: 0, performance: 0, debug: 0, unknown: 0 },
+          entityCoverageRatio: 1.0,
+          assertionDensity: 3.0,
+          skipRatio: 0,
+          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+        },
+      };
+
+      const engine = createEngine(
+        makeArchJson({ entities: [entityA, entityB], extensions: { testAnalysis } })
+      );
+
+      const result = engine.getPackageCoverage();
+
+      expect(result).toHaveLength(1);
+      const utilsPkg = result[0];
+      expect(utilsPkg.package).toBe('src/utils');
+      expect(utilsPkg.testFileIds).toHaveLength(3); // deduplicated: a, b, shared
+      expect(utilsPkg.testFileIds).toContain('tests/a.test.ts');
+      expect(utilsPkg.testFileIds).toContain('tests/b.test.ts');
+      expect(utilsPkg.testFileIds).toContain('tests/shared.test.ts');
+    });
+  });
+
   // Stage 1.3: getEntityCoverage
   // ---------------------------------------------------------------------------
   describe('getEntityCoverage', () => {
