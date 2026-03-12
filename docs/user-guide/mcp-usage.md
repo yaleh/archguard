@@ -213,6 +213,114 @@ Rerun analysis for the current project and refresh query artifacts in place. Cal
 archguard_analyze()
 ```
 
+To include test analysis alongside architecture parsing, pass `includeTests: true`:
+
+```
+archguard_analyze(includeTests: true)
+```
+
+This is required before calling any of the four test analysis tools below.
+
+---
+
+### Test Analysis Tools
+
+These four tools provide static test quality analysis. They require test data to be present: call `archguard_analyze(includeTests: true)` at least once before using them.
+
+**Required call sequence:**
+
+1. `archguard_analyze(includeTests: true)` — parse source and run test analysis
+2. `archguard_detect_test_patterns()` — inspect detected frameworks and suggested config
+3. `archguard_get_test_metrics()` / `archguard_get_test_issues()` / `archguard_get_test_coverage()` — query results
+
+---
+
+### `archguard_detect_test_patterns`
+
+Detect test frameworks and conventions in the project. Returns detected framework names, confidence levels, and a suggested `patternConfig` for review.
+
+**Use when**: starting test analysis, or when auto-detected patterns may be wrong for the project.
+
+```
+archguard_detect_test_patterns()
+```
+
+Example output:
+```json
+{
+  "detectedFrameworks": [{ "name": "vitest", "confidence": "high" }],
+  "suggestedPatternConfig": { "assertionPatterns": ["\\bexpect\\s*\\("] },
+  "notes": ["Detected 166 test files. Pattern config source: auto."]
+}
+```
+
+> **Note**: The `patternConfig` returned here is informational. It describes what was detected at analyze time. Passing it to the query tools does not currently re-run the analysis with a different config — see [Known Limitations](#known-limitations).
+
+---
+
+### `archguard_get_test_metrics`
+
+Return a summary of test quality metrics: file counts by type, entity coverage ratio, assertion density, skip ratio, and issue counts.
+
+**Parameters**:
+- `patternConfig` *(optional)* — from `archguard_detect_test_patterns`; currently informational only
+
+```
+archguard_get_test_metrics()
+```
+
+Key fields in the response:
+
+| Field | Meaning |
+|-------|---------|
+| `totalTestFiles` | Number of test files discovered |
+| `byType` | Breakdown: unit / integration / e2e / performance / debug / unknown |
+| `entityCoverageRatio` | Fraction of source entities linked to at least one test |
+| `assertionDensity` | Average assertions per test case across all test files |
+| `skipRatio` | Fraction of test cases marked skip/todo |
+| `issueCount` | Count per issue type |
+
+---
+
+### `archguard_get_test_issues`
+
+Return the list of quality issues detected in test files.
+
+**Parameters**:
+- `patternConfig` *(optional)* — from `archguard_detect_test_patterns`
+- `severity` *(optional)* — filter by `"warning"` or `"info"`
+
+```
+archguard_get_test_issues()
+archguard_get_test_issues(severity: "warning")
+```
+
+Issue types:
+
+| Type | Severity | Meaning |
+|------|----------|---------|
+| `zero_assertion` | warning | Test file has test cases but no detected assertions |
+| `orphan_test` | info | Test file has no detected link to any source entity |
+| `assertion_poverty` | info | Assertion density below 1.0 per test case |
+| `skip_accumulation` | info | More than 20% of test cases are skipped |
+
+---
+
+### `archguard_get_test_coverage`
+
+Return the per-entity coverage map: which source entities are linked to which test files, and at what confidence score.
+
+**Parameters**:
+- `patternConfig` *(optional)* — from `archguard_detect_test_patterns`
+
+```
+archguard_get_test_coverage()
+```
+
+Coverage score is computed from two layers:
+- **Import analysis** (weight 0.85): test file imports source file → entities in that file are linked
+- **Path-convention** (weight 0.6): `foo.test.ts` → `foo.ts`, `test_foo.py` → `foo.py`, `foo_test.go` → `foo.go`
+
 ---
 
 ## Typical Usage Patterns
@@ -272,6 +380,15 @@ Returns the set of entities participating in dependency cycles.
 3. `archguard_find_implementers(name: "ILanguagePlugin")` — audit extension points
 4. `archguard_get_dependents(name: "<CoreType>", depth: 1)` — trace usage
 5. `archguard_analyze()` — refresh after code changes
+
+### Test quality review workflow
+
+1. `archguard_analyze(includeTests: true)` — parse and run test analysis
+2. `archguard_detect_test_patterns()` — check detected frameworks and config
+3. `archguard_get_test_metrics()` — review coverage ratio and assertion density
+4. `archguard_get_test_issues(severity: "warning")` — address warnings first
+5. `archguard_get_test_issues()` — review all issues including orphan tests
+6. `archguard_get_test_coverage()` — identify which source entities lack test coverage
 
 ### Analyzing a project that is not the current working directory
 
@@ -347,6 +464,27 @@ You can guide the AI more specifically:
 | File entity lookup fails | Path missing `src/` prefix or wrong separator | Use the full relative path as it appears in the project |
 | Stale results after code changes | Query artifacts not refreshed | Call `archguard_analyze()` or re-run `archguard analyze` |
 | MCP server fails to start | Analysis artifacts not generated yet | Run `archguard analyze` first |
+| Test tools return "No test analysis data" | `archguard_analyze` was called without `includeTests: true` | Call `archguard_analyze(includeTests: true)` then retry |
+
+---
+
+## Known Limitations
+
+### Test Analysis
+
+**`patternConfig` is accepted but not re-applied at query time.**
+The `patternConfig` parameter on `archguard_get_test_metrics`, `archguard_get_test_issues`, and `archguard_get_test_coverage` is part of the tool schema but is not currently used at query time. All results come from data computed during the `archguard_analyze(includeTests: true)` call. Changing `patternConfig` at query time has no effect on the returned data.
+
+Workaround: if the auto-detected patterns are wrong, re-run analysis with a corrected config via the CLI `--include-tests` flag and a custom `archguard.config.json`.
+
+**TypeScript `orphan_test` false positives with ESM-style `.js` imports.**
+Test files that import source using the TypeScript ESM convention (`from '../foo.js'`) may be incorrectly reported as `orphan_test`. The import resolver preserves the `.js` extension, which does not match the `.ts` entity file path stored in the index. This affects most TypeScript projects using standard ESM module resolution.
+
+**`zero_assertion` false positives in tests with long setup.**
+Assertion counting uses a 20-line sliding window from each `it()`/`test()` call. Tests that contain long mock setup before their `expect()` calls may be reported as having zero assertions even when they do not.
+
+**Third-party test files inside `tests/poc/**/node_modules/`.**
+Test discovery recursively scans the `tests/` directory without excluding sub-`node_modules` folders. POC directories that have their own `node_modules` may contribute third-party test files to the results. These appear as `orphan_test` entries. Use `testFileGlobs` in your config to scope discovery if needed.
 
 ---
 

@@ -19,6 +19,7 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 - **Multi-Language Support**: TypeScript, Go, Java, Python via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
+- **Static Test Analysis**: Test coverage mapping, assertion density, orphan detection, and quality issues — no test execution required
 - **Parallel Processing**: High-performance parsing with configurable concurrency
 - **Smart Caching**: File-based caching with SHA-256 hashing for fast repeated runs
 - **Zero External Dependencies**: Local Mermaid rendering using isomorphic-mermaid
@@ -57,6 +58,18 @@ Claude will call `archguard_analyze` to parse the project and build a query inde
 > Review this project's code and documentation using the archguard MCP and the `.archguard` output files.
 
 > Based on the archguard analysis, suggest refactoring directions for reducing coupling.
+
+To include test quality analysis alongside architecture inspection:
+
+> Analyze the architecture and test coverage of `/path/to/my-project` using archguard MCP. Check which source entities lack test coverage and flag any test files with no assertions.
+
+Claude will call `archguard_analyze(includeTests: true)`, then sequence through the test analysis tools:
+
+> Which test files have no assertions?
+
+> Show me the entity coverage ratio and assertion density for this project.
+
+> List all orphan test files — tests with no detected link to source entities.
 
 **Re-using an existing analysis**: If the project was already analyzed in a previous session, query artifacts persist in `.archguard/query/`. You can skip re-analysis and query the cache directly:
 
@@ -180,6 +193,12 @@ archguard analyze -s ./src -e "**/*.test.ts" "**/*.spec.ts"
 
 # Dark theme
 archguard analyze -s ./src --mermaid-theme dark
+
+# Analyze architecture and generate test quality report
+archguard analyze --include-tests
+
+# Refresh test report only, skip re-parsing source (faster)
+archguard analyze --tests-only
 ```
 
 ### `query`
@@ -237,6 +256,8 @@ codex mcp add archguard -- archguard mcp
 
 **Available MCP tools:**
 
+Architecture query:
+
 | Tool | Purpose |
 |------|---------|
 | `archguard_summary` | Project overview: entity/relation counts, scope list |
@@ -247,7 +268,16 @@ codex mcp add archguard -- archguard mcp
 | `archguard_find_subclasses` | All subclasses of a base class |
 | `archguard_get_file_entities` | All entities defined in a source file |
 | `archguard_detect_cycles` | Circular dependency detection |
-| `archguard_analyze` | Refresh query artifacts in the current session |
+| `archguard_analyze` | Refresh query artifacts; pass `includeTests: true` to include test analysis |
+
+Test analysis (requires `archguard_analyze(includeTests: true)` first):
+
+| Tool | Purpose |
+|------|---------|
+| `archguard_detect_test_patterns` | Detect test frameworks and return suggested pattern config — call this first |
+| `archguard_get_test_metrics` | Summary: file counts, entity coverage ratio, assertion density, issue counts |
+| `archguard_get_test_issues` | Per-file issues: `zero_assertion`, `orphan_test`, `assertion_poverty`, `skip_accumulation` |
+| `archguard_get_test_coverage` | Per-entity coverage map with confidence scores |
 
 See [MCP Usage Guide](docs/user-guide/mcp-usage.md) for setup, tool reference, and usage patterns.
 

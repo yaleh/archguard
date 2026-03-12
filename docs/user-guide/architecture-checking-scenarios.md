@@ -10,6 +10,8 @@ Use it when you want to answer questions like:
 - Which implementations exist for an interface?
 - Which files or entities look oversized or isolated?
 - How can an agent query architecture data through MCP?
+- How well is the codebase covered by tests?
+- Which test files have no assertions or no connection to source code?
 
 ## Before You Start
 
@@ -223,7 +225,57 @@ Related docs:
 
 - [Go Plugin Usage](./golang-plugin-usage.md)
 
-## 9. Query Architecture Data Through MCP
+## 9. Assess Test System Health
+
+Use this when you want to understand the quality and coverage of the test suite without running any tests.
+
+```bash
+archguard analyze --include-tests
+```
+
+Or to refresh the test report without re-parsing source files:
+
+```bash
+archguard analyze --tests-only
+```
+
+This generates three files in `.archguard/test/`:
+- `metrics.md` — totals, type breakdown, entity coverage ratio, assertion density, skip ratio
+- `issues.md` — per-file quality issues: `zero_assertion`, `orphan_test`, `assertion_poverty`, `skip_accumulation`
+- `coverage-heatmap.md` — four-bucket entity coverage map (well tested / partially tested / not tested / debug only)
+
+Via MCP (useful when reviewing from an AI assistant):
+
+```
+archguard_analyze(includeTests: true)
+archguard_detect_test_patterns()
+archguard_get_test_metrics()
+archguard_get_test_issues(severity: "warning")
+archguard_get_test_coverage()
+```
+
+What to inspect:
+
+- `entityCoverageRatio` — fraction of source entities covered by at least one test; values below 0.5 indicate large untested areas
+- `assertionDensity` — average assertions per test case; below 1.0 means many tests verify nothing observable
+- `byType.debug` — test files classified as debug (have test cases but zero assertions); these are either incomplete tests or exploration scripts
+- `orphan_test` issues — test files with no detected link to any source entity; often integration or E2E tests, but also points to broken import paths
+- `zero_assertion` issues — tests that run code but make no assertions; the most actionable warning
+
+Good fit for:
+
+- Pre-release test quality review
+- Identifying test debt alongside architecture debt
+- Onboarding — understanding what the test suite actually validates
+- CI gate: check `entityCoverageRatio` and `issueCount.zero_assertion` as quality signals
+
+Related docs:
+
+- [MCP Usage Guide](./mcp-usage.md)
+
+---
+
+## 10. Query Architecture Data Through MCP
 
 Use this when an agent, IDE assistant, or automation pipeline needs structured architecture answers.
 
@@ -294,6 +346,14 @@ Related docs:
 2. `archguard mcp`
 3. Let the agent call query tools against persisted scopes
 4. Re-run `archguard_analyze` after meaningful code changes
+
+### Test Quality Review
+
+1. `archguard analyze --include-tests`
+2. Open `.archguard/test/metrics.md` — check `entityCoverageRatio` and `assertionDensity`
+3. Open `.archguard/test/issues.md` — address `zero_assertion` warnings first
+4. Open `.archguard/test/coverage-heatmap.md` — identify "Not Tested" entities
+5. Re-run `archguard analyze --tests-only` after fixing test gaps (faster, skips re-parsing)
 
 ## Limits
 

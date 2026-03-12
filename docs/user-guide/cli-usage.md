@@ -61,6 +61,8 @@ archguard analyze [options]
 | `--work-dir <dir>` | string | `./.archguard` | Work directory for cache and query artifacts |
 | `--cache-dir <dir>` | string | `<work-dir>/cache` | Cache directory |
 | `--no-atlas` | boolean | false | Disable Go Atlas mode (Go only) |
+| `--include-tests` | boolean | false | Run static test analysis after parsing; generates `test/metrics.md` and `test/issues.md` in the output directory |
+| `--tests-only` | boolean | false | Skip diagram generation and run test analysis only, using cached ArchJSON (faster for iterative test review) |
 
 #### Default behavior (no flags)
 
@@ -118,6 +120,18 @@ archguard analyze -c 8 -v
 archguard analyze --output-dir ./docs/diagrams
 ```
 
+**Include test quality report**
+
+```bash
+archguard analyze --include-tests
+```
+
+**Refresh test report without re-parsing source (faster)**
+
+```bash
+archguard analyze --tests-only
+```
+
 #### Output
 
 TypeScript (3-tier, auto-detected with 2+ modules):
@@ -132,6 +146,10 @@ TypeScript (3-tier, auto-detected with 2+ modules):
 │   ├── cli.mmd / .svg / .png
 │   ├── parser.mmd / .svg / .png
 │   └── ...
+├── test/                        # generated with --include-tests or --tests-only
+│   ├── metrics.md               # totals, type breakdown, coverage ratio, assertion density
+│   ├── issues.md                # zero_assertion, orphan_test, skip_accumulation, assertion_poverty
+│   └── coverage-heatmap.md     # four-bucket entity coverage map
 └── index.md
 ```
 
