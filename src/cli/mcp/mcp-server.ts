@@ -15,6 +15,8 @@ import type { Entity } from '@/types/index.js';
 import type { PackageGraph, CapabilityGraph, GoroutineTopology } from '@/types/extensions.js';
 import { registerAnalyzeTool } from './analyze-tool.js';
 import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
+import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.js';
+import { registerGitHistoryTools } from './tools/git-history-tools.js';
 
 const projectRootParam = z
   .string()
@@ -67,6 +69,8 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
     defaultRoot,
   });
   registerTestAnalysisTools(server, defaultRoot);
+  registerGitHistoryAnalyzeTool(server, defaultRoot);
+  registerGitHistoryTools(server, defaultRoot);
   return server;
 }
 

@@ -360,6 +360,121 @@ When `found: false`, the entity ID is not present in the analysis data — eithe
 
 ---
 
+---
+
+## Git History Analysis
+
+ArchGuard's git history tools provide evolutionary insights about your codebase — change risk,
+co-change patterns, and ownership concentration — without exposing raw git commands.
+
+### Workflow
+
+Git history analysis is a separate opt-in step:
+
+1. **Analyze structure** (if not done): `archguard_analyze`
+2. **Analyze git history**: `archguard_analyze_git`
+3. **Query history signals**: use the four history query tools
+
+### `archguard_analyze_git`
+
+Scans recent git history and persists aggregated evolution data under `.archguard/query/git-history`.
+
+```json
+{
+  "tool": "archguard_analyze_git",
+  "arguments": {
+    "projectRoot": "/path/to/project",
+    "sinceDays": 90,
+    "maxCommits": 500,
+    "includeMerges": false
+  }
+}
+```
+
+Returns a compact summary of the analyzed window (commit count, date range, output location).
+
+---
+
+### `archguard_get_change_context`
+
+Get the full pre-edit context for a file or package: churn, ownership, co-change neighbors,
+and risk hints in one call.
+
+```json
+{
+  "tool": "archguard_get_change_context",
+  "arguments": {
+    "projectRoot": "/path/to/project",
+    "targetType": "file",
+    "target": "src/parser/typescript-parser.ts"
+  }
+}
+```
+
+---
+
+### `archguard_get_cochange`
+
+Return the strongest co-change neighbors. Co-change strength is normalized Jaccard similarity;
+it is an evolutionary signal, not proof of static or runtime dependency.
+
+```json
+{
+  "tool": "archguard_get_cochange",
+  "arguments": {
+    "targetType": "package",
+    "target": "src/parser",
+    "topN": 5
+  }
+}
+```
+
+---
+
+### `archguard_get_change_risk`
+
+Return an explainable risk score (0–1) broken into five factors: churn, author count,
+owner concentration, co-change breadth, and recency.
+
+```json
+{
+  "tool": "archguard_get_change_risk",
+  "arguments": {
+    "targetType": "file",
+    "target": "src/cli/mcp/mcp-server.ts"
+  }
+}
+```
+
+---
+
+### `archguard_get_ownership`
+
+Return ranked contributors, primary owner share, active maintainers count, and bus-factor proxy.
+
+```json
+{
+  "tool": "archguard_get_ownership",
+  "arguments": {
+    "targetType": "package",
+    "target": "src/cli"
+  }
+}
+```
+
+---
+
+### V1 Limitations
+
+- History operates at **file and package** granularity only; entity-level (method/class) tracking is not supported.
+- Results reflect only the **analyzed time window** (default: last 90 days).
+- Analysis runs on the **current branch HEAD** only; branch topology and cross-branch history are not tracked.
+- Rename detection is approximate; renamed files may appear as new files in the history index.
+- Co-change is an **evolutionary signal**, not a dependency declaration.
+- Risk scores are heuristic approximations, not predictive defect models.
+
+---
+
 ## Typical Usage Patterns
 
 ### Orientation — what can I query?
@@ -427,6 +542,14 @@ Returns the set of entities participating in dependency cycles.
 5. `archguard_get_test_issues()` — review all issues including orphan tests
 6. `archguard_get_test_metrics(includePackageBreakdown: true)` — identify which packages lack coverage
 7. `archguard_get_entity_coverage(entityId: "<id>")` — drill into a specific entity's coverage detail
+
+### Pre-edit risk review workflow
+
+1. `archguard_analyze_git()` — analyze git history (run once, then re-run after significant elapsed time)
+2. `archguard_get_change_context(targetType: "file", target: "src/cli/mcp/mcp-server.ts")` — full pre-edit snapshot
+3. `archguard_get_cochange(targetType: "file", target: "...", topN: 5)` — which other files tend to change alongside it
+4. `archguard_get_change_risk(targetType: "file", target: "...")` — explainable risk score before editing
+5. `archguard_get_ownership(targetType: "file", target: "...")` — check who maintains the file (bus-factor proxy)
 
 ### Analyzing a project that is not the current working directory
 
@@ -503,6 +626,8 @@ You can guide the AI more specifically:
 | Stale results after code changes | Query artifacts not refreshed | Call `archguard_analyze()` or re-run `archguard analyze` |
 | MCP server fails to start | Analysis artifacts not generated yet | Run `archguard analyze` first |
 | Test tools return "No test analysis data" | `archguard_analyze` was called without `includeTests: true` | Call `archguard_analyze(includeTests: true)` then retry |
+| Git history tools return "No git history data found" | `archguard_analyze_git` has not been run yet | Call `archguard_analyze_git({ projectRoot: "..." })` first |
+| Git history query returns "Target not found" | Path does not match any entry in the analyzed index | Check the path against `archguard_summary()` or verify the path format |
 
 ---
 
