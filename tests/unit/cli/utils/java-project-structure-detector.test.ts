@@ -120,6 +120,38 @@ describe('detectJavaProjectStructure', () => {
     expect(result.every((diagram) => diagram.exclude?.[0] === '**/generated/**')).toBe(true);
   });
 
+  it('deduplicates Maven modules listed in multiple profiles (Fix 4)', async () => {
+    root = await makeTempProject({
+      'pom.xml': `
+        <project>
+          <modules>
+            <module>jlama-core</module>
+            <module>jlama-cli</module>
+          </modules>
+          <profiles>
+            <profile>
+              <id>ci</id>
+              <modules>
+                <module>jlama-core</module>
+                <module>jlama-cli</module>
+              </modules>
+            </profile>
+          </profiles>
+        </project>
+      `,
+      'jlama-core/src/main/java/com/acme/CoreApp.java': 'package com.acme; class CoreApp {}',
+      'jlama-cli/src/main/java/com/acme/CliApp.java': 'package com.acme; class CliApp {}',
+    });
+
+    const result = await detectJavaProjectStructure(root, { label: 'Jlama' });
+
+    // Only one class diagram per module, not two
+    const coreModuleDiagrams = result.filter((d) => d.name === 'Jlama/class/jlama-core');
+    const cliModuleDiagrams = result.filter((d) => d.name === 'Jlama/class/jlama-cli');
+    expect(coreModuleDiagrams).toHaveLength(1);
+    expect(cliModuleDiagrams).toHaveLength(1);
+  });
+
   it('falls back to root package/class diagrams when no Maven modules are declared', async () => {
     root = await makeTempProject({
       'pom.xml': '<project />',

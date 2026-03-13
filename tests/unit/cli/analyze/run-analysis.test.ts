@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Config } from '@/cli/config-loader.js';
 import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
+import type { ArchJSON } from '@/types/index.js';
 
 const loadMock = vi.fn();
 const normalizeToDiagramsMock = vi.fn();
@@ -11,8 +12,12 @@ const writeManifestMock = vi.fn();
 const persistQueryScopesMock = vi.fn();
 const processAllMock = vi.fn();
 const getQuerySourceGroupsMock = vi.fn();
+const getLastArchJsonMock = vi.fn();
+const generateTestCoverageHeatmapMock = vi.fn();
 const indexGenerateMock = vi.fn();
 const diagramProcessorCtorMock = vi.fn();
+const testAnalyzerAnalyzeMock = vi.fn();
+const testOutputWriterWriteMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -45,6 +50,26 @@ vi.mock('@/cli/processors/diagram-processor.js', () => ({
     }
     processAll = processAllMock;
     getQuerySourceGroups = getQuerySourceGroupsMock;
+    getLastArchJson = getLastArchJsonMock;
+    generateTestCoverageHeatmap = generateTestCoverageHeatmapMock;
+  },
+}));
+
+vi.mock('@/analysis/test-analyzer.js', () => ({
+  TestAnalyzer: class {
+    analyze = testAnalyzerAnalyzeMock;
+  },
+}));
+
+vi.mock('@/cli/utils/test-output-writer.js', () => ({
+  TestOutputWriter: class {
+    write = testOutputWriterWriteMock;
+  },
+}));
+
+vi.mock('fs-extra', () => ({
+  default: {
+    outputJson: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -107,10 +132,18 @@ describe('runAnalysis', () => {
     persistQueryScopesMock.mockReset();
     processAllMock.mockReset();
     getQuerySourceGroupsMock.mockReset();
+    getLastArchJsonMock.mockReset();
+    generateTestCoverageHeatmapMock.mockReset();
     indexGenerateMock.mockReset();
     diagramProcessorCtorMock.mockReset();
+    testAnalyzerAnalyzeMock.mockReset();
+    testOutputWriterWriteMock.mockReset();
 
     loadMock.mockResolvedValue(baseConfig);
+    getLastArchJsonMock.mockReturnValue(null);
+    generateTestCoverageHeatmapMock.mockResolvedValue(undefined);
+    testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 0 } });
+    testOutputWriterWriteMock.mockResolvedValue(undefined);
     normalizeToDiagramsMock.mockResolvedValue([
       { name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' },
     ]);
@@ -369,6 +402,81 @@ describe('runAnalysis', () => {
 
     expect(cleanStaleDiagramsMock).toHaveBeenCalledTimes(1);
     expect(writeManifestMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot)', () => {
+  function makeArchJsonForLanguage(language: string, workspaceRoot: string): ArchJSON {
+    return {
+      version: '1.0',
+      language: language as any,
+      timestamp: '2026-03-13T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot,
+    } as any;
+  }
+
+  it('passes archJson.workspaceRoot to TestAnalyzer for Java (not sessionRoot)', async () => {
+    const externalRoot = '/some/external/java/project';
+    const javaArchJson = makeArchJsonForLanguage('java', externalRoot);
+    getLastArchJsonMock.mockReturnValue(javaArchJson);
+    testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 2 } });
+
+    // Mock the Java plugin import
+    vi.doMock('@/plugins/java/index.js', () => ({
+      JavaPlugin: class {
+        initialize = vi.fn().mockResolvedValue(undefined);
+      },
+    }));
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/home/archguard',
+      workDir: '/home/archguard/.archguard',
+      cliOptions: { includeTests: true },
+      reporter: silentReporter(),
+    });
+
+    expect(testAnalyzerAnalyzeMock).toHaveBeenCalledWith(
+      javaArchJson,
+      expect.anything(),
+      expect.objectContaining({ workspaceRoot: externalRoot })
+    );
+    // Must NOT use sessionRoot
+    expect(testAnalyzerAnalyzeMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ workspaceRoot: '/home/archguard' })
+    );
+  });
+
+  it('falls back to sessionRoot when archJson.workspaceRoot is undefined', async () => {
+    const archJsonNoRoot: ArchJSON = {
+      version: '1.0',
+      language: 'java' as any,
+      timestamp: '2026-03-13T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJsonNoRoot);
+    testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 0 } });
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/home/archguard',
+      workDir: '/home/archguard/.archguard',
+      cliOptions: { includeTests: true },
+      reporter: silentReporter(),
+    });
+
+    expect(testAnalyzerAnalyzeMock).toHaveBeenCalledWith(
+      archJsonNoRoot,
+      expect.anything(),
+      expect.objectContaining({ workspaceRoot: '/home/archguard' })
+    );
   });
 });
 

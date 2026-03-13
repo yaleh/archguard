@@ -89,7 +89,7 @@ export class TestAnalyzer {
   }
 
   private async inferTestDirs(workspaceRoot: string): Promise<string[]> {
-    const candidates = ['tests', '__tests__', 'test', 'spec', 'src'];
+    const candidates = ['tests', '__tests__', 'test', 'spec', 'autotest', 'src'];
     const results: string[] = [];
     for (const c of candidates) {
       const p = path.join(workspaceRoot, c);

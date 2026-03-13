@@ -61,7 +61,7 @@ async function readMavenModules(projectRoot: string): Promise<string[]> {
     }
   }
 
-  return modules;
+  return [...new Set(modules)];
 }
 
 export async function detectJavaProjectStructure(

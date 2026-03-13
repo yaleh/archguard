@@ -493,9 +493,9 @@ export class TypeScriptPlugin implements ILanguagePlugin {
         if (/\.(test|spec)\.(ts|tsx|js|jsx)$/.test(importPath)) continue;
         // Resolve to absolute path
         const resolved = path.resolve(dir, importPath);
-        // Try adding extensions if no extension present
+        // Try adding extensions if no extension present; normalise .js → .ts
         const withExt = /\.(ts|tsx|js|jsx)$/.test(resolved)
-          ? resolved
+          ? resolved.replace(/\.js$/, '.ts')
           : `${resolved}.ts`;
         importedSourceFiles.push(withExt);
       }
@@ -538,6 +538,44 @@ export class TypeScriptPlugin implements ILanguagePlugin {
           ? resolved.replace(/\.js$/, '.ts')
           : `${resolved}.ts`;
         importedSourceFiles.push(withTs);
+      }
+
+      // Extract dynamic import() calls: await import('@/...') or import('../...')
+      const dynamicImportPattern = /(?:await\s+)?import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+      let dynMatch: RegExpExecArray | null;
+      while ((dynMatch = dynamicImportPattern.exec(code)) !== null) {
+        const specifier = dynMatch[1];
+        if (/\.(test|spec)\.(ts|tsx|js|jsx)$/.test(specifier)) continue;
+
+        if (specifier.startsWith('@/')) {
+          // @/ alias — reuse same alias resolution logic
+          const stripped = specifier.replace(/^@\//, '');
+          const tsConfigPath = cachedFindTsConfigPath(path.dirname(filePath));
+          const aliases = tsConfigPath ? loadPathAliases(tsConfigPath) : undefined;
+          let resolvedBase: string | null = null;
+          if (aliases?.paths) {
+            const atStarTarget = aliases.paths['@/*'];
+            if (atStarTarget && atStarTarget.length > 0) {
+              const targetDir = atStarTarget[0].replace(/\/\*$/, '');
+              resolvedBase = path.join(aliases.baseUrl, targetDir);
+            }
+          }
+          if (!resolvedBase) {
+            resolvedBase = path.join(path.dirname(filePath), '..', '..', 'src');
+          }
+          const resolved = path.join(resolvedBase, stripped);
+          const withTs = /\.(ts|tsx|js|jsx)$/.test(resolved)
+            ? resolved.replace(/\.js$/, '.ts')
+            : `${resolved}.ts`;
+          importedSourceFiles.push(withTs);
+        } else if (specifier.startsWith('.')) {
+          // Relative path
+          const resolved = path.resolve(dir, specifier);
+          const withExt = /\.(ts|tsx|js|jsx)$/.test(resolved)
+            ? resolved.replace(/\.js$/, '.ts')
+            : `${resolved}.ts`;
+          importedSourceFiles.push(withExt);
+        }
       }
 
       return {

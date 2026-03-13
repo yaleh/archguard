@@ -374,6 +374,36 @@ describe('TestAnalyzer.discoverTestFiles — Java multi-module (real filesystem)
   });
 });
 
+// Fix 3: autotest directory support
+describe('TestAnalyzer.inferTestDirs — autotest directory candidate (Fix 3)', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'archguard-autotest-'));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('includes autotest/ in inferred test dirs when it exists', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    await mkdir(path.join(tmpDir, 'autotest'), { recursive: true });
+
+    const analyzer = new TestAnalyzer();
+    const dirs: string[] = await (analyzer as any).inferTestDirs(tmpDir);
+    expect(dirs).toContain(path.join(tmpDir, 'autotest'));
+  });
+
+  it('does not include autotest/ when it does not exist', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    // no autotest dir created
+    const analyzer = new TestAnalyzer();
+    const dirs: string[] = await (analyzer as any).inferTestDirs(tmpDir);
+    expect(dirs).not.toContain(path.join(tmpDir, 'autotest'));
+  });
+});
+
 // Fix 2A: directory-prefix matching for Go package imports
 describe('TestAnalyzer - Go package directory import resolution', () => {
   it('resolves entities whose file is inside an imported package directory', async () => {

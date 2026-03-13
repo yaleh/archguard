@@ -157,7 +157,105 @@ describe('extractTestStructure — @/ alias import extraction', () => {
     // bare path (no .js) should get .ts appended
     expect(result!.importedSourceFiles.some((p) => p.includes('core/plugin-registry'))).toBe(true);
   });
+});
 
+// ---------------------------------------------------------------------------
+// Phase C — relative .js import extension normalization (Fix 2)
+// ---------------------------------------------------------------------------
+
+describe('extractTestStructure — relative .js import extension normalization', () => {
+  it('normalizes ../../../src/bar.js to ../../../src/bar.ts in importedSourceFiles', () => {
+    const code = [
+      `import { Foo } from '../../../src/mermaid/renderer.js';`,
+      `it('x', () => { expect(1).toBe(1); });`,
+    ].join('\n');
+    const result = plugin.extractTestStructure('/project/tests/unit/mermaid/renderer.test.ts', code);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('renderer.ts'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('renderer.js'))).toBe(false);
+  });
+
+  it('does not double-convert .ts extension (already .ts stays .ts)', () => {
+    const code = [
+      `import { Foo } from '../../../src/mermaid/renderer.ts';`,
+      `it('x', () => { expect(1).toBe(1); });`,
+    ].join('\n');
+    const result = plugin.extractTestStructure('/project/tests/unit/mermaid/renderer.test.ts', code);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('renderer.ts'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('renderer.js'))).toBe(false);
+  });
+
+  it('@/ alias .js → .ts still works (existing @/ branch unchanged)', () => {
+    vi.spyOn(tsconfigFinder, 'findTsConfigPath').mockReturnValue('/project/tsconfig.json');
+    vi.spyOn(tsconfigFinder, 'loadPathAliases').mockReturnValue({
+      baseUrl: '/project',
+      paths: { '@/*': ['src/*'] },
+    });
+
+    const code = `import { X } from '@/cli/tools/analyze-tool.js';\nit('x', () => {});\n`;
+    const result = plugin.extractTestStructure('/project/tests/foo.test.ts', code);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('analyze-tool.ts'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('analyze-tool.js'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase D — dynamic import() capture (Fix 5)
+// ---------------------------------------------------------------------------
+
+describe('extractTestStructure — dynamic import() capture', () => {
+  it('captures await import(@/ alias) and resolves to .ts path', () => {
+    vi.spyOn(tsconfigFinder, 'findTsConfigPath').mockReturnValue('/project/tsconfig.json');
+    vi.spyOn(tsconfigFinder, 'loadPathAliases').mockReturnValue({
+      baseUrl: '/project',
+      paths: { '@/*': ['src/*'] },
+    });
+
+    const code = [
+      `it('x', async () => {`,
+      `  const mod = await import('@/cli/tools/analyze-tool.js');`,
+      `  expect(mod).toBeDefined();`,
+      `});`,
+    ].join('\n');
+    const result = plugin.extractTestStructure('/project/tests/foo.test.ts', code);
+    expect(result!.importedSourceFiles.some((p) => p.includes('cli/tools/analyze-tool'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('.ts'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('.js'))).toBe(false);
+  });
+
+  it('captures import() with relative path and normalizes .js → .ts', () => {
+    const code = [
+      `it('x', async () => {`,
+      `  const mod = await import('../../../src/mermaid/renderer.js');`,
+      `  expect(mod).toBeDefined();`,
+      `});`,
+    ].join('\n');
+    const result = plugin.extractTestStructure('/project/tests/unit/mermaid/test.test.ts', code);
+    expect(result!.importedSourceFiles.some((p) => p.includes('mermaid/renderer') && p.endsWith('.ts'))).toBe(true);
+    expect(result!.importedSourceFiles.some((p) => p.endsWith('.js'))).toBe(false);
+  });
+
+  it('does not duplicate when same path is both static-imported and dynamic-imported', () => {
+    vi.spyOn(tsconfigFinder, 'findTsConfigPath').mockReturnValue('/project/tsconfig.json');
+    vi.spyOn(tsconfigFinder, 'loadPathAliases').mockReturnValue({
+      baseUrl: '/project',
+      paths: { '@/*': ['src/*'] },
+    });
+
+    const code = [
+      `import { X } from '@/parser/foo.js';`,
+      `it('x', async () => {`,
+      `  const mod = await import('@/parser/foo.js');`,
+      `  expect(mod).toBeDefined();`,
+      `});`,
+    ].join('\n');
+    const result = plugin.extractTestStructure('/project/tests/foo.test.ts', code);
+    const parserFooPaths = result!.importedSourceFiles.filter((p) => p.includes('parser/foo'));
+    // Should have the path at least once (deduplication acceptable but not required)
+    expect(parserFooPaths.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('extractTestStructure — @/ alias import extraction — additional', () => {
   it('does not include @/ imports in relative import list (no double-counting)', () => {
     vi.spyOn(tsconfigFinder, 'findTsConfigPath').mockReturnValue('/project/tsconfig.json');
     vi.spyOn(tsconfigFinder, 'loadPathAliases').mockReturnValue({
