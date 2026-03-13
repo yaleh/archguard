@@ -355,6 +355,93 @@ def greet(name: str = "World"):
     });
   });
 
+  describe('annotated_assignment field extraction (Plan 43)', () => {
+    it('extracts simple annotated assignment as classAttribute', () => {
+      const code = `
+class Config:
+    max_tokens: int = 512
+    temperature: float = 0.8
+`;
+      const module = bridge.parseCode(code, 'config.py');
+      expect(module.classes).toHaveLength(1);
+      const cls = module.classes[0];
+      expect(cls.classAttributes).toHaveLength(2);
+      expect(cls.classAttributes[0]).toMatchObject({ name: 'max_tokens', type: 'int', isPrivate: false });
+      expect(cls.classAttributes[1]).toMatchObject({ name: 'temperature', type: 'float', isPrivate: false });
+    });
+
+    it('extracts Optional and generic type annotations', () => {
+      const code = `
+class Model:
+    top_p: Optional[float] = None
+    stop_words: List[str] = []
+`;
+      const module = bridge.parseCode(code, 'model.py');
+      const cls = module.classes[0];
+      expect(cls.classAttributes[0]).toMatchObject({ name: 'top_p', type: 'Optional[float]' });
+      expect(cls.classAttributes[1]).toMatchObject({ name: 'stop_words', type: 'List[str]' });
+    });
+
+    it('marks _private fields correctly', () => {
+      const code = `
+class Engine:
+    _cache: dict = {}
+    _timeout: int = 30
+    public_field: str = ''
+`;
+      const module = bridge.parseCode(code, 'engine.py');
+      const cls = module.classes[0];
+      expect(cls.classAttributes[0]).toMatchObject({ name: '_cache', isPrivate: true });
+      expect(cls.classAttributes[1]).toMatchObject({ name: '_timeout', isPrivate: true });
+      expect(cls.classAttributes[2]).toMatchObject({ name: 'public_field', isPrivate: false });
+    });
+
+    it('extracts annotated fields without default value (bare annotations)', () => {
+      const code = `
+class Schema:
+    name: str
+    value: int
+`;
+      const module = bridge.parseCode(code, 'schema.py');
+      const cls = module.classes[0];
+      expect(cls.classAttributes).toHaveLength(2);
+      expect(cls.classAttributes[0]).toMatchObject({ name: 'name', type: 'str' });
+    });
+
+    it('does not confuse instance attribute assignments (self.x = y) with class attributes', () => {
+      const code = `
+class Foo:
+    class_field: int = 0
+    def __init__(self):
+        self.instance_field = 42
+`;
+      const module = bridge.parseCode(code, 'foo.py');
+      const cls = module.classes[0];
+      // Only the class-level annotated_assignment is extracted
+      expect(cls.classAttributes).toHaveLength(1);
+      expect(cls.classAttributes[0].name).toBe('class_field');
+    });
+
+    it('extracts both methods and class attributes from the same class', () => {
+      const code = `
+from dataclasses import dataclass
+
+@dataclass
+class GenerationConfig:
+    max_new_tokens: int = 512
+    temperature: float = 0.8
+
+    def validate(self):
+        pass
+`;
+      const module = bridge.parseCode(code, 'gen_config.py');
+      const cls = module.classes[0];
+      expect(cls.classAttributes).toHaveLength(2);
+      expect(cls.methods).toHaveLength(1);
+      expect(cls.methods[0].name).toBe('validate');
+    });
+  });
+
   describe('Edge cases', () => {
     it('should handle empty class', () => {
       const code = `

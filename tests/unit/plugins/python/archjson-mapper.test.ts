@@ -30,6 +30,38 @@ function makeImport(module: string, items?: Array<{ name: string }>): PythonRawI
   return { module, items };
 }
 
+function makeClass(overrides: Partial<import('@/plugins/python/types.js').PythonRawClass> = {}): import('@/plugins/python/types.js').PythonRawClass {
+  return {
+    name: 'MyClass',
+    moduleName: 'mymodule',
+    baseClasses: [],
+    methods: [],
+    properties: [],
+    classAttributes: [],
+    decorators: [],
+    filePath: `${BASE_WS}/myapp/mymodule.py`,
+    startLine: 1,
+    endLine: 10,
+    ...overrides,
+  };
+}
+
+function makeMethod(name: string): import('@/plugins/python/types.js').PythonRawMethod {
+  return {
+    name,
+    parameters: [],
+    returnType: undefined,
+    decorators: [],
+    isClassMethod: false,
+    isStaticMethod: false,
+    isProperty: false,
+    isAsync: false,
+    isPrivate: false,
+    startLine: 2,
+    endLine: 4,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // P0.1 — Entity ID collision fix
 // ---------------------------------------------------------------------------
@@ -595,5 +627,94 @@ describe('mapModules — cross-package integration fixture (plan-35)', () => {
 
     // No third-party or self edges
     expect(deps.find((r) => r.target === 'torch')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 43 — classAttributes → Member[] mapping
+// ---------------------------------------------------------------------------
+
+describe('ArchJsonMapper (Python) — mapClass classAttributes (Plan 43)', () => {
+  it('maps classAttributes to field Members', () => {
+    const mapper = new ArchJsonMapper();
+    const module = makeModule({
+      classes: [
+        makeClass({
+          classAttributes: [
+            { name: 'max_tokens', type: 'int', isPrivate: false },
+            { name: 'temperature', type: 'float', isPrivate: false },
+          ],
+        }),
+      ],
+    });
+
+    const result = mapper.mapModules([module], BASE_WS);
+
+    expect(result.entities).toHaveLength(1);
+    const entity = result.entities[0];
+    const fieldMembers = entity.members.filter((m) => m.type === 'field');
+    expect(fieldMembers).toHaveLength(2);
+    expect(fieldMembers[0]).toMatchObject({ name: 'max_tokens', type: 'field', visibility: 'public', fieldType: 'int' });
+    expect(fieldMembers[1]).toMatchObject({ name: 'temperature', type: 'field', visibility: 'public', fieldType: 'float' });
+  });
+
+  it('sets visibility: private for _private attributes', () => {
+    const mapper = new ArchJsonMapper();
+    const module = makeModule({
+      classes: [
+        makeClass({
+          classAttributes: [{ name: '_cache', type: 'dict', isPrivate: true }],
+        }),
+      ],
+    });
+    const result = mapper.mapModules([module], BASE_WS);
+    const fieldMembers = result.entities[0].members.filter((m) => m.type === 'field');
+    expect(fieldMembers[0]).toMatchObject({ name: '_cache', visibility: 'private' });
+  });
+
+  it('maps fieldType from type annotation', () => {
+    const mapper = new ArchJsonMapper();
+    const module = makeModule({
+      classes: [
+        makeClass({
+          classAttributes: [{ name: 'top_p', type: 'Optional[float]', isPrivate: false }],
+        }),
+      ],
+    });
+    const result = mapper.mapModules([module], BASE_WS);
+    const field = result.entities[0].members.find((m) => m.name === 'top_p');
+    expect(field?.fieldType).toBe('Optional[float]');
+  });
+
+  it('produces both field members and method members', () => {
+    const mapper = new ArchJsonMapper();
+    const module = makeModule({
+      classes: [
+        makeClass({
+          classAttributes: [{ name: 'value', type: 'int', isPrivate: false }],
+          methods: [makeMethod('compute')],
+        }),
+      ],
+    });
+    const result = mapper.mapModules([module], BASE_WS);
+    const entity = result.entities[0];
+    expect(entity.members.filter((m) => m.type === 'field')).toHaveLength(1);
+    expect(entity.members.filter((m) => m.type === 'method')).toHaveLength(1);
+  });
+
+  it('class with no classAttributes still maps correctly (empty array — no regression)', () => {
+    const mapper = new ArchJsonMapper();
+    const module = makeModule({
+      classes: [
+        makeClass({
+          classAttributes: [],
+          methods: [makeMethod('do_something')],
+        }),
+      ],
+    });
+    const result = mapper.mapModules([module], BASE_WS);
+    const entity = result.entities[0];
+    expect(entity.members.filter((m) => m.type === 'field')).toHaveLength(0);
+    expect(entity.members.filter((m) => m.type === 'method')).toHaveLength(1);
   });
 });

@@ -20,6 +20,7 @@ import type {
   PythonRawMethod,
   PythonRawParameter,
   PythonRawImport,
+  PythonRawAttribute,
 } from './types.js';
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 import type { ImportRelation } from './import-extractor.js';
@@ -155,6 +156,11 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       members.push(this.mapProperty(prop));
     }
 
+    // Map class-level annotated fields (dataclass fields, type annotations)
+    for (const attr of cls.classAttributes) {
+      members.push(this.mapClassAttribute(attr));
+    }
+
     // Determine visibility (Python doesn't have true access modifiers, but we can infer from naming)
     const visibility: Visibility = cls.name.startsWith('_') ? 'private' : 'public';
 
@@ -224,6 +230,23 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       visibility: 'public',
       returnType: prop.type,
       decorators,
+    };
+  }
+
+  /**
+   * Map a PythonRawAttribute (class-level annotated assignment) to a Member.
+   *
+   * Visibility is inferred from the leading underscore convention:
+   *   _name → private, __name → private (dunder-private), name → public
+   */
+  private mapClassAttribute(attr: PythonRawAttribute): Member {
+    const visibility: Visibility = attr.isPrivate ? 'private' : 'public';
+
+    return {
+      name: attr.name,
+      type: 'field',
+      visibility,
+      fieldType: attr.type,
     };
   }
 

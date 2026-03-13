@@ -16,6 +16,7 @@ import type {
   PythonRawParameter,
   PythonRawDecorator,
   PythonRawImport,
+  PythonRawAttribute,
 } from './types.js';
 
 export class TreeSitterBridge {
@@ -124,6 +125,7 @@ export class TreeSitterBridge {
     // Extract class body
     const body = node.childForFieldName('body');
     const methods: PythonRawMethod[] = [];
+    const classAttributes: PythonRawAttribute[] = [];
 
     if (body) {
       for (const child of body.namedChildren) {
@@ -148,6 +150,14 @@ export class TreeSitterBridge {
                 methods.push(method);
               }
             }
+          } else if (child.type === 'expression_statement') {
+            // Annotated assignment: `field: Type [= default]`
+            // In tree-sitter-python these appear as expression_statement > assignment (with type field)
+            const inner = child.namedChildCount > 0 ? child.namedChild(0) : null;
+            if (inner?.type === 'assignment') {
+              const attr = this.extractAnnotatedAssignment(inner, code);
+              if (attr) classAttributes.push(attr);
+            }
           }
         } catch (error) {
           // Skip errors in individual methods
@@ -165,7 +175,7 @@ export class TreeSitterBridge {
       baseClasses,
       methods,
       properties: [],
-      classAttributes: [],
+      classAttributes,
       decorators: [],
       docstring,
       filePath,
@@ -213,6 +223,50 @@ export class TreeSitterBridge {
       startLine: node.startPosition.row + 1,
       endLine: node.endPosition.row + 1,
     };
+  }
+
+  /**
+   * Extract a class-level annotated assignment as a PythonRawAttribute.
+   *
+   * In tree-sitter-python, `field: Type [= default]` inside a class body appears as:
+   *   expression_statement
+   *     assignment (with a 'type' field present)
+   *       left: identifier       → 'field'
+   *       type: type node        → 'Optional[int]'
+   *       right: ...             → default value (optional)
+   *
+   * This method receives the inner `assignment` node.
+   * Returns null when the node has no type annotation (plain assignment, not typed)
+   * or when the left-hand side is not a simple identifier (e.g. self.x).
+   */
+  private extractAnnotatedAssignment(
+    node: Parser.SyntaxNode,
+    code: string
+  ): PythonRawAttribute | null {
+    try {
+      // Only handle annotated assignments (those with a 'type' field)
+      const typeNode = node.childForFieldName('type');
+      if (!typeNode) return null;
+
+      // Extract field name from 'left' field
+      const leftNode = node.childForFieldName('left');
+      if (!leftNode) return null;
+
+      const name = code.substring(leftNode.startIndex, leftNode.endIndex).trim();
+      // Skip names that are not simple identifiers (e.g., 'self.x' — these are instance attrs)
+      if (name.includes('.')) return null;
+
+      // Extract type annotation text
+      const fieldType = code.substring(typeNode.startIndex, typeNode.endIndex).trim();
+
+      return {
+        name,
+        type: fieldType,
+        isPrivate: name.startsWith('_'),
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**
