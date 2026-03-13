@@ -205,6 +205,64 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     }
   }
 
+  // Git history analysis — invoked when --include-git is set
+  if (cliOptions.includeGit) {
+    try {
+      reporter.start('Analyzing git history...');
+      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo } = await import(
+        '../git-history/git-log-reader.js'
+      );
+      const { aggregateFileMetrics, aggregatePackageMetrics } = await import(
+        '../git-history/history-aggregator.js'
+      );
+      const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
+
+      const projectRoot = sessionRoot;
+      if (!isGitRepo(projectRoot)) {
+        reporter.warn('[git-history] Not a git repository — skipping git history analysis');
+      } else {
+        const sinceDays = 90;
+        const maxCommits = 500;
+        const includeMerges = false;
+        const granularities: ('package' | 'file')[] = ['package', 'file'];
+
+        const commits = readGitLog(projectRoot, { sinceDays, maxCommits, includeMerges });
+        if (commits.length === 0) {
+          reporter.warn(`[git-history] No commits found in the last ${sinceDays} days`);
+        } else {
+          const fileMetrics = aggregateFileMetrics(commits);
+          const packageMetrics = aggregatePackageMetrics(fileMetrics);
+          const headRef = getHeadRef(projectRoot);
+          const analyzedBranch = getCurrentBranch(projectRoot);
+          const manifest = {
+            version: '1' as const,
+            generatedAt: new Date().toISOString(),
+            headRef,
+            analyzedBranch,
+            sinceDays,
+            maxCommits,
+            totalCommits: commits.length,
+            includeMerges,
+            granularities,
+          };
+          const artifacts = {
+            manifest,
+            packageMetrics,
+            fileMetrics,
+          };
+          const archguardDir = config.workDir || workDir;
+          await writeHistoryArtifacts(archguardDir, artifacts);
+          reporter.succeed(
+            `Git history analysis complete: ${commits.length} commits, ${fileMetrics.length} files, ${packageMetrics.length} packages`
+          );
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      reporter.warn(`[git-history] Failed: ${msg}`);
+    }
+  }
+
   return {
     config,
     diagrams: selectedDiagrams,

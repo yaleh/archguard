@@ -26,4 +26,5 @@ export interface CLIOptions {
   name?: string;
   includeTests?: boolean;
   testsOnly?: boolean;
+  includeGit?: boolean;
 }
