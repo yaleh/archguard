@@ -221,15 +221,15 @@ See [Plugin Registry Documentation](docs/user-guide/plugin-registry.md) for deta
 
 Three-layer architecture:
 1. **Parser** (`src/parser/`) - TypeScriptParser → Extractors → ArchJSON
-2. **AI Integration** (`src/ai/`) - LLMGroupingService → MermaidGenerator
+2. **Mermaid** (`src/mermaid/`) - MermaidGenerator → Renderer → SVG/PNG
 3. **CLI** (`src/cli/`) - Commands (analyze, init, cache) with ErrorHandler
 
 **Data Flow**: `TypeScript → AST → ArchJSON → Mermaid/SVG/PNG`
 
 **Key Components**:
 - ParallelParser: Concurrent file processing
-- LLMGroupingService: Intelligent entity grouping (optional)
 - MermaidGenerator: Local Mermaid generation with validation
+- RenderWorkerPool: Parallel diagram rendering via Worker Threads
 - ErrorHandler: Unified error formatting
 
 ## Configuration
@@ -260,9 +260,10 @@ Create `archguard.config.json` (run `node dist/cli/index.js init`):
 When importing, use these aliases instead of relative paths:
 - `@/parser` → `src/parser`
 - `@/cli` → `src/cli`
-- `@/ai` → `src/ai`
 - `@/types` → `src/types`
 - `@/utils` → `src/utils`
+- `@/core` → `src/core`
+- `@/analysis` → `src/analysis`
 
 ## Testing Patterns
 

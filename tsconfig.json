@@ -40,11 +40,9 @@
     "paths": {
       "@/*": ["src/*"],
       "@/parser/*": ["src/parser/*"],
-      "@/generator/*": ["src/generator/*"],
       "@/cli/*": ["src/cli/*"],
       "@/types/*": ["src/types/*"],
       "@/utils/*": ["src/utils/*"],
-      "@/ai/*": ["src/ai/*"],
       "@/core/*": ["src/core/*"],
       "@/analysis/*": ["src/analysis/*"]
     }

@@ -49,11 +49,9 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
       '@/parser': resolve(__dirname, './src/parser'),
-      '@/generator': resolve(__dirname, './src/generator'),
       '@/cli': resolve(__dirname, './src/cli'),
       '@/types': resolve(__dirname, './src/types'),
       '@/utils': resolve(__dirname, './src/utils'),
-      '@/ai': resolve(__dirname, './src/ai'),
       '@/core': resolve(__dirname, './src/core'),       // NEW (Stage A-0)
       '@/analysis': resolve(__dirname, './src/analysis'), // NEW (Stage A-0)
     }
