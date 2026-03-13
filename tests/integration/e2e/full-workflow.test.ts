@@ -175,11 +175,12 @@ interface User {
       const archJSON = parser.parseCode(sourceCode, 'relationships.ts');
 
       // Check for inheritance relation
+      // After qualifyRelations post-pass: source/target are qualified with filePath prefix
       const inheritanceRelation = archJSON.relations.find(
-        (r) => r.type === 'inheritance' && r.source === 'Child'
+        (r) => r.type === 'inheritance' && r.source === 'relationships.ts.Child'
       );
       expect(inheritanceRelation).toBeDefined();
-      expect(inheritanceRelation?.target).toBe('Parent');
+      expect(inheritanceRelation?.target).toBe('relationships.ts.Parent');
     });
   });
 

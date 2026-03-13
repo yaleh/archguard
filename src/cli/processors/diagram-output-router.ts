@@ -16,7 +16,7 @@ import type { MermaidRendererOptions } from '@/mermaid/types.js';
 import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
 import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
 import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js';
-import type { ArchJSON } from '@/types/index.js';
+import type { ArchJSON, Relation } from '@/types/index.js';
 import type { ProgressReporterLike } from '@/cli/progress.js';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
 import fs from 'fs-extra';
@@ -80,7 +80,11 @@ export class DiagramOutputRouter {
     // Step 1: json format
     if (format === 'json') {
       await fs.ensureDir(path.dirname(paths.paths.json));
-      await fs.writeJson(paths.paths.json, canonicalizeArchJson(archJSON), { spaces: 2 });
+      const outputJson =
+        level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph
+          ? this.injectModuleGraphRelations(archJSON)
+          : archJSON;
+      await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
       return;
     }
 
@@ -132,6 +136,26 @@ export class DiagramOutputRouter {
       ? 'transparent'
       : 'white';
     return options;
+  }
+
+  /**
+   * Convert TsModuleGraph.edges to Relation[] and attach them to a shallow copy
+   * of the given ArchJSON. Called only for package-level JSON output.
+   *
+   * Each TsModuleDependency { from, to, strength } maps to:
+   *   { id, type: 'dependency', source: from, target: to }
+   *
+   * The returned object shares all other fields with the input (shallow copy).
+   */
+  private injectModuleGraphRelations(archJSON: ArchJSON): ArchJSON {
+    const moduleGraph = archJSON.extensions!.tsAnalysis!.moduleGraph!;
+    const relations: Relation[] = moduleGraph.edges.map((edge) => ({
+      id: `${edge.from}_dependency_${edge.to}`,
+      type: 'dependency' as const,
+      source: edge.from,
+      target: edge.to,
+    }));
+    return { ...archJSON, relations };
   }
 
   /**

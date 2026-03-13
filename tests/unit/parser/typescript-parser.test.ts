@@ -95,13 +95,15 @@ describe('TypeScriptParser - Single File', () => {
 
     expect(result.relations.length).toBeGreaterThan(0);
 
+    // After qualifyRelations post-pass: source is scoped to the file path
+    // Default filePath for parseCode() is 'source.ts', so qualified ID is 'source.ts.UserService'
     const inheritance = result.relations.find(
-      (r) => r.type === 'inheritance' && r.source === 'UserService'
+      (r) => r.type === 'inheritance' && r.source === 'source.ts.UserService'
     );
     expect(inheritance).toBeDefined();
 
     const implementation = result.relations.find(
-      (r) => r.type === 'implementation' && r.source === 'UserService'
+      (r) => r.type === 'implementation' && r.source === 'source.ts.UserService'
     );
     expect(implementation).toBeDefined();
   });
@@ -513,5 +515,71 @@ describe('TypeScriptParser - parseProject excludePatterns', () => {
 
     const testFiles = result.sourceFiles.filter((f) => f.endsWith('.test.ts'));
     expect(testFiles).toHaveLength(0);
+  });
+});
+
+describe('TypeScriptParser — qualifyRelations post-pass (Phase B fix)', () => {
+  it('rewrites bare class name source to qualified entity ID in parseCode()', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = `
+      export class Bar {}
+      export class Foo extends Bar {}
+    `;
+    const archJson = parser.parseCode(code, '/project/src/foo.ts');
+
+    // Both Bar and Foo are in the same file so both should resolve to qualified IDs
+    const rel = archJson.relations.find((r) => r.type === 'inheritance');
+    expect(rel).toBeDefined();
+    expect(rel?.source).toBe('src/foo.ts.Foo');
+    expect(rel?.target).toBe('src/foo.ts.Bar');
+  });
+
+  it('resolves internal relations between two classes in the same file', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = `
+      export class Bar {}
+      export class Foo extends Bar {}
+    `;
+    const archJson = parser.parseCode(code, '/project/src/both.ts');
+    const barId = 'src/both.ts.Bar';
+    const fooId = 'src/both.ts.Foo';
+
+    const rel = archJson.relations.find((r) => r.type === 'inheritance');
+    expect(rel?.source).toBe(fooId);
+    expect(rel?.target).toBe(barId);
+  });
+
+  it('does not throw when relations is empty', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = 'export class Alone {}';
+    expect(() => parser.parseCode(code, '/project/src/alone.ts')).not.toThrow();
+    const archJson = parser.parseCode(code, '/project/src/alone.ts');
+    expect(archJson.relations).toHaveLength(0);
+  });
+
+  it('leaves unresolvable targets unchanged (external types stay as bare name)', () => {
+    const parser = new TypeScriptParser('/project');
+    const code = `
+      import type { ExternalType } from 'some-lib';
+      export class MyClass implements ExternalType {}
+    `;
+    const archJson = parser.parseCode(code, '/project/src/my-class.ts');
+    const rel = archJson.relations.find((r) => r.type === 'implementation');
+    // ExternalType has no entity in this file → target stays as 'ExternalType'
+    expect(rel?.target).toBe('ExternalType');
+    // Source is qualified to the file
+    expect(rel?.source).toBe('src/my-class.ts.MyClass');
+  });
+
+  it('uses default filePath source.ts when no filePath provided', () => {
+    const parser = new TypeScriptParser();
+    const code = `
+      export class Base {}
+      export class Child extends Base {}
+    `;
+    const archJson = parser.parseCode(code); // default filePath = 'source.ts'
+    const rel = archJson.relations.find((r) => r.type === 'inheritance');
+    expect(rel?.source).toBe('source.ts.Child');
+    expect(rel?.target).toBe('source.ts.Base');
   });
 });

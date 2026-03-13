@@ -95,8 +95,9 @@ export class TypeScriptParser {
     // Extract standalone functions
     entities.push(...this.functionExtractor.extract(sourceFile, relPath));
 
-    // Extract relations
-    const relations = this.relationExtractor.extractFromSourceFile(sourceFile);
+    // Extract relations and qualify source/target to scoped entity IDs
+    const rawRelations = this.relationExtractor.extractFromSourceFile(sourceFile);
+    const relations = this.qualifyRelations(entities, rawRelations, relPath);
 
     return {
       version: '1.0',
@@ -255,6 +256,50 @@ export class TypeScriptParser {
       ...filtered,
       relations: uniqueRelations,
     };
+  }
+
+  /**
+   * Post-pass: rewrite relation source/target from bare class names to qualified entity IDs.
+   *
+   * RelationExtractor emits source/target as bare class names, e.g. 'TypeScriptParser'.
+   * Entity IDs are qualified: 'src/parser/typescript-parser.ts.TypeScriptParser'.
+   *
+   * Build a Map<simpleName, qualifiedId> from entities. For collisions (same simple name
+   * in multiple files), only the first encountered wins — acceptable because cross-file
+   * same-name collisions already cause incorrect diagrams and this is a known limitation.
+   *
+   * Relations whose source or target cannot be resolved are left with source scoped to
+   * the current file (for source) or unchanged (for target — may refer to external types).
+   *
+   * @param entities  - All entities extracted from this file
+   * @param relations - Relations as emitted by RelationExtractor (bare names)
+   * @param filePath  - Relative file path for scoping source names
+   * @returns New Relation[] with qualified IDs where resolvable
+   */
+  private qualifyRelations(entities: Entity[], relations: Relation[], filePath: string): Relation[] {
+    // Build simple name → first matching entity ID
+    const nameToId = new Map<string, string>();
+    for (const entity of entities) {
+      if (!nameToId.has(entity.name)) {
+        nameToId.set(entity.name, entity.id);
+      }
+    }
+
+    return relations.map((rel) => {
+      // Source is always in the current file — scope it directly
+      const resolvedSource = nameToId.get(rel.source) ?? `${filePath}.${rel.source}`;
+      // Target may be external (no entity) — keep bare name for those
+      const resolvedTarget = nameToId.get(rel.target) ?? rel.target;
+      if (resolvedSource === rel.source && resolvedTarget === rel.target) {
+        return rel; // no change needed
+      }
+      return {
+        ...rel,
+        id: `${resolvedSource}_${rel.type}_${resolvedTarget}`,
+        source: resolvedSource,
+        target: resolvedTarget,
+      };
+    });
   }
 
   /**

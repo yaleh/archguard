@@ -262,6 +262,126 @@ describe('DiagramOutputRouter', () => {
   });
 
   // --------------------------------------------------------------------------
+  // Package JSON relation injection (Phase A fix)
+  // --------------------------------------------------------------------------
+
+  describe('JSON format — package-level module graph relation injection', () => {
+    const moduleGraphArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [], // empty class-level relations
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              {
+                id: 'src/cli',
+                name: 'src/cli',
+                type: 'internal',
+                fileCount: 3,
+                stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'src/parser',
+                name: 'src/parser',
+                type: 'internal',
+                fileCount: 5,
+                stats: { classes: 3, interfaces: 0, functions: 0, enums: 0 },
+              },
+            ],
+            edges: [{ from: 'src/cli', to: 'src/parser', strength: 2, importedNames: [] }],
+            cycles: [],
+          },
+        },
+      },
+    } as unknown as ArchJSON;
+
+    it('injects module graph edges as relations when level=package and moduleGraph present', async () => {
+      const fsMock = await getFsMock();
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        moduleGraphArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(1);
+      expect(written.relations[0]?.source).toBe('src/cli');
+      expect(written.relations[0]?.target).toBe('src/parser');
+      expect(written.relations[0]?.type).toBe('dependency');
+    });
+
+    it('does not inject module graph relations when level=class', async () => {
+      const fsMock = await getFsMock();
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        moduleGraphArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'class', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(0); // original empty array preserved
+    });
+
+    it('does not inject when moduleGraph absent', async () => {
+      const fsMock = await getFsMock();
+
+      const archJsonNoGraph = makeArchJSON({ extensions: {} as unknown as ArchJSON['extensions'] });
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        archJsonNoGraph,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(0);
+    });
+
+    it('generates correct relation id for each edge', async () => {
+      const fsMock = await getFsMock();
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        moduleGraphArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations[0]?.id).toBe('src/cli_dependency_src/parser');
+    });
+
+    it('does not mutate the original archJSON relations array', async () => {
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const originalRelations = moduleGraphArchJSON.relations;
+
+      await router.route(
+        moduleGraphArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      // Original archJSON.relations should remain untouched (shallow copy used)
+      expect(moduleGraphArchJSON.relations).toBe(originalRelations);
+      expect(moduleGraphArchJSON.relations).toHaveLength(0);
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // Atlas routing
   // --------------------------------------------------------------------------
 
