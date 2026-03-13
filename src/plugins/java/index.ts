@@ -20,6 +20,7 @@ import type { TestPatternConfig } from '@/types/extensions.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
+import { MavenCrossModuleParser } from './maven-crossmodule-parser.js';
 import type { JavaRawPackage } from './types.js';
 
 /**
@@ -146,6 +147,43 @@ export class JavaPlugin implements ILanguagePlugin {
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
     const relations = this.mapper.mapRelations(packageList);
+
+    // Add Maven cross-module dependency relations
+    try {
+      const crossModuleDeps = await new MavenCrossModuleParser().parse(workspaceRoot);
+      if (crossModuleDeps.length > 0) {
+        // Build sub-module → representative Java package prefix map
+        const modulePackageMap = new Map<string, string>();
+        for (const entity of entities) {
+          if (!entity.sourceLocation?.file) continue;
+          const relFile = path.relative(workspaceRoot, entity.sourceLocation.file);
+          const moduleName = relFile.split('/')[0];
+          if (!modulePackageMap.has(moduleName) && entity.id.includes('.')) {
+            const pkgPrefix = entity.id.split('.').slice(0, -1).join('.');
+            modulePackageMap.set(moduleName, pkgPrefix);
+          }
+        }
+
+        const crossSeen = new Set<string>();
+        for (const dep of crossModuleDeps) {
+          const srcPkg = modulePackageMap.get(dep.from);
+          const tgtPkg = modulePackageMap.get(dep.to);
+          if (!srcPkg || !tgtPkg) continue;
+          const key = `dependency:${srcPkg}:${tgtPkg}`;
+          if (crossSeen.has(key)) continue;
+          crossSeen.add(key);
+          relations.push({
+            id: key,
+            type: 'dependency',
+            source: srcPkg,
+            target: tgtPkg,
+            inferenceSource: 'explicit',
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to parse Maven cross-module dependencies:', error);
+    }
 
     return {
       version: '1.0',
