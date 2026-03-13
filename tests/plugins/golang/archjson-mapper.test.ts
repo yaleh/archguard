@@ -17,6 +17,7 @@ import { ArchJsonMapper } from '../../../src/plugins/golang/archjson-mapper.js';
 import type {
   GoRawPackage,
   GoRawInterface,
+  GoImport,
   InferredImplementation,
 } from '../../../src/plugins/golang/types.js';
 
@@ -29,6 +30,11 @@ const loc = (file = 'src.go', startLine = 1, endLine = 10) => ({
   startLine,
   endLine,
 });
+
+/** Minimal GoImport fixture */
+function makeImport(importPath: string, alias?: string): GoImport {
+  return { path: importPath, alias, location: loc() };
+}
 
 /** Minimal GoRawPackage with sane defaults */
 function makePkg(
@@ -376,7 +382,7 @@ describe('ArchJsonMapper - mapMissingInterfaceEntities', () => {
     }).not.toThrow();
   });
 
-  it('only processes implementation relations, not other types', () => {
+  it('only processes implementation relations, not other types (dependency relations are not scanned)', () => {
     const hubPkg = makePkg({
       name: 'hub',
       fullName: 'pkg/hub',
@@ -407,5 +413,168 @@ describe('ArchJsonMapper - mapMissingInterfaceEntities', () => {
       hubPkg,
     ]);
     expect(missing).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan-33: Import dependency edges
+// ---------------------------------------------------------------------------
+
+describe('mapRelations — dependency edges', () => {
+  const mapper = new ArchJsonMapper();
+  const MODULE = 'github.com/org/app';
+
+  it('1: emits a dependency relation for a same-module import', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`)],
+    });
+    const svc = makePkg({ name: 'svc', fullName: 'internal/svc' });
+
+    const relations = mapper.mapRelations([api, svc], [], MODULE);
+    const deps = relations.filter((r) => r.type === 'dependency');
+
+    expect(deps).toHaveLength(1);
+    expect(deps[0].source).toBe('internal/api');
+    expect(deps[0].target).toBe('internal/svc');
+  });
+
+  it('2: excludes stdlib imports (no module prefix)', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport('fmt'), makeImport('context')],
+    });
+
+    const relations = mapper.mapRelations([api], [], MODULE);
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+  });
+
+  it('3: excludes external module imports (different module prefix)', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport('github.com/gin-gonic/gin')],
+    });
+
+    const relations = mapper.mapRelations([api], [], MODULE);
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+  });
+
+  it('4: emits zero relations when moduleName is unknown (no match)', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`)],
+    });
+    const svc = makePkg({ name: 'svc', fullName: 'internal/svc' });
+
+    const relations = mapper.mapRelations([api, svc], [], 'unknown.module/other');
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+  });
+
+  it('5: deduplicates duplicate imports of the same path', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`), makeImport(`${MODULE}/internal/svc`)],
+    });
+    const svc = makePkg({ name: 'svc', fullName: 'internal/svc' });
+
+    const relations = mapper.mapRelations([api, svc], [], MODULE);
+    const deps = relations.filter((r) => r.type === 'dependency');
+    expect(deps).toHaveLength(1);
+  });
+
+  it('6: guards against self-imports (source === target)', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/api`)],
+    });
+
+    const relations = mapper.mapRelations([api], [], MODULE);
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+  });
+
+  it('7: emits dependency relation for blank import (alias="_")', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`, '_')],
+    });
+    const svc = makePkg({ name: 'svc', fullName: 'internal/svc' });
+
+    const relations = mapper.mapRelations([api, svc], [], MODULE);
+    const deps = relations.filter((r) => r.type === 'dependency');
+    expect(deps).toHaveLength(1);
+    expect(deps[0].source).toBe('internal/api');
+    expect(deps[0].target).toBe('internal/svc');
+  });
+
+  it('8: coexists with implementation relations without collision', () => {
+    const api = makePkg({
+      name: 'api',
+      fullName: 'internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`)],
+      interfaces: [makeIface('Handler', 'api')],
+    });
+    const svc = makePkg({ name: 'svc', fullName: 'internal/svc' });
+    const impl = makeImpl('internal/svc', 'ServiceImpl', 'internal/api', 'Handler');
+
+    const relations = mapper.mapRelations([api, svc], [impl], MODULE);
+    const deps = relations.filter((r) => r.type === 'dependency');
+    const impls = relations.filter((r) => r.type === 'implementation');
+
+    expect(deps).toHaveLength(1);
+    expect(impls).toHaveLength(1);
+  });
+
+  it('9: emits two dependency relations for a three-package chain (A→B→C)', () => {
+    const a = makePkg({
+      name: 'a',
+      fullName: 'internal/a',
+      imports: [makeImport(`${MODULE}/internal/b`)],
+    });
+    const b = makePkg({
+      name: 'b',
+      fullName: 'internal/b',
+      imports: [makeImport(`${MODULE}/internal/c`)],
+    });
+    const c = makePkg({ name: 'c', fullName: 'internal/c' });
+
+    const relations = mapper.mapRelations([a, b, c], [], MODULE);
+    const deps = relations.filter((r) => r.type === 'dependency');
+
+    expect(deps).toHaveLength(2);
+    const sources = deps.map((r) => r.source);
+    const targets = deps.map((r) => r.target);
+    expect(sources).toContain('internal/a');
+    expect(targets).toContain('internal/b');
+    expect(sources).toContain('internal/b');
+    expect(targets).toContain('internal/c');
+  });
+
+  it('10: emits no dependency relations when imports array is empty', () => {
+    const api = makePkg({ name: 'api', fullName: 'internal/api', imports: [] });
+
+    const relations = mapper.mapRelations([api], [], MODULE);
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+  });
+
+  it('11: emits zero relations when fullNames are absolute paths (parseFiles-style)', () => {
+    // In parseFiles mode, pkg.fullName is an absolute filesystem path like
+    // "/workspace/internal/api". These never match the stripped import suffix
+    // "internal/api" so no dependency relations should be emitted.
+    const api = makePkg({
+      name: 'api',
+      fullName: '/workspace/internal/api',
+      imports: [makeImport(`${MODULE}/internal/svc`)],
+    });
+    const svc = makePkg({ name: 'svc', fullName: '/workspace/internal/svc' });
+
+    const relations = mapper.mapRelations([api, svc], [], MODULE);
+    expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
   });
 });

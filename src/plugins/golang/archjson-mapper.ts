@@ -139,9 +139,17 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
   }
 
   /**
-   * Map interface implementations to Relations
+   * Map interface implementations and package import dependencies to Relations.
+   *
+   * @param moduleName - The Go module name from go.mod (e.g. "github.com/org/app").
+   *   When non-empty, same-module imports are resolved to dependency relations.
+   *   When empty (default), no dependency edges are emitted (backward-compat).
    */
-  mapRelations(packages: GoRawPackage[], implementations: InferredImplementation[]): Relation[] {
+  mapRelations(
+    packages: GoRawPackage[],
+    implementations: InferredImplementation[],
+    moduleName = ''
+  ): Relation[] {
     const relations: Relation[] = [];
     const seen = new Set<string>();
 
@@ -160,7 +168,28 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
       );
     }
 
-    // TODO: Add dependency relations from imports
+    // Build dependency edges from package imports (only when moduleName is known)
+    if (moduleName) {
+      const prefix = moduleName + '/';
+      const knownFullNames = new Set(packages.map((p) => p.fullName || p.name));
+
+      for (const pkg of packages) {
+        const source = pkg.fullName || pkg.name;
+        for (const imp of pkg.imports) {
+          if (!imp.path.startsWith(prefix)) continue;
+          const target = imp.path.slice(prefix.length);
+          if (target === source) continue; // self-import guard
+          if (!knownFullNames.has(target)) continue; // unknown package — skip
+          this.pushUniqueRelation(
+            relations,
+            seen,
+            this.createExplicitRelation('dependency', source, target, {
+              inferenceSource: 'explicit',
+            })
+          );
+        }
+      }
+    }
 
     return relations;
   }

@@ -201,7 +201,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities([pkg]);
-    const relations = this.mapper.mapRelations([pkg], implementations);
+    const relations = this.mapper.mapRelations([pkg], implementations, this.cachedModuleName);
 
     return {
       version: '1.0',
@@ -270,7 +270,8 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
-    const relations = this.mapper.mapRelations(packageList, implementations);
+    // parseFiles uses absolute filesystem paths as fullName — no dependency edges emitted (expected)
+    const relations = this.mapper.mapRelations(packageList, implementations, this.cachedModuleName);
     const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
       entities,
       relations,
@@ -342,7 +343,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       this.goplsClient
     );
     const entities = this.mapper.mapEntities(rawData.packages);
-    const relations = this.mapper.mapRelations(rawData.packages, implementations);
+    const relations = this.mapper.mapRelations(rawData.packages, implementations, rawData.moduleName);
     const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
       entities,
       relations,
