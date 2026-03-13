@@ -813,6 +813,66 @@ describe('ArchJSONAggregator', () => {
     });
   });
 
+  describe('Java MRJAR module inflation (Phase C)', () => {
+    it('does not produce a module for java21 MRJAR version directory', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'java',
+        timestamp: '2026-03-13T00:00:00.000Z',
+        workspaceRoot: '/workspace/jlama',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.example.Foo',
+            name: 'Foo',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/jlama/jlama-native/src/main/java21/com/example/Foo.java',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      const names = result.entities.map((e) => e.name);
+      expect(names).not.toContain('java21');
+    });
+
+    it('still produces module jlama-core for a normal Maven path', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'java',
+        timestamp: '2026-03-13T00:00:00.000Z',
+        workspaceRoot: '/workspace/jlama',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.example.Foo',
+            name: 'Foo',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/jlama/jlama-core/src/main/java/com/example/Foo.java',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+        ],
+        relations: [],
+      };
+
+      const result = aggregator.aggregate(archJSON, 'package');
+      const names = result.entities.map((e) => e.name);
+      expect(names).toContain('jlama-core');
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle empty entities array', () => {
       const archJSON: ArchJSON = {

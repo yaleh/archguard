@@ -6,6 +6,39 @@ import type { Entity, Relation, Member } from '@/types/index.js';
 import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from './types.js';
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 
+/**
+ * Common JDK type names used unqualified that should not be treated as user-defined types.
+ * These are standard library types that do not represent project-specific entities.
+ */
+const JDK_COMMON_NAMES = new Set([
+  // Collections
+  'List', 'Map', 'Set', 'Collection', 'Queue', 'Deque', 'Iterator', 'Iterable',
+  // Functional / concurrency
+  'Optional', 'Stream', 'Future', 'Callable', 'Runnable', 'Comparator',
+  // Exceptions
+  'Exception', 'RuntimeException', 'Error', 'Throwable',
+  // Threading
+  'Thread',
+  // Logging (common unqualified usage via SLF4J / java.util.logging)
+  'Logger',
+  // Reflection / meta
+  'Class', 'Enum', 'Number', 'Math',
+  // Text
+  'StringBuilder', 'StringBuffer',
+  // NIO buffers
+  'ByteBuffer', 'CharBuffer', 'IntBuffer', 'ShortBuffer', 'LongBuffer',
+  'FloatBuffer', 'DoubleBuffer',
+  // IO
+  'Path', 'File', 'URI', 'URL',
+  'InputStream', 'OutputStream', 'Reader', 'Writer', 'Closeable', 'AutoCloseable',
+  // Interfaces
+  'Serializable', 'Comparable', 'Cloneable',
+  // Annotations (sometimes appear as types)
+  'Override', 'Deprecated', 'FunctionalInterface', 'SuppressWarnings',
+  // Web / common framework types that are JDK-or-javax standard
+  'Builder', 'Response', 'Request',
+]);
+
 export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   /**
    * Map Java packages to ArchJSON entities
@@ -338,6 +371,21 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
 
     // Skip Java standard library types (simple heuristic)
     if (type.startsWith('java.')) {
+      return false;
+    }
+
+    // Single-letter generic type parameter (T, E, K, V, R, N, S, U, etc.)
+    if (type.length === 1 && /[A-Z]/.test(type)) {
+      return false;
+    }
+
+    // Two-letter generic variant (T1, T2, K1, V1, etc.)
+    if (/^[A-Z][0-9]$/.test(type)) {
+      return false;
+    }
+
+    // Common JDK names used unqualified that are not user-defined types
+    if (JDK_COMMON_NAMES.has(type)) {
       return false;
     }
 

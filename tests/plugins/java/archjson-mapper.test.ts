@@ -543,6 +543,70 @@ describe('JavaArchJsonMapper', () => {
     });
   });
 
+  describe('isUserDefinedType', () => {
+    // Access private method via cast
+    const isUserDefined = (type: string) => (mapper as any).isUserDefinedType(type);
+
+    it('single-letter generics T, E, K, V are not user-defined', () => {
+      expect(isUserDefined('T')).toBe(false);
+      expect(isUserDefined('E')).toBe(false);
+      expect(isUserDefined('K')).toBe(false);
+      expect(isUserDefined('V')).toBe(false);
+    });
+
+    it('two-letter generic variants T1, T2, K1 are not user-defined', () => {
+      expect(isUserDefined('T1')).toBe(false);
+      expect(isUserDefined('T2')).toBe(false);
+      expect(isUserDefined('K1')).toBe(false);
+    });
+
+    it('common JDK names List, Map, Optional, Logger, ByteBuffer are not user-defined', () => {
+      expect(isUserDefined('List')).toBe(false);
+      expect(isUserDefined('Map')).toBe(false);
+      expect(isUserDefined('Optional')).toBe(false);
+      expect(isUserDefined('Logger')).toBe(false);
+      expect(isUserDefined('ByteBuffer')).toBe(false);
+    });
+
+    it('project-specific types MyService, UserRepository, AbstractModel are user-defined', () => {
+      expect(isUserDefined('MyService')).toBe(true);
+      expect(isUserDefined('UserRepository')).toBe(true);
+      expect(isUserDefined('AbstractModel')).toBe(true);
+    });
+
+    it('does not generate false-positive relation for field typed as List', () => {
+      const pkg: JavaRawPackage = {
+        name: 'com.example',
+        classes: [
+          {
+            name: 'MyService',
+            packageName: 'com.example',
+            modifiers: ['public'],
+            interfaces: [],
+            fields: [
+              { name: 'items', type: 'List<String>', modifiers: ['private'], annotations: [] },
+              { name: 'buf', type: 'ByteBuffer', modifiers: ['private'], annotations: [] },
+              { name: 'logger', type: 'Logger', modifiers: ['private'], annotations: [] },
+            ],
+            methods: [],
+            constructors: [],
+            annotations: [],
+            isAbstract: false,
+            filePath: 'MyService.java',
+            startLine: 1,
+            endLine: 10,
+          },
+        ],
+        interfaces: [],
+        enums: [],
+      };
+
+      const relations = mapper.mapRelations([pkg]);
+      // None of List, ByteBuffer, Logger should produce a dependency relation
+      expect(relations.filter((r) => r.type === 'dependency')).toHaveLength(0);
+    });
+  });
+
   describe('Annotation Handling', () => {
     it('should preserve decorators from annotations', () => {
       const pkg: JavaRawPackage = {

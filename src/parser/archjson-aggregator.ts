@@ -210,7 +210,14 @@ export class ArchJSONAggregator {
     const match =
       normalized.match(/^([^/]+)\/src\/(?:main|test)\/java\//) ??
       normalized.match(/\/([^/]+)\/src\/(?:main|test)\/java\//);
-    return match?.[1] ?? null;
+    if (!match) return null;
+    const moduleName = match[1];
+    // Skip Multi-Release JAR version directories (java9, java11, java17, java21, etc.)
+    // and META-INF, which are not Maven module names
+    if (/^java\d+$/.test(moduleName) || moduleName === 'META-INF') {
+      return null;
+    }
+    return moduleName;
   }
 
   /**
