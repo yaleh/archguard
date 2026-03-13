@@ -182,4 +182,30 @@ describe('loadPathAliases — JSONC comment stripping', () => {
     const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
     expect(result).toBeUndefined();
   });
+
+  it('correctly parses @/* paths when named block comments precede paths section (regression: @/* swallowed by greedy comment match)', () => {
+    // The bug: a real-world tsconfig has labelled block comments like /* Path Mapping */
+    // which the regex strips correctly.  But the non-greedy /\/\*[\s\S]*?\*\//g also
+    // matches from the "/*" inside the JSON key "@/*" all the way to a later "*/" that
+    // appears in "include": ["src/**/"] — stripping the entire paths object.
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-jsonc-'));
+    const content = `{
+  "compilerOptions": {
+    "baseUrl": ".",
+    /* Path Mapping */
+    "paths": {
+      "@/*": ["src/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/core/*": ["src/core/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}`;
+    writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
+    const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
+    expect(result).not.toBeUndefined();
+    expect(result!.paths['@/*']).toEqual(['src/*']);
+    expect(result!.paths['@/utils/*']).toEqual(['src/utils/*']);
+    expect(result!.paths['@/core/*']).toEqual(['src/core/*']);
+  });
 });

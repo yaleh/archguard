@@ -13,6 +13,7 @@
 
 import path from 'node:path';
 import fs from 'node:fs';
+import ts from 'typescript';
 
 export interface PathAliasConfig {
   /** Absolute path used as base for resolving `paths` entries. */
@@ -38,23 +39,12 @@ export function findTsConfigPath(startDir: string): string | undefined {
 }
 
 /**
- * Strip JSONC-style comments from a string before JSON.parse().
- * Handles:
- * - Block comments: /* ... * /
- * - Line comments: // ... (to end of line)
- *
- * Limitation: does not handle // or /* inside JSON string values,
- * but tsconfig.json values never contain comment-like sequences in practice.
- */
-function stripJsoncComments(text: string): string {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
-    .replace(/\/\/[^\n]*/g, '');      // line comments
-}
-
-/**
  * Read only the `baseUrl` and `paths` from a tsconfig.json file.
  * Returns undefined if neither is present or if the file cannot be parsed.
+ *
+ * Uses the TypeScript compiler API's JSONC-aware parser so that block comments
+ * containing path-like sequences (e.g. `/* Path Mapping *\/`) do not interfere
+ * with `@/*` entries in the paths map.
  *
  * `baseUrl` is resolved to an absolute path relative to the tsconfig file's directory.
  */
@@ -62,7 +52,9 @@ export function loadPathAliases(tsConfigFilePath: string): PathAliasConfig | und
   try {
     const tsDir = path.dirname(tsConfigFilePath);
     const content = fs.readFileSync(tsConfigFilePath, 'utf8');
-    const raw = JSON.parse(stripJsoncComments(content)) as {
+    const result = ts.parseConfigFileTextToJson(tsConfigFilePath, content);
+    if (result.error) return undefined;
+    const raw = result.config as {
       compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
     };
     const co = raw.compilerOptions ?? {};
