@@ -76,7 +76,7 @@ export class TestAnalyzer {
     const candidateDirs = await this.inferTestDirs(workspaceRoot);
     const allFiles: string[] = [];
     for (const dir of candidateDirs) {
-      const files = await globby(`${dir}/**/*`, { onlyFiles: true, absolute: true });
+      const files = await globby(`${dir}/**/*`, { onlyFiles: true, absolute: true, ignore: ['**/node_modules/**'] });
       allFiles.push(...files);
     }
     if (plugin.isTestFile) {
