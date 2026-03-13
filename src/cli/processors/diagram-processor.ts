@@ -16,7 +16,6 @@
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
 import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import type { ParseCache } from '@/parser/parse-cache.js';
-import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { QuerySourceGroup } from '@/cli/query/query-manifest.js';
@@ -26,12 +25,13 @@ import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import { ArchJsonProvider, hashSources } from './arch-json-provider.js';
 import { DiagramOutputRouter } from './diagram-output-router.js';
-import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
+import { generateTestCoverageHeatmap } from './test-coverage-writer.js';
+import { WorkerPoolFactory } from './worker-pool-factory.js';
+import { QueryScopeCollector } from './query-scope-collector.js';
+import { DiagramPipelineRunner } from './diagram-pipeline-runner.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
-import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';
-import path from 'path';
 
 // Re-export so existing callers importing from diagram-processor are unaffected.
 export { deriveSubModuleArchJSON } from './arch-json-provider.js';
@@ -64,6 +64,21 @@ export interface DiagramProcessorOptions {
    * plugins instead of hardcoded dynamic imports.
    */
   registry?: PluginRegistry;
+  /**
+   * Optional worker pool factory for creating MermaidRenderWorkerPool instances.
+   * Primarily used in tests to inject a mock pool factory.
+   */
+  poolFactory?: WorkerPoolFactory;
+  /**
+   * Optional query scope collector for accumulating query-layer scopes.
+   * Primarily used in tests to inject a mock collector.
+   */
+  collector?: QueryScopeCollector;
+  /**
+   * Optional diagram pipeline runner for processing individual diagrams.
+   * Primarily used in tests to inject a mock runner.
+   */
+  runner?: DiagramPipelineRunner;
 }
 
 /**
@@ -118,12 +133,12 @@ export class DiagramProcessor {
   private diagrams: DiagramConfig[];
   private globalConfig: GlobalConfig;
   private progress: ProgressReporterLike;
-  private aggregator: ArchJSONAggregator;
-  private metricsCalculator: MetricsCalculator;
   private parallelProgress?: ParallelProgressReporter;
   private readonly provider: ArchJsonProvider;
   private readonly router: DiagramOutputRouter;
-  private _lastArchJson: ArchJSON | null = null;
+  private readonly poolFactory: WorkerPoolFactory;
+  private readonly collector: QueryScopeCollector;
+  private readonly runner: DiagramPipelineRunner;
 
   constructor(options: DiagramProcessorOptions) {
     if (options.diagrams.length === 0) {
@@ -133,14 +148,23 @@ export class DiagramProcessor {
     this.diagrams = options.diagrams;
     this.globalConfig = options.globalConfig;
     this.progress = options.progress;
-    this.aggregator = new ArchJSONAggregator();
-    this.metricsCalculator = new MetricsCalculator();
     this.provider = new ArchJsonProvider({
       globalConfig: options.globalConfig,
       parseCache: options.parseCache,
       registry: options.registry,
     });
     this.router = new DiagramOutputRouter(options.globalConfig, options.progress);
+    this.poolFactory = options.poolFactory ?? new WorkerPoolFactory();
+    this.collector = options.collector ?? new QueryScopeCollector();
+    this.runner =
+      options.runner ??
+      new DiagramPipelineRunner(
+        new ArchJSONAggregator(),
+        new MetricsCalculator(),
+        this.router,
+        options.globalConfig,
+        options.progress
+      );
   }
 
   /**
@@ -164,23 +188,8 @@ export class DiagramProcessor {
     }
 
     // Create worker pool for parallel SVG rendering.
-    // For single diagrams we normally skip the pool, but Go Atlas diagrams render
-    // 4 layers concurrently so we treat the layer count as the effective diagram count.
-    const diagramCount = this.diagrams.length;
-    const isGoAtlas = diagramCount === 1 && this.diagrams[0].language === 'go';
-    const atlasLayerCount = isGoAtlas
-      ? ((this.diagrams[0].languageSpecific?.atlas as { layers?: string[] } | undefined)?.layers
-          ?.length ?? 4)
-      : 0;
-    const effectiveDiagramCount = Math.max(diagramCount, atlasLayerCount);
-    const poolSize = Math.max(1, Math.min(os.cpus().length - 1, effectiveDiagramCount, 4));
-    const poolTheme = this.globalConfig.mermaid?.theme ?? 'default';
-    const pool = new MermaidRenderWorkerPool(poolSize, {
-      theme: poolTheme,
-      maxTextSize: 200000,
-      transparentBackground: this.globalConfig.mermaid?.transparentBackground ?? false,
-      themeVariables: undefined,
-    });
+    // Pool sizing is handled by WorkerPoolFactory (accounts for Go Atlas layer count).
+    const pool = this.poolFactory.create(this.diagrams, this.globalConfig);
 
     const needsRendering = this.diagrams.some(
       (d) => (d.format ?? this.globalConfig.format ?? 'mermaid') !== 'json'
@@ -241,39 +250,12 @@ export class DiagramProcessor {
     return sourceGroups;
   }
 
-  /** Collector for query-layer scopes: one entry per unique source set that produced ArchJSON. */
-  private queryScopes = new Map<string, InternalQueryScope>();
-
-  /**
-   * Register a query scope for the query layer.
-   * Only registers if the ArchJSON has at least one entity and the key is not already present
-   * (first registration wins to avoid overwriting with a derived copy).
-   */
-  private registerQueryScope(
-    sources: string[],
-    archJson: ArchJSON,
-    kind: 'parsed' | 'derived',
-    role?: 'primary' | 'secondary'
-  ): void {
-    if (!archJson.entities || archJson.entities.length === 0) return;
-    const key = hashSources(sources, archJson.language);
-    if (this.queryScopes.has(key)) return;
-    const normalizedSources = sources.map((s) => path.resolve(s));
-    this.queryScopes.set(key, {
-      key,
-      sources: normalizedSources,
-      archJson,
-      kind,
-      role,
-    });
-  }
-
   /**
    * Return collected query scopes. Each scope represents a unique set of source
    * directories and the ArchJSON produced for them during processAll().
    */
   public getQuerySourceGroups(): InternalQueryScope[] {
-    return Array.from(this.queryScopes.values());
+    return this.collector.getQuerySourceGroups();
   }
 
   /**
@@ -283,7 +265,7 @@ export class DiagramProcessor {
    * Returns null before processAll() is called or if all groups failed.
    */
   public getLastArchJson(): ArchJSON | null {
-    return this._lastArchJson;
+    return this.collector.getLastArchJson();
   }
 
   /**
@@ -308,16 +290,14 @@ export class DiagramProcessor {
       const { archJson: rawArchJSON, kind } = await this.provider.get(firstDiagram, {
         needsModuleGraph,
       });
-      this.registerQueryScope(firstDiagram.sources, rawArchJSON, kind, firstDiagram.queryRole);
+      this.collector.register(firstDiagram.sources, rawArchJSON, kind, firstDiagram.queryRole);
       // Store ArchJSON for test analysis: first assignment wins, unless a primary role is found.
       // Check all diagrams in the group (they share sources, so any with queryRole='primary' wins).
       const groupHasPrimary = diagrams.some((d) => d.queryRole === 'primary');
-      if (this._lastArchJson === null || groupHasPrimary) {
-        this._lastArchJson = rawArchJSON;
-      }
+      this.collector.setLastArchJson(rawArchJSON, groupHasPrimary);
       return await pMap(
         diagrams,
-        (diagram) => this.processDiagramWithArchJSON(diagram, rawArchJSON, pool),
+        (diagram) => this.runner.run(diagram, rawArchJSON, pool, this.parallelProgress),
         { concurrency: this.globalConfig.concurrency || os.cpus().length }
       );
     } catch (error) {
@@ -346,147 +326,7 @@ export class DiagramProcessor {
     archJson: ArchJSON,
     outputDir: string
   ): Promise<void> {
-    const renderer = new TestCoverageRenderer();
-    const mermaidCode = renderer.render(analysis, archJson);
-
-    const heatmapDir = path.join(outputDir, 'test');
-    await fs.ensureDir(heatmapDir);
-
-    const heatmapPath = path.join(heatmapDir, 'coverage-heatmap.md');
-    const content = [
-      '# Test Coverage Heatmap',
-      '',
-      '> Generated from test analysis — four buckets by coverage score',
-      '',
-      '```mermaid',
-      mermaidCode,
-      '```',
-      '',
-    ].join('\n');
-
-    await fs.writeFile(heatmapPath, content, 'utf-8');
+    return generateTestCoverageHeatmap(analysis, archJson, outputDir);
   }
 
-  /**
-   * Process a single diagram with pre-parsed ArchJSON
-   *
-   * @param diagram - Diagram configuration
-   * @param rawArchJSON - Pre-parsed ArchJSON (before aggregation)
-   * @returns DiagramResult
-   */
-  private async processDiagramWithArchJSON(
-    diagram: DiagramConfig,
-    rawArchJSON: ArchJSON,
-    pool: MermaidRenderWorkerPool
-  ): Promise<DiagramResult> {
-    const startTime = Date.now();
-
-    try {
-      // For single diagram, use original progress reporter
-      if (!this.parallelProgress) {
-        this.progress.start(`Processing diagram: ${diagram.name}`);
-      }
-
-      // 1. Aggregate to specified level
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 50, 'Aggregating');
-      }
-      const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
-
-      // 2. Resolve output paths
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 60, 'Preparing output');
-      }
-      const pathResolver = new OutputPathResolver({
-        outputDir: this.globalConfig.outputDir,
-        output: undefined, // Not using legacy output field
-      });
-
-      const paths = pathResolver.resolve({ name: diagram.name });
-      await pathResolver.ensureDirectory({ name: diagram.name });
-
-      // 3. Generate output based on format
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 70, 'Generating output');
-      }
-      const format = diagram.format || this.globalConfig.format;
-
-      // Compute metrics unconditionally so they can be attached to the DiagramResult
-      // (consumers like DiagramIndexGenerator need them regardless of output format).
-      // Always embed metrics so json format gets them; mermaid renderers ignore the field.
-      const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(
-        aggregatedJSON,
-        diagram.level
-      );
-      const outputJSON = { ...aggregatedJSON, metrics: computedMetrics };
-
-      await this.router.route(outputJSON, paths, diagram, pool);
-
-      if (this.parallelProgress) {
-        this.parallelProgress.update(diagram.name, 90, 'Finalizing');
-      }
-
-      const parseTime = Date.now() - startTime;
-
-      if (this.parallelProgress) {
-        this.parallelProgress.complete(diagram.name);
-      } else {
-        this.progress.succeed(`Diagram ${diagram.name} completed`);
-      }
-
-      // Build result paths based on format
-      const resultPaths: DiagramResult['paths'] = {};
-      if (format === 'json') {
-        resultPaths.json = paths.paths.json;
-      } else if (format === 'mermaid') {
-        resultPaths.mmd = paths.paths.mmd;
-        resultPaths.svg = paths.paths.svg;
-        resultPaths.png = paths.paths.png;
-      }
-
-      // For package-level TS diagrams the rendered output comes from the
-      // TsModuleGraph extension, not from aggregatedJSON.entities/relations.
-      // Use moduleGraph counts so index.md reflects the actual diagram content.
-      const moduleGraph = aggregatedJSON.extensions?.tsAnalysis?.moduleGraph;
-      const usesModuleGraph = diagram.level === 'package' && !!moduleGraph;
-
-      // For Go Atlas diagrams the package layer is the source of truth at package level.
-      const atlasPackageLayer = aggregatedJSON.extensions?.goAtlas?.layers?.['package'];
-      const usesAtlas = !!atlasPackageLayer && !usesModuleGraph;
-
-      return {
-        name: diagram.name,
-        success: true,
-        metrics: computedMetrics,
-        paths: resultPaths,
-        stats: {
-          entities: usesModuleGraph
-            ? moduleGraph.nodes.length
-            : usesAtlas
-              ? atlasPackageLayer.nodes.length
-              : aggregatedJSON.entities.length,
-          relations: usesModuleGraph
-            ? moduleGraph.edges.length
-            : usesAtlas
-              ? atlasPackageLayer.edges.length
-              : aggregatedJSON.relations.length,
-          parseTime,
-        },
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (this.parallelProgress) {
-        this.parallelProgress.fail(diagram.name);
-      } else {
-        this.progress.fail(`Diagram ${diagram.name} failed: ${errorMessage}`);
-      }
-
-      return {
-        name: diagram.name,
-        success: false,
-        error: errorMessage,
-      };
-    }
-  }
 }
