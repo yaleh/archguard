@@ -33,18 +33,25 @@ export class PythonImportExtractor {
       const module = imp.module;
       if (!module) continue;
 
-      // Resolve the target module ID (handles relative imports)
-      const targetModuleId = this.resolveModuleId(module, currentModuleId);
-      if (!targetModuleId) continue;
+      // Skip __future__ imports early
+      if (module === '__future__' || module.startsWith('__future__.')) continue;
 
-      // Skip __future__ imports
-      if (targetModuleId === '__future__' || targetModuleId.startsWith('__future__.')) continue;
+      let targetModuleId: string | null;
+
+      if (!module.startsWith('.')) {
+        // Absolute import: use resolveToKnown which handles project-root prefix stripping
+        targetModuleId = this.resolveToKnown(module, knownModuleIds);
+      } else {
+        // Relative import: resolve to dotted path first, then check knownModuleIds
+        const resolved = this.resolveModuleId(module, currentModuleId);
+        if (!resolved) continue;
+        targetModuleId = knownModuleIds.has(resolved) ? resolved : null;
+      }
+
+      if (!targetModuleId) continue;
 
       // Skip self-imports
       if (targetModuleId === currentModuleId) continue;
-
-      // Skip modules not in the known set
-      if (!knownModuleIds.has(targetModuleId)) continue;
 
       // Deduplicate
       if (seen.has(targetModuleId)) continue;
@@ -54,6 +61,35 @@ export class PythonImportExtractor {
     }
 
     return result;
+  }
+
+  /**
+   * Resolve a module string to a known module ID, with project-root prefix stripping.
+   *
+   * For absolute imports, tries:
+   *   1. Direct match against knownModuleIds
+   *   2. Right-side truncation (strip last component): "a.b.c" → "a.b" → "a"
+   *   3. Left-side stripping (remove project root prefix): "pkg.a.b" → "a.b" → "a"
+   *      combined with right-side truncation at each level
+   *
+   * This fixes the case where sources are at /project/mypackage/ so known IDs
+   * have no "mypackage." prefix, but code uses `from mypackage.sub import X`.
+   */
+  private resolveToKnown(
+    absoluteModule: string,
+    knownModuleIds: Set<string>
+  ): string | null {
+    const parts = absoluteModule.split('.');
+    // Try all left-prefix strip levels (0 = no strip, 1 = strip first component, etc.)
+    for (let leftStrip = 0; leftStrip < parts.length; leftStrip++) {
+      const remaining = parts.slice(leftStrip);
+      // Try all right-side truncations
+      for (let rightLen = remaining.length; rightLen > 0; rightLen--) {
+        const candidate = remaining.slice(0, rightLen).join('.');
+        if (knownModuleIds.has(candidate)) return candidate;
+      }
+    }
+    return null;
   }
 
   /**

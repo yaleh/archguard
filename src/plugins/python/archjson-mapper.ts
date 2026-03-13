@@ -355,17 +355,30 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
 
   /**
    * Resolve an absolute dotted import path to a known module ID.
-   * Uses progressive-strip fallback: "lmdeploy.models.MyClass" → "lmdeploy.models" → ...
+   *
+   * Uses two-dimensional fallback:
+   *   1. Right-side truncation: "lmdeploy.models.MyClass" → "lmdeploy.models" → "lmdeploy"
+   *   2. Left-side prefix stripping (project root removal): when sources are at
+   *      /project/mypackage/, known IDs lack the "mypackage." prefix, so
+   *      "mypackage.sub.module" → try "sub.module" → "sub"
+   *
+   * This fixes missing cross-package arrows when code uses absolute imports
+   * including the project root package name (e.g. `from lmdeploy.pytorch import X`)
+   * but module IDs are relative to the sources directory (e.g. `pytorch`).
    */
   private resolveAbsoluteImport(
     dottedPath: string,
     modulePathIndex: Map<string, string>
   ): string | null {
-    if (modulePathIndex.has(dottedPath)) return dottedPath;
     const parts = dottedPath.split('.');
-    for (let i = parts.length - 1; i > 0; i--) {
-      const candidate = parts.slice(0, i).join('.');
-      if (modulePathIndex.has(candidate)) return candidate;
+    // Try all left-prefix strip levels (0 = no strip, 1 = strip first component, etc.)
+    for (let leftStrip = 0; leftStrip < parts.length; leftStrip++) {
+      const remaining = parts.slice(leftStrip);
+      // Try all right-side truncations
+      for (let rightLen = remaining.length; rightLen > 0; rightLen--) {
+        const candidate = remaining.slice(0, rightLen).join('.');
+        if (modulePathIndex.has(candidate)) return candidate;
+      }
     }
     return null;
   }

@@ -135,6 +135,68 @@ describe('PythonImportExtractor – relative imports', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Project-root prefix stripping (absolute imports with package root prefix)
+// ---------------------------------------------------------------------------
+
+describe('PythonImportExtractor – project root prefix stripping', () => {
+  const extractor = new PythonImportExtractor();
+
+  /**
+   * Scenario: sources dir is /lmdeploy/lmdeploy/ (workspaceRoot = that dir).
+   * Known module IDs are relative to that root, e.g. "pytorch.engine.engine".
+   * But Python code inside the project uses absolute imports:
+   *   from lmdeploy.pytorch.engine import X
+   * The raw import module is "lmdeploy.pytorch.engine", but the known ID is
+   * "pytorch.engine" (or "pytorch.engine.engine"). The first dotted component
+   * "lmdeploy" is the project root package and must be stripped.
+   */
+  it('resolves cross-package import when import has project root prefix not in knownModuleIds', () => {
+    // from mypackage.submodule import X
+    // workspaceRoot = /path/to/mypackage/, so known IDs have no "mypackage." prefix
+    const imports: PythonRawImport[] = [{ module: 'mypackage.submodule' }];
+    const known = makeKnown('submodule'); // known ID lacks "mypackage." prefix
+    const result = extractor.extract(imports, 'mypackage.core', known);
+    expect(result).toHaveLength(1);
+    expect(result[0].targetModuleId).toBe('submodule');
+  });
+
+  it('resolves deep absolute import by stripping project root prefix', () => {
+    // from lmdeploy.pytorch.engine.engine import LlamaForCausalLM
+    // knownModuleIds: pytorch.engine.engine (relative to lmdeploy/ sources dir)
+    const imports: PythonRawImport[] = [{ module: 'lmdeploy.pytorch.engine.engine' }];
+    const known = makeKnown('pytorch.engine.engine', 'serve.server');
+    const result = extractor.extract(imports, 'pytorch.layers.linear', known);
+    expect(result).toHaveLength(1);
+    expect(result[0].targetModuleId).toBe('pytorch.engine.engine');
+  });
+
+  it('still resolves when the import needs both prefix stripping and right-side truncation', () => {
+    // from lmdeploy.pytorch.engine import SomeClass (imports the package, not a submodule)
+    // knownModuleIds: pytorch.engine (not pytorch.engine.SomeClass)
+    const imports: PythonRawImport[] = [{ module: 'lmdeploy.pytorch.engine' }];
+    const known = makeKnown('pytorch.engine', 'pytorch.layers');
+    const result = extractor.extract(imports, 'pytorch.serve.server', known);
+    expect(result).toHaveLength(1);
+    expect(result[0].targetModuleId).toBe('pytorch.engine');
+  });
+
+  it('does not strip prefix when it would produce a self-import', () => {
+    // source module is "submodule", import is "mypackage.submodule" → strips to "submodule" = self
+    const imports: PythonRawImport[] = [{ module: 'mypackage.submodule' }];
+    const known = makeKnown('submodule');
+    const result = extractor.extract(imports, 'submodule', known);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when no prefix-stripped candidate is in knownModuleIds', () => {
+    const imports: PythonRawImport[] = [{ module: 'lmdeploy.nonexistent.module' }];
+    const known = makeKnown('pytorch.engine', 'serve.server');
+    const result = extractor.extract(imports, 'pytorch.layers', known);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
 
