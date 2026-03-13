@@ -45,6 +45,18 @@ describe('TreeSitterBridge', () => {
       expect(result.namespace).toBe('');
       expect(result.classes[0].qualifiedName).toBe('Foo');
     });
+
+    it('skips forward declarations (no body) — resolves to canonical definition', () => {
+      // Forward declaration only — should not produce an entity
+      const fwdOnly = bridge.parseCode('struct ggml_tensor;', 'ggml-metal.h');
+      expect(fwdOnly.classes).toHaveLength(0);
+
+      // Forward decl followed by canonical definition — only definition survives
+      const code = 'struct ggml_tensor;\nstruct ggml_tensor { int type; float * data; };';
+      const result = bridge.parseCode(code, 'ggml.h');
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].fields.length).toBeGreaterThan(0);
+    });
   });
 
   describe('enum extraction', () => {

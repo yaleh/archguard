@@ -120,12 +120,13 @@ export class TreeSitterBridge {
     const kind: 'class' | 'struct' = node.type === 'struct_specifier' ? 'struct' : 'class';
     const qualifiedName = currentNs ? `${currentNs}::${name}` : name;
 
-    const bases = this.extractBases(node);
     const bodyNode = node.childForFieldName('body');
+    // Skip forward declarations (no body): struct ggml_tensor; is not the canonical definition
+    if (!bodyNode) return null;
+
+    const bases = this.extractBases(node);
     const defaultVis: 'public' | 'private' = kind === 'struct' ? 'public' : 'private';
-    const { fields, methods } = bodyNode
-      ? this.classBuilder.extractMembers(bodyNode, filePath, defaultVis)
-      : { fields: [], methods: [] };
+    const { fields, methods } = this.classBuilder.extractMembers(bodyNode, filePath, defaultVis);
 
     return {
       name,
