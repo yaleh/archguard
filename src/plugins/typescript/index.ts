@@ -29,6 +29,48 @@ import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { TypeScriptAnalyzer } from './typescript-analyzer.js';
 
+// ---------------------------------------------------------------------------
+// Module-level helpers for extractTestStructure
+// ---------------------------------------------------------------------------
+
+/**
+ * Scan forward from startIdx to find the closing '}' of the test callback body.
+ * Returns the line index (exclusive) of the first line after the body ends.
+ * Tracks brace depth: opening '{' increments, closing '}' decrements.
+ * Scanning starts counting depth only after the first '{' is seen
+ * (the callback function open brace), so inline object literals on the
+ * test() invocation line itself are handled gracefully.
+ */
+export function scanTestBody(lines: string[], startIdx: number): number {
+  let depth = 0;
+  let started = false;
+  for (let i = startIdx; i < lines.length; i++) {
+    const line = lines[i];
+    for (const ch of line) {
+      if (ch === '{') {
+        depth++;
+        started = true;
+      } else if (ch === '}' && started) {
+        depth--;
+        if (depth === 0) {
+          return i + 1; // exclusive end index
+        }
+      }
+    }
+  }
+  return lines.length; // unterminated body — scan to end of file
+}
+
+/** Module-level tsconfig path cache keyed on directory (avoids repeated FS traversal). */
+const _tsconfigPathCache = new Map<string, string | undefined>();
+
+function cachedFindTsConfigPath(dir: string): string | undefined {
+  if (_tsconfigPathCache.has(dir)) return _tsconfigPathCache.get(dir);
+  const result = findTsConfigPath(dir);
+  _tsconfigPathCache.set(dir, result);
+  return result;
+}
+
 /**
  * TypeScript/JavaScript plugin for ArchGuard
  *
@@ -426,8 +468,10 @@ export class TypeScriptPlugin implements ILanguagePlugin {
           if (!testCasePattern.test(line)) return null;
 
           const isSkipped = skipPatterns.some((p) => line.includes(p));
+          // Use brace-depth scan to find the full test body instead of a fixed 20-line window
+          const bodyEnd = scanTestBody(lines, _idx);
           const assertionCount = lines
-            .slice(_idx, Math.min(_idx + 20, lines.length))
+            .slice(_idx, bodyEnd)
             .filter((l) => assertionPatterns.some((ap) => l.includes(ap))).length;
 
           // Extract name from first string argument
@@ -454,6 +498,46 @@ export class TypeScriptPlugin implements ILanguagePlugin {
           ? resolved
           : `${resolved}.ts`;
         importedSourceFiles.push(withExt);
+      }
+
+      // Extract @/-alias imports (e.g. `from '@/parser/foo.js'`)
+      // Resolve using the nearest tsconfig.json paths config.
+      const aliasPattern = /import\s+.*?from\s+['"](@\/[^'"]+)['"]/g;
+      let aliasMatch: RegExpExecArray | null;
+      while ((aliasMatch = aliasPattern.exec(code)) !== null) {
+        const aliasPath = aliasMatch[1]; // e.g. '@/parser/typescript-parser.js'
+        // Strip the leading '@/'
+        const stripped = aliasPath.replace(/^@\//, ''); // e.g. 'parser/typescript-parser.js'
+
+        // Resolve via tsconfig.paths: '@/*' maps to 'src/*' (most common convention).
+        const tsConfigPath = cachedFindTsConfigPath(path.dirname(filePath));
+        const aliases = tsConfigPath ? loadPathAliases(tsConfigPath) : undefined;
+
+        let resolvedBase: string | null = null;
+
+        if (aliases?.paths) {
+          // Look for '@/*' → ['src/*'] or equivalent
+          const atStarTarget = aliases.paths['@/*'];
+          if (atStarTarget && atStarTarget.length > 0) {
+            // e.g. 'src/*' → strip trailing '/*' → 'src'
+            const targetDir = atStarTarget[0].replace(/\/\*$/, '');
+            resolvedBase = path.join(aliases.baseUrl, targetDir);
+          }
+        }
+
+        if (!resolvedBase) {
+          // Fallback: assume '@/*' → '<workspaceRoot>/src/*' by convention
+          // workspaceRoot is unavailable here; use file's ancestor heuristic
+          resolvedBase = path.join(path.dirname(filePath), '..', '..', 'src');
+        }
+
+        // Build resolved path from base + stripped alias
+        const resolved = path.join(resolvedBase, stripped);
+        // Normalise extension: .js imports → .ts sources; bare path → add .ts
+        const withTs = /\.(ts|tsx|js|jsx)$/.test(resolved)
+          ? resolved.replace(/\.js$/, '.ts')
+          : `${resolved}.ts`;
+        importedSourceFiles.push(withTs);
       }
 
       return {
