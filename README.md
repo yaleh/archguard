@@ -1,6 +1,6 @@
 # ArchGuard
 
-ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), and Python (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
+ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), Python (beta), and C++ (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
 
 ## Screenshots
 
@@ -16,7 +16,7 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 ## Features
 
 - **AI-Native MCP Interface**: Query architecture in natural language from Claude Code or Codex — analyze projects, trace dependencies, find implementers, detect cycles
-- **Multi-Language Support**: TypeScript, Go, Java, Python via plugin system
+- **Multi-Language Support**: TypeScript, Go, Java, Python, C++ via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
 - **Static Test Analysis**: Test coverage mapping, assertion density, orphan detection, and quality issues — no test execution required
@@ -277,7 +277,17 @@ Test analysis (requires `archguard_analyze(includeTests: true)` first):
 | `archguard_detect_test_patterns` | Detect test frameworks and return suggested pattern config — call this first |
 | `archguard_get_test_metrics` | Summary: file counts, entity coverage ratio, assertion density, issue counts |
 | `archguard_get_test_issues` | Per-file issues: `zero_assertion`, `orphan_test`, `assertion_poverty`, `skip_accumulation` |
-| `archguard_get_test_coverage` | Per-entity coverage map with confidence scores |
+| `archguard_get_entity_coverage` | Per-entity coverage map with confidence scores |
+
+Git history analysis:
+
+| Tool | Purpose |
+|------|---------|
+| `archguard_analyze_git` | Index git history for change-based queries |
+| `archguard_get_change_context` | Commits and changed files for an entity |
+| `archguard_get_cochange` | Files that frequently change together |
+| `archguard_get_change_risk` | Change risk score based on churn and coupling |
+| `archguard_get_ownership` | Author ownership breakdown per file or entity |
 
 See [MCP Usage Guide](docs/user-guide/mcp-usage.md) for setup, tool reference, and usage patterns.
 
@@ -307,6 +317,7 @@ archguard cache path    # Show cache directory
 | Go         | Stable | tree-sitter + gopls       | Structs, interfaces, goroutines, Architecture Atlas |
 | Java       | Beta   | tree-sitter               | Classes, interfaces, Maven/Gradle deps              |
 | Python     | Beta   | tree-sitter               | Classes, functions, pip/Poetry deps                 |
+| C++        | Beta   | tree-sitter               | Structs, classes, inheritance, CMake deps           |
 
 ### Go Architecture Atlas
 
@@ -515,7 +526,8 @@ archguard/
 │   │   ├── golang/          # Stable (tree-sitter + gopls + Atlas)
 │   │   │   └── atlas/       # package, capability, goroutine, flow builders
 │   │   ├── java/            # Beta
-│   │   └── python/          # Beta
+│   │   ├── python/          # Beta
+│   │   └── cpp/             # Beta (tree-sitter + CMake)
 │   └── types/               # Core types (config, ArchJSON, extensions)
 ├── tests/
 │   ├── unit/                # Unit tests
@@ -594,11 +606,11 @@ npm run build
 # Analyze ArchGuard itself
 node dist/cli/index.js analyze -v
 
-# Package-level overview
-node dist/cli/index.js analyze -l package -n overview
+# Package-level overview only
+node dist/cli/index.js analyze --diagrams package
 
 # Method-level detail for a module
-node dist/cli/index.js analyze -s ./src/cli -l method -n cli-module
+node dist/cli/index.js analyze -s ./src/cli --diagrams method
 ```
 
 ## Technology Stack
