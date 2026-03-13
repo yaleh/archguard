@@ -292,3 +292,107 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
     expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase E — Python module-level relation sources
+// ---------------------------------------------------------------------------
+
+describe('ValidatedMermaidGenerator - Python module-level relation sources (Phase E)', () => {
+  it('includes relation when source is a module prefix of a known entity (class level)', () => {
+    // Python: entities have class-level IDs, but import relations have module-level source IDs
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'python',
+      entities: [
+        {
+          id: 'lmdeploy.pytorch.models.LlamaModel',
+          name: 'LlamaModel',
+          type: 'class',
+          visibility: 'public',
+        },
+      ],
+      relations: [
+        {
+          id: 'rel1',
+          // module-level source: not a known entity ID but is a prefix of one
+          source: 'lmdeploy.pytorch.models',
+          target: 'lmdeploy.pytorch.engine',
+          type: 'dependency',
+        },
+      ],
+    };
+
+    const generator = new ValidatedMermaidGenerator(archJson, {
+      level: 'class',
+      grouping: { packages: [] },
+    });
+
+    const diagram = generator.generate();
+    // The relation should appear in the diagram
+    expect(diagram).toContain('-->');
+  });
+
+  it('excludes relation when source is completely unknown (no entity has it as prefix)', () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'python',
+      entities: [
+        {
+          id: 'myapp.models.User',
+          name: 'User',
+          type: 'class',
+          visibility: 'public',
+        },
+      ],
+      relations: [
+        {
+          id: 'rel1',
+          // source is an entirely unknown module — no entity has it as a prefix
+          source: 'completely.unknown.module',
+          target: 'myapp.views',
+          type: 'dependency',
+        },
+      ],
+    };
+
+    const generator = new ValidatedMermaidGenerator(archJson, {
+      level: 'class',
+      grouping: { packages: [] },
+    });
+
+    const diagram = generator.generate();
+    // Relation from unknown source should NOT appear
+    expect(diagram).not.toContain('completely_unknown_module');
+  });
+
+  it('includes module-level relation source at package level too', () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'python',
+      entities: [
+        {
+          id: 'myapp.utils.Helper',
+          name: 'Helper',
+          type: 'class',
+          visibility: 'public',
+        },
+      ],
+      relations: [
+        {
+          id: 'rel1',
+          source: 'myapp.utils',       // module prefix of myapp.utils.Helper
+          target: 'myapp.views',
+          type: 'dependency',
+        },
+      ],
+    };
+
+    const generator = new ValidatedMermaidGenerator(archJson, {
+      level: 'package',
+      grouping: { packages: [] },
+    });
+
+    const diagram = generator.generate();
+    expect(diagram).toContain('-->');
+  });
+});

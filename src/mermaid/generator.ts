@@ -189,6 +189,9 @@ export class ValidatedMermaidGenerator {
     const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
     const knownEntityIds = new Set(visibleEntities.map((e) => e.id));
 
+    // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
+    const modulePrefixIndex = this.buildModulePrefixIndex(knownEntityIds);
+
     // If we have grouping, use namespaces
     if (packageGroups.length > 0 && packageGroups[0]?.name !== 'Default') {
       for (const group of packageGroups) {
@@ -206,15 +209,19 @@ export class ValidatedMermaidGenerator {
         lines.push('  }');
       }
 
-      // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
+      // Add relationships: source must be known (by name, scoped ID, or module prefix); unknown targets render as ghost nodes.
       // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        if (
-          (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          (knownEntityIds.has(relation.target) ||
-            knownEntityNames.has(relation.target) ||
-            !this.isNoisyTarget(relation.target))
-        ) {
+        const sourceKnownDirect =
+          knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source);
+        const sourceKnownViaPrefix = !sourceKnownDirect && modulePrefixIndex.has(relation.source);
+        const sourceKnown = sourceKnownDirect || sourceKnownViaPrefix;
+        const targetOk =
+          knownEntityIds.has(relation.target) ||
+          knownEntityNames.has(relation.target) ||
+          sourceKnownViaPrefix || // Python module-level: skip noisy check for target too
+          !this.isNoisyTarget(relation.target);
+        if (sourceKnown && targetOk) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
       }
@@ -224,15 +231,19 @@ export class ValidatedMermaidGenerator {
         lines.push(...this.generateClassDefinition(entity, 1, true));
       }
 
-      // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
+      // Add relationships: source must be known (by name, scoped ID, or module prefix); unknown targets render as ghost nodes.
       // Noisy targets (inline types, generics, literals) are filtered.
       for (const relation of this.archJson.relations) {
-        if (
-          (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-          (knownEntityIds.has(relation.target) ||
-            knownEntityNames.has(relation.target) ||
-            !this.isNoisyTarget(relation.target))
-        ) {
+        const sourceKnownDirect =
+          knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source);
+        const sourceKnownViaPrefix = !sourceKnownDirect && modulePrefixIndex.has(relation.source);
+        const sourceKnown = sourceKnownDirect || sourceKnownViaPrefix;
+        const targetOk =
+          knownEntityIds.has(relation.target) ||
+          knownEntityNames.has(relation.target) ||
+          sourceKnownViaPrefix || // Python module-level: skip noisy check for target too
+          !this.isNoisyTarget(relation.target);
+        if (sourceKnown && targetOk) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
       }
@@ -292,13 +303,19 @@ export class ValidatedMermaidGenerator {
       }
     }
 
-    // Add relationships: source must be known (by name or scoped ID); unknown targets render as ghost nodes.
+    // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
+    const modulePrefixIndexMethod = this.buildModulePrefixIndex(knownEntityIds);
+
+    // Add relationships: source must be known (by name, scoped ID, or module prefix); unknown targets render as ghost nodes.
     // Noisy targets (inline types, generics, literals) are filtered.
     for (const relation of this.archJson.relations) {
-      if (
-        (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-        !this.isNoisyTarget(relation.target)
-      ) {
+      const sourceKnownDirect =
+        knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source);
+      const sourceKnownViaPrefix =
+        !sourceKnownDirect && modulePrefixIndexMethod.has(relation.source);
+      const sourceKnown = sourceKnownDirect || sourceKnownViaPrefix;
+      // Python module-level: skip noisy check for target when source matched via prefix
+      if (sourceKnown && (sourceKnownViaPrefix || !this.isNoisyTarget(relation.target))) {
         lines.push(`  ${this.generateRelationLine(relation)}`);
       }
     }
@@ -493,18 +510,44 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
+   * Build a module-prefix → representative entity ID map for Python-style module-level
+   * relation sources.  For each entity ID that contains a dot, the module ID (everything
+   * before the last dot) is recorded.  This lets us accept relations whose source is a
+   * module-level ID (e.g. `lmdeploy.pytorch.models`) even when entities are registered
+   * at class level (e.g. `lmdeploy.pytorch.models.LlamaModel`).
+   */
+  private buildModulePrefixIndex(entityIds: Set<string>): Map<string, string> {
+    const index = new Map<string, string>();
+    for (const entityId of entityIds) {
+      const lastDot = entityId.lastIndexOf('.');
+      if (lastDot > 0) {
+        const moduleId = entityId.substring(0, lastDot);
+        if (!index.has(moduleId)) {
+          index.set(moduleId, entityId);
+        }
+      }
+    }
+    return index;
+  }
+
+  /**
    * Generate all relations for package level
    */
   private generateRelations(_packageGroups: PackageGroup[]): string[] {
     const lines: string[] = [];
     const knownEntityNames = new Set(this.archJson.entities.map((e) => e.name));
     const knownEntityIds = new Set(this.archJson.entities.map((e) => e.id));
+    // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
+    const modulePrefixIndex = this.buildModulePrefixIndex(knownEntityIds);
 
     for (const relation of this.archJson.relations) {
-      if (
-        (knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source)) &&
-        !this.isNoisyTarget(relation.target)
-      ) {
+      const sourceKnownDirect =
+        knownEntityNames.has(relation.source) || knownEntityIds.has(relation.source);
+      const sourceKnownViaPrefix = !sourceKnownDirect && modulePrefixIndex.has(relation.source);
+      const sourceKnown = sourceKnownDirect || sourceKnownViaPrefix;
+      // When the source matched via module prefix (Python-style), skip the isNoisyTarget check
+      // for the target because Python dotted module paths look like TypeScript namespace types.
+      if (sourceKnown && (sourceKnownViaPrefix || !this.isNoisyTarget(relation.target))) {
         lines.push(`  ${this.generateRelationLine(relation)}`);
       }
     }
@@ -747,13 +790,22 @@ export class ValidatedMermaidGenerator {
       }
       lines.push('  }');
 
-      // Emit relations: source must be in this group; target must be a known entity
+      // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
+      const modulePrefixIndexGroup = this.buildModulePrefixIndex(knownEntityIds);
+
+      // Emit relations: source must be in this group (or a module prefix of a group entity);
+      // target must be a known entity or a non-noisy external ghost node.
       for (const relation of this.archJson.relations) {
-        const sourceInGroup =
+        const sourceInGroupDirect =
           groupEntityIdSet.has(relation.source) || groupEntityNames.has(relation.source);
+        const sourceViaPrefix =
+          !sourceInGroupDirect && modulePrefixIndexGroup.has(relation.source);
+        const sourceInGroup = sourceInGroupDirect || sourceViaPrefix;
         const targetKnown =
           knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target);
-        if (sourceInGroup && (targetKnown || !this.isNoisyTarget(relation.target))) {
+        // Python module-level: skip noisy check for target when source matched via prefix
+        const targetOk = targetKnown || sourceViaPrefix || !this.isNoisyTarget(relation.target);
+        if (sourceInGroup && targetOk) {
           lines.push(`  ${this.generateRelationLine(relation)}`);
         }
       }
