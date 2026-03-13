@@ -435,35 +435,34 @@ describe('ArchJsonMapper', () => {
       expect(staticMethod?.isStatic).toBe(true);
     });
 
-    it('should map imports as dependency relations', () => {
+    it('should map imports as dependency relations for known project modules', () => {
+      // stdlib imports (os, sys, typing) are now filtered out when not in the module index.
+      // mapModule() without a modulePathIndex emits no dependency relations.
+      // Use mapModules() with a known project module to test dependency emission.
+      const target: PythonRawModule = {
+        name: 'helpers',
+        filePath: '/project/myapp/helpers.py',
+        classes: [],
+        functions: [],
+        imports: [],
+      };
       const module: PythonRawModule = {
         name: 'test_module',
-        filePath: '/test/module.py',
+        filePath: '/project/myapp/module.py',
         classes: [],
         functions: [],
         imports: [
-          { module: 'os' },
-          { module: 'sys', alias: 'system' },
-          { module: 'typing', items: [{ name: 'List' }, { name: 'Dict', alias: 'Dictionary' }] },
+          { module: 'myapp.helpers' },  // project-internal import (matches module ID)
         ],
       };
 
-      const result = mapper.mapModule(module);
-
-      // Imports should create dependency relations
-      expect(result.relations.length).toBeGreaterThan(0);
+      const result = mapper.mapModules([target, module], '/project');
 
       const depRelations = result.relations.filter((r) => r.type === 'dependency');
-      expect(depRelations.length).toBe(3);
+      expect(depRelations.length).toBe(1);
 
-      const osDep = depRelations.find((r) => r.target === 'os');
-      expect(osDep).toBeDefined();
-
-      const sysDep = depRelations.find((r) => r.target === 'sys');
-      expect(sysDep).toBeDefined();
-
-      const typingDep = depRelations.find((r) => r.target === 'typing');
-      expect(typingDep).toBeDefined();
+      const helpersDep = depRelations.find((r) => r.target === 'myapp.helpers');
+      expect(helpersDep).toBeDefined();
     });
   });
 

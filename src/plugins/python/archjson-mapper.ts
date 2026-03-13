@@ -39,8 +39,18 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
     const entities: Entity[] = [];
     const relations: Relation[] = [];
 
+    // Pre-pass: build index of all known module IDs for import resolution
+    const modulePathIndex = new Map<string, string>();
+    for (const m of modules) {
+      const modId = this.generateModuleId(m.name, m.filePath, workspaceRoot);
+      modulePathIndex.set(modId, modId);
+    }
+
+    // Dedup set spanning all modules (keyed on "dependency:source:target")
+    const seenDeps = new Set<string>();
+
     for (const module of modules) {
-      const moduleResult = this.mapModule(module, workspaceRoot);
+      const moduleResult = this.mapModule(module, workspaceRoot, modulePathIndex, seenDeps);
       entities.push(...moduleResult.entities);
       relations.push(...moduleResult.relations);
     }
@@ -61,7 +71,9 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
    */
   mapModule(
     module: PythonRawModule,
-    workspaceRoot?: string
+    workspaceRoot?: string,
+    modulePathIndex?: Map<string, string>,
+    seenDeps?: Set<string>
   ): { entities: Entity[]; relations: Relation[] } {
     const entities: Entity[] = [];
     const relations: Relation[] = [];
@@ -83,11 +95,23 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       entities.push(entity);
     }
 
-    // Map imports as dependency relations
-    for (const imp of module.imports) {
-      const depRelation = this.createImportDependency(imp, module.filePath, module.name, workspaceRoot);
-      if (depRelation) {
-        relations.push(depRelation);
+    // Map imports as dependency relations (only when module index is available)
+    if (modulePathIndex) {
+      for (const imp of module.imports) {
+        const depRelation = this.createImportDependency(
+          imp,
+          module.filePath,
+          module.name,
+          workspaceRoot,
+          modulePathIndex
+        );
+        if (depRelation) {
+          const key = `dependency:${depRelation.source}:${depRelation.target}`;
+          if (!seenDeps || !seenDeps.has(key)) {
+            seenDeps?.add(key);
+            relations.push(depRelation);
+          }
+        }
       }
     }
 
@@ -253,22 +277,83 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
   }
 
   /**
-   * Create dependency relation from import
+   * Create dependency relation from import, resolving the target against
+   * the known module index. Returns null when the import cannot be resolved
+   * to a known project module (stdlib, third-party, unresolvable relative).
    */
   private createImportDependency(
     imp: PythonRawImport,
     filePath: string,
     moduleName: string,
-    workspaceRoot?: string
+    workspaceRoot: string | undefined,
+    modulePathIndex: Map<string, string>
   ): Relation | null {
-    // Create a relation for the module itself
-    // The source is a pseudo-entity representing the module
-    const sourceId = this.generateModuleId(moduleName, filePath, workspaceRoot);
+    // Strip " as <alias>" suffix emitted verbatim by tree-sitter for "import X as Y"
+    const rawModule = imp.module.replace(/ as \w+$/, '');
 
-    return this.createExplicitRelation('dependency', sourceId, imp.module, {
+    // Resolve to a known module ID
+    let targetId: string | null;
+    if (rawModule.startsWith('.')) {
+      targetId = this.resolveRelativeImport(rawModule, filePath, workspaceRoot, modulePathIndex);
+    } else {
+      targetId = this.resolveAbsoluteImport(rawModule, modulePathIndex);
+    }
+    if (!targetId) return null;
+
+    const sourceId = this.generateModuleId(moduleName, filePath, workspaceRoot);
+    if (sourceId === targetId) return null; // self-import guard
+
+    return this.createExplicitRelation('dependency', sourceId, targetId, {
       confidence: 1.0,
       inferenceSource: 'explicit',
     });
+  }
+
+  /**
+   * Resolve an absolute dotted import path to a known module ID.
+   * Uses progressive-strip fallback: "lmdeploy.models.MyClass" → "lmdeploy.models" → ...
+   */
+  private resolveAbsoluteImport(
+    dottedPath: string,
+    modulePathIndex: Map<string, string>
+  ): string | null {
+    if (modulePathIndex.has(dottedPath)) return dottedPath;
+    const parts = dottedPath.split('.');
+    for (let i = parts.length - 1; i > 0; i--) {
+      const candidate = parts.slice(0, i).join('.');
+      if (modulePathIndex.has(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  /**
+   * Resolve a relative import path (starts with ".") to a known module ID.
+   * Returns null when workspaceRoot is absent.
+   */
+  private resolveRelativeImport(
+    rawModule: string,
+    sourceFilePath: string,
+    workspaceRoot: string | undefined,
+    modulePathIndex: Map<string, string>
+  ): string | null {
+    if (!workspaceRoot) return null;
+
+    const dots = rawModule.match(/^\.+/)?.[0] ?? '.';
+    const dotCount = dots.length;
+    const suffix = rawModule.slice(dotCount); // "" for ".", "utils" for ".utils"
+
+    // Start at sourceFile's directory; move up (dotCount-1) levels
+    let baseDir = path.dirname(sourceFilePath);
+    for (let i = 1; i < dotCount; i++) {
+      baseDir = path.dirname(baseDir);
+    }
+
+    const resolvedDir = suffix ? path.join(baseDir, ...suffix.split('.')) : baseDir;
+    const relDir = path.relative(workspaceRoot, resolvedDir).replace(/\\/g, '/');
+    const dottedDir = relDir.replace(/\//g, '.');
+
+    if (modulePathIndex.has(dottedDir)) return dottedDir;
+    return null;
   }
 
   /**
