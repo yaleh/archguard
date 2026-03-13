@@ -11,6 +11,8 @@ This directory contains Architecture Decision Records for the ArchGuard project.
 | [ADR-003](./003-librsvg-css-inline-patching.md) | Inline SVG Style Patching for librsvg Compatibility | Accepted | 2026-03-05 | `src/mermaid/renderer.ts`, `tests/unit/mermaid/edge-style-inline.test.ts` |
 | [ADR-004](./004-single-analysis-write-path-for-cli-and-mcp.md) | CLI 与 MCP 必须共享单一分析写盘路径 | Proposed | 2026-03-07 | [proposal-mcp-analyze-tool.md](../proposals/proposal-mcp-analyze-tool.md) |
 | [ADR-005](./005-default-analysis-uses-primary-language-project-scope.md) | 缺省分析自动发现主语言并使用项目级 scope | Proposed | 2026-03-08 | [proposal-default-analysis-language-scopes.md](../proposals/proposal-default-analysis-language-scopes.md) |
+| [ADR-006](./006-mcp-tool-design-standards.md) | MCP Tool 设计规范 | Accepted | 2026-03-12 | `src/cli/mcp/mcp-server.ts` |
+| [ADR-007](./007-cli-mcp-interface-parity.md) | CLI 与 MCP 接口一致性规范 | Accepted | 2026-03-13 | `src/cli/commands/query.ts`, `src/cli/mcp/mcp-server.ts`, `tests/integration/cli-mcp/` |
 
 ## How to Read ADRs
 
