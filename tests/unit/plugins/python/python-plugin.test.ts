@@ -42,6 +42,14 @@ describe('PythonPlugin.isTestFile()', () => {
     expect(plugin.isTestFile('/project/test/helpers.py')).toBe(true);
   });
 
+  it('recognises any .py file inside an autotest/ directory', () => {
+    expect(plugin.isTestFile('/project/autotest/benchmark/test_apiserver.py')).toBe(true);
+  });
+
+  it('recognises any .py file inside a spec/ directory', () => {
+    expect(plugin.isTestFile('/project/spec/test_utils.py')).toBe(true);
+  });
+
   it('rejects conftest.py', () => {
     expect(plugin.isTestFile('/project/tests/conftest.py')).toBe(false);
   });

@@ -181,9 +181,9 @@ export class PythonPlugin implements ILanguagePlugin {
     const base = path.basename(filePath);
     if (base === 'conftest.py' || base === '__init__.py') return false;
     if (/^test_.+\.py$/.test(base) || /^.+_test\.py$/.test(base)) return true;
-    // directory convention: any .py file inside tests/ or test/ directory
+    // directory convention: any .py file inside tests/, test/, autotest/, or spec/ directory
     const parts = filePath.replace(/\\/g, '/').split('/');
-    return parts.some((p) => p === 'tests' || p === 'test');
+    return parts.some((p) => p === 'tests' || p === 'test' || p === 'autotest' || p === 'spec');
   }
 
   /**
