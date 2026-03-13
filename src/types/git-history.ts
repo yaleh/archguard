@@ -74,6 +74,7 @@ export interface FileHistoryMetrics {
   riskFactors: RiskFactors;
   commitShas?: string[]; // unique SHA list for this file
   topContributors?: ContributorSummary[]; // top-5 contributors by commit count
+  contributorShas?: Record<string, string[]>; // per-author unique SHA list (for package-level dedup)
   currentlyExists?: boolean; // false when the file path no longer exists in working tree
 }
 

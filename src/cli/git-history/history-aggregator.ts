@@ -21,6 +21,7 @@ interface FileAccumulator {
   commits: string[]; // sha list (for counting)
   dates: Set<string>;
   authors: Map<string, number>; // email → commit count
+  authorShas: Map<string, Set<string>>; // email → set of unique SHAs
   addedLines: number;
   deletedLines: number;
   lastDate: string;
@@ -52,6 +53,7 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
           shaSet: new Set(),
           dates: new Set(),
           authors: new Map(),
+          authorShas: new Map(),
           addedLines: 0,
           deletedLines: 0,
           lastDate: commit.date,
@@ -62,6 +64,8 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
       acc.shaSet.add(commit.sha);
       acc.dates.add(commit.date);
       acc.authors.set(commit.authorEmail, (acc.authors.get(commit.authorEmail) ?? 0) + 1);
+      if (!acc.authorShas.has(commit.authorEmail)) acc.authorShas.set(commit.authorEmail, new Set());
+      acc.authorShas.get(commit.authorEmail)!.add(commit.sha);
       acc.addedLines += fc.added;
       acc.deletedLines += fc.deleted;
       if (commit.date > acc.lastDate) {
@@ -117,6 +121,12 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
       share: commitCount > 0 ? count / commitCount : 0,
     }));
 
+    // Build contributorShas: per-author unique SHA record (used for package-level dedup)
+    const contributorShas: Record<string, string[]> = {};
+    for (const [email, shas] of acc.authorShas) {
+      contributorShas[email] = [...shas];
+    }
+
     results.push({
       path: acc.path,
       packagePath: extractPackagePath(acc.path, depth),
@@ -132,6 +142,7 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
       riskFactors,
       commitShas: [...acc.shaSet],
       topContributors,
+      contributorShas,
     });
   }
 
@@ -244,17 +255,30 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth
       { maxCommitCount, maxAuthorCount }
     );
 
-    // Merge author maps from all files to compute package-level topContributors
-    const mergedAuthors = new Map<string, number>();
+    // Merge per-author SHA sets from all files to compute package-level topContributors
+    // This ensures share = authorUniqueShas.size / packageUniqueShas.size (no inflation)
+    const pkgAuthorShas = new Map<string, Set<string>>();
     for (const fm of acc.files) {
-      for (const contributor of fm.topContributors ?? []) {
-        mergedAuthors.set(
-          contributor.email,
-          (mergedAuthors.get(contributor.email) ?? 0) + contributor.commitCount
-        );
+      if (fm.contributorShas) {
+        for (const [email, shas] of Object.entries(fm.contributorShas)) {
+          if (!pkgAuthorShas.has(email)) pkgAuthorShas.set(email, new Set());
+          const authorSet = pkgAuthorShas.get(email)!;
+          for (const sha of shas) authorSet.add(sha);
+        }
+      } else {
+        // Fallback: no contributorShas available — use topContributors counts (may inflate)
+        for (const contributor of fm.topContributors ?? []) {
+          pkgAuthorShas.set(
+            contributor.email,
+            new Set([...(pkgAuthorShas.get(contributor.email) ?? []), contributor.email + '_count_' + contributor.commitCount])
+          );
+        }
       }
     }
-    const sortedPkgAuthors = [...mergedAuthors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const sortedPkgAuthors = [...pkgAuthorShas.entries()]
+      .map(([email, shas]) => [email, shas.size] as [string, number])
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
     const topContributors: ContributorSummary[] = sortedPkgAuthors.map(([email, count]) => ({
       email,
       commitCount: count,

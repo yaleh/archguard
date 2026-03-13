@@ -454,3 +454,64 @@ describe('aggregatePackageMetrics — topContributors', () => {
     expect(bob).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// contributor share correctness (Plan 39A)
+// ---------------------------------------------------------------------------
+
+describe('aggregatePackageMetrics — contributor share correctness', () => {
+  it('share does not exceed 1.0 when one contributor changes many files with same SHAs', () => {
+    // Alice makes 10 commits, each touching 5 files in the same package.
+    // Per-file count would be 10 each → naively summed = 50, share = 50/10 = 5.0 (wrong).
+    // With SHA dedup: alice's unique SHAs = 10, package SHAs = 10 → share = 1.0 (correct).
+    const files = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'].map((f) => ({ path: `src/${f}` }));
+    const commits: CommitRecord[] = Array.from({ length: 10 }, (_, i) =>
+      makeCommit(`sha${i}`, 'alice@x.com', `2024-01-${String(i + 1).padStart(2, '0')}`, files)
+    );
+    const fileMetrics = aggregateFileMetrics(commits);
+    const packageMetrics = aggregatePackageMetrics(fileMetrics);
+    const src = packageMetrics.find((p) => p.path === 'src')!;
+    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
+    expect(alice).toBeDefined();
+    expect(alice.share).toBeLessThanOrEqual(1.0);
+    expect(alice.commitCount).toBe(10);
+  });
+
+  it('two contributors with disjoint 5-commit sets each have share=0.5', () => {
+    // Alice makes commits sha0-sha4 on foo.ts, Bob makes sha5-sha9 on bar.ts.
+    // Package has 10 unique SHAs → each contributor has 5 → share = 0.5.
+    const aliceCommits: CommitRecord[] = Array.from({ length: 5 }, (_, i) =>
+      makeCommit(`sha${i}`, 'alice@x.com', `2024-01-${String(i + 1).padStart(2, '0')}`, [{ path: 'src/foo.ts' }])
+    );
+    const bobCommits: CommitRecord[] = Array.from({ length: 5 }, (_, i) =>
+      makeCommit(`sha${i + 5}`, 'bob@x.com', `2024-01-${String(i + 6).padStart(2, '0')}`, [{ path: 'src/bar.ts' }])
+    );
+    const fileMetrics = aggregateFileMetrics([...aliceCommits, ...bobCommits]);
+    const packageMetrics = aggregatePackageMetrics(fileMetrics);
+    const src = packageMetrics.find((p) => p.path === 'src')!;
+    expect(src.commitCount).toBe(10);
+    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
+    const bob = src.topContributors!.find((c) => c.email === 'bob@x.com')!;
+    expect(alice).toBeDefined();
+    expect(bob).toBeDefined();
+    expect(alice.share).toBeCloseTo(0.5, 5);
+    expect(bob.share).toBeCloseTo(0.5, 5);
+  });
+
+  it('busFactor computed correctly from accurate shares: sole contributor = high bus factor risk', () => {
+    // Alice makes all 10 commits touching 5 files.
+    // Package commitCount = 10, alice share = 1.0, alice is primary owner.
+    const files = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'].map((f) => ({ path: `src/${f}` }));
+    const commits: CommitRecord[] = Array.from({ length: 10 }, (_, i) =>
+      makeCommit(`sha${i}`, 'alice@x.com', `2024-01-${String(i + 1).padStart(2, '0')}`, files)
+    );
+    const fileMetrics = aggregateFileMetrics(commits);
+    const packageMetrics = aggregatePackageMetrics(fileMetrics);
+    const src = packageMetrics.find((p) => p.path === 'src')!;
+    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
+    // sole contributor: share should be exactly 1.0, and ownerConcentration (bus factor risk) should be low
+    expect(alice.share).toBeCloseTo(1.0, 5);
+    // ownerConcentration = 1 - primaryOwnerShare; sole owner → ownerConcentration ≈ 0
+    expect(src.riskFactors.ownerConcentration).toBeCloseTo(0, 1);
+  });
+});
