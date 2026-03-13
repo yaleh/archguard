@@ -16,11 +16,12 @@ import type {
   RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
-import type { ArchJSON } from '@/types/index.js';
-import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
+import type { ArchJSON, TestPatternConfig } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
+import { PythonImportExtractor } from './import-extractor.js';
+import type { ImportRelation } from './import-extractor.js';
 
 /**
  * Python language plugin implementation
@@ -160,8 +161,57 @@ export class PythonPlugin implements ILanguagePlugin {
       }
     }
 
+    // Build inter-package import relations using the full set of known module IDs
+    const importRelations = this.extractImportRelations(modules, workspaceRoot);
+
     // Map all modules to ArchJSON, propagating workspaceRoot for stable IDs and path resolution
-    return this.archJsonMapper.mapModules(modules, workspaceRoot);
+    return this.archJsonMapper.mapModules(modules, workspaceRoot, importRelations);
+  }
+
+  /**
+   * Extract inter-package import relations from all parsed modules.
+   *
+   * Builds the set of known module IDs first, then runs PythonImportExtractor
+   * per module to produce deduped cross-module dependency relations.
+   */
+  private extractImportRelations(
+    modules: import('./types.js').PythonRawModule[],
+    workspaceRoot?: string
+  ): ImportRelation[] {
+    if (modules.length === 0) return [];
+
+    // Build known module IDs: derive from file paths the same way ArchJsonMapper does
+    const knownModuleIds = new Set<string>();
+    for (const mod of modules) {
+      const moduleId = this.filePathToModuleId(mod.filePath, workspaceRoot);
+      if (moduleId) knownModuleIds.add(moduleId);
+    }
+
+    const extractor = new PythonImportExtractor();
+    const allRelations: ImportRelation[] = [];
+
+    for (const mod of modules) {
+      const currentModuleId = this.filePathToModuleId(mod.filePath, workspaceRoot);
+      if (!currentModuleId) continue;
+
+      const relations = extractor.extract(mod.imports, currentModuleId, knownModuleIds);
+      allRelations.push(...relations);
+    }
+
+    return allRelations;
+  }
+
+  /**
+   * Convert a file path to a dotted Python module ID, consistent with
+   * ArchJsonMapper.generateModuleId().
+   */
+  private filePathToModuleId(filePath: string, workspaceRoot?: string): string | null {
+    if (!workspaceRoot) return null;
+    const rel = path.relative(workspaceRoot, filePath);
+    if (rel.startsWith('..')) return null; // outside workspace
+    const withoutExt = rel.replace(/\.py$/, '');
+    const normalised = withoutExt.replace(/(\/|^)__init__$/, '');
+    return normalised.replace(/\//g, '.') || null;
   }
 
   /**
@@ -181,9 +231,9 @@ export class PythonPlugin implements ILanguagePlugin {
     const base = path.basename(filePath);
     if (base === 'conftest.py' || base === '__init__.py') return false;
     if (/^test_.+\.py$/.test(base) || /^.+_test\.py$/.test(base)) return true;
-    // directory convention: any .py file inside tests/, test/, autotest/, or spec/ directory
+    // directory convention: any .py file inside tests/ or test/ directory
     const parts = filePath.replace(/\\/g, '/').split('/');
-    return parts.some((p) => p === 'tests' || p === 'test' || p === 'autotest' || p === 'spec');
+    return parts.some((p) => p === 'tests' || p === 'test');
   }
 
   /**

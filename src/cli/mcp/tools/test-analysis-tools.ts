@@ -11,7 +11,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
-import { loadEngine } from '../../query/engine-loader.js';
+import { loadEngine, readManifest } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
 
 /**
@@ -94,6 +94,38 @@ function textResponse(text: string) {
   return { content: [{ type: 'text' as const, text }] };
 }
 
+/**
+ * Build an actionable diagnostic response when no test files are found in the
+ * current scope. This typically happens when the default scope covers only
+ * source files (e.g. src/) and excludes tests/.
+ */
+async function buildZeroTestsDiagnosticResponse(archDir: string): Promise<ReturnType<typeof textResponse>> {
+  let availableScopes = '';
+  try {
+    const manifest = await readManifest(archDir);
+    availableScopes = manifest.scopes?.map((s: any) => `${s.key} (${s.label})`).join(', ') ?? '';
+  } catch {
+    // ignore — manifest may not exist yet
+  }
+
+  return textResponse(
+    JSON.stringify(
+      {
+        error: 'No test files found in the analyzed scope.',
+        diagnosis: [
+          'The current ArchJSON scope covers only source files (e.g. src/) and excludes tests/.',
+          'Fix: Re-run archguard_analyze with --include-tests flag.',
+          availableScopes
+            ? `Available scopes: ${availableScopes}`
+            : 'Run archguard_analyze first to generate analysis data.',
+        ],
+      },
+      null,
+      2
+    )
+  );
+}
+
 const patternConfigSchema = z
   .object({
     assertionPatterns: z.array(z.string()).optional(),
@@ -120,14 +152,18 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         .string()
         .optional()
         .describe('Project root (default: server startup cwd)'),
+      scope: z
+        .string()
+        .optional()
+        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
     },
-    async ({ projectRoot }) => {
+    async ({ projectRoot, scope }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
         let engine: Awaited<ReturnType<typeof loadEngine>> | null = null;
         try {
-          engine = await loadEngine(archDir);
+          engine = await loadEngine(archDir, scope);
         } catch {
           // No prior analysis — fall back to package.json detection
         }
@@ -168,6 +204,12 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         }
 
         const analysis = engine.getTestAnalysis()!;
+
+        // Scope mismatch guard: engine loaded but no test files found
+        if (analysis.metrics.totalTestFiles === 0) {
+          return buildZeroTestsDiagnosticResponse(archDir);
+        }
+
         const frameworks = [...new Set(analysis.testFiles.flatMap((f) => f.frameworks))];
         const suggestedPatternConfig = buildSuggestedPatternConfig(frameworks);
         return textResponse(
@@ -198,18 +240,26 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
     'Get test quality issues for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
+      scope: z
+        .string()
+        .optional()
+        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
       patternConfig: patternConfigSchema,
       severity: z
         .enum(['warning', 'info'])
         .optional()
         .describe('Filter by severity'),
     },
-    async ({ projectRoot, severity }) => {
+    async ({ projectRoot, scope, severity }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
-        const engine = await loadEngine(path.join(root, '.archguard'));
+        const archDir = path.join(root, '.archguard');
+        const engine = await loadEngine(archDir, scope);
         if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = engine.getTestAnalysis()!;
+        if (analysis.metrics.totalTestFiles === 0) {
+          return buildZeroTestsDiagnosticResponse(archDir);
+        }
         const issues = severity
           ? analysis.issues.filter((i) => i.severity === severity)
           : analysis.issues;
@@ -225,17 +275,25 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
     'Get test metrics summary for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
+      scope: z
+        .string()
+        .optional()
+        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
       patternConfig: patternConfigSchema,
       includePackageBreakdown: z.boolean().optional().describe(
         'When true, includes per-package coverage breakdown sorted ascending by coverageRatio.'
       ),
     },
-    async ({ projectRoot, includePackageBreakdown }) => {
+    async ({ projectRoot, scope, includePackageBreakdown }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
-        const engine = await loadEngine(path.join(root, '.archguard'));
+        const archDir = path.join(root, '.archguard');
+        const engine = await loadEngine(archDir, scope);
         if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = engine.getTestAnalysis()!;
+        if (analysis.metrics.totalTestFiles === 0) {
+          return buildZeroTestsDiagnosticResponse(archDir);
+        }
         const result: Record<string, unknown> = { ...analysis.metrics };
         if (includePackageBreakdown) {
           result.packageCoverage = engine.getPackageCoverage();

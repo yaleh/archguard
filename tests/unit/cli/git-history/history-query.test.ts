@@ -274,7 +274,7 @@ describe('HistoryQuery.getOwnership', () => {
     expect(others).toBeUndefined();
   });
 
-  it('includes "others" entry when primaryOwnerShare < 1.0', () => {
+  it('includes "others" entry when primaryOwnerShare < 1.0 and no topContributors', () => {
     const file = makeFileMetric('src/a.ts', {
       primaryOwner: 'alice@example.com',
       primaryOwnerShare: 0.7,
@@ -287,6 +287,62 @@ describe('HistoryQuery.getOwnership', () => {
     const others = result.contributors.find((c) => c.email === 'others');
     expect(others).toBeDefined();
     expect(others?.share).toBeCloseTo(0.3, 5);
+  });
+
+  it('returns real contributor emails from topContributors when available', () => {
+    const file = makeFileMetric('src/a.ts', {
+      primaryOwner: 'alice@example.com',
+      primaryOwnerShare: 0.7,
+      commitCount: 10,
+      topContributors: [
+        { email: 'alice@example.com', commitCount: 7, share: 0.7 },
+        { email: 'bob@example.com', commitCount: 3, share: 0.3 },
+      ],
+    });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getOwnership('file', 'src/a.ts');
+    expect(result.contributors).toHaveLength(2);
+    const emails = result.contributors.map((c) => c.email);
+    expect(emails).toContain('alice@example.com');
+    expect(emails).toContain('bob@example.com');
+    // no synthetic "others" entry
+    expect(emails).not.toContain('others');
+  });
+
+  it('busFactor=1 when single author topContributor has 100% commits', () => {
+    const file = makeFileMetric('src/a.ts', {
+      primaryOwner: 'alice@example.com',
+      primaryOwnerShare: 1.0,
+      commitCount: 5,
+      topContributors: [{ email: 'alice@example.com', commitCount: 5, share: 1.0 }],
+    });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getOwnership('file', 'src/a.ts');
+    expect(result.busFactor).toBe(1);
+  });
+
+  it('busFactor=2 when 2 authors together reach 50% with topContributors', () => {
+    // alice=30%, bob=25%, carol=25%, dave=20% — need first 2 (55%) to hit >=50%
+    const file = makeFileMetric('src/a.ts', {
+      primaryOwner: 'alice@example.com',
+      primaryOwnerShare: 0.3,
+      commitCount: 20,
+      topContributors: [
+        { email: 'alice@example.com', commitCount: 6, share: 0.3 },
+        { email: 'bob@example.com', commitCount: 5, share: 0.25 },
+        { email: 'carol@example.com', commitCount: 5, share: 0.25 },
+        { email: 'dave@example.com', commitCount: 4, share: 0.2 },
+      ],
+    });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getOwnership('file', 'src/a.ts');
+    expect(result.busFactor).toBe(2);
   });
 
   it('throws for unknown target', () => {
@@ -589,5 +645,24 @@ describe('HistoryQuery.getChangeContext', () => {
     const result = q.getChangeContext('package', 'src');
     expect(result.targetType).toBe('package');
     expect(result.summary.commitCount).toBe(20);
+  });
+
+  it('stalePathWarning is undefined when currentlyExists is true', () => {
+    const file = makeFileMetric('src/a.ts', { currentlyExists: true });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeContext('file', 'src/a.ts');
+    expect(result.stalePathWarning).toBeUndefined();
+  });
+
+  it('stalePathWarning is set when currentlyExists is false', () => {
+    const file = makeFileMetric('src/a.ts', { currentlyExists: false });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeContext('file', 'src/a.ts');
+    expect(result.stalePathWarning).toBeDefined();
+    expect(result.stalePathWarning).toContain('no longer exists');
   });
 });

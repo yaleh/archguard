@@ -70,6 +70,7 @@ export interface ChangeContextResult {
   topCochangeNeighbors: CochangeEdge[];
   risk: { riskScore: number; riskLevel: string; topFactor: string };
   analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  stalePathWarning?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,23 +185,45 @@ export class HistoryQuery {
     const m = this.getMetrics(targetType, target);
     const { commitCount, primaryOwner, primaryOwnerShare } = m;
 
-    // Build contributor list from available data (primaryOwner + optional "others")
-    const ownerCommitCount = Math.round(commitCount * primaryOwnerShare);
-    const othersCommitCount = commitCount - ownerCommitCount;
-    const othersShare = 1 - primaryOwnerShare;
+    let contributors: OwnershipContributor[];
+    let busFactor: number;
 
-    const contributors: OwnershipContributor[] = [
-      { email: primaryOwner, commitCount: ownerCommitCount, share: primaryOwnerShare },
-    ];
-    if (primaryOwnerShare < 1.0) {
-      contributors.push({ email: 'others', commitCount: othersCommitCount, share: othersShare });
+    if (m.topContributors && m.topContributors.length > 0) {
+      // Use real contributor data from topContributors
+      contributors = m.topContributors.map((c) => ({
+        email: c.email,
+        commitCount: c.commitCount,
+        share: c.share,
+      }));
+
+      // busFactor: cumulative contributors needed to reach 50% of commits
+      let cumulative = 0;
+      busFactor = 0;
+      for (const c of m.topContributors) {
+        cumulative += c.share;
+        busFactor++;
+        if (cumulative >= 0.5) break;
+      }
+      busFactor = Math.max(1, busFactor);
+    } else {
+      // Fallback: synthesize from primaryOwner + "others"
+      const ownerCommitCount = Math.round(commitCount * primaryOwnerShare);
+      const othersCommitCount = commitCount - ownerCommitCount;
+      const othersShare = 1 - primaryOwnerShare;
+
+      contributors = [
+        { email: primaryOwner, commitCount: ownerCommitCount, share: primaryOwnerShare },
+      ];
+      if (primaryOwnerShare < 1.0) {
+        contributors.push({ email: 'others', commitCount: othersCommitCount, share: othersShare });
+      }
+
+      // busFactor: 1 if single person covers >=50% of commits, else 2
+      busFactor = primaryOwnerShare >= 0.5 ? 1 : 2;
     }
 
     // activeMaintainers: 1 when nearly sole owner, 2+ otherwise (approximation)
     const activeMaintainers = primaryOwnerShare >= 0.9 ? 1 : 2;
-
-    // busFactor: 1 if single person covers >=50% of commits, else 2
-    const busFactor = primaryOwnerShare >= 0.5 ? 1 : 2;
 
     return {
       target,
@@ -253,6 +276,12 @@ export class HistoryQuery {
     const riskScore = computeRiskScore(rf);
     const riskLevel = classifyRiskLevel(riskScore);
 
+    // Stale path warning: only applicable to file-type metrics with currentlyExists=false
+    const stalePathWarning =
+      targetType === 'file' && (m as import('@/types/git-history.js').FileHistoryMetrics).currentlyExists === false
+        ? 'This file path no longer exists in the working tree. It may have been renamed or deleted. History reflects the old path only.'
+        : undefined;
+
     return {
       target,
       targetType,
@@ -280,6 +309,7 @@ export class HistoryQuery {
         topFactor: topRiskFactor(rf),
       },
       analyzedWindow: this.analyzedWindow(),
+      stalePathWarning,
     };
   }
 }

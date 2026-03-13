@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 import path from 'path';
+import fs from 'fs-extra';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRoot } from '../mcp-server.js';
 import { readGitLog, getHeadRef, getCurrentBranch, isGitRepo } from '../../git-history/git-log-reader.js';
@@ -61,6 +62,11 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         .optional()
         .default(['package', 'file'])
         .describe("Which granularities to include in the output (default: ['package', 'file'])."),
+      packageDepth: z
+        .coerce.number().int().min(1).max(5)
+        .optional()
+        .default(1)
+        .describe('Number of path segments to use for package grouping (default: 1). Use 2 for sub-package depth (e.g. src/mermaid instead of src).'),
     },
     async (params) => {
       const projectRoot = resolveRoot(params.projectRoot, defaultRoot);
@@ -68,6 +74,7 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
       const maxCommits = params.maxCommits ?? 500;
       const includeMerges = params.includeMerges ?? false;
       const granularities = (params.granularities ?? ['package', 'file']) as ('package' | 'file')[];
+      const packageDepth = params.packageDepth ?? 1;
 
       // Validate git repository
       if (!isGitRepo(projectRoot)) {
@@ -109,14 +116,20 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
       }
 
       // Aggregate metrics
-      const fileMetrics = aggregateFileMetrics(commits);
-      const packageMetrics = aggregatePackageMetrics(fileMetrics);
+      const fileMetrics = aggregateFileMetrics(commits, packageDepth);
+
+      // Annotate stale paths (file existence check in working tree)
+      await Promise.all(fileMetrics.map(async (fm) => {
+        fm.currentlyExists = await fs.pathExists(path.join(projectRoot, fm.path));
+      }));
+
+      const packageMetrics = aggregatePackageMetrics(fileMetrics, packageDepth);
 
       // Build manifest
       const headRef = getHeadRef(projectRoot);
       const analyzedBranch = getCurrentBranch(projectRoot);
       const manifest: GitHistoryManifest = {
-        version: '1',
+        version: '2',
         generatedAt: new Date().toISOString(),
         headRef,
         analyzedBranch,
@@ -125,6 +138,7 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         totalCommits: commits.length,
         includeMerges,
         granularities,
+        packageDepth,
       };
 
       const artifacts: GitHistoryArtifacts = {

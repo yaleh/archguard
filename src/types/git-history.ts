@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 export interface GitHistoryManifest {
-  version: '1';
+  version: '1' | '2';
   generatedAt: string; // ISO timestamp
   headRef: string; // analyzed HEAD SHA (short)
   analyzedBranch: string; // branch name or 'HEAD'
@@ -19,6 +19,7 @@ export interface GitHistoryManifest {
   totalCommits: number; // actual commits processed
   includeMerges: boolean;
   granularities: ('package' | 'file')[];
+  packageDepth?: number; // sub-package depth (1 = first segment, 2 = two segments, etc.)
 }
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,16 @@ export interface RiskFactors {
 }
 
 // ---------------------------------------------------------------------------
+// Contributor summary
+// ---------------------------------------------------------------------------
+
+export interface ContributorSummary {
+  email: string;
+  commitCount: number;
+  share: number; // 0..1 fraction of this artifact's total commits
+}
+
+// ---------------------------------------------------------------------------
 // File metrics
 // ---------------------------------------------------------------------------
 
@@ -61,6 +72,9 @@ export interface FileHistoryMetrics {
   lastChangedAt: string; // ISO timestamp (date string) of most recent commit
   topCochangeNeighbors: CochangeEdge[]; // bounded top-10
   riskFactors: RiskFactors;
+  commitShas?: string[]; // unique SHA list for this file
+  topContributors?: ContributorSummary[]; // top-5 contributors by commit count
+  currentlyExists?: boolean; // false when the file path no longer exists in working tree
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +93,7 @@ export interface PackageHistoryMetrics {
   lastChangedAt: string; // ISO timestamp (date string)
   topCochangeNeighbors: CochangeEdge[];
   riskFactors: RiskFactors;
+  topContributors?: ContributorSummary[]; // top-5 contributors by commit count
 }
 
 // ---------------------------------------------------------------------------

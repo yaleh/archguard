@@ -9,6 +9,7 @@ import type {
   PackageHistoryMetrics,
   CochangeEdge,
   RiskFactors,
+  ContributorSummary,
 } from '@/types/git-history.js';
 
 // ---------------------------------------------------------------------------
@@ -34,9 +35,12 @@ interface FileAccumulator {
  *
  * Risk factors are computed after all files are accumulated so that
  * normalization denominators (max commit count, max author count) are known.
+ *
+ * @param commits   Commit records to aggregate.
+ * @param depth     Number of path segments to use for packagePath (default: 1).
  */
-export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetrics[] {
-  const accMap = new Map<string, FileAccumulator>();
+export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1): FileHistoryMetrics[] {
+  const accMap = new Map<string, FileAccumulator & { shaSet: Set<string> }>();
 
   for (const commit of commits) {
     for (const fc of commit.files) {
@@ -45,6 +49,7 @@ export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetric
         acc = {
           path: fc.path,
           commits: [],
+          shaSet: new Set(),
           dates: new Set(),
           authors: new Map(),
           addedLines: 0,
@@ -54,6 +59,7 @@ export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetric
         accMap.set(fc.path, acc);
       }
       acc.commits.push(commit.sha);
+      acc.shaSet.add(commit.sha);
       acc.dates.add(commit.date);
       acc.authors.set(commit.authorEmail, (acc.authors.get(commit.authorEmail) ?? 0) + 1);
       acc.addedLines += fc.added;
@@ -103,9 +109,17 @@ export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetric
       { maxCommitCount, maxAuthorCount }
     );
 
+    // Build topContributors (top-5 sorted by commit count desc)
+    const sortedAuthors = [...acc.authors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topContributors: ContributorSummary[] = sortedAuthors.map(([email, count]) => ({
+      email,
+      commitCount: count,
+      share: commitCount > 0 ? count / commitCount : 0,
+    }));
+
     results.push({
       path: acc.path,
-      packagePath: extractPackagePath(acc.path),
+      packagePath: extractPackagePath(acc.path, depth),
       commitCount,
       activeDays: acc.dates.size,
       addedLines: acc.addedLines,
@@ -116,6 +130,8 @@ export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetric
       lastChangedAt: acc.lastDate,
       topCochangeNeighbors,
       riskFactors,
+      commitShas: [...acc.shaSet],
+      topContributors,
     });
   }
 
@@ -128,16 +144,14 @@ export function aggregateFileMetrics(commits: CommitRecord[]): FileHistoryMetric
 
 /**
  * Roll up file metrics to package level.
- * Package = first path segment (e.g. 'src' from 'src/utils/foo.ts').
+ *
+ * @param fileMetrics  Already-aggregated file metrics (from aggregateFileMetrics).
+ * @param depth        Package path depth; used to re-group files by pkg path (default: 1).
  */
-export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): PackageHistoryMetrics[] {
+export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth: number = 1): PackageHistoryMetrics[] {
   const pkgMap = new Map<
     string,
     {
-      commitShas: Set<string>;
-      dates: Set<string>;
-      authors: Set<string>;
-      authorCommits: Map<string, number>;
       addedLines: number;
       deletedLines: number;
       lastDate: string;
@@ -148,14 +162,10 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): Pack
   // We need the full commit records to build package-level co-change properly,
   // but here we only have file metrics. We'll aggregate via file metrics.
   for (const fm of fileMetrics) {
-    const pkg = fm.packagePath;
+    const pkg = extractPackagePath(fm.path, depth);
     let acc = pkgMap.get(pkg);
     if (!acc) {
       acc = {
-        commitShas: new Set(),
-        dates: new Set(),
-        authors: new Set(),
-        authorCommits: new Map(),
         addedLines: 0,
         deletedLines: 0,
         lastDate: fm.lastChangedAt,
@@ -171,20 +181,23 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): Pack
 
   if (pkgMap.size === 0) return [];
 
-  // Denominators for risk normalization at package level
-  // Approximate: use sum of file commit counts (packages can have higher raw counts)
-  const pkgCommitCounts = [...pkgMap.values()].map((a) => a.files.reduce((s, f) => s + f.commitCount, 0));
-  const maxCommitCount = Math.max(...pkgCommitCounts, 1);
-  const pkgAuthorCounts = [...pkgMap.values()].map((a) => {
-    const all = new Set(a.files.flatMap((f) => Array.from({ length: f.authorCount }, (_, i) => `${f.primaryOwner}-${i}`)));
-    return a.files.reduce((mx, f) => Math.max(mx, f.authorCount), 0);
+  // Compute deduplicated commit counts per package using commitShas
+  const pkgCommitCounts = [...pkgMap.values()].map((a) => {
+    const allShas = new Set(a.files.flatMap((f) => f.commitShas ?? []));
+    return allShas.size > 0 ? allShas.size : a.files.reduce((s, f) => s + f.commitCount, 0);
   });
+  const maxCommitCount = Math.max(...pkgCommitCounts, 1);
+  const pkgAuthorCounts = [...pkgMap.values()].map((a) =>
+    a.files.reduce((mx, f) => Math.max(mx, f.authorCount), 0)
+  );
   const maxAuthorCount = Math.max(...pkgAuthorCounts, 1);
 
   const results: PackageHistoryMetrics[] = [];
 
   for (const [pkg, acc] of pkgMap) {
-    const commitCount = acc.files.reduce((s, f) => s + f.commitCount, 0);
+    // Deduplicated commit count via SHA union
+    const allShas = new Set(acc.files.flatMap((f) => f.commitShas ?? []));
+    const commitCount = allShas.size > 0 ? allShas.size : acc.files.reduce((s, f) => s + f.commitCount, 0);
 
     // Approximate author count: max across files (conservative estimate)
     const authorCount = acc.files.reduce((mx, f) => Math.max(mx, f.authorCount), 0);
@@ -201,7 +214,7 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): Pack
     const neighborPkgCounts = new Map<string, { joint: number; ownCount: number }>();
     for (const fm of acc.files) {
       for (const edge of fm.topCochangeNeighbors) {
-        const neighborPkg = extractPackagePath(edge.target);
+        const neighborPkg = extractPackagePath(edge.target, depth);
         if (neighborPkg === pkg) continue; // same package
         const existing = neighborPkgCounts.get(neighborPkg) ?? { joint: 0, ownCount: 0 };
         existing.joint += edge.jointChangeCount;
@@ -231,6 +244,23 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): Pack
       { maxCommitCount, maxAuthorCount }
     );
 
+    // Merge author maps from all files to compute package-level topContributors
+    const mergedAuthors = new Map<string, number>();
+    for (const fm of acc.files) {
+      for (const contributor of fm.topContributors ?? []) {
+        mergedAuthors.set(
+          contributor.email,
+          (mergedAuthors.get(contributor.email) ?? 0) + contributor.commitCount
+        );
+      }
+    }
+    const sortedPkgAuthors = [...mergedAuthors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topContributors: ContributorSummary[] = sortedPkgAuthors.map(([email, count]) => ({
+      email,
+      commitCount: count,
+      share: commitCount > 0 ? count / commitCount : 0,
+    }));
+
     results.push({
       path: pkg,
       commitCount,
@@ -243,6 +273,7 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[]): Pack
       lastChangedAt: acc.lastDate,
       topCochangeNeighbors,
       riskFactors,
+      topContributors,
     });
   }
 
@@ -407,11 +438,14 @@ export function computeRiskFactors(
 // ---------------------------------------------------------------------------
 
 /**
- * Extract the package path (first directory segment) from a file path.
+ * Extract the package path from a file path, up to `depth` directory segments.
  * Returns '.' for root-level files.
+ *
+ * @param filePath  Relative file path (e.g. 'src/mermaid/foo.ts')
+ * @param depth     Number of path segments to include (default: 1)
  */
-function extractPackagePath(filePath: string): string {
+export function extractPackagePath(filePath: string, depth: number = 1): string {
   const parts = filePath.split('/');
   if (parts.length <= 1) return '.';
-  return parts[0];
+  return parts.slice(0, depth).join('/') || '.';
 }

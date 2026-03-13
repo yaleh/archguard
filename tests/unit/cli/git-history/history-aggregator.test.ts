@@ -8,8 +8,10 @@ import { describe, it, expect } from 'vitest';
 import type { CommitRecord } from '@/cli/git-history/git-log-reader.js';
 import {
   aggregateFileMetrics,
+  aggregatePackageMetrics,
   buildCochangeIndex,
   computeRiskFactors,
+  extractPackagePath,
 } from '@/cli/git-history/history-aggregator.js';
 
 // ---------------------------------------------------------------------------
@@ -314,5 +316,141 @@ describe('computeRiskFactors', () => {
       today
     );
     expect(risk.cochangeBreadth).toBeCloseTo(1.0, 5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// depth and SHA dedup (Plan 38A)
+// ---------------------------------------------------------------------------
+
+describe('extractPackagePath', () => {
+  it('depth=2 returns first two segments', () => {
+    expect(extractPackagePath('src/mermaid/foo.ts', 2)).toBe('src/mermaid');
+  });
+
+  it('depth=1 returns first segment only', () => {
+    expect(extractPackagePath('src/mermaid/foo.ts', 1)).toBe('src');
+  });
+
+  it('root-level file returns "." regardless of depth', () => {
+    expect(extractPackagePath('Makefile', 1)).toBe('.');
+  });
+
+  it('depth=2 with only two segments returns both', () => {
+    expect(extractPackagePath('src/foo.ts', 2)).toBe('src/foo.ts');
+  });
+});
+
+describe('aggregateFileMetrics — commitShas', () => {
+  it('stores unique SHAs in commitShas', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('sha1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('sha2', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts' }]),
+      makeCommit('sha3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
+    ];
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    expect(foo.commitShas).toBeDefined();
+    expect(foo.commitShas?.sort()).toEqual(['sha1', 'sha2', 'sha3'].sort());
+  });
+
+  it('deduplicates SHAs when same commit touches same file twice (edge case)', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('sha1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('sha1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+    ];
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    // SHA dedup: only 1 unique sha
+    expect(foo.commitShas).toHaveLength(1);
+  });
+});
+
+describe('aggregatePackageMetrics — SHA dedup for commit counts', () => {
+  it('package commitCount is deduplicated across files sharing same commit SHA', () => {
+    // 3 commits each touching 5 files in same package → package commitCount = 3, not 15
+    const shaFiles = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'].map((f) => ({ path: `src/${f}` }));
+    const commits: CommitRecord[] = [
+      makeCommit('sha1', 'alice@x.com', '2024-01-01', shaFiles),
+      makeCommit('sha2', 'alice@x.com', '2024-01-02', shaFiles),
+      makeCommit('sha3', 'alice@x.com', '2024-01-03', shaFiles),
+    ];
+    const fileMetrics = aggregateFileMetrics(commits);
+    const packageMetrics = aggregatePackageMetrics(fileMetrics);
+    const src = packageMetrics.find((p) => p.path === 'src')!;
+    expect(src.commitCount).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// topContributors (Plan 38B)
+// ---------------------------------------------------------------------------
+
+describe('aggregateFileMetrics — topContributors', () => {
+  it('file with 3 commits from 2 authors has 2 topContributors entries', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts' }]),
+      makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
+    ];
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    expect(foo.topContributors).toBeDefined();
+    expect(foo.topContributors).toHaveLength(2);
+  });
+
+  it('topContributors are sorted desc by commitCount', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('a1', 'bob@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts' }]),
+      makeCommit('a3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
+    ];
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    expect(foo.topContributors![0].email).toBe('alice@x.com');
+    expect(foo.topContributors![0].commitCount).toBe(2);
+    expect(foo.topContributors![1].email).toBe('bob@x.com');
+    expect(foo.topContributors![1].commitCount).toBe(1);
+  });
+
+  it('topContributors share sums to ~1.0', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts' }]),
+      makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
+    ];
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const totalShare = foo.topContributors!.reduce((s, c) => s + c.share, 0);
+    expect(totalShare).toBeCloseTo(1.0, 5);
+  });
+
+  it('caps topContributors at 5 entries for files with many authors', () => {
+    const commits: CommitRecord[] = Array.from({ length: 10 }, (_, i) =>
+      makeCommit(`s${i}`, `author${i}@x.com`, `2024-01-${String(i + 1).padStart(2, '0')}`, [
+        { path: 'src/foo.ts' },
+      ])
+    );
+    const metrics = aggregateFileMetrics(commits);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    expect(foo.topContributors!.length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('aggregatePackageMetrics — topContributors', () => {
+  it('package topContributors merges authors from all files', () => {
+    const commits: CommitRecord[] = [
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
+      makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/bar.ts' }]),
+      makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
+    ];
+    const fileMetrics = aggregateFileMetrics(commits);
+    const packageMetrics = aggregatePackageMetrics(fileMetrics);
+    const src = packageMetrics.find((p) => p.path === 'src')!;
+    expect(src.topContributors).toBeDefined();
+    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com');
+    const bob = src.topContributors!.find((c) => c.email === 'bob@x.com');
+    expect(alice).toBeDefined();
+    expect(bob).toBeDefined();
   });
 });

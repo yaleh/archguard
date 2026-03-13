@@ -22,6 +22,7 @@ import type {
   PythonRawImport,
 } from './types.js';
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
+import type { ImportRelation } from './import-extractor.js';
 
 /**
  * Maps Python raw AST data to ArchJSON format
@@ -34,8 +35,14 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
    *   entity IDs use the dotted Python module path relative to this root
    *   (e.g. `myapp.engine.utils.MyClass`), and the value is written to the
    *   returned `workspaceRoot` field so downstream tools can resolve paths.
+   * @param importRelations - Additional import relations from PythonImportExtractor.
+   *   These are merged with the mapper-level relations (deduped).
    */
-  mapModules(modules: PythonRawModule[], workspaceRoot?: string): ArchJSON {
+  mapModules(
+    modules: PythonRawModule[],
+    workspaceRoot?: string,
+    importRelations: ImportRelation[] = []
+  ): ArchJSON {
     const entities: Entity[] = [];
     const relations: Relation[] = [];
 
@@ -53,6 +60,20 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       const moduleResult = this.mapModule(module, workspaceRoot, modulePathIndex, seenDeps);
       entities.push(...moduleResult.entities);
       relations.push(...moduleResult.relations);
+    }
+
+    // Add additional import relations from PythonImportExtractor (deduplicated)
+    for (const ir of importRelations) {
+      const key = `dependency:${ir.sourceModuleId}:${ir.targetModuleId}`;
+      if (!seenDeps.has(key)) {
+        seenDeps.add(key);
+        relations.push(
+          this.createExplicitRelation('dependency', ir.sourceModuleId, ir.targetModuleId, {
+            confidence: 1.0,
+            inferenceSource: 'explicit',
+          })
+        );
+      }
     }
 
     return {

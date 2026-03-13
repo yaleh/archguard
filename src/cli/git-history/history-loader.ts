@@ -66,6 +66,15 @@ export async function loadHistoryData(archguardDir: string): Promise<LoadedHisto
     fs.readJson(path.join(historyDir, 'file-metrics.json')) as Promise<FileHistoryMetrics[]>,
   ]);
 
+  // Version check: warn if artifacts were generated without packageDepth support (v1)
+  if (manifest.version === '1' || manifest.packageDepth == null) {
+    console.warn(
+      '[archguard] Warning: Git history artifacts were generated with an older version of ArchGuard ' +
+      '(missing packageDepth). Consider re-running archguard_analyze_git to get sub-package depth support, ' +
+      'SHA dedup, and contributor breakdowns. Falling back to depth=1.'
+    );
+  }
+
   // Build Maps for O(1) lookup by path
   const packageMetrics = new Map<string, PackageHistoryMetrics>(
     packageMetricsArray.map((p) => [p.path, p])
