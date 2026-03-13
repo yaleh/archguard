@@ -146,7 +146,8 @@ export class JavaPlugin implements ILanguagePlugin {
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
-    const relations = this.mapper.mapRelations(packageList);
+    const rawRelations = this.mapper.mapRelations(packageList);
+    const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
     // Add Maven cross-module dependency relations
     try {
@@ -207,7 +208,8 @@ export class JavaPlugin implements ILanguagePlugin {
 
       // Map to ArchJSON
       const entities = this.mapper.mapEntities([pkg]);
-      const relations = this.mapper.mapRelations([pkg]);
+      const rawRelations = this.mapper.mapRelations([pkg]);
+      const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
       return {
         version: '1.0',
@@ -263,7 +265,8 @@ export class JavaPlugin implements ILanguagePlugin {
 
     // Map to ArchJSON
     const entities = this.mapper.mapEntities(packageList);
-    const relations = this.mapper.mapRelations(packageList);
+    const rawRelations = this.mapper.mapRelations(packageList);
+    const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
     return {
       version: '1.0',

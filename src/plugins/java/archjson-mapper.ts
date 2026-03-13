@@ -288,6 +288,72 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   }
 
   /**
+   * Post-pass: correct inheritance/implementation relation targets that were resolved
+   * to the wrong package (same-package assumption in resolveTypeId()).
+   *
+   * Algorithm:
+   * 1. Build a Set of all known entity IDs for O(1) existence checks.
+   * 2. Build a simple-name → first-qualified-ID index from the entity list.
+   * 3. For each inheritance or implementation relation:
+   *    a. If target is already a known entity ID, leave unchanged.
+   *    b. Extract the simple name (last dot-segment) of the current target.
+   *    c. Look it up in the global index.
+   *    d. If found and different from current target, replace the target.
+   *
+   * Collision policy: when multiple entities share the same simple name,
+   * the first entity in the entity list wins. Java's own compiler requires
+   * an unambiguous import for same-name classes in different packages,
+   * so this collision is extremely rare in well-formed code.
+   *
+   * @param entities - Full entity list from mapEntities() (all packages)
+   * @param relations - Relations from mapRelations() (not mutated; returns new array)
+   * @returns New Relation[] with corrected inheritance/implementation targets
+   */
+  reconcileInheritanceTargets(entities: Entity[], relations: Relation[]): Relation[] {
+    // 1. Set of all known entity IDs
+    const entityIdSet = new Set<string>(entities.map((e) => e.id));
+
+    // 2. simple name → first qualifying entity ID
+    //    e.g. 'LlamaModel' → 'com.github.tjake.jlama.model.llama.LlamaModel'
+    const simpleNameToId = new Map<string, string>();
+    for (const entity of entities) {
+      if (!simpleNameToId.has(entity.name)) {
+        simpleNameToId.set(entity.name, entity.id);
+      }
+    }
+
+    // 3. Reconcile
+    return relations.map((rel) => {
+      // Only fix inheritance and implementation relations
+      if (rel.type !== 'inheritance' && rel.type !== 'implementation') {
+        return rel;
+      }
+
+      // Target already correct — it exists in the entity set
+      if (entityIdSet.has(rel.target)) {
+        return rel;
+      }
+
+      // Extract the simple name from the wrong-package qualified name
+      // e.g. 'com.example.gemma.LlamaModel' → 'LlamaModel'
+      const simpleName = rel.target.includes('.')
+        ? rel.target.split('.').pop()!
+        : rel.target;
+
+      const correctedId = simpleNameToId.get(simpleName);
+      if (!correctedId || correctedId === rel.target) {
+        return rel; // not in entity set (external type) or already correct
+      }
+
+      return {
+        ...rel,
+        id: `${rel.source}_${rel.type}_${correctedId}`,
+        target: correctedId,
+      };
+    });
+  }
+
+  /**
    * Map Java modifiers to ArchJSON visibility
    */
   private mapVisibility(modifiers: string[]) {
