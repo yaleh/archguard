@@ -314,6 +314,24 @@ export class PythonPlugin implements ILanguagePlugin {
 
       if (testCases.length === 0) return null;
 
+      // File-level fallback: if ALL test cases have zero assertions but the file
+      // contains assertion lines (e.g. in async helper methods), distribute the
+      // file-level assertion count across test cases as a floor estimate.
+      // This prevents false-positive zero_assertion for files that genuinely
+      // assert in helper functions called from the test body.
+      const allZeroAssertions = testCases.every((tc) => tc.assertionCount === 0);
+      if (allZeroAssertions && testCases.length > 0) {
+        const fileAssertionCount = lines.filter((l) =>
+          assertionPatterns.some((ap) => l.includes(ap))
+        ).length;
+        if (fileAssertionCount > 0) {
+          const perCase = Math.ceil(fileAssertionCount / testCases.length);
+          testCases.forEach((tc) => {
+            tc.assertionCount = perCase;
+          });
+        }
+      }
+
       return {
         filePath,
         frameworks,
