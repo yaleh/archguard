@@ -27,7 +27,7 @@ import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import { ArchJsonProvider, hashSources } from './arch-json-provider.js';
 import { DiagramOutputRouter } from './diagram-output-router.js';
 import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import fs from 'fs-extra';
 import pMap from 'p-map';
 import os from 'os';

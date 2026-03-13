@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 export class TestOutputWriter {
   async write(analysis: TestAnalysis, outputDir: string): Promise<void> {

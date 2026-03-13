@@ -1,4 +1,4 @@
-import type { PackageCoverage } from '@/types/extensions.js';
+import type { PackageCoverage } from '@/types/extensions/test-analysis.js';
 import { describe, it, expect } from 'vitest';
 
 describe('PackageCoverage interface', () => {

@@ -2,7 +2,7 @@ import type { GoRawData, GoRawPackage, GoCallExpr, GoField } from '../../types.j
 import type { FlowGraph, EntryPoint, CallChain, CallEdge } from '../types.js';
 import type { FlowBuildOptions } from '../types.js';
 import type { IAtlasBuilder } from './i-atlas-builder.js';
-import type { HttpMethod } from '@/types/extensions.js';
+import type { HttpMethod } from '@/types/extensions/go-atlas.js';
 
 // Internal call pattern — not user-facing
 interface CallPattern {

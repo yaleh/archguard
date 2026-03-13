@@ -10,7 +10,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Entity, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
-import type { ArchJSONExtensions } from '@/types/extensions.js';
+import type { ArchJSONExtensions } from '@/types/extensions/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTools } from '@/cli/mcp/mcp-server.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';

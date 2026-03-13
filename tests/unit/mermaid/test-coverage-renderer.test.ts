@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 
 function makeAnalysis(overrides: Partial<TestAnalysis> = {}): TestAnalysis {

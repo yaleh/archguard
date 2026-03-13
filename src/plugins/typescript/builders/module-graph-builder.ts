@@ -14,7 +14,7 @@ import type {
   TsModuleNode,
   TsModuleDependency,
   TsModuleCycle,
-} from '@/types/extensions.js';
+} from '@/types/extensions/ts-analysis.js';
 import type { Entity } from '@/types/index.js';
 import path from 'node:path';
 

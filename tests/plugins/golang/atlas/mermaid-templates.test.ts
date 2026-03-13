@@ -12,7 +12,7 @@ import type {
   ChannelEdge,
   PackageGraph,
   PackageNode,
-} from '@/types/extensions.js';
+} from '@/types/extensions/go-atlas.js';
 import type {
   CapabilityGraph,
   CapabilityNode,

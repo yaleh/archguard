@@ -17,7 +17,7 @@ import type {
   RawTestFile,
   RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
-import type { TestPatternConfig } from '@/types/extensions.js';
+import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';

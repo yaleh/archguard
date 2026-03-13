@@ -3,8 +3,8 @@ import { promises as fs } from 'fs';
 import { globby } from 'globby';
 import type { ILanguagePlugin, RawTestFile } from '@/core/interfaces/language-plugin.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { TestAnalysis, TestFileInfo, TestPatternConfig, TestMetrics } from '@/types/extensions.js';
-import { TEST_ANALYSIS_VERSION } from '@/types/extensions.js';
+import type { TestAnalysis, TestFileInfo, TestPatternConfig, TestMetrics } from '@/types/extensions/test-analysis.js';
+import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
 import { TestCoverageMapper } from './test-coverage-mapper.js';
 import { TestIssueDetector } from './test-issue-detector.js';
 

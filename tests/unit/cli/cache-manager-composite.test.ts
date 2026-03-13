@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
 import { CacheManager } from '@/cli/cache-manager.js';
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 const makeTestAnalysis = (): TestAnalysis => ({
   version: '1.0',

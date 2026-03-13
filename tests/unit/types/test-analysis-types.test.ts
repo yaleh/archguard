@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { TEST_ANALYSIS_VERSION } from '@/types/index.js';
-import type { ArchJSONExtensions, TestAnalysis, TestFileInfo, TestIssue, TestPatternConfig } from '@/types/extensions.js';
+import type { ArchJSONExtensions } from '@/types/extensions/index.js';
+import type { TestAnalysis, TestFileInfo, TestIssue, TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ILanguagePlugin } from '@/core/interfaces/language-plugin.js';
 
 describe('TEST_ANALYSIS_VERSION', () => {

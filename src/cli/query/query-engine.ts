@@ -8,7 +8,9 @@ import path from 'path';
 import type { ArchJSON, Entity, Relation, RelationType, CycleInfo } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from './query-manifest.js';
-import type { GoAtlasLayers, TsModuleGraph, TestAnalysis, PackageCoverage, TestFileInfo } from '@/types/extensions.js';
+import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
+import type { TestAnalysis, PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
 
 export interface EntitySummary {
   id: string;

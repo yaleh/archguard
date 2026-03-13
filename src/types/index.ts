@@ -7,7 +7,7 @@ export * from './config.js';
 import type { DetailLevel } from './config.js';
 
 // Export extension types (ADR-002)
-export type { ArchJSONExtensions } from './extensions.js';
+export type { ArchJSONExtensions } from './extensions/index.js';
 export type {
   GoAtlasExtension,
   GoAtlasLayers,
@@ -37,8 +37,8 @@ export type {
   TestIssue,
   TestMetrics,
   PackageCoverage,
-} from './extensions.js';
-export { GO_ATLAS_EXTENSION_VERSION, TEST_ANALYSIS_VERSION, TS_ANALYSIS_EXTENSION_VERSION } from './extensions.js';
+} from './extensions/index.js';
+export { GO_ATLAS_EXTENSION_VERSION, TEST_ANALYSIS_VERSION, TS_ANALYSIS_EXTENSION_VERSION } from './extensions/index.js';
 
 /**
  * Supported programming languages
@@ -69,7 +69,7 @@ export interface ArchJSON {
   workspaceRoot?: string;
 
   // Type-safe extensions (ADR-002)
-  extensions?: import('./extensions.js').ArchJSONExtensions;
+  extensions?: import('./extensions/index.js').ArchJSONExtensions;
 
   /**
    * Structural proxy metrics, computed by MetricsCalculator after aggregation.

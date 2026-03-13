@@ -13,7 +13,7 @@ import type {
   PluginCapabilities,
   RawTestFile,
 } from '@/core/interfaces/language-plugin.js';
-import type { TestPatternConfig } from '@/types/extensions.js';
+import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor, Dependency } from '@/core/interfaces/dependency.js';

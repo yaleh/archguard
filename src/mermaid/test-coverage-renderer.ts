@@ -11,7 +11,7 @@
  * @module mermaid/test-coverage-renderer
  */
 
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 
 const MAX_NODES_PER_BUCKET = 20;

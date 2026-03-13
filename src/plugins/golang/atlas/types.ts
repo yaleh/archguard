@@ -30,14 +30,14 @@ export type {
   EntryPoint,
   CallChain,
   CallEdge,
-} from '@/types/extensions.js';
+} from '@/types/extensions/go-atlas.js';
 
-export { GO_ATLAS_EXTENSION_VERSION } from '@/types/extensions.js';
+export { GO_ATLAS_EXTENSION_VERSION } from '@/types/extensions/go-atlas.js';
 
 /**
  * GoArchitectureAtlas is an alias for GoAtlasExtension
  */
-export type { GoAtlasExtension as GoArchitectureAtlas } from '@/types/extensions.js';
+export type { GoAtlasExtension as GoArchitectureAtlas } from '@/types/extensions/go-atlas.js';
 
 // ========== Framework Detection Types ==========
 

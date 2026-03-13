@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { AtlasRenderer } from '@/plugins/golang/atlas/renderers/atlas-renderer.js';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
-import type { GoAtlasExtension } from '@/types/extensions.js';
+import type { GoAtlasExtension } from '@/types/extensions/go-atlas.js';
 import type {
   PackageGraph,
   CapabilityGraph,
   GoroutineTopology,
   FlowGraph,
-} from '@/types/extensions.js';
+} from '@/types/extensions/go-atlas.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

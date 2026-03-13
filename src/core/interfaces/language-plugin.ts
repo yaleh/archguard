@@ -8,7 +8,7 @@
 import type { IParser } from './parser.js';
 import type { IDependencyExtractor } from './dependency.js';
 import type { IValidator } from './validation.js';
-import type { TestPatternConfig } from '@/types/extensions.js';
+import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 
 /**
  * A single test case's raw structure (plugin layer output).

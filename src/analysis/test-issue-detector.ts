@@ -1,4 +1,4 @@
-import type { TestFileInfo, CoverageLink, TestIssue } from '@/types/extensions.js';
+import type { TestFileInfo, CoverageLink, TestIssue } from '@/types/extensions/test-analysis.js';
 
 export class TestIssueDetector {
   detect(testFiles: TestFileInfo[], coverageMap: CoverageLink[]): TestIssue[] {

@@ -16,7 +16,7 @@ import type {
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { TestPatternConfig } from '@/types/extensions.js';
+import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';

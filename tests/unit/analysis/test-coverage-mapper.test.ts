@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { TestFileInfo, CoverageLink } from '@/types/extensions.js';
+import type { TestFileInfo, CoverageLink } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 
 function makeTestFile(id: string, coveredEntityIds: string[] = []): TestFileInfo {

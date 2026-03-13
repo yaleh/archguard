@@ -4,7 +4,8 @@ import type { QueryEngineOptions } from '@/cli/query/query-engine.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
-import type { PackageGraph, PackageCoverage, TestAnalysis } from '@/types/extensions.js';
+import type { PackageGraph } from '@/types/extensions/go-atlas.js';
+import type { PackageCoverage, TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

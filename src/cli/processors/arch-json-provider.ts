@@ -169,7 +169,7 @@ export function deriveSubModuleArchJSON(
           nodes: filteredNodes,
           edges: filteredEdges,
           cycles: filteredCycles,
-        } as import('@/types/extensions.js').TsModuleGraph,
+        } as import('@/types/extensions/ts-analysis.js').TsModuleGraph,
       },
     };
   }

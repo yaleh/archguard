@@ -5,7 +5,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto, { createHash } from 'crypto';
-import type { TestAnalysis } from '@/types/extensions.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 export interface CacheStats {
   hits: number;

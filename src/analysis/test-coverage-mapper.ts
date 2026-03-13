@@ -1,5 +1,5 @@
 import path from 'path';
-import type { TestFileInfo, CoverageLink } from '@/types/extensions.js';
+import type { TestFileInfo, CoverageLink } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 
 export class TestCoverageMapper {

@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
 import type { QueryEngine, EntitySummary, PackageStatEntry, PackageStatsResult } from '../query/query-engine.js';
 import type { Entity } from '@/types/index.js';
-import type { PackageGraph, CapabilityGraph, GoroutineTopology } from '@/types/extensions.js';
+import type { PackageGraph, CapabilityGraph, GoroutineTopology } from '@/types/extensions/go-atlas.js';
 import { registerAnalyzeTool } from './analyze-tool.js';
 import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
 import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.js';

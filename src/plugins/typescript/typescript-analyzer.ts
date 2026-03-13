@@ -6,8 +6,8 @@
  */
 
 import type { SourceFile } from 'ts-morph';
-import type { TsAnalysis } from '@/types/extensions.js';
-import { TS_ANALYSIS_EXTENSION_VERSION } from '@/types/extensions.js';
+import type { TsAnalysis } from '@/types/extensions/ts-analysis.js';
+import { TS_ANALYSIS_EXTENSION_VERSION } from '@/types/extensions/ts-analysis.js';
 import type { Entity } from '@/types/index.js';
 import { ModuleGraphBuilder } from './builders/module-graph-builder.js';
 
