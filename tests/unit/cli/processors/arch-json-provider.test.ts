@@ -359,6 +359,36 @@ describe('ArchJsonProvider', () => {
     vi.doUnmock('@/plugins/python/index.js');
   });
 
+  // ---- 7b. parseWithParallelParser passes workspaceRoot to ParallelParser ---
+
+  it('constructs ParallelParser with workspaceRoot derived from diagram.sources[0]', async () => {
+    const archJson = makeArchJSON();
+    const capturedOptions: Array<Record<string, unknown>> = [];
+    const mockParseFiles = vi.fn().mockResolvedValue(archJson);
+    const mockDiscoverFiles = vi.fn().mockResolvedValue(['/abs/path/to/src/a.ts']);
+
+    ParallelParser.mockImplementation((opts: Record<string, unknown>) => {
+      capturedOptions.push(opts);
+      return { parseFiles: mockParseFiles };
+    });
+    FileDiscoveryService.mockImplementation(() => ({
+      discoverFiles: mockDiscoverFiles,
+    }));
+    ArchJsonDiskCache.mockImplementation(() => ({
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      computeKey: vi.fn().mockResolvedValue('key-b'),
+    }));
+
+    const provider = new ArchJsonProvider({ globalConfig: makeGlobalConfig() });
+    const diagram = makeDiagram({ sources: ['/abs/path/to/src'], level: 'class' });
+
+    await provider.get(diagram, { needsModuleGraph: false });
+
+    expect(capturedOptions.length).toBeGreaterThan(0);
+    expect(capturedOptions[0]?.workspaceRoot).toBe('/abs/path/to/src');
+  });
+
   // ---- 8. TS + needsModuleGraph=false → ParallelParser path ---------------
 
   it('routes to ParallelParser when needsModuleGraph=false', async () => {

@@ -38,6 +38,21 @@ export function findTsConfigPath(startDir: string): string | undefined {
 }
 
 /**
+ * Strip JSONC-style comments from a string before JSON.parse().
+ * Handles:
+ * - Block comments: /* ... * /
+ * - Line comments: // ... (to end of line)
+ *
+ * Limitation: does not handle // or /* inside JSON string values,
+ * but tsconfig.json values never contain comment-like sequences in practice.
+ */
+function stripJsoncComments(text: string): string {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
+    .replace(/\/\/[^\n]*/g, '');      // line comments
+}
+
+/**
  * Read only the `baseUrl` and `paths` from a tsconfig.json file.
  * Returns undefined if neither is present or if the file cannot be parsed.
  *
@@ -46,7 +61,8 @@ export function findTsConfigPath(startDir: string): string | undefined {
 export function loadPathAliases(tsConfigFilePath: string): PathAliasConfig | undefined {
   try {
     const tsDir = path.dirname(tsConfigFilePath);
-    const raw = JSON.parse(fs.readFileSync(tsConfigFilePath, 'utf8')) as {
+    const content = fs.readFileSync(tsConfigFilePath, 'utf8');
+    const raw = JSON.parse(stripJsoncComments(content)) as {
       compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
     };
     const co = raw.compilerOptions ?? {};

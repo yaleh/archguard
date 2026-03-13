@@ -604,13 +604,15 @@ export class ArchJsonProvider {
    * Disk cache logic stays in get() — this method receives pre-discovered files.
    */
   private async parseWithParallelParser(
-    _diagram: DiagramConfig,
+    diagram: DiagramConfig,
     files: string[]
   ): Promise<ArchJSON> {
+    const workspaceRoot = path.resolve(diagram.sources[0]);
     const parser = new ParallelParser({
       concurrency: this.globalConfig.concurrency,
       continueOnError: true,
       parseCache: this.parseCache,
+      workspaceRoot,
     });
     return parser.parseFiles(files);
   }

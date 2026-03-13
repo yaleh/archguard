@@ -313,8 +313,8 @@ describe('DiagramOutputRouter', () => {
 
       const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
       expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('src/cli');
-      expect(written.relations[0]?.target).toBe('src/parser');
+      expect(written.relations[0]?.source).toBe('cli');
+      expect(written.relations[0]?.target).toBe('parser');
       expect(written.relations[0]?.type).toBe('dependency');
     });
 
@@ -378,6 +378,132 @@ describe('DiagramOutputRouter', () => {
       // Original archJSON.relations should remain untouched (shallow copy used)
       expect(moduleGraphArchJSON.relations).toBe(originalRelations);
       expect(moduleGraphArchJSON.relations).toHaveLength(0);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // @/ alias resolution in module graph relations (Phase C fix)
+  // --------------------------------------------------------------------------
+
+  describe('JSON format — @/ alias resolution in module graph relations', () => {
+    it('resolves @/parser edge source to "parser" package entity ID', async () => {
+      const fsMock = await getFsMock();
+
+      const aliasArchJSON = makeArchJSON({
+        extensions: {
+          tsAnalysis: {
+            version: '1.0',
+            moduleGraph: {
+              nodes: [],
+              edges: [{ from: '@/parser', to: '@/mermaid', strength: 1, importedNames: [] }],
+              cycles: [],
+            },
+          },
+        } as unknown as ArchJSON['extensions'],
+      });
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        aliasArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(1);
+      expect(written.relations[0]?.source).toBe('parser');
+      expect(written.relations[0]?.target).toBe('mermaid');
+    });
+
+    it('resolves @/cli/commands edge to "cli" package entity ID', async () => {
+      const fsMock = await getFsMock();
+
+      const aliasArchJSON = makeArchJSON({
+        extensions: {
+          tsAnalysis: {
+            version: '1.0',
+            moduleGraph: {
+              nodes: [],
+              edges: [{ from: '@/cli/commands', to: '@/parser/parallel-parser', strength: 2, importedNames: [] }],
+              cycles: [],
+            },
+          },
+        } as unknown as ArchJSON['extensions'],
+      });
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        aliasArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(1);
+      expect(written.relations[0]?.source).toBe('cli');
+      expect(written.relations[0]?.target).toBe('parser');
+    });
+
+    it('resolves src/ prefix in edge IDs to bare package names', async () => {
+      const fsMock = await getFsMock();
+
+      const srcArchJSON = makeArchJSON({
+        extensions: {
+          tsAnalysis: {
+            version: '1.0',
+            moduleGraph: {
+              nodes: [],
+              edges: [{ from: 'src/cli', to: 'src/utils', strength: 1, importedNames: [] }],
+              cycles: [],
+            },
+          },
+        } as unknown as ArchJSON['extensions'],
+      });
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        srcArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(1);
+      expect(written.relations[0]?.source).toBe('cli');
+      expect(written.relations[0]?.target).toBe('utils');
+    });
+
+    it('passes through bare package names unchanged', async () => {
+      const fsMock = await getFsMock();
+
+      const bareArchJSON = makeArchJSON({
+        extensions: {
+          tsAnalysis: {
+            version: '1.0',
+            moduleGraph: {
+              nodes: [],
+              edges: [{ from: 'parser', to: 'mermaid', strength: 1, importedNames: [] }],
+              cycles: [],
+            },
+          },
+        } as unknown as ArchJSON['extensions'],
+      });
+
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        bareArchJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+
+      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+      expect(written.relations).toHaveLength(1);
+      expect(written.relations[0]?.source).toBe('parser');
+      expect(written.relations[0]?.target).toBe('mermaid');
     });
   });
 

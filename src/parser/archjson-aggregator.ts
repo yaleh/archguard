@@ -247,12 +247,43 @@ export class ArchJSONAggregator {
       entityToPackage.set(entity.id, packageName);
     }
 
+    // Build module-level fallback map for Python (and other languages where relations
+    // use module IDs instead of class IDs as source/target).
+    //
+    // For each entity ID like 'pytorch.engine.Engine' in package 'pytorch':
+    //   strip last component → 'pytorch.engine' → maps to 'pytorch'
+    // This allows relations with source 'pytorch.engine' (module-level) to resolve
+    // to package 'pytorch' even though 'pytorch.engine' is not an entity ID.
+    const moduleToPackage = new Map<string, string>();
+    for (const [entityId, packageName] of entityToPackage) {
+      const lastDot = entityId.lastIndexOf('.');
+      if (lastDot > 0) {
+        const moduleId = entityId.slice(0, lastDot);
+        // First writer wins: if multiple entities share a module, they all map to the same package
+        if (!moduleToPackage.has(moduleId)) {
+          moduleToPackage.set(moduleId, packageName);
+        }
+        // Also register intermediate prefixes (for deeply nested module IDs)
+        // e.g., 'pytorch.engine.layers.LayerNorm' → also register 'pytorch.engine.layers' and 'pytorch.engine'
+        let prefix = moduleId;
+        let dotIdx: number;
+        while ((dotIdx = prefix.lastIndexOf('.')) > 0) {
+          prefix = prefix.slice(0, dotIdx);
+          if (!moduleToPackage.has(prefix)) {
+            moduleToPackage.set(prefix, packageName);
+          }
+        }
+      }
+    }
+
     // Map class relations to package relations
     const packageRelationsMap = new Map<string, Relation>();
 
     for (const relation of relations) {
-      const sourcePackage = entityToPackage.get(relation.source);
-      const targetPackage = entityToPackage.get(relation.target);
+      const sourcePackage =
+        entityToPackage.get(relation.source) ?? moduleToPackage.get(relation.source);
+      const targetPackage =
+        entityToPackage.get(relation.target) ?? moduleToPackage.get(relation.target);
 
       // Skip if packages are unknown, empty, or same
       if (

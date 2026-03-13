@@ -139,15 +139,74 @@ describe('QueryScopeCollector', () => {
       expect(collector.getLastArchJson()).toBe(archJson);
     });
 
-    it('does NOT overwrite an already-stored value when groupHasPrimary=false', () => {
+    it('does NOT overwrite when incoming has FEWER entities and groupHasPrimary=false (stored richer wins)', () => {
       const collector = new QueryScopeCollector();
-      const first = makeArchJson(1);
-      const second = makeArchJson(2);
+      const large = makeArchJson(447);
+      const small = makeArchJson(4);
 
-      collector.setLastArchJson(first, false);
-      collector.setLastArchJson(second, false);
+      collector.setLastArchJson(large, false);
+      collector.setLastArchJson(small, false);
 
-      expect(collector.getLastArchJson()).toBe(first);
+      expect(collector.getLastArchJson()).toBe(large);
+    });
+
+    it('DOES overwrite when incoming has MORE entities and groupHasPrimary=false (richer wins)', () => {
+      const collector = new QueryScopeCollector();
+      const small = makeArchJson(4);
+      const large = makeArchJson(447);
+
+      collector.setLastArchJson(small, false);
+      collector.setLastArchJson(large, false);
+
+      expect(collector.getLastArchJson()).toBe(large);
+    });
+
+    it('overwrites when groupHasPrimary=true even if incoming is smaller (primary wins)', () => {
+      const collector = new QueryScopeCollector();
+      const large = makeArchJson(447);
+      const small = makeArchJson(4);
+
+      collector.setLastArchJson(large, false);
+      collector.setLastArchJson(small, true);
+
+      expect(collector.getLastArchJson()).toBe(small);
+    });
+
+    it('primary overwrite then non-primary smaller does NOT overwrite', () => {
+      const collector = new QueryScopeCollector();
+      const tiny = makeArchJson(4);
+      const primary = makeArchJson(100);
+      const nonPrimarySmall = makeArchJson(10);
+
+      collector.setLastArchJson(tiny, false);
+      collector.setLastArchJson(primary, true);
+      collector.setLastArchJson(nonPrimarySmall, false);
+
+      expect(collector.getLastArchJson()).toBe(primary);
+    });
+
+    it('primary overwrite then non-primary larger DOES overwrite (richer wins over primary)', () => {
+      const collector = new QueryScopeCollector();
+      const primary = makeArchJson(50);
+      const large = makeArchJson(500);
+
+      collector.setLastArchJson(makeArchJson(4), false);
+      collector.setLastArchJson(primary, true);
+      collector.setLastArchJson(large, false);
+
+      expect(collector.getLastArchJson()).toBe(large);
+    });
+
+    it('handles ArchJSON with undefined entities without throwing', () => {
+      const collector = new QueryScopeCollector();
+      const noEntities = { ...makeArchJson(0), entities: undefined as any };
+
+      collector.setLastArchJson(noEntities, false);
+      expect(collector.getLastArchJson()).toBe(noEntities);
+
+      const withEntities = makeArchJson(100);
+      collector.setLastArchJson(withEntities, false);
+      expect(collector.getLastArchJson()).toBe(withEntities);
     });
 
     it('DOES overwrite when groupHasPrimary=true', () => {

@@ -53,17 +53,26 @@ export class QueryScopeCollector {
   }
 
   /**
-   * Update the stored "last ArchJSON" with primary-role semantics.
+   * Update the stored "last ArchJSON" with primary-role and richness semantics.
    *
-   * - If no value is stored yet, always stores the given archJson.
-   * - If a value is already stored:
-   *   - When groupHasPrimary=false: does NOT overwrite.
-   *   - When groupHasPrimary=true: overwrites (primary wins).
+   * Resolution order (highest priority first):
+   * 1. If no value is stored yet: always store.
+   * 2. If groupHasPrimary === true: always overwrite (explicit primary wins).
+   * 3. If incoming has more entities than stored: overwrite (richer wins).
+   *    This ensures pMap completion-order nondeterminism does not cause a
+   *    small sub-module ArchJSON (e.g. 4 entities from method/analysis) to
+   *    permanently block the larger full-project ArchJSON (e.g. 447 entities).
+   * 4. Otherwise: no-op.
    */
   setLastArchJson(archJson: ArchJSON, groupHasPrimary: boolean): void {
-    if (this._lastArchJson === null || groupHasPrimary) {
+    if (this._lastArchJson === null) {
+      this._lastArchJson = archJson;
+    } else if (groupHasPrimary) {
+      this._lastArchJson = archJson;
+    } else if ((archJson.entities?.length ?? 0) > (this._lastArchJson.entities?.length ?? 0)) {
       this._lastArchJson = archJson;
     }
+    // Otherwise: no-op — stored value is richer or equal
   }
 
   /**

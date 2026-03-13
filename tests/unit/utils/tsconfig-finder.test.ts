@@ -125,3 +125,61 @@ describe('loadPathAliases', () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe('loadPathAliases — JSONC comment stripping', () => {
+  let tmpDir: string;
+
+  afterEach(() => {
+    if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('parses tsconfig.json with line comments', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-jsonc-'));
+    const content = `{
+    // This is a comment
+    "compilerOptions": {
+      "baseUrl": ".",
+      // Another comment
+      "paths": { "@/*": ["src/*"] }
+    }
+  }`;
+    writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
+    const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
+    expect(result).not.toBeUndefined();
+    expect(result!.paths['@/*']).toEqual(['src/*']);
+  });
+
+  it('parses tsconfig.json with block comments', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-jsonc-'));
+    const content = `{
+    /* Block comment */
+    "compilerOptions": {
+      "baseUrl": ".",
+      "paths": { /* inline block */ "@/*": ["src/*"] }
+    }
+  }`;
+    writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
+    const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
+    expect(result).not.toBeUndefined();
+    expect(result!.paths['@/*']).toEqual(['src/*']);
+  });
+
+  it('returns undefined for a file with no compilerOptions paths or baseUrl (with comments)', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-jsonc-'));
+    const content = `{
+    // Just extends
+    "extends": "./tsconfig.base.json"
+  }`;
+    writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
+    const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
+    expect(result).toBeUndefined();
+  });
+
+  it('still returns undefined for invalid JSON (even after comment stripping)', () => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'tsconfig-jsonc-'));
+    const content = `{ "bad json": }`;
+    writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
+    const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
+    expect(result).toBeUndefined();
+  });
+});

@@ -139,22 +139,44 @@ export class DiagramOutputRouter {
   }
 
   /**
+   * Resolve a moduleGraph node ID to a package entity ID.
+   * Examples:
+   *   '@/parser/foo' → 'parser'
+   *   'src/parser'   → 'parser'
+   *   'parser'       → 'parser'
+   */
+  private resolveModuleNodeToPackageId(nodeId: string): string {
+    // Strip @/ prefix
+    const stripped = nodeId.startsWith('@/') ? nodeId.slice(2) : nodeId;
+    // Strip leading src/
+    const noSrc = stripped.startsWith('src/') ? stripped.slice(4) : stripped;
+    // First path component is the package name
+    return noSrc.split('/')[0];
+  }
+
+  /**
    * Convert TsModuleGraph.edges to Relation[] and attach them to a shallow copy
    * of the given ArchJSON. Called only for package-level JSON output.
    *
    * Each TsModuleDependency { from, to, strength } maps to:
    *   { id, type: 'dependency', source: from, target: to }
    *
+   * @/ alias prefixes and src/ prefixes are resolved to bare package names.
+   *
    * The returned object shares all other fields with the input (shallow copy).
    */
   private injectModuleGraphRelations(archJSON: ArchJSON): ArchJSON {
     const moduleGraph = archJSON.extensions!.tsAnalysis!.moduleGraph!;
-    const relations: Relation[] = moduleGraph.edges.map((edge) => ({
-      id: `${edge.from}_dependency_${edge.to}`,
-      type: 'dependency' as const,
-      source: edge.from,
-      target: edge.to,
-    }));
+    const relations: Relation[] = moduleGraph.edges.map((edge) => {
+      const source = this.resolveModuleNodeToPackageId(edge.from);
+      const target = this.resolveModuleNodeToPackageId(edge.to);
+      return {
+        id: `${edge.from}_dependency_${edge.to}`,
+        type: 'dependency' as const,
+        source,
+        target,
+      };
+    });
     return { ...archJSON, relations };
   }
 
