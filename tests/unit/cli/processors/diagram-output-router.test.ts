@@ -425,7 +425,14 @@ describe('DiagramOutputRouter', () => {
             version: '1.0',
             moduleGraph: {
               nodes: [],
-              edges: [{ from: '@/cli/commands', to: '@/parser/parallel-parser', strength: 2, importedNames: [] }],
+              edges: [
+                {
+                  from: '@/cli/commands',
+                  to: '@/parser/parallel-parser',
+                  strength: 2,
+                  importedNames: [],
+                },
+              ],
               cycles: [],
             },
           },

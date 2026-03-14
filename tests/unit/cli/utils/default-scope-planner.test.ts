@@ -41,8 +41,8 @@ describe('planDefaultScopes', () => {
 
     expect(goScope).toBeDefined();
     // Go scope should use the fixture dir where go.mod is, not the project root
-    expect(goScope!.sources[0]).toContain('tests/fixtures/go');
-    expect(goScope!.sources[0]).not.toBe('.');
+    expect(goScope.sources[0]).toContain('tests/fixtures/go');
+    expect(goScope.sources[0]).not.toBe('.');
   });
 
   it('Go scope uses project root when go.mod is at root', async () => {
@@ -56,7 +56,7 @@ describe('planDefaultScopes', () => {
     const goScope = scopes.find((s) => s.language === 'go');
 
     expect(goScope).toBeDefined();
-    expect(goScope!.sources[0]).toBe('.');
+    expect(goScope.sources[0]).toBe('.');
   });
 
   it('TypeScript primary scope uses project root (.)', async () => {
@@ -70,6 +70,6 @@ describe('planDefaultScopes', () => {
     const tsScope = scopes.find((s) => s.language === 'typescript');
 
     expect(tsScope).toBeDefined();
-    expect(tsScope!.sources[0]).toBe('.');
+    expect(tsScope.sources[0]).toBe('.');
   });
 });

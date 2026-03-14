@@ -3,7 +3,12 @@ import { promises as fs } from 'fs';
 import { globby } from 'globby';
 import type { ILanguagePlugin, RawTestFile } from '@/core/interfaces/language-plugin.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { TestAnalysis, TestFileInfo, TestPatternConfig, TestMetrics } from '@/types/extensions/test-analysis.js';
+import type {
+  TestAnalysis,
+  TestFileInfo,
+  TestPatternConfig,
+  TestMetrics,
+} from '@/types/extensions/test-analysis.js';
 import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
 import { TestCoverageMapper } from './test-coverage-mapper.js';
 import { TestIssueDetector } from './test-issue-detector.js';
@@ -67,7 +72,7 @@ export class TestAnalyzer {
         ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
       });
       if (plugin.isTestFile) {
-        return allJavaFiles.filter((f) => plugin.isTestFile!(f, patternConfig));
+        return allJavaFiles.filter((f) => plugin.isTestFile(f, patternConfig));
       }
       return allJavaFiles;
     }
@@ -76,15 +81,18 @@ export class TestAnalyzer {
     const candidateDirs = await this.inferTestDirs(workspaceRoot);
     const allFiles: string[] = [];
     for (const dir of candidateDirs) {
-      const files = await globby(`${dir}/**/*`, { onlyFiles: true, absolute: true, ignore: ['**/node_modules/**'] });
+      const files = await globby(`${dir}/**/*`, {
+        onlyFiles: true,
+        absolute: true,
+        ignore: ['**/node_modules/**'],
+      });
       allFiles.push(...files);
     }
     if (plugin.isTestFile) {
-      return allFiles.filter((f) => plugin.isTestFile!(f, patternConfig));
+      return allFiles.filter((f) => plugin.isTestFile(f, patternConfig));
     }
     return allFiles.filter(
-      (f) =>
-        /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(f) || /_test\.(go|ts)$/.test(f)
+      (f) => /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(f) || /_test\.(go|ts)$/.test(f)
     );
   }
 
@@ -176,7 +184,9 @@ export class TestAnalyzer {
   ): string[] {
     // Directory of the test file (relative to workspaceRoot), used to resolve ../relative includes.
     const testRelDir = testFilePath
-      ? path.dirname(path.isAbsolute(testFilePath) ? path.relative(workspaceRoot, testFilePath) : testFilePath)
+      ? path.dirname(
+          path.isAbsolute(testFilePath) ? path.relative(workspaceRoot, testFilePath) : testFilePath
+        )
       : '';
 
     const result: string[] = [];

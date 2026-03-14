@@ -23,7 +23,9 @@ describe('MavenCrossModuleParser', () => {
 
   it('returns one dependency when cli pom declares core as dependency', async () => {
     await writePom('core', `<project><artifactId>core</artifactId></project>`);
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -34,7 +36,8 @@ describe('MavenCrossModuleParser', () => {
           </dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(1);
@@ -44,7 +47,9 @@ describe('MavenCrossModuleParser', () => {
   it('returns multiple dependencies when cli pom declares core and net', async () => {
     await writePom('core', `<project><artifactId>core</artifactId></project>`);
     await writePom('net', `<project><artifactId>net</artifactId></project>`);
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -56,7 +61,8 @@ describe('MavenCrossModuleParser', () => {
           </dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(2);
@@ -66,7 +72,9 @@ describe('MavenCrossModuleParser', () => {
 
   it('excludes test-scoped dependencies', async () => {
     await writePom('net', `<project><artifactId>net</artifactId></project>`);
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -76,7 +84,8 @@ describe('MavenCrossModuleParser', () => {
           </dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(0);
@@ -84,7 +93,9 @@ describe('MavenCrossModuleParser', () => {
 
   it('includes runtime-scoped dependencies', async () => {
     await writePom('core', `<project><artifactId>core</artifactId></project>`);
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -94,7 +105,8 @@ describe('MavenCrossModuleParser', () => {
           </dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(1);
@@ -102,7 +114,9 @@ describe('MavenCrossModuleParser', () => {
   });
 
   it('excludes external (non-sub-module) dependencies', async () => {
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -113,7 +127,8 @@ describe('MavenCrossModuleParser', () => {
           </dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(0);
@@ -121,15 +136,20 @@ describe('MavenCrossModuleParser', () => {
 
   it('returns all pairs when multiple sub-modules depend on each other', async () => {
     await writePom('core', `<project><artifactId>core</artifactId></project>`);
-    await writePom('net', `
+    await writePom(
+      'net',
+      `
       <project>
         <artifactId>net</artifactId>
         <dependencies>
           <dependency><artifactId>core</artifactId></dependency>
         </dependencies>
       </project>
-    `);
-    await writePom('cli', `
+    `
+    );
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencies>
@@ -137,7 +157,8 @@ describe('MavenCrossModuleParser', () => {
           <dependency><artifactId>net</artifactId></dependency>
         </dependencies>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(3);
@@ -148,7 +169,9 @@ describe('MavenCrossModuleParser', () => {
 
   it('does not treat dependencyManagement entries as direct dependencies', async () => {
     await writePom('core', `<project><artifactId>core</artifactId></project>`);
-    await writePom('cli', `
+    await writePom(
+      'cli',
+      `
       <project>
         <artifactId>cli</artifactId>
         <dependencyManagement>
@@ -160,7 +183,8 @@ describe('MavenCrossModuleParser', () => {
           </dependencies>
         </dependencyManagement>
       </project>
-    `);
+    `
+    );
     const parser = new MavenCrossModuleParser();
     const result = await parser.parse(tmpDir);
     expect(result).toHaveLength(0);

@@ -489,7 +489,9 @@ function makeTestAnalysis() {
 describe('query --test-patterns', () => {
   it('returns detected frameworks and totalTestFiles', async () => {
     const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>);
+    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
+      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
+    );
     vi.mocked(loadEngine).mockResolvedValue(engine);
     await runQuery('--test-patterns', '--format', 'json');
     const parsed = JSON.parse(consoleOutput.join('\n'));
@@ -510,7 +512,9 @@ describe('query --test-patterns', () => {
 describe('query --test-issues', () => {
   it('returns issues array as JSON', async () => {
     const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>);
+    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
+      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
+    );
     vi.mocked(loadEngine).mockResolvedValue(engine);
     await runQuery('--test-issues', '--format', 'json');
     const parsed = JSON.parse(consoleOutput.join('\n'));
@@ -530,7 +534,9 @@ describe('query --test-issues', () => {
 describe('query --test-metrics', () => {
   it('returns metrics object as JSON', async () => {
     const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>);
+    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
+      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
+    );
     vi.mocked(loadEngine).mockResolvedValue(engine);
     await runQuery('--test-metrics', '--format', 'json');
     const parsed = JSON.parse(consoleOutput.join('\n'));
@@ -590,7 +596,9 @@ describe('query --change-context', () => {
       topContributors: [],
       cochangedFiles: [],
     };
-    vi.mocked(loadHistoryData).mockResolvedValue(fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>);
+    vi.mocked(loadHistoryData).mockResolvedValue(
+      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
+    );
     const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
     vi.spyOn(HistoryQuery.prototype, 'getChangeContext').mockReturnValue(contextResult);
     await runQuery('--change-context', 'src/foo.ts', '--format', 'json');
@@ -610,7 +618,9 @@ describe('query --change-context', () => {
 describe('query --cochange', () => {
   it('calls getCochange with targetType and outputs JSON', async () => {
     const cochangeResult = { target: 'src/foo.ts', targetType: 'file' as const, neighbors: [] };
-    vi.mocked(loadHistoryData).mockResolvedValue(fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>);
+    vi.mocked(loadHistoryData).mockResolvedValue(
+      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
+    );
     const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
     vi.spyOn(HistoryQuery.prototype, 'getCochange').mockReturnValue(cochangeResult);
     await runQuery('--cochange', 'src/foo.ts', '--target-type', 'file', '--format', 'json');
@@ -628,7 +638,9 @@ describe('query --change-risk', () => {
       riskLevel: 'high' as const,
       factors: [],
     };
-    vi.mocked(loadHistoryData).mockResolvedValue(fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>);
+    vi.mocked(loadHistoryData).mockResolvedValue(
+      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
+    );
     const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
     vi.spyOn(HistoryQuery.prototype, 'getChangeRisk').mockReturnValue(riskResult);
     await runQuery('--change-risk', 'src/foo.ts', '--format', 'json');
@@ -646,7 +658,9 @@ describe('query --ownership', () => {
       ownershipRatio: 0.8,
       contributors: [],
     };
-    vi.mocked(loadHistoryData).mockResolvedValue(fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>);
+    vi.mocked(loadHistoryData).mockResolvedValue(
+      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
+    );
     const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
     vi.spyOn(HistoryQuery.prototype, 'getOwnership').mockReturnValue(ownerResult);
     await runQuery('--ownership', 'src/foo.ts', '--format', 'json');
@@ -668,7 +682,9 @@ describe('query --ownership', () => {
       ownershipRatio: 0.6,
       contributors: [],
     };
-    vi.mocked(loadHistoryData).mockResolvedValue(fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>);
+    vi.mocked(loadHistoryData).mockResolvedValue(
+      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
+    );
     const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
     const spy = vi.spyOn(HistoryQuery.prototype, 'getOwnership').mockReturnValue(ownerResult);
     await runQuery('--ownership', 'src', '--target-type', 'package', '--format', 'json');

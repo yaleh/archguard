@@ -31,11 +31,7 @@ export abstract class BaseArchJsonMapper<TPackage, TRawEntity = never> {
     return generateEntityId(packageName, entityName);
   }
 
-  protected createSourceLocation(
-    file: string,
-    startLine: number,
-    endLine: number
-  ): SourceLocation {
+  protected createSourceLocation(file: string, startLine: number, endLine: number): SourceLocation {
     return { file, startLine, endLine };
   }
 
@@ -64,11 +60,7 @@ export abstract class BaseArchJsonMapper<TPackage, TRawEntity = never> {
     }));
   }
 
-  protected pushUniqueEntity(
-    entities: Entity[],
-    seenIds: Set<string>,
-    entity: Entity
-  ): void {
+  protected pushUniqueEntity(entities: Entity[], seenIds: Set<string>, entity: Entity): void {
     if (seenIds.has(entity.id)) {
       return;
     }

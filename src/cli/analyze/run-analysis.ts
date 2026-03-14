@@ -133,7 +133,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         // (arch.json extensions are not reliably updated after processAll in multi-source runs)
         const queryDir = path.join(config.workDir || workDir, 'query');
         await import('fs-extra').then((fs) =>
-          fs.default.outputJson(path.join(queryDir, 'test-analysis.json'), testAnalysis, { spaces: 2 })
+          fs.default.outputJson(path.join(queryDir, 'test-analysis.json'), testAnalysis, {
+            spaces: 2,
+          })
         );
 
         // Write test output files
@@ -206,12 +208,10 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   if (cliOptions.includeGit) {
     try {
       reporter.start('Analyzing git history...');
-      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo } = await import(
-        '../git-history/git-log-reader.js'
-      );
-      const { aggregateFileMetrics, aggregatePackageMetrics } = await import(
-        '../git-history/history-aggregator.js'
-      );
+      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo } =
+        await import('../git-history/git-log-reader.js');
+      const { aggregateFileMetrics, aggregatePackageMetrics } =
+        await import('../git-history/history-aggregator.js');
       const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
 
       const projectRoot = sessionRoot;

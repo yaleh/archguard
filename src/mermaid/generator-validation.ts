@@ -27,7 +27,9 @@ export function validateGeneratorInput(archJson: ArchJSON, verbose: boolean): vo
   }
 
   if (filteredWarnings.length > 0) {
-    console.warn(`⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`);
+    console.warn(
+      `⚠️  Warning: ${filteredWarnings.length} relation(s) reference undefined entities:`
+    );
     console.warn(filteredWarnings.join('\n'));
   }
 

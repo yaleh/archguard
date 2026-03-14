@@ -58,11 +58,7 @@ export interface CoverageLink {
 }
 
 export interface TestIssue {
-  type:
-    | 'zero_assertion'
-    | 'orphan_test'
-    | 'skip_accumulation'
-    | 'assertion_poverty';
+  type: 'zero_assertion' | 'orphan_test' | 'skip_accumulation' | 'assertion_poverty';
   severity: 'warning' | 'info';
   testFileId: string;
   message: string;

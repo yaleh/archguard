@@ -40,7 +40,10 @@ interface FileAccumulator {
  * @param commits   Commit records to aggregate.
  * @param depth     Number of path segments to use for packagePath (default: 1).
  */
-export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1): FileHistoryMetrics[] {
+export function aggregateFileMetrics(
+  commits: CommitRecord[],
+  depth: number = 1
+): FileHistoryMetrics[] {
   const accMap = new Map<string, FileAccumulator & { shaSet: Set<string> }>();
 
   for (const commit of commits) {
@@ -64,8 +67,9 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
       acc.shaSet.add(commit.sha);
       acc.dates.add(commit.date);
       acc.authors.set(commit.authorEmail, (acc.authors.get(commit.authorEmail) ?? 0) + 1);
-      if (!acc.authorShas.has(commit.authorEmail)) acc.authorShas.set(commit.authorEmail, new Set());
-      acc.authorShas.get(commit.authorEmail)!.add(commit.sha);
+      if (!acc.authorShas.has(commit.authorEmail))
+        acc.authorShas.set(commit.authorEmail, new Set());
+      acc.authorShas.get(commit.authorEmail).add(commit.sha);
       acc.addedLines += fc.added;
       acc.deletedLines += fc.deleted;
       if (commit.date > acc.lastDate) {
@@ -159,7 +163,10 @@ export function aggregateFileMetrics(commits: CommitRecord[], depth: number = 1)
  * @param fileMetrics  Already-aggregated file metrics (from aggregateFileMetrics).
  * @param depth        Package path depth; used to re-group files by pkg path (default: 1).
  */
-export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth: number = 1): PackageHistoryMetrics[] {
+export function aggregatePackageMetrics(
+  fileMetrics: FileHistoryMetrics[],
+  depth: number = 1
+): PackageHistoryMetrics[] {
   const pkgMap = new Map<
     string,
     {
@@ -208,13 +215,17 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth
   for (const [pkg, acc] of pkgMap) {
     // Deduplicated commit count via SHA union
     const allShas = new Set(acc.files.flatMap((f) => f.commitShas ?? []));
-    const commitCount = allShas.size > 0 ? allShas.size : acc.files.reduce((s, f) => s + f.commitCount, 0);
+    const commitCount =
+      allShas.size > 0 ? allShas.size : acc.files.reduce((s, f) => s + f.commitCount, 0);
 
     // Approximate author count: max across files (conservative estimate)
     const authorCount = acc.files.reduce((mx, f) => Math.max(mx, f.authorCount), 0);
 
     // Primary owner: owner of the file with most commits
-    const mostChangedFile = acc.files.reduce((best, f) => (f.commitCount > best.commitCount ? f : best), acc.files[0]);
+    const mostChangedFile = acc.files.reduce(
+      (best, f) => (f.commitCount > best.commitCount ? f : best),
+      acc.files[0]
+    );
     const primaryOwner = mostChangedFile?.primaryOwner ?? '';
     const primaryOwnerShare = mostChangedFile?.primaryOwnerShare ?? 0;
 
@@ -262,7 +273,7 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth
       if (fm.contributorShas) {
         for (const [email, shas] of Object.entries(fm.contributorShas)) {
           if (!pkgAuthorShas.has(email)) pkgAuthorShas.set(email, new Set());
-          const authorSet = pkgAuthorShas.get(email)!;
+          const authorSet = pkgAuthorShas.get(email);
           for (const sha of shas) authorSet.add(sha);
         }
       } else {
@@ -270,7 +281,10 @@ export function aggregatePackageMetrics(fileMetrics: FileHistoryMetrics[], depth
         for (const contributor of fm.topContributors ?? []) {
           pkgAuthorShas.set(
             contributor.email,
-            new Set([...(pkgAuthorShas.get(contributor.email) ?? []), contributor.email + '_count_' + contributor.commitCount])
+            new Set([
+              ...(pkgAuthorShas.get(contributor.email) ?? []),
+              contributor.email + '_count_' + contributor.commitCount,
+            ])
           );
         }
       }
@@ -352,8 +366,8 @@ export function buildCochangeIndex(
 
     if (!adjacency.has(a)) adjacency.set(a, new Map());
     if (!adjacency.has(b)) adjacency.set(b, new Map());
-    adjacency.get(a)!.set(b, joint);
-    adjacency.get(b)!.set(a, joint);
+    adjacency.get(a).set(b, joint);
+    adjacency.get(b).set(a, joint);
   }
 
   // Convert to CochangeEdge arrays, sort, and limit
@@ -414,12 +428,12 @@ export function computeRiskFactors(
   norms: RiskNorms,
   referenceDate: Date = new Date()
 ): RiskFactors {
-  const { commitCount, authorCount, primaryOwnerShare, lastChangedAt, topCochangeNeighbors } = input;
+  const { commitCount, authorCount, primaryOwnerShare, lastChangedAt, topCochangeNeighbors } =
+    input;
   const { maxCommitCount, maxAuthorCount } = norms;
 
   // Churn: log1p normalized
-  const churn =
-    maxCommitCount > 0 ? Math.log1p(commitCount) / Math.log1p(maxCommitCount) : 0;
+  const churn = maxCommitCount > 0 ? Math.log1p(commitCount) / Math.log1p(maxCommitCount) : 0;
 
   // Author count: log1p normalized
   const authorCountRisk =

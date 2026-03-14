@@ -10,7 +10,11 @@ import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from './query-manifest.js';
 import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
-import type { TestAnalysis, PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
+import type {
+  TestAnalysis,
+  PackageCoverage,
+  TestFileInfo,
+} from '@/types/extensions/test-analysis.js';
 
 export interface EntitySummary {
   id: string;
@@ -148,9 +152,10 @@ export class QueryEngine {
       .sort((a, b) => b.dependentCount - a.dependentCount)
       .slice(0, 10);
 
-    const atlasEdgeCount = Object.values(
-      this.archJson.extensions?.goAtlas?.layers ?? {}
-    ).reduce((sum, layer) => sum + ((layer as { edges?: unknown[] }).edges?.length ?? 0), 0);
+    const atlasEdgeCount = Object.values(this.archJson.extensions?.goAtlas?.layers ?? {}).reduce(
+      (sum, layer) => sum + ((layer as { edges?: unknown[] }).edges?.length ?? 0),
+      0
+    );
     // Note: FlowGraph has no .edges (it has entryPoints/callChains); the cast safely returns 0 for it.
 
     const hasImplementation = (this.index.relationsByType['implementation']?.length ?? 0) > 0;
@@ -277,7 +282,7 @@ export class QueryEngine {
       if (!buckets.has(pkg)) {
         buckets.set(pkg, { total: 0, covered: 0, testIds: new Set() });
       }
-      const bucket = buckets.get(pkg)!;
+      const bucket = buckets.get(pkg);
       bucket.total++;
 
       const link = linkByEntity.get(entity.id);
@@ -314,7 +319,13 @@ export class QueryEngine {
   } {
     const analysis = this.getTestAnalysis();
     if (!analysis) {
-      return { entityId, coverageScore: 0, coveredByTestIds: [], testFileDetails: [], found: false };
+      return {
+        entityId,
+        coverageScore: 0,
+        coveredByTestIds: [],
+        testFileDetails: [],
+        found: false,
+      };
     }
 
     const link = analysis.coverageMap.find((l) => l.sourceEntityId === entityId);
@@ -355,12 +366,9 @@ export class QueryEngine {
     // ── Path A: Go Atlas ──────────────────────────────────────────────────────
     const pg = this.getAtlasLayer('package');
     if (pg) {
-      const sourceNodes = pg.nodes.filter(
-        (n) => n.type === 'internal' || n.type === 'cmd'
-      );
+      const sourceNodes = pg.nodes.filter((n) => n.type === 'internal' || n.type === 'cmd');
       const packages: PackageStatEntry[] = sourceNodes.map((node) => {
-        const { entityCount, methodCount, fieldCount } =
-          this.aggregateEntityMetrics(node.name);
+        const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.name);
         return {
           package: node.name,
           fileCount: node.fileCount,
@@ -384,7 +392,7 @@ export class QueryEngine {
     }
 
     // ── Path B: TypeScript (tsAnalysis.moduleGraph) ───────────────────────────
-    const mg = this.archJson.extensions?.tsAnalysis?.moduleGraph as TsModuleGraph | undefined;
+    const mg = this.archJson.extensions?.tsAnalysis?.moduleGraph;
     if (mg) {
       const testPattern = this.buildTestPattern();
       const ws = this.archJson.workspaceRoot;
@@ -401,8 +409,7 @@ export class QueryEngine {
         .map((node) => {
           const files = moduleFiles.get(node.id) ?? [];
           const testFileCount = files.filter((f) => testPattern.test(f)).length;
-          const { entityCount, methodCount, fieldCount } =
-            this.aggregateEntityMetrics(node.id);
+          const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.id);
           return {
             package: node.name,
             fileCount: node.fileCount,
@@ -476,9 +483,7 @@ export class QueryEngine {
           methodCount += members.filter(
             (m) => m.type === 'method' || m.type === 'constructor'
           ).length;
-          fieldCount += members.filter(
-            (m) => m.type === 'property' || m.type === 'field'
-          ).length;
+          fieldCount += members.filter((m) => m.type === 'property' || m.type === 'field').length;
           maxLine = Math.max(maxLine, entity.sourceLocation.endLine);
         }
         loc += maxLine;
@@ -519,9 +524,11 @@ export class QueryEngine {
   // Internal helpers
   // ----------------------------------------------------------------
 
-  private aggregateEntityMetrics(
-    packagePrefix: string
-  ): { entityCount: number; methodCount: number; fieldCount: number } {
+  private aggregateEntityMetrics(packagePrefix: string): {
+    entityCount: number;
+    methodCount: number;
+    fieldCount: number;
+  } {
     let entityCount = 0,
       methodCount = 0,
       fieldCount = 0;
@@ -552,9 +559,7 @@ export class QueryEngine {
         methodCount += members.filter(
           (m) => m.type === 'method' || m.type === 'constructor'
         ).length;
-        fieldCount += members.filter(
-          (m) => m.type === 'property' || m.type === 'field'
-        ).length;
+        fieldCount += members.filter((m) => m.type === 'property' || m.type === 'field').length;
       }
     }
     return { entityCount, methodCount, fieldCount };

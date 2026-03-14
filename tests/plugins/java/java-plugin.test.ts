@@ -183,30 +183,30 @@ public class Invalid {
     });
 
     it('recognizes files in /test/ directory', () => {
-      expect(plugin.isTestFile!('/project/src/test/java/com/example/FooTest.java')).toBe(true);
-      expect(plugin.isTestFile!('/project/src/tests/java/com/example/Foo.java')).toBe(true);
+      expect(plugin.isTestFile('/project/src/test/java/com/example/FooTest.java')).toBe(true);
+      expect(plugin.isTestFile('/project/src/tests/java/com/example/Foo.java')).toBe(true);
     });
 
     it('recognizes Test-prefixed filenames', () => {
-      expect(plugin.isTestFile!('/project/src/main/TestParser.java')).toBe(true);
-      expect(plugin.isTestFile!('/project/src/TestModels.java')).toBe(true);
+      expect(plugin.isTestFile('/project/src/main/TestParser.java')).toBe(true);
+      expect(plugin.isTestFile('/project/src/TestModels.java')).toBe(true);
     });
 
     it('recognizes *Test.java, *Tests.java, *TestCase.java', () => {
-      expect(plugin.isTestFile!('/project/FooTest.java')).toBe(true);
-      expect(plugin.isTestFile!('/project/OpenAIServiceTests.java')).toBe(true);
-      expect(plugin.isTestFile!('/project/FooTestCase.java')).toBe(true);
+      expect(plugin.isTestFile('/project/FooTest.java')).toBe(true);
+      expect(plugin.isTestFile('/project/OpenAIServiceTests.java')).toBe(true);
+      expect(plugin.isTestFile('/project/FooTestCase.java')).toBe(true);
     });
 
     it('recognizes JMH benchmark files (*Bench.java, *Benchmark.java)', () => {
-      expect(plugin.isTestFile!('/project/VectorPerfBench.java')).toBe(true);
-      expect(plugin.isTestFile!('/project/TensorBenchmark.java')).toBe(true);
+      expect(plugin.isTestFile('/project/VectorPerfBench.java')).toBe(true);
+      expect(plugin.isTestFile('/project/TensorBenchmark.java')).toBe(true);
     });
 
     it('rejects non-Java and non-test files', () => {
-      expect(plugin.isTestFile!('/project/src/main/Foo.java')).toBe(false);
-      expect(plugin.isTestFile!('/project/src/MyService.java')).toBe(false);
-      expect(plugin.isTestFile!('/project/test/foo.ts')).toBe(false);
+      expect(plugin.isTestFile('/project/src/main/Foo.java')).toBe(false);
+      expect(plugin.isTestFile('/project/src/MyService.java')).toBe(false);
+      expect(plugin.isTestFile('/project/test/foo.ts')).toBe(false);
     });
   });
 
@@ -221,10 +221,10 @@ public class FooTest {
     Assert.assertEquals(1, 1);
   }
 }`;
-      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      const result = plugin.extractTestStructure('/project/FooTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.frameworks).toContain('junit4');
-      expect(result!.frameworks).not.toContain('junit5');
+      expect(result.frameworks).toContain('junit4');
+      expect(result.frameworks).not.toContain('junit5');
     });
 
     it('detects JUnit 5 framework', () => {
@@ -237,10 +237,10 @@ public class ChatApiTest {
     Assertions.assertEquals(200, response.getStatus());
   }
 }`;
-      const result = plugin.extractTestStructure!('/project/ChatApiTest.java', code);
+      const result = plugin.extractTestStructure('/project/ChatApiTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.frameworks).toContain('junit5');
-      expect(result!.frameworks).not.toContain('junit4');
+      expect(result.frameworks).toContain('junit5');
+      expect(result.frameworks).not.toContain('junit4');
     });
 
     it('detects JMH benchmark framework', () => {
@@ -253,10 +253,10 @@ public class VectorPerfBench {
     bh.consume(ops.dotProduct(a, b, 0, 0, SIZE));
   }
 }`;
-      const result = plugin.extractTestStructure!('/project/VectorPerfBench.java', code);
+      const result = plugin.extractTestStructure('/project/VectorPerfBench.java', code);
       expect(result).not.toBeNull();
-      expect(result!.frameworks).toContain('jmh');
-      expect(result!.testTypeHint).toBe('performance');
+      expect(result.frameworks).toContain('jmh');
+      expect(result.testTypeHint).toBe('performance');
     });
 
     it('extracts @Test-annotated methods as test cases', () => {
@@ -272,11 +272,11 @@ public class TestParser {
     Assert.assertEquals(2, t.dims());
   }
 }`;
-      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      const result = plugin.extractTestStructure('/project/TestParser.java', code);
       expect(result).not.toBeNull();
-      expect(result!.testCases).toHaveLength(2);
-      expect(result!.testCases.map((tc) => tc.name)).toContain('testReadSafetensor');
-      expect(result!.testCases.map((tc) => tc.name)).toContain('testSlicing');
+      expect(result.testCases).toHaveLength(2);
+      expect(result.testCases.map((tc) => tc.name)).toContain('testReadSafetensor');
+      expect(result.testCases.map((tc) => tc.name)).toContain('testSlicing');
     });
 
     it('counts assertions correctly', () => {
@@ -291,9 +291,9 @@ public class TestParser {
     Assert.assertNotNull(obj);
   }
 }`;
-      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      const result = plugin.extractTestStructure('/project/TestParser.java', code);
       expect(result).not.toBeNull();
-      expect(result!.testCases[0].assertionCount).toBeGreaterThanOrEqual(3);
+      expect(result.testCases[0].assertionCount).toBeGreaterThanOrEqual(3);
     });
 
     it('detects @Ignore-skipped tests (JUnit 4)', () => {
@@ -307,9 +307,9 @@ public class FooTest {
   @Test
   public void testSkipped() { Assert.assertTrue(false); }
 }`;
-      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      const result = plugin.extractTestStructure('/project/FooTest.java', code);
       expect(result).not.toBeNull();
-      const skipped = result!.testCases.filter((tc) => tc.isSkipped);
+      const skipped = result.testCases.filter((tc) => tc.isSkipped);
       expect(skipped).toHaveLength(1);
       expect(skipped[0].name).toBe('testSkipped');
     });
@@ -325,9 +325,9 @@ public class FooTest {
   @Test
   public void testSkipped() { }
 }`;
-      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
+      const result = plugin.extractTestStructure('/project/FooTest.java', code);
       expect(result).not.toBeNull();
-      const skipped = result!.testCases.filter((tc) => tc.isSkipped);
+      const skipped = result.testCases.filter((tc) => tc.isSkipped);
       expect(skipped).toHaveLength(1);
       expect(skipped[0].name).toBe('testSkipped');
     });
@@ -339,8 +339,8 @@ public class FooTest {
   @Test
   public void testFoo() { Assert.assertTrue(true); }
 }`;
-      const result = plugin.extractTestStructure!('/project/FooTest.java', code);
-      expect(result!.testTypeHint).toBe('unit');
+      const result = plugin.extractTestStructure('/project/FooTest.java', code);
+      expect(result.testTypeHint).toBe('unit');
     });
 
     it('returns null when no known test framework is detected', () => {
@@ -349,7 +349,7 @@ package com.example;
 public class RegularClass {
   public void doStuff() { }
 }`;
-      const result = plugin.extractTestStructure!('/project/RegularClass.java', code);
+      const result = plugin.extractTestStructure('/project/RegularClass.java', code);
       expect(result).toBeNull();
     });
 
@@ -362,9 +362,9 @@ public class TensorBench {
   @Benchmark
   public void benchDot(Blackhole bh) { bh.consume(result2); }
 }`;
-      const result = plugin.extractTestStructure!('/project/TensorBench.java', code);
+      const result = plugin.extractTestStructure('/project/TensorBench.java', code);
       expect(result).not.toBeNull();
-      expect(result!.testCases).toHaveLength(2);
+      expect(result.testCases).toHaveLength(2);
     });
   });
 
@@ -380,11 +380,17 @@ public class TestParser {
   @Test
   public void testSomething() { Assert.assertEquals(1, 1); }
 }`;
-      const result = plugin.extractTestStructure!('/project/TestParser.java', code);
+      const result = plugin.extractTestStructure('/project/TestParser.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/tensor/AbstractTensor.java');
-      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/tensor/FloatBufferTensor.java');
-      expect(result!.importedSourceFiles).toContain('com/github/tjake/jlama/safetensors/SafeTensorSupport.java');
+      expect(result.importedSourceFiles).toContain(
+        'com/github/tjake/jlama/tensor/AbstractTensor.java'
+      );
+      expect(result.importedSourceFiles).toContain(
+        'com/github/tjake/jlama/tensor/FloatBufferTensor.java'
+      );
+      expect(result.importedSourceFiles).toContain(
+        'com/github/tjake/jlama/safetensors/SafeTensorSupport.java'
+      );
     });
 
     it('excludes stdlib and test framework imports', () => {
@@ -401,15 +407,17 @@ public class MyTest {
   @Test
   public void testSomething() { Assert.assertEquals(1, 1); }
 }`;
-      const result = plugin.extractTestStructure!('/project/MyTest.java', code);
+      const result = plugin.extractTestStructure('/project/MyTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).not.toContain('org/junit/Test.java');
-      expect(result!.importedSourceFiles).not.toContain('org/junit/Assert.java');
-      expect(result!.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
-      expect(result!.importedSourceFiles).not.toContain('java/util/List.java');
-      expect(result!.importedSourceFiles).not.toContain('javax/annotation/Nullable.java');
-      expect(result!.importedSourceFiles).not.toContain('com/fasterxml/jackson/databind/ObjectMapper.java');
-      expect(result!.importedSourceFiles).toContain('com/example/MyProjectClass.java');
+      expect(result.importedSourceFiles).not.toContain('org/junit/Test.java');
+      expect(result.importedSourceFiles).not.toContain('org/junit/Assert.java');
+      expect(result.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
+      expect(result.importedSourceFiles).not.toContain('java/util/List.java');
+      expect(result.importedSourceFiles).not.toContain('javax/annotation/Nullable.java');
+      expect(result.importedSourceFiles).not.toContain(
+        'com/fasterxml/jackson/databind/ObjectMapper.java'
+      );
+      expect(result.importedSourceFiles).toContain('com/example/MyProjectClass.java');
     });
 
     it('extracts static imports from project classes', () => {
@@ -420,9 +428,9 @@ public class TestOperations {
   @Test
   public void testOps() { assertEquals(1, 1); }
 }`;
-      const result = plugin.extractTestStructure!('/project/TestOperations.java', code);
+      const result = plugin.extractTestStructure('/project/TestOperations.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).toContain(
+      expect(result.importedSourceFiles).toContain(
         'com/github/tjake/jlama/tensor/operations/NativeSimdTensorOperations.java'
       );
     });
@@ -437,11 +445,11 @@ public class MyServiceTest {
   @Test
   public void testService() { assertThat(1).isEqualTo(1); }
 }`;
-      const result = plugin.extractTestStructure!('/project/MyServiceTest.java', code);
+      const result = plugin.extractTestStructure('/project/MyServiceTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
-      expect(result!.importedSourceFiles).not.toContain('org/junit/Assert.java');
-      expect(result!.importedSourceFiles).toContain('com/example/MyService.java');
+      expect(result.importedSourceFiles).not.toContain('org/assertj/core/api/Assertions.java');
+      expect(result.importedSourceFiles).not.toContain('org/junit/Assert.java');
+      expect(result.importedSourceFiles).toContain('com/example/MyService.java');
     });
 
     it('resolves static method imports to the containing class file', () => {
@@ -453,13 +461,13 @@ public class JlamaServiceUnitTest {
   @Test
   public void testPowerOfTwo() { }
 }`;
-      const result = plugin.extractTestStructure!('/project/JlamaServiceUnitTest.java', code);
+      const result = plugin.extractTestStructure('/project/JlamaServiceUnitTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).toContain(
+      expect(result.importedSourceFiles).toContain(
         'com/github/tjake/jlama/net/grpc/JlamaService.java'
       );
       // Should only appear once (deduped)
-      const count = result!.importedSourceFiles.filter(
+      const count = result.importedSourceFiles.filter(
         (f) => f === 'com/github/tjake/jlama/net/grpc/JlamaService.java'
       ).length;
       expect(count).toBe(1);
@@ -474,9 +482,9 @@ public class PureFrameworkTest {
   @Test
   public void testSomething() { }
 }`;
-      const result = plugin.extractTestStructure!('/project/PureFrameworkTest.java', code);
+      const result = plugin.extractTestStructure('/project/PureFrameworkTest.java', code);
       expect(result).not.toBeNull();
-      expect(result!.importedSourceFiles).toHaveLength(0);
+      expect(result.importedSourceFiles).toHaveLength(0);
     });
   });
 });

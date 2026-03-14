@@ -209,11 +209,7 @@ describe('PythonImportExtractor – edge cases', () => {
   });
 
   it('returns empty array when no imports match knownModuleIds', () => {
-    const imports: PythonRawImport[] = [
-      { module: 'os' },
-      { module: 'sys' },
-      { module: 'typing' },
-    ];
+    const imports: PythonRawImport[] = [{ module: 'os' }, { module: 'sys' }, { module: 'typing' }];
     const known = makeKnown('myapp.core', 'myapp.utils');
     const result = extractor.extract(imports, 'myapp.models', known);
     expect(result).toHaveLength(0);

@@ -1621,7 +1621,9 @@ describe('DiagramProcessor', () => {
       }));
 
       const processor = new DiagramProcessor({
-        diagrams: [{ name: 'overview/package', sources: ['./src'], level: 'package', language: 'go' }],
+        diagrams: [
+          { name: 'overview/package', sources: ['./src'], level: 'package', language: 'go' },
+        ],
         globalConfig: createGlobalConfig(),
         progress,
         registry,

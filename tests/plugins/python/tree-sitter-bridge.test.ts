@@ -366,8 +366,16 @@ class Config:
       expect(module.classes).toHaveLength(1);
       const cls = module.classes[0];
       expect(cls.classAttributes).toHaveLength(2);
-      expect(cls.classAttributes[0]).toMatchObject({ name: 'max_tokens', type: 'int', isPrivate: false });
-      expect(cls.classAttributes[1]).toMatchObject({ name: 'temperature', type: 'float', isPrivate: false });
+      expect(cls.classAttributes[0]).toMatchObject({
+        name: 'max_tokens',
+        type: 'int',
+        isPrivate: false,
+      });
+      expect(cls.classAttributes[1]).toMatchObject({
+        name: 'temperature',
+        type: 'float',
+        isPrivate: false,
+      });
     });
 
     it('extracts Optional and generic type annotations', () => {

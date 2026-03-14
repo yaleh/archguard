@@ -115,7 +115,10 @@ function makePackageMetrics(path: string): PackageHistoryMetrics {
 function makeMockData(): LoadedHistoryData {
   const fileMetrics = new Map<string, FileHistoryMetrics>();
   fileMetrics.set('src/cli/mcp/mcp-server.ts', makeFileMetrics('src/cli/mcp/mcp-server.ts'));
-  fileMetrics.set('src/parser/typescript-parser.ts', makeFileMetrics('src/parser/typescript-parser.ts'));
+  fileMetrics.set(
+    'src/parser/typescript-parser.ts',
+    makeFileMetrics('src/parser/typescript-parser.ts')
+  );
 
   const packageMetrics = new Map<string, PackageHistoryMetrics>();
   packageMetrics.set('src/cli', makePackageMetrics('src/cli'));
@@ -185,7 +188,7 @@ describe('archguard_get_change_context', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_context')!;
+    const cb = tools.get('archguard_get_change_context');
 
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     expect(result.content[0].type).toBe('text');
@@ -207,7 +210,7 @@ describe('archguard_get_change_context', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_context')!;
+    const cb = tools.get('archguard_get_change_context');
 
     const result = await cb({ targetType: 'package', target: 'src/cli' });
     const parsed = JSON.parse(result.content[0].text);
@@ -221,7 +224,7 @@ describe('archguard_get_change_context', () => {
     );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_context')!;
+    const cb = tools.get('archguard_get_change_context');
 
     const result = await cb({ targetType: 'file', target: 'src/foo.ts' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
@@ -231,7 +234,7 @@ describe('archguard_get_change_context', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_context')!;
+    const cb = tools.get('archguard_get_change_context');
 
     const result = await cb({ targetType: 'file', target: 'nonexistent/path.ts' });
     expect(result.content[0].text).toContain('nonexistent/path.ts');
@@ -245,7 +248,7 @@ describe('archguard_get_cochange', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cochange')!;
+    const cb = tools.get('archguard_get_cochange');
 
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     const parsed = JSON.parse(result.content[0].text);
@@ -263,7 +266,7 @@ describe('archguard_get_cochange', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cochange')!;
+    const cb = tools.get('archguard_get_cochange');
 
     const result = await cb({
       targetType: 'file',
@@ -280,7 +283,7 @@ describe('archguard_get_cochange', () => {
     );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cochange')!;
+    const cb = tools.get('archguard_get_cochange');
 
     const result = await cb({ targetType: 'package', target: 'src/cli' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
@@ -292,7 +295,7 @@ describe('archguard_get_change_risk', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_risk')!;
+    const cb = tools.get('archguard_get_change_risk');
 
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     const parsed = JSON.parse(result.content[0].text);
@@ -310,7 +313,7 @@ describe('archguard_get_change_risk', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_risk')!;
+    const cb = tools.get('archguard_get_change_risk');
 
     const result = await cb({ targetType: 'package', target: 'src/parser' });
     const parsed = JSON.parse(result.content[0].text);
@@ -324,7 +327,7 @@ describe('archguard_get_change_risk', () => {
     );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_change_risk')!;
+    const cb = tools.get('archguard_get_change_risk');
 
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
@@ -336,7 +339,7 @@ describe('archguard_get_ownership', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_ownership')!;
+    const cb = tools.get('archguard_get_ownership');
 
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     const parsed = JSON.parse(result.content[0].text);
@@ -353,7 +356,7 @@ describe('archguard_get_ownership', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData());
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_ownership')!;
+    const cb = tools.get('archguard_get_ownership');
 
     const result = await cb({ targetType: 'package', target: 'src/cli' });
     const parsed = JSON.parse(result.content[0].text);
@@ -367,7 +370,7 @@ describe('archguard_get_ownership', () => {
     );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_ownership')!;
+    const cb = tools.get('archguard_get_ownership');
 
     const result = await cb({ targetType: 'package', target: 'src/cli' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
@@ -390,7 +393,7 @@ describe('NOT_ANALYZED_MSG consistency across all tools', () => {
 
       const server = new McpServer({ name: 'test', version: '1.0.0' });
       const tools = collectTools(server);
-      const cb = tools.get(toolName)!;
+      const cb = tools.get(toolName);
       expect(cb).toBeDefined();
 
       const result = await cb({ targetType: 'file', target: 'src/foo.ts' });

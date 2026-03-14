@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TsModuleGraph, TsModuleNode, TsModuleDependency } from '@/types/extensions/ts-analysis.js';
+import type {
+  TsModuleGraph,
+  TsModuleNode,
+  TsModuleDependency,
+} from '@/types/extensions/ts-analysis.js';
 import { renderTsModuleGraph } from '@/mermaid/ts-module-graph-renderer.js';
 
 function makeNode(

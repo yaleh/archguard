@@ -39,7 +39,7 @@ export function renderFlowGraph(
   for (const entry of graph.entryPoints) {
     const pkg = packageOfEntry(entry);
     if (!pkgGroups.has(pkg)) pkgGroups.set(pkg, []);
-    pkgGroups.get(pkg)!.push(entry);
+    pkgGroups.get(pkg).push(entry);
   }
 
   const depthMap = new Map<string, number>();

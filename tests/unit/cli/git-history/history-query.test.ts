@@ -364,7 +364,10 @@ describe('HistoryQuery.getOwnership', () => {
   });
 
   it('works for package type', () => {
-    const pkg = makePackageMetric('src', { primaryOwner: 'bob@example.com', primaryOwnerShare: 0.9 });
+    const pkg = makePackageMetric('src', {
+      primaryOwner: 'bob@example.com',
+      primaryOwnerShare: 0.9,
+    });
     const data = makeData([], [pkg]);
     const q = new HistoryQuery(data);
 
@@ -578,7 +581,7 @@ describe('HistoryQuery.getChangeContext', () => {
     const file = makeFileMetric('src/a.ts', {
       riskFactors: {
         churn: 0.2,
-        authorCount: 0.95,   // highest
+        authorCount: 0.95, // highest
         ownerConcentration: 0.3,
         cochangeBreadth: 0.1,
         recency: 0.4,

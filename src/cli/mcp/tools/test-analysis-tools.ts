@@ -32,11 +32,23 @@ function buildSuggestedPatternConfig(frameworks: string[]): Record<string, strin
         break;
       case 'junit4':
       case 'junit5':
-        assertionPatterns.push('\\bAssert\\.assert\\w+\\s*\\(', '\\bAssertions\\.assert\\w+\\s*\\(', '\\bassertEquals\\s*\\(', '\\bassertTrue\\s*\\(', '\\bassertFalse\\s*\\(', '\\bassertNotNull\\s*\\(', '\\bassertThat\\s*\\(');
+        assertionPatterns.push(
+          '\\bAssert\\.assert\\w+\\s*\\(',
+          '\\bAssertions\\.assert\\w+\\s*\\(',
+          '\\bassertEquals\\s*\\(',
+          '\\bassertTrue\\s*\\(',
+          '\\bassertFalse\\s*\\(',
+          '\\bassertNotNull\\s*\\(',
+          '\\bassertThat\\s*\\('
+        );
         break;
       case 'testng':
         if (!assertionPatterns.includes('\\bassertEquals\\s*\\('))
-          assertionPatterns.push('\\bassertEquals\\s*\\(', '\\bassertTrue\\s*\\(', '\\bassertNotNull\\s*\\(');
+          assertionPatterns.push(
+            '\\bassertEquals\\s*\\(',
+            '\\bassertTrue\\s*\\(',
+            '\\bassertNotNull\\s*\\('
+          );
         break;
       case 'jmh':
         // JMH benchmarks don't use assertions — no patterns needed
@@ -61,15 +73,15 @@ function buildSuggestedPatternConfig(frameworks: string[]): Record<string, strin
       case 'assert': // C++ custom / Node assert
         assertionPatterns.push(
           '\\bassert\\s*\\(',
-          '\\bassert_\\w+\\s*\\(',        // assert_equal(), assert_true(), assert_equals()
-          '\\bt\\.assert_\\w+\\s*\\(',   // t.assert_equal(), t.assert_true()
-          '\\bGGML_ASSERT\\s*\\(',
+          '\\bassert_\\w+\\s*\\(', // assert_equal(), assert_true(), assert_equals()
+          '\\bt\\.assert_\\w+\\s*\\(', // t.assert_equal(), t.assert_true()
+          '\\bGGML_ASSERT\\s*\\('
         );
         break;
       case 'pytest':
         assertionPatterns.push(
           '\\bassert\\b',
-          '.assert'   // torch.testing.assert_close, np.testing.assert_allclose, self.assertX
+          '.assert' // torch.testing.assert_close, np.testing.assert_allclose, self.assertX
         );
         break;
       case 'unittest':
@@ -99,7 +111,9 @@ function textResponse(text: string) {
  * current scope. This typically happens when the default scope covers only
  * source files (e.g. src/) and excludes tests/.
  */
-async function buildZeroTestsDiagnosticResponse(archDir: string): Promise<ReturnType<typeof textResponse>> {
+async function buildZeroTestsDiagnosticResponse(
+  archDir: string
+): Promise<ReturnType<typeof textResponse>> {
   let availableScopes = '';
   try {
     const manifest = await readManifest(archDir);
@@ -148,14 +162,13 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
     'archguard_detect_test_patterns',
     'Pattern-First tool: call this FIRST before any other test analysis tool. Detects test frameworks and conventions in the project. Returns suggestedPatternConfig and notes. Review the notes and correct the config if needed before passing to other tools.',
     {
-      projectRoot: z
-        .string()
-        .optional()
-        .describe('Project root (default: server startup cwd)'),
+      projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
         .string()
         .optional()
-        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
+        .describe(
+          'Analysis scope key. Omit to use the widest available scope containing test data.'
+        ),
     },
     async ({ projectRoot, scope }) => {
       try {
@@ -203,7 +216,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
           );
         }
 
-        const analysis = engine.getTestAnalysis()!;
+        const analysis = engine.getTestAnalysis();
 
         // Scope mismatch guard: engine loaded but no test files found
         if (analysis.metrics.totalTestFiles === 0) {
@@ -243,12 +256,11 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       scope: z
         .string()
         .optional()
-        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
+        .describe(
+          'Analysis scope key. Omit to use the widest available scope containing test data.'
+        ),
       patternConfig: patternConfigSchema,
-      severity: z
-        .enum(['warning', 'info'])
-        .optional()
-        .describe('Filter by severity'),
+      severity: z.enum(['warning', 'info']).optional().describe('Filter by severity'),
     },
     async ({ projectRoot, scope, severity }) => {
       try {
@@ -256,7 +268,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         const archDir = path.join(root, '.archguard');
         const engine = await loadEngine(archDir, scope);
         if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
-        const analysis = engine.getTestAnalysis()!;
+        const analysis = engine.getTestAnalysis();
         if (analysis.metrics.totalTestFiles === 0) {
           return buildZeroTestsDiagnosticResponse(archDir);
         }
@@ -278,11 +290,16 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       scope: z
         .string()
         .optional()
-        .describe('Analysis scope key. Omit to use the widest available scope containing test data.'),
+        .describe(
+          'Analysis scope key. Omit to use the widest available scope containing test data.'
+        ),
       patternConfig: patternConfigSchema,
-      includePackageBreakdown: z.boolean().optional().describe(
-        'When true, includes per-package coverage breakdown sorted ascending by coverageRatio.'
-      ),
+      includePackageBreakdown: z
+        .boolean()
+        .optional()
+        .describe(
+          'When true, includes per-package coverage breakdown sorted ascending by coverageRatio.'
+        ),
     },
     async ({ projectRoot, scope, includePackageBreakdown }) => {
       try {
@@ -290,7 +307,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         const archDir = path.join(root, '.archguard');
         const engine = await loadEngine(archDir, scope);
         if (!engine.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
-        const analysis = engine.getTestAnalysis()!;
+        const analysis = engine.getTestAnalysis();
         if (analysis.metrics.totalTestFiles === 0) {
           return buildZeroTestsDiagnosticResponse(archDir);
         }

@@ -1,9 +1,4 @@
-import type {
-  PackageGraph,
-  CapabilityGraph,
-  GoroutineTopology,
-  FlowGraph,
-} from '../types.js';
+import type { PackageGraph, CapabilityGraph, GoroutineTopology, FlowGraph } from '../types.js';
 import { renderPackageGraph } from './package-mermaid-template.js';
 import { renderCapabilityGraph } from './capability-mermaid-template.js';
 import { renderGoroutineTopology } from './goroutine-mermaid-template.js';

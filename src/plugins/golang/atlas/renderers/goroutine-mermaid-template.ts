@@ -21,7 +21,7 @@ export function renderGoroutineTopology(topology: GoroutineTopology): string {
   const addDecl = (pkg: string | undefined, decl: NodeDecl) => {
     if (pkg) {
       if (!packageGroups.has(pkg)) packageGroups.set(pkg, []);
-      packageGroups.get(pkg)!.push(decl);
+      packageGroups.get(pkg).push(decl);
     } else {
       ungrouped.push(decl);
     }
@@ -36,7 +36,8 @@ export function renderGoroutineTopology(topology: GoroutineTopology): string {
   for (const node of topology.nodes) {
     const patternLabel = node.pattern ? ` (${node.pattern})` : '';
     const displayName = formatGoroutineName(node);
-    const lifecycleTag = node.type === 'spawned' ? getLifecycleTag(node.id, topology.lifecycle) : '';
+    const lifecycleTag =
+      node.type === 'spawned' ? getLifecycleTag(node.id, topology.lifecycle) : '';
     const label = `${displayName}${patternLabel}${lifecycleTag}`;
     const style =
       node.type === 'main'
@@ -69,7 +70,11 @@ export function renderGoroutineTopology(topology: GoroutineTopology): string {
 
   const usedSubgraphIds = new Set<string>();
   const depthMap = new Map<string, number>();
-  const renderTreeNode = (treeNode: { pkg: string; isVirtual: boolean; children: any[] }, indent: string, depth: number): void => {
+  const renderTreeNode = (
+    treeNode: { pkg: string; isVirtual: boolean; children: any[] },
+    indent: string,
+    depth: number
+  ): void => {
     const sgId = createSubgraphId(treeNode.pkg, usedSubgraphIds);
     depthMap.set(sgId, depth);
     output += `\n${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;

@@ -9,7 +9,11 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { loadHistoryData, GitHistoryNotFoundError } from '@/cli/git-history/history-loader.js';
-import type { GitHistoryManifest, FileHistoryMetrics, PackageHistoryMetrics } from '@/types/git-history.js';
+import type {
+  GitHistoryManifest,
+  FileHistoryMetrics,
+  PackageHistoryMetrics,
+} from '@/types/git-history.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -80,11 +84,14 @@ async function setupTmpDir(): Promise<string> {
   return tmpDir;
 }
 
-async function writeArtifacts(archguardDir: string, opts: {
-  manifest?: GitHistoryManifest;
-  fileMetrics?: FileHistoryMetrics[];
-  packageMetrics?: PackageHistoryMetrics[];
-} = {}): Promise<void> {
+async function writeArtifacts(
+  archguardDir: string,
+  opts: {
+    manifest?: GitHistoryManifest;
+    fileMetrics?: FileHistoryMetrics[];
+    packageMetrics?: PackageHistoryMetrics[];
+  } = {}
+): Promise<void> {
   const outDir = path.join(archguardDir, 'query', 'git-history');
   await fs.ensureDir(outDir);
 
@@ -158,10 +165,7 @@ describe('loadHistoryData', () => {
 
   it('builds fileMetrics Map keyed by path', async () => {
     const archguardDir = path.join(tmpDir, '.archguard');
-    const fileMetrics = [
-      makeFileMetric('src/utils/foo.ts'),
-      makeFileMetric('src/index.ts'),
-    ];
+    const fileMetrics = [makeFileMetric('src/utils/foo.ts'), makeFileMetric('src/index.ts')];
     await writeArtifacts(archguardDir, { fileMetrics });
 
     const data = await loadHistoryData(archguardDir);

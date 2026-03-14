@@ -12,10 +12,7 @@ import { Command } from 'commander';
 import { resolveArchDir, loadEngine, readManifest } from '../query/engine-loader.js';
 import type { QueryEngine } from '../query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
-import {
-  loadHistoryData,
-  GitHistoryNotFoundError,
-} from '../git-history/history-loader.js';
+import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
 import { HistoryQuery } from '../git-history/history-query.js';
 import type {
   CochangeResult,
@@ -105,14 +102,8 @@ export function createQueryCommand(): Command {
       .option('--in-cycles', 'Find entities participating in cycles')
 
       // Phase 5: architecture query tools
-      .option(
-        '--package-stats [depth]',
-        'Show package statistics (optional depth 1-5, default: 2)'
-      )
-      .option(
-        '--atlas-layer <layer>',
-        'Show Go Atlas layer (package|capability|goroutine|flow)'
-      )
+      .option('--package-stats [depth]', 'Show package statistics (optional depth 1-5, default: 2)')
+      .option('--atlas-layer <layer>', 'Show Go Atlas layer (package|capability|goroutine|flow)')
 
       // Phase 5: test analysis tools
       .option('--test-patterns', 'Show detected test frameworks and pattern config')
@@ -331,17 +322,17 @@ async function handleGitHistoryQuery(opts: QueryOptions): Promise<void> {
   try {
     if (opts.changeContext) {
       result = query.getChangeContext(targetType, opts.changeContext);
-      if (!isJson) formatChangeContext(result as ChangeContextResult);
+      if (!isJson) formatChangeContext(result);
     } else if (opts.cochange) {
       result = query.getCochange(targetType, opts.cochange);
-      if (!isJson) formatCochange(result as CochangeResult);
+      if (!isJson) formatCochange(result);
     } else if (opts.changeRisk) {
       result = query.getChangeRisk(targetType, opts.changeRisk);
-      if (!isJson) formatChangeRisk(result as ChangeRiskResult);
+      if (!isJson) formatChangeRisk(result);
     } else {
       // opts.ownership must be set
-      result = query.getOwnership(targetType, opts.ownership!);
-      if (!isJson) formatOwnership(result as OwnershipResult);
+      result = query.getOwnership(targetType, opts.ownership);
+      if (!isJson) formatOwnership(result);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -350,7 +341,7 @@ async function handleGitHistoryQuery(opts: QueryOptions): Promise<void> {
   }
 
   if (isJson) {
-    console.log(JSON.stringify(result!, null, 2));
+    console.log(JSON.stringify(result, null, 2));
   }
 }
 
@@ -395,9 +386,7 @@ function validateQueryOptions(opts: QueryOptions): void {
   }
 
   if (opts.targetType && opts.targetType !== 'package' && opts.targetType !== 'file') {
-    throw new Error(
-      `Invalid --target-type: "${opts.targetType}". Expected "package" or "file".`
-    );
+    throw new Error(`Invalid --target-type: "${opts.targetType}". Expected "package" or "file".`);
   }
 }
 
@@ -506,7 +495,8 @@ function formatPackageStats(statsResult: PackageStatsResult): void {
   console.log('  ' + '-'.repeat(meta.locAvailable ? 72 : 66));
 
   for (const pkg of packages) {
-    const locStr = meta.locAvailable && pkg.loc !== undefined ? `  ${String(pkg.loc).padStart(6)}` : '';
+    const locStr =
+      meta.locAvailable && pkg.loc !== undefined ? `  ${String(pkg.loc).padStart(6)}` : '';
     console.log(
       `  ${pkg.package.padEnd(40)} ${String(pkg.fileCount).padStart(6)} ${String(pkg.entityCount).padStart(8)} ${String(pkg.methodCount).padStart(8)}${locStr}`
     );
@@ -550,7 +540,9 @@ function formatTestPatterns(result: TestPatternsResult): void {
   }
 }
 
-function formatTestIssues(issues: Array<{ severity: string; type: string; message: string; file?: string }>): void {
+function formatTestIssues(
+  issues: Array<{ severity: string; type: string; message: string; file?: string }>
+): void {
   if (issues.length === 0) {
     console.log('No test quality issues found.');
     return;
@@ -566,7 +558,9 @@ function formatTestMetrics(metrics: Record<string, unknown>): void {
   console.log('Test Metrics:\n');
   for (const [key, value] of Object.entries(metrics)) {
     if (typeof value === 'number') {
-      console.log(`  ${key}: ${typeof value === 'number' && !Number.isInteger(value) ? (value as number).toFixed(3) : value}`);
+      console.log(
+        `  ${key}: ${typeof value === 'number' && !Number.isInteger(value) ? value.toFixed(3) : value}`
+      );
     } else if (typeof value === 'object' && value !== null) {
       console.log(`  ${key}:`);
       for (const [k2, v2] of Object.entries(value as Record<string, unknown>)) {
@@ -578,9 +572,7 @@ function formatTestMetrics(metrics: Record<string, unknown>): void {
   }
 }
 
-function formatEntityCoverage(
-  coverage: ReturnType<QueryEngine['getEntityCoverage']>
-): void {
+function formatEntityCoverage(coverage: ReturnType<QueryEngine['getEntityCoverage']>): void {
   if (!coverage.found) {
     console.log(`Entity "${coverage.entityId}" not found in test analysis data.`);
     return;
@@ -612,16 +604,22 @@ function formatChangeContext(result: ChangeContextResult): void {
   console.log(`\n  Churn — added: ${churn.addedLines}, deleted: ${churn.deletedLines}`);
 
   const risk = result.risk;
-  console.log(`\n  Risk: ${risk.riskLevel} (score: ${risk.riskScore.toFixed(3)}, top factor: ${risk.topFactor})`);
+  console.log(
+    `\n  Risk: ${risk.riskLevel} (score: ${risk.riskScore.toFixed(3)}, top factor: ${risk.topFactor})`
+  );
 
   if (result.topCochangeNeighbors.length > 0) {
     console.log('\n  Top co-change neighbors:');
     for (const n of result.topCochangeNeighbors) {
-      console.log(`    ${n.target} (strength: ${n.strength.toFixed(3)}, joint changes: ${n.jointChangeCount})`);
+      console.log(
+        `    ${n.target} (strength: ${n.strength.toFixed(3)}, joint changes: ${n.jointChangeCount})`
+      );
     }
   }
 
-  console.log(`\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`);
+  console.log(
+    `\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`
+  );
 }
 
 function formatCochange(result: CochangeResult): void {
@@ -634,7 +632,9 @@ function formatCochange(result: CochangeResult): void {
       console.log(`    strength: ${n.strength.toFixed(3)}, joint changes: ${n.jointChangeCount}`);
     }
   }
-  console.log(`\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`);
+  console.log(
+    `\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`
+  );
   console.log(`  Note: ${result.limitation}`);
 }
 
@@ -654,7 +654,9 @@ function formatChangeRisk(result: ChangeRiskResult): void {
 
 function formatOwnership(result: OwnershipResult): void {
   console.log(`Ownership: ${result.target} (${result.targetType})\n`);
-  console.log(`  Primary owner: ${result.primaryOwner} (${(result.primaryOwnerShare * 100).toFixed(1)}%)`);
+  console.log(
+    `  Primary owner: ${result.primaryOwner} (${(result.primaryOwnerShare * 100).toFixed(1)}%)`
+  );
   console.log(`  Active maintainers: ${result.activeMaintainers}`);
   console.log(`  Bus factor: ${result.busFactor}`);
   if (result.contributors.length > 0) {
@@ -663,5 +665,7 @@ function formatOwnership(result: OwnershipResult): void {
       console.log(`    ${c.email}: ${c.commitCount} commits (${(c.share * 100).toFixed(1)}%)`);
     }
   }
-  console.log(`\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`);
+  console.log(
+    `\n  Analyzed: last ${result.analyzedWindow.sinceDays} days, ${result.analyzedWindow.totalCommits} commits`
+  );
 }

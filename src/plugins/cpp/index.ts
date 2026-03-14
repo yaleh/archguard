@@ -201,7 +201,8 @@ export class CppPlugin implements ILanguagePlugin {
     // Framework detection
     const frameworks: string[] = [];
     if (/#include\s*[<"]gtest\/gtest/.test(code)) frameworks.push('gtest');
-    if (/#include\s*[<"]catch2\//.test(code) || /CATCH_CONFIG_MAIN/.test(code)) frameworks.push('catch2');
+    if (/#include\s*[<"]catch2\//.test(code) || /CATCH_CONFIG_MAIN/.test(code))
+      frameworks.push('catch2');
     if (/#include\s*[<"]doctest\.h/.test(code)) frameworks.push('doctest');
     if (frameworks.length === 0) frameworks.push('assert'); // custom main-based
 
@@ -249,7 +250,11 @@ export class CppPlugin implements ILanguagePlugin {
       }
       // If no named functions found but has main(), treat the whole file as one test
       if (testCases.length === 0 && /\bint\s+main\s*\(/.test(code)) {
-        testCases.push({ name: path.basename(filePath, path.extname(filePath)), assertionCount: totalAssertions, isSkipped: false });
+        testCases.push({
+          name: path.basename(filePath, path.extname(filePath)),
+          assertionCount: totalAssertions,
+          isSkipped: false,
+        });
       }
     }
 

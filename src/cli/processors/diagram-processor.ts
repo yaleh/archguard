@@ -328,5 +328,4 @@ export class DiagramProcessor {
   ): Promise<void> {
     return generateTestCoverageHeatmap(analysis, archJson, outputDir);
   }
-
 }

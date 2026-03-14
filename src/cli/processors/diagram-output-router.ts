@@ -166,7 +166,7 @@ export class DiagramOutputRouter {
    * The returned object shares all other fields with the input (shallow copy).
    */
   private injectModuleGraphRelations(archJSON: ArchJSON): ArchJSON {
-    const moduleGraph = archJSON.extensions!.tsAnalysis!.moduleGraph!;
+    const moduleGraph = archJSON.extensions.tsAnalysis.moduleGraph;
     const relations: Relation[] = moduleGraph.edges.map((edge) => {
       const source = this.resolveModuleNodeToPackageId(edge.from);
       const target = this.resolveModuleNodeToPackageId(edge.to);

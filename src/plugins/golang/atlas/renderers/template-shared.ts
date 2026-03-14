@@ -89,9 +89,9 @@ export function buildPackageTree(packages: string[]): PkgTreeNode[] {
   for (const prefix of allPrefixes) {
     const parent = parentOf(prefix);
     if (parent && nodeMap.has(parent)) {
-      nodeMap.get(parent)!.children.push(nodeMap.get(prefix)!);
+      nodeMap.get(parent).children.push(nodeMap.get(prefix));
     } else {
-      roots.push(nodeMap.get(prefix)!);
+      roots.push(nodeMap.get(prefix));
     }
   }
 
@@ -145,9 +145,9 @@ export function buildGroupTree(nodes: Array<{ id: string; name: string }>): {
   for (const prefix of validPrefixes) {
     const parent = parentGroupFor(prefix);
     if (parent && nodeObjects.has(parent)) {
-      nodeObjects.get(parent)!.children.push(nodeObjects.get(prefix)!);
+      nodeObjects.get(parent).children.push(nodeObjects.get(prefix));
     } else {
-      roots.push(nodeObjects.get(prefix)!);
+      roots.push(nodeObjects.get(prefix));
     }
   }
 
@@ -155,7 +155,7 @@ export function buildGroupTree(nodes: Array<{ id: string; name: string }>): {
   for (const node of nodes) {
     const group = deepestGroupFor(node.name);
     if (group && nodeObjects.has(group)) {
-      nodeObjects.get(group)!.nodeIds.push(node.id);
+      nodeObjects.get(group).nodeIds.push(node.id);
       grouped.add(node.id);
     }
   }
@@ -197,7 +197,7 @@ export function renderGroupNodes(
       : group.nodeIds;
 
     for (const nodeId of sortedIds) {
-      const node = nodeMap.get(nodeId)!;
+      const node = nodeMap.get(nodeId);
       const style = cycleNodeIds.has(node.id) ? ':::cycle' : `:::${node.type}`;
       out += `${indent}  ${sanitizeId(node.id)}["${node.name}"]${style}\n`;
     }

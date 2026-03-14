@@ -18,7 +18,7 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   const nodesByPkg = new Map<string, CapabilityNode[]>();
   for (const node of graph.nodes) {
     if (!nodesByPkg.has(node.package)) nodesByPkg.set(node.package, []);
-    nodesByPkg.get(node.package)!.push(node);
+    nodesByPkg.get(node.package).push(node);
   }
 
   const pkgRoots = buildPackageTree(Array.from(nodesByPkg.keys()));
@@ -26,7 +26,11 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   const capDepthMap = new Map<string, number>();
   let hasHotspotNode = false;
 
-  const renderCapNode = (treeNode: { pkg: string; isVirtual: boolean; children: any[] }, indent: string, depth: number): void => {
+  const renderCapNode = (
+    treeNode: { pkg: string; isVirtual: boolean; children: any[] },
+    indent: string,
+    depth: number
+  ): void => {
     const sgId = createSubgraphId(treeNode.pkg, usedSubgraphIds);
     capDepthMap.set(sgId, depth);
     output += `${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;

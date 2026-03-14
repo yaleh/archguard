@@ -146,7 +146,7 @@ describe('loadPathAliases — JSONC comment stripping', () => {
     writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
     const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
     expect(result).not.toBeUndefined();
-    expect(result!.paths['@/*']).toEqual(['src/*']);
+    expect(result.paths['@/*']).toEqual(['src/*']);
   });
 
   it('parses tsconfig.json with block comments', () => {
@@ -161,7 +161,7 @@ describe('loadPathAliases — JSONC comment stripping', () => {
     writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
     const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
     expect(result).not.toBeUndefined();
-    expect(result!.paths['@/*']).toEqual(['src/*']);
+    expect(result.paths['@/*']).toEqual(['src/*']);
   });
 
   it('returns undefined for a file with no compilerOptions paths or baseUrl (with comments)', () => {
@@ -204,8 +204,8 @@ describe('loadPathAliases — JSONC comment stripping', () => {
     writeFileSync(path.join(tmpDir, 'tsconfig.json'), content, 'utf8');
     const result = loadPathAliases(path.join(tmpDir, 'tsconfig.json'));
     expect(result).not.toBeUndefined();
-    expect(result!.paths['@/*']).toEqual(['src/*']);
-    expect(result!.paths['@/utils/*']).toEqual(['src/utils/*']);
-    expect(result!.paths['@/core/*']).toEqual(['src/core/*']);
+    expect(result.paths['@/*']).toEqual(['src/*']);
+    expect(result.paths['@/utils/*']).toEqual(['src/utils/*']);
+    expect(result.paths['@/core/*']).toEqual(['src/core/*']);
   });
 });

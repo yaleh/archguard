@@ -11,8 +11,20 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('corrects inheritance target when parent is in a different package', () => {
     const entities: Entity[] = [
-      { id: 'com.example.llama.LlamaModel', name: 'LlamaModel', type: 'class', visibility: 'public', members: [] },
-      { id: 'com.example.gemma.GemmaModel', name: 'GemmaModel', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.llama.LlamaModel',
+        name: 'LlamaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.gemma.GemmaModel',
+        name: 'GemmaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -31,8 +43,20 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('leaves same-package inheritance unchanged when target is already correct', () => {
     const entities: Entity[] = [
-      { id: 'com.example.pkg.Parent', name: 'Parent', type: 'class', visibility: 'public', members: [] },
-      { id: 'com.example.pkg.Child', name: 'Child', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.pkg.Parent',
+        name: 'Parent',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.pkg.Child',
+        name: 'Child',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -50,7 +74,13 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('leaves external (JDK/library) inheritance targets unchanged', () => {
     const entities: Entity[] = [
-      { id: 'com.example.MyList', name: 'MyList', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.MyList',
+        name: 'MyList',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -68,7 +98,13 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('does not alter dependency relations (only inheritance/implementation)', () => {
     const entities: Entity[] = [
-      { id: 'com.example.b.Service', name: 'Service', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.b.Service',
+        name: 'Service',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -87,8 +123,20 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('reconciles implementation relations across packages', () => {
     const entities: Entity[] = [
-      { id: 'com.example.api.Repository', name: 'Repository', type: 'interface', visibility: 'public', members: [] },
-      { id: 'com.example.impl.UserService', name: 'UserService', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.api.Repository',
+        name: 'Repository',
+        type: 'interface',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.impl.UserService',
+        name: 'UserService',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -106,8 +154,20 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('updates the relation id when correcting the target', () => {
     const entities: Entity[] = [
-      { id: 'com.example.llama.LlamaModel', name: 'LlamaModel', type: 'class', visibility: 'public', members: [] },
-      { id: 'com.example.gemma.GemmaModel', name: 'GemmaModel', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.llama.LlamaModel',
+        name: 'LlamaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.gemma.GemmaModel',
+        name: 'GemmaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {
@@ -127,7 +187,13 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
 
   it('does not mutate the original relations array', () => {
     const entities: Entity[] = [
-      { id: 'com.example.llama.LlamaModel', name: 'LlamaModel', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.llama.LlamaModel',
+        name: 'LlamaModel',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const original: Relation[] = [
       {
@@ -148,9 +214,27 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
   it('handles multi-level inheritance chain across three packages', () => {
     // A extends B, B extends C — all in different packages
     const entities: Entity[] = [
-      { id: 'com.example.a.ClassA', name: 'ClassA', type: 'class', visibility: 'public', members: [] },
-      { id: 'com.example.b.ClassB', name: 'ClassB', type: 'class', visibility: 'public', members: [] },
-      { id: 'com.example.c.ClassC', name: 'ClassC', type: 'class', visibility: 'public', members: [] },
+      {
+        id: 'com.example.a.ClassA',
+        name: 'ClassA',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.b.ClassB',
+        name: 'ClassB',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
+      {
+        id: 'com.example.c.ClassC',
+        name: 'ClassC',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+      },
     ];
     const relations: Relation[] = [
       {

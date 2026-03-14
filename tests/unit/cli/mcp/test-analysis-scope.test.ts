@@ -67,7 +67,11 @@ const sampleAnalysis: TestAnalysis = {
     },
   ],
   coverageMap: [
-    { sourceEntityId: 'entity-1', coveredByTestIds: ['tests/unit/foo.test.ts'], coverageScore: 0.9 },
+    {
+      sourceEntityId: 'entity-1',
+      coveredByTestIds: ['tests/unit/foo.test.ts'],
+      coverageScore: 0.9,
+    },
   ],
   issues: [],
   metrics: {
@@ -172,8 +176,26 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
       generatedAt: '2026-01-01T00:00:00Z',
       globalScopeKey: 'global-scope',
       scopes: [
-        { key: 'src-scope', label: 'src (typescript)', language: 'typescript', kind: 'parsed', sources: ['/project/src'], entityCount: 5, relationCount: 2, hasAtlasExtension: false },
-        { key: 'global-scope', label: 'global (typescript)', language: 'typescript', kind: 'derived', sources: ['/project'], entityCount: 20, relationCount: 10, hasAtlasExtension: false },
+        {
+          key: 'src-scope',
+          label: 'src (typescript)',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: ['/project/src'],
+          entityCount: 5,
+          relationCount: 2,
+          hasAtlasExtension: false,
+        },
+        {
+          key: 'global-scope',
+          label: 'global (typescript)',
+          language: 'typescript',
+          kind: 'derived',
+          sources: ['/project'],
+          entityCount: 20,
+          relationCount: 10,
+          hasAtlasExtension: false,
+        },
       ],
     });
   });
@@ -181,7 +203,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
   it('archguard_detect_test_patterns returns diagnostic when 0 test files', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBeDefined();
@@ -193,7 +215,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
   it('archguard_detect_test_patterns diagnostic includes available scopes', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     // Should mention at least one scope key
@@ -204,7 +226,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
   it('archguard_get_test_metrics returns diagnostic when 0 test files', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBeDefined();
@@ -215,7 +237,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
   it('archguard_get_test_issues returns diagnostic when 0 test files', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBeDefined();
@@ -226,7 +248,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
   it('diagnostic mentions --include-tests flag', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     const diagText = parsed.diagnosis.join(' ');
@@ -246,7 +268,7 @@ describe('38D — scope parameter threading', () => {
   it('archguard_detect_test_patterns threads scope to loadEngine', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/project');
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     await cb({ scope: 'global-scope' });
     expect(loadEngineMock).toHaveBeenCalledWith(
       expect.stringContaining('.archguard'),
@@ -257,18 +279,15 @@ describe('38D — scope parameter threading', () => {
   it('archguard_get_test_metrics threads scope to loadEngine', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/project');
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     await cb({ scope: 'src-scope' });
-    expect(loadEngineMock).toHaveBeenCalledWith(
-      expect.stringContaining('.archguard'),
-      'src-scope'
-    );
+    expect(loadEngineMock).toHaveBeenCalledWith(expect.stringContaining('.archguard'), 'src-scope');
   });
 
   it('archguard_get_test_issues threads scope to loadEngine', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/project');
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     await cb({ scope: 'global-scope' });
     expect(loadEngineMock).toHaveBeenCalledWith(
       expect.stringContaining('.archguard'),
@@ -279,7 +298,7 @@ describe('38D — scope parameter threading', () => {
   it('archguard_get_test_metrics uses no scope when omitted', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/project');
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     await cb({});
     // called with archDir and undefined (no scope key)
     const calls = loadEngineMock.mock.calls;
@@ -300,7 +319,7 @@ describe('38D — normal response when test data exists', () => {
   it('archguard_detect_test_patterns returns frameworks when data present', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     // Normal response — no error field
@@ -312,7 +331,7 @@ describe('38D — normal response when test data exists', () => {
   it('archguard_get_test_metrics returns metrics when data present', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBeUndefined();
@@ -322,7 +341,7 @@ describe('38D — normal response when test data exists', () => {
   it('archguard_get_test_issues returns issues when data present', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     // issues is an array, not an error object
@@ -343,7 +362,7 @@ describe('38D — diagnostic fallback when readManifest fails', () => {
   it('archguard_get_test_metrics still returns diagnostic even if manifest unreadable', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBeDefined();

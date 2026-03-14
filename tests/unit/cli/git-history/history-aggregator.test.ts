@@ -44,8 +44,8 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-03', [{ path: 'src/bar.ts', added: 2 }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
-    const bar = metrics.find((m) => m.path === 'src/bar.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
+    const bar = metrics.find((m) => m.path === 'src/bar.ts');
     expect(foo.commitCount).toBe(2);
     expect(bar.commitCount).toBe(1);
   });
@@ -57,7 +57,7 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.authorCount).toBe(2);
   });
 
@@ -68,7 +68,7 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.primaryOwner).toBe('bob@x.com');
   });
 
@@ -81,18 +81,20 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a5', 'carol@x.com', '2024-01-05', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     // alice=2, bob=2, carol=1 → max owner is alice or bob with 2/5 = 0.4
     expect(foo.primaryOwnerShare).toBeCloseTo(0.4, 5);
   });
 
   it('sums added and deleted lines', () => {
     const commits: CommitRecord[] = [
-      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts', added: 10, deleted: 3 }]),
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [
+        { path: 'src/foo.ts', added: 10, deleted: 3 },
+      ]),
       makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts', added: 5, deleted: 2 }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.addedLines).toBe(15);
     expect(foo.deletedLines).toBe(5);
   });
@@ -104,7 +106,7 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-02', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.activeDays).toBe(2);
   });
 
@@ -115,9 +117,9 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-01', [{ path: 'index.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const srcFile = metrics.find((m) => m.path === 'src/utils/helper.ts')!;
-    const testFile = metrics.find((m) => m.path === 'tests/foo.test.ts')!;
-    const rootFile = metrics.find((m) => m.path === 'index.ts')!;
+    const srcFile = metrics.find((m) => m.path === 'src/utils/helper.ts');
+    const testFile = metrics.find((m) => m.path === 'tests/foo.test.ts');
+    const rootFile = metrics.find((m) => m.path === 'index.ts');
     expect(srcFile.packagePath).toBe('src');
     expect(testFile.packagePath).toBe('tests');
     expect(rootFile.packagePath).toBe('.');
@@ -130,7 +132,7 @@ describe('aggregateFileMetrics', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.lastChangedAt).toBe('2024-01-05');
   });
 
@@ -147,18 +149,12 @@ describe('aggregateFileMetrics', () => {
 describe('buildCochangeIndex', () => {
   it('co-change strength is 1.0 when files always change together', () => {
     const commits: CommitRecord[] = [
-      makeCommit('a1', 'alice@x.com', '2024-01-01', [
-        { path: 'src/a.ts' },
-        { path: 'src/b.ts' },
-      ]),
-      makeCommit('a2', 'alice@x.com', '2024-01-02', [
-        { path: 'src/a.ts' },
-        { path: 'src/b.ts' },
-      ]),
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/a.ts' }, { path: 'src/b.ts' }]),
+      makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/a.ts' }, { path: 'src/b.ts' }]),
     ];
     const index = buildCochangeIndex(commits);
-    const aNeighbors = index.get('src/a.ts')!;
-    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts')!;
+    const aNeighbors = index.get('src/a.ts');
+    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts');
     // jaccard: 2 / (2 + 2 - 2) = 1.0
     expect(bEdge.strength).toBeCloseTo(1.0, 5);
   });
@@ -172,8 +168,8 @@ describe('buildCochangeIndex', () => {
     // a: 2 commits, b: 2 commits, joint: 1
     // jaccard = 1 / (2 + 2 - 1) = 1/3
     const index = buildCochangeIndex(commits);
-    const aNeighbors = index.get('src/a.ts')!;
-    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts')!;
+    const aNeighbors = index.get('src/a.ts');
+    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts');
     expect(bEdge.strength).toBeCloseTo(1 / 3, 5);
   });
 
@@ -184,8 +180,8 @@ describe('buildCochangeIndex', () => {
     ];
     // a has 2 commits, joint with b = 1 → windowCoverage from a's perspective = 1/2
     const index = buildCochangeIndex(commits);
-    const aNeighbors = index.get('src/a.ts')!;
-    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts')!;
+    const aNeighbors = index.get('src/a.ts');
+    const bEdge = aNeighbors.find((e) => e.target === 'src/b.ts');
     expect(bEdge.windowCoverage).toBeCloseTo(0.5, 5);
   });
 
@@ -193,20 +189,15 @@ describe('buildCochangeIndex', () => {
     // Create 15 files that all change with 'src/hub.ts'
     const filePaths = Array.from({ length: 15 }, (_, i) => `src/f${i}.ts`);
     const files = [{ path: 'src/hub.ts' }, ...filePaths.map((p) => ({ path: p }))];
-    const commits: CommitRecord[] = [
-      makeCommit('a1', 'alice@x.com', '2024-01-01', files),
-    ];
+    const commits: CommitRecord[] = [makeCommit('a1', 'alice@x.com', '2024-01-01', files)];
     const index = buildCochangeIndex(commits, 10);
-    const hubNeighbors = index.get('src/hub.ts')!;
+    const hubNeighbors = index.get('src/hub.ts');
     expect(hubNeighbors.length).toBeLessThanOrEqual(10);
   });
 
   it('does not include self as co-change neighbor', () => {
     const commits: CommitRecord[] = [
-      makeCommit('a1', 'alice@x.com', '2024-01-01', [
-        { path: 'src/a.ts' },
-        { path: 'src/b.ts' },
-      ]),
+      makeCommit('a1', 'alice@x.com', '2024-01-01', [{ path: 'src/a.ts' }, { path: 'src/b.ts' }]),
     ];
     const index = buildCochangeIndex(commits);
     const aNeighbors = index.get('src/a.ts') ?? [];
@@ -243,8 +234,8 @@ describe('computeRiskFactors', () => {
       makeCommit('l1', 'alice@x.com', '2024-01-01', [{ path: 'src/cold.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const hot = metrics.find((m) => m.path === 'src/hot.ts')!;
-    const cold = metrics.find((m) => m.path === 'src/cold.ts')!;
+    const hot = metrics.find((m) => m.path === 'src/hot.ts');
+    const cold = metrics.find((m) => m.path === 'src/cold.ts');
     expect(hot.riskFactors.churn).toBeGreaterThan(cold.riskFactors.churn);
   });
 
@@ -255,7 +246,7 @@ describe('computeRiskFactors', () => {
       makeCommit('a2', 'alice@x.com', '2024-01-02', [{ path: 'src/owned.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const owned = metrics.find((m) => m.path === 'src/owned.ts')!;
+    const owned = metrics.find((m) => m.path === 'src/owned.ts');
     expect(owned.riskFactors.ownerConcentration).toBeCloseTo(0, 5);
   });
 
@@ -267,7 +258,7 @@ describe('computeRiskFactors', () => {
       makeCommit('a4', 'dave@x.com', '2024-01-04', [{ path: 'src/shared.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const shared = metrics.find((m) => m.path === 'src/shared.ts')!;
+    const shared = metrics.find((m) => m.path === 'src/shared.ts');
     // 4 authors each with 1/4 share → ownerConcentration = 1 - 0.25 = 0.75
     expect(shared.riskFactors.ownerConcentration).toBeGreaterThan(0.5);
   });
@@ -278,12 +269,24 @@ describe('computeRiskFactors', () => {
     const recentDate = '2024-02-05'; // 5 days ago → recency = 1
     const oldDate = '2024-01-01'; // 40 days ago → recency = 0.4
     const recent = computeRiskFactors(
-      { commitCount: 1, authorCount: 1, primaryOwnerShare: 1, lastChangedAt: recentDate, topCochangeNeighbors: [] },
+      {
+        commitCount: 1,
+        authorCount: 1,
+        primaryOwnerShare: 1,
+        lastChangedAt: recentDate,
+        topCochangeNeighbors: [],
+      },
       { maxCommitCount: 5, maxAuthorCount: 2 },
       today
     );
     const old = computeRiskFactors(
-      { commitCount: 1, authorCount: 1, primaryOwnerShare: 1, lastChangedAt: oldDate, topCochangeNeighbors: [] },
+      {
+        commitCount: 1,
+        authorCount: 1,
+        primaryOwnerShare: 1,
+        lastChangedAt: oldDate,
+        topCochangeNeighbors: [],
+      },
       { maxCommitCount: 5, maxAuthorCount: 2 },
       today
     );
@@ -295,7 +298,13 @@ describe('computeRiskFactors', () => {
     const today = new Date('2024-06-01');
     const veryOldDate = '2024-01-01'; // ~152 days ago
     const risk = computeRiskFactors(
-      { commitCount: 1, authorCount: 1, primaryOwnerShare: 1, lastChangedAt: veryOldDate, topCochangeNeighbors: [] },
+      {
+        commitCount: 1,
+        authorCount: 1,
+        primaryOwnerShare: 1,
+        lastChangedAt: veryOldDate,
+        topCochangeNeighbors: [],
+      },
       { maxCommitCount: 5, maxAuthorCount: 2 },
       today
     );
@@ -311,7 +320,13 @@ describe('computeRiskFactors', () => {
     }));
     const today = new Date('2024-02-10');
     const risk = computeRiskFactors(
-      { commitCount: 1, authorCount: 1, primaryOwnerShare: 1, lastChangedAt: '2024-02-09', topCochangeNeighbors: neighbors },
+      {
+        commitCount: 1,
+        authorCount: 1,
+        primaryOwnerShare: 1,
+        lastChangedAt: '2024-02-09',
+        topCochangeNeighbors: neighbors,
+      },
       { maxCommitCount: 5, maxAuthorCount: 2 },
       today
     );
@@ -349,7 +364,7 @@ describe('aggregateFileMetrics — commitShas', () => {
       makeCommit('sha3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.commitShas).toBeDefined();
     expect(foo.commitShas?.sort()).toEqual(['sha1', 'sha2', 'sha3'].sort());
   });
@@ -360,7 +375,7 @@ describe('aggregateFileMetrics — commitShas', () => {
       makeCommit('sha1', 'alice@x.com', '2024-01-01', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     // SHA dedup: only 1 unique sha
     expect(foo.commitShas).toHaveLength(1);
   });
@@ -377,7 +392,7 @@ describe('aggregatePackageMetrics — SHA dedup for commit counts', () => {
     ];
     const fileMetrics = aggregateFileMetrics(commits);
     const packageMetrics = aggregatePackageMetrics(fileMetrics);
-    const src = packageMetrics.find((p) => p.path === 'src')!;
+    const src = packageMetrics.find((p) => p.path === 'src');
     expect(src.commitCount).toBe(3);
   });
 });
@@ -394,7 +409,7 @@ describe('aggregateFileMetrics — topContributors', () => {
       makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
     expect(foo.topContributors).toBeDefined();
     expect(foo.topContributors).toHaveLength(2);
   });
@@ -406,11 +421,11 @@ describe('aggregateFileMetrics — topContributors', () => {
       makeCommit('a3', 'alice@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
-    expect(foo.topContributors![0].email).toBe('alice@x.com');
-    expect(foo.topContributors![0].commitCount).toBe(2);
-    expect(foo.topContributors![1].email).toBe('bob@x.com');
-    expect(foo.topContributors![1].commitCount).toBe(1);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
+    expect(foo.topContributors[0].email).toBe('alice@x.com');
+    expect(foo.topContributors[0].commitCount).toBe(2);
+    expect(foo.topContributors[1].email).toBe('bob@x.com');
+    expect(foo.topContributors[1].commitCount).toBe(1);
   });
 
   it('topContributors share sums to ~1.0', () => {
@@ -420,8 +435,8 @@ describe('aggregateFileMetrics — topContributors', () => {
       makeCommit('a3', 'bob@x.com', '2024-01-03', [{ path: 'src/foo.ts' }]),
     ];
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
-    const totalShare = foo.topContributors!.reduce((s, c) => s + c.share, 0);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
+    const totalShare = foo.topContributors.reduce((s, c) => s + c.share, 0);
     expect(totalShare).toBeCloseTo(1.0, 5);
   });
 
@@ -432,8 +447,8 @@ describe('aggregateFileMetrics — topContributors', () => {
       ])
     );
     const metrics = aggregateFileMetrics(commits);
-    const foo = metrics.find((m) => m.path === 'src/foo.ts')!;
-    expect(foo.topContributors!.length).toBeLessThanOrEqual(5);
+    const foo = metrics.find((m) => m.path === 'src/foo.ts');
+    expect(foo.topContributors.length).toBeLessThanOrEqual(5);
   });
 });
 
@@ -446,10 +461,10 @@ describe('aggregatePackageMetrics — topContributors', () => {
     ];
     const fileMetrics = aggregateFileMetrics(commits);
     const packageMetrics = aggregatePackageMetrics(fileMetrics);
-    const src = packageMetrics.find((p) => p.path === 'src')!;
+    const src = packageMetrics.find((p) => p.path === 'src');
     expect(src.topContributors).toBeDefined();
-    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com');
-    const bob = src.topContributors!.find((c) => c.email === 'bob@x.com');
+    const alice = src.topContributors.find((c) => c.email === 'alice@x.com');
+    const bob = src.topContributors.find((c) => c.email === 'bob@x.com');
     expect(alice).toBeDefined();
     expect(bob).toBeDefined();
   });
@@ -470,8 +485,8 @@ describe('aggregatePackageMetrics — contributor share correctness', () => {
     );
     const fileMetrics = aggregateFileMetrics(commits);
     const packageMetrics = aggregatePackageMetrics(fileMetrics);
-    const src = packageMetrics.find((p) => p.path === 'src')!;
-    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
+    const src = packageMetrics.find((p) => p.path === 'src');
+    const alice = src.topContributors.find((c) => c.email === 'alice@x.com');
     expect(alice).toBeDefined();
     expect(alice.share).toBeLessThanOrEqual(1.0);
     expect(alice.commitCount).toBe(10);
@@ -481,17 +496,21 @@ describe('aggregatePackageMetrics — contributor share correctness', () => {
     // Alice makes commits sha0-sha4 on foo.ts, Bob makes sha5-sha9 on bar.ts.
     // Package has 10 unique SHAs → each contributor has 5 → share = 0.5.
     const aliceCommits: CommitRecord[] = Array.from({ length: 5 }, (_, i) =>
-      makeCommit(`sha${i}`, 'alice@x.com', `2024-01-${String(i + 1).padStart(2, '0')}`, [{ path: 'src/foo.ts' }])
+      makeCommit(`sha${i}`, 'alice@x.com', `2024-01-${String(i + 1).padStart(2, '0')}`, [
+        { path: 'src/foo.ts' },
+      ])
     );
     const bobCommits: CommitRecord[] = Array.from({ length: 5 }, (_, i) =>
-      makeCommit(`sha${i + 5}`, 'bob@x.com', `2024-01-${String(i + 6).padStart(2, '0')}`, [{ path: 'src/bar.ts' }])
+      makeCommit(`sha${i + 5}`, 'bob@x.com', `2024-01-${String(i + 6).padStart(2, '0')}`, [
+        { path: 'src/bar.ts' },
+      ])
     );
     const fileMetrics = aggregateFileMetrics([...aliceCommits, ...bobCommits]);
     const packageMetrics = aggregatePackageMetrics(fileMetrics);
-    const src = packageMetrics.find((p) => p.path === 'src')!;
+    const src = packageMetrics.find((p) => p.path === 'src');
     expect(src.commitCount).toBe(10);
-    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
-    const bob = src.topContributors!.find((c) => c.email === 'bob@x.com')!;
+    const alice = src.topContributors.find((c) => c.email === 'alice@x.com');
+    const bob = src.topContributors.find((c) => c.email === 'bob@x.com');
     expect(alice).toBeDefined();
     expect(bob).toBeDefined();
     expect(alice.share).toBeCloseTo(0.5, 5);
@@ -507,8 +526,8 @@ describe('aggregatePackageMetrics — contributor share correctness', () => {
     );
     const fileMetrics = aggregateFileMetrics(commits);
     const packageMetrics = aggregatePackageMetrics(fileMetrics);
-    const src = packageMetrics.find((p) => p.path === 'src')!;
-    const alice = src.topContributors!.find((c) => c.email === 'alice@x.com')!;
+    const src = packageMetrics.find((p) => p.path === 'src');
+    const alice = src.topContributors.find((c) => c.email === 'alice@x.com');
     // sole contributor: share should be exactly 1.0, and ownerConcentration (bus factor risk) should be low
     expect(alice.share).toBeCloseTo(1.0, 5);
     // ownerConcentration = 1 - primaryOwnerShare; sole owner → ownerConcentration ≈ 0

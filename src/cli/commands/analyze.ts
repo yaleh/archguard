@@ -124,8 +124,14 @@ export function createAnalyzeCommand(): Command {
 
       // ========== Test Analysis ==========
       .option('--include-tests', 'Include test system analysis in output')
-      .option('--tests-only', 'Run only test analysis (uses cached ArchJSON if available, skips diagram generation)')
-      .option('--include-git', 'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/)')
+      .option(
+        '--tests-only',
+        'Run only test analysis (uses cached ArchJSON if available, skips diagram generation)'
+      )
+      .option(
+        '--include-git',
+        'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/)'
+      )
 
       // ========== Go Architecture Atlas ==========
       .option(

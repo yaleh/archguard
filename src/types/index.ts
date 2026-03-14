@@ -38,7 +38,11 @@ export type {
   TestMetrics,
   PackageCoverage,
 } from './extensions/index.js';
-export { GO_ATLAS_EXTENSION_VERSION, TEST_ANALYSIS_VERSION, TS_ANALYSIS_EXTENSION_VERSION } from './extensions/index.js';
+export {
+  GO_ATLAS_EXTENSION_VERSION,
+  TEST_ANALYSIS_VERSION,
+  TS_ANALYSIS_EXTENSION_VERSION,
+} from './extensions/index.js';
 
 /**
  * Supported programming languages

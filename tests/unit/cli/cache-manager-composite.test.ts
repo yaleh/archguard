@@ -72,7 +72,10 @@ describe('CacheManager composite key', () => {
     it('invalidates cache when patternConfig changes', () => {
       const files = ['tests/foo.test.ts', 'tests/bar.test.ts'];
       const keyWithDefault = cache.getCompositeKey(files, 'auto');
-      const keyWithCustom = cache.getCompositeKey(files, JSON.stringify({ assertionPatterns: ['expect'] }));
+      const keyWithCustom = cache.getCompositeKey(
+        files,
+        JSON.stringify({ assertionPatterns: ['expect'] })
+      );
       expect(keyWithDefault).not.toBe(keyWithCustom);
     });
   });

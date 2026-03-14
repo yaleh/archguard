@@ -87,7 +87,7 @@ describe('GoPlugin - dependency edges via parseToRawData pipeline', () => {
 
     const depRel = relations.find((r) => r.type === 'dependency');
     expect(depRel).toBeDefined();
-    expect(depRel!.source).toBe('internal/api');
-    expect(depRel!.target).toBe('internal/svc');
+    expect(depRel.source).toBe('internal/api');
+    expect(depRel.target).toBe('internal/svc');
   });
 });

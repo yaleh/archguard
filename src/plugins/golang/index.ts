@@ -316,7 +316,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
         ...excludePatterns,
         '**/vendor/**',
         '**/testdata/**',
-        ...(atlasConfig?.excludeTests ?? true ? ['**/*_test.go'] : []),
+        ...((atlasConfig?.excludeTests ?? true) ? ['**/*_test.go'] : []),
       ],
       extractBodies: functionBodyStrategy !== 'none',
       selectiveExtraction: functionBodyStrategy === 'selective',
@@ -343,7 +343,11 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       this.goplsClient
     );
     const entities = this.mapper.mapEntities(rawData.packages);
-    const relations = this.mapper.mapRelations(rawData.packages, implementations, rawData.moduleName);
+    const relations = this.mapper.mapRelations(
+      rawData.packages,
+      implementations,
+      rawData.moduleName
+    );
     const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
       entities,
       relations,

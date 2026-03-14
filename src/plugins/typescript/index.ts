@@ -161,7 +161,11 @@ export class TypeScriptPlugin implements ILanguagePlugin {
    * Source files are added once here; both TypeScriptParser and
    * TypeScriptAnalyzer reuse this Project to avoid a second parse pass.
    */
-  private initTsProject(workspaceRoot: string, pattern: string, excludePatterns?: string[]): Project {
+  private initTsProject(
+    workspaceRoot: string,
+    pattern: string,
+    excludePatterns?: string[]
+  ): Project {
     // Inject only baseUrl + paths from the nearest tsconfig.json so that path
     // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
     // (e.g. moduleResolution) are intentionally NOT inherited to preserve ts-morph's

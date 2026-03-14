@@ -70,8 +70,8 @@ export async function loadHistoryData(archguardDir: string): Promise<LoadedHisto
   if (manifest.version === '1' || manifest.packageDepth == null) {
     console.warn(
       '[archguard] Warning: Git history artifacts were generated with an older version of ArchGuard ' +
-      '(missing packageDepth). Consider re-running archguard_analyze_git to get sub-package depth support, ' +
-      'SHA dedup, and contributor breakdowns. Falling back to depth=1.'
+        '(missing packageDepth). Consider re-running archguard_analyze_git to get sub-package depth support, ' +
+        'SHA dedup, and contributor breakdowns. Falling back to depth=1.'
     );
   }
 
@@ -80,9 +80,7 @@ export async function loadHistoryData(archguardDir: string): Promise<LoadedHisto
     packageMetricsArray.map((p) => [p.path, p])
   );
 
-  const fileMetrics = new Map<string, FileHistoryMetrics>(
-    fileMetricsArray.map((f) => [f.path, f])
-  );
+  const fileMetrics = new Map<string, FileHistoryMetrics>(fileMetricsArray.map((f) => [f.path, f]));
 
   return { manifest, packageMetrics, fileMetrics };
 }

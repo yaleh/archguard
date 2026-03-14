@@ -161,7 +161,9 @@ describe('WorkerPoolFactory', () => {
 
     it('passes transparentBackground from globalConfig.mermaid', async () => {
       mockCpus(4);
-      const config = makeGlobalConfig({ mermaid: { theme: 'default', transparentBackground: true } });
+      const config = makeGlobalConfig({
+        mermaid: { theme: 'default', transparentBackground: true },
+      });
       factory.create([makeDiagram()], config);
 
       const [, opts] = (MermaidRenderWorkerPool as any).mock.calls[0];

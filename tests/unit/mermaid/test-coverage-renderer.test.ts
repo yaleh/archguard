@@ -36,7 +36,9 @@ describe('TestCoverageRenderer', () => {
   it('places entity with score >= 0.7 in "Well Tested" bucket', () => {
     const renderer = new TestCoverageRenderer();
     const analysis = makeAnalysis({
-      coverageMap: [{ sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.85 }],
+      coverageMap: [
+        { sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.85 },
+      ],
     });
     const archJson = makeArchJson([
       { id: 'entity-1', name: 'FooService', type: 'class', sourceLocation: { file: 'src/foo.ts' } },
@@ -49,7 +51,9 @@ describe('TestCoverageRenderer', () => {
   it('places entity with score 0.3-0.7 in "Partially Tested" bucket', () => {
     const renderer = new TestCoverageRenderer();
     const analysis = makeAnalysis({
-      coverageMap: [{ sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.5 }],
+      coverageMap: [
+        { sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.5 },
+      ],
     });
     const archJson = makeArchJson([
       { id: 'entity-1', name: 'BarService', type: 'class', sourceLocation: { file: 'src/bar.ts' } },
@@ -73,17 +77,19 @@ describe('TestCoverageRenderer', () => {
   it('shows "Debug Only" bucket when debug test files exist', () => {
     const renderer = new TestCoverageRenderer();
     const analysis = makeAnalysis({
-      testFiles: [{
-        id: 'debug.test.ts',
-        filePath: '/workspace/debug.test.ts',
-        frameworks: ['vitest'],
-        testType: 'debug',
-        testCaseCount: 1,
-        assertionCount: 0,
-        skipCount: 0,
-        assertionDensity: 0,
-        coveredEntityIds: [],
-      }],
+      testFiles: [
+        {
+          id: 'debug.test.ts',
+          filePath: '/workspace/debug.test.ts',
+          frameworks: ['vitest'],
+          testType: 'debug',
+          testCaseCount: 1,
+          assertionCount: 0,
+          skipCount: 0,
+          assertionDensity: 0,
+          coveredEntityIds: [],
+        },
+      ],
     });
     const result = renderer.render(analysis, makeArchJson());
     expect(result).toContain('Debug Only');
@@ -119,17 +125,19 @@ describe('TestCoverageRenderer', () => {
   it('does not show Debug Only bucket when no debug test files exist', () => {
     const renderer = new TestCoverageRenderer();
     const analysis = makeAnalysis({
-      testFiles: [{
-        id: 'normal.test.ts',
-        filePath: '/workspace/normal.test.ts',
-        frameworks: ['vitest'],
-        testType: 'unit',
-        testCaseCount: 5,
-        assertionCount: 10,
-        skipCount: 0,
-        assertionDensity: 2,
-        coveredEntityIds: [],
-      }],
+      testFiles: [
+        {
+          id: 'normal.test.ts',
+          filePath: '/workspace/normal.test.ts',
+          frameworks: ['vitest'],
+          testType: 'unit',
+          testCaseCount: 5,
+          assertionCount: 10,
+          skipCount: 0,
+          assertionDensity: 2,
+          coveredEntityIds: [],
+        },
+      ],
     });
     const result = renderer.render(analysis, makeArchJson());
     expect(result).not.toContain('Debug Only');

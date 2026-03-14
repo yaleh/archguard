@@ -331,9 +331,7 @@ describe('registerAnalyzeTool', () => {
           workDir: '/project/.archguard',
           outputDir: '/project/.archguard/output',
         },
-        diagrams: [
-          { name: 'architecture', level: 'package', sources: [], language: 'typescript' },
-        ],
+        diagrams: [{ name: 'architecture', level: 'package', sources: [], language: 'typescript' }],
         results: [],
         queryScopesPersisted: 1,
         persistedScopeKeys: ['abc123'],

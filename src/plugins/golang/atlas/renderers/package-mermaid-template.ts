@@ -11,7 +11,9 @@ import {
 
 export function renderPackageGraph(graph: PackageGraph): string {
   let output = FLOWCHART_INIT + 'flowchart TB\n';
-  const cycleNodeIds = new Set(graph.cycles.filter((c) => c.packages.length > 1).flatMap((c) => c.packages));
+  const cycleNodeIds = new Set(
+    graph.cycles.filter((c) => c.packages.length > 1).flatMap((c) => c.packages)
+  );
   const activeTypes = new Set(graph.nodes.map((n) => n.type as string));
   if (cycleNodeIds.size > 0) activeTypes.add('cycle');
 

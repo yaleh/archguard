@@ -971,7 +971,12 @@ describe('ArchJSONAggregator', () => {
         ],
         relations: [
           // source is a 3-level module ID, not a class ID
-          { id: 'r1', source: 'lmdeploy.pytorch.models', target: 'lmdeploy.turbomind.engine', type: 'dependency' },
+          {
+            id: 'r1',
+            source: 'lmdeploy.pytorch.models',
+            target: 'lmdeploy.turbomind.engine',
+            type: 'dependency',
+          },
         ],
         extensions: {},
       };
@@ -1030,7 +1035,12 @@ describe('ArchJSONAggregator', () => {
           },
         ],
         relations: [
-          { id: 'r1', source: 'src/parser/TypeScriptParser', target: 'src/cli/AnalyzeCommand', type: 'dependency' },
+          {
+            id: 'r1',
+            source: 'src/parser/TypeScriptParser',
+            target: 'src/cli/AnalyzeCommand',
+            type: 'dependency',
+          },
         ],
         extensions: {},
       };

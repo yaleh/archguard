@@ -75,10 +75,7 @@ export class PythonImportExtractor {
    * This fixes the case where sources are at /project/mypackage/ so known IDs
    * have no "mypackage." prefix, but code uses `from mypackage.sub import X`.
    */
-  private resolveToKnown(
-    absoluteModule: string,
-    knownModuleIds: Set<string>
-  ): string | null {
+  private resolveToKnown(absoluteModule: string, knownModuleIds: Set<string>): string | null {
     const parts = absoluteModule.split('.');
     // Try all left-prefix strip levels (0 = no strip, 1 = strip first component, etc.)
     for (let leftStrip = 0; leftStrip < parts.length; leftStrip++) {

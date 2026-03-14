@@ -3,7 +3,11 @@ import type { TestFileInfo, CoverageLink } from '@/types/extensions/test-analysi
 import type { ArchJSON } from '@/types/index.js';
 
 export class TestCoverageMapper {
-  buildCoverageMap(testFiles: TestFileInfo[], archJson: ArchJSON, workspaceRoot: string): CoverageLink[] {
+  buildCoverageMap(
+    testFiles: TestFileInfo[],
+    archJson: ArchJSON,
+    workspaceRoot: string
+  ): CoverageLink[] {
     // Initialise with ALL entities at score 0 so callers can query uncovered entities
     const linkMap = new Map<string, { testIds: Set<string>; score: number }>(
       archJson.entities.map((e) => [e.id, { testIds: new Set<string>(), score: 0 }])
@@ -15,7 +19,7 @@ export class TestCoverageMapper {
         if (!linkMap.has(entityId)) {
           linkMap.set(entityId, { testIds: new Set(), score: 0 });
         }
-        const link = linkMap.get(entityId)!;
+        const link = linkMap.get(entityId);
         link.testIds.add(testFile.id);
         link.score = Math.min(1.0, link.score + 0.85 * 0.5);
       }
@@ -39,10 +43,7 @@ export class TestCoverageMapper {
         testNameWithoutExt = testBasename.replace(/_test\.go$/, '');
       }
       // C++ convention: test-foo.cpp → foo, test_foo.cpp → foo, foo_test.cpp → foo
-      if (
-        testNameWithoutExt === testBasename &&
-        /\.(?:cpp|cc|cxx)$/.test(testBasename)
-      ) {
+      if (testNameWithoutExt === testBasename && /\.(?:cpp|cc|cxx)$/.test(testBasename)) {
         testNameWithoutExt = testBasename
           .replace(/\.(?:cpp|cc|cxx)$/, '')
           .replace(/^test[-_]/, '')
@@ -64,7 +65,7 @@ export class TestCoverageMapper {
             if (!linkMap.has(entity.id)) {
               linkMap.set(entity.id, { testIds: new Set(), score: 0 });
             }
-            const link = linkMap.get(entity.id)!;
+            const link = linkMap.get(entity.id);
             link.testIds.add(testFile.id);
             link.score = Math.min(1.0, link.score + 0.35 * 0.5);
           }
@@ -84,7 +85,7 @@ export class TestCoverageMapper {
           if (!linkMap.has(entity.id)) {
             linkMap.set(entity.id, { testIds: new Set(), score: 0 });
           }
-          const link = linkMap.get(entity.id)!;
+          const link = linkMap.get(entity.id);
           link.testIds.add(testFile.id);
           link.score = Math.min(1.0, link.score + 0.6 * 0.5);
         }

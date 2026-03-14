@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { TEST_ANALYSIS_VERSION } from '@/types/index.js';
 import type { ArchJSONExtensions } from '@/types/extensions/index.js';
-import type { TestAnalysis, TestFileInfo, TestIssue, TestPatternConfig } from '@/types/extensions/test-analysis.js';
+import type {
+  TestAnalysis,
+  TestFileInfo,
+  TestIssue,
+  TestPatternConfig,
+} from '@/types/extensions/test-analysis.js';
 import type { ILanguagePlugin } from '@/core/interfaces/language-plugin.js';
 
 describe('TEST_ANALYSIS_VERSION', () => {
@@ -25,14 +30,26 @@ describe('TestFileInfo', () => {
     expect(t).toBe('debug');
   });
   it('testType union includes all 6 values', () => {
-    const types: Array<TestFileInfo['testType']> = ['unit', 'integration', 'e2e', 'performance', 'debug', 'unknown'];
+    const types: Array<TestFileInfo['testType']> = [
+      'unit',
+      'integration',
+      'e2e',
+      'performance',
+      'debug',
+      'unknown',
+    ];
     expect(types).toHaveLength(6);
   });
 });
 
 describe('TestIssue', () => {
   it('type union covers all four issue types', () => {
-    const types: Array<TestIssue['type']> = ['zero_assertion', 'orphan_test', 'skip_accumulation', 'assertion_poverty'];
+    const types: Array<TestIssue['type']> = [
+      'zero_assertion',
+      'orphan_test',
+      'skip_accumulation',
+      'assertion_poverty',
+    ];
     expect(types).toHaveLength(4);
   });
 });

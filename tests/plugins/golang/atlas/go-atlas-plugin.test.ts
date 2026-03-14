@@ -107,7 +107,9 @@ describe('GoAtlasPlugin', () => {
     });
 
     it('no atlas config → atlas mode by default (result has extensions.goAtlas)', async () => {
-      const parseToRawData = vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
+      const parseToRawData = vi
+        .spyOn(plugin as any, 'parseToRawData')
+        .mockResolvedValue(minimalRawData);
 
       const result = await plugin.parseProject('/test', {
         workspaceRoot: '/test',

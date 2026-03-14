@@ -267,9 +267,9 @@ export class PythonPlugin implements ILanguagePlugin {
 
       // --- Configurable patterns ---
       const assertionPatterns = patternConfig?.assertionPatterns ?? [
-        'assert ',        // Python assert statement: assert x == y
-        'assert(',        // assert(condition) call style
-        '.assert',        // self.assertX (unittest), torch.testing.assert_close, np.testing.assert_allclose
+        'assert ', // Python assert statement: assert x == y
+        'assert(', // assert(condition) call style
+        '.assert', // self.assertX (unittest), torch.testing.assert_close, np.testing.assert_allclose
       ];
       const skipPatterns = patternConfig?.skipPatterns ?? [
         '@pytest.mark.skip',

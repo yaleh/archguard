@@ -380,7 +380,7 @@ describe('ValidatedMermaidGenerator - Python module-level relation sources (Phas
       relations: [
         {
           id: 'rel1',
-          source: 'myapp.utils',       // module prefix of myapp.utils.Helper
+          source: 'myapp.utils', // module prefix of myapp.utils.Helper
           target: 'myapp.views',
           type: 'dependency',
         },

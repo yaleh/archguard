@@ -112,11 +112,13 @@ function makeProgress(): ProgressReporterLike {
 }
 
 function makePool(): InstanceType<typeof MermaidRenderWorkerPool> {
-  return (MermaidRenderWorkerPool as any).mock.results[0]?.value ?? {
-    start: vi.fn(),
-    terminate: vi.fn(),
-    render: vi.fn().mockResolvedValue({ success: true, svg: '<svg/>' }),
-  };
+  return (
+    (MermaidRenderWorkerPool as any).mock.results[0]?.value ?? {
+      start: vi.fn(),
+      terminate: vi.fn(),
+      render: vi.fn().mockResolvedValue({ success: true, svg: '<svg/>' }),
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -152,11 +154,22 @@ function setupBaseMocks(archJson: ArchJSON = makeArchJson(1, 0)) {
   return archJson;
 }
 
-function makeRunner(globalConfig = makeGlobalConfig(), progress = makeProgress(), parallelProgress?: any) {
+function makeRunner(
+  globalConfig = makeGlobalConfig(),
+  progress = makeProgress(),
+  parallelProgress?: any
+) {
   const aggregator = new ArchJSONAggregator() as any;
   const metricsCalc = new MetricsCalculator() as any;
   const router = new DiagramOutputRouter(globalConfig, progress) as any;
-  return new DiagramPipelineRunner(aggregator, metricsCalc, router, globalConfig, progress, parallelProgress);
+  return new DiagramPipelineRunner(
+    aggregator,
+    metricsCalc,
+    router,
+    globalConfig,
+    progress,
+    parallelProgress
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -214,11 +227,7 @@ describe('DiagramPipelineRunner', () => {
       const runner = makeRunner(makeGlobalConfig({ format: 'json' }));
       const pool = makePool();
 
-      const result = await runner.run(
-        makeDiagram({ format: 'json' }),
-        makeArchJson(),
-        pool
-      );
+      const result = await runner.run(makeDiagram({ format: 'json' }), makeArchJson(), pool);
 
       expect(result.success).toBe(true);
       expect(result.paths?.json).toBeDefined();
@@ -232,11 +241,7 @@ describe('DiagramPipelineRunner', () => {
       const runner = makeRunner(makeGlobalConfig({ format: 'mermaid' }));
       const pool = makePool();
 
-      const result = await runner.run(
-        makeDiagram({ format: 'mermaid' }),
-        makeArchJson(),
-        pool
-      );
+      const result = await runner.run(makeDiagram({ format: 'mermaid' }), makeArchJson(), pool);
 
       expect(result.success).toBe(true);
       expect(result.paths?.mmd).toBeDefined();
@@ -252,9 +257,27 @@ describe('DiagramPipelineRunner', () => {
             version: '1.0',
             moduleGraph: {
               nodes: [
-                { id: 'a', name: 'a', type: 'internal', fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
-                { id: 'b', name: 'b', type: 'internal', fileCount: 3, stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 } },
-                { id: 'c', name: 'c', type: 'external', fileCount: 0, stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 } },
+                {
+                  id: 'a',
+                  name: 'a',
+                  type: 'internal',
+                  fileCount: 2,
+                  stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'b',
+                  name: 'b',
+                  type: 'internal',
+                  fileCount: 3,
+                  stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'c',
+                  name: 'c',
+                  type: 'external',
+                  fileCount: 0,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
               ],
               edges: [
                 { from: 'a', to: 'b', strength: 5, importedNames: [] },

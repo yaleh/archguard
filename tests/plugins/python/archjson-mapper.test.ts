@@ -452,7 +452,7 @@ describe('ArchJsonMapper', () => {
         classes: [],
         functions: [],
         imports: [
-          { module: 'myapp.helpers' },  // project-internal import (matches module ID)
+          { module: 'myapp.helpers' }, // project-internal import (matches module ID)
         ],
       };
 

@@ -291,7 +291,11 @@ export class JavaPlugin implements ILanguagePlugin {
     return false;
   }
 
-  extractTestStructure(filePath: string, code: string, _patternConfig?: TestPatternConfig): RawTestFile | null {
+  extractTestStructure(
+    filePath: string,
+    code: string,
+    _patternConfig?: TestPatternConfig
+  ): RawTestFile | null {
     // Detect frameworks
     const hasJUnit5 = /import\s+org\.junit\.jupiter\.api\b/.test(code);
     const hasJUnit4 = !hasJUnit5 && /import\s+org\.junit\b/.test(code);
@@ -325,7 +329,8 @@ export class JavaPlugin implements ILanguagePlugin {
           // Another annotation — keep pending
         } else if (/\b(\w+)\s*\(/.test(trimmed)) {
           // Method declaration
-          const nameMatch = /(?:(?:public|private|protected|static|final|void|\w+)\s+)+(\w+)\s*\(/.exec(trimmed);
+          const nameMatch =
+            /(?:(?:public|private|protected|static|final|void|\w+)\s+)+(\w+)\s*\(/.exec(trimmed);
           if (nameMatch) {
             testCases.push({ name: nameMatch[1], isSkipped: pendingSkip, assertionCount: 0 });
           }
@@ -367,13 +372,25 @@ export class JavaPlugin implements ILanguagePlugin {
   private extractJavaImports(code: string): string[] {
     // Known external package prefixes — anything matching these is skipped.
     const EXTERNAL_PREFIXES = [
-      'java.', 'javax.', 'jakarta.', 'sun.', 'com.sun.',
-      'org.junit.', 'org.testng.', 'org.assertj.',
-      'org.openjdk.jmh.', 'org.mockito.',
-      'org.slf4j.', 'ch.qos.',
-      'com.fasterxml.', 'com.google.',
-      'io.grpc.', 'io.netty.', 'io.vertx.',
-      'org.apache.', 'org.springframework.',
+      'java.',
+      'javax.',
+      'jakarta.',
+      'sun.',
+      'com.sun.',
+      'org.junit.',
+      'org.testng.',
+      'org.assertj.',
+      'org.openjdk.jmh.',
+      'org.mockito.',
+      'org.slf4j.',
+      'ch.qos.',
+      'com.fasterxml.',
+      'com.google.',
+      'io.grpc.',
+      'io.netty.',
+      'io.vertx.',
+      'org.apache.',
+      'org.springframework.',
     ];
 
     const imported: string[] = [];

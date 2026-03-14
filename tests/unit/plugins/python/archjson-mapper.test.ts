@@ -30,7 +30,9 @@ function makeImport(module: string, items?: Array<{ name: string }>): PythonRawI
   return { module, items };
 }
 
-function makeClass(overrides: Partial<import('@/plugins/python/types.js').PythonRawClass> = {}): import('@/plugins/python/types.js').PythonRawClass {
+function makeClass(
+  overrides: Partial<import('@/plugins/python/types.js').PythonRawClass> = {}
+): import('@/plugins/python/types.js').PythonRawClass {
   return {
     name: 'MyClass',
     moduleName: 'mymodule',
@@ -90,7 +92,7 @@ describe('ArchJsonMapper – entity ID (P0.1)', () => {
     const result = mapper.mapModules([module], BASE_WS);
     const entity = result.entities.find((e) => e.name === 'User');
     expect(entity).toBeDefined();
-    expect(entity!.id).toBe('myapp.models.user.User');
+    expect(entity.id).toBe('myapp.models.user.User');
   });
 
   it('uses dotted module path for a function entity', () => {
@@ -114,7 +116,7 @@ describe('ArchJsonMapper – entity ID (P0.1)', () => {
     const result = mapper.mapModules([module], BASE_WS);
     const entity = result.entities.find((e) => e.name === 'my_func');
     expect(entity).toBeDefined();
-    expect(entity!.id).toBe('myapp.utils.my_func');
+    expect(entity.id).toBe('myapp.utils.my_func');
   });
 
   it('handles __init__.py by using parent directory name', () => {
@@ -141,7 +143,7 @@ describe('ArchJsonMapper – entity ID (P0.1)', () => {
     const entity = result.entities.find((e) => e.name === 'Engine');
     expect(entity).toBeDefined();
     // __init__.py → use parent dir: myapp.engine.Engine
-    expect(entity!.id).toBe('myapp.engine.Engine');
+    expect(entity.id).toBe('myapp.engine.Engine');
   });
 
   it('avoids ID collision: two classes named "Config" in different modules get distinct IDs', () => {
@@ -218,7 +220,7 @@ describe('ArchJsonMapper – entity ID (P0.1)', () => {
     const entity = result.entities.find((e) => e.name === 'Helper');
     expect(entity).toBeDefined();
     // Falls back to moduleName.ClassName
-    expect(entity!.id).toBe('utils.Helper');
+    expect(entity.id).toBe('utils.Helper');
   });
 });
 
@@ -249,11 +251,11 @@ describe('ArchJsonMapper – decorator double-counting (P0.3)', () => {
     expect(entity).toBeDefined();
 
     // Decorator must appear at entity level
-    expect(entity!.decorators).toHaveLength(1);
-    expect(entity!.decorators![0].name).toBe('triton.jit');
+    expect(entity.decorators).toHaveLength(1);
+    expect(entity.decorators[0].name).toBe('triton.jit');
 
     // Member must NOT carry the decorator (no double-count)
-    const member = entity!.members![0];
+    const member = entity.members[0];
     expect(member.decorators).toBeUndefined();
   });
 
@@ -276,8 +278,8 @@ describe('ArchJsonMapper – decorator double-counting (P0.3)', () => {
 
     const result = mapper.mapModules([module]);
     const entity = result.entities.find((e) => e.name === 'plain_func');
-    expect(entity!.decorators).toBeUndefined();
-    expect(entity!.members![0].decorators).toBeUndefined();
+    expect(entity.decorators).toBeUndefined();
+    expect(entity.members[0].decorators).toBeUndefined();
   });
 
   it('class method decorators are still preserved on the member', () => {
@@ -314,9 +316,9 @@ describe('ArchJsonMapper – decorator double-counting (P0.3)', () => {
 
     const result = mapper.mapModules([module]);
     const entity = result.entities.find((e) => e.name === 'MyModel');
-    const method = entity!.members!.find((m) => m.name === 'forward');
-    expect(method!.decorators).toHaveLength(1);
-    expect(method!.decorators![0].name).toBe('torch.no_grad');
+    const method = entity.members.find((m) => m.name === 'forward');
+    expect(method.decorators).toHaveLength(1);
+    expect(method.decorators[0].name).toBe('torch.no_grad');
   });
 });
 
@@ -328,7 +330,11 @@ describe('ArchJsonMapper – dependency relation source ID (Fix 3)', () => {
   it('source ID uses dotted path (not module: prefix) when workspaceRoot is provided', () => {
     const mapper = new ArchJsonMapper();
     // Use a project-internal import so the relation is emitted (stdlib filtered)
-    const target = makeModule({ name: 'helpers', filePath: `${BASE_WS}/myapp/helpers.py`, imports: [] });
+    const target = makeModule({
+      name: 'helpers',
+      filePath: `${BASE_WS}/myapp/helpers.py`,
+      imports: [],
+    });
     const module = makeModule({
       filePath: `${BASE_WS}/myapp/utils.py`,
       imports: [makeImport('myapp.helpers')],
@@ -337,8 +343,8 @@ describe('ArchJsonMapper – dependency relation source ID (Fix 3)', () => {
     const result = mapper.mapModules([target, module], BASE_WS);
     const rel = result.relations.find((r) => r.type === 'dependency');
     expect(rel).toBeDefined();
-    expect(rel!.source).not.toMatch(/^module:/);
-    expect(rel!.source).toBe('myapp.utils');
+    expect(rel.source).not.toMatch(/^module:/);
+    expect(rel.source).toBe('myapp.utils');
   });
 
   it('source ID falls back to bare moduleName (no module: prefix) without workspaceRoot', () => {
@@ -359,7 +365,11 @@ describe('ArchJsonMapper – dependency relation source ID (Fix 3)', () => {
 
   it('__init__.py module source ID resolves to parent directory dotted path', () => {
     const mapper = new ArchJsonMapper();
-    const target = makeModule({ name: 'helpers', filePath: `${BASE_WS}/myapp/helpers.py`, imports: [] });
+    const target = makeModule({
+      name: 'helpers',
+      filePath: `${BASE_WS}/myapp/helpers.py`,
+      imports: [],
+    });
     const module = makeModule({
       name: '__init__',
       filePath: `${BASE_WS}/myapp/engine/__init__.py`,
@@ -368,7 +378,7 @@ describe('ArchJsonMapper – dependency relation source ID (Fix 3)', () => {
 
     const result = mapper.mapModules([target, module], BASE_WS);
     const rel = result.relations.find((r) => r.type === 'dependency');
-    expect(rel!.source).toBe('myapp.engine');
+    expect(rel.source).toBe('myapp.engine');
   });
 
   it('no relation source starts with "module:" prefix', () => {
@@ -414,69 +424,105 @@ describe('mapModules — dependency relations (plan-35)', () => {
   const WS = '/project';
 
   it('1: emits dependency relation for absolute import of a known module', () => {
-    const base = makeModule({ name: 'base', filePath: `${WS}/lmdeploy/models/base.py`, imports: [] });
+    const base = makeModule({
+      name: 'base',
+      filePath: `${WS}/lmdeploy/models/base.py`,
+      imports: [],
+    });
     const engine = makeModule({
       name: 'engine',
       filePath: `${WS}/lmdeploy/engine.py`,
       imports: [makeImport('lmdeploy.models.base')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([base, engine], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([base, engine], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].source).toBe('lmdeploy.engine');
     expect(deps[0].target).toBe('lmdeploy.models.base');
   });
 
   it('2: emits dependency relation for relative import .utils (same directory)', () => {
-    const utils = makeModule({ name: 'utils', filePath: `${WS}/lmdeploy/models/utils.py`, imports: [] });
+    const utils = makeModule({
+      name: 'utils',
+      filePath: `${WS}/lmdeploy/models/utils.py`,
+      imports: [],
+    });
     const base = makeModule({
       name: 'base',
       filePath: `${WS}/lmdeploy/models/base.py`,
       imports: [makeImport('.utils')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([utils, base], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([utils, base], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].source).toBe('lmdeploy.models.base');
     expect(deps[0].target).toBe('lmdeploy.models.utils');
   });
 
   it('3: emits dependency relation for relative import ..common (parent directory)', () => {
-    const common = makeModule({ name: 'common', filePath: `${WS}/lmdeploy/common.py`, imports: [] });
+    const common = makeModule({
+      name: 'common',
+      filePath: `${WS}/lmdeploy/common.py`,
+      imports: [],
+    });
     const base = makeModule({
       name: 'base',
       filePath: `${WS}/lmdeploy/models/base.py`,
       imports: [makeImport('..common')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([common, base], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([common, base], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].source).toBe('lmdeploy.models.base');
     expect(deps[0].target).toBe('lmdeploy.common');
   });
 
   it('4: excludes stdlib imports (not in module index)', () => {
-    const m = makeModule({ name: 'engine', filePath: `${WS}/lmdeploy/engine.py`, imports: [makeImport('os'), makeImport('sys')] });
-    const deps = new ArchJsonMapper().mapModules([m], WS).relations.filter((r) => r.type === 'dependency');
+    const m = makeModule({
+      name: 'engine',
+      filePath: `${WS}/lmdeploy/engine.py`,
+      imports: [makeImport('os'), makeImport('sys')],
+    });
+    const deps = new ArchJsonMapper()
+      .mapModules([m], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(0);
   });
 
   it('5: excludes third-party imports not in module index', () => {
-    const m = makeModule({ name: 'engine', filePath: `${WS}/lmdeploy/engine.py`, imports: [makeImport('torch'), makeImport('numpy')] });
-    const deps = new ArchJsonMapper().mapModules([m], WS).relations.filter((r) => r.type === 'dependency');
+    const m = makeModule({
+      name: 'engine',
+      filePath: `${WS}/lmdeploy/engine.py`,
+      imports: [makeImport('torch'), makeImport('numpy')],
+    });
+    const deps = new ArchJsonMapper()
+      .mapModules([m], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(0);
   });
 
   it('6: resolves import of __init__.py package module', () => {
     // lmdeploy/models/__init__.py → module ID "lmdeploy.models"
-    const init = makeModule({ name: '__init__', filePath: `${WS}/lmdeploy/models/__init__.py`, imports: [] });
+    const init = makeModule({
+      name: '__init__',
+      filePath: `${WS}/lmdeploy/models/__init__.py`,
+      imports: [],
+    });
     const engine = makeModule({
       name: 'engine',
       filePath: `${WS}/lmdeploy/engine.py`,
       imports: [makeImport('lmdeploy.models')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([init, engine], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([init, engine], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].target).toBe('lmdeploy.models');
   });
@@ -487,28 +533,46 @@ describe('mapModules — dependency relations (plan-35)', () => {
       filePath: `${WS}/lmdeploy/engine.py`,
       imports: [makeImport('lmdeploy.engine')],
     });
-    const deps = new ArchJsonMapper().mapModules([m], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([m], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(0);
   });
 
   it('8: deduplicates duplicate import entries for the same module', () => {
-    const base = makeModule({ name: 'base', filePath: `${WS}/lmdeploy/models/base.py`, imports: [] });
+    const base = makeModule({
+      name: 'base',
+      filePath: `${WS}/lmdeploy/models/base.py`,
+      imports: [],
+    });
     const engine = makeModule({
       name: 'engine',
       filePath: `${WS}/lmdeploy/engine.py`,
       imports: [makeImport('lmdeploy.models.base'), makeImport('lmdeploy.models.base')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([base, engine], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([base, engine], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
   });
 
   it('9: emits 2 relations for A→B→C chain', () => {
-    const a = makeModule({ name: 'a', filePath: `${WS}/lmdeploy/a.py`, imports: [makeImport('lmdeploy.b')] });
-    const b = makeModule({ name: 'b', filePath: `${WS}/lmdeploy/b.py`, imports: [makeImport('lmdeploy.c')] });
+    const a = makeModule({
+      name: 'a',
+      filePath: `${WS}/lmdeploy/a.py`,
+      imports: [makeImport('lmdeploy.b')],
+    });
+    const b = makeModule({
+      name: 'b',
+      filePath: `${WS}/lmdeploy/b.py`,
+      imports: [makeImport('lmdeploy.c')],
+    });
     const c = makeModule({ name: 'c', filePath: `${WS}/lmdeploy/c.py`, imports: [] });
 
-    const deps = new ArchJsonMapper().mapModules([a, b, c], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([a, b, c], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(2);
     const edges = deps.map((r) => `${r.source}->${r.target}`);
     expect(edges).toContain('lmdeploy.a->lmdeploy.b');
@@ -517,27 +581,41 @@ describe('mapModules — dependency relations (plan-35)', () => {
 
   it('10: emits no dependency relations when imports is empty', () => {
     const m = makeModule({ name: 'engine', filePath: `${WS}/lmdeploy/engine.py`, imports: [] });
-    const deps = new ArchJsonMapper().mapModules([m], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([m], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(0);
   });
 
   it('11: silently skips relative import when workspaceRoot is not provided', () => {
     const utils = makeModule({ name: 'utils', filePath: `${WS}/lmdeploy/utils.py`, imports: [] });
-    const base = makeModule({ name: 'base', filePath: `${WS}/lmdeploy/base.py`, imports: [makeImport('.utils')] });
+    const base = makeModule({
+      name: 'base',
+      filePath: `${WS}/lmdeploy/base.py`,
+      imports: [makeImport('.utils')],
+    });
     // No workspaceRoot → relative imports unresolvable
-    const deps = new ArchJsonMapper().mapModules([utils, base]).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([utils, base])
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(0);
   });
 
   it('12: resolves bare relative import "." to the package __init__.py', () => {
-    const init = makeModule({ name: '__init__', filePath: `${WS}/lmdeploy/models/__init__.py`, imports: [] });
+    const init = makeModule({
+      name: '__init__',
+      filePath: `${WS}/lmdeploy/models/__init__.py`,
+      imports: [],
+    });
     const base = makeModule({
       name: 'base',
       filePath: `${WS}/lmdeploy/models/base.py`,
       imports: [makeImport('.')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([init, base], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([init, base], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].target).toBe('lmdeploy.models');
   });
@@ -548,18 +626,20 @@ describe('mapModules — dependency relations (plan-35)', () => {
       name: 'child',
       filePath: `${WS}/lmdeploy/child.py`,
       imports: [makeImport('lmdeploy.base')],
-      classes: [{
-        name: 'Child',
-        moduleName: 'child',
-        baseClasses: ['Base'],
-        methods: [],
-        properties: [],
-        classAttributes: [],
-        decorators: [],
-        filePath: `${WS}/lmdeploy/child.py`,
-        startLine: 1,
-        endLine: 5,
-      }],
+      classes: [
+        {
+          name: 'Child',
+          moduleName: 'child',
+          baseClasses: ['Base'],
+          methods: [],
+          properties: [],
+          classAttributes: [],
+          decorators: [],
+          filePath: `${WS}/lmdeploy/child.py`,
+          startLine: 1,
+          endLine: 5,
+        },
+      ],
     });
 
     const result = new ArchJsonMapper().mapModules([base, child], WS);
@@ -570,14 +650,20 @@ describe('mapModules — dependency relations (plan-35)', () => {
   });
 
   it('14: strips " as alias" suffix before resolving aliased import', () => {
-    const base = makeModule({ name: 'base', filePath: `${WS}/lmdeploy/models/base.py`, imports: [] });
+    const base = makeModule({
+      name: 'base',
+      filePath: `${WS}/lmdeploy/models/base.py`,
+      imports: [],
+    });
     const consumer = makeModule({
       name: 'consumer',
       filePath: `${WS}/lmdeploy/consumer.py`,
       imports: [makeImport('lmdeploy.models.base as base')],
     });
 
-    const deps = new ArchJsonMapper().mapModules([base, consumer], WS).relations.filter((r) => r.type === 'dependency');
+    const deps = new ArchJsonMapper()
+      .mapModules([base, consumer], WS)
+      .relations.filter((r) => r.type === 'dependency');
     expect(deps).toHaveLength(1);
     expect(deps[0].target).toBe('lmdeploy.models.base');
   });
@@ -597,20 +683,20 @@ describe('mapModules — cross-package integration fixture (plan-35)', () => {
         name: 'engine',
         filePath: `${WS}/lmdeploy/engine.py`,
         imports: [
-          makeImport('lmdeploy.models.base'),  // absolute cross-package
-          makeImport('.utils'),                 // relative same-dir
-          makeImport('lmdeploy.common'),        // absolute sibling module
+          makeImport('lmdeploy.models.base'), // absolute cross-package
+          makeImport('.utils'), // relative same-dir
+          makeImport('lmdeploy.common'), // absolute sibling module
         ],
       }),
-      makeModule({ name: 'utils',  filePath: `${WS}/lmdeploy/utils.py`,  imports: [] }),
+      makeModule({ name: 'utils', filePath: `${WS}/lmdeploy/utils.py`, imports: [] }),
       makeModule({ name: 'common', filePath: `${WS}/lmdeploy/common.py`, imports: [] }),
       makeModule({ name: '__init__', filePath: `${WS}/lmdeploy/models/__init__.py`, imports: [] }),
       makeModule({
         name: 'base',
         filePath: `${WS}/lmdeploy/models/base.py`,
         imports: [
-          makeImport('lmdeploy.models'),  // resolves to __init__
-          makeImport('torch'),            // third-party — excluded
+          makeImport('lmdeploy.models'), // resolves to __init__
+          makeImport('torch'), // third-party — excluded
         ],
       }),
     ];
@@ -654,8 +740,18 @@ describe('ArchJsonMapper (Python) — mapClass classAttributes (Plan 43)', () =>
     const entity = result.entities[0];
     const fieldMembers = entity.members.filter((m) => m.type === 'field');
     expect(fieldMembers).toHaveLength(2);
-    expect(fieldMembers[0]).toMatchObject({ name: 'max_tokens', type: 'field', visibility: 'public', fieldType: 'int' });
-    expect(fieldMembers[1]).toMatchObject({ name: 'temperature', type: 'field', visibility: 'public', fieldType: 'float' });
+    expect(fieldMembers[0]).toMatchObject({
+      name: 'max_tokens',
+      type: 'field',
+      visibility: 'public',
+      fieldType: 'int',
+    });
+    expect(fieldMembers[1]).toMatchObject({
+      name: 'temperature',
+      type: 'field',
+      visibility: 'public',
+      fieldType: 'float',
+    });
   });
 
   it('sets visibility: private for _private attributes', () => {

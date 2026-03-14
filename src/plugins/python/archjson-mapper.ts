@@ -5,14 +5,7 @@
  */
 
 import path from 'path';
-import type {
-  ArchJSON,
-  Entity,
-  Member,
-  Relation,
-  Decorator,
-  Visibility,
-} from '@/types/index.js';
+import type { ArchJSON, Entity, Member, Relation, Decorator, Visibility } from '@/types/index.js';
 import type {
   PythonRawModule,
   PythonRawClass,
@@ -433,7 +426,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       return `${moduleName}.${name}`;
     }
     const rel = path.relative(workspaceRoot, filePath); // e.g. myapp/models/user.py
-    const withoutExt = rel.replace(/\.py$/, '');        // myapp/models/user
+    const withoutExt = rel.replace(/\.py$/, ''); // myapp/models/user
     // __init__ → use parent directory (myapp/engine/__init__ → myapp/engine)
     const normalised = withoutExt.replace(/(\/|^)__init__$/, '');
     const dotted = normalised.replace(/\//g, '.');

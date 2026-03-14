@@ -145,7 +145,8 @@ export function generateRelationLine(
   relation: Relation,
   entityIdToName: Map<string, string>
 ): string {
-  const resolve = (id: string): string => escapeId(normalizeEntityName(entityIdToName.get(id) ?? id));
+  const resolve = (id: string): string =>
+    escapeId(normalizeEntityName(entityIdToName.get(id) ?? id));
   const source = resolve(relation.source);
   const target = resolve(relation.target);
   switch (relation.type) {

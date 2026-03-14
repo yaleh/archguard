@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import type { ILanguagePlugin, RawTestFile, RawTestCase, PluginCapabilities } from '@/core/interfaces/language-plugin.js';
+import type {
+  ILanguagePlugin,
+  RawTestFile,
+  RawTestCase,
+  PluginCapabilities,
+} from '@/core/interfaces/language-plugin.js';
 
 describe('RawTestFile', () => {
   it('testTypeHint union does not include "debug"', () => {
     const hint: RawTestFile['testTypeHint'] = 'unknown';
-    expect(['unit','integration','e2e','performance','unknown']).toContain(hint);
+    expect(['unit', 'integration', 'e2e', 'performance', 'unknown']).toContain(hint);
   });
 });
 
@@ -16,8 +21,8 @@ describe('ILanguagePlugin optional test methods', () => {
       canHandle: () => false,
       dispose: async () => {},
       supportedLevels: [],
-      parseCode: () => ({} as any),
-      parseProject: async () => ({} as any),
+      parseCode: () => ({}) as any,
+      parseProject: async () => ({}) as any,
     };
     expect(minimal.isTestFile).toBeUndefined();
     expect(minimal.extractTestStructure).toBeUndefined();

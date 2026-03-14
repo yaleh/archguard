@@ -8,7 +8,12 @@
  * Stages 2.2 + 2.3 of Phase 2 (Query Layer).
  */
 
-import type { CochangeEdge, FileHistoryMetrics, PackageHistoryMetrics, RiskFactors } from '@/types/git-history.js';
+import type {
+  CochangeEdge,
+  FileHistoryMetrics,
+  PackageHistoryMetrics,
+  RiskFactors,
+} from '@/types/git-history.js';
 import type { LoadedHistoryData } from './history-loader.js';
 
 // ---------------------------------------------------------------------------
@@ -155,11 +160,7 @@ export class HistoryQuery {
   // getCochange
   // -------------------------------------------------------------------------
 
-  getCochange(
-    targetType: 'package' | 'file',
-    target: string,
-    topN: number = 10
-  ): CochangeResult {
+  getCochange(targetType: 'package' | 'file', target: string, topN: number = 10): CochangeResult {
     const m = this.getMetrics(targetType, target);
 
     // Sort by strength desc and slice to topN
@@ -261,8 +262,7 @@ export class HistoryQuery {
         cochangeBreadth: rf.cochangeBreadth,
         recency: `Recency factor: ${(rf.recency * 100).toFixed(0)}% (recent activity = higher risk)`,
       },
-      limitation:
-        'Risk score is a heuristic approximation based on git history patterns.',
+      limitation: 'Risk score is a heuristic approximation based on git history patterns.',
     };
   }
 
@@ -278,7 +278,8 @@ export class HistoryQuery {
 
     // Stale path warning: only applicable to file-type metrics with currentlyExists=false
     const stalePathWarning =
-      targetType === 'file' && (m as import('@/types/git-history.js').FileHistoryMetrics).currentlyExists === false
+      targetType === 'file' &&
+      (m as import('@/types/git-history.js').FileHistoryMetrics).currentlyExists === false
         ? 'This file path no longer exists in the working tree. It may have been renamed or deleted. History reflects the old path only.'
         : undefined;
 

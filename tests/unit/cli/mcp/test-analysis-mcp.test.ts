@@ -65,7 +65,11 @@ const sampleAnalysis: TestAnalysis = {
     },
   ],
   coverageMap: [
-    { sourceEntityId: 'entity-1', coveredByTestIds: ['tests/unit/foo.test.ts'], coverageScore: 0.9 },
+    {
+      sourceEntityId: 'entity-1',
+      coveredByTestIds: ['tests/unit/foo.test.ts'],
+      coverageScore: 0.9,
+    },
   ],
   issues: [
     {
@@ -145,7 +149,7 @@ describe('test analysis MCP tools — no analysis present', () => {
   it('archguard_get_test_issues returns NOT_ANALYZED_MSG', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     const result = await cb({});
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });
@@ -153,7 +157,7 @@ describe('test analysis MCP tools — no analysis present', () => {
   it('archguard_get_test_metrics returns NOT_ANALYZED_MSG', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });
@@ -163,7 +167,7 @@ describe('test analysis MCP tools — no analysis present', () => {
     loadEngineMock.mockRejectedValue(new Error('No query data found'));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.notes[0]).toContain('No prior test analysis found');
@@ -178,7 +182,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_issues returns all issues when no severity filter', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -188,7 +192,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_issues filters by severity', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
 
     const infoResult = await cb({ severity: 'info' });
     const infoParsed = JSON.parse(infoResult.content[0].text);
@@ -202,7 +206,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_metrics returns metrics', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.totalTestFiles).toBe(1);
@@ -212,7 +216,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_detect_test_patterns returns detected frameworks', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.detectedFrameworks.some((f: { name: string }) => f.name === 'vitest')).toBe(true);
@@ -222,7 +226,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_detect_test_patterns returns non-empty suggestedPatternConfig with assertionPatterns', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.suggestedPatternConfig).toBeDefined();
@@ -233,7 +237,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_detect_test_patterns returns assertionPatterns for junit4', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     loadEngineMock.mockResolvedValueOnce({
       hasTestAnalysis: () => true,
       getTestAnalysis: () => ({
@@ -246,7 +250,9 @@ describe('test analysis MCP tools — analysis present', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(Array.isArray(parsed.suggestedPatternConfig.assertionPatterns)).toBe(true);
     expect(parsed.suggestedPatternConfig.assertionPatterns.length).toBeGreaterThan(0);
-    expect(parsed.suggestedPatternConfig.assertionPatterns.some((p: string) => p.includes('assert'))).toBe(true);
+    expect(
+      parsed.suggestedPatternConfig.assertionPatterns.some((p: string) => p.includes('assert'))
+    ).toBe(true);
   });
 
   it('registers four test analysis tools', () => {
@@ -271,7 +277,7 @@ describe('test analysis MCP tools — analysis present', () => {
     } as any);
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_detect_test_patterns')!;
+    const cb = tools.get('archguard_detect_test_patterns');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     const patterns: string[] = parsed.suggestedPatternConfig.assertionPatterns ?? [];
@@ -283,7 +289,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_metrics accepts patternConfig without crashing', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
     // Should return valid JSON (cached data is fine; what matters is no crash/ignored param)
     expect(() => JSON.parse(result.content[0].text)).not.toThrow();
@@ -292,7 +298,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_issues accepts patternConfig without crashing', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_issues')!;
+    const cb = tools.get('archguard_get_test_issues');
     const result = await cb({ patternConfig: { assertionPatterns: ['.assert'] } });
     expect(() => JSON.parse(result.content[0].text)).not.toThrow();
   });
@@ -300,7 +306,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_metrics includes packageCoverage when includePackageBreakdown=true', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({ includePackageBreakdown: true });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.totalTestFiles).toBe(1);
@@ -310,7 +316,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_test_metrics omits packageCoverage when includePackageBreakdown is false/absent', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
 
     const withFalse = await cb({ includePackageBreakdown: false });
     const parsedFalse = JSON.parse(withFalse.content[0].text);
@@ -324,7 +330,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_entity_coverage returns coverage data for known entityId', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_entity_coverage')!;
+    const cb = tools.get('archguard_get_entity_coverage');
     const result = await cb({ entityId: 'entity-1' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.found).toBe(true);
@@ -337,7 +343,7 @@ describe('test analysis MCP tools — analysis present', () => {
   it('archguard_get_entity_coverage returns found:false for unknown entityId', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_entity_coverage')!;
+    const cb = tools.get('archguard_get_entity_coverage');
     const result = await cb({ entityId: 'nonexistent.Entity' });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.found).toBe(false);
@@ -352,7 +358,7 @@ describe('test analysis MCP tools — no analysis present (metrics)', () => {
   it('archguard_get_test_metrics returns NOT_ANALYZED_MSG when no analysis', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_test_metrics')!;
+    const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({ includePackageBreakdown: true });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });
@@ -366,7 +372,7 @@ describe('archguard_get_entity_coverage — no analysis present', () => {
   it('archguard_get_entity_coverage returns NOT_ANALYZED_MSG when analysis absent', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_entity_coverage')!;
+    const cb = tools.get('archguard_get_entity_coverage');
     const result = await cb({ entityId: 'entity-1' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });

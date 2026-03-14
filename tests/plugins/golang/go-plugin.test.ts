@@ -214,13 +214,13 @@ func (u User) GetName() string {
 
   describe('isTestFile', () => {
     it('returns true for _test.go files', () => {
-      expect(plugin.isTestFile!('foo_test.go')).toBe(true);
-      expect(plugin.isTestFile!('/abs/path/bar_test.go')).toBe(true);
+      expect(plugin.isTestFile('foo_test.go')).toBe(true);
+      expect(plugin.isTestFile('/abs/path/bar_test.go')).toBe(true);
     });
 
     it('returns false for regular .go files', () => {
-      expect(plugin.isTestFile!('foo.go')).toBe(false);
-      expect(plugin.isTestFile!('test_helper.go')).toBe(false);
+      expect(plugin.isTestFile('foo.go')).toBe(false);
+      expect(plugin.isTestFile('test_helper.go')).toBe(false);
     });
 
     it('declares testStructureExtraction capability', () => {
@@ -251,15 +251,15 @@ func TestBar(t *testing.T) {
 `;
 
     it('returns null for non-test files', () => {
-      expect(plugin.extractTestStructure!('foo.go', 'package main')).toBeNull();
+      expect(plugin.extractTestStructure('foo.go', 'package main')).toBeNull();
     });
 
     it('detects testify framework', () => {
-      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
+      const raw = plugin.extractTestStructure('foo_test.go', testifyFile);
       expect(raw).not.toBeNull();
-      expect(raw!.frameworks).toContain('testify');
+      expect(raw.frameworks).toContain('testify');
       // stdlib 'testing' is omitted when testify is detected (avoid duplicate attribution)
-      expect(raw!.frameworks).not.toContain('testing');
+      expect(raw.frameworks).not.toContain('testing');
     });
 
     it('falls back to stdlib testing framework when no testify', () => {
@@ -270,24 +270,24 @@ func TestPlain(t *testing.T) {
   t.Error("fail")
 }
 `;
-      const raw = plugin.extractTestStructure!('plain_test.go', stdlibCode);
-      expect(raw!.frameworks).toContain('testing');
-      expect(raw!.frameworks).not.toContain('testify');
+      const raw = plugin.extractTestStructure('plain_test.go', stdlibCode);
+      expect(raw.frameworks).toContain('testing');
+      expect(raw.frameworks).not.toContain('testify');
     });
 
     it('extracts test functions and counts assertions', () => {
-      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
-      expect(raw!.testCases).toHaveLength(2);
-      const foo = raw!.testCases.find((c) => c.name === 'TestFoo');
+      const raw = plugin.extractTestStructure('foo_test.go', testifyFile);
+      expect(raw.testCases).toHaveLength(2);
+      const foo = raw.testCases.find((c) => c.name === 'TestFoo');
       expect(foo).toBeDefined();
-      expect(foo!.assertionCount).toBeGreaterThan(0);
-      expect(foo!.isSkipped).toBe(false);
+      expect(foo.assertionCount).toBeGreaterThan(0);
+      expect(foo.isSkipped).toBe(false);
     });
 
     it('detects skipped tests', () => {
-      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
-      const bar = raw!.testCases.find((c) => c.name === 'TestBar');
-      expect(bar!.isSkipped).toBe(true);
+      const raw = plugin.extractTestStructure('foo_test.go', testifyFile);
+      const bar = raw.testCases.find((c) => c.name === 'TestBar');
+      expect(bar.isSkipped).toBe(true);
     });
 
     it('marks benchmark files as performance type', () => {
@@ -298,18 +298,18 @@ func BenchmarkFoo(b *testing.B) {
   for i := 0; i < b.N; i++ { doWork() }
 }
 `;
-      const raw = plugin.extractTestStructure!('bench_test.go', benchCode);
-      expect(raw!.testTypeHint).toBe('performance');
+      const raw = plugin.extractTestStructure('bench_test.go', benchCode);
+      expect(raw.testTypeHint).toBe('performance');
     });
 
     it('returns null when no test functions found', () => {
-      const raw = plugin.extractTestStructure!('foo_test.go', 'package mypkg\n\nfunc helper() {}');
+      const raw = plugin.extractTestStructure('foo_test.go', 'package mypkg\n\nfunc helper() {}');
       expect(raw).toBeNull();
     });
 
     it('sets unit testTypeHint for regular Test* functions', () => {
-      const raw = plugin.extractTestStructure!('foo_test.go', testifyFile);
-      expect(raw!.testTypeHint).toBe('unit');
+      const raw = plugin.extractTestStructure('foo_test.go', testifyFile);
+      expect(raw.testTypeHint).toBe('unit');
     });
 
     // Fix 2A: module-local imports must appear in importedSourceFiles
@@ -339,9 +339,11 @@ func TestFoo(t *testing.T) {
   assert.Equal(t, 1, 1)
 }
 `;
-        const raw = localPlugin.extractTestStructure!('service_test.go', code);
+        const raw = localPlugin.extractTestStructure('service_test.go', code);
         expect(raw).not.toBeNull();
-        expect(raw!.importedSourceFiles.some((f: string) => f.includes('internal/service'))).toBe(true);
+        expect(raw.importedSourceFiles.some((f: string) => f.includes('internal/service'))).toBe(
+          true
+        );
       } finally {
         await rm(tmpDir, { recursive: true });
       }
@@ -373,11 +375,11 @@ func TestFoo(t *testing.T) {
   assert.Equal(t, 1, 1)
 }
 `;
-        const raw = localPlugin.extractTestStructure!('foo_test.go', code);
+        const raw = localPlugin.extractTestStructure('foo_test.go', code);
         expect(raw).not.toBeNull();
         // testify and external lib must NOT appear
-        expect(raw!.importedSourceFiles.some((f: string) => f.includes('testify'))).toBe(false);
-        expect(raw!.importedSourceFiles.some((f: string) => f.includes('external/lib'))).toBe(false);
+        expect(raw.importedSourceFiles.some((f: string) => f.includes('testify'))).toBe(false);
+        expect(raw.importedSourceFiles.some((f: string) => f.includes('external/lib'))).toBe(false);
       } finally {
         await rm(tmpDir, { recursive: true });
       }

@@ -798,8 +798,7 @@ export class ValidatedMermaidGenerator {
       for (const relation of this.archJson.relations) {
         const sourceInGroupDirect =
           groupEntityIdSet.has(relation.source) || groupEntityNames.has(relation.source);
-        const sourceViaPrefix =
-          !sourceInGroupDirect && modulePrefixIndexGroup.has(relation.source);
+        const sourceViaPrefix = !sourceInGroupDirect && modulePrefixIndexGroup.has(relation.source);
         const sourceInGroup = sourceInGroupDirect || sourceViaPrefix;
         const targetKnown =
           knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target);

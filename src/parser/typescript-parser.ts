@@ -276,7 +276,11 @@ export class TypeScriptParser {
    * @param filePath  - Relative file path for scoping source names
    * @returns New Relation[] with qualified IDs where resolvable
    */
-  private qualifyRelations(entities: Entity[], relations: Relation[], filePath: string): Relation[] {
+  private qualifyRelations(
+    entities: Entity[],
+    relations: Relation[],
+    filePath: string
+  ): Relation[] {
     // Build simple name → first matching entity ID
     const nameToId = new Map<string, string>();
     for (const entity of entities) {

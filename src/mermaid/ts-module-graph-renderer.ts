@@ -17,7 +17,11 @@
  * Cycle edges are rendered in red via linkStyle.
  */
 
-import type { TsModuleGraph, TsModuleDependency, TsModuleNode } from '@/types/extensions/ts-analysis.js';
+import type {
+  TsModuleGraph,
+  TsModuleDependency,
+  TsModuleNode,
+} from '@/types/extensions/ts-analysis.js';
 
 /**
  * Depth-based fill/stroke palette for subgraph backgrounds.

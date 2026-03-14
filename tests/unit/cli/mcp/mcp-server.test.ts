@@ -678,7 +678,9 @@ describe('archguard_get_atlas_layer', () => {
 });
 
 describe('archguard_get_package_stats', () => {
-  function makePackageStatsEngine(result: import('@/cli/query/query-engine.js').PackageStatsResult) {
+  function makePackageStatsEngine(
+    result: import('@/cli/query/query-engine.js').PackageStatsResult
+  ) {
     const engine = createTestEngine();
     vi.spyOn(engine, 'getPackageStats').mockReturnValue(result);
     return engine;
@@ -696,8 +698,22 @@ describe('archguard_get_package_stats', () => {
   const ooResult: import('@/cli/query/query-engine.js').PackageStatsResult = {
     meta: { dataPath: 'oo-derived', locAvailable: true, locBasis: 'maxEndLine' },
     packages: [
-      { package: 'com/example/service', fileCount: 5, entityCount: 8, methodCount: 12, fieldCount: 4, loc: 800 },
-      { package: 'com/example/model', fileCount: 2, entityCount: 3, methodCount: 0, fieldCount: 6, loc: 200 },
+      {
+        package: 'com/example/service',
+        fileCount: 5,
+        entityCount: 8,
+        methodCount: 12,
+        fieldCount: 4,
+        loc: 800,
+      },
+      {
+        package: 'com/example/model',
+        fileCount: 2,
+        entityCount: 3,
+        methodCount: 0,
+        fieldCount: 6,
+        loc: 200,
+      },
     ],
   };
 

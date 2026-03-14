@@ -35,7 +35,9 @@ export class TestOutputWriter {
       '',
       `| Issue | Count |`,
       `|-------|-------|`,
-      ...Object.entries(analysis.metrics.issueCount).map(([type, count]) => `| ${type} | ${count} |`),
+      ...Object.entries(analysis.metrics.issueCount).map(
+        ([type, count]) => `| ${type} | ${count} |`
+      ),
     ];
     await fs.writeFile(path.join(dir, 'metrics.md'), lines.join('\n') + '\n');
   }

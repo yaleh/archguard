@@ -12,31 +12,70 @@ import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
  */
 const JDK_COMMON_NAMES = new Set([
   // Collections
-  'List', 'Map', 'Set', 'Collection', 'Queue', 'Deque', 'Iterator', 'Iterable',
+  'List',
+  'Map',
+  'Set',
+  'Collection',
+  'Queue',
+  'Deque',
+  'Iterator',
+  'Iterable',
   // Functional / concurrency
-  'Optional', 'Stream', 'Future', 'Callable', 'Runnable', 'Comparator',
+  'Optional',
+  'Stream',
+  'Future',
+  'Callable',
+  'Runnable',
+  'Comparator',
   // Exceptions
-  'Exception', 'RuntimeException', 'Error', 'Throwable',
+  'Exception',
+  'RuntimeException',
+  'Error',
+  'Throwable',
   // Threading
   'Thread',
   // Logging (common unqualified usage via SLF4J / java.util.logging)
   'Logger',
   // Reflection / meta
-  'Class', 'Enum', 'Number', 'Math',
+  'Class',
+  'Enum',
+  'Number',
+  'Math',
   // Text
-  'StringBuilder', 'StringBuffer',
+  'StringBuilder',
+  'StringBuffer',
   // NIO buffers
-  'ByteBuffer', 'CharBuffer', 'IntBuffer', 'ShortBuffer', 'LongBuffer',
-  'FloatBuffer', 'DoubleBuffer',
+  'ByteBuffer',
+  'CharBuffer',
+  'IntBuffer',
+  'ShortBuffer',
+  'LongBuffer',
+  'FloatBuffer',
+  'DoubleBuffer',
   // IO
-  'Path', 'File', 'URI', 'URL',
-  'InputStream', 'OutputStream', 'Reader', 'Writer', 'Closeable', 'AutoCloseable',
+  'Path',
+  'File',
+  'URI',
+  'URL',
+  'InputStream',
+  'OutputStream',
+  'Reader',
+  'Writer',
+  'Closeable',
+  'AutoCloseable',
   // Interfaces
-  'Serializable', 'Comparable', 'Cloneable',
+  'Serializable',
+  'Comparable',
+  'Cloneable',
   // Annotations (sometimes appear as types)
-  'Override', 'Deprecated', 'FunctionalInterface', 'SuppressWarnings',
+  'Override',
+  'Deprecated',
+  'FunctionalInterface',
+  'SuppressWarnings',
   // Web / common framework types that are JDK-or-javax standard
-  'Builder', 'Response', 'Request',
+  'Builder',
+  'Response',
+  'Request',
 ]);
 
 export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
@@ -336,9 +375,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
 
       // Extract the simple name from the wrong-package qualified name
       // e.g. 'com.example.gemma.LlamaModel' → 'LlamaModel'
-      const simpleName = rel.target.includes('.')
-        ? rel.target.split('.').pop()!
-        : rel.target;
+      const simpleName = rel.target.includes('.') ? rel.target.split('.').pop() : rel.target;
 
       const correctedId = simpleNameToId.get(simpleName);
       if (!correctedId || correctedId === rel.target) {

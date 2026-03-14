@@ -33,7 +33,11 @@ export class TestIssueDetector {
       // orphan_test: non-debug test with no covered entities via either import-analysis or
       // path-convention (coverage map). We check both sources to avoid false positives when
       // path-convention matches succeed but do not produce coveredEntityIds entries.
-      if (file.testType !== 'debug' && file.coveredEntityIds.length === 0 && !filesWithMapLinks.has(file.id)) {
+      if (
+        file.testType !== 'debug' &&
+        file.coveredEntityIds.length === 0 &&
+        !filesWithMapLinks.has(file.id)
+      ) {
         issues.push({
           type: 'orphan_test',
           severity: 'info',
@@ -56,7 +60,12 @@ export class TestIssueDetector {
 
       // assertion_poverty: fewer than 1 assertion per test case on average
       // Exempt debug (already covered by zero_assertion) and performance (benchmarks never assert)
-      if (file.testCaseCount > 0 && file.assertionDensity < 1 && file.testType !== 'debug' && file.testType !== 'performance') {
+      if (
+        file.testCaseCount > 0 &&
+        file.assertionDensity < 1 &&
+        file.testType !== 'debug' &&
+        file.testType !== 'performance'
+      ) {
         issues.push({
           type: 'assertion_poverty',
           severity: 'info',

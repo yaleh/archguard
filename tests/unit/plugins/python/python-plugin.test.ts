@@ -97,7 +97,7 @@ def test_add():
 `;
     const result = plugin.extractTestStructure('/project/test_add.py', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('pytest');
+    expect(result.frameworks).toContain('pytest');
   });
 
   it('detects unittest framework from "import unittest"', () => {
@@ -109,7 +109,7 @@ class TestCalc(unittest.TestCase):
 `;
     const result = plugin.extractTestStructure('/project/test_calc.py', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('unittest');
+    expect(result.frameworks).toContain('unittest');
   });
 
   it('falls back to "unknown" framework when no known import found', () => {
@@ -117,7 +117,7 @@ class TestCalc(unittest.TestCase):
     assert 1 + 1 == 2
 `;
     const result = plugin.extractTestStructure('/project/test_add.py', code);
-    expect(result!.frameworks).toContain('unknown');
+    expect(result.frameworks).toContain('unknown');
   });
 
   it('extracts top-level test_ functions as test cases', () => {
@@ -128,8 +128,8 @@ def test_subtract():
     assert 3 - 1 == 2
 `;
     const result = plugin.extractTestStructure('/project/test_math.py', code);
-    expect(result!.testCases).toHaveLength(2);
-    expect(result!.testCases.map((tc) => tc.name)).toEqual(['test_add', 'test_subtract']);
+    expect(result.testCases).toHaveLength(2);
+    expect(result.testCases.map((tc) => tc.name)).toEqual(['test_add', 'test_subtract']);
   });
 
   it('extracts test methods from a Test* class (but not helper methods)', () => {
@@ -141,8 +141,8 @@ def test_subtract():
         pass
 `;
     const result = plugin.extractTestStructure('/project/test_calc.py', code);
-    expect(result!.testCases).toHaveLength(1);
-    expect(result!.testCases[0].name).toBe('test_add');
+    expect(result.testCases).toHaveLength(1);
+    expect(result.testCases[0].name).toBe('test_add');
   });
 
   it('counts "assert " statements as assertions', () => {
@@ -152,7 +152,7 @@ def test_subtract():
     assert result > 0
 `;
     const result = plugin.extractTestStructure('/project/test_add.py', code);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 
   it('marks test as skipped for @pytest.mark.skip', () => {
@@ -163,7 +163,7 @@ def test_broken():
     assert False
 `;
     const result = plugin.extractTestStructure('/project/test_broken.py', code);
-    expect(result!.testCases[0].isSkipped).toBe(true);
+    expect(result.testCases[0].isSkipped).toBe(true);
   });
 
   it('marks test as skipped for @pytest.mark.skipif(...)', () => {
@@ -174,7 +174,7 @@ def test_future():
     pass
 `;
     const result = plugin.extractTestStructure('/project/test_future.py', code);
-    expect(result!.testCases[0].isSkipped).toBe(true);
+    expect(result.testCases[0].isSkipped).toBe(true);
   });
 
   it('marks test as skipped for @unittest.skip(...)', () => {
@@ -186,31 +186,31 @@ class TestFoo(unittest.TestCase):
         pass
 `;
     const result = plugin.extractTestStructure('/project/test_foo.py', code);
-    expect(result!.testCases[0].isSkipped).toBe(true);
+    expect(result.testCases[0].isSkipped).toBe(true);
   });
 
   it('sets testTypeHint "unit" by default', () => {
     const code = `def test_add():\n    assert 1 + 1 == 2\n`;
     const result = plugin.extractTestStructure('/project/tests/test_add.py', code);
-    expect(result!.testTypeHint).toBe('unit');
+    expect(result.testTypeHint).toBe('unit');
   });
 
   it('sets testTypeHint "integration" for paths containing /integration/', () => {
     const code = `def test_api():\n    assert True\n`;
     const result = plugin.extractTestStructure('/project/tests/integration/test_api.py', code);
-    expect(result!.testTypeHint).toBe('integration');
+    expect(result.testTypeHint).toBe('integration');
   });
 
   it('sets testTypeHint "e2e" for paths containing /e2e/', () => {
     const code = `def test_ui():\n    assert True\n`;
     const result = plugin.extractTestStructure('/project/tests/e2e/test_ui.py', code);
-    expect(result!.testTypeHint).toBe('e2e');
+    expect(result.testTypeHint).toBe('e2e');
   });
 
   it('sets testTypeHint "performance" for paths containing /benchmark/', () => {
     const code = `def test_speed():\n    assert True\n`;
     const result = plugin.extractTestStructure('/project/tests/benchmark/test_speed.py', code);
-    expect(result!.testTypeHint).toBe('performance');
+    expect(result.testTypeHint).toBe('performance');
   });
 
   it('respects patternConfig.assertionPatterns override', () => {
@@ -220,7 +220,7 @@ class TestFoo(unittest.TestCase):
 `;
     const cfg = { assertionPatterns: ['my_assert('] };
     const result = plugin.extractTestStructure('/project/test_custom.py', code, cfg);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 
   it('respects patternConfig.skipPatterns override', () => {
@@ -230,7 +230,7 @@ def test_broken():
 `;
     const cfg = { skipPatterns: ['@my_skip'] };
     const result = plugin.extractTestStructure('/project/test_broken.py', code, cfg);
-    expect(result!.testCases[0].isSkipped).toBe(true);
+    expect(result.testCases[0].isSkipped).toBe(true);
   });
 
   it('returns empty importedSourceFiles for relative-only imports (not resolvable)', () => {
@@ -240,7 +240,7 @@ def test_user():
     assert User is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_user.py', code);
-    expect(result!.importedSourceFiles).toEqual([]);
+    expect(result.importedSourceFiles).toEqual([]);
   });
 
   // ---------------------------------------------------------------------------
@@ -254,7 +254,7 @@ def test_registry():
     assert INPUT_MODELS is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_registry.py', code);
-    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
+    expect(result.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
   });
 
   it('resolves "import pkg.sub.module" to pkg/sub/module.py', () => {
@@ -264,7 +264,7 @@ def test_model():
     assert True
 `;
     const result = plugin.extractTestStructure('/project/tests/test_model.py', code);
-    expect(result!.importedSourceFiles).toContain('lmdeploy/pytorch/models/llama.py');
+    expect(result.importedSourceFiles).toContain('lmdeploy/pytorch/models/llama.py');
   });
 
   it('excludes relative imports (from . import, from .. import) from importedSourceFiles', () => {
@@ -276,9 +276,9 @@ def test_mixed():
     assert True
 `;
     const result = plugin.extractTestStructure('/project/tests/test_mixed.py', code);
-    expect(result!.importedSourceFiles).not.toContain('helpers.py');
-    expect(result!.importedSourceFiles).not.toContain('utils/common.py');
-    expect(result!.importedSourceFiles).toContain('lmdeploy/pytorch/engine.py');
+    expect(result.importedSourceFiles).not.toContain('helpers.py');
+    expect(result.importedSourceFiles).not.toContain('utils/common.py');
+    expect(result.importedSourceFiles).toContain('lmdeploy/pytorch/engine.py');
   });
 
   it('deduplicates when the same module is imported multiple times', () => {
@@ -289,7 +289,7 @@ def test_config():
     assert CacheConfig is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_config.py', code);
-    const matches = result!.importedSourceFiles.filter((f) => f === 'lmdeploy/pytorch/config.py');
+    const matches = result.importedSourceFiles.filter((f) => f === 'lmdeploy/pytorch/config.py');
     expect(matches).toHaveLength(1);
   });
 
@@ -303,10 +303,12 @@ def test_readers():
     assert InternLM2Reader is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_converter.py', code);
-    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
-    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
-    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/internlm2.py');
-    expect(result!.importedSourceFiles).toHaveLength(3);
+    expect(result.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/base.py');
+    expect(result.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
+    expect(result.importedSourceFiles).toContain(
+      'lmdeploy/turbomind/deploy/source_model/internlm2.py'
+    );
+    expect(result.importedSourceFiles).toHaveLength(3);
   });
 
   it('handles dynamic/inline imports inside function bodies', () => {
@@ -317,7 +319,7 @@ def test_readers():
     assert reader is not None
 `;
     const result = plugin.extractTestStructure('/project/tests/test_ffn.py', code);
-    expect(result!.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
+    expect(result.importedSourceFiles).toContain('lmdeploy/turbomind/deploy/source_model/llama.py');
   });
 
   it('ignores single-component imports (stdlib or package root) to avoid false positives', () => {
@@ -329,7 +331,7 @@ def test_env():
     assert os.path.exists('/')
 `;
     const result = plugin.extractTestStructure('/project/tests/test_env.py', code);
-    expect(result!.importedSourceFiles).toEqual([]);
+    expect(result.importedSourceFiles).toEqual([]);
   });
 
   // PyTorch / NumPy assertion detection (Fix for torch.testing.assert_close false negatives)
@@ -339,8 +341,11 @@ def test_env():
     torch.testing.assert_close(out, expected, atol=1e-3, rtol=1e-5)
     torch.testing.assert_close(out.shape, expected.shape)
 `;
-    const result = plugin.extractTestStructure('/project/tests/pytorch/kernel/test_attention.py', code);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    const result = plugin.extractTestStructure(
+      '/project/tests/pytorch/kernel/test_attention.py',
+      code
+    );
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 
   it('counts np.testing.assert_allclose as an assertion by default', () => {
@@ -349,7 +354,7 @@ def test_env():
     np.testing.assert_array_equal(a, b)
 `;
     const result = plugin.extractTestStructure('/project/tests/test_output.py', code);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 
   it('counts self.assertEqual and self.assertIsNotNone by default', () => {
@@ -361,7 +366,7 @@ class TestModel(unittest.TestCase):
         self.assertIsNotNone(result)
 `;
     const result = plugin.extractTestStructure('/project/tests/test_model.py', code);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 
   it('counts mixed assert statement and torch.testing.assert_close', () => {
@@ -371,7 +376,7 @@ class TestModel(unittest.TestCase):
     torch.testing.assert_close(out, expected)
 `;
     const result = plugin.extractTestStructure('/project/tests/test_mixed.py', code);
-    expect(result!.testCases[0].assertionCount).toBe(2);
+    expect(result.testCases[0].assertionCount).toBe(2);
   });
 });
 
@@ -402,9 +407,9 @@ class TestAsyncHelper:
 `;
     const result = plugin.extractTestStructure('/project/tests/test_async_helper.py', code);
     expect(result).not.toBeNull();
-    expect(result!.testCases).toHaveLength(2);
+    expect(result.testCases).toHaveLength(2);
     // Each test case should have assertionCount >= 1 (fallback distributes file-level assertions)
-    for (const tc of result!.testCases) {
+    for (const tc of result.testCases) {
       expect(tc.assertionCount).toBeGreaterThanOrEqual(1);
     }
   });
@@ -420,7 +425,7 @@ def test_also_nothing():
 `;
     const result = plugin.extractTestStructure('/project/test_no_assert.py', code);
     expect(result).not.toBeNull();
-    for (const tc of result!.testCases) {
+    for (const tc of result.testCases) {
       expect(tc.assertionCount).toBe(0);
     }
   });
@@ -436,8 +441,8 @@ def test_b():
     const result = plugin.extractTestStructure('/project/test_mixed.py', code);
     expect(result).not.toBeNull();
     // test_a should have 1, test_b should have 0 (no fallback since not ALL zero)
-    const testA = result!.testCases.find((tc) => tc.name === 'test_a');
-    const testB = result!.testCases.find((tc) => tc.name === 'test_b');
+    const testA = result.testCases.find((tc) => tc.name === 'test_a');
+    const testB = result.testCases.find((tc) => tc.name === 'test_b');
     expect(testA?.assertionCount).toBe(1);
     expect(testB?.assertionCount).toBe(0);
   });

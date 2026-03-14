@@ -82,7 +82,10 @@ describe('TestAnalyzer.analyze()', () => {
       filePaths.map((fp) => makeRawTestFile(fp))
     );
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.metrics.totalTestFiles).toBe(3);
   });
 
@@ -101,7 +104,10 @@ describe('TestAnalyzer.analyze()', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].testType).toBe('debug');
   });
 });
@@ -122,7 +128,10 @@ describe('TestAnalyzer - patternConfig override', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].testType).toBe('integration');
   });
 });
@@ -143,7 +152,10 @@ describe('TestAnalyzer - performance hint exemption', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].testType).toBe('performance');
   });
 
@@ -162,7 +174,10 @@ describe('TestAnalyzer - performance hint exemption', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].testType).toBe('performance');
     expect(result.metrics.issueCount.zero_assertion).toBe(0);
   });
@@ -173,10 +188,7 @@ describe('TestAnalyzer - metrics computation', () => {
     const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
     const workspaceRoot = '/workspace';
     const plugin = makePlugin();
-    const filePaths = [
-      `${workspaceRoot}/foo.test.ts`,
-      `${workspaceRoot}/bar.integration.test.ts`,
-    ];
+    const filePaths = [`${workspaceRoot}/foo.test.ts`, `${workspaceRoot}/bar.integration.test.ts`];
 
     const analyzer = new TestAnalyzer();
     vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue(filePaths);
@@ -185,7 +197,10 @@ describe('TestAnalyzer - metrics computation', () => {
       makeRawTestFile(filePaths[1], { testTypeHint: 'integration' }),
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.metrics.byType.unit).toBe(1);
     expect(result.metrics.byType.integration).toBe(1);
   });
@@ -199,7 +214,10 @@ describe('TestAnalyzer - metrics computation', () => {
     vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([]);
     vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.version).toBe('1.0');
   });
 
@@ -222,9 +240,12 @@ describe('TestAnalyzer - metrics computation', () => {
 
     // zero-assertion test → testType becomes 'debug'
     // debug files EMIT zero_assertion (proposal: "同步输出 issue") but are EXEMPT from orphan_test
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.metrics.issueCount.zero_assertion).toBe(1); // debug emits zero_assertion
-    expect(result.metrics.issueCount.orphan_test).toBe(0);    // debug exempt from orphan
+    expect(result.metrics.issueCount.orphan_test).toBe(0); // debug exempt from orphan
   });
 });
 
@@ -261,8 +282,13 @@ describe('TestAnalyzer - Java Maven suffix import matching', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
-    expect(result.testFiles[0].coveredEntityIds).toContain('com.github.tjake.jlama.tensor.AbstractTensor');
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
+    expect(result.testFiles[0].coveredEntityIds).toContain(
+      'com.github.tjake.jlama.tensor.AbstractTensor'
+    );
     expect(result.metrics.entityCoverageRatio).toBeGreaterThan(0);
   });
 
@@ -277,13 +303,21 @@ describe('TestAnalyzer - Java Maven suffix import matching', () => {
         id: 'com.github.tjake.jlama.tensor.AbstractTensor',
         name: 'AbstractTensor',
         type: 'abstract_class',
-        sourceLocation: { file: 'jlama-core/src/main/java/com/github/tjake/jlama/tensor/AbstractTensor.java', startLine: 1, endLine: 100 },
+        sourceLocation: {
+          file: 'jlama-core/src/main/java/com/github/tjake/jlama/tensor/AbstractTensor.java',
+          startLine: 1,
+          endLine: 100,
+        },
       },
       {
         id: 'com.github.tjake.jlama.tensor.FloatBufferTensor',
         name: 'FloatBufferTensor',
         type: 'class',
-        sourceLocation: { file: 'jlama-core/src/main/java/com/github/tjake/jlama/tensor/FloatBufferTensor.java', startLine: 1, endLine: 80 },
+        sourceLocation: {
+          file: 'jlama-core/src/main/java/com/github/tjake/jlama/tensor/FloatBufferTensor.java',
+          startLine: 1,
+          endLine: 80,
+        },
       },
     ]);
 
@@ -300,9 +334,16 @@ describe('TestAnalyzer - Java Maven suffix import matching', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
-    expect(result.testFiles[0].coveredEntityIds).toContain('com.github.tjake.jlama.tensor.AbstractTensor');
-    expect(result.testFiles[0].coveredEntityIds).toContain('com.github.tjake.jlama.tensor.FloatBufferTensor');
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
+    expect(result.testFiles[0].coveredEntityIds).toContain(
+      'com.github.tjake.jlama.tensor.AbstractTensor'
+    );
+    expect(result.testFiles[0].coveredEntityIds).toContain(
+      'com.github.tjake.jlama.tensor.FloatBufferTensor'
+    );
   });
 });
 
@@ -437,11 +478,18 @@ describe('TestAnalyzer - Go package directory import resolution', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
 
     // Both entities in internal/service/ must be linked
-    const handlerLink = result.coverageMap.find((l: any) => l.sourceEntityId === 'internal/service.Handler');
-    const configLink = result.coverageMap.find((l: any) => l.sourceEntityId === 'internal/service.Config');
+    const handlerLink = result.coverageMap.find(
+      (l: any) => l.sourceEntityId === 'internal/service.Handler'
+    );
+    const configLink = result.coverageMap.find(
+      (l: any) => l.sourceEntityId === 'internal/service.Config'
+    );
     expect(handlerLink?.coverageScore).toBeGreaterThan(0);
     expect(configLink?.coverageScore).toBeGreaterThan(0);
     expect(result.metrics.entityCoverageRatio).toBeGreaterThan(0);
@@ -478,9 +526,14 @@ describe('TestAnalyzer - Go package directory import resolution', () => {
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
 
-    const busLink = result.coverageMap.find((l: any) => l.sourceEntityId === 'internal/servicebus.Bus');
+    const busLink = result.coverageMap.find(
+      (l: any) => l.sourceEntityId === 'internal/servicebus.Bus'
+    );
     // servicebus must NOT be linked by 'internal/service' import
     expect(busLink?.coverageScore ?? 0).toBe(0);
   });
@@ -512,7 +565,10 @@ describe('TestAnalyzer - totalAssertions field (C++ rounding fix)', () => {
       },
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].testType).not.toBe('debug');
     expect(result.testFiles[0].assertionCount).toBe(4);
   });
@@ -535,7 +591,10 @@ describe('TestAnalyzer - totalAssertions field (C++ rounding fix)', () => {
       // no totalAssertions field
     ]);
 
-    const result = await analyzer.analyze(makeArchJson(), plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(makeArchJson(), plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     expect(result.testFiles[0].assertionCount).toBe(5);
   });
 });
@@ -566,7 +625,10 @@ describe('TestAnalyzer - C++ relative import path normalization (Fix ../ paths)'
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     const link = result.coverageMap.find((l: any) => l.sourceEntityId === 'src.llama_grammar');
     expect(link?.coverageScore).toBeGreaterThan(0);
   });
@@ -595,7 +657,10 @@ describe('TestAnalyzer - C++ relative import path normalization (Fix ../ paths)'
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     const link = result.coverageMap.find((l: any) => l.sourceEntityId === 'src.unicode_cpt');
     expect(link?.coverageScore).toBeGreaterThan(0);
   });
@@ -624,7 +689,10 @@ describe('TestAnalyzer - C++ relative import path normalization (Fix ../ paths)'
       }),
     ]);
 
-    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot, patternConfig: undefined });
+    const result = await analyzer.analyze(archJson, plugin, {
+      workspaceRoot,
+      patternConfig: undefined,
+    });
     const link = result.coverageMap.find((l: any) => l.sourceEntityId === 'src.MyClass');
     expect(link?.coverageScore).toBeGreaterThan(0);
   });

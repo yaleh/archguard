@@ -362,26 +362,26 @@ public:
   // ---------------------------------------------------------------- isTestFile
   describe('isTestFile()', () => {
     it('returns true for test-*.cpp files', () => {
-      expect(plugin.isTestFile!('tests/test-grammar-parser.cpp')).toBe(true);
-      expect(plugin.isTestFile!('/abs/tests/test-alloc.cpp')).toBe(true);
+      expect(plugin.isTestFile('tests/test-grammar-parser.cpp')).toBe(true);
+      expect(plugin.isTestFile('/abs/tests/test-alloc.cpp')).toBe(true);
     });
 
     it('returns true for *_test.cpp files', () => {
-      expect(plugin.isTestFile!('src/foo_test.cpp')).toBe(true);
+      expect(plugin.isTestFile('src/foo_test.cpp')).toBe(true);
     });
 
     it('returns true for files inside tests/ directory', () => {
-      expect(plugin.isTestFile!('/proj/tests/helper.cpp')).toBe(true);
-      expect(plugin.isTestFile!('/proj/test/runner.cpp')).toBe(true);
+      expect(plugin.isTestFile('/proj/tests/helper.cpp')).toBe(true);
+      expect(plugin.isTestFile('/proj/test/runner.cpp')).toBe(true);
     });
 
     it('returns false for regular source files', () => {
-      expect(plugin.isTestFile!('src/llama.cpp')).toBe(false);
-      expect(plugin.isTestFile!('common/utils.h')).toBe(false);
+      expect(plugin.isTestFile('src/llama.cpp')).toBe(false);
+      expect(plugin.isTestFile('common/utils.h')).toBe(false);
     });
 
     it('returns false for header-only files', () => {
-      expect(plugin.isTestFile!('tests/test-helper.h')).toBe(false);
+      expect(plugin.isTestFile('tests/test-helper.h')).toBe(false);
     });
 
     it('declares testStructureExtraction capability', () => {
@@ -439,67 +439,67 @@ SCENARIO("scenario test") {
 `;
 
     it('returns null for non-test files', () => {
-      expect(plugin.extractTestStructure!('src/foo.cpp', 'class Foo {};')).toBeNull();
+      expect(plugin.extractTestStructure('src/foo.cpp', 'class Foo {};')).toBeNull();
     });
 
     it('detects assert-based framework', () => {
-      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
+      const raw = plugin.extractTestStructure('tests/test-basic.cpp', assertCode);
       expect(raw).not.toBeNull();
-      expect(raw!.frameworks).toContain('assert');
+      expect(raw.frameworks).toContain('assert');
     });
 
     it('extracts named test/verify functions as test cases', () => {
-      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
-      expect(raw!.testCases.length).toBeGreaterThanOrEqual(2);
-      const names = raw!.testCases.map((c) => c.name);
+      const raw = plugin.extractTestStructure('tests/test-basic.cpp', assertCode);
+      expect(raw.testCases.length).toBeGreaterThanOrEqual(2);
+      const names = raw.testCases.map((c) => c.name);
       expect(names).toContain('verify_parsing');
       expect(names).toContain('test_basic');
     });
 
     it('counts assert() calls as assertions', () => {
-      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
-      const total = raw!.testCases.reduce((s, c) => s + c.assertionCount, 0);
+      const raw = plugin.extractTestStructure('tests/test-basic.cpp', assertCode);
+      const total = raw.testCases.reduce((s, c) => s + c.assertionCount, 0);
       expect(total).toBeGreaterThan(0);
     });
 
     it('detects gtest framework and TEST() macros', () => {
-      const raw = plugin.extractTestStructure!('tests/test-foo.cpp', gtestCode);
-      expect(raw!.frameworks).toContain('gtest');
-      expect(raw!.testCases).toHaveLength(2);
-      const names = raw!.testCases.map((c) => c.name);
+      const raw = plugin.extractTestStructure('tests/test-foo.cpp', gtestCode);
+      expect(raw.frameworks).toContain('gtest');
+      expect(raw.testCases).toHaveLength(2);
+      const names = raw.testCases.map((c) => c.name);
       expect(names).toContain('BasicTest');
       expect(names).toContain('AdvancedTest');
     });
 
     it('counts EXPECT_* and ASSERT_* as gtest assertions', () => {
-      const raw = plugin.extractTestStructure!('tests/test-foo.cpp', gtestCode);
-      const total = raw!.testCases.reduce((s, c) => s + c.assertionCount, 0);
+      const raw = plugin.extractTestStructure('tests/test-foo.cpp', gtestCode);
+      const total = raw.testCases.reduce((s, c) => s + c.assertionCount, 0);
       expect(total).toBeGreaterThan(0);
     });
 
     it('detects catch2 and extracts TEST_CASE / SCENARIO', () => {
-      const raw = plugin.extractTestStructure!('tests/test-catch.cpp', catch2Code);
-      expect(raw!.frameworks).toContain('catch2');
-      expect(raw!.testCases).toHaveLength(2);
+      const raw = plugin.extractTestStructure('tests/test-catch.cpp', catch2Code);
+      expect(raw.frameworks).toContain('catch2');
+      expect(raw.testCases).toHaveLength(2);
     });
 
     it('marks benchmark files as performance type', () => {
-      const raw = plugin.extractTestStructure!('tests/test-bench-ops.cpp', assertCode);
-      expect(raw!.testTypeHint).toBe('performance');
+      const raw = plugin.extractTestStructure('tests/test-bench-ops.cpp', assertCode);
+      expect(raw.testTypeHint).toBe('performance');
     });
 
     it('returns unit testTypeHint for regular test files', () => {
-      const raw = plugin.extractTestStructure!('tests/test-grammar.cpp', assertCode);
-      expect(raw!.testTypeHint).toBe('unit');
+      const raw = plugin.extractTestStructure('tests/test-grammar.cpp', assertCode);
+      expect(raw.testTypeHint).toBe('unit');
     });
 
     it('extracts local #include paths for coverage linking', () => {
-      const raw = plugin.extractTestStructure!('tests/test-basic.cpp', assertCode);
-      expect(raw!.importedSourceFiles).toContain('llama.h');
+      const raw = plugin.extractTestStructure('tests/test-basic.cpp', assertCode);
+      expect(raw.importedSourceFiles).toContain('llama.h');
     });
 
     it('returns null when no test functions or main() found', () => {
-      const raw = plugin.extractTestStructure!('tests/test-empty.cpp', '#include <stdio.h>\n');
+      const raw = plugin.extractTestStructure('tests/test-empty.cpp', '#include <stdio.h>\n');
       expect(raw).toBeNull();
     });
   });

@@ -16,7 +16,10 @@ import type { GitHistoryArtifacts } from '@/types/git-history.js';
 // ---------------------------------------------------------------------------
 
 function makeTempDir(): string {
-  const dir = path.join(tmpdir(), `archguard-writer-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = path.join(
+    tmpdir(),
+    `archguard-writer-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

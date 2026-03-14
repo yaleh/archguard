@@ -108,11 +108,25 @@ const goAtlasArchJson: ArchJSON = {
       layers: {
         package: {
           nodes: [
-            { id: 'github.com/example/app/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 3 },
-            { id: 'github.com/example/app/pkg/store', name: 'pkg/store', type: 'internal', fileCount: 2 },
+            {
+              id: 'github.com/example/app/pkg/hub',
+              name: 'pkg/hub',
+              type: 'internal',
+              fileCount: 3,
+            },
+            {
+              id: 'github.com/example/app/pkg/store',
+              name: 'pkg/store',
+              type: 'internal',
+              fileCount: 2,
+            },
           ],
           edges: [
-            { from: 'github.com/example/app/pkg/hub', to: 'github.com/example/app/pkg/store', strength: 4 },
+            {
+              from: 'github.com/example/app/pkg/hub',
+              to: 'github.com/example/app/pkg/store',
+              strength: 4,
+            },
           ],
           cycles: [],
         },
@@ -472,8 +486,8 @@ describe('QueryEngine', () => {
       const engine = createEngine(goAtlasArchJson);
       const layer = engine.getAtlasLayer('package');
       expect(layer).toBeDefined();
-      expect((layer as PackageGraph).nodes).toHaveLength(2);
-      expect((layer as PackageGraph).edges).toHaveLength(1);
+      expect(layer.nodes).toHaveLength(2);
+      expect(layer.edges).toHaveLength(1);
     });
 
     it('returns undefined for a layer absent from the fixture (flow)', () => {
@@ -535,7 +549,7 @@ describe('QueryEngine', () => {
       const summary = engine.getSummary();
       expect(summary.topDependedOn).toEqual([]);
       expect(typeof summary.topDependedOnNote).toBe('string');
-      expect((summary.topDependedOnNote as string).length).toBeGreaterThan(0);
+      expect(summary.topDependedOnNote.length).toBeGreaterThan(0);
     });
 
     it('TypeScript project: topDependedOn is non-empty, topDependedOnNote is undefined', () => {
@@ -614,9 +628,9 @@ describe('QueryEngine', () => {
         type: 'struct',
         visibility: 'public',
         members: [
-          { name: 'Find',    type: 'method',   visibility: 'public'  },
-          { name: 'GetDeps', type: 'method',   visibility: 'public'  },
-          { name: 'index',   type: 'field',    visibility: 'private' },
+          { name: 'Find', type: 'method', visibility: 'public' },
+          { name: 'GetDeps', type: 'method', visibility: 'public' },
+          { name: 'index', type: 'field', visibility: 'private' },
         ],
         sourceLocation: { file: 'internal/query/engine.go', startLine: 10, endLine: 80 },
       },
@@ -625,9 +639,7 @@ describe('QueryEngine', () => {
         name: 'ArchIndex',
         type: 'interface',
         visibility: 'public',
-        members: [
-          { name: 'Build', type: 'method', visibility: 'public' },
-        ],
+        members: [{ name: 'Build', type: 'method', visibility: 'public' }],
         sourceLocation: { file: 'internal/query/index.go', startLine: 5, endLine: 20 },
       },
       {
@@ -636,8 +648,8 @@ describe('QueryEngine', () => {
         type: 'struct',
         visibility: 'public',
         members: [
-          { name: 'Run',  type: 'method', visibility: 'public'  },
-          { name: 'port', type: 'field',  visibility: 'private' },
+          { name: 'Run', type: 'method', visibility: 'public' },
+          { name: 'port', type: 'field', visibility: 'private' },
         ],
         sourceLocation: { file: 'cmd/main.go', startLine: 8, endLine: 50 },
       },
@@ -712,9 +724,9 @@ describe('QueryEngine', () => {
         type: 'class',
         visibility: 'public',
         members: [
-          { name: 'find',    type: 'method',   visibility: 'public'  },
-          { name: 'index',   type: 'property', visibility: 'private' },
-          { name: 'load',    type: 'method',   visibility: 'private' },
+          { name: 'find', type: 'method', visibility: 'public' },
+          { name: 'index', type: 'property', visibility: 'private' },
+          { name: 'load', type: 'method', visibility: 'private' },
         ],
         sourceLocation: { file: 'src/cli/engine.ts', startLine: 5, endLine: 120 },
       },
@@ -723,9 +735,7 @@ describe('QueryEngine', () => {
         name: 'EngineLoader',
         type: 'class',
         visibility: 'public',
-        members: [
-          { name: 'load', type: 'method', visibility: 'public' },
-        ],
+        members: [{ name: 'load', type: 'method', visibility: 'public' }],
         sourceLocation: { file: 'src/cli/loader.ts', startLine: 3, endLine: 40 },
       },
       {
@@ -733,9 +743,7 @@ describe('QueryEngine', () => {
         name: 'Parser',
         type: 'interface',
         visibility: 'public',
-        members: [
-          { name: 'parse', type: 'method', visibility: 'public' },
-        ],
+        members: [{ name: 'parse', type: 'method', visibility: 'public' }],
         sourceLocation: { file: 'src/parser/index.ts', startLine: 1, endLine: 15 },
       },
     ],
@@ -760,9 +768,7 @@ describe('QueryEngine', () => {
               stats: { classes: 0, interfaces: 1, functions: 0, enums: 0 },
             },
           ],
-          edges: [
-            { from: 'src/cli', to: 'src/parser', strength: 2, importedNames: ['Parser'] },
-          ],
+          edges: [{ from: 'src/cli', to: 'src/parser', strength: 2, importedNames: ['Parser'] }],
           cycles: [],
         },
       },
@@ -781,9 +787,9 @@ describe('QueryEngine', () => {
         type: 'class',
         visibility: 'public',
         members: [
-          { name: 'create',  type: 'method',   visibility: 'public'  },
-          { name: 'delete',  type: 'method',   visibility: 'public'  },
-          { name: 'orderId', type: 'field',    visibility: 'private' },
+          { name: 'create', type: 'method', visibility: 'public' },
+          { name: 'delete', type: 'method', visibility: 'public' },
+          { name: 'orderId', type: 'field', visibility: 'private' },
         ],
         sourceLocation: {
           file: 'com/example/service/OrderService.java',
@@ -797,8 +803,8 @@ describe('QueryEngine', () => {
         type: 'class',
         visibility: 'public',
         members: [
-          { name: 'find',   type: 'method', visibility: 'public'  },
-          { name: 'userId', type: 'field',  visibility: 'private' },
+          { name: 'find', type: 'method', visibility: 'public' },
+          { name: 'userId', type: 'field', visibility: 'private' },
         ],
         sourceLocation: {
           file: 'com/example/service/UserService.java',
@@ -811,9 +817,7 @@ describe('QueryEngine', () => {
         name: 'OrderServiceTest',
         type: 'class',
         visibility: 'public',
-        members: [
-          { name: 'testCreate', type: 'method', visibility: 'public' },
-        ],
+        members: [{ name: 'testCreate', type: 'method', visibility: 'public' }],
         sourceLocation: {
           file: 'com/example/service/OrderServiceTest.java',
           startLine: 1,
@@ -826,7 +830,7 @@ describe('QueryEngine', () => {
         type: 'class',
         visibility: 'public',
         members: [
-          { name: 'id',    type: 'field', visibility: 'private' },
+          { name: 'id', type: 'field', visibility: 'private' },
           { name: 'total', type: 'field', visibility: 'private' },
         ],
         sourceLocation: {
@@ -862,30 +866,30 @@ describe('QueryEngine', () => {
       const result = engine.getPackageStats();
       const iq = result.packages.find((p) => p.package === 'internal/query');
       expect(iq).toBeDefined();
-      expect(iq!.methodCount).toBe(3);
-      expect(iq!.fieldCount).toBe(1);
+      expect(iq.methodCount).toBe(3);
+      expect(iq.fieldCount).toBe(1);
     });
 
     it('internal/query has languageStats with structs/interfaces/functions', () => {
       const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
       const result = engine.getPackageStats();
       const iq = result.packages.find((p) => p.package === 'internal/query');
-      expect(iq!.languageStats).toEqual({ structs: 1, interfaces: 1, functions: 3 });
+      expect(iq.languageStats).toEqual({ structs: 1, interfaces: 1, functions: 3 });
     });
 
     it('internal/query has no loc field (loc === undefined)', () => {
       const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
       const result = engine.getPackageStats();
       const iq = result.packages.find((p) => p.package === 'internal/query');
-      expect(iq!.loc).toBeUndefined();
+      expect(iq.loc).toBeUndefined();
     });
 
     it('cmd entry has methodCount=1 and fieldCount=1', () => {
       const engine = createEngine(goAtlasWithEntitiesArchJson, { ...defaultScope, language: 'go' });
       const result = engine.getPackageStats();
       const cmd = result.packages.find((p) => p.package === 'cmd');
-      expect(cmd!.methodCount).toBe(1);
-      expect(cmd!.fieldCount).toBe(1);
+      expect(cmd.methodCount).toBe(1);
+      expect(cmd.fieldCount).toBe(1);
     });
 
     it('meta.dataPath is go-atlas and locAvailable is false', () => {
@@ -917,37 +921,37 @@ describe('QueryEngine', () => {
       const engine = createEngine(tsArchJson);
       const result = engine.getPackageStats();
       const cli = result.packages.find((p) => p.package === 'src/cli');
-      expect(cli!.fileCount).toBe(3);
+      expect(cli.fileCount).toBe(3);
     });
 
     it('src/cli has testFileCount=1 (engine.test.ts absent from fileToIds but counted via sourceFiles)', () => {
       const engine = createEngine(tsArchJson);
       const result = engine.getPackageStats();
       const cli = result.packages.find((p) => p.package === 'src/cli');
-      expect(cli!.testFileCount).toBe(1);
+      expect(cli.testFileCount).toBe(1);
     });
 
     it('src/cli has entityCount=2, methodCount=3, fieldCount=1', () => {
       const engine = createEngine(tsArchJson);
       const result = engine.getPackageStats();
       const cli = result.packages.find((p) => p.package === 'src/cli');
-      expect(cli!.entityCount).toBe(2);
-      expect(cli!.methodCount).toBe(3);
-      expect(cli!.fieldCount).toBe(1);
+      expect(cli.entityCount).toBe(2);
+      expect(cli.methodCount).toBe(3);
+      expect(cli.fieldCount).toBe(1);
     });
 
     it('src/cli has languageStats with classes/interfaces/functions/enums', () => {
       const engine = createEngine(tsArchJson);
       const result = engine.getPackageStats();
       const cli = result.packages.find((p) => p.package === 'src/cli');
-      expect(cli!.languageStats).toEqual({ classes: 2, interfaces: 0, functions: 0, enums: 0 });
+      expect(cli.languageStats).toEqual({ classes: 2, interfaces: 0, functions: 0, enums: 0 });
     });
 
     it('src/cli has no loc field', () => {
       const engine = createEngine(tsArchJson);
       const result = engine.getPackageStats();
       const cli = result.packages.find((p) => p.package === 'src/cli');
-      expect(cli!.loc).toBeUndefined();
+      expect(cli.loc).toBeUndefined();
     });
 
     it('meta.dataPath is ts-module-graph and locAvailable is false', () => {
@@ -976,23 +980,23 @@ describe('QueryEngine', () => {
       const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
       const result = engine.getPackageStats(3);
       const svc = result.packages.find((p) => p.package === 'com/example/service');
-      expect(svc!.fileCount).toBe(3);
-      expect(svc!.testFileCount).toBe(1);
-      expect(svc!.entityCount).toBe(3);
-      expect(svc!.methodCount).toBe(4);
-      expect(svc!.fieldCount).toBe(2);
-      expect(svc!.loc).toBe(410);
+      expect(svc.fileCount).toBe(3);
+      expect(svc.testFileCount).toBe(1);
+      expect(svc.entityCount).toBe(3);
+      expect(svc.methodCount).toBe(4);
+      expect(svc.fieldCount).toBe(2);
+      expect(svc.loc).toBe(410);
     });
 
     it('com/example/model has fileCount=1, testFileCount=0, entityCount=1, fieldCount=2, loc=80', () => {
       const engine = createEngine(javaArchJson, { ...defaultScope, language: 'java' });
       const result = engine.getPackageStats(3);
       const model = result.packages.find((p) => p.package === 'com/example/model');
-      expect(model!.fileCount).toBe(1);
-      expect(model!.testFileCount).toBe(0);
-      expect(model!.entityCount).toBe(1);
-      expect(model!.fieldCount).toBe(2);
-      expect(model!.loc).toBe(80);
+      expect(model.fileCount).toBe(1);
+      expect(model.testFileCount).toBe(0);
+      expect(model.entityCount).toBe(1);
+      expect(model.fieldCount).toBe(2);
+      expect(model.loc).toBe(80);
     });
 
     it('meta.dataPath is oo-derived, locAvailable is true, locBasis is maxEndLine', () => {
@@ -1160,8 +1164,8 @@ describe('QueryEngine', () => {
       const result = engine.getPackageStats(2);
       const enginePkg = result.packages.find((p) => p.package === 'pytorch/engine');
       expect(enginePkg).toBeDefined();
-      expect(enginePkg!.entityCount).toBe(1);
-      expect(enginePkg!.methodCount).toBe(2); // run + stop
+      expect(enginePkg.entityCount).toBe(1);
+      expect(enginePkg.methodCount).toBe(2); // run + stop
     });
 
     it('meta.dataPath is oo-derived', () => {
@@ -1268,14 +1272,14 @@ describe('QueryEngine', () => {
       const result = engine.getPackageStats(1);
       const src = result.packages.find((p) => p.package === 'src');
       expect(src).toBeDefined();
-      expect(src!.fileCount).toBe(3);
+      expect(src.fileCount).toBe(3);
     });
 
     it('entityCount for src package is still 1 (only entity-having file contributes)', () => {
       const engine = createEngine(cppArchJson, { ...defaultScope, language: 'cpp' });
       const result = engine.getPackageStats(1);
       const src = result.packages.find((p) => p.package === 'src');
-      expect(src!.entityCount).toBe(1);
+      expect(src.entityCount).toBe(1);
     });
 
     it('total fileCount across all packages equals sourceFiles.length (no double-counting)', () => {
@@ -1322,7 +1326,12 @@ describe('QueryEngine', () => {
           entityCoverageRatio: 0.67,
           assertionDensity: 3.0,
           skipRatio: 0,
-          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+          issueCount: {
+            zero_assertion: 0,
+            orphan_test: 0,
+            skip_accumulation: 0,
+            assertion_poverty: 0,
+          },
         },
       };
 
@@ -1336,14 +1345,14 @@ describe('QueryEngine', () => {
       const corePkg = result.find((p) => p.package === 'src/core');
 
       expect(utilsPkg).toBeDefined();
-      expect(utilsPkg!.totalEntities).toBe(2);
-      expect(utilsPkg!.coveredEntities).toBe(1);
-      expect(utilsPkg!.coverageRatio).toBeCloseTo(0.5);
+      expect(utilsPkg.totalEntities).toBe(2);
+      expect(utilsPkg.coveredEntities).toBe(1);
+      expect(utilsPkg.coverageRatio).toBeCloseTo(0.5);
 
       expect(corePkg).toBeDefined();
-      expect(corePkg!.totalEntities).toBe(1);
-      expect(corePkg!.coveredEntities).toBe(1);
-      expect(corePkg!.coverageRatio).toBeCloseTo(1.0);
+      expect(corePkg.totalEntities).toBe(1);
+      expect(corePkg.coveredEntities).toBe(1);
+      expect(corePkg.coverageRatio).toBeCloseTo(1.0);
     });
 
     it('sorts results ascending by coverageRatio (worst-covered first)', () => {
@@ -1373,7 +1382,12 @@ describe('QueryEngine', () => {
           entityCoverageRatio: 0.67,
           assertionDensity: 3.0,
           skipRatio: 0,
-          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+          issueCount: {
+            zero_assertion: 0,
+            orphan_test: 0,
+            skip_accumulation: 0,
+            assertion_poverty: 0,
+          },
         },
       };
 
@@ -1421,7 +1435,12 @@ describe('QueryEngine', () => {
           entityCoverageRatio: 1.0,
           assertionDensity: 3.0,
           skipRatio: 0,
-          issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+          issueCount: {
+            zero_assertion: 0,
+            orphan_test: 0,
+            skip_accumulation: 0,
+            assertion_poverty: 0,
+          },
         },
       };
 
@@ -1468,7 +1487,11 @@ describe('QueryEngine', () => {
         },
       ],
       coverageMap: [
-        { sourceEntityId: 'entity-covered', coveredByTestIds: ['tests/covered.test.ts'], coverageScore: 0.85 },
+        {
+          sourceEntityId: 'entity-covered',
+          coveredByTestIds: ['tests/covered.test.ts'],
+          coverageScore: 0.85,
+        },
         { sourceEntityId: 'entity-uncovered', coveredByTestIds: [], coverageScore: 0.0 },
       ],
       issues: [],
@@ -1478,7 +1501,12 @@ describe('QueryEngine', () => {
         entityCoverageRatio: 0.5,
         assertionDensity: 3.0,
         skipRatio: 0,
-        issueCount: { zero_assertion: 0, orphan_test: 0, skip_accumulation: 0, assertion_poverty: 0 },
+        issueCount: {
+          zero_assertion: 0,
+          orphan_test: 0,
+          skip_accumulation: 0,
+          assertion_poverty: 0,
+        },
       },
     };
 

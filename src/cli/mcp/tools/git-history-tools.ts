@@ -54,7 +54,9 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
         .describe('Whether the target is a package path or a file path.'),
       target: z
         .string()
-        .describe('Package path or file path to query (e.g. "src/cli" or "src/cli/mcp/mcp-server.ts").'),
+        .describe(
+          'Package path or file path to query (e.g. "src/cli" or "src/cli/mcp/mcp-server.ts").'
+        ),
     },
     async (params) => {
       const root = resolveRoot(params.projectRoot, defaultRoot);
@@ -70,9 +72,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
           return textResponse(NOT_ANALYZED_MSG);
         }
         const message = err instanceof Error ? err.message : String(err);
-        return textResponse(
-          `Target "${params.target}" not found in git history data. ${message}`
-        );
+        return textResponse(`Target "${params.target}" not found in git history data. ${message}`);
       }
     }
   );
@@ -92,11 +92,9 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
       targetType: z
         .enum(['package', 'file'])
         .describe('Whether the target is a package path or a file path.'),
-      target: z
-        .string()
-        .describe('Package path or file path to query.'),
-      topN: z
-        .coerce.number()
+      target: z.string().describe('Package path or file path to query.'),
+      topN: z.coerce
+        .number()
         .min(1)
         .max(20)
         .default(10)
@@ -117,9 +115,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
           return textResponse(NOT_ANALYZED_MSG);
         }
         const message = err instanceof Error ? err.message : String(err);
-        return textResponse(
-          `Target "${params.target}" not found in git history data. ${message}`
-        );
+        return textResponse(`Target "${params.target}" not found in git history data. ${message}`);
       }
     }
   );
@@ -139,9 +135,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
       targetType: z
         .enum(['package', 'file'])
         .describe('Whether the target is a package path or a file path.'),
-      target: z
-        .string()
-        .describe('Package path or file path to query.'),
+      target: z.string().describe('Package path or file path to query.'),
     },
     async (params) => {
       const root = resolveRoot(params.projectRoot, defaultRoot);
@@ -157,9 +151,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
           return textResponse(NOT_ANALYZED_MSG);
         }
         const message = err instanceof Error ? err.message : String(err);
-        return textResponse(
-          `Target "${params.target}" not found in git history data. ${message}`
-        );
+        return textResponse(`Target "${params.target}" not found in git history data. ${message}`);
       }
     }
   );
@@ -179,9 +171,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
       targetType: z
         .enum(['package', 'file'])
         .describe('Whether the target is a package path or a file path.'),
-      target: z
-        .string()
-        .describe('Package path or file path to query.'),
+      target: z.string().describe('Package path or file path to query.'),
     },
     async (params) => {
       const root = resolveRoot(params.projectRoot, defaultRoot);
@@ -197,9 +187,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
           return textResponse(NOT_ANALYZED_MSG);
         }
         const message = err instanceof Error ? err.message : String(err);
-        return textResponse(
-          `Target "${params.target}" not found in git history data. ${message}`
-        );
+        return textResponse(`Target "${params.target}" not found in git history data. ${message}`);
       }
     }
   );
