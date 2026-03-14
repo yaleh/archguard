@@ -449,6 +449,74 @@ def test_b():
 });
 
 // ---------------------------------------------------------------------------
+// Phase D — async helper zero-assertion fallback
+// ---------------------------------------------------------------------------
+
+describe('PythonPlugin.extractTestStructure() — async helper fallback (Phase D)', () => {
+  it('assigns assertionCount >= 1 when all test cases delegate assertions to an async helper', () => {
+    // The helper function contains the actual assertion; the test body only awaits it.
+    // Without the fallback, assertionCount would be 0 (30-line window misses assertion in helper).
+    const code = `import pytest
+
+async def _assert_result(actual, expected):
+    assert actual == expected
+
+async def _assert_positive(value):
+    assert value > 0
+
+class TestAsyncHelper:
+    def test_foo(self):
+        import asyncio
+        asyncio.run(_assert_result(1, 1))
+
+    def test_bar(self):
+        import asyncio
+        asyncio.run(_assert_positive(42))
+`;
+    const result = plugin.extractTestStructure('/project/tests/test_async_helper.py', code);
+    expect(result).not.toBeNull();
+    expect(result!.testCases).toHaveLength(2);
+    // Each test case should have assertionCount >= 1 (fallback distributes file-level assertions)
+    for (const tc of result!.testCases) {
+      expect(tc.assertionCount).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('leaves assertionCount at 0 when the entire file has no assertion lines', () => {
+    // Genuine zero_assertion: no assert statements anywhere in the file
+    const code = `def test_no_assertions():
+    x = 1 + 1
+    # just a comment, no assertion
+
+def test_also_nothing():
+    pass
+`;
+    const result = plugin.extractTestStructure('/project/test_no_assert.py', code);
+    expect(result).not.toBeNull();
+    for (const tc of result!.testCases) {
+      expect(tc.assertionCount).toBe(0);
+    }
+  });
+
+  it('does not apply fallback when some test cases already have assertions', () => {
+    // Mixed file: test_a has assertions, test_b does not → no fallback applied
+    const code = `def test_a():
+    assert 1 == 1
+
+def test_b():
+    pass
+`;
+    const result = plugin.extractTestStructure('/project/test_mixed.py', code);
+    expect(result).not.toBeNull();
+    // test_a should have 1, test_b should have 0 (no fallback since not ALL zero)
+    const testA = result!.testCases.find((tc) => tc.name === 'test_a');
+    const testB = result!.testCases.find((tc) => tc.name === 'test_b');
+    expect(testA?.assertionCount).toBe(1);
+    expect(testB?.assertionCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Capabilities flag
 // ---------------------------------------------------------------------------
 
