@@ -43,8 +43,8 @@ export interface CLIDetectionResult {
  */
 export async function detectClaudeCodeCLI(): Promise<CLIDetectionResult> {
   try {
-    // Try to execute claude-glm --version
-    const { stdout } = await execa('claude-glm', ['--version'], {
+    // Try to execute claude --version
+    const { stdout } = await execa('claude', ['--version'], {
       timeout: 5000,
       reject: true,
     });
@@ -79,7 +79,7 @@ export async function detectClaudeCodeCLI(): Promise<CLIDetectionResult> {
     // Other errors
     return {
       available: false,
-      error: `Failed to detect CLI: ${errorMessage}`,
+      error: `Claude Code CLI error: ${errorMessage}`,
     };
   }
 }
