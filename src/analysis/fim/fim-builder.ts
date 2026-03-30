@@ -161,29 +161,48 @@ export function aggregateToPackageLevel(
 }
 
 /**
+ * Top-level directory prefixes that indicate non-production code.
+ * Uses a denylist (rather than an allowlist) so that any project layout works:
+ * Go (cmd/, internal/, pkg/), Java (app/), Python (mypackage/), etc.
+ */
+const NON_PRODUCTION_PREFIXES = [
+  'test',      // test/, tests/, testing/, testdata/
+  '__test',    // __tests__/
+  'example',   // example/, examples/
+  'template',  // template/, templates/
+  'script',    // script/, scripts/
+  'vendor',    // vendor/ (Go)
+  'doc',       // doc/, docs/
+  'fixture',   // fixture/, fixtures/
+  'mock',      // mock/, mocks/
+  'bench',     // bench/, benchmark/, benchmarks/
+];
+
+/**
  * Returns true if the package name looks like a production source package.
- * Non-production packages (examples, templates, scripts, root) are excluded
- * from filtered κ/N_eff calculations to avoid spurious rank deficiency.
+ *
+ * Uses a denylist so that any project layout is supported: TypeScript (src/, lib/),
+ * Go (cmd/, internal/, pkg/), Java (app/), Python (project-name/), etc.
+ * Excluded top-level prefixes: test*, __test*, example*, template*, script*,
+ * vendor*, doc*, fixture*, mock*, bench*, and the bare root ".".
  */
 export function isProductionPackage(name: string): boolean {
   if (name === '.') return false;
-  if (name.startsWith('examples')) return false;
-  if (name.startsWith('templates')) return false;
-  if (name.startsWith('scripts')) return false;
-  return name.startsWith('src/') || name.startsWith('lib/') || name.startsWith('core/');
+  const first = name.split('/')[0]?.toLowerCase() ?? '';
+  return !NON_PRODUCTION_PREFIXES.some((prefix) => first.startsWith(prefix));
 }
 
 /**
- * Filters out non-production zero-coverage packages from a FisherInformationResult
- * and re-computes conditionNumber and effectiveDimension via SVD on the filtered sub-matrix.
+ * Returns a FisherInformationResult restricted to production packages only.
  *
- * @param result   The full FisherInformationResult to filter.
- * @param coverage The CoverageMatrix whose fileIds match result.diagonal[*].fileId (package names).
+ * Extracts the sub-coverage-matrix for packages passing `isProductionPackage`,
+ * then re-runs SVD via `computeFisherInformation` on that sub-matrix. This
+ * ensures κ and N_eff reflect the true geometry of the production manifold —
+ * not diagonal selfInfo values, and not inflated by test/example/vendor packages.
+ *
+ * @param coverage The package-level CoverageMatrix (fileIds are package names).
  */
-export function filterProductionPackages(
-  result: FisherInformationResult,
-  coverage: CoverageMatrix
-): FisherInformationResult {
+export function filterProductionPackages(coverage: CoverageMatrix): FisherInformationResult {
   const keepIndices: number[] = [];
   for (let i = 0; i < coverage.fileIds.length; i++) {
     const fileId = coverage.fileIds[i] ?? '';

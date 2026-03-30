@@ -181,6 +181,17 @@ describe('isProductionPackage', () => {
   it('returns true for "src/analysis/fim"', () => expect(isProductionPackage('src/analysis/fim')).toBe(true));
   it('returns true for "lib/utils"', () => expect(isProductionPackage('lib/utils')).toBe(true));
   it('returns false for "tests/unit" (not src/lib/core)', () => expect(isProductionPackage('tests/unit')).toBe(false));
+  it('returns true for Go "cmd/server"', () => expect(isProductionPackage('cmd/server')).toBe(true));
+  it('returns true for Go "internal/auth"', () => expect(isProductionPackage('internal/auth')).toBe(true));
+  it('returns true for Go "pkg/utils"', () => expect(isProductionPackage('pkg/utils')).toBe(true));
+  it('returns true for Go "api/handler"', () => expect(isProductionPackage('api/handler')).toBe(true));
+  it('returns false for Go "vendor/github.com/foo"', () => expect(isProductionPackage('vendor/github.com/foo')).toBe(false));
+  it('returns true for Java "app/service"', () => expect(isProductionPackage('app/service')).toBe(true));
+  it('returns true for Python "mypackage/utils"', () => expect(isProductionPackage('mypackage/utils')).toBe(true));
+  it('returns false for "testdata/golden"', () => expect(isProductionPackage('testdata/golden')).toBe(false));
+  it('returns false for "benchmark/suite"', () => expect(isProductionPackage('benchmark/suite')).toBe(false));
+  it('returns false for "mocks/generated"', () => expect(isProductionPackage('mocks/generated')).toBe(false));
+  it('returns false for "docs/api"', () => expect(isProductionPackage('docs/api')).toBe(false));
 });
 
 describe('filterProductionPackages', () => {
@@ -189,8 +200,7 @@ describe('filterProductionPackages', () => {
       [[1, 0, 0], [0, 1, 0]],
       ['src/a.ts', 'src/b.ts', 'examples/demo.ts']
     );
-    const result = computeFisherInformation(coverage);
-    const filtered = filterProductionPackages(result, coverage);
+    const filtered = filterProductionPackages(coverage);
     expect(filtered.diagonal.map(d => d.fileId)).not.toContain('examples/demo.ts');
     expect(filtered.fileCount).toBe(2);
   });
@@ -200,8 +210,7 @@ describe('filterProductionPackages', () => {
       [[1, 0, 0]],
       ['src/a.ts', 'src/uncovered.ts', 'examples/demo.ts']
     );
-    const result = computeFisherInformation(coverage);
-    const filtered = filterProductionPackages(result, coverage);
+    const filtered = filterProductionPackages(coverage);
     expect(filtered.diagonal.map(d => d.fileId)).toContain('src/uncovered.ts');
     expect(filtered.diagonal.map(d => d.fileId)).not.toContain('examples/demo.ts');
   });
@@ -212,10 +221,10 @@ describe('filterProductionPackages', () => {
       [[1, 0]],
       ['src/a.ts', 'examples/x.ts']
     );
-    const result = computeFisherInformation(coverage);
-    expect(result.conditionNumber).toBe(Infinity);
+    const fullResult = computeFisherInformation(coverage);
+    expect(fullResult.conditionNumber).toBe(Infinity);
     // After filtering out zero-coverage non-production package, only src/a.ts remains → κ finite
-    const filtered = filterProductionPackages(result, coverage);
+    const filtered = filterProductionPackages(coverage);
     expect(filtered.conditionNumber).not.toBe(Infinity);
     expect(filtered.fileCount).toBe(1);
   });
@@ -235,8 +244,7 @@ describe('filterProductionPackages', () => {
       ],
       ['src/a', 'src/b', 'examples/x']
     );
-    const result = computeFisherInformation(coverage);
-    const filtered = filterProductionPackages(result, coverage);
+    const filtered = filterProductionPackages(coverage);
 
     // After filtering: 2 production packages remain (src/a, src/b)
     expect(filtered.diagonal.map(d => d.fileId)).toEqual(['src/a', 'src/b']);
@@ -264,8 +272,7 @@ describe('filterProductionPackages', () => {
       ],
       ['src/a', 'src/b', 'examples/x']
     );
-    const result = computeFisherInformation(coverage);
-    const filtered = filterProductionPackages(result, coverage);
+    const filtered = filterProductionPackages(coverage);
 
     // SVD eigenvalues of [[3,2],[2,2]]: λ = (5±√17)/2 ≈ 4.561, 0.439
     // sum = 5, sum of squares = trace(A²) where A=[[3,2],[2,2]]

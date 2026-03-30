@@ -69,3 +69,46 @@ describe('readFIMHistory', () => {
     await expect(readFIMHistory(outputDir)).resolves.toEqual([snapshot]);
   });
 });
+
+describe('FIMSnapshot filteredTopEigenvalueShares type shape and persistence', () => {
+  it('accepts filteredTopEigenvalueShares as an optional field on FIMSnapshot', async () => {
+    const outputDir = await makeOutputDir();
+    const snapshot: FIMSnapshot = {
+      ...makeSnapshot('import-approximation'),
+      filteredTopEigenvalueShares: [0.7, 0.3],
+    };
+
+    // If FIMSnapshot does not declare filteredTopEigenvalueShares, this assignment
+    // will cause a TypeScript compile error, making the test fail at type-check.
+    expect(snapshot.filteredTopEigenvalueShares).toEqual([0.7, 0.3]);
+  });
+
+  it('persists and retrieves filteredTopEigenvalueShares via appendFIMSnapshot / readFIMHistory', async () => {
+    const outputDir = await makeOutputDir();
+    const snapshot: FIMSnapshot = {
+      ...makeSnapshot('import-approximation'),
+      filteredTopEigenvalueShares: [0.7, 0.3],
+    };
+
+    await appendFIMSnapshot(outputDir, snapshot);
+    const history = await readFIMHistory(outputDir);
+
+    expect(history[0].filteredTopEigenvalueShares).toEqual([0.7, 0.3]);
+  });
+
+  it('round-trips a snapshot that has both topEigenvalueShares and filteredTopEigenvalueShares', async () => {
+    const outputDir = await makeOutputDir();
+    const snapshot: FIMSnapshot = {
+      ...makeSnapshot('import-approximation'),
+      topEigenvalueShares: [0.6, 0.25, 0.15],
+      filteredTopEigenvalueShares: [0.7, 0.3],
+    };
+
+    await appendFIMSnapshot(outputDir, snapshot);
+    const [retrieved] = await readFIMHistory(outputDir);
+
+    expect(retrieved.topEigenvalueShares).toEqual([0.6, 0.25, 0.15]);
+    expect(retrieved.filteredTopEigenvalueShares).toEqual([0.7, 0.3]);
+    expect(retrieved.filteredTopEigenvalueShares).not.toEqual(retrieved.topEigenvalueShares);
+  });
+});

@@ -24,11 +24,14 @@ export interface FIMSnapshot {
   descriptionLength?: number;
   conditionNumber: number;
   effectiveDimension: number;
-  /** κ after excluding non-production zero-coverage packages */
+  /** κ after excluding non-production packages */
   filteredConditionNumber?: number;
-  /** N_eff after excluding non-production zero-coverage packages */
+  /** N_eff after excluding non-production packages */
   filteredEffectiveDimension?: number;
+  /** Eigenvalue share distribution for all packages (including non-production) */
   topEigenvalueShares: number[];
+  /** Eigenvalue share distribution for production packages only — consistent with filteredConditionNumber */
+  filteredTopEigenvalueShares?: number[];
   uncoveredFileCount: number;
   mantelCorrelation?: number;
   mantelPValue?: number;

@@ -241,7 +241,7 @@ export async function computeImportApproximationFIM(
     fileIds: packageNames,
   };
   const packageResult = computeFisherInformation(packageCoverageMatrix);
-  const filteredPackageResult = filterProductionPackages(packageResult, packageCoverageMatrix);
+  const filteredPackageResult = filterProductionPackages(packageCoverageMatrix);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
@@ -267,6 +267,7 @@ export async function computeImportApproximationFIM(
     filteredConditionNumber: filteredPackageResult.conditionNumber,
     filteredEffectiveDimension: filteredPackageResult.effectiveDimension,
     topEigenvalueShares: topEigenvalueShares(packageResult.eigenvalues),
+    filteredTopEigenvalueShares: topEigenvalueShares(filteredPackageResult.eigenvalues),
     uncoveredFileCount: fileResult.uncoveredFiles.length,
   };
 
