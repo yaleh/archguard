@@ -30,6 +30,41 @@ claude mcp add --scope project archguard -- archguard mcp
 claude mcp add --scope user archguard -- archguard mcp
 ```
 
+Claude Code stores user-scope MCP servers in `~/.claude/mcp.json`. A registered
+ArchGuard entry looks like this:
+
+```json
+{
+  "mcpServers": {
+    "archguard": {
+      "command": "archguard",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+If you are installing from a local ArchGuard checkout and also want the repo's
+Claude skill copied into user scope, use the helper script:
+
+```bash
+bash scripts/install-claude-user-scope.sh
+```
+
+That script performs four user-scope steps:
+
+1. Builds the current checkout
+2. Installs `archguard` globally for the current user via a packed tarball
+3. Registers or updates the `archguard` MCP server in `~/.claude/mcp.json`
+4. Copies `.agents/skills/feature-developer` to `~/.claude/skills/feature-developer`
+
+If you already built the current checkout and only want to refresh the user-scope
+installation, run:
+
+```bash
+bash scripts/install-claude-user-scope.sh --skip-build
+```
+
 **Custom work directory** (when artifacts are not in the default `.archguard`):
 
 ```bash
