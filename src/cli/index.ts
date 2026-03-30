@@ -9,6 +9,8 @@ import { createCacheCommand } from './commands/cache.js';
 import { createInitCommand } from './commands/init.js';
 import { createQueryCommand } from './commands/query.js';
 import { createMcpCommand } from './commands/mcp.js';
+import { createDiffCommand } from './commands/diff.js';
+import { createCheckCommand } from './commands/check.js';
 import { createRequire } from 'module';
 
 // Read package.json for version
@@ -32,6 +34,8 @@ export function createCLI(): Command {
   program.addCommand(createInitCommand());
   program.addCommand(createQueryCommand());
   program.addCommand(createMcpCommand());
+  program.addCommand(createDiffCommand());
+  program.addCommand(createCheckCommand());
 
   return program;
 }

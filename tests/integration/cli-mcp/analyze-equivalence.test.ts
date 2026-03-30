@@ -136,6 +136,8 @@ describe('CLI / MCP analyze equivalence', () => {
         const fullPath = path.join(current, child);
         const stat = await fs.stat(fullPath);
         if (stat.isDirectory()) {
+          // Skip snapshots directory — filenames are timestamp-based and non-deterministic
+          if (child === 'snapshots') continue;
           await walk(fullPath);
         } else {
           entries.push(path.relative(root, fullPath).replace(/\\/g, '/'));

@@ -193,6 +193,32 @@ const configSchema = z.object({
     })
     .optional(),
 
+  // ========== Fitness Functions (Plan 52) ==========
+  fitness: z
+    .object({
+      rules: z
+        .array(
+          z.union([
+            z.object({
+              type: z.literal('metric').optional(),
+              metric: z.string(),
+              op: z.enum(['<', '<=', '>', '>=', '==', '!=']),
+              value: z.number(),
+              message: z.string(),
+            }),
+            z.object({
+              type: z.literal('no-dependency'),
+              from: z.string(),
+              to: z.string(),
+              message: z.string(),
+            }),
+          ])
+        )
+        .default([]),
+      failOnViolation: z.boolean().default(true),
+    })
+    .optional(),
+
   // ========== Diagrams Configuration (v2.0 Core Change + v2.1.0 Enhancement) ==========
   /**
    * Array of diagram definitions

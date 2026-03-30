@@ -23,6 +23,21 @@ import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { DiagramResult } from './diagram-processor.js';
 import type { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
+import { buildMetricVector } from '@/analysis/metric-vector-builder.js';
+import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import { QueryEngine } from '@/cli/query/query-engine.js';
+import { saveSnapshot, pruneSnapshots, resolveCommitSha, resolveBranch } from '@/analysis/snapshot-store.js';
+import type { MetricSnapshot } from '@/analysis/snapshot-store.js';
+import { createRequire } from 'node:module';
+
+const _require = createRequire(import.meta.url);
+let _archguardVersion: string;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  _archguardVersion = (_require('../../../package.json') as { version: string }).version;
+} catch {
+  _archguardVersion = '0.1.23';
+}
 
 /**
  * DiagramPipelineRunner
@@ -98,7 +113,7 @@ export class DiagramPipelineRunner {
         aggregatedJSON,
         diagram.level
       );
-      const outputJSON = {
+      const outputJSON: ArchJSON = {
         ...aggregatedJSON,
         metrics: computedMetrics,
         extensions: {
@@ -108,6 +123,57 @@ export class DiagramPipelineRunner {
             : {}),
         },
       };
+
+      // Compute and attach MetricVector after metrics are populated.
+      // Build a lightweight QueryEngine to reuse getPackageStats() logic.
+      const archIndex = buildArchIndex(outputJSON, '');
+      const queryEngine = new QueryEngine({
+        archJson: outputJSON,
+        archIndex,
+        scopeEntry: {
+          key: '',
+          label: diagram.name,
+          language: outputJSON.language,
+          kind: 'parsed',
+          sources: diagram.sources,
+          entityCount: outputJSON.entities.length,
+          relationCount: outputJSON.relations.length,
+          hasAtlasExtension: !!outputJSON.extensions?.goAtlas,
+        },
+      });
+      const packageStats = queryEngine.getPackageStats().packages;
+      outputJSON.metricVector = buildMetricVector(outputJSON, packageStats);
+
+      // B4: Auto-snapshot after MetricVector is computed.
+      try {
+        const commitSha = await resolveCommitSha();
+        const branch = await resolveBranch();
+        const snapshot: MetricSnapshot = {
+          schemaVersion: 1,
+          commitSha,
+          branch,
+          timestamp: new Date().toISOString(),
+          archguardVersion: _archguardVersion,
+          metricVector: outputJSON.metricVector,
+        };
+        const outputDir = this.globalConfig.outputDir ?? '.archguard';
+        await saveSnapshot(outputDir, snapshot);
+        await pruneSnapshots(outputDir, 100);
+        if (this.globalConfig.verbose) {
+          console.log(`Snapshot saved to ${outputDir}/snapshots/`);
+        }
+      } catch {
+        // Snapshot failures must not break the main pipeline
+      }
+
+      if (this.globalConfig.verbose) {
+        const v = outputJSON.metricVector;
+        console.log(
+          `MetricVector: entities=${v.totalEntities}, relations=${v.totalRelations}, ` +
+          `sccCount=${v.sccCount}, maxInDegree=${v.maxInDegree}, ` +
+          `giniInDegree=${v.giniInDegree.toFixed(2)}, packages=${v.packageCount}`
+        );
+      }
 
       await this.router.route(outputJSON, paths, diagram, pool);
 

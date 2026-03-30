@@ -6,6 +6,9 @@
 export * from './config.js';
 import type { DetailLevel } from './config.js';
 
+// Export MetricVector type
+export type { MetricVector } from './metric-vector.js';
+
 // Export extension types (ADR-002)
 export type { ArchJSONExtensions } from './extensions/index.js';
 export type {
@@ -82,6 +85,12 @@ export interface ArchJSON {
    * Only present in json-format output. Bound to the aggregation level used.
    */
   metrics?: ArchJSONMetrics;
+
+  /**
+   * Standardized metric vector for temporal comparison and fitness checks.
+   * Computed after aggregation; only present in json-format output.
+   */
+  metricVector?: import('./metric-vector.js').MetricVector;
 }
 
 /**

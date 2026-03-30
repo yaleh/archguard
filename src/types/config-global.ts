@@ -1,6 +1,7 @@
 import type { DiagramConfig } from './config-diagram.js';
 import type { ProjectSemantics } from './extensions/project-semantics.js';
 import type { MermaidConfig, OutputFormat } from './config-mermaid.js';
+import type { FitnessConfig } from '../analysis/fitness/rule-types.js';
 
 export interface GlobalConfig {
   workDir?: string;
@@ -22,6 +23,7 @@ export interface GlobalConfig {
   verbose: boolean;
   maxNodesPerDiagram?: number;
   projectSemantics?: Partial<ProjectSemantics>;
+  fitness?: FitnessConfig;
 }
 
 export interface ArchGuardConfig extends GlobalConfig {
