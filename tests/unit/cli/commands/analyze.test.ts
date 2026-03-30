@@ -775,6 +775,20 @@ describe('createAnalyzeCommand — flag presence', () => {
     const sourcesOption = command.options.find((opt) => opt.long === '--sources');
     expect(sourcesOption).toBeDefined();
   });
+
+  it('should have --explore flag', async () => {
+    const { createAnalyzeCommand } = await import('@/cli/commands/analyze.js');
+    const command = createAnalyzeCommand();
+    const exploreOption = command.options.find((opt) => opt.long === '--explore');
+    expect(exploreOption).toBeDefined();
+  });
+
+  it('should have --no-explore flag', async () => {
+    const { createAnalyzeCommand } = await import('@/cli/commands/analyze.js');
+    const command = createAnalyzeCommand();
+    const exploreOption = command.options.find((opt) => opt.long === '--no-explore');
+    expect(exploreOption).toBeDefined();
+  });
 });
 
 describe('smart outputDir inference', () => {

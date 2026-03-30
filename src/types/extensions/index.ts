@@ -6,10 +6,12 @@
  * and owns the ArchJSONExtensions container.
  */
 export * from './go-atlas.js';
+export * from './project-semantics.js';
 export * from './ts-analysis.js';
 export * from './test-analysis.js';
 
 import type { GoAtlasExtension } from './go-atlas.js';
+import type { ProjectSemantics } from './project-semantics.js';
 import type { TsAnalysis } from './ts-analysis.js';
 import type { TestAnalysis } from './test-analysis.js';
 
@@ -18,6 +20,7 @@ import type { TestAnalysis } from './test-analysis.js';
  */
 export interface ArchJSONExtensions {
   goAtlas?: GoAtlasExtension;
+  projectSemantics?: ProjectSemantics;
   tsAnalysis?: TsAnalysis;
   testAnalysis?: TestAnalysis;
   // Future: javaAtlas?, rustAtlas?, ...

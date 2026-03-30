@@ -23,6 +23,10 @@ import type {
   TsModuleNode,
 } from '@/types/extensions/ts-analysis.js';
 
+interface TsModuleGraphRenderOptions {
+  architecturalLayers?: Record<string, string>;
+}
+
 /**
  * Depth-based fill/stroke palette for subgraph backgrounds.
  * Index 0 = depth-1 (outermost), index 3 = depth-4+ (clamped).
@@ -61,6 +65,25 @@ function arrowStyle(strength: number): string {
 function parentPath(id: string): string | null {
   const slash = id.lastIndexOf('/');
   return slash > 0 ? id.slice(0, slash) : null;
+}
+
+function normalizeLayerPrefix(prefix: string): string {
+  return prefix.replace(/\\/g, '/').replace(/^@?\//, '').replace(/^src\//, '').replace(/\/+$/, '');
+}
+
+function findMatchingLayer(
+  moduleId: string,
+  layers?: Record<string, string>
+): { key: string; label: string } | null {
+  if (!layers) return null;
+
+  const normalizedModule = moduleId.replace(/\\/g, '/');
+  const candidates = Object.entries(layers)
+    .map(([key, label]) => ({ key: normalizeLayerPrefix(key), label }))
+    .filter(({ key }) => normalizedModule === key || normalizedModule.startsWith(`${key}/`))
+    .sort((left, right) => right.key.length - left.key.length);
+
+  return candidates[0] ?? null;
 }
 
 /**
@@ -184,7 +207,10 @@ function emitTreeNode(
 /**
  * Render a TsModuleGraph as a Mermaid flowchart LR string.
  */
-export function renderTsModuleGraph(graph: TsModuleGraph): string {
+export function renderTsModuleGraph(
+  graph: TsModuleGraph,
+  options: TsModuleGraphRenderOptions = {}
+): string {
   const lines: string[] = [];
 
   lines.push("%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%");
@@ -201,7 +227,31 @@ export function renderTsModuleGraph(graph: TsModuleGraph): string {
   // --- Internal nodes: emit with subgraph hierarchy ---
   const subgraphStyles: Array<{ id: string; depth: number }> = [];
   const forest = buildForest(internalNodes);
+  const groupedRoots = new Map<string, TreeNode[]>();
+  const unmatchedRoots: TreeNode[] = [];
   for (const root of forest) {
+    const layerMatch = findMatchingLayer(nodeTreeId(root), options.architecturalLayers);
+    if (!layerMatch) {
+      unmatchedRoots.push(root);
+      continue;
+    }
+    if (!groupedRoots.has(layerMatch.label)) {
+      groupedRoots.set(layerMatch.label, []);
+    }
+    groupedRoots.get(layerMatch.label)?.push(root);
+  }
+
+  for (const [label, roots] of groupedRoots.entries()) {
+    const layerGroupId = `layer_${toNodeId(label)}`;
+    subgraphStyles.push({ id: layerGroupId, depth: 1 });
+    lines.push(`  subgraph ${layerGroupId}["${label}"]`);
+    for (const root of roots) {
+      emitTreeNode(root, lines, 2, subgraphStyles, cycleNodeIds);
+    }
+    lines.push('  end');
+  }
+
+  for (const root of unmatchedRoots) {
     emitTreeNode(root, lines, 1, subgraphStyles, cycleNodeIds);
   }
 

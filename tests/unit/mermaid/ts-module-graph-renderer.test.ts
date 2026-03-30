@@ -186,6 +186,46 @@ describe('renderTsModuleGraph', () => {
       expect(classDefPos).toBeLessThan(firstEdgePos);
     }
   });
+
+  it('groups top-level module trees into architectural layer subgraphs when provided', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('analysis'),
+        makeNode('analysis/fim'),
+        makeNode('cli'),
+        makeNode('cli/analyze'),
+        makeNode('parser'),
+      ],
+      edges: [makeEdge('cli/analyze', 'analysis/fim', 1)],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph, {
+      architecturalLayers: {
+        'src/analysis': 'Analysis',
+        'src/cli': 'CLI',
+      },
+    });
+
+    expect(output).toContain('subgraph layer_Analysis["Analysis"]');
+    expect(output).toContain('subgraph layer_CLI["CLI"]');
+    expect(output).toContain('analysis["analysis"]');
+    expect(output).toContain('cli["cli"]');
+    expect(output).toContain('parser["parser"]');
+  });
+
+  it('keeps the previous package tree rendering when architecturalLayers are absent', () => {
+    const graph: TsModuleGraph = {
+      nodes: [makeNode('analysis'), makeNode('analysis/fim'), makeNode('cli')],
+      edges: [],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph);
+
+    expect(output).not.toContain('layer_Analysis');
+    expect(output).not.toContain('layer_CLI');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ export const TEST_ANALYSIS_VERSION = '1.0';
 
 export interface TestPatternConfig {
   assertionPatterns?: string[];
+  customAssertionRegexes?: string[];
   testCasePatterns?: string[];
   skipPatterns?: string[];
   testFileGlobs?: string[];

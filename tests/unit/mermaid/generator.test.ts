@@ -176,6 +176,90 @@ describe('ValidatedMermaidGenerator', () => {
       expect(userLayerIndex).toBeGreaterThanOrEqual(0);
       expect(authLayerIndex).toBeGreaterThanOrEqual(0);
     });
+
+    it('uses architecturalLayers to group package nodes into subgraphs when provided', () => {
+      const layeredArchJson: ArchJSON = {
+        ...archJson,
+        sourceFiles: [
+          'src/domain/model/User.ts',
+          'src/infra/http/AuthService.ts',
+          'src/ui/Page.ts',
+        ],
+        entities: [
+          {
+            ...archJson.entities[0],
+            sourceLocation: { file: 'src/domain/model/User.ts', startLine: 1, endLine: 20 },
+          },
+          {
+            ...archJson.entities[1],
+            sourceLocation: { file: 'src/infra/http/AuthService.ts', startLine: 1, endLine: 15 },
+          },
+          {
+            id: 'Page',
+            name: 'Page',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/ui/Page.ts', startLine: 1, endLine: 10 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel1',
+            type: 'dependency',
+            source: 'AuthService',
+            target: 'User',
+          },
+          {
+            id: 'rel2',
+            type: 'dependency',
+            source: 'Page',
+            target: 'AuthService',
+          },
+        ],
+        extensions: {
+          projectSemantics: {
+            version: '1.0',
+            nonProductionPatterns: [],
+            barrelFiles: [],
+            additionalTestPatterns: [],
+            customAssertionPatterns: [],
+            confidence: 0.9,
+            architecturalLayers: {
+              'src/domain': 'Domain',
+              'src/infra': 'Infrastructure',
+            },
+          },
+        },
+      };
+
+      const generator = new ValidatedMermaidGenerator(layeredArchJson, {
+        level: 'package',
+        grouping: groupingDecision,
+      });
+
+      const mermaidCode = generator.generate();
+
+      expect(mermaidCode).toContain('flowchart');
+      expect(mermaidCode).toContain('subgraph');
+      expect(mermaidCode).toContain('["Domain"]');
+      expect(mermaidCode).toContain('["Infrastructure"]');
+      expect(mermaidCode).toContain('src/domain/model');
+      expect(mermaidCode).toContain('src/infra/http');
+      expect(mermaidCode).toContain('src/ui');
+    });
+
+    it('does not emit layer subgraphs when architecturalLayers are absent', () => {
+      const generator = new ValidatedMermaidGenerator(archJson, {
+        level: 'package',
+        grouping: groupingDecision,
+      });
+
+      const mermaidCode = generator.generate();
+
+      expect(mermaidCode).not.toContain('subgraph');
+      expect(mermaidCode).toContain('classDiagram');
+    });
   });
 
   describe('class level generation', () => {

@@ -58,11 +58,10 @@ describe('PythonPlugin.isTestFile()', () => {
     expect(plugin.isTestFile('/project/tests/__init__.py')).toBe(false);
   });
 
-  it('uses patternConfig.testFileGlobs when provided (overrides defaults)', () => {
+  it('matches patternConfig.testFileGlobs in addition to default conventions', () => {
     const cfg = { testFileGlobs: ['**/check_*.py'] };
     expect(plugin.isTestFile('/project/src/check_health.py', cfg)).toBe(true);
-    // default pattern test_*.py is NOT matched when globs override is active
-    expect(plugin.isTestFile('/project/test_foo.py', cfg)).toBe(false);
+    expect(plugin.isTestFile('/project/test_foo.py', cfg)).toBe(true);
   });
 
   it('is case-sensitive: TestFoo.py is not matched by default', () => {
@@ -221,6 +220,15 @@ class TestFoo(unittest.TestCase):
     const cfg = { assertionPatterns: ['my_assert('] };
     const result = plugin.extractTestStructure('/project/test_custom.py', code, cfg);
     expect(result.testCases[0].assertionCount).toBe(2);
+  });
+
+  it('respects patternConfig.customAssertionRegexes', () => {
+    const code = `def test_custom():
+    assert_close(result, expected)
+`;
+    const cfg = { customAssertionRegexes: ['\\bassert_close\\s*\\('] };
+    const result = plugin.extractTestStructure('/project/test_custom.py', code, cfg);
+    expect(result.testCases[0].assertionCount).toBe(1);
   });
 
   it('respects patternConfig.skipPatterns override', () => {

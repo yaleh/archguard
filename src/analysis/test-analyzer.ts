@@ -10,12 +10,52 @@ import type {
   TestMetrics,
 } from '@/types/extensions/test-analysis.js';
 import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
+import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
 import { TestCoverageMapper } from './test-coverage-mapper.js';
 import { TestIssueDetector } from './test-issue-detector.js';
 
 export interface TestAnalyzerOptions {
   workspaceRoot: string;
   patternConfig?: TestPatternConfig;
+  projectSemantics?: Partial<ProjectSemantics>;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+export function mergeProjectSemanticsIntoPatternConfig(
+  patternConfig?: TestPatternConfig,
+  projectSemantics?: Partial<ProjectSemantics>
+): TestPatternConfig | undefined {
+  const additionalTestPatterns = projectSemantics?.additionalTestPatterns ?? [];
+  const semanticAssertionRegexes = projectSemantics?.customAssertionPatterns ?? [];
+  const shouldInjectCustomRegexes =
+    (patternConfig?.assertionPatterns?.length ?? 0) === 0 &&
+    (patternConfig?.customAssertionRegexes?.length ?? 0) === 0;
+
+  const testFileGlobs = uniqueStrings([
+    ...(patternConfig?.testFileGlobs ?? []),
+    ...additionalTestPatterns,
+  ]);
+
+  if (
+    !patternConfig &&
+    testFileGlobs.length === 0 &&
+    (!shouldInjectCustomRegexes || semanticAssertionRegexes.length === 0)
+  ) {
+    return undefined;
+  }
+
+  return {
+    ...patternConfig,
+    testFileGlobs: testFileGlobs.length > 0 ? testFileGlobs : patternConfig?.testFileGlobs,
+    customAssertionRegexes: shouldInjectCustomRegexes
+      ? semanticAssertionRegexes.length > 0
+        ? uniqueStrings(semanticAssertionRegexes)
+        : patternConfig?.customAssertionRegexes
+      : patternConfig?.customAssertionRegexes,
+  };
 }
 
 export class TestAnalyzer {
@@ -27,9 +67,13 @@ export class TestAnalyzer {
     plugin: ILanguagePlugin,
     options: TestAnalyzerOptions
   ): Promise<TestAnalysis> {
-    const { workspaceRoot, patternConfig } = options;
-    const testFilePaths = await this.discoverTestFiles(workspaceRoot, plugin, patternConfig);
-    const rawFiles = await this.collectRawTestFiles(testFilePaths, plugin, patternConfig);
+    const { workspaceRoot, patternConfig, projectSemantics } = options;
+    const effectivePatternConfig = mergeProjectSemanticsIntoPatternConfig(
+      patternConfig,
+      projectSemantics
+    );
+    const testFilePaths = await this.discoverTestFiles(workspaceRoot, plugin, effectivePatternConfig);
+    const rawFiles = await this.collectRawTestFiles(testFilePaths, plugin, effectivePatternConfig);
     const testFiles = this.buildTestFileInfos(rawFiles, archJson, workspaceRoot);
     const coverageMap = this.mapper.buildCoverageMap(testFiles, archJson, workspaceRoot);
     const issues = this.issueDetector.detect(testFiles, coverageMap);
@@ -50,17 +94,18 @@ export class TestAnalyzer {
     plugin: ILanguagePlugin,
     patternConfig?: TestPatternConfig
   ): Promise<string[]> {
+    const extraMatches =
+      patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0
+        ? await globby(
+            patternConfig.testFileGlobs.map((globPattern) => `${workspaceRoot}/${globPattern}`),
+            { onlyFiles: true, absolute: true }
+          )
+        : [];
+
     // Go: scan entire workspace since _test.go files live beside source
     if (plugin.metadata.fileExtensions.includes('.go')) {
-      return globby(`${workspaceRoot}/**/*_test.go`, { onlyFiles: true, absolute: true });
-    }
-
-    // Use testFileGlobs from patternConfig if provided
-    if (patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0) {
-      return globby(
-        patternConfig.testFileGlobs.map((g) => `${workspaceRoot}/${g}`),
-        { onlyFiles: true, absolute: true }
-      );
+      const defaultMatches = await globby(`${workspaceRoot}/**/*_test.go`, { onlyFiles: true, absolute: true });
+      return uniqueStrings([...defaultMatches, ...extraMatches]);
     }
 
     // Java: scan entire workspace tree to handle Maven multi-module projects
@@ -72,9 +117,12 @@ export class TestAnalyzer {
         ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
       });
       if (plugin.isTestFile) {
-        return allJavaFiles.filter((f) => plugin.isTestFile(f, patternConfig));
+        return uniqueStrings([
+          ...allJavaFiles.filter((f) => plugin.isTestFile(f, patternConfig)),
+          ...extraMatches,
+        ]);
       }
-      return allJavaFiles;
+      return uniqueStrings([...allJavaFiles, ...extraMatches]);
     }
 
     // Default: walk candidate dirs and filter with plugin.isTestFile
@@ -89,11 +137,17 @@ export class TestAnalyzer {
       allFiles.push(...files);
     }
     if (plugin.isTestFile) {
-      return allFiles.filter((f) => plugin.isTestFile(f, patternConfig));
+      return uniqueStrings([
+        ...allFiles.filter((f) => plugin.isTestFile(f, patternConfig)),
+        ...extraMatches,
+      ]);
     }
-    return allFiles.filter(
-      (f) => /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(f) || /_test\.(go|ts)$/.test(f)
-    );
+    return uniqueStrings([
+      ...allFiles.filter(
+        (f) => /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(f) || /_test\.(go|ts)$/.test(f)
+      ),
+      ...extraMatches,
+    ]);
   }
 
   private async inferTestDirs(workspaceRoot: string): Promise<string[]> {

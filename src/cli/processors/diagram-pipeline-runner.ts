@@ -98,7 +98,16 @@ export class DiagramPipelineRunner {
         aggregatedJSON,
         diagram.level
       );
-      const outputJSON = { ...aggregatedJSON, metrics: computedMetrics };
+      const outputJSON = {
+        ...aggregatedJSON,
+        metrics: computedMetrics,
+        extensions: {
+          ...(aggregatedJSON.extensions ?? {}),
+          ...(this.globalConfig.projectSemantics
+            ? { projectSemantics: this.globalConfig.projectSemantics as NonNullable<ArchJSON['extensions']>['projectSemantics'] }
+            : {}),
+        },
+      };
 
       await this.router.route(outputJSON, paths, diagram, pool);
 

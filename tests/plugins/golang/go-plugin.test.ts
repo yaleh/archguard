@@ -223,6 +223,14 @@ func (u User) GetName() string {
       expect(plugin.isTestFile('test_helper.go')).toBe(false);
     });
 
+    it('matches additional test globs when provided', () => {
+      expect(
+        plugin.isTestFile('foo_bench_test.go', {
+          testFileGlobs: ['*_bench_test.go'],
+        })
+      ).toBe(true);
+    });
+
     it('declares testStructureExtraction capability', () => {
       expect(plugin.metadata.capabilities.testStructureExtraction).toBe(true);
     });

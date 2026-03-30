@@ -87,6 +87,24 @@ describe('extractTestStructure — assertion counting via brace-depth scan', () 
     // With old 20-line window, assertionCount would be 0; with brace scan it should be 1
     expect(result.testCases[0].assertionCount).toBe(1);
   });
+
+  it('counts custom assertion regexes without changing substring defaults', () => {
+    const code = `it('verify', () => {\n  verify(result);\n});\n`;
+    const result = plugin.extractTestStructure('/test/foo.test.ts', code, {
+      customAssertionRegexes: ['\\bverify\\s*\\('],
+    });
+    expect(result.testCases[0].assertionCount).toBe(1);
+  });
+
+  it('skips invalid custom assertion regexes without crashing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const code = `it('verify', () => {\n  verify(result);\n});\n`;
+    const result = plugin.extractTestStructure('/test/foo.test.ts', code, {
+      customAssertionRegexes: ['('],
+    });
+    expect(result).not.toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

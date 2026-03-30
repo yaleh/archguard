@@ -64,6 +64,17 @@ export function scanTestBody(lines: string[], startIdx: number): number {
 /** Module-level tsconfig path cache keyed on directory (avoids repeated FS traversal). */
 const _tsconfigPathCache = new Map<string, string | undefined>();
 
+function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
+  return (patterns ?? []).flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern)];
+    } catch (error) {
+      console.warn(`[typescript:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      return [];
+    }
+  });
+}
+
 function cachedFindTsConfigPath(dir: string): string | undefined {
   if (_tsconfigPathCache.has(dir)) return _tsconfigPathCache.get(dir);
   const result = findTsConfigPath(dir);
@@ -405,10 +416,12 @@ export class TypeScriptPlugin implements ILanguagePlugin {
    * Determine whether a given file path is a test file.
    */
   isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
-    if (patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0) {
-      return micromatch.isMatch(filePath, patternConfig.testFileGlobs);
-    }
-    return /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(filePath);
+    return (
+      /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(filePath) ||
+      (patternConfig?.testFileGlobs?.length
+        ? micromatch.isMatch(filePath, patternConfig.testFileGlobs)
+        : false)
+    );
   }
 
   /**
@@ -456,6 +469,9 @@ export class TypeScriptPlugin implements ILanguagePlugin {
         'assert(',
         'assert.',
       ];
+      const customAssertionRegexes = compileCustomAssertionRegexes(
+        patternConfig?.customAssertionRegexes
+      );
 
       // Skip patterns
       const skipPatterns = patternConfig?.skipPatterns ?? [
@@ -481,7 +497,11 @@ export class TypeScriptPlugin implements ILanguagePlugin {
           const bodyEnd = scanTestBody(lines, _idx);
           const assertionCount = lines
             .slice(_idx, bodyEnd)
-            .filter((l) => assertionPatterns.some((ap) => l.includes(ap))).length;
+            .filter(
+              (line) =>
+                assertionPatterns.some((pattern) => line.includes(pattern)) ||
+                customAssertionRegexes.some((regex) => regex.test(line))
+            ).length;
 
           // Extract name from first string argument
           const nameMatch = line.match(/(?:it|test)\s*\(\s*['"`]([^'"`]+)['"`]/);

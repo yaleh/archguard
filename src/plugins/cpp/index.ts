@@ -9,6 +9,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { glob } from 'glob';
+import micromatch from 'micromatch';
 import type {
   ILanguagePlugin,
   PluginMetadata,
@@ -24,6 +25,17 @@ import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { HeaderMerger } from './builders/header-merger.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
+
+function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
+  return (patterns ?? []).flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern)];
+    } catch (error) {
+      console.warn(`[cpp:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      return [];
+    }
+  });
+}
 
 export class CppPlugin implements ILanguagePlugin {
   readonly metadata: PluginMetadata = {
@@ -180,12 +192,21 @@ export class CppPlugin implements ILanguagePlugin {
     this.initialized = false;
   }
 
-  isTestFile(filePath: string, _patternConfig?: TestPatternConfig): boolean {
+  isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
     const base = path.basename(filePath);
     const ext = path.extname(base).toLowerCase();
     if (!['.cpp', '.cxx', '.cc'].includes(ext)) return false;
     // Named test-*.cpp / test_*.cpp / *_test.cpp / *Test.cpp
-    if (/^test[-_]/i.test(base) || /[-_]test\./i.test(base) || /Test\./.test(base)) return true;
+    if (
+      /^test[-_]/i.test(base) ||
+      /[-_]test\./i.test(base) ||
+      /Test\./.test(base) ||
+      (patternConfig?.testFileGlobs?.length
+        ? micromatch.isMatch(filePath, patternConfig.testFileGlobs)
+        : false)
+    ) {
+      return true;
+    }
     // Inside a tests/ or test/ directory
     const parts = filePath.replace(/\\/g, '/').split('/');
     return parts.some((p) => p === 'tests' || p === 'test');
@@ -194,9 +215,9 @@ export class CppPlugin implements ILanguagePlugin {
   extractTestStructure(
     filePath: string,
     code: string,
-    _patternConfig?: TestPatternConfig
+    patternConfig?: TestPatternConfig
   ): RawTestFile | null {
-    if (!this.isTestFile(filePath)) return null;
+    if (!this.isTestFile(filePath, patternConfig)) return null;
 
     // Framework detection
     const frameworks: string[] = [];
@@ -218,10 +239,18 @@ export class CppPlugin implements ILanguagePlugin {
       /\bREQUIRE\s*\(/g,
       /\bCHECK\s*\(/g,
     ];
+    const customAssertionRegexes = compileCustomAssertionRegexes(
+      patternConfig?.customAssertionRegexes
+    );
     let totalAssertions = 0;
     for (const pat of assertionPatterns) {
       const m = code.match(pat);
       if (m) totalAssertions += m.length;
+    }
+    if (customAssertionRegexes.length > 0) {
+      for (const line of code.split('\n')) {
+        totalAssertions += customAssertionRegexes.filter((regex) => regex.test(line)).length;
+      }
     }
 
     const testCases: RawTestCase[] = [];

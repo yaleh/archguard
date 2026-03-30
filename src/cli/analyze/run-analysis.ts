@@ -10,11 +10,25 @@ import { persistQueryScopes } from '../query/query-artifacts.js';
 import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
-import { TestAnalyzer } from '@/analysis/test-analyzer.js';
+import {
+  TestAnalyzer,
+  mergeProjectSemanticsIntoPatternConfig,
+} from '@/analysis/test-analyzer.js';
 import { TestOutputWriter } from '../utils/test-output-writer.js';
 import { computeImportApproximationFIM, validateFIMAgainstGit } from '@/analysis/fim/fim-analysis.js';
 import { appendFIMSnapshot } from '@/analysis/fim/fim-snapshot.js';
 import { writeFIMCurrentArtifact } from '@/analysis/fim/fim-artifacts.js';
+import { ProjectSemanticsExplorer } from '@/analysis/project-semantics-explorer.js';
+import {
+  computeDirTreeHash,
+  loadCachedSemantics,
+  saveSemanticsCache,
+} from '@/analysis/project-semantics-cache.js';
+import {
+  PROJECT_SEMANTICS_VERSION,
+  mergeProjectSemantics,
+  type ProjectSemantics,
+} from '@/types/extensions/project-semantics.js';
 
 function formatFimMetric(value: number): string {
   return Number.isFinite(value) ? value.toFixed(3) : 'Infinity';
@@ -82,6 +96,14 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const configLoader = new ConfigLoader(sessionRoot);
   const configOverrides = buildConfigOverrides(cliOptions, workDir, sessionRoot);
   const config = await configLoader.load(configOverrides, cliOptions.config);
+  const archguardDir = config.workDir || workDir;
+  const mergedProjectSemantics = await resolveProjectSemantics(
+    config,
+    cliOptions,
+    sessionRoot,
+    archguardDir
+  );
+  config.projectSemantics = mergedProjectSemantics;
   reporter.succeed('Configuration loaded');
 
   const selectedDiagrams = (
@@ -135,7 +157,10 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
         const plugin = await loadPluginForLanguage(language, workspaceRoot);
         const analyzer = new TestAnalyzer();
-        const testAnalysis = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+        const testAnalysis = await analyzer.analyze(archJson, plugin, {
+          workspaceRoot,
+          projectSemantics: mergedProjectSemantics,
+        });
 
         // Attach result to archJson extensions
         if (!archJson.extensions) {
@@ -185,6 +210,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           archJson,
           plugin,
           workspaceRoot,
+          patternConfig: mergeProjectSemanticsIntoPatternConfig(undefined, mergedProjectSemantics),
+          nonProductionPatterns: mergedProjectSemantics.nonProductionPatterns ?? [],
+          suggestedDepth: mergedProjectSemantics.suggestedDepth,
         });
 
         if (cliOptions.fimValidate) {
@@ -227,6 +255,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
                 commits,
                 permutations: 999,
                 seed: 42,
+                packageDepth: artifact.packageDepth,
               });
               artifact.mantel = mantel;
               snapshot.mantelCorrelation = mantel.observedCorrelation;
@@ -239,7 +268,6 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           }
         }
 
-        const archguardDir = config.workDir || workDir;
         await writeFIMCurrentArtifact(archguardDir, artifact);
         await appendFIMSnapshot(archguardDir, snapshot);
 
@@ -454,4 +482,54 @@ function buildConfigOverrides(
   }
 
   return configOverrides;
+}
+
+const EMPTY_PROJECT_SEMANTICS_DEFAULTS: Partial<ProjectSemantics> = {
+  version: PROJECT_SEMANTICS_VERSION,
+  nonProductionPatterns: [],
+  barrelFiles: [],
+  additionalTestPatterns: [],
+  customAssertionPatterns: [],
+};
+
+async function resolveProjectSemantics(
+  config: Config,
+  cliOptions: Partial<CLIOptions>,
+  projectRoot: string,
+  archguardDir: string
+): Promise<Partial<ProjectSemantics>> {
+  if (cliOptions.explore === false) {
+    return mergeProjectSemantics(config.projectSemantics, undefined, EMPTY_PROJECT_SEMANTICS_DEFAULTS);
+  }
+
+  const currentHash = await computeDirTreeHash(projectRoot);
+  let llmSemantics: ProjectSemantics | null = null;
+
+  if (config.cache?.enabled !== false) {
+    llmSemantics = await loadCachedSemantics(archguardDir, currentHash);
+  }
+
+  if (!llmSemantics) {
+    const explorer = new ProjectSemanticsExplorer(
+      config.cli.command,
+      config.cli.args,
+      Math.min(config.cli.timeout ?? 60_000, 30_000)
+    );
+    const explored = await explorer.explore(projectRoot);
+    if (explored) {
+      llmSemantics = {
+        ...explored,
+        _dirTreeHash: currentHash,
+      };
+      if (config.cache?.enabled !== false) {
+        await saveSemanticsCache(archguardDir, llmSemantics);
+      }
+    }
+  }
+
+  return mergeProjectSemantics(
+    config.projectSemantics,
+    llmSemantics ?? undefined,
+    EMPTY_PROJECT_SEMANTICS_DEFAULTS
+  );
 }

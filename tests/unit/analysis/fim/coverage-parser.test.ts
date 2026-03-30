@@ -90,4 +90,19 @@ describe('buildCoverageMatrixFromImports', () => {
 
     expect(coverage.matrix).toEqual([[1, 1, 1, 0]]);
   });
+
+  it('treats additional test globs as test-like paths for source filtering', () => {
+    const coverage = buildCoverageMatrixFromImports(
+      ['tests/a.test.ts'],
+      ['src/foo.integration.ts', 'src/a.ts'],
+      makeImportGraph({
+        'tests/a.test.ts': ['src/foo.integration.ts', 'src/a.ts'],
+      }),
+      3,
+      ['**/*.integration.ts']
+    );
+
+    expect(coverage.fileIds).toEqual(['src/a.ts']);
+    expect(coverage.matrix).toEqual([[1]]);
+  });
 });

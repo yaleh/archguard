@@ -7,6 +7,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { z } from 'zod';
+import { PartialProjectSemanticsSchema } from '../types/extensions/project-semantics.js';
 export type { ArchGuardConfig } from '../types/config.js';
 
 /**
@@ -178,6 +179,7 @@ const configSchema = z.object({
   // ========== Other Configuration ==========
   concurrency: z.number().default(os.cpus().length),
   verbose: z.boolean().default(false),
+  projectSemantics: PartialProjectSemanticsSchema.optional(),
 
   // ========== v2.1.0: Root Metadata (Optional) ==========
   metadata: z
@@ -259,6 +261,18 @@ interface FileConfig {
   };
   concurrency?: number;
   verbose?: boolean;
+  projectSemantics?: {
+    version?: '1.0';
+    nonProductionPatterns?: string[];
+    barrelFiles?: string[];
+    additionalTestPatterns?: string[];
+    customAssertionPatterns?: string[];
+    architecturalLayers?: Record<string, string>;
+    suggestedDepth?: number;
+    confidence?: number;
+    _dirTreeHash?: string;
+    _generatedAt?: string;
+  };
   diagrams?: Array<{
     name: string;
     sources: string[];

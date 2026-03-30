@@ -3,6 +3,9 @@ import {
   aggregateToPackageLevel,
   computeFisherInformation,
   computeGramMatrix,
+  filterProductionCoverage,
+  filterProductionPackages,
+  isProductionPackage,
 } from '@/analysis/fim/fim-builder.js';
 import type { CoverageMatrix } from '@/analysis/fim/types.js';
 
@@ -170,8 +173,6 @@ describe('aggregateToPackageLevel', () => {
   });
 });
 
-import { isProductionPackage, filterProductionPackages } from '@/analysis/fim/fim-builder.js';
-
 describe('isProductionPackage', () => {
   it('returns false for "."', () => expect(isProductionPackage('.')).toBe(false));
   it('returns false for "examples"', () => expect(isProductionPackage('examples')).toBe(false));
@@ -192,9 +193,37 @@ describe('isProductionPackage', () => {
   it('returns false for "benchmark/suite"', () => expect(isProductionPackage('benchmark/suite')).toBe(false));
   it('returns false for "mocks/generated"', () => expect(isProductionPackage('mocks/generated')).toBe(false));
   it('returns false for "docs/api"', () => expect(isProductionPackage('docs/api')).toBe(false));
+
+  it('keeps playground as production without extra patterns', () => {
+    expect(isProductionPackage('playground', [])).toBe(true);
+  });
+
+  it('treats playground as non-production when provided in extra patterns', () => {
+    expect(isProductionPackage('playground', ['playground'])).toBe(false);
+  });
+
+  it('keeps src production when extra patterns do not match', () => {
+    expect(isProductionPackage('src', ['playground'])).toBe(true);
+  });
+
+  it('preserves existing behavior when extra patterns are omitted', () => {
+    expect(isProductionPackage('vendor')).toBe(false);
+  });
 });
 
 describe('filterProductionPackages', () => {
+  it('filterProductionCoverage excludes extra non-production packages', () => {
+    const coverage = makeCoverageMatrix(
+      [[1, 1, 0]],
+      ['src/a.ts', 'playground/demo.ts', 'examples/demo.ts']
+    );
+
+    const filtered = filterProductionCoverage(coverage, ['playground']);
+
+    expect(filtered.fileIds).toEqual(['src/a.ts']);
+    expect(filtered.matrix).toEqual([[1]]);
+  });
+
   it('removes zero-coverage non-production packages and recomputes metrics', () => {
     const coverage = makeCoverageMatrix(
       [[1, 0, 0], [0, 1, 0]],
@@ -281,5 +310,16 @@ describe('filterProductionPackages', () => {
     //
     // selfInfo-based (buggy) N_eff = (3+2)²/(3²+2²) = 25/13 ≈ 1.923
     expect(filtered.effectiveDimension).toBeCloseTo(1.19, 1);
+  });
+
+  it('forwards extra patterns when filtering production packages', () => {
+    const coverage = makeCoverageMatrix(
+      [[1, 0]],
+      ['src/a.ts', 'playground/demo.ts']
+    );
+
+    const filtered = filterProductionPackages(coverage, ['playground']);
+
+    expect(filtered.diagonal.map((entry) => entry.fileId)).toEqual(['src/a.ts']);
   });
 });

@@ -3,6 +3,7 @@ import type { Config } from '@/cli/config-loader.js';
 import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
 
 const loadMock = vi.fn();
 const normalizeToDiagramsMock = vi.fn();
@@ -17,6 +18,7 @@ const generateTestCoverageHeatmapMock = vi.fn();
 const indexGenerateMock = vi.fn();
 const diagramProcessorCtorMock = vi.fn();
 const testAnalyzerAnalyzeMock = vi.fn();
+const mergeProjectSemanticsIntoPatternConfigMock = vi.fn();
 const testOutputWriterWriteMock = vi.fn();
 const computeImportApproximationFIMMock = vi.fn();
 const validateFIMAgainstGitMock = vi.fn();
@@ -25,11 +27,14 @@ const appendFIMSnapshotMock = vi.fn();
 const readGitLogMock = vi.fn();
 const isGitRepoMock = vi.fn();
 const getGitRootMock = vi.fn();
+const computeDirTreeHashMock = vi.fn();
+const loadCachedSemanticsMock = vi.fn();
+const saveSemanticsCacheMock = vi.fn();
+const explorerExploreMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
     constructor(public configDir: string) {
-      loadMock.mockImplementation(() => Promise.resolve(baseConfig));
       (this as any).configDir = configDir;
     }
     load = loadMock;
@@ -66,6 +71,7 @@ vi.mock('@/analysis/test-analyzer.js', () => ({
   TestAnalyzer: class {
     analyze = testAnalyzerAnalyzeMock;
   },
+  mergeProjectSemanticsIntoPatternConfig: mergeProjectSemanticsIntoPatternConfigMock,
 }));
 
 vi.mock('@/cli/utils/test-output-writer.js', () => ({
@@ -95,6 +101,18 @@ vi.mock('@/cli/git-history/git-log-reader.js', () => ({
   getCurrentBranch: vi.fn(),
 }));
 
+vi.mock('@/analysis/project-semantics-cache.js', () => ({
+  computeDirTreeHash: computeDirTreeHashMock,
+  loadCachedSemantics: loadCachedSemanticsMock,
+  saveSemanticsCache: saveSemanticsCacheMock,
+}));
+
+vi.mock('@/analysis/project-semantics-explorer.js', () => ({
+  ProjectSemanticsExplorer: class {
+    explore = explorerExploreMock;
+  },
+}));
+
 vi.mock('fs-extra', () => ({
   default: {
     outputJson: vi.fn().mockResolvedValue(undefined),
@@ -117,7 +135,19 @@ const baseConfig: Config = {
   cache: { enabled: true, ttl: 86400, dir: '/tmp/project/.archguard/cache' },
   concurrency: 4,
   verbose: false,
+  projectSemantics: undefined,
   diagrams: [],
+};
+
+const cachedSemantics: ProjectSemantics = {
+  version: '1.0',
+  nonProductionPatterns: ['playground'],
+  barrelFiles: [],
+  additionalTestPatterns: [],
+  customAssertionPatterns: [],
+  confidence: 0.9,
+  _dirTreeHash: 'hash-1',
+  _generatedAt: '2026-03-30T00:00:00Z',
 };
 
 const successfulResult: DiagramResult = {
@@ -165,6 +195,7 @@ describe('runAnalysis', () => {
     indexGenerateMock.mockReset();
     diagramProcessorCtorMock.mockReset();
     testAnalyzerAnalyzeMock.mockReset();
+    mergeProjectSemanticsIntoPatternConfigMock.mockReset();
     testOutputWriterWriteMock.mockReset();
     computeImportApproximationFIMMock.mockReset();
     validateFIMAgainstGitMock.mockReset();
@@ -173,11 +204,27 @@ describe('runAnalysis', () => {
     readGitLogMock.mockReset();
     isGitRepoMock.mockReset();
     getGitRootMock.mockReset();
+    computeDirTreeHashMock.mockReset();
+    loadCachedSemanticsMock.mockReset();
+    saveSemanticsCacheMock.mockReset();
+    explorerExploreMock.mockReset();
 
-    loadMock.mockResolvedValue(baseConfig);
+    baseConfig.projectSemantics = undefined;
+    loadMock.mockResolvedValue({
+      ...baseConfig,
+      mermaid: { ...baseConfig.mermaid },
+      cli: { ...baseConfig.cli },
+      cache: { ...baseConfig.cache },
+      diagrams: [...baseConfig.diagrams],
+      projectSemantics: undefined,
+    });
     getLastArchJsonMock.mockReturnValue(null);
     generateTestCoverageHeatmapMock.mockResolvedValue(undefined);
     testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 0 } });
+    mergeProjectSemanticsIntoPatternConfigMock.mockImplementation((_patternConfig, projectSemantics) => ({
+      testFileGlobs: projectSemantics?.additionalTestPatterns ?? [],
+      customAssertionRegexes: projectSemantics?.customAssertionPatterns ?? [],
+    }));
     testOutputWriterWriteMock.mockResolvedValue(undefined);
     computeImportApproximationFIMMock.mockResolvedValue({
       artifact: {
@@ -243,6 +290,10 @@ describe('runAnalysis', () => {
         permutations: 999,
         pValue: 0.01,
         isValidProxy: true,
+        separationScore: 2.1,
+        isSignificantOverNull: true,
+        nullModelMeanR: 0.2,
+        nullModelMaxR: 0.4,
       },
       packageCochangeMatrix: [[1]],
     });
@@ -251,6 +302,10 @@ describe('runAnalysis', () => {
     readGitLogMock.mockReturnValue([{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }]);
     isGitRepoMock.mockReturnValue(true);
     getGitRootMock.mockReturnValue('/tmp/project');
+    computeDirTreeHashMock.mockResolvedValue('hash-1');
+    loadCachedSemanticsMock.mockResolvedValue(null);
+    saveSemanticsCacheMock.mockResolvedValue(undefined);
+    explorerExploreMock.mockResolvedValue(null);
     normalizeToDiagramsMock.mockResolvedValue([
       { name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' },
     ]);
@@ -292,7 +347,10 @@ describe('runAnalysis', () => {
       undefined
     );
     expect(normalizeToDiagramsMock).toHaveBeenCalledWith(
-      baseConfig,
+      expect.objectContaining({
+        outputDir: '/tmp/project/.archguard/output',
+        workDir: '/tmp/project/.archguard',
+      }),
       { sources: ['./src'] },
       '/tmp/project'
     );
@@ -599,6 +657,7 @@ describe('runAnalysis — FIM integration', () => {
       workspaceRoot: '/tmp/project',
     } as any;
     getLastArchJsonMock.mockReturnValue(archJson);
+    explorerExploreMock.mockResolvedValue(cachedSemantics);
 
     const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
     await runAnalysis({
@@ -609,7 +668,11 @@ describe('runAnalysis — FIM integration', () => {
     });
 
     expect(computeImportApproximationFIMMock).toHaveBeenCalledWith(
-      expect.objectContaining({ archJson, workspaceRoot: '/tmp/project' })
+      expect.objectContaining({
+        archJson,
+        workspaceRoot: '/tmp/project',
+        nonProductionPatterns: ['playground'],
+      })
     );
     expect(writeFIMCurrentArtifactMock).toHaveBeenCalledWith(
       '/tmp/project/.archguard',
@@ -677,6 +740,153 @@ describe('runAnalysis — FIM integration', () => {
       expect.objectContaining({
         mantel: expect.objectContaining({ isValidProxy: true }),
       })
+    );
+  });
+
+  it('skips semantic exploration entirely when explore=false', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+    const initialLoadCalls = loadCachedSemanticsMock.mock.calls.length;
+    const initialExploreCalls = explorerExploreMock.mock.calls.length;
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true, explore: false },
+      reporter: silentReporter(),
+    });
+
+    expect(loadCachedSemanticsMock.mock.calls.length).toBe(initialLoadCalls);
+    expect(explorerExploreMock.mock.calls.length).toBe(initialExploreCalls);
+  });
+
+  it('uses cached semantics when the hash matches', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+    loadCachedSemanticsMock.mockResolvedValue(cachedSemantics);
+    const initialExploreCalls = explorerExploreMock.mock.calls.length;
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true },
+      reporter: silentReporter(),
+    });
+
+    expect(loadCachedSemanticsMock).toHaveBeenLastCalledWith('/tmp/project/.archguard', 'hash-1');
+    expect(explorerExploreMock.mock.calls.length).toBe(initialExploreCalls);
+    expect(computeImportApproximationFIMMock.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ nonProductionPatterns: ['playground'] })
+    );
+  });
+
+  it('triggers exploration when the cache misses', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+    loadCachedSemanticsMock.mockResolvedValue(null);
+    explorerExploreMock.mockResolvedValue(cachedSemantics);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true },
+      reporter: silentReporter(),
+    });
+
+    expect(explorerExploreMock).toHaveBeenLastCalledWith('/tmp/project');
+    expect(saveSemanticsCacheMock).toHaveBeenLastCalledWith('/tmp/project/.archguard', cachedSemantics);
+  });
+
+  it('lets user config override LLM semantics', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+    loadMock.mockResolvedValue({
+      ...baseConfig,
+      projectSemantics: {
+        nonProductionPatterns: ['!playground', 'demo'],
+      },
+    });
+    explorerExploreMock.mockResolvedValue(cachedSemantics);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true },
+      reporter: silentReporter(),
+    });
+
+    expect(computeImportApproximationFIMMock.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ nonProductionPatterns: ['demo'] })
+    );
+  });
+
+  it('falls back to defaults when no LLM is available', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+    loadMock.mockResolvedValue({
+      ...baseConfig,
+      mermaid: { ...baseConfig.mermaid },
+      cli: { ...baseConfig.cli },
+      cache: { ...baseConfig.cache },
+      diagrams: [...baseConfig.diagrams],
+      projectSemantics: undefined,
+    });
+    explorerExploreMock.mockResolvedValue(null);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true },
+      reporter: silentReporter(),
+    });
+
+    expect(computeImportApproximationFIMMock.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ nonProductionPatterns: [] })
     );
   });
 });

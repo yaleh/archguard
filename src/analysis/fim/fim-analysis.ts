@@ -22,6 +22,8 @@ export interface ComputeImportApproximationFIMOptions {
   plugin: ILanguagePlugin;
   workspaceRoot: string;
   patternConfig?: TestPatternConfig;
+  nonProductionPatterns?: string[];
+  suggestedDepth?: number;
 }
 
 export interface ValidateFIMAgainstGitOptions {
@@ -35,6 +37,7 @@ export interface ValidateFIMAgainstGitOptions {
   workspaceRoot?: string;
   /** Git repo root (parent of workspaceRoot when project is a git subdir) */
   gitRoot?: string;
+  packageDepth?: number;
 }
 
 function normalizeFilePath(filePath: string): string {
@@ -70,15 +73,17 @@ async function discoverTestFiles(
   plugin: ILanguagePlugin,
   patternConfig?: TestPatternConfig
 ): Promise<string[]> {
-  if (plugin.metadata.fileExtensions.includes('.go')) {
-    return globby(`${workspaceRoot}/**/*_test.go`, { onlyFiles: true, absolute: true });
-  }
+  const extraMatches =
+    patternConfig?.testFileGlobs?.length
+      ? await globby(patternConfig.testFileGlobs.map((globPattern) => `${workspaceRoot}/${globPattern}`), {
+          onlyFiles: true,
+          absolute: true,
+        })
+      : [];
 
-  if (patternConfig?.testFileGlobs?.length) {
-    return globby(patternConfig.testFileGlobs.map((glob) => `${workspaceRoot}/${glob}`), {
-      onlyFiles: true,
-      absolute: true,
-    });
+  if (plugin.metadata.fileExtensions.includes('.go')) {
+    const defaultMatches = await globby(`${workspaceRoot}/**/*_test.go`, { onlyFiles: true, absolute: true });
+    return [...new Set([...defaultMatches, ...extraMatches])];
   }
 
   if (plugin.metadata.fileExtensions.includes('.java')) {
@@ -87,7 +92,9 @@ async function discoverTestFiles(
       absolute: true,
       ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
     });
-    return plugin.isTestFile ? allJavaFiles.filter((file) => plugin.isTestFile(file, patternConfig)) : allJavaFiles;
+    return plugin.isTestFile
+      ? [...new Set([...allJavaFiles.filter((file) => plugin.isTestFile(file, patternConfig)), ...extraMatches])]
+      : [...new Set([...allJavaFiles, ...extraMatches])];
   }
 
   const candidateDirs = await inferTestDirs(workspaceRoot);
@@ -102,12 +109,17 @@ async function discoverTestFiles(
   }
 
   if (plugin.isTestFile) {
-    return allFiles.filter((file) => plugin.isTestFile(file, patternConfig));
+    return [...new Set([...allFiles.filter((file) => plugin.isTestFile(file, patternConfig)), ...extraMatches])];
   }
 
-  return allFiles.filter(
-    (file) => /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(file) || /_test\.(go|ts)$/.test(file)
-  );
+  return [
+    ...new Set([
+      ...allFiles.filter(
+        (file) => /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(file) || /_test\.(go|ts)$/.test(file)
+      ),
+      ...extraMatches,
+    ]),
+  ];
 }
 
 async function collectRawTestFiles(
@@ -214,10 +226,56 @@ function derivePackageNames(fileIds: string[], depth: number = 2): string[] {
   return packageNames;
 }
 
+interface PackageAnalysis {
+  depth: number;
+  packageNames: string[];
+  packageMatrix: number[][];
+  filteredPackageMatrix: number[][];
+  packageResult: FIMCurrentArtifact['packageResult'];
+  filteredPackageResult: FIMCurrentArtifact['filteredPackageResult'];
+}
+
+function buildPackageAnalysis(
+  coverage: CoverageMatrix,
+  depth: number,
+  nonProductionPatterns: string[]
+): PackageAnalysis {
+  const packageDepth = Math.max(1, depth);
+  const packageNames = derivePackageNames(coverage.fileIds, packageDepth);
+  const packageCoverage = clampCoverageByPackage(coverage, coverage.fileIds, packageDepth);
+  const packageCoverageMatrix: CoverageMatrix = {
+    matrix: packageCoverage,
+    testIds: coverage.testIds,
+    fileIds: packageNames,
+  };
+  const packageResult = computeFisherInformation(packageCoverageMatrix);
+  const filteredPackageCoverageMatrix = filterProductionCoverage(
+    packageCoverageMatrix,
+    nonProductionPatterns
+  );
+  const filteredPackageResult = filterProductionPackages(
+    packageCoverageMatrix,
+    nonProductionPatterns
+  );
+
+  return {
+    depth: packageDepth,
+    packageNames,
+    packageMatrix: computeGramMatrix(packageCoverageMatrix),
+    filteredPackageMatrix: computeGramMatrix(filteredPackageCoverageMatrix),
+    packageResult,
+    filteredPackageResult,
+  };
+}
+
 function topEigenvalueShares(eigenvalues: number[], limit: number = 20): number[] {
   const total = eigenvalues.reduce((sum, value) => sum + value, 0);
   if (total === 0) return [];
   return eigenvalues.slice(0, limit).map((value) => value / total);
+}
+
+function safeDelta(left: number, right: number): number | null {
+  return Number.isFinite(left) && Number.isFinite(right) ? left - right : null;
 }
 
 export async function computeImportApproximationFIM(
@@ -231,33 +289,70 @@ export async function computeImportApproximationFIM(
   const sourceFiles = collectSourceFiles(options.archJson, options.workspaceRoot);
   const testIds = rawFiles.map((rawFile) => relativeFilePath(rawFile.filePath, options.workspaceRoot));
   const importGraph = buildImportGraph(rawFiles, options.archJson, options.workspaceRoot);
-  const coverage = buildCoverageMatrixFromImports(testIds, sourceFiles, importGraph);
+  const coverage = buildCoverageMatrixFromImports(
+    testIds,
+    sourceFiles,
+    importGraph,
+    undefined,
+    options.patternConfig?.testFileGlobs
+  );
   const fileResult = computeFisherInformation(coverage);
-
-  const packageNames = derivePackageNames(coverage.fileIds, 2);
-  const packageCoverage = clampCoverageByPackage(coverage, coverage.fileIds, 2);
-  const packageCoverageMatrix: CoverageMatrix = {
-    matrix: packageCoverage,
-    testIds: coverage.testIds,
-    fileIds: packageNames,
-  };
-  const packageResult = computeFisherInformation(packageCoverageMatrix);
-  const filteredPackageCoverageMatrix = filterProductionCoverage(packageCoverageMatrix);
-  const filteredPackageResult = computeFisherInformation(filteredPackageCoverageMatrix);
+  const defaultDepth = 1;
+  const selectedDepth = Math.max(defaultDepth, options.suggestedDepth ?? defaultDepth);
+  const nonProductionPatterns = options.nonProductionPatterns ?? [];
+  const selectedPackageAnalysis = buildPackageAnalysis(coverage, selectedDepth, nonProductionPatterns);
+  const defaultPackageAnalysis =
+    selectedDepth === defaultDepth
+      ? selectedPackageAnalysis
+      : buildPackageAnalysis(coverage, defaultDepth, nonProductionPatterns);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
     source: 'import-approximation',
     descriptionLength: options.archJson.entities.length + options.archJson.relations.length,
     fileIds: coverage.fileIds,
-    packageNames,
+    packageDepth: selectedPackageAnalysis.depth,
+    packageNames: selectedPackageAnalysis.packageNames,
     fileMatrix: coverage.matrix,
-    packageMatrix: computeGramMatrix(packageCoverageMatrix),
-    filteredPackageMatrix: computeGramMatrix(filteredPackageCoverageMatrix),
+    packageMatrix: selectedPackageAnalysis.packageMatrix,
+    filteredPackageMatrix: selectedPackageAnalysis.filteredPackageMatrix,
     fileResult,
-    packageResult,
-    filteredPackageResult,
+    packageResult: selectedPackageAnalysis.packageResult,
+    filteredPackageResult: selectedPackageAnalysis.filteredPackageResult,
   };
+
+  if (selectedDepth !== defaultDepth) {
+    artifact.depth1 = {
+      depth: defaultPackageAnalysis.depth,
+      packageNames: defaultPackageAnalysis.packageNames,
+      packageMatrix: defaultPackageAnalysis.packageMatrix,
+      filteredPackageMatrix: defaultPackageAnalysis.filteredPackageMatrix,
+      packageResult: defaultPackageAnalysis.packageResult,
+      filteredPackageResult: defaultPackageAnalysis.filteredPackageResult,
+    };
+    artifact.depthN = {
+      depth: selectedPackageAnalysis.depth,
+      packageNames: selectedPackageAnalysis.packageNames,
+      packageMatrix: selectedPackageAnalysis.packageMatrix,
+      filteredPackageMatrix: selectedPackageAnalysis.filteredPackageMatrix,
+      packageResult: selectedPackageAnalysis.packageResult,
+      filteredPackageResult: selectedPackageAnalysis.filteredPackageResult,
+    };
+    artifact.depthComparison = {
+      defaultDepth,
+      suggestedDepth: selectedDepth,
+      conditionNumberDelta: safeDelta(
+        selectedPackageAnalysis.filteredPackageResult.conditionNumber,
+        defaultPackageAnalysis.filteredPackageResult.conditionNumber
+      ),
+      effectiveDimensionDelta:
+        selectedPackageAnalysis.filteredPackageResult.effectiveDimension -
+        defaultPackageAnalysis.filteredPackageResult.effectiveDimension,
+      uncoveredFileCountDelta:
+        selectedPackageAnalysis.filteredPackageResult.uncoveredFiles.length -
+        defaultPackageAnalysis.filteredPackageResult.uncoveredFiles.length,
+    };
+  }
 
   const snapshot: FIMSnapshot = {
     timestamp: artifact.timestamp,
@@ -265,12 +360,14 @@ export async function computeImportApproximationFIM(
     fileCount: fileResult.fileCount,
     testCount: fileResult.testCount,
     descriptionLength: artifact.descriptionLength,
-    conditionNumber: packageResult.conditionNumber,
-    effectiveDimension: packageResult.effectiveDimension,
-    filteredConditionNumber: filteredPackageResult.conditionNumber,
-    filteredEffectiveDimension: filteredPackageResult.effectiveDimension,
-    topEigenvalueShares: topEigenvalueShares(packageResult.eigenvalues),
-    filteredTopEigenvalueShares: topEigenvalueShares(filteredPackageResult.eigenvalues),
+    conditionNumber: selectedPackageAnalysis.packageResult.conditionNumber,
+    effectiveDimension: selectedPackageAnalysis.packageResult.effectiveDimension,
+    filteredConditionNumber: selectedPackageAnalysis.filteredPackageResult.conditionNumber,
+    filteredEffectiveDimension: selectedPackageAnalysis.filteredPackageResult.effectiveDimension,
+    topEigenvalueShares: topEigenvalueShares(selectedPackageAnalysis.packageResult.eigenvalues),
+    filteredTopEigenvalueShares: topEigenvalueShares(
+      selectedPackageAnalysis.filteredPackageResult.eigenvalues
+    ),
     uncoveredFileCount: fileResult.uncoveredFiles.length,
   };
 
@@ -293,7 +390,13 @@ export function validateFIMAgainstGit(
 
   const fileToPackage = new Map(
     options.coverage.fileIds.flatMap((fileId) => {
-      const packageName = path.dirname(normalizeFilePath(fileId)).split('/').filter(Boolean).slice(0, 2).join('/') || '.';
+      const packageName =
+        path
+          .dirname(normalizeFilePath(fileId))
+          .split('/')
+          .filter(Boolean)
+          .slice(0, Math.max(1, options.packageDepth ?? 1))
+          .join('/') || '.';
       const entries: [string, string][] = [[fileId, packageName]];
       if (subDirPrefix) {
         entries.push([subDirPrefix + fileId, packageName]);

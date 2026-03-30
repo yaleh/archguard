@@ -359,7 +359,9 @@ export class DiagramOutputRouter {
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
     const moduleGraph = archJSON.extensions.tsAnalysis.moduleGraph;
-    const mmdContent = renderTsModuleGraph(moduleGraph);
+    const mmdContent = renderTsModuleGraph(moduleGraph, {
+      architecturalLayers: archJSON.extensions?.projectSemantics?.architecturalLayers,
+    });
 
     const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions());
 

@@ -1,3 +1,4 @@
+import micromatch from 'micromatch';
 import type { CoverageMatrix } from './types.js';
 
 const DEFAULT_TRANSITIVE_DEPTH = 3;
@@ -6,9 +7,13 @@ function normalizeFileId(filePath: string): string {
   return filePath.replace(/\\/g, '/');
 }
 
-function isTestLikePath(filePath: string): boolean {
+export function isTestLikePath(filePath: string, additionalTestGlobs?: string[]): boolean {
   const normalized = normalizeFileId(filePath);
-  return /(^|\/)(?:tests?|__tests__)\//.test(normalized) || /(?:^|[._-])(test|spec)\.[^.]+$/.test(normalized);
+  return (
+    /(^|\/)(?:tests?|__tests__)\//.test(normalized) ||
+    /(?:^|[._-])(test|spec)\.[^.]+$/.test(normalized) ||
+    (additionalTestGlobs?.length ? micromatch.isMatch(normalized, additionalTestGlobs) : false)
+  );
 }
 
 function collectReachableSources(
@@ -49,9 +54,10 @@ export function buildCoverageMatrixFromImports(
   testFiles: string[],
   sourceFiles: string[],
   importGraph: Map<string, Set<string>>,
-  maxDepth: number = DEFAULT_TRANSITIVE_DEPTH
+  maxDepth: number = DEFAULT_TRANSITIVE_DEPTH,
+  additionalTestGlobs?: string[]
 ): CoverageMatrix {
-  const fileIds = sourceFiles.filter((fileId) => !isTestLikePath(fileId));
+  const fileIds = sourceFiles.filter((fileId) => !isTestLikePath(fileId, additionalTestGlobs));
   const sourceSet = new Set(fileIds);
   const fileIndex = new Map(fileIds.map((fileId, index) => [fileId, index]));
 

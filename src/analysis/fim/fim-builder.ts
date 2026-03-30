@@ -186,10 +186,12 @@ const NON_PRODUCTION_PREFIXES = [
  * Excluded top-level prefixes: test*, __test*, example*, template*, script*,
  * vendor*, doc*, fixture*, mock*, bench*, and the bare root ".".
  */
-export function isProductionPackage(name: string): boolean {
+export function isProductionPackage(name: string, extraPatterns: string[] = []): boolean {
   if (name === '.') return false;
   const first = name.split('/')[0]?.toLowerCase() ?? '';
-  return !NON_PRODUCTION_PREFIXES.some((prefix) => first.startsWith(prefix));
+  return ![...NON_PRODUCTION_PREFIXES, ...extraPatterns]
+    .map((prefix) => prefix.toLowerCase())
+    .some((prefix) => first.startsWith(prefix));
 }
 
 /**
@@ -197,11 +199,14 @@ export function isProductionPackage(name: string): boolean {
  *
  * @param coverage The package-level CoverageMatrix (fileIds are package names).
  */
-export function filterProductionCoverage(coverage: CoverageMatrix): CoverageMatrix {
+export function filterProductionCoverage(
+  coverage: CoverageMatrix,
+  extraPatterns: string[] = []
+): CoverageMatrix {
   const keepIndices: number[] = [];
   for (let i = 0; i < coverage.fileIds.length; i++) {
     const fileId = coverage.fileIds[i] ?? '';
-    if (isProductionPackage(fileId)) {
+    if (isProductionPackage(fileId, extraPatterns)) {
       keepIndices.push(i);
     }
   }
@@ -221,8 +226,11 @@ export function filterProductionCoverage(coverage: CoverageMatrix): CoverageMatr
  *
  * @param coverage The package-level CoverageMatrix (fileIds are package names).
  */
-export function filterProductionPackages(coverage: CoverageMatrix): FisherInformationResult {
-  return computeFisherInformation(filterProductionCoverage(coverage));
+export function filterProductionPackages(
+  coverage: CoverageMatrix,
+  extraPatterns: string[] = []
+): FisherInformationResult {
+  return computeFisherInformation(filterProductionCoverage(coverage, extraPatterns));
 }
 
 export function clampCoverageByPackage(

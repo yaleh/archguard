@@ -47,6 +47,7 @@ export interface FIMCurrentArtifact {
   source: FIMSnapshot['source'];
   descriptionLength: number;
   fileIds: string[];
+  packageDepth: number;
   packageNames: string[];
   fileMatrix: number[][];
   packageMatrix: number[][];
@@ -55,5 +56,28 @@ export interface FIMCurrentArtifact {
   fileResult: FisherInformationResult;
   packageResult: FisherInformationResult;
   filteredPackageResult: FisherInformationResult;
+  depth1?: {
+    depth: number;
+    packageNames: string[];
+    packageMatrix: number[][];
+    filteredPackageMatrix: number[][];
+    packageResult: FisherInformationResult;
+    filteredPackageResult: FisherInformationResult;
+  };
+  depthN?: {
+    depth: number;
+    packageNames: string[];
+    packageMatrix: number[][];
+    filteredPackageMatrix: number[][];
+    packageResult: FisherInformationResult;
+    filteredPackageResult: FisherInformationResult;
+  };
+  depthComparison?: {
+    defaultDepth: number;
+    suggestedDepth: number;
+    conditionNumberDelta: number | null;
+    effectiveDimensionDelta: number;
+    uncoveredFileCountDelta: number;
+  };
   mantel?: import('./mantel-test.js').MantelTestWithNullModelResult;
 }

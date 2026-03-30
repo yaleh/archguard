@@ -52,6 +52,14 @@ describe('isTestFile — tsx/jsx test file detection', () => {
   it('does NOT identify a plain .jsx file as a test file', () => {
     expect(plugin.isTestFile('/src/components/Button.jsx')).toBe(false);
   });
+
+  it('identifies additional test globs such as *.integration.ts', () => {
+    expect(
+      plugin.isTestFile('/src/components/Button.integration.ts', {
+        testFileGlobs: ['**/*.integration.ts'],
+      })
+    ).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

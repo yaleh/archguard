@@ -84,6 +84,16 @@ int main() {}`;
     const r = await extractTestStructure('/tests/test-only-custom.cpp', code);
     expect(totalAssertions(r)).toBeGreaterThan(0);
   });
+
+  it('counts customAssertionRegexes from patternConfig', async () => {
+    const { CppPlugin } = await import('@/plugins/cpp/index.js');
+    const plugin = new CppPlugin();
+    const code = `int main() { MY_CHECK(value); }`;
+    const r = plugin.extractTestStructure('/tests/test-only-custom.cpp', code, {
+      customAssertionRegexes: ['\\bMY_CHECK\\s*\\('],
+    });
+    expect(totalAssertions(r)).toBeGreaterThan(0);
+  });
 });
 
 describe('CppPlugin extractTestStructure — assertion count preserved across many test functions (Fix rounding)', () => {

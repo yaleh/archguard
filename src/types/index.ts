@@ -12,6 +12,7 @@ export type {
   GoAtlasExtension,
   GoAtlasLayers,
   GoAtlasMetadata,
+  ProjectSemantics,
   PackageGraph,
   PackageCycle,
   PackageNode,
@@ -40,6 +41,7 @@ export type {
 } from './extensions/index.js';
 export {
   GO_ATLAS_EXTENSION_VERSION,
+  PROJECT_SEMANTICS_VERSION,
   TEST_ANALYSIS_VERSION,
   TS_ANALYSIS_EXTENSION_VERSION,
 } from './extensions/index.js';

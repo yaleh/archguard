@@ -318,6 +318,34 @@ describe('DiagramPipelineRunner', () => {
       expect(result.stats?.entities).toBe(3);
       expect(result.stats?.relations).toBe(2);
     });
+
+    it('injects global projectSemantics into ArchJSON extensions before routing', async () => {
+      setupBaseMocks(makeArchJson(1, 0));
+      const runner = makeRunner(
+        makeGlobalConfig({
+          projectSemantics: {
+            suggestedDepth: 2,
+            architecturalLayers: {
+              'src/analysis': 'Analysis',
+            },
+          },
+        })
+      );
+      const pool = makePool();
+
+      await runner.run(makeDiagram({ level: 'package' }), makeArchJson(), pool);
+
+      const router = (DiagramOutputRouter as any).mock.results[0].value;
+      const routeMock = (router.route as any).mock;
+      expect(routeMock.calls[0][0].extensions?.projectSemantics).toEqual(
+        expect.objectContaining({
+          suggestedDepth: 2,
+          architecturalLayers: {
+            'src/analysis': 'Analysis',
+          },
+        })
+      );
+    });
   });
 
   describe('failure handling', () => {

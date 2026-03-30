@@ -5,6 +5,7 @@ import { JavaPlugin } from '@/plugins/java/index.js';
 import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
 import os from 'os';
 import path from 'path';
+import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
 
 function makePlugin(fileExtensions: string[] = ['.ts', '.tsx']): ILanguagePlugin {
   return {
@@ -246,6 +247,49 @@ describe('TestAnalyzer - metrics computation', () => {
     });
     expect(result.metrics.issueCount.zero_assertion).toBe(1); // debug emits zero_assertion
     expect(result.metrics.issueCount.orphan_test).toBe(0); // debug exempt from orphan
+  });
+});
+
+describe('TestAnalyzer - ProjectSemantics integration', () => {
+  it('passes custom assertion regexes from ProjectSemantics when patternConfig does not override them', async () => {
+    const { mergeProjectSemanticsIntoPatternConfig } = await import('@/analysis/test-analyzer.js');
+
+    const merged = mergeProjectSemanticsIntoPatternConfig(undefined, {
+      customAssertionPatterns: ['\\bverify\\s*\\('],
+    } as Partial<ProjectSemantics>);
+
+    expect(merged?.customAssertionRegexes).toEqual(['\\bverify\\s*\\(']);
+  });
+
+  it('keeps patternConfig assertionPatterns as higher priority than ProjectSemantics regexes', async () => {
+    const { mergeProjectSemanticsIntoPatternConfig } = await import('@/analysis/test-analyzer.js');
+
+    const merged = mergeProjectSemanticsIntoPatternConfig(
+      {
+        assertionPatterns: ['expect('],
+      },
+      {
+        customAssertionPatterns: ['\\bverify\\s*\\('],
+      } as Partial<ProjectSemantics>
+    );
+
+    expect(merged?.assertionPatterns).toEqual(['expect(']);
+    expect(merged?.customAssertionRegexes).toBeUndefined();
+  });
+
+  it('merges additionalTestPatterns into testFileGlobs', async () => {
+    const { mergeProjectSemanticsIntoPatternConfig } = await import('@/analysis/test-analyzer.js');
+
+    const merged = mergeProjectSemanticsIntoPatternConfig(
+      {
+        testFileGlobs: ['**/*.spec.ts'],
+      },
+      {
+        additionalTestPatterns: ['**/*.integration.ts'],
+      } as Partial<ProjectSemantics>
+    );
+
+    expect(merged?.testFileGlobs).toEqual(['**/*.spec.ts', '**/*.integration.ts']);
   });
 });
 

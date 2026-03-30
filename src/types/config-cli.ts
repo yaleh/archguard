@@ -29,4 +29,5 @@ export interface CLIOptions {
   includeGit?: boolean;
   fim?: boolean;
   fimValidate?: boolean;
+  explore?: boolean;
 }

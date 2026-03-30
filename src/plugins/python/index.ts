@@ -23,6 +23,17 @@ import { DependencyExtractor } from './dependency-extractor.js';
 import { PythonImportExtractor } from './import-extractor.js';
 import type { ImportRelation } from './import-extractor.js';
 
+function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
+  return (patterns ?? []).flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern)];
+    } catch (error) {
+      console.warn(`[python:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      return [];
+    }
+  });
+}
+
 /**
  * Python language plugin implementation
  */
@@ -225,12 +236,17 @@ export class PythonPlugin implements ILanguagePlugin {
    * When patternConfig.testFileGlobs is provided those globs take precedence.
    */
   isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
-    if (patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0) {
-      return micromatch.isMatch(filePath, patternConfig.testFileGlobs);
-    }
     const base = path.basename(filePath);
     if (base === 'conftest.py' || base === '__init__.py') return false;
-    if (/^test_.+\.py$/.test(base) || /^.+_test\.py$/.test(base)) return true;
+    if (
+      /^test_.+\.py$/.test(base) ||
+      /^.+_test\.py$/.test(base) ||
+      (patternConfig?.testFileGlobs?.length
+        ? micromatch.isMatch(filePath, patternConfig.testFileGlobs)
+        : false)
+    ) {
+      return true;
+    }
     // directory convention: any .py file inside tests/ or test/ directory
     const parts = filePath.replace(/\\/g, '/').split('/');
     return parts.some((p) => p === 'tests' || p === 'test');
@@ -271,6 +287,9 @@ export class PythonPlugin implements ILanguagePlugin {
         'assert(', // assert(condition) call style
         '.assert', // self.assertX (unittest), torch.testing.assert_close, np.testing.assert_allclose
       ];
+      const customAssertionRegexes = compileCustomAssertionRegexes(
+        patternConfig?.customAssertionRegexes
+      );
       const skipPatterns = patternConfig?.skipPatterns ?? [
         '@pytest.mark.skip',
         '@pytest.mark.skipif',
@@ -300,7 +319,11 @@ export class PythonPlugin implements ILanguagePlugin {
           const bodyEnd = Math.min(i + 30, lines.length);
           const assertionCount = lines
             .slice(i + 1, bodyEnd)
-            .filter((l) => assertionPatterns.some((ap) => l.includes(ap))).length;
+            .filter(
+              (line) =>
+                assertionPatterns.some((pattern) => line.includes(pattern)) ||
+                customAssertionRegexes.some((regex) => regex.test(line))
+            ).length;
           testCases.push({ name, isSkipped, assertionCount });
           pendingSkip = false;
           continue;

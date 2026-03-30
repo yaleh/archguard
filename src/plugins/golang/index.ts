@@ -10,6 +10,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { glob } from 'glob';
+import micromatch from 'micromatch';
 import type {
   ILanguagePlugin,
   PluginMetadata,
@@ -41,6 +42,17 @@ import type {
   RenderResult,
 } from './atlas/types.js';
 import { GO_ATLAS_EXTENSION_VERSION } from './atlas/types.js';
+
+function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
+  return (patterns ?? []).flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern)];
+    } catch (error) {
+      console.warn(`[go:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      return [];
+    }
+  });
+}
 
 // Re-export types for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -645,16 +657,21 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     }
   }
 
-  isTestFile(filePath: string, _patternConfig?: TestPatternConfig): boolean {
-    return filePath.endsWith('_test.go');
+  isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
+    return (
+      filePath.endsWith('_test.go') ||
+      (patternConfig?.testFileGlobs?.length
+        ? micromatch.isMatch(filePath, patternConfig.testFileGlobs)
+        : false)
+    );
   }
 
   extractTestStructure(
     filePath: string,
     code: string,
-    _patternConfig?: TestPatternConfig
+    patternConfig?: TestPatternConfig
   ): RawTestFile | null {
-    if (!this.isTestFile(filePath)) return null;
+    if (!this.isTestFile(filePath, patternConfig)) return null;
 
     // Detect frameworks from import block
     const frameworks: string[] = [];
@@ -678,10 +695,18 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
         /\brequire\.\w+\s*\(/g,
         /\bt\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)\s*\(/g,
       ];
+      const customAssertionRegexes = compileCustomAssertionRegexes(
+        patternConfig?.customAssertionRegexes
+      );
       let assertionCount = 0;
       for (const pat of assertPatterns) {
         const all = code.match(pat);
         if (all) assertionCount += all.length;
+      }
+      if (customAssertionRegexes.length > 0) {
+        for (const line of code.split('\n')) {
+          assertionCount += customAssertionRegexes.filter((regex) => regex.test(line)).length;
+        }
       }
 
       testCases.push({ name, assertionCount: isBenchmark ? 0 : assertionCount, isSkipped });

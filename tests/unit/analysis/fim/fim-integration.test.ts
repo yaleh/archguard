@@ -84,8 +84,8 @@ describe('computeImportApproximationFIM', () => {
 
     expect(result.artifact.fileIds).toEqual(['src/pkg-a/a.ts', 'src/pkg-b/b.ts']);
     expect(result.artifact.fileResult.testCount).toBe(2);
-    expect(result.artifact.packageNames).toEqual(['src/pkg-a', 'src/pkg-b']);
-    expect(result.artifact.packageResult.fileCount).toBe(2);
+    expect(result.artifact.packageNames).toEqual(['src']);
+    expect(result.artifact.packageResult.fileCount).toBe(1);
   });
 
   it('captures a snapshot with normalized top eigenvalue shares', async () => {
@@ -99,6 +99,157 @@ describe('computeImportApproximationFIM', () => {
     expect(result.snapshot.source).toBe('import-approximation');
     expect(result.snapshot.topEigenvalueShares.length).toBeGreaterThan(0);
     expect(result.snapshot.topEigenvalueShares[0]).toBeLessThanOrEqual(1);
+  });
+
+  it('treats additional test globs as test-like paths during FIM coverage building', async () => {
+    const workspaceRoot = await makeWorkspace();
+    await fs.writeFile(
+      path.join(workspaceRoot, 'src/pkg-a/a.integration.ts'),
+      'import "./a.ts";'
+    );
+
+    const archJson = makeArchJson(workspaceRoot);
+    archJson.sourceFiles = [
+      ...archJson.sourceFiles,
+      path.join(workspaceRoot, 'src/pkg-a/a.integration.ts'),
+    ];
+
+    const plugin = {
+      metadata: { fileExtensions: ['.ts'] },
+      isTestFile: (filePath: string) => /\.test\.ts$/.test(filePath),
+      extractTestStructure: (filePath: string) => ({
+        filePath,
+        frameworks: ['vitest'],
+        testTypeHint: 'unit',
+        testCases: [{ name: 'works', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: [path.join(workspaceRoot, 'src/pkg-a/a.ts')],
+      }),
+    };
+
+    const result = await computeImportApproximationFIM({
+      archJson,
+      plugin,
+      workspaceRoot,
+      patternConfig: {
+        testFileGlobs: ['**/*.integration.ts'],
+      },
+    });
+
+    expect(result.artifact.fileIds).not.toContain('src/pkg-a/a.integration.ts');
+    expect(result.artifact.fileIds).toContain('src/pkg-a/a.ts');
+  });
+});
+
+async function makeDeepWorkspace(): Promise<string> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-fim-int-deep-'));
+  tempDirs.push(dir);
+  await fs.ensureDir(path.join(dir, 'src/app/orders'));
+  await fs.ensureDir(path.join(dir, 'src/app/payments'));
+  await fs.ensureDir(path.join(dir, 'tests'));
+  await fs.writeFile(path.join(dir, 'src/app/orders/service.ts'), 'export const orders = 1;');
+  await fs.writeFile(path.join(dir, 'src/app/payments/service.ts'), 'export const payments = 1;');
+  await fs.writeFile(path.join(dir, 'tests/orders.test.ts'), 'import "../src/app/orders/service.ts";');
+  await fs.writeFile(path.join(dir, 'tests/payments.test.ts'), 'import "../src/app/payments/service.ts";');
+  return dir;
+}
+
+function makeDeepArchJson(workspaceRoot: string): ArchJSON {
+  return {
+    version: '1.0',
+    language: 'typescript',
+    timestamp: '2026-03-30T00:00:00Z',
+    workspaceRoot,
+    sourceFiles: [
+      path.join(workspaceRoot, 'src/app/orders/service.ts'),
+      path.join(workspaceRoot, 'src/app/payments/service.ts'),
+    ],
+    entities: [
+      {
+        id: 'OrdersService',
+        name: 'OrdersService',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: {
+          file: path.join(workspaceRoot, 'src/app/orders/service.ts'),
+          startLine: 1,
+          endLine: 1,
+        },
+      },
+      {
+        id: 'PaymentsService',
+        name: 'PaymentsService',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: {
+          file: path.join(workspaceRoot, 'src/app/payments/service.ts'),
+          startLine: 1,
+          endLine: 1,
+        },
+      },
+    ],
+    relations: [
+      {
+        id: 'r1',
+        type: 'dependency',
+        source: 'OrdersService',
+        target: 'PaymentsService',
+      },
+    ],
+  } as any;
+}
+
+function makeDeepPlugin(workspaceRoot: string): any {
+  return {
+    metadata: { fileExtensions: ['.ts'] },
+    isTestFile: (filePath: string) => /\.test\.ts$/.test(filePath),
+    extractTestStructure: (filePath: string) => ({
+      filePath,
+      frameworks: ['vitest'],
+      testTypeHint: 'unit',
+      testCases: [{ name: 'works', isSkipped: false, assertionCount: 1 }],
+      importedSourceFiles: filePath.endsWith('orders.test.ts')
+        ? [path.join(workspaceRoot, 'src/app/orders/service.ts')]
+        : [path.join(workspaceRoot, 'src/app/payments/service.ts')],
+    }),
+  };
+}
+
+describe('computeImportApproximationFIM depth suggestion', () => {
+  it('defaults to depth 1 when no suggestedDepth is provided', async () => {
+    const workspaceRoot = await makeDeepWorkspace();
+    const result = await computeImportApproximationFIM({
+      archJson: makeDeepArchJson(workspaceRoot),
+      plugin: makeDeepPlugin(workspaceRoot),
+      workspaceRoot,
+    });
+
+    expect(result.artifact.packageNames).toEqual(['src']);
+  });
+
+  it('uses suggestedDepth for package derivation and exposes multi-depth comparison fields', async () => {
+    const workspaceRoot = await makeDeepWorkspace();
+    const result = await computeImportApproximationFIM({
+      archJson: makeDeepArchJson(workspaceRoot),
+      plugin: makeDeepPlugin(workspaceRoot),
+      workspaceRoot,
+      suggestedDepth: 3,
+    });
+
+    expect(result.artifact.packageNames).toEqual(['src/app/orders', 'src/app/payments']);
+    expect(result.artifact.depth1?.packageNames).toEqual(['src']);
+    expect(result.artifact.depthN?.packageNames).toEqual(['src/app/orders', 'src/app/payments']);
+    expect(result.artifact.depthComparison).toEqual(
+      expect.objectContaining({
+        defaultDepth: 1,
+        suggestedDepth: 3,
+      })
+    );
+    expect(
+      result.artifact.depthComparison?.conditionNumberDelta === null ||
+        typeof result.artifact.depthComparison?.conditionNumberDelta === 'number'
+    ).toBe(true);
   });
 });
 
@@ -277,10 +428,10 @@ describe('FIMCurrentArtifact filteredPackageMatrix', () => {
       workspaceRoot,
     });
 
-    // Full packageMatrix includes examples/x → 3×3
-    // filteredPackageMatrix excludes examples/x → 2×2
-    expect(result.artifact.packageMatrix.length).toBe(3);
-    expect(result.artifact.filteredPackageMatrix.length).toBe(2);
+    // Default depth=1 aggregates to src + examples.
+    // Filtering excludes examples, leaving only src.
+    expect(result.artifact.packageMatrix.length).toBe(2);
+    expect(result.artifact.filteredPackageMatrix.length).toBe(1);
   });
 });
 

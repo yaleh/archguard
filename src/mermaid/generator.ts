@@ -5,6 +5,7 @@
  * v2.1.0: Integrated CommentGenerator for self-documenting diagrams
  */
 
+import path from 'path';
 import type { ArchJSON, Entity, EntityType, Member, Relation } from '../types/index.js';
 import type { DiagramConfig } from '../types/config.js';
 import type {
@@ -83,18 +84,6 @@ export class ValidatedMermaidGenerator {
   generate(): string {
     validateGeneratorInput(this.archJson, this.verbose);
 
-    // Start with comment header (v2.1.0)
-    const lines: string[] = ['classDiagram'];
-
-    // Add metadata comments if enabled (v2.1.0)
-    if (this.diagramConfig && this.diagramConfig.annotations?.enableComments !== false) {
-      const comments = this.commentGenerator.generateAll(this.diagramConfig);
-      if (comments) {
-        lines.push(comments);
-        lines.push(''); // Empty line separator
-      }
-    }
-
     // Generate based on level
     let diagramCode: string;
     switch (this.options.level) {
@@ -110,8 +99,18 @@ export class ValidatedMermaidGenerator {
         break;
     }
 
-    // Remove the initial 'classDiagram' from diagramCode since we already added it
-    const diagramLines = diagramCode.split('\n').slice(1);
+    const diagramLines = diagramCode.split('\n');
+    const header = diagramLines.shift() || 'classDiagram';
+    const lines: string[] = [header];
+
+    if (this.diagramConfig && this.diagramConfig.annotations?.enableComments !== false) {
+      const comments = this.commentGenerator.generateAll(this.diagramConfig);
+      if (comments) {
+        lines.push(comments);
+        lines.push('');
+      }
+    }
+
     lines.push(...diagramLines);
 
     // v2.1.1: Add visible title at the end (bottom) or beginning (top)
@@ -127,7 +126,7 @@ export class ValidatedMermaidGenerator {
           // Add at the beginning (after classDiagram but before diagram content)
           // Insert after comments but before the first diagram line
           const insertIndex = lines.findIndex(
-            (line) => !line.startsWith('%%') && line !== 'classDiagram'
+            (line) => !line.startsWith('%%') && line !== header
           );
           if (insertIndex !== -1) {
             lines.splice(insertIndex, 0, visibleTitle);
@@ -145,6 +144,10 @@ export class ValidatedMermaidGenerator {
    * Generate package-level diagram
    */
   private generatePackageLevel(): string {
+    if (this.getArchitecturalLayers()) {
+      return this.generateLayeredPackageLevel();
+    }
+
     const lines: string[] = ['classDiagram'];
 
     // Group entities by packages
@@ -167,6 +170,112 @@ export class ValidatedMermaidGenerator {
 
     // Add relationships
     lines.push(...this.generateRelations(packageGroups));
+
+    return lines.join('\n');
+  }
+
+  private getArchitecturalLayers(): Record<string, string> | undefined {
+    const layers = this.archJson.extensions?.projectSemantics?.architecturalLayers;
+    return layers && Object.keys(layers).length > 0 ? layers : undefined;
+  }
+
+  private normalizePackagePath(filePath: string): string {
+    const normalizedFile = filePath.replace(/\\/g, '/');
+    const workspaceRoot = this.archJson.workspaceRoot?.replace(/\\/g, '/');
+    if (workspaceRoot && path.isAbsolute(filePath)) {
+      return path.posix.dirname(path.posix.relative(workspaceRoot, normalizedFile));
+    }
+    return path.posix.dirname(normalizedFile);
+  }
+
+  private findMatchingLayer(
+    packageName: string,
+    layers: Record<string, string>
+  ): { key: string; label: string } | null {
+    const normalizedPackage = packageName.replace(/\\/g, '/');
+    const candidates = Object.entries(layers)
+      .map(([key, label]) => ({ key: key.replace(/\\/g, '/'), label }))
+      .filter(
+        ({ key }) =>
+          normalizedPackage === key || normalizedPackage.startsWith(`${key}/`)
+      )
+      .sort((left, right) => right.key.length - left.key.length);
+
+    return candidates[0] ?? null;
+  }
+
+  private generateLayeredPackageLevel(): string {
+    const architecturalLayers = this.getArchitecturalLayers();
+    if (!architecturalLayers) {
+      return this.generatePackageLevel();
+    }
+
+    const direction = this.options.grouping.layout?.direction ?? 'TB';
+    const lines: string[] = [`flowchart ${direction}`];
+    const entityPackageIndex = new Map<string, string>();
+    const packageNames: string[] = [];
+    const seenPackages = new Set<string>();
+
+    for (const entity of this.archJson.entities) {
+      const sourceFile = entity.sourceLocation?.file;
+      if (!sourceFile) continue;
+      const packageName = this.normalizePackagePath(sourceFile);
+      if (!packageName || packageName === '.') continue;
+      entityPackageIndex.set(entity.id, packageName);
+      entityPackageIndex.set(entity.name, packageName);
+      if (!seenPackages.has(packageName)) {
+        seenPackages.add(packageName);
+        packageNames.push(packageName);
+      }
+    }
+
+    const groupedPackages = new Map<string, string[]>();
+    const unmatchedPackages: string[] = [];
+    for (const packageName of packageNames) {
+      const layerMatch = this.findMatchingLayer(packageName, architecturalLayers);
+      if (!layerMatch) {
+        unmatchedPackages.push(packageName);
+        continue;
+      }
+      if (!groupedPackages.has(layerMatch.label)) {
+        groupedPackages.set(layerMatch.label, []);
+      }
+      groupedPackages.get(layerMatch.label)?.push(packageName);
+    }
+
+    const nodeIdForPackage = (packageName: string) => this.escapeId(`pkg_${packageName}`);
+    for (const [label, layerPackages] of groupedPackages.entries()) {
+      if (layerPackages.length === 0) continue;
+      lines.push(`  subgraph ${this.escapeId(`layer_${label}`)}["${label}"]`);
+      for (const packageName of layerPackages) {
+        lines.push(`    ${nodeIdForPackage(packageName)}["${packageName}"]`);
+      }
+      lines.push('  end');
+    }
+
+    for (const packageName of unmatchedPackages) {
+      lines.push(`  ${nodeIdForPackage(packageName)}["${packageName}"]`);
+    }
+
+    const relationEdges = new Set<string>();
+    for (const relation of this.archJson.relations) {
+      const sourcePackage =
+        entityPackageIndex.get(relation.source) ??
+        entityPackageIndex.get(this.normalizeEntityName(relation.source));
+      const targetPackage =
+        entityPackageIndex.get(relation.target) ??
+        entityPackageIndex.get(this.normalizeEntityName(relation.target));
+
+      if (!sourcePackage || !targetPackage || sourcePackage === targetPackage) {
+        continue;
+      }
+
+      const edge = `  ${nodeIdForPackage(sourcePackage)} --> ${nodeIdForPackage(targetPackage)}`;
+      if (!relationEdges.has(edge)) {
+        relationEdges.add(edge);
+        lines.push(edge);
+      }
+    }
 
     return lines.join('\n');
   }
