@@ -1,7 +1,12 @@
 # Proposal: 基于测试覆盖矩阵的 Fisher 信息度量 — GIT 理论的经验检验框架
 
-**状态**: Draft (v1)
+**状态**: Draft (v2 — post-experiment revision)
 **日期**: 2026-03-30
+
+| Version | Changes |
+|---------|---------|
+| v1 | Initial draft |
+| v2 | Post-experiment revision: elevate Phase 2a priority based on spike findings; correct import-approximation limitations; add type-file false positive mitigation |
 **关联**: proposal-jl-intrinsic-dimension.md、proposal-information-shape-smell-detection.md、proposal-test-analysis.md
 **起源**: 对 ArchGuard 项目自身执行 GIT (几何信息论) 框架的统计度量时，发现协变矩阵作为 Fisher 信息矩阵(FIM)的代理缺乏数学合法性——协变计数既非正半定，也不源于概率模型。需要一种从概率模型严格推导的 FIM 构造方法。
 
@@ -176,6 +181,14 @@ vitest 支持 `--coverage.perFile` 尚未稳定。替代方案：
 | import 依赖近似 | 中 | 低（复用 TestCoverageMapper）| **Phase 1** |
 | 全局覆盖 + 测试文件归属 | 中 | 中 | Phase 1 备选 |
 
+**⚠ Import 近似的已知偏差（spike 实测）**：
+
+`scripts/fim-experiment.mjs` 在 ArchGuard 自身上的实验（`docs/spikes/fim-experiment-report.md`）发现 import 近似存在系统性失真：纯类型定义文件（如 `src/types/config-cli.ts`）被 ~100 个测试 import 但运行时零语句执行，导致 import-based FIM 的 $I_{ii}$ 严重虚高（106 vs 真实 0）。
+
+文件级排名几乎完全翻转：import 近似的 Top-10 全是 `src/types/` 文件，真实覆盖的 Top-10 是 `golang/tree-sitter-bridge.ts`、`mermaid/generator.ts` 等业务逻辑文件。
+
+**结论**：import 近似在包级聚合后仍然有效（Mantel r=0.77, p=0.01），但**文件级 FIM 不可信**。如需文件级分析，必须使用 Phase 2a 的运行时覆盖数据。
+
 Phase 1 使用 import 依赖近似：对每个测试文件 $t$，追踪其 import 链到达的源文件集合 $\{f_1, f_2, ...\}$，令 $C_{t,f_k} = 1$。这与真实运行时覆盖有偏差（import 不等于执行），但：
 - 保证 $C$ 是二值矩阵
 - 保证 $I = C^\top C$ 正半定
@@ -205,6 +218,8 @@ export function buildCoverageMatrix(
   importGraph: Map<string, Set<string>>
 ): CoverageMatrix;
 ```
+
+> **Phase 1 缓解措施**：可选地排除纯类型定义文件（仅含 `interface`/`type`/`enum` 声明、无可执行语句的文件）以降低 false positive。但此过滤需要 AST 分析或启发式规则，且可能引入 false negative。推荐方案仍为升级至 Phase 2a。
 
 ### FIM 构造与特征值分析
 
@@ -444,13 +459,13 @@ tests/unit/analysis/fim/
 
 ## Phase 2 升级路径
 
-Phase 1 使用 import 近似构造 $C$ 矩阵，Phase 2 替换为真实运行时覆盖：
+Phase 1 使用 import 近似构造 $C$ 矩阵，**但 spike 实验已证明 import 近似仅在包级聚合后有效，文件级 FIM 不可信**。因此 Phase 2a 不是可选升级，而是**文件级 FIM 分析的必要前提**。Phase 1 仅适用于包级聚合分析。
 
-| 阶段 | $C$ 矩阵数据源 | FIM 精度 | 成本 |
-|------|---------------|---------|------|
-| Phase 1 | import 依赖图（静态） | 中——import ≠ 执行，存在假阳性 | 低——复用现有 import 分析 |
-| Phase 2a | per-test 运行时覆盖（vitest custom reporter）| 高 | 中——需定制 reporter |
-| Phase 2b | 变异检测结果（Stryker）| 最高——直接度量 $\partial p/\partial\theta$ | 高——$O(M \times T)$ |
+| 阶段 | $C$ 矩阵数据源 | FIM 精度 | 成本 | 文件级可信度 |
+|------|---------------|---------|------|------------|
+| Phase 1 | import 依赖图（静态） | 中——import ≠ 执行，类型文件 false positive | 低——复用现有 import 分析 | ✗ 不可信（spike 已验证） |
+| Phase 2a | per-test 运行时覆盖（vitest custom reporter）| 高 | 中——需定制 reporter | ✓ 可信 |
+| Phase 2b | 变异检测结果（Stryker）| 最高——直接度量 $\partial p/\partial\theta$ | 高——$O(M \times T)$ | ✓ 最高 |
 
 **关键设计约束**：`fim-builder.ts` 只接收 `CoverageMatrix`（二值矩阵），不关心数据来源。Phase 升级只需替换 `coverage-parser.ts`，下游全部不变。
 
@@ -504,6 +519,18 @@ Phase 1 使用 import 近似构造 $C$ 矩阵，Phase 2 替换为真实运行时
 
 ---
 
+## Spike 实验结果
+
+实验已在 ArchGuard 自身上完成。详见 `docs/spikes/fim-experiment-report.md`。
+
+关键发现：
+1. **P5 成立**：Co-change 是覆盖 FIM 的统计显著代理（Mantel r=0.77, p=0.01），回溯验证了基于 co-change 的 GIT 分析
+2. **P2 粒度敏感**：DiagramProcessor 重构（`429159d`）在文件级改善 κ（329.69→327.64），包级反而恶化（74613→79285）
+3. **Import 近似文件级不可信**：纯类型文件的 false positive 主导了 λ₁（51%方差），文件级 Top-10 排名与真实覆盖完全翻转
+4. **包级有效**：包级聚合消除了类型文件偏差，Mantel test 在三个时间点一致通过
+
+---
+
 ## 开放问题
 
 | 问题 | 说明 | 建议处理时机 |
@@ -513,6 +540,7 @@ Phase 1 使用 import 近似构造 $C$ 矩阵，Phase 2 替换为真实运行时
 | Mantel test 的统计功效 | 当包数 $P < 10$ 时，$P(P-1)/2$ 个独立元素太少，置换检验功效低 | 文件级 Mantel test 作为补充 |
 | 与 JL intrinsic dimension 的关系 | FIM 特征值谱与邻接矩阵 SVD 的 $d_{int}$ 是否等价？理论上一个度量测试可观测性，一个度量依赖结构 | 实测后比较 |
 | 跨语言支持 | Go/Java/Python/C++ 的覆盖工具格式不同（go test -cover、JaCoCo、coverage.py） | 按需扩展 coverage-parser |
+| Import 近似的类型文件偏差 | 纯类型定义文件（interface-only）导致 $I_{ii}$ 虚高。Phase 1 可通过排除无可执行语句文件缓解，但根本解决需 Phase 2a | Phase 2a 前评估排除策略 |
 
 ---
 
