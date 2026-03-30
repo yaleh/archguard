@@ -30,6 +30,10 @@ export interface ValidateFIMAgainstGitOptions {
   commits: CommitRecord[];
   permutations?: number;
   seed?: number;
+  /** Workspace root for the analyzed project (used to resolve git-relative paths) */
+  workspaceRoot?: string;
+  /** Git repo root (parent of workspaceRoot when project is a git subdir) */
+  gitRoot?: string;
 }
 
 function normalizeFilePath(filePath: string): string {
@@ -272,8 +276,26 @@ export async function computeImportApproximationFIM(
 export function validateFIMAgainstGit(
   options: ValidateFIMAgainstGitOptions
 ): { mantel: MantelTestWithNullModelResult; packageCochangeMatrix: number[][] } {
+  // Compute the subdirectory prefix: when workspaceRoot is a subdirectory of the git repo root,
+  // commit file paths include the prefix (e.g. "workspace/app/src/foo.ts") while
+  // coverage fileIds are relative to workspaceRoot (e.g. "src/foo.ts").
+  let subDirPrefix = '';
+  if (options.workspaceRoot && options.gitRoot) {
+    const relativeSubDir = normalizeFilePath(path.relative(options.gitRoot, options.workspaceRoot));
+    if (relativeSubDir && relativeSubDir !== '.') {
+      subDirPrefix = relativeSubDir + '/';
+    }
+  }
+
   const fileToPackage = new Map(
-    options.coverage.fileIds.map((fileId) => [fileId, path.dirname(normalizeFilePath(fileId)).split('/').filter(Boolean).slice(0, 2).join('/') || '.'])
+    options.coverage.fileIds.flatMap((fileId) => {
+      const packageName = path.dirname(normalizeFilePath(fileId)).split('/').filter(Boolean).slice(0, 2).join('/') || '.';
+      const entries: [string, string][] = [[fileId, packageName]];
+      if (subDirPrefix) {
+        entries.push([subDirPrefix + fileId, packageName]);
+      }
+      return entries;
+    })
   );
   const packageCochangeMatrix = buildPackageCochangeMatrix(
     options.commits,

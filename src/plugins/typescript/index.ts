@@ -231,6 +231,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     // Attach tsAnalysis to extensions
     return {
       ...archJson,
+      workspaceRoot,
       extensions: {
         ...archJson.extensions,
         tsAnalysis,

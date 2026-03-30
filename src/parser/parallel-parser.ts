@@ -309,6 +309,7 @@ export class ParallelParser extends EventEmitter {
       sourceFiles: allSourceFiles,
       entities: allEntities,
       relations: uniqueRelations,
+      workspaceRoot: this.workspaceRoot,
     };
   }
 

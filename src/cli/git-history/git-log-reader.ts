@@ -31,6 +31,8 @@ export interface ReadGitLogOptions {
   sinceDays: number;
   maxCommits: number;
   includeMerges: boolean;
+  /** Optional path filter — limits git log to commits touching this subdirectory (relative to git root) */
+  pathFilter?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -48,11 +50,11 @@ export interface ReadGitLogOptions {
  * @returns Array of CommitRecord, newest-first (git default).
  */
 export function readGitLog(repoRoot: string, options: ReadGitLogOptions): CommitRecord[] {
-  const { sinceDays, maxCommits, includeMerges } = options;
+  const { sinceDays, maxCommits, includeMerges, pathFilter } = options;
 
   const mergeFlag = includeMerges ? '--merges' : '--no-merges';
   // Use a unique separator prefix so commit boundaries are unambiguous regardless of numstat layout.
-  const cmd = [
+  const parts = [
     'git',
     'log',
     '--numstat',
@@ -61,7 +63,11 @@ export function readGitLog(repoRoot: string, options: ReadGitLogOptions): Commit
     '--date=short',
     `--since=${sinceDays}.days.ago`,
     `--max-count=${maxCommits}`,
-  ].join(' ');
+  ];
+  if (pathFilter) {
+    parts.push('--', pathFilter);
+  }
+  const cmd = parts.join(' ');
 
   let rawOutput: string;
   try {
@@ -214,5 +220,21 @@ export function isGitRepo(dir: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Returns the absolute path of the git repo root for the given directory,
+ * or null if the directory is not inside a git repo.
+ */
+export function getGitRoot(dir: string): string | null {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return null;
   }
 }

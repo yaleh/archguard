@@ -188,13 +188,31 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         });
 
         if (cliOptions.fimValidate) {
-          const { isGitRepo, readGitLog } = await import('../git-history/git-log-reader.js');
-          if (isGitRepo(sessionRoot)) {
-            const commits = readGitLog(sessionRoot, {
+          const { isGitRepo, readGitLog, getGitRoot } = await import('../git-history/git-log-reader.js');
+          if (isGitRepo(workspaceRoot)) {
+            const gitRoot = getGitRoot(workspaceRoot) ?? workspaceRoot;
+            // When workspaceRoot is a subdirectory of the git root, use a path filter
+            // to limit git log output to commits touching only the analyzed project.
+            const subDirPath =
+              gitRoot !== workspaceRoot
+                ? path.relative(gitRoot, workspaceRoot).replace(/\\/g, '/')
+                : undefined;
+            const rawFimCommits = readGitLog(gitRoot, {
               sinceDays: 90,
               maxCommits: 500,
               includeMerges: false,
+              pathFilter: subDirPath,
             });
+            // Strip the subdirectory prefix so file paths are relative to workspaceRoot
+            const fimSubDirPrefix = subDirPath ? subDirPath + '/' : '';
+            const commits = fimSubDirPrefix
+              ? rawFimCommits.map((c) => ({
+                  ...c,
+                  files: c.files
+                    .filter((f) => f.path.startsWith(fimSubDirPrefix))
+                    .map((f) => ({ ...f, path: f.path.slice(fimSubDirPrefix.length) })),
+                }))
+              : rawFimCommits;
             if (commits.length > 0) {
               const { mantel } = validateFIMAgainstGit({
                 coverage,
@@ -296,13 +314,14 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   if (cliOptions.includeGit) {
     try {
       reporter.start('Analyzing git history...');
-      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo } =
+      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo, getGitRoot: getGitRootFn } =
         await import('../git-history/git-log-reader.js');
       const { aggregateFileMetrics, aggregatePackageMetrics } =
         await import('../git-history/history-aggregator.js');
       const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
 
-      const projectRoot = sessionRoot;
+      const gitArchJson = processor.getLastArchJson();
+      const projectRoot = gitArchJson?.workspaceRoot ?? sessionRoot;
       if (!isGitRepo(projectRoot)) {
         reporter.warn('[git-history] Not a git repository — skipping git history analysis');
       } else {
@@ -311,14 +330,29 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         const includeMerges = false;
         const granularities: ('package' | 'file')[] = ['package', 'file'];
 
-        const commits = readGitLog(projectRoot, { sinceDays, maxCommits, includeMerges });
+        const gitRepoRoot = getGitRootFn(projectRoot) ?? projectRoot;
+        const gitSubDir =
+          gitRepoRoot !== projectRoot
+            ? path.relative(gitRepoRoot, projectRoot).replace(/\\/g, '/')
+            : undefined;
+        const rawCommits = readGitLog(gitRepoRoot, { sinceDays, maxCommits, includeMerges, pathFilter: gitSubDir });
+        // Strip the subdirectory prefix from file paths so metrics are relative to projectRoot
+        const subDirPrefix = gitSubDir ? gitSubDir + '/' : '';
+        const commits = subDirPrefix
+          ? rawCommits.map((c) => ({
+              ...c,
+              files: c.files
+                .filter((f) => f.path.startsWith(subDirPrefix))
+                .map((f) => ({ ...f, path: f.path.slice(subDirPrefix.length) })),
+            }))
+          : rawCommits;
         if (commits.length === 0) {
           reporter.warn(`[git-history] No commits found in the last ${sinceDays} days`);
         } else {
           const fileMetrics = aggregateFileMetrics(commits);
           const packageMetrics = aggregatePackageMetrics(fileMetrics);
-          const headRef = getHeadRef(projectRoot);
-          const analyzedBranch = getCurrentBranch(projectRoot);
+          const headRef = getHeadRef(gitRepoRoot);
+          const analyzedBranch = getCurrentBranch(gitRepoRoot);
           const manifest = {
             version: '1' as const,
             generatedAt: new Date().toISOString(),

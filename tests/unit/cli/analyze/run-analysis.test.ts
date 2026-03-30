@@ -24,6 +24,7 @@ const writeFIMCurrentArtifactMock = vi.fn();
 const appendFIMSnapshotMock = vi.fn();
 const readGitLogMock = vi.fn();
 const isGitRepoMock = vi.fn();
+const getGitRootMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -89,6 +90,7 @@ vi.mock('@/analysis/fim/fim-snapshot.js', () => ({
 vi.mock('@/cli/git-history/git-log-reader.js', () => ({
   readGitLog: readGitLogMock,
   isGitRepo: isGitRepoMock,
+  getGitRoot: getGitRootMock,
   getHeadRef: vi.fn(),
   getCurrentBranch: vi.fn(),
 }));
@@ -170,6 +172,7 @@ describe('runAnalysis', () => {
     appendFIMSnapshotMock.mockReset();
     readGitLogMock.mockReset();
     isGitRepoMock.mockReset();
+    getGitRootMock.mockReset();
 
     loadMock.mockResolvedValue(baseConfig);
     getLastArchJsonMock.mockReturnValue(null);
@@ -236,6 +239,7 @@ describe('runAnalysis', () => {
     appendFIMSnapshotMock.mockResolvedValue(undefined);
     readGitLogMock.mockReturnValue([{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }]);
     isGitRepoMock.mockReturnValue(true);
+    getGitRootMock.mockReturnValue('/tmp/project');
     normalizeToDiagramsMock.mockResolvedValue([
       { name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' },
     ]);
