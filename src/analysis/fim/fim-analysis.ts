@@ -10,6 +10,7 @@ import {
   computeGramMatrix,
   computeFisherInformation,
   filterProductionPackages,
+  filterProductionCoverage,
 } from './fim-builder.js';
 import { buildCoverageMatrixFromImports } from './coverage-parser.js';
 import { buildPackageCochangeMatrix } from './cochange-matrix-builder.js';
@@ -241,7 +242,8 @@ export async function computeImportApproximationFIM(
     fileIds: packageNames,
   };
   const packageResult = computeFisherInformation(packageCoverageMatrix);
-  const filteredPackageResult = filterProductionPackages(packageCoverageMatrix);
+  const filteredPackageCoverageMatrix = filterProductionCoverage(packageCoverageMatrix);
+  const filteredPackageResult = computeFisherInformation(filteredPackageCoverageMatrix);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
@@ -251,6 +253,7 @@ export async function computeImportApproximationFIM(
     packageNames,
     fileMatrix: coverage.matrix,
     packageMatrix: computeGramMatrix(packageCoverageMatrix),
+    filteredPackageMatrix: computeGramMatrix(filteredPackageCoverageMatrix),
     fileResult,
     packageResult,
     filteredPackageResult,

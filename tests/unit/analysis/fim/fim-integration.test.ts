@@ -2,8 +2,9 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
 import { afterEach, describe, expect, it } from 'vitest';
-import { computeImportApproximationFIM } from '@/analysis/fim/fim-analysis.js';
+import { computeImportApproximationFIM, validateFIMAgainstGit } from '@/analysis/fim/fim-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
+import type { FIMCurrentArtifact } from '@/analysis/fim/types.js';
 
 const tempDirs: string[] = [];
 
@@ -237,5 +238,134 @@ describe('FIMSnapshot filteredTopEigenvalueShares consistency', () => {
     expect(result.snapshot.filteredTopEigenvalueShares!.length).not.toBe(
       result.snapshot.topEigenvalueShares.length
     );
+  });
+});
+
+describe('FIMCurrentArtifact filteredPackageMatrix', () => {
+  it('artifact has filteredPackageMatrix field (type-level guard)', async () => {
+    const workspaceRoot = await makeWorkspace();
+    const result = await computeImportApproximationFIM({
+      archJson: makeArchJson(workspaceRoot),
+      plugin: makePlugin(workspaceRoot),
+      workspaceRoot,
+    });
+
+    // TypeScript will error if FIMCurrentArtifact does not declare filteredPackageMatrix
+    const artifact: FIMCurrentArtifact = result.artifact;
+    expect(artifact.filteredPackageMatrix).toBeDefined();
+  });
+
+  it('filteredPackageMatrix is n_prod × n_prod when all packages are production', async () => {
+    const workspaceRoot = await makeWorkspace();
+    const result = await computeImportApproximationFIM({
+      archJson: makeArchJson(workspaceRoot),
+      plugin: makePlugin(workspaceRoot),
+      workspaceRoot,
+    });
+
+    // All packages are production (src/pkg-a, src/pkg-b) → 2×2
+    const n = result.artifact.filteredPackageResult.fileCount;
+    expect(result.artifact.filteredPackageMatrix).toHaveLength(n);
+    result.artifact.filteredPackageMatrix.forEach((row) => expect(row).toHaveLength(n));
+  });
+
+  it('filteredPackageMatrix is smaller than packageMatrix when non-production packages exist', async () => {
+    const workspaceRoot = await makeWorkspaceWithNonProduction();
+    const result = await computeImportApproximationFIM({
+      archJson: makeArchJsonWithNonProduction(workspaceRoot),
+      plugin: makePluginWithNonProduction(workspaceRoot),
+      workspaceRoot,
+    });
+
+    // Full packageMatrix includes examples/x → 3×3
+    // filteredPackageMatrix excludes examples/x → 2×2
+    expect(result.artifact.packageMatrix.length).toBe(3);
+    expect(result.artifact.filteredPackageMatrix.length).toBe(2);
+  });
+});
+
+describe('validateFIMAgainstGit Mantel scope (filtered vs full)', () => {
+  it('returns a 2×2 packageCochangeMatrix when only 2 production packageNames are passed', () => {
+    // Simulate: 2 production packages + 1 non-production
+    // When caller passes only the 2 filtered packageNames, the co-change matrix must be 2×2
+    const coverage = {
+      matrix: [
+        [1, 0, 0], // test covering src/a only
+        [0, 1, 0], // test covering src/b only
+      ],
+      testIds: ['t0', 't1'],
+      fileIds: ['src/a/a.ts', 'src/b/b.ts', 'examples/x/x.ts'],
+    };
+
+    // A single commit touching src/a and src/b
+    const commits = [
+      {
+        sha: 'abc',
+        date: '2026-01-01',
+        files: [
+          { path: 'src/a/a.ts', insertions: 1, deletions: 0 },
+          { path: 'src/b/b.ts', insertions: 1, deletions: 0 },
+        ],
+      },
+    ];
+
+    // 2×2 filtered Gram matrix for [src/a, src/b]
+    const filteredPackageMatrix = [
+      [1, 0],
+      [0, 1],
+    ];
+
+    const { packageCochangeMatrix } = validateFIMAgainstGit({
+      coverage,
+      packageNames: ['src/a', 'src/b'], // filtered — 2 only
+      packageMatrix: filteredPackageMatrix,
+      commits,
+      permutations: 10,
+      seed: 42,
+    });
+
+    expect(packageCochangeMatrix).toHaveLength(2);
+    packageCochangeMatrix.forEach((row) => expect(row).toHaveLength(2));
+  });
+
+  it('returns a 3×3 packageCochangeMatrix when all 3 packageNames are passed (demonstrating the pre-fix bug)', () => {
+    const coverage = {
+      matrix: [
+        [1, 0, 0],
+        [0, 1, 0],
+      ],
+      testIds: ['t0', 't1'],
+      fileIds: ['src/a/a.ts', 'src/b/b.ts', 'examples/x/x.ts'],
+    };
+
+    const commits = [
+      {
+        sha: 'abc',
+        date: '2026-01-01',
+        files: [
+          { path: 'src/a/a.ts', insertions: 1, deletions: 0 },
+          { path: 'src/b/b.ts', insertions: 1, deletions: 0 },
+        ],
+      },
+    ];
+
+    // 3×3 full Gram matrix (includes examples/x with zero row/col)
+    const fullPackageMatrix = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+    ];
+
+    const { packageCochangeMatrix } = validateFIMAgainstGit({
+      coverage,
+      packageNames: ['src/a', 'src/b', 'examples/x'], // all 3
+      packageMatrix: fullPackageMatrix,
+      commits,
+      permutations: 10,
+      seed: 42,
+    });
+
+    // Full scope: 3×3 — trivially-zero pairs inflate the correlation
+    expect(packageCochangeMatrix).toHaveLength(3);
   });
 });

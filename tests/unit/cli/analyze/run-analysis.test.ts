@@ -208,6 +208,17 @@ describe('runAnalysis', () => {
           uncoveredFiles: [],
           fragilityHotspots: [],
         },
+        filteredPackageMatrix: [[1]],
+        filteredPackageResult: {
+          eigenvalues: [1],
+          conditionNumber: 1,
+          effectiveDimension: 1,
+          fileCount: 1,
+          testCount: 1,
+          diagonal: [{ fileId: 'src', selfInfo: 1 }],
+          uncoveredFiles: [],
+          fragilityHotspots: [],
+        },
       },
       snapshot: {
         timestamp: '2026-03-30T00:00:00Z',

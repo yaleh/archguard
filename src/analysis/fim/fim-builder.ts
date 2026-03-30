@@ -193,6 +193,25 @@ export function isProductionPackage(name: string): boolean {
 }
 
 /**
+ * Extracts the sub-CoverageMatrix restricted to production packages only.
+ *
+ * @param coverage The package-level CoverageMatrix (fileIds are package names).
+ */
+export function filterProductionCoverage(coverage: CoverageMatrix): CoverageMatrix {
+  const keepIndices: number[] = [];
+  for (let i = 0; i < coverage.fileIds.length; i++) {
+    const fileId = coverage.fileIds[i] ?? '';
+    if (isProductionPackage(fileId)) {
+      keepIndices.push(i);
+    }
+  }
+
+  const subMatrix = coverage.matrix.map((row) => keepIndices.map((col) => row[col] ?? 0));
+  const subFileIds = keepIndices.map((i) => coverage.fileIds[i] ?? '');
+  return { matrix: subMatrix, testIds: coverage.testIds, fileIds: subFileIds };
+}
+
+/**
  * Returns a FisherInformationResult restricted to production packages only.
  *
  * Extracts the sub-coverage-matrix for packages passing `isProductionPackage`,
@@ -203,24 +222,7 @@ export function isProductionPackage(name: string): boolean {
  * @param coverage The package-level CoverageMatrix (fileIds are package names).
  */
 export function filterProductionPackages(coverage: CoverageMatrix): FisherInformationResult {
-  const keepIndices: number[] = [];
-  for (let i = 0; i < coverage.fileIds.length; i++) {
-    const fileId = coverage.fileIds[i] ?? '';
-    if (isProductionPackage(fileId)) {
-      keepIndices.push(i);
-    }
-  }
-
-  // Extract the sub-coverage-matrix for kept packages (select columns)
-  const subMatrix = coverage.matrix.map((row) => keepIndices.map((col) => row[col] ?? 0));
-  const subFileIds = keepIndices.map((i) => coverage.fileIds[i] ?? '');
-  const subCoverage: CoverageMatrix = {
-    matrix: subMatrix,
-    testIds: coverage.testIds,
-    fileIds: subFileIds,
-  };
-
-  return computeFisherInformation(subCoverage);
+  return computeFisherInformation(filterProductionCoverage(coverage));
 }
 
 export function clampCoverageByPackage(

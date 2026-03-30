@@ -50,6 +50,8 @@ export interface FIMCurrentArtifact {
   packageNames: string[];
   fileMatrix: number[][];
   packageMatrix: number[][];
+  /** Gram matrix restricted to production packages only — use this for Mantel validation */
+  filteredPackageMatrix: number[][];
   fileResult: FisherInformationResult;
   packageResult: FisherInformationResult;
   filteredPackageResult: FisherInformationResult;

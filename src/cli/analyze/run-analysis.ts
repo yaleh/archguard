@@ -214,10 +214,16 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
                 }))
               : rawFimCommits;
             if (commits.length > 0) {
+              // Use filtered (production-only) package names and Gram matrix so that
+              // non-production packages (examples, templates, .) with zero coverage do
+              // not create trivially-consistent zero pairs that inflate Spearman r.
+              const filteredPackageNames = artifact.filteredPackageResult.diagonal.map(
+                (d) => d.fileId
+              );
               const { mantel } = validateFIMAgainstGit({
                 coverage,
-                packageNames: artifact.packageNames,
-                packageMatrix: artifact.packageMatrix,
+                packageNames: filteredPackageNames,
+                packageMatrix: artifact.filteredPackageMatrix,
                 commits,
                 permutations: 999,
                 seed: 42,
