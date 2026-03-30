@@ -223,9 +223,17 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         reporter.info(
           `[fim] package kappa=${formatFimMetric(artifact.packageResult.conditionNumber)} N_eff=${artifact.packageResult.effectiveDimension.toFixed(3)} packages=${artifact.packageNames.length} tests=${artifact.fileResult.testCount}`
         );
+        const fp = artifact.filteredPackageResult;
+        const excluded = artifact.packageNames.length - fp.fileCount;
+        reporter.info(
+          `[fim] filtered kappa=${formatFimMetric(fp.conditionNumber)} N_eff=${fp.effectiveDimension.toFixed(3)} (excluded ${excluded} non-production packages)`
+        );
         if (artifact.mantel) {
           reporter.info(
             `[fim] Mantel r=${artifact.mantel.observedCorrelation.toFixed(3)} p=${artifact.mantel.pValue.toFixed(3)} valid=${artifact.mantel.isValidProxy}`
+          );
+          reporter.info(
+            `[fim] null-model separation=${artifact.mantel.separationScore.toFixed(2)}σ significant=${artifact.mantel.isSignificantOverNull} (nullMeanR=${artifact.mantel.nullModelMeanR.toFixed(3)} nullMaxR=${artifact.mantel.nullModelMaxR.toFixed(3)})`
           );
         }
         reporter.succeed('FIM analysis complete');

@@ -24,6 +24,10 @@ export interface FIMSnapshot {
   descriptionLength?: number;
   conditionNumber: number;
   effectiveDimension: number;
+  /** κ after excluding non-production zero-coverage packages */
+  filteredConditionNumber?: number;
+  /** N_eff after excluding non-production zero-coverage packages */
+  filteredEffectiveDimension?: number;
   topEigenvalueShares: number[];
   uncoveredFileCount: number;
   mantelCorrelation?: number;
@@ -45,10 +49,6 @@ export interface FIMCurrentArtifact {
   packageMatrix: number[][];
   fileResult: FisherInformationResult;
   packageResult: FisherInformationResult;
-  mantel?: {
-    observedCorrelation: number;
-    permutations: number;
-    pValue: number;
-    isValidProxy: boolean;
-  };
+  filteredPackageResult: FisherInformationResult;
+  mantel?: import('./mantel-test.js').MantelTestWithNullModelResult;
 }

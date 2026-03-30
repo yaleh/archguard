@@ -50,6 +50,35 @@ export class TestCoverageMapper {
           .replace(/[-_]test$/, '');
       }
 
+      // TypeScript/JS directory convention (confidence weight 0.25):
+      // A test file in tests/unit/analysis/fim/ is linked to ALL entities in src/analysis/fim/.
+      // This covers entities (e.g. interfaces in types.ts) that have no same-named test file
+      // and whose imports appear in multi-line form that the import-regex fails to capture.
+      if (/\.(test|spec)\.(ts|tsx|js|jsx)$/.test(testBasename)) {
+        const testDir = path.dirname(testFile.id).replace(/\\/g, '/');
+        const canonicalTestDir = testDir
+          .replace(/^tests?\/(?:unit|integration|e2e|functional|system)\//, '')
+          .replace(/^(?:tests?|__tests?__|spec)\//, '');
+        if (canonicalTestDir && canonicalTestDir !== '.') {
+          for (const entity of archJson.entities) {
+            if (!entity.sourceLocation?.file) continue;
+            const relEntityFile = path.isAbsolute(entity.sourceLocation.file)
+              ? path.relative(workspaceRoot, entity.sourceLocation.file)
+              : entity.sourceLocation.file;
+            const entityDir = path.dirname(relEntityFile).replace(/\\/g, '/');
+            const canonicalEntityDir = entityDir.replace(/^(?:src|lib|app|source)\//, '');
+            if (canonicalEntityDir === canonicalTestDir) {
+              if (!linkMap.has(entity.id)) {
+                linkMap.set(entity.id, { testIds: new Set(), score: 0 });
+              }
+              const link = linkMap.get(entity.id)!;
+              link.testIds.add(testFile.id);
+              link.score = Math.min(1.0, link.score + 0.25 * 0.5);
+            }
+          }
+        }
+      }
+
       // Go directory-match layer (confidence weight 0.35):
       // Any _test.go file in the same directory as an entity's source file is linked to that entity.
       // This covers cases where a package has multiple test files but the entity's sourceLocation

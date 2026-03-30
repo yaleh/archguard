@@ -169,3 +169,51 @@ describe('aggregateToPackageLevel', () => {
     expect(pkg.matrix[1][1]).toBe(1);
   });
 });
+
+import { isProductionPackage, filterProductionPackages } from '@/analysis/fim/fim-builder.js';
+
+describe('isProductionPackage', () => {
+  it('returns false for "."', () => expect(isProductionPackage('.')).toBe(false));
+  it('returns false for "examples"', () => expect(isProductionPackage('examples')).toBe(false));
+  it('returns false for "templates/plugin-template"', () => expect(isProductionPackage('templates/plugin-template')).toBe(false));
+  it('returns false for "scripts"', () => expect(isProductionPackage('scripts')).toBe(false));
+  it('returns true for "src/cli"', () => expect(isProductionPackage('src/cli')).toBe(true));
+  it('returns true for "src/analysis/fim"', () => expect(isProductionPackage('src/analysis/fim')).toBe(true));
+  it('returns true for "lib/utils"', () => expect(isProductionPackage('lib/utils')).toBe(true));
+  it('returns false for "tests/unit" (not src/lib/core)', () => expect(isProductionPackage('tests/unit')).toBe(false));
+});
+
+describe('filterProductionPackages', () => {
+  it('removes zero-coverage non-production packages and recomputes metrics', () => {
+    const result = computeFisherInformation(makeCoverageMatrix(
+      [[1, 0, 0], [0, 1, 0]],
+      ['src/a.ts', 'src/b.ts', 'examples/demo.ts']
+    ));
+    const filtered = filterProductionPackages(result);
+    expect(filtered.diagonal.map(d => d.fileId)).not.toContain('examples/demo.ts');
+    expect(filtered.fileCount).toBe(2);
+  });
+
+  it('keeps zero-coverage src/ package (legitimate gap)', () => {
+    const result = computeFisherInformation(makeCoverageMatrix(
+      [[1, 0, 0]],
+      ['src/a.ts', 'src/uncovered.ts', 'examples/demo.ts']
+    ));
+    const filtered = filterProductionPackages(result);
+    expect(filtered.diagonal.map(d => d.fileId)).toContain('src/uncovered.ts');
+    expect(filtered.diagonal.map(d => d.fileId)).not.toContain('examples/demo.ts');
+  });
+
+  it('yields finite kappa when only zero eigenvalues removed were from non-production', () => {
+    // src/a.ts covered; examples/x.ts zero coverage → rank-deficient → κ=Infinity
+    const result = computeFisherInformation(makeCoverageMatrix(
+      [[1, 0]],
+      ['src/a.ts', 'examples/x.ts']
+    ));
+    expect(result.conditionNumber).toBe(Infinity);
+    // After filtering out zero-coverage non-production package, only src/a.ts remains → κ finite
+    const filtered = filterProductionPackages(result);
+    expect(filtered.conditionNumber).not.toBe(Infinity);
+    expect(filtered.fileCount).toBe(1);
+  });
+});

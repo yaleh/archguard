@@ -10,6 +10,20 @@ export interface MantelTestOptions {
   seed?: number;
 }
 
+export interface MantelTestWithNullModelOptions extends MantelTestOptions {
+  nullModelIterations?: number;
+}
+
+export interface MantelTestWithNullModelResult extends MantelTestResult {
+  nullModelMeanR: number;
+  nullModelMaxR: number;
+  nullModelStdR: number;
+  /** (observedR - nullMeanR) / nullStdR — how many σ above the null */
+  separationScore: number;
+  /** true when separationScore > 2.0 */
+  isSignificantOverNull: boolean;
+}
+
 function assertSquareSymmetric(matrix: number[][], label: string): void {
   const size = matrix.length;
   for (let rowIndex = 0; rowIndex < size; rowIndex++) {
@@ -183,5 +197,71 @@ export function mantelTest(
     permutations,
     pValue,
     isValidProxy: pValue < 0.05,
+  };
+}
+
+/**
+ * Generates a random positive-definite symmetric matrix of the given size.
+ * Uses M = A^T * A + ε*I where A is a random matrix.
+ */
+export function generateRandomPositiveDefiniteMatrix(size: number, seed?: number): number[][] {
+  const random = seed === undefined ? Math.random : createSeededRandom(seed);
+  const epsilon = 0.01;
+
+  const a: number[][] = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => random())
+  );
+
+  return Array.from({ length: size }, (_, rowIndex) =>
+    Array.from({ length: size }, (_, columnIndex) => {
+      let sum = 0;
+      for (let k = 0; k < size; k++) {
+        sum += (a[k]?.[rowIndex] ?? 0) * (a[k]?.[columnIndex] ?? 0);
+      }
+      return rowIndex === columnIndex ? sum + epsilon : sum;
+    })
+  );
+}
+
+/**
+ * Runs the Mantel test and augments the result with a null-model baseline.
+ * K random positive-definite matrices are compared against the co-change matrix.
+ * If r(FIM, cochange) is not > 2σ above the null distribution, the signal is
+ * likely spurious (e.g. because the co-change matrix is near-constant).
+ */
+export function mantelTestWithNullModel(
+  fimMatrix: number[][],
+  cochangeMatrix: number[][],
+  options: MantelTestWithNullModelOptions = {}
+): MantelTestWithNullModelResult {
+  const nullModelIterations = options.nullModelIterations ?? 10;
+  const base = mantelTest(fimMatrix, cochangeMatrix, options);
+
+  const size = fimMatrix.length;
+  if (size === 0) {
+    return { ...base, nullModelMeanR: 0, nullModelMaxR: 0, nullModelStdR: 0, separationScore: 0, isSignificantOverNull: false };
+  }
+
+  const nullRs: number[] = [];
+  for (let iteration = 0; iteration < nullModelIterations; iteration++) {
+    const iterSeed = options.seed === undefined ? undefined : options.seed * 1000 + iteration + 1;
+    const randomMatrix = generateRandomPositiveDefiniteMatrix(size, iterSeed);
+    const nullResult = mantelTest(randomMatrix, cochangeMatrix, { permutations: options.permutations, seed: iterSeed });
+    nullRs.push(nullResult.observedCorrelation);
+  }
+
+  const nullMeanR = nullRs.reduce((sum, r) => sum + r, 0) / nullRs.length;
+  const nullMaxR = Math.max(...nullRs);
+  const variance = nullRs.reduce((sum, r) => sum + (r - nullMeanR) ** 2, 0) / nullRs.length;
+  const nullStdR = Math.sqrt(variance);
+  const separationScore = nullStdR > 0 ? (base.observedCorrelation - nullMeanR) / nullStdR : 0;
+
+  return {
+    ...base,
+    nullModelMeanR: nullMeanR,
+    nullModelMaxR: nullMaxR,
+    nullModelStdR: nullStdR,
+    separationScore,
+    isSignificantOverNull: separationScore > 2.0,
   };
 }

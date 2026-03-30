@@ -9,10 +9,11 @@ import {
   clampCoverageByPackage,
   computeGramMatrix,
   computeFisherInformation,
+  filterProductionPackages,
 } from './fim-builder.js';
 import { buildCoverageMatrixFromImports } from './coverage-parser.js';
 import { buildPackageCochangeMatrix } from './cochange-matrix-builder.js';
-import { mantelTest, type MantelTestResult } from './mantel-test.js';
+import { mantelTestWithNullModel, type MantelTestWithNullModelResult } from './mantel-test.js';
 import type { CoverageMatrix, FIMCurrentArtifact, FIMSnapshot } from './types.js';
 
 export interface ComputeImportApproximationFIMOptions {
@@ -236,6 +237,7 @@ export async function computeImportApproximationFIM(
     fileIds: packageNames,
   };
   const packageResult = computeFisherInformation(packageCoverageMatrix);
+  const filteredPackageResult = filterProductionPackages(packageResult);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
@@ -247,6 +249,7 @@ export async function computeImportApproximationFIM(
     packageMatrix: computeGramMatrix(packageCoverageMatrix),
     fileResult,
     packageResult,
+    filteredPackageResult,
   };
 
   const snapshot: FIMSnapshot = {
@@ -257,6 +260,8 @@ export async function computeImportApproximationFIM(
     descriptionLength: artifact.descriptionLength,
     conditionNumber: packageResult.conditionNumber,
     effectiveDimension: packageResult.effectiveDimension,
+    filteredConditionNumber: filteredPackageResult.conditionNumber,
+    filteredEffectiveDimension: filteredPackageResult.effectiveDimension,
     topEigenvalueShares: topEigenvalueShares(packageResult.eigenvalues),
     uncoveredFileCount: fileResult.uncoveredFiles.length,
   };
@@ -266,7 +271,7 @@ export async function computeImportApproximationFIM(
 
 export function validateFIMAgainstGit(
   options: ValidateFIMAgainstGitOptions
-): { mantel: MantelTestResult; packageCochangeMatrix: number[][] } {
+): { mantel: MantelTestWithNullModelResult; packageCochangeMatrix: number[][] } {
   const fileToPackage = new Map(
     options.coverage.fileIds.map((fileId) => [fileId, path.dirname(normalizeFilePath(fileId)).split('/').filter(Boolean).slice(0, 2).join('/') || '.'])
   );
@@ -275,7 +280,7 @@ export function validateFIMAgainstGit(
     options.packageNames,
     fileToPackage
   );
-  const mantel = mantelTest(options.packageMatrix, packageCochangeMatrix, {
+  const mantel = mantelTestWithNullModel(options.packageMatrix, packageCochangeMatrix, {
     permutations: options.permutations,
     seed: options.seed,
   });

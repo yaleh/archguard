@@ -160,6 +160,56 @@ export function aggregateToPackageLevel(
   };
 }
 
+/**
+ * Returns true if the package name looks like a production source package.
+ * Non-production packages (examples, templates, scripts, root) are excluded
+ * from filtered κ/N_eff calculations to avoid spurious rank deficiency.
+ */
+export function isProductionPackage(name: string): boolean {
+  if (name === '.') return false;
+  if (name.startsWith('examples')) return false;
+  if (name.startsWith('templates')) return false;
+  if (name.startsWith('scripts')) return false;
+  return name.startsWith('src/') || name.startsWith('lib/') || name.startsWith('core/');
+}
+
+/**
+ * Filters out non-production zero-coverage packages from a FisherInformationResult
+ * and re-computes conditionNumber and effectiveDimension from the remaining diagonal.
+ */
+export function filterProductionPackages(result: FisherInformationResult): FisherInformationResult {
+  const filtered = result.diagonal.filter(
+    (entry) => entry.selfInfo > 0 || isProductionPackage(entry.fileId)
+  );
+
+  const filteredEigenvalues = filtered.map((e) => e.selfInfo);
+  const positiveFiltered = filteredEigenvalues.filter((v) => v > EIGENVALUE_EPSILON);
+  const hasDeficiency = filteredEigenvalues.length > positiveFiltered.length;
+  const conditionNumber =
+    positiveFiltered.length === 0
+      ? Number.POSITIVE_INFINITY
+      : hasDeficiency
+        ? Number.POSITIVE_INFINITY
+        : positiveFiltered[0] / positiveFiltered[positiveFiltered.length - 1];
+
+  const sum = filteredEigenvalues.reduce((s, v) => s + v, 0);
+  const sumSq = filteredEigenvalues.reduce((s, v) => s + v * v, 0);
+  const effectiveDimension = sumSq > 0 ? (sum * sum) / sumSq : 0;
+
+  return {
+    ...result,
+    diagonal: filtered,
+    eigenvalues: filteredEigenvalues,
+    conditionNumber,
+    effectiveDimension,
+    fileCount: filtered.length,
+    uncoveredFiles: filtered.filter((e) => e.selfInfo === 0).map((e) => e.fileId),
+    fragilityHotspots: filtered
+      .filter((e) => e.selfInfo > 0 && e.selfInfo < (result.fragilityHotspots[0]?.crb ?? 3))
+      .map((e) => ({ fileId: e.fileId, selfInfo: e.selfInfo, crb: 1 / e.selfInfo })),
+  };
+}
+
 export function clampCoverageByPackage(
   coverage: CoverageMatrix,
   fileIds: string[] = coverage.fileIds,

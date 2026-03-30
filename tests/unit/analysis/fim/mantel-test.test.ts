@@ -130,3 +130,60 @@ describe('mantelTest', () => {
     ).toThrow(/same dimensions/i);
   });
 });
+
+import { generateRandomPositiveDefiniteMatrix, mantelTestWithNullModel } from '@/analysis/fim/mantel-test.js';
+
+describe('generateRandomPositiveDefiniteMatrix', () => {
+  it('returns a square matrix of the requested size', () => {
+    const m = generateRandomPositiveDefiniteMatrix(4);
+    expect(m.length).toBe(4);
+    m.forEach(row => expect(row.length).toBe(4));
+  });
+
+  it('is symmetric', () => {
+    const m = generateRandomPositiveDefiniteMatrix(3, 42);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+      expect(m[i][j]).toBeCloseTo(m[j][i], 10);
+  });
+
+  it('is deterministic with a seed', () => {
+    const m1 = generateRandomPositiveDefiniteMatrix(3, 99);
+    const m2 = generateRandomPositiveDefiniteMatrix(3, 99);
+    expect(m1).toEqual(m2);
+  });
+
+  it('produces different matrices for different seeds', () => {
+    const m1 = generateRandomPositiveDefiniteMatrix(3, 1);
+    const m2 = generateRandomPositiveDefiniteMatrix(3, 2);
+    expect(m1).not.toEqual(m2);
+  });
+});
+
+describe('mantelTestWithNullModel', () => {
+  const identity = (n: number) => Array.from({length: n}, (_, i) =>
+    Array.from({length: n}, (_, j) => i === j ? 1 : 0));
+
+  it('returns all MantelTestWithNullModelResult fields', () => {
+    const m = identity(3);
+    const result = mantelTestWithNullModel(m, m, { seed: 1, permutations: 9, nullModelIterations: 3 });
+    expect(result).toHaveProperty('observedCorrelation');
+    expect(result).toHaveProperty('nullModelMeanR');
+    expect(result).toHaveProperty('nullModelMaxR');
+    expect(result).toHaveProperty('nullModelStdR');
+    expect(result).toHaveProperty('separationScore');
+    expect(result).toHaveProperty('isSignificantOverNull');
+  });
+
+  it('nullModelMaxR >= nullModelMeanR', () => {
+    const m = identity(4);
+    const result = mantelTestWithNullModel(m, m, { seed: 7, permutations: 9, nullModelIterations: 5 });
+    expect(result.nullModelMaxR).toBeGreaterThanOrEqual(result.nullModelMeanR);
+  });
+
+  it('is deterministic with a seed', () => {
+    const m = identity(4);
+    const r1 = mantelTestWithNullModel(m, m, { seed: 1, permutations: 9, nullModelIterations: 3 });
+    const r2 = mantelTestWithNullModel(m, m, { seed: 1, permutations: 9, nullModelIterations: 3 });
+    expect(r1.nullModelMeanR).toBeCloseTo(r2.nullModelMeanR, 10);
+  });
+});
