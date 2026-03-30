@@ -175,39 +175,33 @@ export function isProductionPackage(name: string): boolean {
 
 /**
  * Filters out non-production zero-coverage packages from a FisherInformationResult
- * and re-computes conditionNumber and effectiveDimension from the remaining diagonal.
+ * and re-computes conditionNumber and effectiveDimension via SVD on the filtered sub-matrix.
+ *
+ * @param result   The full FisherInformationResult to filter.
+ * @param coverage The CoverageMatrix whose fileIds match result.diagonal[*].fileId (package names).
  */
-export function filterProductionPackages(result: FisherInformationResult): FisherInformationResult {
-  const filtered = result.diagonal.filter(
-    (entry) => entry.selfInfo > 0 || isProductionPackage(entry.fileId)
-  );
+export function filterProductionPackages(
+  result: FisherInformationResult,
+  coverage: CoverageMatrix
+): FisherInformationResult {
+  const keepIndices: number[] = [];
+  for (let i = 0; i < coverage.fileIds.length; i++) {
+    const fileId = coverage.fileIds[i] ?? '';
+    if (isProductionPackage(fileId)) {
+      keepIndices.push(i);
+    }
+  }
 
-  const filteredEigenvalues = filtered.map((e) => e.selfInfo);
-  const positiveFiltered = filteredEigenvalues.filter((v) => v > EIGENVALUE_EPSILON);
-  const hasDeficiency = filteredEigenvalues.length > positiveFiltered.length;
-  const conditionNumber =
-    positiveFiltered.length === 0
-      ? Number.POSITIVE_INFINITY
-      : hasDeficiency
-        ? Number.POSITIVE_INFINITY
-        : positiveFiltered[0] / positiveFiltered[positiveFiltered.length - 1];
-
-  const sum = filteredEigenvalues.reduce((s, v) => s + v, 0);
-  const sumSq = filteredEigenvalues.reduce((s, v) => s + v * v, 0);
-  const effectiveDimension = sumSq > 0 ? (sum * sum) / sumSq : 0;
-
-  return {
-    ...result,
-    diagonal: filtered,
-    eigenvalues: filteredEigenvalues,
-    conditionNumber,
-    effectiveDimension,
-    fileCount: filtered.length,
-    uncoveredFiles: filtered.filter((e) => e.selfInfo === 0).map((e) => e.fileId),
-    fragilityHotspots: filtered
-      .filter((e) => e.selfInfo > 0 && e.selfInfo < (result.fragilityHotspots[0]?.crb ?? 3))
-      .map((e) => ({ fileId: e.fileId, selfInfo: e.selfInfo, crb: 1 / e.selfInfo })),
+  // Extract the sub-coverage-matrix for kept packages (select columns)
+  const subMatrix = coverage.matrix.map((row) => keepIndices.map((col) => row[col] ?? 0));
+  const subFileIds = keepIndices.map((i) => coverage.fileIds[i] ?? '');
+  const subCoverage: CoverageMatrix = {
+    matrix: subMatrix,
+    testIds: coverage.testIds,
+    fileIds: subFileIds,
   };
+
+  return computeFisherInformation(subCoverage);
 }
 
 export function clampCoverageByPackage(

@@ -241,7 +241,7 @@ export async function computeImportApproximationFIM(
     fileIds: packageNames,
   };
   const packageResult = computeFisherInformation(packageCoverageMatrix);
-  const filteredPackageResult = filterProductionPackages(packageResult);
+  const filteredPackageResult = filterProductionPackages(packageResult, packageCoverageMatrix);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
