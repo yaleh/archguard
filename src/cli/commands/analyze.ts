@@ -132,6 +132,11 @@ export function createAnalyzeCommand(): Command {
         '--include-git',
         'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/)'
       )
+      .option('--fim', 'Compute the coverage-based Fisher Information Matrix (import-approximation)')
+      .option(
+        '--fim-validate',
+        'Validate the package-level FIM against git co-change via a Mantel test (requires --fim)'
+      )
 
       // ========== Go Architecture Atlas ==========
       .option(

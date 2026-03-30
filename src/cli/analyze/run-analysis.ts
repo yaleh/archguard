@@ -12,6 +12,46 @@ import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { TestAnalyzer } from '@/analysis/test-analyzer.js';
 import { TestOutputWriter } from '../utils/test-output-writer.js';
+import { computeImportApproximationFIM, validateFIMAgainstGit } from '@/analysis/fim/fim-analysis.js';
+import { appendFIMSnapshot } from '@/analysis/fim/fim-snapshot.js';
+import { writeFIMCurrentArtifact } from '@/analysis/fim/fim-artifacts.js';
+
+function formatFimMetric(value: number): string {
+  return Number.isFinite(value) ? value.toFixed(3) : 'Infinity';
+}
+
+async function loadPluginForLanguage(
+  language: string,
+  workspaceRoot: string
+): Promise<import('@/core/interfaces/language-plugin.js').ILanguagePlugin> {
+  let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin | null = null;
+
+  try {
+    if (language === 'go') {
+      const { GoPlugin } = await import('@/plugins/golang/index.js');
+      plugin = new GoPlugin();
+    } else if (language === 'java') {
+      const { JavaPlugin } = await import('@/plugins/java/index.js');
+      plugin = new JavaPlugin();
+    } else if (language === 'python') {
+      const { PythonPlugin } = await import('@/plugins/python/index.js');
+      plugin = new PythonPlugin();
+    } else if (language === 'cpp') {
+      const { CppPlugin } = await import('@/plugins/cpp/index.js');
+      plugin = new CppPlugin();
+    } else {
+      const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+      plugin = new TypeScriptPlugin();
+    }
+    await plugin.initialize?.({ workspaceRoot });
+    return plugin;
+  } catch {
+    const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+    plugin = new TypeScriptPlugin();
+    await plugin.initialize?.({ workspaceRoot });
+    return plugin;
+  }
+}
 
 export interface RunAnalysisOptions {
   sessionRoot: string;
@@ -92,34 +132,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       try {
         reporter.start('Running test analysis...');
         const language = archJson.language ?? 'typescript';
-        // Dynamically load the plugin for this language
-        let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin | null = null;
-        try {
-          if (language === 'go') {
-            const { GoPlugin } = await import('@/plugins/golang/index.js');
-            plugin = new GoPlugin();
-          } else if (language === 'java') {
-            const { JavaPlugin } = await import('@/plugins/java/index.js');
-            plugin = new JavaPlugin();
-          } else if (language === 'python') {
-            const { PythonPlugin } = await import('@/plugins/python/index.js');
-            plugin = new PythonPlugin();
-          } else if (language === 'cpp') {
-            const { CppPlugin } = await import('@/plugins/cpp/index.js');
-            plugin = new CppPlugin();
-          } else {
-            const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
-            plugin = new TypeScriptPlugin();
-          }
-          await plugin.initialize?.({ workspaceRoot: archJson.workspaceRoot ?? sessionRoot });
-        } catch {
-          // If plugin load fails, fall back to TypeScript plugin
-          const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
-          plugin = new TypeScriptPlugin();
-          await plugin.initialize?.({ workspaceRoot: archJson.workspaceRoot ?? sessionRoot });
-        }
-
         const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
+        const plugin = await loadPluginForLanguage(language, workspaceRoot);
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, { workspaceRoot });
 
@@ -155,6 +169,72 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       }
     } else if (config.verbose) {
       reporter.warn('[test-analysis] No ArchJSON available for test analysis');
+    }
+  }
+
+  if (cliOptions.fim || cliOptions.fimValidate) {
+    const archJson = processor.getLastArchJson();
+    if (!cliOptions.fim && cliOptions.fimValidate) {
+      reporter.warn('[fim] --fim-validate requires --fim — skipping FIM analysis');
+    } else if (archJson) {
+      try {
+        reporter.start('Computing Fisher Information Matrix...');
+        const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
+        const plugin = await loadPluginForLanguage(archJson.language ?? 'typescript', workspaceRoot);
+        const { artifact, snapshot, coverage } = await computeImportApproximationFIM({
+          archJson,
+          plugin,
+          workspaceRoot,
+        });
+
+        if (cliOptions.fimValidate) {
+          const { isGitRepo, readGitLog } = await import('../git-history/git-log-reader.js');
+          if (isGitRepo(sessionRoot)) {
+            const commits = readGitLog(sessionRoot, {
+              sinceDays: 90,
+              maxCommits: 500,
+              includeMerges: false,
+            });
+            if (commits.length > 0) {
+              const { mantel } = validateFIMAgainstGit({
+                coverage,
+                packageNames: artifact.packageNames,
+                packageMatrix: artifact.packageMatrix,
+                commits,
+                permutations: 999,
+                seed: 42,
+              });
+              artifact.mantel = mantel;
+              snapshot.mantelCorrelation = mantel.observedCorrelation;
+              snapshot.mantelPValue = mantel.pValue;
+            } else {
+              reporter.warn('[fim] No git commits available for Mantel validation');
+            }
+          } else {
+            reporter.warn('[fim] Not a git repository — skipping Mantel validation');
+          }
+        }
+
+        const archguardDir = config.workDir || workDir;
+        await writeFIMCurrentArtifact(archguardDir, artifact);
+        await appendFIMSnapshot(archguardDir, snapshot);
+
+        reporter.info('[fim] source=import-approximation (Phase 1 static coverage proxy)');
+        reporter.info(
+          `[fim] package kappa=${formatFimMetric(artifact.packageResult.conditionNumber)} N_eff=${artifact.packageResult.effectiveDimension.toFixed(3)} packages=${artifact.packageNames.length} tests=${artifact.fileResult.testCount}`
+        );
+        if (artifact.mantel) {
+          reporter.info(
+            `[fim] Mantel r=${artifact.mantel.observedCorrelation.toFixed(3)} p=${artifact.mantel.pValue.toFixed(3)} valid=${artifact.mantel.isValidProxy}`
+          );
+        }
+        reporter.succeed('FIM analysis complete');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        reporter.warn(`[fim] Failed: ${msg}`);
+      }
+    } else if (config.verbose) {
+      reporter.warn('[fim] No ArchJSON available for FIM analysis');
     }
   }
 

@@ -58,6 +58,20 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       expect(outputDirOption?.description).toContain('Output directory');
     });
 
+    it('should parse --fim option', () => {
+      const command = createAnalyzeCommand();
+      const fimOption = command.options.find((opt) => opt.long === '--fim');
+      expect(fimOption).toBeDefined();
+      expect(fimOption?.description).toContain('Fisher Information Matrix');
+    });
+
+    it('should parse --fim-validate option', () => {
+      const command = createAnalyzeCommand();
+      const fimValidateOption = command.options.find((opt) => opt.long === '--fim-validate');
+      expect(fimValidateOption).toBeDefined();
+      expect(fimValidateOption?.description).toContain('Mantel');
+    });
+
     it('should not have default value for --cli-command in CLI', () => {
       const command = createAnalyzeCommand();
 

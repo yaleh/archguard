@@ -18,6 +18,12 @@ const indexGenerateMock = vi.fn();
 const diagramProcessorCtorMock = vi.fn();
 const testAnalyzerAnalyzeMock = vi.fn();
 const testOutputWriterWriteMock = vi.fn();
+const computeImportApproximationFIMMock = vi.fn();
+const validateFIMAgainstGitMock = vi.fn();
+const writeFIMCurrentArtifactMock = vi.fn();
+const appendFIMSnapshotMock = vi.fn();
+const readGitLogMock = vi.fn();
+const isGitRepoMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -65,6 +71,26 @@ vi.mock('@/cli/utils/test-output-writer.js', () => ({
   TestOutputWriter: class {
     write = testOutputWriterWriteMock;
   },
+}));
+
+vi.mock('@/analysis/fim/fim-analysis.js', () => ({
+  computeImportApproximationFIM: computeImportApproximationFIMMock,
+  validateFIMAgainstGit: validateFIMAgainstGitMock,
+}));
+
+vi.mock('@/analysis/fim/fim-artifacts.js', () => ({
+  writeFIMCurrentArtifact: writeFIMCurrentArtifactMock,
+}));
+
+vi.mock('@/analysis/fim/fim-snapshot.js', () => ({
+  appendFIMSnapshot: appendFIMSnapshotMock,
+}));
+
+vi.mock('@/cli/git-history/git-log-reader.js', () => ({
+  readGitLog: readGitLogMock,
+  isGitRepo: isGitRepoMock,
+  getHeadRef: vi.fn(),
+  getCurrentBranch: vi.fn(),
 }));
 
 vi.mock('fs-extra', () => ({
@@ -138,12 +164,78 @@ describe('runAnalysis', () => {
     diagramProcessorCtorMock.mockReset();
     testAnalyzerAnalyzeMock.mockReset();
     testOutputWriterWriteMock.mockReset();
+    computeImportApproximationFIMMock.mockReset();
+    validateFIMAgainstGitMock.mockReset();
+    writeFIMCurrentArtifactMock.mockReset();
+    appendFIMSnapshotMock.mockReset();
+    readGitLogMock.mockReset();
+    isGitRepoMock.mockReset();
 
     loadMock.mockResolvedValue(baseConfig);
     getLastArchJsonMock.mockReturnValue(null);
     generateTestCoverageHeatmapMock.mockResolvedValue(undefined);
     testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 0 } });
     testOutputWriterWriteMock.mockResolvedValue(undefined);
+    computeImportApproximationFIMMock.mockResolvedValue({
+      artifact: {
+        timestamp: '2026-03-30T00:00:00Z',
+        source: 'import-approximation',
+        descriptionLength: 12,
+        fileIds: ['src/a.ts'],
+        packageNames: ['src'],
+        fileMatrix: [[1]],
+        packageMatrix: [[1]],
+        fileResult: {
+          eigenvalues: [1],
+          conditionNumber: 1,
+          effectiveDimension: 1,
+          fileCount: 1,
+          testCount: 1,
+          diagonal: [{ fileId: 'src/a.ts', selfInfo: 1 }],
+          uncoveredFiles: [],
+          fragilityHotspots: [],
+        },
+        packageResult: {
+          eigenvalues: [1],
+          conditionNumber: 1,
+          effectiveDimension: 1,
+          fileCount: 1,
+          testCount: 1,
+          diagonal: [{ fileId: 'src', selfInfo: 1 }],
+          uncoveredFiles: [],
+          fragilityHotspots: [],
+        },
+      },
+      snapshot: {
+        timestamp: '2026-03-30T00:00:00Z',
+        source: 'import-approximation',
+        descriptionLength: 12,
+        fileCount: 1,
+        testCount: 1,
+        conditionNumber: 1,
+        effectiveDimension: 1,
+        topEigenvalueShares: [1],
+        uncoveredFileCount: 0,
+      },
+      coverage: {
+        matrix: [[1]],
+        testIds: ['tests/a.test.ts'],
+        fileIds: ['src/a.ts'],
+      },
+    });
+    validateFIMAgainstGitMock.mockReturnValue({
+      mantel: {
+        observedCorrelation: 0.7,
+        permutations: 999,
+        pValue: 0.01,
+        isValidProxy: true,
+      },
+      packageCochangeMatrix: [[1]],
+    });
+    writeFIMCurrentArtifactMock.mockResolvedValue(undefined);
+    appendFIMSnapshotMock.mockResolvedValue(undefined);
+    readGitLogMock.mockReturnValue([{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }]);
+    isGitRepoMock.mockReturnValue(true);
     normalizeToDiagramsMock.mockResolvedValue([
       { name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' },
     ]);
@@ -476,6 +568,100 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
       archJsonNoRoot,
       expect.anything(),
       expect.objectContaining({ workspaceRoot: '/home/archguard' })
+    );
+  });
+});
+
+describe('runAnalysis — FIM integration', () => {
+  it('computes and persists FIM artifacts when fim=true', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true },
+      reporter: silentReporter(),
+    });
+
+    expect(computeImportApproximationFIMMock).toHaveBeenCalledWith(
+      expect.objectContaining({ archJson, workspaceRoot: '/tmp/project' })
+    );
+    expect(writeFIMCurrentArtifactMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard',
+      expect.objectContaining({ source: 'import-approximation' })
+    );
+    expect(appendFIMSnapshotMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard',
+      expect.objectContaining({ source: 'import-approximation' })
+    );
+  });
+
+  it('does not run FIM work when fim is not requested', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+
+    const initialCallCount = computeImportApproximationFIMMock.mock.calls.length;
+    const initialWriteCount = writeFIMCurrentArtifactMock.mock.calls.length;
+    const initialSnapshotCount = appendFIMSnapshotMock.mock.calls.length;
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(computeImportApproximationFIMMock.mock.calls.length).toBe(initialCallCount);
+    expect(writeFIMCurrentArtifactMock.mock.calls.length).toBe(initialWriteCount);
+    expect(appendFIMSnapshotMock.mock.calls.length).toBe(initialSnapshotCount);
+  });
+
+  it('runs Mantel validation when fimValidate=true', async () => {
+    const archJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-03-30T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      workspaceRoot: '/tmp/project',
+    } as any;
+    getLastArchJsonMock.mockReturnValue(archJson);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { fim: true, fimValidate: true },
+      reporter: silentReporter(),
+    });
+
+    expect(readGitLogMock).toHaveBeenCalled();
+    expect(validateFIMAgainstGitMock).toHaveBeenCalled();
+    expect(writeFIMCurrentArtifactMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard',
+      expect.objectContaining({
+        mantel: expect.objectContaining({ isValidProxy: true }),
+      })
     );
   });
 });

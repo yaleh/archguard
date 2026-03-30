@@ -58,6 +58,7 @@
     "globby": "^16.1.1",
     "isomorphic-mermaid": "^0.1.1",
     "micromatch": "^4.0.8",
+    "ml-matrix": "^6.12.1",
     "ora": "^9.3.0",
     "p-limit": "^7.3.0",
     "p-map": "^7.0.4",

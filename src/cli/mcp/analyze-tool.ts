@@ -62,6 +62,14 @@ const analyzeSchema = {
     .boolean()
     .optional()
     .describe('Run test analysis only, without generating architecture diagrams.'),
+  fim: z
+    .boolean()
+    .optional()
+    .describe('Compute the coverage-based Fisher Information Matrix using import-approximation.'),
+  fimValidate: z
+    .boolean()
+    .optional()
+    .describe('Run Mantel validation against git co-change after FIM computation. Requires fim=true.'),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -69,7 +77,18 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
     'archguard_analyze',
     'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
     analyzeSchema,
-    async ({ projectRoot, sources, lang, diagrams, format, noCache, includeTests, testsOnly }) => {
+    async ({
+      projectRoot,
+      sources,
+      lang,
+      diagrams,
+      format,
+      noCache,
+      includeTests,
+      testsOnly,
+      fim,
+      fimValidate,
+    }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
 
@@ -87,6 +106,8 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               cache: noCache ? false : undefined,
               includeTests,
               testsOnly,
+              fim,
+              fimValidate,
             },
             reporter: new StderrReporter(),
           });
