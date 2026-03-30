@@ -13,6 +13,7 @@ This directory contains Architecture Decision Records for the ArchGuard project.
 | [ADR-005](./005-default-analysis-uses-primary-language-project-scope.md) | 缺省分析自动发现主语言并使用项目级 scope | Proposed | 2026-03-08 | [proposal-default-analysis-language-scopes.md](../proposals/proposal-default-analysis-language-scopes.md) |
 | [ADR-006](./006-mcp-tool-design-standards.md) | MCP Tool 设计规范 | Accepted | 2026-03-12 | `src/cli/mcp/mcp-server.ts` |
 | [ADR-007](./007-cli-mcp-interface-parity.md) | CLI 与 MCP 接口一致性规范 | Accepted | 2026-03-13 | `src/cli/commands/query.ts`, `src/cli/mcp/mcp-server.ts`, `tests/integration/cli-mcp/` |
+| [ADR-008](./008-llm-semantic-exploration-before-analysis.md) | 分析前 LLM 语义探索层 | Proposed | 2026-03-30 | [proposal-llm-semantic-exploration.md](../proposals/proposal-llm-semantic-exploration.md) |
 
 ## How to Read ADRs
 
@@ -113,4 +114,4 @@ Proposed → Accepted → Implemented → Deprecated → Superseded
 
 ---
 
-**Last Updated**: 2026-03-08
+**Last Updated**: 2026-03-30
