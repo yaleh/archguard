@@ -3,7 +3,12 @@
  * Story 5: Relationship Extraction
  */
 
-import { type SourceFile, type ClassDeclaration, type InterfaceDeclaration } from 'ts-morph';
+import {
+  type SourceFile,
+  type ClassDeclaration,
+  type InterfaceDeclaration,
+  SyntaxKind,
+} from 'ts-morph';
 import type { Relation } from '@/types';
 import { BaseExtractor } from './base-extractor.js';
 
@@ -88,8 +93,11 @@ export class RelationExtractor extends BaseExtractor {
 
     // Extract from interfaces
     for (const interfaceDecl of sourceFile.getInterfaces()) {
-      relations.push(...this.extractInterfaceRelations(interfaceDecl, relationSet));
+      relations.push(...this.extractInterfaceRelations(interfaceDecl, relationSet, externalNames));
     }
+
+    // Extract from functions (function declarations + arrow-function variables)
+    relations.push(...this.extractFunctionRelations(sourceFile, relationSet, externalNames));
 
     return relations;
   }
@@ -165,11 +173,13 @@ export class RelationExtractor extends BaseExtractor {
    * Extract relations from an interface
    * @param interfaceDecl - InterfaceDeclaration
    * @param relationSet - Set to track unique relations
+   * @param externalNames - Set of names imported from external packages to skip
    * @returns Array of Relation objects
    */
   private extractInterfaceRelations(
     interfaceDecl: InterfaceDeclaration,
-    relationSet: Set<string>
+    relationSet: Set<string>,
+    externalNames: Set<string> = new Set()
   ): Relation[] {
     const relations: Relation[] = [];
     const interfaceName = interfaceDecl.getName();
@@ -178,6 +188,83 @@ export class RelationExtractor extends BaseExtractor {
     for (const extendsExpr of interfaceDecl.getExtends()) {
       const parentName = extendsExpr.getExpression().getText();
       this.addRelation(relations, relationSet, 'inheritance', interfaceName, parentName);
+    }
+
+    // Extract composition from interface property types
+    for (const property of interfaceDecl.getProperties()) {
+      const propTypeName = this.extractTypeName(property.getType().getText());
+      if (
+        propTypeName &&
+        this.isCustomType(propTypeName) &&
+        !externalNames.has(propTypeName) &&
+        propTypeName !== interfaceName
+      ) {
+        this.addRelation(relations, relationSet, 'composition', interfaceName, propTypeName);
+      }
+    }
+
+    return relations;
+  }
+
+  /**
+   * Extract dependency relations for top-level function declarations and arrow-function
+   * variable declarations.  For each such function, find the local named imports that
+   * are referenced inside the function body and emit `dependency` relations.
+   *
+   * @param sourceFile - ts-morph SourceFile
+   * @param relationSet - Set to track unique relations
+   * @param externalNames - Names imported from external (non-local) packages
+   * @returns Array of Relation objects
+   */
+  private extractFunctionRelations(
+    sourceFile: SourceFile,
+    relationSet: Set<string>,
+    externalNames: Set<string>
+  ): Relation[] {
+    const relations: Relation[] = [];
+
+    // Build a map of local imported names → their source specifier
+    const localImportedNames = new Set<string>();
+    for (const importDecl of sourceFile.getImportDeclarations()) {
+      const specifier = importDecl.getModuleSpecifierValue();
+      if (!isLocalModuleSpecifier(specifier)) {
+        continue;
+      }
+      for (const named of importDecl.getNamedImports()) {
+        localImportedNames.add(named.getName());
+      }
+    }
+
+    // Helper: given a function name and its body text, emit dependency relations
+    const emitDepsForBody = (funcName: string, bodyText: string): void => {
+      for (const importedName of localImportedNames) {
+        if (importedName === funcName) {
+          continue; // skip self
+        }
+        // Word-boundary check: the name appears as a standalone identifier in the body
+        const wordBoundaryRegex = new RegExp(`\\b${importedName}\\b`);
+        if (wordBoundaryRegex.test(bodyText)) {
+          this.addRelation(relations, relationSet, 'dependency', funcName, importedName);
+        }
+      }
+    };
+
+    // Process function declarations
+    for (const funcDecl of sourceFile.getFunctions()) {
+      const funcName = funcDecl.getName();
+      if (!funcName) continue;
+      const body = funcDecl.getBody();
+      if (!body) continue;
+      emitDepsForBody(funcName, body.getText());
+    }
+
+    // Process variable declarations whose initializer is an arrow function
+    for (const varDecl of sourceFile.getVariableDeclarations()) {
+      const initializer = varDecl.getInitializer();
+      if (!initializer) continue;
+      if (initializer.getKind() !== SyntaxKind.ArrowFunction) continue;
+      const varName = varDecl.getName();
+      emitDepsForBody(varName, initializer.getText());
     }
 
     return relations;
@@ -220,6 +307,14 @@ export class RelationExtractor extends BaseExtractor {
   private extractTypeName(typeText: string): string | null {
     // Remove whitespace
     typeText = typeText.trim();
+
+    // Reject structural / anonymous types — not named user-defined types
+    // Function types: "(x: T) => R", "() => void"
+    if (typeText.startsWith('(')) return null;
+    // Object literal types: "{ key: T }"
+    if (typeText.startsWith('{')) return null;
+    // Tuple types: "[A, B]"
+    if (typeText.startsWith('[')) return null;
 
     // ✅ Handle ts-morph import() function format
     // Format: import("path").ClassName or import("./relative").ClassName

@@ -331,3 +331,264 @@ describe('RelationExtractor - External Import Filtering', () => {
     expect(relations.find((r) => r.target === 'Ora')).toBeUndefined();
   });
 });
+
+describe('RelationExtractor - Gap A: Function Import Relations', () => {
+  it('should extract dependency relations for named imports called inside a function body', () => {
+    const code = `
+      import { fetchData } from './api';
+      import { useHelper } from './helpers';
+      export function useWeather() {
+        const data = fetchData();
+        return useHelper(data);
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'useWeather', target: 'fetchData' })
+    );
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'useWeather', target: 'useHelper' })
+    );
+  });
+
+  it('should extract dependency relations for arrow-function variables that call local imports', () => {
+    const code = `
+      import { computeScore } from './scoring';
+      export const processResult = (input: string) => {
+        return computeScore(input);
+      };
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({
+        type: 'dependency',
+        source: 'processResult',
+        target: 'computeScore',
+      })
+    );
+  });
+
+  it('should NOT emit dependency relation for imports from external packages', () => {
+    const code = `
+      import { lodashHelper } from 'lodash';
+      export function myUtil() {
+        return lodashHelper();
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'lodashHelper')).toBeUndefined();
+  });
+
+  it('should NOT emit self-relation for a function', () => {
+    const code = `
+      import { useWeather } from './weather';
+      export function useWeather() {
+        return useWeather();
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    const selfRels = relations.filter((r) => r.source === 'useWeather' && r.target === 'useWeather');
+    expect(selfRels).toHaveLength(0);
+  });
+
+  it('should not emit relation for a local import not referenced in the function body', () => {
+    const code = `
+      import { fetchData } from './api';
+      import { unusedHelper } from './helpers';
+      export function useWeather() {
+        return fetchData();
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'unusedHelper')).toBeUndefined();
+  });
+
+  it('should extract relations from multiple functions in the same file', () => {
+    const code = `
+      import { callA } from './a';
+      import { callB } from './b';
+      export function funcOne() {
+        callA();
+      }
+      export function funcTwo() {
+        callB();
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'funcOne', target: 'callA' })
+    );
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'funcTwo', target: 'callB' })
+    );
+  });
+});
+
+describe('RelationExtractor - Gap B: Interface Property Type Refs', () => {
+  it('should extract composition relations for custom types in interface properties', () => {
+    const code = `
+      interface ForecastPoint {}
+      interface Coordinates {}
+      interface WeatherData {
+        forecast: ForecastPoint;
+        location: Coordinates;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({
+        type: 'composition',
+        source: 'WeatherData',
+        target: 'ForecastPoint',
+      })
+    );
+    expect(relations).toContainEqual(
+      expect.objectContaining({
+        type: 'composition',
+        source: 'WeatherData',
+        target: 'Coordinates',
+      })
+    );
+  });
+
+  it('should NOT emit composition for primitive property types in interfaces', () => {
+    const code = `
+      interface Config {
+        name: string;
+        count: number;
+        active: boolean;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'string')).toBeUndefined();
+    expect(relations.find((r) => r.target === 'number')).toBeUndefined();
+    expect(relations.find((r) => r.target === 'boolean')).toBeUndefined();
+  });
+
+  it('should NOT emit composition for interface property types imported from external packages', () => {
+    const code = `
+      import type { ExternalModel } from 'some-package';
+      interface MyData {
+        external: ExternalModel;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations.find((r) => r.target === 'ExternalModel')).toBeUndefined();
+  });
+
+  it('should emit composition for interface property types imported from local paths', () => {
+    const code = `
+      import type { LocalType } from './local-types';
+      interface MyData {
+        item: LocalType;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'composition', source: 'MyData', target: 'LocalType' })
+    );
+  });
+
+  it('should handle interface that both extends and has typed properties', () => {
+    const code = `
+      interface Base {}
+      interface Point {}
+      interface Shape extends Base {
+        center: Point;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'inheritance', source: 'Shape', target: 'Base' })
+    );
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'composition', source: 'Shape', target: 'Point' })
+    );
+  });
+
+  it('should not emit duplicate composition relations for repeated types in interface', () => {
+    const code = `
+      interface Point {}
+      interface Line {
+        start: Point;
+        end: Point;
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    const pointRels = relations.filter((r) => r.source === 'Line' && r.target === 'Point');
+    expect(pointRels).toHaveLength(1);
+  });
+});
+
+describe('RelationExtractor - Structural type filtering', () => {
+  it('should NOT emit composition for function-typed interface properties', () => {
+    const code = `
+      interface EventHandlers {
+        onClick: () => void;
+        onChange: (value: string) => boolean;
+        onSubmit: (data: FormData, event: Event) => Promise<void>;
+      }
+    `;
+    const relations = extractor.extract(code);
+    // No composition relations — all props are anonymous function types
+    expect(relations.filter((r) => r.type === 'composition')).toHaveLength(0);
+  });
+
+  it('should NOT emit composition for object-literal-typed interface properties', () => {
+    const code = `
+      interface Config {
+        options: { debug: boolean; timeout: number };
+      }
+    `;
+    const relations = extractor.extract(code);
+    expect(relations.filter((r) => r.type === 'composition')).toHaveLength(0);
+  });
+
+  it('should NOT emit composition for tuple-typed interface properties', () => {
+    const code = `
+      interface Pair {
+        coords: [number, number];
+      }
+    `;
+    const relations = extractor.extract(code);
+    expect(relations.filter((r) => r.type === 'composition')).toHaveLength(0);
+  });
+
+  it('should still emit composition for named-type interface properties', () => {
+    const code = `
+      interface Component {
+        onClick: () => void;
+        data: WeatherData;
+        handler: (x: number) => void;
+      }
+    `;
+    const relations = extractor.extract(code);
+    const comp = relations.filter((r) => r.type === 'composition');
+    expect(comp).toHaveLength(1);
+    expect(comp[0].target).toBe('WeatherData');
+  });
+});

@@ -178,6 +178,10 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const builtinExcludes = [
       `!${workspaceRoot}/**/*.test.ts`,
       `!${workspaceRoot}/**/*.spec.ts`,
+      `!${workspaceRoot}/**/*.test.tsx`,
+      `!${workspaceRoot}/**/*.spec.tsx`,
+      `!${workspaceRoot}/**/*.test.jsx`,
+      `!${workspaceRoot}/**/*.spec.jsx`,
       `!${workspaceRoot}/**/node_modules/**`,
     ];
     const callerExcludes = (excludePatterns ?? []).map((p) =>
@@ -208,7 +212,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       continueOnError: true,
     });
 
-    const pattern = config.filePattern ?? '**/*.ts';
+    const pattern = config.filePattern ?? '**/*.{ts,tsx}';
 
     // Create a single shared ts-morph Project to avoid parsing twice
     const tsProject = this.initTsProject(workspaceRoot, pattern, config.excludePatterns);

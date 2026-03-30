@@ -63,21 +63,46 @@ export class ModuleGraphBuilder {
           if (fileToModule.has(absTo)) {
             toModule = fileToModule.get(absTo) ?? '';
           } else {
-            // File exists in the project but outside our root? Treat as external
-            const relTo = path.relative(projectRoot, absTo).replace(/\\/g, '/');
-            toModule = path.dirname(relTo).replace(/\\/g, '/');
+            // File exists in ts-morph project but outside our source root — skip.
+            // This avoids creating phantom ".." module nodes for imports that
+            // resolve to e.g. node_modules or sibling directories outside projectRoot.
+            continue;
           }
         } else {
           // Unresolved import
           const specifier = importDecl.getModuleSpecifierValue();
-          // Relative imports that failed to resolve are broken/missing files — skip them.
-          // They must not create phantom external nodes (e.g. id ".").
-          if (specifier.startsWith('.')) continue;
-          // Use the bare package name (first path segment)
-          toModule = specifier.startsWith('@')
-            ? specifier.split('/').slice(0, 2).join('/')
-            : specifier.split('/')[0];
-          externalModules.add(toModule);
+          if (specifier.startsWith('.')) {
+            // Attempt manual resolution: resolve path relative to this source file,
+            // then try common extension/index candidates against the fileToModule map.
+            // This handles the common case where ts-morph can't resolve the import
+            // with ArchGuard's sparse compiler options, but the target file IS in
+            // the project (already in fileToModule).
+            const sfPath = sf.getFilePath();
+            const base = path.resolve(path.dirname(sfPath), specifier);
+            const candidates = [
+              base,
+              base + '.ts',
+              base + '.tsx',
+              base + '.d.ts',
+              base + '/index.ts',
+              base + '/index.tsx',
+            ];
+            let resolved = false;
+            for (const candidate of candidates) {
+              if (fileToModule.has(candidate)) {
+                toModule = fileToModule.get(candidate) ?? '';
+                resolved = true;
+                break;
+              }
+            }
+            if (!resolved) continue; // broken/missing — skip without creating phantom node
+          } else {
+            // Use the bare package name (first path segment)
+            toModule = specifier.startsWith('@')
+              ? specifier.split('/').slice(0, 2).join('/')
+              : specifier.split('/')[0];
+            externalModules.add(toModule);
+          }
         }
 
         // Skip self-imports
