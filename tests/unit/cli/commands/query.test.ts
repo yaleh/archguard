@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Entity, Relation, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
+import type { PackageStatEntry, PackageStatsResult } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 
@@ -16,20 +17,8 @@ vi.mock('@/cli/query/engine-loader.js', () => ({
   readManifest: vi.fn(),
 }));
 
-// Mock history-loader for git history tests
-vi.mock('@/cli/git-history/history-loader.js', () => ({
-  loadHistoryData: vi.fn(),
-  GitHistoryNotFoundError: class GitHistoryNotFoundError extends Error {
-    constructor(dir: string) {
-      super(`Git history not found in ${dir}`);
-      this.name = 'GitHistoryNotFoundError';
-    }
-  },
-}));
-
 import { createQueryCommand } from '@/cli/commands/query.js';
 import { resolveArchDir, loadEngine, readManifest } from '@/cli/query/engine-loader.js';
-import { loadHistoryData, GitHistoryNotFoundError } from '@/cli/git-history/history-loader.js';
 
 // -- Test fixtures --
 
@@ -174,18 +163,6 @@ describe('createQueryCommand', () => {
     expect(optionNames).toContain('--orphans');
     expect(optionNames).toContain('--in-cycles');
     expect(optionNames).toContain('--verbose');
-    // Phase 5 options
-    expect(optionNames).toContain('--package-stats');
-    expect(optionNames).toContain('--atlas-layer');
-    expect(optionNames).toContain('--test-patterns');
-    expect(optionNames).toContain('--test-issues');
-    expect(optionNames).toContain('--test-metrics');
-    expect(optionNames).toContain('--entity-coverage');
-    expect(optionNames).toContain('--change-context');
-    expect(optionNames).toContain('--cochange');
-    expect(optionNames).toContain('--change-risk');
-    expect(optionNames).toContain('--ownership');
-    expect(optionNames).toContain('--target-type');
   });
 
   it('does NOT expose --calls', () => {
@@ -366,341 +343,6 @@ describe('derived scope warning', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Phase 5 — architecture query tools
-// ---------------------------------------------------------------------------
-
-describe('query --package-stats', () => {
-  it('calls getPackageStats with default depth 2', async () => {
-    const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue({
-      depth: 2,
-      packages: [],
-      totalPackages: 0,
-      totalEntities: 0,
-      totalRelations: 0,
-    });
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--package-stats');
-    expect(spy).toHaveBeenCalledWith(2);
-  });
-
-  it('calls getPackageStats with explicit depth', async () => {
-    const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue({
-      depth: 3,
-      packages: [],
-      totalPackages: 0,
-      totalEntities: 0,
-      totalRelations: 0,
-    });
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--package-stats', '3');
-    expect(spy).toHaveBeenCalledWith(3);
-  });
-
-  it('rejects out-of-range depth for --package-stats', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
-    await runQuery('--package-stats', '9');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('--package-stats');
-  });
-
-  it('outputs JSON for --package-stats', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getPackageStats').mockReturnValue({
-      depth: 2,
-      packages: [{ name: 'src', entityCount: 5, relationCount: 3, avgRelations: 0.6 }],
-      totalPackages: 1,
-      totalEntities: 5,
-      totalRelations: 3,
-    });
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--package-stats', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.totalPackages).toBe(1);
-  });
-});
-
-describe('query --atlas-layer', () => {
-  it('rejects unknown atlas layer', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
-    await runQuery('--atlas-layer', 'unknown');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('Invalid --atlas-layer');
-  });
-
-  it('reports missing atlas data gracefully', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getAtlasLayer').mockReturnValue(undefined);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--atlas-layer', 'package');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('not found');
-  });
-
-  it('calls getAtlasLayer with correct key', async () => {
-    const engine = createTestEngine();
-    const spy = vi
-      .spyOn(engine, 'getAtlasLayer')
-      .mockReturnValue({ nodes: [], edges: [] } as unknown as ReturnType<
-        typeof engine.getAtlasLayer
-      >);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--atlas-layer', 'capability', '--format', 'json');
-    expect(spy).toHaveBeenCalledWith('capability');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Phase 5 — test analysis tools
-// ---------------------------------------------------------------------------
-
-function makeTestAnalysis() {
-  return {
-    testFiles: [
-      {
-        id: 'f1',
-        filePath: 'tests/test_foo.py',
-        frameworks: ['pytest'],
-        testCases: [{ name: 'test_add', assertionCount: 2, isSkipped: false }],
-        testTypeHint: 'unit' as const,
-        importedSourceFiles: [],
-      },
-    ],
-    issues: [{ type: 'zero_assertion', file: 'tests/test_bar.py', severity: 'warning' }],
-    metrics: {
-      totalTestFiles: 1,
-      totalTestCases: 1,
-      assertionDensity: 2,
-      skippedTests: 0,
-      unitTests: 1,
-      integrationTests: 0,
-      e2eTests: 0,
-      performanceTests: 0,
-      debugTests: 0,
-      frameworks: ['pytest'],
-    },
-    coverageMap: new Map(),
-    patternConfigSource: 'default' as const,
-  };
-}
-
-describe('query --test-patterns', () => {
-  it('returns detected frameworks and totalTestFiles', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
-      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
-    );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-patterns', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.detectedFrameworks).toEqual([{ name: 'pytest', confidence: 'high' }]);
-    expect(parsed.totalTestFiles).toBe(1);
-  });
-
-  it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(undefined);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-patterns');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('No test analysis data');
-  });
-});
-
-describe('query --test-issues', () => {
-  it('returns issues array as JSON', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
-      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
-    );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-issues', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed[0].type).toBe('zero_assertion');
-  });
-
-  it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(undefined);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-issues');
-    expect(process.exit).toHaveBeenCalledWith(1);
-  });
-});
-
-describe('query --test-metrics', () => {
-  it('returns metrics object as JSON', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(
-      makeTestAnalysis() as unknown as ReturnType<typeof engine.getTestAnalysis>
-    );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-metrics', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.totalTestFiles).toBe(1);
-    expect(parsed.assertionDensity).toBe(2);
-  });
-
-  it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(undefined);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--test-metrics');
-    expect(process.exit).toHaveBeenCalledWith(1);
-  });
-});
-
-describe('query --entity-coverage', () => {
-  it('calls getEntityCoverage with given entity ID', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
-    const spy = vi.spyOn(engine, 'getEntityCoverage').mockReturnValue({
-      entityId: 'cm',
-      coveredBy: [],
-      coverageScore: 0,
-      isCovered: false,
-    });
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--entity-coverage', 'cm', '--format', 'json');
-    expect(spy).toHaveBeenCalledWith('cm');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.entityId).toBe('cm');
-  });
-
-  it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(false);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
-    await runQuery('--entity-coverage', 'cm');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('No test analysis data');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Phase 5 — git history tools
-// ---------------------------------------------------------------------------
-
-const fakeHistoryData = { fileMetrics: [], packageMetrics: [], commitMetrics: [] };
-
-describe('query --change-context', () => {
-  it('calls getChangeContext and outputs JSON', async () => {
-    const contextResult = {
-      target: 'src/foo.ts',
-      targetType: 'file' as const,
-      changeFrequency: 5,
-      lastChangedAt: '2026-01-01',
-      topContributors: [],
-      cochangedFiles: [],
-    };
-    vi.mocked(loadHistoryData).mockResolvedValue(
-      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
-    );
-    const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
-    vi.spyOn(HistoryQuery.prototype, 'getChangeContext').mockReturnValue(contextResult);
-    await runQuery('--change-context', 'src/foo.ts', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.target).toBe('src/foo.ts');
-    expect(parsed.changeFrequency).toBe(5);
-  });
-
-  it('exits 1 when git history not found', async () => {
-    vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('.archguard'));
-    await runQuery('--change-context', 'src/foo.ts');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('No git history data found');
-  });
-});
-
-describe('query --cochange', () => {
-  it('calls getCochange with targetType and outputs JSON', async () => {
-    const cochangeResult = { target: 'src/foo.ts', targetType: 'file' as const, neighbors: [] };
-    vi.mocked(loadHistoryData).mockResolvedValue(
-      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
-    );
-    const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
-    vi.spyOn(HistoryQuery.prototype, 'getCochange').mockReturnValue(cochangeResult);
-    await runQuery('--cochange', 'src/foo.ts', '--target-type', 'file', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.target).toBe('src/foo.ts');
-  });
-});
-
-describe('query --change-risk', () => {
-  it('calls getChangeRisk and outputs JSON', async () => {
-    const riskResult = {
-      target: 'src/foo.ts',
-      targetType: 'file' as const,
-      riskScore: 0.7,
-      riskLevel: 'high' as const,
-      factors: [],
-    };
-    vi.mocked(loadHistoryData).mockResolvedValue(
-      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
-    );
-    const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
-    vi.spyOn(HistoryQuery.prototype, 'getChangeRisk').mockReturnValue(riskResult);
-    await runQuery('--change-risk', 'src/foo.ts', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.riskScore).toBe(0.7);
-  });
-});
-
-describe('query --ownership', () => {
-  it('calls getOwnership and outputs JSON', async () => {
-    const ownerResult = {
-      target: 'src/foo.ts',
-      targetType: 'file' as const,
-      primaryOwner: 'alice',
-      ownershipRatio: 0.8,
-      contributors: [],
-    };
-    vi.mocked(loadHistoryData).mockResolvedValue(
-      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
-    );
-    const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
-    vi.spyOn(HistoryQuery.prototype, 'getOwnership').mockReturnValue(ownerResult);
-    await runQuery('--ownership', 'src/foo.ts', '--format', 'json');
-    const parsed = JSON.parse(consoleOutput.join('\n'));
-    expect(parsed.primaryOwner).toBe('alice');
-  });
-
-  it('exits 1 when git history not found', async () => {
-    vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('.archguard'));
-    await runQuery('--ownership', 'src/foo.ts');
-    expect(process.exit).toHaveBeenCalledWith(1);
-  });
-
-  it('uses --target-type package for package queries', async () => {
-    const ownerResult = {
-      target: 'src',
-      targetType: 'package' as const,
-      primaryOwner: 'bob',
-      ownershipRatio: 0.6,
-      contributors: [],
-    };
-    vi.mocked(loadHistoryData).mockResolvedValue(
-      fakeHistoryData as unknown as Awaited<ReturnType<typeof loadHistoryData>>
-    );
-    const { HistoryQuery } = await import('@/cli/git-history/history-query.js');
-    const spy = vi.spyOn(HistoryQuery.prototype, 'getOwnership').mockReturnValue(ownerResult);
-    await runQuery('--ownership', 'src', '--target-type', 'package', '--format', 'json');
-    expect(spy).toHaveBeenCalledWith('package', 'src');
-  });
-});
-
-describe('query --target-type validation', () => {
-  it('rejects invalid --target-type value', async () => {
-    vi.mocked(loadHistoryData).mockRejectedValue(new Error('unreachable'));
-    await runQuery('--ownership', 'src/foo.ts', '--target-type', 'invalid');
-    expect(process.exit).toHaveBeenCalledWith(1);
-    expect(consoleErrorOutput.join('\n')).toContain('Invalid --target-type');
-  });
-});
-
 describe('error handling', () => {
   it('exits 1 when loadEngine fails (multiple scopes)', async () => {
     vi.mocked(loadEngine).mockRejectedValue(
@@ -744,5 +386,208 @@ describe('error handling', () => {
     await runQuery('--high-coupling', '--threshold', 'abc');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --threshold');
+  });
+});
+
+// -- Package stats helpers --
+
+function makePackageStatsResult(
+  packages: Partial<PackageStatEntry>[],
+  locAvailable = false
+): PackageStatsResult {
+  const full: PackageStatEntry[] = packages.map((p) => ({
+    package: p.package ?? 'pkg',
+    fileCount: p.fileCount ?? 1,
+    entityCount: p.entityCount ?? 0,
+    methodCount: p.methodCount ?? 0,
+    fieldCount: p.fieldCount ?? 0,
+    loc: p.loc,
+  }));
+  return {
+    meta: {
+      dataPath: locAvailable ? 'oo-derived' : 'ts-module-graph',
+      locAvailable,
+      ...(locAvailable ? { locBasis: 'maxEndLine' as const } : {}),
+    },
+    packages: full,
+  };
+}
+
+describe('query --package-stats', () => {
+  it('is registered as a CLI option', () => {
+    const cmd = createQueryCommand();
+    const optionNames = cmd.options.map((o) => o.long);
+    expect(optionNames).toContain('--package-stats');
+    expect(optionNames).toContain('--package-stats-sort-by');
+    expect(optionNames).toContain('--package-stats-min-files');
+    expect(optionNames).toContain('--package-stats-min-loc');
+    expect(optionNames).toContain('--package-stats-top');
+  });
+
+  it('calls getPackageStats with default depth 2', async () => {
+    const engine = createTestEngine();
+    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([{ package: 'src/cli', fileCount: 3 }])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats');
+    expect(spy).toHaveBeenCalledWith(2);
+  });
+
+  it('calls getPackageStats with explicit depth', async () => {
+    const engine = createTestEngine();
+    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([{ package: 'src', fileCount: 5 }])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '3');
+    expect(spy).toHaveBeenCalledWith(3);
+  });
+
+  it('outputs text listing for each package', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([
+        { package: 'src/cli', fileCount: 4, entityCount: 10, methodCount: 20 },
+        { package: 'src/parser', fileCount: 2, entityCount: 5, methodCount: 8 },
+      ])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('src/cli');
+    expect(output).toContain('src/parser');
+    expect(output).toContain('files=4');
+    expect(output).toContain('entities=10');
+  });
+
+  it('outputs JSON when --format json', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([{ package: 'src/cli', fileCount: 4, entityCount: 10, methodCount: 5 }])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--format', 'json');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.packages).toHaveLength(1);
+    expect(parsed.packages[0].package).toBe('src/cli');
+    expect(parsed.meta).toBeDefined();
+  });
+
+  it('filters by --package-stats-min-files', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([
+        { package: 'big', fileCount: 10 },
+        { package: 'small', fileCount: 1 },
+      ])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-min-files', '5');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('big');
+    expect(output).not.toContain('small');
+  });
+
+  it('filters by --package-stats-min-loc when loc is available', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult(
+        [
+          { package: 'heavy', fileCount: 3, loc: 500 },
+          { package: 'light', fileCount: 3, loc: 50 },
+        ],
+        true /* locAvailable */
+      )
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-min-loc', '100');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('heavy');
+    expect(output).not.toContain('light');
+  });
+
+  it('ignores --package-stats-min-loc when loc is not available', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult(
+        [
+          { package: 'pkgA', fileCount: 3 },
+          { package: 'pkgB', fileCount: 3 },
+        ],
+        false /* locAvailable=false */
+      )
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-min-loc', '9999');
+    const output = consoleOutput.join('\n');
+    // Neither should be filtered since loc is unavailable
+    expect(output).toContain('pkgA');
+    expect(output).toContain('pkgB');
+  });
+
+  it('limits results with --package-stats-top', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([
+        { package: 'a', fileCount: 5 },
+        { package: 'b', fileCount: 4 },
+        { package: 'c', fileCount: 3 },
+      ])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-top', '2', '--format', 'json');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.packages).toHaveLength(2);
+  });
+
+  it('sorts by fileCount when --package-stats-sort-by fileCount', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([
+        { package: 'many-files', fileCount: 20, entityCount: 1 },
+        { package: 'few-files', fileCount: 2, entityCount: 50 },
+      ])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-sort-by', 'fileCount', '--format', 'json');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.packages[0].package).toBe('many-files');
+  });
+
+  it('sorts by entityCount when --package-stats-sort-by entityCount', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([
+        { package: 'low-entities', fileCount: 10, entityCount: 1 },
+        { package: 'high-entities', fileCount: 1, entityCount: 100 },
+      ])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-sort-by', 'entityCount', '--format', 'json');
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.packages[0].package).toBe('high-entities');
+  });
+
+  it('shows "none" message when all packages filtered out', async () => {
+    const engine = createTestEngine();
+    vi.spyOn(engine, 'getPackageStats').mockReturnValue(
+      makePackageStatsResult([{ package: 'tiny', fileCount: 1 }])
+    );
+    vi.mocked(loadEngine).mockResolvedValue(engine);
+    await runQuery('--package-stats', '--package-stats-min-files', '999');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('No package statistics');
+  });
+
+  it('conflicts with other primary query options', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--package-stats', '--summary');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Specify exactly one primary query option');
   });
 });

@@ -26,7 +26,6 @@ import { registerAnalyzeTool } from './analyze-tool.js';
 import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
 import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.js';
 import { registerGitHistoryTools } from './tools/git-history-tools.js';
-import { registerFIMTools } from './tools/fim-tools.js';
 
 const projectRootParam = z
   .string()
@@ -81,7 +80,6 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerTestAnalysisTools(server, defaultRoot);
   registerGitHistoryAnalyzeTool(server, defaultRoot);
   registerGitHistoryTools(server, defaultRoot);
-  registerFIMTools(server, defaultRoot);
   return server;
 }
 

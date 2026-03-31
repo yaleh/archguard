@@ -62,6 +62,20 @@ const analyzeSchema = {
     .boolean()
     .optional()
     .describe('Run test analysis only, without generating architecture diagrams.'),
+  explore: z
+    .boolean()
+    .optional()
+    .describe(
+      'Run LLM semantic exploration before analysis to improve non-production package filtering. ' +
+        'Defaults to true when a Claude CLI is configured.'
+    ),
+  includeGit: z
+    .boolean()
+    .optional()
+    .describe(
+      'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/). ' +
+        'Required before calling git history tools (get_change_context, get_cochange, get_change_risk, get_ownership).'
+    ),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -69,16 +83,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
     'archguard_analyze',
     'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
     analyzeSchema,
-    async ({
-      projectRoot,
-      sources,
-      lang,
-      diagrams,
-      format,
-      noCache,
-      includeTests,
-      testsOnly,
-    }) => {
+    async ({ projectRoot, sources, lang, diagrams, format, noCache, includeTests, testsOnly, explore, includeGit }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
 
@@ -96,6 +101,8 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               cache: noCache ? false : undefined,
               includeTests,
               testsOnly,
+              explore,
+              includeGit,
             },
             reporter: new StderrReporter(),
           });

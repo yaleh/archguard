@@ -294,6 +294,98 @@ describe('registerAnalyzeTool', () => {
     });
   });
 
+  describe('explore / includeGit forwarding', () => {
+    const baseResult = {
+      config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: ['abc'],
+      hasDiagramFailures: false,
+    };
+
+    it('passes explore: true to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', explore: true });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ explore: true }),
+        })
+      );
+    });
+
+    it('passes explore: false to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', explore: false });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ explore: false }),
+        })
+      );
+    });
+
+    it('passes includeGit: true to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', includeGit: true });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ includeGit: true }),
+        })
+      );
+    });
+
+    it('schema describes explore and includeGit correctly', async () => {
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const schema = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[2] as Record<
+        string,
+        { safeParse: (value: unknown) => { success: boolean } }
+      >;
+
+      expect(schema.explore.safeParse(true).success).toBe(true);
+      expect(schema.explore.safeParse(undefined).success).toBe(true);
+      expect(schema.includeGit.safeParse(true).success).toBe(true);
+      expect(schema.includeGit.safeParse(undefined).success).toBe(true);
+    });
+  });
+
   describe('formatAnalyzeResponse Paradigm block', () => {
     it('Go project → output contains Paradigm block', async () => {
       runAnalysisMock.mockResolvedValue({
@@ -331,7 +423,9 @@ describe('registerAnalyzeTool', () => {
           workDir: '/project/.archguard',
           outputDir: '/project/.archguard/output',
         },
-        diagrams: [{ name: 'architecture', level: 'package', sources: [], language: 'typescript' }],
+        diagrams: [
+          { name: 'architecture', level: 'package', sources: [], language: 'typescript' },
+        ],
         results: [],
         queryScopesPersisted: 1,
         persistedScopeKeys: ['abc123'],
