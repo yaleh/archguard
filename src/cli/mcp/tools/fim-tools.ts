@@ -1,3 +1,11 @@
+/**
+ * @experimental
+ * MCP tool registration for FIM (Fisher Information Matrix) read-only access.
+ * FIM computation is no longer part of the `archguard analyze` pipeline;
+ * this tool reads pre-computed artifacts produced by historical `--fim` runs.
+ * See src/analysis/fim/README.md for context and validated findings.
+ */
+
 import path from 'path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

@@ -15,9 +15,6 @@ import {
   mergeProjectSemanticsIntoPatternConfig,
 } from '@/analysis/test-analyzer.js';
 import { TestOutputWriter } from '../utils/test-output-writer.js';
-import { computeImportApproximationFIM, validateFIMAgainstGit } from '@/analysis/fim/fim-analysis.js';
-import { appendFIMSnapshot } from '@/analysis/fim/fim-snapshot.js';
-import { writeFIMCurrentArtifact } from '@/analysis/fim/fim-artifacts.js';
 import { ProjectSemanticsExplorer } from '@/analysis/project-semantics-explorer.js';
 import {
   computeDirTreeHash,
@@ -29,10 +26,6 @@ import {
   mergeProjectSemantics,
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
-
-function formatFimMetric(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(3) : 'Infinity';
-}
 
 async function loadPluginForLanguage(
   language: string,
@@ -194,107 +187,6 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       }
     } else if (config.verbose) {
       reporter.warn('[test-analysis] No ArchJSON available for test analysis');
-    }
-  }
-
-  if (cliOptions.fim || cliOptions.fimValidate) {
-    const archJson = processor.getLastArchJson();
-    if (!cliOptions.fim && cliOptions.fimValidate) {
-      reporter.warn('[fim] --fim-validate requires --fim — skipping FIM analysis');
-    } else if (archJson) {
-      try {
-        reporter.start('Computing Fisher Information Matrix...');
-        const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
-        const plugin = await loadPluginForLanguage(archJson.language ?? 'typescript', workspaceRoot);
-        const { artifact, snapshot, coverage } = await computeImportApproximationFIM({
-          archJson,
-          plugin,
-          workspaceRoot,
-          patternConfig: mergeProjectSemanticsIntoPatternConfig(undefined, mergedProjectSemantics),
-          nonProductionPatterns: mergedProjectSemantics.nonProductionPatterns ?? [],
-          suggestedDepth: mergedProjectSemantics.suggestedDepth,
-        });
-
-        if (cliOptions.fimValidate) {
-          const { isGitRepo, readGitLog, getGitRoot } = await import('../git-history/git-log-reader.js');
-          if (isGitRepo(workspaceRoot)) {
-            const gitRoot = getGitRoot(workspaceRoot) ?? workspaceRoot;
-            // When workspaceRoot is a subdirectory of the git root, use a path filter
-            // to limit git log output to commits touching only the analyzed project.
-            const subDirPath =
-              gitRoot !== workspaceRoot
-                ? path.relative(gitRoot, workspaceRoot).replace(/\\/g, '/')
-                : undefined;
-            const rawFimCommits = readGitLog(gitRoot, {
-              sinceDays: 90,
-              maxCommits: 500,
-              includeMerges: false,
-              pathFilter: subDirPath,
-            });
-            // Strip the subdirectory prefix so file paths are relative to workspaceRoot
-            const fimSubDirPrefix = subDirPath ? subDirPath + '/' : '';
-            const commits = fimSubDirPrefix
-              ? rawFimCommits.map((c) => ({
-                  ...c,
-                  files: c.files
-                    .filter((f) => f.path.startsWith(fimSubDirPrefix))
-                    .map((f) => ({ ...f, path: f.path.slice(fimSubDirPrefix.length) })),
-                }))
-              : rawFimCommits;
-            if (commits.length > 0) {
-              // Use filtered (production-only) package names and Gram matrix so that
-              // non-production packages (examples, templates, .) with zero coverage do
-              // not create trivially-consistent zero pairs that inflate Spearman r.
-              const filteredPackageNames = artifact.filteredPackageResult.diagonal.map(
-                (d) => d.fileId
-              );
-              const { mantel } = validateFIMAgainstGit({
-                coverage,
-                packageNames: filteredPackageNames,
-                packageMatrix: artifact.filteredPackageMatrix,
-                commits,
-                permutations: 999,
-                seed: 42,
-                packageDepth: artifact.packageDepth,
-              });
-              artifact.mantel = mantel;
-              snapshot.mantelCorrelation = mantel.observedCorrelation;
-              snapshot.mantelPValue = mantel.pValue;
-            } else {
-              reporter.warn('[fim] No git commits available for Mantel validation');
-            }
-          } else {
-            reporter.warn('[fim] Not a git repository — skipping Mantel validation');
-          }
-        }
-
-        await writeFIMCurrentArtifact(archguardDir, artifact);
-        await appendFIMSnapshot(archguardDir, snapshot);
-
-        reporter.info('[fim] source=import-approximation (Phase 1 static coverage proxy)');
-        reporter.info(
-          `[fim] package kappa=${formatFimMetric(artifact.packageResult.conditionNumber)} N_eff=${artifact.packageResult.effectiveDimension.toFixed(3)} packages=${artifact.packageNames.length} tests=${artifact.fileResult.testCount}`
-        );
-        const fp = artifact.filteredPackageResult;
-        const excluded = artifact.packageNames.length - fp.fileCount;
-        reporter.info(
-          `[fim] filtered kappa=${formatFimMetric(fp.conditionNumber)} N_eff=${fp.effectiveDimension.toFixed(3)} (excluded ${excluded} non-production packages)`
-        );
-        if (artifact.mantel) {
-          reporter.info(
-            `[fim] Mantel r=${artifact.mantel.observedCorrelation.toFixed(3)} p=${artifact.mantel.pValue.toFixed(3)} valid=${artifact.mantel.isValidProxy}`
-          );
-          reporter.info(
-            `[fim] null-model separation=${artifact.mantel.separationScore.toFixed(2)}σ significant=${artifact.mantel.isSignificantOverNull} (nullMeanR=${artifact.mantel.nullModelMeanR.toFixed(3)} nullMaxR=${artifact.mantel.nullModelMaxR.toFixed(3)})`
-          );
-        }
-        reporter.succeed('FIM analysis complete');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        reporter.warn(`[fim] Failed: ${msg}`);
-      }
-    } else if (config.verbose) {
-      reporter.warn('[fim] No ArchJSON available for FIM analysis');
     }
   }
 

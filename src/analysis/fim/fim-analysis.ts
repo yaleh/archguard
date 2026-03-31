@@ -1,3 +1,15 @@
+/**
+ * @experimental
+ * FIM (Fisher Information Matrix) analysis for ArchGuard.
+ *
+ * This module implements import-approximation FIM computation and Mantel test
+ * validation against git co-change matrices. It is no longer invoked by
+ * `archguard analyze` but remains accessible via the `archguard_get_fim` MCP tool.
+ *
+ * Key finding: package-level FIM correlates significantly with git co-change
+ * (Mantel r≈0.77, p<0.02). See docs/spikes/fim-experiment-report.md.
+ */
+
 import path from 'path';
 import { promises as fs } from 'fs';
 import { globby } from 'globby';
