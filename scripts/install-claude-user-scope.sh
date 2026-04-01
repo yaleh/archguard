@@ -6,8 +6,7 @@ PACKAGE_JSON="$ROOT_DIR/package.json"
 CLAUDE_DIR="${HOME}/.claude"
 CLAUDE_MCP_JSON="${CLAUDE_DIR}/mcp.json"
 CLAUDE_SKILLS_DIR="${CLAUDE_DIR}/skills"
-SOURCE_SKILL_DIR="${ROOT_DIR}/.agents/skills/feature-developer"
-TARGET_SKILL_DIR="${CLAUDE_SKILLS_DIR}/feature-developer"
+SOURCE_SKILLS_DIR="${ROOT_DIR}/.agents/skills"
 SKIP_BUILD=false
 
 for arg in "$@"; do
@@ -94,13 +93,12 @@ if (!doc._deprecated) {
 fs.writeFileSync(path, `${JSON.stringify(doc, null, 2)}\n`);
 NODE
 
-if [[ -d "$SOURCE_SKILL_DIR" ]]; then
-  echo "[archguard-install] syncing Claude skill"
+if [[ -d "$SOURCE_SKILLS_DIR" ]]; then
+  echo "[archguard-install] syncing Claude skills"
   mkdir -p "$CLAUDE_SKILLS_DIR"
-  rm -rf "$TARGET_SKILL_DIR"
-  cp -R "$SOURCE_SKILL_DIR" "$TARGET_SKILL_DIR"
+  node "$ROOT_DIR/scripts/sync-claude-skills.mjs" "$SOURCE_SKILLS_DIR" "$CLAUDE_SKILLS_DIR"
 else
-  echo "[archguard-install] skill source missing, skipping: $SOURCE_SKILL_DIR"
+  echo "[archguard-install] skill source missing, skipping: $SOURCE_SKILLS_DIR"
 fi
 
 ARCHGUARD_BIN="$(command -v archguard)"
@@ -111,6 +109,6 @@ echo "[archguard-install] done"
 echo "  binary: $ARCHGUARD_BIN"
 echo "  target: $ARCHGUARD_TARGET"
 echo "  mcp:    $CLAUDE_MCP_JSON"
-if [[ -d "$TARGET_SKILL_DIR" ]]; then
-  echo "  skill:  $TARGET_SKILL_DIR"
+if [[ -d "$CLAUDE_SKILLS_DIR" ]]; then
+  echo "  skills: $CLAUDE_SKILLS_DIR"
 fi

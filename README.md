@@ -43,16 +43,16 @@ Register the MCP server (project scope):
 claude mcp add --scope project archguard -- archguard mcp
 ```
 
-Or install it for Claude Code user scope, including the bundled `feature-developer`
-skill from this repository:
+Or install it for Claude Code user scope, including the bundled repository
+skills from this checkout:
 
 ```bash
 bash scripts/install-claude-user-scope.sh
 ```
 
 This installs the `archguard` binary globally for the current user, registers
-`archguard mcp` in `~/.claude/mcp.json`, and copies the skill into
-`~/.claude/skills/feature-developer/`.
+`archguard mcp` in `~/.claude/mcp.json`, and syncs all skills from
+`.agents/skills/` into `~/.claude/skills/`.
 
 If you already have fresh `dist/` artifacts and only want to re-install the user
 scope wiring, use:

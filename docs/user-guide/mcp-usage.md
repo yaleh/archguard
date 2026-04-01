@@ -56,7 +56,7 @@ That script performs four user-scope steps:
 1. Builds the current checkout
 2. Installs `archguard` globally for the current user via a packed tarball
 3. Registers or updates the `archguard` MCP server in `~/.claude/mcp.json`
-4. Copies `.agents/skills/feature-developer` to `~/.claude/skills/feature-developer`
+4. Syncs every repo-owned skill from `.agents/skills/` into `~/.claude/skills/`
 
 If you already built the current checkout and only want to refresh the user-scope
 installation, run:
