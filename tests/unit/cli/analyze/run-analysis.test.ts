@@ -3,7 +3,6 @@ import type { Config } from '@/cli/config-loader.js';
 import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
 
 const loadMock = vi.fn();
 const normalizeToDiagramsMock = vi.fn();
@@ -23,10 +22,7 @@ const testOutputWriterWriteMock = vi.fn();
 const readGitLogMock = vi.fn();
 const isGitRepoMock = vi.fn();
 const getGitRootMock = vi.fn();
-const computeDirTreeHashMock = vi.fn();
-const loadCachedSemanticsMock = vi.fn();
-const saveSemanticsCacheMock = vi.fn();
-const explorerExploreMock = vi.fn();
+const loadProjectSemanticsSidecarMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -84,16 +80,8 @@ vi.mock('@/cli/git-history/git-log-reader.js', () => ({
   getCurrentBranch: vi.fn(),
 }));
 
-vi.mock('@/analysis/project-semantics-cache.js', () => ({
-  computeDirTreeHash: computeDirTreeHashMock,
-  loadCachedSemantics: loadCachedSemanticsMock,
-  saveSemanticsCache: saveSemanticsCacheMock,
-}));
-
-vi.mock('@/analysis/project-semantics-explorer.js', () => ({
-  ProjectSemanticsExplorer: class {
-    explore = explorerExploreMock;
-  },
+vi.mock('@/analysis/project-semantics-loader.js', () => ({
+  loadProjectSemanticsSidecar: loadProjectSemanticsSidecarMock,
 }));
 
 vi.mock('fs-extra', () => ({
@@ -120,17 +108,6 @@ const baseConfig: Config = {
   verbose: false,
   projectSemantics: undefined,
   diagrams: [],
-};
-
-const cachedSemantics: ProjectSemantics = {
-  version: '1.0',
-  nonProductionPatterns: ['playground'],
-  barrelFiles: [],
-  additionalTestPatterns: [],
-  customAssertionPatterns: [],
-  confidence: 0.9,
-  _dirTreeHash: 'hash-1',
-  _generatedAt: '2026-03-30T00:00:00Z',
 };
 
 const successfulResult: DiagramResult = {
@@ -183,10 +160,7 @@ describe('runAnalysis', () => {
     readGitLogMock.mockReset();
     isGitRepoMock.mockReset();
     getGitRootMock.mockReset();
-    computeDirTreeHashMock.mockReset();
-    loadCachedSemanticsMock.mockReset();
-    saveSemanticsCacheMock.mockReset();
-    explorerExploreMock.mockReset();
+    loadProjectSemanticsSidecarMock.mockReset();
 
     baseConfig.projectSemantics = undefined;
     loadMock.mockResolvedValue({
@@ -208,10 +182,7 @@ describe('runAnalysis', () => {
     readGitLogMock.mockReturnValue([{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }]);
     isGitRepoMock.mockReturnValue(true);
     getGitRootMock.mockReturnValue('/tmp/project');
-    computeDirTreeHashMock.mockResolvedValue('hash-1');
-    loadCachedSemanticsMock.mockResolvedValue(null);
-    saveSemanticsCacheMock.mockResolvedValue(undefined);
-    explorerExploreMock.mockResolvedValue(null);
+    loadProjectSemanticsSidecarMock.mockResolvedValue(undefined);
     normalizeToDiagramsMock.mockResolvedValue([
       { name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' },
     ]);
@@ -475,9 +446,8 @@ describe('runAnalysis', () => {
     expect(writeManifestMock).toHaveBeenCalledTimes(1);
   });
 
-  it('merges explored architecturalLayers into config.projectSemantics and caches the result', async () => {
-    explorerExploreMock.mockResolvedValue({
-      version: '1.0',
+  it('merges sidecar architecturalLayers into config.projectSemantics', async () => {
+    loadProjectSemanticsSidecarMock.mockResolvedValue({
       nonProductionPatterns: ['examples'],
       barrelFiles: [],
       additionalTestPatterns: [],
@@ -487,14 +457,13 @@ describe('runAnalysis', () => {
         'src/cli': 'CLI',
       },
       suggestedDepth: 2,
-      confidence: 0.9,
     });
 
     const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
     const result = await runAnalysis({
       sessionRoot: '/tmp/project',
       workDir: '/tmp/project/.archguard',
-      cliOptions: { explore: true },
+      cliOptions: {},
       reporter: silentReporter(),
     });
 
@@ -507,19 +476,50 @@ describe('runAnalysis', () => {
         suggestedDepth: 2,
       })
     );
-    expect(saveSemanticsCacheMock).toHaveBeenCalledWith(
-      '/tmp/project/.archguard',
-      expect.objectContaining({
-        architecturalLayers: {
-          'src/analysis': 'Analysis',
-          'src/cli': 'CLI',
-        },
-      })
+  });
+
+  it('uses defaults when neither config nor sidecar provides project semantics', async () => {
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    const result = await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(result.config.projectSemantics).toEqual({
+      version: '1.0',
+      nonProductionPatterns: [],
+      barrelFiles: [],
+      additionalTestPatterns: [],
+      customAssertionPatterns: [],
+    });
+  });
+
+  it('fails startup when the sidecar semantics file is malformed', async () => {
+    loadProjectSemanticsSidecarMock.mockRejectedValue(
+      new Error('Invalid project-semantics.json: suggestedDepth must be a number')
     );
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+
+    await expect(
+      runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: {},
+        reporter: silentReporter(),
+      })
+    ).rejects.toThrow(/project-semantics\.json/);
   });
 });
 
 describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot)', () => {
+  beforeEach(() => {
+    loadProjectSemanticsSidecarMock.mockReset();
+    loadProjectSemanticsSidecarMock.mockResolvedValue(undefined);
+  });
+
   function makeArchJsonForLanguage(language: string, workspaceRoot: string): ArchJSON {
     return {
       version: '1.0',

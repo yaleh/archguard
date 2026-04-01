@@ -288,16 +288,12 @@ interface FileConfig {
   concurrency?: number;
   verbose?: boolean;
   projectSemantics?: {
-    version?: '1.0';
     nonProductionPatterns?: string[];
     barrelFiles?: string[];
     additionalTestPatterns?: string[];
     customAssertionPatterns?: string[];
     architecturalLayers?: Record<string, string>;
     suggestedDepth?: number;
-    confidence?: number;
-    _dirTreeHash?: string;
-    _generatedAt?: string;
   };
   diagrams?: Array<{
     name: string;

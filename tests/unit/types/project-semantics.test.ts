@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { ArchGuardConfig } from '@/types/config.js';
 import {
   PROJECT_SEMANTICS_VERSION,
+  ProjectSemanticsInputSchema,
   ProjectSemanticsSchema,
   mergeProjectSemantics,
   sanitizeProjectSemantics,
+  type ProjectSemanticsInput,
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
 
@@ -47,6 +49,36 @@ describe('ProjectSemanticsSchema', () => {
       ProjectSemanticsSchema.parse({
         ...makeSemantics(),
         confidence: 1.1,
+      })
+    ).toThrow();
+  });
+});
+
+describe('ProjectSemanticsInputSchema', () => {
+  it('accepts a valid partial authoring object', () => {
+    const input: ProjectSemanticsInput = {
+      architecturalLayers: {
+        'src/analysis': 'analysis',
+      },
+      suggestedDepth: 2,
+    };
+
+    expect(ProjectSemanticsInputSchema.parse(input)).toEqual(input);
+  });
+
+  it('rejects unsafe path-like values with targeted issues', () => {
+    const result = ProjectSemanticsInputSchema.safeParse({
+      nonProductionPatterns: ['../etc'],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0]?.path).toEqual(['nonProductionPatterns', 0]);
+  });
+
+  it('rejects legacy discovery metadata fields', () => {
+    expect(() =>
+      ProjectSemanticsInputSchema.parse({
+        confidence: 0.9,
       })
     ).toThrow();
   });
@@ -157,6 +189,40 @@ describe('mergeProjectSemantics', () => {
     expect(merged.architecturalLayers).toEqual({
       'src/domain': 'core-domain',
       'src/infra': 'infrastructure',
+    });
+  });
+
+  it('merges config input, sidecar input, and defaults into resolved semantics', () => {
+    const merged = mergeProjectSemantics(
+      {
+        additionalTestPatterns: ['**/*.integration.ts'],
+        architecturalLayers: {
+          'src/cli': 'cli',
+        },
+      },
+      {
+        nonProductionPatterns: ['examples'],
+        suggestedDepth: 2,
+      },
+      {
+        version: PROJECT_SEMANTICS_VERSION,
+        nonProductionPatterns: ['scripts'],
+        barrelFiles: [],
+        additionalTestPatterns: [],
+        customAssertionPatterns: [],
+      }
+    );
+
+    expect(merged).toEqual({
+      version: PROJECT_SEMANTICS_VERSION,
+      nonProductionPatterns: ['scripts', 'examples'],
+      barrelFiles: [],
+      additionalTestPatterns: ['**/*.integration.ts'],
+      customAssertionPatterns: [],
+      architecturalLayers: {
+        'src/cli': 'cli',
+      },
+      suggestedDepth: 2,
     });
   });
 });

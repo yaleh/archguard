@@ -217,6 +217,49 @@ describe('Story 5: Configuration File Support', () => {
       expect(config.cache.enabled).toBe(false);
       expect(config.cache.ttl).toBe(3600);
     });
+
+    it('should load valid partial projectSemantics from config', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        projectSemantics: {
+          additionalTestPatterns: ['**/*.integration.ts'],
+          architecturalLayers: {
+            'src/analysis': 'analysis',
+          },
+        },
+      });
+
+      const config = await loader.load();
+
+      expect(config.projectSemantics).toEqual({
+        additionalTestPatterns: ['**/*.integration.ts'],
+        architecturalLayers: {
+          'src/analysis': 'analysis',
+        },
+      });
+    });
+
+    it('should reject malformed projectSemantics in config', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        projectSemantics: {
+          suggestedDepth: '2',
+        },
+      });
+
+      await expect(loader.load()).rejects.toThrow(/projectSemantics/);
+    });
+
+    it('should reject unsafe projectSemantics values in config', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        projectSemantics: {
+          barrelFiles: ['../secret.ts'],
+        },
+      });
+
+      await expect(loader.load()).rejects.toThrow(/projectSemantics/);
+    });
   });
 
   describe('Phase 4.1: CLI Configuration Schema', () => {

@@ -231,7 +231,7 @@ This creates `archguard.config.json` with default settings.
 
 - **Type**: `object`
 - **Default**: `{ command: "claude", args: [], timeout: 60000 }`
-- **Description**: Claude CLI configuration
+- **Description**: External command configuration used by features that opt into command execution
 
 ```json
 {
@@ -245,20 +245,20 @@ This creates `archguard.config.json` with default settings.
 
 **Field Descriptions**:
 
-- **cli.command** - The Claude CLI command to use (default: `claude`)
-- **cli.args** - Additional arguments to pass to the CLI
-- **cli.timeout** - Timeout in milliseconds for CLI operations
+- **cli.command** - Command to execute
+- **cli.args** - Additional arguments to pass to the command
+- **cli.timeout** - Timeout in milliseconds for command execution
 
 **Examples**:
 
 ```json
-// Default Claude CLI
+// Default command configuration
 { "cli": { "command": "claude" } }
 
-// Custom CLI path
+// Custom command path
 { "cli": { "command": "/usr/local/bin/claude" } }
 
-// With custom model
+// With custom arguments
 {
   "cli": {
     "args": ["--model", "claude-opus-4-20250514"]
@@ -276,12 +276,12 @@ This creates `archguard.config.json` with default settings.
 #### outputDir
 
 - **Type**: `string`
-- **Default**: `"./archguard"`
+- **Default**: `"./.archguard/output"`
 - **Description**: Output directory for generated diagrams
 
 ```json
 {
-  "outputDir": "./archguard"
+  "outputDir": "./.archguard/output"
 }
 ```
 
@@ -289,7 +289,7 @@ This creates `archguard.config.json` with default settings.
 
 ```json
 // Default location
-{ "outputDir": "./archguard" }
+{ "outputDir": "./.archguard/output" }
 
 // Custom output directory
 { "outputDir": "./docs/diagrams" }
@@ -298,16 +298,69 @@ This creates `archguard.config.json` with default settings.
 { "outputDir": "/tmp/archguard-output" }
 ```
 
+#### projectSemantics
+
+- **Type**: `object`
+- **Default**: not set
+- **Description**: Skill-authored or user-authored project knowledge injected into test analysis, Mermaid grouping, and FIM analysis
+
+```json
+{
+  "projectSemantics": {
+    "additionalTestPatterns": ["tests/**/*.ts"],
+    "customAssertionPatterns": ["expect[A-Z]\\w+"],
+    "architecturalLayers": {
+      "src/analysis": "analysis",
+      "src/cli": "cli"
+    },
+    "suggestedDepth": 2
+  }
+}
+```
+
+**Supported fields**:
+
+- `nonProductionPatterns`
+- `barrelFiles`
+- `additionalTestPatterns`
+- `customAssertionPatterns`
+- `architecturalLayers`
+- `suggestedDepth`
+
+**Merge priority**:
+
+1. `archguard.config.json.projectSemantics`
+2. `.archguard/project-semantics.json`
+3. built-in defaults
+
+The sidecar file must use the same bare object shape as `projectSemantics`.
+
+**Validation behavior**:
+
+- Invalid `projectSemantics` in config fails configuration loading.
+- Invalid `.archguard/project-semantics.json` fails analysis startup.
+- Unsafe path-like values such as `..`, absolute paths, and null bytes are rejected.
+
+**Sidecar example**:
+
+```json
+{
+  "architecturalLayers": {
+    "src/analysis": "analysis",
+    "src/cli": "cli"
+  }
+}
+```
+
 #### mermaid
 
 - **Type**: `object`
-- **Default**: `{ enableLLMGrouping: true, renderer: "isomorphic", theme: "default", transparentBackground: true }`
+- **Default**: `{ renderer: "isomorphic", theme: "default", transparentBackground: true }`
 - **Description**: Mermaid-specific configuration
 
 ```json
 {
   "mermaid": {
-    "enableLLMGrouping": true,
     "renderer": "isomorphic",
     "theme": "default",
     "transparentBackground": true
@@ -317,7 +370,6 @@ This creates `archguard.config.json` with default settings.
 
 **Field Descriptions**:
 
-- **enableLLMGrouping** - Use LLM for intelligent entity grouping (default: true)
 - **renderer** - Rendering engine: `"isomorphic"` (default) or `"cli"`
 - **theme** - Visual theme: `"default"`, `"forest"`, `"dark"`, `"neutral"`
 - **transparentBackground** - Use transparent background for PNG output (default: true)
@@ -326,10 +378,7 @@ This creates `archguard.config.json` with default settings.
 
 ```json
 // Default configuration
-{ "mermaid": { "enableLLMGrouping": true, "theme": "default" } }
-
-// Disable LLM grouping (faster, free)
-{ "mermaid": { "enableLLMGrouping": false } }
+{ "mermaid": { "theme": "default" } }
 
 // Dark theme
 { "mermaid": { "theme": "dark" } }
@@ -370,7 +419,7 @@ Old configuration files using `ai` fields are automatically migrated:
 
 - `ai.model` → `cli.args` (converted to `--model` flag)
 - `ai.timeout` → `cli.timeout`
-- `ai.apiKey` → **Removed** (Claude CLI uses its own auth)
+- `ai.apiKey` → **Removed**
 - `ai.maxTokens` → **Removed** (not applicable to CLI)
 - `ai.temperature` → **Removed** (not applicable to CLI)
 
@@ -380,7 +429,6 @@ When using deprecated fields, ArchGuard will show warnings:
 
 ```
 Warning: ai.apiKey is deprecated and will be ignored.
-Claude Code CLI uses its own authentication.
 Please remove apiKey from your config file.
 ```
 
@@ -392,16 +440,13 @@ Command-line options have the highest priority and override both configuration f
 
 ```bash
 archguard analyze \
-  --source ./src \
+  --sources ./src \
   --format mermaid \
   --exclude "**/*.test.ts" "**/*.spec.ts" \
   --concurrency 8 \
   --no-cache \
   --verbose \
-  --no-llm-grouping \
   --mermaid-theme dark \
-  --cli-command /usr/local/bin/claude \
-  --cli-args "--model claude-opus-4-20250514" \
   --output-dir ./docs/diagrams
 ```
 
@@ -409,11 +454,8 @@ archguard analyze \
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--no-llm-grouping` | boolean | false | Disable LLM-powered grouping |
 | `--mermaid-theme` | string | default | Mermaid theme (default, forest, dark, neutral) |
 | `--mermaid-renderer` | string | isomorphic | Mermaid renderer (isomorphic, cli) |
-| `--cli-command` | string | claude | Claude CLI command to use (optional) |
-| `--cli-args` | string | - | Additional CLI arguments (space-separated) |
 | `--output-dir` | string | ./archguard | Output directory for diagrams |
 
 #### verbose

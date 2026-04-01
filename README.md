@@ -180,11 +180,6 @@ archguard analyze [options]
 - `--atlas-include-tests` - Include test packages in Atlas
 - `--atlas-protocols <protocols>` - Protocols included in flow graph
 
-**Claude CLI:**
-
-- `--cli-command <command>` - Claude CLI executable (default: `claude`)
-- `--cli-args <args>` - Additional Claude CLI arguments
-
 **Examples:**
 
 ```bash
@@ -439,8 +434,34 @@ archguard analyze --diagrams class method
 | `cache.enabled` | boolean | `true` | Enable file-based caching |
 | `mermaid.theme` | string | `default` | Diagram theme |
 | `mermaid.transparentBackground` | boolean | `true` | Transparent PNG background |
-| `cli.command` | string | `claude` | Claude CLI executable |
-| `cli.timeout` | number | `60000` | Claude CLI timeout (ms) |
+| `projectSemantics` | object | — | Skill-authored project knowledge consumed during analysis |
+
+## Skill-Authored Project Semantics
+
+ArchGuard does not discover project semantics at runtime. Skills or users write project knowledge, and ArchGuard loads, validates, merges, and consumes it during analysis.
+
+Authoritative locations and priority:
+
+1. `archguard.config.json.projectSemantics`
+2. `.archguard/project-semantics.json`
+3. built-in defaults
+
+The sidecar file uses the same shape as `archguard.config.json.projectSemantics`.
+
+```json
+{
+  "additionalTestPatterns": ["tests/**/*.ts"],
+  "customAssertionPatterns": ["expect[A-Z]\\w+"],
+  "architecturalLayers": {
+    "src/analysis": "analysis",
+    "src/cli": "cli",
+    "src/rendering": "rendering"
+  },
+  "suggestedDepth": 2
+}
+```
+
+If either the config `projectSemantics` block or `.archguard/project-semantics.json` is malformed, ArchGuard fails fast during configuration load or analysis startup instead of silently ignoring the knowledge.
 
 ## Output Formats
 

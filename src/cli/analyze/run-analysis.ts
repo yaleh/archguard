@@ -15,12 +15,7 @@ import {
   mergeProjectSemanticsIntoPatternConfig,
 } from '@/analysis/test-analyzer.js';
 import { TestOutputWriter } from '../utils/test-output-writer.js';
-import { ProjectSemanticsExplorer } from '@/analysis/project-semantics-explorer.js';
-import {
-  computeDirTreeHash,
-  loadCachedSemantics,
-  saveSemanticsCache,
-} from '@/analysis/project-semantics-cache.js';
+import { loadProjectSemanticsSidecar } from '@/analysis/project-semantics-loader.js';
 import {
   PROJECT_SEMANTICS_VERSION,
   mergeProjectSemantics,
@@ -90,12 +85,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const configOverrides = buildConfigOverrides(cliOptions, workDir, sessionRoot);
   const config = await configLoader.load(configOverrides, cliOptions.config);
   const archguardDir = config.workDir || workDir;
-  const mergedProjectSemantics = await resolveProjectSemantics(
-    config,
-    cliOptions,
-    sessionRoot,
-    archguardDir
-  );
+  const mergedProjectSemantics = await resolveProjectSemantics(config, archguardDir);
   config.projectSemantics = mergedProjectSemantics;
   reporter.succeed('Configuration loaded');
 
@@ -386,42 +376,13 @@ const EMPTY_PROJECT_SEMANTICS_DEFAULTS: Partial<ProjectSemantics> = {
 
 async function resolveProjectSemantics(
   config: Config,
-  cliOptions: Partial<CLIOptions>,
-  projectRoot: string,
   archguardDir: string
 ): Promise<Partial<ProjectSemantics>> {
-  if (cliOptions.explore === false) {
-    return mergeProjectSemantics(config.projectSemantics, undefined, EMPTY_PROJECT_SEMANTICS_DEFAULTS);
-  }
-
-  const currentHash = await computeDirTreeHash(projectRoot);
-  let llmSemantics: ProjectSemantics | null = null;
-
-  if (config.cache?.enabled !== false) {
-    llmSemantics = await loadCachedSemantics(archguardDir, currentHash);
-  }
-
-  if (!llmSemantics) {
-    const explorer = new ProjectSemanticsExplorer(
-      config.cli.command,
-      config.cli.args,
-      Math.min(config.cli.timeout ?? 60_000, 30_000)
-    );
-    const explored = await explorer.explore(projectRoot);
-    if (explored) {
-      llmSemantics = {
-        ...explored,
-        _dirTreeHash: currentHash,
-      };
-      if (config.cache?.enabled !== false) {
-        await saveSemanticsCache(archguardDir, llmSemantics);
-      }
-    }
-  }
+  const sidecarSemantics = await loadProjectSemanticsSidecar(archguardDir);
 
   return mergeProjectSemantics(
     config.projectSemantics,
-    llmSemantics ?? undefined,
+    sidecarSemantics,
     EMPTY_PROJECT_SEMANTICS_DEFAULTS
   );
 }

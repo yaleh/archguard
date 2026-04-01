@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 export const PROJECT_SEMANTICS_VERSION = '1.0' as const;
 
+export interface ProjectSemanticsInput {
+  nonProductionPatterns?: string[];
+  barrelFiles?: string[];
+  additionalTestPatterns?: string[];
+  customAssertionPatterns?: string[];
+  architecturalLayers?: Record<string, string>;
+  suggestedDepth?: number;
+}
+
 export interface ProjectSemantics {
   version: typeof PROJECT_SEMANTICS_VERSION;
   nonProductionPatterns: string[];
@@ -14,6 +23,30 @@ export interface ProjectSemantics {
   _dirTreeHash?: string;
   _generatedAt?: string;
 }
+
+function isUnsafePathLikeValue(value: string): boolean {
+  return value.includes('..') || value.includes('\0') || value.startsWith('/');
+}
+
+const SafePathLikeStringSchema = z.string().superRefine((value, ctx) => {
+  if (isUnsafePathLikeValue(value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Unsafe path-like value is not allowed',
+    });
+  }
+});
+
+export const ProjectSemanticsInputSchema = z
+  .object({
+    nonProductionPatterns: z.array(SafePathLikeStringSchema).optional(),
+    barrelFiles: z.array(SafePathLikeStringSchema).optional(),
+    additionalTestPatterns: z.array(SafePathLikeStringSchema).optional(),
+    customAssertionPatterns: z.array(SafePathLikeStringSchema).optional(),
+    architecturalLayers: z.record(SafePathLikeStringSchema, z.string()).optional(),
+    suggestedDepth: z.number().int().min(1).max(5).optional(),
+  })
+  .strict();
 
 export const ProjectSemanticsSchema = z.object({
   version: z.literal(PROJECT_SEMANTICS_VERSION),
@@ -28,13 +61,9 @@ export const ProjectSemanticsSchema = z.object({
   _generatedAt: z.string().optional(),
 });
 
-export const PartialProjectSemanticsSchema = ProjectSemanticsSchema.partial();
+export const PartialProjectSemanticsSchema = ProjectSemanticsInputSchema;
 
-type ProjectSemanticsInput = Partial<ProjectSemantics> | undefined;
-
-function isUnsafePathLikeValue(value: string): boolean {
-  return value.includes('..') || value.includes('\0') || value.startsWith('/');
-}
+type ProjectSemanticsMergeInput = ProjectSemanticsInput | Partial<ProjectSemantics> | undefined;
 
 function sanitizeStringArray(values?: string[]): string[] | undefined {
   if (!values) return undefined;
@@ -68,7 +97,7 @@ export function sanitizeProjectSemantics(raw: ProjectSemantics): ProjectSemantic
   };
 }
 
-function sanitizeProjectSemanticsInput(raw?: ProjectSemanticsInput): Partial<ProjectSemantics> {
+function sanitizeProjectSemanticsInput(raw?: ProjectSemanticsMergeInput): Partial<ProjectSemantics> {
   if (!raw) return {};
 
   return {
@@ -110,9 +139,9 @@ function mergeArrayField(
 }
 
 export function mergeProjectSemantics(
-  user?: ProjectSemanticsInput,
-  llm?: ProjectSemanticsInput,
-  defaults?: ProjectSemanticsInput
+  user?: ProjectSemanticsMergeInput,
+  llm?: ProjectSemanticsMergeInput,
+  defaults?: ProjectSemanticsMergeInput
 ): Partial<ProjectSemantics> {
   const sanitizedDefaults = sanitizeProjectSemanticsInput(defaults);
   const sanitizedLlm = sanitizeProjectSemanticsInput(llm);

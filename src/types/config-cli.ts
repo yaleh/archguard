@@ -27,5 +27,4 @@ export interface CLIOptions {
   includeTests?: boolean;
   testsOnly?: boolean;
   includeGit?: boolean;
-  explore?: boolean;
 }

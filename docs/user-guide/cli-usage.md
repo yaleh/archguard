@@ -56,8 +56,6 @@ archguard analyze [options]
 | `-v, --verbose` | boolean | false | Verbose output |
 | `--mermaid-theme <theme>` | string | default | Mermaid theme: `default`\|`forest`\|`dark`\|`neutral` |
 | `--mermaid-renderer <renderer>` | string | isomorphic | Mermaid renderer: `isomorphic`\|`cli` |
-| `--cli-command <command>` | string | claude | Claude CLI command |
-| `--cli-args <args>` | string | - | Additional CLI arguments (space-separated) |
 | `--work-dir <dir>` | string | `./.archguard` | Work directory for cache and query artifacts |
 | `--cache-dir <dir>` | string | `<work-dir>/cache` | Cache directory |
 | `--no-atlas` | boolean | false | Disable Go Atlas mode (Go only) |
@@ -73,6 +71,28 @@ ArchGuard auto-detects your project structure and generates a **3-tier diagram s
 - `method/<module>` — method-level detail per module
 
 Output goes to `.archguard/` with an `index.md` summary.
+
+#### Project semantics
+
+ArchGuard consumes project semantics; it does not discover them at runtime.
+
+- Durable knowledge: `archguard.config.json.projectSemantics`
+- Skill-written sidecar: `.archguard/project-semantics.json`
+- Merge priority: config `projectSemantics` > sidecar > built-in defaults
+- Failure behavior: malformed config semantics fail config loading; malformed sidecar semantics fail analysis startup
+
+Minimal sidecar example:
+
+```json
+{
+  "architecturalLayers": {
+    "src/analysis": "analysis",
+    "src/cli": "cli"
+  },
+  "additionalTestPatterns": ["tests/**/*.ts"],
+  "customAssertionPatterns": ["expect[A-Z]\\w+"]
+}
+```
 
 #### Examples
 

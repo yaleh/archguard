@@ -111,8 +111,6 @@ export function createAnalyzeCommand(): Command {
       .option('--output-dir <dir>', 'Output directory')
       .option('-e, --exclude <patterns...>', 'Exclude patterns')
       .option('--no-cache', 'Disable cache')
-      .option('--explore', 'Enable LLM semantic exploration before analysis')
-      .option('--no-explore', 'Disable LLM semantic exploration before analysis')
       .option('-c, --concurrency <num>', 'Parallel parsing concurrency', `${os.cpus().length}`)
       .option('-v, --verbose', 'Verbose output', false)
 
