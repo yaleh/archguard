@@ -474,6 +474,49 @@ describe('runAnalysis', () => {
     expect(cleanStaleDiagramsMock).toHaveBeenCalledTimes(1);
     expect(writeManifestMock).toHaveBeenCalledTimes(1);
   });
+
+  it('merges explored architecturalLayers into config.projectSemantics and caches the result', async () => {
+    explorerExploreMock.mockResolvedValue({
+      version: '1.0',
+      nonProductionPatterns: ['examples'],
+      barrelFiles: [],
+      additionalTestPatterns: [],
+      customAssertionPatterns: [],
+      architecturalLayers: {
+        'src/analysis': 'Analysis',
+        'src/cli': 'CLI',
+      },
+      suggestedDepth: 2,
+      confidence: 0.9,
+    });
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    const result = await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { explore: true },
+      reporter: silentReporter(),
+    });
+
+    expect(result.config.projectSemantics).toEqual(
+      expect.objectContaining({
+        architecturalLayers: {
+          'src/analysis': 'Analysis',
+          'src/cli': 'CLI',
+        },
+        suggestedDepth: 2,
+      })
+    );
+    expect(saveSemanticsCacheMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard',
+      expect.objectContaining({
+        architecturalLayers: {
+          'src/analysis': 'Analysis',
+          'src/cli': 'CLI',
+        },
+      })
+    );
+  });
 });
 
 describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot)', () => {

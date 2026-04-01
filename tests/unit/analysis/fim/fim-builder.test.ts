@@ -322,4 +322,16 @@ describe('filterProductionPackages', () => {
 
     expect(filtered.diagonal.map((entry) => entry.fileId)).toEqual(['src/a.ts']);
   });
+
+  it('supports exact package exclusions without applying prefix filtering', () => {
+    const coverage = makeCoverageMatrix(
+      [[1, 1, 1]],
+      ['src', 'src/pkg-a', 'src/pkg-b']
+    );
+
+    const filtered = filterProductionCoverage(coverage, [], ['src']);
+
+    expect(filtered.fileIds).toEqual(['src/pkg-a', 'src/pkg-b']);
+    expect(filtered.matrix).toEqual([[1, 1]]);
+  });
 });

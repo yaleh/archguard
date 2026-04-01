@@ -201,12 +201,14 @@ export function isProductionPackage(name: string, extraPatterns: string[] = []):
  */
 export function filterProductionCoverage(
   coverage: CoverageMatrix,
-  extraPatterns: string[] = []
+  extraPatterns: string[] = [],
+  exactPackageExclusions: string[] = []
 ): CoverageMatrix {
   const keepIndices: number[] = [];
+  const excludedPackages = new Set(exactPackageExclusions.map((name) => name.toLowerCase()));
   for (let i = 0; i < coverage.fileIds.length; i++) {
     const fileId = coverage.fileIds[i] ?? '';
-    if (isProductionPackage(fileId, extraPatterns)) {
+    if (!excludedPackages.has(fileId.toLowerCase()) && isProductionPackage(fileId, extraPatterns)) {
       keepIndices.push(i);
     }
   }
@@ -228,9 +230,12 @@ export function filterProductionCoverage(
  */
 export function filterProductionPackages(
   coverage: CoverageMatrix,
-  extraPatterns: string[] = []
+  extraPatterns: string[] = [],
+  exactPackageExclusions: string[] = []
 ): FisherInformationResult {
-  return computeFisherInformation(filterProductionCoverage(coverage, extraPatterns));
+  return computeFisherInformation(
+    filterProductionCoverage(coverage, extraPatterns, exactPackageExclusions)
+  );
 }
 
 export function clampCoverageByPackage(

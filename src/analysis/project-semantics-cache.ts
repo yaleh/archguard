@@ -22,9 +22,39 @@ export const KNOWN_PROJECT_CONFIG_FILES = [
 
 const CACHE_FILE_NAME = 'project-semantics.json';
 const TREE_OUTPUT_LIMIT_BYTES = 6 * 1024;
+const NOISY_DIRECTORY_NAMES = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.archguard',
+]);
+const ROOT_DIRECTORY_PRIORITY = ['src', 'lib', 'app', 'source', 'tests', 'test'];
 
 function isHiddenDirectory(name: string): boolean {
   return name.startsWith('.');
+}
+
+function shouldSkipDirectory(name: string): boolean {
+  return isHiddenDirectory(name) || NOISY_DIRECTORY_NAMES.has(name);
+}
+
+function compareDirectories(
+  left: string,
+  right: string,
+  relativePrefix: string
+): number {
+  if (!relativePrefix) {
+    const leftPriority = ROOT_DIRECTORY_PRIORITY.indexOf(left);
+    const rightPriority = ROOT_DIRECTORY_PRIORITY.indexOf(right);
+    if (leftPriority !== -1 || rightPriority !== -1) {
+      if (leftPriority === -1) return 1;
+      if (rightPriority === -1) return -1;
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+    }
+  }
+
+  return left.localeCompare(right);
 }
 
 async function safeReadDir(target: string): Promise<Dirent[]> {
@@ -47,9 +77,9 @@ async function walkDirectories(
   const dirPath = relativePrefix ? path.join(root, relativePrefix) : root;
   const entries = await safeReadDir(dirPath);
   const directories = entries
-    .filter((entry) => entry.isDirectory() && !isHiddenDirectory(entry.name))
+    .filter((entry) => entry.isDirectory() && !shouldSkipDirectory(entry.name))
     .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
+    .sort((left, right) => compareDirectories(left, right, relativePrefix));
 
   for (const directory of directories) {
     const relativePath = relativePrefix ? path.posix.join(relativePrefix, directory) : directory;

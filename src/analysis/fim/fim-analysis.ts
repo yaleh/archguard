@@ -13,6 +13,7 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import { globby } from 'globby';
+import ts from 'typescript';
 import type { ILanguagePlugin, RawTestFile } from '@/core/interfaces/language-plugin.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
@@ -35,6 +36,7 @@ export interface ComputeImportApproximationFIMOptions {
   workspaceRoot: string;
   patternConfig?: TestPatternConfig;
   nonProductionPatterns?: string[];
+  barrelFiles?: string[];
   suggestedDepth?: number;
 }
 
@@ -238,6 +240,88 @@ function derivePackageNames(fileIds: string[], depth: number = 2): string[] {
   return packageNames;
 }
 
+function packageNameForFile(fileId: string, depth: number): string {
+  const dir = path.dirname(normalizeFilePath(fileId));
+  return dir === '.' ? '.' : dir.split('/').filter(Boolean).slice(0, Math.max(1, depth)).join('/');
+}
+
+function normalizeRelativePath(filePath: string): string {
+  return normalizeFilePath(filePath).replace(/^\.\/+/, '');
+}
+
+function isSupportedBarrelExtension(filePath: string): boolean {
+  return ['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs', '.cjs'].includes(path.extname(filePath));
+}
+
+function isVerifiedTypeScriptBarrel(content: string, filePath: string): boolean {
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    filePath.endsWith('.tsx') || filePath.endsWith('.jsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+
+  if (sourceFile.statements.length === 0) {
+    return false;
+  }
+
+  return sourceFile.statements.every((statement) => ts.isExportDeclaration(statement));
+}
+
+export async function resolveVerifiedBarrelPackages(
+  workspaceRoot: string,
+  fileIds: string[],
+  barrelFiles: string[] | undefined,
+  depth: number
+): Promise<string[]> {
+  if (!barrelFiles?.length) {
+    return [];
+  }
+
+  const normalizedFileIds = fileIds.map((fileId) => normalizeRelativePath(fileId));
+  const fileIdSet = new Set(normalizedFileIds);
+  const packageFiles = new Map<string, string[]>();
+
+  for (const fileId of normalizedFileIds) {
+    const packageName = packageNameForFile(fileId, depth);
+    const files = packageFiles.get(packageName);
+    if (files) {
+      files.push(fileId);
+    } else {
+      packageFiles.set(packageName, [fileId]);
+    }
+  }
+
+  const verifiedBarrelFiles = new Set<string>();
+  for (const candidate of barrelFiles.map((filePath) => normalizeRelativePath(filePath))) {
+    if (!fileIdSet.has(candidate) || !isSupportedBarrelExtension(candidate)) {
+      continue;
+    }
+
+    try {
+      const content = await fs.readFile(path.join(workspaceRoot, candidate), 'utf8');
+      if (isVerifiedTypeScriptBarrel(content, candidate)) {
+        verifiedBarrelFiles.add(candidate);
+      }
+    } catch {
+      // Ignore unreadable candidates.
+    }
+  }
+
+  const excludedPackages: string[] = [];
+  for (const [packageName, packageFileIds] of packageFiles) {
+    if (
+      packageFileIds.length > 0 &&
+      packageFileIds.every((fileId) => verifiedBarrelFiles.has(fileId))
+    ) {
+      excludedPackages.push(packageName);
+    }
+  }
+
+  return excludedPackages.sort();
+}
+
 interface PackageAnalysis {
   depth: number;
   packageNames: string[];
@@ -250,7 +334,8 @@ interface PackageAnalysis {
 function buildPackageAnalysis(
   coverage: CoverageMatrix,
   depth: number,
-  nonProductionPatterns: string[]
+  nonProductionPatterns: string[],
+  exactPackageExclusions: string[] = []
 ): PackageAnalysis {
   const packageDepth = Math.max(1, depth);
   const packageNames = derivePackageNames(coverage.fileIds, packageDepth);
@@ -263,11 +348,13 @@ function buildPackageAnalysis(
   const packageResult = computeFisherInformation(packageCoverageMatrix);
   const filteredPackageCoverageMatrix = filterProductionCoverage(
     packageCoverageMatrix,
-    nonProductionPatterns
+    nonProductionPatterns,
+    exactPackageExclusions
   );
   const filteredPackageResult = filterProductionPackages(
     packageCoverageMatrix,
-    nonProductionPatterns
+    nonProductionPatterns,
+    exactPackageExclusions
   );
 
   return {
@@ -312,25 +399,44 @@ export async function computeImportApproximationFIM(
   const defaultDepth = 1;
   const selectedDepth = Math.max(defaultDepth, options.suggestedDepth ?? defaultDepth);
   const nonProductionPatterns = options.nonProductionPatterns ?? [];
-  const selectedPackageAnalysis = buildPackageAnalysis(coverage, selectedDepth, nonProductionPatterns);
+  const selectedDepthBarrelPackages = await resolveVerifiedBarrelPackages(
+    options.workspaceRoot,
+    coverage.fileIds,
+    options.barrelFiles,
+    selectedDepth
+  );
+  const defaultDepthBarrelPackages =
+    selectedDepth === defaultDepth
+      ? selectedDepthBarrelPackages
+      : await resolveVerifiedBarrelPackages(
+          options.workspaceRoot,
+          coverage.fileIds,
+          options.barrelFiles,
+          defaultDepth
+        );
   const defaultPackageAnalysis =
     selectedDepth === defaultDepth
-      ? selectedPackageAnalysis
-      : buildPackageAnalysis(coverage, defaultDepth, nonProductionPatterns);
+      ? buildPackageAnalysis(coverage, selectedDepth, [...nonProductionPatterns], selectedDepthBarrelPackages)
+      : buildPackageAnalysis(coverage, defaultDepth, [
+          ...nonProductionPatterns,
+        ], defaultDepthBarrelPackages);
+  const effectiveSelectedPackageAnalysis = buildPackageAnalysis(coverage, selectedDepth, [
+    ...nonProductionPatterns,
+  ], selectedDepthBarrelPackages);
 
   const artifact: FIMCurrentArtifact = {
     timestamp: new Date().toISOString(),
     source: 'import-approximation',
     descriptionLength: options.archJson.entities.length + options.archJson.relations.length,
     fileIds: coverage.fileIds,
-    packageDepth: selectedPackageAnalysis.depth,
-    packageNames: selectedPackageAnalysis.packageNames,
+    packageDepth: effectiveSelectedPackageAnalysis.depth,
+    packageNames: effectiveSelectedPackageAnalysis.packageNames,
     fileMatrix: coverage.matrix,
-    packageMatrix: selectedPackageAnalysis.packageMatrix,
-    filteredPackageMatrix: selectedPackageAnalysis.filteredPackageMatrix,
+    packageMatrix: effectiveSelectedPackageAnalysis.packageMatrix,
+    filteredPackageMatrix: effectiveSelectedPackageAnalysis.filteredPackageMatrix,
     fileResult,
-    packageResult: selectedPackageAnalysis.packageResult,
-    filteredPackageResult: selectedPackageAnalysis.filteredPackageResult,
+    packageResult: effectiveSelectedPackageAnalysis.packageResult,
+    filteredPackageResult: effectiveSelectedPackageAnalysis.filteredPackageResult,
   };
 
   if (selectedDepth !== defaultDepth) {
@@ -343,25 +449,25 @@ export async function computeImportApproximationFIM(
       filteredPackageResult: defaultPackageAnalysis.filteredPackageResult,
     };
     artifact.depthN = {
-      depth: selectedPackageAnalysis.depth,
-      packageNames: selectedPackageAnalysis.packageNames,
-      packageMatrix: selectedPackageAnalysis.packageMatrix,
-      filteredPackageMatrix: selectedPackageAnalysis.filteredPackageMatrix,
-      packageResult: selectedPackageAnalysis.packageResult,
-      filteredPackageResult: selectedPackageAnalysis.filteredPackageResult,
+      depth: effectiveSelectedPackageAnalysis.depth,
+      packageNames: effectiveSelectedPackageAnalysis.packageNames,
+      packageMatrix: effectiveSelectedPackageAnalysis.packageMatrix,
+      filteredPackageMatrix: effectiveSelectedPackageAnalysis.filteredPackageMatrix,
+      packageResult: effectiveSelectedPackageAnalysis.packageResult,
+      filteredPackageResult: effectiveSelectedPackageAnalysis.filteredPackageResult,
     };
     artifact.depthComparison = {
       defaultDepth,
       suggestedDepth: selectedDepth,
       conditionNumberDelta: safeDelta(
-        selectedPackageAnalysis.filteredPackageResult.conditionNumber,
+        effectiveSelectedPackageAnalysis.filteredPackageResult.conditionNumber,
         defaultPackageAnalysis.filteredPackageResult.conditionNumber
       ),
       effectiveDimensionDelta:
-        selectedPackageAnalysis.filteredPackageResult.effectiveDimension -
+        effectiveSelectedPackageAnalysis.filteredPackageResult.effectiveDimension -
         defaultPackageAnalysis.filteredPackageResult.effectiveDimension,
       uncoveredFileCountDelta:
-        selectedPackageAnalysis.filteredPackageResult.uncoveredFiles.length -
+        effectiveSelectedPackageAnalysis.filteredPackageResult.uncoveredFiles.length -
         defaultPackageAnalysis.filteredPackageResult.uncoveredFiles.length,
     };
   }
@@ -372,13 +478,13 @@ export async function computeImportApproximationFIM(
     fileCount: fileResult.fileCount,
     testCount: fileResult.testCount,
     descriptionLength: artifact.descriptionLength,
-    conditionNumber: selectedPackageAnalysis.packageResult.conditionNumber,
-    effectiveDimension: selectedPackageAnalysis.packageResult.effectiveDimension,
-    filteredConditionNumber: selectedPackageAnalysis.filteredPackageResult.conditionNumber,
-    filteredEffectiveDimension: selectedPackageAnalysis.filteredPackageResult.effectiveDimension,
-    topEigenvalueShares: topEigenvalueShares(selectedPackageAnalysis.packageResult.eigenvalues),
+    conditionNumber: effectiveSelectedPackageAnalysis.packageResult.conditionNumber,
+    effectiveDimension: effectiveSelectedPackageAnalysis.packageResult.effectiveDimension,
+    filteredConditionNumber: effectiveSelectedPackageAnalysis.filteredPackageResult.conditionNumber,
+    filteredEffectiveDimension: effectiveSelectedPackageAnalysis.filteredPackageResult.effectiveDimension,
+    topEigenvalueShares: topEigenvalueShares(effectiveSelectedPackageAnalysis.packageResult.eigenvalues),
     filteredTopEigenvalueShares: topEigenvalueShares(
-      selectedPackageAnalysis.filteredPackageResult.eigenvalues
+      effectiveSelectedPackageAnalysis.filteredPackageResult.eigenvalues
     ),
     uncoveredFileCount: fileResult.uncoveredFiles.length,
   };

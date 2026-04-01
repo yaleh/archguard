@@ -253,6 +253,106 @@ describe('computeImportApproximationFIM depth suggestion', () => {
   });
 });
 
+async function makeWorkspaceWithBarrelRoot(): Promise<string> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-fim-int-barrel-'));
+  tempDirs.push(dir);
+  await fs.ensureDir(path.join(dir, 'src/pkg-a'));
+  await fs.ensureDir(path.join(dir, 'src/pkg-b'));
+  await fs.ensureDir(path.join(dir, 'tests'));
+  await fs.writeFile(
+    path.join(dir, 'src/index.ts'),
+    ['/** package barrel */', 'export * from "./pkg-a/a.ts";', 'export * from "./pkg-b/b.ts";', ''].join('\n')
+  );
+  await fs.writeFile(path.join(dir, 'src/pkg-a/a.ts'), 'export const a = 1;');
+  await fs.writeFile(path.join(dir, 'src/pkg-b/b.ts'), 'export const b = 2;');
+  await fs.writeFile(path.join(dir, 'tests/a.test.ts'), 'import "../src/pkg-a/a.ts";');
+  await fs.writeFile(path.join(dir, 'tests/b.test.ts'), 'import "../src/pkg-b/b.ts";');
+  return dir;
+}
+
+function makeArchJsonWithBarrelRoot(workspaceRoot: string): ArchJSON {
+  return {
+    version: '1.0',
+    language: 'typescript',
+    timestamp: '2026-03-30T00:00:00Z',
+    workspaceRoot,
+    sourceFiles: [
+      path.join(workspaceRoot, 'src/index.ts'),
+      path.join(workspaceRoot, 'src/pkg-a/a.ts'),
+      path.join(workspaceRoot, 'src/pkg-b/b.ts'),
+    ],
+    entities: [
+      {
+        id: 'RootIndex',
+        name: 'RootIndex',
+        type: 'module',
+        visibility: 'public',
+        members: [],
+        sourceLocation: { file: path.join(workspaceRoot, 'src/index.ts'), startLine: 1, endLine: 3 },
+      },
+      {
+        id: 'A',
+        name: 'A',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: { file: path.join(workspaceRoot, 'src/pkg-a/a.ts'), startLine: 1, endLine: 1 },
+      },
+      {
+        id: 'B',
+        name: 'B',
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: { file: path.join(workspaceRoot, 'src/pkg-b/b.ts'), startLine: 1, endLine: 1 },
+      },
+    ],
+    relations: [{ id: 'r1', type: 'dependency', source: 'A', target: 'B' }],
+  } as any;
+}
+
+describe('computeImportApproximationFIM barrel file semantics', () => {
+  it('excludes verified barrel-only packages from filtered package FIM when barrelFiles are provided', async () => {
+    const workspaceRoot = await makeWorkspaceWithBarrelRoot();
+    const result = await computeImportApproximationFIM({
+      archJson: makeArchJsonWithBarrelRoot(workspaceRoot),
+      plugin: makePlugin(workspaceRoot),
+      workspaceRoot,
+      suggestedDepth: 2,
+      barrelFiles: ['src/index.ts'],
+    });
+
+    expect(result.artifact.packageNames).toEqual(['src', 'src/pkg-a', 'src/pkg-b']);
+    expect(result.artifact.filteredPackageResult.diagonal.map((entry) => entry.fileId)).toEqual([
+      'src/pkg-a',
+      'src/pkg-b',
+    ]);
+    expect(result.artifact.filteredPackageMatrix).toHaveLength(2);
+  });
+
+  it('does not exclude a candidate barrel package when the file contains real logic', async () => {
+    const workspaceRoot = await makeWorkspaceWithBarrelRoot();
+    await fs.writeFile(
+      path.join(workspaceRoot, 'src/index.ts'),
+      ['export * from "./pkg-a/a.ts";', 'export const runtimeFlag = true;', ''].join('\n')
+    );
+
+    const result = await computeImportApproximationFIM({
+      archJson: makeArchJsonWithBarrelRoot(workspaceRoot),
+      plugin: makePlugin(workspaceRoot),
+      workspaceRoot,
+      suggestedDepth: 2,
+      barrelFiles: ['src/index.ts'],
+    });
+
+    expect(result.artifact.filteredPackageResult.diagonal.map((entry) => entry.fileId)).toEqual([
+      'src',
+      'src/pkg-a',
+      'src/pkg-b',
+    ]);
+  });
+});
+
 async function makeWorkspaceWithNonProduction(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-fim-int-np-'));
   tempDirs.push(dir);

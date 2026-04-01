@@ -167,4 +167,37 @@ describe('project-semantics-cache', () => {
     expect(tree).toContain('(truncated, ');
     expect(Buffer.byteLength(tree, 'utf8')).toBeLessThanOrEqual(6200);
   });
+
+  it('collectDirectoryTree excludes noisy generated and dependency directories', async () => {
+    const projectRoot = await makeTempProject();
+    cleanupPaths.push(projectRoot);
+    await fs.mkdir(path.join(projectRoot, 'src', 'analysis'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, 'node_modules', 'left-pad'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, 'dist', 'cli'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, '.archguard', 'cache'), { recursive: true });
+
+    const tree = await collectDirectoryTree(projectRoot, 3);
+
+    expect(tree).toContain('src');
+    expect(tree).toContain('src/analysis');
+    expect(tree).not.toContain('node_modules');
+    expect(tree).not.toContain('dist');
+    expect(tree).not.toContain('.archguard');
+  });
+
+  it('computeDirTreeHash ignores noisy generated and dependency directories', async () => {
+    const projectRoot = await makeTempProject();
+    cleanupPaths.push(projectRoot);
+    await fs.mkdir(path.join(projectRoot, 'src', 'analysis'), { recursive: true });
+
+    const before = await computeDirTreeHash(projectRoot);
+
+    await fs.mkdir(path.join(projectRoot, 'node_modules', 'left-pad'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, 'dist', 'cli'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, '.archguard', 'cache'), { recursive: true });
+
+    const after = await computeDirTreeHash(projectRoot);
+
+    expect(after).toBe(before);
+  });
 });
