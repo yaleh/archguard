@@ -173,7 +173,8 @@ function emitTreeNode(
   lines: string[],
   depth: number,
   subgraphStyles: Array<{ id: string; depth: number }>,
-  cycleNodeIds: Set<string>
+  cycleNodeIds: Set<string>,
+  options: { collapseSelfGroup?: boolean } = {}
 ): void {
   const pad = '  '.repeat(depth);
   const id = nodeTreeId(node);
@@ -188,6 +189,13 @@ function emitTreeNode(
   if (node.children.length === 0) {
     // Leaf node – plain declaration with role annotation
     lines.push(`${pad}${nid}["${label}"]${roleClass}`);
+  } else if (options.collapseSelfGroup && node.moduleNode !== null) {
+    // Layer grouping already establishes the outer boundary; avoid repeating it
+    // when the layer label is the same as the real root module label.
+    lines.push(`${pad}${nid}["${label}"]${roleClass}`);
+    for (const child of node.children) {
+      emitTreeNode(child, lines, depth, subgraphStyles, cycleNodeIds);
+    }
   } else {
     // Parent or virtual node – wrap in subgraph
     const sgId = `${nid}_group`;
@@ -246,7 +254,9 @@ export function renderTsModuleGraph(
     subgraphStyles.push({ id: layerGroupId, depth: 1 });
     lines.push(`  subgraph ${layerGroupId}["${label}"]`);
     for (const root of roots) {
-      emitTreeNode(root, lines, 2, subgraphStyles, cycleNodeIds);
+      emitTreeNode(root, lines, 2, subgraphStyles, cycleNodeIds, {
+        collapseSelfGroup: root.moduleNode !== null && nodeTreeId(root) === label,
+      });
     }
     lines.push('  end');
   }

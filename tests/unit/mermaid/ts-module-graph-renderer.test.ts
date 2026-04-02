@@ -214,6 +214,35 @@ describe('renderTsModuleGraph', () => {
     expect(output).toContain('parser["parser"]');
   });
 
+  it('does not create a redundant same-name root subgraph when the layer label matches the root module', () => {
+    const graph: TsModuleGraph = {
+      nodes: [
+        makeNode('analysis'),
+        makeNode('analysis/fim'),
+        makeNode('cli'),
+        makeNode('cli/analyze'),
+      ],
+      edges: [makeEdge('cli/analyze', 'analysis/fim', 1)],
+      cycles: [],
+    };
+
+    const output = renderTsModuleGraph(graph, {
+      architecturalLayers: {
+        'src/analysis': 'analysis',
+        'src/cli': 'cli',
+      },
+    });
+
+    expect(output).toContain('subgraph layer_analysis["analysis"]');
+    expect(output).toContain('subgraph layer_cli["cli"]');
+    expect(output).not.toContain('subgraph analysis_group["analysis"]');
+    expect(output).not.toContain('subgraph cli_group["cli"]');
+    expect(output).toContain('analysis["analysis"]');
+    expect(output).toContain('analysis/fim');
+    expect(output).toContain('cli["cli"]');
+    expect(output).toContain('cli/analyze');
+  });
+
   it('keeps the previous package tree rendering when architecturalLayers are absent', () => {
     const graph: TsModuleGraph = {
       nodes: [makeNode('analysis'), makeNode('analysis/fim'), makeNode('cli')],

@@ -249,6 +249,62 @@ describe('ValidatedMermaidGenerator', () => {
       expect(mermaidCode).toContain('src/ui');
     });
 
+    it('keeps non-conflicting package layer labels as outer grouping only', () => {
+      const layeredArchJson: ArchJSON = {
+        ...archJson,
+        sourceFiles: [
+          'src/domain/model/User.ts',
+          'src/infra/http/AuthService.ts',
+        ],
+        entities: [
+          {
+            ...archJson.entities[0],
+            sourceLocation: { file: 'src/domain/model/User.ts', startLine: 1, endLine: 20 },
+          },
+          {
+            ...archJson.entities[1],
+            sourceLocation: { file: 'src/infra/http/AuthService.ts', startLine: 1, endLine: 15 },
+          },
+        ],
+        relations: [
+          {
+            id: 'rel1',
+            type: 'dependency',
+            source: archJson.entities[1].id,
+            target: archJson.entities[0].id,
+          },
+        ],
+        extensions: {
+          projectSemantics: {
+            version: '1.0',
+            nonProductionPatterns: [],
+            barrelFiles: [],
+            additionalTestPatterns: [],
+            customAssertionPatterns: [],
+            confidence: 0.9,
+            architecturalLayers: {
+              'src/domain': 'Domain',
+              'src/infra': 'Infrastructure',
+            },
+          },
+        },
+      };
+
+      const generator = new ValidatedMermaidGenerator(layeredArchJson, {
+        level: 'package',
+        grouping: groupingDecision,
+      });
+
+      const mermaidCode = generator.generate();
+
+      expect(mermaidCode).toContain('subgraph layer_Domain["Domain"]');
+      expect(mermaidCode).toContain('subgraph layer_Infrastructure["Infrastructure"]');
+      expect(mermaidCode).toContain('pkg_src_domain_model["src/domain/model"]');
+      expect(mermaidCode).toContain('pkg_src_infra_http["src/infra/http"]');
+      expect(mermaidCode).not.toContain('subgraph pkg_src_domain_model');
+      expect(mermaidCode).not.toContain('subgraph pkg_src_infra_http');
+    });
+
     it('does not emit layer subgraphs when architecturalLayers are absent', () => {
       const generator = new ValidatedMermaidGenerator(archJson, {
         level: 'package',
