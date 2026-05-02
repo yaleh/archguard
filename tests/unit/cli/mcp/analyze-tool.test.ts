@@ -122,6 +122,7 @@ describe('registerAnalyzeTool', () => {
     expect(description).toContain('code-language plugin override');
     expect(schema.lang.safeParse('typescript').success).toBe(true);
     expect(schema.lang.safeParse('go').success).toBe(true);
+    expect(schema.lang.safeParse('kotlin').success).toBe(true);
     expect(schema.lang.safeParse('zh-CN').success).toBe(false);
   });
 

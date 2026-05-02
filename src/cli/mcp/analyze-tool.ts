@@ -19,7 +19,7 @@ export const PARADIGM_BLOCK_GO = `Paradigm: package (Go Atlas)
 
 Next step: call archguard_summary or archguard_get_atlas_layer.`;
 
-const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp'] as const;
+const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp', 'kotlin'] as const;
 const analyzeLocks = new Set<string>();
 
 const analyzeSchema = {
@@ -37,7 +37,7 @@ const analyzeSchema = {
     .enum(supportedAnalyzeLanguages)
     .optional()
     .describe(
-      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp. This is not a natural-language locale.'
+      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp, kotlin. This is not a natural-language locale.'
     ),
   diagrams: z
     .array(z.enum(['package', 'class', 'method']))

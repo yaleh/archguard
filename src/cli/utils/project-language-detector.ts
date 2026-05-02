@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 
-export type DetectedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'cpp';
+export type DetectedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'cpp' | 'kotlin';
 
 export interface LanguageCandidate {
   language: DetectedLanguage;
@@ -32,6 +32,7 @@ const MARKERS: Record<DetectedLanguage, string[]> = {
   cpp: ['CMakeLists.txt', 'Makefile'],
   go: ['go.mod'],
   java: ['pom.xml', 'build.gradle'],
+  kotlin: ['build.gradle.kts', 'settings.gradle.kts'],
   python: ['pyproject.toml', 'requirements.txt', 'setup.py', 'setup.cfg', 'Pipfile'],
   typescript: ['package.json', 'tsconfig.json'],
 };
@@ -40,6 +41,7 @@ const EXTENSIONS: Record<DetectedLanguage, string[]> = {
   cpp: ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.h'],
   go: ['.go'],
   java: ['.java'],
+  kotlin: ['.kt', '.kts'],
   python: ['.py'],
   typescript: ['.ts', '.tsx'],
 };
@@ -57,6 +59,7 @@ function createStats(): Record<DetectedLanguage, LanguageStats> {
     cpp: emptyStats(),
     go: emptyStats(),
     java: emptyStats(),
+    kotlin: emptyStats(),
     python: emptyStats(),
     typescript: emptyStats(),
   };
@@ -175,7 +178,7 @@ function chooseSourceRoot(
   language: DetectedLanguage,
   depth: number
 ): string {
-  if (language === 'cpp' || language === 'go' || language === 'python') {
+  if (language === 'cpp' || language === 'go' || language === 'python' || language === 'kotlin') {
     return projectRoot;
   }
 

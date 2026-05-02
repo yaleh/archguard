@@ -80,4 +80,34 @@ describe('project-language-detector', () => {
 
     expect(primary?.language).toBe('typescript');
   });
+
+  it('detects kotlin for a project with build.gradle.kts marker', async () => {
+    const root = await makeProject({
+      'build.gradle.kts': 'plugins { id("com.android.application") }',
+      'settings.gradle.kts': 'rootProject.name = "myapp"',
+      'app/src/main/java/com/example/app/MainActivity.kt': 'class MainActivity',
+      'app/src/main/java/com/example/app/ViewModel.kt': 'class ViewModel',
+      'app/src/main/java/com/example/app/Repository.kt': 'class Repository',
+    });
+
+    const primary = await detectPrimaryLanguage(root);
+
+    expect(primary?.language).toBe('kotlin');
+  });
+
+  it('prefers kotlin over java when build.gradle.kts coexists with .kt files', async () => {
+    const root = await makeProject({
+      'build.gradle.kts': 'plugins { kotlin("android") }',
+      'pom.xml': '<project></project>',
+      'app/src/main/java/com/example/Main.kt': 'fun main() {}',
+      'app/src/main/java/com/example/Helper.kt': 'class Helper',
+    });
+
+    const candidates = await detectProjectLanguages(root);
+    const kotlinCandidate = candidates.find((c) => c.language === 'kotlin');
+    const javaCandidate = candidates.find((c) => c.language === 'java');
+
+    expect(kotlinCandidate).toBeDefined();
+    expect(kotlinCandidate!.score).toBeGreaterThan(javaCandidate?.score ?? 0);
+  });
 });
