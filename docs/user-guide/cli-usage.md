@@ -46,7 +46,7 @@ archguard analyze [options]
 |--------|------|---------|-------------|
 | `-s, --sources <paths...>` | string[] | - | Source directory/directories; triggers auto-detection → multi-diagram output |
 | `--diagrams <levels...>` | string[] | all | Filter by level: `package`\|`class`\|`method` (TypeScript); `package`\|`capability`\|`goroutine`\|`flow` (Go Atlas) |
-| `--lang <language>` | string | auto | Language plugin: `typescript`\|`go`\|`java`\|`python` |
+| `--lang <language>` | string | auto | Language plugin: `typescript`\|`go`\|`java`\|`python`\|`cpp`\|`kotlin` |
 | `--config <path>` | string | archguard.config.json | Config file path |
 | `-f, --format <type>` | string | mermaid | Output format: `mermaid`\|`json` |
 | `--output-dir <dir>` | string | `./.archguard` | Output directory (auto-set to `<project>/.archguard` for external paths) |
@@ -329,6 +329,8 @@ archguard cache clear   # Clear all cached data
 | Go (standard) | `package`, `class`, `method` |
 | Java | `package`, `class`, `method` |
 | Python | `package`, `class`, `method` |
+| C++ | `package`, `class` |
+| Kotlin/Android | `package`, `class` |
 
 ---
 

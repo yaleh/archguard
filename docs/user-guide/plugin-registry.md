@@ -302,6 +302,8 @@ detectPluginForDirectory(directoryPath: string): ILanguagePlugin | null {
 | Go | `go.mod` |
 | Java | `pom.xml`, `build.gradle` |
 | Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `Pipfile` |
+| C++ | `CMakeLists.txt`, `Makefile` |
+| Kotlin/Android | `build.gradle.kts`, `settings.gradle.kts` |
 | Rust | `Cargo.toml` |
 | C# | `.csproj`, `.sln` |
 

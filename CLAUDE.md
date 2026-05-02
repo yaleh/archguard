@@ -89,6 +89,7 @@ node dist/cli/index.js analyze -s ./src --lang go        # Atlas mode ON by defa
 node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard Go parsing
 node dist/cli/index.js analyze -s ./src --lang java
 node dist/cli/index.js analyze -s ./src --lang python
+node dist/cli/index.js analyze -s ./src --lang kotlin
 ```
 
 #### Multiple Diagram Generation via Config File
@@ -129,7 +130,7 @@ Analyze TypeScript project and generate architecture diagrams.
 - `--mermaid-theme <theme>` - Mermaid theme: `default`|`forest`|`dark`|`neutral`
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
-- `--lang <language>` - Language plugin: `typescript`|`go`|`java`|`python`
+- `--lang <language>` - Language plugin: `typescript`|`go`|`java`|`python`|`cpp`|`kotlin`
 
 **Claude CLI Configuration**:
 - `--cli-command <command>` - Claude CLI command to use (default: `claude`)
@@ -190,6 +191,8 @@ ArchGuard supports multiple programming languages through its plugin system:
 | Go | Stable | Tree-sitter + gopls, interface detection |
 | Java | Beta | Tree-sitter, Maven/Gradle deps |
 | Python | Beta | Tree-sitter, pip/Poetry deps |
+| C++ | Beta | Tree-sitter, CMake deps |
+| Kotlin/Android | Beta | Tree-sitter, build.gradle.kts deps |
 
 ### Adding Language Support
 
@@ -207,12 +210,13 @@ node dist/cli/index.js analyze -s ./src --lang go        # Atlas mode ON by defa
 node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard mode opt-out
 node dist/cli/index.js analyze -s ./src --lang java
 node dist/cli/index.js analyze -s ./src --lang python
+node dist/cli/index.js analyze -s ./src --lang kotlin
 ```
 
 ### Plugin Registry
 
 ArchGuard uses a plugin registry to manage language support. Plugins can be:
-- **Built-in**: TypeScript, Go, Java, Python plugins included
+- **Built-in**: TypeScript, Go, Java, Python, C++, Kotlin plugins included
 - **External**: Load third-party plugins via configuration
 
 See [Plugin Registry Documentation](docs/user-guide/plugin-registry.md) for details.

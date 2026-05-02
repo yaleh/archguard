@@ -387,7 +387,7 @@ Represents a project dependency.
 interface Dependency {
   name: string;
   version: string;
-  type: DependencyType;           // 'npm' | 'gomod' | 'pip' | 'maven' | 'cargo'
+  type: DependencyType;           // 'npm' | 'gomod' | 'pip' | 'maven' | 'cargo' | 'cmake' | 'gradle'
   scope: DependencyScope;         // 'runtime' | 'development' | 'optional' | 'peer'
   source: string;                 // Source file
   isDirect: boolean;              // Direct vs transitive

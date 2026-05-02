@@ -1,6 +1,6 @@
 # ArchGuard
 
-ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), Python (beta), and C++ (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
+ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), Python (beta), C++ (beta), and Kotlin/Android (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
 
 ## Screenshots
 
@@ -16,7 +16,7 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 ## Features
 
 - **AI-Native MCP Interface**: Query architecture in natural language from Claude Code or Codex — analyze projects, trace dependencies, find implementers, detect cycles
-- **Multi-Language Support**: TypeScript, Go, Java, Python, C++ via plugin system
+- **Multi-Language Support**: TypeScript, Go, Java, Python, C++, Kotlin/Android via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
 - **Static Test Analysis**: Test coverage mapping, assertion density, orphan detection, and quality issues — no test execution required
@@ -148,7 +148,7 @@ archguard analyze [options]
 
 - `-s, --sources <paths...>` - Source directories; triggers auto-detection and multi-diagram generation
 - `--diagrams <levels...>` - Filter by level: `package` | `class` | `method` (language-dependent)
-- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` (auto-detected)
+- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` | `kotlin` (auto-detected)
 - `--config <path>` - Config file path (default: `archguard.config.json`)
 
 **Output:**
@@ -324,13 +324,14 @@ archguard cache path    # Show cache directory
 
 ## Language Support
 
-| Language   | Status | Parser                    | Features                                           |
-|------------|--------|---------------------------|----------------------------------------------------|
-| TypeScript | Stable | ts-morph (AST)            | Classes, interfaces, enums, dependencies, path aliases |
-| Go         | Stable | tree-sitter + gopls       | Structs, interfaces, goroutines, Architecture Atlas |
-| Java       | Beta   | tree-sitter               | Classes, interfaces, Maven/Gradle deps              |
-| Python     | Beta   | tree-sitter               | Classes, functions, pip/Poetry deps                 |
-| C++        | Beta   | tree-sitter               | Structs, classes, inheritance, CMake deps           |
+| Language       | Status | Parser                    | Features                                           |
+|----------------|--------|---------------------------|----------------------------------------------------|
+| TypeScript     | Stable | ts-morph (AST)            | Classes, interfaces, enums, dependencies, path aliases |
+| Go             | Stable | tree-sitter + gopls       | Structs, interfaces, goroutines, Architecture Atlas |
+| Java           | Beta   | tree-sitter               | Classes, interfaces, Maven/Gradle deps              |
+| Python         | Beta   | tree-sitter               | Classes, functions, pip/Poetry deps                 |
+| C++            | Beta   | tree-sitter               | Structs, classes, inheritance, CMake deps           |
+| Kotlin/Android | Beta   | tree-sitter               | Classes, interfaces, build.gradle.kts deps          |
 
 ### Go Architecture Atlas
 
@@ -566,7 +567,8 @@ archguard/
 │   │   │   └── atlas/       # package, capability, goroutine, flow builders
 │   │   ├── java/            # Beta
 │   │   ├── python/          # Beta
-│   │   └── cpp/             # Beta (tree-sitter + CMake)
+│   │   ├── cpp/             # Beta (tree-sitter + CMake)
+│   │   └── kotlin/          # Beta (tree-sitter + build.gradle.kts)
 │   └── types/               # Core types (config, ArchJSON, extensions)
 ├── tests/
 │   ├── unit/                # Unit tests
