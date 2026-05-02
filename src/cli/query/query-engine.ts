@@ -44,7 +44,7 @@ export interface PackageStatEntry {
 }
 
 export interface PackageStatMeta {
-  dataPath: 'go-atlas' | 'ts-module-graph' | 'oo-derived';
+  dataPath: 'go-atlas' | 'ts-module-graph' | 'oo-derived' | 'kotlin-package';
   locAvailable: boolean;
   locBasis?: 'maxEndLine';
 }
@@ -363,6 +363,11 @@ export class QueryEngine {
   getPackageStats(depth: number = 2, topN?: number): PackageStatsResult {
     const clampedDepth = Math.max(1, Math.min(5, depth));
 
+    // ── Path Kotlin: group by logical package derived from entity ID ───────────
+    if (this.archJson.language === 'kotlin') {
+      return this.getKotlinPackageStats(topN);
+    }
+
     // ── Path A: Go Atlas ──────────────────────────────────────────────────────
     const pg = this.getAtlasLayer('package');
     if (pg) {
@@ -506,6 +511,88 @@ export class QueryEngine {
     };
   }
 
+  /** Group Kotlin entities by logical package name (derived from entity ID). */
+  private getKotlinPackageStats(topN?: number): PackageStatsResult {
+    const testPattern = this.buildTestPattern();
+    const ws = this.archJson.workspaceRoot;
+
+    // pkg → { files: file → maxEndLine, metrics }
+    const pkgData = new Map<string, {
+      files: Map<string, number>;
+      entityCount: number;
+      methodCount: number;
+      fieldCount: number;
+    }>();
+
+    for (const entity of this.archJson.entities) {
+      const lastDot = entity.id.lastIndexOf('.');
+      const pkg = lastDot > 0 ? entity.id.slice(0, lastDot) : '.';
+
+      if (!pkgData.has(pkg)) {
+        pkgData.set(pkg, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
+      }
+      const data = pkgData.get(pkg)!;
+
+      let file = entity.sourceLocation.file;
+      if (path.isAbsolute(file) && ws) file = path.relative(ws, file);
+      const prevMax = data.files.get(file) ?? 0;
+      data.files.set(file, Math.max(prevMax, entity.sourceLocation.endLine));
+
+      data.entityCount++;
+      const members = entity.members ?? [];
+      data.methodCount += members.filter((m) => m.type === 'method' || m.type === 'constructor').length;
+      data.fieldCount += members.filter((m) => m.type === 'property' || m.type === 'field').length;
+    }
+
+    // Also count entity-less source files (e.g. test files with no class declarations).
+    // Derive their package from the Maven path: **/java/com/example/pkg/Foo.kt → com.example.pkg
+    const seenFiles = new Set<string>();
+    for (const data of pkgData.values()) {
+      for (const file of data.files.keys()) seenFiles.add(file);
+    }
+    for (const rawFile of this.archJson.sourceFiles) {
+      let file = rawFile;
+      if (path.isAbsolute(file) && ws) file = path.relative(ws, file);
+      if (seenFiles.has(file)) continue;
+      const normalized = file.replace(/\\/g, '/');
+      const javaIdx = normalized.indexOf('/java/');
+      if (javaIdx === -1) continue;
+      const afterJava = normalized.slice(javaIdx + 6);
+      const lastSlash = afterJava.lastIndexOf('/');
+      if (lastSlash === -1) continue;
+      const pkgPath = afterJava.slice(0, lastSlash).replace(/\//g, '.');
+      if (!pkgPath) continue;
+      if (!pkgData.has(pkgPath)) {
+        pkgData.set(pkgPath, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
+      }
+      pkgData.get(pkgPath)!.files.set(file, 0);
+    }
+
+    const packages: PackageStatEntry[] = Array.from(pkgData.entries()).map(([pkg, data]) => {
+      let loc = 0;
+      let testFileCount = 0;
+      for (const [file, maxLine] of data.files) {
+        loc += maxLine;
+        if (testPattern.test(file)) testFileCount++;
+      }
+      return {
+        package: pkg,
+        fileCount: data.files.size,
+        testFileCount,
+        entityCount: data.entityCount,
+        methodCount: data.methodCount,
+        fieldCount: data.fieldCount,
+        loc,
+      };
+    });
+
+    const sorted = packages.sort((a, b) => (b.entityCount ?? 0) - (a.entityCount ?? 0));
+    return {
+      meta: { dataPath: 'kotlin-package', locAvailable: true, locBasis: 'maxEndLine' },
+      packages: topN !== undefined ? sorted.slice(0, topN) : sorted,
+    };
+  }
+
   /** Project a full Entity to a compact EntitySummary (no members array). */
   toSummary(entity: Entity): EntitySummary {
     const members = entity.members ?? [];
@@ -569,6 +656,8 @@ export class QueryEngine {
     switch (this.archJson.language) {
       case 'typescript':
         return /\.(test|spec)\.(ts|tsx|js|jsx)$/;
+      case 'kotlin':
+        return /Test\.kt$|Tests\.kt$|([\\/](?:test|androidTest|sharedTest)[\\/])/;
       case 'java':
         return /Test\.java$|Tests\.java$|TestCase\.java$|([\\/]test[\\/])/;
       case 'python':

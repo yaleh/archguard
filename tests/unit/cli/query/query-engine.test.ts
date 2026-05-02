@@ -1291,6 +1291,124 @@ describe('QueryEngine', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Group F: getPackageStats() — Kotlin logical package path
+  // ---------------------------------------------------------------------------
+  describe('getPackageStats — Kotlin logical package path', () => {
+    const kotlinWs = '/workspace';
+    const kotlinArchJson: ArchJSON = {
+      version: '1.0',
+      language: 'kotlin',
+      timestamp: '2026-05-02T00:00:00Z',
+      workspaceRoot: kotlinWs,
+      sourceFiles: [
+        `${kotlinWs}/app/src/main/java/com/example/app/AppShell.kt`,
+        `${kotlinWs}/app/src/main/java/com/example/app/AppDestination.kt`,
+        `${kotlinWs}/app/src/main/java/com/example/usb/UsbManager.kt`,
+        `${kotlinWs}/app/src/main/java/com/example/data/api/MottyApi.kt`,
+        `${kotlinWs}/app/src/test/java/com/example/app/AppShellTest.kt`,
+      ],
+      entities: [
+        {
+          id: 'com.example.app.AppShell',
+          name: 'AppShell',
+          type: 'class',
+          visibility: 'public',
+          members: [
+            { name: 'render', type: 'method', visibility: 'public' },
+            { name: 'state', type: 'field', visibility: 'private' },
+          ],
+          sourceLocation: {
+            file: `${kotlinWs}/app/src/main/java/com/example/app/AppShell.kt`,
+            startLine: 1,
+            endLine: 120,
+          },
+        },
+        {
+          id: 'com.example.app.AppDestination',
+          name: 'AppDestination',
+          type: 'class',
+          visibility: 'public',
+          members: [{ name: 'route', type: 'field', visibility: 'public' }],
+          sourceLocation: {
+            file: `${kotlinWs}/app/src/main/java/com/example/app/AppDestination.kt`,
+            startLine: 1,
+            endLine: 15,
+          },
+        },
+        {
+          id: 'com.example.usb.UsbManager',
+          name: 'UsbManager',
+          type: 'interface',
+          visibility: 'public',
+          members: [{ name: 'connect', type: 'method', visibility: 'public' }],
+          sourceLocation: {
+            file: `${kotlinWs}/app/src/main/java/com/example/usb/UsbManager.kt`,
+            startLine: 1,
+            endLine: 10,
+          },
+        },
+        {
+          id: 'com.example.data.api.MottyApi',
+          name: 'MottyApi',
+          type: 'interface',
+          visibility: 'public',
+          members: [{ name: 'fetch', type: 'method', visibility: 'public' }],
+          sourceLocation: {
+            file: `${kotlinWs}/app/src/main/java/com/example/data/api/MottyApi.kt`,
+            startLine: 1,
+            endLine: 8,
+          },
+        },
+      ],
+      relations: [],
+    };
+
+    it('returns logical Kotlin package names (not file path segments)', () => {
+      const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
+      const result = engine.getPackageStats();
+      const pkgNames = result.packages.map((p) => p.package).sort();
+      expect(pkgNames).toEqual([
+        'com.example.app',
+        'com.example.data.api',
+        'com.example.usb',
+      ]);
+    });
+
+    it('com.example.app has fileCount=3 (2 main + 1 test), entityCount=2, methodCount=1, fieldCount=2', () => {
+      const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
+      const result = engine.getPackageStats();
+      const pkg = result.packages.find((p) => p.package === 'com.example.app');
+      expect(pkg).toBeDefined();
+      expect(pkg!.fileCount).toBe(3); // AppShell.kt + AppDestination.kt + AppShellTest.kt
+      expect(pkg!.entityCount).toBe(2);
+      expect(pkg!.methodCount).toBe(1);
+      expect(pkg!.fieldCount).toBe(2);
+    });
+
+    it('test files are counted in testFileCount for the correct package', () => {
+      const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
+      const result = engine.getPackageStats();
+      const pkg = result.packages.find((p) => p.package === 'com.example.app');
+      expect(pkg!.testFileCount).toBe(1);
+    });
+
+    it('meta.dataPath is kotlin-package', () => {
+      const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
+      const result = engine.getPackageStats();
+      expect(result.meta.dataPath).toBe('kotlin-package');
+    });
+
+    it('depth parameter is ignored (Kotlin uses entity-ID grouping)', () => {
+      const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
+      const resultDepth1 = engine.getPackageStats(1);
+      const resultDepth5 = engine.getPackageStats(5);
+      expect(resultDepth1.packages.map((p) => p.package).sort()).toEqual(
+        resultDepth5.packages.map((p) => p.package).sort()
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Stage 1.2: getPackageCoverage
   // ---------------------------------------------------------------------------
   describe('getPackageCoverage', () => {

@@ -83,8 +83,7 @@ export class ArchJSONAggregator {
     const packageEntities: Entity[] = packages.map((pkg) => {
       const firstEntityInPackage = archJSON.entities.find(
         (e) =>
-          this.extractPackageFromFile(e.sourceLocation.file, workspaceRoot, archJSON.language) ===
-          pkg
+          this.extractPackageFromEntity(e, workspaceRoot, archJSON.language) === pkg
       );
 
       return {
@@ -124,11 +123,7 @@ export class ArchJSONAggregator {
     const packages = new Set<string>();
 
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(
-        entity.sourceLocation.file,
-        workspaceRoot,
-        language
-      );
+      const packageName = this.extractPackageFromEntity(entity, workspaceRoot, language);
       packages.add(packageName);
     }
 
@@ -198,6 +193,23 @@ export class ArchJSONAggregator {
     return afterSrc.substring(0, firstSlashIndex);
   }
 
+  /**
+   * For Kotlin, derive the logical package name directly from the entity ID.
+   * Entity IDs are always `com.example.pkg.ClassName` — strip the last component.
+   * Falls back to file-path extraction for all other languages.
+   */
+  private extractPackageFromEntity(
+    entity: Entity,
+    workspaceRoot?: string,
+    language?: ArchJSON['language']
+  ): string {
+    if (language === 'kotlin') {
+      const lastDot = entity.id.lastIndexOf('.');
+      return lastDot > 0 ? entity.id.slice(0, lastDot) : '';
+    }
+    return this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot, language);
+  }
+
   private extractJavaMavenModule(
     relativePath: string,
     language?: ArchJSON['language']
@@ -236,14 +248,10 @@ export class ArchJSONAggregator {
     workspaceRoot?: string,
     language?: ArchJSON['language']
   ): Relation[] {
-    // Create entity ID to package mapping (using file paths)
+    // Create entity ID to package mapping
     const entityToPackage = new Map<string, string>();
     for (const entity of entities) {
-      const packageName = this.extractPackageFromFile(
-        entity.sourceLocation.file,
-        workspaceRoot,
-        language
-      );
+      const packageName = this.extractPackageFromEntity(entity, workspaceRoot, language);
       entityToPackage.set(entity.id, packageName);
     }
 

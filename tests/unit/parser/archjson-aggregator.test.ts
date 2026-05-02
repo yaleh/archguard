@@ -556,6 +556,224 @@ describe('ArchJSONAggregator', () => {
       const packages = aggregator['extractPackages'](entities, undefined, 'java');
       expect(packages).toEqual(['jlama-core']);
     });
+
+    it('extracts Kotlin logical package names from entity IDs (not file paths)', () => {
+      const entities: Entity[] = [
+        {
+          id: 'com.example.androidmotty.app.AppShell',
+          name: 'AppShell',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/app/src/main/java/com/example/androidmotty/app/AppShell.kt',
+            startLine: 1,
+            endLine: 50,
+          },
+          members: [],
+        },
+        {
+          id: 'com.example.androidmotty.usb.MonitorSessionRuntime',
+          name: 'MonitorSessionRuntime',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/app/src/main/java/com/example/androidmotty/usb/MonitorSessionRuntime.kt',
+            startLine: 1,
+            endLine: 80,
+          },
+          members: [],
+        },
+        {
+          id: 'com.example.androidmotty.data.api.MottyApi',
+          name: 'MottyApi',
+          type: 'interface',
+          visibility: 'public',
+          sourceLocation: {
+            file: '/workspace/app/src/main/java/com/example/androidmotty/data/api/MottyApi.kt',
+            startLine: 1,
+            endLine: 10,
+          },
+          members: [],
+        },
+      ];
+
+      const packages = aggregator['extractPackages'](entities, '/workspace', 'kotlin');
+      expect(packages).toEqual([
+        'com.example.androidmotty.app',
+        'com.example.androidmotty.data.api',
+        'com.example.androidmotty.usb',
+      ]);
+    });
+
+    it('deduplicates Kotlin packages from entity IDs', () => {
+      const entities: Entity[] = [
+        {
+          id: 'com.example.app.Foo',
+          name: 'Foo',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: '/ws/app/src/main/java/com/example/app/Foo.kt', startLine: 1, endLine: 10 },
+          members: [],
+        },
+        {
+          id: 'com.example.app.Bar',
+          name: 'Bar',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: '/ws/app/src/main/java/com/example/app/Bar.kt', startLine: 1, endLine: 10 },
+          members: [],
+        },
+        {
+          id: 'com.example.usb.Baz',
+          name: 'Baz',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: '/ws/app/src/main/java/com/example/usb/Baz.kt', startLine: 1, endLine: 10 },
+          members: [],
+        },
+      ];
+
+      const packages = aggregator['extractPackages'](entities, '/ws', 'kotlin');
+      expect(packages).toEqual(['com.example.app', 'com.example.usb']);
+    });
+  });
+
+  describe('aggregateToPackageLevel (Kotlin)', () => {
+    it('produces package entities with Kotlin logical package names', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'kotlin',
+        timestamp: '2026-05-02T00:00:00.000Z',
+        workspaceRoot: '/workspace',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.example.app.AppShell',
+            name: 'AppShell',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/app/AppShell.kt',
+              startLine: 1,
+              endLine: 50,
+            },
+            members: [],
+          },
+          {
+            id: 'com.example.usb.UsbManager',
+            name: 'UsbManager',
+            type: 'interface',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/usb/UsbManager.kt',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+        ],
+        relations: [],
+      };
+
+      const result = aggregator['aggregateToPackageLevel'](archJSON);
+      expect(result.entities.map((e) => e.name).sort()).toEqual([
+        'com.example.app',
+        'com.example.usb',
+      ]);
+    });
+
+    it('maps Kotlin cross-package relations to package relations', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'kotlin',
+        timestamp: '2026-05-02T00:00:00.000Z',
+        workspaceRoot: '/workspace',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.example.app.AppShell',
+            name: 'AppShell',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/app/AppShell.kt',
+              startLine: 1,
+              endLine: 50,
+            },
+            members: [],
+          },
+          {
+            id: 'com.example.usb.UsbManager',
+            name: 'UsbManager',
+            type: 'interface',
+            visibility: 'public',
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/usb/UsbManager.kt',
+              startLine: 1,
+              endLine: 10,
+            },
+            members: [],
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'implementation',
+            source: 'com.example.app.AppShell',
+            target: 'com.example.usb.UsbManager',
+          },
+        ],
+      };
+
+      const result = aggregator['aggregateToPackageLevel'](archJSON);
+      expect(result.relations).toEqual([
+        {
+          id: 'pkg-com.example.app-com.example.usb',
+          type: 'implementation',
+          source: 'com.example.app',
+          target: 'com.example.usb',
+        },
+      ]);
+    });
+
+    it('filters out same-package Kotlin relations', () => {
+      const archJSON: ArchJSON = {
+        version: '1.0',
+        language: 'kotlin',
+        timestamp: '2026-05-02T00:00:00.000Z',
+        workspaceRoot: '/workspace',
+        sourceFiles: [],
+        entities: [
+          {
+            id: 'com.example.app.Foo',
+            name: 'Foo',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: { file: '/workspace/app/src/main/java/com/example/app/Foo.kt', startLine: 1, endLine: 10 },
+            members: [],
+          },
+          {
+            id: 'com.example.app.Bar',
+            name: 'Bar',
+            type: 'class',
+            visibility: 'public',
+            sourceLocation: { file: '/workspace/app/src/main/java/com/example/app/Bar.kt', startLine: 1, endLine: 10 },
+            members: [],
+          },
+        ],
+        relations: [
+          {
+            id: 'rel-1',
+            type: 'composition',
+            source: 'com.example.app.Foo',
+            target: 'com.example.app.Bar',
+          },
+        ],
+      };
+
+      const result = aggregator['aggregateToPackageLevel'](archJSON);
+      expect(result.relations).toHaveLength(0);
+    });
   });
 
   describe('analyzePackageDependencies', () => {
