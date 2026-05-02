@@ -5,7 +5,7 @@
 /**
  * Types of dependency management systems
  */
-export type DependencyType = 'npm' | 'gomod' | 'pip' | 'maven' | 'cargo' | 'cmake';
+export type DependencyType = 'npm' | 'gomod' | 'pip' | 'maven' | 'cargo' | 'cmake' | 'gradle-kts';
 
 /**
  * Scope/purpose of a dependency

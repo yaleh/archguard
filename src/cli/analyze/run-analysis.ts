@@ -41,6 +41,9 @@ async function loadPluginForLanguage(
     } else if (language === 'cpp') {
       const { CppPlugin } = await import('@/plugins/cpp/index.js');
       plugin = new CppPlugin();
+    } else if (language === 'kotlin') {
+      const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
+      plugin = new KotlinPlugin();
     } else {
       const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
       plugin = new TypeScriptPlugin();

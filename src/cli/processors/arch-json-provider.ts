@@ -294,7 +294,7 @@ export class ArchJsonProvider {
       }
     }
 
-    if (diagram.language === 'python' || diagram.language === 'java') {
+    if (diagram.language === 'python' || diagram.language === 'java' || diagram.language === 'kotlin') {
       const archJson = await this.registerDeferred(
         diagram.sources,
         diagram.language,
@@ -587,6 +587,22 @@ export class ArchJsonProvider {
         (await (async () => {
           const { JavaPlugin } = await import('@/plugins/java/index.js');
           return new JavaPlugin();
+        })());
+
+      await plugin.initialize({ workspaceRoot });
+      return plugin.parseProject(workspaceRoot, {
+        workspaceRoot,
+        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      });
+    }
+
+    if (pluginName === 'kotlin') {
+      const registryPlugin = this.registry?.getByName('kotlin');
+      const plugin =
+        registryPlugin ??
+        (await (async () => {
+          const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
+          return new KotlinPlugin();
         })());
 
       await plugin.initialize({ workspaceRoot });

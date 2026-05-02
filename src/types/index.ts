@@ -52,7 +52,7 @@ export {
 /**
  * Supported programming languages
  */
-export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust' | 'cpp';
+export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust' | 'cpp' | 'kotlin';
 
 /**
  * Module structure for organizing entities

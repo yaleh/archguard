@@ -2,6 +2,7 @@ import path from 'path';
 import { detectProjectStructure } from '../utils/project-structure-detector.js';
 import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
 import { detectJavaProjectStructure } from '../utils/java-project-structure-detector.js';
+import { detectKotlinProjectStructure } from '../utils/kotlin-project-structure-detector.js';
 import {
   createProjectRootLanguageDiagrams,
   planDefaultDiagrams,
@@ -46,6 +47,18 @@ export async function normalizeToDiagrams(
         },
       };
       return [diagram];
+    }
+
+    if (language === 'kotlin') {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      return filterByLevels(
+        await detectKotlinProjectStructure(sourcePath, {
+          label: path.basename(sourcePath),
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+        }),
+        cliOptions.diagrams
+      );
     }
 
     if (language === 'cpp') {
@@ -107,6 +120,16 @@ export async function normalizeToDiagrams(
         },
       },
     ];
+  }
+
+  if (cliOptions.lang === 'kotlin') {
+    return filterByLevels(
+      await detectKotlinProjectStructure(resolvedRoot, {
+        format: cliOptions.format,
+        exclude: cliOptions.exclude,
+      }),
+      cliOptions.diagrams
+    );
   }
 
   if (cliOptions.lang === 'cpp') {
