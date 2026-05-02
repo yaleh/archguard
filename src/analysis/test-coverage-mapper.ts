@@ -49,6 +49,13 @@ export class TestCoverageMapper {
           .replace(/^test[-_]/, '')
           .replace(/[-_]test$/, '');
       }
+      // Kotlin convention: FooTest.kt → Foo, FooTests.kt → Foo, TestFoo.kt → Foo
+      if (testNameWithoutExt === testBasename && /\.kts?$/.test(testBasename)) {
+        testNameWithoutExt = testBasename
+          .replace(/\.kts?$/, '')
+          .replace(/Tests?$/, '')
+          .replace(/^Test(?=[A-Z])/, '');
+      }
 
       // TypeScript/JS directory convention (confidence weight 0.25):
       // A test file in tests/unit/analysis/fim/ is linked to ALL entities in src/analysis/fim/.

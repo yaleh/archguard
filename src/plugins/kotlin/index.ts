@@ -228,7 +228,7 @@ export class KotlinPlugin implements ILanguagePlugin {
       if (/^@(Test|ParameterizedTest|RepeatedTest)\b/.test(trimmed)) {
         // Look forward for the function declaration
         for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-          const m = lines[j].match(/fun\s+(\w+)\s*[\(<]/);
+          const m = lines[j].match(/fun\s+(`[^`]+`|\w+)\s*[\(<]/);
           if (m) {
             testCases.push({
               name: m[1],
@@ -247,7 +247,7 @@ export class KotlinPlugin implements ILanguagePlugin {
           const annotLine = lines[j].trim();
           if (/^@(Test|ParameterizedTest|RepeatedTest)\b/.test(annotLine)) {
             for (let k = j + 1; k < Math.min(j + 4, lines.length); k++) {
-              const m = lines[k].match(/fun\s+(\w+)\s*[\(<]/);
+              const m = lines[k].match(/fun\s+(`[^`]+`|\w+)\s*[\(<]/);
               if (m) {
                 testCases.push({
                   name: m[1],

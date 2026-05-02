@@ -257,6 +257,18 @@ export class TestAnalyzer {
       }
 
       for (const entity of archJson.entities) {
+        // Kotlin: imports are dotted class/package paths that match entity IDs directly.
+        // e.g. import "com.example.app.AppShell" → entity.id = "com.example.app.AppShell"
+        if (entity.id === relSrc) {
+          result.push(entity.id);
+          continue;
+        }
+        // Kotlin package-level import: "com.example.usb" matches all entities in that package
+        if (!relSrc.includes('/') && relSrc.includes('.') && entity.id.startsWith(relSrc + '.')) {
+          result.push(entity.id);
+          continue;
+        }
+
         const entityFile = entity.sourceLocation?.file;
         if (!entityFile) continue;
         const relEntity = path.isAbsolute(entityFile)

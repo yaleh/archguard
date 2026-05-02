@@ -311,4 +311,88 @@ describe('TestCoverageMapper', () => {
     const link = result.find((l: CoverageLink) => l.sourceEntityId === 'internal/query.Stage2');
     expect(link?.coverageScore ?? 0).toBe(0);
   });
+
+  // Kotlin path-convention: FooTest.kt → Foo.kt
+  it('Kotlin: UsbDeviceRefreshControllerTest.kt matches UsbDeviceRefreshController.kt entity', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [
+      makeTestFile(
+        'app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt',
+        []
+      ),
+    ];
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.usb.UsbDeviceRefreshController',
+        name: 'UsbDeviceRefreshController',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/usb/UsbDeviceRefreshController.kt',
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find(
+      (l: CoverageLink) => l.sourceEntityId === 'com.example.usb.UsbDeviceRefreshController'
+    );
+    expect(link).toBeDefined();
+    expect(link!.coveredByTestIds).toContain(
+      'app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt'
+    );
+    expect(link!.coverageScore).toBeGreaterThan(0);
+  });
+
+  it('Kotlin: AppShellTest.kt (androidTest) matches AppShell.kt entity via path-convention', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [
+      makeTestFile('app/src/androidTest/java/com/example/app/AppShellTest.kt', []),
+    ];
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.app.AppShell',
+        name: 'AppShell',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/app/AppShell.kt',
+          startLine: 1,
+          endLine: 80,
+        },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'com.example.app.AppShell');
+    expect(link).toBeDefined();
+    expect(link!.coveredByTestIds).toContain(
+      'app/src/androidTest/java/com/example/app/AppShellTest.kt'
+    );
+    expect(link!.coverageScore).toBeGreaterThan(0);
+  });
+
+  it('Kotlin: ExampleInstrumentedTest.kt (no Test-suffix match) does not falsely link', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [
+      makeTestFile('app/src/androidTest/java/com/example/ExampleInstrumentedTest.kt', []),
+    ];
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.app.AppShell',
+        name: 'AppShell',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/app/AppShell.kt',
+          startLine: 1,
+          endLine: 80,
+        },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'com.example.app.AppShell');
+    // ExampleInstrumentedTest → strips "Test" → "ExampleInstrumented" — should NOT match AppShell
+    expect(link?.coverageScore ?? 0).toBe(0);
+  });
 });

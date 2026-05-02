@@ -741,3 +741,85 @@ describe('TestAnalyzer - C++ relative import path normalization (Fix ../ paths)'
     expect(link?.coverageScore).toBeGreaterThan(0);
   });
 });
+
+describe('TestAnalyzer - Kotlin entity-ID import matching', () => {
+  it('links Kotlin androidTest to production entity via dotted entity-ID match', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.kt']);
+    const filePath = `${workspaceRoot}/app/src/androidTest/java/com/example/app/AppShellLocalPackageImportTest.kt`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.app.AppShell',
+        name: 'AppShell',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/app/AppShell.kt',
+          startLine: 1,
+          endLine: 80,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'integration',
+        testCases: [{ name: 'importsLocalPackage', isSkipped: false, assertionCount: 2 }],
+        importedSourceFiles: ['com.example.app.AppShell'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.example.app.AppShell');
+    expect(result.metrics.entityCoverageRatio).toBeGreaterThan(0);
+  });
+
+  it('links Kotlin test importing a package to all entities in that package', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.kt']);
+    const filePath = `${workspaceRoot}/app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.usb.UsbDeviceRefreshController',
+        name: 'UsbDeviceRefreshController',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/usb/UsbDeviceRefreshController.kt',
+          startLine: 1,
+          endLine: 40,
+        },
+      },
+      {
+        id: 'com.example.usb.AndroidUsbSerialManager',
+        name: 'AndroidUsbSerialManager',
+        type: 'class',
+        sourceLocation: {
+          file: 'app/src/main/java/com/example/usb/AndroidUsbSerialManager.kt',
+          startLine: 1,
+          endLine: 60,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'refreshes on attach', isSkipped: false, assertionCount: 1 }],
+        // Package-level import links to all entities in the package
+        importedSourceFiles: ['com.example.usb'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    const covered = result.testFiles[0].coveredEntityIds;
+    expect(covered).toContain('com.example.usb.UsbDeviceRefreshController');
+    expect(covered).toContain('com.example.usb.AndroidUsbSerialManager');
+  });
+});

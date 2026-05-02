@@ -162,6 +162,48 @@ describe('KotlinPlugin', () => {
       const integResult = plugin.extractTestStructure?.('src/androidTest/FooTest.kt', code);
       expect(integResult?.testTypeHint).toBe('integration');
     });
+
+    it('detects backtick-named @Test functions (idiomatic Kotlin JUnit5)', () => {
+      const code = `
+        class UsbDeviceRefreshControllerTest {
+          @Test
+          fun \`refreshes when usb device is attached or detached\`() = runTest {
+            assertEquals(2, refreshCalls)
+          }
+
+          @Test
+          fun \`refreshes when lifecycle resumes\`() = runTest {
+            assertEquals(1, refreshCalls)
+          }
+        }
+      `;
+      const result = plugin.extractTestStructure?.(
+        'src/test/java/com/example/UsbDeviceRefreshControllerTest.kt',
+        code
+      );
+      expect(result).not.toBeNull();
+      expect(result?.testCases.length).toBe(2);
+      expect(result?.testTypeHint).toBe('unit');
+    });
+
+    it('returns null when all @Test functions use backtick names and none matched by old regex', () => {
+      // This test documents that backtick-only tests previously returned null — now they must not
+      const code = `
+        class AppShellTest {
+          @Test
+          fun \`shows project list on launch\`() {
+            assertTrue(true)
+          }
+        }
+      `;
+      const result = plugin.extractTestStructure?.(
+        'src/test/java/com/example/app/AppShellTest.kt',
+        code
+      );
+      // Must find the test case, not return null
+      expect(result).not.toBeNull();
+      expect(result?.testCases.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   describe('dispose', () => {
