@@ -19,7 +19,8 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 - **Multi-Language Support**: TypeScript, Go, Java, Python, C++, Kotlin/Android via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
-- **Static Test Analysis**: Test coverage mapping, assertion density, orphan detection, and quality issues — no test execution required
+- **Kotlin/Android Support**: Auto-detect Kotlin projects, parse `build.gradle.kts` / `settings.gradle.kts`, and plan multi-module diagrams
+- **Static Test Analysis**: Test coverage mapping, assertion density, orphan detection, and quality issues — no test execution required, including Kotlin/Android projects
 - **Parallel Processing**: High-performance parsing with configurable concurrency
 - **Smart Caching**: File-based caching with SHA-256 hashing for fast repeated runs
 - **Zero External Dependencies**: Local Mermaid rendering using isomorphic-mermaid
@@ -117,7 +118,7 @@ Point archguard at any project path — no configuration file needed:
 
 > Analyze the architecture of `/home/user/work/my-project` using archguard MCP.
 
-Archguard auto-detects the language and project structure, generates diagrams under `<project>/.archguard/`, and builds the query index for follow-up queries.
+Archguard auto-detects the language and project structure, generates diagrams under `<project>/.archguard/`, and builds the query index for follow-up queries. Kotlin/Android projects are detected from `build.gradle.kts`, `settings.gradle.kts`, `.kt`, and `.kts` markers and can be analyzed without forcing `--lang kotlin`.
 
 ### Standalone CLI
 
@@ -148,7 +149,7 @@ archguard analyze [options]
 
 - `-s, --sources <paths...>` - Source directories; triggers auto-detection and multi-diagram generation
 - `--diagrams <levels...>` - Filter by level: `package` | `class` | `method` (language-dependent)
-- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` | `kotlin` (auto-detected)
+- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` | `cpp` | `kotlin` (auto-detected)
 - `--config <path>` - Config file path (default: `archguard.config.json`)
 
 **Output:**
@@ -212,6 +213,9 @@ archguard analyze --include-tests
 
 # Refresh test report only, skip re-parsing source (faster)
 archguard analyze --tests-only
+
+# Kotlin/Android project (explicit language selection is optional)
+archguard analyze -s ./app/src/main/java --lang kotlin
 ```
 
 ### `query`
@@ -331,7 +335,7 @@ archguard cache path    # Show cache directory
 | Java           | Beta   | tree-sitter               | Classes, interfaces, Maven/Gradle deps              |
 | Python         | Beta   | tree-sitter               | Classes, functions, pip/Poetry deps                 |
 | C++            | Beta   | tree-sitter               | Structs, classes, inheritance, CMake deps           |
-| Kotlin/Android | Beta   | tree-sitter               | Classes, interfaces, build.gradle.kts deps          |
+| Kotlin/Android | Beta   | tree-sitter               | Classes, interfaces, top-level functions, `build.gradle.kts` deps, `settings.gradle.kts` multi-module planning, static test analysis |
 
 ### Go Architecture Atlas
 
