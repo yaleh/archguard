@@ -71,12 +71,16 @@ export class TreeSitterBridge {
         continue;
       }
 
-      // Recurse into preprocessor conditionals (#ifdef, #ifndef, #if, #else, #elif)
+      // Recurse into preprocessor conditionals and ERROR nodes.
+      // ERROR nodes arise when extern "C" { } braces are split across #ifdef __cplusplus
+      // blocks — tree-sitter cannot balance them and wraps the outer block in ERROR,
+      // but the subtree (including namespace/class nodes) is still correctly parsed.
       if (
         child.type === 'preproc_ifdef' ||
         child.type === 'preproc_if' ||
         child.type === 'preproc_else' ||
-        child.type === 'preproc_elif'
+        child.type === 'preproc_elif' ||
+        child.type === 'ERROR'
       ) {
         this.visitForClasses(child, filePath, fileNamespace, currentNs, out);
         continue;
@@ -187,12 +191,13 @@ export class TreeSitterBridge {
         continue;
       }
 
-      // Recurse into preprocessor conditionals
+      // Recurse into preprocessor conditionals and ERROR nodes (same reason as visitForClasses)
       if (
         child.type === 'preproc_ifdef' ||
         child.type === 'preproc_if' ||
         child.type === 'preproc_else' ||
-        child.type === 'preproc_elif'
+        child.type === 'preproc_elif' ||
+        child.type === 'ERROR'
       ) {
         this.visitForEnums(child, filePath, namespace, out);
         continue;
@@ -243,12 +248,13 @@ export class TreeSitterBridge {
         if (body) fns.push(...this.extractTopLevelFunctions(body, filePath, newNs));
         continue;
       }
-      // Recurse into preprocessor conditionals
+      // Recurse into preprocessor conditionals and ERROR nodes (same reason as visitForClasses)
       if (
         child.type === 'preproc_ifdef' ||
         child.type === 'preproc_if' ||
         child.type === 'preproc_else' ||
-        child.type === 'preproc_elif'
+        child.type === 'preproc_elif' ||
+        child.type === 'ERROR'
       ) {
         fns.push(...this.extractTopLevelFunctions(child, filePath, namespace));
         continue;
