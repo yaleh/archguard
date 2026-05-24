@@ -85,9 +85,17 @@ export class ClassBuilder {
       this.findDescendant(declarator, 'identifier');
     if (!nameNode) return null;
 
+    // tree-sitter puts pointer/reference sigils in the declarator node, not the type node.
+    // e.g. `Foo *bar_` → type="Foo", declarator=pointer_declarator("*bar_").
+    // Append the qualifier so classifyFieldRelation can distinguish pointer fields
+    // (aggregation) from value fields (composition).
+    let fieldType = typeNode.text;
+    if (declarator.type === 'pointer_declarator') fieldType += ' *';
+    else if (declarator.type === 'reference_declarator') fieldType += ' &';
+
     return {
       name: nameNode.text,
-      fieldType: typeNode.text,
+      fieldType,
       visibility,
       isStatic: node.text.includes('static'),
     };
