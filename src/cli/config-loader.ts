@@ -243,6 +243,8 @@ const configSchema = z.object({
         format: z.enum(['mermaid', 'json']).optional(),
         /** Exclude patterns override */
         exclude: z.array(z.string()).optional(),
+        /** Language plugin: typescript | cpp | python | go | java | kotlin */
+        language: z.string().optional(),
         /** v2.1.0: Diagram metadata */
         metadata: DiagramMetadataSchema.optional(),
         /** v2.1.0: Design information */
@@ -302,6 +304,7 @@ interface FileConfig {
     description?: string;
     format?: 'mermaid' | 'json';
     exclude?: string[];
+    language?: string;
   }>;
 }
 
