@@ -88,7 +88,7 @@ function displayResults(results: DiagramResult[], config: Config): void {
 export function createAnalyzeCommand(): Command {
   return (
     new Command('analyze')
-      .description('Analyze TypeScript project and generate architecture diagrams')
+      .description('Analyze source code and generate architecture diagrams (TypeScript, Go, Java, Python, C++, Kotlin)')
 
       // ========== Configuration File ==========
       .option('--config <path>', 'Config file path (default: archguard.config.json)')
@@ -102,7 +102,7 @@ export function createAnalyzeCommand(): Command {
         '-s, --sources <paths...>',
         'Source directories (auto-detects project structure, generates multi-diagram)'
       )
-      .option('--lang <language>', 'Language plugin: typescript (default: auto-detect)')
+      .option('--lang <language>', 'Language plugin: typescript|go|java|python|cpp|kotlin (default: auto-detect)')
 
       // ========== Global Config Overrides ==========
       .option('-f, --format <type>', 'Output format: mermaid|json (default: mermaid)')

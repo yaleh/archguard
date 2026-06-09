@@ -26,7 +26,7 @@ export function createCLI(): Command {
   program
     .name('archguard')
     .version(packageJson.version)
-    .description('ArchGuard - TypeScript Architecture Analyzer and Documentation Generator');
+    .description('ArchGuard - Multi-Language Architecture Analyzer and Documentation Generator');
 
   // Add commands
   program.addCommand(createAnalyzeCommand());
