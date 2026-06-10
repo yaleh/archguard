@@ -11,6 +11,64 @@ import { detectProjectLanguages } from '../utils/project-language-detector.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
 
+/** Common options passed to every structure detector. */
+interface DetectorOptions {
+  label?: string;
+  format?: DiagramConfig['format'];
+  exclude?: string[];
+  /** Used only by cpp when --sources is provided (basename of sourcePath). */
+  moduleName?: string;
+}
+
+/**
+ * A structure detector function: given a project root and common options,
+ * it returns the list of DiagramConfig entries for that language.
+ */
+type StructureDetector = (
+  root: string,
+  options?: DetectorOptions
+) => Promise<DiagramConfig[]> | DiagramConfig[];
+
+/**
+ * Registry of structure detectors keyed by language name.
+ *
+ * Languages whose project structure can be discovered via a single
+ * `detectXxxProjectStructure(root, options)` call live here.
+ *
+ * Intentionally excluded:
+ *  - `go`        — architecturally different (Atlas vs. standard diagram)
+ *  - `typescript`/`python` — use the generic `createProjectRootLanguageDiagrams` fallback
+ *
+ * Export is intentional: consumers and tests can inspect or extend the map
+ * without touching dispatch logic.
+ */
+export const LANGUAGE_STRUCTURE_DETECTORS: Record<string, StructureDetector> = {
+  kotlin: (root, opts) =>
+    detectKotlinProjectStructure(root, {
+      label: opts?.label,
+      format: opts?.format,
+      exclude: opts?.exclude,
+    }),
+  cpp: (root, opts) =>
+    detectCppProjectStructure(root, opts?.moduleName ?? path.basename(root), {
+      format: opts?.format as string | undefined,
+      exclude: opts?.exclude,
+    }),
+  java: (root, opts) =>
+    detectJavaProjectStructure(root, {
+      label: opts?.label,
+      format: opts?.format,
+      exclude: opts?.exclude,
+    }),
+};
+
+/**
+ * Languages that use `createProjectRootLanguageDiagrams` in the no-sources
+ * path (instead of a dedicated structure detector).
+ * cpp is also in this set because its no-sources path uses the generic fallback.
+ */
+const GENERIC_FALLBACK_LANGS = new Set(['typescript', 'python', 'cpp']);
+
 /**
  * Normalize CLI options to DiagramConfig[]
  */
@@ -27,9 +85,9 @@ export async function normalizeToDiagrams(
 
   if (cliOptions.sources && cliOptions.sources.length > 0) {
     const language = cliOptions.lang;
-    const atlasEnabled = language === 'go';
 
-    if (atlasEnabled) {
+    // Go: special Atlas diagram — not a structure-detector language
+    if (language === 'go') {
       const diagram: DiagramConfig = {
         name: 'architecture',
         sources: cliOptions.sources,
@@ -49,40 +107,7 @@ export async function normalizeToDiagrams(
       return [diagram];
     }
 
-    if (language === 'kotlin') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      return filterByLevels(
-        await detectKotlinProjectStructure(sourcePath, {
-          label: path.basename(sourcePath),
-          format: cliOptions.format,
-          exclude: cliOptions.exclude,
-        }),
-        cliOptions.diagrams
-      );
-    }
-
-    if (language === 'cpp') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      const moduleName = path.basename(sourcePath);
-      const diagrams = await detectCppProjectStructure(sourcePath, moduleName, {
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      });
-      return filterByLevels(diagrams, cliOptions.diagrams);
-    }
-
-    if (language === 'java') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      return filterByLevels(
-        await detectJavaProjectStructure(sourcePath, {
-          label: path.basename(sourcePath),
-          format: cliOptions.format,
-          exclude: cliOptions.exclude,
-        }),
-        cliOptions.diagrams
-      );
-    }
-
+    // TypeScript / Python: generic fallback (label comes from the source path)
     if (language === 'python' || language === 'typescript') {
       const sourcePath = path.resolve(cliOptions.sources[0]);
       return filterByLevels(
@@ -96,11 +121,30 @@ export async function normalizeToDiagrams(
       );
     }
 
+    // Registry lookup (kotlin / cpp / java + future languages)
+    const detector = LANGUAGE_STRUCTURE_DETECTORS[language ?? ''];
+    if (detector) {
+      const sourcePath = path.resolve(cliOptions.sources[0]);
+      return filterByLevels(
+        await detector(sourcePath, {
+          label: path.basename(sourcePath),
+          moduleName: path.basename(sourcePath),
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+        }),
+        cliOptions.diagrams
+      );
+    }
+
+    // Unknown language: auto-detect project structure
     const externalSourceRoot = path.resolve(cliOptions.sources[0]);
     const diagrams = await detectProjectStructure(resolvedRoot, externalSourceRoot);
     return filterByLevels(diagrams, cliOptions.diagrams);
   }
 
+  // ── No --sources path ─────────────────────────────────────────────────────
+
+  // Go: special Atlas diagram
   if (cliOptions.lang === 'go') {
     return [
       {
@@ -122,9 +166,12 @@ export async function normalizeToDiagrams(
     ];
   }
 
-  if (cliOptions.lang === 'kotlin') {
+  // Languages that have a dedicated structure detector and aren't in the
+  // generic-fallback set (kotlin / java)
+  const lang = cliOptions.lang ?? '';
+  if (LANGUAGE_STRUCTURE_DETECTORS[lang] && !GENERIC_FALLBACK_LANGS.has(lang)) {
     return filterByLevels(
-      await detectKotlinProjectStructure(resolvedRoot, {
+      await LANGUAGE_STRUCTURE_DETECTORS[lang](resolvedRoot, {
         format: cliOptions.format,
         exclude: cliOptions.exclude,
       }),
@@ -132,9 +179,10 @@ export async function normalizeToDiagrams(
     );
   }
 
-  if (cliOptions.lang === 'cpp') {
+  // TypeScript / Python / cpp (no-sources): generic fallback
+  if (GENERIC_FALLBACK_LANGS.has(lang)) {
     return filterByLevels(
-      createProjectRootLanguageDiagrams(resolvedRoot, 'cpp', {
+      createProjectRootLanguageDiagrams(resolvedRoot, lang as 'typescript' | 'python' | 'cpp', {
         format: cliOptions.format,
         exclude: cliOptions.exclude,
       }),
@@ -142,26 +190,7 @@ export async function normalizeToDiagrams(
     );
   }
 
-  if (cliOptions.lang === 'java') {
-    return filterByLevels(
-      await detectJavaProjectStructure(resolvedRoot, {
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      }),
-      cliOptions.diagrams
-    );
-  }
-
-  if (cliOptions.lang === 'python' || cliOptions.lang === 'typescript') {
-    return filterByLevels(
-      createProjectRootLanguageDiagrams(resolvedRoot, cliOptions.lang, {
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      }),
-      cliOptions.diagrams
-    );
-  }
-
+  // Auto-detect language then plan diagrams
   const candidates = await detectProjectLanguages(resolvedRoot);
   if (
     candidates.length === 1 &&
