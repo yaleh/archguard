@@ -89,7 +89,7 @@ export class ArchJSONAggregator {
       return {
         id: pkg,
         name: pkg,
-        type: 'package' as any, // Type assertion needed as 'package' is not in EntityType
+        type: 'package',
         visibility: 'public' as const,
         members: [],
         sourceLocation: firstEntityInPackage

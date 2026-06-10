@@ -6,7 +6,7 @@
  */
 
 import path from 'path';
-import type { ArchJSON, Entity, EntityType, Member, Relation } from '../types/index.js';
+import type { ArchJSON, Entity, Member, Relation } from '../types/index.js';
 import type { DiagramConfig } from '../types/config.js';
 import type {
   MermaidDetailLevel,
@@ -33,7 +33,7 @@ const ENTITY_CLASSDEF_STYLES: Record<string, string> = {
   function: 'fill:#f6f8fa,stroke:#d0d7de,color:#57606a',
 };
 
-function entityTypeToClassDef(type: EntityType): string {
+function entityTypeToClassDef(type: string): string {
   return type === 'class' ? 'classNode' : type;
 }
 

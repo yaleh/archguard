@@ -1,6 +1,6 @@
 import path from 'path';
 import { BaseArchJsonMapper, createRelation } from '@/plugins/shared/mapper-utils.js';
-import type { Entity, EntityType, Member, MemberType, Relation } from '@/types/index.js';
+import type { Entity, KnownEntityType, Member, MemberType, Relation } from '@/types/index.js';
 import type { MergedCppEntity, RawEnum, RawFunction, RawMethod, RawField } from './types.js';
 import { CppTypeExtractor } from './cpp-type-extractor.js';
 
@@ -20,7 +20,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<MergedCppEntity> {
       entities.push({
         id,
         name: cls.name,
-        type: cls.kind as EntityType,
+        type: cls.kind as KnownEntityType,
         visibility: 'public',
         members: [
           ...cls.fields.map((f) => this.mapField(f)),

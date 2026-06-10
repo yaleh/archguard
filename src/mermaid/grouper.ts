@@ -121,9 +121,8 @@ export class HeuristicGrouper {
       // For path-based package names (e.g. "src", "src/models", "examples/batched"),
       // group by the top-level path component using the entity name directly.
       // Package entities from the aggregator always carry their canonical path as name.
-      // Note: 'package' is a valid entity type at runtime (e.g. C++ aggregator output)
-      // even though EntityType does not yet enumerate it — cast to string for comparison.
-      const isPathBased = (entity.type as string) === 'package' || entity.name.includes('/');
+      // 'package' is a valid EntityType (open union) — no cast needed.
+      const isPathBased = entity.type === 'package' || entity.name.includes('/');
       const javaModuleName =
         archJson.language === 'java'
           ? this.extractJavaMavenModuleName(entity.sourceLocation.file)

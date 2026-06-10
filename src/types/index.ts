@@ -94,9 +94,11 @@ export interface ArchJSON {
 }
 
 /**
- * Entity types in the architecture
+ * Known (built-in) entity types in the architecture.
+ * Plugins may declare additional types via EntityTypeRegistry; use EntityType
+ * (the open union) wherever a value may be a custom type string.
  */
-export type EntityType =
+export type KnownEntityType =
   | 'class'
   | 'interface'
   | 'enum'
@@ -104,6 +106,14 @@ export type EntityType =
   | 'trait'
   | 'abstract_class'
   | 'function';
+
+/**
+ * Open entity type: the seven built-in kinds plus any custom string that a
+ * language plugin registers. Widened from the closed KnownEntityType union so
+ * that values like 'package', 'lock_domain', etc. are first-class citizens
+ * without requiring `as any` casts.
+ */
+export type EntityType = KnownEntityType | string;
 
 /**
  * Visibility modifiers
