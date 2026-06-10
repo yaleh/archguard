@@ -57,10 +57,9 @@ consumers — Claude Code, downstream tools — cannot discover what types are q
   not a source-entity concept. The aggregator's synthetic package entities are an
   internal detail; they should stay `as any` or be typed via a separate internal
   interface, not promoted into the public `KnownEntityType` union.
-- Exposing `--attr`/attribute queries through the MCP tools surface
-  (`src/cli/mcp/mcp-server.ts`). The `archguard_find_entity` MCP tool currently
-  accepts only a `name` parameter. Adding attribute filtering to MCP tools is deferred;
-  the CLI `--attr` flag is the primary interface in this proposal.
+- A full expression query language (SQL-like predicates with `AND/OR/NOT` across
+  multiple attribute conditions). Composing `--type` + one or more `--attr` flags
+  covers the primary use cases without a parser.
 
 ## Design
 
@@ -331,6 +330,60 @@ function entityTypeToClassDef(
 time (or imports it directly), giving it access without changing the public API of
 `generate()`.
 
+### 8. MCP tool extension (`archguard_find_entity`)
+
+ADR-007 requires CLI/MCP interface parity: every new query capability added to the
+CLI must have a corresponding MCP entry point calling the same `QueryEngine` method.
+Attribute filtering is primarily useful to Claude Code — the AI agent asking "find all
+`lock_domain` entities where `irq_safe=true`" — so MCP parity is not optional here.
+
+**Current state**: `archguard_find_entity` in `src/cli/mcp/mcp-server.ts:161` accepts
+only a `name` parameter (exact-match entity lookup). It has no `entityType` or
+attribute filter.
+
+**Change**: extend the tool's input schema with two optional parameters:
+
+```typescript
+// New input schema for archguard_find_entity
+{
+  name?: string,          // existing: exact name match (now optional)
+  entityType?: string,    // new: filter by entity type (e.g. 'lock_domain')
+  attrFilter?: Record<string, string | number | boolean>  // new: attribute key-value filter (AND-composed)
+}
+```
+
+Routing logic in the tool handler:
+
+```typescript
+// src/cli/mcp/mcp-server.ts — archguard_find_entity handler
+if (name) {
+  // existing path: exact name lookup, unchanged
+  return engine.findEntity(name);
+} else if (entityType || attrFilter) {
+  // new path: type + attribute filter
+  const attrEntries = attrFilter ? Object.entries(attrFilter) : [];
+  const [firstKey, firstVal] = attrEntries[0] ?? [undefined, undefined];
+  let results = entityType
+    ? engine.findByTypeAndAttr(entityType, firstKey, firstVal)
+    : engine.findByAttr(firstKey!, firstVal);
+  for (const [k, v] of attrEntries.slice(1)) {
+    results = results.filter((e) => e.attributes?.[k] === v);
+  }
+  return results;
+}
+```
+
+The handler calls `findByTypeAndAttr()` / `findByAttr()` — the same `QueryEngine`
+methods as the CLI `--attr` path. No duplicate logic.
+
+**Tool description update**: change from `"Find entity by exact name"` to
+`"Find entities by name, type, or attribute filter. Provide 'name' for exact match,
+'entityType' to filter by type, or 'attrFilter' to filter by attribute key-value pairs.
+Multiple attrFilter entries are AND-composed."`.
+
+This is the canonical path for Claude Code to query custom entity types and their
+domain attributes without needing to read the entire ArchJSON dump.
+
 ## Affected Files
 
 | File | Change |
@@ -346,6 +399,7 @@ time (or imports it directly), giving it access without changing the public API 
 | `src/parser/archjson-aggregator.ts` | Remove `as any` from `type: 'package' as any` — no longer needed once `EntityType` is open |
 | `src/mermaid/grouper.ts` | Remove `as string` cast in `(entity.type as string) === 'package'` |
 | `src/plugins/cpp/archjson-mapper.ts` | Change `cls.kind as EntityType` to `cls.kind as KnownEntityType` (or remove cast if emitting custom kinds intentionally) |
+| `src/cli/mcp/mcp-server.ts` | Extend `archguard_find_entity` input schema with `entityType?` and `attrFilter?`; update handler to route through `findByTypeAndAttr()` / `findByAttr()` |
 
 **Not affected** (no changes required):
 - `src/plugins/typescript/`, `src/plugins/golang/`, `src/plugins/java/`, `src/plugins/python/`, `src/plugins/kotlin/` — their `metadata` objects need no `customEntityTypes` field; existing type assignments (`'class'`, `'struct'`, etc.) remain valid.

@@ -210,10 +210,41 @@ Test cases for `queryHandler` routing (mocked `QueryEngine`):
 
 > Note: `validateQueryOptions` must be exported from `query.ts` so it can be unit-tested directly (test cases 7-11 in Stage 3.1 depend on this).
 
-### Stage 3.3 — Self-validation
+### Stage 3.3 — MCP parity (ADR-007)
+
+ADR-007 requires every CLI capability to have a corresponding MCP entry point. Attribute
+filtering is primarily useful to Claude Code, so MCP parity is not optional.
+
+**File: `tests/unit/cli/mcp/mcp-server-find-entity.test.ts`** (new, ~50 lines) — write
+tests first:
+
+1. `archguard_find_entity({ name: 'Foo' })` still calls `findEntity('Foo')` (existing path unchanged).
+2. `archguard_find_entity({ entityType: 'lock_domain' })` calls `findByType('lock_domain')` (no attr).
+3. `archguard_find_entity({ entityType: 'lock_domain', attrFilter: { irq_safe: true } })` calls `findByTypeAndAttr('lock_domain', 'irq_safe', true)`.
+4. `archguard_find_entity({ attrFilter: { execution_context: 'irq' } })` (no entityType) calls `findByAttr('execution_context', 'irq')`.
+5. `attrFilter` with two keys applies AND: result is intersection of both attr filters.
+6. Empty `attrFilter: {}` with `entityType` set behaves as plain `findByType`.
+7. Neither `name` nor `entityType` nor `attrFilter` provided → tool returns error response (no crash).
+
+Then implement in **`src/cli/mcp/mcp-server.ts`** (~30 lines changed):
+
+- Update `archguard_find_entity` input schema (`inputSchema.properties`) to add:
+  ```
+  entityType: { type: 'string', description: 'Filter by entity type (e.g. lock_domain)' }
+  attrFilter:  { type: 'object', description: 'Attribute key-value pairs (AND-composed)' }
+  ```
+- Make `name` optional in the schema (add it to `required: []` or remove from `required`).
+- Update the handler to:
+  1. If `name` is provided → `engine.findEntity(name)` (existing, unchanged).
+  2. Else if `entityType` or `attrFilter` → route through `findByTypeAndAttr` / `findByAttr`
+     with AND reduction for multiple `attrFilter` entries (same logic as Stage 3.2 CLI handler).
+  3. Else → return empty result with a descriptive message.
+- Update tool description string to document the three calling modes.
+
+### Stage 3.4 — Self-validation
 
 ```bash
-npm test                               # all tests pass (target: 2787 + ~45 new)
+npm test                               # all tests pass (target: 2787 + ~95 new across Phase 3)
 npm run type-check
 npm run build
 
@@ -227,7 +258,7 @@ node dist/cli/index.js query --type class --format json | head -5
 node dist/cli/index.js query --attr some_key 2>&1 | grep -i "primary"
 ```
 
-Expected: `--attr` alone prints the validation error message; `--type class` still works.
+Expected: `--attr` alone prints the validation error message; `--type class` still works; MCP tool tests pass.
 
 ---
 
@@ -345,6 +376,7 @@ Phases 3 and 4 can be developed in parallel once Phase 2 is complete.
 | `src/core/entity-type-registry.ts` | 2 | new | ~33 |
 | `src/cli/query/query-engine.ts` | 2 | modify | ~25 |
 | `src/cli/commands/query.ts` | 3 | modify | ~50 |
+| `src/cli/mcp/mcp-server.ts` | 3 | modify | ~30 |
 | `src/cli/processors/arch-json-provider.ts` | 4 | modify | ~8 |
 | `src/cli/analyze/run-analysis.ts` | 4 | modify | ~4 |
 | **Tests** | | | |
@@ -352,11 +384,12 @@ Phases 3 and 4 can be developed in parallel once Phase 2 is complete.
 | `tests/unit/core/entity-type-registry.test.ts` | 2, 4 | new | ~90 |
 | `tests/unit/cli/query/query-engine.test.ts` | 2 | extend | ~40 |
 | `tests/unit/cli/commands/query-attr.test.ts` | 3 | new | ~120 |
+| `tests/unit/cli/mcp/mcp-server-find-entity.test.ts` | 3 | new | ~50 |
 | `tests/unit/mermaid/generator-unknown-type.test.ts` | 4 | new | ~80 |
 
-**Total production code delta**: ~179 lines.
-**Total test code delta**: ~370 lines.
-**Grand total**: ~549 lines (well within 4 × 500 budget; each phase ≤ 200 production lines and ≤ 250 test lines).
+**Total production code delta**: ~209 lines.
+**Total test code delta**: ~420 lines.
+**Grand total**: ~629 lines (well within 4 × 500 budget; each phase ≤ 200 production lines and ≤ 300 test lines).
 
 ---
 
