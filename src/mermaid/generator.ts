@@ -8,6 +8,7 @@
 import path from 'path';
 import type { ArchJSON, Entity, Member, Relation } from '../types/index.js';
 import type { DiagramConfig } from '../types/config.js';
+import { globalEntityTypeRegistry, EntityTypeRegistry } from '@/core/entity-type-registry.js';
 import type {
   MermaidDetailLevel,
   GroupingDecision,
@@ -33,8 +34,17 @@ const ENTITY_CLASSDEF_STYLES: Record<string, string> = {
   function: 'fill:#f6f8fa,stroke:#d0d7de,color:#57606a',
 };
 
-function entityTypeToClassDef(type: string): string {
-  return type === 'class' ? 'classNode' : type;
+function entityTypeToClassDef(
+  type: string,
+  registry: EntityTypeRegistry = globalEntityTypeRegistry
+): string {
+  if (type === 'class') return 'classNode';
+  if (type in ENTITY_CLASSDEF_STYLES) return type;
+  const custom = registry.get(type);
+  if (custom?.mermaidShape && custom.mermaidShape !== 'default') {
+    return custom.mermaidShape === 'component' ? 'interface' : 'classNode';
+  }
+  return 'classNode'; // unknown type: plain box, never throws
 }
 
 /**

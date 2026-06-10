@@ -86,4 +86,16 @@ describe('EntityTypeRegistry', () => {
     const mod2 = await import('@/core/entity-type-registry.js');
     expect(mod1.globalEntityTypeRegistry).toBe(mod2.globalEntityTypeRegistry);
   });
+
+  // Test 16 (Phase 4): globalEntityTypeRegistry.clear() in afterEach has no side effects on isolation
+  it('globalEntityTypeRegistry.clear() in afterEach leaves the registry empty for the next test', () => {
+    // Register something
+    globalEntityTypeRegistry.register(makeDecl('test_type_isolation'));
+    expect(globalEntityTypeRegistry.get('test_type_isolation')).toBeDefined();
+    // afterEach will clear this; subsequent tests start empty
+    // Verify clear() works inline as well
+    globalEntityTypeRegistry.clear();
+    expect(globalEntityTypeRegistry.get('test_type_isolation')).toBeUndefined();
+    expect(globalEntityTypeRegistry.listCustomTypes()).toEqual([]);
+  });
 });

@@ -23,6 +23,7 @@ import type { ArchJSON } from '@/types/index.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { ArchJsonDiskCache } from '@/cli/cache/arch-json-disk-cache.js';
 import { planGoAnalysisScope } from '@/plugins/golang/source-scope.js';
+import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import { createHash } from 'crypto';
 import path from 'path';
 
@@ -504,6 +505,11 @@ export class ArchJsonProvider {
       })());
 
     await plugin.initialize({ workspaceRoot });
+    if (plugin.metadata?.customEntityTypes) {
+      for (const decl of plugin.metadata.customEntityTypes) {
+        globalEntityTypeRegistry.register(decl);
+      }
+    }
     return plugin.parseProject(workspaceRoot, {
       workspaceRoot,
       includePatterns: plan.includePatterns,
@@ -529,6 +535,11 @@ export class ArchJsonProvider {
       })());
 
     await plugin.initialize({ workspaceRoot });
+    if (plugin.metadata?.customEntityTypes) {
+      for (const decl of plugin.metadata.customEntityTypes) {
+        globalEntityTypeRegistry.register(decl);
+      }
+    }
     return plugin.parseProject(workspaceRoot, {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
@@ -554,6 +565,11 @@ export class ArchJsonProvider {
       })());
 
     await plugin.initialize({ workspaceRoot });
+    if (plugin.metadata?.customEntityTypes) {
+      for (const decl of plugin.metadata.customEntityTypes) {
+        globalEntityTypeRegistry.register(decl);
+      }
+    }
     return plugin.parseProject(workspaceRoot, {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
@@ -574,6 +590,11 @@ export class ArchJsonProvider {
         })());
 
       await plugin.initialize({ workspaceRoot });
+      if (plugin.metadata?.customEntityTypes) {
+        for (const decl of plugin.metadata.customEntityTypes) {
+          globalEntityTypeRegistry.register(decl);
+        }
+      }
       return plugin.parseProject(workspaceRoot, {
         workspaceRoot,
         excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
@@ -590,6 +611,11 @@ export class ArchJsonProvider {
         })());
 
       await plugin.initialize({ workspaceRoot });
+      if (plugin.metadata?.customEntityTypes) {
+        for (const decl of plugin.metadata.customEntityTypes) {
+          globalEntityTypeRegistry.register(decl);
+        }
+      }
       return plugin.parseProject(workspaceRoot, {
         workspaceRoot,
         excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
@@ -606,6 +632,11 @@ export class ArchJsonProvider {
         })());
 
       await plugin.initialize({ workspaceRoot });
+      if (plugin.metadata?.customEntityTypes) {
+        for (const decl of plugin.metadata.customEntityTypes) {
+          globalEntityTypeRegistry.register(decl);
+        }
+      }
       return plugin.parseProject(workspaceRoot, {
         workspaceRoot,
         excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],

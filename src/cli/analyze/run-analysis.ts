@@ -3,6 +3,7 @@ import { ConfigLoader } from '../config-loader.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
 import type { ProgressReporterLike } from '../progress.js';
+import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
 import { ParseCache } from '@/parser/parse-cache.js';
@@ -49,11 +50,21 @@ async function loadPluginForLanguage(
       plugin = new TypeScriptPlugin();
     }
     await plugin.initialize?.({ workspaceRoot });
+    if (plugin.metadata?.customEntityTypes) {
+      for (const decl of plugin.metadata.customEntityTypes) {
+        globalEntityTypeRegistry.register(decl);
+      }
+    }
     return plugin;
   } catch {
     const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
     plugin = new TypeScriptPlugin();
     await plugin.initialize?.({ workspaceRoot });
+    if (plugin.metadata?.customEntityTypes) {
+      for (const decl of plugin.metadata.customEntityTypes) {
+        globalEntityTypeRegistry.register(decl);
+      }
+    }
     return plugin;
   }
 }
