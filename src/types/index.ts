@@ -136,6 +136,7 @@ export interface Entity {
   genericParams?: string[];
   extends?: string[];
   implements?: string[];
+  attributes?: Record<string, string | number | boolean>;
 }
 
 /**

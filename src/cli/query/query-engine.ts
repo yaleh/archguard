@@ -204,6 +204,35 @@ export class QueryEngine {
     });
   }
 
+  /** Find entities that have the given attribute key (optionally matching a specific value). */
+  findByAttr(key: string, value?: string | number | boolean): Entity[] {
+    return this.archJson.entities.filter((e) => {
+      if (!e.attributes) return false;
+      if (value === undefined) return key in e.attributes;
+      return e.attributes[key] === value;
+    });
+  }
+
+  /**
+   * Find entities by type, optionally filtered by an attribute key/value.
+   *
+   * - entityType only → equivalent to findByType(entityType)
+   * - + attrKey (no attrValue) → presence check: entity must have the attribute key
+   * - + attrKey + attrValue → value match: entity must have attribute key equal to attrValue
+   */
+  findByTypeAndAttr(
+    entityType: string,
+    attrKey?: string,
+    attrValue?: string | number | boolean
+  ): Entity[] {
+    return this.findByType(entityType).filter((e) => {
+      if (!attrKey) return true;
+      if (!e.attributes) return false;
+      if (attrValue === undefined) return attrKey in e.attributes;
+      return e.attributes[attrKey] === attrValue;
+    });
+  }
+
   /** Find entities whose total incoming + outgoing edges >= threshold. */
   findHighCoupling(threshold: number = 8): Entity[] {
     return this.archJson.entities.filter((e) => {

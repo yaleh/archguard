@@ -1678,4 +1678,111 @@ describe('QueryEngine', () => {
       expect(result.testFileDetails[0].assertionDensity).toBeCloseTo(3.0);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // findByAttr / findByTypeAndAttr (Phase 2)
+  // -----------------------------------------------------------------------
+
+  describe('findByAttr / findByTypeAndAttr', () => {
+    const entityWithAttrs = makeEntity('X', 'Xray', {
+      type: 'class',
+      attributes: { irq_safe: true, priority: 3, label: 'main' },
+    });
+    const entityPartialAttrs = makeEntity('Y', 'Yankee', {
+      type: 'interface',
+      attributes: { priority: 5 },
+    });
+    const entityNoAttrs = makeEntity('Z', 'Zulu', { type: 'class' });
+
+    const attrArchJson = makeArchJson({
+      entities: [entityWithAttrs, entityPartialAttrs, entityNoAttrs],
+      relations: [],
+    });
+
+    // Test 8: Returns entities that have given attribute key (presence check, value omitted)
+    it('findByAttr: returns entities that have the given attribute key (presence check)', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('irq_safe');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('X');
+    });
+
+    // Test 9: Returns entities whose attribute key equals given string value
+    it('findByAttr: returns entities whose attribute key equals a given string value', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('label', 'main');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('X');
+    });
+
+    // Test 10: Returns entities whose attribute key equals given boolean value
+    it('findByAttr: returns entities whose attribute key equals a given boolean value', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('irq_safe', true);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('X');
+    });
+
+    // Test 11: Returns entities whose attribute key equals given number value
+    it('findByAttr: returns entities whose attribute key equals a given number value', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('priority', 5);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('Y');
+    });
+
+    // Test 12: Returns [] when no entities have attributes
+    it('findByAttr: returns [] when no entities have attributes', () => {
+      const engine = createEngine(makeArchJson({ entities: [entityNoAttrs], relations: [] }));
+      const result = engine.findByAttr('irq_safe');
+      expect(result).toEqual([]);
+    });
+
+    // Test 13: Returns [] when entities have attributes but not the queried key
+    it('findByAttr: returns [] when entities have attributes but not the queried key', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('nonexistent_key');
+      expect(result).toEqual([]);
+    });
+
+    // Test 14: Returns [] when key matches but value does not
+    it('findByAttr: returns [] when key matches but value does not match', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByAttr('irq_safe', false);
+      expect(result).toEqual([]);
+    });
+
+    // Test 15: findByTypeAndAttr with only entityType (no attrKey): equivalent to findByType()
+    it('findByTypeAndAttr: with only entityType returns same as findByType()', () => {
+      const engine = createEngine(attrArchJson);
+      const byType = engine.findByType('class');
+      const byTypeAndAttr = engine.findByTypeAndAttr('class');
+      expect(byTypeAndAttr).toEqual(byType);
+    });
+
+    // Test 16: findByTypeAndAttr with entityType + attrKey presence check
+    it('findByTypeAndAttr: with entityType + attrKey presence check returns subset', () => {
+      const engine = createEngine(attrArchJson);
+      // Both entityWithAttrs and entityNoAttrs are 'class'; only entityWithAttrs has 'irq_safe'
+      const result = engine.findByTypeAndAttr('class', 'irq_safe');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('X');
+    });
+
+    // Test 17: findByTypeAndAttr with entityType + attrKey + attrValue narrows further
+    it('findByTypeAndAttr: with entityType + attrKey + attrValue narrows to matching value', () => {
+      const engine = createEngine(attrArchJson);
+      const result = engine.findByTypeAndAttr('class', 'priority', 3);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('X');
+    });
+
+    // Test 18: Returns [] when no entity has both right type and right attribute
+    it('findByTypeAndAttr: returns [] when no entity has both right type and right attribute', () => {
+      const engine = createEngine(attrArchJson);
+      // entityPartialAttrs has 'priority' but type is 'interface', not 'class'
+      const result = engine.findByTypeAndAttr('class', 'priority', 5);
+      expect(result).toEqual([]);
+    });
+  });
 });

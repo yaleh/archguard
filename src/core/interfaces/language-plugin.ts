@@ -50,6 +50,22 @@ export interface RawTestFile {
 }
 
 /**
+ * Declaration of a custom entity type provided by a language plugin.
+ * Registered into EntityTypeRegistry so the Mermaid renderer can
+ * degrade gracefully for unknown types.
+ */
+export interface CustomEntityTypeDeclaration {
+  /** The custom type string (e.g. 'lock_domain'). */
+  type: string;
+  /** Human-readable label for UIs and reports. */
+  display: string;
+  /** How the entity should be rendered in Mermaid diagrams. */
+  mermaidShape?: 'class' | 'component' | 'service' | 'default';
+  /** Known attribute keys that entities of this type may carry. */
+  attributes?: string[];
+}
+
+/**
  * Plugin capabilities flags
  *
  * Indicates which optional features the plugin supports
@@ -131,6 +147,13 @@ export interface PluginMetadata {
    * Plugin capabilities
    */
   capabilities: PluginCapabilities;
+
+  /**
+   * Custom entity types declared by this plugin.
+   * These are registered into EntityTypeRegistry during plugin initialization
+   * so the Mermaid renderer can handle them gracefully.
+   */
+  customEntityTypes?: CustomEntityTypeDeclaration[];
 }
 
 /**
