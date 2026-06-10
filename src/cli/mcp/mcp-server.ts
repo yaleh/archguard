@@ -159,18 +159,51 @@ function toAtlasAdjacency(
 export function registerTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_find_entity',
-    'Find architecture entities by exact name match',
+    "Find entities by name, type, or attribute filter. Provide 'name' for exact match, 'entityType' to filter by type, or 'attrFilter' for attribute key-value pairs (AND-composed).",
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
-      name: z.string().describe('Entity name to search for'),
+      name: z.string().optional().describe('Entity name to search for (exact match)'),
+      entityType: z.string().optional().describe('Filter by entity type (e.g. lock_domain, class)'),
+      attrFilter: z
+        .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+        .optional()
+        .describe('Attribute key-value pairs (AND-composed). Values can be string, number, or boolean.'),
       verbose: verboseParam,
     },
-    async ({ projectRoot, scope, name, verbose }) => {
+    async ({ projectRoot, scope, name, entityType, attrFilter, verbose }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.findEntity(name), verbose);
+
+        let entities: Entity[];
+
+        if (name) {
+          // Existing path: exact name match
+          entities = engine.findEntity(name);
+        } else {
+          const attrEntries = attrFilter ? Object.entries(attrFilter) : [];
+          const [[firstKey, firstVal], ...restEntries] = attrEntries.length > 0
+            ? attrEntries
+            : [[undefined, undefined] as [undefined, undefined]];
+
+          if (entityType) {
+            entities = firstKey !== undefined
+              ? engine.findByTypeAndAttr(entityType, firstKey, firstVal as string | number | boolean)
+              : engine.findByType(entityType);
+          } else if (firstKey !== undefined) {
+            entities = engine.findByAttr(firstKey, firstVal as string | number | boolean);
+          } else {
+            entities = [];
+          }
+
+          // AND-compose remaining attr filters
+          for (const [k, v] of restEntries) {
+            entities = entities.filter((e) => e.attributes?.[k] === v);
+          }
+        }
+
+        const payload = applyView(engine, entities, verbose);
         return textResponse(serializeEntities(payload));
       });
     }

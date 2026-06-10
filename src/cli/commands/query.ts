@@ -37,12 +37,46 @@ interface QueryOptions {
   orphans?: true;
   inCycles?: true;
 
+  // Phase 5: attribute queries
+  attr?: string[];
+
   // Package stats
   packageStats?: string | boolean;
   packageStatsSortBy?: string;
   packageStatsMinFiles?: string;
   packageStatsMinLoc?: string;
   packageStatsTop?: string;
+}
+
+/**
+ * Parse a raw --attr option string into a key and coerced value.
+ *
+ * Format: `key` (presence check) or `key=value` (equality check).
+ * Values are coerced: "true"/"false" → boolean, numeric strings → number, else string.
+ * Splits on the FIRST `=` only so values containing `=` are preserved.
+ */
+export function parseAttrOption(raw: string): { key: string; value: string | number | boolean | undefined } {
+  const eqIdx = raw.indexOf('=');
+  if (eqIdx === -1) return { key: raw, value: undefined };
+  const key = raw.slice(0, eqIdx);
+  const rawVal = raw.slice(eqIdx + 1);
+  if (rawVal === 'true') return { key, value: true };
+  if (rawVal === 'false') return { key, value: false };
+  const num = Number(rawVal);
+  if (!isNaN(num) && rawVal !== '') return { key, value: num };
+  return { key, value: rawVal };
+}
+
+function buildAttrQueryLabel(
+  type: string | undefined,
+  attrs: Array<{ key: string; value: string | number | boolean | undefined }>
+): string {
+  const parts: string[] = [];
+  if (type) parts.push(`type="${type}"`);
+  for (const a of attrs) {
+    parts.push(a.value === undefined ? `attr:${a.key}` : `attr:${a.key}=${a.value}`);
+  }
+  return `Entities matching ${parts.join(', ')}`;
 }
 
 /**
@@ -77,6 +111,9 @@ export function createQueryCommand(): Command {
       .option('--threshold <n>', 'Coupling threshold for --high-coupling', '8')
       .option('--orphans', 'Find orphan entities (no relations)')
       .option('--in-cycles', 'Find entities participating in cycles')
+
+      // Phase 5: attribute queries
+      .option('--attr <keyOrPair...>', 'Filter by attribute key or key=value pair (repeatable, AND-composed)')
 
       // Package stats
       .option('--package-stats [depth]', 'Show package statistics (optional depth 1-5, default: 2)')
@@ -151,10 +188,27 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       const summary = engine.getSummary();
       result = summary;
       if (!isJson) formatSummary(summary);
-    } else if (opts.type) {
-      const entities = engine.findByType(opts.type);
+    } else if (opts.type || opts.attr?.length) {
+      const parsedAttrs = (opts.attr ?? []).map(parseAttrOption);
+      const [first, ...rest] = parsedAttrs;
+      let entities: Entity[];
+      if (opts.type) {
+        entities = first
+          ? engine.findByTypeAndAttr(opts.type, first.key, first.value)
+          : engine.findByType(opts.type);
+      } else {
+        entities = engine.findByAttr(first.key, first.value);
+      }
+      // AND-compose remaining attrs
+      for (const attr of rest) {
+        entities = entities.filter((e) =>
+          attr.value === undefined
+            ? e.attributes != null && attr.key in e.attributes
+            : e.attributes?.[attr.key] === attr.value
+        );
+      }
       result = projectEntitiesForOutput(engine, entities, opts.verbose);
-      if (!isJson) formatEntityList(entities, `Entities of type "${opts.type}"`);
+      if (!isJson) formatEntityList(entities, buildAttrQueryLabel(opts.type, parsedAttrs));
     } else if (opts.highCoupling) {
       const threshold = parseBoundedInt(opts.threshold, '--threshold', 1);
       const entities = engine.findHighCoupling(threshold);
@@ -227,7 +281,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
   }
 }
 
-function validateQueryOptions(opts: QueryOptions): void {
+export function validateQueryOptions(opts: QueryOptions): void {
   const primaryOptions = [
     opts.entity,
     opts.depsOf,
@@ -247,6 +301,12 @@ function validateQueryOptions(opts: QueryOptions): void {
 
   if (primaryOptions.length > 1) {
     throw new Error('Specify exactly one primary query option.');
+  }
+
+  if (opts.attr?.length && primaryOptions.length === 0) {
+    throw new Error(
+      '--attr requires a primary query option (e.g. --type). To filter by attribute alone, use --type with a custom type name.'
+    );
   }
 
   if (opts.depsOf || opts.usedBy) {
