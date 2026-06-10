@@ -1,3 +1,19 @@
+## Context in the Proposal Series
+
+This is the first of three proposals addressing ArchGuard's extensibility:
+
+| Step | Proposal | Side | Claude Code impact |
+|------|----------|------|--------------------|
+| **1+2** | **This document** | **Consumer** | **Claude Code can now query custom entity types and domain attributes via `archguard_find_entity`** |
+| 3 | `proposal-tree-sitter-query-externalization.md` | Producer | Transparent — lowers cost of adding new languages; no change to query interface |
+| 4 | `proposal-declarative-entity-schema.md` | Producer | Transparent — makes entity mapping declarative; no change to query interface |
+
+The ordering is intentional: **extend the consumer interface first, then lower the
+producer cost**. Steps 3 and 4 make it cheaper to emit custom entity types and
+attributes; Step 1+2 makes those types and attributes queryable. Delivering Step 1+2
+first means Claude Code gets the query capability regardless of whether Steps 3 and 4
+are ever implemented — plugins can emit `Entity.attributes` in TypeScript today.
+
 ## Problem Statement
 
 `EntityType` in `src/types/index.ts:99` is a closed union:
