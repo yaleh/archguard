@@ -1,0 +1,170 @@
+{
+  "levels": {
+    "L1": {
+      "bootstrap": {
+        "ci_high": 34.60375901986464,
+        "ci_low": 26.09624314975915,
+        "ci_width": 8.50751587010549,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 225,
+      "level": "L1",
+      "mle": 25.30202240255894,
+      "n_duplicates_removed": 0,
+      "n_points": 225,
+      "n_unique": 225,
+      "reliable": true,
+      "skdim_version": "0.3.4",
+      "twonn": 32.788160070227725,
+      "unreliable_reasons": []
+    },
+    "L2": {
+      "bootstrap": {
+        "ci_high": 34.60375901986464,
+        "ci_low": 26.09624314975915,
+        "ci_width": 8.50751587010549,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 225,
+      "level": "L2",
+      "mle": 25.30202240255894,
+      "n_duplicates_removed": 0,
+      "n_points": 225,
+      "n_unique": 225,
+      "reliable": true,
+      "skdim_version": "0.3.4",
+      "twonn": 32.788160070227725,
+      "unreliable_reasons": []
+    },
+    "L3": {
+      "bootstrap": {
+        "ci_high": 2.831546862512153,
+        "ci_low": 1.796098502337212,
+        "ci_width": 1.0354483601749411,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 225,
+      "level": "L3",
+      "mle": 2.1999186022423673,
+      "n_duplicates_removed": 0,
+      "n_points": 225,
+      "n_unique": 225,
+      "reliable": true,
+      "skdim_version": "0.3.4",
+      "twonn": 2.7237831817145777,
+      "unreliable_reasons": []
+    },
+    "L4": {
+      "bootstrap": {
+        "ci_high": 2.831546862512153,
+        "ci_low": 1.796098502337212,
+        "ci_width": 1.0354483601749411,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 225,
+      "level": "L4",
+      "mle": 2.1999186022423673,
+      "n_duplicates_removed": 0,
+      "n_points": 225,
+      "n_unique": 225,
+      "reliable": true,
+      "skdim_version": "0.3.4",
+      "twonn": 2.7237831817145777,
+      "unreliable_reasons": []
+    },
+    "L5": {
+      "bootstrap": {
+        "ci_high": 2.831546862512153,
+        "ci_low": 1.796098502337212,
+        "ci_width": 1.0354483601749411,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 225,
+      "level": "L5",
+      "mle": 2.1999186022423673,
+      "n_duplicates_removed": 0,
+      "n_points": 225,
+      "n_unique": 225,
+      "reliable": true,
+      "skdim_version": "0.3.4",
+      "twonn": 2.7237831817145777,
+      "unreliable_reasons": []
+    }
+  },
+  "skdim_version": "0.3.4"
+}

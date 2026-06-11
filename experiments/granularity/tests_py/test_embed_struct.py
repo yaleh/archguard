@@ -36,8 +36,8 @@ def all_nodes(archjson):
     return extract_all_method_nodes(archjson)
 
 @pytest.fixture(scope="module")
-def entity_repr(archjson):
-    return build_entity_repr_map(archjson)
+def entity_repr(archjson, all_nodes):
+    return build_entity_repr_map(archjson, set(all_nodes))
 
 @pytest.fixture(scope="module")
 def entity_relations(archjson):

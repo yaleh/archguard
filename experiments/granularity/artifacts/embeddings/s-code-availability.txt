@@ -1,0 +1,22 @@
+Stage 70.2 S-code Model Availability Check
+DATE: 2026-06-11T14:09:17Z
+
+RESULT: ALL S-CODE FALLBACK MODELS UNAVAILABLE
+
+Checked models (LiteLLM gateway: https://litellm.lrfz.com):
+  1. nomic-embed-text      → 400 Invalid model name (not in gateway)
+  2. mxbai-embed-large     → 400 Invalid model name (not in gateway)
+  3. text-embedding-3-small → 400 Invalid model name (not in gateway)
+  4. text-embedding-3-large → 400 Invalid model name (not in gateway)
+
+Available embedding model on gateway: qwen3-embedding:4b (used for S-lm-real)
+
+DECISION (per plan §Stage 70.2 protocol):
+  S-code sensor: SKIPPED — no distinct S-code model available
+  Using 2-sensor design: S-lm-real (qwen3-embedding:4b) + S-struct (node2vec)
+  Phase 0 gate proceeds with 2 sensors (threshold: ANY sensor shows d_ℓ separation)
+  Deviation noted in experiment report as D-70.2-s-code-unavailable
+
+NOTE: Using the same model for S-lm-real and S-code would produce identical
+embeddings (same model, same input = same output), defeating the dual-sensor
+design. Skipping is scientifically correct.

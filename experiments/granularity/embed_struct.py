@@ -64,47 +64,56 @@ def load_callgraph_call_edges() -> list[tuple[str, str]]:
 
 
 def extract_all_method_nodes(archjson: dict) -> list[str]:
-    """Extract all method node IDs: '<relative_file>#<ClassName>.<methodName>'.
+    """Extract all method node IDs from callgraph (authoritative scope for S-struct).
 
-    ArchGuard ArchJSON uses:
-      - entity.members (not entity.methods)
-      - member.type == 'method' to filter methods
-      - entity.sourceLocation.file (not entity.file)
+    Uses callgraph.json (kind='call') nodes as the fixed node set — this captures
+    ALL methods in scope (including private methods not in ArchJSON public members).
+    ArchJSON public members are a strict subset of callgraph nodes for the mermaid+parser scope.
     """
-    nodes = []
-    for entity in archjson.get("entities", []):
-        cls = entity.get("name", "")
-        src_loc = entity.get("sourceLocation", {})
-        rel_file = src_loc.get("file", "") if isinstance(src_loc, dict) else ""
-        for member in entity.get("members", []):
-            if member.get("type") != "method":
-                continue
-            mname = member.get("name", "")
-            if mname:
-                nodes.append(f"{rel_file}#{cls}.{mname}")
-    return nodes
+    call_edges = load_callgraph_call_edges()
+    nodes_set: set[str] = set()
+    for src, tgt in call_edges:
+        nodes_set.add(src)
+        nodes_set.add(tgt)
+    return sorted(nodes_set)
 
 
-def get_representative_method(entity: dict) -> str | None:
-    """Return the first method node id for an entity (for L1/L2 expansion rule)."""
+def get_representative_method(entity: dict, known_nodes: set[str]) -> str | None:
+    """Return the first method node id for an entity that exists in known_nodes.
+
+    Searches ArchJSON public members first; falls back to scanning known_nodes
+    for any node matching 'file#ClassName.*'. This handles private methods
+    that appear in the callgraph but not in ArchJSON members.
+    """
     cls = entity.get("name", "")
     src_loc = entity.get("sourceLocation", {})
     rel_file = src_loc.get("file", "") if isinstance(src_loc, dict) else ""
+
+    # Try ArchJSON public methods first
     for member in entity.get("members", []):
         if member.get("type") != "method":
             continue
         mname = member.get("name", "")
         if mname:
-            return f"{rel_file}#{cls}.{mname}"
-    return None  # entity has no methods; skip its edges
+            node_id = f"{rel_file}#{cls}.{mname}"
+            if node_id in known_nodes:
+                return node_id
+
+    # Fallback: scan known_nodes for any method of this class
+    prefix = f"{rel_file}#{cls}."
+    for node in known_nodes:
+        if node.startswith(prefix):
+            return node
+
+    return None  # entity not in callgraph scope; skip its edges
 
 
-def build_entity_repr_map(archjson: dict) -> dict[str, str | None]:
-    """Map entity name → representative method node (or None if no methods)."""
+def build_entity_repr_map(archjson: dict, known_nodes: set[str]) -> dict[str, str | None]:
+    """Map entity name → representative method node (or None if not in callgraph scope)."""
     result: dict[str, str | None] = {}
     for entity in archjson.get("entities", []):
         name = entity.get("name", "")
-        result[name] = get_representative_method(entity)
+        result[name] = get_representative_method(entity, known_nodes)
     return result
 
 
@@ -183,7 +192,8 @@ def main(argv: list[str] | None = None) -> int:
     archjson = read_json(args.archjson)
     call_edges = load_callgraph_call_edges()
     all_nodes = extract_all_method_nodes(archjson)
-    entity_repr = build_entity_repr_map(archjson)
+    known_nodes_set = set(all_nodes)
+    entity_repr = build_entity_repr_map(archjson, known_nodes_set)
     entity_relations = archjson.get("relations", [])
 
     print(f"Method nodes: {len(all_nodes)}", file=sys.stderr)

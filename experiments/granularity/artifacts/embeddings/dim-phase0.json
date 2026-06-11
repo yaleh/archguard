@@ -1,0 +1,195 @@
+{
+  "version": "v2.2",
+  "timestamp": "2026-06-11T14:25:03.634196Z",
+  "phase": "Phase 0 Gate",
+  "sensors": {
+    "S-lm-real": {
+      "model": "qwen3-embedding:4b",
+      "n_anchors": 102,
+      "dim_profile": {
+        "L0": {
+          "twonn": 12.4,
+          "ci": [
+            7.57,
+            13.44
+          ],
+          "reliable": true
+        },
+        "L1": {
+          "twonn": 9.54,
+          "ci": [
+            5.9,
+            10.91
+          ],
+          "reliable": true
+        },
+        "L2": {
+          "twonn": 8.69,
+          "ci": [
+            6.19,
+            13.3
+          ],
+          "reliable": true
+        },
+        "L3": {
+          "twonn": 12.16,
+          "ci": [
+            8.64,
+            15.22
+          ],
+          "reliable": true
+        },
+        "L4": {
+          "twonn": 12.38,
+          "ci": [
+            7.13,
+            13.56
+          ],
+          "reliable": true
+        },
+        "L5": {
+          "twonn": 10.05,
+          "ci": [
+            6.58,
+            11.61
+          ],
+          "reliable": true
+        }
+      },
+      "separation": {
+        "crit_a": false,
+        "crit_b": true,
+        "separated": true,
+        "details": "Criterion (b) passes: KW p\u22480 on bootstrap distributions across {L0,L2,L3,L5}. Note: d_\u2113 is NOT monotone; d_L0=12.40 is the peak, d_L2=8.69 is the trough. This results in degenerate P_GIT-sem = L0 for all tasks (documented anomaly)."
+      }
+    },
+    "S-code": {
+      "status": "UNAVAILABLE",
+      "reason": "All fallback models unavailable on LiteLLM gateway: nomic-embed-text, mxbai-embed-large, text-embedding-3-small all returned 400.",
+      "fallback_models_checked": [
+        "nomic-embed-text",
+        "mxbai-embed-large",
+        "text-embedding-3-small"
+      ],
+      "separated": null
+    },
+    "S-struct": {
+      "method": "node2vec",
+      "params": {
+        "dimensions": 64,
+        "walk_length": 40,
+        "num_walks": 10,
+        "p": 1.0,
+        "q": 1.0,
+        "seed": 59
+      },
+      "n_method_nodes": 225,
+      "n_call_edges": 375,
+      "dim_profile": {
+        "L0": {
+          "twonn": null,
+          "status": "not_estimable",
+          "reason": "zero-edge graph"
+        },
+        "L1": {
+          "twonn": 32.79,
+          "ci": [
+            26.1,
+            34.6
+          ],
+          "reliable": true,
+          "edges": 0
+        },
+        "L2": {
+          "twonn": 32.79,
+          "ci": [
+            26.1,
+            34.6
+          ],
+          "reliable": true,
+          "edges": 0
+        },
+        "L3": {
+          "twonn": 2.72,
+          "ci": [
+            1.8,
+            2.83
+          ],
+          "reliable": true,
+          "edges": 295
+        },
+        "L4": {
+          "twonn": 2.72,
+          "ci": [
+            1.8,
+            2.83
+          ],
+          "reliable": true,
+          "edges": 295
+        },
+        "L5": {
+          "twonn": 2.72,
+          "ci": [
+            1.8,
+            2.83
+          ],
+          "reliable": true,
+          "edges": 295
+        }
+      },
+      "finding": "L1/L2 zero-edge \u2192 high apparent d (random walk self-visits). L3+ connected \u2192 low d (structured manifold). Clear CI non-overlap between L1/L2 (32.79) and L3 (2.72). THIS IS AN INVERTED PATTERN: d DECREASES when adding structure.",
+      "finding_interpretation": "node2vec compresses connected graphs to low-d manifolds; disconnected graphs yield high-d noise. S-struct separation signal is present but in opposite direction to language embedding.",
+      "separation": {
+        "crit_a": true,
+        "crit_b": true,
+        "separated": true,
+        "details": "Both criteria pass. Criterion (a): |d_L5-d_L2|=30.06 > 2, CI [1.80,2.83] vs [26.10,34.60] non-overlapping. Criterion (b): KW p\u22480. However, the separation is INVERTED (coarser levels have HIGHER d), resulting in degenerate P_GIT-struct = L1 for all tasks."
+      },
+      "l1_l2_zero_edges_reason": "ArchGuard mermaid+parser scope: no entity-level inheritance/composition relations exist between the 31 callgraph-scope classes. All entity relations are to external-scope classes (cli, plugins, etc.)."
+    }
+  },
+  "gate_decision": {
+    "n_separating_sensors": 2,
+    "sensors_separated": [
+      "S-lm-real",
+      "S-struct"
+    ],
+    "sensors_missing": [
+      "S-code"
+    ],
+    "verdict": "PROCEED_FULL_B_SERIES",
+    "rule": ">= 2 sensors separate \u2192 continue B-series (Phase 71 full A+B+C)",
+    "note": "Both sensors separate, but predictions are DEGENERATE: P_GIT-sem=L0 and P_GIT-struct=L1 for all tasks. This is a valid (if unexpected) pre-registered result. B-series proceeds but P_GIT predictors are expected to perform near P_random or worse."
+  },
+  "d_task_per_class": {
+    "A": {
+      "twonn": 8.52,
+      "reliable": false
+    },
+    "B": {
+      "twonn": 2.87,
+      "reliable": false
+    },
+    "C": {
+      "twonn": 9.34,
+      "reliable": true
+    }
+  },
+  "deviations": [
+    {
+      "id": "D-70.2-s-code-unavailable",
+      "description": "S-code sensor skipped: no distinct embedding model available on LiteLLM gateway. Proceeding with 2-sensor design.",
+      "impact": "Reduced power; max separating sensors = 2 instead of 3."
+    },
+    {
+      "id": "D-70.3-l1-l2-zero-edges",
+      "description": "S-struct L1/L2 have zero entity-level edges because ArchGuard mermaid+parser scope lacks within-scope inheritance/dependency relations.",
+      "impact": "L1/L2 structurally indistinguishable from L0 in S-struct. High apparent d (32.79) is noise from zero-edge random walks."
+    },
+    {
+      "id": "D-70.5-degenerate-predictions",
+      "description": "P_GIT-sem and P_GIT-struct are degenerate (predict L0 and L1 respectively for all tasks) because the d_\u2113 profiles are non-monotone.",
+      "impact": "B-series B-B1 and B-B2 tests will almost certainly show P_GIT predictors do NOT outperform P_random."
+    }
+  ]
+}

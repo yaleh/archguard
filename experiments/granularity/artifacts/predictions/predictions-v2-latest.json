@@ -1,0 +1,1096 @@
+{
+  "version": "v2.2",
+  "timestamp": "20260611T142416Z",
+  "n_tasks": 68,
+  "d_task_per_class": {
+    "A": 8.52,
+    "B": 2.87,
+    "C": 9.34
+  },
+  "level_dims": {
+    "S-lm-real": {
+      "L0": 12.4,
+      "L1": 9.54,
+      "L2": 8.69,
+      "L3": 12.16,
+      "L4": 12.38,
+      "L5": 10.05
+    },
+    "S-struct": {
+      "L1": 32.79,
+      "L2": 32.79,
+      "L3": 2.72,
+      "L4": 2.72,
+      "L5": 2.72
+    }
+  },
+  "sensors_available": [
+    "S-lm-real",
+    "S-struct"
+  ],
+  "sensors_missing": [
+    "S-code"
+  ],
+  "tie_break_rule": "L3/L4_tie_resolves_to_L3",
+  "predictions": [
+    {
+      "task_id": "v2-a-highest-indegree-1",
+      "task_class": "A",
+      "task_type": "highest-in-degree",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-top3-indegree",
+      "task_class": "A",
+      "task_type": "top-n-in-degree",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-cycle-exists",
+      "task_class": "A",
+      "task_type": "cycle-detection",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-list-packages",
+      "task_class": "A",
+      "task_type": "list-packages",
+      "H0": "L0",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L0",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-largest-package-size",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-relation-count",
+      "task_class": "A",
+      "task_type": "relation-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-dominant-entity-type",
+      "task_class": "A",
+      "task_type": "entity-type-count",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-package-size-plugins",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-package-size-cli",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-package-size-types",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-package-size-mermaid",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-package-size-analysis",
+      "task_class": "A",
+      "task_type": "package-entity-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-cross-package-count",
+      "task_class": "A",
+      "task_type": "cross-package-deps",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1"
+      ]
+    },
+    {
+      "task_id": "v2-a-total-entity-count",
+      "task_class": "A",
+      "task_type": "entity-count",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-interface-count",
+      "task_class": "A",
+      "task_type": "entity-type-count",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-root-entity-count",
+      "task_class": "A",
+      "task_type": "root-node-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-highest-outdegree",
+      "task_class": "A",
+      "task_type": "highest-out-degree",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-direct-dep-exists",
+      "task_class": "A",
+      "task_type": "direct-dependency-exists",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-inheritance-count",
+      "task_class": "A",
+      "task_type": "relation-type-count",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-composition-count",
+      "task_class": "A",
+      "task_type": "relation-type-count",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-internal-rel-plugins",
+      "task_class": "A",
+      "task_type": "package-internal-relations",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-internal-rel-cli",
+      "task_class": "A",
+      "task_type": "package-internal-relations",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-internal-rel-types",
+      "task_class": "A",
+      "task_type": "package-internal-relations",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-internal-rel-mermaid",
+      "task_class": "A",
+      "task_type": "package-internal-relations",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L2",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-a-dominant-relation-type",
+      "task_class": "A",
+      "task_type": "relation-type-distribution",
+      "H0": "L1",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L1",
+      "d_task": 8.52,
+      "derivable_levels": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-validatedmermaidgenerator-escapeid",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-relationextractor-addrelation",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-noopprogressreporter-succeed",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-iprogressreporter-succeed",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-validatedmermaidgenerator-normalizeen",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-relationextractor-extracttypename",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-noopprogressreporter-start",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-iprogressreporter-start",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers--tonodeid",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callers-mermaidparsevalidator-validate",
+      "task_class": "B",
+      "task_type": "direct-callers",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-validatedmermaidgenerator-generatemet",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-mermaidautorepair-repair",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-mermaiddiagramgenerator-renderjobsinp",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-typescriptparser-parseproject",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-mermaidautorepair-repairbesteffort",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-validatedmermaidgenerator-generate",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-validatedmermaidgenerator-generatepac",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-callees-validatedmermaidgenerator-generatelay",
+      "task_class": "B",
+      "task_type": "direct-callees",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-caller-count-mermaidparsevalidator-validate",
+      "task_class": "B",
+      "task_type": "caller-count",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-caller-count-noopprogressreporter-start",
+      "task_class": "B",
+      "task_type": "caller-count",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-caller-count-iprogressreporter-start",
+      "task_class": "B",
+      "task_type": "caller-count",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+      "task_class": "B",
+      "task_type": "call-exists",
+      "H0": "L3",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 2.87,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-mermaid-to-validated",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-mermaid-to-pipeline",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-mermaid-to-renderer",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-mermaid-to-repair",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-mermaid-to-grouper",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-pipeline-to-validator",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-pipeline-to-structural",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-pipeline-to-render",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-pipeline-to-quality",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-autorepair-to-validator",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-generator-to-comment",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-parallel-to-ts",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-ts-to-relation",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-ts-to-interface",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-ts-to-enum",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c1-ts-to-function",
+      "task_class": "C",
+      "task_type": "concrete-call-edges",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c2-most-called-alidatedmermaidgenerator",
+      "task_class": "C",
+      "task_type": "most-called-external-method",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c2-most-called-ypescriptparser",
+      "task_class": "C",
+      "task_type": "most-called-external-method",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c2-most-called-elationextractor",
+      "task_class": "C",
+      "task_type": "most-called-external-method",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c2-most-called-ermaidvalidationpipeline",
+      "task_class": "C",
+      "task_type": "most-called-external-method",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L3",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    {
+      "task_id": "c2-most-called-ermaidparsevalidator",
+      "task_class": "C",
+      "task_type": "most-called-external-method",
+      "H0": "L2",
+      "P_GIT-sem": "L0",
+      "P_GIT-struct": "L1",
+      "P_random": "L5",
+      "d_task": 9.34,
+      "derivable_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ]
+    }
+  ]
+}
