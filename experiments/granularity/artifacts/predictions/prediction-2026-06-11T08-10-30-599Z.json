@@ -1,0 +1,564 @@
+{
+  "schema": "prediction-v1",
+  "generatedAt": "2026-06-11T08:10:30.599Z",
+  "inputs": {
+    "tasks": {
+      "path": "artifacts/gt/tasks.json",
+      "sha256": "5603556004c77fb4221a920cbf57e4d9725f46b4e06f163b1fd924e1ece840ab"
+    },
+    "dimensions": {
+      "path": "artifacts/embeddings/dimensions-merged.json",
+      "sha256": "516f4f54940c22ea871bc8a9b687d78a4bf273a788610aaeb775be95205a02cc"
+    },
+    "archjson": {
+      "path": "artifacts/levels/L4/arch.json",
+      "sha256": "b38ee21f074c8e68b29ebbfd781a0d5d3e0bdc08f3e5653d39f8c9af44844366"
+    }
+  },
+  "K": 167,
+  "derivability": {
+    "obf-highest-in-degree-1": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": true
+    },
+    "obf-inter-layer-deps-2": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": true
+    },
+    "obf-articulation-point-3": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": true
+    },
+    "obf-signature-change-impact-4": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-5": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-6": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-7": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-8": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-9": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-10": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-11": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-12": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-13": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-14": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-15": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": true
+    },
+    "obf-signature-change-impact-16": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-17": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-signature-change-impact-18": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-19": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-20": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-21": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-22": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": true
+    },
+    "obf-callers-into-23": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-24": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-25": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-26": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-27": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-28": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-29": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-30": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-31": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-32": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-callers-into-33": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "obf-most-called-method-34": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    }
+  },
+  "h0": {
+    "obf-highest-in-degree-1": "L5",
+    "obf-inter-layer-deps-2": "L5",
+    "obf-articulation-point-3": "L5",
+    "obf-signature-change-impact-4": "L3",
+    "obf-signature-change-impact-5": "L3",
+    "obf-signature-change-impact-6": "L3",
+    "obf-signature-change-impact-7": "L3",
+    "obf-signature-change-impact-8": "L3",
+    "obf-signature-change-impact-9": "L3",
+    "obf-signature-change-impact-10": "L3",
+    "obf-signature-change-impact-11": "L3",
+    "obf-signature-change-impact-12": "L3",
+    "obf-signature-change-impact-13": "L3",
+    "obf-signature-change-impact-14": "L3",
+    "obf-signature-change-impact-15": "L5",
+    "obf-signature-change-impact-16": "L3",
+    "obf-signature-change-impact-17": "L3",
+    "obf-signature-change-impact-18": "L3",
+    "obf-callers-into-19": "L3",
+    "obf-callers-into-20": "L3",
+    "obf-callers-into-21": "L3",
+    "obf-callers-into-22": "L5",
+    "obf-callers-into-23": "L3",
+    "obf-callers-into-24": "L3",
+    "obf-callers-into-25": "L3",
+    "obf-callers-into-26": "L3",
+    "obf-callers-into-27": "L3",
+    "obf-callers-into-28": "L3",
+    "obf-callers-into-29": "L3",
+    "obf-callers-into-30": "L3",
+    "obf-callers-into-31": "L3",
+    "obf-callers-into-32": "L3",
+    "obf-callers-into-33": "L3",
+    "obf-most-called-method-34": "L3"
+  },
+  "pGit": {
+    "A": {
+      "error": "no d_task for task class 'A' in dimensions input"
+    },
+    "B": {
+      "level": "L1",
+      "dTask": 15.364127015093866,
+      "fallbackToL5": false,
+      "skippedUnreliable": [],
+      "tieNormalizedToL3": false,
+      "scan": [
+        {
+          "level": "L0",
+          "d": 15.17770425089324,
+          "reliable": true,
+          "satisfied": false,
+          "skipped": false
+        },
+        {
+          "level": "L1",
+          "d": 16.770566734259756,
+          "reliable": true,
+          "satisfied": true,
+          "skipped": false
+        }
+      ],
+      "dTaskReliable": true
+    }
+  },
+  "perTask": [
+    {
+      "id": "obf-highest-in-degree-1",
+      "taskClass": "A",
+      "h0": "L5",
+      "pGit": null
+    },
+    {
+      "id": "obf-inter-layer-deps-2",
+      "taskClass": "A",
+      "h0": "L5",
+      "pGit": null
+    },
+    {
+      "id": "obf-articulation-point-3",
+      "taskClass": "A",
+      "h0": "L5",
+      "pGit": null
+    },
+    {
+      "id": "obf-signature-change-impact-4",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-5",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-6",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-7",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-8",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-9",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-10",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-11",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-12",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-13",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-14",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-15",
+      "taskClass": "B",
+      "h0": "L5",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-16",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-17",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-signature-change-impact-18",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-19",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-20",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-21",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-22",
+      "taskClass": "B",
+      "h0": "L5",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-23",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-24",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-25",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-26",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-27",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-28",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-29",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-30",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-31",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-32",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-callers-into-33",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    },
+    {
+      "id": "obf-most-called-method-34",
+      "taskClass": "B",
+      "h0": "L3",
+      "pGit": "L1"
+    }
+  ]
+}

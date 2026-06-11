@@ -35,12 +35,24 @@ from lib_py.common import read_json, write_json_atomic
 
 # --- Frozen protocol constants (§8.1 / §8.4) ---------------------------------
 DISCARD_FRACTION = 0.1  # skdim TwoNN library default (Facco–Laio top-10% cut)
-K_MLE = 10
+K_MLE_TARGET = 10  # default k for Levina–Bickel MLE; capped at ⌊K/3⌋−1 per §8.1 assertion
 MIN_UNIQUE_FRACTION = 0.8
 DEFAULT_N_BOOTSTRAP = 1000
 CONFIDENCE_LEVEL = 0.95
 DEFAULT_SEED = 42
 MIN_POINTS_FOR_ESTIMATE = 3
+
+
+def _resolve_k_mle(k: int) -> int:
+    """Return the MLE neighbour count respecting the frozen K_MLE < K/3 guard."""
+    cap = max(1, k // 3 - 1)
+    resolved = min(K_MLE_TARGET, cap)
+    if resolved < 2:
+        raise ValueError(
+            f"Cannot compute MLE: K={k} ⇒ max k_mle={cap}, which is < 2 "
+            "(insufficient for a reliable MLE estimate)"
+        )
+    return resolved
 
 
 def dedupe_points(points: Any) -> tuple[np.ndarray, int]:
@@ -59,10 +71,15 @@ def estimate_twonn(points: Any, discard_fraction: float = DISCARD_FRACTION) -> f
     return float(est.dimension_)
 
 
-def estimate_mle(points: Any, k_mle: int = K_MLE) -> float:
-    """Secondary estimator: Levina–Bickel MLE with the frozen K_MLE < K/3 guard."""
+def estimate_mle(points: Any, k_mle: int | None = None) -> float:
+    """Secondary estimator: Levina–Bickel MLE with the frozen K_MLE < K/3 guard.
+
+    If k_mle is None, it is auto-resolved from len(points) via _resolve_k_mle.
+    """
     pts = np.asarray(points, dtype=np.float64)
     n = len(pts)
+    if k_mle is None:
+        k_mle = _resolve_k_mle(n)
     if not (k_mle < n / 3):
         raise ValueError(
             f"K_MLE={k_mle} violates the frozen runtime assertion K_MLE < K/3 (K={n})"
@@ -125,7 +142,7 @@ def estimate_level_dimension(
     level: str | None = None,
     expected_k: int | None = None,
     n_bootstrap: int = DEFAULT_N_BOOTSTRAP,
-    k_mle: int = K_MLE,
+    k_mle: int | None = None,
     discard_fraction: float = DISCARD_FRACTION,
     min_unique_fraction: float = MIN_UNIQUE_FRACTION,
 ) -> dict[str, Any]:
@@ -144,8 +161,9 @@ def estimate_level_dimension(
             f"unique_points_{len(unique)}_below_{min_unique_fraction}*K_{k_anchors}"
         )
 
+    _kmle = k_mle if k_mle is not None else _resolve_k_mle(k_anchors)
     twonn = estimate_twonn(unique, discard_fraction)
-    mle = estimate_mle(unique, k_mle)  # raises if K_MLE >= K/3 (frozen assertion)
+    mle = estimate_mle(unique, _kmle)  # raises if K_MLE >= K/3 (frozen assertion)
     boot = bootstrap_ci(
         pts,
         seed=seed,
