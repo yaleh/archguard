@@ -31,14 +31,18 @@ export interface ModelSpec {
 
 /** §6 frozen sampling parameters, per model. */
 export const MODELS: readonly ModelSpec[] = [
-  { name: 'deepseek-v4-flash', params: { temperature: 0.2 } },
-  { name: 'gpt-5.4', params: { temperature: 1, reasoning_effort: 'low' } },
+  // max_tokens=8192: prevents deepseek from using all budget on reasoning (empty content bug with 36k+ prompts)
+  // 1024 was insufficient for large prompts (L3-L5, 36k-62k tokens); 8192 allows reasoning + output (D-71.2 fix)
+  { name: 'deepseek-v4-flash', params: { temperature: 0.2, max_tokens: 8192 } },
+  // PROTOCOL DEVIATION (Phase 66): gpt-5.4 svip group persistently 503 →
+  // substitute claude-sonnet-4-6 (different family, verified responsive)
+  { name: 'claude-sonnet-4-6', params: { temperature: 0.2 } },
 ];
 
-export const K = 5;
+export const K = 5; // v2.2 pre-registered value (§Stage 71.1)
 
 /** §13.6 baseline probe (fixed prompt; gpt-5.4 hidden-injection drift watch). */
-export const BASELINE_PROBE_MODEL = 'gpt-5.4';
+export const BASELINE_PROBE_MODEL = 'deepseek-v4-flash'; // PROTOCOL DEVIATION: gpt-5.4 substituted, baseline on deepseek
 export const BASELINE_PROBE_PROMPT = 'Reply with the single word: ok';
 export const BASELINE_DRIFT_TOLERANCE_TOKENS = 16;
 export const DEFAULT_BATCH_SIZE = 50;
@@ -76,13 +80,21 @@ export function defaultDerivable(task: Task, level: Level): boolean {
 }
 
 export function isDerivable(task: Task, level: Level, matrix?: DerivabilityMatrix): boolean {
+  // v2 tasks: use built-in derivability field; 'partial' is included (C-class L2 must be run)
+  const v2Deriv = (task as unknown as Record<string, unknown>).derivability as Record<string, boolean | 'partial'> | undefined;
+  if (v2Deriv) {
+    const cell = v2Deriv[level];
+    // false = skip; true = run; 'partial' = run (C-class key point)
+    return cell !== false && cell !== undefined;
+  }
+  // v1 fallback: external matrix or default rule
   const cell = matrix?.[task.id]?.[level];
   return cell !== undefined ? cell : defaultDerivable(task, level);
 }
 
 export interface PlannedCall {
   taskId: string;
-  taskClass: 'A' | 'B';
+  taskClass: 'A' | 'B' | 'C';
   module: string;
   level: Level;
   model: string;
@@ -118,8 +130,8 @@ export function buildCallPlan(options: {
         for (let rep = 1; rep <= k; rep++) {
           calls.push({
             taskId: task.id,
-            taskClass: task.taskClass,
-            module: task.module,
+            taskClass: task.taskClass as 'A' | 'B' | 'C',
+            module: (task as unknown as { module?: string }).module ?? 'v2-arch',
             level,
             model: model.name,
             k: rep,
@@ -153,9 +165,34 @@ export function buildPrompt(task: Task, levelText: string): string {
 
 export type LevelTextLoader = (module: string, level: Level) => string;
 
+/** v1 per-module loader: reads <levelsDir>/<level>/<module>.txt */
 export function createFileLevelTextLoader(levelsDir: string): LevelTextLoader {
   return (module, level) => {
     const p = path.join(levelsDir, level, `${module}.txt`);
+    assertCleanSourcePath(p);
+    return readFileSync(p, 'utf8');
+  };
+}
+
+/**
+ * v2 whole-level loader: reads the canonical artifact file for each level.
+ * L0=filelist.txt, L1=package.mmd, L2=class.mmd, L3=method.mmd,
+ * L4=reduced.json, L5=source-stripped.ts
+ * Module parameter is ignored (whole-codebase subject).
+ */
+export const V2_LEVEL_FILES: Record<Level, string> = {
+  L0: 'filelist.txt',
+  L1: 'package.mmd',
+  L2: 'class.mmd',
+  L3: 'method.mmd',
+  L4: 'reduced.json',
+  L5: 'source-stripped.ts',
+};
+
+export function createV2LevelTextLoader(levelsDir: string): LevelTextLoader {
+  return (_module, level) => {
+    const filename = V2_LEVEL_FILES[level];
+    const p = path.join(levelsDir, level, filename);
     assertCleanSourcePath(p);
     return readFileSync(p, 'utf8');
   };
@@ -253,27 +290,46 @@ export async function runTasks(options: {
     const invalidated = isBaselineDrifted(baseline, observed, options.driftTolerance);
     if (invalidated) summary.invalidatedBatches++;
 
-    for (const call of pending) {
-      const task = taskById.get(call.taskId);
-      if (!task) throw new Error(`plan references unknown task '${call.taskId}'`);
-      const prompt = buildPrompt(task, options.levelTextLoader(call.module, call.level));
-      const res = await options.client.chat({
-        model: call.model,
-        messages: [{ role: 'user', content: prompt }],
-        params: paramsByModel.get(call.model) ?? {},
-      });
-      const result: CallResult = {
-        ...call,
-        key: callKey(call),
-        content: res.content,
-        promptTokens: res.promptTokens,
-        completionTokens: res.completionTokens,
-        invalidated,
-        timestamp: new Date().toISOString(),
-      };
-      writeFileSync(path.join(callsDir, `${callKey(call)}.json`), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
-      summary.executed++;
+    // Execute pending calls with concurrency limit + per-call timeout
+    const CONCURRENCY = 6;
+    const CALL_TIMEOUT_MS = 90_000; // 90s per individual call (before client retry)
+    for (let c = 0; c < pending.length; c += CONCURRENCY) {
+      const chunk = pending.slice(c, c + CONCURRENCY);
+      const results = await Promise.all(
+        chunk.map(async (call) => {
+          const task = taskById.get(call.taskId);
+          if (!task) throw new Error(`plan references unknown task '${call.taskId}'`);
+          const prompt = buildPrompt(task, options.levelTextLoader(call.module, call.level));
+          const chatPromise = options.client.chat({
+            model: call.model,
+            messages: [{ role: 'user', content: prompt }],
+            params: { ...(paramsByModel.get(call.model) ?? {}), timeoutMs: CALL_TIMEOUT_MS },
+          });
+          // Per-call timeout: if the LLM call takes > CALL_TIMEOUT_MS, return a timeout marker instead of hanging
+          const timeoutPromise = new Promise<{ call: typeof call; res: { content: string; promptTokens: number; completionTokens: number; timedOut: true } }>((resolve) =>
+            setTimeout(() => resolve({ call, res: { content: '', promptTokens: -1, completionTokens: -1, timedOut: true } }), CALL_TIMEOUT_MS + 30_000)
+          );
+          const result = await Promise.race([chatPromise.then(res => ({ call, res })), timeoutPromise]);
+          return result;
+        })
+      );
+      for (const { call, res } of results) {
+        const isTimedOut = (res as Record<string, unknown>).timedOut === true;
+        const result: CallResult = {
+          ...call,
+          key: callKey(call),
+          content: isTimedOut ? '' : res.content,
+          promptTokens: isTimedOut ? -1 : res.promptTokens,
+          completionTokens: isTimedOut ? -1 : res.completionTokens,
+          invalidated: invalidated || isTimedOut,
+          timestamp: new Date().toISOString(),
+        };
+        writeFileSync(path.join(callsDir, `${callKey(call)}.json`), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+        if (isTimedOut) process.stderr.write(`  TIMEOUT: ${callKey(call)}\n`);
+        summary.executed++;
+      }
     }
+    process.stderr.write(`[batch] ${summary.executed}/${options.plan.calls.length} calls executed\n`);
   }
   return summary;
 }
@@ -315,20 +371,28 @@ if (isMain) {
     return i >= 0 ? args[i + 1] : undefined;
   };
   const dryRun = args.includes('--dry-run');
+  const isV2 = args.includes('--v2') || !args.includes('--tasks');
+  // v2 default: tasks/v2-tasks.json; v1 default: GT_DIR/tasks.json
+  const defaultTasksPath = isV2
+    ? path.join(GRANULARITY_ROOT, 'tasks', 'v2-tasks.json')
+    : path.join(GT_DIR, 'tasks.json');
   const fixtureTasks = path.join(GRANULARITY_ROOT, 'tests', 'fixtures', 'tasks', 'tasks.fixture.json');
-  let tasksPath = get('--tasks') ?? path.join(GT_DIR, 'tasks.json');
+  let tasksPath = get('--tasks') ?? defaultTasksPath;
   if (!existsSync(tasksPath) && dryRun) {
     console.log(`note: ${tasksPath} not found; dry-run falls back to fixture ${fixtureTasks}`);
     tasksPath = fixtureTasks;
   }
   assertCleanSourcePath(tasksPath);
   const tasks = JSON.parse(readFileSync(tasksPath, 'utf8')) as Task[];
-  const v = validateTasks(tasks);
-  if (!v.valid) {
-    console.error(`invalid tasks file:\n${v.errors.join('\n')}`);
-    process.exit(1);
+  // v2 tasks use a different schema; skip v1 validation for v2
+  if (!isV2) {
+    const v = validateTasks(tasks);
+    if (!v.valid) {
+      console.error(`invalid tasks file:\n${v.errors.join('\n')}`);
+      process.exit(1);
+    }
   }
-  const runDir = get('--run-dir') ?? RUNS_DIR;
+  const runDir = get('--run-dir') ?? (isV2 ? path.join(GRANULARITY_ROOT, 'artifacts', 'runs-v2') : RUNS_DIR);
   const seedFile = path.join(runDir, 'seed.json');
   const seed = existsSync(seedFile)
     ? (JSON.parse(readFileSync(seedFile, 'utf8')) as { seed: number }).seed
@@ -346,12 +410,15 @@ if (isMain) {
     process.exit(0);
   }
   const levelsDir = get('--levels-dir') ?? LEVELS_DIR;
+  const levelTextLoader = isV2
+    ? createV2LevelTextLoader(levelsDir)
+    : createFileLevelTextLoader(levelsDir);
   runTasks({
     tasks,
     plan,
     client: createLlmClient(),
     runDir,
-    levelTextLoader: createFileLevelTextLoader(levelsDir),
+    levelTextLoader,
   })
     .then((s) =>
       console.log(

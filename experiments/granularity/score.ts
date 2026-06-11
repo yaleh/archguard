@@ -41,7 +41,7 @@ export interface VoteDetail {
 
 export interface ScoreRow {
   taskId: string;
-  taskClass: 'A' | 'B';
+  taskClass: 'A' | 'B' | 'C';
   level: Level;
   model: string;
   score: number;
@@ -268,9 +268,35 @@ if (isMain) {
   const tasksPath = get('--tasks') ?? path.join(GT_DIR, 'tasks.json');
   const runDir = get('--run-dir') ?? RUNS_DIR;
   const outPath = get('--out') ?? path.join(runDir, 'scores.json');
+  const oraclePath = get('--oracle-out');
   const tasks = JSON.parse(readFileSync(tasksPath, 'utf8')) as Task[];
   const rows = scoreRuns(tasks, loadRunResults(runDir));
   writeFileSync(outPath, `${JSON.stringify(rows, null, 2)}\n`, 'utf8');
   console.log(`scored ${rows.length} (task × level × model) rows -> ${outPath}`);
+  if (oraclePath) {
+    // P_oracle: per task, the level with the highest mean score (ties → lower ordinal)
+    const LEVEL_ORDER = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'];
+    const byTask = new Map<string, Map<string, number[]>>();
+    for (const row of rows) {
+      if (!byTask.has(row.taskId)) byTask.set(row.taskId, new Map());
+      const lvlMap = byTask.get(row.taskId)!;
+      if (!lvlMap.has(row.level)) lvlMap.set(row.level, []);
+      lvlMap.get(row.level)!.push(row.score);
+    }
+    const oracle: Record<string, string> = {};
+    for (const [taskId, lvlMap] of byTask) {
+      let bestLevel = '';
+      let bestScore = -1;
+      for (const lv of LEVEL_ORDER) {
+        const scores = lvlMap.get(lv);
+        if (!scores) continue;
+        const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+        if (mean > bestScore) { bestScore = mean; bestLevel = lv === 'L4' ? 'L3' : lv; }
+      }
+      if (bestLevel) oracle[taskId] = bestLevel;
+    }
+    writeFileSync(oraclePath, `${JSON.stringify(oracle, null, 2)}\n`, 'utf8');
+    console.log(`P_oracle for ${Object.keys(oracle).length} tasks -> ${oraclePath}`);
+  }
 }
 /* c8 ignore stop */
