@@ -1,0 +1,35 @@
+{
+  "tree": "obf",
+  "queries": {
+    "cycles": [],
+    "high-coupling": [
+      {
+        "id": "d1/d6/f15.ts.Hs51",
+        "name": "Hs51",
+        "type": "class",
+        "visibility": "public",
+        "file": "d1/d6/f15.ts",
+        "methodCount": 24,
+        "fieldCount": 6
+      },
+      {
+        "id": "d1/d7/f43.ts.Xd131",
+        "name": "Xd131",
+        "type": "class",
+        "visibility": "public",
+        "file": "d1/d7/f43.ts",
+        "methodCount": 8,
+        "fieldCount": 7
+      },
+      {
+        "id": "d1/d8/f54.ts.Vw210",
+        "name": "Vw210",
+        "type": "interface",
+        "visibility": "public",
+        "file": "d1/d8/f54.ts",
+        "methodCount": 0,
+        "fieldCount": 12
+      }
+    ]
+  }
+}

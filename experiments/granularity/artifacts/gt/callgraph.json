@@ -1,0 +1,4527 @@
+{
+  "scope": [
+    "../../src/mermaid",
+    "../../src/parser"
+  ],
+  "basePath": "/home/yale/work/archguard/src",
+  "criteria": "proposal-§1-R1 (i)-(iv) v2.1",
+  "stats": {
+    "call": 375,
+    "reference": 1,
+    "viaInterface": 40
+  },
+  "edges": [
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.addDiagramDeclaration",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 22,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixGenericTypes",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 23,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.flattenNestedNamespaces",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 24,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.extractNamespaceRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 25,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixTrailingCommas",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 26,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.normalizeWhitespace",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 27,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 30,
+        "column": 46
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.attemptAdvancedRepairs",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 37,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 39,
+        "column": 51
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.extractNamespaceRelations",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.isRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 139,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.attemptAdvancedRepairs",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixLineError",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 219,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.attemptAdvancedRepairs",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.removeUnknownTokens",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 223,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.attemptAdvancedRepairs",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixUnexpectedToken",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 227,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.addDiagramDeclaration",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 310,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixGenericTypes",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 311,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.flattenNestedNamespaces",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 312,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.extractNamespaceRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 313,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.fixTrailingCommas",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 314,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.normalizeWhitespace",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 315,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/auto-repair.ts#MermaidAutoRepair.repairBestEffort",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/auto-repair.ts",
+        "line": 318,
+        "column": 46
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/comment-generator.ts#CommentGenerator.generateAll",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generateHeader",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/comment-generator.ts",
+        "line": 236,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/comment-generator.ts#CommentGenerator.generateAll",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generateProcessComments",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/comment-generator.ts",
+        "line": 239,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/comment-generator.ts#CommentGenerator.generateAll",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generatePatternComments",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/comment-generator.ts",
+        "line": 242,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/comment-generator.ts#CommentGenerator.generateAll",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generateUsageComments",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/comment-generator.ts",
+        "line": 245,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.constructor",
+      "target": "mermaid/progress.ts#NoopProgressReporter.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 75,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 108,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 108,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 109,
+        "column": 36
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 110,
+        "column": 41
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 111,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 111,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 114,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 114,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 115,
+        "column": 29
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 129,
+        "column": 23
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 130,
+        "column": 64
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 133,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 133,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 145,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 145,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 167,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 167,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 168,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 169,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.fail",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 172,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.fail",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 172,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.generateReport",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 175,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 178,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 178,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.getParseValidator",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 179,
+        "column": 41
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 180,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/auto-repair.ts#MermaidAutoRepair.repair",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 193,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 196,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 198,
+        "column": 22
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 198,
+        "column": 22
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.fail",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 203,
+        "column": 20
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.fail",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 203,
+        "column": 20
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 213,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 213,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#NoopProgressReporter.fail",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 251,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "target": "mermaid/progress.ts#IProgressReporter.fail",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 251,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#NoopProgressReporter.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 268,
+        "column": 39
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 273,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 273,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 287,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderAndSave",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 288,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 293,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 293,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#NoopProgressReporter.fail",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 295,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel",
+      "target": "mermaid/progress.ts#IProgressReporter.fail",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 295,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 318,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 318,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 319,
+        "column": 40
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 320,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 320,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#NoopProgressReporter.start",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 325,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#IProgressReporter.start",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 325,
+        "column": 16
+      }
+    },
+    {
+      "kind": "reference",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/diagram-generator.ts#MermaidDiagramGenerator",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 345,
+        "column": 13
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallelWithConfig",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 345,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#NoopProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 351,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#IProgressReporter.succeed",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 351,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#NoopProgressReporter.fail",
+      "viaInterface": true,
+      "view": "expanded",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 364,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender",
+      "target": "mermaid/progress.ts#IProgressReporter.fail",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 364,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallelWithConfig",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 389,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallelWithConfig",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderAndSave",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/diagram-generator.ts",
+        "line": 390,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#sanitizeType",
+      "target": "mermaid/generator-formatting.ts#normalizeTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 56,
+        "column": 20
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateMemberLine",
+      "target": "mermaid/generator-formatting.ts#getVisibilitySymbol",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 115,
+        "column": 22
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateMemberLine",
+      "target": "mermaid/generator-formatting.ts#sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 122,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateMemberLine",
+      "target": "mermaid/generator-formatting.ts#sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 128,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateMemberLine",
+      "target": "mermaid/generator-formatting.ts#sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 133,
+        "column": 51
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateRelationLine.resolve",
+      "target": "mermaid/generator-formatting.ts#escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 149,
+        "column": 5
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateRelationLine.resolve",
+      "target": "mermaid/generator-formatting.ts#normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 149,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateClassDefinition",
+      "target": "mermaid/generator-formatting.ts#escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 187,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateClassDefinition",
+      "target": "mermaid/generator-formatting.ts#normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 187,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateClassDefinition",
+      "target": "mermaid/generator-formatting.ts#shouldIncludeMember",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 190,
+        "column": 10
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-formatting.ts#generateClassDefinition",
+      "target": "mermaid/generator-formatting.ts#generateMemberLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-formatting.ts",
+        "line": 191,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-validation.ts#validateGeneratorInput",
+      "target": "mermaid/external-dependencies.ts#isExternalDependency",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-validation.ts",
+        "line": 13,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-validation.ts#validateGeneratorInput",
+      "target": "mermaid/external-dependencies.ts#isExternalDependency",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-validation.ts",
+        "line": 14,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-validation.ts#validateGeneratorInput",
+      "target": "mermaid/external-dependencies.ts#isExternalDependency",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-validation.ts",
+        "line": 39,
+        "column": 45
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator-validation.ts#validateGeneratorInput",
+      "target": "mermaid/external-dependencies.ts#isExternalDependency",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator-validation.ts",
+        "line": 40,
+        "column": 45
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.constructor",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 86,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/generator-validation.ts#validateGeneratorInput",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 95,
+        "column": 5
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 101,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 104,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 108,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generateAll",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 117,
+        "column": 46
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/comment-generator.ts#CommentGenerator.generateVisibleTitle",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 128,
+        "column": 50
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.postProcess",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 150,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.getArchitecturalLayers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 157,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 158,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator-grouping.ts#groupEntitiesByPackage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 164,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 171,
+        "column": 46
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 171,
+        "column": 60
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 176,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 182,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.getArchitecturalLayers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 218,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 220,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizePackagePath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 232,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.findMatchingLayer",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 245,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel.nodeIdForPackage",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 256,
+        "column": 60
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 259,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 274,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 277,
+        "column": 37
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator-grouping.ts#groupEntitiesByPackage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 305,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.buildModulePrefixIndex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 312,
+        "column": 36
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 321,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 326,
+        "column": 40
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.isNoisyTarget",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 342,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 344,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 350,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.isNoisyTarget",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 364,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 366,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 377,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 377,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel",
+      "target": "mermaid/generator.ts#entityTypeToClassDef",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 380,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator-grouping.ts#groupEntitiesByPackage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 398,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 410,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 415,
+        "column": 40
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 421,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.buildModulePrefixIndex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 426,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.isNoisyTarget",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 437,
+        "column": 57
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 438,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 448,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 448,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel",
+      "target": "mermaid/generator.ts#entityTypeToClassDef",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 451,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 466,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 466,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.shouldIncludeMember",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 474,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 478,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.getVisibilitySymbol",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 495,
+        "column": 29
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 503,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 507,
+        "column": 56
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.sanitizeType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 514,
+        "column": 50
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine.resolve",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 586,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine.resolve",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 586,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelations",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.buildModulePrefixIndex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 660,
+        "column": 36
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelations",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.isNoisyTarget",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 669,
+        "column": 57
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelations",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 670,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.sanitizeType",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 757,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator-grouping.ts#groupEntitiesByPackage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 860,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 880,
+        "column": 43
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 906,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 908,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.buildModulePrefixIndex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 913,
+        "column": 43
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.isNoisyTarget",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 925,
+        "column": 66
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 927,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.escapeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 936,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 936,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#entityTypeToClassDef",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 939,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams",
+      "target": "mermaid/generator.ts#ValidatedMermaidGenerator.postProcess",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/generator.ts",
+        "line": 942,
+        "column": 54
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.applyCustomRules",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 39,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.groupByPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 45,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.mergeSmallPackages",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 48,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.applyLimits",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 51,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.group",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.generateLayoutDecision",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 54,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.groupByPath",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.extractJavaMavenModuleName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 128,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.groupByPath",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.extractPackageName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 132,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/grouper.ts#HeuristicGrouper.groupByPath",
+      "target": "mermaid/grouper.ts#HeuristicGrouper.formatPackageName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/grouper.ts",
+        "line": 149,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/post-process-svg.ts#postProcessSVG",
+      "target": "mermaid/post-process-svg.ts#inlineEdgeStyles",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/post-process-svg.ts",
+        "line": 189,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/post-process-svg.ts#postProcessSVG",
+      "target": "mermaid/post-process-svg.ts#injectBackground",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/post-process-svg.ts",
+        "line": 198,
+        "column": 10
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.spawnWorker",
+      "target": "mermaid/render-worker-pool.ts#sanitizeWorkerExecArgv",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 48,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.spawnWorker",
+      "target": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.onResult",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 51,
+        "column": 52
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.spawnWorker",
+      "target": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.onWorkerExit",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 55,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.start",
+      "target": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.spawnWorker",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 62,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.onWorkerExit",
+      "target": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.spawnWorker",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 90,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.render",
+      "target": "mermaid/render-worker-pool.ts#MermaidRenderWorkerPool.dispatch",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker-pool.ts",
+        "line": 108,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker.ts#handleMessage",
+      "target": "mermaid/post-process-svg.ts#postProcessSVG",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker.ts",
+        "line": 25,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/render-worker.ts#<module-top>",
+      "target": "mermaid/render-worker.ts#handleMessage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/render-worker.ts",
+        "line": 37,
+        "column": 3
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVG",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.ensureInitialized",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 35,
+        "column": 10
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVG",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.generateId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 39,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVGRaw",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.ensureInitialized",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 75,
+        "column": 10
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVGRaw",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.generateId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 77,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderPNG",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVG",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 91,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderPNG",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.convertSVGToPNG",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 92,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.convertSVGToPNG",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.parseBackgroundColor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 147,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderAndSave",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderSVG",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 169,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderAndSave",
+      "target": "mermaid/post-process-svg.ts#inlineEdgeStyles",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 173,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.renderAndSave",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.convertSVGToPNG",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 178,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/renderer.ts#IsomorphicMermaidRenderer.setOptions",
+      "target": "mermaid/renderer.ts#IsomorphicMermaidRenderer.ensureInitialized",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/renderer.ts",
+        "line": 242,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.truncate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 33,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.truncate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 42,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.nodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 49,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.nodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 59,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.nodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 69,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.render",
+      "target": "mermaid/test-coverage-renderer.ts#TestCoverageRenderer.nodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/test-coverage-renderer.ts",
+        "line": 80,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#findMatchingLayer",
+      "target": "mermaid/ts-module-graph-renderer.ts#normalizeLayerPrefix",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 82,
+        "column": 36
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#buildForest",
+      "target": "mermaid/ts-module-graph-renderer.ts#parentPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 125,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#buildForest",
+      "target": "mermaid/ts-module-graph-renderer.ts#parentPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 131,
+        "column": 13
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "target": "mermaid/ts-module-graph-renderer.ts#nodeTreeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 180,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 181,
+        "column": 15
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "target": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 197,
+        "column": 7
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "target": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 209,
+        "column": 7
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#buildForest",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 237,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#findMatchingLayer",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 241,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#nodeTreeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 241,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 253,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 257,
+        "column": 7
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#nodeTreeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 258,
+        "column": 56
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#emitTreeNode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 265,
+        "column": 5
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 272,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 333,
+        "column": 20
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 334,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#arrowStyle",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 335,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 342,
+        "column": 20
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#toNodeId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 343,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph",
+      "target": "mermaid/ts-module-graph-renderer.ts#arrowStyle",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/ts-module-graph-renderer.ts",
+        "line": 344,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.constructor",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 23,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.constructor",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 24,
+        "column": 36
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.constructor",
+      "target": "mermaid/validator-render.ts#RenderValidator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 25,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.constructor",
+      "target": "mermaid/validator-quality.ts#QualityValidator.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 26,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validate",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 34,
+        "column": 51
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validate",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 37,
+        "column": 55
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validate",
+      "target": "mermaid/validator-render.ts#RenderValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 40,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validate",
+      "target": "mermaid/validator-quality.ts#QualityValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 43,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validate",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.calculateOverall",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 46,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 110,
+        "column": 51
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 113,
+        "column": 55
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "target": "mermaid/validator-render.ts#RenderValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 116,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "target": "mermaid/validator-quality.ts#QualityValidator.validate",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 119,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.validateFull",
+      "target": "mermaid/validation-pipeline.ts#MermaidValidationPipeline.calculateOverall",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validation-pipeline.ts",
+        "line": 122,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.ensureInitialized",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-parse.ts",
+        "line": 25,
+        "column": 10
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.collectWarnings",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-parse.ts",
+        "line": 51,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-parse.ts#MermaidParseValidator.validate",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.parseError",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-parse.ts",
+        "line": 57,
+        "column": 22
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-parse.ts#MermaidParseValidator.parseError",
+      "target": "mermaid/validator-parse.ts#MermaidParseValidator.sanitizeErrorMessage",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-parse.ts",
+        "line": 90,
+        "column": 23
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.validate",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateMetrics",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 17,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.validate",
+      "target": "mermaid/validator-quality.ts#QualityValidator.generateSuggestions",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 18,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.validate",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateScore",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 19,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateMetrics",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateReadability",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 34,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateMetrics",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 35,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateMetrics",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateConsistency",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 36,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateMetrics",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateComplexity",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 37,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateReadability",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateNestingDepth",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 53,
+        "column": 29
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateReadability",
+      "target": "mermaid/validator-quality.ts#QualityValidator.calculateExpectedIndent",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 59,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "target": "mermaid/validator-quality.ts#QualityValidator.escapeRegex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 101,
+        "column": 50
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "target": "mermaid/validator-quality.ts#QualityValidator.toMermaidId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 112,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "target": "mermaid/validator-quality.ts#QualityValidator.toMermaidId",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 113,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "target": "mermaid/validator-quality.ts#QualityValidator.escapeRegex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 114,
+        "column": 44
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-quality.ts#QualityValidator.calculateCompleteness",
+      "target": "mermaid/validator-quality.ts#QualityValidator.escapeRegex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-quality.ts",
+        "line": 115,
+        "column": 44
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-render.ts#RenderValidator.validate",
+      "target": "mermaid/validator-render.ts#RenderValidator.checkSize",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-render.ts",
+        "line": 23,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-render.ts#RenderValidator.validate",
+      "target": "mermaid/validator-render.ts#RenderValidator.checkComplexity",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-render.ts",
+        "line": 26,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-render.ts#RenderValidator.validate",
+      "target": "mermaid/validator-render.ts#RenderValidator.checkUnsupportedFeatures",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-render.ts",
+        "line": 29,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-render.ts#RenderValidator.checkComplexity",
+      "target": "mermaid/validator-render.ts#RenderValidator.calculateNestingDepth",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-render.ts",
+        "line": 81,
+        "column": 29
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.checkMissingEntities",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-structural.ts",
+        "line": 20,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.checkInvalidRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-structural.ts",
+        "line": 23,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.checkCircularDependencies",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-structural.ts",
+        "line": 26,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-structural.ts#StructuralValidator.validate",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.checkOrphanEntities",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-structural.ts",
+        "line": 29,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "mermaid/validator-structural.ts#StructuralValidator.checkMissingEntities",
+      "target": "mermaid/validator-structural.ts#StructuralValidator.escapeRegex",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "mermaid/validator-structural.ts",
+        "line": 44,
+        "column": 60
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregate",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregateToClassLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 38,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregate",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregateToPackageLevel",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 41,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregateToPackageLevel",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackages",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 74,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregateToPackageLevel",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.analyzePackageDependencies",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 75,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.aggregateToPackageLevel",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromEntity",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 86,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackages",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromEntity",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 126,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromFile",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractJavaMavenModule",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 151,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromFile",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractJavaMavenModule",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 159,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromEntity",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromFile",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 210,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/archjson-aggregator.ts#ArchJSONAggregator.analyzePackageDependencies",
+      "target": "parser/archjson-aggregator.ts#ArchJSONAggregator.extractPackageFromEntity",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/archjson-aggregator.ts",
+        "line": 254,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extract",
+      "target": "parser/errors.ts#ParseError.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 37,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extract",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractClass",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 40,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractClass",
+      "target": "parser/class-extractor.ts#ClassExtractor.getVisibility",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 56,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractClass",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractMembers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 58,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractClass",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractDecorators",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 59,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractClass",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractGenericParams",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 60,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMembers",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractProperty",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 106,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMembers",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractMethod",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 111,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMembers",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractConstructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 116,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractProperty",
+      "target": "parser/class-extractor.ts#ClassExtractor.getMemberVisibility",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 133,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractProperty",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractDecorators",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 138,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMethod",
+      "target": "parser/class-extractor.ts#ClassExtractor.getMemberVisibility",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 151,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMethod",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractParameters",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 155,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractMethod",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractDecorators",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 157,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractConstructor",
+      "target": "parser/class-extractor.ts#ClassExtractor.getConstructorVisibility",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 170,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/class-extractor.ts#ClassExtractor.extractConstructor",
+      "target": "parser/class-extractor.ts#ClassExtractor.extractParameters",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/class-extractor.ts",
+        "line": 171,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/enum-extractor.ts#EnumExtractor.extract",
+      "target": "parser/errors.ts#ParseError.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/enum-extractor.ts",
+        "line": 30,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/enum-extractor.ts#EnumExtractor.extract",
+      "target": "parser/enum-extractor.ts#EnumExtractor.extractEnum",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/enum-extractor.ts",
+        "line": 33,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/enum-extractor.ts#EnumExtractor.extractEnum",
+      "target": "parser/enum-extractor.ts#EnumExtractor.extractMembers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/enum-extractor.ts",
+        "line": 50,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/function-extractor.ts#FunctionExtractor.extract",
+      "target": "parser/function-extractor.ts#FunctionExtractor.extractParamsAsMembers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/function-extractor.ts",
+        "line": 42,
+        "column": 23
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/function-extractor.ts#FunctionExtractor.extract",
+      "target": "parser/function-extractor.ts#FunctionExtractor.extractParamsAsMembers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/function-extractor.ts",
+        "line": 66,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extract",
+      "target": "parser/errors.ts#ParseError.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 30,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extract",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 33,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractMembers",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 50,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractExtends",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 52,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractGenericParams",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 53,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractMembers",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractPropertySignature",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 102,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractMembers",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractMethodSignature",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 107,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/interface-extractor.ts#InterfaceExtractor.extractMethodSignature",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractParameters",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/interface-extractor.ts",
+        "line": 144,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.calculate",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.computeSCCGroups",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 17,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.calculate",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.buildCycleInfos",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 21,
+        "column": 42
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.calculate",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.computeFileStats",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 22,
+        "column": 45
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.calculate",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.buildTypeBreakdown",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 28,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.calculate",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.calcInferredRatio",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 30,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.computeSCCGroups",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.dfsIterative",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 88,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/metrics-calculator.ts#MetricsCalculator.computeSCCGroups",
+      "target": "parser/metrics-calculator.ts#MetricsCalculator.dfsIterative",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/metrics-calculator.ts",
+        "line": 98,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFiles",
+      "target": "parser/parallel-parser.ts#ParallelParser.createEmptyArchJSON",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 137,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFiles",
+      "target": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 154,
+        "column": 39
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFiles",
+      "target": "parser/parallel-parser.ts#ParallelParser.createEmptyArchJSON",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 192,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFiles",
+      "target": "parser/parallel-parser.ts#ParallelParser.mergeResults",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 199,
+        "column": 25
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFilesWithMetrics",
+      "target": "parser/parallel-parser.ts#ParallelParser.parseFiles",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 223,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/parallel-parser.ts#ParallelParser.createEmptyArchJSON",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 258,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/parse-cache.ts#ParseCache.getOrParse",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 272,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 273,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 274,
+        "column": 23
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 277,
+        "column": 24
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.parseFile",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 278,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.mergeResults",
+      "target": "parser/parallel-parser.ts#ParallelParser.createEmptyArchJSON",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 289,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/parallel-parser.ts#ParallelParser.mergeResults",
+      "target": "parser/parallel-parser.ts#ParallelParser.deduplicateRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/parallel-parser.ts",
+        "line": 303,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#collectExternalImportedNames",
+      "target": "parser/relation-extractor.ts#isLocalModuleSpecifier",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 35,
+        "column": 9
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extract",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 76,
+        "column": 17
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "target": "parser/relation-extractor.ts#collectExternalImportedNames",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 87,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 91,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractInterfaceRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 96,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractFunctionRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 100,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 125,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 131,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 136,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 137,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 138,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 145,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 146,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 147,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 155,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 156,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 157,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 162,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 163,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractClassRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 164,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractInterfaceRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 190,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractInterfaceRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 195,
+        "column": 33
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractInterfaceRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 198,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractInterfaceRelations",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 202,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFunctionRelations",
+      "target": "parser/relation-extractor.ts#isLocalModuleSpecifier",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 230,
+        "column": 12
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractFunctionRelations.emitDepsForBody",
+      "target": "parser/relation-extractor.ts#RelationExtractor.addRelation",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 247,
+        "column": 16
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 349,
+        "column": 19
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 382,
+        "column": 32
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 396,
+        "column": 21
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.extractTypeName",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isPrimitiveType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 401,
+        "column": 14
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/relation-extractor.ts#RelationExtractor.isCustomType",
+      "target": "parser/relation-extractor.ts#RelationExtractor.isPrimitiveType",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/relation-extractor.ts",
+        "line": 415,
+        "column": 18
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "target": "parser/class-extractor.ts#ClassExtractor.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 37,
+        "column": 31
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 38,
+        "column": 35
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "target": "parser/enum-extractor.ts#EnumExtractor.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 39,
+        "column": 30
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "target": "parser/relation-extractor.ts#RelationExtractor.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 40,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.constructor",
+      "target": "parser/function-extractor.ts#FunctionExtractor.constructor",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 41,
+        "column": 34
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.toRelPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 75,
+        "column": 26
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 85,
+        "column": 46
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/enum-extractor.ts#EnumExtractor.extractEnum",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 91,
+        "column": 41
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/function-extractor.ts#FunctionExtractor.extract",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 96,
+        "column": 45
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 99,
+        "column": 49
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseCode",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.qualifyRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 100,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.toRelPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 177,
+        "column": 28
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/interface-extractor.ts#InterfaceExtractor.extractInterface",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 187,
+        "column": 48
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/enum-extractor.ts#EnumExtractor.extractEnum",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 193,
+        "column": 43
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/function-extractor.ts#FunctionExtractor.extract",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 198,
+        "column": 47
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.toRelPath",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 206,
+        "column": 38
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/relation-extractor.ts#RelationExtractor.extractFromSourceFile",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 214,
+        "column": 52
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.filterExternalRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 250,
+        "column": 27
+      }
+    },
+    {
+      "kind": "call",
+      "source": "parser/typescript-parser.ts#TypeScriptParser.parseProject",
+      "target": "parser/typescript-parser.ts#TypeScriptParser.deduplicateRelations",
+      "viaInterface": false,
+      "view": "both",
+      "location": {
+        "file": "parser/typescript-parser.ts",
+        "line": 253,
+        "column": 34
+      }
+    }
+  ]
+}

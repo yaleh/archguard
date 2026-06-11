@@ -1,0 +1,23 @@
+{
+  "name": "@archguard-experiments/granularity",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "//": "ts-morph is intentionally NOT declared here: the main repo is not an npm workspace, so Node module resolution from this directory walks up and hits the root node_modules/ts-morph@27.0.2 (verified). Declaring it locally would risk a duplicate, version-skewed copy.",
+  "scripts": {
+    "obfuscate": "tsx obfuscate.ts",
+    "callgraph": "tsx callgraph.ts",
+    "ground-truth": "tsx ground-truth.ts",
+    "probes": "tsx probes.ts",
+    "predict": "tsx predict.ts",
+    "run-tasks": "tsx run-tasks.ts",
+    "score": "tsx score.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.20.3",
+    "vitest": "^3.2.4"
+  }
+}

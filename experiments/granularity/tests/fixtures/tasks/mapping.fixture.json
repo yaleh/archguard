@@ -1,0 +1,16 @@
+{
+  "modA": "src/mermaid",
+  "p1": "generators",
+  "p2": "validators",
+  "Xq7": "MermaidGenerator",
+  "Zk2": "DiagramRenderer",
+  "Pf3": "ValidationPipeline",
+  "Qm9": "ParserBridge",
+  "Rt5": "ThemeRegistry",
+  "Xq7.m1": "MermaidGenerator.generate",
+  "Zk2.m2": "DiagramRenderer.renderSVG",
+  "Qm9.m3": "ParserBridge.parseProject",
+  "Pf3.m4": "ValidationPipeline.validate",
+  "Rt5.m5": "ThemeRegistry.applyTheme",
+  "Pf3.m6": "ValidationPipeline.reportError"
+}

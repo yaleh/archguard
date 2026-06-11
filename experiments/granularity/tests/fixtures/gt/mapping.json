@@ -1,0 +1,15 @@
+{
+  "identifiers": {
+    "Renderer": "C1",
+    "Parser": "C2",
+    "render": "m1",
+    "parse": "m2"
+  },
+  "files": {
+    "src/render.ts": "f1.ts",
+    "src/parse.ts": "f2.ts"
+  },
+  "strings": {
+    "classDiagram": "s1"
+  }
+}

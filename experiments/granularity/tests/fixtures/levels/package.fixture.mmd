@@ -1,0 +1,25 @@
+%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%
+flowchart LR
+
+  d6["d6"]:::internal
+  d8["d8"]:::internal
+  subgraph d4_group["d4"]
+    d4_d5["d4/d5"]:::internal
+  end
+  subgraph external_deps["External Dependencies"]
+    pkg1["pkg1"]:::external
+  end
+  subgraph legend["Legend"]
+    direction LR
+    legend_internal["internal module"]:::internal
+    legend_external["external dependency"]:::external
+    legend_edge["--> depends on (bolder = more imports)"]
+  end
+  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01
+
+  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329
+  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01
+
+  d6 ===>|"14 refs"| d8
+  d6 --> pkg1
+  d8 --> d4_d5

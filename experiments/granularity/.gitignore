@@ -1,0 +1,19 @@
+# local toolchains
+node_modules/
+.venv/
+
+# coverage output
+coverage-ts/
+.coverage
+htmlcov/
+
+# generated run products (obfuscated tree, analyze work dirs, LLM run outputs)
+obf/
+artifacts/work/
+artifacts/runs/*
+!artifacts/runs/.gitkeep
+
+# python cache
+__pycache__/
+*.pyc
+.pytest_cache/

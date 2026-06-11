@@ -1,0 +1,14 @@
+{
+  "frozenAt": "2026-06-11T07:41:55.136Z",
+  "protocol": "granularity-freeze-v2.1",
+  "files": {
+    "artifacts/gt/callgraph.json": "0f8d157b478abe86be7ee331b5985ffed3f9229a8bb074255cfcf974df8822ad",
+    "artifacts/gt/mapping.json": "f64a36748633baf37cb97cf143e04e2f3bf8bc5ba13897109a792a212ddf4b1a",
+    "artifacts/gt/callgraph-audit.md": "0e43d758b49c22ea533f2c43a6db2b7a6e8e9ff70c0154738b042dde9599db5c",
+    "artifacts/gt/leak-probe.md": "5a0a8e682ef9f34c2e29b18caec543f470e9c12d1fd9d40bcfafc3d7be158918",
+    "artifacts/gt/instantiator-gt.json": "7987fc21a0aab3eed7cac06fe03b8347903d9b5371cf55242c6f66eab284a73c",
+    "artifacts/gt/tasks.json": "5603556004c77fb4221a920cbf57e4d9725f46b4e06f163b1fd924e1ece840ab",
+    "artifacts/levels/callgraph-obf.json": "d40cc9743bc33ffd74dfd2da8f48f74bc230a98426337f4eb5a2f313eb154324",
+    "artifacts/levels/probes/probes.meta.json": "f215e4d51e8feccf5704dec6de7af51d4bc5db60356265f59301002ceeb16c88"
+  }
+}

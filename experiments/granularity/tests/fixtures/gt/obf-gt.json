@@ -1,0 +1,16 @@
+{
+  "tree": "obf",
+  "queries": {
+    "deps-of:C1": ["C2"],
+    "used-by:C2": ["C1"],
+    "cycles": [["C1", "C2"]],
+    "file:f1.ts": ["C1"]
+  },
+  "graph": {
+    "articulationPoints": ["C1"],
+    "inDegreeRanking": [
+      { "id": "C2", "inDegree": 3 },
+      { "id": "C1", "inDegree": 1 }
+    ]
+  }
+}

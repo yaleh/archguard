@@ -1,0 +1,44 @@
+[
+  {
+    "id": "modA-highest-in-degree-1",
+    "taskClass": "A",
+    "module": "modA",
+    "taskType": "highest-in-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of incoming dependencies (in-degree)? Respond with JSON only, exactly in this shape: {\"answer\": \"name\"}. No prose, no markdown fences.",
+    "entities": ["Pf3"],
+    "answerType": "exact",
+    "answer": "Pf3"
+  },
+  {
+    "id": "modA-cycles-1",
+    "taskClass": "A",
+    "module": "modA",
+    "taskType": "cycles",
+    "prompt": "Based only on the representation above: list every entity that participates in at least one circular dependency. Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": ["Pf3", "Rt5"],
+    "answerType": "set",
+    "answer": ["Pf3", "Rt5"]
+  },
+  {
+    "id": "modA-signature-change-impact-1",
+    "taskClass": "B",
+    "module": "modA",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Pf3.m4 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": ["Pf3", "Qm9", "Xq7", "Zk2"],
+    "answerType": "set",
+    "answer": ["Qm9.m3", "Xq7.m1", "Zk2.m2"],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "modA-most-called-method-1",
+    "taskClass": "B",
+    "module": "modA",
+    "taskType": "most-called-method",
+    "prompt": "Based only on the representation above: which method is called by the largest number of distinct other methods? Respond with JSON only, exactly in this shape: {\"answer\": \"name\"}. No prose, no markdown fences.",
+    "entities": ["Pf3"],
+    "answerType": "exact",
+    "answer": "Pf3.m4",
+    "gtVariant": "expanded"
+  }
+]

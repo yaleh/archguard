@@ -1,0 +1,40 @@
+{
+  "scope": ["obf/d1/d6", "obf/d1/d7"],
+  "basePath": "obf/d1",
+  "criteria": "proposal-§1-R1 (i)-(iv) v2.1",
+  "stats": { "call": 3, "reference": 1, "viaInterface": 1 },
+  "edges": [
+    {
+      "kind": "call",
+      "source": "d6/f7.ts#Xq7.m1",
+      "target": "d6/f7.ts#Xq7.m2",
+      "viaInterface": false,
+      "view": "both",
+      "location": { "file": "d6/f7.ts", "line": 4, "column": 9 }
+    },
+    {
+      "kind": "call",
+      "source": "d6/f7.ts#Xq7.m1",
+      "target": "d8/f40.ts#Rx34",
+      "viaInterface": false,
+      "view": "both",
+      "location": { "file": "d6/f7.ts", "line": 5, "column": 9 }
+    },
+    {
+      "kind": "call",
+      "source": "d7/f31.ts#<module-top>",
+      "target": "d4/d5/f6.ts#Ma26.m3",
+      "viaInterface": true,
+      "view": "interface-member",
+      "location": { "file": "d7/f31.ts", "line": 2, "column": 1 }
+    },
+    {
+      "kind": "reference",
+      "source": "d7/f31.ts#<module-top>",
+      "target": "d8/f40.ts#Rx34",
+      "viaInterface": false,
+      "view": "both",
+      "location": { "file": "d7/f31.ts", "line": 3, "column": 1 }
+    }
+  ]
+}

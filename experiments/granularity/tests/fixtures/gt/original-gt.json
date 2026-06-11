@@ -1,0 +1,16 @@
+{
+  "tree": "original",
+  "queries": {
+    "deps-of:Renderer": ["Parser"],
+    "used-by:Parser": ["Renderer"],
+    "cycles": [["Renderer", "Parser"]],
+    "file:src/render.ts": ["Renderer"]
+  },
+  "graph": {
+    "articulationPoints": ["Renderer"],
+    "inDegreeRanking": [
+      { "id": "Parser", "inDegree": 3 },
+      { "id": "Renderer", "inDegree": 1 }
+    ]
+  }
+}

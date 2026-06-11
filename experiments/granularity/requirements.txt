@@ -1,0 +1,13 @@
+# Granularity experiment Python deps — all pinned (frozen with protocol, plan 59-66 Stage 59.1).
+# Verified installable on Python 3.10 (2026-06-11); skdim 0.3.4 smoke-tested against numpy 2.2.6
+# (TwoNN/MLE import + fit OK, so no numpy<2 fallback needed).
+scikit-dimension==0.3.4
+numpy==2.2.6
+scipy==1.15.3
+requests==2.34.2
+pytest==9.0.3
+pytest-cov==7.1.0
+# Undeclared import-time dependencies of scikit-dimension 0.3.4 (its setup metadata omits
+# them, but `import skdim` fails without them) — pinned for reproducibility:
+pandas==2.3.3
+matplotlib==3.10.9

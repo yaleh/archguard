@@ -1,0 +1,21 @@
+{
+  "module": "modA",
+  "entities": ["Xq7", "Zk2", "Pf3", "Qm9", "Rt5"],
+  "packages": { "Xq7": "p1", "Zk2": "p1", "Pf3": "p2", "Qm9": "p2", "Rt5": "p2" },
+  "relations": [
+    { "from": "Xq7", "to": "Pf3", "type": "dependency" },
+    { "from": "Zk2", "to": "Pf3", "type": "dependency" },
+    { "from": "Qm9", "to": "Pf3", "type": "dependency" },
+    { "from": "Pf3", "to": "Rt5", "type": "dependency" },
+    { "from": "Rt5", "to": "Pf3", "type": "dependency" }
+  ],
+  "cycles": [["Pf3", "Rt5", "Pf3"]],
+  "articulationPoints": ["Pf3"],
+  "callGraph": [
+    { "caller": "Xq7.m1", "callee": "Pf3.m4" },
+    { "caller": "Zk2.m2", "callee": "Pf3.m4" },
+    { "caller": "Qm9.m3", "callee": "Pf3.m4" },
+    { "caller": "Pf3.m4", "callee": "Rt5.m5" },
+    { "caller": "Rt5.m5", "callee": "Pf3.m6" }
+  ]
+}

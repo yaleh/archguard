@@ -1,0 +1,610 @@
+[
+  {
+    "id": "obf-highest-in-degree-1",
+    "taskClass": "A",
+    "module": "obf",
+    "taskType": "highest-in-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of incoming dependencies (in-degree)? Respond with JSON only, exactly in this shape: {\"answer\": \"name\"}. No prose, no markdown fences.",
+    "entities": [
+      "d7/f32.ts.Gw113"
+    ],
+    "answerType": "exact",
+    "answer": "d7/f32.ts.Gw113"
+  },
+  {
+    "id": "obf-inter-layer-deps-2",
+    "taskClass": "A",
+    "module": "obf",
+    "taskType": "inter-layer-deps",
+    "prompt": "Based only on the representation above: which entities in package d6 directly depend on at least one entity in package d8? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "d6/f24.ts.Av82"
+    ],
+    "answerType": "set",
+    "answer": [
+      "d6/f24.ts.Av82"
+    ]
+  },
+  {
+    "id": "obf-articulation-point-3",
+    "taskClass": "A",
+    "module": "obf",
+    "taskType": "articulation-point",
+    "prompt": "Based only on the representation above: list every entity that is an articulation point of the dependency graph (removing it disconnects the graph). Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "d7/f32.ts.Gw113"
+    ],
+    "answerType": "set",
+    "answer": [
+      "d7/f32.ts.Gw113"
+    ]
+  },
+  {
+    "id": "obf-signature-change-impact-4",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m145 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m125",
+      "Hs51.m131",
+      "Hs51.m131.v323",
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m134",
+      "Hs51.m138.v419",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-5",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m136 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m125",
+      "Hs51.m131",
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m134",
+      "Hs51.m138.v419",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-6",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Ln47 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ln47",
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m125",
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-7",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m140 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m141",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-8",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m139 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m141",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-9",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m138 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m141",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-10",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Cq108.m76 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Cq108",
+      "Aj27",
+      "Gt107"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Aj27.m78",
+      "Aj27.m90",
+      "Gt107.m250",
+      "Gt107.m76"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-11",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Jg57.m160 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Jg57",
+      "Vr32"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Vr32.m110",
+      "Vr32.m111",
+      "Vr32.m112"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-12",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Jg57.m161 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Jg57",
+      "Vr32"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Vr32.m110",
+      "Vr32.m111",
+      "Vr32.m112"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-13",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Jg57.m162 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Jg57",
+      "Vr32"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Vr32.m110",
+      "Vr32.m111",
+      "Vr32.m112"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-14",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Hs51.m134 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-15",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Dn50 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Dn50",
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-16",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Ym67.m194 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ym67"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Ym67.m189",
+      "Ym67.m190",
+      "Ym67.m197"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-17",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Ga112.m285 changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ga112"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Ga112.m282",
+      "Ga112.m283",
+      "Ga112.m287"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-signature-change-impact-18",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "signature-change-impact",
+    "prompt": "Based only on the representation above: if the signature of method Tw116.constructor changes, which methods are directly impacted (they call it directly)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Tw116",
+      "Nj114",
+      "Tr119",
+      "Zf115"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Nj114.m289",
+      "Tr119.m289",
+      "Zf115.m289"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-19",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Cq108 (i.e. call any method of Cq108)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Cq108",
+      "Aj27",
+      "Gt107"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Aj27.m78",
+      "Aj27.m90",
+      "Gt107.constructor",
+      "Gt107.m250",
+      "Gt107.m76"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-20",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Jg57 (i.e. call any method of Jg57)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Jg57",
+      "Vr32"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Vr32.constructor",
+      "Vr32.m110",
+      "Vr32.m111",
+      "Vr32.m112"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-21",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Ln47 (i.e. call any method of Ln47)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ln47",
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m125",
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-22",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Dn50 (i.e. call any method of Dn50)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Dn50",
+      "Hs51"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Hs51.m132",
+      "Hs51.m133",
+      "Hs51.m148"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-23",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Ck111 (i.e. call any method of Ck111)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ck111",
+      "Gt107"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Gt107.constructor",
+      "Gt107.m250",
+      "Gt107.m76"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-24",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Pt110 (i.e. call any method of Pt110)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Pt110",
+      "Gt107"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Gt107.constructor",
+      "Gt107.m250",
+      "Gt107.m76"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-25",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Vs109 (i.e. call any method of Vs109)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Vs109",
+      "Gt107"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Gt107.constructor",
+      "Gt107.m250",
+      "Gt107.m76"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-26",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Tw116 (i.e. call any method of Tw116)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Tw116",
+      "Nj114",
+      "Tr119",
+      "Zf115"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Nj114.m289",
+      "Tr119.m289",
+      "Zf115.m289"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-27",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Tr119 (i.e. call any method of Tr119)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Tr119",
+      "Xd131"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Xd131.constructor",
+      "Xd131.m65",
+      "Xd131.m66"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-28",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Zf115 (i.e. call any method of Zf115)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Zf115",
+      "Xd131"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Xd131.constructor",
+      "Xd131.m65",
+      "Xd131.m66"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-29",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Ac130 (i.e. call any method of Ac130)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ac130",
+      "Xd131"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Xd131.constructor",
+      "Xd131.m65",
+      "Xd131.m66"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-30",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Qz117 (i.e. call any method of Qz117)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Qz117",
+      "Xd131"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Xd131.constructor",
+      "Xd131.m65",
+      "Xd131.m66"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-31",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Ym67 (i.e. call any method of Ym67)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Ym67",
+      "Vr32"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Vr32.m111",
+      "Vr32.m113"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-32",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Uk38 (i.e. call any method of Uk38)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Uk38",
+      "Si46",
+      "Tc44"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Si46",
+      "Tc44.v241"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-callers-into-33",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "callers-into",
+    "prompt": "Based only on the representation above: which methods call into Sh37 (i.e. call any method of Sh37)? Respond with JSON only, exactly in this shape: {\"answer\": [\"name1\", \"name2\"]}. Use an empty array if nothing qualifies. No prose, no markdown fences.",
+    "entities": [
+      "Sh37",
+      "Si46",
+      "Tc44"
+    ],
+    "answerType": "set",
+    "answer": [
+      "Si46",
+      "Tc44.v241"
+    ],
+    "gtVariant": "expanded"
+  },
+  {
+    "id": "obf-most-called-method-34",
+    "taskClass": "B",
+    "module": "obf",
+    "taskType": "most-called-method",
+    "prompt": "Based only on the representation above: which method is called by the largest number of distinct other methods? Respond with JSON only, exactly in this shape: {\"answer\": \"name\"}. No prose, no markdown fences.",
+    "entities": [
+      "Hs51"
+    ],
+    "answerType": "exact",
+    "answer": "Hs51.m145",
+    "gtVariant": "expanded"
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "entities": [
+    {
+      "id": "d6/f7.ts.Xq7",
+      "name": "Xq7",
+      "type": "class",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m1",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "parameters": [{ "name": "v1", "type": "string", "isOptional": false }],
+          "returnType": "void"
+        },
+        {
+          "name": "m2",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "parameters": [],
+          "returnType": "Promise<number>"
+        },
+        { "name": "p1", "type": "property", "visibility": "public", "fieldType": "string" },
+        { "name": "p2", "type": "property", "visibility": "private", "fieldType": "Ma26" }
+      ],
+      "sourceLocation": { "file": "d6/f7.ts", "startLine": 2, "endLine": 15 }
+    },
+    {
+      "id": "d4/d5/f6.ts.Ma26",
+      "name": "Ma26",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m3",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [],
+          "returnType": "string"
+        }
+      ],
+      "sourceLocation": { "file": "d4/d5/f6.ts", "startLine": 1, "endLine": 3 }
+    },
+    {
+      "id": "d8/f40.ts.Rx34",
+      "name": "Rx34",
+      "type": "function",
+      "visibility": "public",
+      "sourceLocation": { "file": "d8/f40.ts", "startLine": 2, "endLine": 4 }
+    }
+  ],
+  "relations": [
+    {
+      "id": "d6/f7.ts.Xq7_implementation_d4/d5/f6.ts.Ma26",
+      "type": "implementation",
+      "source": "d6/f7.ts.Xq7",
+      "target": "d4/d5/f6.ts.Ma26"
+    },
+    {
+      "id": "d6/f7.ts.Xq7_composition_\"s1\"",
+      "type": "composition",
+      "source": "d6/f7.ts.Xq7",
+      "target": "\"s1\""
+    }
+  ]
+}
