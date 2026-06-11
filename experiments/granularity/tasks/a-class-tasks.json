@@ -1,0 +1,440 @@
+[
+  {
+    "id": "v2-a-highest-indegree-1",
+    "taskClass": "A",
+    "taskType": "highest-in-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of incoming dependencies (in-degree)? Respond with JSON only: {\"answer\": \"EntityName\"}.",
+    "answerType": "exact",
+    "answer": "types/config.ts.DiagramConfig",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-top3-indegree",
+    "taskClass": "A",
+    "taskType": "top-n-in-degree",
+    "prompt": "Based only on the representation above: list the 3 entities with the highest number of incoming dependencies (in-degree), in descending order. Respond with JSON only: {\"answer\": [\"Name1\", \"Name2\", \"Name3\"]}.",
+    "answerType": "set",
+    "answer": [
+      "types/config.ts.DiagramConfig",
+      "\"package\"",
+      "core/interfaces/language-plugin.ts.ILanguagePlugin"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-cycle-exists",
+    "taskClass": "A",
+    "taskType": "cycle-detection",
+    "prompt": "Based only on the representation above: does any cycle (circular dependency) exist in the entity dependency graph? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}.",
+    "answerType": "exact",
+    "answer": "no",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-list-packages",
+    "taskClass": "A",
+    "taskType": "list-packages",
+    "prompt": "Based only on the representation above: list all top-level packages (directories) in this codebase. Respond with JSON only: {\"answer\": [\"pkg1\", \"pkg2\", ...]}.",
+    "answerType": "set",
+    "answer": [
+      "analysis",
+      "cli",
+      "core",
+      "mermaid",
+      "parser",
+      "plugins",
+      "types",
+      "utils"
+    ],
+    "derivability": {
+      "L0": true,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L0"
+  },
+  {
+    "id": "v2-a-largest-package-size",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: which package contains the most entities (classes/interfaces)? Respond with JSON only: {\"answer\": \"packageName\"}.",
+    "answerType": "exact",
+    "answer": "plugins",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-relation-count",
+    "taskClass": "A",
+    "taskType": "relation-count",
+    "prompt": "Based only on the representation above: how many total dependency/inheritance/composition relations exist between entities? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 354,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-dominant-entity-type",
+    "taskClass": "A",
+    "taskType": "entity-type-count",
+    "prompt": "Based only on the representation above: which entity type (class, interface, etc.) is most common? Respond with JSON only: {\"answer\": \"typeName\"}.",
+    "answerType": "exact",
+    "answer": "interface",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-package-size-plugins",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: how many entities (classes/interfaces) are in the `plugins` package? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 144,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-package-size-cli",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: how many entities (classes/interfaces) are in the `cli` package? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 138,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-package-size-types",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: how many entities (classes/interfaces) are in the `types` package? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 73,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-package-size-mermaid",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: how many entities (classes/interfaces) are in the `mermaid` package? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 61,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-package-size-analysis",
+    "taskClass": "A",
+    "taskType": "package-entity-count",
+    "prompt": "Based only on the representation above: how many entities (classes/interfaces) are in the `analysis` package? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 59,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-cross-package-count",
+    "taskClass": "A",
+    "taskType": "cross-package-deps",
+    "prompt": "Based only on the representation above: how many unique cross-package dependency relationships exist (package-to-package, not counting self-dependencies)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 0,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": false,
+      "L3": false,
+      "L4": false,
+      "L5": false
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-total-entity-count",
+    "taskClass": "A",
+    "taskType": "entity-count",
+    "prompt": "Based only on the representation above: how many total entities (classes + interfaces combined) are in this codebase? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 530,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-interface-count",
+    "taskClass": "A",
+    "taskType": "entity-type-count",
+    "prompt": "Based only on the representation above: how many interface entities are defined in this codebase? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 276,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-root-entity-count",
+    "taskClass": "A",
+    "taskType": "root-node-count",
+    "prompt": "Based only on the representation above: how many entities have NO incoming dependency relations (i.e., no other entity depends on them)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 510,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-highest-outdegree",
+    "taskClass": "A",
+    "taskType": "highest-out-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of outgoing dependencies (out-degree)? Respond with JSON only: {\"answer\": \"EntityName\"}.",
+    "answerType": "exact",
+    "answer": "cli/analyze/run-analysis.ts.runAnalysis",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-direct-dep-exists",
+    "taskClass": "A",
+    "taskType": "direct-dependency-exists",
+    "prompt": "Based only on the representation above: does entity `analysis/fim/fim-analysis.ts.buildPackageAnalysis` have a direct dependency on `analysis/fim/fim-builder.ts.clampCoverageByPackage`? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}.",
+    "answerType": "exact",
+    "answer": "yes",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-inheritance-count",
+    "taskClass": "A",
+    "taskType": "relation-type-count",
+    "prompt": "Based only on the representation above: how many inheritance or implementation relations exist in total? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 43,
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  },
+  {
+    "id": "v2-a-composition-count",
+    "taskClass": "A",
+    "taskType": "relation-type-count",
+    "prompt": "Based only on the representation above: how many composition or aggregation relations exist in total? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 87,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-internal-rel-plugins",
+    "taskClass": "A",
+    "taskType": "package-internal-relations",
+    "prompt": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `plugins` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 0,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-internal-rel-cli",
+    "taskClass": "A",
+    "taskType": "package-internal-relations",
+    "prompt": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `cli` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 0,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-internal-rel-types",
+    "taskClass": "A",
+    "taskType": "package-internal-relations",
+    "prompt": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `types` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 0,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-internal-rel-mermaid",
+    "taskClass": "A",
+    "taskType": "package-internal-relations",
+    "prompt": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `mermaid` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 0,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2"
+  },
+  {
+    "id": "v2-a-dominant-relation-type",
+    "taskClass": "A",
+    "taskType": "relation-type-distribution",
+    "prompt": "Based only on the representation above: which type of relation (e.g. dependency, inheritance, composition) is most frequent? Respond with JSON only: {\"answer\": \"typeName\"}.",
+    "answerType": "exact",
+    "answer": "dependency",
+    "derivability": {
+      "L0": false,
+      "L1": true,
+      "L2": true,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L1"
+  }
+]

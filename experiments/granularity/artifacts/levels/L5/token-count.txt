@@ -1,0 +1,6 @@
+L5 source (true names, stripped comments)
+Chars: 184880
+Words: 16989
+Estimated tokens (1.3x): 22085
+Limit: 128000
+Decision: OK - no chunking needed

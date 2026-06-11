@@ -1,0 +1,13 @@
+L4 ArchJSON token count report (Stage 67.3)
+==========================================
+ArchJSON source: /home/yale/work/archguard/.archguard/output/class/all-classes.json
+Callgraph source: /home/yale/work/archguard/experiments/granularity/artifacts/gt/callgraph.json (375 call edges)
+Entities in reduced JSON: 530
+Relations in reduced JSON: 354
+CallGraph edges: 375
+Raw JSON size: 233358 chars
+Token estimate (cl100k_base approx): 14081
+Token limit: 32000
+Decision: OK (estimated 14081 tokens ≤ 32000 limit)
+
+No chunking needed. Stage 69.2 can use reduced.json directly.

@@ -1,0 +1,431 @@
+[
+  {
+    "id": "c1-mermaid-to-validated",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `ValidatedMermaidGenerator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidDiagramGenerator→ValidatedMermaidGenerator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-mermaid-to-pipeline",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `MermaidValidationPipeline`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidDiagramGenerator→MermaidValidationPipeline relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-mermaid-to-renderer",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `IsomorphicMermaidRenderer`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.renderJobsInParallelWithConfig"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidDiagramGenerator→IsomorphicMermaidRenderer relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-mermaid-to-repair",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `MermaidAutoRepair`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidDiagramGenerator→MermaidAutoRepair relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-mermaid-to-grouper",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `HeuristicGrouper`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidDiagramGenerator→HeuristicGrouper relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-pipeline-to-validator",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `MermaidParseValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidValidationPipeline→MermaidParseValidator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-pipeline-to-structural",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `StructuralValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidValidationPipeline→StructuralValidator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-pipeline-to-render",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `RenderValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidValidationPipeline→RenderValidator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-pipeline-to-quality",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `QualityValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidValidationPipeline→QualityValidator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-autorepair-to-validator",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `MermaidAutoRepair` directly call methods of class `MermaidParseValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidAutoRepair.repair",
+      "MermaidAutoRepair.repairBestEffort"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidAutoRepair→MermaidParseValidator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-generator-to-comment",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `ValidatedMermaidGenerator` directly call methods of class `CommentGenerator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ValidatedMermaidGenerator.constructor",
+      "ValidatedMermaidGenerator.generate"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows ValidatedMermaidGenerator→CommentGenerator relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-parallel-to-ts",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `ParallelParser` directly call methods of class `TypeScriptParser`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ParallelParser.parseFile"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows ParallelParser→TypeScriptParser relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-ts-to-relation",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `RelationExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows TypeScriptParser→RelationExtractor relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-ts-to-interface",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `InterfaceExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows TypeScriptParser→InterfaceExtractor relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-ts-to-enum",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `EnumExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows TypeScriptParser→EnumExtractor relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c1-ts-to-function",
+    "taskClass": "C",
+    "taskType": "concrete-call-edges",
+    "prompt": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `FunctionExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows TypeScriptParser→FunctionExtractor relation exists, but method names only visible in L3+."
+  },
+  {
+    "id": "c2-most-called-alidatedmermaidgenerator",
+    "taskClass": "C",
+    "taskType": "most-called-external-method",
+    "prompt": "Based only on the representation above: which method of class `ValidatedMermaidGenerator` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}.",
+    "answerType": "exact",
+    "answer": "ValidatedMermaidGenerator.escapeId",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows ValidatedMermaidGenerator exists with external dependencies, but method-level call counts require L3+."
+  },
+  {
+    "id": "c2-most-called-ypescriptparser",
+    "taskClass": "C",
+    "taskType": "most-called-external-method",
+    "prompt": "Based only on the representation above: which method of class `TypeScriptParser` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}.",
+    "answerType": "exact",
+    "answer": "TypeScriptParser.constructor",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows TypeScriptParser exists with external dependencies, but method-level call counts require L3+."
+  },
+  {
+    "id": "c2-most-called-elationextractor",
+    "taskClass": "C",
+    "taskType": "most-called-external-method",
+    "prompt": "Based only on the representation above: which method of class `RelationExtractor` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}.",
+    "answerType": "exact",
+    "answer": "RelationExtractor.extractFromSourceFile",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows RelationExtractor exists with external dependencies, but method-level call counts require L3+."
+  },
+  {
+    "id": "c2-most-called-ermaidvalidationpipeline",
+    "taskClass": "C",
+    "taskType": "most-called-external-method",
+    "prompt": "Based only on the representation above: which method of class `MermaidValidationPipeline` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}.",
+    "answerType": "exact",
+    "answer": "MermaidValidationPipeline.validateFull",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidValidationPipeline exists with external dependencies, but method-level call counts require L3+."
+  },
+  {
+    "id": "c2-most-called-ermaidparsevalidator",
+    "taskClass": "C",
+    "taskType": "most-called-external-method",
+    "prompt": "Based only on the representation above: which method of class `MermaidParseValidator` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}.",
+    "answerType": "exact",
+    "answer": "MermaidParseValidator.validate",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": "partial",
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L2",
+    "humanVerification": "L2 shows MermaidParseValidator exists with external dependencies, but method-level call counts require L3+."
+  }
+]

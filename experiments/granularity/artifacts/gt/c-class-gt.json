@@ -1,0 +1,158 @@
+{
+  "c1-mermaid-to-validated": {
+    "fromClass": "MermaidDiagramGenerator",
+    "toClass": "ValidatedMermaidGenerator",
+    "callers": [
+      "MermaidDiagramGenerator.generateOnly"
+    ]
+  },
+  "c1-mermaid-to-pipeline": {
+    "fromClass": "MermaidDiagramGenerator",
+    "toClass": "MermaidValidationPipeline",
+    "callers": [
+      "MermaidDiagramGenerator.generateOnly"
+    ]
+  },
+  "c1-mermaid-to-renderer": {
+    "fromClass": "MermaidDiagramGenerator",
+    "toClass": "IsomorphicMermaidRenderer",
+    "callers": [
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.renderJobsInParallelWithConfig"
+    ]
+  },
+  "c1-mermaid-to-repair": {
+    "fromClass": "MermaidDiagramGenerator",
+    "toClass": "MermaidAutoRepair",
+    "callers": [
+      "MermaidDiagramGenerator.generateOnly"
+    ]
+  },
+  "c1-mermaid-to-grouper": {
+    "fromClass": "MermaidDiagramGenerator",
+    "toClass": "HeuristicGrouper",
+    "callers": [
+      "MermaidDiagramGenerator.generateOnly"
+    ]
+  },
+  "c1-pipeline-to-validator": {
+    "fromClass": "MermaidValidationPipeline",
+    "toClass": "MermaidParseValidator",
+    "callers": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ]
+  },
+  "c1-pipeline-to-structural": {
+    "fromClass": "MermaidValidationPipeline",
+    "toClass": "StructuralValidator",
+    "callers": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ]
+  },
+  "c1-pipeline-to-render": {
+    "fromClass": "MermaidValidationPipeline",
+    "toClass": "RenderValidator",
+    "callers": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ]
+  },
+  "c1-pipeline-to-quality": {
+    "fromClass": "MermaidValidationPipeline",
+    "toClass": "QualityValidator",
+    "callers": [
+      "MermaidValidationPipeline.constructor",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ]
+  },
+  "c1-autorepair-to-validator": {
+    "fromClass": "MermaidAutoRepair",
+    "toClass": "MermaidParseValidator",
+    "callers": [
+      "MermaidAutoRepair.repair",
+      "MermaidAutoRepair.repairBestEffort"
+    ]
+  },
+  "c1-generator-to-comment": {
+    "fromClass": "ValidatedMermaidGenerator",
+    "toClass": "CommentGenerator",
+    "callers": [
+      "ValidatedMermaidGenerator.constructor",
+      "ValidatedMermaidGenerator.generate"
+    ]
+  },
+  "c1-parallel-to-ts": {
+    "fromClass": "ParallelParser",
+    "toClass": "TypeScriptParser",
+    "callers": [
+      "ParallelParser.parseFile"
+    ]
+  },
+  "c1-ts-to-relation": {
+    "fromClass": "TypeScriptParser",
+    "toClass": "RelationExtractor",
+    "callers": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ]
+  },
+  "c1-ts-to-interface": {
+    "fromClass": "TypeScriptParser",
+    "toClass": "InterfaceExtractor",
+    "callers": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ]
+  },
+  "c1-ts-to-enum": {
+    "fromClass": "TypeScriptParser",
+    "toClass": "EnumExtractor",
+    "callers": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ]
+  },
+  "c1-ts-to-function": {
+    "fromClass": "TypeScriptParser",
+    "toClass": "FunctionExtractor",
+    "callers": [
+      "TypeScriptParser.constructor",
+      "TypeScriptParser.parseCode",
+      "TypeScriptParser.parseProject"
+    ]
+  },
+  "c2-most-called-alidatedmermaidgenerator": {
+    "targetClass": "ValidatedMermaidGenerator",
+    "mostCalled": "ValidatedMermaidGenerator.escapeId",
+    "externalCallCount": 2
+  },
+  "c2-most-called-ypescriptparser": {
+    "targetClass": "TypeScriptParser",
+    "mostCalled": "TypeScriptParser.constructor",
+    "externalCallCount": 2
+  },
+  "c2-most-called-elationextractor": {
+    "targetClass": "RelationExtractor",
+    "mostCalled": "RelationExtractor.extractFromSourceFile",
+    "externalCallCount": 2
+  },
+  "c2-most-called-ermaidvalidationpipeline": {
+    "targetClass": "MermaidValidationPipeline",
+    "mostCalled": "MermaidValidationPipeline.validateFull",
+    "externalCallCount": 2
+  },
+  "c2-most-called-ermaidparsevalidator": {
+    "targetClass": "MermaidParseValidator",
+    "mostCalled": "MermaidParseValidator.validate",
+    "externalCallCount": 5
+  }
+}

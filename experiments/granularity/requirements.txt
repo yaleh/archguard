@@ -11,3 +11,6 @@ pytest-cov==7.1.0
 # them, but `import skdim` fails without them) — pinned for reproducibility:
 pandas==2.3.3
 matplotlib==3.10.9
+# Stage 67.2 (v2.2): S-struct sensor — node2vec graph embeddings (no LLM)
+node2vec==0.4.6
+networkx>=3.0

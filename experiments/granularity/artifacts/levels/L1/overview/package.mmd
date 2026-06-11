@@ -1,0 +1,78 @@
+%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%
+flowchart LR
+
+  d10["d10"]:::internal
+  subgraph d4_group["d4"]
+    d4["d4"]:::internal
+    d4_d5["d4/d5"]:::internal
+  end
+  d6["d6"]:::internal
+  d7["d7"]:::internal
+  subgraph d8_group["d8"]
+    d8["d8"]:::internal
+    d8_d9["d8/d9"]:::internal
+  end
+  d2_d3["d2/d3"]:::internal
+  subgraph external_deps["External Dependencies"]
+    pkg16["pkg16"]:::external
+    pkg17["pkg17"]:::external
+    pkg18["pkg18"]:::external
+    pkg2["pkg2"]:::external
+    pkg3["pkg3"]:::external
+    pkg4["pkg4"]:::external
+    pkg5["pkg5"]:::external
+    pkg6["pkg6"]:::external
+    pkg7["pkg7"]:::external
+    pkg8["pkg8"]:::external
+    pkg9["pkg9"]:::external
+    pkg10["pkg10"]:::external
+    pkg11["pkg11"]:::external
+    pkg12["pkg12"]:::external
+    pkg13["pkg13"]:::external
+    pkg14["pkg14"]:::external
+    pkg15["pkg15"]:::external
+  end
+  subgraph legend["Legend"]
+    direction LR
+    legend_internal["internal module"]:::internal
+    legend_external["external dependency"]:::external
+    legend_edge["--> depends on (bolder = more imports)"]
+  end
+  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01
+
+  style d4_group fill:#ffffff,stroke:#d0d7de,stroke-width:1px
+  style d8_group fill:#ffffff,stroke:#d0d7de,stroke-width:1px
+  style external_deps fill:#ffffff,stroke:#d0d7de,stroke-width:1px
+
+  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329
+  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e,font-weight:bold
+
+  d10 --> pkg16
+  d10 --> pkg17
+  d10 --> pkg18
+  d4 --> d4_d5
+  d6 ===>|"14 refs"| d8
+  d6 -->|"2 refs"| pkg2
+  d6 --> d4
+  d6 -->|"2 refs"| pkg3
+  d6 --> pkg4
+  d6 --> pkg5
+  d6 ==>|"3 refs"| pkg6
+  d6 --> pkg7
+  d6 --> pkg8
+  d6 -->|"2 refs"| d8_d9
+  d7 ==>|"3 refs"| pkg2
+  d7 ===>|"11 refs"| d8
+  d7 ==>|"7 refs"| pkg9
+  d7 --> pkg10
+  d7 --> pkg11
+  d7 --> pkg12
+  d7 --> pkg13
+  d7 --> pkg14
+  d7 --> d10
+  d8 --> d8_d9
+  d8 --> d2_d3
+  d4_d5 --> d8_d9
+  d4_d5 -->|"2 refs"| d8
+  d8_d9 --> pkg15

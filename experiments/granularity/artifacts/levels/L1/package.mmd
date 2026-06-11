@@ -1,0 +1,24 @@
+%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80, 'curve': 'basis'}}}%%
+flowchart LR
+
+  subgraph layer_analysis["analysis"]
+    analysis["analysis"]:::internal
+  end
+  subgraph layer_cli["cli"]
+    cli["cli"]:::internal
+  end
+  subgraph legend["Legend"]
+    direction LR
+    legend_internal["internal module"]:::internal
+    legend_edge["--> depends on (bolder = more imports)"]
+  end
+  style legend fill:#fff8c5,stroke:#d4a72c,stroke-dasharray:5 5,color:#633c01
+
+  style layer_analysis fill:#ffffff,stroke:#d0d7de,stroke-width:1px
+  style layer_cli fill:#ffffff,stroke:#d0d7de,stroke-width:1px
+
+  classDef internal fill:#dafbe1,stroke:#2da44e,color:#116329
+  classDef external fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef cycle    fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e,font-weight:bold
+
+  cli --> analysis

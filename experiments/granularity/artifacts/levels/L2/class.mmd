@@ -1,0 +1,2895 @@
+classDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Cli_Layer {
+    class CacheManager {
+      +readonly cacheDir: string
+      +async computeFileHash(filePath: string): any
+      +async get(filePath: string, hash: string): any
+      +async set(filePath: string, hash: string, data: T, options?: CacheOptions): any
+      +async clear(): any
+      +getStats(): CacheStats
+      +async getCacheSize(): any
+      +setDefaultTTL(ttl: number): void
+      +getDefaultTTL(): number
+      +getCompositeKey(files: Array, configBlob: string): string
+      +async loadCachedTestAnalysis(compositeKey: string): any
+      +async saveCachedTestAnalysis(compositeKey: string, analysis: TestAnalysis): any
+      +constructor(cacheDir?: string)
+    }
+    class CacheStats {
+      +hits: number
+      +misses: number
+      +hitRate: number
+      +totalSize: number
+    }
+    class CacheOptions {
+      +ttl?: number
+    }
+    class CacheEntry {
+      +data: T
+      +timestamp: number
+      +ttl: number
+    }
+    class ConfigLoader {
+      +async load(cliOptions?: any, configPath?: string): any
+      +async init(options?: object): any
+      +async getConfigPath(): any
+      +constructor(configDir?: string)
+    }
+    class FileConfig {
+      +workDir?: string
+      +outputDir?: string
+      +format?: any
+      +mermaid?: object
+      +exclude?: Array
+      +cli?: object
+      +cache?: object
+      +concurrency?: number
+      +verbose?: boolean
+      +diagrams?: Array
+    }
+    class ErrorHandler {
+      +format(error: unknown, options?: ErrorFormatOptions): string
+    }
+    class ErrorFormatOptions {
+      +color?: boolean
+      +verbose?: boolean
+    }
+    class APIError {
+      +constructor(message: string, statusCode: number)
+    }
+    class ValidationError {
+      +constructor(message: string, suggestions?: Array)
+    }
+    class FileError {
+      +constructor(message: string, filePath: string, operation: any)
+    }
+    class ProgressReporter {
+      +start(message: string): void
+      +update(completed: number, total: number): void
+      +succeed(message: string): void
+      +fail(message: string): void
+      +warn(message: string): void
+      +info(message: string): void
+      +getStages(): Array
+      +getCurrentStage(): Stage
+      +getSummary(): ProgressSummary
+      +printSummary(): void
+      +stop(): void
+      +constructor()
+    }
+    class StderrReporter {
+      +start(message: string): void
+      +succeed(message: string): void
+      +fail(message: string): void
+      +warn(message: string): void
+      +info(message: string): void
+    }
+    class NoopReporter {
+      +start(_message: string): void
+      +succeed(_message: string): void
+      +fail(_message: string): void
+      +warn(_message: string): void
+      +info(_message: string): void
+    }
+    class ProgressReporterLike {
+      +start(message: string): void
+      +succeed(message: string): void
+      +fail(message: string): void
+      +warn(message: string): void
+      +info(message: string): void
+    }
+    class Stage {
+      +name: string
+      +status: any
+      +startTime?: number
+      +endTime?: number
+      +progress?: object
+    }
+    class ProgressSummary {
+      +totalDuration: number
+      +totalDurationFormatted: string
+      +successCount: number
+      +failureCount: number
+      +warningCount: number
+    }
+    class CLIConfig {
+      +command: string
+      +args: Array
+      +timeout: number
+    }
+    class Config {
+      +source: any
+      +output?: string
+      +workDir?: string
+      +outputDir: string
+      +format: any
+      +exclude: Array
+      +cli: CLIConfig
+      +ai?: object
+      +cache: object
+      +concurrency?: number
+      +verbose?: boolean
+    }
+    class AnalyzeOptions {
+      +source: any
+      +output?: string
+      +format: any
+      +exclude?: Array
+      +cache: boolean
+      +concurrency?: number
+      +verbose?: boolean
+      +cliCommand?: string
+      +cliArgs?: string
+      +outputDir?: string
+      +workDir?: string
+      +cacheDir?: string
+      +name?: string
+    }
+  }
+  CacheManager --> TestAnalysis
+  ConfigLoader --> FileConfig
+  ErrorHandler --> ParseError
+  ProgressReporterLike <|.. ProgressReporter
+  ProgressReporterLike <|.. StderrReporter
+  ProgressReporterLike <|.. NoopReporter
+
+  %% Node type annotations
+  class CacheManager:::classNode
+  class CacheStats:::interface
+  class CacheOptions:::interface
+  class CacheEntry:::interface
+  class ConfigLoader:::classNode
+  class FileConfig:::interface
+  class ErrorHandler:::classNode
+  class ErrorFormatOptions:::interface
+  class APIError:::classNode
+  class ValidationError:::classNode
+  class FileError:::classNode
+  class ProgressReporter:::classNode
+  class StderrReporter:::classNode
+  class NoopReporter:::classNode
+  class ProgressReporterLike:::interface
+  class Stage:::interface
+  class ProgressSummary:::interface
+  class CLIConfig:::interface
+  class Config:::interface
+  class AnalyzeOptions:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Core_Layer___Mermaid_Layer {
+    class PluginRegistry {
+      +register(plugin: ILanguagePlugin, options?: RegisterOptions): void
+      +getByName(name: string, version?: string): ILanguagePlugin
+      +getByExtension(extension: string): ILanguagePlugin
+      +async detectPluginForDirectory(directoryPath: string): any
+      +listVersions(name: string): Array
+      +listAll(): Array
+      +has(name: string, version?: string): boolean
+      +async loadFromPath(pluginPath: string): any
+    }
+    class RegisterOptions {
+      +overwrite?: boolean
+    }
+    class MermaidAutoRepair {
+      +async repair(mermaidCode: string, errors: Array): any
+      +async repairBestEffort(mermaidCode: string): any
+      +constructor(parseValidator: MermaidParseValidator)
+    }
+    class CommentGenerator {
+      +generateHeader(config: DiagramConfig): string
+      +generatePatternComments(config: DiagramConfig): string
+      +generateProcessComments(config: DiagramConfig): string
+      +generateUsageComments(config: DiagramConfig): string
+      +generateAll(config: DiagramConfig): string
+      +generateVisibleTitle(config: DiagramConfig): string
+    }
+    class CppPackageFlowchartGenerator {
+      +generate(archJSON: ArchJSON): string
+    }
+    class MermaidDiagramGenerator {
+      +async generateOnly(archJson: ArchJSON, outputOptions: MermaidOutputOptions, level: DetailLevel, diagramConfig?: DiagramConfig): any
+      +static async renderJobsInParallel(jobs: Array, concurrency: number, progress?: IProgressReporter): any
+      +async generateAndRender(archJson: ArchJSON, outputOptions: MermaidOutputOptions, level: DetailLevel, diagramConfig?: DiagramConfig): any
+      +constructor(config: GlobalConfig, progress?: IProgressReporter)
+    }
+    class MermaidOutputOptions {
+      +outputDir: string
+      +baseName: string
+      +paths: object
+    }
+    class RenderJob {
+      +name: string
+      +mermaidCode: string
+      +outputPath: object
+    }
+    class ValidatedMermaidGenerator {
+      +generate(): string
+      +generateClassDiagrams(maxNodesPerDiagram: number): Array
+      +constructor(archJson: ArchJSON, options: object, diagramConfig?: DiagramConfig)
+    }
+    class HeuristicGrouper {
+      +group(archJson: ArchJSON): GroupingDecision
+      +constructor(config?: any)
+    }
+    class NoopProgressReporter {
+      +start(_message: string): void
+      +succeed(_message: string): void
+      +fail(_message: string): void
+      +warn(_message: string): void
+      +info(_message: string): void
+    }
+    class IProgressReporter {
+      +start(message: string): void
+      +succeed(message: string): void
+      +fail(message: string): void
+      +warn(message: string): void
+      +info(message: string): void
+    }
+    class MermaidRenderWorkerPool {
+      +start(): void
+      +render(job: any): any
+      +async terminate(): any
+      +constructor(poolSize: number, initData: WorkerInitData)
+    }
+    class WorkerInitData {
+      +theme: string
+      +maxTextSize: number
+      +transparentBackground: boolean
+      +themeVariables?: any
+    }
+    class RenderJob {
+      +jobId: string
+      +mermaidCode: string
+    }
+    class RenderResult {
+      +jobId: string
+      +success: boolean
+      +svg?: string
+      +error?: string
+    }
+    class IsomorphicMermaidRenderer {
+      +async renderSVG(mermaidCode: string): any
+      +async renderSVGRaw(mermaidCode: string): any
+      +async renderPNG(mermaidCode: string, outputPath: string): any
+      +async convertSVGToPNG(svg: string, outputPath: string): any
+      +async renderAndSave(mermaidCode: string, paths: MermaidOutputPaths): any
+      +getOptions(): MermaidRendererOptions
+      +setOptions(options: any): void
+      +constructor(options?: any)
+    }
+    class TestCoverageRenderer {
+      +render(analysis: TestAnalysis, archJson: ArchJSON): string
+    }
+    class TreeNode {
+      +moduleNode: any
+      +virtualId?: string
+      +children: Array
+    }
+    class GroupingDecision {
+      +packages: Array
+      +layout: LayoutDecision
+    }
+    class PackageGroup {
+      +name: string
+      +entities: Array
+      +reasoning?: string
+    }
+    class LayoutDecision {
+      +direction: any
+      +reasoning: string
+    }
+    class ParseValidationResult {
+      +valid: boolean
+      +errors: Array
+      +warnings: Array
+    }
+    class ValidationError {
+      +message: string
+      +line?: number
+      +column?: number
+      +code?: string
+    }
+    class ValidationWarning {
+      +message: string
+      +line?: number
+      +suggestion?: string
+    }
+    class StructuralValidationResult {
+      +valid: boolean
+      +issues: Array
+    }
+    class StructuralIssue {
+      +type: any
+      +message: string
+      +entity?: string
+      +details?: any
+    }
+    class RenderValidationResult {
+      +valid: boolean
+      +canRender: boolean
+      +issues: Array
+    }
+    class RenderIssue {
+      +type: any
+      +message: string
+      +severity: any
+    }
+    class QualityValidationResult {
+      +valid: boolean
+      +score: number
+      +metrics: QualityMetrics
+      +suggestions: Array
+    }
+    class QualityMetrics {
+      +readability: number
+      +completeness: number
+      +consistency: number
+      +complexity: number
+    }
+    class QualitySuggestion {
+      +type: any
+      +message: string
+      +impact: any
+      +action?: string
+    }
+    class ValidationPipelineResult {
+      +parse: ParseValidationResult
+      +structural: StructuralValidationResult
+      +render: RenderValidationResult
+      +quality: QualityValidationResult
+      +overall: object
+    }
+    class MermaidGeneratorOptions {
+      +level: MermaidDetailLevel
+      +grouping: GroupingDecision
+      +theme?: MermaidTheme
+      +includePrivate?: boolean
+      +includeProtected?: boolean
+      +maxDepth?: number
+    }
+    class MermaidTheme {
+      +name?: any
+      +variables?: any
+    }
+    class MermaidRendererOptions {
+      +format: any
+      +theme?: MermaidTheme
+      +backgroundColor?: string
+      +width?: number
+      +height?: number
+    }
+    class MermaidOutputPaths {
+      +mmd: string
+      +svg: string
+      +png: string
+    }
+    class GrouperConfig {
+      +strategy: GrouperStrategy
+      +maxPackages?: number
+      +maxEntitiesPerPackage?: number
+      +customRules?: Array
+    }
+    class GroupingRule {
+      +pattern: RegExp
+      +packageName: string
+      +priority?: number
+    }
+    class LLMGrouperResponse {
+      +packages: Array
+      +layout: LayoutDecision
+      +reasoning: string
+    }
+    class MermaidValidationPipeline {
+      +async validate(mermaidCode: string, archJson: ArchJSON): any
+      +async validateFull(mermaidCode: string, archJson: ArchJSON): any
+      +getParseValidator(): MermaidParseValidator
+      +generateReport(result: object): string
+      +summarize(result: ValidationPipelineResult): string
+      +constructor(_config?: any)
+    }
+    class MermaidParseValidator {
+      +async validate(mermaidCode: string): any
+      +constructor()
+    }
+    class QualityValidator {
+      +validate(mermaidCode: string, archJson: ArchJSON): QualityValidationResult
+    }
+    class RenderValidator {
+      +validate(mermaidCode: string): RenderValidationResult
+    }
+    class StructuralValidator {
+      +validate(mermaidCode: string, archJson: ArchJSON): StructuralValidationResult
+    }
+  }
+  CppPackageFlowchartGenerator --> ArchJSON
+  IProgressReporter <|.. NoopProgressReporter
+  TestCoverageRenderer --> TestAnalysis
+  TestCoverageRenderer --> ArchJSON
+
+  %% Node type annotations
+  class PluginRegistry:::classNode
+  class RegisterOptions:::interface
+  class MermaidAutoRepair:::classNode
+  class CommentGenerator:::classNode
+  class CppPackageFlowchartGenerator:::classNode
+  class MermaidDiagramGenerator:::classNode
+  class MermaidOutputOptions:::interface
+  class RenderJob:::interface
+  class ValidatedMermaidGenerator:::classNode
+  class HeuristicGrouper:::classNode
+  class NoopProgressReporter:::classNode
+  class IProgressReporter:::interface
+  class MermaidRenderWorkerPool:::classNode
+  class WorkerInitData:::interface
+  class RenderResult:::interface
+  class IsomorphicMermaidRenderer:::classNode
+  class TestCoverageRenderer:::classNode
+  class TreeNode:::interface
+  class GroupingDecision:::interface
+  class PackageGroup:::interface
+  class LayoutDecision:::interface
+  class ParseValidationResult:::interface
+  class ValidationError:::interface
+  class ValidationWarning:::interface
+  class StructuralValidationResult:::interface
+  class StructuralIssue:::interface
+  class RenderValidationResult:::interface
+  class RenderIssue:::interface
+  class QualityValidationResult:::interface
+  class QualityMetrics:::interface
+  class QualitySuggestion:::interface
+  class ValidationPipelineResult:::interface
+  class MermaidGeneratorOptions:::interface
+  class MermaidTheme:::interface
+  class MermaidRendererOptions:::interface
+  class MermaidOutputPaths:::interface
+  class GrouperConfig:::interface
+  class GroupingRule:::interface
+  class LLMGrouperResponse:::interface
+  class MermaidValidationPipeline:::classNode
+  class MermaidParseValidator:::classNode
+  class QualityValidator:::classNode
+  class RenderValidator:::classNode
+  class StructuralValidator:::classNodeclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Extensions_Layer {
+    class GoAtlasExtension {
+      +version: string
+      +layers: GoAtlasLayers
+      +metadata: GoAtlasMetadata
+    }
+    class GoAtlasLayers {
+      +package?: PackageGraph
+      +capability?: CapabilityGraph
+      +goroutine?: GoroutineTopology
+      +flow?: FlowGraph
+    }
+    class GoAtlasMetadata {
+      +generatedAt: string
+      +generationStrategy: object
+      +completeness: object
+      +performance: object
+      +warnings?: Array
+    }
+    class PackageGraph {
+      +nodes: Array
+      +edges: Array
+      +cycles: Array
+    }
+    class PackageCycle {
+      +packages: Array
+      +severity: any
+    }
+    class PackageNode {
+      +id: string
+      +name: string
+      +type: any
+      +fileCount: number
+      +stats?: PackageStats
+    }
+    class PackageStats {
+      +structs: number
+      +interfaces: number
+      +functions: number
+    }
+    class PackageDependency {
+      +from: string
+      +to: string
+      +strength: number
+      +transitive?: boolean
+    }
+    class CapabilityGraph {
+      +nodes: Array
+      +edges: Array
+      +concreteUsageRisks?: Array
+    }
+    class CapabilityNode {
+      +id: string
+      +name: string
+      +type: any
+      +package: string
+      +exported: boolean
+      +methodCount?: number
+      +fieldCount?: number
+      +fanIn?: number
+      +fanOut?: number
+    }
+    class CapabilityRelation {
+      +id: string
+      +type: any
+      +source: string
+      +target: string
+      +confidence: number
+      +concreteUsage?: boolean
+      +context?: object
+    }
+    class ConcreteUsageRisk {
+      +owner: string
+      +fieldType: string
+      +concreteType: string
+      +location: string
+    }
+    class GoroutineLifecycleSummary {
+      +nodeId: string
+      +spawnTargetName: string
+      +receivesContext: boolean
+      +cancellationCheckAvailable: boolean
+      +hasCancellationCheck?: boolean
+      +cancellationMechanism?: any
+      +orphan: boolean
+    }
+    class GoroutineTopology {
+      +nodes: Array
+      +edges: Array
+      +channels: Array
+      +channelEdges: Array
+      +lifecycle?: Array
+    }
+    class GoroutineNode {
+      +id: string
+      +name: string
+      +type: any
+      +spawnType?: any
+      +package: string
+      +location: object
+      +pattern?: GoroutinePattern
+    }
+    class SpawnRelation {
+      +from: string
+      +to: string
+      +spawnType: any
+    }
+    class ChannelInfo {
+      +id: string
+      +name: string
+      +type: string
+      +direction: any
+      +bufferSize?: number
+      +location: object
+    }
+    class ChannelEdge {
+      +from: string
+      +to: string
+      +edgeType: any
+    }
+    class FlowGraph {
+      +entryPoints: Array
+      +callChains: Array
+    }
+    class EntryPoint {
+      +id: string
+      +protocol: string
+      +method?: HttpMethod
+      +framework: string
+      +path: string
+      +handler: string
+      +middleware: Array
+      +package?: string
+      +location: object
+    }
+    class CallChain {
+      +id: string
+      +entryPoint: string
+      +calls: Array
+      +errorPath?: Array
+    }
+    class CallEdge {
+      +from: string
+      +to: string
+      +type: any
+      +confidence: number
+    }
+    class ArchJSONExtensions {
+      +goAtlas?: GoAtlasExtension
+      +tsAnalysis?: TsAnalysis
+      +testAnalysis?: TestAnalysis
+    }
+    class TestPatternConfig {
+      +assertionPatterns?: Array
+      +testCasePatterns?: Array
+      +skipPatterns?: Array
+      +testFileGlobs?: Array
+      +typeClassificationRules?: Array
+    }
+    class DetectedTestPatterns {
+      +detectedFrameworks: Array
+      +suggestedPatternConfig: TestPatternConfig
+      +notes: Array
+    }
+    class TestAnalysis {
+      +version: string
+      +patternConfigSource: any
+      +testFiles: Array
+      +coverageMap: Array
+      +issues: Array
+      +metrics: TestMetrics
+    }
+    class TestFileInfo {
+      +id: string
+      +filePath: string
+      +frameworks: Array
+      +testType: any
+      +testCaseCount: number
+      +assertionCount: number
+      +skipCount: number
+      +assertionDensity: number
+      +coveredEntityIds: Array
+    }
+    class CoverageLink {
+      +sourceEntityId: string
+      +coveredByTestIds: Array
+      +coverageScore: number
+    }
+    class TestIssue {
+      +type: any
+      +severity: any
+      +testFileId: string
+      +message: string
+      +suggestion?: string
+    }
+    class TestMetrics {
+      +totalTestFiles: number
+      +byType: any
+      +entityCoverageRatio: number
+      +assertionDensity: number
+      +skipRatio: number
+      +issueCount: any
+    }
+    class PackageCoverage {
+      +package: string
+      +totalEntities: number
+      +coveredEntities: number
+      +coverageRatio: number
+      +testFileIds: Array
+    }
+    class TsAnalysis {
+      +version: string
+      +moduleGraph?: TsModuleGraph
+    }
+    class TsModuleGraph {
+      +nodes: Array
+      +edges: Array
+      +cycles: Array
+    }
+    class TsModuleNode {
+      +id: string
+      +name: string
+      +type: any
+      +fileCount: number
+      +stats: object
+    }
+    class TsModuleDependency {
+      +from: string
+      +to: string
+      +strength: number
+      +importedNames: Array
+    }
+    class TsModuleCycle {
+      +modules: Array
+      +severity: any
+    }
+  }
+
+  %% Node type annotations
+  class GoAtlasExtension:::interface
+  class GoAtlasLayers:::interface
+  class GoAtlasMetadata:::interface
+  class PackageGraph:::interface
+  class PackageCycle:::interface
+  class PackageNode:::interface
+  class PackageStats:::interface
+  class PackageDependency:::interface
+  class CapabilityGraph:::interface
+  class CapabilityNode:::interface
+  class CapabilityRelation:::interface
+  class ConcreteUsageRisk:::interface
+  class GoroutineLifecycleSummary:::interface
+  class GoroutineTopology:::interface
+  class GoroutineNode:::interface
+  class SpawnRelation:::interface
+  class ChannelInfo:::interface
+  class ChannelEdge:::interface
+  class FlowGraph:::interface
+  class EntryPoint:::interface
+  class CallChain:::interface
+  class CallEdge:::interface
+  class ArchJSONExtensions:::interface
+  class TestPatternConfig:::interface
+  class DetectedTestPatterns:::interface
+  class TestAnalysis:::interface
+  class TestFileInfo:::interface
+  class CoverageLink:::interface
+  class TestIssue:::interface
+  class TestMetrics:::interface
+  class PackageCoverage:::interface
+  class TsAnalysis:::interface
+  class TsModuleGraph:::interface
+  class TsModuleNode:::interface
+  class TsModuleDependency:::interface
+  class TsModuleCycle:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Git_History_Layer {
+    class FileChange {
+      +path: string
+      +added: number
+      +deleted: number
+    }
+    class CommitRecord {
+      +sha: string
+      +authorEmail: string
+      +date: string
+      +files: Array
+    }
+    class ReadGitLogOptions {
+      +sinceDays: number
+      +maxCommits: number
+      +includeMerges: boolean
+    }
+    class FileAccumulator {
+      +path: string
+      +commits: Array
+      +dates: Set
+      +authors: Map
+      +authorShas: Map
+      +addedLines: number
+      +deletedLines: number
+      +lastDate: string
+    }
+    class RiskInput {
+      +commitCount: number
+      +authorCount: number
+      +primaryOwnerShare: number
+      +lastChangedAt: string
+      +topCochangeNeighbors: Array
+    }
+    class RiskNorms {
+      +maxCommitCount: number
+      +maxAuthorCount: number
+    }
+    class GitHistoryNotFoundError {
+      +constructor(archguardDir: string)
+    }
+    class LoadedHistoryData {
+      +manifest: GitHistoryManifest
+      +packageMetrics: Map
+      +fileMetrics: Map
+    }
+    class HistoryQuery {
+      +getCochange(targetType: any, target: string, topN?: number): CochangeResult
+      +getOwnership(targetType: any, target: string): OwnershipResult
+      +getChangeRisk(targetType: any, target: string): ChangeRiskResult
+      +getChangeContext(targetType: any, target: string): ChangeContextResult
+      +constructor(data: LoadedHistoryData)
+    }
+    class CochangeResult {
+      +target: string
+      +targetType: any
+      +neighbors: Array
+      +analyzedWindow: object
+      +limitation: string
+    }
+    class OwnershipContributor {
+      +email: string
+      +commitCount: number
+      +share: number
+    }
+    class OwnershipResult {
+      +target: string
+      +targetType: any
+      +contributors: Array
+      +primaryOwner: string
+      +primaryOwnerShare: number
+      +activeMaintainers: number
+      +busFactor: number
+      +analyzedWindow: object
+    }
+    class ChangeRiskResult {
+      +target: string
+      +targetType: any
+      +riskScore: number
+      +riskLevel: any
+      +factors: RiskFactors
+      +factorExplanations: object
+      +limitation: string
+    }
+    class ChangeContextResult {
+      +target: string
+      +targetType: any
+      +summary: object
+      +recentChurn: object
+      +ownerConcentration: object
+      +topCochangeNeighbors: Array
+      +risk: object
+      +analyzedWindow: object
+      +stalePathWarning?: string
+    }
+  }
+
+  %% Node type annotations
+  class FileChange:::interface
+  class CommitRecord:::interface
+  class ReadGitLogOptions:::interface
+  class FileAccumulator:::interface
+  class RiskInput:::interface
+  class RiskNorms:::interface
+  class GitHistoryNotFoundError:::classNode
+  class LoadedHistoryData:::interface
+  class HistoryQuery:::classNode
+  class CochangeResult:::interface
+  class OwnershipContributor:::interface
+  class OwnershipResult:::interface
+  class ChangeRiskResult:::interface
+  class ChangeContextResult:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Golang_Layer {
+    class ArchJsonMapper {
+      +mapEntities(packages: Array): Array
+      +mapMissingInterfaceEntities(entities: Array, relations: Array, packages: Array): Array
+      +mapRelations(packages: Array, implementations: Array, moduleName?: string): Array
+    }
+    class DependencyExtractor {
+      +async extractDependencies(workspaceRoot: string): any
+    }
+    class GoModInfo {
+      +module: string
+      +goVersion: string
+      +dependencies: Array
+    }
+    class GoplsClient {
+      +async initialize(workspaceRoot: string): any
+      +async getImplementations(typeName: string, filePath: string, line: number): any
+      +async getTypeInfo(symbol: string, filePath: string, line: number): any
+      +isInitialized(): boolean
+      +async dispose(): any
+      +constructor(goplsPath?: string, timeout?: number)
+    }
+    class LSPMessage {
+      +jsonrpc: "2.0"
+      +id?: number
+      +method?: string
+      +params?: any
+      +result?: any
+      +error?: object
+    }
+    class Location {
+      +uri: string
+      +range: object
+    }
+    class ImplementationResult {
+      +structName: string
+      +filePath: string
+      +line: number
+    }
+    class TypeInfo {
+      +name: string
+      +kind: string
+      +signature?: string
+    }
+    class GoPlugin {
+      +readonly metadata: PluginMetadata
+      +readonly supportedLevels: any
+      +readonly dependencyExtractor: IDependencyExtractor
+      +async initialize(config: PluginInitConfig): any
+      +canHandle(targetPath: string): boolean
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +async parseFiles(filePaths: Array): any
+      +async parseProject(workspaceRoot: string, config: ParseConfig): any
+      +async parseToRawData(workspaceRoot: string, config: any): any
+      +async generateAtlas(rootPath: string, options?: AtlasGenerationOptions): any
+      +async renderLayer(atlas: GoArchitectureAtlas, layer?: AtlasLayer, format?: RenderFormat): any
+      +async dispose(): any
+      +isTestFile(filePath: string, _patternConfig?: TestPatternConfig): boolean
+      +extractTestStructure(filePath: string, code: string, _patternConfig?: TestPatternConfig): any
+      +constructor()
+    }
+    class IGoAtlas {
+      +generateAtlas(rootPath: string, options?: AtlasGenerationOptions): any
+      +renderLayer(atlas: GoArchitectureAtlas, layer: AtlasLayer, format: RenderFormat): any
+    }
+    class InterfaceMatcher {
+      +async matchWithGopls(structs: Array, interfaces: Array, goplsClient: GoplsClient): any
+      +matchImplicitImplementations(structs: Array, interfaces: Array): Array
+      +matchImplicitImplementationsWithEmbedding(structs: Array, interfaces: Array, structMap: Map): Array
+      +buildMethodSet(struct: GoRawStruct, structMap: Map, visited?: Set, isRoot?: boolean): MethodSet
+    }
+    class GoAnalysisScopePlan {
+      +workspaceRoot: string
+      +includePatterns: Array
+      +excludePatterns: Array
+    }
+    class TreeSitterBridge {
+      +parseCode(code: string, filePath: string, options?: TreeSitterParseOptions): GoRawPackage
+      +constructor()
+    }
+    class TreeSitterParseOptions {
+      +extractBodies?: boolean
+      +selectiveExtraction?: boolean
+    }
+    class GoSourceLocation {
+      +file: string
+      +startLine: number
+      +endLine: number
+      +startColumn?: number
+      +endColumn?: number
+    }
+    class GoField {
+      +name: string
+      +type: string
+      +tag?: string
+      +exported: boolean
+      +location: GoSourceLocation
+    }
+    class GoMethod {
+      +name: string
+      +receiver?: string
+      +receiverType?: string
+      +parameters: Array
+      +returnTypes: Array
+      +exported: boolean
+      +location: GoSourceLocation
+      +body?: GoFunctionBody
+    }
+    class MethodSignature {
+      +name: string
+      +normalizedSignature: string
+    }
+    class MethodSet {
+      +valueMethodSet: Map
+      +pointerMethodSet: Map
+    }
+    class EmbeddedTypeRef {
+      +name: string
+      +isPointer: boolean
+      +location: GoSourceLocation
+    }
+    class GoRawStruct {
+      +name: string
+      +packageName: string
+      +fields: Array
+      +methods: Array
+      +embeddedTypes: Array
+      +embeddedTypeRefs?: Array
+      +exported: boolean
+      +location: GoSourceLocation
+    }
+    class GoRawInterface {
+      +name: string
+      +packageName: string
+      +methods: Array
+      +embeddedInterfaces: Array
+      +exported: boolean
+      +location: GoSourceLocation
+    }
+    class GoFunctionBody {
+      +calls: Array
+      +goSpawns: Array
+      +channelOps: Array
+    }
+    class GoCallExpr {
+      +functionName: string
+      +packageName?: string
+      +receiverType?: string
+      +args?: Array
+      +location: GoSourceLocation
+    }
+    class GoSpawnStmt {
+      +call: GoCallExpr
+      +location: GoSourceLocation
+    }
+    class GoChannelOp {
+      +channelName: string
+      +operation: any
+      +location: GoSourceLocation
+    }
+    class GoFunction {
+      +name: string
+      +packageName: string
+      +parameters: Array
+      +returnTypes: Array
+      +exported: boolean
+      +location: GoSourceLocation
+      +body?: GoFunctionBody
+    }
+    class GoImport {
+      +path: string
+      +alias?: string
+      +location: GoSourceLocation
+      +type?: any
+    }
+    class GoRawPackage {
+      +id: string
+      +name: string
+      +fullName: string
+      +dirPath: string
+      +imports: Array
+      +structs: Array
+      +interfaces: Array
+      +functions: Array
+      +sourceFiles: Array
+      +orphanedMethods?: Array
+    }
+    class GoRawData {
+      +packages: Array
+      +moduleRoot: string
+      +moduleName: string
+      +implementations?: Array
+    }
+    class InferredImplementation {
+      +structName: string
+      +structPackageId: string
+      +interfaceName: string
+      +interfacePackageId: string
+      +confidence: number
+      +matchedMethods: Array
+      +source: any
+    }
+  }
+  BaseArchJsonMapper <|-- ArchJsonMapper
+  ArchJsonMapper --> Entity
+  ArchJsonMapper --> Relation
+  IDependencyExtractor <|.. DependencyExtractor
+  DependencyExtractor --> Dependency
+  DependencyExtractor --> GoModInfo
+  GoplsClient --> ImplementationResult
+  GoplsClient --> TypeInfo
+  GoplsClient --> ArrayBufferLike
+  GoplsClient --> LSPMessage
+  ILanguagePlugin <|.. GoPlugin
+  IGoAtlas <|.. GoPlugin
+  GoPlugin *-- PluginMetadata
+  GoPlugin *-- readonly___package____capability____goroutine____flow__
+  GoPlugin *-- IDependencyExtractor
+  GoPlugin --> PluginInitConfig
+  GoPlugin --> ArchJSON
+  GoPlugin --> ParseConfig
+  GoPlugin --> GoArchitectureAtlas
+  GoPlugin --> TestPatternConfig
+  TreeSitterBridge --> Parser_SyntaxNode
+
+  %% Node type annotations
+  class ArchJsonMapper:::classNode
+  class DependencyExtractor:::classNode
+  class GoModInfo:::interface
+  class GoplsClient:::classNode
+  class LSPMessage:::interface
+  class Location:::interface
+  class ImplementationResult:::interface
+  class TypeInfo:::interface
+  class GoPlugin:::classNode
+  class IGoAtlas:::interface
+  class InterfaceMatcher:::classNode
+  class GoAnalysisScopePlan:::interface
+  class TreeSitterBridge:::classNode
+  class TreeSitterParseOptions:::interface
+  class GoSourceLocation:::interface
+  class GoField:::interface
+  class GoMethod:::interface
+  class MethodSignature:::interface
+  class MethodSet:::interface
+  class EmbeddedTypeRef:::interface
+  class GoRawStruct:::interface
+  class GoRawInterface:::interface
+  class GoFunctionBody:::interface
+  class GoCallExpr:::interface
+  class GoSpawnStmt:::interface
+  class GoChannelOp:::interface
+  class GoFunction:::interface
+  class GoImport:::interface
+  class GoRawPackage:::interface
+  class GoRawData:::interface
+  class InferredImplementation:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Interfaces_Layer {
+    class Dependency {
+      +name: string
+      +version: string
+      +type: DependencyType
+      +scope: DependencyScope
+      +source: string
+      +isDirect: boolean
+    }
+    class IDependencyExtractor {
+      +extractDependencies(workspaceRoot: string): any
+    }
+    class PluginError {
+      +readonly code: string
+      +readonly pluginName: string
+      +readonly cause: Error
+      +constructor(message: string, code: string, pluginName: string, cause?: Error)
+    }
+    class PluginInitializationError {
+      +constructor(pluginName: string, message: string, cause?: Error)
+    }
+    class PluginConfigError {
+      +readonly field: string
+      +constructor(pluginName: string, message: string, field?: string, cause?: Error)
+    }
+    class ToolDependencyError {
+      +readonly toolName: string
+      +readonly requiredVersion: string
+      +constructor(pluginName: string, toolName: string, requiredVersion?: string)
+    }
+    class ParseError {
+      +readonly file: string
+      +readonly line: number
+      +constructor(message: string, pluginName: string, file: string, line?: number, cause?: Error)
+    }
+    class FileSystemError {
+      +readonly path: string
+      +readonly operation: any
+      +constructor(pluginName: string, operation: any, path: string, cause?: Error)
+    }
+    class RawTestCase {
+      +name: string
+      +isSkipped: boolean
+      +assertionCount: number
+    }
+    class RawTestFile {
+      +filePath: string
+      +frameworks: Array
+      +testTypeHint: any
+      +testCases: Array
+      +importedSourceFiles: Array
+      +totalAssertions?: number
+    }
+    class PluginCapabilities {
+      +singleFileParsing: boolean
+      +incrementalParsing: boolean
+      +dependencyExtraction: boolean
+      +typeInference: boolean
+      +testStructureExtraction?: boolean
+    }
+    class PluginMetadata {
+      +name: string
+      +version: string
+      +displayName: string
+      +fileExtensions: Array
+      +author: string
+      +repository?: string
+      +minCoreVersion: string
+      +capabilities: PluginCapabilities
+    }
+    class PluginInitConfig {
+      +workspaceRoot: string
+      +cacheDir?: string
+      +verbose?: boolean
+    }
+    class ILanguagePlugin {
+      +readonly metadata: PluginMetadata
+      +readonly supportedLevels: readonly Array
+      +readonly dependencyExtractor?: IDependencyExtractor
+      +readonly validator?: IValidator
+      +initialize(config: PluginInitConfig): any
+      +canHandle(targetPath: string): boolean
+      +dispose(): any
+      +isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean
+      +extractTestStructure(filePath: string, code: string, patternConfig?: TestPatternConfig): RawTestFile
+    }
+    class ParseConfig {
+      +workspaceRoot: string
+      +excludePatterns: Array
+      +includePatterns?: Array
+      +filePattern?: string
+      +concurrency?: number
+      +languageSpecific?: any
+    }
+    class IParser {
+      +parseProject(workspaceRoot: string, config: ParseConfig): any
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +parseFiles(filePaths: Array): any
+    }
+    class ValidationError {
+      +code: string
+      +message: string
+      +path?: string
+      +severity: "error"
+    }
+    class ValidationWarning {
+      +code: string
+      +message: string
+      +path?: string
+      +severity: "warning"
+      +suggestion?: string
+    }
+    class ValidationResult {
+      +valid: boolean
+      +errors: Array
+      +warnings: Array
+      +durationMs: number
+    }
+    class IValidator {
+      +validate(archJson: ArchJSON): ValidationResult
+    }
+  }
+  PluginError <|-- PluginInitializationError
+  PluginError <|-- PluginConfigError
+  PluginError <|-- ToolDependencyError
+  PluginError <|-- ParseError
+  PluginError <|-- FileSystemError
+  IParser <|-- ILanguagePlugin
+
+  %% Node type annotations
+  class Dependency:::interface
+  class IDependencyExtractor:::interface
+  class PluginError:::classNode
+  class PluginInitializationError:::classNode
+  class PluginConfigError:::classNode
+  class ToolDependencyError:::classNode
+  class ParseError:::classNode
+  class FileSystemError:::classNode
+  class RawTestCase:::interface
+  class RawTestFile:::interface
+  class PluginCapabilities:::interface
+  class PluginMetadata:::interface
+  class PluginInitConfig:::interface
+  class ILanguagePlugin:::interface
+  class ParseConfig:::interface
+  class IParser:::interface
+  class ValidationError:::interface
+  class ValidationWarning:::interface
+  class ValidationResult:::interface
+  class IValidator:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Java_Layer {
+    class ArchJsonMapper {
+      +mapEntities(packages: Array): Array
+      +mapRelations(packages: Array): Array
+    }
+    class DependencyExtractor {
+      +async extractDependencies(workspaceRoot: string): any
+      +async extractFromGradle(gradlePath: string): any
+      +async extractFromMaven(pomPath: string): any
+    }
+    class JavaPlugin {
+      +canHandle(targetPath: string): boolean
+      +async dispose(): any
+      +extractTestStructure(_filePath: string, _code: string): null
+      +async initialize(config: PluginInitConfig): any
+      +isTestFile(_filePath: string): boolean
+      +readonly metadata: PluginMetadata
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +async parseFiles(filePaths: Array): any
+      +async parseProject(workspaceRoot: string, config: ParseConfig): any
+      +readonly supportedLevels: readonly ["package", "class", "method"]
+    }
+    class TreeSitterBridge {
+      +constructor()
+      +parseCode(code: string, filePath: string): JavaRawPackage
+    }
+    class JavaRawAnnotation {
+      +arguments?: any
+      +name: string
+    }
+    class JavaRawClass {
+      +annotations: Array
+      +constructors: Array
+      +endLine: number
+      +fields: Array
+      +filePath: string
+      +interfaces: Array
+      +isAbstract: boolean
+      +methods: Array
+      +modifiers: Array
+      +name: string
+      +packageName: string
+      +startLine: number
+      +superClass?: string
+    }
+    class JavaRawConstructor {
+      +annotations: Array
+      +modifiers: Array
+      +parameters: Array
+    }
+    class JavaRawData {
+      +packages: Array
+    }
+    class JavaRawEnum {
+      +endLine: number
+      +filePath: string
+      +modifiers: Array
+      +name: string
+      +packageName: string
+      +startLine: number
+      +values: Array
+    }
+    class JavaRawField {
+      +annotations: Array
+      +defaultValue?: string
+      +modifiers: Array
+      +name: string
+      +type: string
+    }
+    class JavaRawInterface {
+      +annotations: Array
+      +endLine: number
+      +extends: Array
+      +filePath: string
+      +methods: Array
+      +modifiers: Array
+      +name: string
+      +packageName: string
+      +startLine: number
+    }
+    class JavaRawMethod {
+      +annotations: Array
+      +isAbstract: boolean
+      +modifiers: Array
+      +name: string
+      +parameters: Array
+      +returnType: string
+    }
+    class JavaRawPackage {
+      +classes: Array
+      +enums: Array
+      +interfaces: Array
+      +name: string
+    }
+    class JavaRawParameter {
+      +annotations?: Array
+      +name: string
+      +type: string
+    }
+    class JavaSourceLocation {
+      +endColumn?: number
+      +endLine: number
+      +file: string
+      +startColumn?: number
+      +startLine: number
+    }
+  }
+  ArchJsonMapper --> Entity
+  ArchJsonMapper --> Relation
+  BaseArchJsonMapper <|-- ArchJsonMapper
+  DependencyExtractor --> Dependency
+  DependencyExtractor --> DependencyScope
+  DependencyExtractor --> JavaDependencyScope
+  IDependencyExtractor <|.. DependencyExtractor
+  JavaPlugin *-- PluginMetadata
+  JavaPlugin *-- readonly___package____class____method__
+  JavaPlugin --> ArchJSON
+  JavaPlugin --> ParseConfig
+  JavaPlugin --> PluginInitConfig
+  ILanguagePlugin <|.. JavaPlugin
+  TreeSitterBridge --> Parser_SyntaxNode
+
+  %% Node type annotations
+  class ArchJsonMapper:::classNode
+  class DependencyExtractor:::classNode
+  class JavaPlugin:::classNode
+  class TreeSitterBridge:::classNode
+  class JavaRawAnnotation:::interface
+  class JavaRawClass:::interface
+  class JavaRawConstructor:::interface
+  class JavaRawData:::interface
+  class JavaRawEnum:::interface
+  class JavaRawField:::interface
+  class JavaRawInterface:::interface
+  class JavaRawMethod:::interface
+  class JavaRawPackage:::interface
+  class JavaRawParameter:::interface
+  class JavaSourceLocation:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Parser_Layer {
+    class ArchJSONAggregator {
+      +aggregate(archJSON: ArchJSON, level: DetailLevel): ArchJSON
+    }
+    class BaseExtractor {
+      +constructor()
+    }
+    class ClassExtractor {
+      +extract(code: string, filePath?: string): Entity
+    }
+    class EnumExtractor {
+      +extract(code: string, filePath?: string): Entity
+      +extractEnum(enumDecl: EnumDeclaration, filePath: string): Entity
+    }
+    class ParseError {
+      +constructor(message: string, filePath: string, line?: number, column?: number)
+    }
+    class FunctionExtractor {
+      +extract(sourceFile: SourceFile, relativeFilePath: string): Array
+    }
+    class InterfaceExtractor {
+      +extract(code: string, filePath?: string): Entity
+      +extractInterface(interfaceDecl: InterfaceDeclaration, filePath: string): Entity
+    }
+    class MetricsCalculator {
+      +calculate(archJSON: ArchJSON, level: DetailLevel): ArchJSONMetrics
+    }
+    class ParallelParser {
+      +getConcurrency(): number
+      +getContinueOnError(): boolean
+      +async parseFiles(filePaths: Array): any
+      +async parseFilesWithMetrics(filePaths: Array): any
+      +constructor(options?: ParallelParserOptions)
+    }
+    class ParallelParserOptions {
+      +concurrency?: number
+      +continueOnError?: boolean
+      +workspaceRoot?: string
+      +parseCache?: ParseCache
+    }
+    class ParsingMetrics {
+      +result: ArchJSON
+      +parseTime: number
+      +filesPerSecond: number
+      +fileCount: number
+      +memoryUsage: object
+    }
+    class ProgressEvent {
+      +completed: number
+      +total: number
+      +percentage: number
+    }
+    class FileCompleteEvent {
+      +file: string
+      +entityCount: number
+      +relationCount: number
+    }
+    class CompletionEvent {
+      +totalFiles: number
+      +successCount: number
+      +errorCount: number
+      +parseTime: number
+    }
+    class ParseCache {
+      +getOrParse(filePath: string, content: string, parse: FunctionArchJSON): ArchJSON
+      +clear(): void
+    }
+    class RelationExtractor {
+      +extract(code: string, filePath?: string): Array
+      +extractFromSourceFile(sourceFile: SourceFile): Array
+    }
+    class TypeScriptParser {
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +parseProject(rootDir: string, pattern?: string, externalProject?: Project, excludePatterns?: Array): ArchJSON
+      +toJSON(archJson: ArchJSON, pretty?: boolean): string
+      +constructor(workspaceRoot?: string)
+    }
+  }
+  ArchJSONAggregator --> ArchJSON
+  ArchJSONAggregator --> DetailLevel
+  ArchJSONAggregator --> Entity
+  ArchJSONAggregator --> Relation
+  BaseExtractor <|-- ClassExtractor
+  ClassExtractor --> Entity
+  ClassExtractor --> Visibility
+  ClassExtractor --> Member
+  ClassExtractor --> Parameter
+  ClassExtractor --> TsMorphDecorator
+  BaseExtractor <|-- EnumExtractor
+  EnumExtractor --> Entity
+  EnumExtractor --> Member
+  FunctionExtractor --> Entity
+  FunctionExtractor --> Member
+  BaseExtractor <|-- InterfaceExtractor
+  InterfaceExtractor --> Entity
+  InterfaceExtractor --> Member
+  InterfaceExtractor --> Parameter
+  MetricsCalculator --> ArchJSONMetrics
+  MetricsCalculator --> ArchJSON
+  MetricsCalculator --> DetailLevel
+  MetricsCalculator --> RelationType
+  MetricsCalculator --> CycleInfo
+  MetricsCalculator --> FileStats
+  EventEmitter <|-- ParallelParser
+  ParallelParser --> ArchJSON
+  ParallelParser --> Relation
+  ParseCache *-- ArchJSON
+  ParseCache --> ArchJSON
+  BaseExtractor <|-- RelationExtractor
+  RelationExtractor --> Relation
+  TypeScriptParser --> ArchJSON
+  TypeScriptParser --> Relation
+
+  %% Node type annotations
+  class ArchJSONAggregator:::classNode
+  class BaseExtractor:::classNode
+  class ClassExtractor:::classNode
+  class EnumExtractor:::classNode
+  class ParseError:::classNode
+  class FunctionExtractor:::classNode
+  class InterfaceExtractor:::classNode
+  class MetricsCalculator:::classNode
+  class ParallelParser:::classNode
+  class ParallelParserOptions:::interface
+  class ParsingMetrics:::interface
+  class ProgressEvent:::interface
+  class FileCompleteEvent:::interface
+  class CompletionEvent:::interface
+  class ParseCache:::classNode
+  class RelationExtractor:::classNode
+  class TypeScriptParser:::classNodeclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Progress_Layer___Query_Layer {
+    class ParallelProgressReporter {
+      +update(name: string, progress: number, status?: string): void
+      +complete(name: string): void
+      +fail(name: string): void
+      +stop(): void
+      +constructor(diagrams: Array)
+    }
+    class DiagramProgress {
+      +name: string
+      +status: any
+      +progress: number
+    }
+    class ArchIndex {
+      +version: string
+      +generatedAt: string
+      +archJsonHash: string
+      +language: string
+      +nameToIds: any
+      +idToFile: any
+      +idToName: any
+      +dependents: any
+      +dependencies: any
+      +relationsByType: any
+      +fileToIds: any
+      +cycles: Array
+    }
+    class PersistQueryScopesOptions {
+      +merge?: boolean
+      +preferredGlobalScopeKey?: string
+    }
+    class QueryEngine {
+      +findEntity(name: string): Array
+      +getDependencies(entityName: string, depth?: number): Array
+      +getDependents(entityName: string, depth?: number): Array
+      +findImplementers(interfaceName: string): Array
+      +findSubclasses(className: string): Array
+      +getFileEntities(filePath: string): Array
+      +getCycles(): Array
+      +getSummary(): object
+      +findByType(entityType: string): Array
+      +findHighCoupling(threshold?: number): Array
+      +findOrphans(): Array
+      +findInCycles(): Array
+      +getScopeEntry(): QueryScopeEntry
+      +getAtlasLayer(layer: K): any
+      +hasAtlasExtension(): boolean
+      +getTestAnalysis(): any
+      +hasTestAnalysis(): boolean
+      +getPackageCoverage(): Array
+      +getEntityCoverage(entityId: string): object
+      +getPackageStats(depth?: number, topN?: number): PackageStatsResult
+      +toSummary(entity: Entity): EntitySummary
+      +constructor(options: QueryEngineOptions)
+    }
+    class EntitySummary {
+      +id: string
+      +name: string
+      +type: string
+      +visibility: string
+      +file: string
+      +methodCount: number
+      +fieldCount: number
+    }
+    class PackageStatEntry {
+      +package: string
+      +fileCount: number
+      +testFileCount?: number
+      +entityCount: number
+      +methodCount: number
+      +fieldCount: number
+      +loc?: number
+      +languageStats?: object
+    }
+    class PackageStatMeta {
+      +dataPath: any
+      +locAvailable: boolean
+      +locBasis?: "maxEndLine"
+    }
+    class PackageStatsResult {
+      +meta: PackageStatMeta
+      +packages: Array
+    }
+    class QueryEngineOptions {
+      +archJson: ArchJSON
+      +archIndex: ArchIndex
+      +scopeEntry: QueryScopeEntry
+    }
+    class QueryManifest {
+      +version: string
+      +generatedAt: string
+      +globalScopeKey?: string
+      +scopes: Array
+    }
+    class QueryScopeEntry {
+      +key: string
+      +label: string
+      +language: string
+      +kind: any
+      +sources: Array
+      +entityCount: number
+      +relationCount: number
+      +hasAtlasExtension: boolean
+      +role?: any
+    }
+    class QuerySourceGroup {
+      +key: string
+      +sources: Array
+      +archJson: ArchJSON
+      +kind: any
+      +role?: any
+    }
+  }
+  QueryEngine *-- ArchJSON
+  QueryEngine *-- Entity
+  QueryEngine --> Entity
+  QueryEngine --> CycleInfo
+  QueryEngine --> PackageCoverage
+
+  %% Node type annotations
+  class ParallelProgressReporter:::classNode
+  class DiagramProgress:::interface
+  class ArchIndex:::interface
+  class PersistQueryScopesOptions:::interface
+  class QueryEngine:::classNode
+  class EntitySummary:::interface
+  class PackageStatEntry:::interface
+  class PackageStatMeta:::interface
+  class PackageStatsResult:::interface
+  class QueryEngineOptions:::interface
+  class QueryManifest:::interface
+  class QueryScopeEntry:::interface
+  class QuerySourceGroup:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Renderers_Layer {
+    class AtlasRenderer {
+      +render(atlas: GoArchitectureAtlas, layer: AtlasLayer, format: RenderFormat): any
+    }
+    class MermaidTemplates {
+      +static renderPackageGraph(graph: PackageGraph): string
+      +static renderCapabilityGraph(graph: CapabilityGraph): string
+      +static renderGoroutineTopology(topology: GoroutineTopology): string
+      +static renderFlowGraph(graph: FlowGraph, format?: any): string
+      +static computePackageEdgeTiers(strengths: Array): Map
+    }
+    class GroupNode {
+      +prefix: string
+      +children: Array
+      +nodeIds: Array
+    }
+    class PkgTreeNode {
+      +pkg: string
+      +isVirtual: boolean
+      +children: Array
+    }
+  }
+  AtlasRenderer --> GoArchitectureAtlas
+  MermaidTemplates --> PackageGraph
+  MermaidTemplates --> CapabilityGraph
+  MermaidTemplates --> GoroutineTopology
+  MermaidTemplates --> FlowGraph
+
+  %% Node type annotations
+  class AtlasRenderer:::classNode
+  class MermaidTemplates:::classNode
+  class GroupNode:::interface
+  class PkgTreeNode:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Types_Layer {
+    class CLIOptions {
+      +config?: string
+      +diagrams?: Array
+      +sources?: Array
+      +lang?: string
+      +format?: OutputFormat
+      +outputDir?: string
+      +workDir?: string
+      +cacheDir?: string
+      +exclude?: Array
+      +cache?: boolean
+      +concurrency?: number
+      +verbose?: boolean
+      +cliCommand?: string
+      +cliArgs?: string
+      +mermaidTheme?: any
+      +mermaidRenderer?: any
+      +atlasLayers?: string
+      +atlasStrategy?: string
+      +atlasNoTests?: boolean
+      +atlasIncludeTests?: boolean
+      +atlasProtocols?: string
+      +level?: any
+      +name?: string
+      +includeTests?: boolean
+      +testsOnly?: boolean
+      +includeGit?: boolean
+    }
+    class DiagramMetadata {
+      +title?: string
+      +subtitle?: string
+      +purpose?: string
+      +primaryActors?: Array
+      +input?: object
+      +output?: object
+    }
+    class DesignInfo {
+      +architectureStyle?: any
+      +patterns?: Array
+      +principles?: Array
+      +decisions?: Array
+    }
+    class DesignPatternInfo {
+      +name: string
+      +category: PatternCategory
+      +participants: Array
+      +description: string
+      +codeExample?: string
+    }
+    class ArchitecturalDecision {
+      +topic: string
+      +decision: string
+      +rationale: string
+      +alternatives?: Array
+    }
+    class ProcessInfo {
+      +stages?: number
+      +stageList?: Array
+      +dataFlow?: string
+      +keyDependencies?: Array
+    }
+    class ProcessStage {
+      +order: number
+      +name: string
+      +description: string
+      +namespace?: string
+      +patterns?: Array
+    }
+    class AnnotationConfig {
+      +enableComments?: boolean
+      +highlightPatterns?: boolean
+      +showExternalDeps?: boolean
+      +includeUsageExample?: boolean
+      +enableVisibleTitle?: boolean
+      +visibleTitleSections?: any
+      +titlePosition?: any
+    }
+    class ClassHighlightConfig {
+      +highlightClasses?: Array
+      +annotateClasses?: Array
+      +visibility?: object
+    }
+    class ClassAnnotation {
+      +className: string
+      +note?: string
+      +stereotypes?: Array
+      +responsibility?: string
+    }
+    class DiagramConfig {
+      +name: string
+      +sources: Array
+      +level: DetailLevel
+      +description?: string
+      +format?: OutputFormat
+      +exclude?: Array
+      +language?: string
+      +languageSpecific?: any
+      +queryRole?: any
+      +metadata?: DiagramMetadata
+      +design?: DesignInfo
+      +process?: ProcessInfo
+      +annotations?: AnnotationConfig
+      +classes?: ClassHighlightConfig
+    }
+    class GlobalConfig {
+      +workDir?: string
+      +outputDir: string
+      +format: OutputFormat
+      +mermaid?: MermaidConfig
+      +exclude: Array
+      +cli: object
+      +cache: object
+      +concurrency: number
+      +verbose: boolean
+      +maxNodesPerDiagram?: number
+    }
+    class ArchGuardConfig {
+      +diagrams: Array
+    }
+    class MermaidConfig {
+      +renderer?: any
+      +theme?: any
+      +transparentBackground?: boolean
+    }
+    class GitHistoryManifest {
+      +version: any
+      +generatedAt: string
+      +headRef: string
+      +analyzedBranch: string
+      +sinceDays: number
+      +maxCommits: number
+      +totalCommits: number
+      +includeMerges: boolean
+      +granularities: any
+      +packageDepth?: number
+    }
+    class CochangeEdge {
+      +target: string
+      +jointChangeCount: number
+      +strength: number
+      +windowCoverage: number
+    }
+    class RiskFactors {
+      +churn: number
+      +authorCount: number
+      +ownerConcentration: number
+      +cochangeBreadth: number
+      +recency: number
+    }
+    class ContributorSummary {
+      +email: string
+      +commitCount: number
+      +share: number
+    }
+    class FileHistoryMetrics {
+      +path: string
+      +packagePath: string
+      +commitCount: number
+      +activeDays: number
+      +addedLines: number
+      +deletedLines: number
+      +authorCount: number
+      +primaryOwner: string
+      +primaryOwnerShare: number
+      +lastChangedAt: string
+      +topCochangeNeighbors: Array
+      +riskFactors: RiskFactors
+      +commitShas?: Array
+      +topContributors?: Array
+      +contributorShas?: any
+      +currentlyExists?: boolean
+    }
+    class PackageHistoryMetrics {
+      +path: string
+      +commitCount: number
+      +activeDays: number
+      +addedLines: number
+      +deletedLines: number
+      +authorCount: number
+      +primaryOwner: string
+      +primaryOwnerShare: number
+      +lastChangedAt: string
+      +topCochangeNeighbors: Array
+      +riskFactors: RiskFactors
+      +topContributors?: Array
+    }
+    class GitHistoryArtifacts {
+      +manifest: GitHistoryManifest
+      +packageMetrics: Array
+      +fileMetrics: Array
+    }
+    class Module {
+      +name: string
+      +entities: Array
+      +submodules?: Array
+    }
+    class ArchJSON {
+      +version: string
+      +language: SupportedLanguage
+      +timestamp: string
+      +sourceFiles: Array
+      +entities: Array
+      +relations: Array
+      +modules?: Array
+      +metadata?: any
+      +workspaceRoot?: string
+      +extensions?: ArchJSONExtensions
+      +metrics?: ArchJSONMetrics
+    }
+    class Entity {
+      +id: string
+      +name: string
+      +type: EntityType
+      +visibility: Visibility
+      +members: Array
+      +sourceLocation: SourceLocation
+      +decorators?: Array
+      +isAbstract?: boolean
+      +isConst?: boolean
+      +genericParams?: Array
+      +extends?: Array
+      +implements?: Array
+    }
+    class Member {
+      +name: string
+      +type: MemberType
+      +visibility: Visibility
+      +returnType?: string
+      +parameters?: Array
+      +isStatic?: boolean
+      +isAbstract?: boolean
+      +isAsync?: boolean
+      +isReadonly?: boolean
+      +isOptional?: boolean
+      +fieldType?: string
+      +defaultValue?: string
+      +decorators?: Array
+    }
+    class Parameter {
+      +name: string
+      +type: string
+      +isOptional?: boolean
+      +defaultValue?: string
+    }
+    class SourceLocation {
+      +file: string
+      +startLine: number
+      +endLine: number
+    }
+    class Decorator {
+      +name: string
+      +arguments?: any
+    }
+    class Relation {
+      +id: string
+      +type: RelationType
+      +source: string
+      +target: string
+      +confidence?: number
+      +inferenceSource?: any
+    }
+    class ArchJSONMetrics {
+      +level: DetailLevel
+      +entityCount: number
+      +relationCount: number
+      +relationTypeBreakdown: any
+      +stronglyConnectedComponents: number
+      +inferredRelationRatio: number
+      +fileStats?: Array
+      +cycles?: Array
+    }
+    class FileStats {
+      +file: string
+      +loc: number
+      +entityCount: number
+      +methodCount: number
+      +fieldCount: number
+      +inDegree: number
+      +outDegree: number
+      +cycleCount: number
+    }
+    class CycleInfo {
+      +size: number
+      +members: Array
+      +memberNames: Array
+      +files: Array
+    }
+  }
+  GlobalConfig <|-- ArchGuardConfig
+
+  %% Node type annotations
+  class CLIOptions:::interface
+  class DiagramMetadata:::interface
+  class DesignInfo:::interface
+  class DesignPatternInfo:::interface
+  class ArchitecturalDecision:::interface
+  class ProcessInfo:::interface
+  class ProcessStage:::interface
+  class AnnotationConfig:::interface
+  class ClassHighlightConfig:::interface
+  class ClassAnnotation:::interface
+  class DiagramConfig:::interface
+  class GlobalConfig:::interface
+  class ArchGuardConfig:::interface
+  class MermaidConfig:::interface
+  class GitHistoryManifest:::interface
+  class CochangeEdge:::interface
+  class RiskFactors:::interface
+  class ContributorSummary:::interface
+  class FileHistoryMetrics:::interface
+  class PackageHistoryMetrics:::interface
+  class GitHistoryArtifacts:::interface
+  class Module:::interface
+  class ArchJSON:::interface
+  class Entity:::interface
+  class Member:::interface
+  class Parameter:::interface
+  class SourceLocation:::interface
+  class Decorator:::interface
+  class Relation:::interface
+  class ArchJSONMetrics:::interface
+  class FileStats:::interface
+  class CycleInfo:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Typescript_Layer___Extensions_Layer {
+    class TypeScriptPlugin {
+      +readonly metadata: PluginMetadata
+      +readonly supportedLevels: readonly ["package", "class", "method"]
+      +readonly dependencyExtractor: IDependencyExtractor
+      +readonly validator: IValidator
+      +async initialize(config: PluginInitConfig): any
+      +canHandle(targetPath: string): boolean
+      +async parseProject(workspaceRoot: string, config: ParseConfig): any
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +async parseFiles(filePaths: Array): any
+      +isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean
+      +extractTestStructure(filePath: string, code: string, patternConfig?: TestPatternConfig): any
+      +async dispose(): any
+    }
+    class TypeScriptAnalyzer {
+      +analyze(projectRoot: string, sourceFiles: Array, entities: Array): TsAnalysis
+    }
+    class GoAtlasExtension {
+      +version: string
+      +layers: GoAtlasLayers
+      +metadata: GoAtlasMetadata
+    }
+    class GoAtlasLayers {
+      +package?: PackageGraph
+      +capability?: CapabilityGraph
+      +goroutine?: GoroutineTopology
+      +flow?: FlowGraph
+    }
+    class GoAtlasMetadata {
+      +generatedAt: string
+      +generationStrategy: object
+      +completeness: object
+      +performance: object
+      +warnings?: Array
+    }
+    class PackageGraph {
+      +nodes: Array
+      +edges: Array
+      +cycles: Array
+    }
+    class PackageCycle {
+      +packages: Array
+      +severity: any
+    }
+    class PackageNode {
+      +id: string
+      +name: string
+      +type: any
+      +fileCount: number
+      +stats?: PackageStats
+    }
+    class PackageStats {
+      +structs: number
+      +interfaces: number
+      +functions: number
+    }
+    class PackageDependency {
+      +from: string
+      +to: string
+      +strength: number
+      +transitive?: boolean
+    }
+    class CapabilityGraph {
+      +nodes: Array
+      +edges: Array
+      +concreteUsageRisks?: Array
+    }
+    class CapabilityNode {
+      +id: string
+      +name: string
+      +type: any
+      +package: string
+      +exported: boolean
+      +methodCount?: number
+      +fieldCount?: number
+      +fanIn?: number
+      +fanOut?: number
+    }
+    class CapabilityRelation {
+      +id: string
+      +type: any
+      +source: string
+      +target: string
+      +confidence: number
+      +concreteUsage?: boolean
+      +context?: object
+    }
+    class ConcreteUsageRisk {
+      +owner: string
+      +fieldType: string
+      +concreteType: string
+      +location: string
+    }
+    class GoroutineLifecycleSummary {
+      +nodeId: string
+      +spawnTargetName: string
+      +receivesContext: boolean
+      +cancellationCheckAvailable: boolean
+      +hasCancellationCheck?: boolean
+      +cancellationMechanism?: any
+      +orphan: boolean
+    }
+    class GoroutineTopology {
+      +nodes: Array
+      +edges: Array
+      +channels: Array
+      +channelEdges: Array
+      +lifecycle?: Array
+    }
+    class GoroutineNode {
+      +id: string
+      +name: string
+      +type: any
+      +spawnType?: any
+      +package: string
+      +location: object
+      +pattern?: GoroutinePattern
+    }
+    class SpawnRelation {
+      +from: string
+      +to: string
+      +spawnType: any
+    }
+    class ChannelInfo {
+      +id: string
+      +name: string
+      +type: string
+      +direction: any
+      +bufferSize?: number
+      +location: object
+    }
+    class ChannelEdge {
+      +from: string
+      +to: string
+      +edgeType: any
+    }
+    class FlowGraph {
+      +entryPoints: Array
+      +callChains: Array
+    }
+    class EntryPoint {
+      +id: string
+      +protocol: string
+      +method?: HttpMethod
+      +framework: string
+      +path: string
+      +handler: string
+      +middleware: Array
+      +package?: string
+      +location: object
+    }
+    class CallChain {
+      +id: string
+      +entryPoint: string
+      +calls: Array
+      +errorPath?: Array
+    }
+    class CallEdge {
+      +from: string
+      +to: string
+      +type: any
+      +confidence: number
+    }
+    class ArchJSONExtensions {
+      +goAtlas?: GoAtlasExtension
+      +tsAnalysis?: TsAnalysis
+      +testAnalysis?: TestAnalysis
+    }
+    class TestPatternConfig {
+      +assertionPatterns?: Array
+      +testCasePatterns?: Array
+      +skipPatterns?: Array
+      +testFileGlobs?: Array
+      +typeClassificationRules?: Array
+    }
+    class DetectedTestPatterns {
+      +detectedFrameworks: Array
+      +suggestedPatternConfig: TestPatternConfig
+      +notes: Array
+    }
+    class TestAnalysis {
+      +version: string
+      +patternConfigSource: any
+      +testFiles: Array
+      +coverageMap: Array
+      +issues: Array
+      +metrics: TestMetrics
+    }
+    class TestFileInfo {
+      +id: string
+      +filePath: string
+      +frameworks: Array
+      +testType: any
+      +testCaseCount: number
+      +assertionCount: number
+      +skipCount: number
+      +assertionDensity: number
+      +coveredEntityIds: Array
+    }
+    class CoverageLink {
+      +sourceEntityId: string
+      +coveredByTestIds: Array
+      +coverageScore: number
+    }
+    class TestIssue {
+      +type: any
+      +severity: any
+      +testFileId: string
+      +message: string
+      +suggestion?: string
+    }
+    class TestMetrics {
+      +totalTestFiles: number
+      +byType: any
+      +entityCoverageRatio: number
+      +assertionDensity: number
+      +skipRatio: number
+      +issueCount: any
+    }
+    class PackageCoverage {
+      +package: string
+      +totalEntities: number
+      +coveredEntities: number
+      +coverageRatio: number
+      +testFileIds: Array
+    }
+    class TsAnalysis {
+      +version: string
+      +moduleGraph?: TsModuleGraph
+    }
+    class TsModuleGraph {
+      +nodes: Array
+      +edges: Array
+      +cycles: Array
+    }
+    class TsModuleNode {
+      +id: string
+      +name: string
+      +type: any
+      +fileCount: number
+      +stats: object
+    }
+    class TsModuleDependency {
+      +from: string
+      +to: string
+      +strength: number
+      +importedNames: Array
+    }
+    class TsModuleCycle {
+      +modules: Array
+      +severity: any
+    }
+  }
+  ILanguagePlugin <|.. TypeScriptPlugin
+  TypeScriptPlugin *-- PluginMetadata
+  TypeScriptPlugin *-- readonly___package____class____method__
+  TypeScriptPlugin *-- TypeScriptParser
+  TypeScriptPlugin *-- ParallelParser
+  TypeScriptPlugin *-- IDependencyExtractor
+  TypeScriptPlugin *-- IValidator
+  TypeScriptPlugin --> PluginInitConfig
+  TypeScriptPlugin --> ArchJSON
+  TypeScriptPlugin --> ParseConfig
+  TypeScriptPlugin --> Dependency
+  TypeScriptPlugin --> ValidationResult
+  TypeScriptPlugin --> TestPatternConfig
+  TypeScriptAnalyzer --> TsAnalysis
+  TypeScriptAnalyzer --> Entity
+
+  %% Node type annotations
+  class TypeScriptPlugin:::classNode
+  class TypeScriptAnalyzer:::classNode
+  class GoAtlasExtension:::interface
+  class GoAtlasLayers:::interface
+  class GoAtlasMetadata:::interface
+  class PackageGraph:::interface
+  class PackageCycle:::interface
+  class PackageNode:::interface
+  class PackageStats:::interface
+  class PackageDependency:::interface
+  class CapabilityGraph:::interface
+  class CapabilityNode:::interface
+  class CapabilityRelation:::interface
+  class ConcreteUsageRisk:::interface
+  class GoroutineLifecycleSummary:::interface
+  class GoroutineTopology:::interface
+  class GoroutineNode:::interface
+  class SpawnRelation:::interface
+  class ChannelInfo:::interface
+  class ChannelEdge:::interface
+  class FlowGraph:::interface
+  class EntryPoint:::interface
+  class CallChain:::interface
+  class CallEdge:::interface
+  class ArchJSONExtensions:::interface
+  class TestPatternConfig:::interface
+  class DetectedTestPatterns:::interface
+  class TestAnalysis:::interface
+  class TestFileInfo:::interface
+  class CoverageLink:::interface
+  class TestIssue:::interface
+  class TestMetrics:::interface
+  class PackageCoverage:::interface
+  class TsAnalysis:::interface
+  class TsModuleGraph:::interface
+  class TsModuleNode:::interface
+  class TsModuleDependency:::interface
+  class TsModuleCycle:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Typescript_Layer___Types_Layer {
+    class TypeScriptPlugin {
+      +canHandle(targetPath: string): boolean
+      +readonly dependencyExtractor: IDependencyExtractor
+      +async dispose(): any
+      +extractTestStructure(filePath: string, code: string, patternConfig?: TestPatternConfig): any
+      +async initialize(config: PluginInitConfig): any
+      +isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean
+      +readonly metadata: PluginMetadata
+      +parseCode(code: string, filePath?: string): ArchJSON
+      +async parseFiles(filePaths: Array): any
+      +async parseProject(workspaceRoot: string, config: ParseConfig): any
+      +readonly supportedLevels: readonly ["package", "class", "method"]
+      +readonly validator: IValidator
+    }
+    class TypeScriptAnalyzer {
+      +analyze(projectRoot: string, sourceFiles: Array, entities: Array): TsAnalysis
+    }
+    class CLIOptions {
+      +atlasIncludeTests?: boolean
+      +atlasLayers?: string
+      +atlasNoTests?: boolean
+      +atlasProtocols?: string
+      +atlasStrategy?: string
+      +cache?: boolean
+      +cacheDir?: string
+      +cliArgs?: string
+      +cliCommand?: string
+      +concurrency?: number
+      +config?: string
+      +diagrams?: Array
+      +exclude?: Array
+      +format?: OutputFormat
+      +includeGit?: boolean
+      +includeTests?: boolean
+      +lang?: string
+      +level?: any
+      +mermaidRenderer?: any
+      +mermaidTheme?: any
+      +name?: string
+      +outputDir?: string
+      +sources?: Array
+      +testsOnly?: boolean
+      +verbose?: boolean
+      +workDir?: string
+    }
+    class AnnotationConfig {
+      +enableComments?: boolean
+      +enableVisibleTitle?: boolean
+      +highlightPatterns?: boolean
+      +includeUsageExample?: boolean
+      +showExternalDeps?: boolean
+      +titlePosition?: any
+      +visibleTitleSections?: any
+    }
+    class ArchitecturalDecision {
+      +alternatives?: Array
+      +decision: string
+      +rationale: string
+      +topic: string
+    }
+    class ClassAnnotation {
+      +className: string
+      +note?: string
+      +responsibility?: string
+      +stereotypes?: Array
+    }
+    class ClassHighlightConfig {
+      +annotateClasses?: Array
+      +highlightClasses?: Array
+      +visibility?: object
+    }
+    class DesignInfo {
+      +architectureStyle?: any
+      +decisions?: Array
+      +patterns?: Array
+      +principles?: Array
+    }
+    class DesignPatternInfo {
+      +category: PatternCategory
+      +codeExample?: string
+      +description: string
+      +name: string
+      +participants: Array
+    }
+    class DiagramConfig {
+      +annotations?: AnnotationConfig
+      +classes?: ClassHighlightConfig
+      +description?: string
+      +design?: DesignInfo
+      +exclude?: Array
+      +format?: OutputFormat
+      +language?: string
+      +languageSpecific?: any
+      +level: DetailLevel
+      +metadata?: DiagramMetadata
+      +name: string
+      +process?: ProcessInfo
+      +queryRole?: any
+      +sources: Array
+    }
+    class DiagramMetadata {
+      +input?: object
+      +output?: object
+      +primaryActors?: Array
+      +purpose?: string
+      +subtitle?: string
+      +title?: string
+    }
+    class ProcessInfo {
+      +dataFlow?: string
+      +keyDependencies?: Array
+      +stageList?: Array
+      +stages?: number
+    }
+    class ProcessStage {
+      +description: string
+      +name: string
+      +namespace?: string
+      +order: number
+      +patterns?: Array
+    }
+    class ArchGuardConfig {
+      +diagrams: Array
+    }
+    class GlobalConfig {
+      +cache: object
+      +cli: object
+      +concurrency: number
+      +exclude: Array
+      +format: OutputFormat
+      +maxNodesPerDiagram?: number
+      +mermaid?: MermaidConfig
+      +outputDir: string
+      +verbose: boolean
+      +workDir?: string
+    }
+    class MermaidConfig {
+      +renderer?: any
+      +theme?: any
+      +transparentBackground?: boolean
+    }
+    class CochangeEdge {
+      +jointChangeCount: number
+      +strength: number
+      +target: string
+      +windowCoverage: number
+    }
+    class ContributorSummary {
+      +commitCount: number
+      +email: string
+      +share: number
+    }
+    class FileHistoryMetrics {
+      +activeDays: number
+      +addedLines: number
+      +authorCount: number
+      +commitCount: number
+      +commitShas?: Array
+      +contributorShas?: any
+      +currentlyExists?: boolean
+      +deletedLines: number
+      +lastChangedAt: string
+      +packagePath: string
+      +path: string
+      +primaryOwner: string
+      +primaryOwnerShare: number
+      +riskFactors: RiskFactors
+      +topCochangeNeighbors: Array
+      +topContributors?: Array
+    }
+    class GitHistoryArtifacts {
+      +fileMetrics: Array
+      +manifest: GitHistoryManifest
+      +packageMetrics: Array
+    }
+    class GitHistoryManifest {
+      +analyzedBranch: string
+      +generatedAt: string
+      +granularities: any
+      +headRef: string
+      +includeMerges: boolean
+      +maxCommits: number
+      +packageDepth?: number
+      +sinceDays: number
+      +totalCommits: number
+      +version: any
+    }
+    class PackageHistoryMetrics {
+      +activeDays: number
+      +addedLines: number
+      +authorCount: number
+      +commitCount: number
+      +deletedLines: number
+      +lastChangedAt: string
+      +path: string
+      +primaryOwner: string
+      +primaryOwnerShare: number
+      +riskFactors: RiskFactors
+      +topCochangeNeighbors: Array
+      +topContributors?: Array
+    }
+    class RiskFactors {
+      +authorCount: number
+      +churn: number
+      +cochangeBreadth: number
+      +ownerConcentration: number
+      +recency: number
+    }
+    class ArchJSON {
+      +entities: Array
+      +extensions?: ArchJSONExtensions
+      +language: SupportedLanguage
+      +metadata?: any
+      +metrics?: ArchJSONMetrics
+      +modules?: Array
+      +relations: Array
+      +sourceFiles: Array
+      +timestamp: string
+      +version: string
+      +workspaceRoot?: string
+    }
+    class ArchJSONMetrics {
+      +cycles?: Array
+      +entityCount: number
+      +fileStats?: Array
+      +inferredRelationRatio: number
+      +level: DetailLevel
+      +relationCount: number
+      +relationTypeBreakdown: any
+      +stronglyConnectedComponents: number
+    }
+    class CycleInfo {
+      +files: Array
+      +memberNames: Array
+      +members: Array
+      +size: number
+    }
+    class Decorator {
+      +arguments?: any
+      +name: string
+    }
+    class Entity {
+      +decorators?: Array
+      +extends?: Array
+      +genericParams?: Array
+      +id: string
+      +implements?: Array
+      +isAbstract?: boolean
+      +isConst?: boolean
+      +members: Array
+      +name: string
+      +sourceLocation: SourceLocation
+      +type: EntityType
+      +visibility: Visibility
+    }
+    class FileStats {
+      +cycleCount: number
+      +entityCount: number
+      +fieldCount: number
+      +file: string
+      +inDegree: number
+      +loc: number
+      +methodCount: number
+      +outDegree: number
+    }
+    class Member {
+      +decorators?: Array
+      +defaultValue?: string
+      +fieldType?: string
+      +isAbstract?: boolean
+      +isAsync?: boolean
+      +isOptional?: boolean
+      +isReadonly?: boolean
+      +isStatic?: boolean
+      +name: string
+      +parameters?: Array
+      +returnType?: string
+      +type: MemberType
+      +visibility: Visibility
+    }
+    class Module {
+      +entities: Array
+      +name: string
+      +submodules?: Array
+    }
+    class Parameter {
+      +defaultValue?: string
+      +isOptional?: boolean
+      +name: string
+      +type: string
+    }
+    class Relation {
+      +confidence?: number
+      +id: string
+      +inferenceSource?: any
+      +source: string
+      +target: string
+      +type: RelationType
+    }
+    class SourceLocation {
+      +endLine: number
+      +file: string
+      +startLine: number
+    }
+  }
+  TypeScriptPlugin *-- IDependencyExtractor
+  TypeScriptPlugin *-- IValidator
+  TypeScriptPlugin *-- ParallelParser
+  TypeScriptPlugin *-- PluginMetadata
+  TypeScriptPlugin *-- readonly___package____class____method__
+  TypeScriptPlugin *-- TypeScriptParser
+  TypeScriptPlugin --> ArchJSON
+  TypeScriptPlugin --> Dependency
+  TypeScriptPlugin --> ParseConfig
+  TypeScriptPlugin --> PluginInitConfig
+  TypeScriptPlugin --> TestPatternConfig
+  TypeScriptPlugin --> ValidationResult
+  ILanguagePlugin <|.. TypeScriptPlugin
+  TypeScriptAnalyzer --> Entity
+  TypeScriptAnalyzer --> TsAnalysis
+  GlobalConfig <|-- ArchGuardConfig
+
+  %% Node type annotations
+  class TypeScriptPlugin:::classNode
+  class TypeScriptAnalyzer:::classNode
+  class CLIOptions:::interface
+  class AnnotationConfig:::interface
+  class ArchitecturalDecision:::interface
+  class ClassAnnotation:::interface
+  class ClassHighlightConfig:::interface
+  class DesignInfo:::interface
+  class DesignPatternInfo:::interface
+  class DiagramConfig:::interface
+  class DiagramMetadata:::interface
+  class ProcessInfo:::interface
+  class ProcessStage:::interface
+  class ArchGuardConfig:::interface
+  class GlobalConfig:::interface
+  class MermaidConfig:::interface
+  class CochangeEdge:::interface
+  class ContributorSummary:::interface
+  class FileHistoryMetrics:::interface
+  class GitHistoryArtifacts:::interface
+  class GitHistoryManifest:::interface
+  class PackageHistoryMetrics:::interface
+  class RiskFactors:::interface
+  class ArchJSON:::interface
+  class ArchJSONMetrics:::interface
+  class CycleInfo:::interface
+  class Decorator:::interface
+  class Entity:::interface
+  class FileStats:::interface
+  class Member:::interface
+  class Module:::interface
+  class Parameter:::interface
+  class Relation:::interface
+  class SourceLocation:::interfaceclassDiagram
+  classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef interface fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef enum fill:#fff8c5,stroke:#d4a72c,color:#633c01
+  classDef struct fill:#f6f8fa,stroke:#d0d7de,color:#24292f
+  classDef trait fill:#ddf4ff,stroke:#54aeff,color:#0969da
+  classDef abstract_class fill:#fdf4ff,stroke:#d2a8ff,color:#8250df
+  classDef function fill:#f6f8fa,stroke:#d0d7de,color:#57606a
+
+  namespace Utils_Layer {
+    class CLIDetectionResult {
+      +available: boolean
+      +version?: string
+      +error?: string
+    }
+    class PathAliasConfig {
+      +baseUrl: string
+      +paths: any
+    }
+    class PlannedScope {
+      +language: DetectedLanguage
+      +label: string
+      +role?: QueryRole
+      +sources: Array
+    }
+    class DiagramOptions {
+      +format?: DiagramConfig
+      +exclude?: Array
+    }
+    class DiagramIndexGenerator {
+      +async generate(results: Array): any
+      +constructor(globalConfig: GlobalConfig)
+    }
+    class FileDiscoveryService {
+      +async discoverFiles(options?: FileDiscoveryOptions): any
+    }
+    class FileDiscoveryOptions {
+      +sources?: Array
+      +exclude?: Array
+      +skipMissing?: boolean
+    }
+    class OutputPathResolver {
+      +resolve(options?: ResolveOptions): PathResolution
+      +async ensureDirectory(options?: ResolveOptions): any
+      +constructor(config: object)
+    }
+    class PathResolution {
+      +outputDir: string
+      +baseName: string
+      +paths: object
+    }
+    class ResolveOptions {
+      +baseName?: string
+      +name?: string
+      +output?: string
+    }
+    class OutputPathOptions {
+    }
+    class ResolvedPaths {
+      +dir: string
+    }
+    class LanguageCandidate {
+      +language: DetectedLanguage
+      +score: number
+      +evidence: Array
+      +roots: Array
+    }
+    class LanguageStats {
+      +totalFiles: number
+      +priorityFiles: number
+      +markerRoots: Map
+      +markerFiles: Set
+      +sourceRoots: Map
+    }
+    class TestOutputWriter {
+      +async write(analysis: TestAnalysis, outputDir: string): any
+    }
+  }
+  DiagramIndexGenerator *-- GlobalConfig
+  DiagramIndexGenerator --> DiagramResult
+  DiagramIndexGenerator --> ArchJSONMetrics
+  ResolveOptions <|-- OutputPathOptions
+  PathResolution <|-- ResolvedPaths
+  TestOutputWriter --> TestAnalysis
+
+  %% Node type annotations
+  class CLIDetectionResult:::interface
+  class PathAliasConfig:::interface
+  class PlannedScope:::interface
+  class DiagramOptions:::interface
+  class DiagramIndexGenerator:::classNode
+  class FileDiscoveryService:::classNode
+  class FileDiscoveryOptions:::interface
+  class OutputPathResolver:::classNode
+  class PathResolution:::interface
+  class ResolveOptions:::interface
+  class OutputPathOptions:::interface
+  class ResolvedPaths:::interface
+  class LanguageCandidate:::interface
+  class LanguageStats:::interface
+  class TestOutputWriter:::classNode

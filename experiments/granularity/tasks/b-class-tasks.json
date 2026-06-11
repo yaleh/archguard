@@ -1,0 +1,491 @@
+[
+  {
+    "id": "v2-b-callers-validatedmermaidgenerator-escapeid",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `ValidatedMermaidGenerator.escapeId`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ValidatedMermaidGenerator.generatePackageLevel",
+      "ValidatedMermaidGenerator.generateLayeredPackageLevel.nodeIdForPackage",
+      "ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "ValidatedMermaidGenerator.generateClassLevel",
+      "ValidatedMermaidGenerator.generateMethodLevel",
+      "ValidatedMermaidGenerator.generateClassDefinition",
+      "ValidatedMermaidGenerator.generateRelationLine.resolve",
+      "ValidatedMermaidGenerator.generateClassDiagrams"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-relationextractor-addrelation",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `RelationExtractor.addRelation`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "RelationExtractor.extractClassRelations",
+      "RelationExtractor.extractInterfaceRelations",
+      "RelationExtractor.extractFunctionRelations.emitDepsForBody"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-noopprogressreporter-succeed",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `NoopProgressReporter.succeed`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly",
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.generateAndRender"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-iprogressreporter-succeed",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `IProgressReporter.succeed`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly",
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.generateAndRender"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-validatedmermaidgenerator-normalizeen",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `ValidatedMermaidGenerator.normalizeEntityName`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ValidatedMermaidGenerator.generatePackageLevel",
+      "ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      "ValidatedMermaidGenerator.generateClassLevel",
+      "ValidatedMermaidGenerator.generateMethodLevel",
+      "ValidatedMermaidGenerator.generateClassDefinition",
+      "ValidatedMermaidGenerator.generateRelationLine.resolve",
+      "ValidatedMermaidGenerator.generateClassDiagrams"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-relationextractor-extracttypename",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `RelationExtractor.extractTypeName`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "RelationExtractor.extractClassRelations",
+      "RelationExtractor.extractInterfaceRelations",
+      "RelationExtractor.extractTypeName"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-noopprogressreporter-start",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `NoopProgressReporter.start`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly",
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.generateAndRender"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-iprogressreporter-start",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `IProgressReporter.start`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidDiagramGenerator.generateOnly",
+      "MermaidDiagramGenerator.renderJobsInParallel",
+      "MermaidDiagramGenerator.generateAndRender"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers--tonodeid",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `.toNodeId`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      ".emitTreeNode",
+      ".renderTsModuleGraph"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callers-mermaidparsevalidator-validate",
+    "taskClass": "B",
+    "taskType": "direct-callers",
+    "prompt": "Based only on the representation above: which methods directly call `MermaidParseValidator.validate`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidAutoRepair.repair",
+      "MermaidAutoRepair.repairBestEffort",
+      "MermaidValidationPipeline.validate",
+      "MermaidValidationPipeline.validateFull"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-validatedmermaidgenerator-generatemet",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generateMethodLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      ".groupEntitiesByPackage",
+      "ValidatedMermaidGenerator.generateClassDefinition",
+      "ValidatedMermaidGenerator.escapeId",
+      "ValidatedMermaidGenerator.buildModulePrefixIndex",
+      "ValidatedMermaidGenerator.isNoisyTarget",
+      "ValidatedMermaidGenerator.generateRelationLine",
+      "ValidatedMermaidGenerator.normalizeEntityName",
+      ".entityTypeToClassDef"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-mermaidautorepair-repair",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `MermaidAutoRepair.repair` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidAutoRepair.addDiagramDeclaration",
+      "MermaidAutoRepair.fixGenericTypes",
+      "MermaidAutoRepair.flattenNestedNamespaces",
+      "MermaidAutoRepair.extractNamespaceRelations",
+      "MermaidAutoRepair.fixTrailingCommas",
+      "MermaidAutoRepair.normalizeWhitespace",
+      "MermaidParseValidator.validate",
+      "MermaidAutoRepair.attemptAdvancedRepairs"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-mermaiddiagramgenerator-renderjobsinp",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `MermaidDiagramGenerator.renderJobsInParallel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "NoopProgressReporter.constructor",
+      "NoopProgressReporter.start",
+      "IProgressReporter.start",
+      "IsomorphicMermaidRenderer.constructor",
+      "IsomorphicMermaidRenderer.renderAndSave",
+      "NoopProgressReporter.succeed",
+      "IProgressReporter.succeed",
+      "NoopProgressReporter.fail",
+      "IProgressReporter.fail"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-typescriptparser-parseproject",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `TypeScriptParser.parseProject` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "TypeScriptParser.toRelPath",
+      "InterfaceExtractor.extractInterface",
+      "EnumExtractor.extractEnum",
+      "FunctionExtractor.extract",
+      "RelationExtractor.extractFromSourceFile",
+      "TypeScriptParser.filterExternalRelations",
+      "TypeScriptParser.deduplicateRelations"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-mermaidautorepair-repairbesteffort",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `MermaidAutoRepair.repairBestEffort` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "MermaidAutoRepair.addDiagramDeclaration",
+      "MermaidAutoRepair.fixGenericTypes",
+      "MermaidAutoRepair.flattenNestedNamespaces",
+      "MermaidAutoRepair.extractNamespaceRelations",
+      "MermaidAutoRepair.fixTrailingCommas",
+      "MermaidAutoRepair.normalizeWhitespace",
+      "MermaidParseValidator.validate"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-validatedmermaidgenerator-generate",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generate` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      ".validateGeneratorInput",
+      "ValidatedMermaidGenerator.generatePackageLevel",
+      "ValidatedMermaidGenerator.generateMethodLevel",
+      "ValidatedMermaidGenerator.generateClassLevel",
+      "CommentGenerator.generateAll",
+      "CommentGenerator.generateVisibleTitle",
+      "ValidatedMermaidGenerator.postProcess"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-validatedmermaidgenerator-generatepac",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generatePackageLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ValidatedMermaidGenerator.getArchitecturalLayers",
+      "ValidatedMermaidGenerator.generateLayeredPackageLevel",
+      ".groupEntitiesByPackage",
+      "ValidatedMermaidGenerator.escapeId",
+      "ValidatedMermaidGenerator.normalizeEntityName",
+      "ValidatedMermaidGenerator.generateRelations"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-callees-validatedmermaidgenerator-generatelay",
+    "taskClass": "B",
+    "taskType": "direct-callees",
+    "prompt": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generateLayeredPackageLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none.",
+    "answerType": "set",
+    "answer": [
+      "ValidatedMermaidGenerator.getArchitecturalLayers",
+      "ValidatedMermaidGenerator.generatePackageLevel",
+      "ValidatedMermaidGenerator.normalizePackagePath",
+      "ValidatedMermaidGenerator.findMatchingLayer",
+      "ValidatedMermaidGenerator.escapeId",
+      "ValidatedMermaidGenerator.normalizeEntityName"
+    ],
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-caller-count-mermaidparsevalidator-validate",
+    "taskClass": "B",
+    "taskType": "caller-count",
+    "prompt": "Based only on the representation above: how many distinct methods directly call `MermaidParseValidator.validate`? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 4,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-caller-count-noopprogressreporter-start",
+    "taskClass": "B",
+    "taskType": "caller-count",
+    "prompt": "Based only on the representation above: how many distinct methods directly call `NoopProgressReporter.start`? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 3,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-caller-count-iprogressreporter-start",
+    "taskClass": "B",
+    "taskType": "caller-count",
+    "prompt": "Based only on the representation above: how many distinct methods directly call `IProgressReporter.start`? Respond with JSON only: {\"answer\": N}.",
+    "answerType": "exact",
+    "answer": 3,
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  },
+  {
+    "id": "v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+    "taskClass": "B",
+    "taskType": "call-exists",
+    "prompt": "Based only on the representation above: does `MermaidAutoRepair.repair` directly call `MermaidAutoRepair.addDiagramDeclaration`? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}.",
+    "answerType": "exact",
+    "answer": "yes",
+    "derivability": {
+      "L0": false,
+      "L1": false,
+      "L2": false,
+      "L3": true,
+      "L4": true,
+      "L5": true
+    },
+    "h0Prediction": "L3"
+  }
+]
