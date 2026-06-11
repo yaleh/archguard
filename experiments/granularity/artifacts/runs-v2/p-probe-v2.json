@@ -1,0 +1,6 @@
+{
+  "is_post_hoc": true,
+  "skipped": true,
+  "skip_reason": "dim-input.json stores level-level arrays for TwoNN (not per-task embeddings keyed by task_id). The linear probe requires embeddings indexed by task_id to match p-oracle labels. No such file was generated in Phase 65 (anchor embeddings are anonymous). P_probe diagnostic cannot be computed; this does NOT affect the \u00a710 decision table.",
+  "post_hoc_note": "P_probe uses P_oracle labels from Stage 71.3. It CANNOT replace P_GIT-sem/P_GIT-struct in the \u00a710 decision table."
+}
