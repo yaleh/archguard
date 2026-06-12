@@ -19,6 +19,14 @@
 4. **对 ArchGuard 核心（`src/`）的改动：零**。全部产物位于 `experiments/format-encoding/`，与既有 `experiments/granularity/` 平级；主 vitest 配置已排除 `experiments/**`，实验测试用目录内独立 vitest/pytest 运行。
 5. **凭据零落盘**：任何脚本、配置、测试、文档中不得出现 API key。凭据一律经环境变量引用：`LLM_BASE_URL`、`LLM_API_KEY`。脚本启动时 fail-fast 校验环境变量存在，缺失即报错退出。
 
+### 确认的答题模型（probe 2026-06-12）
+
+| 模型 | 角色 | 配置 | probe OVERALL | 备注 |
+|---|---|---|---|---|
+| `claude-haiku-4-5-20251001` | 主答题模型 | 默认参数，max_tokens=8192；reasoning OFF 默认 | 0.526 | 无 logprob |
+| `glm-4.5-flash` | 次答题模型 | `extra_body: {thinking:{type:"disabled"}}`, max_tokens=8192 | 0.334 | 无 logprob（待最终确认）；via LiteLLM zai provider |
+| 改写模型 | Exp 2 改写步 | 须与上述异家族；候选 Qwen / DeepSeek；Phase 74 冻结版本 | — | 改写质量须 smoke test 确认 |
+
 ### 与 §8 执行顺序的对应
 
 | §8 步骤 | 内容 | 本 plan Phase |
@@ -71,7 +79,7 @@
 | Gate | 来源 | 须决策内容 | 选项 |
 |---|---|---|---|
 | **Q1** | §10 Q1 / §3.7 | 实验规模是否过大？API 预算是否已批准？若不够，优先裁剪哪些臂？ | 接受全量 / 裁剪（方向见上方预算表） |
-| **Q2** | §10 Q2 / §3.5 | 困惑度协变量在无 logprob 模型（如 Claude）上的替代方案 | (A) GPT-4o 代测 / (B) 放弃困惑度，改纯结构指标 / (C) 加 GPT-4o 为第三答题模型 |
+| **Q2** | §10 Q2 / §3.5 | 困惑度协变量替代方案。**探针已确认**：haiku 无 logprob（Anthropic 不提供）；glm-4.5-flash 无 logprob（冻结前最终确认）。两个主答题模型均无 logprob，方案 B 为默认路径。 | (A) GPT-4o 代测 / **(B) 放弃困惑度，改纯结构指标（默认推荐）** / (C) 加 GPT-4o 为第三答题模型 |
 | **Q3** | §10 Q3 / §3.4 | 任务泄漏处置（复用 v2.2 68 题的 RLHF 偏差风险） | (A) 接受复用+声明局限 / (B) 混入 ≥20 道新题（架构师建议）/ (C) 加本地开源模型 |
 | **Q4** | §10 Q4 / §3.1 | Haskell-ADT"天然无损往返"须实证验证（smoke test 通过才保留主集合） | 在 Phase 76 往返门控时执行；若有损则重设计格式或移至有损参照轨 |
 | **Q5** | §10 Q5 / §4.1 | "改写-清理 prose"往返验证无确定性解析器，如何处置 H-info 控制 | (A) 接受 LLM-as-parser（须预注册解析 prompt）/ (B) 降级为人工抽样审核 10% |
@@ -164,7 +172,7 @@
 **验收标准**：
 - 所有预测与决策表以文档形式存在，无任何"见实现"或"待确认"的占位；
 - 改写 prompt 草稿存在（Phase 75 做最终冻结）；
-- 模型列表含每个模型的 logprob 可用性确认记录（来自 §3.5 架构师修订）；
+- 模型列表含每个模型的 logprob 可用性确认记录（来自 §3.5 架构师修订）；**已知**：claude-haiku-4-5-20251001 无 logprob；glm-4.5-flash 须最终确认（探针未见 logprob 字段，按无处理）；
 - **本 Stage 完成后，Phase 75 才可开始**。
 
 ---

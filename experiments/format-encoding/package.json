@@ -1,0 +1,19 @@
+{
+  "name": "@archguard-experiments/format-encoding",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "run-tasks": "tsx scripts/run-tasks.ts",
+    "score": "tsx scripts/score.ts"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.20.3",
+    "vitest": "^3.2.4",
+    "yaml": "^2.4.5",
+    "tiktoken": "^1.0.21"
+  }
+}
