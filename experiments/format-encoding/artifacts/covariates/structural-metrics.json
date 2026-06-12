@@ -1,0 +1,270 @@
+{
+  "generated": "2026-06-12T11:44:46.786Z",
+  "tokenApprox": "chars/4 (GPT-style approximation)",
+  "instances": [
+    {
+      "instance": "archguard/class/all-classes.json",
+      "entityCount": 545,
+      "relationCount": 355,
+      "methodCount": 336,
+      "formats": {
+        "json-adjacency": {
+          "tokens": 65334,
+          "chars": 261335,
+          "nestingDepth": 7,
+          "tokensPerRelation": 184.03943661971832,
+          "delimiterDensityPer100": 26.955337190436836,
+          "keyRelMedianPosition": 0.511,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1896
+        },
+        "json-edge-list": {
+          "tokens": 65781,
+          "chars": 263124,
+          "nestingDepth": 7,
+          "tokensPerRelation": 185.29859154929576,
+          "delimiterDensityPer100": 24.70470196561317,
+          "keyRelMedianPosition": 0.402,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1892
+        },
+        "yaml": {
+          "tokens": 45780,
+          "chars": 183117,
+          "nestingDepth": 6,
+          "tokensPerRelation": 128.95774647887325,
+          "delimiterDensityPer100": 19.66360856269113,
+          "keyRelMedianPosition": 0.513,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1844
+        },
+        "markdown-table": {
+          "tokens": 31258,
+          "chars": 125030,
+          "nestingDepth": 0,
+          "tokensPerRelation": 88.0507042253521,
+          "delimiterDensityPer100": 15.068142555505789,
+          "keyRelMedianPosition": 0.363,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1841
+        },
+        "mermaid": {
+          "tokens": 65694,
+          "chars": 262773,
+          "nestingDepth": 1,
+          "tokensPerRelation": 185.05352112676056,
+          "delimiterDensityPer100": 4.944134928608396,
+          "keyRelMedianPosition": 0.123,
+          "keyRelFractionFirst20pct": 0.958,
+          "vocabularySize": 3020
+        },
+        "haskell-adt": {
+          "tokens": 37291,
+          "chars": 149163,
+          "nestingDepth": 225,
+          "tokensPerRelation": 105.04507042253522,
+          "delimiterDensityPer100": 21.428762972298944,
+          "keyRelMedianPosition": 0.522,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 2000
+        },
+        "custom-dsl": {
+          "tokens": 32048,
+          "chars": 128190,
+          "nestingDepth": 0,
+          "tokensPerRelation": 90.27605633802817,
+          "delimiterDensityPer100": 17.723414877683474,
+          "keyRelMedianPosition": 0.374,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1838
+        },
+        "nl-exhaustive": {
+          "tokens": 35094,
+          "chars": 140373,
+          "nestingDepth": 1,
+          "tokensPerRelation": 98.85633802816902,
+          "delimiterDensityPer100": 12.554852681370035,
+          "keyRelMedianPosition": 0.392,
+          "keyRelFractionFirst20pct": 0.083,
+          "vocabularySize": 1840
+        }
+      }
+    },
+    {
+      "instance": "granularity-python/class/all-classes.json",
+      "entityCount": 144,
+      "relationCount": 17,
+      "methodCount": 268,
+      "formats": {
+        "json-adjacency": {
+          "tokens": 29407,
+          "chars": 117625,
+          "nestingDepth": 9,
+          "tokensPerRelation": 1729.8235294117646,
+          "delimiterDensityPer100": 26.772537151018465,
+          "keyRelMedianPosition": 0.239,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 627
+        },
+        "json-edge-list": {
+          "tokens": 28624,
+          "chars": 114494,
+          "nestingDepth": 9,
+          "tokensPerRelation": 1683.764705882353,
+          "delimiterDensityPer100": 25.52403577417552,
+          "keyRelMedianPosition": 0.237,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 624
+        },
+        "yaml": {
+          "tokens": 18677,
+          "chars": 74705,
+          "nestingDepth": 6,
+          "tokensPerRelation": 1098.6470588235295,
+          "delimiterDensityPer100": 19.328585961342828,
+          "keyRelMedianPosition": 0.243,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 536
+        },
+        "markdown-table": {
+          "tokens": 9115,
+          "chars": 36458,
+          "nestingDepth": 2,
+          "tokensPerRelation": 536.1764705882352,
+          "delimiterDensityPer100": 10.444322545255073,
+          "keyRelMedianPosition": 0.253,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 532
+        },
+        "mermaid": {
+          "tokens": 15057,
+          "chars": 60227,
+          "nestingDepth": 3,
+          "tokensPerRelation": 885.7058823529412,
+          "delimiterDensityPer100": 5.014279072856478,
+          "keyRelMedianPosition": 0.039,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 1132
+        },
+        "haskell-adt": {
+          "tokens": 12410,
+          "chars": 49637,
+          "nestingDepth": 136,
+          "tokensPerRelation": 730,
+          "delimiterDensityPer100": 22.796132151490735,
+          "keyRelMedianPosition": 0.252,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 671
+        },
+        "custom-dsl": {
+          "tokens": 9802,
+          "chars": 39206,
+          "nestingDepth": 2,
+          "tokensPerRelation": 576.5882352941177,
+          "delimiterDensityPer100": 15.588655376453787,
+          "keyRelMedianPosition": 0.248,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 525
+        },
+        "nl-exhaustive": {
+          "tokens": 10234,
+          "chars": 40934,
+          "nestingDepth": 3,
+          "tokensPerRelation": 602,
+          "delimiterDensityPer100": 8.882157514168458,
+          "keyRelMedianPosition": 0.259,
+          "keyRelFractionFirst20pct": 0,
+          "vocabularySize": 530
+        }
+      }
+    },
+    {
+      "instance": "java-java/class/all-classes.json",
+      "entityCount": 5,
+      "relationCount": 3,
+      "methodCount": 14,
+      "formats": {
+        "json-adjacency": {
+          "tokens": 796,
+          "chars": 3181,
+          "nestingDepth": 7,
+          "tokensPerRelation": 265.3333333333333,
+          "delimiterDensityPer100": 32.663316582914575,
+          "keyRelMedianPosition": 0.012,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 49
+        },
+        "json-edge-list": {
+          "tokens": 775,
+          "chars": 3099,
+          "nestingDepth": 7,
+          "tokensPerRelation": 258.3333333333333,
+          "delimiterDensityPer100": 31.870967741935484,
+          "keyRelMedianPosition": 0.012,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 48
+        },
+        "yaml": {
+          "tokens": 526,
+          "chars": 2102,
+          "nestingDepth": 6,
+          "tokensPerRelation": 175.33333333333334,
+          "delimiterDensityPer100": 20.722433460076044,
+          "keyRelMedianPosition": 0.009,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 48
+        },
+        "markdown-table": {
+          "tokens": 295,
+          "chars": 1180,
+          "nestingDepth": 0,
+          "tokensPerRelation": 98.33333333333333,
+          "delimiterDensityPer100": 21.01694915254237,
+          "keyRelMedianPosition": 0.088,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 46
+        },
+        "mermaid": {
+          "tokens": 414,
+          "chars": 1656,
+          "nestingDepth": 1,
+          "tokensPerRelation": 138,
+          "delimiterDensityPer100": 7.487922705314009,
+          "keyRelMedianPosition": 0.026,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 51
+        },
+        "haskell-adt": {
+          "tokens": 363,
+          "chars": 1451,
+          "nestingDepth": 11,
+          "tokensPerRelation": 121,
+          "delimiterDensityPer100": 28.92561983471074,
+          "keyRelMedianPosition": 0.007,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 41
+        },
+        "custom-dsl": {
+          "tokens": 287,
+          "chars": 1148,
+          "nestingDepth": 0,
+          "tokensPerRelation": 95.66666666666667,
+          "delimiterDensityPer100": 19.16376306620209,
+          "keyRelMedianPosition": 0.007,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 40
+        },
+        "nl-exhaustive": {
+          "tokens": 292,
+          "chars": 1167,
+          "nestingDepth": 1,
+          "tokensPerRelation": 97.33333333333333,
+          "delimiterDensityPer100": 13.698630136986301,
+          "keyRelMedianPosition": 0.02,
+          "keyRelFractionFirst20pct": 1,
+          "vocabularySize": 44
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "generated": "2026-06-12T00:00:00Z",
+  "note": "Pre-registered predictions committed before any LLM task runs (Phase 78). All conditions derived from freeze/pre-freeze-decisions.md. This file must exist and be verifiable before Phase 78 begins.",
+  "tag": "format-encoding-freeze-v1.1",
+  "predictions": [
+    {
+      "id": "H1",
+      "label": "Format main effect on accuracy",
+      "hypothesis": "At least one pairwise format comparison is statistically significant.",
+      "operationalization": "Friedman test across 8 formats (68+20 tasks × k=5 samples per format). Reject H0 if Friedman p < 0.05 after BH-FDR correction across 28 pairwise comparisons.",
+      "test": "Friedman χ² followed by pairwise Wilcoxon with BH-FDR (q=0.05)",
+      "threshold": "p < 0.05 (BH-FDR adjusted)",
+      "direction": "Format matters; some formats significantly outperform others.",
+      "decision_if_confirmed": "Proceed to pairwise decomposition (H-parse, H-pretrain, H-dense, H-interact).",
+      "decision_if_null": "Report null; check power; note n limitation; continue pairwise as exploratory."
+    },
+    {
+      "id": "H-parse",
+      "label": "Flat parse tree improves accuracy",
+      "hypothesis": "JSON-edge-list outperforms JSON-adjacency.",
+      "operationalization": "Pairwise Wilcoxon on per-task accuracy: JSON-edge-list vs JSON-adjacency. Both have same training familiarity (JSON); difference attributed to parse tree flatness.",
+      "test": "Pairwise Wilcoxon signed-rank, one-tailed (edge-list > adjacency), BH-FDR adjusted",
+      "threshold": "q < 0.05",
+      "direction": "Positive (edge-list > adjacency)",
+      "decision_if_confirmed": "Support flat-parse hypothesis; engineering action: prefer flat/edge-list encoding.",
+      "decision_if_null": "Familiarity effect dominates or ceiling/floor effects; parse tree flatness insufficient predictor."
+    },
+    {
+      "id": "H-pretrain",
+      "label": "Pretraining familiarity beats simplicity",
+      "hypothesis": "JSON-edge-list outperforms Custom-DSL despite DSL being simpler.",
+      "operationalization": "Pairwise Wilcoxon: JSON-edge-list vs Custom-DSL. Testable ONLY IF Custom-DSL confirmed simpler by pre-registered rule (vocabulary_size ≤ JSON-edge-list AND avg_tokens_per_relation ≤ JSON-edge-list × 0.8). Phase 77.1 result: SIMPLER confirmed for all 3 instances.",
+      "test": "Pairwise Wilcoxon signed-rank, one-tailed (JSON-edge-list > Custom-DSL), BH-FDR adjusted",
+      "threshold": "q < 0.05",
+      "direction": "Positive (JSON > DSL even though DSL is simpler)",
+      "dsl_simpler_gate": "CONFIRMED (Phase 77.1: vocab ratio ✓, token ratio ✓ for all instances)",
+      "decision_if_confirmed": "Support familiarity-over-simplicity hypothesis.",
+      "decision_if_null": "DSL achieves comparable accuracy despite lower familiarity; simplicity sufficient."
+    },
+    {
+      "id": "H-dense",
+      "label": "Dense encoding independently effective",
+      "hypothesis": "Haskell-ADT outperforms JSON-edge-list after token-count adjustment.",
+      "operationalization": "Primary: token-adjusted rank analysis (partial correlation of accuracy with token count controlled). Haskell-ADT must remain ahead of JSON-edge-list after controlling for tokens. Secondary: Exp2 deterministic-Haskell arm vs baseline (NL-exhaustive).",
+      "test": "Partial Spearman correlation; mixed-effects regression with tokens as covariate",
+      "threshold": "p < 0.05 for token-adjusted contrast",
+      "direction": "Positive (Haskell-ADT > JSON-edge-list, token-adjusted)",
+      "gate": "Haskell-ADT roundtrip PASS in Phase 76 — CONFIRMED.",
+      "decision_if_confirmed": "Dense encoding independently effective beyond token savings.",
+      "decision_if_null": "Token efficiency alone explains Haskell-ADT advantage."
+    },
+    {
+      "id": "H-interact",
+      "label": "Format × task-class interaction",
+      "hypothesis": "Mermaid/Haskell advantage concentrated in C-type tasks; JSON variants dominant for A/B-type.",
+      "operationalization": "Mixed-effects model: accuracy ~ format + task_type + format:task_type. Interaction term significance test.",
+      "test": "Mixed-effects model interaction term F-test",
+      "threshold": "p < 0.05",
+      "direction": "Positive interaction (format effect differs across task classes)",
+      "decision_if_confirmed": "Format routing should be task-class aware.",
+      "decision_if_null": "Format effect consistent across task classes; single best format recommendation sufficient."
+    },
+    {
+      "id": "H-attribution",
+      "label": "Structural covariates predict accuracy",
+      "hypothesis": "Both parsing_burden and local_density_distribution coefficients are significant in the regression.",
+      "operationalization": "Mixed-effects regression per Phase 77.1 covariates. Model: accuracy ~ parsing_burden + tokens + local_density_dist + task_type. Perplexity dropped (Q2 decision: no logprob API). parsing_burden = nesting_depth × delimiter_density. local_density = fraction of key relations in first 20% of tokens.",
+      "test": "Linear mixed-effects regression; Wald test for each coefficient",
+      "threshold": "p < 0.05 for both parsing_burden and local_density_distribution",
+      "direction": "Both significant (both structural dimensions predict accuracy)",
+      "decision_if_confirmed": "Both parse-tree shape and information distribution matter.",
+      "decision_if_null": "One dimension dominates; focus engineering on the significant predictor."
+    },
+    {
+      "id": "H-rewrite",
+      "label": "Rewrite canonicalization improves accuracy",
+      "hypothesis": "Any rewrite arm (rewrite-Haskell, rewrite-JSON, rewrite-CleanProse) outperforms deterministic-Haskell.",
+      "operationalization": "Pairwise Wilcoxon: each rewrite arm vs deterministic-Haskell (Exp2 roundtrip-passing instances only).",
+      "test": "Pairwise Wilcoxon signed-rank, BH-FDR adjusted",
+      "threshold": "q < 0.05 for any rewrite arm",
+      "direction": "Positive (rewrite > deterministic)",
+      "decision_if_confirmed": "Rewrite canonicalization provides net benefit beyond format alone.",
+      "decision_if_null": "Canonicalization overhead not worth cost at current scale."
+    },
+    {
+      "id": "H-info",
+      "label": "Information content drives accuracy",
+      "hypothesis": "rewrite-CleanProse outperforms NL-exhaustive baseline.",
+      "operationalization": "Pairwise Wilcoxon on 10% manual sample (Q5 decision). Conclusion strength labeled as lower than structural rewrite arms.",
+      "test": "Pairwise Wilcoxon, one-tailed, reported as exploratory (10% manual sample)",
+      "threshold": "p < 0.05 (exploratory, lower confidence)",
+      "direction": "Positive (CleanProse > NL-exhaustive)",
+      "confidence": "Lower — Q5 decision reduced this arm to manual 10% sampling.",
+      "decision_if_confirmed": "Report as exploratory support for information-ceiling hypothesis.",
+      "decision_if_null": "NL-exhaustive already near information ceiling."
+    }
+  ],
+  "model_config": {
+    "answer_models": ["claude-haiku-4-5-20251001", "glm-4.5-flash"],
+    "rewrite_model": "qwen3-235b-a22b",
+    "k_answer": 5,
+    "k_rewrite": 3,
+    "max_tokens": 8192,
+    "task_set_size_target": 88,
+    "task_set_v22_reuse": 68,
+    "task_set_new": 20
+  },
+  "experiment_status_at_commit": {
+    "artifacts_runs_empty": true,
+    "phase_76_tag": "format-encoding-freeze-v1.1",
+    "roundtrip_all_pass": true,
+    "phase_77_1_covariates_measured": true,
+    "custom_dsl_simpler_verdict": "CONFIRMED",
+    "h_pretrain_testable": true
+  }
+}
