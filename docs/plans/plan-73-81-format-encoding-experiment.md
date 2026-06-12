@@ -1,7 +1,7 @@
 # Plan 73-81 — 格式与编码实验（Format-Encoding Experiment）
 
 > Proposal: `docs/proposals/proposal-format-encoding-experiment.md`（预注册实验协议 v1.1）
-> Status: **Phase 78-79 IN PROGRESS** (Exp 1: 14/112 done haiku-only; Exp 2 rewrite: DONE; Exp 2 answers: running)
+> Status: **✅ COMPLETE** (Phase 81 done — final report at `experiments/format-encoding/REPORT.md`)
 > Priority: MEDIUM（实验 harness，**对 `src/` 零改动**）
 >承接: granularity-v2.2 B4 发现（L4 JSON vs L3 Mermaid，Δ=38.4%，p=7.6×10⁻⁸）
 >
@@ -13,10 +13,25 @@
 > | 76.2 | ✅ DONE | 改写 smoke test PASS (deepseek-v4-flash, 2/3 臂通过；clean-prose 为 human-sample) |
 > | 76.3 | ✅ DONE | tag: format-encoding-freeze-v1.1 @ commit b7af508 |
 > | 77.1–77.3 | ✅ DONE | 协变量测量完成；预测 commit 完成 |
-> | 78.1 | 🔄 RUNNING | Exp 1: 14/112 done (haiku-only; GLM dropped — D-78.1); 8格式 × 14任务 × k=5 |
+> | 78.1 | ✅ DONE | Exp 1: 112/112 done (haiku-only; GLM dropped — D-78.1); 8格式 × 14任务 × k=5 |
 > | 78.2 | ✅ DONE | Exp 2 rewrite DONE: 0/9 roundtrip pass (corpus太大→全H-info); D-78.2 |
-> | 79.1 | 🔄 RUNNING | Exp 2 答题: deterministic-haskell + baseline-nl (rewrite臂均无有效实例) |
-> | 80–81 | ⏳ PENDING | |
+> | 79.1 | ✅ DONE | Exp 2 答题: deterministic-haskell (0.614) + baseline-nl (0.629)；rewrite臂均无有效实例 |
+> | 80 | ✅ DONE | 统计分析完成: H1 CONFIRMED (p=0.0073); H-parse INSUFFICIENT_DATA; H-pretrain/H-dense/H-interact/H-attribution NULL |
+> | 81 | ✅ DONE | 最终报告: `experiments/format-encoding/REPORT.md` |
+>
+> ### 主要结论
+>
+> | 假设 | 结论 | 备注 |
+> |---|---|---|
+> | H1 — 格式主效应 | **CONFIRMED** | Friedman χ²=19.282, p=0.0073；主要驱动因素: mermaid 极差 (0.286 vs 0.571–0.671) |
+> | H-parse — 扁平解析树 | **INSUFFICIENT_DATA** | 仅2个非零差值；方向一致但不可检验 |
+> | H-pretrain — 预训练熟悉度 | **NULL** | json-edge-list=0.671 vs custom-dsl=0.643；W=9, p=0.41 |
+> | H-dense — 密集编码 | **NULL (方向反转)** | haskell-adt=0.571 < json-edge-list=0.671；W=0, p=1.00 |
+> | H-interact — 格式×任务类交互 | **NULL** | Kruskal p≥0.60 in all 3 classes |
+> | H-attribution — 结构协变量 | **NULL** | Spearman |ρ|<0.31, p>0.46 (n=8) |
+> | H-rewrite — 改写收益 | **UNTESTABLE** | D-78.2: 0/9 roundtrip pass |
+> | H-info — 幻觉抑制 | **UNTESTABLE** | D-78.2: 仅定性 |
+> | H-model — 跨模型一致性 | **UNTESTABLE** | D-78.1: GLM dropped |
 >
 > ### 协议偏离日志 (Deviation Log)
 >

@@ -1,0 +1,139 @@
+{
+  "generated": "2026-06-12T14:37:47.432435",
+  "n_records": 112,
+  "n_formats": 8,
+  "n_tasks": 14,
+  "n_common_tasks": 14,
+  "format_ranking": [
+    {
+      "format": "json-edge-list",
+      "accuracy": 0.6714285714285715
+    },
+    {
+      "format": "custom-dsl",
+      "accuracy": 0.642857142857143
+    },
+    {
+      "format": "markdown-table",
+      "accuracy": 0.6428571428571429
+    },
+    {
+      "format": "yaml",
+      "accuracy": 0.6285714285714287
+    },
+    {
+      "format": "nl-exhaustive",
+      "accuracy": 0.6
+    },
+    {
+      "format": "json-adjacency",
+      "accuracy": 0.5857142857142856
+    },
+    {
+      "format": "haskell-adt",
+      "accuracy": 0.5714285714285714
+    },
+    {
+      "format": "mermaid",
+      "accuracy": 0.2857142857142857
+    }
+  ],
+  "verdicts": {
+    "H1": {
+      "label": "Format main effect on accuracy",
+      "test": "Friedman",
+      "statistic": 19.28240740740736,
+      "p_value": 0.007347212919132674,
+      "verdict": "CONFIRMED",
+      "n_formats": 8,
+      "n_common_tasks": 14
+    },
+    "H-parse": {
+      "label": "Flat parse tree improves accuracy",
+      "test": "Wilcoxon signed-rank (greater) + BH-FDR",
+      "contrast": "json-edge-list vs json-adjacency",
+      "statistic": NaN,
+      "p_value": NaN,
+      "bh_adjusted_reject": false,
+      "verdict": "INSUFFICIENT_DATA"
+    },
+    "H-pretrain": {
+      "label": "Pretraining familiarity beats simplicity",
+      "test": "Wilcoxon signed-rank (greater) + BH-FDR",
+      "contrast": "json-edge-list vs custom-dsl",
+      "statistic": 9.0,
+      "p_value": 0.40625,
+      "bh_adjusted_reject": false,
+      "verdict": "NULL"
+    },
+    "H-dense": {
+      "label": "Dense encoding independently effective",
+      "test": "Wilcoxon signed-rank (greater) + BH-FDR",
+      "contrast": "haskell-adt vs json-edge-list",
+      "statistic": 0.0,
+      "p_value": 1.0,
+      "bh_adjusted_reject": false,
+      "verdict": "NULL"
+    },
+    "H-interact": {
+      "label": "Format \u00d7 task-class interaction",
+      "test": "Kruskal-Wallis within each task class",
+      "per_class": {
+        "A": {
+          "kruskal_stat": 5.1476342710997764,
+          "kruskal_p": 0.6419521667499171,
+          "n_formats": 8,
+          "format_means": {
+            "custom-dsl": 0.56,
+            "haskell-adt": 0.44000000000000006,
+            "json-adjacency": 0.44000000000000006,
+            "json-edge-list": 0.6,
+            "markdown-table": 0.6,
+            "mermaid": 0.04,
+            "nl-exhaustive": 0.44000000000000006,
+            "yaml": 0.52
+          }
+        },
+        "B": {
+          "kruskal_stat": 2.239354425911245,
+          "kruskal_p": 0.9454140853257893,
+          "n_formats": 8,
+          "format_means": {
+            "custom-dsl": 0.5666666666666667,
+            "haskell-adt": 0.5,
+            "json-adjacency": 0.5,
+            "json-edge-list": 0.5666666666666667,
+            "markdown-table": 0.5,
+            "mermaid": 0.2333333333333333,
+            "nl-exhaustive": 0.5333333333333333,
+            "yaml": 0.5333333333333333
+          }
+        },
+        "C": {
+          "kruskal_stat": 5.484848484848492,
+          "kruskal_p": 0.6010120548751339,
+          "n_formats": 8,
+          "format_means": {
+            "custom-dsl": 0.9333333333333332,
+            "haskell-adt": 0.9333333333333332,
+            "json-adjacency": 1.0,
+            "json-edge-list": 1.0,
+            "markdown-table": 1.0,
+            "mermaid": 0.7999999999999999,
+            "nl-exhaustive": 1.0,
+            "yaml": 1.0
+          }
+        }
+      },
+      "verdict": "NULL",
+      "significant_classes": []
+    },
+    "H-attribution": {
+      "label": "Structural covariates predict accuracy",
+      "test": "Spearman correlation",
+      "covariates_available": true,
+      "covariate_results": {},
+      "verdict": "INSUFFICIENT_DATA"
+    }
+  }
+}

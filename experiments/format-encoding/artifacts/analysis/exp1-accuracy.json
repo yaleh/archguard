@@ -1,0 +1,1816 @@
+{
+  "generated": "2026-06-12T14:35:30.747Z",
+  "totalCombinations": 112,
+  "formatAccuracy": {
+    "custom-dsl": 0.642857142857143,
+    "haskell-adt": 0.5714285714285714,
+    "json-adjacency": 0.5857142857142856,
+    "json-edge-list": 0.6714285714285715,
+    "markdown-table": 0.6428571428571429,
+    "mermaid": 0.2857142857142857,
+    "nl-exhaustive": 0.6,
+    "yaml": 0.6285714285714287
+  },
+  "modelAccuracy": {
+    "claude-haiku-4-5-20251001": 0.5785714285714286
+  },
+  "classAccuracy": {
+    "A": 0.45499999999999996,
+    "B": 0.49166666666666664,
+    "C": 0.9583333333333334
+  },
+  "details": [
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.6,
+      "scores": [
+        1,
+        1,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0.4,
+      "scores": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "custom-dsl",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 0.8,
+      "scores": [
+        0,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "haskell-adt",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 0.8,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "json-adjacency",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0.4,
+      "scores": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "json-edge-list",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0.8,
+      "scores": [
+        1,
+        0,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "markdown-table",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 0.4,
+      "scores": [
+        0,
+        0,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "mermaid",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 0.4,
+      "scores": [
+        0,
+        0,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "nl-exhaustive",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.6,
+      "scores": [
+        0,
+        0,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "yaml",
+      "model": "claude-haiku-4-5-20251001",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

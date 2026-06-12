@@ -1,0 +1,34 @@
+{
+  "generated": "2026-06-12T13:09:49.522Z",
+  "status": "PARTIAL — scoring complete, statistical tests pending",
+  "verdicts": {
+    "note": "Hypothesis verdicts require statistical tests (Friedman + pairwise Wilcoxon + BH-FDR). Run statistical analysis script.",
+    "H1": {
+      "verdict": "PENDING",
+      "data": {
+        "baseline-nl-exhaustive": 0.6285714285714287,
+        "deterministic-haskell": 0.6142857142857142
+      }
+    },
+    "H-parse": {
+      "verdict": "PENDING",
+      "contrast": "json-edge-list vs json-adjacency"
+    },
+    "H-pretrain": {
+      "verdict": "PENDING",
+      "contrast": "json-edge-list vs custom-dsl (Custom-DSL confirmed simpler)"
+    },
+    "H-dense": {
+      "verdict": "PENDING",
+      "contrast": "haskell-adt vs json-edge-list (token-adjusted)"
+    },
+    "H-interact": {
+      "verdict": "PENDING",
+      "test": "format × task-class interaction term"
+    },
+    "H-attribution": {
+      "verdict": "PENDING",
+      "test": "regression accuracy ~ parsing_burden + tokens + local_density"
+    }
+  }
+}
