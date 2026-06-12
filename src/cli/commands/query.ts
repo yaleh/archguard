@@ -9,7 +9,13 @@
 
 import { Command } from 'commander';
 import { resolveArchDir, loadEngine, readManifest } from '../query/engine-loader.js';
-import type { QueryEngine, PackageStatEntry } from '../query/query-engine.js';
+import type {
+  QueryEngine,
+  PackageStatEntry,
+  QueryMethodOptions,
+  OutputScope,
+  QueryOutputFormat,
+} from '../query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
 
 interface QueryOptions {
@@ -46,6 +52,10 @@ interface QueryOptions {
   packageStatsMinFiles?: string;
   packageStatsMinLoc?: string;
   packageStatsTop?: string;
+
+  // Phase 85: LLM-aware output
+  outputScope?: string;
+  queryFormat?: string;
 }
 
 /**
@@ -55,7 +65,10 @@ interface QueryOptions {
  * Values are coerced: "true"/"false" → boolean, numeric strings → number, else string.
  * Splits on the FIRST `=` only so values containing `=` are preserved.
  */
-export function parseAttrOption(raw: string): { key: string; value: string | number | boolean | undefined } {
+export function parseAttrOption(raw: string): {
+  key: string;
+  value: string | number | boolean | undefined;
+} {
   const eqIdx = raw.indexOf('=');
   if (eqIdx === -1) return { key: raw, value: undefined };
   const key = raw.slice(0, eqIdx);
@@ -113,7 +126,10 @@ export function createQueryCommand(): Command {
       .option('--in-cycles', 'Find entities participating in cycles')
 
       // Phase 5: attribute queries
-      .option('--attr <keyOrPair...>', 'Filter by attribute key or key=value pair (repeatable, AND-composed)')
+      .option(
+        '--attr <keyOrPair...>',
+        'Filter by attribute key or key=value pair (repeatable, AND-composed)'
+      )
 
       // Package stats
       .option('--package-stats [depth]', 'Show package statistics (optional depth 1-5, default: 2)')
@@ -127,6 +143,13 @@ export function createQueryCommand(): Command {
         'Exclude packages with loc below N (no effect for Go/TypeScript)'
       )
       .option('--package-stats-top <n>', 'Limit output to top N packages')
+
+      // Phase 85: LLM-aware output
+      .option('--output-scope <scope>', 'Output granularity: package|class|method (default: class)')
+      .option(
+        '--query-format <format>',
+        'Output format: structured|edge-list (default: structured)'
+      )
 
       .action(queryHandler)
   );
@@ -151,34 +174,54 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     const isJson = opts.format === 'json';
     const scopeEntry = engine.getScopeEntry();
 
+    // Build QueryMethodOptions from Phase 85 flags (only when at least one is set)
+    const queryOptions: QueryMethodOptions | undefined =
+      opts.outputScope || opts.queryFormat
+        ? {
+            outputScope: opts.outputScope as OutputScope | undefined,
+            queryFormat: opts.queryFormat as QueryOutputFormat | undefined,
+          }
+        : undefined;
+
     // Determine which query to run
     let result: unknown;
 
+    // When queryOptions are present, the engine already applies scope/format narrowing.
+    // In that case we bypass projectEntitiesForOutput (which would strip members via toSummary).
+    // For text output we still use the pre-options entities for formatEntityList.
+    const useRawEngineResult = !!queryOptions;
+
     if (opts.entity) {
-      const entities = engine.findEntity(opts.entity);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.findEntity(opts.entity, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities matching "${opts.entity}"`);
     } else if (opts.depsOf) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
-      const entities = engine.getDependencies(opts.depsOf, depth);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.getDependencies(opts.depsOf, depth, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependencies of "${opts.depsOf}" (depth: ${depth})`);
     } else if (opts.usedBy) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
-      const entities = engine.getDependents(opts.usedBy, depth);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.getDependents(opts.usedBy, depth, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependents of "${opts.usedBy}" (depth: ${depth})`);
     } else if (opts.implementersOf) {
-      const entities = engine.findImplementers(opts.implementersOf);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.findImplementers(opts.implementersOf, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Implementers of "${opts.implementersOf}"`);
     } else if (opts.subclassesOf) {
-      const entities = engine.findSubclasses(opts.subclassesOf);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.findSubclasses(opts.subclassesOf, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Subclasses of "${opts.subclassesOf}"`);
     } else if (opts.file) {
-      const entities = engine.getFileEntities(opts.file);
-      result = projectEntitiesForOutput(engine, entities, opts.verbose);
+      const raw = engine.getFileEntities(opts.file, queryOptions);
+      const entities = raw as Entity[];
+      result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities in ${opts.file}`);
     } else if (opts.cycles) {
       const cycles = engine.getCycles();
@@ -193,11 +236,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       const [first, ...rest] = parsedAttrs;
       let entities: Entity[];
       if (opts.type) {
-        entities = first
-          ? engine.findByTypeAndAttr(opts.type, first.key, first.value)
-          : engine.findByType(opts.type);
+        entities = (
+          first
+            ? engine.findByTypeAndAttr(opts.type, first.key, first.value)
+            : engine.findByType(opts.type)
+        ) as Entity[];
       } else {
-        entities = engine.findByAttr(first.key, first.value);
+        entities = engine.findByAttr(first.key, first.value) as Entity[];
       }
       // AND-compose remaining attrs
       for (const attr of rest) {
@@ -223,14 +268,15 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, 'Entities in dependency cycles');
     } else if (opts.packageStats !== undefined) {
-      const depth =
-        typeof opts.packageStats === 'string' ? parseInt(opts.packageStats, 10) : 2;
+      const depth = typeof opts.packageStats === 'string' ? parseInt(opts.packageStats, 10) : 2;
       const statsResult = engine.getPackageStats(depth);
       let packages = statsResult.packages;
 
       const sortBy = opts.packageStatsSortBy ?? 'loc';
       const minFiles =
-        opts.packageStatsMinFiles !== undefined ? parseInt(opts.packageStatsMinFiles, 10) : undefined;
+        opts.packageStatsMinFiles !== undefined
+          ? parseInt(opts.packageStatsMinFiles, 10)
+          : undefined;
       const minLoc =
         opts.packageStatsMinLoc !== undefined ? parseInt(opts.packageStatsMinLoc, 10) : undefined;
       const topN =
@@ -315,6 +361,19 @@ export function validateQueryOptions(opts: QueryOptions): void {
 
   if (opts.highCoupling) {
     parseBoundedInt(opts.threshold, '--threshold', 1);
+  }
+
+  const validScopes = ['package', 'class', 'method'];
+  const validFormats = ['structured', 'edge-list'];
+  if (opts.outputScope && !validScopes.includes(opts.outputScope)) {
+    throw new Error(
+      `Invalid --output-scope: "${opts.outputScope}". Expected: ${validScopes.join('|')}.`
+    );
+  }
+  if (opts.queryFormat && !validFormats.includes(opts.queryFormat)) {
+    throw new Error(
+      `Invalid --query-format: "${opts.queryFormat}". Expected: ${validFormats.join('|')}.`
+    );
   }
 }
 
@@ -418,6 +477,27 @@ function formatSummary(summary: ReturnType<QueryEngine['getSummary']>): void {
     console.log('\n  Top depended-on:');
     for (const item of summary.topDependedOn) {
       console.log(`    ${item.name}: ${item.dependentCount} dependents`);
+    }
+  }
+
+  if (summary.relationCountByType && Object.keys(summary.relationCountByType).length > 0) {
+    console.log('\n  Relations by type:');
+    for (const [type, count] of Object.entries(summary.relationCountByType)) {
+      console.log(`    ${type}: ${count}`);
+    }
+  }
+
+  if (summary.topByMethodCount && summary.topByMethodCount.length > 0) {
+    console.log('\n  Top by method count:');
+    for (const item of summary.topByMethodCount) {
+      console.log(`    ${item.name}: ${item.methodCount} methods`);
+    }
+  }
+
+  if (summary.topByOutDegree && summary.topByOutDegree.length > 0) {
+    console.log('\n  Top by out-degree:');
+    for (const item of summary.topByOutDegree) {
+      console.log(`    ${item.name}: ${item.outDegree} deps`);
     }
   }
 }

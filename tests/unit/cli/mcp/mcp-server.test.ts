@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Entity, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
@@ -831,6 +832,63 @@ describe('archguard_get_package_stats', () => {
     const cb = tools.get('archguard_get_package_stats');
     const result = await cb({ projectRoot: '/tmp/project', depth: 2, sortBy: 'loc' });
     expect(result.content[0].text).toContain('No query data found');
+  });
+});
+
+describe('Phase 86 MCP schema outputScope/queryFormat', () => {
+  function getToolSchema(server: McpServer, toolName: string): z.ZodObject<z.ZodRawShape> | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const registeredTools = (server as any)._registeredTools as Record<string, { inputSchema?: z.ZodObject<z.ZodRawShape> }>;
+    return registeredTools[toolName]?.inputSchema;
+  }
+
+  it('archguard_get_dependencies: outputScope param defaults to "method"', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+    const schema = getToolSchema(server, 'archguard_get_dependencies');
+    expect(schema).toBeDefined();
+    const result = schema!.parse({ name: 'Foo', depth: 1 });
+    expect(result.outputScope).toBe('method');
+  });
+
+  it('archguard_summary: outputScope param defaults to "package"', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+    const schema = getToolSchema(server, 'archguard_summary');
+    expect(schema).toBeDefined();
+    const result = schema!.parse({});
+    expect(result.outputScope).toBe('package');
+  });
+
+  it('archguard_find_entity: outputScope enum contains package, class, method', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+    const schema = getToolSchema(server, 'archguard_find_entity');
+    expect(schema).toBeDefined();
+    // Valid values should parse
+    expect(() => schema!.parse({ outputScope: 'package' })).not.toThrow();
+    expect(() => schema!.parse({ outputScope: 'class' })).not.toThrow();
+    expect(() => schema!.parse({ outputScope: 'method' })).not.toThrow();
+    // Default is class for find_entity
+    const result = schema!.parse({});
+    expect(result.outputScope).toBe('class');
+  });
+
+  it('queryFormat param: value "invalid" fails zod parse', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+    const schema = getToolSchema(server, 'archguard_get_dependencies');
+    expect(schema).toBeDefined();
+    expect(() => schema!.parse({ name: 'Foo', depth: 1, queryFormat: 'invalid' })).toThrow();
+  });
+
+  it('queryFormat param: value "edge-list" passes zod parse', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+    const schema = getToolSchema(server, 'archguard_get_dependencies');
+    expect(schema).toBeDefined();
+    const result = schema!.parse({ name: 'Foo', depth: 1, queryFormat: 'edge-list' });
+    expect(result.queryFormat).toBe('edge-list');
   });
 });
 

@@ -117,7 +117,7 @@ describe('archguard_find_entity MCP tool', () => {
 
     await tool({ name: 'CacheManager' });
 
-    expect(findEntitySpy).toHaveBeenCalledWith('CacheManager');
+    expect(findEntitySpy).toHaveBeenCalledWith('CacheManager', expect.objectContaining({ outputScope: expect.any(String) }));
   });
 
   it('entityType filter calls findByType', async () => {
@@ -133,7 +133,7 @@ describe('archguard_find_entity MCP tool', () => {
     const result = await tool({ entityType: 'lock_domain' });
 
     expect(findEntitySpy).not.toHaveBeenCalled();
-    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain');
+    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain', expect.objectContaining({ outputScope: expect.any(String) }));
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(3); // ld1, ld2, ld3
@@ -150,7 +150,7 @@ describe('archguard_find_entity MCP tool', () => {
 
     const result = await tool({ entityType: 'lock_domain', attrFilter: { irq_safe: true } });
 
-    expect(findByTypeAndAttrSpy).toHaveBeenCalledWith('lock_domain', 'irq_safe', true);
+    expect(findByTypeAndAttrSpy).toHaveBeenCalledWith('lock_domain', 'irq_safe', true, expect.objectContaining({ outputScope: expect.any(String) }));
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(2); // ld1 and ld3 have irq_safe=true
@@ -167,7 +167,7 @@ describe('archguard_find_entity MCP tool', () => {
 
     const result = await tool({ attrFilter: { execution_context: 'irq' } });
 
-    expect(findByAttrSpy).toHaveBeenCalledWith('execution_context', 'irq');
+    expect(findByAttrSpy).toHaveBeenCalledWith('execution_context', 'irq', expect.objectContaining({ outputScope: expect.any(String) }));
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(1); // only w1
@@ -202,7 +202,7 @@ describe('archguard_find_entity MCP tool', () => {
 
     const result = await tool({ entityType: 'lock_domain', attrFilter: {} });
 
-    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain');
+    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain', expect.objectContaining({ outputScope: expect.any(String) }));
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(3); // all lock_domain entities

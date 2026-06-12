@@ -15,6 +15,9 @@ import type {
   EntitySummary,
   PackageStatEntry,
   PackageStatsResult,
+  OutputScope,
+  QueryMethodOptions,
+  QueryOutputFormat,
 } from '../query/query-engine.js';
 import type { Entity } from '@/types/index.js';
 import type {
@@ -107,6 +110,27 @@ const verboseParam = z
   .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().default(false))
   .describe('Return full entities with members. Default false returns summary only.');
 
+function outputScopeParam(defaultScope: OutputScope = 'class') {
+  return z
+    .enum(['package', 'class', 'method'])
+    .default(defaultScope)
+    .describe(
+      'Output granularity: "package" (package-level only), ' +
+        '"class" (entity-level, no members, default), ' +
+        '"method" (full entity with method signatures). ' +
+        'edge-list format recommended for LLM reasoning ' +
+        '(+38pp vs mermaid, format-encoding experiment, n=14 tasks).'
+    );
+}
+
+const queryFormatParam = z
+  .enum(['structured', 'edge-list'])
+  .default('structured')
+  .describe(
+    'Output format: "structured" (nested JSON objects, default) or ' +
+      '"edge-list" (flat { entities[], relations[] } — best for LLM reasoning).'
+  );
+
 function applyView(
   engine: QueryEngine,
   entities: Entity[],
@@ -114,6 +138,20 @@ function applyView(
 ): Entity[] | EntitySummary[] {
   const isVerbose = verbose === 'true' ? true : (verbose ?? false);
   return isVerbose ? entities : entities.map((e) => engine.toSummary(e));
+}
+
+/**
+ * Resolve the effective OutputScope, honouring the `verbose` override:
+ * if verbose=true, always use 'method' so full entities (with members) are returned.
+ */
+function resolveOutputScope(
+  outputScope: string | undefined,
+  verbose: boolean | string | undefined,
+  fallback: OutputScope = 'class'
+): OutputScope {
+  const isVerbose = verbose === 'true' ? true : (verbose ?? false);
+  if (isVerbose) return 'method';
+  return (outputScope as OutputScope | undefined) ?? fallback;
 }
 
 interface AdjacencyEdge {
@@ -159,7 +197,7 @@ function toAtlasAdjacency(
 export function registerTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_find_entity',
-    "Find entities by name, type, or attribute filter. Provide 'name' for exact match, 'entityType' to filter by type, or 'attrFilter' for attribute key-value pairs (AND-composed).",
+    "Find entities by name, type, or attribute filter. Provide 'name' for exact match, 'entityType' to filter by type, or 'attrFilter' for attribute key-value pairs (AND-composed). Use outputScope param to control result granularity.",
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -168,31 +206,52 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       attrFilter: z
         .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
         .optional()
-        .describe('Attribute key-value pairs (AND-composed). Values can be string, number, or boolean.'),
+        .describe(
+          'Attribute key-value pairs (AND-composed). Values can be string, number, or boolean.'
+        ),
       verbose: verboseParam,
+      outputScope: outputScopeParam('class'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, name, entityType, attrFilter, verbose }) => {
+    async ({
+      projectRoot,
+      scope,
+      name,
+      entityType,
+      attrFilter,
+      verbose,
+      outputScope,
+      queryFormat,
+    }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
 
         let entities: Entity[];
 
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+
         if (name) {
           // Existing path: exact name match
-          entities = engine.findEntity(name);
+          entities = engine.findEntity(name, queryOptions) as Entity[];
         } else {
           const attrEntries = attrFilter ? Object.entries(attrFilter) : [];
-          const [[firstKey, firstVal], ...restEntries] = attrEntries.length > 0
-            ? attrEntries
-            : [[undefined, undefined] as [undefined, undefined]];
+          const [[firstKey, firstVal], ...restEntries] =
+            attrEntries.length > 0
+              ? attrEntries
+              : [[undefined, undefined] as [undefined, undefined]];
 
           if (entityType) {
-            entities = firstKey !== undefined
-              ? engine.findByTypeAndAttr(entityType, firstKey, firstVal as string | number | boolean)
-              : engine.findByType(entityType);
+            entities = (
+              firstKey !== undefined
+                ? engine.findByTypeAndAttr(entityType, firstKey, firstVal, queryOptions)
+                : engine.findByType(entityType, queryOptions)
+            ) as Entity[];
           } else if (firstKey !== undefined) {
-            entities = engine.findByAttr(firstKey, firstVal as string | number | boolean);
+            entities = engine.findByAttr(firstKey, firstVal, queryOptions) as Entity[];
           } else {
             entities = [];
           }
@@ -211,19 +270,29 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependencies',
-    'Get dependencies of a named entity (what it depends on). Operates at entity (class/struct) level; for Go package-level dependencies use archguard_get_atlas_layer.',
+    'Return direct and transitive class-level dependency graph with method signatures (outputScope=method by default); call graph edges (method→method calls) are not included — only class-level structural relations. For Go package-level dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
       verbose: verboseParam,
+      outputScope: outputScopeParam('method'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, name, depth, verbose }) => {
+    async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.getDependencies(name, depth), verbose);
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const payload = applyView(
+          engine,
+          engine.getDependencies(name, depth, queryOptions) as Entity[],
+          verbose
+        );
         return textResponse(serializeEntities(payload));
       });
     }
@@ -231,19 +300,29 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependents',
-    'Get dependents of a named entity (what depends on it). Operates at entity (class/struct) level; for Go package-level reverse dependencies use archguard_get_atlas_layer.',
+    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). For Go package-level reverse dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       name: z.string().describe('Entity name'),
       depth: z.coerce.number().min(1).max(5).default(1).describe('BFS traversal depth (1-5)'),
       verbose: verboseParam,
+      outputScope: outputScopeParam('method'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, name, depth, verbose }) => {
+    async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.getDependents(name, depth), verbose);
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const payload = applyView(
+          engine,
+          engine.getDependents(name, depth, queryOptions) as Entity[],
+          verbose
+        );
         return textResponse(serializeEntities(payload));
       });
     }
@@ -251,18 +330,28 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_find_implementers',
-    'Find classes that implement a given interface. For Go, finds struct types satisfying an interface via implicit structural typing.',
+    'Find classes that implement a given interface. For Go, finds struct types satisfying an interface via implicit structural typing. Use outputScope param to control result granularity.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       name: z.string().describe('Interface name'),
       verbose: verboseParam,
+      outputScope: outputScopeParam('class'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, name, verbose }) => {
+    async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.findImplementers(name), verbose);
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const payload = applyView(
+          engine,
+          engine.findImplementers(name, queryOptions) as Entity[],
+          verbose
+        );
         return textResponse(serializeEntities(payload));
       });
     }
@@ -270,18 +359,28 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_find_subclasses',
-    'Find subclasses of a given class. Only applicable to OO languages; Go has no class inheritance and will always return empty.',
+    'Find subclasses of a given class. Only applicable to OO languages; Go has no class inheritance and will always return empty. Use outputScope param to control result granularity.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       name: z.string().describe('Class name'),
       verbose: verboseParam,
+      outputScope: outputScopeParam('class'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, name, verbose }) => {
+    async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.findSubclasses(name), verbose);
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const payload = applyView(
+          engine,
+          engine.findSubclasses(name, queryOptions) as Entity[],
+          verbose
+        );
         return textResponse(serializeEntities(payload));
       });
     }
@@ -289,18 +388,28 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_file_entities',
-    'Get all entities defined in a specific file',
+    'Get all entities defined in a specific file. Use outputScope param to control result granularity.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       filePath: z.string().describe('Source file path (e.g. "cli/query/query-engine.ts")'),
       verbose: verboseParam,
+      outputScope: outputScopeParam('class'),
+      queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope, filePath, verbose }) => {
+    async ({ projectRoot, scope, filePath, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
-        const payload = applyView(engine, engine.getFileEntities(filePath), verbose);
+        const queryOptions: QueryMethodOptions = {
+          outputScope: resolveOutputScope(outputScope, verbose),
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const payload = applyView(
+          engine,
+          engine.getFileEntities(filePath, queryOptions) as Entity[],
+          verbose
+        );
         return textResponse(serializeEntities(payload));
       });
     }
@@ -308,10 +417,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_detect_cycles',
-    'Detect dependency cycles in the architecture. For Go: the compiler prevents import cycles, so this tool will return empty for any valid Go project.',
+    'Detect dependency cycles in the architecture. For Go: the compiler prevents import cycles, so this tool will return empty for any valid Go project. Use outputScope param to control result granularity.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
+      outputScope: outputScopeParam('class'),
+      queryFormat: queryFormatParam,
     },
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
@@ -324,10 +435,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_summary',
-    'Get a summary of the architecture scope',
+    'Return pre-computed architecture statistics: exact entity/relation counts (no graph enumeration needed), relation breakdown by type, top-N entities by in-degree / out-degree / method count. ALWAYS call this tool first for any counting or ranking query — do NOT attempt to enumerate or count items from other tool outputs. Default outputScope=package (L1 granularity); for method-level detail call archguard_get_dependencies.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
+      outputScope: outputScopeParam('package'),
+      queryFormat: queryFormatParam,
     },
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
@@ -398,8 +511,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_package_stats',
-    'Get per-package volume metrics (file count, entity count, approximate line count) ' +
-      'sorted and filtered by threshold.',
+    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -436,6 +548,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         .max(200)
         .optional()
         .describe('Limit output to the top N packages after sorting and filtering.'),
+      outputScope: outputScopeParam('package'),
+      queryFormat: queryFormatParam,
     },
     async ({ projectRoot, scope, depth, sortBy, minFileCount, minLoc, topN }) => {
       const root = resolveRoot(projectRoot, defaultRoot);

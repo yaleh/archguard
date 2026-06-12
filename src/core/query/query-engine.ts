@@ -15,6 +15,8 @@ import type {
   PackageCoverage,
   TestFileInfo,
 } from '@/types/extensions/test-analysis.js';
+import { narrowEntities } from './output-scope-filter.js';
+import { serialize } from './edge-list-serializer.js';
 
 export interface EntitySummary {
   id: string;
@@ -60,6 +62,37 @@ export interface QueryEngineOptions {
   scopeEntry: QueryScopeEntry;
 }
 
+export type OutputScope = 'package' | 'class' | 'method';
+export type QueryOutputFormat = 'structured' | 'edge-list';
+
+export interface QueryMethodOptions {
+  outputScope?: OutputScope;
+  queryFormat?: QueryOutputFormat;
+}
+
+export interface EdgeListEntity {
+  id: string;
+  name: string;
+  type: string;
+  sourceFile: string;
+  methods: Array<{
+    name: string;
+    params: Array<{ name: string; type: string }>;
+    returnType: string;
+  }>;
+}
+
+export interface EdgeListRelation {
+  from: string;
+  to: string;
+  type: string;
+}
+
+export interface EdgeListOutput {
+  entities: EdgeListEntity[];
+  relations: EdgeListRelation[];
+}
+
 export class QueryEngine {
   private archJson: ArchJSON;
   private index: ArchIndex;
@@ -79,47 +112,73 @@ export class QueryEngine {
   // ----------------------------------------------------------------
 
   /** Find entities by exact name match. */
-  findEntity(name: string): Entity[] {
+  findEntity(
+    name: string,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
     const ids = this.index.nameToIds[name] ?? [];
-    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
+    const entities = ids.map((id) => this.entityMap.get(id)).filter(Boolean);
+    return this.applyOutputOptions(entities, options);
   }
 
   /** BFS along the dependencies direction (what entityName depends on). */
-  getDependencies(entityName: string, depth: number = 1): Entity[] {
-    return this.bfs(entityName, 'dependencies', depth);
+  getDependencies(
+    entityName: string,
+    depth: number = 1,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    return this.applyOutputOptions(this.bfs(entityName, 'dependencies', depth), options);
   }
 
   /** BFS along the dependents direction (what depends on entityName). */
-  getDependents(entityName: string, depth: number = 1): Entity[] {
-    return this.bfs(entityName, 'dependents', depth);
+  getDependents(
+    entityName: string,
+    depth: number = 1,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    return this.applyOutputOptions(this.bfs(entityName, 'dependents', depth), options);
   }
 
   /** Find entities that implement the given interface (relation.type === 'implementation'). */
-  findImplementers(interfaceName: string): Entity[] {
+  findImplementers(
+    interfaceName: string,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
     const pairs = this.index.relationsByType['implementation'] ?? [];
     const ids = this.index.nameToIds[interfaceName] ?? [];
     const targetSet = new Set(ids);
     const implementerIds = pairs
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
-    return [...new Set(implementerIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
+    const entities = [...new Set(implementerIds)]
+      .map((id) => this.entityMap.get(id))
+      .filter(Boolean);
+    return this.applyOutputOptions(entities, options);
   }
 
   /** Find subclasses of the given class (relation.type === 'inheritance'). */
-  findSubclasses(className: string): Entity[] {
+  findSubclasses(
+    className: string,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
     const pairs = this.index.relationsByType['inheritance'] ?? [];
     const ids = this.index.nameToIds[className] ?? [];
     const targetSet = new Set(ids);
     const subclassIds = pairs
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
-    return [...new Set(subclassIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
+    const entities = [...new Set(subclassIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
+    return this.applyOutputOptions(entities, options);
   }
 
   /** Get all entities defined in a given file. */
-  getFileEntities(filePath: string): Entity[] {
+  getFileEntities(
+    filePath: string,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
     const ids = this.index.fileToIds[filePath] ?? [];
-    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
+    const entities = ids.map((id) => this.entityMap.get(id)).filter(Boolean);
+    return this.applyOutputOptions(entities, options);
   }
 
   /** Return all non-trivial cycles (SCCs with size > 1). */
@@ -143,6 +202,9 @@ export class QueryEngine {
     };
     topPackages: PackageStatEntry[];
     totalPackageCount: number;
+    relationCountByType: Partial<Record<RelationType, number>>;
+    topByMethodCount: Array<{ name: string; methodCount: number }>;
+    topByOutDegree: Array<{ name: string; outDegree: number }>;
   } {
     const computedTopDependedOn = Object.entries(this.index.dependents)
       .map(([id, deps]) => ({
@@ -177,6 +239,32 @@ export class QueryEngine {
     const totalPackageCount = topPackagesResult.packages.length;
     const topPackages = topPackagesResult.packages.slice(0, 10);
 
+    // relationCountByType
+    const relationCountByType: Partial<Record<RelationType, number>> = {};
+    for (const [type, rels] of Object.entries(this.index.relationsByType)) {
+      relationCountByType[type as RelationType] = rels.length;
+    }
+
+    // topByMethodCount (method + constructor, consistent with getPackageStats)
+    const topByMethodCount = this.archJson.entities
+      .map((e) => ({
+        name: this.index.idToName[e.id] ?? e.id,
+        methodCount: (e.members ?? []).filter(
+          (m) => m.type === 'method' || m.type === 'constructor'
+        ).length,
+      }))
+      .sort((a, b) => b.methodCount - a.methodCount)
+      .slice(0, 10);
+
+    // topByOutDegree (ArchIndex.dependencies is Record<string, string[]>)
+    const topByOutDegree = this.archJson.entities
+      .map((e) => ({
+        name: this.index.idToName[e.id] ?? e.id,
+        outDegree: (this.index.dependencies[e.id] ?? []).length,
+      }))
+      .sort((a, b) => b.outDegree - a.outDegree)
+      .slice(0, 10);
+
     return {
       entityCount: this.archJson.entities.length,
       relationCount: atlasEdgeCount > 0 ? atlasEdgeCount : this.archJson.relations.length,
@@ -187,6 +275,9 @@ export class QueryEngine {
       capabilities,
       topPackages,
       totalPackageCount,
+      relationCountByType,
+      topByMethodCount,
+      topByOutDegree,
     };
   }
 
@@ -195,22 +286,31 @@ export class QueryEngine {
   // ----------------------------------------------------------------
 
   /** Find entities matching a given EntityType. */
-  findByType(entityType: string): Entity[] {
-    return this.archJson.entities.filter((e) => {
+  findByType(
+    entityType: string,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    const entities = this.archJson.entities.filter((e) => {
       if (entityType === 'abstract_class') {
         return e.type === 'abstract_class' || (e.isAbstract && e.type === 'class');
       }
       return e.type === entityType;
     });
+    return this.applyOutputOptions(entities, options);
   }
 
   /** Find entities that have the given attribute key (optionally matching a specific value). */
-  findByAttr(key: string, value?: string | number | boolean): Entity[] {
-    return this.archJson.entities.filter((e) => {
+  findByAttr(
+    key: string,
+    value?: string | number | boolean,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    const entities = this.archJson.entities.filter((e) => {
       if (!e.attributes) return false;
       if (value === undefined) return key in e.attributes;
       return e.attributes[key] === value;
     });
+    return this.applyOutputOptions(entities, options);
   }
 
   /**
@@ -223,14 +323,22 @@ export class QueryEngine {
   findByTypeAndAttr(
     entityType: string,
     attrKey?: string,
-    attrValue?: string | number | boolean
-  ): Entity[] {
-    return this.findByType(entityType).filter((e) => {
+    attrValue?: string | number | boolean,
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    const base = this.archJson.entities.filter((e) => {
+      if (entityType === 'abstract_class') {
+        return e.type === 'abstract_class' || (e.isAbstract && e.type === 'class');
+      }
+      return e.type === entityType;
+    });
+    const entities = base.filter((e) => {
       if (!attrKey) return true;
       if (!e.attributes) return false;
       if (attrValue === undefined) return attrKey in e.attributes;
       return e.attributes[attrKey] === attrValue;
     });
+    return this.applyOutputOptions(entities, options);
   }
 
   /** Find entities whose total incoming + outgoing edges >= threshold. */
@@ -255,6 +363,31 @@ export class QueryEngine {
   findInCycles(): Entity[] {
     const cycleIds = new Set(this.index.cycles.flatMap((c) => c.members));
     return this.archJson.entities.filter((e) => cycleIds.has(e.id));
+  }
+
+  /**
+   * Apply outputScope and queryFormat options to a result set.
+   * - No options → return as-is (backward compatibility)
+   * - scope='class' (default): strip members[]
+   * - scope='method': keep all fields including members[]
+   * - scope='package': keep only id, name, type, sourceLocation.file
+   * - format='edge-list': serialize to flat { entities, relations } structure
+   * - format='structured' (default): return narrowed entity array
+   */
+  private applyOutputOptions(
+    entities: Entity[],
+    options?: QueryMethodOptions
+  ): Entity[] | Partial<Entity>[] | EdgeListOutput {
+    if (!options) return entities; // no options = return as-is (backward compat)
+
+    const scope = options.outputScope ?? 'class';
+    const format = options.queryFormat ?? 'structured';
+
+    const narrowed = narrowEntities(entities, scope);
+    if (format === 'edge-list') {
+      return serialize(narrowed, this.archJson.relations, scope);
+    }
+    return narrowed;
   }
 
   /** Return the scope entry associated with this engine. */
@@ -546,12 +679,15 @@ export class QueryEngine {
     const ws = this.archJson.workspaceRoot;
 
     // pkg → { files: file → maxEndLine, metrics }
-    const pkgData = new Map<string, {
-      files: Map<string, number>;
-      entityCount: number;
-      methodCount: number;
-      fieldCount: number;
-    }>();
+    const pkgData = new Map<
+      string,
+      {
+        files: Map<string, number>;
+        entityCount: number;
+        methodCount: number;
+        fieldCount: number;
+      }
+    >();
 
     for (const entity of this.archJson.entities) {
       const lastDot = entity.id.lastIndexOf('.');
@@ -560,7 +696,7 @@ export class QueryEngine {
       if (!pkgData.has(pkg)) {
         pkgData.set(pkg, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
       }
-      const data = pkgData.get(pkg)!;
+      const data = pkgData.get(pkg);
 
       let file = entity.sourceLocation.file;
       if (path.isAbsolute(file) && ws) file = path.relative(ws, file);
@@ -569,7 +705,9 @@ export class QueryEngine {
 
       data.entityCount++;
       const members = entity.members ?? [];
-      data.methodCount += members.filter((m) => m.type === 'method' || m.type === 'constructor').length;
+      data.methodCount += members.filter(
+        (m) => m.type === 'method' || m.type === 'constructor'
+      ).length;
       data.fieldCount += members.filter((m) => m.type === 'property' || m.type === 'field').length;
     }
 
@@ -594,7 +732,7 @@ export class QueryEngine {
       if (!pkgData.has(pkgPath)) {
         pkgData.set(pkgPath, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
       }
-      pkgData.get(pkgPath)!.files.set(file, 0);
+      pkgData.get(pkgPath).files.set(file, 0);
     }
 
     const packages: PackageStatEntry[] = Array.from(pkgData.entries()).map(([pkg, data]) => {

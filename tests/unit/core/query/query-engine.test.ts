@@ -167,3 +167,137 @@ describe('QueryEngine.findByAttr (from @/core/query, Plan 58)', () => {
   it.todo('finds entities with a given attribute key (no value filter)');
   it.todo('finds entities matching a specific attribute value');
 });
+
+// ---------------------------------------------------------------------------
+// Test 5: QueryEngine options (Phase 84)
+// ---------------------------------------------------------------------------
+
+describe('QueryEngine options (Phase 84)', () => {
+  // Fixture: entity A with 2 methods + 1 field, entity B with 1 field
+  // A depends on B
+  function makeMethod(name: string) {
+    return {
+      name,
+      type: 'method' as const,
+      visibility: 'public' as const,
+      parameters: [{ name: 'x', type: 'string' }],
+      returnType: 'void',
+    };
+  }
+
+  function makeField(name: string) {
+    return { name, type: 'field' as const, visibility: 'private' as const };
+  }
+
+  const entityA = makeEntity('pkg.A', 'A', {
+    members: [makeMethod('doSomething'), makeMethod('doOther'), makeField('value')],
+  });
+  const entityB = makeEntity('pkg.B', 'B', {
+    members: [makeField('count')],
+  });
+
+  function makeEngine() {
+    const archJson = makeArchJson({
+      entities: [entityA, entityB],
+      relations: [{ source: 'pkg.A', target: 'pkg.B', type: 'dependency' }],
+    });
+    const index = buildArchIndex(archJson, 'hash-phase84');
+    return new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+  }
+
+  it('findEntity no options: returns full Entity[] (backward compat)', () => {
+    const engine = makeEngine();
+    const result = engine.findEntity('A');
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Entity[];
+    expect(entities).toHaveLength(1);
+    expect(entities[0].members).toBeDefined();
+    expect(entities[0].members).toHaveLength(3);
+  });
+
+  it('findEntity outputScope=method: returns entities with members', () => {
+    const engine = makeEngine();
+    const result = engine.findEntity('A', { outputScope: 'method' });
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Entity[];
+    expect(entities).toHaveLength(1);
+    expect(entities[0].members).toBeDefined();
+    expect(entities[0].members!.length).toBeGreaterThan(0);
+  });
+
+  it('findEntity outputScope=class: returns entities WITHOUT members key', () => {
+    const engine = makeEngine();
+    const result = engine.findEntity('A', { outputScope: 'class' });
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Partial<Entity>[];
+    expect(entities).toHaveLength(1);
+    expect(entities[0].members).toBeUndefined();
+    expect(entities[0].name).toBe('A');
+  });
+
+  it('getDependencies queryFormat=edge-list: returns EdgeListOutput { entities, relations }', () => {
+    const engine = makeEngine();
+    const result = engine.getDependencies('A', 1, { queryFormat: 'edge-list' });
+    expect(result).toHaveProperty('entities');
+    expect(result).toHaveProperty('relations');
+    const edgeList = result as { entities: unknown[]; relations: unknown[] };
+    expect(edgeList.entities).toHaveLength(1);
+    expect(edgeList.entities[0]).toHaveProperty('id', 'pkg.B');
+    expect(edgeList.relations).toHaveLength(1);
+    const rel = edgeList.relations[0] as { from: string; to: string; type: string };
+    expect(rel.from).toBe('pkg.A');
+    expect(rel.to).toBe('pkg.B');
+    expect(rel.type).toBe('dependency');
+  });
+
+  it('getDependencies outputScope=method + queryFormat=edge-list: methods[] populated', () => {
+    const engine = makeEngine();
+    const result = engine.getDependencies('A', 1, { outputScope: 'method', queryFormat: 'edge-list' });
+    const edgeList = result as { entities: Array<{ id: string; methods: unknown[] }>; relations: unknown[] };
+    expect(edgeList.entities).toHaveLength(1);
+    // B has no methods (only a field), so methods[] is empty
+    expect(edgeList.entities[0].methods).toEqual([]);
+  });
+
+  it('getDependents outputScope=class: returns narrowed entities without members', () => {
+    const engine = makeEngine();
+    const result = engine.getDependents('B', 1, { outputScope: 'class' });
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Partial<Entity>[];
+    expect(entities).toHaveLength(1);
+    expect(entities[0].name).toBe('A');
+    expect(entities[0].members).toBeUndefined();
+  });
+
+  it('findImplementers no options: full entity returned', () => {
+    const archJson = makeArchJson({
+      entities: [
+        makeEntity('pkg.IFoo', 'IFoo', { type: 'interface' }),
+        makeEntity('pkg.FooImpl', 'FooImpl', {
+          type: 'class',
+          members: [makeMethod('execute')],
+        }),
+      ],
+      relations: [{ source: 'pkg.FooImpl', target: 'pkg.IFoo', type: 'implementation' }],
+    });
+    const index = buildArchIndex(archJson, 'hash-phase84-impl');
+    const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+
+    const result = engine.findImplementers('IFoo');
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Entity[];
+    expect(entities).toHaveLength(1);
+    expect(entities[0].members).toBeDefined();
+  });
+
+  it('applyOutputOptions scope defaults to class when options provided without scope', () => {
+    const engine = makeEngine();
+    // Pass options with only queryFormat (no outputScope) — should default scope to 'class'
+    const result = engine.findEntity('A', { queryFormat: 'structured' });
+    expect(Array.isArray(result)).toBe(true);
+    const entities = result as Partial<Entity>[];
+    expect(entities).toHaveLength(1);
+    // scope=class → members stripped
+    expect(entities[0].members).toBeUndefined();
+  });
+});

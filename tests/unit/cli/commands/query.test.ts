@@ -232,7 +232,7 @@ describe('query --deps-of', () => {
     const spy = vi.spyOn(engine, 'getDependencies');
     vi.mocked(loadEngine).mockResolvedValue(engine);
     await runQuery('--deps-of', 'DiagramProcessor', '--depth', '2');
-    expect(spy).toHaveBeenCalledWith('DiagramProcessor', 2);
+    expect(spy).toHaveBeenCalledWith('DiagramProcessor', 2, undefined);
   });
 });
 
@@ -242,7 +242,7 @@ describe('query --used-by', () => {
     const spy = vi.spyOn(engine, 'getDependents');
     vi.mocked(loadEngine).mockResolvedValue(engine);
     await runQuery('--used-by', 'CacheManager');
-    expect(spy).toHaveBeenCalledWith('CacheManager', 1);
+    expect(spy).toHaveBeenCalledWith('CacheManager', 1, undefined);
   });
 });
 
@@ -589,5 +589,72 @@ describe('query --package-stats', () => {
     await runQuery('--package-stats', '--summary');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Specify exactly one primary query option');
+  });
+});
+
+describe('query command Phase 85 options', () => {
+  it('validates --output-scope: invalid value throws error', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--summary', '--output-scope', 'module');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Invalid --output-scope');
+    expect(consoleErrorOutput.join('\n')).toContain('module');
+  });
+
+  it('validates --output-scope: valid values do not throw', async () => {
+    for (const scope of ['package', 'class', 'method']) {
+      vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+      consoleErrorOutput = [];
+      await runQuery('--summary', '--output-scope', scope);
+      expect(consoleErrorOutput.join('\n')).not.toContain('Invalid --output-scope');
+    }
+  });
+
+  it('validates --query-format: invalid value throws error', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--summary', '--query-format', 'csv');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toContain('Invalid --query-format');
+    expect(consoleErrorOutput.join('\n')).toContain('csv');
+  });
+
+  it('validates --query-format: valid values do not throw', async () => {
+    for (const fmt of ['structured', 'edge-list']) {
+      vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+      consoleErrorOutput = [];
+      await runQuery('--summary', '--query-format', fmt);
+      expect(consoleErrorOutput.join('\n')).not.toContain('Invalid --query-format');
+    }
+  });
+
+  it('--output-scope and --query-format are registered CLI options', () => {
+    const cmd = createQueryCommand();
+    const optionNames = cmd.options.map((o) => o.long);
+    expect(optionNames).toContain('--output-scope');
+    expect(optionNames).toContain('--query-format');
+  });
+
+  it('formatSummary prints relationCountByType when present', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--summary');
+    const output = consoleOutput.join('\n');
+    // The test engine has relations: dependency (x3) and implementation (x1)
+    expect(output).toContain('Relations by type:');
+    expect(output).toMatch(/dependency:\s*3/);
+    expect(output).toMatch(/implementation:\s*1/);
+  });
+
+  it('formatSummary prints topByMethodCount when present', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--summary');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('Top by method count:');
+  });
+
+  it('formatSummary prints topByOutDegree when present', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--summary');
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('Top by out-degree:');
   });
 });

@@ -13,3 +13,11 @@ export type {
   PackageStatsResult,
   QueryEngineOptions,
 } from '@/core/query/query-engine.js';
+export type {
+  OutputScope,
+  QueryOutputFormat,
+  QueryMethodOptions,
+  EdgeListEntity,
+  EdgeListRelation,
+  EdgeListOutput,
+} from '@/core/query/query-engine.js';
