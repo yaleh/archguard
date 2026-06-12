@@ -39,10 +39,23 @@ const FORMAT_RENDERERS: Record<string, (c: C) => string> = {
 const ALL_FORMATS = Object.keys(FORMAT_RENDERERS);
 
 // Pre-registered model configs per plan Phase 74 (pre-freeze-decisions.md)
-const MODEL_CONFIGS: Record<string, Record<string, unknown>> = {
+const MODEL_CONFIGS_BASE: Record<string, Record<string, unknown>> = {
   'claude-haiku-4-5-20251001': { temperature: 0, max_tokens: 8192 },
   'glm-4.5-flash': { temperature: 0, max_tokens: 8192 },
 };
+
+// --nothink: appends extra_body:{thinking:{type:'disabled'}} to GLM config.
+// LiteLLM merges extra_body contents into the actual upstream request body.
+function buildModelConfigs(nothink: boolean): Record<string, Record<string, unknown>> {
+  if (!nothink) return MODEL_CONFIGS_BASE;
+  return {
+    ...MODEL_CONFIGS_BASE,
+    'glm-4.5-flash': {
+      ...MODEL_CONFIGS_BASE['glm-4.5-flash'],
+      extra_body: { thinking: { type: 'disabled' } },
+    },
+  };
+}
 
 function parseArgs() {
   const argv = process.argv.slice(2);
@@ -58,6 +71,7 @@ function parseArgs() {
     formats: get('--formats', 'all') === 'all' ? ALL_FORMATS : get('--formats', 'all').split(','),
     k: parseInt(get('--k', '5'), 10),
     outDir: get('--out', 'artifacts/runs/exp1'),
+    nothink: argv.includes('--nothink'),
   };
 }
 
@@ -75,6 +89,7 @@ async function runTask(
   prompt: string,
   k: number,
   resultPath: string,
+  modelConfigs: Record<string, Record<string, unknown>>,
 ): Promise<{ responses: string[]; promptTokens: number; completionTokens: number }> {
   if (await fileExists(resultPath)) {
     const existing = JSON.parse(await readFile(resultPath, 'utf-8'));
@@ -90,7 +105,7 @@ async function runTask(
     const res = await llm.chat({
       model,
       messages: [{ role: 'user', content: prompt }],
-      params: MODEL_CONFIGS[model] ?? { temperature: 0, max_tokens: 8192 },
+      params: modelConfigs[model] ?? { temperature: 0, max_tokens: 8192 },
       timeoutMs: 300_000, // 5 min — large prompts (65K+ tokens) need more time
     });
     responses.push(res.content);
@@ -116,9 +131,12 @@ async function main() {
   const c = archJsonToC(raw as Parameters<typeof archJsonToC>[0]);
   const tasks: TaskDef[] = JSON.parse(await readFile(opts.tasksPath, 'utf-8'));
 
+  const MODEL_CONFIGS = buildModelConfigs(opts.nothink);
+
   console.log(`Corpus: ${c.entities.length} entities, ${c.relations.length} relations`);
   console.log(`Tasks: ${tasks.length} | Formats: ${opts.formats.length} | Models: ${opts.models.join(', ')} | k=${opts.k}`);
   console.log(`Expected calls: ${tasks.length * opts.formats.length * opts.models.length * opts.k}`);
+  if (opts.nothink) console.log('GLM config: reasoning OFF (extra_body: thinking:disabled)');
 
   const llm = createLlmClient();
 
@@ -136,7 +154,7 @@ async function main() {
         const resultPath = join(taskDir, 'result.json');
 
         process.stdout.write(`  ${model} / ${task.id} `);
-        await runTask(llm, model, prompt, opts.k, resultPath);
+        await runTask(llm, model, prompt, opts.k, resultPath, MODEL_CONFIGS);
 
         // Also save task metadata alongside result for scoring
         const metaPath = join(taskDir, 'task.json');

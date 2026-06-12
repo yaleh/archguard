@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"\\\"mermaid\\\"\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"\\\"mermaid\\\"\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"\\\"mermaid\\\"\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"\\\"mermaid\\\"\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"\\\"mermaid\\\"\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 315005,
+  "completionTokens": 100
+}

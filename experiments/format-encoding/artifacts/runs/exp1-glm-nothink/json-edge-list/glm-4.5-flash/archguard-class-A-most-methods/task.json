@@ -1,0 +1,14 @@
+{
+  "task": {
+    "id": "archguard-class-A-most-methods",
+    "taskClass": "A",
+    "taskType": "most-methods",
+    "prompt": "Based only on the representation above: which entity has the most methods? If there is a tie, give any one. Respond with JSON: {\"answer\": \"entity-id\"}.",
+    "answerType": "set",
+    "answer": [
+      "src/core/query/query-engine.ts.queryengine"
+    ]
+  },
+  "format": "json-edge-list",
+  "model": "glm-4.5-flash"
+}

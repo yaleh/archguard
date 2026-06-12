@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-B-direct-dep-check-no",
+    "taskClass": "B",
+    "taskType": "direct-dep-check",
+    "prompt": "Based only on the representation above: does entity \"src/analysis/fim/cochange-matrix-builder.ts.buildfullcochangematrix\" directly depend on entity \"src/analysis/fim/cochange-matrix-builder.ts.buildpackagecochangematrix\"? Respond with JSON: {\"answer\": true} or {\"answer\": false}.",
+    "answerType": "boolean",
+    "answer": false
+  },
+  "format": "custom-dsl",
+  "model": "glm-4.5-flash"
+}

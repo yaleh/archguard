@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-A-relation-count",
+    "taskClass": "A",
+    "taskType": "relation-count",
+    "prompt": "Based only on the representation above: how many relations (dependencies, inheritance, etc.) are described? Respond with JSON: {\"answer\": <integer>}.",
+    "answerType": "integer",
+    "answer": 355
+  },
+  "format": "haskell-adt",
+  "model": "glm-4.5-flash"
+}

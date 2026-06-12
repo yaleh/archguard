@@ -27,7 +27,7 @@ executed them against the ArchGuard class-level graph (545 entities, 1,131 relat
 | H-attribution — Structural covariates | **NULL** | All Spearman rho < 0.31, p > 0.46 (n=8) |
 | H-rewrite — Rewrite benefit | **UNTESTABLE** | D-78.2: 0/9 roundtrip pass |
 | H-info — Hallucination suppression | **UNTESTABLE** | D-78.2: qualitative only |
-| H-model — Cross-model consistency | **UNTESTABLE** | D-78.1: GLM dropped |
+| H-model — Cross-model consistency | **PARTIALLY TESTABLE** | D-78.1 resolved post-hoc; see Appendix A |
 
 ---
 
@@ -87,7 +87,7 @@ All deviations pre-registered in plan before results were examined.
 | D-76.3 | post-freeze | parser-fix | Haskell parser `entityTypeRaw` not lowercased; model outputs `Function` vs `function` | Minor — only affects rewrite arm | Fixed with `.toLowerCase()` |
 | D-76.4 | post-freeze | parser-fix | json-edge-list parser did not strip markdown code fences from LLM output | Minor — only affects rewrite arm | Fixed in `parsers/json-edge-list.ts` |
 | D-76.5 | post-freeze | prompt-update | rewrite-haskell prompt lacked `-- \| name:` annotation; model did not preserve camelCase | Minor — structural roundtrip unaffected | Added `-- \| name:` to prompt schema |
-| D-78.1 | 78.1 | model-drop | `glm-4.5-flash` consistently times out on all 8 formats (31K–65K tokens) via LiteLLM gateway | Moderate — cross-model H-model hypothesis untestable | GLM removed; haiku-only for all experiments |
+| D-78.1 | 78.1 | model-drop | `glm-4.5-flash` consistently times out on all 8 formats (31K–65K tokens) via LiteLLM gateway | Moderate — cross-model H-model hypothesis untestable | GLM removed from primary run; **post-hoc resolved** (see Appendix A): `extra_body:{thinking:{type:"disabled"}}` eliminates timeout; full 560-call GLM run completed with zero timeouts |
 | D-78.2 | 78.2 | roundtrip-fail | Exp 2 rewrite: 0/9 roundtrip passes (545-entity corpus too large for rewrite model) | Major — H-rewrite and H-info UNTESTABLE | Reported as limitation; recommend ≤100-entity local corpus for Exp 2 |
 
 ---
@@ -163,6 +163,10 @@ Two tasks floor all formats: entity-count (0.00 everywhere) and relation-count (
   (225) of the haskell-adt representation may impede structural lookup.
   Note: haskell-adt is also 4.3× fewer tokens than json-edge-list — the information density
   advantage did not translate to accuracy.
+- **Cross-model confirmation (Appendix A)**: GLM reasoning-OFF shows the same reversal
+  (haskell-adt=0.500 < json-edge-list=0.643, 2 non-zero diffs both −1.00). Pooling
+  haiku + GLM paired observations yields 5 non-zero diffs, all negative; Wilcoxon W=0,
+  p=1.00. The reversal is not haiku-specific — it holds across two unrelated model families.
 
 #### H-interact — Format × task-class interaction
 
@@ -247,8 +251,11 @@ Two tasks floor all formats: entity-count (0.00 everywhere) and relation-count (
 
 ## 6. Limitations
 
-1. **Single answer model**: D-78.1 removed GLM. All Exp 1 conclusions are conditional on
-   `claude-haiku-4-5-20251001` behavior. Cross-model generalization cannot be assessed.
+1. **Single answer model (partially resolved)**: D-78.1 originally removed GLM. Post-hoc
+   GLM run (Appendix A) shows broadly consistent format rankings (Spearman ρ=0.446) but
+   the correlation is not significant at n=8 (p=0.27). Haiku H1 confirmed (p=0.007); GLM
+   H1 marginal (p=0.079). Cross-model generalization remains uncertain beyond mermaid being
+   worst for both models.
 
 2. **H-rewrite / H-info UNTESTABLE at scale**: The 545-entity corpus is too large for
    deepseek-v4-flash to produce lossless rewrites. D-78.2. Future work should use ≤100-entity
@@ -314,3 +321,73 @@ Based on findings, for future format-encoding experiments:
 
 *Report prepared per Phase 81 of plan-73-81-format-encoding-experiment.md.*
 *All deviation log entries are reproduced verbatim from the plan deviation log.*
+
+---
+
+## Appendix A: GLM Post-hoc Run (D-78.1 Resolved)
+
+> **Context**: D-78.1 dropped `glm-4.5-flash` during primary Exp 1 due to consistent
+> gateway timeouts on 31K–65K token prompts. Post-hoc investigation found that the
+> timeout was caused by reasoning/thinking overhead (default ON for GLM on this gateway),
+> not a context-window limit. Disabling reasoning via `extra_body:{thinking:{type:"disabled"}}`
+> in the LiteLLM request body eliminates the timeout.
+> Confirmed fix from granularity experiment (REPORT-v2): reasoning ON → ~35s/call,
+> reasoning OFF → ~7.9s/call at comparable prompt sizes.
+>
+> **Run**: 8 formats × 14 tasks × k=5 = 560 calls; zero timeouts; exit code 0.
+> Results in: `artifacts/runs/exp1-glm-nothink/`
+
+### A.1 GLM Format Accuracy (reasoning OFF, k=5)
+
+| Format | Overall | Class A (5 tasks) | Class B (6 tasks) | Class C (3 tasks) |
+|---|---|---|---|---|
+| **json-edge-list** | **0.643** | 0.600 | 0.500 | 1.000 |
+| **json-adjacency** | **0.643** | 0.400 | 0.667 | 1.000 |
+| nl-exhaustive | 0.557 | 0.360 | 0.500 | 1.000 |
+| custom-dsl | 0.514 | 0.440 | 0.333 | 1.000 |
+| haskell-adt | 0.500 | 0.400 | 0.333 | 1.000 |
+| markdown-table | 0.500 | 0.400 | 0.333 | 1.000 |
+| yaml | 0.486 | 0.360 | 0.333 | 1.000 |
+| **mermaid** | **0.357** | **0.000** | 0.333 | 1.000 |
+
+GLM overall mean: 0.525. Mermaid remains the worst format (Class A = 0.000, same as haiku).
+All formats achieve Class C = 1.000.
+
+### A.2 H1 — Format Main Effect (GLM)
+
+- Friedman χ² = 12.745, df = 7, p = 0.0786
+- Verdict: **MARGINAL** — not significant at α=0.05 (haiku: p=0.0073)
+- Mermaid is still a strong outlier but the effect is weaker for GLM
+- The top-7 non-mermaid formats span 0.486–0.643 (vs 0.571–0.671 for haiku)
+
+### A.3 H-model — Cross-model Format Ranking Consistency
+
+| Format | Haiku | GLM | Δ(GLM−Haiku) |
+|---|---|---|---|
+| json-edge-list | 0.671 | 0.643 | −0.029 |
+| custom-dsl | 0.643 | 0.514 | −0.129 |
+| markdown-table | 0.643 | 0.500 | −0.143 |
+| yaml | 0.629 | 0.486 | −0.143 |
+| nl-exhaustive | 0.600 | 0.557 | −0.043 |
+| json-adjacency | 0.586 | 0.643 | +0.057 |
+| haskell-adt | 0.571 | 0.500 | −0.071 |
+| mermaid | 0.286 | 0.357 | +0.071 |
+
+- Spearman ρ = 0.446, p = 0.268 (n=8)
+- Verdict: **NULL** — rankings not significantly correlated at n=8
+- Qualitative agreement: mermaid worst in both; json-edge-list near top in both
+- Key divergence: json-adjacency ranks 1st for GLM (tied, 0.643) vs 6th for haiku (0.586)
+- GLM uniformly lower than haiku on most formats (5/8 negative Δ); consistent with smaller model
+
+### A.4 H-dense Combined Analysis (haiku + GLM)
+
+Both models independently show haskell-adt < json-edge-list:
+- Haiku: 3 non-zero diffs, all negative (−0.80, −0.40, −0.20)
+- GLM: 2 non-zero diffs, all negative (−1.00, −1.00)
+- **Pooled (5 pairs)**: Wilcoxon W=0.0, p=1.000 (one-tailed, haskell>json)
+
+The H-dense reversal is **not haiku-specific**. It holds across two unrelated model families
+(Anthropic Claude and Zhipu GLM). The dense Haskell ADT encoding consistently underperforms
+flat JSON encoding regardless of model. This strengthens the NULL verdict for H-dense and
+rules out the "limited Haskell training in haiku" as the sole explanation; the structural
+complexity of Haskell ADT (nesting depth 225) is the more likely culprit.

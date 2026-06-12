@@ -1,0 +1,37 @@
+{
+  "task": {
+    "id": "archguard-class-B-subclasses",
+    "taskClass": "B",
+    "taskType": "subclasses",
+    "prompt": "Based only on the representation above: list the IDs of all entities that inherit from another entity (i.e. have an inheritance/extends relation). Respond with JSON: {\"answer\": [\"id1\", ...]}.",
+    "answerType": "set",
+    "answer": [
+      "src/analysis/fim/mantel-test.ts.manteltestwithnullmodeloptions",
+      "src/analysis/fim/mantel-test.ts.manteltestwithnullmodelresult",
+      "src/cli/utils/output-path-resolver.ts.outputpathoptions",
+      "src/cli/utils/output-path-resolver.ts.resolvedpaths",
+      "src/core/interfaces/errors.ts.filesystemerror",
+      "src/core/interfaces/errors.ts.parseerror",
+      "src/core/interfaces/errors.ts.pluginconfigerror",
+      "src/core/interfaces/errors.ts.plugininitializationerror",
+      "src/core/interfaces/errors.ts.tooldependencyerror",
+      "src/core/interfaces/language-plugin.ts.ilanguageplugin",
+      "src/parser/class-extractor.ts.classextractor",
+      "src/parser/enum-extractor.ts.enumextractor",
+      "src/parser/interface-extractor.ts.interfaceextractor",
+      "src/parser/parallel-parser.ts.parallelparser",
+      "src/parser/relation-extractor.ts.relationextractor",
+      "src/plugins/cpp/archjson-mapper.ts.archjsonmapper",
+      "src/plugins/cpp/types.ts.mergedcppentity",
+      "src/plugins/golang/archjson-mapper.ts.archjsonmapper",
+      "src/plugins/java/archjson-mapper.ts.archjsonmapper",
+      "src/plugins/kotlin/archjson-mapper.ts.archjsonmapper",
+      "src/plugins/kotlin/dependency-extractor.ts.kotlindependency",
+      "src/plugins/python/archjson-mapper.ts.archjsonmapper",
+      "src/types/config-global.ts.archguardconfig",
+      "tests/fixtures/cross-language/04-inheritance/typescript.ts.dog"
+    ]
+  },
+  "format": "markdown-table",
+  "model": "glm-4.5-flash"
+}

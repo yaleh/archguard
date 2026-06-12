@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.archguardconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.archguardconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.archguardconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.archguardconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.archguardconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 190630,
+  "completionTokens": 255
+}

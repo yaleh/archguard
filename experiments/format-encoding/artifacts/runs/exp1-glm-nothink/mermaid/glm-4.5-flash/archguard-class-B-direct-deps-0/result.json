@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src_cli_types_ts_analyzeoptions\",\n    \"src_cli_types_ts_cliconfig\",\n    \"src_cli_types_ts_config\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_types_ts_analyzeoptions\",\n    \"src_cli_types_ts_cliconfig\",\n    \"src_cli_types_ts_config\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_types_ts_analyzeoptions\",\n    \"src_cli_types_ts_cliconfig\",\n    \"src_cli_types_ts_config\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_types_ts_analyzeoptions\",\n    \"src_cli_types_ts_cliconfig\",\n    \"src_cli_types_ts_config\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_types_ts_cliconfig\",\n    \"src_cli_types_ts_analyzeoptions\",\n    \"src_cli_types_ts_config\",\n    \"src_types_config_ts_clioptions\",\n    \"src_types_config_ts_diagramconfig\",\n    \"src_types_config_global_ts_globalconfig\",\n    \"src_types_config_mermaid_ts_mermaidconfig\",\n    \"src_types_config_diagram_ts_diagramconfig\",\n    \"src_types_config_diagram_ts_diagrammetadata\",\n    \"src_types_config_diagram_ts_annotationconfig\",\n    \"src_types_config_diagram_ts_classannotation\",\n    \"src_types_config_diagram_ts_classhighlightconfig\",\n    \"src_types_config_diagram_ts_designinfo\",\n    \"src_types_config_diagram_ts_designpatterninfo\",\n    \"src_types_config_diagram_ts_processinfo\",\n    \"src_types_config_diagram_ts_processstage\",\n    \"src_types_config_global_ts_archguardconfig\",\n    \"src_types_config_mermaid_ts_mermaidconfig\",\n    \"z_infer_any_\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 313275,
+  "completionTokens": 395
+}

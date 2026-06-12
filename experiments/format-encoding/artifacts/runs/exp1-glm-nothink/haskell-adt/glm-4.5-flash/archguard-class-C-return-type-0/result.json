@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```"
+  ],
+  "promptTokens": 190640,
+  "completionTokens": 90
+}

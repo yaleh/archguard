@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src_cli_query_engine_loader_ts_loadengine\",\n    \"src_cli_query_query_artifacts_ts_persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_query_engine_loader_ts_loadengine\",\n    \"src_cli_query_query_artifacts_ts_persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_query_engine_loader_ts_loadengine\",\n    \"src_cli_query_query_artifacts_ts_persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_query_engine_loader_ts_loadengine\",\n    \"src_cli_query_query_artifacts_ts_persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src_cli_query_engine_loader_ts_loadengine\",\n    \"src_cli_query_query_artifacts_ts_persistqueryscopes\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 313295,
+  "completionTokens": 195
+}

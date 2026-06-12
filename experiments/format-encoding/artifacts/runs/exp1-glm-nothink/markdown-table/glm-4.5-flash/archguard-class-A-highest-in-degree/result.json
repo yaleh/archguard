@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"src/core/interfaces/language-plugin.ts.ilanguageplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/interfaces/language-plugin.ts.ilanguageplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/interfaces/language-plugin.ts.ilanguageplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/interfaces/language-plugin.ts.ilanguageplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/interfaces/language-plugin.ts.ilanguageplugin\"\n}\n```"
+  ],
+  "promptTokens": 145105,
+  "completionTokens": 110
+}

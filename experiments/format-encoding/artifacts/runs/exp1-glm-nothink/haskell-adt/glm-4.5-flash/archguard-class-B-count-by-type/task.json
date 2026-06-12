@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-B-count-by-type",
+    "taskClass": "B",
+    "taskType": "count-by-type",
+    "prompt": "Based only on the representation above: how many entities have type \"interface\"? Respond with JSON: {\"answer\": <integer>}.",
+    "answerType": "integer",
+    "answer": 280
+  },
+  "format": "haskell-adt",
+  "model": "glm-4.5-flash"
+}

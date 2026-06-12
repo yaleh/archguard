@@ -1,0 +1,1816 @@
+{
+  "generated": "2026-06-12T16:58:31.872Z",
+  "totalCombinations": 112,
+  "formatAccuracy": {
+    "custom-dsl": 0.5142857142857143,
+    "haskell-adt": 0.5,
+    "json-adjacency": 0.6428571428571429,
+    "json-edge-list": 0.6428571428571429,
+    "markdown-table": 0.5,
+    "mermaid": 0.35714285714285715,
+    "nl-exhaustive": 0.5571428571428572,
+    "yaml": 0.4857142857142857
+  },
+  "modelAccuracy": {
+    "glm-4.5-flash": 0.525
+  },
+  "classAccuracy": {
+    "A": 0.37,
+    "B": 0.4166666666666667,
+    "C": 1
+  },
+  "details": [
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0.2,
+      "scores": [
+        0,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "custom-dsl",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "haskell-adt",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "json-adjacency",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "json-edge-list",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "markdown-table",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "mermaid",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0.8,
+      "scores": [
+        1,
+        1,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "nl-exhaustive",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-entity-count",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "entity-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-in-degree",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-in-degree",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-highest-out-degree",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "highest-out-degree",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-most-methods",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "most-methods",
+      "k": 5,
+      "meanScore": 0.8,
+      "scores": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-A-relation-count",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "A",
+      "taskType": "relation-count",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-count-by-type",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "count-by-type",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-no",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dep-check-yes",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dep-check",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-dependents-0",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-dependents",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-direct-deps-0",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "direct-deps",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-B-subclasses",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "B",
+      "taskType": "subclasses",
+      "k": 5,
+      "meanScore": 0,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-count-0",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-count",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-method-names-0",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "method-names",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "taskId": "archguard-class-C-return-type-0",
+      "format": "yaml",
+      "model": "glm-4.5-flash",
+      "taskClass": "C",
+      "taskType": "return-type",
+      "k": 5,
+      "meanScore": 1,
+      "scores": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

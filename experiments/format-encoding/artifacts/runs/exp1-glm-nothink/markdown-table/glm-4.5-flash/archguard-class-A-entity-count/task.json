@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-A-entity-count",
+    "taskClass": "A",
+    "taskType": "entity-count",
+    "prompt": "Based only on the representation above: how many entities are described? Respond with JSON: {\"answer\": <integer>}.",
+    "answerType": "integer",
+    "answer": 545
+  },
+  "format": "markdown-table",
+  "model": "glm-4.5-flash"
+}

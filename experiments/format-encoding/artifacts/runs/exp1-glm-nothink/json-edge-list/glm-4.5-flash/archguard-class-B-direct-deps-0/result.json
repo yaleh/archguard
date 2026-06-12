@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 321825,
+  "completionTokens": 175
+}

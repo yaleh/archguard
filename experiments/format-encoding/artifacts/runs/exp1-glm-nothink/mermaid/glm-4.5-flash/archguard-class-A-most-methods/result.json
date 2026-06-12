@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"src_plugins_golang_index_ts_goplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_plugins_golang_index_ts_goplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_plugins_golang_index_ts_goplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_plugins_golang_index_ts_goplugin\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_plugins_golang_index_ts_goplugin\"\n}\n```"
+  ],
+  "promptTokens": 313240,
+  "completionTokens": 110
+}

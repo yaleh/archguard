@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"src/core/query/query-engine.ts.queryengine\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/query/query-engine.ts.queryengine\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/query/query-engine.ts.queryengine\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/query/query-engine.ts.queryengine\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/core/query/query-engine.ts.queryengine\"\n}\n```"
+  ],
+  "promptTokens": 321790,
+  "completionTokens": 105
+}

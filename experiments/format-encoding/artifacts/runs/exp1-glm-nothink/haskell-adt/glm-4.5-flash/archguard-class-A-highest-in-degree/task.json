@@ -1,0 +1,14 @@
+{
+  "task": {
+    "id": "archguard-class-A-highest-in-degree",
+    "taskClass": "A",
+    "taskType": "highest-in-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of incoming dependencies (in-degree)? If there is a tie, give any one. Respond with JSON: {\"answer\": \"entity-id\"}.",
+    "answerType": "set",
+    "answer": [
+      "src/core/interfaces/language-plugin.ts.ilanguageplugin"
+    ]
+  },
+  "format": "haskell-adt",
+  "model": "glm-4.5-flash"
+}

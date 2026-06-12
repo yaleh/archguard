@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"src_cli_analyze_run_analysis_ts_runanalysis\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_cli_analyze_run_analysis_ts_runanalysis\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_cli_analyze_run_analysis_ts_runanalysis\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_cli_analyze_run_analysis_ts_runanalysis\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src_cli_analyze_run_analysis_ts_runanalysis\"\n}\n```"
+  ],
+  "promptTokens": 313270,
+  "completionTokens": 110
+}

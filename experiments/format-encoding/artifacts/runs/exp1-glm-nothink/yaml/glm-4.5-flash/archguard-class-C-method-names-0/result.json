@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 223775,
+  "completionTokens": 240
+}

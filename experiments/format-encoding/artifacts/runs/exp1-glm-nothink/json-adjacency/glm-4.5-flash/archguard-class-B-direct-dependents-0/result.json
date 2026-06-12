@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 315025,
+  "completionTokens": 125
+}

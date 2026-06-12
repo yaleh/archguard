@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/query-artifacts.ts.persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/query-artifacts.ts.persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/query-artifacts.ts.persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/query-artifacts.ts.persistqueryscopes\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/query-artifacts.ts.persistqueryscopes\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 190650,
+  "completionTokens": 135
+}

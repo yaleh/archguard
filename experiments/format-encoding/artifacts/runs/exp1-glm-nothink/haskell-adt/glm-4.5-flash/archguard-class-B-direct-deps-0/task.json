@@ -1,0 +1,14 @@
+{
+  "task": {
+    "id": "archguard-class-B-direct-deps-0",
+    "taskClass": "B",
+    "taskType": "direct-deps",
+    "prompt": "Based only on the representation above: list the IDs of all entities that \"src/cli/types.ts.config\" directly depends on. Respond with JSON: {\"answer\": [\"id1\", \"id2\", ...]}.",
+    "answerType": "set",
+    "answer": [
+      "\"mermaid\""
+    ]
+  },
+  "format": "haskell-adt",
+  "model": "glm-4.5-flash"
+}

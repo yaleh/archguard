@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\"answer\": 547}\n```",
+    "```json\n{\"answer\": 578}\n```",
+    "```json\n{\"answer\": 547}\n```",
+    "```json\n{\"answer\": 547}\n```",
+    "```json\n{\n  \"answer\": 547\n}\n```"
+  ],
+  "promptTokens": 156490,
+  "completionTokens": 63
+}

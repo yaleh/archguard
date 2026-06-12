@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": \"src/cli/processors/diagram-processor.ts.diagramprocessor\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/cli/processors/diagram-processor.ts.diagramprocessor\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/cli/processors/diagram-processor.ts.diagramprocessor\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/cli/processors/diagram-processor.ts.diagramprocessor\"\n}\n```",
+    "```json\n{\n  \"answer\": \"src/cli/processors/diagram-processor.ts.diagramprocessor\"\n}\n```"
+  ],
+  "promptTokens": 145075,
+  "completionTokens": 130
+}

@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\",\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.globalconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\",\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.globalconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\",\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.globalconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\",\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.globalconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/types.ts.analyzeoptions\",\n    \"src/cli/types.ts.cliconfig\",\n    \"src/types/config-diagram.ts.diagramconfig\",\n    \"src/types/config-global.ts.globalconfig\",\n    \"src/types/config-mermaid.ts.mermaidconfig\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 145110,
+  "completionTokens": 355
+}
