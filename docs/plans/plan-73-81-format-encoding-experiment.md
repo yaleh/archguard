@@ -1,7 +1,7 @@
 # Plan 73-81 — 格式与编码实验（Format-Encoding Experiment）
 
 > Proposal: `docs/proposals/proposal-format-encoding-experiment.md`（预注册实验协议 v1.1）
-> Status: **Phase 78 IN PROGRESS** (Exp 1: 13/224 done; Exp 2 rewrite: running)
+> Status: **Phase 78-79 IN PROGRESS** (Exp 1: 14/112 done haiku-only; Exp 2 rewrite: DONE; Exp 2 answers: running)
 > Priority: MEDIUM（实验 harness，**对 `src/` 零改动**）
 >承接: granularity-v2.2 B4 发现（L4 JSON vs L3 Mermaid，Δ=38.4%，p=7.6×10⁻⁸）
 >
@@ -13,19 +13,22 @@
 > | 76.2 | ✅ DONE | 改写 smoke test PASS (deepseek-v4-flash, 2/3 臂通过；clean-prose 为 human-sample) |
 > | 76.3 | ✅ DONE | tag: format-encoding-freeze-v1.1 @ commit b7af508 |
 > | 77.1–77.3 | ✅ DONE | 协变量测量完成；预测 commit 完成 |
-> | 78.1 | 🔄 RUNNING | Exp 1: ~13/224 result files; model: haiku + glm; k=5 |
-> | 78.2 | 🔄 RUNNING | Exp 2 rewrite: deepseek-v4-flash, k=3; 3 arms |
-> | 79–81 | ⏳ PENDING | |
+> | 78.1 | 🔄 RUNNING | Exp 1: 14/112 done (haiku-only; GLM dropped — D-78.1); 8格式 × 14任务 × k=5 |
+> | 78.2 | ✅ DONE | Exp 2 rewrite DONE: 0/9 roundtrip pass (corpus太大→全H-info); D-78.2 |
+> | 79.1 | 🔄 RUNNING | Exp 2 答题: deterministic-haskell + baseline-nl (rewrite臂均无有效实例) |
+> | 80–81 | ⏳ PENDING | |
 >
 > ### 协议偏离日志 (Deviation Log)
 >
 > | ID | Stage | 类型 | 描述 | 影响 | 处置 |
 > |---|---|---|---|---|---|
 > | D-76.1 | 76.2 | model-substitution | 预注册改写模型 `qwen3-235b-a22b` 在 gateway 不可用。替换为 `deepseek-v4-flash` (DeepSeek 家族) | Minor — 跨家族隔离保持 (DeepSeek ≠ Claude ≠ Zhipu) | 已用 deepseek-v4-flash 通过 smoke test |
-> | D-76.2 | post-freeze | parser-fix | Haskell 解析器 `parseTargetList()` 未去除目标 ID 的引号（模型倾向加引号） | Minor — 不影响确定性往返（渲染器不加引号）；仅影响改写臂 | 已在 parsers/haskell-adt.ts 中去除引号 |
+> | D-76.2 | post-freeze | parser-fix | Haskell 解析器 `parseTargetList()` 未去除目标 ID 的引号（模型倾向加引号） | Minor — 不影响确定性往返；仅影响改写臂 | 已在 parsers/haskell-adt.ts 中去除引号 |
 > | D-76.3 | post-freeze | parser-fix | Haskell 解析器 `entityTypeRaw` 未做 toLowerCase()；模型输出 `Function` 而非 `function` | Minor — 不影响确定性往返；仅影响改写臂 | 已加 `.toLowerCase()` |
 > | D-76.4 | post-freeze | parser-fix | json-edge-list 解析器未去除 code fence；模型倾向用 ```json...``` 包裹输出 | Minor — 不影响确定性往返；仅影响改写臂 | 已在 parsers/json-edge-list.ts 中剥离 code fence |
 > | D-76.5 | post-freeze | prompt-update | rewrite-haskell prompt schema 未包含 `-- \| name:` 注释；模型不保留原始名称（PascalCase vs camelCase） | Minor — 名称 case 偏离不改变结构；解析器已能读 `-- \| name:` | 已在 freeze/rewrite-prompts/rewrite-haskell.md 中添加 `-- \| name:` 行 |
+> | D-78.1 | 78.1 | model-drop | 预注册次答题模型 `glm-4.5-flash` 在 LiteLLM gateway 对 31K–65K token 提示词一致超时（实测：35K tokens curl -m 90 返回空响应）。**GLM 从 Exp 1 全面移除。** 仅保留 claude-haiku-4-5-20251001。 | Moderate — 跨模型比较不可用；结论内部有效性（H-parse/H-pretrain/H-dense）仍可检验，跨模型泛化无法评估 | Exp 1 及 Exp 2 答题均改为 haiku-only；Exp 2 对比设计降级为单模型 |
+> | D-78.2 | 78.2 | roundtrip-fail | Exp 2 改写步 9/9 实例均往返失败（545 实体语料对改写模型过大）。改写-Haskell 1/9 触发 H-info；改写-JSON/clean-prose 各 3/3 失败但无 H-info 增量。H-rewrite 假设因无有效实例无法检验（UNTESTABLE）；H-info 分析降级为质性检查 | Major — H-rewrite/H-info 定量分析均无法执行 | 在最终报告中如实声明；建议 Exp 2 后续使用 ≤ 100 实体的局部语料子集 |
 
 ---
 
