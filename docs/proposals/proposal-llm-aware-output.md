@@ -135,8 +135,35 @@ export type QueryOutputFormat = 'structured' | 'edge-list';
 
 `'structured'`（默认）：维持当前 JSON 对象结构。  
 `'edge-list'`：将实体和关系序列化为平坦的 json-edge-list 格式——
-实体列表 + 边列表，避免深层嵌套，去除 Mermaid 片段。格式与 format-encoding 实验
-所用渲染器 `renderers/json-edge-list.ts` 一致。
+实体列表 + 边列表，避免深层嵌套，去除 Mermaid 片段。
+
+**格式规范（基于代码检查 `experiments/format-encoding/renderers/json-edge-list.ts`）**：
+
+```typescript
+{
+  entities: Array<{
+    id: string;           // entity ID
+    name: string;         // entity name
+    type: string;         // entity type (class/interface/function/…)
+    sourceFile: string;   // 来源文件，不可用时为 "unknown"
+    methods: Array<{      // 仅当 outputScope='method' 时填充
+      name: string;
+      params: Array<{ name: string; type: string }>;
+      returnType: string; // 不可用时为 "void"
+    }>;
+  }>;
+  relations: Array<{
+    from: string;         // entity ID
+    to: string;           // entity ID
+    type: string;         // RelationType
+  }>;
+}
+```
+
+> **注**：实验 `renderers/json-edge-list.ts` 使用的 schema 类型（`CEntity.methods`）对应
+> ArchJSON 的 `Entity.members`（`type='method'` 的成员）。`EdgeListSerializer` 在
+> `outputScope='class'`（默认）时 `methods` 字段输出空数组；`outputScope='method'` 时
+> 填充方法签名。两层控制（scope + format）正交，可独立组合。
 
 **CLI 实现**：`query` 命令新增 `--query-format <structured|edge-list>` flag，默认 `structured`。
 
@@ -147,7 +174,20 @@ format-encoding experiment, n=14 tasks)`。
 
 ### 决策 3 — 按工具语义设置默认 outputScope（路由表硬编码）
 
-根据 granularity 实验 P_oracle 路由表，为各 MCP 工具设置不同的默认 `outputScope`：
+根据 granularity 实验 P_oracle 路由表，为各 MCP 工具设置不同的默认 `outputScope`。
+
+**工具清单核实（2026-06-12 代码检查）**：
+
+`src/cli/mcp/mcp-server.ts` 中 `registerTools()` 注册了 **10 个**核心查询工具；
+`src/cli/mcp/tools/git-history-tools.ts` 中 `registerGitHistoryTools()` 注册了 **4 个**
+git 历史工具（`archguard_get_change_context`、`archguard_get_cochange`、
+`archguard_get_change_risk`、`archguard_get_ownership`）。
+另有 `archguard_get_atlas_layer`（Go 专属，不适用 outputScope 路由）和
+`archguard_analyze`、`archguard_analyze_git`（写操作，不适用）。
+
+> **注**：git 历史工具的输出来自 `.archguard/git-history/` 目录中的演化信号（churn、
+> co-change、ownership、risk score），其数据源不是 ArchJSON，因此
+> `outputScope`/`queryFormat` 参数不适用于这 4 个工具（见"遗留问题"）。
 
 | 工具 | 任务类别 | 默认 `outputScope` | 依据 |
 |---|---|---|---|
@@ -160,11 +200,14 @@ format-encoding experiment, n=14 tasks)`。
 | `archguard_find_subclasses` | B — 关系 | `class` | 继承关系 class 级即完整 |
 | `archguard_find_implementers` | B — 关系 | `class` | 同上 |
 | `archguard_detect_cycles` | B — 关系 | `class` | 环路检测不需要方法签名 |
-| `archguard_get_change_context` | C — 综合 | `method` | L3 最优（C 类 19/21）；暴露 members[] |
-| `archguard_get_cochange` | C — 综合 | `method` | 同上 |
-| `archguard_get_change_risk` | C — 综合 | `method` | 同上 |
+| `archguard_get_atlas_layer` | B/C — Go 专属 | 不适用 | 数据来自 Go Atlas 扩展，非 ArchJSON 主体 |
+| `archguard_get_change_context` | C — 综合 | 不适用 | 数据来自 git 历史，非 ArchJSON |
+| `archguard_get_cochange` | C — 综合 | 不适用 | 同上 |
+| `archguard_get_change_risk` | C — 综合 | 不适用 | 同上 |
+| `archguard_get_ownership` | C — 综合 | 不适用 | 同上 |
 
-调用方可通过 `outputScope` 参数覆盖默认值。
+调用方可通过 `outputScope` 参数覆盖可用工具的默认值。
+`outputScope` 和 `queryFormat` 只在返回 ArchJSON 派生内容的工具上实现（前 9 个）。
 
 ### 决策 4 — 工具描述内联粒度声明（ADR-006 合规）
 
@@ -180,6 +223,140 @@ archguard_summary:
   "Return package-level architecture summary (L1 granularity); for
    method-level detail call archguard_get_dependencies."
 ```
+
+### 决策 5 — 扩展 `archguard_summary` 暴露预计算聚合统计
+
+#### 动机：地板效应的根因
+
+format-encoding 实验揭示了一类特殊的"地板任务"——准确率在**所有 8 种格式和两个模型**上均为 0 或接近 0：
+
+| 任务 | Ground truth | Haiku 均值 | GLM 均值 | 失败模式 |
+|---|---|---|---|---|
+| `entity-count` | 545 | **0.000** | **0.000** | 需枚举 545 实体 |
+| `count-by-type` | 280 (dependency) | **0.000** | **0.000** | 需按类型枚举 355 条关系 |
+| `relation-count` | 355 | 0.075 | 0.000 | 需枚举 355 条关系 |
+| `subclasses` | 单个 entity id | 0.075 | 0.000 | 需扫全图找 inheritance |
+| `direct-deps-0` | `['mermaid']`（npm 包） | 0.075 | 0.125 | 跨 class/package 层次找外部包 |
+
+对照：**同样的 LLM** 在"拿到具名实体后数其方法数"（答案 = 5）上得 **1.000**。
+差异不在 LLM 能力，在于：**局部查找 vs 全局枚举**。LLM 无法在 65K token 的格式化文本中
+可靠地计数 545 个对象——这是认知负荷限制，而非智力限制。
+
+#### 关键观察：`getSummary()` 已有部分答案
+
+**代码检查（2026-06-12）**：`src/core/query/query-engine.ts:getSummary()` 当前完整返回签名：
+
+```typescript
+{
+  entityCount: number;
+  relationCount: number;
+  language: string;
+  kind: 'parsed' | 'derived';
+  topDependedOn: Array<{ name: string; dependentCount: number }>;  // 字段名为 name
+  topDependedOnNote?: string;
+  capabilities: { classHierarchy: boolean; interfaceImplementation: boolean; packageGraph: boolean; cycleDetection: boolean };
+  topPackages: PackageStatEntry[];
+  totalPackageCount: number;
+}
+```
+
+这意味着如果 LLM 被引导调用 `archguard_summary`，`entity-count`（0.000）和 `relation-count`
+（0.075）任务可以立刻得满分——**工具已有数据，只是 LLM 不知道**。
+
+`count-by-type`（0.000）差一步：`index.relationsByType` 按类型索引已存在
+（`ArchIndex.relationsByType: Partial<Record<RelationType, [string, string][]>>`），
+只需把 `{type → count}` 字典加进 `getSummary()` 返回值即可。
+
+> **RelationType 约束**：生产代码 `RelationType`（`src/types/index.ts`）=
+> `'inheritance' | 'implementation' | 'composition' | 'aggregation' | 'dependency' | 'association'`。
+> 注意**不含** `'call'`（仅在实验 schema 中存在），故统计结果中不会出现 call 类型。
+
+#### 决策：扩展 `getSummary()` 返回值
+
+在 `QueryEngine.getSummary()` 中新增三个字段：
+
+```typescript
+interface SummaryResult {
+  // 现有字段（保留不变，完整签名见上方）
+  entityCount: number;
+  relationCount: number;
+  language: string;
+  kind: 'parsed' | 'derived';
+  topDependedOn: Array<{ name: string; dependentCount: number }>;  // name，非 entity
+  topDependedOnNote?: string;
+  capabilities: { classHierarchy: boolean; interfaceImplementation: boolean; packageGraph: boolean; cycleDetection: boolean };
+  topPackages: PackageStatEntry[];  // PackageStatEntry，非 PackageStat
+  totalPackageCount: number;
+
+  // 新增字段
+  relationCountByType: Partial<Record<RelationType, number>>;
+  // 覆盖 count-by-type 地板任务（0.000 → 1.000 预期）
+
+  topByMethodCount: Array<{ name: string; methodCount: number }>;
+  // 字段名用 name（与 topDependedOn 一致）；top-10 按方法数降序
+  // 覆盖 most-methods 任务（当前 0.425/0.275）
+
+  topByOutDegree: Array<{ name: string; outDegree: number }>;
+  // 字段名用 name；top-10 按出度降序；与 topDependedOn（入度）对称
+  // 覆盖 highest-out-degree 任务（当前 0.875，仅 mermaid 失败）
+}
+```
+
+**实现（全部在 `getSummary()` 内，纯内存操作）**：
+
+```typescript
+// relationCountByType — ArchIndex.relationsByType 是 Record<RelationType, [string,string][]>
+const relationCountByType: Partial<Record<RelationType, number>> = {};
+for (const [type, rels] of Object.entries(this.index.relationsByType)) {
+  relationCountByType[type as RelationType] = rels.length;
+}
+
+// topByMethodCount — 含 constructor（与 getPackageStats methodCount 计算逻辑一致）
+const topByMethodCount = this.archJson.entities
+  .map(e => ({
+    name: this.index.idToName[e.id] ?? e.id,
+    methodCount: (e.members ?? []).filter(m => m.type === 'method' || m.type === 'constructor').length,
+  }))
+  .sort((a, b) => b.methodCount - a.methodCount)
+  .slice(0, 10);
+
+// topByOutDegree — index.dependencies 是 Record<string, string[]>（数组，用 .length）
+const topByOutDegree = this.archJson.entities
+  .map(e => ({
+    name: this.index.idToName[e.id] ?? e.id,
+    outDegree: (this.index.dependencies[e.id] ?? []).length,
+  }))
+  .sort((a, b) => b.outDegree - a.outDegree)
+  .slice(0, 10);
+```
+
+> **草案勘误（已更正）**：
+> 1. `topDependedOn` 的元素字段名是 `name`，原草案写成 `entity`，已修正。
+> 2. `topByOutDegree` 原草案写 `index.dependencies[e.id]?.size`（Set API），
+>    实际 `ArchIndex.dependencies` 是 `Record<string, string[]>`，应用 `.length`，已修正。
+> 3. `topByMethodCount` 原草案仅过滤 `m.type === 'method'`，漏掉 `'constructor'`；
+>    已与 `getPackageStats()` 中的计算逻辑对齐，加入 `'constructor'`。
+> 4. 原草案 `topPackages: PackageStat[]` 类型错误，实际导出类型是 `PackageStatEntry[]`，已修正。
+
+#### `archguard_summary` 工具描述更新（ADR-006 §2.3）
+
+```
+archguard_summary:
+  "Return pre-computed architecture statistics: exact entity/relation counts
+   (no graph enumeration needed), relation breakdown by type, top-N entities by
+   in-degree / out-degree / method count.
+   ALWAYS call this tool first for any counting or ranking query — do NOT attempt
+   to enumerate or count items from other tool outputs."
+```
+
+这条描述明确了**优先调用语义**，将 LLM 从地板任务的枚举陷阱中引导出来。
+
+#### `direct-deps-0` 的特殊情况
+
+`direct-deps-0` 答案是外部 npm 包 `mermaid`（0.075 失败），不是 class 级关系。
+这是 ArchJSON `externalDependencies` 字段，与上述统计扩展无关。
+建议在 `archguard_get_package_stats` 的返回值中暴露 `externalDependencies` 列表——
+作为独立的小增量，不纳入本决策 5，标记为后续待办。
 
 ---
 
@@ -197,8 +374,25 @@ MCP tool param (outputScope, queryFormat)
     EdgeListSerializer.serialize(archJson)         ← 新增：src/core/query/
 ```
 
-两个新模块均在 `src/core/query/` 下实现，不在接口层（`query.ts` 或 `mcp-server.ts`）
-内联任何业务逻辑。
+两个新模块均在 `src/core/query/` 下实现（对应路径别名 `@/core/query/`，见 CLAUDE.md），
+不在接口层（`query.ts` 或 `mcp-server.ts`）内联任何业务逻辑。
+
+**文件布局说明（重要）**：
+
+项目中存在两个 `query-engine.ts`：
+- `src/core/query/query-engine.ts` — 领域类的**规范位置**，含 `QueryEngine` 类实体
+- `src/cli/query/query-engine.ts` — **向后兼容 re-export shim**，只做 re-export
+
+所有新增逻辑（`OutputScope`、`QueryOutputFormat`、新方法参数、`getSummary()` 扩展）
+均在 `src/core/query/query-engine.ts` 实现。
+
+**shim 需同步更新**：`src/cli/query/query-engine.ts` 当前仅 re-export
+`QueryEngine`、`EntitySummary`、`PackageStatEntry`、`PackageStatMeta`、`PackageStatsResult`、
+`QueryEngineOptions`。Stage 82.1 新增类型后，shim 必须追加 re-export：
+`OutputScope`、`QueryOutputFormat`、`QueryMethodOptions`、`EdgeListOutput`、
+`EdgeListEntity`、`EdgeListRelation`。
+这样 `src/cli/mcp/mcp-server.ts` 可以继续通过现有导入路径
+`'../query/query-engine.js'`（即 shim）使用这些类型，无需修改导入路径。
 
 ### 接口对称性（遵循 ADR-007 §4）
 
@@ -213,14 +407,62 @@ MCP tool param (outputScope, queryFormat)
 - `archguard_get_dependencies` 等关系型工具默认 `outputScope` 升为 `'method'`，
   是增量扩展（新增 `members[]` 字段），不删除任何现有字段。
 
+### 与现有 `verbose` 参数的关系
+
+`src/cli/mcp/mcp-server.ts` 中多个工具已存在 `verbose: boolean` 参数（`verboseParam`），
+控制是否返回完整 Entity（含 `members[]`）还是 `EntitySummary`（不含 members）：
+
+```typescript
+// 现有行为
+verbose=false → engine.toSummary(entity)  // 无 members
+verbose=true  → entity（完整，含 members）
+```
+
+`outputScope='method'` 的语义与 `verbose=true` 部分重叠，但不完全等价：
+- `verbose` 是工具级布尔开关，作用于实体列表的 members 字段
+- `outputScope` 是跨工具的三级粒度控制，还影响 `'package'` 级的字段裁减
+
+**实施决策**：两个参数独立共存，不合并。`outputScope='method'` 时隐式启用完整 entity
+输出（等效于 `verbose=true`）；当用户显式传入 `verbose=false` 且 `outputScope='method'`
+时，`outputScope` 优先（method scope 必须暴露 members[]）。现有 `verbose` 参数可在后续
+逐步废弃。
+
 ### 测试要求（遵循 ADR-007 §3）
 
 1. `OutputScopeFilter` 单元测试：三个 scope 级别的字段保留/裁减行为，
    含边界（空 members、无关系的 class）。
 2. `EdgeListSerializer` 单元测试：序列化输出结构与 format-encoding 实验
-   `renderers/json-edge-list.ts` 产物格式一致性断言。
+   `renderers/json-edge-list.ts` 产物格式一致性断言（`{ entities, relations }` 顶层结构，
+   entity 含 `id/name/type/sourceFile/methods[]`，relation 含 `from/to/type`）。
 3. CLI/MCP 等价快照测试：同一 fixture + 同一 `outputScope` → 两侧产物字节级等价。
 4. MCP 工具 schema 测试：`outputScope`、`queryFormat` 枚举合法值/非法值。
+5. `getSummary()` 新字段测试：`relationCountByType` 覆盖已知关系类型；
+   `topByMethodCount`/`topByOutDegree` 按降序排列，至多 10 条。
+
+---
+
+## 遗留问题（需在实施阶段决策）
+
+### P1 — git 历史工具（4个）不支持 outputScope/queryFormat
+
+`archguard_get_change_context`、`archguard_get_cochange`、`archguard_get_change_risk`、
+`archguard_get_ownership` 的数据源是 `.archguard/git-history/` 演化信号（churn、
+ownership、co-change），不是 ArchJSON。本提案两个参数对这 4 个工具无意义，
+**不实施**，路由表中标注为"不适用"。
+
+如需为这 4 个工具优化 LLM 消费格式，需单独立项（git 历史工具格式化独立 proposal）。
+
+### P2 — `archguard_get_atlas_layer` 的 format 参数冲突
+
+该工具已有自己的 `format: 'full' | 'adjacency'` 参数。`queryFormat='edge-list'` 与
+`format='adjacency'` 语义重叠。实施时需明确：Atlas 工具**不添加** `queryFormat` 参数，
+维持现有 `format` 参数，避免混淆。
+
+### P3 — `externalDependencies` 暴露（direct-deps-0 地板任务）
+
+实验中 `direct-deps-0` 答案是外部 npm 包 `mermaid`，需从 ArchJSON `externalDependencies`
+字段暴露。这是独立增量，不在本提案范围内，建议作为 `archguard_get_package_stats` 的
+后续小增量处理。
 
 ---
 
@@ -230,6 +472,8 @@ MCP tool param (outputScope, queryFormat)
 - **不引入 LLM 推理选择粒度**：路由表硬编码，不依赖额外模型调用。
 - **不实现 haskell-adt 或高嵌套格式**：H-dense W=0 p=1.00 已明确否定。
 - **不提取 call graph**：跨方法调用边提取是独立工作，见下节。
+- **不在本 proposal 内处理 `direct-deps-0` 地板任务**：该任务答案是外部 npm 包名，
+  需从 `externalDependencies` 暴露；作为 `archguard_get_package_stats` 的增量，独立处理。
 
 ---
 
