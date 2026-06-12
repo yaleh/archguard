@@ -1,0 +1,15 @@
+{
+  "generated": "2026-06-12T11:41:38.777Z",
+  "tag": "format-encoding-freeze-v1.1",
+  "note": "Phase 76.2 rewrite-smoke.md is a placeholder — run scripts/rewrite-smoke.ts with LLM credentials before Phase 78.",
+  "files": {
+    "schema/C-schema.md": "fafcb516308ec6d9a5a3fee5a5c249bf1e2da724fbede61cd234e936d98684c8",
+    "schema/diff-rules.md": "d8a6cbbea389084d39f8829db8cf98c683c84068e3c063b3086c638ac9b80b1b",
+    "freeze/pre-freeze-decisions.md": "0671f624b17b55b2d5f9e878fbd30b709266ab34d7ffa01f93316f4a4344f937",
+    "freeze/rewrite-prompts/rewrite-clean-prose.md": "d9e8bcc3aebc2b913fea9daecd587a2a793e68d796c70d461ff768d7e44de738",
+    "freeze/rewrite-prompts/rewrite-haskell.md": "a504dc4a44024a91d54443a633a7804754dd527c8aac0943722ccf9fc684a866",
+    "freeze/rewrite-prompts/rewrite-json.md": "e9a7144d21c12e0d71a6396cd7a8930932b309f7cbd231b42386714badce052e",
+    "artifacts/roundtrip/roundtrip-audit.md": "bdfb238d9e0b8519ff704071f672ab468b4da40609766c331b8a33279086873a",
+    "artifacts/roundtrip/rewrite-smoke.md": "b6c6318f550b601e8451e2886d5356fd5123842785c9d2b114b729a71ab0a68c"
+  }
+}
