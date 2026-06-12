@@ -1,9 +1,31 @@
 # Plan 73-81 — 格式与编码实验（Format-Encoding Experiment）
 
 > Proposal: `docs/proposals/proposal-format-encoding-experiment.md`（预注册实验协议 v1.1）
-> Status: Draft
+> Status: **Phase 78 IN PROGRESS** (Exp 1: 13/224 done; Exp 2 rewrite: running)
 > Priority: MEDIUM（实验 harness，**对 `src/` 零改动**）
 >承接: granularity-v2.2 B4 发现（L4 JSON vs L3 Mermaid，Δ=38.4%，p=7.6×10⁻⁸）
+>
+> ### 当前状态 (2026-06-12)
+>
+> | Phase | 状态 | 备注 |
+> |---|---|---|
+> | 73–76.1 | ✅ DONE | 8 格式往返 PASS；tag: format-encoding-freeze-v1.1 |
+> | 76.2 | ✅ DONE | 改写 smoke test PASS (deepseek-v4-flash, 2/3 臂通过；clean-prose 为 human-sample) |
+> | 76.3 | ✅ DONE | tag: format-encoding-freeze-v1.1 @ commit b7af508 |
+> | 77.1–77.3 | ✅ DONE | 协变量测量完成；预测 commit 完成 |
+> | 78.1 | 🔄 RUNNING | Exp 1: ~13/224 result files; model: haiku + glm; k=5 |
+> | 78.2 | 🔄 RUNNING | Exp 2 rewrite: deepseek-v4-flash, k=3; 3 arms |
+> | 79–81 | ⏳ PENDING | |
+>
+> ### 协议偏离日志 (Deviation Log)
+>
+> | ID | Stage | 类型 | 描述 | 影响 | 处置 |
+> |---|---|---|---|---|---|
+> | D-76.1 | 76.2 | model-substitution | 预注册改写模型 `qwen3-235b-a22b` 在 gateway 不可用。替换为 `deepseek-v4-flash` (DeepSeek 家族) | Minor — 跨家族隔离保持 (DeepSeek ≠ Claude ≠ Zhipu) | 已用 deepseek-v4-flash 通过 smoke test |
+> | D-76.2 | post-freeze | parser-fix | Haskell 解析器 `parseTargetList()` 未去除目标 ID 的引号（模型倾向加引号） | Minor — 不影响确定性往返（渲染器不加引号）；仅影响改写臂 | 已在 parsers/haskell-adt.ts 中去除引号 |
+> | D-76.3 | post-freeze | parser-fix | Haskell 解析器 `entityTypeRaw` 未做 toLowerCase()；模型输出 `Function` 而非 `function` | Minor — 不影响确定性往返；仅影响改写臂 | 已加 `.toLowerCase()` |
+> | D-76.4 | post-freeze | parser-fix | json-edge-list 解析器未去除 code fence；模型倾向用 ```json...``` 包裹输出 | Minor — 不影响确定性往返；仅影响改写臂 | 已在 parsers/json-edge-list.ts 中剥离 code fence |
+> | D-76.5 | post-freeze | prompt-update | rewrite-haskell prompt schema 未包含 `-- \| name:` 注释；模型不保留原始名称（PascalCase vs camelCase） | Minor — 名称 case 偏离不改变结构；解析器已能读 `-- \| name:` | 已在 freeze/rewrite-prompts/rewrite-haskell.md 中添加 `-- \| name:` 行 |
 
 ---
 

@@ -27,11 +27,11 @@ function parseMethodSignature(name: string, signature: string): CMethod {
   return { name, params, returnType };
 }
 
-// Parse a _rel_ target list: "[Target1, Target2, ...]"
+// Parse a _rel_ target list: "[Target1, Target2, ...]" or with quoted IDs
 function parseTargetList(raw: string): string[] {
   const inner = raw.trim().replace(/^\[|\]$/g, '').trim();
   if (!inner) return [];
-  return inner.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  return inner.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(s => s.length > 0);
 }
 
 export function parse(text: string): C {
@@ -76,7 +76,7 @@ export function parse(text: string): C {
       }
 
       const haskellTypeName = dataMatch[1] ?? '';
-      const entityTypeRaw = dataMatch[2] ?? 'class';
+      const entityTypeRaw = (dataMatch[2] ?? 'class').toLowerCase();
       if (!haskellTypeName) { i = j + 1; continue; }
       if (!entityId) entityId = haskellTypeName;
       // Use stored original name if available; fall back to Haskell type name

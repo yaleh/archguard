@@ -10,6 +10,7 @@ DO NOT add, infer, or remove any architectural information. DO NOT supplement mi
 Haskell-ADT Schema:
 ```
 -- | id: <entity_id>
+-- | name: <entity_original_name>
 -- | source: <source_file>
 data <EntityName> :: <EntityType> = <EntityName>
   { _method_<methodName> :: "<param1:type1, param2:type2> -> <returnType>"
@@ -19,6 +20,7 @@ data <EntityName> :: <EntityType> = <EntityName>
 Where EntityType is one of: class, interface, function, enum, type
 Where relationType is one of: call, inheritance, composition, aggregation, dependency, implementation
 Methods with no parameters use "() -> <returnType>"
+The `-- | name:` annotation MUST contain the exact original name from the input (preserve capitalization).
 
 Input:
 {{INPUT}}

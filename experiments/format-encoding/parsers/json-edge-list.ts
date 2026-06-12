@@ -31,9 +31,11 @@ interface RawDoc {
 }
 
 export function parse(text: string): C {
+  // Strip markdown code fences if present (LLM rewrite output may wrap JSON in ```json...```)
+  const stripped = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
   let doc: RawDoc;
   try {
-    doc = JSON.parse(text) as RawDoc;
+    doc = JSON.parse(stripped) as RawDoc;
   } catch (e) {
     throw new Error(`json-edge-list: failed to parse JSON: ${(e as Error).message}`);
   }
