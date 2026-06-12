@@ -91,6 +91,7 @@ async function runTask(
       model,
       messages: [{ role: 'user', content: prompt }],
       params: MODEL_CONFIGS[model] ?? { temperature: 0, max_tokens: 8192 },
+      timeoutMs: 300_000, // 5 min — large prompts (65K+ tokens) need more time
     });
     responses.push(res.content);
     promptTokens += res.promptTokens;
