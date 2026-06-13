@@ -10,6 +10,7 @@ import { TypeScriptParser } from './typescript-parser';
 import type { ArchJSON, Entity, Relation } from '@/types';
 import fs from 'fs/promises';
 import type { ParseCache } from './parse-cache.js';
+import type { IParserFacade } from '@/core/interfaces/parser-facade.js';
 
 /**
  * Options for ParallelParser configuration
@@ -95,7 +96,7 @@ interface CompletionEvent {
  * - Error handling with continue-on-error option
  * - Memory usage optimization
  */
-export class ParallelParser extends EventEmitter {
+export class ParallelParser extends EventEmitter implements IParserFacade {
   private concurrency: number;
   private continueOnError: boolean;
   private limit: ReturnType<typeof pLimit>;

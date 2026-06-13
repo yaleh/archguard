@@ -132,6 +132,12 @@ ArchGuard uses different backends depending on language:
 
 The TypeScript path includes `TypeScriptParser`, extractor components, and `ParallelParser` for concurrent file parsing.
 
+The `GoPlugin` is implemented as a thin coordinator in `src/plugins/golang/index.ts` that delegates to:
+- `GoAtlasCoordinator` (`go-atlas-coordinator.ts`) — builds the four-layer architecture atlas from raw data
+- `GoTestAnalyzer` (`go-test-analyzer.ts`) — extracts test structure and coverage info from `_test.go` files
+
+The `ValidatedMermaidGenerator` in `src/mermaid/generator.ts` delegates formatting utilities to `generator-formatting.ts`, which exports `escapeId`, `normalizeEntityName`, `sanitizeType`, `generateClassDefinition`, and related helpers.
+
 ### 2.7 Output and Rendering Layer
 
 ArchGuard can produce:

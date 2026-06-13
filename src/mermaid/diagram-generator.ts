@@ -13,6 +13,7 @@
 
 import type { ArchJSON } from '../types/index.js';
 import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
+import type { IRendererFacade } from '@/core/interfaces/renderer-facade.js';
 import type { GroupingDecision } from './types.js';
 import { HeuristicGrouper } from './grouper.js';
 import { ValidatedMermaidGenerator } from './generator.js';
@@ -65,7 +66,7 @@ export interface RenderJob {
  * await generator.generateAndRender(archJson, outputOptions, 'class');
  * ```
  */
-export class MermaidDiagramGenerator {
+export class MermaidDiagramGenerator implements IRendererFacade {
   private progress: IProgressReporter;
 
   constructor(

@@ -283,6 +283,7 @@ When importing, use these aliases instead of relative paths:
 4. **Lint**: `npm run lint` and `npm run lint:fix`
 5. **Build**: `npm run build`
 6. **Self-validate**: `node dist/cli/index.js analyze -v`
+7. **After rebuilding with new MCP tools**: Run `/mcp` → Reconnect in Claude Code to reload MCP tool definitions in the current session.
 
 ## Project-Specific Patterns
 

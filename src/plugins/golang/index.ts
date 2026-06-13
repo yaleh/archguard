@@ -10,13 +10,11 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { glob } from 'glob';
-import micromatch from 'micromatch';
 import type {
   ILanguagePlugin,
   PluginMetadata,
   PluginInitConfig,
   RawTestFile,
-  RawTestCase,
 } from '@/core/interfaces/language-plugin.js';
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
@@ -29,10 +27,6 @@ import { ArchJsonMapper } from './archjson-mapper.js';
 import { GoplsClient } from './gopls-client.js';
 import { DependencyExtractor } from './dependency-extractor.js';
 import type { GoRawPackage, GoRawData } from './types.js';
-import { BehaviorAnalyzer } from './atlas/behavior-analyzer.js';
-import { AtlasRenderer } from './atlas/renderers/atlas-renderer.js';
-import { GoModResolver } from './atlas/go-mod-resolver.js';
-import { FrameworkDetector } from './atlas/framework-detector.js';
 import type {
   GoArchitectureAtlas,
   AtlasConfig,
@@ -41,18 +35,8 @@ import type {
   RenderFormat,
   RenderResult,
 } from './atlas/types.js';
-import { GO_ATLAS_EXTENSION_VERSION } from './atlas/types.js';
-
-function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
-  return (patterns ?? []).flatMap((pattern) => {
-    try {
-      return [new RegExp(pattern)];
-    } catch (error) {
-      console.warn(`[go:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
-      return [];
-    }
-  });
-}
+import { GoAtlasCoordinator } from './go-atlas-coordinator.js';
+import { GoTestAnalyzer } from './go-test-analyzer.js';
 
 // Re-export types for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -134,10 +118,9 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   private workspaceRoot = '';
   private cachedModuleName = '';
 
-  // Atlas internals (from former GoAtlasPlugin)
-  private behaviorAnalyzer!: BehaviorAnalyzer;
-  private atlasRenderer!: AtlasRenderer;
-  private goModResolver!: GoModResolver;
+  // Atlas + test analysis coordinators
+  private atlasCoordinator!: GoAtlasCoordinator;
+  private testAnalyzer!: GoTestAnalyzer;
 
   constructor() {
     this.dependencyExtractor = new DependencyExtractor();
@@ -164,15 +147,13 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       this.goplsClient = null;
     }
 
-    // Atlas components
-    this.goModResolver = new GoModResolver();
-    this.behaviorAnalyzer = new BehaviorAnalyzer(this.goModResolver);
-    this.atlasRenderer = new AtlasRenderer();
+    this.atlasCoordinator = new GoAtlasCoordinator();
 
     this.initialized = true;
 
     // Cache module name for use in extractTestStructure (import resolution)
     this.cachedModuleName = await this.readModuleName(config.workspaceRoot);
+    this.testAnalyzer = new GoTestAnalyzer(this.cachedModuleName);
   }
 
   /**
@@ -377,7 +358,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     };
 
     // Build Atlas from same rawData (no re-parse)
-    const atlas = await this.buildAtlasFromRawData(workspaceRoot, rawData, {
+    const atlas = await this.atlasCoordinator.buildAtlasFromRawData(workspaceRoot, rawData, {
       functionBodyStrategy,
       includeTests: atlasConfig?.includeTests,
       excludeTests: atlasConfig?.excludeTests ?? true,
@@ -544,7 +525,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       };
     }
 
-    return this.buildAtlasFromRawData(rootPath, rawData, options, startTime);
+    return this.atlasCoordinator.buildAtlasFromRawData(rootPath, rawData, options, startTime);
   }
 
   /**
@@ -555,7 +536,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     layer: AtlasLayer = 'all',
     format: RenderFormat = 'mermaid'
   ): Promise<RenderResult> {
-    return this.atlasRenderer.render(atlas, layer, format);
+    return this.atlasCoordinator.renderLayer(atlas, layer, format);
   }
 
   /**
@@ -576,86 +557,6 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   }
 
   /**
-   * Build GoArchitectureAtlas from already-parsed rawData.
-   *
-   * Called by both parseProject (which passes pre-parsed rawData to avoid
-   * double-parsing) and generateAtlas (which parses then delegates here).
-   */
-  private async buildAtlasFromRawData(
-    rootPath: string,
-    rawData: GoRawData,
-    options: AtlasGenerationOptions = {},
-    startTime: number = performance.now()
-  ): Promise<GoArchitectureAtlas> {
-    // Resolve module info for import classification
-    const moduleInfo = await this.goModResolver.resolveProject(rootPath);
-
-    // Detect frameworks from module info + raw data
-    const detectedFrameworks = new FrameworkDetector().detect(moduleInfo, rawData);
-
-    // Build all four layers in parallel (no second parsing pass needed)
-    const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
-      this.behaviorAnalyzer.buildPackageGraph(rawData),
-      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
-      this.behaviorAnalyzer.buildGoroutineTopology(rawData, {
-        includeTests: options.includeTests,
-      }),
-      this.behaviorAnalyzer.buildFlowGraph(rawData, {
-        detectedFrameworks,
-        protocols: options.protocols,
-        customFrameworks: options.customFrameworks,
-        entryPoints: options.entryPoints,
-        followIndirectCalls: options.followIndirectCalls,
-      }),
-    ]);
-
-    const totalTime = performance.now() - startTime;
-
-    // Emit warnings when flow graph has no entry points
-    const warnings: string[] = [];
-    if (flowGraph.entryPoints.length === 0) {
-      warnings.push(
-        `Flow graph: no entry points detected. Frameworks found: ${[...detectedFrameworks].join(', ')}. ` +
-          `Add 'customFrameworks' or 'entryPoints' to archguard.config.json to configure detection.`
-      );
-    }
-
-    // Return GoAtlasExtension (ADR-002 structure)
-    return {
-      version: GO_ATLAS_EXTENSION_VERSION,
-      layers: {
-        package: packageGraph,
-        capability: capabilityGraph,
-        goroutine: goroutineTopology,
-        flow: flowGraph,
-      },
-      metadata: {
-        generatedAt: new Date().toISOString(),
-        generationStrategy: {
-          functionBodyStrategy: options.functionBodyStrategy ?? 'none',
-          detectedFrameworks: [...detectedFrameworks],
-          protocols: options.protocols,
-          followIndirectCalls: options.followIndirectCalls ?? false,
-          goplsEnabled: false,
-        },
-        completeness: {
-          package: 1.0,
-          capability: 0.85,
-          goroutine: options.functionBodyStrategy === 'full' ? 0.7 : 0.5,
-          flow: 0.6,
-        },
-        performance: {
-          fileCount: rawData.packages.length,
-          parseTime: totalTime,
-          totalTime,
-          memoryUsage: process.memoryUsage().heapUsed,
-        },
-        warnings: warnings.length > 0 ? warnings : undefined,
-      },
-    };
-  }
-
-  /**
    * Ensure plugin is initialized before use
    */
   private ensureInitialized(): void {
@@ -665,12 +566,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   }
 
   isTestFile(filePath: string, patternConfig?: TestPatternConfig): boolean {
-    return (
-      filePath.endsWith('_test.go') ||
-      (patternConfig?.testFileGlobs?.length
-        ? micromatch.isMatch(filePath, patternConfig.testFileGlobs)
-        : false)
-    );
+    return this.testAnalyzer.isTestFile(filePath, patternConfig);
   }
 
   extractTestStructure(
@@ -678,78 +574,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     code: string,
     patternConfig?: TestPatternConfig
   ): RawTestFile | null {
-    if (!this.isTestFile(filePath, patternConfig)) return null;
-
-    // Detect frameworks from import block
-    const frameworks: string[] = [];
-    const importBlock = code.match(/import\s*\(([^)]*)\)/s)?.[1] ?? '';
-    if (/testify\/assert|testify\/require/.test(importBlock)) frameworks.push('testify');
-    if (/testing\/quick/.test(importBlock)) frameworks.push('testing/quick');
-    if (!frameworks.includes('testify')) frameworks.push('testing'); // stdlib always present for _test.go
-
-    // Extract test functions (Test*, Benchmark*, Example*, Fuzz*)
-    const fnRegex = /^func\s+(Test\w*|Benchmark\w*|Example\w*|Fuzz\w*)\s*\(/gm;
-    const testCases: RawTestCase[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = fnRegex.exec(code)) !== null) {
-      const name = match[1];
-      const isSkipped = new RegExp(`func\\s+${name}[^{]*\\{[^}]*t\\.Skip`, 's').test(code);
-      const isBenchmark = name.startsWith('Benchmark');
-
-      // Count assertion calls: assert.*, require.*, t.Error*, t.Fatal*, t.Log*+Fail pattern
-      const assertPatterns = [
-        /\bassert\.\w+\s*\(/g,
-        /\brequire\.\w+\s*\(/g,
-        /\bt\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)\s*\(/g,
-      ];
-      const customAssertionRegexes = compileCustomAssertionRegexes(
-        patternConfig?.customAssertionRegexes
-      );
-      let assertionCount = 0;
-      for (const pat of assertPatterns) {
-        const all = code.match(pat);
-        if (all) assertionCount += all.length;
-      }
-      if (customAssertionRegexes.length > 0) {
-        for (const line of code.split('\n')) {
-          assertionCount += customAssertionRegexes.filter((regex) => regex.test(line)).length;
-        }
-      }
-
-      testCases.push({ name, assertionCount: isBenchmark ? 0 : assertionCount, isSkipped });
-    }
-
-    if (testCases.length === 0) return null;
-
-    // Extract imported source files from same module (non-test packages)
-    const importedSourceFiles: string[] = [];
-    const importLineRegex = /^\s*(?:\w+\s+)?"([^"]+)"/gm;
-    while ((match = importLineRegex.exec(importBlock)) !== null) {
-      const pkg = match[1];
-      // If the import is from this module, strip the module prefix to get the
-      // package-relative directory path (e.g. "github.com/org/app/internal/svc" → "internal/svc")
-      if (this.cachedModuleName && pkg.startsWith(this.cachedModuleName + '/')) {
-        importedSourceFiles.push(pkg.slice(this.cachedModuleName.length + 1));
-        continue;
-      }
-      // Skip stdlib (no slash), testify, and other external packages
-      if (!pkg.includes('/') || pkg.startsWith('github.com/') || pkg.startsWith('golang.org/')) {
-        continue;
-      }
-      importedSourceFiles.push(pkg);
-    }
-
-    // Infer overall testTypeHint: benchmark functions → performance
-    const hasBenchmark = /^func\s+Benchmark\w*\s*\(/m.test(code);
-    const testTypeHint: RawTestFile['testTypeHint'] = hasBenchmark ? 'performance' : 'unit';
-
-    return {
-      filePath,
-      frameworks,
-      testTypeHint,
-      testCases,
-      importedSourceFiles,
-    };
+    return this.testAnalyzer.extractTestStructure(filePath, code, patternConfig);
   }
 
   private async readModuleName(workspaceRoot: string): Promise<string> {

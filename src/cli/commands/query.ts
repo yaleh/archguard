@@ -15,6 +15,7 @@ import type {
   QueryMethodOptions,
   OutputScope,
   QueryOutputFormat,
+  EdgeListOutput,
 } from '../query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
 
@@ -201,34 +202,34 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
 
     if (opts.entity) {
       const raw = engine.findEntity(opts.entity, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities matching "${opts.entity}"`);
     } else if (opts.depsOf) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const raw = engine.getDependencies(opts.depsOf, depth, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependencies of "${opts.depsOf}" (depth: ${depth})`);
     } else if (opts.usedBy) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const raw = engine.getDependents(opts.usedBy, depth, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependents of "${opts.usedBy}" (depth: ${depth})`);
     } else if (opts.implementersOf) {
       const raw = engine.findImplementers(opts.implementersOf, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Implementers of "${opts.implementersOf}"`);
     } else if (opts.subclassesOf) {
       const raw = engine.findSubclasses(opts.subclassesOf, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Subclasses of "${opts.subclassesOf}"`);
     } else if (opts.file) {
       const raw = engine.getFileEntities(opts.file, queryOptions);
-      const entities = raw as Entity[];
+      const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities in ${opts.file}`);
     } else if (opts.cycles) {
@@ -415,6 +416,27 @@ function projectEntitiesForOutput(
   verbose: boolean | undefined
 ): Entity[] | ReturnType<QueryEngine['toSummary']>[] {
   return verbose ? entities : entities.map((entity) => engine.toSummary(entity));
+}
+
+/**
+ * Unwrap engine result to Entity[] for text display.
+ * When queryFormat=edge-list the engine returns EdgeListOutput (non-array);
+ * reconstruct minimal Entity-like objects so formatEntityList can iterate safely.
+ */
+function toDisplayEntities(raw: Entity[] | Partial<Entity>[] | EdgeListOutput): Entity[] {
+  if (Array.isArray(raw)) return raw as Entity[];
+  const out = raw;
+  return out.entities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.type,
+    sourceLocation: { file: e.sourceFile, startLine: 0, endLine: 0 },
+    visibility: 'public' as const,
+    members: [],
+    relations: [],
+    annotations: [],
+    packages: [],
+  })) as unknown as Entity[];
 }
 
 // -- List scopes handler --

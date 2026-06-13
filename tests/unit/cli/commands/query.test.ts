@@ -658,3 +658,29 @@ describe('query command Phase 85 options', () => {
     expect(output).toContain('Top by out-degree:');
   });
 });
+
+describe('query command --output-scope / edge-list safety (Phase 101)', () => {
+  it('--entity --output-scope method does not crash (structured)', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'CacheManager', '--output-scope', 'method');
+    expect(process.exit).not.toHaveBeenCalledWith(1);
+    expect(consoleOutput.join('\n')).toContain('CacheManager');
+  });
+
+  it('--entity --output-scope method --query-format edge-list does not crash', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'CacheManager', '--output-scope', 'method', '--query-format', 'edge-list', '--format', 'json');
+    expect(process.exit).not.toHaveBeenCalledWith(1);
+    // JSON output should be edge-list shape { entities, relations }
+    const output = consoleOutput.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed).toHaveProperty('entities');
+    expect(parsed).toHaveProperty('relations');
+  });
+
+  it('--entity --output-scope package does not crash (regression)', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    await runQuery('--entity', 'CacheManager', '--output-scope', 'package');
+    expect(process.exit).not.toHaveBeenCalledWith(1);
+  });
+});
