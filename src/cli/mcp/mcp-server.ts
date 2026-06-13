@@ -13,6 +13,7 @@ import { loadEngine } from '../query/engine-loader.js';
 import type {
   QueryEngine,
   EntitySummary,
+  EdgeListOutput,
   PackageStatEntry,
   PackageStatsResult,
   OutputScope,
@@ -104,8 +105,8 @@ export async function startMcpServer(defaultRoot: string = process.cwd()): Promi
   console.error('ArchGuard MCP server running on stdio');
 }
 
-function serializeEntities(entities: unknown[]): string {
-  return JSON.stringify(entities, null, 2);
+function serializeResult(result: unknown): string {
+  return JSON.stringify(result, null, 2);
 }
 
 const verboseParam = z
@@ -135,11 +136,12 @@ const queryFormatParam = z
 
 function applyView(
   engine: QueryEngine,
-  entities: Entity[],
+  result: Entity[] | Partial<Entity>[] | EdgeListOutput,
   verbose: boolean | string | undefined
-): Entity[] | EntitySummary[] {
+): Entity[] | Partial<Entity>[] | EntitySummary[] | EdgeListOutput {
+  if (!Array.isArray(result)) return result;
   const isVerbose = verbose === 'true' ? true : (verbose ?? false);
-  return isVerbose ? entities : entities.map((e) => engine.toSummary(e));
+  return isVerbose ? result : (result as Entity[]).map((e) => engine.toSummary(e));
 }
 
 /**
@@ -229,16 +231,15 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       return withEngineErrorContext(root, async () => {
         const engine = await loadEngine(path.join(root, '.archguard'), scope);
 
-        let entities: Entity[];
+        // Phase 1: look up with structured format so the result is always Entity[]
+        // and safe for .filter(). Edge-list serialization is applied in Phase 2.
+        const lookupScope = resolveOutputScope(outputScope, verbose);
+        const lookupOptions: QueryMethodOptions = { outputScope: lookupScope, queryFormat: 'structured' };
 
-        const queryOptions: QueryMethodOptions = {
-          outputScope: resolveOutputScope(outputScope, verbose),
-          queryFormat: queryFormat as QueryOutputFormat,
-        };
+        let rawEntities: Entity[];
 
         if (name) {
-          // Existing path: exact name match
-          entities = engine.findEntity(name, queryOptions) as Entity[];
+          rawEntities = engine.findEntity(name, lookupOptions) as Entity[];
         } else {
           const attrEntries = attrFilter ? Object.entries(attrFilter) : [];
           const [[firstKey, firstVal], ...restEntries] =
@@ -247,25 +248,31 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
               : [[undefined, undefined] as [undefined, undefined]];
 
           if (entityType) {
-            entities = (
+            rawEntities = (
               firstKey !== undefined
-                ? engine.findByTypeAndAttr(entityType, firstKey, firstVal, queryOptions)
-                : engine.findByType(entityType, queryOptions)
+                ? engine.findByTypeAndAttr(entityType, firstKey, firstVal, lookupOptions)
+                : engine.findByType(entityType, lookupOptions)
             ) as Entity[];
           } else if (firstKey !== undefined) {
-            entities = engine.findByAttr(firstKey, firstVal, queryOptions) as Entity[];
+            rawEntities = engine.findByAttr(firstKey, firstVal, lookupOptions) as Entity[];
           } else {
-            entities = [];
+            rawEntities = [];
           }
 
-          // AND-compose remaining attr filters
+          // AND-compose remaining attr filters (safe: rawEntities is always Entity[])
           for (const [k, v] of restEntries) {
-            entities = entities.filter((e) => e.attributes?.[k] === v);
+            rawEntities = rawEntities.filter((e) => e.attributes?.[k] === v);
           }
         }
 
-        const payload = applyView(engine, entities, verbose);
-        return textResponse(serializeEntities(payload));
+        // Phase 2: apply the requested output format (structured or edge-list)
+        const finalOptions: QueryMethodOptions = {
+          outputScope: lookupScope,
+          queryFormat: queryFormat as QueryOutputFormat,
+        };
+        const result = engine.applyOutputOptions(rawEntities, finalOptions);
+        const payload = applyView(engine, result, verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );
@@ -290,12 +297,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(
-          engine,
-          engine.getDependencies(name, depth, queryOptions) as Entity[],
-          verbose
-        );
-        return textResponse(serializeEntities(payload));
+        const payload = applyView(engine, engine.getDependencies(name, depth, queryOptions), verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );
@@ -320,12 +323,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(
-          engine,
-          engine.getDependents(name, depth, queryOptions) as Entity[],
-          verbose
-        );
-        return textResponse(serializeEntities(payload));
+        const payload = applyView(engine, engine.getDependents(name, depth, queryOptions), verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );
@@ -349,12 +348,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(
-          engine,
-          engine.findImplementers(name, queryOptions) as Entity[],
-          verbose
-        );
-        return textResponse(serializeEntities(payload));
+        const payload = applyView(engine, engine.findImplementers(name, queryOptions), verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );
@@ -378,12 +373,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(
-          engine,
-          engine.findSubclasses(name, queryOptions) as Entity[],
-          verbose
-        );
-        return textResponse(serializeEntities(payload));
+        const payload = applyView(engine, engine.findSubclasses(name, queryOptions), verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );
@@ -407,12 +398,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(
-          engine,
-          engine.getFileEntities(filePath, queryOptions) as Entity[],
-          verbose
-        );
-        return textResponse(serializeEntities(payload));
+        const payload = applyView(engine, engine.getFileEntities(filePath, queryOptions), verbose);
+        return textResponse(serializeResult(payload));
       });
     }
   );

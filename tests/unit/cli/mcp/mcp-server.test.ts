@@ -892,6 +892,113 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
   });
 });
 
+// ── Bug fix: entities.map is not a function when queryFormat='edge-list' ──────
+// When queryFormat='edge-list' and verbose=false, applyView() was calling
+// entities.map() on an EdgeListOutput object (not an array), crashing with
+// "entities.map is not a function".
+describe('edge-list queryFormat — applyView crash fix', () => {
+  it('get_dependencies + edge-list returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_dependencies');
+    const result = await cb({ name: 'DiagramProcessor', depth: 1, queryFormat: 'edge-list' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(Array.isArray(parsed.relations)).toBe(true);
+    const names = parsed.entities.map((e: { name: string }) => e.name);
+    expect(names).toContain('CacheManager');
+    expect(names).toContain('ILanguagePlugin');
+  });
+
+  it('get_dependents + edge-list returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_dependents');
+    const result = await cb({ name: 'CacheManager', depth: 1, queryFormat: 'edge-list' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(Array.isArray(parsed.relations)).toBe(true);
+    const names = parsed.entities.map((e: { name: string }) => e.name);
+    expect(names).toContain('DiagramProcessor');
+  });
+
+  it('find_implementers + edge-list returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_find_implementers');
+    const result = await cb({ name: 'ILanguagePlugin', queryFormat: 'edge-list' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(Array.isArray(parsed.relations)).toBe(true);
+    expect(parsed.entities[0].name).toBe('TypeScriptPlugin');
+  });
+
+  it('find_subclasses + edge-list returns { entities, relations } not array', async () => {
+    const subEntities: Entity[] = [
+      makeEntity('base2', 'BaseProcessor', 'class', 'src/base.ts'),
+      makeEntity('sub2', 'SubProcessor', 'class', 'src/sub.ts'),
+    ];
+    const subArchJson: ArchJSON = {
+      version: '1.0',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: subEntities,
+      relations: [{ id: 'r2', source: 'sub2', target: 'base2', type: 'inheritance' }],
+    };
+    const { buildArchIndex } = await import('@/cli/query/arch-index-builder.js');
+    const archIndex = buildArchIndex(subArchJson, 'h2');
+    const subEngine = new QueryEngine({ archJson: subArchJson, archIndex, scopeEntry });
+    loadEngineMock.mockResolvedValueOnce(subEngine);
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_find_subclasses');
+    const result = await cb({ name: 'BaseProcessor', queryFormat: 'edge-list' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(parsed.entities[0].name).toBe('SubProcessor');
+  });
+
+  it('get_file_entities + edge-list returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_file_entities');
+    const result = await cb({ filePath: 'src/cache.ts', queryFormat: 'edge-list' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(Array.isArray(parsed.relations)).toBe(true);
+    expect(parsed.entities[0].name).toBe('CacheManager');
+  });
+
+  it('find_entity (by name) + edge-list + verbose=false returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_find_entity');
+    const result = await cb({ name: 'CacheManager', queryFormat: 'edge-list', verbose: false });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(Array.isArray(parsed.relations)).toBe(true);
+    expect(parsed.entities[0].name).toBe('CacheManager');
+  });
+
+  it('find_entity (by entityType) + edge-list returns { entities, relations } not array', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_find_entity');
+    const result = await cb({ entityType: 'interface', queryFormat: 'edge-list', verbose: false });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(false);
+    expect(Array.isArray(parsed.entities)).toBe(true);
+    expect(parsed.entities.some((e: { name: string }) => e.name === 'ILanguagePlugin')).toBe(true);
+  });
+});
+
 describe('createMcpCommand', () => {
   it('registers with correct name', async () => {
     const { createMcpCommand } = await import('@/cli/commands/mcp.js');

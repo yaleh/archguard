@@ -283,7 +283,7 @@ export class QueryEngine {
    * - format='edge-list': serialize to flat { entities, relations } structure
    * - format='structured' (default): return narrowed entity array
    */
-  private applyOutputOptions(
+  applyOutputOptions(
     entities: Entity[],
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
