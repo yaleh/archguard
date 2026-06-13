@@ -235,7 +235,7 @@ export class QueryEngine {
       ? 'Not available for Go Atlas projects. Use archguard_get_atlas_layer({ layer: "package" }) to find the most-imported packages.'
       : undefined;
 
-    const topPackagesResult = this.getPackageStats(2);
+    const topPackagesResult = this.getPackageStats(3);
     const totalPackageCount = topPackagesResult.packages.length;
     const topPackages = topPackagesResult.packages.slice(0, 10);
 

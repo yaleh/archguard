@@ -7,6 +7,7 @@ import {
   type SourceFile,
   type ClassDeclaration,
   type InterfaceDeclaration,
+  type FunctionDeclaration,
   SyntaxKind,
 } from 'ts-morph';
 import type { Relation } from '@/types';
@@ -249,22 +250,46 @@ export class RelationExtractor extends BaseExtractor {
       }
     };
 
+    // Helper: emit dependency relations from TypeChecker-resolved parameter and return types
+    const emitDepsForSignatureTypes = (
+      funcName: string,
+      parameters: ReturnType<FunctionDeclaration['getParameters']>,
+      returnType: ReturnType<FunctionDeclaration['getReturnType']>
+    ): void => {
+      // Parameter types
+      for (const param of parameters) {
+        const typeName = this.extractTypeName(param.getType().getText());
+        if (typeName && this.isCustomType(typeName) && !externalNames.has(typeName) && typeName !== funcName) {
+          this.addRelation(relations, relationSet, 'dependency', funcName, typeName);
+        }
+      }
+      // Return type
+      const retTypeName = this.extractTypeName(returnType.getText());
+      if (retTypeName && this.isCustomType(retTypeName) && !externalNames.has(retTypeName) && retTypeName !== funcName) {
+        this.addRelation(relations, relationSet, 'dependency', funcName, retTypeName);
+      }
+    };
+
     // Process function declarations
     for (const funcDecl of sourceFile.getFunctions()) {
       const funcName = funcDecl.getName();
       if (!funcName) continue;
       const body = funcDecl.getBody();
-      if (!body) continue;
-      emitDepsForBody(funcName, body.getText());
+      if (body) emitDepsForBody(funcName, body.getText());
+      // Also extract from type annotations
+      emitDepsForSignatureTypes(funcName, funcDecl.getParameters(), funcDecl.getReturnType());
     }
 
     // Process variable declarations whose initializer is an arrow function
     for (const varDecl of sourceFile.getVariableDeclarations()) {
       const initializer = varDecl.getInitializer();
       if (!initializer) continue;
-      if (initializer.getKind() !== SyntaxKind.ArrowFunction) continue;
+      const arrowFn = initializer.asKind(SyntaxKind.ArrowFunction);
+      if (!arrowFn) continue;
       const varName = varDecl.getName();
-      emitDepsForBody(varName, initializer.getText());
+      emitDepsForBody(varName, arrowFn.getText());
+      // Also extract from type annotations
+      emitDepsForSignatureTypes(varName, arrowFn.getParameters(), arrowFn.getReturnType());
     }
 
     return relations;
@@ -321,7 +346,7 @@ export class RelationExtractor extends BaseExtractor {
     if (typeText.startsWith('import(')) {
       const match = typeText.match(/^import\([^)]+\)\.\s*([\w.]+)/);
       if (match) {
-        return match[2]; // Return the class name after the dot
+        return match[1]; // Return the class name after the dot
       }
     }
 

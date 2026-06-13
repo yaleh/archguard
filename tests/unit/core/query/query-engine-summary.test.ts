@@ -261,6 +261,42 @@ describe('getSummary().topByOutDegree', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Fix 3: getSummary uses depth=3 package grouping (not depth=2)
+// ---------------------------------------------------------------------------
+
+describe('getSummary() — depth=3 package grouping', () => {
+  it('getSummary uses depth=3 package grouping (not depth=2)', () => {
+    // Create entities from distinct 3-level paths
+    const entities = [
+      makeEntity('src/cli/commands/Foo', 'Foo', {
+        sourceLocation: { file: 'src/cli/commands/foo.ts', startLine: 1, endLine: 10 },
+      }),
+      makeEntity('src/cli/utils/Bar', 'Bar', {
+        sourceLocation: { file: 'src/cli/utils/bar.ts', startLine: 1, endLine: 10 },
+      }),
+      makeEntity('src/cli/types/Baz', 'Baz', {
+        sourceLocation: { file: 'src/cli/types/baz.ts', startLine: 1, endLine: 10 },
+      }),
+    ];
+    const archJson = makeArchJson({
+      entities,
+      sourceFiles: ['src/cli/commands/foo.ts', 'src/cli/utils/bar.ts', 'src/cli/types/baz.ts'],
+    });
+    const index = buildArchIndex(archJson, 'hash-depth-test');
+    const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+    const summary = engine.getSummary();
+
+    // At depth=3, we should get 3 packages (src/cli/commands, src/cli/utils, src/cli/types)
+    // At depth=2, we'd get 1 package (src/cli) with 3 entities
+    expect(summary.totalPackageCount).toBe(3);
+    // topPackages should show all 3 packages
+    expect(summary.topPackages.length).toBe(3);
+    // Each package has exactly 1 entity
+    expect(summary.topPackages.every(p => p.entityCount === 1)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression: existing fields still present
 // ---------------------------------------------------------------------------
 

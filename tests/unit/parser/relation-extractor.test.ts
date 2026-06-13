@@ -544,6 +544,88 @@ describe('RelationExtractor - Gap B: Interface Property Type Refs', () => {
   });
 });
 
+describe('RelationExtractor - Cross-file type resolution (import() format)', () => {
+  it('should extract composition when property type resolves to cross-file import() format', () => {
+    // Create a fresh extractor to get an isolated project
+    const crossExtractor = new RelationExtractor();
+    // Add the "other" file first so TypeChecker can resolve across files
+    crossExtractor['project'].createSourceFile('/types.ts', 'export class Foo {}');
+    const barFile = crossExtractor['project'].createSourceFile('/bar.ts', `
+      import { Foo } from './types.js';
+      export class Bar {
+        private foo: Foo;
+      }
+    `);
+    const relations = crossExtractor.extractFromSourceFile(barFile);
+    const comp = relations.filter(r => r.type === 'composition' && r.source === 'Bar' && r.target === 'Foo');
+    expect(comp).toHaveLength(1);
+  });
+
+  it('extractTypeName handles import() format directly', () => {
+    const ext = new RelationExtractor();
+    // Access private method via type cast
+    const result = (ext as unknown as { extractTypeName(s: string): string | null }).extractTypeName(
+      'import("/home/user/project/src/types/index").ArchJSON'
+    );
+    expect(result).toBe('ArchJSON');
+  });
+});
+
+describe('RelationExtractor - Function signature type extraction', () => {
+  it('should extract dependency from function parameter type annotation', () => {
+    const code = `
+      import { Entity } from './types.js';
+      export function processEntity(entity: Entity): void {}
+    `;
+    const relations = extractor.extract(code);
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'processEntity', target: 'Entity' })
+    );
+  });
+
+  it('should extract dependency from function return type annotation', () => {
+    const code = `
+      import { Result } from './result.js';
+      export function compute(): Result { return {} as Result; }
+    `;
+    const relations = extractor.extract(code);
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'compute', target: 'Result' })
+    );
+  });
+
+  it('should extract dependency from arrow function parameter type annotation', () => {
+    const code = `
+      import { Config } from './config.js';
+      export const applyConfig = (cfg: Config): void => {};
+    `;
+    const relations = extractor.extract(code);
+    expect(relations).toContainEqual(
+      expect.objectContaining({ type: 'dependency', source: 'applyConfig', target: 'Config' })
+    );
+  });
+
+  it('should NOT emit duplicate when type appears both in body text and signature', () => {
+    const code = `
+      import { Foo } from './foo.js';
+      export function useFoo(foo: Foo): void {
+        const x = new Foo();
+      }
+    `;
+    const relations = extractor.extract(code);
+    const depsToFoo = relations.filter(r => r.source === 'useFoo' && r.target === 'Foo');
+    expect(depsToFoo).toHaveLength(1); // dedup by relationSet
+  });
+
+  it('should NOT extract primitive types from function signatures', () => {
+    const code = `
+      export function add(a: number, b: string): boolean { return false; }
+    `;
+    const relations = extractor.extract(code);
+    expect(relations).toHaveLength(0);
+  });
+});
+
 describe('RelationExtractor - Structural type filtering', () => {
   it('should NOT emit composition for function-typed interface properties', () => {
     const code = `
