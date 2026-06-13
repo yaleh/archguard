@@ -129,6 +129,8 @@ describe('ArchGuard Self Test - Integration', () => {
         'composition',
         'aggregation',
         'dependency',
+        'association',
+        'call',
       ]).toContain(relation.type);
     });
 

@@ -389,7 +389,14 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       followIndirectCalls: atlasConfig?.followIndirectCalls,
     });
 
-    return { ...baseArchJSON, extensions: { goAtlas: atlas } };
+    // Map call relations from the flow graph (must happen after atlas is built)
+    const callRelations = this.mapper.mapCallRelations(atlas?.layers?.flow);
+
+    return {
+      ...baseArchJSON,
+      relations: [...baseArchJSON.relations, ...callRelations],
+      extensions: { goAtlas: atlas },
+    };
   }
 
   /**

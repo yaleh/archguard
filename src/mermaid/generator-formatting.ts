@@ -144,7 +144,8 @@ export function generateMemberLine(member: Member): string {
 export function generateRelationLine(
   relation: Relation,
   entityIdToName: Map<string, string>
-): string {
+): string | null {
+  if (relation.type === 'call') return null;
   const resolve = (id: string): string =>
     escapeId(normalizeEntityName(entityIdToName.get(id) ?? id));
   const source = resolve(relation.source);

@@ -199,7 +199,8 @@ export type RelationType =
   | 'composition'
   | 'aggregation'
   | 'dependency'
-  | 'association';
+  | 'association'
+  | 'call';
 
 /**
  * Relation between entities
@@ -210,7 +211,18 @@ export interface Relation {
   source: string;
   target: string;
   confidence?: number;
-  inferenceSource?: 'explicit' | 'inferred' | 'gopls';
+  inferenceSource?: 'explicit' | 'inferred' | 'gopls' | 'call-aggregated';
+
+  /**
+   * Method-level call edge fields. Only populated when `type === 'call'`.
+   * sourceMethod: the calling method name on the source entity.
+   * targetMethod: the called method name on the target entity.
+   * callType: how the call is dispatched — 'direct' (static dispatch),
+   *   'interface' (virtual/interface dispatch), or 'indirect' (callback/higher-order).
+   */
+  sourceMethod?: string;
+  targetMethod?: string;
+  callType?: 'direct' | 'interface' | 'indirect';
 }
 
 /**

@@ -56,6 +56,10 @@ interface QueryOptions {
   // Phase 85: LLM-aware output
   outputScope?: string;
   queryFormat?: string;
+
+  // Phase 93: call graph
+  callers?: string;
+  callersDepth?: string;
 }
 
 /**
@@ -150,6 +154,10 @@ export function createQueryCommand(): Command {
         '--query-format <format>',
         'Output format: structured|edge-list (default: structured)'
       )
+
+      // Phase 93: call graph
+      .option('--callers <entity>', 'Find callers of entity (use "Class" or "Class.method")')
+      .option('--callers-depth <n>', 'BFS depth for --callers (1-5)', '1')
 
       .action(queryHandler)
   );
@@ -267,6 +275,20 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       const entities = engine.findInCycles();
       result = projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, 'Entities in dependency cycles');
+    } else if (opts.callers) {
+      const callersDepth = parseBoundedInt(opts.callersDepth ?? '1', '--callers-depth', 1, 5);
+      const callers = engine.findCallers(opts.callers, callersDepth);
+      result = { entityName: opts.callers, depth: callersDepth, callers };
+      if (!isJson) {
+        console.log(`Callers of "${opts.callers}" (depth: ${callersDepth}):`);
+        if (callers.length === 0) {
+          console.log('  (none)');
+        } else {
+          for (const c of callers) {
+            console.log(`  depth=${c.depth}  ${c.callerEntity}.${c.callerMethod}  [${c.callType}]`);
+          }
+        }
+      }
     } else if (opts.packageStats !== undefined) {
       const depth = typeof opts.packageStats === 'string' ? parseInt(opts.packageStats, 10) : 2;
       const statsResult = engine.getPackageStats(depth);
@@ -343,6 +365,7 @@ export function validateQueryOptions(opts: QueryOptions): void {
     opts.orphans,
     opts.inCycles,
     opts.packageStats !== undefined ? true : undefined,
+    opts.callers,
   ].filter(Boolean);
 
   if (primaryOptions.length > 1) {

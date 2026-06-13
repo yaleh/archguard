@@ -4,6 +4,7 @@
 
 import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
 import type { GoRawPackage, GoRawStruct, GoRawInterface, InferredImplementation } from './types.js';
+import type { FlowGraph } from '@/types/extensions/go-atlas.js';
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 
 export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
@@ -191,6 +192,52 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
       }
     }
 
+    return relations;
+  }
+
+  /**
+   * Map Go Atlas FlowGraph CallEdges to ArchJSON Relation[] with type='call'.
+   *
+   * Must be called AFTER buildAtlasFromRawData() completes.
+   * Each edge `from`/`to` is split on '.' to extract package (source/target)
+   * and method name (sourceMethod/targetMethod). Edges without a package prefix
+   * (no dot) are skipped. Duplicate from/to pairs are deduplicated.
+   */
+  public mapCallRelations(flowGraph: FlowGraph | undefined): Relation[] {
+    if (!flowGraph) return [];
+    const relations: Relation[] = [];
+    const seen = new Set<string>();
+
+    for (const chain of flowGraph.callChains) {
+      for (const edge of chain.calls) {
+        const fromParts = edge.from.split('.');
+        const sourceMethod = fromParts.at(-1) ?? edge.from;
+        const sourceClass = fromParts.slice(0, -1).join('.');
+
+        const toParts = edge.to.split('.');
+        const targetMethod = toParts.at(-1) ?? edge.to;
+        const targetClass = toParts.slice(0, -1).join('.');
+
+        // Skip entries without package prefix
+        if (!sourceClass || !targetClass) continue;
+
+        const id = `call:${edge.from}:${edge.to}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+
+        relations.push({
+          id,
+          type: 'call',
+          source: sourceClass,
+          target: targetClass,
+          sourceMethod,
+          targetMethod,
+          callType: edge.type === 'indirect' ? 'interface' : (edge.type as 'direct' | 'interface'),
+          confidence: edge.confidence,
+          inferenceSource: 'gopls',
+        });
+      }
+    }
     return relations;
   }
 }

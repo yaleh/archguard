@@ -341,7 +341,7 @@ export class ValidatedMermaidGenerator {
           sourceKnownViaPrefix || // Python module-level: skip noisy check for target too
           !this.isNoisyTarget(relation.target);
         if (sourceKnown && targetOk) {
-          lines.push(`  ${this.generateRelationLine(relation)}`);
+          { const _line = this.generateRelationLine(relation); if (_line !== null) lines.push(`  ${_line}`); }
         }
       }
     } else {
@@ -363,7 +363,7 @@ export class ValidatedMermaidGenerator {
           sourceKnownViaPrefix || // Python module-level: skip noisy check for target too
           !this.isNoisyTarget(relation.target);
         if (sourceKnown && targetOk) {
-          lines.push(`  ${this.generateRelationLine(relation)}`);
+          { const _line = this.generateRelationLine(relation); if (_line !== null) lines.push(`  ${_line}`); }
         }
       }
     }
@@ -435,7 +435,8 @@ export class ValidatedMermaidGenerator {
       const sourceKnown = sourceKnownDirect || sourceKnownViaPrefix;
       // Python module-level: skip noisy check for target when source matched via prefix
       if (sourceKnown && (sourceKnownViaPrefix || !this.isNoisyTarget(relation.target))) {
-        lines.push(`  ${this.generateRelationLine(relation)}`);
+        const _line = this.generateRelationLine(relation);
+        if (_line !== null) lines.push(`  ${_line}`);
       }
     }
 
@@ -578,9 +579,10 @@ export class ValidatedMermaidGenerator {
   }
 
   /**
-   * Generate relation line
+   * Generate relation line, or null for call-type relations (filtered out in diagrams).
    */
-  private generateRelationLine(relation: Relation): string {
+  private generateRelationLine(relation: Relation): string | null {
+    if (relation.type === 'call') return null;
     const resolve = (id: string): string => {
       const simpleName = this.entityIdToName.get(id);
       return this.escapeId(this.normalizeEntityName(simpleName ?? id));
@@ -667,7 +669,8 @@ export class ValidatedMermaidGenerator {
       // When the source matched via module prefix (Python-style), skip the isNoisyTarget check
       // for the target because Python dotted module paths look like TypeScript namespace types.
       if (sourceKnown && (sourceKnownViaPrefix || !this.isNoisyTarget(relation.target))) {
-        lines.push(`  ${this.generateRelationLine(relation)}`);
+        const _line = this.generateRelationLine(relation);
+        if (_line !== null) lines.push(`  ${_line}`);
       }
     }
 
@@ -924,7 +927,7 @@ export class ValidatedMermaidGenerator {
         // Python module-level: skip noisy check for target when source matched via prefix
         const targetOk = targetKnown || sourceViaPrefix || !this.isNoisyTarget(relation.target);
         if (sourceInGroup && targetOk) {
-          lines.push(`  ${this.generateRelationLine(relation)}`);
+          { const _line = this.generateRelationLine(relation); if (_line !== null) lines.push(`  ${_line}`); }
         }
       }
 

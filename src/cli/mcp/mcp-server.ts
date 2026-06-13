@@ -29,6 +29,7 @@ import { registerAnalyzeTool } from './analyze-tool.js';
 import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
 import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.js';
 import { registerGitHistoryTools } from './tools/git-history-tools.js';
+import { registerCallGraphTools } from './tools/call-graph-tools.js';
 
 const projectRootParam = z
   .string()
@@ -83,6 +84,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerTestAnalysisTools(server, defaultRoot);
   registerGitHistoryAnalyzeTool(server, defaultRoot);
   registerGitHistoryTools(server, defaultRoot);
+  registerCallGraphTools(server, defaultRoot);
   return server;
 }
 

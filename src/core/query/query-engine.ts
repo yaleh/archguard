@@ -385,9 +385,51 @@ export class QueryEngine {
 
     const narrowed = narrowEntities(entities, scope);
     if (format === 'edge-list') {
-      return serialize(narrowed, this.archJson.relations, scope);
+      const filteredRelations = this.filterRelationsForScope(this.archJson.relations, scope);
+      return serialize(narrowed, filteredRelations, scope);
     }
     return narrowed;
+  }
+
+  /**
+   * Filter/transform relations based on the output scope.
+   *
+   * - scope='package': remove all call edges (method-level noise at package view)
+   * - scope='class': aggregate call edges into dependency edges; pairs already covered
+   *   by an existing dependency relation are NOT duplicated
+   * - scope='method': preserve all relations including call edges with sourceMethod/targetMethod
+   */
+  private filterRelationsForScope(relations: Relation[], scope: OutputScope): Relation[] {
+    if (scope === 'package') {
+      return relations.filter((r) => r.type !== 'call');
+    }
+    if (scope === 'class') {
+      const callEdges = relations.filter((r) => r.type === 'call');
+      const nonCallEdges = relations.filter((r) => r.type !== 'call');
+      const existingDeps = new Set(
+        nonCallEdges
+          .filter((r) => r.type === 'dependency')
+          .map((r) => `${r.source}:${r.target}`)
+      );
+      const aggregated: Relation[] = [];
+      const seen = new Set<string>();
+      for (const edge of callEdges) {
+        const key = `${edge.source}:${edge.target}`;
+        if (!existingDeps.has(key) && !seen.has(key)) {
+          seen.add(key);
+          aggregated.push({
+            id: `call-aggregated:${edge.source}:${edge.target}`,
+            type: 'dependency',
+            source: edge.source,
+            target: edge.target,
+            inferenceSource: 'call-aggregated',
+          });
+        }
+      }
+      return [...nonCallEdges, ...aggregated];
+    }
+    // scope='method': preserve all relations
+    return relations;
   }
 
   /** Return the scope entry associated with this engine. */
@@ -834,6 +876,92 @@ export class QueryEngine {
       default:
         return /\.(test|spec)\./;
     }
+  }
+
+  /**
+   * BFS over call edges to find all callers of a given entity (and optionally a specific method).
+   *
+   * @param entityName  Entity name or "ClassName.methodName" for method-level filtering.
+   * @param depth       BFS depth (1–5; clamped automatically).
+   */
+  findCallers(
+    entityName: string,
+    depth: number = 1
+  ): Array<{ callerEntity: string; callerMethod: string; callType: string; depth: number }> {
+    const maxDepth = Math.min(Math.max(depth, 1), 5);
+    const dotIdx = entityName.indexOf('.');
+    const [targetClass, targetMethod] =
+      dotIdx !== -1
+        ? [entityName.slice(0, dotIdx), entityName.slice(dotIdx + 1)]
+        : [entityName, undefined];
+
+    // Resolve target entity IDs from name
+    const targetIds = new Set(this.index.nameToIds[targetClass] ?? []);
+    if (targetIds.size === 0) return [];
+
+    const callEdges = this.archJson.relations.filter((r) => r.type === 'call');
+    const result: Array<{
+      callerEntity: string;
+      callerMethod: string;
+      callType: string;
+      depth: number;
+    }> = [];
+    const visited = new Set<string>();
+
+    interface QueueItem {
+      targetIds: Set<string>;
+      targetMethod: string | undefined;
+      currentDepth: number;
+    }
+
+    const queue: QueueItem[] = [{ targetIds, targetMethod, currentDepth: 1 }];
+
+    while (queue.length > 0) {
+      const item = queue.shift()!;
+      const { targetIds: tIds, targetMethod: tMethod, currentDepth } = item;
+      if (currentDepth > maxDepth) continue;
+
+      // Collect callers at this level grouped by (source, sourceMethod) to feed next BFS level
+      const nextTargetIds = new Set<string>();
+      const nextTargetMethods = new Map<string, string | undefined>();
+
+      for (const edge of callEdges) {
+        if (!tIds.has(edge.target)) continue;
+        if (tMethod && edge.targetMethod !== tMethod) continue;
+
+        const callerKey = `${edge.source}:${edge.sourceMethod ?? ''}@${currentDepth}`;
+        if (visited.has(callerKey)) continue;
+        visited.add(callerKey);
+
+        result.push({
+          callerEntity: edge.source,
+          callerMethod: edge.sourceMethod ?? '',
+          callType: edge.callType ?? 'direct',
+          depth: currentDepth,
+        });
+
+        if (currentDepth < maxDepth) {
+          nextTargetIds.add(edge.source);
+          // Track the source method to use as method filter at next depth
+          if (!nextTargetMethods.has(edge.source)) {
+            nextTargetMethods.set(edge.source, edge.sourceMethod);
+          } else {
+            // Multiple source methods from same entity → no method filter at next level
+            nextTargetMethods.set(edge.source, undefined);
+          }
+        }
+      }
+
+      if (nextTargetIds.size > 0 && currentDepth < maxDepth) {
+        queue.push({
+          targetIds: nextTargetIds,
+          targetMethod: undefined, // at deeper levels, don't restrict target method
+          currentDepth: currentDepth + 1,
+        });
+      }
+    }
+
+    return result;
   }
 
   private bfs(

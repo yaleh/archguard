@@ -11,6 +11,7 @@ import { InterfaceExtractor } from './interface-extractor';
 import { EnumExtractor } from './enum-extractor';
 import { RelationExtractor } from './relation-extractor';
 import { FunctionExtractor } from './function-extractor';
+import { CallEdgeExtractor } from './call-edge-extractor.js';
 import type { ArchJSON, Entity, Relation } from '@/types';
 
 /**
@@ -249,8 +250,15 @@ export class TypeScriptParser {
     // TypeChecker and cannot resolve cross-file types.
     const filtered = this.filterExternalRelations(merged);
 
-    // Deduplicate relations
-    const uniqueRelations = this.deduplicateRelations(filtered.relations);
+    // Extract method-level call edges (parseProject path only — full TypeChecker available)
+    const callEdgeExtractor = new CallEdgeExtractor(fsProject, entities, rootDir);
+    const callEdges = callEdgeExtractor.extractAll();
+    if (callEdges.length > 5000) {
+      console.warn(`[CallEdgeExtractor] Large call edge set: ${callEdges.length} edges.`);
+    }
+
+    // Deduplicate relations (call edges merged in before dedup)
+    const uniqueRelations = this.deduplicateRelations([...filtered.relations, ...callEdges]);
 
     return {
       ...filtered,
