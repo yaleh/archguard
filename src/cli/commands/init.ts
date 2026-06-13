@@ -4,8 +4,7 @@
 
 import { Command } from 'commander';
 import { ConfigLoader } from '../config-loader.js';
-import { ErrorHandler } from '../error-handler.js';
-import { ValidationError } from '../errors.js';
+import { ErrorHandler, ValidationError } from '../errors/index.js';
 import chalk from 'chalk';
 
 /**

@@ -7,7 +7,7 @@ import { DiagramOutputRouter } from '@/cli/processors/diagram-output-router.js';
 import type { OutputPaths } from '@/cli/processors/diagram-output-router.js';
 import type { GlobalConfig, DiagramConfig, MermaidConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { ProgressReporterLike } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import type { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 
 // Mock fs-extra

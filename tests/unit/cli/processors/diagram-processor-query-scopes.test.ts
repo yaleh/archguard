@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DiagramProcessor } from '@/cli/processors/diagram-processor.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
-import { ProgressReporter } from '@/cli/progress.js';
+import { ProgressReporter } from '@/cli/progress/index.js';
 import type { ArchJSON } from '@/types/index.js';
 
 // Mock dependencies (same pattern as diagram-processor.test.ts)

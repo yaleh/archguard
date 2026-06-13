@@ -2,7 +2,7 @@ import path from 'path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
-import { StderrReporter } from '../progress.js';
+import { StderrReporter } from '../progress/index.js';
 
 export interface AnalyzeToolContext {
   defaultRoot: string;

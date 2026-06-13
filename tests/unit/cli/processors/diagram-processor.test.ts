@@ -9,7 +9,7 @@ import { DiagramProcessor, deriveSubModuleArchJSON } from '@/cli/processors/diag
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import type { ILanguagePlugin } from '@/core/interfaces/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
-import { ProgressReporter } from '@/cli/progress.js';
+import { ProgressReporter } from '@/cli/progress/index.js';
 import type { ArchJSON } from '@/types/index.js';
 
 // Mock os so we can control cpus() in pool-size tests

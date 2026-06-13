@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { runAnalysis } from '@/cli/analyze/run-analysis.js';
-import { NoopReporter } from '@/cli/progress.js';
+import { NoopReporter } from '@/cli/progress/index.js';
 
 vi.mock('@/mermaid/render-worker-pool.js', () => ({
   MermaidRenderWorkerPool: class {

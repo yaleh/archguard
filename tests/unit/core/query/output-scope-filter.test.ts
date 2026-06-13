@@ -2,8 +2,8 @@
  * TDD tests for OutputScopeFilter — written before implementation.
  */
 import { describe, it, expect } from 'vitest';
-import { narrowEntity, narrowEntities } from '@/core/query/output-scope-filter.js';
-import type { Entity } from '@/types/index.js';
+import { narrowEntity, narrowEntities, filterRelationsForScope } from '@/core/query/output-scope-filter.js';
+import type { Entity, Relation } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -114,5 +114,70 @@ describe('narrowEntities', () => {
     // Neither should have members
     expect(results[0]).not.toHaveProperty('members');
     expect(results[1]).not.toHaveProperty('members');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterRelationsForScope
+// ---------------------------------------------------------------------------
+
+function makeRelation(id: string, source: string, target: string, type: Relation['type']): Relation {
+  return { id, source, target, type };
+}
+
+function makeCallRelation(id: string, source: string, target: string): Relation {
+  return { id, source, target, type: 'call', callType: 'direct' };
+}
+
+describe('filterRelationsForScope', () => {
+  const depAB = makeRelation('dep-ab', 'pkg.A', 'pkg.B', 'dependency');
+  const callAC = makeCallRelation('call-ac', 'pkg.A', 'pkg.C');
+  const inhAD = makeRelation('inh-ad', 'pkg.A', 'pkg.D', 'inheritance');
+
+  describe("scope = 'package'", () => {
+    it('removes all call edges', () => {
+      const result = filterRelationsForScope([depAB, callAC, inhAD], 'package');
+      expect(result.some((r) => r.type === 'call')).toBe(false);
+      expect(result).toHaveLength(2);
+    });
+
+    it('keeps dependency and inheritance edges', () => {
+      const result = filterRelationsForScope([depAB, callAC, inhAD], 'package');
+      expect(result.find((r) => r.id === 'dep-ab')).toBeDefined();
+      expect(result.find((r) => r.id === 'inh-ad')).toBeDefined();
+    });
+  });
+
+  describe("scope = 'class'", () => {
+    it('aggregates call into dependency with inferenceSource=call-aggregated', () => {
+      const result = filterRelationsForScope([callAC, inhAD], 'class');
+      const agg = result.find((r) => r.source === 'pkg.A' && r.target === 'pkg.C');
+      expect(agg).toBeDefined();
+      expect(agg?.type).toBe('dependency');
+      expect(agg?.inferenceSource).toBe('call-aggregated');
+    });
+
+    it('does not duplicate when existing dependency covers same pair', () => {
+      const callAB = makeCallRelation('call-ab', 'pkg.A', 'pkg.B');
+      const result = filterRelationsForScope([callAB, depAB], 'class');
+      const depsAB = result.filter((r) => r.source === 'pkg.A' && r.target === 'pkg.B');
+      expect(depsAB).toHaveLength(1);
+      expect(depsAB[0].id).toBe('dep-ab');
+    });
+  });
+
+  describe("scope = 'method'", () => {
+    it('preserves all relations including call edges', () => {
+      const result = filterRelationsForScope([depAB, callAC, inhAD], 'method');
+      expect(result).toHaveLength(3);
+    });
+  });
+
+  describe('edge case: empty array', () => {
+    it('returns empty array for all scopes', () => {
+      expect(filterRelationsForScope([], 'package')).toEqual([]);
+      expect(filterRelationsForScope([], 'class')).toEqual([]);
+      expect(filterRelationsForScope([], 'method')).toEqual([]);
+    });
   });
 });

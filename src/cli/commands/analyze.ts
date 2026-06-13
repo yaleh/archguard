@@ -14,8 +14,8 @@
 import { Command } from 'commander';
 import path from 'path';
 import os from 'os';
-import { ProgressReporter } from '../progress.js';
-import { ErrorHandler } from '../error-handler.js';
+import { ProgressReporter } from '../progress/index.js';
+import { ErrorHandler } from '../errors/index.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';

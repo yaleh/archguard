@@ -20,3 +20,5 @@ export type {
   PackageStatsResult,
   QueryEngineOptions,
 } from './query-engine.js';
+
+export * from './arch-metrics.js';

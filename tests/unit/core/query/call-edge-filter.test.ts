@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '@/core/query/query-engine.js';
 import { buildArchIndex } from '@/core/query/arch-index-builder.js';
+import { filterRelationsForScope } from '@/core/query/output-scope-filter.js';
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 
@@ -76,7 +77,7 @@ function makeEngine(relations: Relation[], entities: Entity[] = []): QueryEngine
 // Direct private method tests
 // ---------------------------------------------------------------------------
 
-describe('filterRelationsForScope (private method, via cast)', () => {
+describe('filterRelationsForScope (named export from output-scope-filter)', () => {
   // Test fixture: A->B call, A->C call, A->B dep, A->D inheritance
   const entityA = makeEntity('pkg.A', 'A');
   const entityB = makeEntity('pkg.B', 'B');
@@ -90,8 +91,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
 
   describe('scope=package', () => {
     it('removes all call edges', () => {
-      const engine = makeEngine([callAB, callAC, depAB, inheritAD], [entityA, entityB, entityC, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, callAC, depAB, inheritAD],
         'package'
       ) as Relation[];
@@ -99,8 +99,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
     });
 
     it('keeps non-call edges', () => {
-      const engine = makeEngine([callAB, callAC, depAB, inheritAD], [entityA, entityB, entityC, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, callAC, depAB, inheritAD],
         'package'
       ) as Relation[];
@@ -113,8 +112,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
   describe('scope=class', () => {
     it('aggregates call edges into type=dependency with inferenceSource=call-aggregated', () => {
       // A->C: no existing dep, should be aggregated
-      const engine = makeEngine([callAC, inheritAD], [entityA, entityC, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAC, inheritAD],
         'class'
       ) as Relation[];
@@ -125,8 +123,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
 
     it('does NOT duplicate if existing dependency already covers same pair', () => {
       // A->B: callAB + depAB both exist. Should NOT produce two dep-ab relations.
-      const engine = makeEngine([callAB, depAB], [entityA, entityB]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, depAB],
         'class'
       ) as Relation[];
@@ -138,8 +135,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
 
     it('multiple call edges with same source+target produce exactly ONE aggregated dependency', () => {
       const callAB2 = makeCallRelation('call-ab-2', 'pkg.A', 'pkg.B', 'methodP', 'methodQ');
-      const engine = makeEngine([callAB, callAB2], [entityA, entityB]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, callAB2],
         'class'
       ) as Relation[];
@@ -149,8 +145,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
     });
 
     it('keeps non-call edges unchanged', () => {
-      const engine = makeEngine([callAB, depAB, inheritAD], [entityA, entityB, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, depAB, inheritAD],
         'class'
       ) as Relation[];
@@ -161,8 +156,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
 
   describe('scope=method', () => {
     it('keeps all call edges intact with sourceMethod/targetMethod', () => {
-      const engine = makeEngine([callAB, callAC, inheritAD], [entityA, entityB, entityC, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, callAC, inheritAD],
         'method'
       ) as Relation[];
@@ -173,8 +167,7 @@ describe('filterRelationsForScope (private method, via cast)', () => {
     });
 
     it('keeps non-call edges', () => {
-      const engine = makeEngine([callAB, inheritAD], [entityA, entityB, entityD]);
-      const result = (engine as any).filterRelationsForScope(
+      const result = filterRelationsForScope(
         [callAB, inheritAD],
         'method'
       ) as Relation[];
@@ -184,23 +177,20 @@ describe('filterRelationsForScope (private method, via cast)', () => {
 
   describe('edge case: no call edges', () => {
     it('returns unchanged relations for package scope', () => {
-      const engine = makeEngine([depAB, inheritAD], [entityA, entityB, entityD]);
       const input = [depAB, inheritAD];
-      const result = (engine as any).filterRelationsForScope(input, 'package') as Relation[];
+      const result = filterRelationsForScope(input, 'package') as Relation[];
       expect(result).toHaveLength(2);
     });
 
     it('returns unchanged relations for class scope', () => {
-      const engine = makeEngine([depAB, inheritAD], [entityA, entityB, entityD]);
       const input = [depAB, inheritAD];
-      const result = (engine as any).filterRelationsForScope(input, 'class') as Relation[];
+      const result = filterRelationsForScope(input, 'class') as Relation[];
       expect(result).toHaveLength(2);
     });
 
     it('returns unchanged relations for method scope', () => {
-      const engine = makeEngine([depAB, inheritAD], [entityA, entityB, entityD]);
       const input = [depAB, inheritAD];
-      const result = (engine as any).filterRelationsForScope(input, 'method') as Relation[];
+      const result = filterRelationsForScope(input, 'method') as Relation[];
       expect(result).toHaveLength(2);
     });
   });

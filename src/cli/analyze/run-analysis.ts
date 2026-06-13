@@ -2,7 +2,7 @@ import path from 'path';
 import { ConfigLoader } from '../config-loader.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
-import type { ProgressReporterLike } from '../progress.js';
+import type { ProgressReporterLike } from '../progress/index.js';
 import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';

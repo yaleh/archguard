@@ -4,8 +4,8 @@
 
 import { Command } from 'commander';
 import path from 'path';
-import { CacheManager } from '../cache-manager.js';
-import { ErrorHandler } from '../error-handler.js';
+import { CacheManager } from '../cache/cache-manager.js';
+import { ErrorHandler } from '../errors/index.js';
 import { ConfigLoader } from '../config-loader.js';
 import { clearRenderHashes } from '../cache/diagram-manifest.js';
 import chalk from 'chalk';

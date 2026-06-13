@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { ParallelParser, ParsingMetrics } from '@/parser/parallel-parser';
 import { TypeScriptParser } from '@/parser/typescript-parser';
-import { CacheManager } from '@/cli/cache-manager';
+import { CacheManager } from '@/cli/cache/cache-manager.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';

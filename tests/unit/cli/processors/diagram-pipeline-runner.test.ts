@@ -33,7 +33,7 @@ import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { DiagramOutputRouter } from '@/cli/processors/diagram-output-router.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
-import type { ProgressReporterLike } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

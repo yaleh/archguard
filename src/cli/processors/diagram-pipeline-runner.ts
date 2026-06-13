@@ -18,7 +18,7 @@ import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { DiagramOutputRouter } from './diagram-output-router.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
-import type { ProgressReporterLike } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { DiagramResult } from './diagram-processor.js';

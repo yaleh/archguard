@@ -1,9 +1,54 @@
 /**
- * Error Handler - User-friendly error message formatting
+ * CLI Errors and Error Handler barrel
  */
 
 import chalk from 'chalk';
-import { ParseError, APIError, ValidationError, FileError } from './errors.js';
+import { ParseError } from '@/parser/errors.js';
+
+export { ParseError } from '@/parser/errors.js';
+
+/**
+ * API Error - when Claude API calls fail
+ */
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = 'APIError';
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+/**
+ * Validation Error - when configuration or options are invalid
+ */
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly suggestions: string[] = []
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+/**
+ * File Error - when file operations fail
+ */
+export class FileError extends Error {
+  constructor(
+    message: string,
+    public readonly filePath: string,
+    public readonly operation: 'read' | 'write' | 'delete' | 'create'
+  ) {
+    super(message);
+    this.name = 'FileError';
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
 
 export interface ErrorFormatOptions {
   color?: boolean;

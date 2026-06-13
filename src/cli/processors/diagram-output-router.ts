@@ -17,7 +17,7 @@ import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
 import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
 import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js';
 import type { ArchJSON, Relation } from '@/types/index.js';
-import type { ProgressReporterLike } from '@/cli/progress.js';
+import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
 import fs from 'fs-extra';
 import path from 'path';
