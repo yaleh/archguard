@@ -91,10 +91,13 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
     nodes: GoroutineNode[]
   ): void {
     for (const spawn of goSpawns) {
-      const isAnonymous = spawn.call.functionName === '<anonymous>';
+      const isAnonymous = !spawn.call.functionName || spawn.call.functionName === '<anonymous>';
+      const nodeName = isAnonymous
+        ? `<anonymous@${spawn.location.startLine}>`
+        : spawn.call.functionName;
       nodes.push({
         id: `${pkg.fullName}.${parentName}.spawn-${spawn.location.startLine}`,
-        name: spawn.call.functionName,
+        name: nodeName,
         type: 'spawned',
         spawnType: isAnonymous ? 'anonymous_func' : 'named_func',
         package: pkg.fullName,
@@ -116,7 +119,7 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
           relations.push({
             from: fromId,
             to: `${pkg.fullName}.${func.name}.spawn-${spawn.location.startLine}`,
-            spawnType: spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
+            spawnType: !spawn.call.functionName || spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
           });
         }
       }
@@ -131,7 +134,7 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
             relations.push({
               from: fromId,
               to: `${pkg.fullName}.${struct.name}.${method.name}.spawn-${spawn.location.startLine}`,
-              spawnType: spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
+              spawnType: !spawn.call.functionName || spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
             });
           }
         }
@@ -281,7 +284,7 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
       for (const { spawn, parentName } of allSpawns) {
         const nodeId = `${pkg.fullName}.${parentName}.spawn-${spawn.location.startLine}`;
         const targetName = spawn.call.functionName;
-        const isAnonymous = targetName === '<anonymous>';
+        const isAnonymous = !targetName || targetName === '<anonymous>';
 
         if (isAnonymous) {
           summaries.push({

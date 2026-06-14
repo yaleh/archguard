@@ -417,6 +417,45 @@ describe('ArchJsonMapper - mapMissingInterfaceEntities', () => {
 });
 
 // ---------------------------------------------------------------------------
+// A3: attributes.package on struct/interface entities
+// ---------------------------------------------------------------------------
+
+describe('ArchJsonMapper - attributes.package', () => {
+  const mapper = new ArchJsonMapper();
+
+  it('sets attributes.package on struct and interface entities', () => {
+    const pkg = makePkg({
+      name: 'hub',
+      fullName: 'pkg/hub',
+      structs: [
+        {
+          name: 'Server',
+          packageName: 'hub',
+          exported: true,
+          fields: [],
+          methods: [],
+          embeddedTypes: [],
+          location: loc(),
+        },
+      ],
+      interfaces: [makeIface('Store', 'hub')],
+    });
+
+    const entities = mapper.mapEntities([pkg]);
+
+    expect(entities).toHaveLength(2);
+    const struct = entities.find((e) => e.type === 'struct');
+    const iface = entities.find((e) => e.type === 'interface');
+
+    expect(struct?.attributes).toBeDefined();
+    expect(struct?.attributes?.['package']).toBe('pkg/hub');
+
+    expect(iface?.attributes).toBeDefined();
+    expect(iface?.attributes?.['package']).toBe('pkg/hub');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Plan-33: Import dependency edges
 // ---------------------------------------------------------------------------
 

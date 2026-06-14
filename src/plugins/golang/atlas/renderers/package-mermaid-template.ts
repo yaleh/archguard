@@ -23,8 +23,8 @@ export function renderPackageGraph(graph: PackageGraph): string {
   const inDegree = new Map<string, number>();
   for (const node of graph.nodes) inDegree.set(node.id, 0);
   for (const edge of graph.edges) {
-    if (edge.from !== edge.to) {
-      inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
+    if (edge.source !== edge.target) {
+      inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
     }
   }
 
@@ -73,9 +73,9 @@ export function renderPackageGraph(graph: PackageGraph): string {
   let edgeIndex = 0;
   output += '\n';
   for (const edge of graph.edges) {
-    const fromId = sanitizeId(edge.from);
-    const toId = sanitizeId(edge.to);
-    if (edge.from === edge.to) {
+    const fromId = sanitizeId(edge.source);
+    const toId = sanitizeId(edge.target);
+    if (edge.source === edge.target) {
       output += `  ${fromId} -.->|"⚠ self"| ${toId}\n`;
       edgeIndex += 1;
       continue;

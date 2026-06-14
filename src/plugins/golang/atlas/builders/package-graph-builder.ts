@@ -39,7 +39,7 @@ export class PackageGraphBuilder implements IAtlasBuilder<PackageGraph> {
 
   private buildEdges(rawData: GoRawData, nodes: PackageNode[]): PackageDependency[] {
     const nodeIds = new Set(nodes.map((n) => n.id));
-    const edgeMap = new Map<string, { from: string; to: string; count: number }>();
+    const edgeMap = new Map<string, { source: string; target: string; count: number }>();
 
     for (const pkg of rawData.packages) {
       const fromId = pkg.fullName ? `${rawData.moduleName}/${pkg.fullName}` : pkg.name;
@@ -57,14 +57,14 @@ export class PackageGraphBuilder implements IAtlasBuilder<PackageGraph> {
         if (existing) {
           existing.count++;
         } else {
-          edgeMap.set(key, { from: fromId, to: toId, count: 1 });
+          edgeMap.set(key, { source: fromId, target: toId, count: 1 });
         }
       }
     }
 
     return [...edgeMap.values()].map((e) => ({
-      from: e.from,
-      to: e.to,
+      source: e.source,
+      target: e.target,
       strength: e.count,
     }));
   }
@@ -80,9 +80,9 @@ export class PackageGraphBuilder implements IAtlasBuilder<PackageGraph> {
       graph.set(node.id, []);
     }
     for (const edge of edges) {
-      const neighbors = graph.get(edge.from);
+      const neighbors = graph.get(edge.source);
       if (neighbors) {
-        neighbors.push(edge.to);
+        neighbors.push(edge.target);
       }
     }
 

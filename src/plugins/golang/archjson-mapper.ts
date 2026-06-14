@@ -109,6 +109,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
       visibility: this.mapExportedVisibility(struct.exported),
       members,
       sourceLocation: struct.location,
+      attributes: { package: packageName },
     };
   }
 
@@ -136,6 +137,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
       visibility: this.mapExportedVisibility(iface.exported),
       members,
       sourceLocation: iface.location,
+      attributes: { package: packageName },
     };
   }
 

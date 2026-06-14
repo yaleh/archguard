@@ -245,7 +245,7 @@ describe('MermaidTemplates', () => {
         { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
         { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
       ],
-      edges: [{ from: 'a', to: 'b', strength: 1, importPath: 'b' }],
+      edges: [{ source: 'a', target: 'b', strength: 1, importPath: 'b' }],
     });
     const output = MermaidTemplates.renderPackageGraph(graph);
 
@@ -261,7 +261,7 @@ describe('MermaidTemplates', () => {
         { id: 'a', name: 'a', type: 'internal', fileCount: 1 },
         { id: 'b', name: 'b', type: 'internal', fileCount: 1 },
       ],
-      edges: [{ from: 'a', to: 'b', strength: 3, importPath: 'b' }],
+      edges: [{ source: 'a', target: 'b', strength: 3, importPath: 'b' }],
     });
     const output = MermaidTemplates.renderPackageGraph(graph);
 

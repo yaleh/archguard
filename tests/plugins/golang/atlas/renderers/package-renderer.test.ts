@@ -67,7 +67,7 @@ describe('renderPackageGraph — direct import', () => {
         makeNode('pkg/hub', 'pkg/hub', 'internal'),
         makeNode('pkg/store', 'pkg/store', 'internal'),
       ],
-      edges: [{ from: 'pkg/hub', to: 'pkg/store', strength: 1 }],
+      edges: [{ source: 'pkg/hub', target: 'pkg/store', strength: 1 }],
     });
     const result = renderPackageGraph(graph);
     expect(result).toContain('pkg_hub -->');
@@ -77,7 +77,7 @@ describe('renderPackageGraph — direct import', () => {
   it('self-loop edge renders as dashed arrow with warning label', () => {
     const graph = makePackageGraph({
       nodes: [makeNode('pkg/runtime', 'pkg/runtime', 'internal')],
-      edges: [{ from: 'pkg/runtime', to: 'pkg/runtime', strength: 1 }],
+      edges: [{ source: 'pkg/runtime', target: 'pkg/runtime', strength: 1 }],
       cycles: [{ packages: ['pkg/runtime'], severity: 'warning' }],
     });
     const result = renderPackageGraph(graph);
@@ -91,8 +91,8 @@ describe('renderPackageGraph — direct import', () => {
         makeNode('pkg/b', 'pkg/b', 'internal'),
       ],
       edges: [
-        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
-        { from: 'pkg/b', to: 'pkg/a', strength: 1 },
+        { source: 'pkg/a', target: 'pkg/b', strength: 1 },
+        { source: 'pkg/b', target: 'pkg/a', strength: 1 },
       ],
       cycles: [{ packages: ['pkg/a', 'pkg/b'], severity: 'error' }],
     });
@@ -109,8 +109,8 @@ describe('renderPackageGraph — direct import', () => {
         makeNode('pkg/c', 'pkg/c', 'internal'),
       ],
       edges: [
-        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
-        { from: 'pkg/a', to: 'pkg/c', strength: 8 },
+        { source: 'pkg/a', target: 'pkg/b', strength: 1 },
+        { source: 'pkg/a', target: 'pkg/c', strength: 8 },
       ],
     });
     const result = renderPackageGraph(graph);
@@ -126,9 +126,9 @@ describe('renderPackageGraph — direct import', () => {
         makeNode('pkg/adapter', 'pkg/adapter', 'internal', 1),
       ],
       edges: [
-        { from: 'cmd/server', to: 'pkg/hub', strength: 1 },
-        { from: 'pkg/hub', to: 'pkg/hub/store', strength: 2 },
-        { from: 'pkg/hub', to: 'pkg/adapter', strength: 1 },
+        { source: 'cmd/server', target: 'pkg/hub', strength: 1 },
+        { source: 'pkg/hub', target: 'pkg/hub/store', strength: 2 },
+        { source: 'pkg/hub', target: 'pkg/adapter', strength: 1 },
       ],
     });
     const result = renderPackageGraph(graph);

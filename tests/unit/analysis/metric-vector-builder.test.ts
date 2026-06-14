@@ -263,6 +263,54 @@ describe('buildMetricVector', () => {
     expect(vec.sccCount).toBe(0);
   });
 
+  // Test 10: Atlas package graph inDegree supersedes fileStats
+  it('uses Atlas package graph inDegree when goAtlas extension is present', () => {
+    // Package graph: A→B, C→B, C→D  → inDegrees: A=0, B=2, C=0, D=1
+    // maxInDegree from Atlas = 2
+    // giniInDegree from Atlas distribution [0,0,1,2] should differ from all-zero
+    const archJson = makeArchJson({
+      extensions: {
+        goAtlas: {
+          version: '2.0',
+          layers: {
+            package: {
+              nodes: [
+                { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 1 },
+                { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 2 },
+                { id: 'pkg/c', name: 'pkg/c', type: 'internal', fileCount: 1 },
+                { id: 'pkg/d', name: 'pkg/d', type: 'internal', fileCount: 1 },
+              ],
+              edges: [
+                { source: 'pkg/a', target: 'pkg/b', strength: 1 },
+                { source: 'pkg/c', target: 'pkg/b', strength: 2 },
+                { source: 'pkg/c', target: 'pkg/d', strength: 1 },
+              ],
+              cycles: [],
+            },
+          },
+          metadata: {
+            generatedAt: '2026-01-01T00:00:00Z',
+            generationStrategy: {
+              functionBodyStrategy: 'none',
+              detectedFrameworks: [],
+              followIndirectCalls: false,
+              goplsEnabled: false,
+            },
+            completeness: { package: 1, capability: 0, goroutine: 0, flow: 0 },
+            performance: { fileCount: 4, parseTime: 0, totalTime: 0, memoryUsage: 0 },
+          },
+        },
+      },
+    });
+
+    const vec = buildMetricVector(archJson, []);
+
+    // maxInDegree should be 2 (pkg/b has 2 incoming edges)
+    expect(vec.maxInDegree).toBe(2);
+    // giniInDegree should be computed from [0,0,1,2], not all zeros
+    expect(vec.giniInDegree).toBeGreaterThan(0);
+  });
+
   // Integration-style Test C: metrics undefined → all zero defaults, schemaVersion still 1
   it('[integration] undefined archJson.metrics produces all-zero defaults and schemaVersion=1', () => {
     const archJson = makeArchJson({

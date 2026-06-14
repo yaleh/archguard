@@ -522,8 +522,8 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
         { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'a', to: 'b', strength: 3 },
-        { from: 'a', to: 'c', strength: 3 },
+        { source: 'a', target: 'b', strength: 3 },
+        { source: 'a', target: 'c', strength: 3 },
       ],
       cycles: [],
     });
@@ -540,9 +540,9 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
         { id: 'd', name: 'd', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'a', to: 'b', strength: 1 },
-        { from: 'a', to: 'c', strength: 1 },
-        { from: 'a', to: 'd', strength: 8 },
+        { source: 'a', target: 'b', strength: 1 },
+        { source: 'a', target: 'c', strength: 1 },
+        { source: 'a', target: 'd', strength: 8 },
       ],
       cycles: [],
     });
@@ -563,9 +563,9 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
         { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'a', to: 'a', strength: 1 }, // index 0 — self-loop, not styled
-        { from: 'a', to: 'b', strength: 1 }, // index 1
-        { from: 'a', to: 'c', strength: 9 }, // index 2 — heavy
+        { source: 'a', target: 'a', strength: 1 }, // index 0 — self-loop, not styled
+        { source: 'a', target: 'b', strength: 1 }, // index 1
+        { source: 'a', target: 'c', strength: 9 }, // index 2 — heavy
       ],
       cycles: [{ packages: ['a'], severity: 'warning' }],
     });
@@ -584,8 +584,8 @@ describe('MermaidTemplates.renderPackageGraph — dynamic edge thickness', () =>
         { id: 'c', name: 'c', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'a', to: 'b', strength: 1 },
-        { from: 'a', to: 'c', strength: 6 },
+        { source: 'a', target: 'b', strength: 1 },
+        { source: 'a', target: 'c', strength: 6 },
       ],
       cycles: [],
     });
@@ -602,7 +602,7 @@ describe('MermaidTemplates.renderPackageGraph — cycles', () => {
   it('renders self-loop edge as dashed arrow with warning label', () => {
     const graph = makePackageGraph({
       nodes: [{ id: 'pkg/runtime', name: 'pkg/runtime', type: 'internal', fileCount: 2 }],
-      edges: [{ from: 'pkg/runtime', to: 'pkg/runtime', strength: 1 }],
+      edges: [{ source: 'pkg/runtime', target: 'pkg/runtime', strength: 1 }],
       cycles: [{ packages: ['pkg/runtime'], severity: 'warning' }],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -617,8 +617,8 @@ describe('MermaidTemplates.renderPackageGraph — cycles', () => {
         { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 },
       ],
       edges: [
-        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
-        { from: 'pkg/b', to: 'pkg/a', strength: 1 },
+        { source: 'pkg/a', target: 'pkg/b', strength: 1 },
+        { source: 'pkg/b', target: 'pkg/a', strength: 1 },
       ],
       cycles: [{ packages: ['pkg/a', 'pkg/b'], severity: 'error' }],
     });
@@ -630,7 +630,7 @@ describe('MermaidTemplates.renderPackageGraph — cycles', () => {
   it('does not apply :::cycle to self-loop nodes', () => {
     const graph = makePackageGraph({
       nodes: [{ id: 'pkg/runtime', name: 'pkg/runtime', type: 'internal', fileCount: 2 }],
-      edges: [{ from: 'pkg/runtime', to: 'pkg/runtime', strength: 1 }],
+      edges: [{ source: 'pkg/runtime', target: 'pkg/runtime', strength: 1 }],
       cycles: [{ packages: ['pkg/runtime'], severity: 'warning' }],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -684,7 +684,7 @@ describe('MermaidTemplates.renderPackageGraph — subgraph grouping', () => {
         { id: 'mod/pkg/hub', name: 'pkg/hub', type: 'internal', fileCount: 1 },
         { id: 'mod/pkg/hub/m', name: 'pkg/hub/m', type: 'internal', fileCount: 1 },
       ],
-      edges: [{ from: 'mod/pkg/hub', to: 'mod/pkg/hub/m', strength: 3 }],
+      edges: [{ source: 'mod/pkg/hub', target: 'mod/pkg/hub/m', strength: 3 }],
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -2132,8 +2132,8 @@ describe('renderPackageGraph — in-degree ordering', () => {
         { id: 'pkg/util', name: 'pkg/util', type: 'internal', fileCount: 1 } as PackageNode,
       ],
       edges: [
-        { from: 'pkg/leaf', to: 'pkg/hub', strength: 1 },
-        { from: 'pkg/util', to: 'pkg/hub', strength: 1 },
+        { source: 'pkg/leaf', target: 'pkg/hub', strength: 1 },
+        { source: 'pkg/util', target: 'pkg/hub', strength: 1 },
       ],
       cycles: [],
     });
@@ -2151,8 +2151,8 @@ describe('renderPackageGraph — in-degree ordering', () => {
       ],
       edges: [
         // Self-loop on pkg/a should NOT boost its in-degree
-        { from: 'pkg/a', to: 'pkg/a', strength: 5 },
-        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
+        { source: 'pkg/a', target: 'pkg/a', strength: 5 },
+        { source: 'pkg/a', target: 'pkg/b', strength: 1 },
       ],
       cycles: [{ packages: ['pkg/a'], severity: 'warning' }],
     });
@@ -2220,8 +2220,8 @@ describe('renderPackageGraph — legend subgraph', () => {
         { id: 'pkg/b', name: 'pkg/b', type: 'internal', fileCount: 1 } as PackageNode,
       ],
       edges: [
-        { from: 'pkg/a', to: 'pkg/b', strength: 1 },
-        { from: 'pkg/b', to: 'pkg/a', strength: 1 },
+        { source: 'pkg/a', target: 'pkg/b', strength: 1 },
+        { source: 'pkg/b', target: 'pkg/a', strength: 1 },
       ],
       cycles: [{ packages: ['pkg/a', 'pkg/b'], severity: 'error' }],
     });
@@ -2242,7 +2242,7 @@ describe('renderPackageGraph — legend subgraph', () => {
   it('omits legend_cycle when graph.cycles contains only self-loops (packages.length === 1)', () => {
     const graph = makePackageGraph({
       nodes: [{ id: 'pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode],
-      edges: [{ from: 'pkg/x', to: 'pkg/x', strength: 1 }],
+      edges: [{ source: 'pkg/x', target: 'pkg/x', strength: 1 }],
       cycles: [{ packages: ['pkg/x'], severity: 'warning' }],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -2276,7 +2276,7 @@ describe('renderPackageGraph — legend subgraph', () => {
         { id: 'a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
         { id: 'b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
       ],
-      edges: [{ from: 'a', to: 'b', strength: 1 }],
+      edges: [{ source: 'a', target: 'b', strength: 1 }],
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -2340,7 +2340,7 @@ describe('renderPackageGraph — legend subgraph', () => {
         { id: 'mod/a', name: 'a', type: 'internal', fileCount: 1 } as PackageNode,
         { id: 'mod/b', name: 'b', type: 'cmd', fileCount: 1 } as PackageNode,
       ],
-      edges: [{ from: 'mod/a', to: 'mod/b', strength: 1 }],
+      edges: [{ source: 'mod/a', target: 'mod/b', strength: 1 }],
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);
@@ -2462,7 +2462,7 @@ describe('renderPackageGraph — subgraph depth styles', () => {
         { id: 'mod/pkg/x', name: 'pkg/x', type: 'internal', fileCount: 1 } as PackageNode,
         { id: 'mod/pkg/y', name: 'pkg/y', type: 'internal', fileCount: 1 } as PackageNode,
       ],
-      edges: [{ from: 'mod/cmd/a', to: 'mod/pkg/x', strength: 1 }],
+      edges: [{ source: 'mod/cmd/a', target: 'mod/pkg/x', strength: 1 }],
       cycles: [],
     });
     const result = MermaidTemplates.renderPackageGraph(graph);

@@ -210,12 +210,59 @@ describe('PackageGraphBuilder', () => {
     const graph = await dedupeBuilder.build(rawData);
 
     // Only one edge should exist between pkg/a and pkg/b
-    const edgesFromA = graph.edges.filter((e) => e.from === `${moduleName}/pkg/a`);
+    const edgesFromA = graph.edges.filter((e) => e.source === `${moduleName}/pkg/a`);
     expect(edgesFromA).toHaveLength(1);
-    expect(edgesFromA[0].to).toBe(`${moduleName}/pkg/b`);
+    expect(edgesFromA[0].target).toBe(`${moduleName}/pkg/b`);
 
     // strength reflects the accumulated count of duplicate imports
     expect(edgesFromA[0].strength).toBe(2);
+  });
+
+  it('edges use source/target field names (not from/to)', async () => {
+    const initializedResolver = makeInitializedResolver();
+    const edgeFieldBuilder = new PackageGraphBuilder(initializedResolver);
+
+    const moduleName = 'github.com/test/project';
+    const rawData: GoRawData = {
+      packages: [
+        {
+          id: 'pkg/a',
+          name: 'a',
+          fullName: 'pkg/a',
+          dirPath: '/test/pkg/a',
+          sourceFiles: ['a.go'],
+          imports: [{ path: `${moduleName}/pkg/b` }],
+          structs: [],
+          interfaces: [],
+          functions: [],
+        },
+        {
+          id: 'pkg/b',
+          name: 'b',
+          fullName: 'pkg/b',
+          dirPath: '/test/pkg/b',
+          sourceFiles: ['b.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [],
+        },
+      ],
+      moduleRoot: '/test',
+      moduleName,
+    };
+
+    const graph = await edgeFieldBuilder.build(rawData);
+
+    expect(graph.edges).toHaveLength(1);
+    const edge = graph.edges[0];
+    // Must use source/target (not from/to)
+    expect(edge).toHaveProperty('source');
+    expect(edge).toHaveProperty('target');
+    expect((edge as any).from).toBeUndefined();
+    expect((edge as any).to).toBeUndefined();
+    expect(edge.source).toBe(`${moduleName}/pkg/a`);
+    expect(edge.target).toBe(`${moduleName}/pkg/b`);
   });
 
   it('should include package stats', async () => {

@@ -213,7 +213,7 @@ describe('GoroutineTopologyBuilder', () => {
 
     expect(topology.nodes).toHaveLength(2);
     const namedNode = topology.nodes.find((n) => n.name === 'namedWorker');
-    const anonNode = topology.nodes.find((n) => n.name === '<anonymous>');
+    const anonNode = topology.nodes.find((n) => n.name === '<anonymous@7>');
 
     expect(namedNode?.spawnType).toBe('named_func');
     expect(anonNode?.spawnType).toBe('anonymous_func');
@@ -581,6 +581,57 @@ describe('GoroutineTopologyBuilder', () => {
     expect(recvEdges).toHaveLength(0);
     const makeEdges = topology.channelEdges.filter((e) => e.edgeType === 'make');
     expect(makeEdges).toHaveLength(1);
+  });
+
+  it('assigns <anonymous@line> name to goroutines with empty functionName', async () => {
+    const rawData = makeRawData({
+      packages: [
+        {
+          id: 'pkg/worker',
+          name: 'worker',
+          fullName: 'pkg/worker',
+          dirPath: '/test/pkg/worker',
+          sourceFiles: ['worker.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [
+            {
+              name: 'StartWorkers',
+              packageName: 'worker',
+              parameters: [],
+              returnTypes: [],
+              exported: true,
+              location: { file: 'worker.go', startLine: 1, endLine: 20 },
+              body: {
+                calls: [],
+                goSpawns: [
+                  {
+                    call: {
+                      functionName: '', // empty string — the bug case
+                      location: { file: 'worker.go', startLine: 8, endLine: 8 },
+                    },
+                    location: { file: 'worker.go', startLine: 8, endLine: 8 },
+                  },
+                ],
+                channelOps: [],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const topology = await builder.build(rawData);
+
+    expect(topology.nodes).toHaveLength(1);
+    const node = topology.nodes[0];
+    // Must not be empty string
+    expect(node.name).not.toBe('');
+    // Must be formatted as <anonymous@LINE>
+    expect(node.name).toBe('<anonymous@8>');
+    // spawnType must be anonymous_func
+    expect(node.spawnType).toBe('anonymous_func');
   });
 });
 

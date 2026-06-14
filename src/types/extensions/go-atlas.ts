@@ -93,8 +93,8 @@ export interface PackageStats {
 }
 
 export interface PackageDependency {
-  from: string; // package id
-  to: string; // package id
+  source: string; // package id
+  target: string; // package id
   strength: number; // number of imported symbols
   transitive?: boolean;
 }
