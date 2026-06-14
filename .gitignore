@@ -60,3 +60,10 @@ archguard*.json
 /test-output/
 /.claude/review/
 /.claude/worktrees/
+
+# Experiment artifacts (large generated files)
+experiments/granularity/artifacts/embeddings/embeddings.json
+experiments/granularity/artifacts/embeddings/dim-input.json
+experiments/granularity/artifacts/embeddings/dim-lm-real.json
+experiments/granularity/artifacts/embeddings/dim-lm-real-input.json
+experiments/granularity/artifacts/embeddings/cache/
