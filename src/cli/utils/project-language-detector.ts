@@ -24,6 +24,7 @@ const SKIP_DIRS = new Set([
   '__pycache__',
   '.venv',
   'venv',
+  'experiments',
 ]);
 
 const LOW_PRIORITY_DIRS = new Set(['scripts', 'tests', 'test', 'examples', 'docs', 'doc', 'bench']);

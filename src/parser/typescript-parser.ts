@@ -4,6 +4,34 @@
  */
 
 import path from 'path';
+
+/**
+ * Filter out relations whose source or target encodes an experiments/ path.
+ *
+ * During self-analysis, the ts-morph TypeChecker may transitively resolve
+ * TypeScript files under experiments/ via import chains. Relations emitted
+ * for those files reference entity IDs that start with or contain
+ * "experiments/" as a path segment, but those entities are excluded from
+ * the parsed entity set (via excludePatterns). This causes dangling-relation
+ * warnings in the Mermaid generator.
+ *
+ * The filter matches:
+ *   - source or target starts with "experiments/" (repo-root-relative)
+ *   - source or target contains "/experiments/" (nested occurrence)
+ *
+ * Relations with "experiments" in a non-path-segment position (e.g.
+ * "src/runner/experiments-runner.ts.Runner") are intentionally kept.
+ *
+ * @param relations - Array of Relation objects to filter
+ * @returns New array with experiment-path relations removed
+ */
+export function filterExperimentRelations(relations: import('@/types').Relation[]): import('@/types').Relation[] {
+  return relations.filter((rel) => {
+    const isExperimentPath = (id: string): boolean =>
+      id.startsWith('experiments/') || id.includes('/experiments/');
+    return !isExperimentPath(rel.source) && !isExperimentPath(rel.target);
+  });
+}
 import { Project } from 'ts-morph';
 import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { ClassExtractor } from './class-extractor';
@@ -248,7 +276,15 @@ export class TypeScriptParser {
     // Note: cross-file relation resolution and external filtering apply here only.
     // The parseCode() path (ParallelParser) uses in-memory per-file projects without
     // TypeChecker and cannot resolve cross-file types.
-    const filtered = this.filterExternalRelations(merged);
+    const withoutExternals = this.filterExternalRelations(merged);
+
+    // Filter out relations whose source or target encodes an experiments/ path.
+    // The TypeChecker may transitively load experiment files via import chains;
+    // those entity IDs are excluded from the parsed set, causing dangling warnings.
+    const filtered = {
+      ...withoutExternals,
+      relations: filterExperimentRelations(withoutExternals.relations),
+    };
 
     // Extract method-level call edges (parseProject path only — full TypeChecker available)
     const callEdgeExtractor = new CallEdgeExtractor(fsProject, entities, rootDir);
