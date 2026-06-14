@@ -11,6 +11,7 @@ interface CallPattern {
   receiverContains?: string; // substring of GoCallExpr.receiverType for disambiguation
   protocol: string;
   httpMethod?: HttpMethod;
+  handlerArgIndex?: number; // index into call.args for handler extraction; defaults to 1
 }
 
 // Framework pattern table (keyed by DetectedFrameworks key)
@@ -56,6 +57,15 @@ const FRAMEWORK_PATTERNS: Record<string, CallPattern[]> = {
   cron: [
     { method: 'AddFunc', protocol: 'scheduler' },
     { method: 'AddJob', protocol: 'scheduler' },
+  ],
+  'mcp-go': [
+    { method: 'AddTool', protocol: 'mcp', handlerArgIndex: 1 },
+    { method: 'RegisterTool', protocol: 'mcp', handlerArgIndex: 1 },
+  ],
+  'mcp-gosdk': [
+    // package-level function: mcp.AddTool(server, tool, handler) — handler at args[2]
+    // receiverContains omitted (falsy) so receiver check is skipped for package-level calls
+    { method: 'AddTool', protocol: 'mcp', handlerArgIndex: 2 },
   ],
 };
 
@@ -222,6 +232,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
       detectedFrameworks,
       customFrameworks = [],
       entryPoints: manualEntryPoints = [],
+      entryPointPattern,
     } = options;
 
     // Collect active patterns from detected frameworks
@@ -243,6 +254,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
           methodSuffix: cp.methodSuffix,
           receiverContains: cp.receiverContains,
           protocol: cf.protocol,
+          handlerArgIndex: cp.handlerArgIndex,
         };
         activePatterns.push({ frameworkKey: cf.name, pattern });
       }
@@ -288,6 +300,12 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
       }
     }
 
+    // Secondary fallback: only fires when primary detection found no entry points
+    if (entryPoints.length === 0) {
+      const fallbackEntries = this.detectGenericToolRegistrations(rawData);
+      entryPoints.push(...fallbackEntries);
+    }
+
     // Manual entry points injection
     for (const manual of manualEntryPoints) {
       entryPoints.push({
@@ -301,7 +319,80 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
       });
     }
 
+    // entryPointPattern: regex scan across all calls (independent of primary detection)
+    if (entryPointPattern) {
+      let regex: RegExp;
+      try {
+        regex = new RegExp(entryPointPattern);
+      } catch {
+        regex = /(?!)/; // invalid regex → never-match
+      }
+      const scanCalls = (pkg: GoRawPackage, calls: GoCallExpr[]) => {
+        for (const call of calls) {
+          if (regex.test(call.functionName)) {
+            const rawHandler = call.args?.[1] ?? '';
+            const handler = rawHandler.startsWith('func(') ? '' : rawHandler;
+            entryPoints.push({
+              id: `entry-pattern-${pkg.fullName}-${call.location.startLine}`,
+              protocol: 'custom',
+              framework: 'entry-pattern',
+              path: call.args?.[0] ?? '',
+              handler,
+              middleware: [],
+              package: pkg.fullName,
+              location: { file: call.location.file, line: call.location.startLine },
+            });
+          }
+        }
+      };
+      for (const pkg of rawData.packages) {
+        for (const func of pkg.functions) {
+          if (func.body) scanCalls(pkg, func.body.calls);
+        }
+        for (const struct of pkg.structs || []) {
+          for (const m of struct.methods || []) {
+            if (m.body) scanCalls(pkg, m.body.calls);
+          }
+        }
+      }
+    }
+
     return entryPoints;
+  }
+
+  private detectGenericToolRegistrations(rawData: GoRawData): EntryPoint[] {
+    const GENERIC_SUFFIXES = ['AddTool', 'RegisterTool', 'AddCommand', 'HandleFunc'];
+    const found: EntryPoint[] = [];
+    const scan = (pkg: GoRawPackage, calls: GoCallExpr[]) => {
+      for (const call of calls) {
+        const name = call.functionName;
+        if (GENERIC_SUFFIXES.some((s) => name === s || name.endsWith(s))) {
+          const rawHandler = call.args?.[1] ?? '';
+          const handler = rawHandler.startsWith('func(') ? '' : rawHandler;
+          found.push({
+            id: `entry-generic-${pkg.fullName}-${call.location.startLine}`,
+            protocol: 'custom',
+            framework: 'generic-heuristic',
+            path: call.args?.[0] ?? '',
+            handler,
+            middleware: [],
+            package: pkg.fullName,
+            location: { file: call.location.file, line: call.location.startLine },
+          });
+        }
+      }
+    };
+    for (const pkg of rawData.packages) {
+      for (const func of pkg.functions) {
+        if (func.body) scan(pkg, func.body.calls);
+      }
+      for (const struct of pkg.structs || []) {
+        for (const method of struct.methods || []) {
+          if (method.body) scan(pkg, method.body.calls);
+        }
+      }
+    }
+    return found;
   }
 
   private matchCallPattern(
@@ -310,11 +401,12 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     activePatterns: Array<{ frameworkKey: string; pattern: CallPattern }>
   ): EntryPoint | null {
     const path = call.args?.[0] ?? '';
-    const rawHandler = call.args?.[1] ?? '';
-    const handler = rawHandler.startsWith('func(') ? '' : rawHandler;
 
     for (const { frameworkKey, pattern } of activePatterns) {
       if (matchesPattern(call, pattern)) {
+        const handlerArgIdx = pattern.handlerArgIndex ?? 1;
+        const rawHandler = call.args?.[handlerArgIdx] ?? '';
+        const handler = rawHandler.startsWith('func(') ? '' : rawHandler;
         return {
           id: `entry-${pkg.fullName}-${call.location.startLine}`,
           protocol: pattern.protocol,

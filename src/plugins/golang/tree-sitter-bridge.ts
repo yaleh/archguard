@@ -220,7 +220,7 @@ export class TreeSitterBridge {
       return true;
     }
 
-    // HTTP handler registration patterns (net/http and gin/echo/chi-style routers)
+    // Handler registration patterns (HTTP, MCP, CLI, and generic tool registrations)
     const httpHandlerNames = new Set([
       'HandleFunc',
       'Handle', // net/http ServeMux
@@ -229,6 +229,9 @@ export class TreeSitterBridge {
       'PUT',
       'DELETE',
       'PATCH', // gin / echo / chi
+      'AddTool',
+      'RegisterTool', // MCP server tool registration
+      'AddCommand', // cobra CLI
     ]);
 
     for (const callExpr of blockNode.descendantsOfType('call_expression')) {

@@ -340,3 +340,50 @@ describe('FrameworkDetector', () => {
     });
   });
 });
+
+// ─── Phase 102: MCP SDK detection ──────────────────────────────────────────
+
+describe('FrameworkDetector — MCP SDKs', () => {
+  const detector = new FrameworkDetector();
+  const emptyRawData = makeRawData();
+
+  it('detects mcp-go from go.mod requires', () => {
+    const moduleInfo = makeModuleInfo({
+      requires: [{ path: 'github.com/mark3labs/mcp-go', version: 'v0.8.0' }],
+    });
+    const result = detector.detect(moduleInfo, emptyRawData);
+    expect(result.has('mcp-go')).toBe(true);
+  });
+
+  it('detects mcp-go from import paths', () => {
+    const rawData = makeRawData({
+      packages: [
+        makePkg({
+          imports: [{ path: 'github.com/mark3labs/mcp-go/server' }],
+        }),
+      ],
+    });
+    const result = detector.detect(null, rawData);
+    expect(result.has('mcp-go')).toBe(true);
+  });
+
+  it('detects mcp-gosdk from go.mod requires', () => {
+    const moduleInfo = makeModuleInfo({
+      requires: [{ path: 'github.com/modelcontextprotocol/go-sdk', version: 'v0.1.0' }],
+    });
+    const result = detector.detect(moduleInfo, emptyRawData);
+    expect(result.has('mcp-gosdk')).toBe(true);
+  });
+
+  it('detects mcp-gosdk from import paths', () => {
+    const rawData = makeRawData({
+      packages: [
+        makePkg({
+          imports: [{ path: 'github.com/modelcontextprotocol/go-sdk/mcp' }],
+        }),
+      ],
+    });
+    const result = detector.detect(null, rawData);
+    expect(result.has('mcp-gosdk')).toBe(true);
+  });
+});

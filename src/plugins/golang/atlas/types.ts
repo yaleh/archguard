@@ -73,6 +73,7 @@ export interface FlowBuildOptions {
   customFrameworks?: CustomFrameworkConfig[];
   entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
+  entryPointPattern?: string; // regex matched against call.functionName; protocol: 'custom'
 }
 
 /**
@@ -110,6 +111,7 @@ export interface AtlasGenerationOptions {
   customFrameworks?: CustomFrameworkConfig[];
   entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
+  entryPointPattern?: string;
 }
 
 /**
@@ -127,4 +129,5 @@ export interface AtlasConfig {
   entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
   excludePatterns?: string[];
+  entryPointPattern?: string; // regex matched against call.functionName; protocol: 'custom'
 }

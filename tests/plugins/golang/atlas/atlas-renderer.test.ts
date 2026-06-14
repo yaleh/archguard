@@ -516,3 +516,98 @@ describe('MermaidTemplates', () => {
     expect(output).toContain('-->|go|');
   });
 });
+
+// ─── Phase 105: empty flow diagnostic ────────────────────────────────────────
+
+describe('AtlasRenderer — empty flow diagnostic', () => {
+  const renderer = new AtlasRenderer();
+
+  function makeFlowAtlas(entryPoints: any[]): GoAtlasExtension {
+    return makeAtlas({
+      layers: {
+        flow: {
+          entryPoints,
+          callChains: [],
+        },
+      },
+    });
+  }
+
+  it('emits diagnostic to stderr when flow layer has no entry points', async () => {
+    const stderrChunks: string[] = [];
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: any) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    };
+    try {
+      await renderer.render(makeFlowAtlas([]), 'flow', 'mermaid');
+    } finally {
+      process.stderr.write = origWrite;
+    }
+    const combined = stderrChunks.join('');
+    expect(combined).toContain('no entry points detected');
+    expect(combined).toContain('mcp-go');
+    expect(combined).toContain('mcp-gosdk');
+    expect(combined).toContain('--atlas-entry-pattern');
+  });
+
+  it('does NOT emit diagnostic when flow layer has entry points', async () => {
+    const stderrChunks: string[] = [];
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: any) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    };
+    try {
+      await renderer.render(
+        makeFlowAtlas([
+          {
+            id: 'e1',
+            protocol: 'http',
+            framework: 'net/http',
+            path: '/',
+            handler: 'fn',
+            middleware: [],
+            location: { file: 'f.go', line: 1 },
+          },
+        ]),
+        'flow',
+        'mermaid'
+      );
+    } finally {
+      process.stderr.write = origWrite;
+    }
+    expect(stderrChunks.join('')).toBe('');
+  });
+
+  it('emits generic-heuristic info when entry points use that framework', async () => {
+    const stderrChunks: string[] = [];
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: any) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    };
+    try {
+      await renderer.render(
+        makeFlowAtlas([
+          {
+            id: 'e1',
+            protocol: 'custom',
+            framework: 'generic-heuristic',
+            path: '',
+            handler: 'fn',
+            middleware: [],
+            location: { file: 'f.go', line: 1 },
+          },
+        ]),
+        'flow',
+        'mermaid'
+      );
+    } finally {
+      process.stderr.write = origWrite;
+    }
+    const combined = stderrChunks.join('');
+    expect(combined).toContain('generic heuristic');
+  });
+});

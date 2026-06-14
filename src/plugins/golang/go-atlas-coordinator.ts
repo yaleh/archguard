@@ -44,6 +44,7 @@ export class GoAtlasCoordinator {
         customFrameworks: options.customFrameworks,
         entryPoints: options.entryPoints,
         followIndirectCalls: options.followIndirectCalls,
+        entryPointPattern: options.entryPointPattern,
       }),
     ]);
 

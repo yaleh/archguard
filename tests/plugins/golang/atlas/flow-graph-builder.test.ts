@@ -1800,3 +1800,331 @@ describe('interface dispatch detection', () => {
     expect(edge.type).toBe('direct');
   });
 });
+
+// ─── Phase 101: handlerArgIndex support ────────────────────────────────────
+
+describe('matchCallPattern — handlerArgIndex', () => {
+  const builder = new FlowGraphBuilder();
+
+  function makeCallWithArgs(functionName: string, args: string[]) {
+    return makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              body: {
+                calls: [
+                  {
+                    functionName,
+                    args,
+                    location: { file: 'main.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  it('undefined handlerArgIndex defaults to args[1]', async () => {
+    const rawData = makeCallWithArgs('HandleFunc', ['/path', 'myHandler', 'extra']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].handler).toBe('myHandler');
+  });
+
+  it('handlerArgIndex: 2 extracts args[2] as handler', async () => {
+    const rawData = makeCallWithArgs('AddTool', ['server', 'toolDef', 'myMcpHandler']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      customFrameworks: [
+        {
+          name: 'test-mcp',
+          protocol: 'mcp',
+          patterns: [{ method: 'AddTool', handlerArgIndex: 2 }],
+        },
+      ],
+    });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].handler).toBe('myMcpHandler');
+  });
+
+  it('handlerArgIndex: 0 extracts args[0] as handler', async () => {
+    const rawData = makeCallWithArgs('Register', ['handlerFn', 'meta']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      customFrameworks: [
+        {
+          name: 'test-custom',
+          protocol: 'custom',
+          patterns: [{ method: 'Register', handlerArgIndex: 0 }],
+        },
+      ],
+    });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].handler).toBe('handlerFn');
+  });
+
+  it('handlerArgIndex: 1 (explicit) extracts args[1] as handler', async () => {
+    const rawData = makeCallWithArgs('HandleFunc', ['/path', 'myHandler']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      customFrameworks: [
+        {
+          name: 'test-fw',
+          protocol: 'http',
+          patterns: [{ method: 'HandleFunc', handlerArgIndex: 1 }],
+        },
+      ],
+    });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].handler).toBe('myHandler');
+  });
+
+  it('handlerArgIndex out of bounds returns empty string', async () => {
+    const rawData = makeCallWithArgs('Register', ['onlyArg']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      customFrameworks: [
+        {
+          name: 'test-custom',
+          protocol: 'custom',
+          patterns: [{ method: 'Register', handlerArgIndex: 5 }],
+        },
+      ],
+    });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].handler).toBe('');
+  });
+});
+
+// ─── Phase 102: MCP protocol entry points ──────────────────────────────────
+
+describe('FlowGraphBuilder — MCP protocol', () => {
+  const builder = new FlowGraphBuilder();
+
+  function makeMcpRawData(functionName: string, args: string[]) {
+    return makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              name: 'main',
+              body: {
+                calls: [
+                  {
+                    functionName,
+                    args,
+                    location: { file: 'main.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  it('detects AddTool call as mcp entry point when mcp-go is detected', async () => {
+    const rawData = makeMcpRawData('AddTool', ['toolDef', 'listFilesHandler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['mcp-go']) });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('mcp');
+    expect(result.entryPoints[0].framework).toBe('mcp-go');
+    expect(result.entryPoints[0].handler).toBe('listFilesHandler');
+  });
+
+  it('detects RegisterTool call as mcp entry point when mcp-go is detected', async () => {
+    const rawData = makeMcpRawData('RegisterTool', ['toolDef', 'readFileHandler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['mcp-go']) });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('mcp');
+    expect(result.entryPoints[0].handler).toBe('readFileHandler');
+  });
+
+  it('detects AddTool with handlerArgIndex:2 for mcp-gosdk', async () => {
+    const rawData = makeMcpRawData('AddTool', ['server', 'toolDef', 'sdkHandler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['mcp-gosdk']) });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('mcp');
+    expect(result.entryPoints[0].framework).toBe('mcp-gosdk');
+    expect(result.entryPoints[0].handler).toBe('sdkHandler');
+  });
+
+  it('does NOT create mcp-protocol entry points for AddTool without mcp framework', async () => {
+    // Without mcp-go in detectedFrameworks, primary detection misses it;
+    // generic heuristic may fire but with protocol:'custom', not 'mcp'
+    const rawData = makeMcpRawData('AddTool', ['toolDef', 'myHandler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    const mcpEntries = result.entryPoints.filter((e) => e.protocol === 'mcp');
+    expect(mcpEntries).toHaveLength(0);
+  });
+});
+
+// ─── Phase 103: generic heuristic fallback ──────────────────────────────────
+
+describe('FlowGraphBuilder — generic heuristic fallback', () => {
+  const builder = new FlowGraphBuilder();
+
+  function makeRawDataWithCall(functionName: string, args: string[]) {
+    return makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              name: 'setup',
+              body: {
+                calls: [
+                  {
+                    functionName,
+                    args,
+                    location: { file: 'main.go', startLine: 20, endLine: 20 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  it('activates when primary detection finds no entry points', async () => {
+    const rawData = makeRawDataWithCall('AddTool', ['toolDef', 'handler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('custom');
+    expect(result.entryPoints[0].framework).toBe('generic-heuristic');
+  });
+
+  it('detects AddTool suffix as custom entry point', async () => {
+    const rawData = makeRawDataWithCall('s.AddTool', ['toolDef', 'handler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].protocol).toBe('custom');
+  });
+
+  it('detects RegisterTool suffix as custom entry point', async () => {
+    const rawData = makeRawDataWithCall('RegisterTool', ['meta', 'fn']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints).toHaveLength(1);
+  });
+
+  it('detects AddCommand suffix as custom entry point', async () => {
+    const rawData = makeRawDataWithCall('rootCmd.AddCommand', ['subCmd']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints).toHaveLength(1);
+  });
+
+  it('detects HandleFunc suffix as custom entry point', async () => {
+    const rawData = makeRawDataWithCall('mux.HandleFunc', ['/path', 'handler']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints).toHaveLength(1);
+  });
+
+  it('does NOT activate when primary detection already found entry points', async () => {
+    const rawData = makeRawDataWithCall('AddTool', ['toolDef', 'handler']);
+    // mcp-go primary detection will find AddTool, so fallback should not trigger
+    const result = await builder.build(rawData, { detectedFrameworks: new Set(['mcp-go']) });
+    // Primary detection finds 1 entry, fallback should not add duplicate
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].framework).toBe('mcp-go');
+  });
+
+  it('marks generic entries with framework: generic-heuristic', async () => {
+    const rawData = makeRawDataWithCall('RegisterTool', ['meta', 'fn']);
+    const result = await builder.build(rawData, { detectedFrameworks: new Set() });
+    expect(result.entryPoints[0].framework).toBe('generic-heuristic');
+  });
+});
+
+// ─── Phase 104: entryPointPattern ───────────────────────────────────────────
+
+describe('FlowGraphBuilder — entryPointPattern', () => {
+  const builder = new FlowGraphBuilder();
+
+  function makeRawDataWithCall(functionName: string, args: string[]) {
+    return makeRawData({
+      packages: [
+        makePackage({
+          functions: [
+            makeFunction({
+              name: 'setup',
+              body: {
+                calls: [
+                  {
+                    functionName,
+                    args,
+                    location: { file: 'main.go', startLine: 30, endLine: 30 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  it('matches exact functionName against provided regex', async () => {
+    const rawData = makeRawDataWithCall('MyRegister', ['meta', 'fn']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPointPattern: 'MyRegister',
+    });
+    const patternEntries = result.entryPoints.filter((e) => e.framework === 'entry-pattern');
+    expect(patternEntries).toHaveLength(1);
+  });
+
+  it('does not match non-matching calls', async () => {
+    const rawData = makeRawDataWithCall('OtherFunc', ['meta', 'fn']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPointPattern: 'MyRegister',
+    });
+    const patternEntries = result.entryPoints.filter((e) => e.framework === 'entry-pattern');
+    expect(patternEntries).toHaveLength(0);
+  });
+
+  it('creates protocol: custom entry points', async () => {
+    const rawData = makeRawDataWithCall('MyRegister', ['meta', 'handler']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPointPattern: 'MyRegister',
+    });
+    const patternEntries = result.entryPoints.filter((e) => e.framework === 'entry-pattern');
+    expect(patternEntries[0].protocol).toBe('custom');
+  });
+
+  it('handles invalid regex without crash', async () => {
+    const rawData = makeRawDataWithCall('MyRegister', ['meta', 'fn']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPointPattern: '[invalid',
+    });
+    const patternEntries = result.entryPoints.filter((e) => e.framework === 'entry-pattern');
+    expect(patternEntries).toHaveLength(0);
+  });
+
+  it('pattern scan is independent of primary detection results', async () => {
+    const rawData = makeRawDataWithCall('HandleFunc', ['/path', 'handler']);
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(['net/http']),
+      entryPointPattern: 'HandleFunc',
+    });
+    // Primary detection finds via net/http; pattern scan adds a second entry
+    const patternEntries = result.entryPoints.filter((e) => e.framework === 'entry-pattern');
+    expect(patternEntries).toHaveLength(1);
+  });
+});

@@ -17,6 +17,8 @@ const GO_MOD_FRAMEWORK_MAP: ReadonlyMap<string, string> = new Map([
   ['github.com/IBM/sarama', 'sarama'],
   ['github.com/nats-io/nats.go', 'nats'],
   ['github.com/robfig/cron', 'cron'],
+  ['github.com/mark3labs/mcp-go', 'mcp-go'],
+  ['github.com/modelcontextprotocol/go-sdk', 'mcp-gosdk'],
 ]);
 
 // Extended import-path prefix table for Layer 2 (catches frameworks not in go.mod directly)

@@ -22,6 +22,7 @@ export interface CLIOptions {
   atlasNoTests?: boolean;
   atlasIncludeTests?: boolean;
   atlasProtocols?: string;
+  atlasEntryPattern?: string;
   level?: 'package' | 'class' | 'method';
   name?: string;
   includeTests?: boolean;

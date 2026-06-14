@@ -155,6 +155,10 @@ export function createAnalyzeCommand(): Command {
         '--atlas-protocols <protocols>',
         'Protocols to include in flow graph (comma-separated: http,grpc,cli,message,scheduler)'
       )
+      .option(
+        '--atlas-entry-pattern <pattern>',
+        'Regex matched against call.functionName for custom entry point detection (protocol: custom)'
+      )
 
       .action(analyzeCommandHandler)
   );

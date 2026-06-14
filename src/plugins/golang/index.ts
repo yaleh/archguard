@@ -369,6 +369,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       customFrameworks: atlasConfig?.customFrameworks,
       entryPoints: atlasConfig?.entryPoints,
       followIndirectCalls: atlasConfig?.followIndirectCalls,
+      entryPointPattern: atlasConfig?.entryPointPattern,
     });
 
     // Map call relations from the flow graph (must happen after atlas is built)

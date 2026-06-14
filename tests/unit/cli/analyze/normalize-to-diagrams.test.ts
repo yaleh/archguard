@@ -325,3 +325,38 @@ describe('filterByLevels', () => {
     expect(filterByLevels(withUndefined, ['package'])).toHaveLength(0);
   });
 });
+
+// ─── Phase 104: atlasEntryPattern → AtlasConfig.entryPointPattern ───────────
+
+describe('normalizeToDiagrams — atlasEntryPattern wiring', () => {
+  const root = '/project';
+
+  it('maps atlasEntryPattern to AtlasConfig.entryPointPattern (with --sources)', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/src'], lang: 'go', atlasEntryPattern: 'MyRegister' }),
+      root
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].languageSpecific?.atlas?.entryPointPattern).toBe('MyRegister');
+  });
+
+  it('maps atlasEntryPattern to AtlasConfig.entryPointPattern (without --sources)', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ lang: 'go', atlasEntryPattern: 'AddTool|Register' }),
+      root
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].languageSpecific?.atlas?.entryPointPattern).toBe('AddTool|Register');
+  });
+
+  it('entryPointPattern is undefined when atlasEntryPattern not set', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ lang: 'go' }),
+      root
+    );
+    expect(result[0].languageSpecific?.atlas?.entryPointPattern).toBeUndefined();
+  });
+});

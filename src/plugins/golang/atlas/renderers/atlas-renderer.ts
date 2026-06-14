@@ -45,10 +45,37 @@ export class AtlasRenderer {
         if (!atlas.layers.goroutine) throw new Error('Goroutine layer not available');
         content = MermaidTemplates.renderGoroutineTopology(atlas.layers.goroutine);
         break;
-      case 'flow':
+      case 'flow': {
         if (!atlas.layers.flow) throw new Error('Flow layer not available');
-        content = MermaidTemplates.renderFlowGraph(atlas.layers.flow);
+        const flow = atlas.layers.flow;
+
+        if (flow.entryPoints.length === 0) {
+          const searched = [
+            'net/http', 'gin', 'gorilla/mux', 'echo', 'chi', 'cobra',
+            'grpc', 'kafka-go', 'sarama', 'nats', 'cron',
+            'mcp-go', 'mcp-gosdk',
+          ].join(', ');
+          process.stderr.write(
+            `ℹ  Flow layer: no entry points detected.\n` +
+            `   Frameworks searched: ${searched}\n` +
+            `   Tip: use --atlas-entry-pattern '<regex>' to specify custom entry points.\n` +
+            `   Tip: use --atlas-protocols to limit to a specific protocol (http, grpc, cli, mcp, message).\n`
+          );
+        } else {
+          const hasGenericHeuristic = flow.entryPoints.some(
+            (e) => e.framework === 'generic-heuristic'
+          );
+          if (hasGenericHeuristic) {
+            process.stderr.write(
+              `ℹ  Flow: entry points found via generic heuristic (not from a detected framework).\n` +
+              `   Verify with --atlas-entry-pattern or --atlas-protocols if results are noisy.\n`
+            );
+          }
+        }
+
+        content = MermaidTemplates.renderFlowGraph(flow);
         break;
+      }
       default:
         throw new Error(`Unknown layer: ${layer}`);
     }
