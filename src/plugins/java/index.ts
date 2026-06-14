@@ -150,6 +150,11 @@ export class JavaPlugin implements ILanguagePlugin {
     const rawRelations = this.mapper.mapRelations(packageList);
     const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
+    // Add call graph relations (Phase 94)
+    const entityNameSet = new Set(entities.map((e) => e.name));
+    const callRelations = this.mapper.mapCallRelations(packageList, entityNameSet);
+    relations.push(...callRelations);
+
     // Add Maven cross-module dependency relations
     try {
       const crossModuleDeps = await new MavenCrossModuleParser().parse(workspaceRoot);

@@ -36,6 +36,15 @@ export interface PythonRawParameter {
 }
 
 /**
+ * Python call site (self.field.method() invocation from within a method body)
+ */
+export interface PythonRawCallSite {
+  receiverField: string;   // field name after self. (e.g. "payment_service")
+  methodName: string;      // called method name (e.g. "charge")
+  callerMethod: string;    // enclosing method name
+}
+
+/**
  * Python method
  */
 export interface PythonRawMethod {
@@ -51,6 +60,7 @@ export interface PythonRawMethod {
   docstring?: string;
   startLine: number;
   endLine: number;
+  callSites?: PythonRawCallSite[];
 }
 
 /**

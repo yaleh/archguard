@@ -17,6 +17,7 @@ import type {
   PythonRawDecorator,
   PythonRawImport,
   PythonRawAttribute,
+  PythonRawCallSite,
 } from './types.js';
 
 export class TreeSitterBridge {
@@ -209,6 +210,9 @@ export class TreeSitterBridge {
     const body = node.childForFieldName('body');
     const docstring = this.extractDocstring(body, code);
 
+    // Extract call sites from method body
+    const callSites = body ? this.extractCallSites(body, code, methodName) : undefined;
+
     return {
       name: methodName,
       parameters,
@@ -222,7 +226,61 @@ export class TreeSitterBridge {
       docstring,
       startLine: node.startPosition.row + 1,
       endLine: node.endPosition.row + 1,
+      callSites: callSites && callSites.length > 0 ? callSites : undefined,
     };
+  }
+
+  /**
+   * Extract call sites from a method body.
+   * Only captures self.field.method() patterns (one-level field access via self).
+   * Skips standalone function calls and same-class self.method() calls.
+   */
+  private extractCallSites(
+    bodyNode: Parser.SyntaxNode,
+    code: string,
+    callerMethodName: string
+  ): PythonRawCallSite[] {
+    const sites: PythonRawCallSite[] = [];
+
+    const calls = bodyNode.descendantsOfType('call');
+    for (const call of calls) {
+      const funcNode = call.childForFieldName('function');
+      if (!funcNode) continue;
+
+      // Must be an attribute access (e.g. self.payment_service.charge)
+      if (funcNode.type !== 'attribute') continue;
+
+      const objectNode = funcNode.childForFieldName('object');
+      const attrNode = funcNode.childForFieldName('attribute');
+      if (!objectNode || !attrNode) continue;
+
+      const methodName = code.substring(attrNode.startIndex, attrNode.endIndex);
+
+      // Must be self.field pattern (receiver is an attribute node whose object is 'self')
+      // e.g. self.payment_service → objectNode.type === 'attribute', object='self', attribute='payment_service'
+      // If objectNode is not 'attribute', it's a direct self call or standalone → skip
+      if (objectNode.type !== 'attribute') {
+        continue;
+      }
+
+      // Check the inner object is 'self'
+      const innerObject = objectNode.childForFieldName('object');
+      const innerAttr = objectNode.childForFieldName('attribute');
+      if (!innerObject || !innerAttr) continue;
+
+      const innerObjectText = code.substring(innerObject.startIndex, innerObject.endIndex);
+      if (innerObjectText !== 'self') continue;
+
+      const fieldName = code.substring(innerAttr.startIndex, innerAttr.endIndex);
+
+      sites.push({
+        receiverField: fieldName,
+        methodName,
+        callerMethod: callerMethodName,
+      });
+    }
+
+    return sites;
   }
 
   /**

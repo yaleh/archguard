@@ -16,6 +16,7 @@ import type {
   PythonRawImport,
   PythonRawAttribute,
 } from './types.js';
+// PythonRawCallSite is not explicitly imported here but used via PythonRawMethod.callSites
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
 import type { ImportRelation } from './import-extractor.js';
 
@@ -80,6 +81,46 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
       relations,
       ...(workspaceRoot !== undefined ? { workspaceRoot } : {}),
     };
+  }
+
+  /**
+   * Map call sites to call-type Relations.
+   *
+   * @param modules - All parsed Python modules
+   * @param entityFieldNames - Set of field names (self.<field>) that correspond to project entities.
+   *   Call sites targeting fields not in this set are skipped.
+   * @returns Array of call relations (type='call', inferenceSource='tree-sitter', confidence=0.4)
+   */
+  mapCallRelations(modules: PythonRawModule[], entityFieldNames: Set<string>): Relation[] {
+    const relations: Relation[] = [];
+    const seen = new Set<string>();
+
+    for (const module of modules) {
+      for (const cls of module.classes) {
+        // Derive entity ID the same way mapClass does (no workspaceRoot available here)
+        const sourceId = this.generateEntityId(cls.name, module.name, cls.filePath);
+        for (const method of cls.methods) {
+          for (const site of method.callSites ?? []) {
+            if (!entityFieldNames.has(site.receiverField)) continue;
+            const key = `call:${sourceId}.${method.name}:${site.receiverField}.${site.methodName}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            relations.push({
+              id: key,
+              type: 'call',
+              source: sourceId,
+              target: site.receiverField,
+              sourceMethod: method.name,
+              targetMethod: site.methodName,
+              callType: 'indirect',
+              confidence: 0.4,
+              inferenceSource: 'tree-sitter',
+            });
+          }
+        }
+      }
+    }
+    return relations;
   }
 
   /**

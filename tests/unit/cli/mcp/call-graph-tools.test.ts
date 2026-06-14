@@ -176,6 +176,6 @@ describe('archguard_find_callers — handler', () => {
     const cb = tools.get('archguard_find_callers')!;
 
     const result = await cb({ entityName: 'B', depth: 1 });
-    expect(result.content[0].text).toContain('Error');
+    expect(result.content[0].text).toContain('archguard_analyze');
   });
 });

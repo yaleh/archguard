@@ -17,6 +17,7 @@ import type {
   JavaRawConstructor,
   JavaRawParameter,
   JavaRawAnnotation,
+  JavaRawCallSite,
 } from './types.js';
 
 export class TreeSitterBridge {
@@ -132,23 +133,46 @@ export class TreeSitterBridge {
       }
     }
 
-    // Extract class body
+    // Extract class body — two-pass:
+    // Pass 1: collect fields and constructor params to build fieldTypeMap
+    // Pass 2: extract methods with call sites resolved against fieldTypeMap
     const bodyNode = node.childForFieldName('body');
     const fields: JavaRawField[] = [];
     const methods: JavaRawMethod[] = [];
     const constructors: JavaRawConstructor[] = [];
 
     if (bodyNode) {
+      // Pass 1: collect fields
       for (const child of bodyNode.namedChildren) {
         if (child.type === 'field_declaration') {
           const extracted = this.extractFields(child, code);
           fields.push(...extracted);
-        } else if (child.type === 'method_declaration') {
-          const method = this.extractMethod(child, code);
-          if (method) methods.push(method);
         } else if (child.type === 'constructor_declaration') {
           const constructor = this.extractConstructor(child, code);
           if (constructor) constructors.push(constructor);
+        }
+      }
+
+      // Build fieldTypeMap: field/param name → simple type name
+      const fieldTypeMap = new Map<string, string>();
+      for (const field of fields) {
+        const simpleType = this.extractSimpleTypeName(field.type);
+        fieldTypeMap.set(field.name, simpleType);
+      }
+      // Also add constructor parameters (often mirror field types)
+      for (const ctor of constructors) {
+        for (const param of ctor.parameters) {
+          if (!fieldTypeMap.has(param.name)) {
+            fieldTypeMap.set(param.name, this.extractSimpleTypeName(param.type));
+          }
+        }
+      }
+
+      // Pass 2: extract methods with call sites
+      for (const child of bodyNode.namedChildren) {
+        if (child.type === 'method_declaration') {
+          const method = this.extractMethod(child, code, fieldTypeMap);
+          if (method) methods.push(method);
         }
       }
     }
@@ -304,7 +328,11 @@ export class TreeSitterBridge {
   /**
    * Extract method declaration
    */
-  private extractMethod(node: Parser.SyntaxNode, code: string): JavaRawMethod | null {
+  private extractMethod(
+    node: Parser.SyntaxNode,
+    code: string,
+    fieldTypeMap: Map<string, string> = new Map()
+  ): JavaRawMethod | null {
     const nameNode = node.childForFieldName('name');
     if (!nameNode) return null;
 
@@ -322,6 +350,12 @@ export class TreeSitterBridge {
     const parametersNode = node.childForFieldName('parameters');
     const parameters = parametersNode ? this.extractParameters(parametersNode, code) : [];
 
+    // Extract call sites from method body
+    const bodyNode = node.childForFieldName('body');
+    const callSites = bodyNode
+      ? this.extractCallSites(bodyNode, code, name, fieldTypeMap)
+      : undefined;
+
     return {
       name,
       returnType,
@@ -329,7 +363,84 @@ export class TreeSitterBridge {
       modifiers,
       annotations,
       isAbstract,
+      callSites: callSites && callSites.length > 0 ? callSites : undefined,
     };
+  }
+
+  /**
+   * Extract call sites (method_invocation nodes) from a method body.
+   * Only captures external-object calls (receiver is a field/local variable, not `this`).
+   */
+  private extractCallSites(
+    bodyNode: Parser.SyntaxNode,
+    code: string,
+    callerMethodName: string,
+    fieldTypeMap: Map<string, string>
+  ): JavaRawCallSite[] {
+    const sites: JavaRawCallSite[] = [];
+
+    const invocations = bodyNode.descendantsOfType('method_invocation');
+    for (const inv of invocations) {
+      // The 'object' field is the receiver expression (e.g. "paymentService" or "this")
+      const objectNode = inv.childForFieldName('object');
+      if (!objectNode) {
+        // No explicit receiver → implicit this → skip
+        continue;
+      }
+
+      const receiverText = code.substring(objectNode.startIndex, objectNode.endIndex);
+
+      // Skip `this` or `this.something` (same-class calls)
+      if (receiverText === 'this' || receiverText.startsWith('this.')) {
+        continue;
+      }
+
+      // Skip chained calls like `foo.bar()` where objectNode itself is a method_invocation
+      // We only handle single-level field access (simple identifier receiver)
+      if (objectNode.type === 'method_invocation') {
+        continue;
+      }
+
+      // Get method name node
+      const methodNameNode = inv.childForFieldName('name');
+      if (!methodNameNode) continue;
+      const methodName = code.substring(methodNameNode.startIndex, methodNameNode.endIndex);
+
+      // Resolve receiver type from field map
+      const receiverType = fieldTypeMap.get(receiverText);
+
+      sites.push({
+        receiverName: receiverText,
+        receiverType,
+        methodName,
+        callerMethod: callerMethodName,
+      });
+    }
+
+    return sites;
+  }
+
+  /**
+   * Extract simple type name (strip generics, arrays, qualifiers)
+   * e.g. "List<PaymentService>" → "List", "PaymentService[]" → "PaymentService", "PaymentService" → "PaymentService"
+   */
+  private extractSimpleTypeName(type: string): string {
+    // Strip generic parameters
+    const genericIdx = type.indexOf('<');
+    if (genericIdx > 0) {
+      type = type.substring(0, genericIdx);
+    }
+    // Strip array brackets
+    const arrayIdx = type.indexOf('[');
+    if (arrayIdx > 0) {
+      type = type.substring(0, arrayIdx);
+    }
+    // Strip package qualifiers (take last segment)
+    const dotIdx = type.lastIndexOf('.');
+    if (dotIdx >= 0) {
+      type = type.substring(dotIdx + 1);
+    }
+    return type.trim();
   }
 
   /**

@@ -391,9 +391,48 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   }
 
   /**
+   * Map call sites to call-type Relations.
+   *
+   * @param packages - All parsed Java packages
+   * @param entityNameSet - Set of simple class names that are project entities
+   *   (call sites targeting types not in this set are skipped)
+   * @returns Array of call relations (type='call', inferenceSource='tree-sitter')
+   */
+  mapCallRelations(packages: JavaRawPackage[], entityNameSet: Set<string>): Relation[] {
+    const relations: Relation[] = [];
+    const seen = new Set<string>();
+
+    for (const pkg of packages) {
+      for (const cls of pkg.classes) {
+        const sourceId = this.createEntityId(cls.packageName, cls.name);
+        for (const method of cls.methods) {
+          for (const site of method.callSites ?? []) {
+            if (!site.receiverType) continue;
+            if (!entityNameSet.has(site.receiverType)) continue;
+            const targetId = this.resolveTypeId(site.receiverType, cls.packageName);
+            const key = `call:${sourceId}.${method.name}:${targetId}.${site.methodName}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            relations.push({
+              ...this.createExplicitRelation('call', sourceId, targetId),
+              id: key,
+              sourceMethod: method.name,
+              targetMethod: site.methodName,
+              callType: 'direct',
+              confidence: 0.6,
+              inferenceSource: 'tree-sitter',
+            });
+          }
+        }
+      }
+    }
+    return relations;
+  }
+
+  /**
    * Map Java modifiers to ArchJSON visibility
    */
-  private mapVisibility(modifiers: string[]) {
+  private mapVisibility(modifiers: string[]): ReturnType<typeof this.mapModifierVisibility> {
     // Java package-private (default) is normalized to public for current ArchJSON output.
     return this.mapModifierVisibility(modifiers, 'public');
   }
@@ -408,7 +447,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   /**
    * Resolve type ID (handle both simple and fully qualified names)
    */
-  private resolveTypeId(typeName: string, currentPackage: string): string {
+  protected resolveTypeId(typeName: string, currentPackage: string): string {
     // If already fully qualified (contains dot), use as-is
     if (typeName.includes('.')) {
       return typeName;

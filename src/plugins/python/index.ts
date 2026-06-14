@@ -177,7 +177,28 @@ export class PythonPlugin implements ILanguagePlugin {
     const importRelations = this.extractImportRelations(modules, workspaceRoot);
 
     // Map all modules to ArchJSON, propagating workspaceRoot for stable IDs and path resolution
-    return this.archJsonMapper.mapModules(modules, workspaceRoot, importRelations);
+    const result = this.archJsonMapper.mapModules(modules, workspaceRoot, importRelations);
+
+    // Add call graph relations (Phase 95)
+    // Collect all self.field receiver names from all modules as the field name universe
+    const allReceiverFields = new Set<string>();
+    for (const mod of modules) {
+      for (const cls of mod.classes) {
+        for (const method of cls.methods) {
+          for (const site of (method.callSites ?? [])) {
+            allReceiverFields.add(site.receiverField);
+          }
+        }
+      }
+    }
+    if (allReceiverFields.size > 0) {
+      const callRelations = this.archJsonMapper.mapCallRelations(modules, allReceiverFields);
+      if (callRelations.length > 0) {
+        return { ...result, relations: [...result.relations, ...callRelations] };
+      }
+    }
+
+    return result;
   }
 
   /**

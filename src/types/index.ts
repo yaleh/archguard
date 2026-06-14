@@ -214,7 +214,7 @@ export interface Relation {
   readonly source: string;
   readonly target: string;
   confidence?: number;
-  inferenceSource?: 'explicit' | 'inferred' | 'gopls' | 'call-aggregated';
+  inferenceSource?: 'explicit' | 'inferred' | 'gopls' | 'call-aggregated' | 'tree-sitter';
 
   /**
    * Method-level call edge fields. Only populated when `type === 'call'`.
