@@ -5,7 +5,7 @@ import { ArchJSON } from '@/types/index.js';
 describe('EnhancedTypeSanitizer', () => {
   // 创建一个 mock ArchJSON 用于测试
   const createMockArchJson = (entities: any[] = []): ArchJSON => ({
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     entities,
     relations: [],

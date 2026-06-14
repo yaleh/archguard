@@ -77,7 +77,7 @@ const derivedScope: QueryScopeEntry = {
 
 function makeArchJson(): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -175,7 +175,7 @@ describe('createQueryCommand', () => {
 describe('query --list-scopes', () => {
   it('reads manifest and displays scopes', async () => {
     vi.mocked(readManifest).mockResolvedValue({
-      version: '1.0',
+      version: '1.1',
       generatedAt: '2026-01-01T00:00:00Z',
       scopes: [parsedScope, derivedScope],
     });

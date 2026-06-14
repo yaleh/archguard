@@ -15,7 +15,7 @@ describe('StructuralValidator', () => {
   });
 
   const createMockArchJSON = (entities: any[] = [], relations: any[] = []): ArchJSON => ({
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: ['test.ts'],

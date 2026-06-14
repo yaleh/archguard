@@ -14,7 +14,7 @@ describe('ArchJSONAggregator', () => {
 
   // Sample test data
   const createTestArchJSON = (): ArchJSON => ({
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2024-01-01T00:00:00.000Z',
     sourceFiles: ['src/services/user.ts', 'src/repositories/user-repo.ts'],
@@ -363,7 +363,7 @@ describe('ArchJSONAggregator', () => {
 
     it('groups Java Maven files by module name instead of main/test directories', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'java',
         timestamp: '2026-03-08T00:00:00.000Z',
         workspaceRoot: '/workspace/Jlama',
@@ -641,7 +641,7 @@ describe('ArchJSONAggregator', () => {
   describe('aggregateToPackageLevel (Kotlin)', () => {
     it('produces package entities with Kotlin logical package names', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'kotlin',
         timestamp: '2026-05-02T00:00:00.000Z',
         workspaceRoot: '/workspace',
@@ -684,7 +684,7 @@ describe('ArchJSONAggregator', () => {
 
     it('maps Kotlin cross-package relations to package relations', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'kotlin',
         timestamp: '2026-05-02T00:00:00.000Z',
         workspaceRoot: '/workspace',
@@ -738,7 +738,7 @@ describe('ArchJSONAggregator', () => {
 
     it('filters out same-package Kotlin relations', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'kotlin',
         timestamp: '2026-05-02T00:00:00.000Z',
         workspaceRoot: '/workspace',
@@ -930,7 +930,7 @@ describe('ArchJSONAggregator', () => {
 
     it('uses parent directory when workspaceRoot is set and path is absolute', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -951,7 +951,7 @@ describe('ArchJSONAggregator', () => {
 
     it('does NOT use workspaceRoot for relative paths (TypeScript fallback)', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -970,7 +970,7 @@ describe('ArchJSONAggregator', () => {
 
     it('maps package relations correctly using workspaceRoot', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -993,7 +993,7 @@ describe('ArchJSONAggregator', () => {
       // The first component will be '..' which should still work (not filtered out)
       // but we want to make sure valid paths work correctly
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -1012,7 +1012,7 @@ describe('ArchJSONAggregator', () => {
 
     it('creates separate packages for nested subdirectories', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -1034,7 +1034,7 @@ describe('ArchJSONAggregator', () => {
   describe('Java MRJAR module inflation (Phase C)', () => {
     it('does not produce a module for java21 MRJAR version directory', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'java',
         timestamp: '2026-03-13T00:00:00.000Z',
         workspaceRoot: '/workspace/jlama',
@@ -1063,7 +1063,7 @@ describe('ArchJSONAggregator', () => {
 
     it('still produces module jlama-core for a normal Maven path', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'java',
         timestamp: '2026-03-13T00:00:00.000Z',
         workspaceRoot: '/workspace/jlama',
@@ -1100,7 +1100,7 @@ describe('ArchJSONAggregator', () => {
 
     it('resolves module-level source to package when entity is in that module', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         entities: [
           {
@@ -1133,7 +1133,7 @@ describe('ArchJSONAggregator', () => {
 
     it('maps cross-package module-level relation to package relation', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         entities: [
           {
@@ -1167,7 +1167,7 @@ describe('ArchJSONAggregator', () => {
 
     it('resolves deeply nested module prefix (3+ levels)', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         entities: [
           {
@@ -1206,7 +1206,7 @@ describe('ArchJSONAggregator', () => {
 
     it('does not produce false relations for unresolvable module IDs', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         entities: [
           {
@@ -1232,7 +1232,7 @@ describe('ArchJSONAggregator', () => {
 
     it('preserves existing class-level relation resolution for TypeScript', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [
           {
@@ -1272,7 +1272,7 @@ describe('ArchJSONAggregator', () => {
   describe('edge cases', () => {
     it('should handle empty entities array', () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],

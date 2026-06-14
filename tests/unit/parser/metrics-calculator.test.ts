@@ -37,7 +37,7 @@ const makeRelation = (
 });
 
 const makeArchJSON = (entities: Entity[], relations: Relation[]): ArchJSON => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript',
   timestamp: '2024-01-01T00:00:00.000Z',
   sourceFiles: [],

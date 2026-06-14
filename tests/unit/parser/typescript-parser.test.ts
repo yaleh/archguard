@@ -35,7 +35,7 @@ describe('TypeScriptParser - Single File', () => {
 
     const result = sharedParser.parseCode(code);
 
-    expect(result.version).toBe('1.0');
+    expect(result.version).toBe('1.1');
     expect(result.language).toBe('typescript');
     expect(result.timestamp).toBeDefined();
     expect(result.sourceFiles).toHaveLength(1);

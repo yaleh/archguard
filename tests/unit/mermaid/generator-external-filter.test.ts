@@ -22,7 +22,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should filter warnings for ts-morph types', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -61,7 +61,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should filter warnings for Node.js built-in types', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -99,7 +99,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should filter warnings for zod types', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -137,7 +137,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should show warnings for non-external undefined entities', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -173,7 +173,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should show filtered count in verbose mode', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -215,7 +215,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should handle mixed external and internal undefined entities', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -256,7 +256,7 @@ describe('ValidatedMermaidGenerator - External Dependency Filtering', () => {
 
   it('should filter generic types', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -301,7 +301,7 @@ describe('ValidatedMermaidGenerator - Python module-level relation sources (Phas
   it('includes relation when source is a module prefix of a known entity (class level)', () => {
     // Python: entities have class-level IDs, but import relations have module-level source IDs
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'python',
       entities: [
         {
@@ -334,7 +334,7 @@ describe('ValidatedMermaidGenerator - Python module-level relation sources (Phas
 
   it('excludes relation when source is completely unknown (no entity has it as prefix)', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'python',
       entities: [
         {
@@ -367,7 +367,7 @@ describe('ValidatedMermaidGenerator - Python module-level relation sources (Phas
 
   it('includes module-level relation source at package level too', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'python',
       entities: [
         {

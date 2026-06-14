@@ -31,7 +31,7 @@ export class ModuleGraphBuilder {
    * @param sourceFiles - ts-morph SourceFile[] from the same Project instance
    * @param entities - Entity list (for stats computation)
    */
-  build(projectRoot: string, sourceFiles: SourceFile[], entities: Entity[]): TsModuleGraph {
+  build(projectRoot: string, sourceFiles: SourceFile[], entities: readonly Entity[]): TsModuleGraph {
     // 1. Map file path → module ID (project-root-relative directory)
     const fileToModule = new Map<string, string>();
     for (const sf of sourceFiles) {

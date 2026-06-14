@@ -175,7 +175,7 @@ describe('CLI Multi-language Support', () => {
     await tsPlugin.initialize({ workspaceRoot: process.cwd() });
 
     const validArchJson = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {

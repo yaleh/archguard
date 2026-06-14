@@ -23,6 +23,7 @@ import type {
   Decorator,
   Visibility,
 } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 
 // ── Kind → EntityType mapping ──────────────────────────────────────────────
 
@@ -203,7 +204,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<RawKotlinFile> {
     const sourceFiles = files.map(f => f.filePath);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'kotlin',
       timestamp: new Date().toISOString(),
       sourceFiles,

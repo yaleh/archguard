@@ -72,7 +72,7 @@ const scopeEntry: QueryScopeEntry = {
 
 function makeArchJson(): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -366,7 +366,7 @@ describe('archguard_find_subclasses', () => {
       makeEntity('sub', 'SubProcessor', 'class', 'src/sub.ts'),
     ];
     const subArchJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '2026-01-01T00:00:00Z',
       sourceFiles: [],
@@ -552,7 +552,7 @@ function makeGoAtlasArchJson(): ArchJSON {
   };
 
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'go',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -942,7 +942,7 @@ describe('edge-list queryFormat — applyView crash fix', () => {
       makeEntity('sub2', 'SubProcessor', 'class', 'src/sub.ts'),
     ];
     const subArchJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '2026-01-01T00:00:00Z',
       sourceFiles: [],

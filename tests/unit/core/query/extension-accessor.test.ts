@@ -15,7 +15,7 @@ import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'go',
     timestamp: new Date().toISOString(),
     sourceFiles: [],

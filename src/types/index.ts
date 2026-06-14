@@ -67,15 +67,15 @@ export interface Module {
  * Main architecture JSON structure
  */
 export interface ArchJSON {
-  version: string;
-  language: SupportedLanguage;
-  timestamp: string;
-  sourceFiles: string[];
-  entities: Entity[];
-  relations: Relation[];
+  readonly version: string;
+  readonly language: SupportedLanguage;
+  readonly timestamp: string;
+  readonly sourceFiles: readonly string[];
+  readonly entities: readonly Entity[];
+  readonly relations: readonly Relation[];
   modules?: Module[];
   metadata?: Record<string, unknown>;
-  workspaceRoot?: string;
+  readonly workspaceRoot?: string;
 
   // Type-safe extensions (ADR-002)
   extensions?: import('./extensions/index.js').ArchJSONExtensions;
@@ -92,6 +92,9 @@ export interface ArchJSON {
    */
   metricVector?: import('./metric-vector.js').MetricVector;
 }
+
+/** Current ArchJSON schema version. Increment minor on non-breaking field additions. */
+export const ARCHJSON_SCHEMA_VERSION = '1.1' as const;
 
 /**
  * Known (built-in) entity types in the architecture.
@@ -124,10 +127,10 @@ export type Visibility = 'public' | 'private' | 'protected';
  * Entity representation
  */
 export interface Entity {
-  id: string;
-  name: string;
-  type: EntityType;
-  visibility: Visibility;
+  readonly id: string;
+  readonly name: string;
+  readonly type: EntityType;
+  readonly visibility: Visibility;
   members: Member[];
   sourceLocation: SourceLocation;
   decorators?: Decorator[];
@@ -148,9 +151,9 @@ export type MemberType = 'property' | 'method' | 'constructor' | 'field';
  * Member of an entity
  */
 export interface Member {
-  name: string;
-  type: MemberType;
-  visibility: Visibility;
+  readonly name: string;
+  readonly type: MemberType;
+  readonly visibility: Visibility;
   returnType?: string;
   parameters?: Parameter[];
   isStatic?: boolean;
@@ -177,9 +180,9 @@ export interface Parameter {
  * Source code location
  */
 export interface SourceLocation {
-  file: string;
-  startLine: number;
-  endLine: number;
+  readonly file: string;
+  readonly startLine: number;
+  readonly endLine: number;
 }
 
 /**
@@ -206,10 +209,10 @@ export type RelationType =
  * Relation between entities
  */
 export interface Relation {
-  id: string;
-  type: RelationType;
-  source: string;
-  target: string;
+  readonly id: string;
+  readonly type: RelationType;
+  readonly source: string;
+  readonly target: string;
   confidence?: number;
   inferenceSource?: 'explicit' | 'inferred' | 'gopls' | 'call-aggregated';
 

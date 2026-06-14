@@ -20,7 +20,7 @@ describe('JavaPlugin Integration Tests', () => {
       });
 
       // Verify basic structure
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('java');
       expect(result.entities.length).toBeGreaterThan(0);
 

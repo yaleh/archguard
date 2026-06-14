@@ -16,6 +16,7 @@ import type {
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import type { ArchJSON } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
@@ -187,7 +188,7 @@ export class JavaPlugin implements ILanguagePlugin {
     }
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'java',
       timestamp: new Date().toISOString(),
       sourceFiles: files,
@@ -212,7 +213,7 @@ export class JavaPlugin implements ILanguagePlugin {
       const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
       return {
-        version: '1.0',
+        version: ARCHJSON_SCHEMA_VERSION,
         language: 'java',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],
@@ -223,7 +224,7 @@ export class JavaPlugin implements ILanguagePlugin {
       console.warn(`Failed to parse code:`, error);
       // Return empty result on error
       return {
-        version: '1.0',
+        version: ARCHJSON_SCHEMA_VERSION,
         language: 'java',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],
@@ -269,7 +270,7 @@ export class JavaPlugin implements ILanguagePlugin {
     const relations = this.mapper.reconcileInheritanceTargets(entities, rawRelations);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'java',
       timestamp: new Date().toISOString(),
       sourceFiles: filePaths,

@@ -25,7 +25,7 @@ import path from 'path';
  * @param relations - Array of Relation objects to filter
  * @returns New array with experiment-path relations removed
  */
-export function filterExperimentRelations(relations: import('@/types').Relation[]): import('@/types').Relation[] {
+export function filterExperimentRelations(relations: readonly import('@/types').Relation[]): import('@/types').Relation[] {
   return relations.filter((rel) => {
     const isExperimentPath = (id: string): boolean =>
       id.startsWith('experiments/') || id.includes('/experiments/');
@@ -41,6 +41,7 @@ import { RelationExtractor } from './relation-extractor';
 import { FunctionExtractor } from './function-extractor';
 import { CallEdgeExtractor } from './call-edge-extractor.js';
 import type { ArchJSON, Entity, Relation } from '@/types';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 
 /**
  * Main TypeScript parser that orchestrates all extractors
@@ -129,7 +130,7 @@ export class TypeScriptParser {
     const relations = this.qualifyRelations(entities, rawRelations, relPath);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles,
@@ -264,7 +265,7 @@ export class TypeScriptParser {
 
     // Build merged result
     const merged: ArchJSON = {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles,

@@ -112,7 +112,7 @@ vi.mock('cli-progress', () => ({
 describe('deriveSubModuleArchJSON', () => {
   it('filters entities by filePath prefix', () => {
     const parent = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript' as const,
       timestamp: '',
       sourceFiles: [],
@@ -142,7 +142,7 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('filters moduleGraph nodes and edges by path prefix', () => {
     const parent = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript' as const,
       timestamp: '',
       sourceFiles: [],
@@ -150,7 +150,7 @@ describe('deriveSubModuleArchJSON', () => {
       relations: [],
       extensions: {
         tsAnalysis: {
-          version: '1.0',
+          version: '1.1',
           moduleGraph: {
             nodes: [
               {
@@ -183,24 +183,24 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('preserves non-moduleGraph extension fields', () => {
     const parent = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript' as const,
       timestamp: '',
       sourceFiles: [],
       entities: [],
       relations: [],
       extensions: {
-        tsAnalysis: { version: '1.0', moduleGraph: { nodes: [], edges: [], cycles: [] } },
+        tsAnalysis: { version: '1.1', moduleGraph: { nodes: [], edges: [], cycles: [] } },
       },
     };
     const result = deriveSubModuleArchJSON(parent as unknown as ArchJSON, '/src');
-    expect(result.version).toBe('1.0');
+    expect(result.version).toBe('1.1');
     expect(result.extensions?.tsAnalysis).toBeDefined();
   });
 
   it('returns empty entities and relations when no filePath matches', () => {
     const parent = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript' as const,
       timestamp: '',
       sourceFiles: [],
@@ -214,7 +214,7 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('includes cross-module relations when source is in sub-module', () => {
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'cpp',
       timestamp: '',
       sourceFiles: [],
@@ -256,7 +256,7 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('adds stub entity for cross-module relation target', () => {
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'cpp',
       timestamp: '',
       sourceFiles: [],
@@ -306,7 +306,7 @@ describe('deriveSubModuleArchJSON', () => {
 
   it('does not add stub for intra-module relations (already in entity set)', () => {
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'cpp',
       timestamp: '',
       sourceFiles: [],
@@ -349,7 +349,7 @@ describe('deriveSubModuleArchJSON', () => {
     // Relations FROM other modules TO this module's entities should NOT appear
     // (only outgoing are included to keep diagram focused on THIS module's dependencies)
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'cpp',
       timestamp: '',
       sourceFiles: [],
@@ -396,7 +396,7 @@ describe('deriveSubModuleArchJSON', () => {
 describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (workspaceRoot fix)', () => {
   it('matches entities when filePath is relative and subPath is absolute with workspaceRoot', () => {
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '',
       sourceFiles: [],
@@ -425,7 +425,7 @@ describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (work
 
   it('still works without workspaceRoot when filePath is already absolute', () => {
     const parent: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '',
       sourceFiles: [],
@@ -467,7 +467,7 @@ describe('DiagramProcessor', () => {
   });
 
   const createTestArchJSON = (): ArchJSON => ({
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: ['test.ts'],
@@ -1297,7 +1297,7 @@ describe('DiagramProcessor', () => {
         relations: [],
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [
                 {
@@ -1528,7 +1528,7 @@ describe('DiagramProcessor', () => {
     it('stats.entities and stats.relations use Atlas package layer when goAtlas extension is present', async () => {
       // Build a minimal AggregatedArchJSON mock with goAtlas extension
       const goAtlasArchJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'go',
         timestamp: new Date().toISOString(),
         sourceFiles: ['main.go'],
@@ -1644,7 +1644,7 @@ describe('Atlas layer parallel rendering', () => {
    * Helper: create a minimal GoAtlas ArchJSON with all 4 layers present.
    */
   const createGoAtlasArchJSON = (): ArchJSON => ({
-    version: '1.0',
+    version: '1.1',
     language: 'go' as const,
     timestamp: new Date().toISOString(),
     sourceFiles: ['main.go'],
@@ -1805,7 +1805,7 @@ describe('Atlas layer parallel rendering', () => {
     const { ParallelParser } = await import('@/parser/parallel-parser.js');
     (ParallelParser as any).mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue({
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '',
         sourceFiles: [],
@@ -1865,7 +1865,7 @@ describe('Atlas layer parallel rendering', () => {
     const { ParallelParser } = await import('@/parser/parallel-parser.js');
     (ParallelParser as any).mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue({
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '',
         sourceFiles: [],
@@ -1918,7 +1918,7 @@ describe('Atlas layer parallel rendering', () => {
     const { ParallelParser } = await import('@/parser/parallel-parser.js');
     (ParallelParser as any).mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue({
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '',
         sourceFiles: [],

@@ -62,7 +62,7 @@ describe('Full Workflow Integration', () => {
       const parser = new TypeScriptParser();
       const archJSON = parser.parseCode(sourceCode, sourceFile);
 
-      expect(archJSON).toHaveProperty('version', '1.0');
+      expect(archJSON).toHaveProperty('version', '1.1');
       expect(archJSON).toHaveProperty('language', 'typescript');
       expect(archJSON.entities.length).toBeGreaterThan(0);
 
@@ -187,7 +187,7 @@ interface User {
   describe('File I/O Operations', () => {
     it('should read and write ArchJSON files', async () => {
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: ['test.ts'],
@@ -215,7 +215,7 @@ interface User {
       const readContent = await fs.readFile(outputPath, 'utf-8');
       const parsed = JSON.parse(readContent);
 
-      expect(parsed.version).toBe('1.0');
+      expect(parsed.version).toBe('1.1');
       expect(parsed.entities.length).toBe(1);
       expect(parsed.entities[0].name).toBe('TestClass');
     });
@@ -250,7 +250,7 @@ class TestClass {
 
       const hash = await cacheManager.computeFileHash(filePath);
       const archJSON: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],
@@ -291,7 +291,7 @@ class TestClass {
 
       const hash1 = await cacheManager.computeFileHash(filePath);
       const archJSON1: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],

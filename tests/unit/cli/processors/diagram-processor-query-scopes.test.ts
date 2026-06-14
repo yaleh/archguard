@@ -104,7 +104,7 @@ const createDiagramConfig = (name: string, sources: string[]): DiagramConfig => 
 });
 
 const createTestArchJSON = (entityCount = 1): ArchJSON => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript',
   timestamp: new Date().toISOString(),
   sourceFiles: ['test.ts'],
@@ -124,7 +124,7 @@ const createTestArchJSON = (entityCount = 1): ArchJSON => ({
 });
 
 const createEmptyArchJSON = (): ArchJSON => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript',
   timestamp: new Date().toISOString(),
   sourceFiles: [],

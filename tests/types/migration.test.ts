@@ -25,7 +25,7 @@ describe('Type Migration - Multi-Language Support', () => {
 
       languages.forEach((lang) => {
         const archJson: ArchJSON = {
-          version: '1.0',
+          version: '1.1',
           language: lang,
           timestamp: new Date().toISOString(),
           sourceFiles: [],
@@ -39,7 +39,7 @@ describe('Type Migration - Multi-Language Support', () => {
 
     it('should maintain backward compatibility with typescript literal', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -55,7 +55,7 @@ describe('Type Migration - Multi-Language Support', () => {
 
       allLanguages.forEach((lang) => {
         const archJson: ArchJSON = {
-          version: '1.0',
+          version: '1.1',
           language: lang,
           timestamp: new Date().toISOString(),
           sourceFiles: [],
@@ -366,7 +366,7 @@ describe('Type Migration - Multi-Language Support', () => {
       };
 
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'go',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -394,7 +394,7 @@ describe('Type Migration - Multi-Language Support', () => {
       };
 
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'java',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -409,7 +409,7 @@ describe('Type Migration - Multi-Language Support', () => {
 
     it('should accept optional metadata field', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -428,7 +428,7 @@ describe('Type Migration - Multi-Language Support', () => {
 
     it('should accept ArchJSON without optional fields', () => {
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [],

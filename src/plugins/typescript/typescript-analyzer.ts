@@ -21,7 +21,7 @@ export class TypeScriptAnalyzer {
    * @param sourceFiles - ts-morph SourceFile[] from the shared Project instance
    * @param entities - Entity list from the parsed ArchJSON
    */
-  analyze(projectRoot: string, sourceFiles: SourceFile[], entities: Entity[]): TsAnalysis {
+  analyze(projectRoot: string, sourceFiles: SourceFile[], entities: readonly Entity[]): TsAnalysis {
     const moduleGraph = this.moduleGraphBuilder.build(projectRoot, sourceFiles, entities);
     return {
       version: TS_ANALYSIS_EXTENSION_VERSION,

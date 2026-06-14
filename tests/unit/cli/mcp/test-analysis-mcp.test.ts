@@ -49,7 +49,7 @@ function makeEntity(id: string, name: string): Entity {
 }
 
 const sampleAnalysis: TestAnalysis = {
-  version: '1.0',
+  version: '1.1',
   patternConfigSource: 'auto',
   testFiles: [
     {
@@ -91,7 +91,7 @@ const sampleAnalysis: TestAnalysis = {
 
 function createEngineWithoutAnalysis(): QueryEngine {
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -105,7 +105,7 @@ function createEngineWithoutAnalysis(): QueryEngine {
 function createEngineWithAnalysis(): QueryEngine {
   const extensions: ArchJSONExtensions = { testAnalysis: sampleAnalysis };
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],

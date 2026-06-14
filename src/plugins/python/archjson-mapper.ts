@@ -6,6 +6,7 @@
 
 import path from 'path';
 import type { ArchJSON, Entity, Member, Relation, Decorator, Visibility } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type {
   PythonRawModule,
   PythonRawClass,
@@ -71,7 +72,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
     }
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'python',
       timestamp: new Date().toISOString(),
       sourceFiles: modules.map((m) => m.filePath),

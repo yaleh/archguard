@@ -117,7 +117,7 @@ describe('PluginRegistry Integration Tests', () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('ProjectEntity');
       expect(result.metadata?.pluginName).toBe('mock');

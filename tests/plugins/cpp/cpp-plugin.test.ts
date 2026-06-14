@@ -260,7 +260,7 @@ public:
         excludePatterns: [],
       });
 
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('cpp');
       expect(typeof result.timestamp).toBe('string');
     });
@@ -330,7 +330,7 @@ public:
     it('returns valid ArchJSON for single file', () => {
       const result = plugin.parseCode('class Bar {};', '/proj/src/bar.cpp');
 
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('cpp');
       expect(result.sourceFiles).toContain('/proj/src/bar.cpp');
     });

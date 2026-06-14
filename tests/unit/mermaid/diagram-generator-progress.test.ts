@@ -31,7 +31,7 @@ const makeConfig = (): GlobalConfig => ({
 });
 
 const makeArchJSON = (): ArchJSON => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript',
   timestamp: new Date().toISOString(),
   sourceFiles: ['src/foo.ts'],

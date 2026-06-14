@@ -68,7 +68,7 @@ type User struct {
       const result = plugin.parseCode(code, 'test.go');
 
       expect(result.language).toBe('go');
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('User');
       expect(result.entities[0].type).toBe('struct');

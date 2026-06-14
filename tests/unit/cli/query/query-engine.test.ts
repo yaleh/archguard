@@ -33,7 +33,7 @@ function makeEntity(id: string, name: string, overrides: Partial<Entity> = {}): 
 
 function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],
@@ -96,7 +96,7 @@ const inheritanceArchJson = makeArchJson({
 
 // Go Atlas fixture (package layer only)
 const goAtlasArchJson: ArchJSON = {
-  version: '1.0',
+  version: '1.1',
   language: 'go',
   timestamp: '2026-01-01T00:00:00Z',
   sourceFiles: [],
@@ -617,7 +617,7 @@ describe('QueryEngine', () => {
   // ---------------------------------------------------------------------------
 
   const goAtlasWithEntitiesArchJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'go',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: ['internal/query/engine.go', 'internal/query/index.go', 'cmd/main.go'],
@@ -708,7 +708,7 @@ describe('QueryEngine', () => {
   };
 
   const tsArchJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [
@@ -750,7 +750,7 @@ describe('QueryEngine', () => {
     relations: [],
     extensions: {
       tsAnalysis: {
-        version: '1.0',
+        version: '1.1',
         moduleGraph: {
           nodes: [
             {
@@ -776,7 +776,7 @@ describe('QueryEngine', () => {
   };
 
   const javaArchJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'java',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -1074,7 +1074,7 @@ describe('QueryEngine', () => {
    * Files: pytorch/engine/engine.py, pytorch/models/llama.py, serve/server.py
    */
   const pythonArchJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'python',
     timestamp: '2026-01-01T00:00:00Z',
     workspaceRoot: pythonWs,
@@ -1198,7 +1198,7 @@ describe('QueryEngine', () => {
         };
       });
       return {
-        version: '1.0',
+        version: '1.1',
         language: 'python',
         timestamp: '2026-01-01T00:00:00Z',
         workspaceRoot: ws,
@@ -1244,7 +1244,7 @@ describe('QueryEngine', () => {
   describe('getPackageStats — OO Fallback fileCount includes entity-less source files (C++)', () => {
     const cppWs = '/workspace';
     const cppArchJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'cpp',
       timestamp: '2026-01-01T00:00:00Z',
       workspaceRoot: cppWs,
@@ -1296,7 +1296,7 @@ describe('QueryEngine', () => {
   describe('getPackageStats — Kotlin logical package path', () => {
     const kotlinWs = '/workspace';
     const kotlinArchJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'kotlin',
       timestamp: '2026-05-02T00:00:00Z',
       workspaceRoot: kotlinWs,
@@ -1429,7 +1429,7 @@ describe('QueryEngine', () => {
       });
 
       const testAnalysis: TestAnalysis = {
-        version: '1.0',
+        version: '1.1',
         patternConfigSource: 'auto',
         testFiles: [],
         coverageMap: [
@@ -1485,7 +1485,7 @@ describe('QueryEngine', () => {
       });
 
       const testAnalysis: TestAnalysis = {
-        version: '1.0',
+        version: '1.1',
         patternConfigSource: 'auto',
         testFiles: [],
         coverageMap: [
@@ -1531,7 +1531,7 @@ describe('QueryEngine', () => {
       });
 
       const testAnalysis: TestAnalysis = {
-        version: '1.0',
+        version: '1.1',
         patternConfigSource: 'auto',
         testFiles: [],
         coverageMap: [
@@ -1589,7 +1589,7 @@ describe('QueryEngine', () => {
     });
 
     const testAnalysis: TestAnalysis = {
-      version: '1.0',
+      version: '1.1',
       patternConfigSource: 'auto',
       testFiles: [
         {

@@ -197,7 +197,7 @@ describe('runAnalysis', () => {
         sources: ['/tmp/project/src'],
         kind: 'parsed',
         archJson: {
-          version: '1.0',
+          version: '1.1',
           language: 'typescript',
           timestamp: '2026-03-07T00:00:00Z',
           sourceFiles: [],
@@ -270,7 +270,7 @@ describe('runAnalysis', () => {
         kind: 'parsed',
         role: 'primary',
         archJson: {
-          version: '1.0',
+          version: '1.1',
           language: 'cpp',
           timestamp: '2026-03-07T00:00:00Z',
           sourceFiles: [],
@@ -284,7 +284,7 @@ describe('runAnalysis', () => {
         kind: 'parsed',
         role: 'secondary',
         archJson: {
-          version: '1.0',
+          version: '1.1',
           language: 'python',
           timestamp: '2026-03-07T00:00:00Z',
           sourceFiles: [],
@@ -522,7 +522,7 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
 
   function makeArchJsonForLanguage(language: string, workspaceRoot: string): ArchJSON {
     return {
-      version: '1.0',
+      version: '1.1',
       language: language as any,
       timestamp: '2026-03-13T00:00:00Z',
       sourceFiles: [],
@@ -568,7 +568,7 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
 
   it('falls back to sessionRoot when archJson.workspaceRoot is undefined', async () => {
     const archJsonNoRoot: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'java' as any,
       timestamp: '2026-03-13T00:00:00Z',
       sourceFiles: [],

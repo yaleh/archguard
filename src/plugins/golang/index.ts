@@ -19,6 +19,7 @@ import type {
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import type { TreeSitterParseOptions } from './tree-sitter-bridge.js';
@@ -197,7 +198,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     const relations = this.mapper.mapRelations([pkg], implementations, this.cachedModuleName);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'go',
       timestamp: new Date().toISOString(),
       sourceFiles: [filePath],
@@ -273,7 +274,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     entities.push(...missingInterfaces);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'go',
       timestamp: new Date().toISOString(),
       sourceFiles: filePaths,
@@ -348,7 +349,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     );
     entities.push(...missingInterfaces);
     const baseArchJSON: ArchJSON = {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'go',
       timestamp: new Date().toISOString(),
       sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),

@@ -42,7 +42,7 @@ function makeEntity(id: string, name: string, overrides: Partial<Entity> = {}): 
 
 function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],

@@ -8,7 +8,7 @@ import { ArchJSON } from '../../../src/types';
 
 describe('HeuristicGrouper', () => {
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-26T10:00:00Z',
     sourceFiles: [
@@ -409,7 +409,7 @@ describe('HeuristicGrouper', () => {
     it('groups path-based package entities by top-level component', () => {
       const grouper = new HeuristicGrouper({ maxPackages: 20 });
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -444,7 +444,7 @@ describe('HeuristicGrouper', () => {
     it('does NOT merge path-grouped packages with adjacent groups', () => {
       const grouper = new HeuristicGrouper({ maxPackages: 20 });
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'cpp',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -465,7 +465,7 @@ describe('HeuristicGrouper', () => {
     it('still merges non-path groups with adjacent groups (TypeScript behavior preserved)', () => {
       const grouper = new HeuristicGrouper({ maxPackages: 20 });
       const archJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2024-01-01T00:00:00.000Z',
         sourceFiles: [],
@@ -500,7 +500,7 @@ describe('HeuristicGrouper', () => {
     it('groups Java entities by Maven module instead of main/test path segments', () => {
       const grouper = new HeuristicGrouper({ maxPackages: 20 });
       const javaArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'java',
         timestamp: '2026-03-08T00:00:00.000Z',
         sourceFiles: [],

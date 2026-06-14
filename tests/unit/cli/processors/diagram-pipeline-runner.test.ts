@@ -63,7 +63,7 @@ function makeDiagram(overrides: Partial<DiagramConfig> = {}): DiagramConfig {
 
 function makeArchJson(entityCount = 1, relationCount = 0): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: ['test.ts'],
@@ -254,7 +254,7 @@ describe('DiagramPipelineRunner', () => {
         ...makeArchJson(1, 0),
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [
                 {

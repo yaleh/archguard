@@ -10,7 +10,7 @@ describe('ArchJsonDiskCache', () => {
   let cache: ArchJsonDiskCache;
 
   const mockArchJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],

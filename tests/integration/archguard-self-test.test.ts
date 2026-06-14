@@ -35,7 +35,7 @@ describe('ArchGuard Self Test - Integration', () => {
     expect(archJson.sourceFiles.length).toBeGreaterThan(0);
 
     // Verify basic structure
-    expect(archJson.version).toBe('1.0');
+    expect(archJson.version).toBe('1.1');
     expect(archJson.language).toBe('typescript');
     expect(archJson.timestamp).toBeDefined();
 
@@ -87,7 +87,7 @@ describe('ArchGuard Self Test - Integration', () => {
     // Should be parseable back
 
     const parsed = JSON.parse(json) as { version: string; language: string };
-    expect(parsed.version).toBe('1.0');
+    expect(parsed.version).toBe('1.1');
     expect(parsed.language).toBe('typescript');
   });
 

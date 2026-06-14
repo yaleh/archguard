@@ -14,7 +14,7 @@ import type { ArchJSON } from '@/types/index.js';
 
 function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],
@@ -57,7 +57,7 @@ const scope2: QueryScopeEntry = {
 
 function makeManifest(scopes: QueryScopeEntry[]): QueryManifest {
   return {
-    version: '1.0',
+    version: '1.1',
     generatedAt: new Date().toISOString(),
     globalScopeKey: scopes[0]?.key,
     scopes,
@@ -125,7 +125,7 @@ describe('resolveScope', () => {
     const big: QueryScopeEntry = { ...scope1, key: 'big', label: 'full src', entityCount: 300 };
     const small: QueryScopeEntry = { ...scope1, key: 'small', label: 'partial', entityCount: 50 };
     const manifest: QueryManifest = {
-      version: '1.0',
+      version: '1.1',
       generatedAt: new Date().toISOString(),
       globalScopeKey: 'big',
       scopes: [small, big],
@@ -141,7 +141,7 @@ describe('resolveScope', () => {
     const manifestDir = path.join(tmpDir, 'query');
     await fs.ensureDir(manifestDir);
     await fs.writeJson(path.join(manifestDir, 'manifest.json'), {
-      version: '1.0',
+      version: '1.1',
       generatedAt: new Date().toISOString(),
       scopes: [scope1, scope2],
     });
@@ -161,7 +161,7 @@ describe('resolveScope', () => {
     const manifestDir = path.join(tmpDir, 'query');
     await fs.ensureDir(manifestDir);
     await fs.writeJson(path.join(manifestDir, 'manifest.json'), {
-      version: '1.0',
+      version: '1.1',
       generatedAt: new Date().toISOString(),
       scopes: [scope1, scope2],
     });

@@ -5,7 +5,7 @@ import type { ArchJSON } from '@/types/index.js';
 
 function makeAnalysis(overrides: Partial<TestAnalysis> = {}): TestAnalysis {
   return {
-    version: '1.0',
+    version: '1.1',
     patternConfigSource: 'auto',
     testFiles: [],
     coverageMap: [],
@@ -23,7 +23,7 @@ function makeAnalysis(overrides: Partial<TestAnalysis> = {}): TestAnalysis {
 }
 
 function makeArchJson(entities: any[] = []): ArchJSON {
-  return { version: '1.0', language: 'typescript', entities, relations: [], extensions: {} } as any;
+  return { version: '1.1', language: 'typescript', entities, relations: [], extensions: {} } as any;
 }
 
 describe('TestCoverageRenderer', () => {

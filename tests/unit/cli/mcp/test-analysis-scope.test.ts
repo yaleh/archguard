@@ -51,7 +51,7 @@ function makeEntity(id: string, name: string): Entity {
 }
 
 const sampleAnalysis: TestAnalysis = {
-  version: '1.0',
+  version: '1.1',
   patternConfigSource: 'auto',
   testFiles: [
     {
@@ -98,7 +98,7 @@ function createEngineWithZeroTestFiles(): QueryEngine {
   };
   const extensions: ArchJSONExtensions = { testAnalysis: emptyAnalysis };
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -114,7 +114,7 @@ function createEngineWithZeroTestFiles(): QueryEngine {
 function createEngineWithTestFiles(): QueryEngine {
   const extensions: ArchJSONExtensions = { testAnalysis: sampleAnalysis };
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -129,7 +129,7 @@ function createEngineWithTestFiles(): QueryEngine {
 /** Engine with no test analysis at all */
 function createEngineWithoutAnalysis(): QueryEngine {
   const archJson: ArchJSON = {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
@@ -172,7 +172,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
     loadEngineMock.mockResolvedValue(createEngineWithZeroTestFiles());
     // readManifest returns scopes listing so we can show them in diagnostic
     readManifestMock.mockResolvedValue({
-      version: '1.0',
+      version: '1.1',
       generatedAt: '2026-01-01T00:00:00Z',
       globalScopeKey: 'global-scope',
       scopes: [

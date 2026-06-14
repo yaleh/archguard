@@ -116,7 +116,7 @@ export class ArchJSONAggregator {
    * @returns Array of unique package names
    */
   private extractPackages(
-    entities: Entity[],
+    entities: readonly Entity[],
     workspaceRoot?: string,
     language?: ArchJSON['language']
   ): string[] {
@@ -243,8 +243,8 @@ export class ArchJSONAggregator {
    * @returns Array of package-level relations
    */
   private analyzePackageDependencies(
-    entities: Entity[],
-    relations: Relation[],
+    entities: readonly Entity[],
+    relations: readonly Relation[],
     workspaceRoot?: string,
     language?: ArchJSON['language']
   ): Relation[] {

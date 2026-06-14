@@ -52,7 +52,7 @@ describe('ParallelParser', () => {
       const files = ['test1.ts'];
       const result = await parser.parseFiles(files);
 
-      expect(result).toHaveProperty('version', '1.0');
+      expect(result).toHaveProperty('version', '1.1');
       expect(result).toHaveProperty('language', 'typescript');
       expect(result).toHaveProperty('entities');
       expect(result).toHaveProperty('relations');
@@ -311,7 +311,7 @@ describe('ParallelParser', () => {
       const result = await parser.parseFiles(files);
 
       // Result should have TypeScriptParser structure
-      expect(result).toHaveProperty('version', '1.0');
+      expect(result).toHaveProperty('version', '1.1');
       expect(result).toHaveProperty('language', 'typescript');
     });
 

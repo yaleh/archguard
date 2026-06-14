@@ -37,7 +37,7 @@ vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
 // ---- Helpers ---------------------------------------------------------------
 
 const makeArchJSON = (override: Partial<ArchJSON> = {}): ArchJSON => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript',
   timestamp: '',
   sourceFiles: ['test.ts'],

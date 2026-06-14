@@ -8,6 +8,7 @@ import os from 'os';
 import pLimit from 'p-limit';
 import { TypeScriptParser } from './typescript-parser';
 import type { ArchJSON, Entity, Relation } from '@/types';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import fs from 'fs/promises';
 import type { ParseCache } from './parse-cache.js';
 import type { IParserFacade } from '@/core/interfaces/parser-facade.js';
@@ -304,7 +305,7 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
     const uniqueRelations = this.deduplicateRelations(allRelations);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: allSourceFiles,
@@ -343,7 +344,7 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
    */
   private createEmptyArchJSON(sourceFiles: string[] = []): ArchJSON {
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles,

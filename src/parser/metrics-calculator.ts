@@ -2,6 +2,7 @@ import path from 'path';
 import type {
   ArchJSON,
   ArchJSONMetrics,
+  Entity,
   RelationType,
   DetailLevel,
   FileStats,
@@ -152,12 +153,12 @@ export class MetricsCalculator {
     };
 
     // Group entities by normalised file path (skip entities with no file)
-    const fileEntityMap = new Map<string, typeof entities>();
+    const fileEntityMap = new Map<string, Entity[]>();
     for (const e of entities) {
       const file = normalise(e.sourceLocation?.file ?? '');
       if (!file) continue;
       if (!fileEntityMap.has(file)) fileEntityMap.set(file, []);
-      fileEntityMap.get(file).push(e);
+      fileEntityMap.get(file)!.push(e);
     }
 
     // Build per-entity degree maps (internal relations only)

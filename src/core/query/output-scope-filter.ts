@@ -18,7 +18,7 @@ export function narrowEntity(entity: Entity, scope: OutputScope): Partial<Entity
   };
 }
 
-export function narrowEntities(entities: Entity[], scope: OutputScope): Partial<Entity>[] {
+export function narrowEntities(entities: readonly Entity[], scope: OutputScope): Partial<Entity>[] {
   return entities.map((e) => narrowEntity(e, scope));
 }
 
@@ -30,7 +30,7 @@ export function narrowEntities(entities: Entity[], scope: OutputScope): Partial<
  *   by an existing dependency relation are NOT duplicated
  * - scope='method': preserve all relations including call edges with sourceMethod/targetMethod
  */
-export function filterRelationsForScope(relations: Relation[], scope: OutputScope): Relation[] {
+export function filterRelationsForScope(relations: readonly Relation[], scope: OutputScope): Relation[] {
   if (scope === 'package') {
     return relations.filter((r) => r.type !== 'call');
   }
@@ -60,5 +60,5 @@ export function filterRelationsForScope(relations: Relation[], scope: OutputScop
     return [...nonCallEdges, ...aggregated];
   }
   // scope='method': preserve all relations
-  return relations;
+  return [...relations];
 }

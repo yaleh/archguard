@@ -72,7 +72,7 @@ describe('QueryManifest types', () => {
 describe('QuerySourceGroup type', () => {
   it('should hold an ArchJSON reference', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: ['src/cli/index.ts'],

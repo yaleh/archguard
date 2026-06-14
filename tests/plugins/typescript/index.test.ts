@@ -187,7 +187,7 @@ describe('TypeScriptPlugin - T1.1.2 Parser Wrapping', () => {
       const result = plugin.parseCode(code, 'test.ts');
 
       expect(result).toBeDefined();
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('typescript');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('TestClass');
@@ -243,7 +243,7 @@ describe('TypeScriptPlugin - T1.1.2 Parser Wrapping', () => {
       const result = await plugin.parseProject(FIXTURES_DIR, config);
 
       expect(result).toBeDefined();
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('typescript');
       expect(result.entities.length).toBeGreaterThan(0);
       expect(result.sourceFiles.length).toBeGreaterThan(0);
@@ -324,7 +324,7 @@ describe('TypeScriptPlugin - T1.1.2 Parser Wrapping', () => {
       const result = await plugin.parseFiles(filePaths);
 
       expect(result).toBeDefined();
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('typescript');
       expect(result.entities.length).toBeGreaterThan(0);
     });
@@ -480,7 +480,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
   describe('validate', () => {
     it('should validate valid ArchJSON', () => {
       const validArchJson: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: ['test.ts'],
@@ -528,7 +528,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should detect missing language', () => {
       const invalidJson: any = {
-        version: '1.0',
+        version: '1.1',
         entities: [],
         relations: [],
       };
@@ -546,7 +546,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should detect missing entity id', () => {
       const invalidJson: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [
           {
@@ -570,7 +570,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should detect missing entity name', () => {
       const invalidJson: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [
           {
@@ -594,7 +594,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should warn about dangling relation source', () => {
       const jsonWithDanglingRelation: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [
           {
@@ -629,7 +629,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should warn about dangling relation target', () => {
       const jsonWithDanglingRelation: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [
           {
@@ -664,7 +664,7 @@ describe('TypeScriptPlugin - T1.1.4 Validation', () => {
 
     it('should include suggestions in warnings', () => {
       const jsonWithDanglingRelation: any = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         entities: [],
         relations: [
@@ -780,7 +780,7 @@ export class UserService {
     const result = plugin.parseCode(code);
 
     // Should produce same output as old TypeScriptParser
-    expect(result.version).toBe('1.0');
+    expect(result.version).toBe('1.1');
     expect(result.language).toBe('typescript');
     expect(result.entities).toHaveLength(1);
     expect(result.entities[0].name).toBe('LegacyClass');

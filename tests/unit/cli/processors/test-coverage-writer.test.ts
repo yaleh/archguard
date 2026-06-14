@@ -35,7 +35,7 @@ import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
 
 function makeAnalysis(): TestAnalysis {
   return {
-    version: '1.0',
+    version: '1.1',
     patternConfigSource: 'auto',
     testFiles: [],
     coverageMap: [],
@@ -65,7 +65,7 @@ function makeAnalysis(): TestAnalysis {
 
 function makeArchJson(): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],

@@ -10,7 +10,7 @@ import type { ArchJSON } from '@/types/index.js';
 
 function makeArchJSON(id: string): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [`${id}.ts`],

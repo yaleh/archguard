@@ -11,7 +11,7 @@ function makePlugin(fileExtensions: string[] = ['.ts', '.tsx']): ILanguagePlugin
   return {
     metadata: {
       name: 'test',
-      version: '1.0',
+      version: '1.1',
       displayName: 'Test',
       fileExtensions,
       author: 'test',
@@ -30,7 +30,7 @@ function makePlugin(fileExtensions: string[] = ['.ts', '.tsx']): ILanguagePlugin
     supportedLevels: ['class'],
     parseCode: vi.fn(),
     parseProject: vi.fn().mockResolvedValue({
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -45,7 +45,7 @@ function makePlugin(fileExtensions: string[] = ['.ts', '.tsx']): ILanguagePlugin
 
 function makeArchJson(entities: any[] = []): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],

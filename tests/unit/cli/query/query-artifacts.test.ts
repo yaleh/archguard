@@ -18,7 +18,7 @@ function makeTmpDir(): string {
 
 function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: ['src/a.ts'],
@@ -138,7 +138,7 @@ describe('buildManifestEntry', () => {
     const archJson = makeArchJson({
       extensions: {
         goAtlas: {
-          version: '1.0',
+          version: '1.1',
           metadata: {} as any,
           layers: {} as any,
         },

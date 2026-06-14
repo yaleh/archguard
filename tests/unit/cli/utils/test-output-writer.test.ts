@@ -6,7 +6,7 @@ import { TestOutputWriter } from '@/cli/utils/test-output-writer.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 const makeAnalysis = (overrides: Partial<TestAnalysis> = {}): TestAnalysis => ({
-  version: '1.0',
+  version: '1.1',
   patternConfigSource: 'auto',
   testFiles: [],
   coverageMap: [],

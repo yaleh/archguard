@@ -4,7 +4,7 @@ import type { ArchJSON } from '@/types/index.js';
 
 function makeArchJSON(entities: any[], relations: any[] = []): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'cpp',
     timestamp: '',
     sourceFiles: [],

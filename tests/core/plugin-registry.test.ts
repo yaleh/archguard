@@ -39,7 +39,7 @@ class MockPlugin implements ILanguagePlugin {
 
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -76,7 +76,7 @@ class MockPluginV2 implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -110,7 +110,7 @@ class AnotherMockPlugin implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -144,7 +144,7 @@ class MockGoPlugin implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'go',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -178,7 +178,7 @@ class MockTypeScriptPlugin implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -212,7 +212,7 @@ class MockJavaPlugin implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'java',
       timestamp: new Date().toISOString(),
       sourceFiles: [],
@@ -246,7 +246,7 @@ class MockPythonPlugin implements ILanguagePlugin {
   }
   async parseProject(): Promise<ArchJSON> {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'python',
       timestamp: new Date().toISOString(),
       sourceFiles: [],

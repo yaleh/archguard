@@ -18,7 +18,7 @@ describe('ValidatedMermaidGenerator', () => {
   beforeEach(() => {
     // Create sample ArchJSON
     archJson = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '2026-01-26T10:00:00Z',
       sourceFiles: ['src/user/User.ts', 'src/auth/AuthService.ts'],
@@ -219,7 +219,7 @@ describe('ValidatedMermaidGenerator', () => {
         ],
         extensions: {
           projectSemantics: {
-            version: '1.0',
+            version: '1.1',
             nonProductionPatterns: [],
             barrelFiles: [],
             additionalTestPatterns: [],
@@ -276,7 +276,7 @@ describe('ValidatedMermaidGenerator', () => {
         ],
         extensions: {
           projectSemantics: {
-            version: '1.0',
+            version: '1.1',
             nonProductionPatterns: [],
             barrelFiles: [],
             additionalTestPatterns: [],
@@ -474,7 +474,7 @@ describe('ValidatedMermaidGenerator', () => {
       };
 
       const errorInheritanceArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2026-01-26T10:00:00Z',
         sourceFiles: ['src/errors.ts'],
@@ -592,7 +592,7 @@ describe('ValidatedMermaidGenerator', () => {
       };
 
       const interfaceArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2026-01-26T10:00:00Z',
         sourceFiles: ['src/repo/IRepository.ts', 'src/repo/UserRepository.ts'],
@@ -796,7 +796,7 @@ describe('ValidatedMermaidGenerator', () => {
   describe('validation before generation', () => {
     it('should validate ArchJSON structure before generation', () => {
       const invalidArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2026-01-26',
         sourceFiles: [],
@@ -823,7 +823,7 @@ describe('ValidatedMermaidGenerator', () => {
 
     it('should handle empty entities list', () => {
       const emptyArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2026-01-26',
         sourceFiles: [],
@@ -1187,7 +1187,7 @@ describe('ValidatedMermaidGenerator', () => {
     };
 
     const scopedArchJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '2026-01-26T10:00:00Z',
       sourceFiles: ['src/mermaid/auto-repair.ts', 'src/mermaid/validator-parse.ts'],
@@ -1255,7 +1255,7 @@ describe('ValidatedMermaidGenerator', () => {
       };
 
       const inheritanceArchJson: ArchJSON = {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: '2026-01-26T10:00:00Z',
         sourceFiles: ['src/errors/base.ts', 'src/errors/parse.ts'],
@@ -1325,7 +1325,7 @@ const makeMinimalEntity = (name: string, type: EntityType) => ({
 });
 
 const makeMinimalArchJson = (entities: ReturnType<typeof makeMinimalEntity>[]) => ({
-  version: '1.0',
+  version: '1.1',
   language: 'typescript' as const,
   timestamp: new Date().toISOString(),
   sourceFiles: ['src/test.ts'],
@@ -1710,7 +1710,7 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     ]);
     const gen = new ValidatedMermaidGenerator(
       {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -1746,7 +1746,7 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     ]);
     const gen = new ValidatedMermaidGenerator(
       {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [],
@@ -1812,7 +1812,7 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     };
     const gen = new ValidatedMermaidGenerator(
       {
-        version: '1.0',
+        version: '1.1',
         language: 'typescript',
         timestamp: new Date().toISOString(),
         sourceFiles: [],

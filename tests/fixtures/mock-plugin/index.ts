@@ -74,7 +74,7 @@ export default class MockPlugin implements ILanguagePlugin {
    */
   parseCode(code: string, filePath?: string): ArchJSON {
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: filePath ? [filePath] : [],
@@ -114,7 +114,7 @@ export default class MockPlugin implements ILanguagePlugin {
     }));
 
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: filePaths,
@@ -139,7 +139,7 @@ export default class MockPlugin implements ILanguagePlugin {
 
     // For mock purposes, return minimal ArchJSON
     return {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: new Date().toISOString(),
       sourceFiles: [],

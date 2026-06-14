@@ -118,7 +118,7 @@ function makePaths(): OutputPaths {
 
 function makeArchJSON(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '',
     sourceFiles: [],
@@ -267,7 +267,7 @@ describe('DiagramOutputRouter', () => {
 
   describe('JSON format — package-level module graph relation injection', () => {
     const moduleGraphArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '',
       sourceFiles: [],
@@ -275,7 +275,7 @@ describe('DiagramOutputRouter', () => {
       relations: [], // empty class-level relations
       extensions: {
         tsAnalysis: {
-          version: '1.0',
+          version: '1.1',
           moduleGraph: {
             nodes: [
               {
@@ -392,7 +392,7 @@ describe('DiagramOutputRouter', () => {
       const aliasArchJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [],
               edges: [{ from: '@/parser', to: '@/mermaid', strength: 1, importedNames: [] }],
@@ -422,7 +422,7 @@ describe('DiagramOutputRouter', () => {
       const aliasArchJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [],
               edges: [
@@ -459,7 +459,7 @@ describe('DiagramOutputRouter', () => {
       const srcArchJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [],
               edges: [{ from: 'src/cli', to: 'src/utils', strength: 1, importedNames: [] }],
@@ -489,7 +489,7 @@ describe('DiagramOutputRouter', () => {
       const bareArchJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [],
               edges: [{ from: 'parser', to: 'mermaid', strength: 1, importedNames: [] }],
@@ -596,7 +596,7 @@ describe('DiagramOutputRouter', () => {
       const archJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [{ id: 'src/core', name: 'core', type: 'internal', fileCount: 1, stats: {} }],
               edges: [],
@@ -619,7 +619,7 @@ describe('DiagramOutputRouter', () => {
       const archJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: { nodes: [], edges: [], cycles: [] },
           },
         } as unknown as ArchJSON['extensions'],
@@ -920,7 +920,7 @@ describe('DiagramOutputRouter', () => {
       const archJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
-            version: '1.0',
+            version: '1.1',
             moduleGraph: {
               nodes: [{ id: 'src/core', name: 'core', type: 'internal', fileCount: 1, stats: {} }],
               edges: [],

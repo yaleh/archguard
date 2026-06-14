@@ -17,6 +17,7 @@ import type {
 } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON, TestPatternConfig } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
@@ -133,7 +134,7 @@ export class PythonPlugin implements ILanguagePlugin {
       const { entities, relations } = this.archJsonMapper.mapModule(rawModule);
 
       return {
-        version: '1.0',
+        version: ARCHJSON_SCHEMA_VERSION,
         language: 'python',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],
@@ -144,7 +145,7 @@ export class PythonPlugin implements ILanguagePlugin {
       // Return empty ArchJSON on error
       console.warn(`Error parsing Python code: ${error}`);
       return {
-        version: '1.0',
+        version: ARCHJSON_SCHEMA_VERSION,
         language: 'python',
         timestamp: new Date().toISOString(),
         sourceFiles: [filePath],

@@ -20,6 +20,7 @@ import type {
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
+import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import { HeaderMerger } from './builders/header-merger.js';
@@ -147,7 +148,7 @@ export class CppPlugin implements ILanguagePlugin {
     const relations = this.mapper.mapRelations(merged, entities, workspaceRoot);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'cpp',
       timestamp: new Date().toISOString(),
       sourceFiles: files,
@@ -175,7 +176,7 @@ export class CppPlugin implements ILanguagePlugin {
     const relations = this.mapper.mapRelations(merged, entities);
 
     return {
-      version: '1.0',
+      version: ARCHJSON_SCHEMA_VERSION,
       language: 'cpp',
       timestamp: new Date().toISOString(),
       sourceFiles: [filePath],

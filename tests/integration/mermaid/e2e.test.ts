@@ -43,7 +43,7 @@ describe('MermaidDiagramGenerator E2E', () => {
 
     // Aggregate results
     archJson = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: results.flatMap((r) => r.entities),
       relations: results.flatMap((r) => r.relations),
@@ -97,7 +97,7 @@ describe('MermaidDiagramGenerator E2E', () => {
   it('should handle validation errors and auto-repair', async () => {
     // Create ArchJSON with problematic names that need repair
     const problematicJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {
@@ -214,7 +214,7 @@ describe('MermaidDiagramGenerator E2E', () => {
 
   it('should handle empty ArchJSON gracefully', async () => {
     const emptyJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [],
       relations: [],
@@ -248,7 +248,7 @@ describe('MermaidDiagramGenerator E2E', () => {
   it('should handle large number of entities', async () => {
     // Create mock ArchJSON with many entities
     const largeJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: Array.from({ length: 50 }, (_, i) => ({
         id: `Class${i}`,
@@ -294,7 +294,7 @@ describe('MermaidDiagramGenerator E2E', () => {
 
   it('should preserve entity relationships in diagram', async () => {
     const relationalJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       entities: [
         {

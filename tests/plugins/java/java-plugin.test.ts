@@ -54,7 +54,7 @@ public class User {
 
       const result = plugin.parseCode(code, 'User.java');
 
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
       expect(result.language).toBe('java');
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe('User');
@@ -140,7 +140,7 @@ public class AdminUser extends User implements Service {
 
       expect(result.entities.length).toBeGreaterThan(0);
       expect(result.language).toBe('java');
-      expect(result.version).toBe('1.0');
+      expect(result.version).toBe('1.1');
     });
   });
 

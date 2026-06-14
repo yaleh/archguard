@@ -16,7 +16,7 @@ import type { ArchJSON } from '@/types/index.js';
 
 function makeArchJson(entityCount = 1): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: ['test.ts'],
@@ -34,7 +34,7 @@ function makeArchJson(entityCount = 1): ArchJSON {
 
 function makeEmptyArchJson(): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: new Date().toISOString(),
     sourceFiles: [],

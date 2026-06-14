@@ -19,7 +19,7 @@ import type { GroupingDecision } from '@/mermaid/types.js';
 
 function makeMinimalArchJson(entityType: string): ArchJSON {
   return {
-    version: '1.0',
+    version: '1.1',
     language: 'typescript',
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: ['src/foo/Foo.ts'],
@@ -162,7 +162,7 @@ describe('classDef emission — only known styles are declared', () => {
   // Test 12: Diagram with known-type entities contains expected classDef lines
   it('diagram with known-type entities contains all expected classDef lines', () => {
     const archJson: ArchJSON = {
-      version: '1.0',
+      version: '1.1',
       language: 'typescript',
       timestamp: '2026-01-01T00:00:00Z',
       sourceFiles: ['src/Foo.ts', 'src/Bar.ts'],
