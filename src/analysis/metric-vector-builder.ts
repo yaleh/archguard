@@ -2,6 +2,7 @@ import { giniCoefficient } from './gini.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { PackageStatEntry } from '@/cli/query/query-engine.js';
 import type { MetricVector } from '@/types/metric-vector.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 export function buildMetricVector(archJson: ArchJSON, packageStats: PackageStatEntry[]): MetricVector {
   const metrics = archJson.metrics;
@@ -20,6 +21,6 @@ export function buildMetricVector(archJson: ArchJSON, packageStats: PackageStatE
     giniInDegree: giniCoefficient(fileStats.map(f => f.inDegree)),
     giniPackageSize: giniCoefficient(packageStats.map(p => p.fileCount)),
     packageCount: packageStats.length,
-    entityCoverageRatio: archJson.extensions?.testAnalysis?.metrics?.entityCoverageRatio ?? null,
+    entityCoverageRatio: new ExtensionAccessor(archJson).getTestAnalysis()?.metrics?.entityCoverageRatio ?? null,
   };
 }

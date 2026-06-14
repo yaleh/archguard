@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import type { QueryManifest, QueryScopeEntry, QuerySourceGroup } from './query-manifest.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 /**
  * Input type for scope persistence. Equivalent to QuerySourceGroup.
@@ -72,7 +73,7 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
     sources: scope.sources,
     entityCount: archJson.entities.length,
     relationCount: archJson.relations.length,
-    hasAtlasExtension: !!archJson.extensions?.goAtlas,
+    hasAtlasExtension: new ExtensionAccessor(archJson).hasAtlasExtension(),
     ...(scope.role ? { role: scope.role } : {}),
   };
 }

@@ -28,6 +28,7 @@ import { buildArchIndex } from '@/core/query/arch-index-builder.js';
 import { QueryEngine } from '@/core/query/query-engine.js';
 import { saveSnapshot, pruneSnapshots, resolveCommitSha, resolveBranch } from '@/analysis/snapshot-store.js';
 import type { MetricSnapshot } from '@/analysis/snapshot-store.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import { createRequire } from 'node:module';
 
 const _require = createRequire(import.meta.url);
@@ -138,7 +139,7 @@ export class DiagramPipelineRunner {
           sources: diagram.sources,
           entityCount: outputJSON.entities.length,
           relationCount: outputJSON.relations.length,
-          hasAtlasExtension: !!outputJSON.extensions?.goAtlas,
+          hasAtlasExtension: new ExtensionAccessor(outputJSON).hasAtlasExtension(),
         },
       });
       const packageStats = queryEngine.getPackageStats().packages;
@@ -206,7 +207,7 @@ export class DiagramPipelineRunner {
       const usesModuleGraph = diagram.level === 'package' && !!moduleGraph;
 
       // For Go Atlas diagrams the package layer is the source of truth at package level.
-      const atlasPackageLayer = aggregatedJSON.extensions?.goAtlas?.layers?.['package'];
+      const atlasPackageLayer = new ExtensionAccessor(aggregatedJSON).getAtlasLayer('package');
       const usesAtlas = !!atlasPackageLayer && !usesModuleGraph;
 
       return {

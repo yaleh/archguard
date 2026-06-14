@@ -19,6 +19,7 @@ import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js
 import type { ArchJSON, Relation } from '@/types/index.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -90,7 +91,7 @@ export class DiagramOutputRouter {
 
     // Step 2: mermaid routing — based on ArchJSON extensions and archJSON.language
     // NOTE: uses archJSON.extensions / archJSON.language, NOT diagram.language
-    if (archJSON.extensions?.goAtlas) {
+    if (new ExtensionAccessor(archJSON).hasAtlasExtension()) {
       await this.generateAtlasOutput(archJSON, paths, diagram, pool);
     } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
       await this.generateTsModuleGraphOutput(archJSON, paths, diagram, pool);

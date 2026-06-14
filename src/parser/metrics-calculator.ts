@@ -8,11 +8,12 @@ import type {
   FileStats,
   CycleInfo,
 } from '@/types/index.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 export class MetricsCalculator {
   calculate(archJSON: ArchJSON, level: DetailLevel): ArchJSONMetrics {
     const { entities, relations } = archJSON;
-    const isAtlas = !!archJSON.extensions?.goAtlas;
+    const isAtlas = new ExtensionAccessor(archJSON).hasAtlasExtension();
 
     // Always compute SCC count — preserves existing behaviour for all levels (including package).
     const { sccCount, nonTrivialSCCs } = this.computeSCCGroups(archJSON);
