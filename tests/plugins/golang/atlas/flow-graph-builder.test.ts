@@ -1092,6 +1092,56 @@ describe('traceCallsFromEntry - stdlib filtering', () => {
     expect(toValues).not.toContain('append');
     expect(toValues.some((t) => t.includes('Query'))).toBe(true);
   });
+
+  it('filters out slog.* calls (Go 1.21 stdlib)', async () => {
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'hub',
+          fullName: 'pkg/hub',
+          functions: [
+            makeFunction({
+              name: 'setupRoutes',
+              body: {
+                calls: [
+                  {
+                    functionName: 'HandleFunc',
+                    args: ['/api', 'handler'],
+                    location: { file: 'r.go', startLine: 5, endLine: 5 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'handler',
+              body: {
+                calls: [
+                  { functionName: 'Info', packageName: 'slog', location: { file: 'r.go', startLine: 10, endLine: 10 } },
+                  { functionName: 'Error', packageName: 'slog', location: { file: 'r.go', startLine: 11, endLine: 11 } },
+                  { functionName: 'Warn', packageName: 'slog', location: { file: 'r.go', startLine: 12, endLine: 12 } },
+                  { functionName: 'Debug', packageName: 'slog', location: { file: 'r.go', startLine: 13, endLine: 13 } },
+                  { functionName: 'Process', packageName: 'biz', location: { file: 'r.go', startLine: 14, endLine: 14 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const builder = new FlowGraphBuilder();
+    const graph = await builder.build(rawData, { detectedFrameworks: new Set(['net/http']) });
+    const chain = graph.callChains[0];
+    const toValues = chain.calls.map((c) => c.to);
+    expect(toValues).not.toContain('slog.Info');
+    expect(toValues).not.toContain('slog.Error');
+    expect(toValues).not.toContain('slog.Warn');
+    expect(toValues).not.toContain('slog.Debug');
+    expect(toValues).toContain('biz.Process');
+  });
 });
 
 describe('traceCallsFromEntry - deduplication', () => {

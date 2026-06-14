@@ -96,6 +96,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     'math',
     'os',
     'log',
+    'slog', // Go 1.21 structured logging stdlib
     'context',
     'net',
     'http',
