@@ -12,6 +12,7 @@ import type {
   PackageCoverage,
   TestFileInfo,
 } from '@/types/extensions/test-analysis.js';
+import { ExtensionAccessor } from './extension-accessor.js';
 
 // ── Re-exported types ────────────────────────────────────────────────────────
 
@@ -47,12 +48,16 @@ export interface PackageStatsResult {
 
 export class ArchMetrics {
   private readonly entityMap: Map<string, Entity>;
+  private readonly ext: ExtensionAccessor;
 
   constructor(
     private readonly archJson: ArchJSON,
-    private readonly index: ArchIndex
+    private readonly index: ArchIndex,
+    extensionAccessor?: ExtensionAccessor
   ) {
     this.entityMap = new Map(archJson.entities.map((e) => [e.id, e]));
+    // Use provided accessor, or create a default one from archJson
+    this.ext = extensionAccessor ?? new ExtensionAccessor(archJson);
   }
 
   // ----------------------------------------------------------------
@@ -78,12 +83,12 @@ export class ArchMetrics {
       .sort((a, b) => b.dependentCount - a.dependentCount)
       .slice(0, 10);
 
-    const atlasEdgeCount = Object.values(this.archJson.extensions?.goAtlas?.layers ?? {}).reduce(
+    const atlasEdgeCount = Object.values(this.ext.getAtlasLayers() ?? {}).reduce(
       (sum, layer) => sum + ((layer as { edges?: unknown[] }).edges?.length ?? 0),
       0
     );
 
-    const hasAtlas = !!this.archJson.extensions?.goAtlas?.layers?.package;
+    const hasAtlas = !!this.ext.getAtlasLayer('package');
 
     const topDependedOn = hasAtlas ? [] : computedTopDependedOn;
     const topDependedOnNote = hasAtlas
@@ -146,7 +151,7 @@ export class ArchMetrics {
     }
 
     // ── Path A: Go Atlas ──────────────────────────────────────────────────
-    const pg = this.archJson.extensions?.goAtlas?.layers?.package;
+    const pg = this.ext.getAtlasLayer('package');
     if (pg) {
       const sourceNodes = pg.nodes.filter((n: { type: string }) => n.type === 'internal' || n.type === 'cmd');
       const packages: PackageStatEntry[] = sourceNodes.map((node: { name: string; fileCount: number; stats?: { structs?: number; interfaces?: number; functions?: number } }) => {
@@ -375,7 +380,7 @@ export class ArchMetrics {
   // ----------------------------------------------------------------
 
   getPackageCoverage(): PackageCoverage[] {
-    const analysis = this.archJson.extensions?.testAnalysis;
+    const analysis = this.ext.getTestAnalysis();
     if (!analysis) return [];
 
     const linkByEntity = new Map<string, { score: number; testIds: string[] }>(
@@ -431,7 +436,7 @@ export class ArchMetrics {
     }>;
     found: boolean;
   } {
-    const analysis = this.archJson.extensions?.testAnalysis;
+    const analysis = this.ext.getTestAnalysis();
     if (!analysis) {
       return {
         entityId,

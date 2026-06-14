@@ -301,3 +301,85 @@ describe('QueryEngine options (Phase 84)', () => {
     expect(entities[0].members).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 111 — ExtensionAccessor end-to-end through QueryEngine
+// ---------------------------------------------------------------------------
+
+describe('QueryEngine — ExtensionAccessor delegation (Phase 111)', () => {
+  const packageGraph = {
+    nodes: [{ id: 'pkg/api', name: 'api', type: 'internal' as const, fileCount: 5 }],
+    edges: [],
+    cycles: [],
+  };
+
+  function makeGoArchJson(): ArchJSON {
+    return {
+      version: '1.0',
+      language: 'go',
+      timestamp: new Date().toISOString(),
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        goAtlas: {
+          version: '2.0',
+          layers: { package: packageGraph },
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            generationStrategy: {
+              functionBodyStrategy: 'none',
+              detectedFrameworks: [],
+              followIndirectCalls: false,
+              goplsEnabled: false,
+            },
+            completeness: { package: 1, capability: 0, goroutine: 0, flow: 0 },
+            performance: { fileCount: 5, parseTime: 50, totalTime: 100, memoryUsage: 512 },
+          },
+        },
+      },
+    };
+  }
+
+  function makeGoEngine() {
+    const archJson = makeGoArchJson();
+    const archIndex = buildArchIndex(archJson);
+    const scope: QueryScopeEntry = {
+      key: 'go-atlas-test',
+      label: 'go atlas test',
+      kind: 'parsed',
+      sources: ['./src'],
+      language: 'go',
+      entityCount: 0,
+      relationCount: 0,
+      hasAtlasExtension: true,
+    };
+    return new QueryEngine({ archJson, archIndex, scopeEntry: scope });
+  }
+
+  it('getSummary().capabilities.packageGraph is true for Go Atlas scope', () => {
+    const engine = makeGoEngine();
+    const summary = engine.getSummary();
+    expect(summary.capabilities.packageGraph).toBe(true);
+  });
+
+  it('getAtlasLayer("package") returns the package graph via ExtensionAccessor', () => {
+    const engine = makeGoEngine();
+    const pg = engine.getAtlasLayer('package');
+    expect(pg).toBeDefined();
+    expect(pg?.nodes).toHaveLength(1);
+    expect(pg?.nodes[0].name).toBe('api');
+  });
+
+  it('hasAtlasExtension() returns true via ExtensionAccessor', () => {
+    const engine = makeGoEngine();
+    expect(engine.hasAtlasExtension()).toBe(true);
+  });
+
+  it('hasAtlasExtension() returns false when no goAtlas extension', () => {
+    const archJson = makeArchJson();
+    const archIndex = buildArchIndex(archJson);
+    const engine = new QueryEngine({ archJson, archIndex, scopeEntry: defaultScope });
+    expect(engine.hasAtlasExtension()).toBe(false);
+  });
+});

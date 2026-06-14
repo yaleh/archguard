@@ -2,6 +2,10 @@
  * QueryEngine — loads a single scope's ArchJSON + ArchIndex and provides query methods.
  *
  * Pure in-memory query object with no disk I/O. Use engine-loader.ts for loading from disk.
+ *
+ * QueryEngine members: ~20 public + 2 private (down from 32 before Phase 109-111).
+ * Entity-search logic lives in EntityQueryService; extension access in ExtensionAccessor;
+ * metrics/aggregation in ArchMetrics. QueryEngine is now a thin coordination layer.
  */
 
 import type { ArchJSON, Entity, RelationType, CycleInfo } from '@/types/index.js';
@@ -15,6 +19,8 @@ import type {
 import { narrowEntities, filterRelationsForScope } from './output-scope-filter.js';
 import { serialize } from './edge-list-serializer.js';
 import { ArchMetrics } from './arch-metrics.js';
+import { ExtensionAccessor } from './extension-accessor.js';
+import { EntityQueryService } from './entity-query-service.js';
 export type { PackageStatEntry, PackageStatMeta, PackageStatsResult } from './arch-metrics.js';
 
 export interface EntitySummary {
@@ -68,16 +74,17 @@ export class QueryEngine {
   private archJson: ArchJSON;
   private index: ArchIndex;
   private scopeEntry: QueryScopeEntry;
-  private entityMap: Map<string, Entity>;
   private readonly metrics: ArchMetrics;
+  private readonly extensionAccessor: ExtensionAccessor;
+  private readonly entityQueryService: EntityQueryService;
 
   constructor(options: QueryEngineOptions) {
     this.archJson = options.archJson;
     this.index = options.archIndex;
     this.scopeEntry = options.scopeEntry;
-    // Build entity map for fast lookup
-    this.entityMap = new Map(options.archJson.entities.map((e) => [e.id, e]));
-    this.metrics = new ArchMetrics(options.archJson, options.archIndex);
+    this.extensionAccessor = new ExtensionAccessor(options.archJson);
+    this.entityQueryService = new EntityQueryService(options.archJson, options.archIndex);
+    this.metrics = new ArchMetrics(options.archJson, options.archIndex, this.extensionAccessor);
   }
 
   // ----------------------------------------------------------------
@@ -89,9 +96,7 @@ export class QueryEngine {
     name: string,
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
-    const ids = this.index.nameToIds[name] ?? [];
-    const entities = ids.map((id) => this.entityMap.get(id)).filter(Boolean);
-    return this.applyOutputOptions(entities, options);
+    return this.applyOutputOptions(this.entityQueryService.findEntity(name), options);
   }
 
   /** BFS along the dependencies direction (what entityName depends on). */
@@ -124,8 +129,8 @@ export class QueryEngine {
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
     const entities = [...new Set(implementerIds)]
-      .map((id) => this.entityMap.get(id))
-      .filter(Boolean);
+      .map((id) => this.entityQueryService.getById(id))
+      .filter(Boolean) as Entity[];
     return this.applyOutputOptions(entities, options);
   }
 
@@ -140,7 +145,9 @@ export class QueryEngine {
     const subclassIds = pairs
       .filter(([, target]) => targetSet.has(target))
       .map(([source]) => source);
-    const entities = [...new Set(subclassIds)].map((id) => this.entityMap.get(id)).filter(Boolean);
+    const entities = [...new Set(subclassIds)]
+      .map((id) => this.entityQueryService.getById(id))
+      .filter(Boolean) as Entity[];
     return this.applyOutputOptions(entities, options);
   }
 
@@ -149,9 +156,7 @@ export class QueryEngine {
     filePath: string,
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
-    const ids = this.index.fileToIds[filePath] ?? [];
-    const entities = ids.map((id) => this.entityMap.get(id)).filter(Boolean);
-    return this.applyOutputOptions(entities, options);
+    return this.applyOutputOptions(this.entityQueryService.getFileEntities(filePath), options);
   }
 
   /** Return all non-trivial cycles (SCCs with size > 1). */
@@ -180,7 +185,7 @@ export class QueryEngine {
     topByOutDegree: Array<{ name: string; outDegree: number }>;
   } {
     const hasImplementation = (this.index.relationsByType['implementation']?.length ?? 0) > 0;
-    const hasAtlas = !!this.archJson.extensions?.goAtlas?.layers?.package;
+    const hasAtlas = !!this.extensionAccessor.getAtlasLayer('package');
 
     const capabilities = {
       classHierarchy: this.archJson.language !== 'go',
@@ -208,13 +213,7 @@ export class QueryEngine {
     entityType: string,
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
-    const entities = this.archJson.entities.filter((e) => {
-      if (entityType === 'abstract_class') {
-        return e.type === 'abstract_class' || (e.isAbstract && e.type === 'class');
-      }
-      return e.type === entityType;
-    });
-    return this.applyOutputOptions(entities, options);
+    return this.applyOutputOptions(this.entityQueryService.findByType(entityType), options);
   }
 
   /** Find entities that have the given attribute key (optionally matching a specific value). */
@@ -223,12 +222,7 @@ export class QueryEngine {
     value?: string | number | boolean,
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
-    const entities = this.archJson.entities.filter((e) => {
-      if (!e.attributes) return false;
-      if (value === undefined) return key in e.attributes;
-      return e.attributes[key] === value;
-    });
-    return this.applyOutputOptions(entities, options);
+    return this.applyOutputOptions(this.entityQueryService.findByAttr(key, value), options);
   }
 
   /**
@@ -244,19 +238,10 @@ export class QueryEngine {
     attrValue?: string | number | boolean,
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
-    const base = this.archJson.entities.filter((e) => {
-      if (entityType === 'abstract_class') {
-        return e.type === 'abstract_class' || (e.isAbstract && e.type === 'class');
-      }
-      return e.type === entityType;
-    });
-    const entities = base.filter((e) => {
-      if (!attrKey) return true;
-      if (!e.attributes) return false;
-      if (attrValue === undefined) return attrKey in e.attributes;
-      return e.attributes[attrKey] === attrValue;
-    });
-    return this.applyOutputOptions(entities, options);
+    return this.applyOutputOptions(
+      this.entityQueryService.findByTypeAndAttr(entityType, attrKey, attrValue),
+      options
+    );
   }
 
   /** Find entities whose total incoming + outgoing edges >= threshold. */
@@ -307,22 +292,22 @@ export class QueryEngine {
 
   /** Return the named Go Atlas layer, or undefined if not present. */
   getAtlasLayer<K extends keyof GoAtlasLayers>(layer: K): GoAtlasLayers[K] | undefined {
-    return this.archJson.extensions?.goAtlas?.layers?.[layer];
+    return this.extensionAccessor.getAtlasLayer(layer);
   }
 
   /** Returns true when the ArchJSON carries a goAtlas extension container. */
   hasAtlasExtension(): boolean {
-    return !!this.archJson.extensions?.goAtlas;
+    return this.extensionAccessor.hasAtlasExtension();
   }
 
   /** Return the TestAnalysis extension, or undefined if not present. */
   getTestAnalysis(): import('@/types/extensions/test-analysis.js').TestAnalysis | undefined {
-    return this.archJson.extensions?.testAnalysis;
+    return this.extensionAccessor.getTestAnalysis();
   }
 
   /** Returns true when the ArchJSON carries a testAnalysis extension. */
   hasTestAnalysis(): boolean {
-    return this.archJson.extensions?.testAnalysis !== undefined;
+    return this.extensionAccessor.hasTestAnalysis();
   }
 
   /**
@@ -478,7 +463,7 @@ export class QueryEngine {
           if (!visited.has(neighborId)) {
             visited.add(neighborId);
             nextFrontier.push(neighborId);
-            const entity = this.entityMap.get(neighborId);
+            const entity = this.entityQueryService.getById(neighborId);
             if (entity) result.push(entity);
           }
         }
