@@ -33,6 +33,8 @@ export interface TreeSitterParseOptions {
   extractBodies?: boolean;
   /** Whether to use selective extraction (only functions with target AST nodes) */
   selectiveExtraction?: boolean;
+  /** Function names that must always have their body extracted, regardless of selective triggers */
+  forceExtractFunctions?: string[];
 }
 
 export class TreeSitterBridge {
@@ -158,8 +160,8 @@ export class TreeSitterBridge {
       const blockNode = funcDecl.childForFieldName('body');
       if (blockNode) {
         if (options.selectiveExtraction) {
-          // AST-based pre-scanning (NOT string matching)
-          if (this.shouldExtractBody(blockNode, code)) {
+          const forced = options.forceExtractFunctions?.includes(func.name) ?? false;
+          if (forced || this.shouldExtractBody(blockNode, code)) {
             func.body = this.extractFunctionBody(blockNode, code, filePath);
           }
         } else {
@@ -775,7 +777,8 @@ export class TreeSitterBridge {
       const blockNode = methodDecl.childForFieldName('body');
       if (blockNode) {
         if (options.selectiveExtraction) {
-          if (this.shouldExtractBody(blockNode, code)) {
+          const forced = options.forceExtractFunctions?.includes(methodName) ?? false;
+          if (forced || this.shouldExtractBody(blockNode, code)) {
             body = this.extractFunctionBody(blockNode, code, filePath);
           }
         } else {

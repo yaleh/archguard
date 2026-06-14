@@ -303,6 +303,9 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       ...(config.excludePatterns ?? []),
       ...(atlasConfig?.excludePatterns ?? []),
     ];
+    const forcedFnNames = (atlasConfig?.entryPoints ?? []).map(
+      (ep) => ep.function.split('.').at(-1) ?? ep.function
+    );
     let rawData = await this.parseToRawData(workspaceRoot, {
       workspaceRoot,
       includePatterns: config.includePatterns,
@@ -314,6 +317,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       ],
       extractBodies: functionBodyStrategy !== 'none',
       selectiveExtraction: functionBodyStrategy === 'selective',
+      forceExtractFunctions: forcedFnNames.length > 0 ? forcedFnNames : undefined,
     });
 
     // Filter test packages
@@ -443,6 +447,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       const pkg = this.treeSitter.parseCode(code, file, {
         extractBodies: config.extractBodies,
         selectiveExtraction: config.selectiveExtraction,
+        forceExtractFunctions: config.forceExtractFunctions,
       });
 
       // Compute fullName from file path relative to module root

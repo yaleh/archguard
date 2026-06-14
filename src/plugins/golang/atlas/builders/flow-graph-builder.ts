@@ -1,4 +1,4 @@
-import type { GoRawData, GoRawPackage, GoCallExpr, GoField } from '../../types.js';
+import type { GoRawData, GoRawPackage, GoCallExpr, GoField, GoFunctionBody } from '../../types.js';
 import type { FlowGraph, EntryPoint, CallChain, CallEdge } from '../types.js';
 import type { FlowBuildOptions } from '../types.js';
 import type { IAtlasBuilder } from './i-atlas-builder.js';
@@ -211,7 +211,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     options: FlowBuildOptions = { detectedFrameworks: new Set(['net/http']) }
   ): Promise<FlowGraph> {
     const entryPoints = this.detectEntryPoints(rawData, options);
-    const callChains = this.buildCallChains(rawData, entryPoints);
+    const callChains = this.buildCallChains(rawData, entryPoints, options);
 
     const graph: FlowGraph = { entryPoints, callChains };
 
@@ -424,11 +424,13 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     return null;
   }
 
-  private buildCallChains(rawData: GoRawData, entryPoints: EntryPoint[]): CallChain[] {
+  private buildCallChains(rawData: GoRawData, entryPoints: EntryPoint[], options: FlowBuildOptions): CallChain[] {
     const interfaceNames = FlowGraphBuilder.buildInterfaceNameSet(rawData);
     const chains: CallChain[] = [];
     for (const entry of entryPoints) {
-      const calls = this.traceCallsFromEntry(rawData, entry, interfaceNames);
+      const calls = options.followIndirectCalls
+        ? this.traceCallsBFS(rawData, entry, interfaceNames, options)
+        : this.traceCallsFromEntry(rawData, entry, interfaceNames);
       chains.push({
         id: `chain-${entry.id}`,
         entryPoint: entry.id,
@@ -436,6 +438,82 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
       });
     }
     return chains;
+  }
+
+  /** Find function body and context types by short name across all packages */
+  private findBodyByName(
+    rawData: GoRawData,
+    fnName: string
+  ): { body: GoFunctionBody; contextTypes: Map<string, string> } | null {
+    for (const pkg of rawData.packages) {
+      for (const func of pkg.functions) {
+        if (func.name === fnName && func.body) {
+          return { body: func.body, contextTypes: FlowGraphBuilder.buildContextTypes(func.parameters) };
+        }
+      }
+      for (const struct of pkg.structs || []) {
+        const method = (struct.methods || []).find((m) => m.name === fnName && m.body);
+        if (method?.body) {
+          const contextTypes = new Map([
+            ...FlowGraphBuilder.buildContextTypes(struct.fields),
+            ...FlowGraphBuilder.buildContextTypes(method.parameters),
+          ]);
+          return { body: method.body, contextTypes };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** BFS multi-hop call tracing (followIndirectCalls=true) */
+  private traceCallsBFS(
+    rawData: GoRawData,
+    entry: EntryPoint,
+    interfaceNames: Set<string>,
+    options: FlowBuildOptions
+  ): CallEdge[] {
+    if (!entry.handler) return [];
+
+    const maxDepth = options.maxCallDepth ?? 3;
+    const handlerFnName = entry.handler.split('.').at(-1) ?? entry.handler;
+    const visitedFns = new Set<string>();
+    const seenEdges = new Set<string>();
+    const edges: CallEdge[] = [];
+
+    let frontier = [handlerFnName];
+
+    for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
+      const nextFrontier: string[] = [];
+
+      for (const fnName of frontier) {
+        if (visitedFns.has(fnName)) continue;
+        visitedFns.add(fnName);
+
+        const found = this.findBodyByName(rawData, fnName);
+        if (!found) continue;
+
+        for (const call of found.body.calls) {
+          const callType = FlowGraphBuilder.classifyCallType(call, found.contextTypes, interfaceNames);
+          const to = call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName;
+          const edge: CallEdge = { from: fnName, to, type: callType, confidence: callType === 'interface' ? 0.8 : 0.7 };
+
+          const edgeKey = `${fnName}\x00${to}`;
+          if (!seenEdges.has(edgeKey) && !FlowGraphBuilder.isNoisyCall(edge)) {
+            seenEdges.add(edgeKey);
+            edges.push(edge);
+          }
+
+          // Only recurse into same-module functions (present in rawData) that aren't already visited
+          if (!visitedFns.has(call.functionName) && this.findBodyByName(rawData, call.functionName) !== null) {
+            nextFrontier.push(call.functionName);
+          }
+        }
+      }
+
+      frontier = nextFrontier;
+    }
+
+    return edges;
   }
 
   private traceCallsFromEntry(

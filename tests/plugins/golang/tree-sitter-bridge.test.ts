@@ -529,4 +529,85 @@ func (s *Server) doWork(x int) {
       expect(method?.body).toBeUndefined();
     });
   });
+
+  describe('forceExtractFunctions override', () => {
+    it('extracts body of a standalone function listed in forceExtractFunctions despite no selective trigger', () => {
+      const code = `
+package handler
+
+func handleToolsCall(req string) string {
+  result := executor.ExecuteTool(req)
+  return result
+}
+`;
+      const result = bridge.parseCode(code, 'handler.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+        forceExtractFunctions: ['handleToolsCall'],
+      });
+      const fn = result.functions.find((f) => f.name === 'handleToolsCall');
+      expect(fn?.body).toBeDefined();
+      expect(fn?.body?.calls.some((c) => c.functionName === 'ExecuteTool')).toBe(true);
+    });
+
+    it('does NOT extract body of a function that is not in forceExtractFunctions', () => {
+      const code = `
+package handler
+
+func otherFn() {
+  doSomething()
+}
+`;
+      const result = bridge.parseCode(code, 'handler.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+        forceExtractFunctions: ['handleToolsCall'],
+      });
+      const fn = result.functions.find((f) => f.name === 'otherFn');
+      expect(fn?.body).toBeUndefined();
+    });
+
+    it('extracts both forced and selectively-triggered functions in the same file', () => {
+      const code = `
+package handler
+
+func manualEntry() {
+  doWork()
+}
+
+func autoExtract() {
+  go func() {}()
+}
+`;
+      const result = bridge.parseCode(code, 'handler.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+        forceExtractFunctions: ['manualEntry'],
+      });
+      const manual = result.functions.find((f) => f.name === 'manualEntry');
+      const auto = result.functions.find((f) => f.name === 'autoExtract');
+      expect(manual?.body).toBeDefined();
+      expect(auto?.body).toBeDefined();
+    });
+
+    it('force-extracts a struct method listed in forceExtractFunctions', () => {
+      const code = `
+package handler
+
+type Handler struct{}
+
+func (h *Handler) handleInitialize(req string) {
+  writeResponse(req)
+}
+`;
+      const result = bridge.parseCode(code, 'handler.go', {
+        extractBodies: true,
+        selectiveExtraction: true,
+        forceExtractFunctions: ['handleInitialize'],
+      });
+      const method = result.structs[0]?.methods.find((m) => m.name === 'handleInitialize');
+      expect(method?.body).toBeDefined();
+      expect(method?.body?.calls.some((c) => c.functionName === 'writeResponse')).toBe(true);
+    });
+  });
 });

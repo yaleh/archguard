@@ -2128,3 +2128,277 @@ describe('FlowGraphBuilder — entryPointPattern', () => {
     expect(patternEntries).toHaveLength(1);
   });
 });
+
+describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
+  const builder = new FlowGraphBuilder();
+
+  function makeRawData(overrides?: Partial<GoRawData>): GoRawData {
+    return {
+      packages: [],
+      moduleRoot: '/test',
+      moduleName: 'github.com/test/project',
+      ...overrides,
+    };
+  }
+
+  function makePackage(overrides?: Partial<GoRawPackage>): GoRawPackage {
+    return {
+      id: 'pkg/api',
+      name: 'api',
+      fullName: 'pkg/api',
+      dirPath: '/test/pkg/api',
+      sourceFiles: ['api.go'],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
+      ...overrides,
+    };
+  }
+
+  function makeFunction(overrides?: Partial<GoFunction>): GoFunction {
+    return {
+      name: 'fn',
+      packageName: 'api',
+      parameters: [],
+      returnTypes: [],
+      exported: true,
+      location: { file: 'api.go', startLine: 1, endLine: 10 },
+      ...overrides,
+    };
+  }
+
+  it('without followIndirectCalls, only 1-hop calls are emitted', async () => {
+    // handleRequest → processRequest (same module), processRequest → db.Query (external)
+    // Without BFS, we only see handleRequest → processRequest
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'server',
+          fullName: 'pkg/server',
+          functions: [
+            makeFunction({
+              name: 'handleRequest',
+              packageName: 'server',
+              body: {
+                calls: [
+                  { functionName: 'processRequest', location: { file: 'server.go', startLine: 5, endLine: 5 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'processRequest',
+              packageName: 'server',
+              body: {
+                calls: [
+                  { functionName: 'Query', packageName: 'db', location: { file: 'server.go', startLine: 15, endLine: 15 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPoints: [{ function: 'handleRequest', protocol: 'mcp' }],
+      followIndirectCalls: false,
+    });
+
+    const chain = result.callChains[0];
+    expect(chain).toBeDefined();
+    const toNames = chain.calls.map((c) => c.to);
+    expect(toNames).toContain('processRequest');
+    // db.Query should NOT appear without BFS
+    expect(toNames).not.toContain('db.Query');
+  });
+
+  it('with followIndirectCalls, BFS expands through same-module functions', async () => {
+    // handleRequest → processRequest → db.Query
+    // With BFS: both edges appear
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'server',
+          fullName: 'pkg/server',
+          functions: [
+            makeFunction({
+              name: 'handleRequest',
+              packageName: 'server',
+              body: {
+                calls: [
+                  { functionName: 'processRequest', location: { file: 'server.go', startLine: 5, endLine: 5 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'processRequest',
+              packageName: 'server',
+              body: {
+                calls: [
+                  { functionName: 'Query', packageName: 'db', location: { file: 'server.go', startLine: 15, endLine: 15 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPoints: [{ function: 'handleRequest', protocol: 'mcp' }],
+      followIndirectCalls: true,
+    });
+
+    const chain = result.callChains[0];
+    expect(chain).toBeDefined();
+    const edges = chain.calls;
+    // Edge 1: handleRequest → processRequest
+    expect(edges.some((e) => e.from === 'handleRequest' && e.to === 'processRequest')).toBe(true);
+    // Edge 2: processRequest → db.Query
+    expect(edges.some((e) => e.from === 'processRequest' && e.to === 'db.Query')).toBe(true);
+  });
+
+  it('BFS stops at maxCallDepth and does not exceed depth limit', async () => {
+    // Chain: A → B → C → D (depth 3 from A)
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'svc',
+          fullName: 'pkg/svc',
+          functions: [
+            makeFunction({
+              name: 'entryA',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'callB', location: { file: 'svc.go', startLine: 1, endLine: 1 } }], goSpawns: [], channelOps: [] },
+            }),
+            makeFunction({
+              name: 'callB',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'callC', location: { file: 'svc.go', startLine: 5, endLine: 5 } }], goSpawns: [], channelOps: [] },
+            }),
+            makeFunction({
+              name: 'callC',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'callD', location: { file: 'svc.go', startLine: 10, endLine: 10 } }], goSpawns: [], channelOps: [] },
+            }),
+            makeFunction({
+              name: 'callD',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'callE', location: { file: 'svc.go', startLine: 15, endLine: 15 } }], goSpawns: [], channelOps: [] },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    // maxCallDepth=2: expand entryA(depth0)→callB(depth1)→callC(depth2), stop before callD
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPoints: [{ function: 'entryA', protocol: 'test' }],
+      followIndirectCalls: true,
+      maxCallDepth: 2,
+    });
+
+    const chain = result.callChains[0];
+    const toNames = chain.calls.map((c) => c.to);
+    expect(toNames).toContain('callB');
+    expect(toNames).toContain('callC');
+    expect(toNames).not.toContain('callD');
+    expect(toNames).not.toContain('callE');
+  });
+
+  it('BFS detects cycles and does not loop infinitely', async () => {
+    // A → B → A (cycle)
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'svc',
+          fullName: 'pkg/svc',
+          functions: [
+            makeFunction({
+              name: 'fnA',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'fnB', location: { file: 'svc.go', startLine: 1, endLine: 1 } }], goSpawns: [], channelOps: [] },
+            }),
+            makeFunction({
+              name: 'fnB',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'fnA', location: { file: 'svc.go', startLine: 5, endLine: 5 } }], goSpawns: [], channelOps: [] },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPoints: [{ function: 'fnA', protocol: 'test' }],
+      followIndirectCalls: true,
+    });
+
+    const chain = result.callChains[0];
+    expect(chain).toBeDefined();
+    // Should complete without hanging; cycle edge fnB→fnA is included at most once
+    const cycleEdge = chain.calls.filter((e) => e.from === 'fnB' && e.to === 'fnA');
+    expect(cycleEdge.length).toBeLessThanOrEqual(1);
+  });
+
+  it('BFS does not recurse into external/noisy calls (stdlib)', async () => {
+    // handleRequest → fmt.Println (stdlib → leaf, do not recurse)
+    // slog.Info exists in stdlib prefix map
+    const rawData = makeRawData({
+      packages: [
+        makePackage({
+          name: 'svc',
+          fullName: 'pkg/svc',
+          functions: [
+            makeFunction({
+              name: 'handleRequest',
+              packageName: 'svc',
+              body: {
+                calls: [
+                  { functionName: 'Info', packageName: 'slog', location: { file: 'svc.go', startLine: 3, endLine: 3 } },
+                  { functionName: 'Println', packageName: 'fmt', location: { file: 'svc.go', startLine: 4, endLine: 4 } },
+                  { functionName: 'doWork', location: { file: 'svc.go', startLine: 5, endLine: 5 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
+            }),
+            makeFunction({
+              name: 'doWork',
+              packageName: 'svc',
+              body: { calls: [{ functionName: 'deepFn', location: { file: 'svc.go', startLine: 10, endLine: 10 } }], goSpawns: [], channelOps: [] },
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = await builder.build(rawData, {
+      detectedFrameworks: new Set(),
+      entryPoints: [{ function: 'handleRequest', protocol: 'test' }],
+      followIndirectCalls: true,
+    });
+
+    const chain = result.callChains[0];
+    const toNames = chain.calls.map((c) => c.to);
+    // doWork is same-module → should be recursed into → deepFn appears
+    expect(toNames).toContain('doWork');
+    expect(toNames).toContain('deepFn');
+    // deepFn is not in rawData → leaf, no further expansion
+    const fromNames = chain.calls.map((c) => c.from);
+    expect(fromNames).not.toContain('deepFn');
+  });
+});

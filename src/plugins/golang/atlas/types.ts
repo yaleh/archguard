@@ -73,6 +73,7 @@ export interface FlowBuildOptions {
   customFrameworks?: CustomFrameworkConfig[];
   entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
+  maxCallDepth?: number; // max BFS depth when followIndirectCalls is true (default 3)
   entryPointPattern?: string; // regex matched against call.functionName; protocol: 'custom'
 }
 

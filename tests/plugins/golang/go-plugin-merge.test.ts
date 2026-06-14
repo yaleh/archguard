@@ -337,4 +337,42 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     );
     expect(parseSpy).not.toHaveBeenCalledWith(expect.anything(), nestedFile, expect.anything());
   });
+
+  it('passes forceExtractFunctions through parseToRawData to parseCode', async () => {
+    const file = `${WS}/pkg/handler/handler.go`;
+    const { glob } = await import('glob');
+    vi.mocked(glob).mockResolvedValue([file] as any);
+
+    const bridge = (plugin as any).treeSitter;
+    const parseSpy = vi.spyOn(bridge, 'parseCode').mockImplementation(
+      (_code: string, filePath: string): GoRawPackage => ({
+        name: 'handler',
+        fullName: '',
+        id: '',
+        dirPath: '',
+        sourceFiles: [filePath],
+        imports: [],
+        structs: [],
+        interfaces: [],
+        functions: [],
+      })
+    );
+
+    await plugin.parseToRawData(WS, {
+      workspaceRoot: WS,
+      extractBodies: true,
+      selectiveExtraction: true,
+      forceExtractFunctions: ['handleToolsCall', 'handleInitialize'],
+    });
+
+    expect(parseSpy).toHaveBeenCalledWith(
+      undefined,
+      file,
+      expect.objectContaining({
+        extractBodies: true,
+        selectiveExtraction: true,
+        forceExtractFunctions: ['handleToolsCall', 'handleInitialize'],
+      })
+    );
+  });
 });
