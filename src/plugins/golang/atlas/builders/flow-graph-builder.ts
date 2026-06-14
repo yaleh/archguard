@@ -480,12 +480,15 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     const seenEdges = new Set<string>();
     const edges: CallEdge[] = [];
 
-    let frontier = [handlerFnName];
+    // Frontier stores {shortName for lookup, displayName for edge.from}
+    let frontier: Array<{ short: string; display: string }> = [
+      { short: handlerFnName, display: entry.handler },
+    ];
 
     for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
-      const nextFrontier: string[] = [];
+      const nextFrontier: Array<{ short: string; display: string }> = [];
 
-      for (const fnName of frontier) {
+      for (const { short: fnName, display: fromDisplay } of frontier) {
         if (visitedFns.has(fnName)) continue;
         visitedFns.add(fnName);
 
@@ -495,9 +498,9 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
         for (const call of found.body.calls) {
           const callType = FlowGraphBuilder.classifyCallType(call, found.contextTypes, interfaceNames);
           const to = call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName;
-          const edge: CallEdge = { from: fnName, to, type: callType, confidence: callType === 'interface' ? 0.8 : 0.7 };
+          const edge: CallEdge = { from: fromDisplay, to, type: callType, confidence: callType === 'interface' ? 0.8 : 0.7 };
 
-          const edgeKey = `${fnName}\x00${to}`;
+          const edgeKey = `${fromDisplay}\x00${to}`;
           if (!seenEdges.has(edgeKey) && !FlowGraphBuilder.isNoisyCall(edge)) {
             seenEdges.add(edgeKey);
             edges.push(edge);
@@ -505,7 +508,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
 
           // Only recurse into same-module functions (present in rawData) that aren't already visited
           if (!visitedFns.has(call.functionName) && this.findBodyByName(rawData, call.functionName) !== null) {
-            nextFrontier.push(call.functionName);
+            nextFrontier.push({ short: call.functionName, display: to });
           }
         }
       }

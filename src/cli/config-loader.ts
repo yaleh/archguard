@@ -255,6 +255,8 @@ const configSchema = z.object({
         annotations: AnnotationConfigSchema.optional(),
         /** v2.1.0: Class-level annotations */
         classes: ClassHighlightConfigSchema.optional(),
+        /** Language-specific plugin options (e.g. atlas config for Go) */
+        languageSpecific: z.record(z.string(), z.unknown()).optional(),
       })
     )
     .default([]),
@@ -305,6 +307,7 @@ interface FileConfig {
     format?: 'mermaid' | 'json';
     exclude?: string[];
     language?: string;
+    languageSpecific?: Record<string, unknown>;
   }>;
 }
 
