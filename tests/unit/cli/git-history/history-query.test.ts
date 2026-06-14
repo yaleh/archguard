@@ -522,6 +522,42 @@ describe('HistoryQuery.getChangeRisk', () => {
     expect(result.riskScore).toBeGreaterThanOrEqual(0);
     expect(result.riskScore).toBeLessThanOrEqual(1);
   });
+
+  it('returns currentlyExists: true for an existing file', () => {
+    const file = makeFileMetric('src/a.ts', { currentlyExists: true });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeRisk('file', 'src/a.ts');
+    expect(result.currentlyExists).toBe(true);
+  });
+
+  it('returns currentlyExists: false for a deleted file', () => {
+    const file = makeFileMetric('src/a.ts', { currentlyExists: false });
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeRisk('file', 'src/a.ts');
+    expect(result.currentlyExists).toBe(false);
+  });
+
+  it('returns currentlyExists: true when field is undefined (safe default)', () => {
+    const file = makeFileMetric('src/a.ts'); // no currentlyExists set
+    const data = makeData([file], []);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeRisk('file', 'src/a.ts');
+    expect(result.currentlyExists).toBe(true);
+  });
+
+  it('returns currentlyExists: true for package type (packages have no existence flag)', () => {
+    const pkg = makePackageMetric('src');
+    const data = makeData([], [pkg]);
+    const q = new HistoryQuery(data);
+
+    const result = q.getChangeRisk('package', 'src');
+    expect(result.currentlyExists).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

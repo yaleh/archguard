@@ -175,8 +175,11 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         };
       }
 
-      // Build summary response
-      const topChurnFiles = [...fileMetrics]
+      // Build summary response — separate existing files from deleted ones
+      const existingFiles = fileMetrics.filter((f) => f.currentlyExists !== false);
+      const deletedFiles = fileMetrics.filter((f) => f.currentlyExists === false);
+
+      const topChurnFiles = [...existingFiles]
         .sort((a, b) => b.commitCount - a.commitCount)
         .slice(0, 5)
         .map((f) => `  ${f.path} (${f.commitCount} commits, ${f.authorCount} authors)`)
@@ -188,16 +191,30 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         .map((p) => `  ${p.path}/ (${p.commitCount} commits)`)
         .join('\n');
 
+      const deletedSection =
+        deletedFiles.length > 0
+          ? [
+              '',
+              `Deleted files (${deletedFiles.length} total, top 3 by churn — excluded from active list):`,
+              [...deletedFiles]
+                .sort((a, b) => b.commitCount - a.commitCount)
+                .slice(0, 3)
+                .map((f) => `  ${f.path} (${f.commitCount} commits, deleted)`)
+                .join('\n'),
+            ].join('\n')
+          : '';
+
       const summary = [
         `Git history analysis complete for ${projectRoot}`,
         `  Branch:    ${analyzedBranch} @ ${headRef}`,
         `  Period:    last ${sinceDays} days`,
         `  Commits:   ${commits.length} processed`,
-        `  Files:     ${fileMetrics.length} changed`,
+        `  Files:     ${fileMetrics.length} changed (${deletedFiles.length} deleted)`,
         `  Packages:  ${packageMetrics.length} packages`,
         '',
         'Top churned files:',
         topChurnFiles || '  (none)',
+        deletedSection,
         '',
         'Top churned packages:',
         topChurnPackages || '  (none)',

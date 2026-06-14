@@ -58,6 +58,7 @@ export interface ChangeRiskResult {
     cochangeBreadth: number;
     recency: string;
   };
+  currentlyExists: boolean;
   limitation: string;
 }
 
@@ -249,6 +250,12 @@ export class HistoryQuery {
     const riskScore = computeRiskScore(rf);
     const riskLevel = classifyRiskLevel(riskScore);
 
+    // Packages have no existence flag; files default to true when unset
+    const currentlyExists =
+      targetType === 'file'
+        ? ((m as import('@/types/git-history.js').FileHistoryMetrics).currentlyExists ?? true)
+        : true;
+
     return {
       target,
       targetType,
@@ -262,6 +269,7 @@ export class HistoryQuery {
         cochangeBreadth: rf.cochangeBreadth,
         recency: `Recency factor: ${(rf.recency * 100).toFixed(0)}% (recent activity = higher risk)`,
       },
+      currentlyExists,
       limitation: 'Risk score is a heuristic approximation based on git history patterns.',
     };
   }

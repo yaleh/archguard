@@ -332,6 +332,37 @@ describe('archguard_get_change_risk', () => {
     const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
     expect(result.content[0].text).toBe(NOT_ANALYZED_MSG);
   });
+
+  it('response includes currentlyExists: true for an existing file', async () => {
+    const mockData = makeMockData();
+    // makeFileMetrics does not set currentlyExists → undefined → should default to true
+    loadHistoryDataMock.mockResolvedValue(mockData);
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_change_risk');
+
+    const result = await cb({ targetType: 'file', target: 'src/cli/mcp/mcp-server.ts' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.currentlyExists).toBe(true);
+  });
+
+  it('response includes currentlyExists: false for a deleted file', async () => {
+    const mockData = makeMockData();
+    const deletedFile = makeFileMetrics('src/analysis/fim/fim-analysis.ts');
+    deletedFile.currentlyExists = false;
+    mockData.fileMetrics.set('src/analysis/fim/fim-analysis.ts', deletedFile);
+    loadHistoryDataMock.mockResolvedValue(mockData);
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_change_risk');
+
+    const result = await cb({
+      targetType: 'file',
+      target: 'src/analysis/fim/fim-analysis.ts',
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.currentlyExists).toBe(false);
+  });
 });
 
 describe('archguard_get_ownership', () => {
