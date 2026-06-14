@@ -250,7 +250,9 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_issues',
-    'Get test quality issues for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
+    'Return static-analysis test quality issues (orphan_test, zero_assertion, skip_accumulation); ' +
+      'orphan_test and zero_assertion results may include false positives when tests use import ' +
+      'aliases, custom assertion helpers, or long setup blocks. Call archguard_detect_test_patterns first.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
@@ -259,7 +261,11 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         .describe(
           'Analysis scope key. Omit to use the widest available scope containing test data.'
         ),
-      patternConfig: patternConfigSchema,
+      patternConfig: patternConfigSchema.describe(
+        'Pattern config for detection (informational only — analysis data was produced at ' +
+          'archguard_analyze time; changing this field at query time does not re-analyze or ' +
+          'alter the stored results).'
+      ),
       severity: z.enum(['warning', 'info']).optional().describe('Filter by severity'),
     },
     async ({ projectRoot, scope, severity }) => {
@@ -284,7 +290,9 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_metrics',
-    'Get test metrics summary for the analyzed project. IMPORTANT: Call archguard_detect_test_patterns first to get the correct patternConfig for this project.',
+    'Return test metrics summary (coverage ratios, assertion density, test file counts); ' +
+      'coverage is inferred from static import-path and filename matching, not runtime tracing — ' +
+      'scores are an approximation. Call archguard_detect_test_patterns first.',
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
@@ -293,7 +301,11 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         .describe(
           'Analysis scope key. Omit to use the widest available scope containing test data.'
         ),
-      patternConfig: patternConfigSchema,
+      patternConfig: patternConfigSchema.describe(
+        'Pattern config for detection (informational only — analysis data was produced at ' +
+          'archguard_analyze time; changing this field at query time does not re-analyze or ' +
+          'alter the stored results).'
+      ),
       includePackageBreakdown: z
         .boolean()
         .optional()

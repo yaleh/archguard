@@ -8,7 +8,7 @@
 
 ## 上下文
 
-ArchGuard MCP server 目前已暴露 14 个工具（10 个查询工具 + 4 个测试分析工具 + 1 个分析工具），未来随着功能扩展，工具数量还会增加。
+ArchGuard MCP server 目前已暴露 24 个工具（核心查询 10 个 + 分析触发 2 个 + Git 历史 4 个 + Go Atlas 分析 3 个 + 调用图 1 个 + 测试分析 4 个），未来随着功能扩展，工具数量还会增加。
 
 当前代码库中工具的描述、命名、参数 schema 和输出格式缺乏一致的标准。调研发现以下问题：
 
@@ -208,26 +208,78 @@ try {
 
 ## 现有工具达标情况
 
+> 最后更新：2026-06-14。工具总数：24（mcp-server.ts 10 个 + 外部 register 函数 14 个）。
+
+### 核心查询工具（mcp-server.ts）
+
 | 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
 |---|---|---|---|---|
-| `archguard_summary` | ❌ 过短 | N/A | N/A | ✅ |
-| `archguard_find_entity` | ❌ 过短 | N/A | N/A | ✅ |
-| `archguard_get_file_entities` | ❌ 过短 | N/A | N/A | ✅ |
+| `archguard_summary` | ✅ | N/A | N/A | ✅ |
+| `archguard_find_entity` | ✅ | N/A | N/A | ✅ |
+| `archguard_get_file_entities` | ⚠️ 描述极简，"Get"开头 | N/A | N/A | ✅ |
 | `archguard_get_package_stats` | ✅ | N/A | N/A | ✅ |
-| `archguard_get_dependencies` | ✅ | N/A | N/A | ✅ |
+| `archguard_get_dependencies` | ✅ | ✅ | N/A | ✅ |
 | `archguard_get_dependents` | ✅ | N/A | N/A | ✅ |
-| `archguard_find_subclasses` | ✅ | N/A | N/A | ✅ |
-| `archguard_find_implementers` | ✅ | N/A | N/A | ✅ |
-| `archguard_detect_cycles` | ✅ | N/A | N/A | ✅ |
-| `archguard_detect_test_patterns` | ✅ | N/A | N/A | ✅ |
-| `archguard_get_test_metrics` | ✅ | ✅ | ✅ | ⚠️ patternConfig 待标注 |
-| `archguard_get_entity_coverage` | ✅ | ✅ | ✅ | ✅ |
-| `archguard_get_test_issues` | ✅ | ✅ | ✅ | ⚠️ patternConfig 待标注 |
-| `archguard_analyze` | ✅ | N/A | N/A | ✅ |
+| `archguard_find_implementers` | ✅ | ✅ Go 结构类型说明 | N/A | ✅ |
+| `archguard_find_subclasses` | ✅ | ✅ Go 返回空说明 | N/A | ✅ |
+| `archguard_detect_cycles` | ✅ | ✅ Go 编译器防循环说明 | N/A | ✅ |
+| `archguard_get_atlas_layer` | ✅ | N/A | N/A | ✅ |
 
-待修复项：
-- `archguard_summary`、`archguard_find_entity`、`archguard_get_file_entities` 描述过短
-- 三个测试查询工具的 `patternConfig` 参数缺少"当前无效"说明
+### 分析触发工具
+
+| 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
+|---|---|---|---|---|
+| `archguard_analyze` | ✅ | N/A | N/A | ✅ |
+| `archguard_analyze_git` | ✅ | N/A | N/A | ✅ |
+
+### Git 历史工具
+
+| 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
+|---|---|---|---|---|
+| `archguard_get_change_context` | ⚠️ "Get"开头 | ✅ 时间窗口/重命名限制 | ✅ requires analyze_git | ✅ |
+| `archguard_get_cochange` | ✅ | ✅ 进化信号非运行时依赖 | ✅ requires analyze_git | ✅ |
+| `archguard_get_change_risk` | ✅ | ✅ 启发式非缺陷预测模型 | ✅ requires analyze_git | ✅ |
+| `archguard_get_ownership` | ✅ | N/A | ✅ requires analyze_git | ✅ |
+
+### Go Atlas 分析工具
+
+| 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
+|---|---|---|---|---|
+| `archguard_get_package_fanin` | ✅ | ✅ 仅 Atlas 模式 | N/A | ✅ |
+| `archguard_get_package_fanout` | ✅ | ✅ 仅 Atlas 模式 | N/A | ✅ |
+| `archguard_detect_god_packages` | ✅ | ✅ 仅 Atlas 模式 | N/A | ✅ |
+
+### 调用图工具
+
+| 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
+|---|---|---|---|---|
+| `archguard_find_callers` | ✅ | ✅ 各语言精度（TS 85%/Go 90%/Java 60%/Python 40%） | ✅ call archguard_analyze first | ✅ |
+
+### 测试分析工具
+
+| 工具 | 描述长度 | 局限性内联 | 工作流依赖 | Schema 完整 |
+|---|---|---|---|---|
+| `archguard_detect_test_patterns` | ✅ | N/A | N/A | ✅ |
+| `archguard_get_test_metrics` | ✅ | ✅ 静态推断非运行时追踪 | ✅ call detect_test_patterns first | ✅ patternConfig 已标注 informational only |
+| `archguard_get_test_issues` | ✅ | ✅ 误报场景（alias/自定义断言/setup 块） | ✅ call detect_test_patterns first | ✅ patternConfig 已标注 informational only |
+| `archguard_get_entity_coverage` | ✅ | ✅ unknown entity 返回 found:false | ✅ call detect_test_patterns first | ✅ |
+
+### 已修复项记录
+
+| 问题 | 修复时间 | 说明 |
+|---|---|---|
+| `archguard_summary` 描述过短 | 2026-03 | 改写为包含排名/计数/使用时机的完整描述 |
+| `archguard_find_entity` 描述过短 | 2026-03 | 补充三种查询模式和参数联动说明 |
+| `archguard_get_test_metrics` "IMPORTANT:" 前缀 | 2026-06 | 改写为 §2.1 动词开头格式，局限性内联 |
+| `archguard_get_test_issues` "IMPORTANT:" 前缀 | 2026-06 | 改写为 §2.1 动词开头格式，局限性内联 |
+| `archguard_get_test_metrics` patternConfig 未标注无效 | 2026-06 | 已加 `.describe('informational only — ...')` |
+| `archguard_get_test_issues` patternConfig 未标注无效 | 2026-06 | 已加 `.describe('informational only — ...')` |
+| `archguard_find_callers` 描述过短 + 原始响应 + 错误不可操作 | 2026-06 | Phase 93–95：精度内联 + textResponse + 错误含 archguard_analyze 指引 |
+
+### 待修复项
+
+- `archguard_get_file_entities`：描述以 "Get" 开头（§2.1 违规），描述极简缺少 limitation；优先级低
+- `archguard_get_change_context`：描述以 "Get" 开头（§2.1 违规）；优先级低
 
 ---
 
@@ -242,17 +294,23 @@ try {
 
 ### 负面影响
 
-- 存量工具需要补齐（约 3 个描述过短，3 个 schema 需补注释）
+- 存量工具已基本补齐；剩余 2 个低优先级 §2.1 违规（"Get"开头描述）未修复
 - 每次新增工具需要对照检查清单，有少量额外工作量
 
 ---
 
 ## 实施要求
 
-### 存量修复（优先级：高）
+### 存量修复记录（已完成）
 
-1. 补充 `archguard_summary`、`archguard_find_entity`、`archguard_get_file_entities` 的描述，遵循本 ADR 的 2.1–2.3 规则
-2. 为三个测试查询工具的 `patternConfig` 参数补充 "informational only" 说明
+1. ~~补充 `archguard_summary`、`archguard_find_entity` 的描述~~ — ✅ 已完成（2026-03）
+2. ~~为测试查询工具的 `patternConfig` 参数补充 "informational only" 说明~~ — ✅ 已完成（2026-06）
+3. ~~`archguard_find_callers` 描述过短 + 原始响应 + 不可操作错误~~ — ✅ 已完成（2026-06，Phase 93–95）
+
+### 存量修复（剩余，优先级低）
+
+1. `archguard_get_file_entities`：描述从 "Get" 改为 "Return all entities defined in..."，并补充 outputScope 影响说明
+2. `archguard_get_change_context`：描述从 "Get" 改为 "Return change-context summary..."
 
 ### 新增工具检查清单
 
