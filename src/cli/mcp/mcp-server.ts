@@ -31,6 +31,7 @@ import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
 import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.js';
 import { registerGitHistoryTools } from './tools/git-history-tools.js';
 import { registerCallGraphTools } from './tools/call-graph-tools.js';
+import { registerAtlasAnalyticsTools } from './tools/atlas-analytics-tools.js';
 
 const projectRootParam = z
   .string()
@@ -86,6 +87,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerGitHistoryAnalyzeTool(server, defaultRoot);
   registerGitHistoryTools(server, defaultRoot);
   registerCallGraphTools(server, defaultRoot);
+  registerAtlasAnalyticsTools(server, defaultRoot);
   return server;
 }
 
@@ -171,8 +173,8 @@ function toAtlasAdjacency(
   if (layer === 'package') {
     const pg = data as PackageGraph;
     return pg.edges.map((e) => ({
-      from: pg.nodes.find((n) => n.id === e.from)?.name ?? e.from,
-      to: pg.nodes.find((n) => n.id === e.to)?.name ?? e.to,
+      from: pg.nodes.find((n) => n.id === e.source)?.name ?? e.source,
+      to: pg.nodes.find((n) => n.id === e.target)?.name ?? e.target,
       label: `${e.strength} refs`,
     }));
   }

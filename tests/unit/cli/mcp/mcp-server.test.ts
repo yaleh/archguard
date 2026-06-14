@@ -480,8 +480,8 @@ function makeGoAtlasArchJson(): ArchJSON {
           ],
           edges: [
             {
-              from: 'github.com/org/repo/internal/query',
-              to: 'github.com/org/repo/internal/store',
+              source: 'github.com/org/repo/internal/query',
+              target: 'github.com/org/repo/internal/store',
               strength: 3,
             },
           ],
@@ -1013,5 +1013,70 @@ describe('createMcpCommand', () => {
     const optionNames = cmd.options.map((o) => o.long);
     expect(optionNames).not.toContain('--arch-dir');
     expect(optionNames).not.toContain('--scope');
+  });
+});
+
+// ── Phase 120: Atlas analytics tool registration via createMcpServer ──────────
+
+describe('createMcpServer — atlas analytics tool registration', () => {
+  function collectAllTools(server: McpServer, defaultRoot: string = '/workspace'): Map<string, Function> {
+    const { createMcpServer: _create, registerTools: _reg } = require('@/cli/mcp/mcp-server.js');
+    // Use same spy pattern as the module-level collectTools but targeting createMcpServer
+    const tools = new Map<string, Function>();
+    const originalTool = server.tool.bind(server);
+    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+      const name = args[0] as string;
+      const cb = args[args.length - 1] as Function;
+      tools.set(name, cb);
+      return (originalTool as Function)(...args);
+    });
+    // registerTools is exported and covers the base 10 tools
+    _reg(server, defaultRoot);
+    return tools;
+  }
+
+  it('registers archguard_get_package_fanin', async () => {
+    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = new Map<string, Function>();
+    const originalTool = server.tool.bind(server);
+    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+      const name = args[0] as string;
+      const cb = args[args.length - 1] as Function;
+      tools.set(name, cb);
+      return (originalTool as Function)(...args);
+    });
+    registerAtlasAnalyticsTools(server, '/workspace');
+    expect(tools.has('archguard_get_package_fanin')).toBe(true);
+  });
+
+  it('registers archguard_get_package_fanout', async () => {
+    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = new Map<string, Function>();
+    const originalTool = server.tool.bind(server);
+    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+      const name = args[0] as string;
+      const cb = args[args.length - 1] as Function;
+      tools.set(name, cb);
+      return (originalTool as Function)(...args);
+    });
+    registerAtlasAnalyticsTools(server, '/workspace');
+    expect(tools.has('archguard_get_package_fanout')).toBe(true);
+  });
+
+  it('registers archguard_detect_god_packages', async () => {
+    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = new Map<string, Function>();
+    const originalTool = server.tool.bind(server);
+    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+      const name = args[0] as string;
+      const cb = args[args.length - 1] as Function;
+      tools.set(name, cb);
+      return (originalTool as Function)(...args);
+    });
+    registerAtlasAnalyticsTools(server, '/workspace');
+    expect(tools.has('archguard_detect_god_packages')).toBe(true);
   });
 });
