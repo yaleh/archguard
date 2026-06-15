@@ -1,10 +1,12 @@
-# ADR-001: GoAtlasPlugin 使用组合模式
+# ADR-001: GoPlugin 直接实现 IGoAtlas，GoAtlasCoordinator 承担协调职责
+
+> **注意**: 本文档反映截至 2026-06 的实际实现。原始设计（v1.2）规划了独立的 `GoAtlasPlugin` 组合类；实际实现中 `GoPlugin` 直接实现了 `ILanguagePlugin` 与 `IGoAtlas` 两个接口，协调职责由 `GoAtlasCoordinator` 承担。
 
 **状态**: 已采纳
 **日期**: 2026-02-24
 **上下文**: Go Architecture Atlas 实施计划 Phase 4
 **决策者**: ArchGuard 架构团队
-**修订**: v1.2 - 对齐 Proposal v5.1（PluginMetadata、注册策略、ParseConfig 类型安全）
+**修订**: v1.3 - 反映实际实现（GoPlugin 直接实现 IGoAtlas，GoAtlasCoordinator 协调）
 
 ---
 
@@ -49,14 +51,16 @@ class GoAtlasPlugin extends GoPlugin {
 
 ## 决策
 
-**使用组合模式**：`GoAtlasPlugin` 包含 `GoPlugin` 实例，而不是继承它。
+**GoPlugin 直接实现 `ILanguagePlugin` 与 `IGoAtlas` 两个接口**，协调职责由 `GoAtlasCoordinator`（`src/plugins/golang/go-atlas-coordinator.ts`）承担，而非由独立的 `GoAtlasPlugin` 组合类实现。
+
+这一实现路径解决了原始组合方案中的 double-parse bug：`GoAtlasPlugin.parseProjectWithAtlas()` 会先调 `goPlugin.parseProject()` 再调 `generateAtlas()` → `goPlugin.parseToRawData()`，导致 Tree-sitter 解析执行两次。将接口直接合并到 `GoPlugin` 后，`parseToRawData()` 只在一个类内部被调用一次。
 
 ### GoPlugin 公共 API
 
-为支持组合模式，`GoPlugin` 暴露一个公共方法：
+`GoPlugin` 暴露 `parseToRawData()` 公共方法，供 `GoAtlasCoordinator` 和内部 Atlas 流程使用：
 
 ```typescript
-export class GoPlugin implements ILanguagePlugin {
+export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   // 内部成员保持 private
   private treeSitter!: TreeSitterBridge;
   private matcher!: InterfaceMatcher;
@@ -65,7 +69,8 @@ export class GoPlugin implements ILanguagePlugin {
 
   /**
    * 公共方法: 解析项目为原始数据
-   * 供 GoAtlasPlugin 等组合使用者调用。
+   * 供 GoAtlasCoordinator 及 Atlas 内部流程调用。
+   * 避免 double-parse：parseProject() 与 Atlas 路径共享同一次 Tree-sitter 解析。
    *
    * @param config - 支持 TreeSitterParseOptions 扩展（extractBodies, selectiveExtraction）
    */
@@ -73,177 +78,49 @@ export class GoPlugin implements ILanguagePlugin {
     workspaceRoot: string,
     config: ParseConfig & TreeSitterParseOptions
   ): Promise<GoRawData> {
-    // 提取自现有 parseProject() 的前半部分逻辑
-    // 包括文件发现、Tree-sitter 解析（传递 body 提取选项）、按 fullName 合并包
+    // 文件发现、Tree-sitter 解析（传递 body 提取选项）、按 fullName 合并包
   }
 
   /**
-   * 现有方法: 复用 parseToRawData()
+   * 标准解析入口：复用 parseToRawData()
+   * Atlas 启用时内部执行增强流程（仍只调用一次 parseToRawData）
    */
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
     const rawData = await this.parseToRawData(workspaceRoot, config);
-    // ... 接口匹配 + ArchJSON 映射 ...
+    // ... 接口匹配 + ArchJSON 映射，或 Atlas 增强 ...
   }
 }
 ```
 
-### 架构设计
+### 架构设计（实际实现）
 
 ```typescript
-/**
- * GoAtlasPlugin - Go Architecture Atlas 专用插件
- *
- * 通过组合 GoPlugin 实现基础解析功能，
- * 通过 BehaviorAnalyzer 实现 Atlas 生成功能。
- */
-export class GoAtlasPlugin implements ILanguagePlugin, IGoAtlas {
-  // ========== 组合组件 ==========
-  private goPlugin: GoPlugin;
-  private behaviorAnalyzer: BehaviorAnalyzer;
-  private atlasRenderer: AtlasRenderer;
-  private atlasMapper: AtlasMapper;
+// GoPlugin 同时实现两个接口
+export class GoPlugin implements ILanguagePlugin, IGoAtlas {
+  // 所有 Atlas 逻辑直接在此类中实现
+  // ILanguagePlugin: initialize(), canHandle(), parseProject(), parseFiles(), parseCode()
+  // IGoAtlas: generateAtlas(), renderLayer()
+  // 内部: parseToRawData()（公共，供 GoAtlasCoordinator 调用）
+}
 
-  // ========== 元数据 ==========
-  // 使用 name: 'golang' 替代 GoPlugin，兼容 Registry 自动检测
-  readonly metadata: PluginMetadata = {
-    name: 'golang',
-    version: '5.0.0',
-    displayName: 'Go Architecture Atlas',
-    fileExtensions: ['.go'],
-    author: 'ArchGuard Team',
-    minCoreVersion: '2.0.0',
-    capabilities: {
-      singleFileParsing: true,
-      incrementalParsing: false,
-      dependencyExtraction: true,
-      typeInference: true,
-    },
-  };
-
-  readonly dependencyExtractor: IDependencyExtractor;
-
-  constructor() {
-    this.goPlugin = new GoPlugin();
-    this.behaviorAnalyzer = new BehaviorAnalyzer();
-    this.atlasRenderer = new AtlasRenderer();
-    this.atlasMapper = new AtlasMapper();
-    this.dependencyExtractor = this.goPlugin.dependencyExtractor;
-  }
-
-  // ========== ILanguagePlugin 实现 ==========
-  // 委托给 GoPlugin 处理标准解析
-
-  async initialize(config: PluginInitConfig): Promise<void> {
-    await this.goPlugin.initialize(config);
-  }
-
-  canHandle(targetPath: string): boolean {
-    return this.goPlugin.canHandle(targetPath);
-  }
-
-  // IParser 可选方法委托
-  parseCode(code: string, filePath?: string): ArchJSON {
-    return this.goPlugin.parseCode(code, filePath);
-  }
-
-  async parseFiles(filePaths: string[]): Promise<ArchJSON> {
-    return this.goPlugin.parseFiles(filePaths);
-  }
-
-  async parseProject(
-    workspaceRoot: string,
-    config: ParseConfig
-  ): Promise<ArchJSON> {
-    const atlasConfig = config.languageSpecific?.atlas as AtlasConfig | undefined;
-
-    // 如果未启用 Atlas，委托给 GoPlugin
-    if (!atlasConfig?.enabled) {
-      return this.goPlugin.parseProject(workspaceRoot, config);
-    }
-
-    // 启用 Atlas 时，执行增强分析
-    return this.parseProjectWithAtlas(workspaceRoot, config, atlasConfig);
-  }
-
-  // ========== IGoAtlas 实现 ==========
-
-  async generateAtlas(
-    rootPath: string,
-    options: AtlasGenerationOptions = {}
-  ): Promise<GoArchitectureAtlas> {
-    // 1. 通过 GoPlugin 公共 API 获取原始数据（含函数体提取选项）
-    const rawData = await this.goPlugin.parseToRawData(rootPath, {
-      workspaceRoot: rootPath,
-      excludePatterns: ['**/vendor/**', '**/testdata/**'],
-      extractBodies: options.functionBodyStrategy !== 'none',
-      selectiveExtraction: options.functionBodyStrategy === 'selective',
-    });
-
-    // 2. 并行构建四层架构图（函数体已在 parseToRawData 中一次性提取）
-    const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
-      this.behaviorAnalyzer.buildPackageGraph(rawData),
-      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
-      this.behaviorAnalyzer.buildGoroutineTopology(rawData, options),
-      this.behaviorAnalyzer.buildFlowGraph(rawData, options),
-    ]);
-
-    return {
-      version: '1.0',
-      layers: { package: packageGraph, capability: capabilityGraph, goroutine: goroutineTopology, flow: flowGraph },
-      metadata: this.buildAtlasMetadata(rawData, options, packageGraph, capabilityGraph, goroutineTopology, flowGraph),
-    };
-  }
-
-  async renderLayer(
-    atlas: GoArchitectureAtlas,
-    layer: AtlasLayer,
-    format: RenderFormat
-  ): Promise<RenderResult> {
-    return this.atlasRenderer.render(atlas, layer, format);
-  }
-
-  // ========== 内部方法 ==========
-
-  private async parseProjectWithAtlas(
-    workspaceRoot: string,
-    config: ParseConfig,
-    atlasConfig: AtlasConfig
-  ): Promise<ArchJSON> {
-    // 1. 获取基础 ArchJSON
-    const baseArchJSON = await this.goPlugin.parseProject(workspaceRoot, config);
-
-    // 2. 生成 Atlas
-    const atlas = await this.generateAtlas(workspaceRoot, {
-      functionBodyStrategy: atlasConfig.functionBodyStrategy,
-      includeTests: atlasConfig.includeTests ?? false,
-      entryPointTypes: atlasConfig.entryPointTypes,
-      followIndirectCalls: atlasConfig.followIndirectCalls ?? false,
-    });
-
-    // 3. 添加 Atlas 扩展
-    return {
-      ...baseArchJSON,
-      extensions: { goAtlas: atlas },
-    };
-  }
-
-  async dispose(): Promise<void> {
-    await this.goPlugin.dispose();
-  }
+// GoAtlasCoordinator — 协调者（src/plugins/golang/go-atlas-coordinator.ts）
+// 负责 CLI/MCP 层的 Atlas 调度：选择分层策略、驱动渲染、组织输出
+export class GoAtlasCoordinator {
+  constructor(private plugin: GoPlugin) {}
+  // 通过 plugin.parseToRawData() + plugin.generateAtlas() 完成协调
 }
 ```
 
 ### 关键设计决策
 
-#### 1. 清晰的职责分离
+#### 1. 清晰的职责分离（实际）
 
 | 组件 | 职责 | API |
 |------|------|-----|
-| `GoPlugin` | 基础 Go 代码解析 | `parseProject()`, `parseToRawData()` |
+| `GoPlugin` | 基础 Go 代码解析 + IGoAtlas 实现 | `parseProject()`, `parseToRawData()`, `generateAtlas()` |
+| `GoAtlasCoordinator` | Atlas 调度与输出协调 | 驱动 `GoPlugin` 完成分层渲染 |
 | `BehaviorAnalyzer` | 四层架构图构建 | `buildPackageGraph()`, `buildCapabilityGraph()`, ... |
 | `AtlasRenderer` | Atlas 渲染和导出 | `render()` |
-| `AtlasMapper` | Atlas → ArchJSON 映射 | `toArchJSON()` |
-| `GoAtlasPlugin` | 协调者和统一入口 | 实现 `ILanguagePlugin` + `IGoAtlas` |
 
 #### 2. 配置驱动的行为
 
@@ -330,31 +207,15 @@ describe('GoAtlasPlugin', () => {
 ### 正面影响
 
 - **封装性**: `GoPlugin` 内部成员保持 `private`，通过公共 `parseToRawData()` API 暴露数据
-- **独立测试**: 每个组件可以独立测试和演进
-- **清晰职责**: 基础解析 vs Atlas 生成职责分离
-- **灵活组合**: 未来可以轻松替换任何组件
-- **无 hack**: 不使用 `this.goPlugin['treeSitter']` 等 bracket notation 访问私有成员
+- **无 double-parse**: `GoPlugin` 内部只调用一次 `parseToRawData()`，消除了组合模式中的重复解析 bug
+- **独立测试**: `GoAtlasCoordinator` 可独立测试，`GoPlugin` Atlas 方法亦可单元测试
+- **无 hack**: 不使用 bracket notation（如 `this.goPlugin['treeSitter']`）访问私有成员
+- **清晰接口边界**: `ILanguagePlugin` + `IGoAtlas` 两个接口明确划分标准解析与 Atlas 能力
 
 ### 负面影响
 
-- **委托样板代码**: 需要转发一些方法（如 `canHandle()`、`dependencyExtractor`）
-- **配置复杂性**: 需要管理嵌套配置对象
-- **初始化协调**: 需要协调多个组件的初始化
-
-### 缓解措施
-
-1. **委托样板代码**: 委托方法数量有限（3-5 个），手动转发即可
-2. **配置复杂性**: 提供配置构建器
-3. **初始化协调**: 使用工厂模式
-   ```typescript
-   class GoAtlasPlugin {
-     static async create(config: PluginInitConfig): Promise<GoAtlasPlugin> {
-       const plugin = new GoAtlasPlugin();
-       await plugin.initialize(config);
-       return plugin;
-     }
-   }
-   ```
+- **GoPlugin 职责略有扩大**: 同时实现两个接口，类体积比纯解析插件更大
+- **配置复杂性**: 需要管理嵌套 Atlas 配置对象
 
 ---
 
@@ -402,9 +263,10 @@ class GoAtlasPlugin implements ILanguagePlugin { /* ... */ }
 
 ---
 
-**文档版本**: 1.2
-**最后更新**: 2026-02-24
-**状态**: 已采纳 - 待实施
+**文档版本**: 1.3
+**最后更新**: 2026-06
+**状态**: 已采纳
 **变更记录**:
 - v1.1: 消除 `this.goPlugin['treeSitter']` bracket hack，改为使用 `GoPlugin.parseToRawData()` 公共 API；移除 `FunctionBodyExtractor` 独立组件（函数体提取集成到 TreeSitterBridge 统一 API 中）；更新版本号至 5.0.0；返回值类型对齐 ADR-002 `GoAtlasExtension`
 - v1.2: 补全 PluginMetadata 必填字段 `author`/`minCoreVersion`；插件名称改为 `'golang'`（替代 GoPlugin，兼容 Registry 自动检测）；`parseToRawData()` 签名改为 `ParseConfig & TreeSitterParseOptions`（满足必填字段 + 集成 body 提取）；`dependencyExtractor` 从 getter 改为 readonly 属性；新增 `parseCode()`/`parseFiles()` 委托；Atlas 配置通过 `ParseConfig.languageSpecific.atlas` 传递；移除 `enrichWithFunctionBodies()`
+- v1.3: 实际实现偏离了组合模式 — GoPlugin 直接实现 IGoAtlas 接口（解决了 parseToRawData 重复调用的 double-parse bug），GoAtlasCoordinator 承担协调职责；ADR 更新以反映现实架构

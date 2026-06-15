@@ -1,6 +1,6 @@
 # ADR-004: CLI 与 MCP 必须共享单一分析写盘路径
 
-**状态**: Proposed
+**状态**: Accepted
 **日期**: 2026-03-07
 **上下文**: [proposal-mcp-analyze-tool.md](../proposals/proposal-mcp-analyze-tool.md)
 **决策者**: ArchGuard 架构团队

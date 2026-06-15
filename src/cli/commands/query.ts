@@ -8,6 +8,7 @@
  */
 
 import { Command } from 'commander';
+import path from 'path';
 import { resolveArchDir, loadEngine, readManifest } from '../query/engine-loader.js';
 import type {
   QueryEngine,
@@ -18,6 +19,12 @@ import type {
   EdgeListOutput,
 } from '../query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
+import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
+import { HistoryQuery } from '../git-history/history-query.js';
+import {
+  computePackageFanMetrics,
+  enrichPackageNodes,
+} from '../mcp/tools/atlas-analytics-tools.js';
 
 interface QueryOptions {
   archDir?: string;
@@ -61,6 +68,28 @@ interface QueryOptions {
   // Phase 93: call graph
   callers?: string;
   callersDepth?: string;
+
+  // ADR-007 §4: Atlas layer
+  atlasLayer?: string;
+
+  // ADR-007 §4: Test analysis
+  testPatterns?: true;
+  testIssues?: true;
+  severity?: string;
+  testMetrics?: true;
+  entityCoverage?: string;
+
+  // ADR-007 §4: Atlas analytics
+  packageFanin?: true;
+  packageFanout?: true;
+  godPackages?: true;
+
+  // ADR-007 §4: Git history (shared --target-type flag)
+  targetType?: string;
+  changeContext?: string;
+  cochange?: string;
+  changeRisk?: string;
+  ownership?: string;
 }
 
 /**
@@ -159,6 +188,37 @@ export function createQueryCommand(): Command {
       // Phase 93: call graph
       .option('--callers <entity>', 'Find callers of entity (use "Class" or "Class.method")')
       .option('--callers-depth <n>', 'BFS depth for --callers (1-5)', '1')
+
+      // ADR-007 §4: Atlas layer (mirrors archguard_get_atlas_layer)
+      .option(
+        '--atlas-layer <layer>',
+        'Show Go Atlas layer data: package|capability|goroutine|flow'
+      )
+
+      // ADR-007 §4: Test analysis (mirrors archguard_detect_test_patterns / get_test_*)
+      .option('--test-patterns', 'Show detected test pattern config and framework summary')
+      .option('--test-issues', 'Show static test quality issues (orphans, zero-assertions, skips)')
+      .option(
+        '--severity <level>',
+        'Filter --test-issues by severity: warning|info (default: all)'
+      )
+      .option('--test-metrics', 'Show test suite metrics and package coverage breakdown')
+      .option('--entity-coverage <entityId>', 'Show test coverage for a specific entity ID')
+
+      // ADR-007 §4: Atlas analytics (mirrors archguard_get_package_fan* / detect_god_packages)
+      .option('--package-fanin', 'List Atlas packages ranked by fan-in (most-depended-on first)')
+      .option('--package-fanout', 'List Atlas packages ranked by fan-out (most-dependent-on first)')
+      .option('--god-packages', 'Detect Atlas packages that violate single-responsibility')
+
+      // ADR-007 §4: Git history (mirrors archguard_get_change_* / get_ownership)
+      .option(
+        '--target-type <type>',
+        'Target type for git history queries: file|package (default: file)'
+      )
+      .option('--change-context <path>', 'Show change context (churn/ownership/risk) for a path')
+      .option('--cochange <path>', 'Show co-change neighbors for a path')
+      .option('--change-risk <path>', 'Show change risk score for a path')
+      .option('--ownership <path>', 'Show maintainer ownership for a path')
 
       .action(queryHandler)
   );
@@ -290,6 +350,139 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
           }
         }
       }
+    } else if (opts.atlasLayer) {
+      if (!engine.hasAtlasExtension()) {
+        console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
+        process.exit(1);
+      }
+      const layerData = engine.getAtlasLayer(opts.atlasLayer as any);
+      if (layerData === undefined) {
+        console.error(`Error: Atlas layer "${opts.atlasLayer}" is empty or not generated.`);
+        process.exit(1);
+      }
+      result = layerData;
+      if (!isJson) console.log(JSON.stringify(layerData, null, 2));
+    } else if (opts.testPatterns) {
+      if (!engine.hasTestAnalysis()) {
+        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        process.exit(1);
+      }
+      const analysis = engine.getTestAnalysis()!;
+      const frameworks = [...new Set(analysis.testFiles.flatMap((f) => f.frameworks))];
+      result = {
+        patternConfigSource: analysis.patternConfigSource,
+        totalTestFiles: analysis.metrics.totalTestFiles,
+        frameworks,
+      };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.testIssues) {
+      if (!engine.hasTestAnalysis()) {
+        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        process.exit(1);
+      }
+      const analysis = engine.getTestAnalysis()!;
+      const issues = opts.severity
+        ? analysis.issues.filter((i) => i.severity === opts.severity)
+        : analysis.issues;
+      result = { issues };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.testMetrics) {
+      if (!engine.hasTestAnalysis()) {
+        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        process.exit(1);
+      }
+      const analysis = engine.getTestAnalysis()!;
+      result = { ...analysis.metrics, packageCoverage: engine.getPackageCoverage() };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.entityCoverage) {
+      if (!engine.hasTestAnalysis()) {
+        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        process.exit(1);
+      }
+      result = engine.getEntityCoverage(opts.entityCoverage);
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.packageFanin) {
+      if (!engine.hasAtlasExtension()) {
+        console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
+        process.exit(1);
+      }
+      const graph = engine.getAtlasLayer('package');
+      if (!graph) {
+        console.error('Error: No package data in Atlas package layer.');
+        process.exit(1);
+      }
+      const { fanIn, fanOut } = computePackageFanMetrics(graph);
+      const enriched = enrichPackageNodes(graph.nodes, fanIn, fanOut);
+      enriched.sort((a, b) => b.fanIn - a.fanIn);
+      result = { packages: enriched };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.packageFanout) {
+      if (!engine.hasAtlasExtension()) {
+        console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
+        process.exit(1);
+      }
+      const graph = engine.getAtlasLayer('package');
+      if (!graph) {
+        console.error('Error: No package data in Atlas package layer.');
+        process.exit(1);
+      }
+      const { fanIn, fanOut } = computePackageFanMetrics(graph);
+      const enriched = enrichPackageNodes(graph.nodes, fanIn, fanOut);
+      enriched.sort((a, b) => b.fanOut - a.fanOut);
+      result = { packages: enriched };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.godPackages) {
+      if (!engine.hasAtlasExtension()) {
+        console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
+        process.exit(1);
+      }
+      const graph = engine.getAtlasLayer('package');
+      if (!graph) {
+        console.error('Error: No package data in Atlas package layer.');
+        process.exit(1);
+      }
+      const { fanIn, fanOut } = computePackageFanMetrics(graph);
+      const enriched = enrichPackageNodes(graph.nodes, fanIn, fanOut);
+      const godPackages = enriched
+        .map((node) => {
+          const reasons: string[] = [];
+          if (node.fanIn >= 5) reasons.push('highFanIn');
+          if (node.fileCount >= 20) reasons.push('tooManyFiles');
+          if (node.stats) {
+            if (node.stats.structs >= 20) reasons.push('tooManyStructs');
+            if (node.stats.functions >= 50) reasons.push('tooManyFunctions');
+          }
+          return { ...node, reasons };
+        })
+        .filter((n) => n.reasons.length > 0);
+      result = { godPackages };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.changeContext || opts.cochange || opts.changeRisk || opts.ownership) {
+      const target = (opts.changeContext ?? opts.cochange ?? opts.changeRisk ?? opts.ownership)!;
+      const targetType = (opts.targetType ?? 'file') as 'file' | 'package';
+      try {
+        const data = await loadHistoryData(archDir);
+        const query = new HistoryQuery(data);
+        if (opts.changeContext) {
+          result = query.getChangeContext(targetType, target);
+        } else if (opts.cochange) {
+          result = query.getCochange(targetType, target);
+        } else if (opts.changeRisk) {
+          result = query.getChangeRisk(targetType, target);
+        } else {
+          result = query.getOwnership(targetType, target);
+        }
+        if (!isJson) console.log(JSON.stringify(result, null, 2));
+      } catch (err) {
+        if (err instanceof GitHistoryNotFoundError) {
+          console.error(
+            'Error: No git history data found. Run archguard analyze-git first.'
+          );
+        } else {
+          console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        }
+        process.exit(1);
+      }
     } else if (opts.packageStats !== undefined) {
       const depth = typeof opts.packageStats === 'string' ? parseInt(opts.packageStats, 10) : 2;
       const statsResult = engine.getPackageStats(depth);
@@ -367,6 +560,18 @@ export function validateQueryOptions(opts: QueryOptions): void {
     opts.inCycles,
     opts.packageStats !== undefined ? true : undefined,
     opts.callers,
+    opts.atlasLayer,
+    opts.testPatterns,
+    opts.testIssues,
+    opts.testMetrics,
+    opts.entityCoverage,
+    opts.packageFanin,
+    opts.packageFanout,
+    opts.godPackages,
+    opts.changeContext,
+    opts.cochange,
+    opts.changeRisk,
+    opts.ownership,
   ].filter(Boolean);
 
   if (primaryOptions.length > 1) {

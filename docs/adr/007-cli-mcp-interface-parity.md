@@ -115,18 +115,32 @@ const SCRUB_KEYS = ['generatedAt', 'createdAt', 'timestamp', 'lastRun', 'archJso
 
 每个 MCP 工具必须有对应的 CLI flag，命名保持一一映射；反之亦然。
 
-| MCP 工具 | CLI flag |
-|---|---|
-| `archguard_get_package_stats` | `query --package-stats` |
-| `archguard_get_atlas_layer` | `query --atlas-layer <layer>` |
-| `archguard_detect_test_patterns` | `query --test-patterns` |
-| `archguard_get_test_issues` | `query --test-issues` |
-| `archguard_get_test_metrics` | `query --test-metrics` |
-| `archguard_get_entity_coverage` | `query --entity-coverage <id>` |
-| `archguard_get_change_context` | `query --change-context <path>` |
-| `archguard_get_cochange` | `query --cochange <path>` |
-| `archguard_get_change_risk` | `query --change-risk <path>` |
-| `archguard_get_ownership` | `query --ownership <path>` |
+| MCP 工具 | CLI flag | 状态 |
+|---|---|---|
+| `archguard_summary` | `query --summary` | ✅ |
+| `archguard_find_entity` | `query --entity <name>` | ✅ |
+| `archguard_get_file_entities` | `query --file <path>` | ✅ |
+| `archguard_get_package_stats` | `query --package-stats` | ✅ |
+| `archguard_get_dependencies` | `query --deps-of <name>` | ✅ |
+| `archguard_get_dependents` | `query --used-by <name>` | ✅ |
+| `archguard_find_implementers` | `query --implementers-of <name>` | ✅ |
+| `archguard_find_subclasses` | `query --subclasses-of <name>` | ✅ |
+| `archguard_detect_cycles` | `query --cycles` | ✅ |
+| `archguard_get_atlas_layer` | `query --atlas-layer <layer>` | ✅ |
+| `archguard_detect_test_patterns` | `query --test-patterns` | ✅ |
+| `archguard_get_test_issues` | `query --test-issues [--severity warning\|info]` | ✅ |
+| `archguard_get_test_metrics` | `query --test-metrics` | ✅ |
+| `archguard_get_entity_coverage` | `query --entity-coverage <id>` | ✅ |
+| `archguard_get_package_fanin` | `query --package-fanin` | ✅ |
+| `archguard_get_package_fanout` | `query --package-fanout` | ✅ |
+| `archguard_detect_god_packages` | `query --god-packages` | ✅ |
+| `archguard_find_callers` | `query --callers <entity>` | ✅ |
+| `archguard_get_change_context` | `query --change-context <path> [--target-type file\|package]` | ✅ |
+| `archguard_get_cochange` | `query --cochange <path> [--target-type file\|package]` | ✅ |
+| `archguard_get_change_risk` | `query --change-risk <path> [--target-type file\|package]` | ✅ |
+| `archguard_get_ownership` | `query --ownership <path> [--target-type file\|package]` | ✅ |
+
+> 最后更新：2026-06-15。所有 22 个 MCP 工具均有对应 CLI flag。`archguard_analyze` 和 `archguard_analyze_git` 是触发分析的写操作工具，对应 `archguard analyze` 和 `archguard analyze-git` 子命令，不在此对称表范围内。
 
 **新增工具检查清单**（PR 必须满足）：
 

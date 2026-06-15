@@ -1,6 +1,6 @@
 # ADR-005: 缺省分析自动发现主语言并使用项目级 scope
 
-**状态**: Proposed
+**状态**: Accepted
 **日期**: 2026-03-08
 **上下文**: [proposal-default-analysis-language-scopes.md](../proposals/proposal-default-analysis-language-scopes.md), [proposal-mcp-stateless-cross-project.md](../proposals/proposal-mcp-stateless-cross-project.md)
 **决策者**: ArchGuard 架构团队
