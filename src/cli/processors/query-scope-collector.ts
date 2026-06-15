@@ -30,7 +30,7 @@ export class QueryScopeCollector {
    * Register a query scope for the given sources and ArchJSON.
    *
    * No-ops when:
-   * - The ArchJSON has no entities (empty parse result)
+   * - The ArchJSON has no queryable content (empty parse result)
    * - A scope with the same key is already registered (first-write-wins)
    */
   register(
@@ -39,7 +39,7 @@ export class QueryScopeCollector {
     kind: 'parsed' | 'derived',
     role?: 'primary' | 'secondary'
   ): void {
-    if (!archJson.entities || archJson.entities.length === 0) return;
+    if (!hasQueryableContent(archJson)) return;
     const key = hashSources(sources, archJson.language);
     if (this.queryScopes.has(key)) return;
     const normalizedSources = sources.map((s) => path.resolve(s));
@@ -88,4 +88,9 @@ export class QueryScopeCollector {
   getLastArchJson(): ArchJSON | null {
     return this._lastArchJson;
   }
+}
+
+function hasQueryableContent(archJson: ArchJSON): boolean {
+  if ((archJson.entities?.length ?? 0) > 0) return true;
+  return (archJson.extensions?.goAtlas?.layers?.package?.nodes?.length ?? 0) > 0;
 }

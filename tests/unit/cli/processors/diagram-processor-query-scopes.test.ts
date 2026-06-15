@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DiagramProcessor } from '@/cli/processors/diagram-processor.js';
+import { QueryScopeCollector } from '@/cli/processors/query-scope-collector.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import { ProgressReporter } from '@/cli/progress/index.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -132,6 +133,41 @@ const createEmptyArchJSON = (): ArchJSON => ({
   relations: [],
 });
 
+const createGoAtlasArchJSON = (): ArchJSON => ({
+  version: '1.1',
+  language: 'go',
+  timestamp: new Date().toISOString(),
+  sourceFiles: ['main.go'],
+  entities: [],
+  relations: [],
+  extensions: {
+    goAtlas: {
+      version: '2.0',
+      layers: {
+        package: {
+          nodes: [
+            { id: 'cmd/server', name: 'server', type: 'internal', fileCount: 2 },
+            { id: 'internal/query', name: 'query', type: 'internal', fileCount: 4 },
+          ],
+          edges: [{ from: 'cmd/server', to: 'internal/query', strength: 1 }],
+          cycles: [],
+        } as any,
+      },
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        generationStrategy: {
+          functionBodyStrategy: 'none',
+          detectedFrameworks: [],
+          followIndirectCalls: false,
+          goplsEnabled: false,
+        },
+        completeness: { package: 1, capability: 0, goroutine: 0, flow: 0 },
+        performance: { fileCount: 6, parseTime: 1, totalTime: 2, memoryUsage: 1 },
+      },
+    },
+  },
+});
+
 describe('DiagramProcessor query scope collection', () => {
   let FileDiscoveryService: any;
   let ParallelParser: any;
@@ -226,6 +262,17 @@ describe('DiagramProcessor query scope collection', () => {
 
     // No scope should be registered since entities array is empty
     expect(scopes.length).toBe(0);
+  });
+
+  it('registers Go Atlas scopes that have package nodes but no OO entities', async () => {
+    const collector = new QueryScopeCollector();
+
+    collector.register(['./cmd'], createGoAtlasArchJSON(), 'parsed');
+    const scopes = collector.getQuerySourceGroups();
+
+    expect(scopes).toHaveLength(1);
+    expect(scopes[0].archJson.entities).toHaveLength(0);
+    expect(scopes[0].archJson.extensions?.goAtlas?.layers.package.nodes).toHaveLength(2);
   });
 
   it('key is an 8-char hex string', async () => {
