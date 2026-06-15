@@ -27,42 +27,67 @@ two sessions could claim the same issue.)
 
 ## Step 3: Read and parse
 
-Read the full issue body. Extract:
-- The task description
-- The `## DoD` section (list of shell commands)
-- The `## Constraints` section if present
+Read the full issue body. Detect the issue format:
+
+**Multi-phase format** (body contains one or more `## Phase` headings):
+- Extract all `## Phase X: <title>` sections in order
+- For each phase: extract its `### Task` and `### DoD` sub-sections
+- Extract global `## Constraints` section if present
+
+**Single-task format** (no `## Phase` headings — legacy):
+- Extract `## Task` description
+- Extract `## DoD` section (list of shell commands)
+- Extract `## Constraints` section if present
 
 ## Step 4: Prepare worktree
 
 git worktree add ../archguard-T<number> -b task/T<number>
 cd ../archguard-T<number>
-npm ci --silent --prefer-offline
+ln -s /home/yale/work/archguard/node_modules ./node_modules
+ln -s /home/yale/work/archguard/.agents ./.agents
 
 Work exclusively inside this worktree. Do not modify the main working tree.
 
-(Note: `--prefer-offline` reuses cached packages from `~/.npm`; a full download still occurs
-if the cache is empty. The worktree shares git objects with the main tree but has its own
-`node_modules` directory.)
-
 ## Step 5: Implement
 
-Implement the task described in Step 3. Follow all constraints. Do not introduce changes
-outside the scope described.
+**Multi-phase**: implement phases in order. For each phase:
+1. Implement the work described in `### Task`
+2. Run all `### DoD` commands (see Step 6 for retry logic)
+3. If pass → post `gh issue comment <number> --body "Phase X ✅"` and continue to next phase
+4. If fail after 3 retries → proceed to Step 8 (note which phase failed)
+
+**Single-task**: implement the task described in Step 3.
+
+Follow all constraints. Do not introduce changes outside the described scope.
 
 ## Step 6: Verify DoD
 
-Run each command from the `## DoD` section. Commands must exit 0.
+Run each DoD command in order. Commands must exit 0.
 
 If all pass → proceed to Step 7.
-If any fail → fix and retry (maximum 3 attempts). If still failing after 3 attempts → proceed to Step 8.
+If any fail → fix and retry (maximum 3 attempts total). If still failing → proceed to Step 8.
 
 ## Step 7: Success path
 
-git add -A && git commit -m "<task title> (closes #<number>)"
+# Append implementation log before committing
+SLUG=$(gh issue view <number> --json title -q '.title' \
+  | sed 's/^\[L0\] //' | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | cut -c1-60)
+mkdir -p docs/implemented
+printf "\n## %s ✅\nDate: %s\nIssue: #%s\n" \
+  "$(gh issue view <number> --json title -q '.title')" \
+  "$(date +%Y-%m-%d)" "<number>" >> "docs/implemented/${SLUG}.md"
+
+git add -A
+git commit -m "<task title> (closes #<number>)"
 gh pr create --title "<task title>" --body "Closes #<number>." --label "ready-for-review"
 
 # Run from inside the worktree (../archguard-T<number>) where the branch is checked out:
 PR_URL=$(gh pr view --json url -q .url)
+
+# Append PR URL to the log entry
+printf "PR: %s\n" "$PR_URL" >> "docs/implemented/${SLUG}.md"
+git add "docs/implemented/${SLUG}.md"
+git commit --amend --no-edit
 
 # Update issue state before removing worktree (update is idempotent; removal might fail)
 gh issue comment <number> --body "PR opened: ${PR_URL}"
