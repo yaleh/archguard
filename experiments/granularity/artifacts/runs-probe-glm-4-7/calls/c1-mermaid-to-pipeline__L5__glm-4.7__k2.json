@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-pipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "c1-mermaid-to-pipeline__L5__glm-4.7__k2",
+  "content": "```json\n[\n  \"MermaidValidationPipeline.validateFull\",\n  \"MermaidValidationPipeline.getParseValidator\"\n]\n```",
+  "promptTokens": 44002,
+  "completionTokens": 25,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:38:48.734Z"
+}

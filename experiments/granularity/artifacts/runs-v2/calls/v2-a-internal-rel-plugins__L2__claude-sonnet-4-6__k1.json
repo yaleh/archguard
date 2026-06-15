@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-plugins",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-internal-rel-plugins__L2__claude-sonnet-4-6__k1",
+  "content": "I need to analyze the relations where both source and target are within the same package groupings shown in the diagrams.\n\nLooking at each namespace/layer for internal relations:\n\n**Cli_Layer:**\n- `ProgressReporterLike <|.. ProgressReporter`\n- `ProgressReporterLike <|.. StderrReporter`\n- `ProgressReporterLike <|.. NoopReporter`\n\n**Core_Layer/Mermaid_Layer:**\n- `IProgressReporter <|.. NoopProgressReporter`\n\n**Interfaces_Layer:**\n- `PluginError <|-- PluginInitializationError`\n- `PluginError <|-- PluginConfigError`\n- `PluginError <|-- ToolDependencyError`\n- `PluginError <|-- ParseError`\n- `PluginError <|-- FileSystemError`\n- `IParser <|-- ILanguagePlugin`\n\n**Golang_Layer:**\n- `BaseArchJsonMapper <|-- ArchJsonMapper`\n- `IDependencyExtractor <|.. DependencyExtractor`\n- `ILanguagePlugin <|.. GoPlugin`\n- `IGoAtlas <|.. GoPlugin`\n- `GoPlugin *-- PluginMetadata`\n- `GoPlugin *-- IDependencyExtractor`\n\n**Java_Layer:**\n- `BaseArchJsonMapper <|-- ArchJsonMapper`\n- `IDependencyExtractor <|.. DependencyExtractor`\n- `ILanguagePlugin <|.. JavaPlugin`\n- `JavaPlugin *-- PluginMetadata`\n\n**Parser_Layer:**\n- `BaseExtractor <|-- ClassExtractor`\n- `BaseExtractor <|-- EnumExtractor`\n- `BaseExtractor <|-- InterfaceExtractor`\n- `BaseExtractor <|-- RelationExtractor`\n- `EventEmitter <|-- ParallelParser`\n- `ParseCache *-- ArchJSON`\n\n**Types_Layer:**\n- `GlobalConfig <|-- ArchGuardConfig`\n\n**Typescript_Layer/Extensions_Layer:**\n- `ILanguagePlugin <|.. TypeScriptPlugin`\n- `TypeScriptPlugin *-- PluginMetadata`\n- `TypeScriptPlugin *-- TypeScriptParser`\n- `TypeScriptPlugin *-- ParallelParser`\n- `TypeScriptPlugin *-- IDependencyExtractor`\n- `TypeScriptPlugin *-- IValidator`\n\n**Typescript_Layer/Types_Layer:**\n- `ILanguagePlugin <|.. TypeScriptPlugin`\n- `TypeScriptPlugin *-- IDependencyExtractor`\n- `TypeScriptPlugin *-- IValidator`\n- `TypeScriptPlugin *-- ParallelParser`\n- `TypeScriptPlugin *-- PluginMetadata`\n- `TypeScriptPlugin *-- TypeScriptParser`\n- `GlobalConfig <|-- ArchGuardConfig`\n\n**Utils_Layer:**\n- `ResolveOptions <|-- OutputPathOptions`\n- `PathResolution <|-- ResolvedPaths`\n\nThe question asks about the `plugins` package specifically. None of these namespaces is explicitly named \"plugins\" — these are layers across the codebase. Without a namespace explicitly called `plugins`, there are 0 internal relations within a `plugins` package as defined in this diagram.\n\n```json\n{\"answer\": 0}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 721,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:33:50.344Z"
+}

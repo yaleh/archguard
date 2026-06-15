@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-total-entity-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-total-entity-count__L5__claude-sonnet-4-6__k1",
+  "content": "I'll count the classes and interfaces defined in this codebase.\n\nClasses:\n1. MermaidAutoRepair\n2. CommentGenerator\n3. CppPackageFlowchartGenerator\n4. MermaidDiagramGenerator\n5. ValidatedMermaidGenerator\n6. HeuristicGrouper\n7. IsomorphicMermaidRenderer\n8. TestCoverageRenderer\n9. MermaidRenderWorkerPool\n10. MermaidValidationPipeline\n11. MermaidParseValidator\n12. QualityValidator\n13. RenderValidator\n14. StructuralValidator\n15. ArchJSONAggregator\n16. BaseExtractor\n17. ClassExtractor\n18. EnumExtractor\n19. ParseError\n20. FunctionExtractor\n21. InterfaceExtractor\n22. MetricsCalculator\n23. ParallelParser\n24. ParseCache\n25. RelationExtractor\n26. TypeScriptParser\n27. NoopProgressReporter\n\nInterfaces:\n1. MermaidOutputOptions\n2. RenderJob (interface in diagram-generator)\n3. IProgressReporter\n4. WorkerInitData\n5. RenderJob (interface in render-worker-pool)\n6. RenderResult\n7. ParallelParserOptions\n8. ParsingMetrics\n\n{\"answer\": 35}",
+  "promptTokens": 46745,
+  "completionTokens": 290,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:46:09.973Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-call-exists-mermaidautorepair-mermaidautorepa__L5__glm-4.7__k1",
+  "content": "```json\n{\"answer\": \"yes\"}\n```",
+  "promptTokens": 43998,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:32:39.088Z"
+}

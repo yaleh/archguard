@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-direct-dep-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-direct-dep-exists__L5__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": \"no\"}",
+  "promptTokens": 46768,
+  "completionTokens": 6,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:09:50.419Z"
+}

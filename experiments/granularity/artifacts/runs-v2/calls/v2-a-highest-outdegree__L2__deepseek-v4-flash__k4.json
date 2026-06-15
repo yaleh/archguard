@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-a-highest-outdegree__L2__deepseek-v4-flash__k4",
+  "content": "{\"answer\": \"TypeScriptPlugin\"}",
+  "promptTokens": 22174,
+  "completionTokens": 1829,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:58:12.763Z"
+}

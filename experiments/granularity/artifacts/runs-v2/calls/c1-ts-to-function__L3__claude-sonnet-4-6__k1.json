@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-function",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "c1-ts-to-function__L3__claude-sonnet-4-6__k1",
+  "content": "Looking at the class diagram, `TypeScriptParser` contains a `FunctionExtractor` as a private member (`-functionExtractor: FunctionExtractor`). However, the call graph provided only shows 375 edges with a truncation note (\"and 325 more call edges\"), and the visible portion doesn't include any `TypeScriptParser` → `FunctionExtractor` call edges.\n\nThe class diagram shows `TypeScriptParser` has methods like `parseCode`, `parseProject`, `qualifyRelations`, etc., and owns a `FunctionExtractor` instance, but without the full call graph I cannot confirm which specific methods directly call `FunctionExtractor` methods from the truncated data alone.\n\nBased strictly on what is represented in the provided data:\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35369,
+  "completionTokens": 240,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:27:49.617Z"
+}

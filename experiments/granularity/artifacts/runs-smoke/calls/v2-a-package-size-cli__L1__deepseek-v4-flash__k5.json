@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-cli",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "v2-a-package-size-cli__L1__deepseek-v4-flash__k5",
+  "content": "{\"answer\": 1}",
+  "promptTokens": 323,
+  "completionTokens": 557,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:30:46.094Z"
+}

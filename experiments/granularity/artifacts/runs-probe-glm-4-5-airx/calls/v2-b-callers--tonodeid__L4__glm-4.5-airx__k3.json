@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers--tonodeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "v2-b-callers--tonodeid__L4__glm-4.5-airx__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"mermaid/ts-module-graph-renderer.ts#emitTreeNode\",\n    \"mermaid/ts-module-graph-renderer.ts#renderTsModuleGraph\"\n  ]\n}\n```",
+  "promptTokens": 57903,
+  "completionTokens": 457,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:56.034Z"
+}

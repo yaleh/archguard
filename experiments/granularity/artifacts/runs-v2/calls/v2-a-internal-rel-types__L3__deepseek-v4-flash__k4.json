@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-a-internal-rel-types__L3__deepseek-v4-flash__k4",
+  "content": "{\"answer\": 1}",
+  "promptTokens": 36450,
+  "completionTokens": 3071,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:01:09.005Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "obf-signature-change-impact-4",
+  "taskClass": "B",
+  "module": "obf",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "obf-signature-change-impact-4__L4__deepseek-v4-flash__k1",
+  "content": "{\"answer\": []}",
+  "promptTokens": 94,
+  "completionTokens": 161,
+  "invalidated": false,
+  "timestamp": "2026-06-11T08:40:57.763Z"
+}

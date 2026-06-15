@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-interface",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-ts-to-interface__L3__claude-sonnet-4-6__k3",
+  "content": "Looking at the class diagram, `TypeScriptParser` has `InterfaceExtractor` as a composed member (`TypeScriptParser *-- InterfaceExtractor`), and the call graph section doesn't include any edges from `TypeScriptParser_*` to `InterfaceExtractor_*`.\n\nThe call graph provided is partial (noting \"... and 325 more call edges\"), so I can only work with what's shown.\n\nBased solely on the representation above:\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35370,
+  "completionTokens": 139,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:37:32.217Z"
+}

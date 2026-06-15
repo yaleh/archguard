@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidparsevalidator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c2-most-called-ermaidparsevalidator__L5__claude-sonnet-4-6__k5",
+  "content": "{\"answer\": \"MermaidParseValidator.validate\"}",
+  "promptTokens": 46759,
+  "completionTokens": 16,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:55:06.872Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "c2-most-called-ermaidvalidationpipeline__L2__claude-sonnet-4-6__k2",
+  "content": "Looking at the class diagrams, I need to find references to `MermaidValidationPipeline` methods being called by other classes.\n\nFrom the diagrams, `MermaidAutoRepair` takes a `MermaidParseValidator` in its constructor, and `MermaidValidationPipeline` exposes `getParseValidator()` which returns a `MermaidParseValidator`. The `ValidatedMermaidGenerator` and `MermaidAutoRepair` are the external consumers in the Mermaid layer.\n\nThe diagram shows `MermaidValidationPipeline` has these methods: `validate`, `validateFull`, `getParseValidator`, `generateReport`, `summarize`. Looking at the relationships, `MermaidAutoRepair` constructor accepts a `MermaidParseValidator` — meaning callers use `getParseValidator()` to supply it. `ValidatedMermaidGenerator` and `MermaidDiagramGenerator` are the primary consumers of validation in that layer.\n\nThe diagram doesn't show explicit call-site references beyond class relationships. Based on the structural evidence — `MermaidAutoRepair` depends on `MermaidParseValidator` (obtained via `getParseValidator()`), and the `validate` method is the primary entry point for the pipeline — `validate` is the most architecturally prominent method called externally, but `getParseValidator` has a concrete structural dependency pointing to it.\n\n```json\n{\"answer\": \"MermaidValidationPipeline.validate\"}\n```",
+  "promptTokens": 21356,
+  "completionTokens": 403,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:32:28.737Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-enum",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "c1-ts-to-enum__L4__deepseek-v4-flash__k5",
+  "content": "{\"answer\": [\"TypeScriptParser.constructor\", \"TypeScriptParser.parseCode\", \"TypeScriptParser.parseProject\"]}",
+  "promptTokens": 62858,
+  "completionTokens": 467,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:43:41.552Z"
+}

@@ -1,0 +1,7 @@
+{
+  "tree": "mermaid",
+  "queries": {
+    "cycles": [],
+    "high-coupling": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "commitSha": "fe222fbb5aa5ae436063fc10e500e47fd1f18930",
+  "branch": "master",
+  "timestamp": "2026-06-11T06:52:56.586Z",
+  "archguardVersion": "0.1.23",
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 66,
+    "totalRelations": 45,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "composition": 44,
+      "inheritance": 1
+    },
+    "maxInDegree": 1,
+    "maxOutDegree": 1,
+    "maxPackageSize": 7,
+    "giniInDegree": 0.9090909090909092,
+    "giniPackageSize": 0.08333333333333326,
+    "packageCount": 2,
+    "entityCoverageRatio": null
+  }
+}

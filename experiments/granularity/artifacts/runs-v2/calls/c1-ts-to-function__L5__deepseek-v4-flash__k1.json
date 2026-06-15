@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-function",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "c1-ts-to-function__L5__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"TypeScriptParser.parseCode\", \"TypeScriptParser.parseProject\"]}",
+  "promptTokens": 46685,
+  "completionTokens": 214,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:26:47.905Z"
+}

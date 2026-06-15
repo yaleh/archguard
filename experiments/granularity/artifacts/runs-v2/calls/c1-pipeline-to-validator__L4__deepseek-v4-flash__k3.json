@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "c1-pipeline-to-validator__L4__deepseek-v4-flash__k3",
+  "content": "{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}",
+  "promptTokens": 62860,
+  "completionTokens": 182,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:43:33.974Z"
+}

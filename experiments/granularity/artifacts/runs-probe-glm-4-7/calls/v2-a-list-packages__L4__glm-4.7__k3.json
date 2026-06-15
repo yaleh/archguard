@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-a-list-packages__L4__glm-4.7__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"analysis\",\n    \"cli\",\n    \"core\",\n    \"mermaid\",\n    \"parser\",\n    \"plugins\",\n    \"types\",\n    \"utils\"\n  ]\n}\n```",
+  "promptTokens": 57905,
+  "completionTokens": 46,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:26:31.538Z"
+}

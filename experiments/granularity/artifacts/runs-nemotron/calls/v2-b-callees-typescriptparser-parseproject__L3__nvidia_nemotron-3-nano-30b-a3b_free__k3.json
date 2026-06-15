@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-b-callees-typescriptparser-parseproject__L3__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n  \"answer\": []\n}",
+  "promptTokens": 36192,
+  "completionTokens": 1842,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:48:45.332Z"
+}

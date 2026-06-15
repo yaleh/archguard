@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-top3-indegree__L5__claude-sonnet-4-6__k2",
+  "content": "I need to analyze the code to find entities (classes/interfaces) with the highest in-degree (most other entities depending on them).\n\nLet me trace the dependencies:\n\n**ArchJSON** is used by:\n- MermaidDiagramGenerator, MermaidValidationPipeline, ValidatedMermaidGenerator, HeuristicGrouper, QualityValidator, StructuralValidator, MermaidValidationPipeline.validateFull, ArchJSONAggregator, MetricsCalculator, ParallelParser, TypeScriptParser, CppPackageFlowchartGenerator, TestCoverageRenderer, renderTsModuleGraph (groupEntitiesByPackage, validateGeneratorInput, etc.)\nThat's a very high in-degree.\n\n**MermaidParseValidator** is used by:\n- MermaidAutoRepair (constructor), MermaidValidationPipeline (instantiates it), MermaidDiagramGenerator (uses pipeline.getParseValidator())\n\n**MermaidValidationPipeline** is used by:\n- MermaidDiagramGenerator\n\n**ValidatedMermaidGenerator** is used by:\n- MermaidDiagramGenerator\n\n**IsomorphicMermaidRenderer** is used by:\n- MermaidDiagramGenerator (renderJobsInParallel, renderJobsInParallelWithConfig, generateAndRender)\n\n**HeuristicGrouper** is used by:\n- MermaidDiagramGenerator\n\n**CommentGenerator** is used by:\n- ValidatedMermaidGenerator\n\n**BaseExtractor** is used by:\n- ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor\n\n**TypeScriptParser** is used by:\n- ParallelParser, ParseCache (indirectly)\n\n**ParseCache** is used by:\n- ParallelParser\n\nCounting carefully:\n\n- **ArchJSON** (type): used across ~14+ classes\n- **BaseExtractor**: ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor = 4\n- **TypeScriptParser**: ParallelParser = 1 (but also parse-cache indirectly)\n- **MermaidParseValidator**: MermaidAutoRepair, MermaidValidationPipeline, MermaidDiagramGenerator = 3\n- **IsomorphicMermaidRenderer**: MermaidDiagramGenerator = 2 usages\n- **MermaidValidationPipeline**: MermaidDiagramGenerator = 1\n- **ValidatedMermaidGenerator**: MermaidDiagramGenerator = 1\n\nTop 3: **ArchJSON**, **BaseExtractor**, **MermaidParseValidator**\n\n```json\n{\"answer\": [\"ArchJSON\", \"BaseExtractor\", \"MermaidParseValidator\"]}\n```",
+  "promptTokens": 46758,
+  "completionTokens": 625,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:44:47.691Z"
+}

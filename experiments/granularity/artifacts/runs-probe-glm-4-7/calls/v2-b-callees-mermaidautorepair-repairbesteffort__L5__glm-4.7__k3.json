@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaidautorepair-repairbesteffort",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-b-callees-mermaidautorepair-repairbesteffort__L5__glm-4.7__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"MermaidAutoRepair.addDiagramDeclaration\",\n    \"MermaidAutoRepair.fixGenericTypes\",\n    \"MermaidAutoRepair.flattenNestedNamespaces\",\n    \"MermaidAutoRepair.extractNamespaceRelations\",\n    \"MermaidAutoRepair.fixTrailingCommas\",\n    \"MermaidAutoRepair.normalizeWhitespace\",\n    \"MermaidParseValidator.validate\"\n  ]\n}\n```",
+  "promptTokens": 43996,
+  "completionTokens": 83,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:00.899Z"
+}

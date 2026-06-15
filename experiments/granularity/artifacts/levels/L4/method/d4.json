@@ -1,0 +1,1043 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:44.842Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f3.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f5.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f6.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/f2.ts"
+  ],
+  "entities": [
+    {
+      "id": "d5/f3.ts.Sn12",
+      "name": "Sn12",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m24",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v30",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f3\").Xc11[]>"
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f3.ts",
+        "startLine": 11,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "d5/f3.ts.Xc11",
+      "name": "Xc11",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f3\").Cz9",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p21",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f3\").Hz10",
+          "isReadonly": false
+        },
+        {
+          "name": "p22",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p23",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f3.ts",
+        "startLine": 3,
+        "endLine": 10
+      }
+    },
+    {
+      "id": "d5/f4.ts.Gk17",
+      "name": "Gk17",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p41",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p42",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p43",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p44",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p45",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p46",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Mk16",
+          "isReadonly": false
+        },
+        {
+          "name": "p47",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Rg15[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 31,
+        "endLine": 41
+      }
+    },
+    {
+      "id": "d5/f4.ts.Kd13",
+      "name": "Kd13",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p25",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p26",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 5,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "d5/f4.ts.Kr19",
+      "name": "Kr19",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m52",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v31",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Lc18",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>"
+        },
+        {
+          "name": "m53",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v32",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean"
+        },
+        {
+          "name": "m54",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [],
+          "returnType": "Promise<void>"
+        },
+        {
+          "name": "m58",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v33",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v34",
+              "type": "Ym194",
+              "isOptional": true
+            }
+          ],
+          "returnType": "boolean"
+        },
+        {
+          "name": "m59",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v35",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v36",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v37",
+              "type": "Ym194",
+              "isOptional": true
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Ww14"
+        },
+        {
+          "name": "p51",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Gk17",
+          "isReadonly": true
+        },
+        {
+          "name": "p55",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "readonly string[]",
+          "isReadonly": true
+        },
+        {
+          "name": "p56",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Sn12",
+          "isReadonly": true,
+          "isOptional": true
+        },
+        {
+          "name": "p57",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Ma26",
+          "isReadonly": true,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "extends": [
+        "Rv21"
+      ],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 47,
+        "endLine": 57
+      }
+    },
+    {
+      "id": "d5/f4.ts.Lc18",
+      "name": "Lc18",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p49",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p50",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 42,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "d5/f4.ts.Mk16",
+      "name": "Mk16",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p36",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p37",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p38",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p39",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p40",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 24,
+        "endLine": 30
+      }
+    },
+    {
+      "id": "d5/f4.ts.Rg15",
+      "name": "Rg15",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p33",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p34",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s23\" | \"s24\" | \"s25\" | \"s26\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p35",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 18,
+        "endLine": 23
+      }
+    },
+    {
+      "id": "d5/f4.ts.Ww14",
+      "name": "Ww14",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p27",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p28",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p29",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s19\" | \"s20\" | \"s21\" | \"p456\" | \"s22\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p30",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4\").Kd13[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p31",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p32",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f4.ts",
+        "startLine": 10,
+        "endLine": 17
+      }
+    },
+    {
+      "id": "d5/f5.ts.Ef20",
+      "name": "Ef20",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p60",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p61",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p62",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p63",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p64",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, unknown>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f5.ts",
+        "startLine": 2,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "d5/f5.ts.Rv21",
+      "name": "Rv21",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m65",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v38",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v39",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f5\").Ef20",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Vw210>"
+        },
+        {
+          "name": "m66",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v40",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v41",
+              "type": "string",
+              "isOptional": true
+            }
+          ],
+          "returnType": "Vw210"
+        },
+        {
+          "name": "m67",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v42",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Vw210>"
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f5.ts",
+        "startLine": 10,
+        "endLine": 14
+      }
+    },
+    {
+      "id": "d5/f6.ts.Dk25",
+      "name": "Dk25",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p72",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p73",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f6\").Ja23[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p74",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f6\").Kp24[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p75",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f6.ts",
+        "startLine": 16,
+        "endLine": 21
+      }
+    },
+    {
+      "id": "d5/f6.ts.Ja23",
+      "name": "Ja23",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p68",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p69",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p170\"",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f6.ts",
+        "startLine": 3,
+        "endLine": 8
+      }
+    },
+    {
+      "id": "d5/f6.ts.Kp24",
+      "name": "Kp24",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p68",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p69",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s27\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p71",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f6.ts",
+        "startLine": 9,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "d5/f6.ts.Ma26",
+      "name": "Ma26",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v43",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f6\").Dk25"
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d5/f6.ts",
+        "startLine": 22,
+        "endLine": 24
+      }
+    },
+    {
+      "id": "f2.ts.Gq7",
+      "name": "Gq7",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m15",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v28",
+              "type": "Rg15",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m16",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v29",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "any",
+          "decorators": []
+        },
+        {
+          "name": "m17",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m18",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "p14",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<string, Rg15>",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "new Map<string, Rg15>()",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f2.ts",
+        "startLine": 2,
+        "endLine": 16
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "d5/f4.ts.Kr19_composition_Ma26",
+      "type": "composition",
+      "source": "d5/f4.ts.Kr19",
+      "target": "Ma26"
+    },
+    {
+      "id": "d5/f4.ts.Kr19_composition_readonly string",
+      "type": "composition",
+      "source": "d5/f4.ts.Kr19",
+      "target": "readonly string"
+    },
+    {
+      "id": "d5/f4.ts.Kr19_composition_Sn12",
+      "type": "composition",
+      "source": "d5/f4.ts.Kr19",
+      "target": "Sn12"
+    },
+    {
+      "id": "d5/f4.ts.Kr19_inheritance_Rv21",
+      "type": "inheritance",
+      "source": "d5/f4.ts.Kr19",
+      "target": "Rv21"
+    },
+    {
+      "id": "d5/f4.ts.Rg15_composition_\"s23\"",
+      "type": "composition",
+      "source": "d5/f4.ts.Rg15",
+      "target": "\"s23\""
+    },
+    {
+      "id": "d5/f4.ts.Ww14_composition_\"s19\"",
+      "type": "composition",
+      "source": "d5/f4.ts.Ww14",
+      "target": "\"s19\""
+    },
+    {
+      "id": "d5/f6.ts.Ja23_composition_\"p170\"",
+      "type": "composition",
+      "source": "d5/f6.ts.Ja23",
+      "target": "\"p170\""
+    },
+    {
+      "id": "d5/f6.ts.Kp24_composition_\"s27\"",
+      "type": "composition",
+      "source": "d5/f6.ts.Kp24",
+      "target": "\"s27\""
+    },
+    {
+      "id": "f2.ts.Gq7_composition_Rg15",
+      "type": "composition",
+      "source": "f2.ts.Gq7",
+      "target": "Rg15"
+    },
+    {
+      "id": "f2.ts.Gq7_dependency_Rg15",
+      "type": "dependency",
+      "source": "f2.ts.Gq7",
+      "target": "Rg15"
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d4",
+  "metrics": {
+    "level": "method",
+    "entityCount": 16,
+    "relationCount": 10,
+    "relationTypeBreakdown": {
+      "composition": 8,
+      "dependency": 1,
+      "inheritance": 1
+    },
+    "stronglyConnectedComponents": 16,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "d5/f3.ts",
+        "loc": 13,
+        "entityCount": 2,
+        "methodCount": 1,
+        "fieldCount": 6,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d5/f4.ts",
+        "loc": 57,
+        "entityCount": 7,
+        "methodCount": 5,
+        "fieldCount": 34,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d5/f5.ts",
+        "loc": 14,
+        "entityCount": 2,
+        "methodCount": 3,
+        "fieldCount": 6,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d5/f6.ts",
+        "loc": 24,
+        "entityCount": 4,
+        "methodCount": 1,
+        "fieldCount": 13,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f2.ts",
+        "loc": 16,
+        "entityCount": 1,
+        "methodCount": 4,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 16,
+    "totalRelations": 10,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "composition": 8,
+      "dependency": 1,
+      "inheritance": 1
+    },
+    "maxInDegree": 0,
+    "maxOutDegree": 0,
+    "maxPackageSize": 4,
+    "giniInDegree": 0,
+    "giniPackageSize": 0.30000000000000004,
+    "packageCount": 2,
+    "entityCoverageRatio": null
+  }
+}

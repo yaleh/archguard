@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-package-size-types__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": 0}",
+  "promptTokens": 46742,
+  "completionTokens": 4,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:21:53.782Z"
+}

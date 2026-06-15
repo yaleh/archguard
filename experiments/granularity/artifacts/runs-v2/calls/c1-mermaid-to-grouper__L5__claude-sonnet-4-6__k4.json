@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-grouper",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-mermaid-to-grouper__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"MermaidDiagramGenerator.generateOnly\"]}",
+  "promptTokens": 46765,
+  "completionTokens": 19,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:09:39.080Z"
+}

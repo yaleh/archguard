@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-iprogressreporter-succeed",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-b-callers-iprogressreporter-succeed__L5__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "",
+  "promptTokens": -1,
+  "completionTokens": -1,
+  "invalidated": true,
+  "timestamp": "2026-06-12T05:20:37.494Z"
+}

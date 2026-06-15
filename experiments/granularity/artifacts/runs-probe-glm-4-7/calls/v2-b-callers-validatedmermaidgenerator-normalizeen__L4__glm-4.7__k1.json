@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-normalizeen",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-callers-validatedmermaidgenerator-normalizeen__L4__glm-4.7__k1",
+  "content": "```json\n[\n  \"ValidatedMermaidGenerator.generatePackageLevel\",\n  \"ValidatedMermaidGenerator.generateLayeredPackageLevel\",\n  \"ValidatedMermaidGenerator.generateClassLevel\",\n  \"ValidatedMermaidGenerator.generateMethodLevel\"\n]\n```",
+  "promptTokens": 57909,
+  "completionTokens": 52,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:26:42.652Z"
+}

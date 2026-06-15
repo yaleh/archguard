@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-largest-package-size",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-largest-package-size__L3__claude-sonnet-4-6__k5",
+  "content": "{\"answer\": \"Core_Layer\"}",
+  "promptTokens": 35350,
+  "completionTokens": 9,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:23:57.839Z"
+}

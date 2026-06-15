@@ -1,0 +1,14 @@
+{
+  "task": {
+    "id": "archguard-class-B-direct-dependents-0",
+    "taskClass": "B",
+    "taskType": "direct-dependents",
+    "prompt": "Based only on the representation above: list the IDs of all entities that directly depend on \"src/cli/query/query-artifacts.ts.atomicwritefile\". Respond with JSON: {\"answer\": [\"id1\", \"id2\", ...]}.",
+    "answerType": "set",
+    "answer": [
+      "src/cli/query/engine-loader.ts.loadengine"
+    ]
+  },
+  "format": "json-adjacency",
+  "model": "claude-haiku-4-5-20251001"
+}

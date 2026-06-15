@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-function",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "c1-ts-to-function__L2__deepseek-v4-flash__k3",
+  "content": "{\"answer\": []}",
+  "promptTokens": 22190,
+  "completionTokens": 363,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:27:10.861Z"
+}

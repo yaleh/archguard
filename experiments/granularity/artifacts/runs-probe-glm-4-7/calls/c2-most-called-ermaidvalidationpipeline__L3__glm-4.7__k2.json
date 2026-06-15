@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "c2-most-called-ermaidvalidationpipeline__L3__glm-4.7__k2",
+  "content": "```json\n{\"answer\": \"MermaidValidationPipeline.validate\"}\n```",
+  "promptTokens": 35004,
+  "completionTokens": 14,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:29:08.106Z"
+}

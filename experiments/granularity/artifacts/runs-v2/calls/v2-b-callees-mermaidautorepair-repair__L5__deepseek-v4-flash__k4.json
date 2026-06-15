@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaidautorepair-repair",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-b-callees-mermaidautorepair-repair__L5__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"MermaidAutoRepair.addDiagramDeclaration\", \"MermaidAutoRepair.fixGenericTypes\", \"M",
+  "promptTokens": 46679,
+  "completionTokens": 1024,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:41:08.142Z"
+}

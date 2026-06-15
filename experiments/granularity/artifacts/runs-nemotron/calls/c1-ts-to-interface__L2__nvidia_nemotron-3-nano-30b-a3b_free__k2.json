@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-interface",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "c1-ts-to-interface__L2__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "",
+  "promptTokens": -1,
+  "completionTokens": -1,
+  "invalidated": true,
+  "timestamp": "2026-06-12T05:26:21.909Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ypescriptparser",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "c2-most-called-ypescriptparser__L2__glm-4.7__k3",
+  "content": "```json\n{\"answer\": \"TypeScriptParser.parseCode\"}\n```",
+  "promptTokens": 21682,
+  "completionTokens": 14,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:42.941Z"
+}

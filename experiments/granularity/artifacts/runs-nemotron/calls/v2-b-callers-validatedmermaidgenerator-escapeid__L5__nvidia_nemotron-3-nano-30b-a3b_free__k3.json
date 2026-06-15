@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-escapeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-b-callers-validatedmermaidgenerator-escapeid__L5__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n\"answer\": [\n    \"ValidatedMermaidGenerator.generateClassDefinition\",\n    \"ValidatedMermaidGenerator.generateClassDiagrams\",\n    \"ValidatedMermaidGenerator.generatePackageLevel\",\n    \"ValidatedMermaidGenerator.generateMethodLevel\",\n    \"ValidatedMermaidGenerator.generateClassLevel\",\n    \"ValidatedMermaidGenerator.generateRelationLine\"\n  ]\n}",
+  "promptTokens": 46283,
+  "completionTokens": 1838,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:06:01.312Z"
+}

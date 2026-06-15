@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-top3-indegree__L2__claude-sonnet-4-6__k5",
+  "content": "I'll analyze the class diagrams to count incoming dependencies (arrows pointing TO each entity) across all the relationship declarations.\n\nLet me tally the key candidates:\n\n**ArchJSON**: Referenced as target in relationships from ArchJSONAggregator, ParallelParser, ParseCache (×2), TypeScriptParser, CppPackageFlowchartGenerator, GoPlugin, JavaPlugin, TypeScriptPlugin (×2 diagrams, multiple), IParser, QueryEngine — approximately 15+ incoming\n\n**TestAnalysis**: Referenced from CacheManager, TestCoverageRenderer, TestOutputWriter, ArchJSONExtensions (×2 diagrams) — approximately 5 incoming\n\n**Entity**: Referenced from ArchJsonMapper (Go), ArchJsonMapper (Java), ArchJSONAggregator, ClassExtractor, EnumExtractor, FunctionExtractor, InterfaceExtractor, QueryEngine, TypeScriptAnalyzer (×2 diagrams) — approximately 10+ incoming\n\n**ParseConfig**: Referenced from GoPlugin, JavaPlugin, TypeScriptPlugin (×2 diagrams) — approximately 4-5 incoming\n\n**PluginInitConfig**: Referenced from GoPlugin, JavaPlugin, TypeScriptPlugin (×2 diagrams) — approximately 4 incoming\n\n**IDependencyExtractor**: Referenced as composition/implementation from GoPlugin, JavaPlugin (DependencyExtractor), TypeScriptPlugin (×2 diagrams) — approximately 5 incoming\n\n**TsAnalysis**: Referenced from TypeScriptAnalyzer (×2 diagrams) — 2 incoming\n\n**TestPatternConfig**: Referenced from GoPlugin, TypeScriptPlugin (×2 diagrams) — approximately 4 incoming\n\nTop 3 by in-degree:\n\n1. **ArchJSON** — highest by far (~15+)\n2. **Entity** — (~10+)\n3. **TestAnalysis** — (~5-6, tied with IDependencyExtractor, but TestAnalysis has explicit named references across more diagrams)\n\n```json\n{\"answer\": [\"ArchJSON\", \"Entity\", \"TestAnalysis\"]}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 522,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:17.284Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-relation",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "c1-ts-to-relation__L3__glm-4.5-airx__k1",
+  "content": "```json\n{\n  \"answer\": [\n    \"TypeScriptParser.parseCode\",\n    \"TypeScriptParser.parseProject\"\n  ]\n}\n```",
+  "promptTokens": 35009,
+  "completionTokens": 921,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:27:43.803Z"
+}

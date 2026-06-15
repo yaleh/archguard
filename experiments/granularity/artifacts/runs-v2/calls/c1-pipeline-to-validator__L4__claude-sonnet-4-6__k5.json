@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c1-pipeline-to-validator__L4__claude-sonnet-4-6__k5",
+  "content": "{\"answer\": [\"MermaidValidationPipeline.constructor\", \"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\", \"MermaidValidationPipeline.getParseValidator\"]}",
+  "promptTokens": 58828,
+  "completionTokens": 67,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:43:48.275Z"
+}

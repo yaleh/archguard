@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-autorepair-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c1-autorepair-to-validator__L2__claude-sonnet-4-6__k5",
+  "content": "Looking at the class diagram, `MermaidAutoRepair` has a constructor that takes `MermaidParseValidator` as a parameter, and has two methods: `repair` and `repairBestEffort`. The diagram shows a composition/dependency relationship via the constructor parameter, but does not specify which methods internally call `MermaidParseValidator` methods — only the structural signatures are shown, not method bodies or call graphs.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 21361,
+  "completionTokens": 146,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:37:47.429Z"
+}

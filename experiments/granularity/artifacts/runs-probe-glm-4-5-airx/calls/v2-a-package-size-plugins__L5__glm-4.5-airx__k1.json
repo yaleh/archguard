@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-plugins",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-a-package-size-plugins__L5__glm-4.5-airx__k1",
+  "content": "```json\n{\"answer\": 0}\n```",
+  "promptTokens": 43983,
+  "completionTokens": 1227,
+  "invalidated": false,
+  "timestamp": "2026-06-12T06:18:13.583Z"
+}

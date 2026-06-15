@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-a-highest-outdegree__L4__glm-4.7__k1",
+  "content": "```json\n{\n  \"answer\": \"mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly\"\n}\n```",
+  "promptTokens": 57899,
+  "completionTokens": 26,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:42:13.969Z"
+}

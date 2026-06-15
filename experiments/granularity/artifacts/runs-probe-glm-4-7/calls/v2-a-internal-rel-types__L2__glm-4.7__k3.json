@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-a-internal-rel-types__L2__glm-4.7__k3",
+  "content": "```json\n{\"answer\": 1}\n```",
+  "promptTokens": 21683,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:36:48.182Z"
+}

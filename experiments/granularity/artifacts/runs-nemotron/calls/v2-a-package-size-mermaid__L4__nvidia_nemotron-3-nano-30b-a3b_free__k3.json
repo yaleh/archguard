@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-mermaid",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-a-package-size-mermaid__L4__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n  \"answer\": 40\n}",
+  "promptTokens": 61491,
+  "completionTokens": 2048,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:47:21.381Z"
+}

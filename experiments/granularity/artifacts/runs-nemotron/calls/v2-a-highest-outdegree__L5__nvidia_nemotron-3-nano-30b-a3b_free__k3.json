@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-a-highest-outdegree__L5__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\"answer\":\"MermaidDiagramGenerator\"}",
+  "promptTokens": 46274,
+  "completionTokens": 1129,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:13:29.503Z"
+}

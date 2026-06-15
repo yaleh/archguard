@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-validatedmermaidgenerator-generatelay",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-callees-validatedmermaidgenerator-generatelay__L5__glm-4.7__k1",
+  "content": "```json\n[\n  \"ValidatedMermaidGenerator.getArchitecturalLayers\",\n  \"ValidatedMermaidGenerator.normalizePackagePath\",\n  \"ValidatedMermaidGenerator.findMatchingLayer\",\n  \"ValidatedMermaidGenerator.escapeId\"\n]\n```",
+  "promptTokens": 43997,
+  "completionTokens": 51,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:42:20.176Z"
+}

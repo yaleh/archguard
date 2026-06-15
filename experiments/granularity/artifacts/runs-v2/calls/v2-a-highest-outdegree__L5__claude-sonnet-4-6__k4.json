@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-highest-outdegree__L5__claude-sonnet-4-6__k4",
+  "content": "I'll analyze the code to find which entity has the highest number of outgoing dependencies by counting relationships where each entity/class is the source.\n\nLet me count outgoing dependencies (composition, dependency, inheritance, implementation) for the major classes:\n\n**ValidatedMermaidGenerator** - depends on: ArchJSON, DiagramConfig, MermaidDetailLevel, GroupingDecision, MermaidTheme, CommentGenerator, PackageGroup, MermaidGeneratorOptions, EntityTypeRegistry, Member, Entity, Relation, groupEntitiesByPackage, validateGeneratorInput — very high count\n\n**TypeScriptParser** - depends on: Project, ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor, FunctionExtractor, ArchJSON, Entity, Relation, findTsConfigPath, loadPathAliases — ~11\n\n**MermaidDiagramGenerator** - depends on: GlobalConfig, IProgressReporter, NoopProgressReporter, ArchJSON, MermaidOutputOptions, DetailLevel, DiagramConfig, HeuristicGrouper, ValidatedMermaidGenerator, MermaidValidationPipeline, IsomorphicMermaidRenderer, MermaidAutoRepair, RenderJob, pMap — ~14\n\n**ValidatedMermaidGenerator** imports/uses: ArchJSON, Entity, Member, Relation, DiagramConfig, GlobalConfig, DetailLevel, MermaidDetailLevel, GroupingDecision, PackageGroup, MermaidGeneratorOptions, MermaidTheme, CommentGenerator, groupEntitiesByPackage, validateGeneratorInput, EntityTypeRegistry, globalEntityTypeRegistry, path — ~17+\n\n**MermaidValidationPipeline** - depends on: ArchJSON, ValidationPipelineResult, MermaidParseValidator, StructuralValidator, RenderValidator, QualityValidator — ~6\n\n**MermaidDiagramGenerator** has the most outgoing dependencies based on imports and direct class instantiations/usages.\n\n```json\n{\"answer\": \"MermaidDiagramGenerator\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 524,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:58:12.762Z"
+}

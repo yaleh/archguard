@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-validated",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "c1-mermaid-to-validated__L4__glm-4.7__k2",
+  "content": "```json\n{\n  \"answer\": [\n    \"MermaidDiagramGenerator.generateOnly\",\n    \"MermaidDiagramGenerator.generateAndRender\"\n  ]\n}\n```",
+  "promptTokens": 57918,
+  "completionTokens": 32,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:36:29.391Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-grouper",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "c1-mermaid-to-grouper__L4__glm-4.5-airx__k3",
+  "content": "```json\n{\"answer\": [\"MermaidDiagramGenerator.generateOnly\"]}\n```",
+  "promptTokens": 57918,
+  "completionTokens": 557,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:53:45.269Z"
+}

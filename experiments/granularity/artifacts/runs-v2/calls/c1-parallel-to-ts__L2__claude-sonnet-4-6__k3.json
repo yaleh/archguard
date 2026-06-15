@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-parallel-to-ts",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-parallel-to-ts__L2__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": []}",
+  "promptTokens": 21359,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:51:28.059Z"
+}

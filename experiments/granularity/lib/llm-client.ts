@@ -41,7 +41,7 @@ export class HttpError extends Error {
   }
 }
 
-export const DEFAULT_TIMEOUT_MS = 120_000;
+export const DEFAULT_TIMEOUT_MS = 300_000; // 5 min — L4 (ArchJSON 424KB) needs extra time
 
 export function createLlmClient(fetchImpl: typeof fetch = fetch): LlmClient {
   return {

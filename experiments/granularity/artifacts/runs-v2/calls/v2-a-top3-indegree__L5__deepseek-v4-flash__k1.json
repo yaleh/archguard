@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L5__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"BaseExtractor\", \"ParseError\", \"MermaidParseValidator\"]}",
+  "promptTokens": 46684,
+  "completionTokens": 5806,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:43:32.367Z"
+}

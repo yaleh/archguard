@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-caller-count-mermaidparsevalidator-validate",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-b-caller-count-mermaidparsevalidator-validate__L5__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": 4}",
+  "promptTokens": 46744,
+  "completionTokens": 4,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:41:47.871Z"
+}

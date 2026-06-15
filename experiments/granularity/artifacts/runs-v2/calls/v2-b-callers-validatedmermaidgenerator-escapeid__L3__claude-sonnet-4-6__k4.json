@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-escapeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-b-callers-validatedmermaidgenerator-escapeid__L3__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"ValidatedMermaidGenerator.generateClassDefinition\", \"ValidatedMermaidGenerator.generateRelationLine\"]}",
+  "promptTokens": 35360,
+  "completionTokens": 43,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:19:44.942Z"
+}

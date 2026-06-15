@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-top3-indegree__L4__claude-sonnet-4-6__k2",
+  "content": "I'll count the incoming dependencies (in-degree) for each entity by tallying how many relations have them as the `target`.\n\nCounting from the `relations` array:\n\n- `ILanguagePlugin` (core/interfaces/language-plugin.ts): targeted by CppPlugin, GoPlugin, JavaPlugin, KotlinPlugin, PythonPlugin, TypeScriptPlugin, IParser (inheritance) = 7\n- `BaseArchJsonMapper` (plugins/shared/mapper-utils.ts): targeted by cpp/ArchJsonMapper, golang/ArchJsonMapper, java/ArchJsonMapper, kotlin/ArchJsonMapper, python/ArchJsonMapper = 5\n- `IDependencyExtractor` (core/interfaces/dependency.ts): targeted by cpp/DependencyExtractor, golang/DependencyExtractor, java/DependencyExtractor, KotlinDependencyExtractor, python/DependencyExtractor = 5\n- `ProgressReporterLike`: targeted by NoopReporter, ProgressReporter, StderrReporter = 3\n- `IAtlasBuilder`: targeted by CapabilityGraphBuilder, FlowGraphBuilder, GoroutineTopologyBuilder, PackageGraphBuilder = 4\n\nTop 3 by in-degree: ILanguagePlugin (7), BaseArchJsonMapper (5), IDependencyExtractor (5).\n\n```json\n{\"answer\": [\"ILanguagePlugin\", \"BaseArchJsonMapper\", \"IDependencyExtractor\"]}\n```",
+  "promptTokens": 58819,
+  "completionTokens": 350,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:42:32.900Z"
+}

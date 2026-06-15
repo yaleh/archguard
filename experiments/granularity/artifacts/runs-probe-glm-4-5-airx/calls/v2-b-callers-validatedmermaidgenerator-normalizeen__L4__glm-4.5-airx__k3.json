@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-normalizeen",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "v2-b-callers-validatedmermaidgenerator-normalizeen__L4__glm-4.5-airx__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generatePackageLevel\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateClassLevel\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateMethodLevel\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDefinition\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateMemberLine\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateRelationLine.resolve\",\n    \"mermaid/generator.ts#ValidatedMermaidGenerator.generateClassDiagrams\"\n  ]\n}\n```",
+  "promptTokens": 57909,
+  "completionTokens": 625,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:06.074Z"
+}

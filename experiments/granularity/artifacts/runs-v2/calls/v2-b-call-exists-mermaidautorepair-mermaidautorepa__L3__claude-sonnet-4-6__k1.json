@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-b-call-exists-mermaidautorepair-mermaidautorepa__L3__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": \"yes\"}",
+  "promptTokens": 35360,
+  "completionTokens": 6,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:50:22.441Z"
+}

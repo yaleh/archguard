@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\"answer\": 5}\n```\n\nThe `IProgressReporter` interface has 5 methods:\n1. `fail(message: string) -> void`\n2. `info(message: string) -> void`\n3. `start(message: string) -> void`\n4. `succeed(message: string) -> void`\n5. `warn(message: string) -> void`",
+    "```json\n{\"answer\": 5}\n```\n\nThe entity `src/mermaid/progress.ts.iprogressreporter` is an interface with the following methods:\n1. `fail(message:string) -> void`\n2. `info(message:string) -> void`\n3. `start(message:string) -> void`\n4. `succeed(message:string) -> void`\n5. `warn(message:string) -> void`",
+    "```json\n{\"answer\": 5}\n```\n\nThe entity `src/mermaid/progress.ts.iprogressreporter` is an interface with the following methods:\n1. `fail(message:string) -> void`\n2. `info(message:string) -> void`\n3. `start(message:string) -> void`\n4. `succeed(message:string) -> void`\n5. `warn(message:string) -> void`",
+    "```json\n{\"answer\": 5}\n```\n\nThe entity `src/mermaid/progress.ts.iprogressreporter` is an interface with the following methods:\n1. `fail(message:string) -> void`\n2. `info(message:string) -> void`\n3. `start(message:string) -> void`\n4. `succeed(message:string) -> void`\n5. `warn(message:string) -> void`",
+    "```json\n{\"answer\": 5}\n```\n\nThe `IProgressReporter` interface has 5 methods:\n1. `fail(message:string) -> void`\n2. `info(message:string) -> void`\n3. `start(message:string) -> void`\n4. `succeed(message:string) -> void`\n5. `warn(message:string) -> void`"
+  ],
+  "promptTokens": 162610,
+  "completionTokens": 524
+}

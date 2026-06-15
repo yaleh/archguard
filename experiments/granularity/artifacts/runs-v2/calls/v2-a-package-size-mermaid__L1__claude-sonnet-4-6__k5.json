@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-mermaid",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-package-size-mermaid__L1__claude-sonnet-4-6__k5",
+  "content": "{\"answer\": 0}",
+  "promptTokens": 739,
+  "completionTokens": 4,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:07:10.076Z"
+}

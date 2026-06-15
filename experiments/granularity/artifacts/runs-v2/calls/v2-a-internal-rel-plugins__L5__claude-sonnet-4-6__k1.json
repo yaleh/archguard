@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-plugins",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-internal-rel-plugins__L5__claude-sonnet-4-6__k1",
+  "content": "I need to analyze the code to identify which files/classes belong to a `plugins` package, then count internal relations.\n\nLooking through all the code provided, I can see files belonging to these packages/modules:\n- `mermaid` (validator, generator, renderer, etc.)\n- `parsers` (TypeScriptParser, ClassExtractor, etc.)\n- `core` (MetricsCalculator, ArchJSONAggregator, etc.)\n\nThere is no `plugins` package represented in any of the code above. No file paths, imports, or class names reference a `plugins` package.\n\n{\"answer\": 0}",
+  "promptTokens": 46758,
+  "completionTokens": 170,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:30:21.984Z"
+}

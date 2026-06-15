@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-indegree-1",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-highest-indegree-1__L5__claude-sonnet-4-6__k3",
+  "content": "Looking at the relations defined across the codebase, I need to identify which entity is imported/used/depended upon the most.\n\nScanning the imports and usages:\n\n- `MermaidParseValidator` is used in: `MermaidAutoRepair`, `MermaidValidationPipeline`, `MermaidDiagramGenerator`, and exported from the index\n- `ArchJSON` is referenced across nearly every file\n- `ValidatedMermaidGenerator` is used in `MermaidDiagramGenerator` and exported\n- `IsomorphicMermaidRenderer` is used in `MermaidDiagramGenerator` and exported\n\n`ArchJSON` appears as a parameter or type in virtually every class: `MermaidDiagramGenerator`, `ValidatedMermaidGenerator`, `HeuristicGrouper`, `MermaidValidationPipeline`, `StructuralValidator`, `QualityValidator`, `ArchJSONAggregator`, `MetricsCalculator`, `ParallelParser`, `TypeScriptParser`, `groupEntitiesByPackage`, `validateGeneratorInput`, `TestCoverageRenderer`, `renderTsModuleGraph`, and more.\n\n```json\n{\"answer\": \"ArchJSON\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 299,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:32:10.241Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-repair",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "c1-mermaid-to-repair__L4__glm-4.7__k1",
+  "content": "```json\n{\n  \"answer\": [\n    \"mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly\"\n  ]\n}\n```",
+  "promptTokens": 57917,
+  "completionTokens": 30,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:28.330Z"
+}

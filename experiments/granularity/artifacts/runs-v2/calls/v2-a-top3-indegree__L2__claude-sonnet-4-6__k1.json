@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L2__claude-sonnet-4-6__k1",
+  "content": "I'll analyze the relationship arrows across all diagrams to count incoming dependencies (in-degree) for each entity.\n\nLet me tally the targets of all relationship arrows (`-->`, `*--`, `<|--`, `<|..`):\n\n**ArchJSON** (target of):\n- ArchJSONAggregator --> ArchJSON\n- ParallelParser --> ArchJSON\n- ParseCache *-- ArchJSON\n- ParseCache --> ArchJSON\n- TypeScriptParser --> ArchJSON\n- CppPackageFlowchartGenerator --> ArchJSON\n- TestCoverageRenderer --> ArchJSON\n- IParser (parseCode returns ArchJSON, but that's a method, not a relation arrow)\n- GoPlugin --> ArchJSON\n- JavaPlugin --> ArchJSON\n- TypeScriptPlugin --> ArchJSON (x2 namespaces, x2 appearances)\n- QueryEngine *-- ArchJSON\n- QueryEngineOptions has archJson field but no arrow\n\nCount: ~10+ arrows pointing to ArchJSON\n\n**Entity** (target of):\n- ArchJSONAggregator --> Entity\n- ClassExtractor --> Entity\n- EnumExtractor --> Entity\n- FunctionExtractor --> Entity\n- InterfaceExtractor --> Entity\n- ArchJsonMapper (Go) --> Entity\n- ArchJsonMapper (Java) --> Entity\n- QueryEngine *-- Entity\n- QueryEngine --> Entity\n- TypeScriptAnalyzer --> Entity (x2 namespaces)\n\nCount: ~10 arrows\n\n**TestAnalysis** (target of):\n- CacheManager --> TestAnalysis\n- TestCoverageRenderer --> TestAnalysis\n- TestOutputWriter --> TestAnalysis\n- QueryEngine --> (via getTestAnalysis, but no explicit arrow)\n\nCount: ~3 arrows\n\n**ParseConfig** (target of):\n- GoPlugin --> ParseConfig\n- JavaPlugin --> ParseConfig\n- TypeScriptPlugin --> ParseConfig (x2)\n\n**Relation** (target of):\n- ArchJSONAggregator --> Relation\n- RelationExtractor --> Relation\n- TypeScriptParser --> Relation\n- ParallelParser --> Relation\n- ArchJsonMapper (Go) --> Relation\n- ArchJsonMapper (Java) --> Relation\n\nCount: ~6 arrows\n\n**PluginMetadata** (target of):\n- GoPlugin *-- PluginMetadata\n- JavaPlugin *-- PluginMetadata\n- TypeScriptPlugin *-- PluginMetadata (x2)\n\nCount: ~4\n\n**ArchJSON** and **Entity** are clearly the top two. **Relation** comes in third with ~6 arrows.\n\n```json\n{\"answer\": [\"ArchJSON\", \"Entity\", \"Relation\"]}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 609,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:05.592Z"
+}

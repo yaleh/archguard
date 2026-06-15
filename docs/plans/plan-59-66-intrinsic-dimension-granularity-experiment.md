@@ -3,7 +3,7 @@
 > Proposal: `docs/proposals/proposal-intrinsic-dimension-granularity-experiment.md`(预注册实验协议 v2.1)
 > Status: Draft
 > Priority: MEDIUM(实验 harness,**对 `src/` 零改动**)
-> Estimated total changes: ~2,310 行实验脚本(Phase 59–63)+ ≤110 行胶水(Phase 64–66)+ ~1,430 行测试(全部位于 `experiments/granularity/`;分项见文末"行数预算核对",总数为各 Stage 之和)
+> Estimated total changes: ~2,320 行实验脚本(Phase 59–63)+ ≤110 行胶水(Phase 64–66)+ ~1,440 行测试(全部位于 `experiments/granularity/`;分项见文末"行数预算核对",总数为各 Stage 之和)
 
 ---
 
@@ -67,12 +67,12 @@
 ## Phase 59 — 实验脚手架与符号混淆器
 
 **依赖**:无。
-**预计行数**:~470 行源码 + ~310 行测试。
+**预计行数**:~480 行源码 + ~320 行测试。
 
 ### Stage 59.1 — `experiments/granularity/` 脚手架(~90 行源码 + ~40 行测试)
 
 **文件**:
-- `experiments/granularity/package.json`(新):局部安装 `tsx`、`vitest`(**不进主 `package.json`**,遵守 §14 运行时依赖决定);`ts-morph` 复用主仓库 dependencies(`^27.0.2`,§14 已核对)。scripts:`test`(vitest run)、各脚本的 `npx tsx` 入口。
+- `experiments/granularity/package.json`(新):局部安装 `tsx`、`vitest`(**不进主 `package.json`**,遵守 §14 运行时依赖决定);`ts-morph` 复用主仓库 dependencies(`^27.0.2`,§14 已核对)。scripts:`test`(vitest run)、各脚本的 `npx tsx` 入口。**模块解析已实测核实**:主仓库非 npm workspaces,Node 自 `experiments/granularity/` 向上解析可命中根 `node_modules/ts-morph@27.0.2`;局部 `npm install` 产生的局部 `node_modules` 不遮蔽向上解析,故 `ts-morph` 无需在局部 package.json 声明(tsx/esbuild 与 tsc 的解析同走向上查找)。
 - `experiments/granularity/tsconfig.json`、`vitest.config.ts`(新):独立配置,不影响主套件(主 vitest 已排除 `experiments/**`)。
 - `experiments/granularity/requirements.txt`(新):`scikit-dimension`、`numpy`、`scipy`、`requests`,**版本固定**(== 钉死,随协议冻结)。
 - `experiments/granularity/lib/env.ts`(新):读取 `LLM_BASE_URL` / `LLM_API_KEY`,任一缺失即抛错(fail-fast)。**不提供默认值、不写入任何文件**。
@@ -85,29 +85,32 @@
 - 主仓库 `npm test`、`npm run type-check` 不受影响(零改动验证);
 - `git grep -iE 'sk-|api[_-]?key\s*[:=]' experiments/granularity/` 无凭据字面量。
 
-### Stage 59.2 — `obfuscate.ts`:语义重命名 + mapping.json(~190 行源码 + ~160 行测试)
+### Stage 59.2 — `obfuscate.ts`:语义重命名 + mapping.json(~200 行源码 + ~170 行测试)
 
 实现 §5 混淆步骤 1 与 6:
-- 对全部 class / interface / enum / function / method / property / 顶层 const 调用 ts-morph `rename()`(引用点自动跟随);混淆名生成器确定性(种子固定),格式如 `Xq7`、`m4`;
+- 对全部 class / interface / enum / function / method / property / 顶层 const 调用 ts-morph `rename()`(引用点自动跟随;**API 已对 ts-morph 27.0.2 `.d.ts` 核实**:`NamedNode`/`NameableNode`/`PropertyNamedNode`/`BindingNamedNode` 均混入 `RenameableNode`,覆盖上述全部声明类型,顶层 const 经 `VariableDeclaration` 覆盖);混淆名生成器确定性(种子固定),格式如 `Xq7`、`m4`;
+- **ts-morph Project 作用域必须含依赖闭包**:两模块大量 `import ... from '@/types'` / `'../types/...'`(已核实:`src/mermaid`+`src/parser` 共 19 处),另有 `@/utils/tsconfig-finder.js` 1 处。闭包文件(`src/types/**` 约 14 个文件 + `src/utils/tsconfig-finder.ts`)须一并加载进 Project 并参与 rename,否则 `ArchJSON`、`MermaidConfig` 等域名标识符以 import 形态残留在混淆树中,59.3 的泄漏自检必失败。闭包加载约 10 行(`addSourceFilesAtPaths` + 主仓库 tsconfig paths),计入本 Stage 预算;
+- rename 传播注意:rename 接口成员会同步重命名实现类成员(语言服务行为),生成器须按"当前名"判断是否已重命名以避免二次改名;mapping 记录单次 rename 影响的全部声明;
 - `mapping.json` 输出:原名 ↔ 混淆名双向映射(实体、成员、文件三个命名空间),**只用于评分与对账,不进任何 prompt**(在 run-tasks.ts 验收中复查)。
 
-**测试**(TDD,fixture 微型 TS 项目):重命名后引用一致(编译通过)、关系结构不变(类继承/实现关系在 rename 前后同构)、映射表可逆、两次运行输出逐字节相同(确定性)。
+**测试**(TDD,fixture 微型 TS 项目):重命名后引用一致(编译通过)、关系结构不变(类继承/实现关系在 rename 前后同构)、映射表可逆、两次运行输出逐字节相同(确定性)、接口成员 rename 同步传播到实现类且 mapping 记录两者。
 
 **验收标准**:测试全过;fixture 项目混淆后 `tsc --noEmit` 零错误。
 
 ### Stage 59.3 — `obfuscate.ts`:文件移动、去注释、字符串与外部依赖替换(~190 行源码 + ~110 行测试)
 
 实现 §5 混淆步骤 2–5:
-- `sourceFile.move()` 重命名文件与目录(import 路径自动更新);
-- printer `removeComments` 去注释;
+- 文件用 `SourceFile#move()`、目录用 `Directory#move()` 重命名(**已对 27.0.2 `.d.ts` 核实**:`move` 自动更新引用方与自身的 module specifier);
+- 去注释用 `sourceFile.print({ removeComments: true })`(ts-morph `PrintNodeOptions.removeComments`,已核实)+ `replaceWithText()` 回写;**不可用 `Project.emit` 的 `removeComments` 编译选项——emit 输出的是 JS 而非 TS**。注意 printer 会按 compiler printer 规范化格式(确定性,可接受;去注释须排在 rename/move 之后、字符串替换之前或之后均可,但全流程顺序固定以保证逐字节确定性);
 - 领域强泄漏字符串字面量(`'classDiagram'`、Mermaid 错误信息等)→ `s1`/`s2` 占位,替换清单进 mapping.json;
-- 外部依赖名替换(`'isomorphic-mermaid'` → `'pkg1'` 等),保持 bare specifier 形态(§5:仍被判为外部依赖)。
+- 外部依赖名替换(`'isomorphic-mermaid'` → `'pkg1'` 等),保持 bare specifier 形态(§5:仍被判为外部依赖);
+- **混淆树输出含依赖闭包文件(59.2 已混淆)+ 混淆树自身的 `tsconfig.json`**(paths `@/*` 指向树内对应目录;以静态模板文件随输出复制,复制逻辑 ~5 行),否则 `tsc --noEmit` 验收无法通过;混淆树的 tsconfig 同时保证 64.2(b) 对账时两树的 import 解析行为同构(原始树经主仓库 tsconfig 解析 `@/types`)。
 
-**测试**:文件移动后 import 解析、注释清零、字符串替换记录进映射、bare specifier 形态保持各有用例。
+**测试**:文件移动后 import 解析、注释清零、字符串替换记录进映射、bare specifier 形态保持、生成的 tsconfig paths 可解析闭包 import,各有用例。
 
 **验收标准**:
-- 测试全过;对 `src/mermaid` + `src/parser` 实跑产出 `obf/<module>/` + `mapping.json`,混淆树 `tsc --noEmit` 零错误;
-- 混淆树中 `grep -riE 'mermaid|archguard|diagram'`(排除 bare specifier 替换前清单)零命中——作为 Phase 64 泄漏探针的前置自检。
+- 测试全过;对 `src/mermaid` + `src/parser` 实跑产出 `obf/<module>/` + 混淆后依赖闭包 + 树内 tsconfig + `mapping.json`,混淆树 `tsc --noEmit` 零错误;
+- 混淆树(**含闭包文件**)中 `grep -riE 'mermaid|archguard|diagram'`(排除 bare specifier 替换前清单)零命中——作为 Phase 64 泄漏探针的前置自检。
 
 ---
 
@@ -141,7 +144,7 @@
 
 ### Stage 60.3 — `ground-truth.ts`:query 包装 + 图算法 + 对账模式(~190 行源码 + ~80 行测试)
 
-- 包装 §5 表中 7 个 query CLI flag(`--deps-of`、`--used-by`、`--implementers-of`、`--subclasses-of`、`--cycles`、`--high-coupling`、`--file`),对指定树(原始/混淆)运行并落盘;
+- 包装 §5 表中 7 个 query CLI flag(`--deps-of`、`--used-by`、`--implementers-of`、`--subclasses-of`、`--cycles`、`--high-coupling`、`--file`),对指定树(原始/混淆)运行并落盘;**调用纪律(已核实 CLI 实现)**:每棵树先以 `analyze -s <tree>/<module> --work-dir <granularity>/artifacts/work/<tree> --no-cache -f json` 生成 query 工件(`<work-dir>/query/manifest.json` + arch.json),再以 `query --arch-dir <同一 work-dir>` 查询——`--arch-dir` 缺省为 `<cwd>/.archguard`,且 `analyze` 的 `inferCliWorkDir` 对**仓库内**源路径默认落到仓库根 `.archguard`,不显式传 `--work-dir`/`--arch-dir` 会污染并误读主项目查询数据;原始树与混淆树各用独立 work-dir,保证 64.2(b) 对账两侧 scope 同构;
 - 内置图算法:关节点(割点)与入度排名(对 ArchJSON relations,~20 行);
 - **对账模式**:读取两树 GT 与 `mapping.json`,将原始树 GT 逐条翻译后与混淆树 GT 比对,输出差异清单(空 = 通过);
 - 冻结工件 SHA-256 计算与落盘(供 §11 第 3 步复用)。
@@ -159,7 +162,7 @@
 
 ### Stage 61.1 — `gen-levels.sh` + 调用边注入(~140 行源码 + ~70 行测试)
 
-- `gen-levels.sh`:在 `obf/` 上跑 `analyze --no-cache` 生成 L1(package)/ L2(class)/ L3(method)Mermaid 与 L4 ArchJSON;L0 = 混淆后文件名清单;L5 = 混淆树源码(obfuscate 已去注释);
+- `gen-levels.sh`:在 `obf/` 上跑 `analyze --no-cache` 生成 L1(package)/ L2(class)/ L3(method)Mermaid 与 L4 ArchJSON(`--diagrams package class method` 过滤层级);**必须显式传 `--work-dir <granularity>/artifacts/work/obf-<module>`**(同 60.3 的调用纪律:仓库内源路径不传 `--work-dir` 会默认写入仓库根 `.archguard`);L0 = 混淆后文件名清单;L5 = 混淆树源码(obfuscate 已去注释;**仅两模块目录,不含依赖闭包文件**——与 §5 的 L5 token 预算口径一致);
 - `inject-callgraph.ts`(注入逻辑独立成 TS 以便单测):L3 末尾追加调用边 flowchart 附录;L4 注入 `callGraph` 字段。注入后 L3 与 L4 信息等价(§4)。
 
 **测试**:注入器对 fixture 调用图的 Mermaid 附录语法有效(经主仓库 Mermaid 校验器或语法 smoke);L4 `callGraph` 字段结构与边数等于输入;两次注入幂等。
@@ -296,7 +299,7 @@
 
 ### Stage 64.2 — 三检 (b) 混淆对账 + (c) 泄漏探针(实测对账)
 
-- **(b) 混淆对账(冻结门槛)**:跑 `obfuscate.ts` → 在混淆树上重跑 ArchGuard(`--no-cache`)生成 GT → `ground-truth.ts --reconcile` 与原始树 GT 经映射翻译逐条比对;**不一致即混淆破坏解析,修复前不得冻结**。对账过程同时产出两树完整 GT(§11 第 1 步注:此即任务实例化的输入);
+- **(b) 混淆对账(冻结门槛)**:跑 `obfuscate.ts` → 在混淆树上重跑 ArchGuard(`--no-cache`,两树各自独立 `--work-dir`,见 60.3 调用纪律)生成 GT → `ground-truth.ts --reconcile` 与原始树 GT 经映射翻译逐条比对;**不一致即混淆破坏解析,修复前不得冻结**。对账过程同时产出两树完整 GT(§11 第 1 步注:此即任务实例化的输入);
 - **(c) 泄漏探针(冻结门槛)**:向 `deepseek-v4-flash` 与 `gpt-5.4` 各展示 L5 样本,问"这是什么项目/这个模块做什么";答出 ArchGuard / Mermaid / 图表渲染等域内概念 → 判混淆失败,修复(扩大字符串/标识符替换面)后重测。此为本 plan 中**唯一允许先于 Phase 65 的 LLM 调用**——它不是实验任务,且是冻结门槛的组成部分(§11 第 1 步)。
 
 **验收标准**:对账差异清单为空;两模型泄漏探针回答不含域内概念(原始问答落盘存证);两树 GT 完整落盘。
@@ -409,7 +412,7 @@
 
 | Phase | 源码 | 测试 | Stage 上限核对 |
 | --- | --- | --- | --- |
-| 59 | ~470 | ~310 | 各 Stage ≤ 190 |
+| 59 | ~480 | ~320 | 各 Stage ≤ 200(59.2 含依赖闭包加载 ~10 行,≈200,贴上限但不超;59.3 的 obf tsconfig 为静态模板,不计源码行) |
 | 60 | ~480 | ~330 | 各 Stage ≤ 190 |
 | 61 | ~480 | ~280 | 各 Stage ≤ 170 |
 | 62 | ~460 | ~280 | 各 Stage ≤ 160 |
@@ -417,5 +420,53 @@
 | 64 | ≤ 50(胶水) | — | 实测对账为主 |
 | 65 | ≤ 30(胶水) | — | 实跑为主 |
 | 66 | ≤ 30(胶水) | — | 实跑 + 报告 |
+
+---
+
+## 后续实验模型选型决策（2026-06-12）
+
+### 背景
+
+v2 实验完成后，对 LiteLLM 网关（`https://litellm.lrfz.com`）上可用模型进行了系统性探针测试，评估速度、失败率和准确率，以确定后续实验的模型配置。
+
+### 探针测试结果汇总
+
+| 模型 | 均速(s/call) | 失败率 | 小批准确率 | 可用性 |
+|------|-------------|--------|-----------|--------|
+| `claude-haiku-4-5-20251001` | 11.3s | 0% | **0.526**（B-L4:0.856，C-L4:0.889） | ✓ |
+| `deepseek-v4-flash` | 2.1s | 8.3%* | ~0.41（原实验） | ✓ |
+| `glm-4.7` | 1.5s | 0% | 0.177 | 可用但准确率低 |
+| `nvidia/nemotron-3-nano-30b-a3b:free` | 3.8s | 33%** | 0.291 | 受免费限额约束 |
+| `openai/gpt-oss-120b:free` | 3.3s | — | 未全量测试 | 可用 |
+| `openai/gpt-oss-20b:free` | 3.0s | — | 未全量测试 | 可用 |
+| `glm-4.5-airx` | 70s+ | 27% | 0.380（部分数据） | 速度不适合全量 |
+| `qwen3.7-max-openai` | ~117s | 高 | — | ✗ 极慢 |
+| `glm-5-HAI-openai` | 超时 | 100% | — | ✗ 不可用 |
+| `Qwen/Qwen3.5-4B` | 超时 | 100% | — | ✗ 不可用 |
+| `zai-org/GLM-4.5-Air` | 5.6s | 89%（429） | — | ✗ 严重限流 |
+| `gpt-oss:20b-cloud` | 2.8s | 100%（空内容） | — | ✗ content="" bug |
+| `minimax-m2.7:cloud` | — | HTTP 400 | — | ✗ 无效模型名 |
+
+\* deepseek-v4-flash 失败为推理模型 token 预算耗尽（D-71.2），已通过 max_tokens=8192 修复。  
+\*\* nemotron 失败因 OpenRouter 免费模型每日 2000 次限额耗尽（非模型本身问题）。
+
+### 决定
+
+**后续实验使用以下两个模型：**
+
+```
+claude-haiku-4-5-20251001   temperature=0.2  max_tokens=4096
+deepseek-v4-flash           temperature=0.2  max_tokens=8192
+```
+
+### 选型理由
+
+1. **`claude-haiku-4-5-20251001`**：小批量测试准确率（0.526）显著优于 v2 实验中的 claude-sonnet-4-6（0.412）和 deepseek-v4-flash（0.410）；零失败率；与 sonnet 同厂商，便于对照。速度（11.3s/call）在可接受范围内，792 calls 预计约 25 分钟。
+
+2. **`deepseek-v4-flash`**：v2 实验已验证模型，准确率稳定（0.410）；速度快（2.1s/call）；作为第二模型提供跨厂商对照，延续 v2 协议设计。需保持 `max_tokens=8192`（D-71.2 修复）。
+
+### 替代 v2 的原始模型配置
+
+v2 实验中 `gpt-5.4` 因持续 503 替换为 `claude-sonnet-4-6`（协议偏离 Phase 66）。本次决策将 sonnet 替换为 haiku，基于实测准确率更优，且 haiku 在该网关上无服务稳定性问题。
 
 每个 Stage ≤ 200 行源码、每个 Phase ≤ 500 行源码,均满足;`obfuscate.ts` 与 `callgraph.ts` 因预计超限已各拆两个 Stage。

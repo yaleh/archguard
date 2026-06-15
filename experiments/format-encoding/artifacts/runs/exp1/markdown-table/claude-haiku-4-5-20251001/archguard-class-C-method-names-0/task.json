@@ -1,0 +1,18 @@
+{
+  "task": {
+    "id": "archguard-class-C-method-names-0",
+    "taskClass": "C",
+    "taskType": "method-names",
+    "prompt": "Based only on the representation above: list the names of all methods defined in entity \"src/plugins/golang/atlas/renderers/mermaid-templates.ts.mermaidtemplates\". Respond with JSON: {\"answer\": [\"name1\", \"name2\", ...]}.",
+    "answerType": "set",
+    "answer": [
+      "computePackageEdgeTiers",
+      "renderCapabilityGraph",
+      "renderFlowGraph",
+      "renderGoroutineTopology",
+      "renderPackageGraph"
+    ]
+  },
+  "format": "markdown-table",
+  "model": "claude-haiku-4-5-20251001"
+}

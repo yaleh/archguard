@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-largest-package-size",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.5-airx",
+  "k": 2,
+  "key": "v2-a-largest-package-size__L3__glm-4.5-airx__k2",
+  "content": "```json\n{\n  \"answer\": \"Core_Layer\"\n}\n```",
+  "promptTokens": 34990,
+  "completionTokens": 3540,
+  "invalidated": false,
+  "timestamp": "2026-06-12T07:07:29.911Z"
+}

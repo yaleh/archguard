@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-largest-package-size",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 1,
+  "key": "v2-a-largest-package-size__L2__nvidia_nemotron-3-nano-30b-a3b_free__k1",
+  "content": "{\n  \"answer\": \"Core_Layer___Mermaid_Layer\"\n}",
+  "promptTokens": 22252,
+  "completionTokens": 3895,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:45:05.955Z"
+}

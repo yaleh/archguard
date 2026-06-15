@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-cli",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-package-size-cli__L5__claude-sonnet-4-6__k1",
+  "content": "I need to look through the code for entities in the `cli` package. The code provided doesn't contain any files from a `cli` package — all the files shown belong to packages like `mermaid`, `parsers`, `core`, and similar internal modules.\n\n{\"answer\": 0}",
+  "promptTokens": 46742,
+  "completionTokens": 95,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:31:28.369Z"
+}

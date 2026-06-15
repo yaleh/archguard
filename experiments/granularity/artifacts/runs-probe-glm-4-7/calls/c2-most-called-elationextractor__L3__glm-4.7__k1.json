@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "c2-most-called-elationextractor__L3__glm-4.7__k1",
+  "content": "```json\n{\"answer\": \"RelationExtractor.extract\"}\n```",
+  "promptTokens": 35002,
+  "completionTokens": 12,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:26:19.451Z"
+}

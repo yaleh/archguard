@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaidautorepair-repair",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-b-callees-mermaidautorepair-repair__L4__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n\"answer\": [\n    \"MermaidAutoRepair.addDiagramDeclaration\",\n    \"MermaidAutoRepair.fixGenericTypes\",\n    \"MermaidAutoRepair.flattenNestedNamespaces\",\n    \"MermaidAutoRepair.extractNamespaceRelations\",\n    \"MermaidAutoRepair.attemptAdvancedRepairs\",\n    \"MermaidParseValidator.validate\",\n    \"MermaidAutoRepair.fixLineError\",\n    \"MermaidAutoRepair.removeUnknownTokens\",\n    \"MermaidAutoRepair.fixUnexpectedToken\",\n    \"MermaidAutoRepair.fixTrailingCommas\",\n    \"MermaidAutoRepair.normalizeWhitespace\"\n  ]\n}",
+  "promptTokens": 61500,
+  "completionTokens": 2361,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:45:21.239Z"
+}

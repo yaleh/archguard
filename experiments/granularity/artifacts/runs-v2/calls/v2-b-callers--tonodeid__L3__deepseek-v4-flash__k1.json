@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers--tonodeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-b-callers--tonodeid__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": []}",
+  "promptTokens": 36445,
+  "completionTokens": 397,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:46:50.859Z"
+}

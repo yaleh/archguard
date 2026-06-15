@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-internal-rel-types__L2__claude-sonnet-4-6__k4",
+  "content": "Looking at the Types_Layer namespace, I need to find relations where both source and target are within that package.\n\nFrom the Types_Layer diagram, the only explicit relation is:\n\n`GlobalConfig <|-- ArchGuardConfig` — both `GlobalConfig` and `ArchGuardConfig` are in Types_Layer.\n\nAll other relations in the Types_Layer section reference external types (like `SupportedLanguage`, `EntityType`, `Visibility`, `RelationType`, `DetailLevel`, `ArchJSONExtensions`, `ArchJSONMetrics`, `ArchJSONMetrics`, `MermaidConfig`, etc.) which are referenced as field types in interface definitions, not as explicit relation arrows.\n\nThe only drawn relation within the package is that one inheritance.\n\n```json\n{\"answer\": 1}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 232,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:36:12.310Z"
+}

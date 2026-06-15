@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-indegree-1",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-highest-indegree-1__L1__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": \"analysis\"}",
+  "promptTokens": 744,
+  "completionTokens": 8,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:24:13.028Z"
+}

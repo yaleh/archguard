@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-render",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "c1-pipeline-to-render__L5__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}",
+  "promptTokens": 46765,
+  "completionTokens": 34,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:49:46.167Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-parallel-to-ts",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "c1-parallel-to-ts__L2__deepseek-v4-flash__k3",
+  "content": "{\"answer\": []}",
+  "promptTokens": 22189,
+  "completionTokens": 291,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:50:28.648Z"
+}

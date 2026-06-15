@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-relation",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "c1-ts-to-relation__L2__glm-4.5-airx__k3",
+  "content": "```json\n{\"answer\": []}\n```",
+  "promptTokens": 21688,
+  "completionTokens": 350,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:27:43.803Z"
+}

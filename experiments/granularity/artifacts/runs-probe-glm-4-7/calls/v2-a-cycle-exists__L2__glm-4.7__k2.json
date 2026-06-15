@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-cycle-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-a-cycle-exists__L2__glm-4.7__k2",
+  "content": "```json\n{\"answer\": \"no\"}\n```",
+  "promptTokens": 21681,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:33:13.495Z"
+}

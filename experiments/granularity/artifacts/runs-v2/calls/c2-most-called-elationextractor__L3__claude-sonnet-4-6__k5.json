@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c2-most-called-elationextractor__L3__claude-sonnet-4-6__k5",
+  "content": "Looking at the call graph and the class relationships in the diagram, I need to find external callers of `RelationExtractor` methods.\n\nFrom the class diagram, `TypeScriptParser` composes `RelationExtractor` (`TypeScriptParser *-- RelationExtractor`), and `RelationExtractor` has methods: `extract`, `extractFromSourceFile`, and several private methods.\n\nThe call graph snippet provided is truncated, but from the structural relationships shown, `TypeScriptParser` is the primary external consumer of `RelationExtractor`. The public methods visible to external callers are `extract` and `extractFromSourceFile`.\n\nGiven that `TypeScriptParser` is the main (and based on the diagram, only) external class that references `RelationExtractor`, and `extractFromSourceFile` takes a `SourceFile` (a ts-morph object that `TypeScriptParser` works with directly during project parsing), while `extract` takes raw code strings — and considering `TypeScriptParser` processes files through its project, `extractFromSourceFile` is the more natural integration point for project-level parsing.\n\n```json\n{\"answer\": \"RelationExtractor.extractFromSourceFile\"}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 358,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:56.086Z"
+}

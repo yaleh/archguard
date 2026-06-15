@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-addrelation",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-b-callers-relationextractor-addrelation__L4__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"RelationExtractor.extractClassRelations\", \"RelationExtractor.extractInterfaceRelations\", \"RelationExtractor.extractFunctionRelations.emitDepsForBody\"]}",
+  "promptTokens": 58814,
+  "completionTokens": 61,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:11:41.610Z"
+}

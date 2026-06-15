@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-list-packages__L1__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": [\"analysis\", \"cli\"]}",
+  "promptTokens": 742,
+  "completionTokens": 11,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:05:51.008Z"
+}

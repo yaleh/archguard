@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-render",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-pipeline-to-render__L3__claude-sonnet-4-6__k4",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has these private members: `parseValidator`, `structuralValidator`, `renderValidator`, `qualityValidator`. The methods that would call `RenderValidator` are the validation methods.\n\nFrom the relationships shown:\n- `MermaidValidationPipeline *-- RenderValidator` (composition)\n- The call graph excerpt doesn't include the internal calls of `MermaidValidationPipeline`'s `validate` and `validateFull` methods explicitly beyond what's shown.\n\nLooking at the class definition, `validate` and `validateFull` are the public methods that orchestrate all validators. The `calculateOverall` is private and assembles results. Based on the structure, `validate` and `validateFull` both call through to the render validator, and `calculateOverall` processes the results but doesn't call validators directly.\n\nThe call graph only shows edges *from* `MermaidValidationPipeline` to `MermaidParseValidator`, `MermaidValidationPipeline_generateReport`, etc. — but the specific edges to `RenderValidator` are not listed in the provided call graph (which is truncated at 375 edges with \"... and 325 more call edges\").\n\nBased solely on what's explicitly represented in the provided diagram data (no inference beyond what's shown):\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35371,
+  "completionTokens": 389,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:47:37.549Z"
+}

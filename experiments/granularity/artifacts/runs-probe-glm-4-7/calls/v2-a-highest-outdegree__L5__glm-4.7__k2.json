@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-a-highest-outdegree__L5__glm-4.7__k2",
+  "content": "```json\n{\"answer\": \"EntityName\"}\n```",
+  "promptTokens": 43984,
+  "completionTokens": 11,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:41:55.757Z"
+}

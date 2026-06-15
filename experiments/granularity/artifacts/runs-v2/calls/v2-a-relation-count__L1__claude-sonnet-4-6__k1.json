@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-relation-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-relation-count__L1__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": 1}",
+  "promptTokens": 743,
+  "completionTokens": 4,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:18:51.471Z"
+}

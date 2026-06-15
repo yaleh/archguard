@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-enum",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-ts-to-enum__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"TypeScriptParser.parseCode\", \"TypeScriptParser.parseProject\"]}",
+  "promptTokens": 46762,
+  "completionTokens": 28,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:43:00.907Z"
+}

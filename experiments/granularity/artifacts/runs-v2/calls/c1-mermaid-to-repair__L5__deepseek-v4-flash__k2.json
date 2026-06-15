@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-repair",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "c1-mermaid-to-repair__L5__deepseek-v4-flash__k2",
+  "content": "{\"answer\": [\"MermaidDiagramGenerator.generateOnly\"]}",
+  "promptTokens": 46688,
+  "completionTokens": 433,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:25:56.237Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-direct-dep-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 1,
+  "key": "v2-a-direct-dep-exists__L5__nvidia_nemotron-3-nano-30b-a3b_free__k1",
+  "content": "{\"answer\":\"no\"}",
+  "promptTokens": 46301,
+  "completionTokens": 565,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:36:57.492Z"
+}

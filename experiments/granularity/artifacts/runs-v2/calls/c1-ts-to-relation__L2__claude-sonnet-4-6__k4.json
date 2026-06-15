@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-relation",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-ts-to-relation__L2__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": []}",
+  "promptTokens": 21360,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:58:27.166Z"
+}

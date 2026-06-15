@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 1,
+  "key": "v2-a-internal-rel-types__L4__nvidia_nemotron-3-nano-30b-a3b_free__k1",
+  "content": "{\n  \"answer\": 0}",
+  "promptTokens": 61500,
+  "completionTokens": 3074,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:58:56.880Z"
+}

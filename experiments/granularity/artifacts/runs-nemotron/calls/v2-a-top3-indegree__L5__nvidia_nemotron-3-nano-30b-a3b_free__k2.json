@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-a-top3-indegree__L5__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\"answer\": [\"ArchJSON\", \"Entity\", \"Relation\"]}",
+  "promptTokens": 46289,
+  "completionTokens": 2980,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:10:48.988Z"
+}

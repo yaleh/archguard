@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaiddiagramgenerator-renderjobsinp",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-b-callees-mermaiddiagramgenerator-renderjobsinp__L4__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"NoopProgressReporter.constructor\", \"NoopProgressReporter.start\", \"IProgressReporter.start\", \"IsomorphicMermaidRenderer.constructor\", \"IsomorphicMermaidRenderer.renderAndSave\", \"NoopProgressReporter.succeed\", \"IProgressReporter.succeed\", \"NoopProgressReporter.fail\", \"IProgressReporter.fail\"]}",
+  "promptTokens": 62853,
+  "completionTokens": 878,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:28:27.132Z"
+}

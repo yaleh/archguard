@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-interface-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-interface-count__L5__claude-sonnet-4-6__k3",
+  "content": "I'll count the TypeScript `interface` declarations across all the code shown.\n\nFrom the code:\n\n1. `MermaidOutputOptions` (diagram-generator.ts)\n2. `RenderJob` (diagram-generator.ts)\n3. `WorkerInitData` (render-worker-pool.ts)\n4. `RenderJob` (render-worker-pool.ts) — same name, same file context\n5. `RenderResult` (render-worker-pool.ts)\n6. `IProgressReporter` (progress.ts)\n7. `ParallelParserOptions` (parallel-parser.ts)\n8. `ParsingMetrics` (parallel-parser.ts)\n9. `ProgressEvent` (parallel-parser.ts)\n10. `FileCompleteEvent` (parallel-parser.ts)\n11. `CompletionEvent` (parallel-parser.ts)\n12. `TsModuleGraphRenderOptions` (ts-module-graph renderer)\n13. `TreeNode` (ts-module-graph renderer)\n14. `GroupingDecision` (types.ts)\n15. `PackageGroup` (types.ts)\n16. `LayoutDecision` (types.ts)\n17. `ParseValidationResult` (types.ts)\n18. `ValidationError` (types.ts)\n19. `ValidationWarning` (types.ts)\n20. `StructuralValidationResult` (types.ts)\n21. `StructuralIssue` (types.ts)\n22. `RenderValidationResult` (types.ts)\n23. `RenderIssue` (types.ts)\n24. `QualityValidationResult` (types.ts)\n25. `QualityMetrics` (types.ts)\n26. `QualitySuggestion` (types.ts)\n27. `ValidationPipelineResult` (types.ts)\n28. `MermaidGeneratorOptions` (types.ts)\n29. `MermaidTheme` (types.ts)\n30. `MermaidRendererOptions` (types.ts)\n31. `MermaidOutputPaths` (types.ts)\n32. `GrouperConfig` (types.ts)\n33. `GroupingRule` (types.ts)\n34. `LLMGrouperResponse` (types.ts)\n\n```json\n{\"answer\": 34}\n```",
+  "promptTokens": 46740,
+  "completionTokens": 440,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:58:54.440Z"
+}

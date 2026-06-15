@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-mermaidparsevalidator-validate",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-callers-mermaidparsevalidator-validate__L3__glm-4.7__k1",
+  "content": "```json\n[\n  \"MermaidAutoRepair.repair\",\n  \"MermaidAutoRepair.repairBestEffort\",\n  \"MermaidValidationPipeline.validate\",\n  \"MermaidValidationPipeline.validateFull\"\n]\n```",
+  "promptTokens": 35001,
+  "completionTokens": 44,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:21.739Z"
+}

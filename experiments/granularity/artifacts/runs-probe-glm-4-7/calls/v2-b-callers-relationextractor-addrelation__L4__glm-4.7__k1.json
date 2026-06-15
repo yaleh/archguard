@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-addrelation",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-callers-relationextractor-addrelation__L4__glm-4.7__k1",
+  "content": "```json\n[\n  \"RelationExtractor.extractClassRelations\",\n  \"RelationExtractor.extractInterfaceRelations\",\n  \"RelationExtractor.extractFunctionRelations\"\n]\n```",
+  "promptTokens": 57905,
+  "completionTokens": 30,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:33:00.774Z"
+}

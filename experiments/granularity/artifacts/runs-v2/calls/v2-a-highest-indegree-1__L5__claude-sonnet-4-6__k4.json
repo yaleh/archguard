@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-indegree-1",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-highest-indegree-1__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": \"MermaidParseValidator\"}",
+  "promptTokens": 46747,
+  "completionTokens": 13,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:32:23.594Z"
+}

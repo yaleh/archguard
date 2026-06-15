@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-highest-outdegree__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": \"GoPlugin\"}",
+  "promptTokens": 36440,
+  "completionTokens": 1788,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:59:55.258Z"
+}

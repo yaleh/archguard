@@ -1,0 +1,274 @@
+[
+  {
+    "id": "task-v2-a-highest-indegree-1",
+    "text": "Based only on the representation above: which entity has the highest number of incoming dependencies (in-degree)? Respond with JSON only: {\"answer\": \"EntityName\"}."
+  },
+  {
+    "id": "task-v2-a-top3-indegree",
+    "text": "Based only on the representation above: list the 3 entities with the highest number of incoming dependencies (in-degree), in descending order. Respond with JSON only: {\"answer\": [\"Name1\", \"Name2\", \"Name3\"]}."
+  },
+  {
+    "id": "task-v2-a-cycle-exists",
+    "text": "Based only on the representation above: does any cycle (circular dependency) exist in the entity dependency graph? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}."
+  },
+  {
+    "id": "task-v2-a-list-packages",
+    "text": "Based only on the representation above: list all top-level packages (directories) in this codebase. Respond with JSON only: {\"answer\": [\"pkg1\", \"pkg2\", ...]}."
+  },
+  {
+    "id": "task-v2-a-largest-package-size",
+    "text": "Based only on the representation above: which package contains the most entities (classes/interfaces)? Respond with JSON only: {\"answer\": \"packageName\"}."
+  },
+  {
+    "id": "task-v2-a-relation-count",
+    "text": "Based only on the representation above: how many total dependency/inheritance/composition relations exist between entities? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-dominant-entity-type",
+    "text": "Based only on the representation above: which entity type (class, interface, etc.) is most common? Respond with JSON only: {\"answer\": \"typeName\"}."
+  },
+  {
+    "id": "task-v2-a-package-size-plugins",
+    "text": "Based only on the representation above: how many entities (classes/interfaces) are in the `plugins` package? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-package-size-cli",
+    "text": "Based only on the representation above: how many entities (classes/interfaces) are in the `cli` package? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-package-size-types",
+    "text": "Based only on the representation above: how many entities (classes/interfaces) are in the `types` package? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-package-size-mermaid",
+    "text": "Based only on the representation above: how many entities (classes/interfaces) are in the `mermaid` package? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-package-size-analysis",
+    "text": "Based only on the representation above: how many entities (classes/interfaces) are in the `analysis` package? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-cross-package-count",
+    "text": "Based only on the representation above: how many unique cross-package dependency relationships exist (package-to-package, not counting self-dependencies)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-total-entity-count",
+    "text": "Based only on the representation above: how many total entities (classes + interfaces combined) are in this codebase? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-interface-count",
+    "text": "Based only on the representation above: how many interface entities are defined in this codebase? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-root-entity-count",
+    "text": "Based only on the representation above: how many entities have NO incoming dependency relations (i.e., no other entity depends on them)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-highest-outdegree",
+    "text": "Based only on the representation above: which entity has the highest number of outgoing dependencies (out-degree)? Respond with JSON only: {\"answer\": \"EntityName\"}."
+  },
+  {
+    "id": "task-v2-a-direct-dep-exists",
+    "text": "Based only on the representation above: does entity `analysis/fim/fim-analysis.ts.buildPackageAnalysis` have a direct dependency on `analysis/fim/fim-builder.ts.clampCoverageByPackage`? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}."
+  },
+  {
+    "id": "task-v2-a-inheritance-count",
+    "text": "Based only on the representation above: how many inheritance or implementation relations exist in total? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-composition-count",
+    "text": "Based only on the representation above: how many composition or aggregation relations exist in total? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-internal-rel-plugins",
+    "text": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `plugins` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-internal-rel-cli",
+    "text": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `cli` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-internal-rel-types",
+    "text": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `types` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-internal-rel-mermaid",
+    "text": "Based only on the representation above: how many dependency/inheritance/composition relations exist WITHIN the `mermaid` package (both source and target in same package)? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-a-dominant-relation-type",
+    "text": "Based only on the representation above: which type of relation (e.g. dependency, inheritance, composition) is most frequent? Respond with JSON only: {\"answer\": \"typeName\"}."
+  },
+  {
+    "id": "task-v2-b-callers-validatedmermaidgenerator-escapeid",
+    "text": "Based only on the representation above: which methods directly call `ValidatedMermaidGenerator.escapeId`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-relationextractor-addrelation",
+    "text": "Based only on the representation above: which methods directly call `RelationExtractor.addRelation`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-noopprogressreporter-succeed",
+    "text": "Based only on the representation above: which methods directly call `NoopProgressReporter.succeed`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-iprogressreporter-succeed",
+    "text": "Based only on the representation above: which methods directly call `IProgressReporter.succeed`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-validatedmermaidgenerator-normalizeen",
+    "text": "Based only on the representation above: which methods directly call `ValidatedMermaidGenerator.normalizeEntityName`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-relationextractor-extracttypename",
+    "text": "Based only on the representation above: which methods directly call `RelationExtractor.extractTypeName`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-noopprogressreporter-start",
+    "text": "Based only on the representation above: which methods directly call `NoopProgressReporter.start`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-iprogressreporter-start",
+    "text": "Based only on the representation above: which methods directly call `IProgressReporter.start`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers--tonodeid",
+    "text": "Based only on the representation above: which methods directly call `.toNodeId`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callers-mermaidparsevalidator-validate",
+    "text": "Based only on the representation above: which methods directly call `MermaidParseValidator.validate`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-validatedmermaidgenerator-generatemet",
+    "text": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generateMethodLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-mermaidautorepair-repair",
+    "text": "Based only on the representation above: which methods does `MermaidAutoRepair.repair` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-mermaiddiagramgenerator-renderjobsinp",
+    "text": "Based only on the representation above: which methods does `MermaidDiagramGenerator.renderJobsInParallel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-typescriptparser-parseproject",
+    "text": "Based only on the representation above: which methods does `TypeScriptParser.parseProject` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-mermaidautorepair-repairbesteffort",
+    "text": "Based only on the representation above: which methods does `MermaidAutoRepair.repairBestEffort` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-validatedmermaidgenerator-generate",
+    "text": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generate` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-validatedmermaidgenerator-generatepac",
+    "text": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generatePackageLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-callees-validatedmermaidgenerator-generatelay",
+    "text": "Based only on the representation above: which methods does `ValidatedMermaidGenerator.generateLayeredPackageLevel` directly call? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-v2-b-caller-count-mermaidparsevalidator-validate",
+    "text": "Based only on the representation above: how many distinct methods directly call `MermaidParseValidator.validate`? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-b-caller-count-noopprogressreporter-start",
+    "text": "Based only on the representation above: how many distinct methods directly call `NoopProgressReporter.start`? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-b-caller-count-iprogressreporter-start",
+    "text": "Based only on the representation above: how many distinct methods directly call `IProgressReporter.start`? Respond with JSON only: {\"answer\": N}."
+  },
+  {
+    "id": "task-v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+    "text": "Based only on the representation above: does `MermaidAutoRepair.repair` directly call `MermaidAutoRepair.addDiagramDeclaration`? Respond with JSON only: {\"answer\": \"yes\"} or {\"answer\": \"no\"}."
+  },
+  {
+    "id": "task-c1-mermaid-to-validated",
+    "text": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `ValidatedMermaidGenerator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-mermaid-to-pipeline",
+    "text": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `MermaidValidationPipeline`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-mermaid-to-renderer",
+    "text": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `IsomorphicMermaidRenderer`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-mermaid-to-repair",
+    "text": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `MermaidAutoRepair`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-mermaid-to-grouper",
+    "text": "Based only on the representation above: which specific methods of class `MermaidDiagramGenerator` directly call methods of class `HeuristicGrouper`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-pipeline-to-validator",
+    "text": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `MermaidParseValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-pipeline-to-structural",
+    "text": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `StructuralValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-pipeline-to-render",
+    "text": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `RenderValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-pipeline-to-quality",
+    "text": "Based only on the representation above: which specific methods of class `MermaidValidationPipeline` directly call methods of class `QualityValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-autorepair-to-validator",
+    "text": "Based only on the representation above: which specific methods of class `MermaidAutoRepair` directly call methods of class `MermaidParseValidator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-generator-to-comment",
+    "text": "Based only on the representation above: which specific methods of class `ValidatedMermaidGenerator` directly call methods of class `CommentGenerator`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-parallel-to-ts",
+    "text": "Based only on the representation above: which specific methods of class `ParallelParser` directly call methods of class `TypeScriptParser`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-ts-to-relation",
+    "text": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `RelationExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-ts-to-interface",
+    "text": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `InterfaceExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-ts-to-enum",
+    "text": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `EnumExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c1-ts-to-function",
+    "text": "Based only on the representation above: which specific methods of class `TypeScriptParser` directly call methods of class `FunctionExtractor`? Respond with JSON only: {\"answer\": [\"ClassName.methodName\", ...]}. Empty array if none."
+  },
+  {
+    "id": "task-c2-most-called-alidatedmermaidgenerator",
+    "text": "Based only on the representation above: which method of class `ValidatedMermaidGenerator` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}."
+  },
+  {
+    "id": "task-c2-most-called-ypescriptparser",
+    "text": "Based only on the representation above: which method of class `TypeScriptParser` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}."
+  },
+  {
+    "id": "task-c2-most-called-elationextractor",
+    "text": "Based only on the representation above: which method of class `RelationExtractor` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}."
+  },
+  {
+    "id": "task-c2-most-called-ermaidvalidationpipeline",
+    "text": "Based only on the representation above: which method of class `MermaidValidationPipeline` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}."
+  },
+  {
+    "id": "task-c2-most-called-ermaidparsevalidator",
+    "text": "Based only on the representation above: which method of class `MermaidParseValidator` is called most frequently by OTHER classes (external callers only)? Respond with JSON only: {\"answer\": \"ClassName.methodName\"}."
+  }
+]

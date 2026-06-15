@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidparsevalidator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "c2-most-called-ermaidparsevalidator__L5__deepseek-v4-flash__k4",
+  "content": "{\"answer\": \"MermaidParseValidator.validate\"}",
+  "promptTokens": 46680,
+  "completionTokens": 1558,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:54:56.990Z"
+}

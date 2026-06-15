@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-list-packages__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"core\", \"cli\", \"interfaces\", \"cpp\", \"golang\", \"java\", \"python\", \"shared\", \"typescript\", \"builders\", \"atlas\", \"renderers\", \"extensions\", \"utils\"]}",
+  "promptTokens": 36449,
+  "completionTokens": 6278,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:06:48.485Z"
+}

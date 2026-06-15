@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-direct-dep-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-a-direct-dep-exists__L1__glm-4.5-airx__k1",
+  "content": "```json\n{\"answer\": \"no\"}\n```",
+  "promptTokens": 342,
+  "completionTokens": 186,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:45:50.952Z"
+}

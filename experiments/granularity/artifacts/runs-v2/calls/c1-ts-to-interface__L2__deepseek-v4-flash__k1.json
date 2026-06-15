@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-interface",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "c1-ts-to-interface__L2__deepseek-v4-flash__k1",
+  "content": "{\"answer\": []}",
+  "promptTokens": 22190,
+  "completionTokens": 204,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:36:59.363Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 1,
+  "key": "v2-a-highest-outdegree__L1__nvidia_nemotron-3-nano-30b-a3b_free__k1",
+  "content": "{\"answer\":\"cli\"}",
+  "promptTokens": 351,
+  "completionTokens": 200,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:13:57.018Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-renderer",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "c1-mermaid-to-renderer__L5__glm-4.5-airx__k3",
+  "content": "```json\n{\n  \"answer\": [\"MermaidDiagramGenerator.renderJobsInParallelWithConfig\"]\n}\n```",
+  "promptTokens": 44003,
+  "completionTokens": 618,
+  "invalidated": false,
+  "timestamp": "2026-06-12T06:40:12.801Z"
+}

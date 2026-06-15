@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-parallel-to-ts",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 1,
+  "key": "c1-parallel-to-ts__L3__nvidia_nemotron-3-nano-30b-a3b_free__k1",
+  "content": "{\n  \"answer\": []\n}",
+  "promptTokens": 36198,
+  "completionTokens": 1916,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:57:22.190Z"
+}

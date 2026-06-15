@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-parallel-to-ts",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "c1-parallel-to-ts__L4__glm-4.7__k2",
+  "content": "```json\n{\n  \"answer\": [\n    \"ParallelParser.parseFile\",\n    \"ParallelParser.parseFile\"\n  ]\n}\n```",
+  "promptTokens": 57914,
+  "completionTokens": 27,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:36:05.565Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L2__glm-4.7__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"ArchJSON\",\n    \"Entity\",\n    \"Relation\"\n  ]\n}\n```",
+  "promptTokens": 21688,
+  "completionTokens": 26,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:41:12.817Z"
+}

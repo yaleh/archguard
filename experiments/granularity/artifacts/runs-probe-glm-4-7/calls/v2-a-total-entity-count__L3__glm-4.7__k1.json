@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-total-entity-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-a-total-entity-count__L3__glm-4.7__k1",
+  "content": "```json\n{\"answer\": 375}\n```",
+  "promptTokens": 34994,
+  "completionTokens": 11,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:38:06.382Z"
+}

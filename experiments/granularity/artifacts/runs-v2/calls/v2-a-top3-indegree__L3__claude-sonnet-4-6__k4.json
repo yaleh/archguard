@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-top3-indegree__L3__claude-sonnet-4-6__k4",
+  "content": "Looking at the relationships defined throughout the diagrams, I need to count incoming dependencies (arrows pointing *to* each entity) across all the `-->` and `*--` relationship lines.\n\nKey counts from scanning the diagrams:\n\n- **ArchJSON**: Referenced as a target in a very large number of relationships — nearly every major class depends on it (ArchJsonProvider, DiagramOutputRouter, DiagramPipelineRunner, DiagramProcessor, TypeScriptParser, ParallelParser, ParseCache, ArchJSONAggregator, MetricsCalculator, CppPlugin, GoPlugin, JavaPlugin, PythonPlugin, TypeScriptPlugin, ValidatedMermaidGenerator, HeuristicGrouper, TestCoverageRenderer, MermaidValidationPipeline, StructuralValidator, QualityValidator, CacheManager, TestAnalyzer, etc.)\n\n- **DiagramConfig**: Pointed to by ArchJsonProvider, DiagramOutputRouter, DiagramPipelineRunner, DiagramProcessor, ValidatedMermaidGenerator, CommentGenerator, MermaidDiagramGenerator, DiagramProcessor (multiple layers), WorkerPoolFactory, etc.\n\n- **Entity**: Pointed to by ArchJSONAggregator, ClassExtractor, EnumExtractor, FunctionExtractor, InterfaceExtractor, TypeScriptParser, QueryEngine, ArchJsonMapper (multiple language layers), ValidatedMermaidGenerator, ModuleGraphBuilder, TypeScriptAnalyzer, BaseArchJsonMapper, PythonPlugin mapper, GoPlugin mapper, JavaPlugin mapper, etc.\n\n```json\n{\"answer\": [\"ArchJSON\", \"DiagramConfig\", \"Entity\"]}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 420,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:49:42.444Z"
+}

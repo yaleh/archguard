@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-structural",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-pipeline-to-structural__L4__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}",
+  "promptTokens": 58827,
+  "completionTokens": 34,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:03:50.087Z"
+}

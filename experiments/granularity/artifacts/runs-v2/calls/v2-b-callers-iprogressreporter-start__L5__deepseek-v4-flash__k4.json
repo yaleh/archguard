@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-iprogressreporter-start",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-b-callers-iprogressreporter-start__L5__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"MermaidDiagramGenerator.generateOnly\", \"MermaidDiagramGenerator.generateAndRender\", \"MermaidDiagramGenerator.renderJobsInParallel\"]}",
+  "promptTokens": 46676,
+  "completionTokens": 532,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:26:53.751Z"
+}

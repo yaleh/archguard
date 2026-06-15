@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-structural",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "c1-pipeline-to-structural__L4__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}",
+  "promptTokens": 62858,
+  "completionTokens": 264,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:03:28.880Z"
+}

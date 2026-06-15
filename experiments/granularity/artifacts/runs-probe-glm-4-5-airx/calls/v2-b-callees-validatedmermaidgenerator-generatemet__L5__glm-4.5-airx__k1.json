@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-validatedmermaidgenerator-generatemet",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-b-callees-validatedmermaidgenerator-generatemet__L5__glm-4.5-airx__k1",
+  "content": "```json\n{\n  \"answer\": [\n    \"groupEntitiesByPackage\",\n    \"this.generateClassDefinition\",\n    \"this.escapeId\",\n    \"this.buildModulePrefixIndex\",\n    \"this.generateRelationLine\",\n    \"this.normalizeEntityName\",\n    \"entityTypeToClassDef\"\n  ]\n}\n```",
+  "promptTokens": 43995,
+  "completionTokens": 917,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:25:54.773Z"
+}

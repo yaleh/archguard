@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-iprogressreporter-succeed",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-b-callers-iprogressreporter-succeed__L4__glm-4.5-airx__k1",
+  "content": "",
+  "promptTokens": 57906,
+  "completionTokens": 8192,
+  "invalidated": false,
+  "timestamp": "2026-06-12T06:11:04.706Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-pipeline-to-validator__L3__claude-sonnet-4-6__k4",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a composition relationship with `MermaidParseValidator` (it owns a `parseValidator` field), and there's a method `getParseValidator()` that returns it.\n\nFrom the call graph edges, I can see:\n- `MermaidDiagramGenerator_generateOnly --> MermaidValidationPipeline_getParseValidator`\n\nBut the question asks which methods of `MermaidValidationPipeline` directly call methods of `MermaidParseValidator`.\n\nLooking at the call graph for edges originating from `MermaidValidationPipeline_*` methods that target `MermaidParseValidator_*` methods:\n\nThe call graph shows `MermaidAutoRepair_repair --> MermaidParseValidator_validate` and `MermaidAutoRepair_repairBestEffort --> MermaidParseValidator_validate`, but those are from `MermaidAutoRepair`, not `MermaidValidationPipeline`.\n\nThere are no edges in the provided call graph of the form `MermaidValidationPipeline_* --> MermaidParseValidator_*`.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35373,
+  "completionTokens": 305,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:45:14.344Z"
+}

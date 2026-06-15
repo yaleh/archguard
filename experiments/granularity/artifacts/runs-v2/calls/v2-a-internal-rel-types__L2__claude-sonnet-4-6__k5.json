@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-internal-rel-types__L2__claude-sonnet-4-6__k5",
+  "content": "I need to count relations where both source and target are within the Types_Layer namespace.\n\nLooking at the Types_Layer namespace, the classes are: CLIOptions, DiagramMetadata, DesignInfo, DesignPatternInfo, ArchitecturalDecision, ProcessInfo, ProcessStage, AnnotationConfig, ClassHighlightConfig, ClassAnnotation, DiagramConfig, GlobalConfig, ArchGuardConfig, MermaidConfig, GitHistoryManifest, CochangeEdge, RiskFactors, ContributorSummary, FileHistoryMetrics, PackageHistoryMetrics, GitHistoryArtifacts, Module, ArchJSON, Entity, Member, Parameter, SourceLocation, Decorator, Relation, ArchJSONMetrics, FileStats, CycleInfo.\n\nThe only explicit relation shown in the Types_Layer section is:\n\n`GlobalConfig <|-- ArchGuardConfig`\n\nBoth GlobalConfig and ArchGuardConfig are in Types_Layer, so that counts.\n\nAll other relations in Types_Layer point to types outside the namespace (like SupportedLanguage, EntityType, Visibility, RelationType, DetailLevel, ArchJSONExtensions, etc.).\n\n{\"answer\": 1}",
+  "promptTokens": 21354,
+  "completionTokens": 311,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:36:12.310Z"
+}

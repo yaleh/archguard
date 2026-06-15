@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-top3-indegree__L5__claude-sonnet-4-6__k5",
+  "content": "I need to analyze the code to find entities (classes/modules) with the highest in-degree — meaning other classes/modules that depend on *them*.\n\nLet me trace the imports and usages:\n\n**ArchJSON** — used by: ValidatedMermaidGenerator, MermaidDiagramGenerator, HeuristicGrouper, MermaidValidationPipeline, QualityValidator, StructuralValidator, ArchJSONAggregator, MetricsCalculator, ParallelParser, TypeScriptParser, renderTsModuleGraph, TestCoverageRenderer, groupEntitiesByPackage, validateGeneratorInput = ~14\n\n**MermaidParseValidator** — used by: MermaidAutoRepair (constructor param), MermaidValidationPipeline (instantiated), MermaidDiagramGenerator (via pipeline.getParseValidator()) = 3\n\n**IsomorphicMermaidRenderer** — used by: MermaidDiagramGenerator (renderJobsInParallel, renderJobsInParallelWithConfig, generateAndRender) = 2\n\n**ValidatedMermaidGenerator** — used by: MermaidDiagramGenerator = 1\n\n**MermaidValidationPipeline** — used by: MermaidDiagramGenerator = 1\n\n**HeuristicGrouper** — used by: MermaidDiagramGenerator = 1\n\n**BaseExtractor** — used by: ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor = 4\n\n**TypeScriptParser** — used by: ParallelParser = 1\n\n**CommentGenerator** — used by: ValidatedMermaidGenerator = 1\n\n**MermaidAutoRepair** — used by: MermaidDiagramGenerator = 1\n\nSo the top three by in-degree:\n\n1. **ArchJSON** (~14)\n2. **BaseExtractor** (4)\n3. **MermaidParseValidator** (3)\n\n```json\n{\"answer\": [\"ArchJSON\", \"BaseExtractor\", \"MermaidParseValidator\"]}\n```",
+  "promptTokens": 46758,
+  "completionTokens": 463,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:44:47.692Z"
+}

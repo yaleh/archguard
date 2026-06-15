@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c2-most-called-ermaidvalidationpipeline__L2__claude-sonnet-4-6__k4",
+  "content": "Looking at the class diagrams, I need to find references to `MermaidValidationPipeline` methods being called by other classes.\n\nScanning all the class diagrams for external callers of `MermaidValidationPipeline` methods:\n\n- `MermaidAutoRepair` has a constructor that takes `MermaidParseValidator` — it calls `MermaidValidationPipeline.getParseValidator()` indirectly, but that's not a direct call shown.\n- `MermaidAutoRepair` constructor takes `parseValidator: MermaidParseValidator` — suggesting `getParseValidator()` is called to obtain one.\n- `ValidatedMermaidGenerator` uses validation internally but no explicit caller arrows to specific methods are shown.\n\nThe diagram shows `MermaidAutoRepair` constructor takes a `MermaidParseValidator`, which is obtained via `MermaidValidationPipeline.getParseValidator()`. That's the one method with an implied external caller pattern.\n\nBeyond that, the relationships shown don't explicitly annotate which methods are called — only class-level dependencies are drawn. Among the methods listed (`validate`, `validateFull`, `getParseValidator`, `generateReport`, `summarize`), `validate` is the most standard entry point and most likely to be called by external classes, but the diagram doesn't provide call-frequency data.\n\nBased solely on what's representable from the diagram structure:\n\n```json\n{\"answer\": \"MermaidValidationPipeline.validate\"}\n```",
+  "promptTokens": 21356,
+  "completionTokens": 420,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:32:28.737Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-relation-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "v2-a-dominant-relation-type__L4__deepseek-v4-flash__k5",
+  "content": "{\"answer\": \"dependency\"}",
+  "promptTokens": 62847,
+  "completionTokens": 1264,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:22:29.798Z"
+}

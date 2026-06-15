@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-highest-outdegree__L5__claude-sonnet-4-6__k2",
+  "content": "I'll analyze the code to find outgoing dependencies (composition, dependency, inheritance, implementation relations where the entity is the source).\n\nLooking at `RelationExtractor.extractClassRelations`, it emits relations for:\n- inheritance (extends)\n- implementation (implements)\n- composition (property types, constructor params)\n- dependency (method return types, method params)\n\nThe classes with the most outgoing relations based on the code structure:\n\n**TypeScriptParser** has dependencies on:\n- ClassExtractor (composition)\n- InterfaceExtractor (composition)\n- EnumExtractor (composition)\n- RelationExtractor (composition)\n- FunctionExtractor (composition)\n- Project (composition)\n- ArchJSON, Entity, Relation (dependency)\n\n**ValidatedMermaidGenerator** has dependencies on:\n- ArchJSON (composition)\n- CommentGenerator (composition)\n- MermaidGeneratorOptions (composition)\n- DiagramConfig (composition)\n- GroupingDecision (composition)\n- EntityTypeRegistry (dependency)\n- PackageGroup (dependency)\n- groupEntitiesByPackage (dependency)\n- validateGeneratorInput (dependency)\n\n**MermaidDiagramGenerator** has dependencies on:\n- HeuristicGrouper (dependency)\n- ValidatedMermaidGenerator (dependency)\n- MermaidValidationPipeline (dependency)\n- MermaidAutoRepair (dependency)\n- IsomorphicMermaidRenderer (dependency)\n- IProgressReporter (composition)\n- NoopProgressReporter (dependency)\n\n**TypeScriptParser** has the most direct field compositions (5 extractors + Project) plus multiple type dependencies, giving it the highest out-degree.\n\n```json\n{\"answer\": \"TypeScriptParser\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 475,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:57:18.191Z"
+}

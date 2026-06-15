@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-plugins",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-a-package-size-plugins__L2__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\n  \"answer\": 20\n}",
+  "promptTokens": 22254,
+  "completionTokens": 1099,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:41:45.756Z"
+}

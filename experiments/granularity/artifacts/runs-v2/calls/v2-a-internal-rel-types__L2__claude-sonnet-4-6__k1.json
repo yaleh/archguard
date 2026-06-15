@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-internal-rel-types__L2__claude-sonnet-4-6__k1",
+  "content": "Looking at the Types_Layer namespace, I need to find relations where both source and target are within that package.\n\nFrom the Types_Layer diagram, the only explicit relation shown is:\n\n`GlobalConfig <|-- ArchGuardConfig`\n\nBoth `GlobalConfig` and `ArchGuardConfig` are defined within the Types_Layer namespace.\n\nNo other relations in the Types_Layer section have both endpoints within the package.\n\n{\"answer\": 1}",
+  "promptTokens": 21354,
+  "completionTokens": 133,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:35:58.869Z"
+}

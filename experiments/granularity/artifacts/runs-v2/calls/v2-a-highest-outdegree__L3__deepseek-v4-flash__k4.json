@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-a-highest-outdegree__L3__deepseek-v4-flash__k4",
+  "content": "{\"answer\": \"TreeSitterBridge\"}",
+  "promptTokens": 36440,
+  "completionTokens": 7022,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:59:55.259Z"
+}

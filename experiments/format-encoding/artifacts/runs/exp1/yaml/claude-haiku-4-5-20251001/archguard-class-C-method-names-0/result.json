@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "Looking at the entity with id `src/plugins/golang/atlas/renderers/mermaid-templates.ts.mermaidtemplates`, I can extract the methods from its definition:\n\n```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 231345,
+  "completionTokens": 378
+}

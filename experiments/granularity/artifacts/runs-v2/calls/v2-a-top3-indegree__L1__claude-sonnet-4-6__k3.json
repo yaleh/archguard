@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L1__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"analysis\", \"cli\", \"legend_internal\"]}",
+  "promptTokens": 757,
+  "completionTokens": 18,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:48:09.977Z"
+}

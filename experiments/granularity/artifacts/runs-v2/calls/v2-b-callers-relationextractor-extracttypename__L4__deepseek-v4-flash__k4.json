@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-extracttypename",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-b-callers-relationextractor-extracttypename__L4__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"RelationExtractor.extractClassRelations\", \"RelationExtractor.extractInterfaceRelations\", \"RelationExtractor.extractTypeName\"]}",
+  "promptTokens": 62851,
+  "completionTokens": 682,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:38:15.833Z"
+}

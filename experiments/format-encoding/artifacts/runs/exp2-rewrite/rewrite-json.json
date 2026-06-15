@@ -1,0 +1,33 @@
+{
+  "armId": "rewrite-json",
+  "armLabel": "NL-Exhaustive → JSON-Edge-List",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "responses": [
+    "",
+    "",
+    ""
+  ],
+  "roundtripResults": [
+    {
+      "pass": false,
+      "parseError": "json-edge-list: failed to parse JSON: Unexpected end of JSON input",
+      "deviationCount": 0,
+      "hInfoTriggered": false
+    },
+    {
+      "pass": false,
+      "parseError": "json-edge-list: failed to parse JSON: Unexpected end of JSON input",
+      "deviationCount": 0,
+      "hInfoTriggered": false
+    },
+    {
+      "pass": false,
+      "parseError": "json-edge-list: failed to parse JSON: Unexpected end of JSON input",
+      "deviationCount": 0,
+      "hInfoTriggered": false
+    }
+  ],
+  "promptTokens": 107757,
+  "completionTokens": 24576
+}

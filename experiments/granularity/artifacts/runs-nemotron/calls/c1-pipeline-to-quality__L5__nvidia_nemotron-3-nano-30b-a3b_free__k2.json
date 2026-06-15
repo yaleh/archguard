@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-quality",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "c1-pipeline-to-quality__L5__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\n\"answer\": [\n    \"validate\",\n    \"validateFull\"\n  ]\n}",
+  "promptTokens": 46289,
+  "completionTokens": 1919,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:38:21.050Z"
+}

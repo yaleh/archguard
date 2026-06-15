@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-indegree-1",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-highest-indegree-1__L3__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": \"ArchJSON\"}",
+  "promptTokens": 35353,
+  "completionTokens": 8,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:26:44.176Z"
+}

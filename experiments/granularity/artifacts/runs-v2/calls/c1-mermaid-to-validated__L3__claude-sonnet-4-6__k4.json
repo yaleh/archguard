@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-validated",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-mermaid-to-validated__L3__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"MermaidDiagramGenerator.generateOnly\"]}",
+  "promptTokens": 35373,
+  "completionTokens": 19,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:38:09.902Z"
+}

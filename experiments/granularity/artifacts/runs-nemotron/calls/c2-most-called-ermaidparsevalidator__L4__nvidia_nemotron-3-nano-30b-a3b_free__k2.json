@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidparsevalidator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "c2-most-called-ermaidparsevalidator__L4__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\n  \"answer\": \"MermaidParseValidator.validate\"\n}",
+  "promptTokens": 61504,
+  "completionTokens": 3331,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:04:48.030Z"
+}

@@ -1,0 +1,238 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:45.187Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d2/d3/f1.ts"
+  ],
+  "entities": [
+    {
+      "id": "d3/f1.ts.En5",
+      "name": "En5",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p8",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d2/d3/f1\").Al4[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p9",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d3/f1.ts",
+        "startLine": 16,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "d3/f1.ts.Ir2",
+      "name": "Ir2",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p2\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p2",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p3",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d2/d3/f1\").Nu1",
+          "isReadonly": false
+        },
+        {
+          "name": "p4",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d3/f1.ts",
+        "startLine": 2,
+        "endLine": 8
+      }
+    },
+    {
+      "id": "d3/f1.ts.Yg6",
+      "name": "Yg6",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p10",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d2/d3/f1\").Al4",
+          "isReadonly": false
+        },
+        {
+          "name": "p11",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p12",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string | number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p13",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d3/f1.ts",
+        "startLine": 20,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "d3/f1.ts.Yn3",
+      "name": "Yn3",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s7\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d3/f1.ts",
+        "startLine": 9,
+        "endLine": 14
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "d3/f1.ts.Ir2_composition_\"p2\"",
+      "type": "composition",
+      "source": "d3/f1.ts.Ir2",
+      "target": "\"p2\""
+    },
+    {
+      "id": "d3/f1.ts.Yn3_composition_\"s7\"",
+      "type": "composition",
+      "source": "d3/f1.ts.Yn3",
+      "target": "\"s7\""
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d2",
+  "metrics": {
+    "level": "method",
+    "entityCount": 4,
+    "relationCount": 2,
+    "relationTypeBreakdown": {
+      "composition": 2
+    },
+    "stronglyConnectedComponents": 4,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "d3/f1.ts",
+        "loc": 25,
+        "entityCount": 4,
+        "methodCount": 0,
+        "fieldCount": 15,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 4,
+    "totalRelations": 2,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "composition": 2
+    },
+    "maxInDegree": 0,
+    "maxOutDegree": 0,
+    "maxPackageSize": 1,
+    "giniInDegree": 0,
+    "giniPackageSize": 0,
+    "packageCount": 1,
+    "entityCoverageRatio": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-interface-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-interface-count__L3__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": 127}",
+  "promptTokens": 35346,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:54:51.421Z"
+}

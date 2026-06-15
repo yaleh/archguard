@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-types",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-internal-rel-types__L4__claude-sonnet-4-6__k2",
+  "content": "I need to count relations where both source and target are within the `types` package (files starting with `types/`).\n\nLet me scan through the relations list for cases where both source and target begin with `types/`.\n\nLooking through all relations:\n\n- `types/config-global.ts.ArchGuardConfig_inheritance_GlobalConfig` — target is just `GlobalConfig`, no package path → not internal\n- `types/extensions/go-atlas.ts.*` compositions — targets are string literals like `\"interface\"`, `\"send\"`, etc. → not internal\n- `types/extensions/project-semantics.ts.ProjectSemantics_composition_\"1.0\"` → target is string literal\n- `types/extensions/test-analysis.ts.*` → targets are string literals\n- `types/extensions/ts-analysis.ts.*` → targets are string literals\n- `types/git-history.ts.*` → targets are string literals\n- `types/index.ts.Relation_composition_\"explicit\"` → string literal\n\nNone of the relations in the `relations` array have both source and target with a `types/` prefix path. All targets for `types/` sources are either string literals, unqualified names, or external references.\n\n{\"answer\": 0}",
+  "promptTokens": 58819,
+  "completionTokens": 352,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:35:43.557Z"
+}

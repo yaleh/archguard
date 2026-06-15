@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers--tonodeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-b-callers--tonodeid__L3__glm-4.5-airx__k1",
+  "content": "```json\n{\n  \"answer\": [\n    \"TestCoverageRenderer.nodeId\"\n  ]\n}\n```",
+  "promptTokens": 34998,
+  "completionTokens": 25,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:40.855Z"
+}

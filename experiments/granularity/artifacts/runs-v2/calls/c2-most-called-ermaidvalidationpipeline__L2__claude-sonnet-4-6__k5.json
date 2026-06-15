@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c2-most-called-ermaidvalidationpipeline__L2__claude-sonnet-4-6__k5",
+  "content": "Looking at the class diagram, I need to find references to `MermaidValidationPipeline` methods being called by other classes.\n\nFrom the diagram, `MermaidValidationPipeline` has these methods:\n- `validate`\n- `validateFull`\n- `getParseValidator`\n- `generateReport`\n- `summarize`\n\nChecking external callers:\n\n- `MermaidAutoRepair` has a constructor parameter `parseValidator: MermaidParseValidator` — and `MermaidValidationPipeline` exposes `getParseValidator()` which returns a `MermaidParseValidator`. This suggests `getParseValidator` is called to obtain the validator passed to `MermaidAutoRepair`.\n- `ValidatedMermaidGenerator` takes an `archJson` and options — it likely uses `validate` or `validateFull`.\n- `MermaidAutoRepair.repair` takes `mermaidCode` and `errors`, which aligns with using the parse validator obtained via `getParseValidator`.\n\nThe diagram shows `MermaidAutoRepair` depends on `MermaidParseValidator` (constructor parameter), and the only way to get a `MermaidParseValidator` from `MermaidValidationPipeline` is via `getParseValidator()`. Meanwhile, `validate` is the primary entry point for the pipeline and would be called by `ValidatedMermaidGenerator` and potentially others.\n\nGiven that `validate` is the core public method and `ValidatedMermaidGenerator` + other pipeline consumers would call it, and the diagram shows no explicit call-frequency data beyond structural relationships, `validate` is the most externally-facing method with the broadest likely usage.\n\n```json\n{\"answer\": \"MermaidValidationPipeline.validate\"}\n```",
+  "promptTokens": 21356,
+  "completionTokens": 468,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:32:28.737Z"
+}

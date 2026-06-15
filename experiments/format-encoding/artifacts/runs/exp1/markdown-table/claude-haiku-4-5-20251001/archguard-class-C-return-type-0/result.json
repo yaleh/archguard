@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "Looking at the entity table for `src/plugins/cpp/builders/header-merger.ts.headermerger`, I can see:\n\n| id | name | type | sourceFile | methods |\n|----|------|------|------------|---------|\n| src/plugins/cpp/builders/header-merger.ts.headermerger | HeaderMerger | class | src/plugins/cpp/builders/header-merger.ts | merge(files:RawCppFile_arr) -> MergedCppEntity_arr |\n\nThe `merge` method has a return type of `MergedCppEntity_arr`.\n\n```json\n{\"answer\": \"MergedCppEntity_arr\"}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```",
+    "```json\n{\n  \"answer\": \"MergedCppEntity_arr\"\n}\n```"
+  ],
+  "promptTokens": 158695,
+  "completionTokens": 227
+}

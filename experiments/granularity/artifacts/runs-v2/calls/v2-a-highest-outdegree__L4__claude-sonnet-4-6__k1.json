@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-highest-outdegree__L4__claude-sonnet-4-6__k1",
+  "content": "Looking at the relations array, I need to count outgoing dependencies (as `source`) for each entity.\n\n`MermaidDiagramGenerator.generateOnly` appears most frequently as a source in the callGraph, but the question is about the `relations` array (structural dependencies).\n\nLet me count the top candidates from the `relations` array by source entity:\n\n- `runAnalysis` (cli/analyze/run-analysis.ts): sources to TestAnalyzer, normalizeToDiagrams, cleanStaleDiagrams, readManifest, writeManifest, ConfigLoader, DiagramProcessor, persistQueryScopes, DiagramIndexGenerator, TestOutputWriter, ParseCache, CLIOptions = ~12\n- `normalizeToDiagrams`: createProjectRootLanguageDiagrams, planDefaultDiagrams, detectProjectLanguages, detectProjectStructure, DiagramConfig = 5\n- `createCLI`: 7 commands = 7\n- `evaluateAllRules`: checkDependencyConstraint, MetricThresholdRule = 2\n- `registerAnalyzeTool`: runAnalysis, StderrReporter = 2\n- `createMcpServer`: registerAnalyzeTool, registerGitHistoryAnalyzeTool, registerGitHistoryTools, registerTestAnalysisTools = 4\n- `registerTools`: loadEngine, PackageStatEntry, PackageStatsResult, CapabilityGraph, GoroutineTopology, PackageGraph, Entity = 7\n- `registerGitHistoryAnalyzeTool`: getCurrentBranch, getHeadRef, isGitRepo, readGitLog, aggregateFileMetrics, aggregatePackageMetrics, writeHistoryArtifacts, resolveRoot, GitHistoryArtifacts, GitHistoryManifest = 10\n- `persistQueryScopes`: buildArchIndex, QueryManifest, QueryScopeEntry, canonicalizeArchJson = 4\n- `loadEngine`: buildArchIndex, ArchIndex, atomicWriteFile, QueryEngine = 4\n- `runAnalysis` wins with ~12.\n\n```json\n{\"answer\": \"runAnalysis\"}\n```",
+  "promptTokens": 58808,
+  "completionTokens": 490,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:56:00.916Z"
+}

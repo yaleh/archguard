@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "I need to find all entities that directly depend on `src/cli/query/query-artifacts.ts.atomicwritefile`.\n\nLet me search through the dependencies for this entity:\n\nLooking at the dependency list, I need to find all lines where `src/cli/query/query-artifacts.ts.atomicwritefile` appears on the right side of a `-dependency->` arrow.\n\nScanning through the provided architecture description:\n\n`src/cli/query/engine-loader.ts.loadengine -dependency-> src/cli/query/query-artifacts.ts.atomicwritefile`\n\nThis is the only direct dependency relationship where `src/cli/query/query-artifacts.ts.atomicwritefile` is the target (right side) of a dependency arrow.\n\n```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```",
+    "I need to find all entities that directly depend on `src/cli/query/query-artifacts.ts.atomicwritefile`.\n\nLet me search through the dependency relationships for any that have `atomicwritefile` as the target (the right side of `-dependency->`).\n\nScanning through all the dependencies:\n\n```\nsrc/cli/query/engine-loader.ts.loadengine -dependency-> src/cli/query/query-artifacts.ts.atomicwritefile\n```\n\nThis is the only direct dependency on `atomicwritefile`.\n\n```json\n{\"answer\": [\"src/cli/query/engine-loader.ts.loadengine\"]}\n```",
+    "```json\n{\n  \"answer\": [\n    \"src/cli/query/engine-loader.ts.loadengine\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 162655,
+  "completionTokens": 498
+}

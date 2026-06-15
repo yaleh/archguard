@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c2-most-called-elationextractor__L2__claude-sonnet-4-6__k5",
+  "content": "Looking at the class diagrams, I need to find which method of `RelationExtractor` is called by other classes.\n\n`RelationExtractor` has two methods:\n- `extract(code: string, filePath?: string): Array`\n- `extractFromSourceFile(sourceFile: SourceFile): Array`\n\nSearching through all the relationship arrows and dependencies in the diagrams, I can see `RelationExtractor` appears in the Parser Layer. The diagrams show:\n\n- `RelationExtractor --> Relation` (it produces Relations)\n- `BaseExtractor <|-- RelationExtractor` (inheritance)\n\nThe class diagrams provided show structural relationships but do not include call-site frequency data or any indication of which specific method on `RelationExtractor` is invoked by external callers, let alone how often.\n\nThere is no information in these diagrams to determine which method is called \"most frequently.\" Any answer would be a guess.\n\n```json\n{\"answer\": \"insufficient data to determine\"}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 292,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:29:53.031Z"
+}

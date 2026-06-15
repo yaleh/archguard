@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L4__deepseek-v4-flash__k1",
+  "content": "",
+  "promptTokens": 62857,
+  "completionTokens": 8192,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:41:21.680Z"
+}

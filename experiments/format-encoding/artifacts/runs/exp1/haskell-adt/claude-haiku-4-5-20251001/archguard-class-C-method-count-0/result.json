@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "Looking at the architecture description for `src/mermaid/progress.ts.iprogressreporter`:\n\n```\n-- | id: src/mermaid/progress.ts.iprogressreporter\n-- | name: IProgressReporter\n-- | source: src/mermaid/progress.ts\ndata IProgressReporter :: interface = IProgressReporter\n  { _method_fail :: (message:string) -> void\n  { _method_info :: (message:string) -> void\n  { _method_start :: (message:string) -> void\n  { _method_succeed :: (message:string) -> void\n  { _method_warn :: (message:string) -> void\n  }\n```\n\nThe interface has 5 methods:\n1. `fail`\n2. `info`\n3. `start`\n4. `succeed`\n5. `warn`\n\n```json\n{\"answer\": 5}\n```",
+    "```json\n{\"answer\": 5}\n```\n\nThe `IProgressReporter` interface has 5 methods:\n1. `fail`\n2. `info`\n3. `start`\n4. `succeed`\n5. `warn`",
+    "```json\n{\"answer\": 5}\n```",
+    "Looking at the architecture description for `src/mermaid/progress.ts.iprogressreporter`:\n\n```\n-- | id: src/mermaid/progress.ts.iprogressreporter\n-- | name: IProgressReporter\n-- | source: src/mermaid/progress.ts\ndata IProgressReporter :: interface = IProgressReporter\n  { _method_fail :: (message:string) -> void\n  { _method_info :: (message:string) -> void\n  { _method_start :: (message:string) -> void\n  { _method_succeed :: (message:string) -> void\n  { _method_warn :: (message:string) -> void\n  }\n```\n\nThe interface has 5 methods: `fail`, `info`, `start`, `succeed`, and `warn`.\n\n```json\n{\"answer\": 5}\n```",
+    "Looking at the architecture description for `src/mermaid/progress.ts.iprogressreporter`:\n\n```\n-- | id: src/mermaid/progress.ts.iprogressreporter\n-- | name: IProgressReporter\n-- | source: src/mermaid/progress.ts\ndata IProgressReporter :: interface = IProgressReporter\n  { _method_fail :: (message:string) -> void\n  { _method_info :: (message:string) -> void\n  { _method_start :: (message:string) -> void\n  { _method_succeed :: (message:string) -> void\n  { _method_warn :: (message:string) -> void\n  }\n```\n\nThe interface has 5 methods: `fail`, `info`, `start`, `succeed`, and `warn`.\n\n```json\n{\"answer\": 5}\n```"
+  ],
+  "promptTokens": 188825,
+  "completionTokens": 650
+}

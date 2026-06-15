@@ -1,0 +1,40 @@
+{
+  "levels": {
+    "A": {
+      "bootstrap": {
+        "ci_high": 14.224736573041916,
+        "ci_low": 4.360043745169827,
+        "ci_width": 9.864692827872089,
+        "confidence": 0.95,
+        "n_effective": 200,
+        "n_resamples": 200,
+        "n_skipped": 0,
+        "resampling_unit": "anchor",
+        "seed": 59
+      },
+      "hyperparameters": {
+        "confidence": 0.95,
+        "discard_fraction": 0.1,
+        "k_mle": null,
+        "min_unique_fraction": 0.8,
+        "n_bootstrap": 200,
+        "primary_estimator": "TwoNN",
+        "secondary_estimator": "MLE",
+        "seed": 59
+      },
+      "k_anchors": 25,
+      "level": "A",
+      "mle": 6.069577993351178,
+      "n_duplicates_removed": 0,
+      "n_points": 25,
+      "n_unique": 25,
+      "reliable": false,
+      "skdim_version": "0.3.4",
+      "twonn": 8.522659131915743,
+      "unreliable_reasons": [
+        "ci_width_exceeds_estimate"
+      ]
+    }
+  },
+  "skdim_version": "0.3.4"
+}

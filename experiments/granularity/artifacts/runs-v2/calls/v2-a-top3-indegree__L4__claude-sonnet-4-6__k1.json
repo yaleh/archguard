@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L4__claude-sonnet-4-6__k1",
+  "content": "I'll analyze the relations array to count incoming dependencies (where each entity appears as a `target`).\n\nLet me tally the in-degrees from the `relations` array:\n\n- `ILanguagePlugin` (core/interfaces/language-plugin.ts): targeted by CppPlugin, GoPlugin, JavaPlugin, KotlinPlugin, PythonPlugin, TypeScriptPlugin = 6\n- `IParser` (core/interfaces/parser.ts): targeted by ILanguagePlugin = 1\n- `IDependencyExtractor` (core/interfaces/dependency.ts): targeted by DependencyExtractor(cpp), DependencyExtractor(golang), DependencyExtractor(java), KotlinDependencyExtractor, DependencyExtractor(python) = 5\n- `BaseArchJsonMapper` (plugins/shared/mapper-utils.ts): targeted by ArchJsonMapper(cpp), ArchJsonMapper(golang), ArchJsonMapper(java), ArchJsonMapper(kotlin), ArchJsonMapper(python) = 5\n- `BaseExtractor` (parser/base-extractor.ts): targeted by ClassExtractor, EnumExtractor, InterfaceExtractor, RelationExtractor = 4\n- `PluginError` (core/interfaces/errors.ts): targeted by FileSystemError, ParseError, PluginConfigError, PluginInitializationError, ToolDependencyError = 5\n- `IAtlasBuilder` (plugins/golang/atlas/builders/i-atlas-builder.ts): targeted by CapabilityGraphBuilder, FlowGraphBuilder, GoroutineTopologyBuilder, PackageGraphBuilder = 4\n- `ProgressReporterLike` (cli/progress.ts): targeted by NoopReporter, ProgressReporter, StderrReporter = 3\n\nTop 3 by in-degree:\n1. `ILanguagePlugin` — 6\n2. `IDependencyExtractor`, `BaseArchJsonMapper`, `PluginError` — 5 (tie)\n\nAmong the tied group, `IDependencyExtractor`, `BaseArchJsonMapper`, and `PluginError` all have 5. I'll pick the three highest distinct counts.\n\n```json\n{\"answer\": [\"ILanguagePlugin\", \"IDependencyExtractor\", \"BaseArchJsonMapper\"]}\n```",
+  "promptTokens": 58819,
+  "completionTokens": 514,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:42:32.900Z"
+}

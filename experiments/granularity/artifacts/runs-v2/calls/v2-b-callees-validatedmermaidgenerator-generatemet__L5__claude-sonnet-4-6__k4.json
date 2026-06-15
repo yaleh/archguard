@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-validatedmermaidgenerator-generatemet",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-b-callees-validatedmermaidgenerator-generatemet__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"ValidatedMermaidGenerator.groupEntitiesByPackage\", \"ValidatedMermaidGenerator.generateClassDefinition\", \"ValidatedMermaidGenerator.escapeId\", \"ValidatedMermaidGenerator.buildModulePrefixIndex\", \"ValidatedMermaidGenerator.generateRelationLine\", \"ValidatedMermaidGenerator.isNoisyTarget\", \"ValidatedMermaidGenerator.normalizeEntityName\", \"ValidatedMermaidGenerator.entityTypeToClassDef\"]}",
+  "promptTokens": 46758,
+  "completionTokens": 149,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:03:02.459Z"
+}

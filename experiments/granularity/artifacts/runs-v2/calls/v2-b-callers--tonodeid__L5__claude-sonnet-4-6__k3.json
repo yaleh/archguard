@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers--tonodeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-b-callers--tonodeid__L5__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"renderTsModuleGraph\", \"emitTreeNode\", \"buildForest\"]}",
+  "promptTokens": 46748,
+  "completionTokens": 24,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:46:50.859Z"
+}

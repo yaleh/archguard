@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-relation-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-a-relation-count__L2__glm-4.7__k2",
+  "content": "```json\n{\"answer\": 317}\n```",
+  "promptTokens": 21671,
+  "completionTokens": 11,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:40:13.474Z"
+}

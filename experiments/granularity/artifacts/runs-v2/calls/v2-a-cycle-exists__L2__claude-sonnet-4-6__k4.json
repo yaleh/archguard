@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-cycle-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-cycle-exists__L2__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": \"no\"}",
+  "promptTokens": 21346,
+  "completionTokens": 6,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:53:09.615Z"
+}

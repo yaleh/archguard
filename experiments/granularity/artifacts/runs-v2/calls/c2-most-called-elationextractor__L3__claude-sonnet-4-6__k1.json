@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "c2-most-called-elationextractor__L3__claude-sonnet-4-6__k1",
+  "content": "Looking at the call graph edges provided, I need to find calls from external classes into `RelationExtractor` methods.\n\nThe call graph section shows 375 edges but only partially lists them, cutting off with \"and 325 more call edges.\" The visible edges don't include any calls into `RelationExtractor`.\n\nHowever, from the class diagram, `TypeScriptParser` composes `RelationExtractor` and uses it internally. The methods on `RelationExtractor` are `extract`, `extractFromSourceFile`, and several private helpers.\n\nLooking at the class diagram relationships:\n- `TypeScriptParser *-- RelationExtractor` (composition)\n- `RelationExtractor --> Relation`\n\nThe public interface of `RelationExtractor` has `extract` and `extractFromSourceFile`. Based on the architecture, `TypeScriptParser` would call `extractFromSourceFile` when working with already-parsed source files (which is the typical pattern in ts-morph based parsers), but `extract` is the more general entry point.\n\nSince the call graph data is truncated and doesn't show RelationExtractor calls explicitly, I cannot determine frequency from the call graph alone. Based solely on what's represented:\n\n```json\n{\"answer\": \"RelationExtractor.extract\"}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 361,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:34.518Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-function",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "c1-ts-to-function__L5__glm-4.5-airx__k3",
+  "content": "```json\n{\n  \"answer\": [\"TypeScriptParser.parseCode\", \"TypeScriptParser.parseProject\"]\n}\n```",
+  "promptTokens": 43999,
+  "completionTokens": 275,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:43:35.570Z"
+}

@@ -1,0 +1,13 @@
+{
+  "tree": "original",
+  "sourceDir": "src/[mermaid+parser]",
+  "queries": {
+    "cycles": [],
+    "high-coupling": []
+  },
+  "summary": {
+    "totalEntities": 0,
+    "totalQueries": 0,
+    "artifactSHA256": "merged"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "Looking at the class definition for `src_mermaid_golang_atlas_renderers_mermaid_templates_ts_mermaidtemplates` in the diagram:\n\n```\nclass src_plugins_golang_atlas_renderers_mermaid_templates_ts_mermaidtemplates {\n    <<class>>\n    +computePackageEdgeTiers(strengths number_arr) Map<number_number>\n    +renderCapabilityGraph(graph CapabilityGraph) string\n    +renderFlowGraph(graph FlowGraph, format string) string\n    +renderGoroutineTopology(topology GoroutineTopology) string\n    +renderPackageGraph(graph PackageGraph) string\n  }\n```\n\n```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 330915,
+  "completionTokens": 486
+}

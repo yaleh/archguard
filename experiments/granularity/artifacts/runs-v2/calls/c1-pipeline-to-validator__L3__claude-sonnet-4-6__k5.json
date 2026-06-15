@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c1-pipeline-to-validator__L3__claude-sonnet-4-6__k5",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a composition relationship with `MermaidParseValidator` (`MermaidValidationPipeline *-- MermaidParseValidator`), and there's a method `getParseValidator()` that returns it.\n\nFrom the call graph edges shown:\n- `MermaidDiagramGenerator_generateOnly --> MermaidValidationPipeline_getParseValidator`\n- `MermaidAutoRepair_repair --> MermaidParseValidator_validate` (called directly by `MermaidAutoRepair`, not through `MermaidValidationPipeline`)\n- `MermaidAutoRepair_repairBestEffort --> MermaidParseValidator_validate` (same)\n\nLooking for edges of the form `MermaidValidationPipeline_* --> MermaidParseValidator_*` in the call graph — none appear in the listed edges. The `validate` calls on `MermaidParseValidator` originate from `MermaidAutoRepair`, not from `MermaidValidationPipeline` methods.\n\nThe call graph notes \"375 call edges\" but only shows a subset, so I can only reason from what's explicitly listed.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35373,
+  "completionTokens": 313,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:45:14.345Z"
+}

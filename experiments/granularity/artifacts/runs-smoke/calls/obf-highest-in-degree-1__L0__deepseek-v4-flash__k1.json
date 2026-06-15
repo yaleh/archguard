@@ -1,0 +1,14 @@
+{
+  "taskId": "obf-highest-in-degree-1",
+  "taskClass": "A",
+  "module": "obf",
+  "level": "L0",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "obf-highest-in-degree-1__L0__deepseek-v4-flash__k1",
+  "content": "{\"answer\": \"d6\"}",
+  "promptTokens": 406,
+  "completionTokens": 2351,
+  "invalidated": false,
+  "timestamp": "2026-06-11T08:26:42.225Z"
+}

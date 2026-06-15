@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-highest-outdegree__L2__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": \"TypeScriptPlugin\"}",
+  "promptTokens": 21343,
+  "completionTokens": 11,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:58:47.393Z"
+}

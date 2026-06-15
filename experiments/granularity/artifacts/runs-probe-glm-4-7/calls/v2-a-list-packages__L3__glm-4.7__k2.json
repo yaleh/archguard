@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-a-list-packages__L3__glm-4.7__k2",
+  "content": "```json\n{\n  \"answer\": [\n    \"Core_Layer\",\n    \"Cli_Layer\",\n    \"Cache_Layer\",\n    \"Commands_Layer\",\n    \"Git_History_Layer\",\n    \"Mcp_Layer\",\n    \"Processors_Layer\",\n    \"Progress_Layer___Query_Layer\",\n    \"Utils_Layer\",\n    \"Core_Layer___Interfaces_Layer\",\n    \"Cpp_Layer\",\n    \"Golang_Layer\",\n    \"Java_Layer\",\n    \"Python_Layer\",\n    \"Shared_Layer\",\n    \"Typescript_Layer\",\n    \"Builders_Layer\",\n    \"Atlas_Layer\",\n    \"Renderers_Layer\",\n    \"Extensions_Layer\"\n  ]\n}\n```",
+  "promptTokens": 35000,
+  "completionTokens": 148,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:26:26.513Z"
+}

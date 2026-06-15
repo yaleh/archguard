@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-extracttypename",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-b-callers-relationextractor-extracttypename__L4__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n  \"answer\": [\n\"RelationExtractor.extractClassRelations\",\n    \"RelationExtractor.extractInterfaceRelations\"\n  ]\n}",
+  "promptTokens": 61496,
+  "completionTokens": 643,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:58:29.026Z"
+}

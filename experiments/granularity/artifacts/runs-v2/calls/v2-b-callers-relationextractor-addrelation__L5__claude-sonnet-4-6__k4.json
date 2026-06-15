@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-addrelation",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-b-callers-relationextractor-addrelation__L5__claude-sonnet-4-6__k4",
+  "content": "",
+  "promptTokens": -1,
+  "completionTokens": -1,
+  "invalidated": true,
+  "timestamp": "2026-06-11T18:14:08.691Z"
+}

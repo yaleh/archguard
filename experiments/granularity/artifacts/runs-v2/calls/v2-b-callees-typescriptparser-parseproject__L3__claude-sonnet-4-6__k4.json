@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-b-callees-typescriptparser-parseproject__L3__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"TypeScriptParser.toRelPath\", \"TypeScriptParser.qualifyRelations\", \"TypeScriptParser.filterExternalRelations\", \"TypeScriptParser.deduplicateRelations\"]}",
+  "promptTokens": 35360,
+  "completionTokens": 61,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:59:39.863Z"
+}

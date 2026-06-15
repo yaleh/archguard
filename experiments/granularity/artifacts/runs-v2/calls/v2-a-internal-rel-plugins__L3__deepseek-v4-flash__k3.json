@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-internal-rel-plugins",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "v2-a-internal-rel-plugins__L3__deepseek-v4-flash__k3",
+  "content": "",
+  "promptTokens": 36450,
+  "completionTokens": 8192,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:36:11.358Z"
+}

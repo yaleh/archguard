@@ -1,0 +1,2358 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:52.605Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f31.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f32.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f33.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f34.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f35.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f36.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f37.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f38.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f39.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f40.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f41.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f42.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f43.ts"
+  ],
+  "entities": [
+    {
+      "id": "f31.ts.Ga112",
+      "name": "Ga112",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m280",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1020",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v1021",
+              "type": "Os146",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m281",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1022",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m282",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1025",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m283",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1033",
+              "type": "Jw214[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1034",
+              "type": "string",
+              "isOptional": true
+            },
+            {
+              "name": "v1035",
+              "type": "Vw210",
+              "isOptional": true
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m284",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1040",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1041",
+              "type": "string",
+              "isOptional": true
+            },
+            {
+              "name": "v1042",
+              "type": "Vw210",
+              "isOptional": true
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m285",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1051",
+              "type": "Jw214",
+              "isOptional": false
+            },
+            {
+              "name": "v1052",
+              "type": "string",
+              "isOptional": true
+            },
+            {
+              "name": "v1053",
+              "type": "Vw210",
+              "isOptional": true
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m286",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1055",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1056",
+              "type": "Vw210",
+              "isOptional": true
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m287",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1060",
+              "type": "Jw214[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1061",
+              "type": "Yf221[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1062",
+              "type": "string",
+              "isOptional": true
+            },
+            {
+              "name": "v1063",
+              "type": "Vw210",
+              "isOptional": true
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f31.ts",
+        "startLine": 4,
+        "endLine": 162
+      }
+    },
+    {
+      "id": "f32.ts.Gw113",
+      "name": "Gw113",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": true,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        },
+        {
+          "name": "p288",
+          "type": "property",
+          "visibility": "protected",
+          "fieldType": "any",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f32.ts",
+        "startLine": 2,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "f33.ts.Nj114",
+      "name": "Nj114",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m289",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1080",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1081",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s471'"
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        },
+        {
+          "name": "m290",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1084",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1085",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        },
+        {
+          "name": "m291",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1087",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Pj213",
+          "decorators": []
+        },
+        {
+          "name": "m292",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1088",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m293",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1091",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216[]",
+          "decorators": []
+        },
+        {
+          "name": "m294",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1096",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216",
+          "decorators": []
+        },
+        {
+          "name": "m295",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1098",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216",
+          "decorators": []
+        },
+        {
+          "name": "m296",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1099",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216",
+          "decorators": []
+        },
+        {
+          "name": "m297",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1100",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Al217[]",
+          "decorators": []
+        },
+        {
+          "name": "m298",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1103",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Pj213",
+          "decorators": []
+        },
+        {
+          "name": "m299",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1107",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Pj213",
+          "decorators": []
+        },
+        {
+          "name": "m300",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1111",
+              "type": "any[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Mb219[]",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f33.ts",
+        "startLine": 5,
+        "endLine": 144
+      }
+    },
+    {
+      "id": "f34.ts.Zf115",
+      "name": "Zf115",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m289",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1117",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1118",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s471'"
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        },
+        {
+          "name": "m293",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1124",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216[]",
+          "decorators": []
+        },
+        {
+          "name": "m301",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1121",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1122",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f34.ts",
+        "startLine": 5,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "f35.ts.Tw116",
+      "name": "Tw116",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v1128",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "p27",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "p213",
+              "type": "number",
+              "isOptional": true
+            },
+            {
+              "name": "p214",
+              "type": "number",
+              "isOptional": true
+            }
+          ]
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f35.ts",
+        "startLine": 1,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "f36.ts.Qz117",
+      "name": "Qz117",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m289",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1129",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1130",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jw214[]",
+          "decorators": []
+        },
+        {
+          "name": "m302",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1138",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216[]",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f36.ts",
+        "startLine": 3,
+        "endLine": 59
+      }
+    },
+    {
+      "id": "f38.ts.Tr119",
+      "name": "Tr119",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m289",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1140",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1141",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s471'"
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        },
+        {
+          "name": "m292",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1150",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m293",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1153",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216[]",
+          "decorators": []
+        },
+        {
+          "name": "m297",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1160",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Al217[]",
+          "decorators": []
+        },
+        {
+          "name": "m303",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1144",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1145",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jw214",
+          "decorators": []
+        },
+        {
+          "name": "m304",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1147",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m305",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1157",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216",
+          "decorators": []
+        },
+        {
+          "name": "m306",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1159",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Uu216",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f38.ts",
+        "startLine": 5,
+        "endLine": 91
+      }
+    },
+    {
+      "id": "f39.ts.Rh120",
+      "name": "Rh120",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m307",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1164",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v1165",
+              "type": "Os146",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Si222",
+          "decorators": []
+        },
+        {
+          "name": "m308",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1174",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Partial<Record<Bj220, number>>",
+          "decorators": []
+        },
+        {
+          "name": "m309",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1177",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m310",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1180",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "{ p311: number; p312: string[][]; }",
+          "decorators": []
+        },
+        {
+          "name": "m313",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1199",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v1200",
+              "type": "string[][]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vm224[]",
+          "decorators": []
+        },
+        {
+          "name": "m314",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1213",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v1214",
+              "type": "string[][]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Cf223[]",
+          "decorators": []
+        },
+        {
+          "name": "m315",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1247",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1248",
+              "type": "Map<string, string[]>",
+              "isOptional": false
+            },
+            {
+              "name": "v1249",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "v1250",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f39.ts",
+        "startLine": 3,
+        "endLine": 197
+      }
+    },
+    {
+      "id": "f40.ts.Bf123",
+      "name": "Bf123",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p326",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p327",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p328",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 26,
+        "endLine": 30
+      }
+    },
+    {
+      "id": "f40.ts.Gc121",
+      "name": "Gc121",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p316",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p317",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Sq127",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p63",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 8,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "f40.ts.Hn125",
+      "name": "Hn125",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p318",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p332",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p333",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p334",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 36,
+        "endLine": 41
+      }
+    },
+    {
+      "id": "f40.ts.Qu126",
+      "name": "Qu126",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v1260",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f40\").Gc121",
+              "isOptional": true,
+              "defaultValue": "{}"
+            }
+          ]
+        },
+        {
+          "name": "m336",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m337",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "m338",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1272",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f40\").Wn122>",
+          "decorators": []
+        },
+        {
+          "name": "m339",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1280",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Vw210>",
+          "decorators": []
+        },
+        {
+          "name": "m340",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1284",
+              "type": "Vw210[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m341",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1290",
+              "type": "Yf221[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m342",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1295",
+              "type": "string[]",
+              "isOptional": true,
+              "defaultValue": "[]"
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m67",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1261",
+              "type": "string[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Vw210>",
+          "decorators": []
+        },
+        {
+          "name": "p316",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p317",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Sq127",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p335",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "any",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p63",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "number",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 42,
+        "endLine": 206
+      }
+    },
+    {
+      "id": "f40.ts.We124",
+      "name": "We124",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p329",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p330",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p331",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 31,
+        "endLine": 35
+      }
+    },
+    {
+      "id": "f40.ts.Wn122",
+      "name": "Wn122",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p253",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Vw210",
+          "isReadonly": false
+        },
+        {
+          "name": "p318",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p319",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p320",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p321",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p322: number; p323: number; p324: number; p325: number; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f40.ts",
+        "startLine": 14,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "f41.ts.Sq127",
+      "name": "Sq127",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m18",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m344",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1297",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1298",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1299",
+              "type": "() => Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "p343",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<string, Vw210>",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "new Map<string, Vw210>()",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f41.ts",
+        "startLine": 3,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "f42.ts.Ac130",
+      "name": "Ac130",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m289",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1311",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1312",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s471'"
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m346",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1314",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m347",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1320",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1321",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "v1322",
+              "type": "Set<string>",
+              "isOptional": true,
+              "defaultValue": "new Set()"
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m348",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1338",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1339",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "v1340",
+              "type": "Set<string>",
+              "isOptional": true,
+              "defaultValue": "new Set()"
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m349",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1347",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v1348",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "v1349",
+              "type": "Set<string>",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m350",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1366",
+              "type": "Yf221[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1367",
+              "type": "Set<string>",
+              "isOptional": false
+            },
+            {
+              "name": "v1368",
+              "type": "Yf221",
+              "isOptional": false
+            },
+            {
+              "name": "v1369",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1370",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m351",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1372",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m352",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1386",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "m353",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1387",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f42.ts",
+        "startLine": 28,
+        "endLine": 263
+      }
+    },
+    {
+      "id": "f43.ts.Xd131",
+      "name": "Xd131",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v1390",
+              "type": "string",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m341",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1457",
+              "type": "Yf221[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m359",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1391",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m360",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1442",
+              "type": "Jw214[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1443",
+              "type": "Yf221[]",
+              "isOptional": false
+            },
+            {
+              "name": "v1444",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yf221[]",
+          "decorators": []
+        },
+        {
+          "name": "m361",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1450",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m362",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1462",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v1463",
+              "type": "boolean",
+              "isOptional": true,
+              "defaultValue": "false"
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m65",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1406",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1407",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s497'"
+            },
+            {
+              "name": "v1408",
+              "type": "any",
+              "isOptional": true
+            },
+            {
+              "name": "v1409",
+              "type": "string[]",
+              "isOptional": true
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "m66",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1392",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1393",
+              "type": "string",
+              "isOptional": true,
+              "defaultValue": "'s496'"
+            }
+          ],
+          "returnType": "Vw210",
+          "decorators": []
+        },
+        {
+          "name": "p288",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "any",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p354",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Nj114",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p355",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Tr119",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p356",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Zf115",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p357",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Ac130",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p358",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Qz117",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "string",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f43.ts",
+        "startLine": 10,
+        "endLine": 209
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "f31.ts.Ga112_dependency_Jw214",
+      "type": "dependency",
+      "source": "f31.ts.Ga112",
+      "target": "Jw214"
+    },
+    {
+      "id": "f31.ts.Ga112_dependency_Os146",
+      "type": "dependency",
+      "source": "f31.ts.Ga112",
+      "target": "Os146"
+    },
+    {
+      "id": "f31.ts.Ga112_dependency_Vw210",
+      "type": "dependency",
+      "source": "f31.ts.Ga112",
+      "target": "Vw210"
+    },
+    {
+      "id": "f31.ts.Ga112_dependency_Yf221",
+      "type": "dependency",
+      "source": "f31.ts.Ga112",
+      "target": "Yf221"
+    },
+    {
+      "id": "f33.ts.Nj114_dependency_Al217",
+      "type": "dependency",
+      "source": "f33.ts.Nj114",
+      "target": "Al217"
+    },
+    {
+      "id": "f33.ts.Nj114_dependency_Jw214",
+      "type": "dependency",
+      "source": "f33.ts.Nj114",
+      "target": "Jw214"
+    },
+    {
+      "id": "f33.ts.Nj114_dependency_Mb219",
+      "type": "dependency",
+      "source": "f33.ts.Nj114",
+      "target": "Mb219"
+    },
+    {
+      "id": "f33.ts.Nj114_dependency_Pj213",
+      "type": "dependency",
+      "source": "f33.ts.Nj114",
+      "target": "Pj213"
+    },
+    {
+      "id": "f33.ts.Nj114_dependency_Uu216",
+      "type": "dependency",
+      "source": "f33.ts.Nj114",
+      "target": "Uu216"
+    },
+    {
+      "id": "f33.ts.Nj114_inheritance_Gw113",
+      "type": "inheritance",
+      "source": "f33.ts.Nj114",
+      "target": "Gw113"
+    },
+    {
+      "id": "f34.ts.Zf115_dependency_Jw214",
+      "type": "dependency",
+      "source": "f34.ts.Zf115",
+      "target": "Jw214"
+    },
+    {
+      "id": "f34.ts.Zf115_dependency_Uu216",
+      "type": "dependency",
+      "source": "f34.ts.Zf115",
+      "target": "Uu216"
+    },
+    {
+      "id": "f34.ts.Zf115_inheritance_Gw113",
+      "type": "inheritance",
+      "source": "f34.ts.Zf115",
+      "target": "Gw113"
+    },
+    {
+      "id": "f35.ts.Tw116_inheritance_Error",
+      "type": "inheritance",
+      "source": "f35.ts.Tw116",
+      "target": "Error"
+    },
+    {
+      "id": "f36.ts.Qz117_dependency_Jw214",
+      "type": "dependency",
+      "source": "f36.ts.Qz117",
+      "target": "Jw214"
+    },
+    {
+      "id": "f36.ts.Qz117_dependency_Uu216",
+      "type": "dependency",
+      "source": "f36.ts.Qz117",
+      "target": "Uu216"
+    },
+    {
+      "id": "f38.ts.Tr119_dependency_Al217",
+      "type": "dependency",
+      "source": "f38.ts.Tr119",
+      "target": "Al217"
+    },
+    {
+      "id": "f38.ts.Tr119_dependency_Jw214",
+      "type": "dependency",
+      "source": "f38.ts.Tr119",
+      "target": "Jw214"
+    },
+    {
+      "id": "f38.ts.Tr119_dependency_Uu216",
+      "type": "dependency",
+      "source": "f38.ts.Tr119",
+      "target": "Uu216"
+    },
+    {
+      "id": "f38.ts.Tr119_inheritance_Gw113",
+      "type": "inheritance",
+      "source": "f38.ts.Tr119",
+      "target": "Gw113"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Bj220",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Bj220"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Cf223",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Cf223"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Os146",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Os146"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Si222",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Si222"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Vm224",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Vm224"
+    },
+    {
+      "id": "f39.ts.Rh120_dependency_Vw210",
+      "type": "dependency",
+      "source": "f39.ts.Rh120",
+      "target": "Vw210"
+    },
+    {
+      "id": "f40.ts.Gc121_composition_Sq127",
+      "type": "composition",
+      "source": "f40.ts.Gc121",
+      "target": "Sq127"
+    },
+    {
+      "id": "f40.ts.Qu126_composition_Sq127",
+      "type": "composition",
+      "source": "f40.ts.Qu126",
+      "target": "Sq127"
+    },
+    {
+      "id": "f40.ts.Qu126_dependency_Vw210",
+      "type": "dependency",
+      "source": "f40.ts.Qu126",
+      "target": "Vw210"
+    },
+    {
+      "id": "f40.ts.Qu126_dependency_Yf221",
+      "type": "dependency",
+      "source": "f40.ts.Qu126",
+      "target": "Yf221"
+    },
+    {
+      "id": "f40.ts.Qu126_inheritance_v21",
+      "type": "inheritance",
+      "source": "f40.ts.Qu126",
+      "target": "v21"
+    },
+    {
+      "id": "f40.ts.Wn122_composition_Vw210",
+      "type": "composition",
+      "source": "f40.ts.Wn122",
+      "target": "Vw210"
+    },
+    {
+      "id": "f41.ts.Sq127_composition_Vw210",
+      "type": "composition",
+      "source": "f41.ts.Sq127",
+      "target": "Vw210"
+    },
+    {
+      "id": "f41.ts.Sq127_dependency_Vw210",
+      "type": "dependency",
+      "source": "f41.ts.Sq127",
+      "target": "Vw210"
+    },
+    {
+      "id": "f42.ts.Ac130_dependency_Yf221",
+      "type": "dependency",
+      "source": "f42.ts.Ac130",
+      "target": "Yf221"
+    },
+    {
+      "id": "f42.ts.Ac130_inheritance_Gw113",
+      "type": "inheritance",
+      "source": "f42.ts.Ac130",
+      "target": "Gw113"
+    },
+    {
+      "id": "f43.ts.Xd131_composition_Ac130",
+      "type": "composition",
+      "source": "f43.ts.Xd131",
+      "target": "Ac130"
+    },
+    {
+      "id": "f43.ts.Xd131_composition_Nj114",
+      "type": "composition",
+      "source": "f43.ts.Xd131",
+      "target": "Nj114"
+    },
+    {
+      "id": "f43.ts.Xd131_composition_Qz117",
+      "type": "composition",
+      "source": "f43.ts.Xd131",
+      "target": "Qz117"
+    },
+    {
+      "id": "f43.ts.Xd131_composition_Tr119",
+      "type": "composition",
+      "source": "f43.ts.Xd131",
+      "target": "Tr119"
+    },
+    {
+      "id": "f43.ts.Xd131_composition_Zf115",
+      "type": "composition",
+      "source": "f43.ts.Xd131",
+      "target": "Zf115"
+    },
+    {
+      "id": "f43.ts.Xd131_dependency_Jw214",
+      "type": "dependency",
+      "source": "f43.ts.Xd131",
+      "target": "Jw214"
+    },
+    {
+      "id": "f43.ts.Xd131_dependency_Vw210",
+      "type": "dependency",
+      "source": "f43.ts.Xd131",
+      "target": "Vw210"
+    },
+    {
+      "id": "f43.ts.Xd131_dependency_Yf221",
+      "type": "dependency",
+      "source": "f43.ts.Xd131",
+      "target": "Yf221"
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d7",
+  "metrics": {
+    "level": "method",
+    "entityCount": 17,
+    "relationCount": 44,
+    "relationTypeBreakdown": {
+      "dependency": 29,
+      "inheritance": 6,
+      "composition": 9
+    },
+    "stronglyConnectedComponents": 17,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "f31.ts",
+        "loc": 162,
+        "entityCount": 1,
+        "methodCount": 8,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f32.ts",
+        "loc": 12,
+        "entityCount": 1,
+        "methodCount": 1,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f33.ts",
+        "loc": 144,
+        "entityCount": 1,
+        "methodCount": 12,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f34.ts",
+        "loc": 46,
+        "entityCount": 1,
+        "methodCount": 3,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f35.ts",
+        "loc": 7,
+        "entityCount": 1,
+        "methodCount": 1,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f36.ts",
+        "loc": 59,
+        "entityCount": 1,
+        "methodCount": 2,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f38.ts",
+        "loc": 91,
+        "entityCount": 1,
+        "methodCount": 8,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f39.ts",
+        "loc": 197,
+        "entityCount": 1,
+        "methodCount": 7,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f40.ts",
+        "loc": 206,
+        "entityCount": 6,
+        "methodCount": 9,
+        "fieldCount": 24,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f41.ts",
+        "loc": 25,
+        "entityCount": 1,
+        "methodCount": 2,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f42.ts",
+        "loc": 263,
+        "entityCount": 1,
+        "methodCount": 9,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f43.ts",
+        "loc": 209,
+        "entityCount": 1,
+        "methodCount": 8,
+        "fieldCount": 7,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 17,
+    "totalRelations": 44,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "dependency": 29,
+      "inheritance": 6,
+      "composition": 9
+    },
+    "maxInDegree": 0,
+    "maxOutDegree": 0,
+    "maxPackageSize": 13,
+    "giniInDegree": 0,
+    "giniPackageSize": 0,
+    "packageCount": 1,
+    "entityCoverageRatio": null
+  }
+}

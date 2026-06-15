@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:37.553Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d10/f56.ts"
+  ],
+  "entities": [
+    {
+      "id": "f56.ts.Ix226",
+      "name": "Ix226",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p102",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string[]>",
+          "isReadonly": false
+        },
+        {
+          "name": "p593",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f56.ts",
+        "startLine": 4,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "f56.ts.Kx227",
+      "name": "Kx227",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v1493",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f56.ts",
+        "startLine": 8,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "f56.ts.Zv228",
+      "name": "Zv228",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v1497",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f56.ts",
+        "startLine": 20,
+        "endLine": 44
+      }
+    }
+  ],
+  "relations": [],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d10",
+  "metrics": {
+    "level": "method",
+    "entityCount": 3,
+    "relationCount": 0,
+    "relationTypeBreakdown": {},
+    "stronglyConnectedComponents": 3,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "f56.ts",
+        "loc": 44,
+        "entityCount": 3,
+        "methodCount": 0,
+        "fieldCount": 4,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 3,
+    "totalRelations": 0,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {},
+    "maxInDegree": 0,
+    "maxOutDegree": 0,
+    "maxPackageSize": 1,
+    "giniInDegree": 0,
+    "giniPackageSize": 0,
+    "packageCount": 1,
+    "entityCoverageRatio": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "obf-highest-in-degree-1",
+  "taskClass": "A",
+  "module": "obf",
+  "level": "L1",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "obf-highest-in-degree-1__L1__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": \"d8\"}",
+  "promptTokens": 1128,
+  "completionTokens": 6,
+  "invalidated": false,
+  "timestamp": "2026-06-11T08:25:44.850Z"
+}

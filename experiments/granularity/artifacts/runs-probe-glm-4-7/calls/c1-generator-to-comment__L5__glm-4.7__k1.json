@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-generator-to-comment",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "c1-generator-to-comment__L5__glm-4.7__k1",
+  "content": "```json\n[\"CommentGenerator.generateAll\", \"CommentGenerator.generateVisibleTitle\"]\n```",
+  "promptTokens": 44001,
+  "completionTokens": 17,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:34:40.929Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-inheritance-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-inheritance-count__L5__claude-sonnet-4-6__k1",
+  "content": "I need to count all `inheritance` and `implementation` relations defined in the code.\n\nLooking through the codebase, relations are defined in the `RelationExtractor` and other places. The actual relation *instances* extracted depend on runtime parsing, but I need to count statically defined/hardcoded relations.\n\nThe code doesn't contain hardcoded relation arrays — it extracts relations dynamically from parsed TypeScript. However, I can count the inheritance/implementation relationships *implied by the class definitions in the code itself*:\n\n1. `MermaidAutoRepair` — no extends/implements\n2. `CommentGenerator` — none\n3. `CppPackageFlowchartGenerator` — none\n4. `MermaidDiagramGenerator` — none\n5. `ValidatedMermaidGenerator` — none\n6. `HeuristicGrouper` — none\n7. `MermaidValidationPipeline` — none\n8. `MermaidParseValidator` — none\n9. `QualityValidator` — none\n10. `RenderValidator` — none\n11. `StructuralValidator` — none\n12. `IsomorphicMermaidRenderer` — none\n13. `MermaidRenderWorkerPool` — none\n14. `TestCoverageRenderer` — none\n15. `ArchJSONAggregator` — none\n16. `MetricsCalculator` — none\n17. `ParallelParser extends EventEmitter` — **inheritance** (1)\n18. `ParseCache` — none\n19. `BaseExtractor` — none\n20. `ClassExtractor extends BaseExtractor` — **inheritance** (2)\n21. `EnumExtractor extends BaseExtractor` — **inheritance** (3)\n22. `InterfaceExtractor extends BaseExtractor` — **inheritance** (4)\n23. `RelationExtractor extends BaseExtractor` — **inheritance** (5)\n24. `TypeScriptParser` — none\n25. `NoopProgressReporter implements IProgressReporter` — **implementation** (6)\n\n{\"answer\": 6}",
+  "promptTokens": 46742,
+  "completionTokens": 506,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:40:09.542Z"
+}

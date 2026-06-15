@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-relation-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-a-dominant-relation-type__L1__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\"answer\":\"dependency\"}",
+  "promptTokens": 356,
+  "completionTokens": 283,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:35:49.355Z"
+}

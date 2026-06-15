@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-entity-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-a-dominant-entity-type__L5__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\n  \"answer\": \"class\"\n}",
+  "promptTokens": 46275,
+  "completionTokens": 248,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:43:43.629Z"
+}

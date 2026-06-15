@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-autorepair-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "c1-autorepair-to-validator__L3__glm-4.5-airx__k3",
+  "content": "```json\n{\"answer\": [\"MermaidAutoRepair.repair\", \"MermaidAutoRepair.repairBestEffort\"]}\n```",
+  "promptTokens": 35012,
+  "completionTokens": 231,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:41:11.161Z"
+}

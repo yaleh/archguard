@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-inheritance-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-inheritance-count__L2__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": 29}",
+  "promptTokens": 21338,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:44:58.086Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "c2-most-called-elationextractor__L3__deepseek-v4-flash__k4",
+  "content": "{\"answer\": \"RelationExtractor.extract\"}",
+  "promptTokens": 36450,
+  "completionTokens": 1556,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:34.518Z"
+}

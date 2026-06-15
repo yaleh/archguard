@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-cli",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-a-package-size-cli__L1__glm-4.7__k1",
+  "content": "```json\n{\"answer\": 1}\n```",
+  "promptTokens": 314,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:35.841Z"
+}

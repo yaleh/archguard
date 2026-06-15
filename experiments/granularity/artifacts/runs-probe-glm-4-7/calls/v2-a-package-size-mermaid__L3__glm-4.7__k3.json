@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-mermaid",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-a-package-size-mermaid__L3__glm-4.7__k3",
+  "content": "```json\n{\n  \"answer\": 0\n}\n```",
+  "promptTokens": 34994,
+  "completionTokens": 13,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:32:39.088Z"
+}

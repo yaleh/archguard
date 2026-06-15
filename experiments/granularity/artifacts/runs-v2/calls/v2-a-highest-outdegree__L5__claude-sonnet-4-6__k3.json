@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-highest-outdegree__L5__claude-sonnet-4-6__k3",
+  "content": "I'll analyze the code to find outgoing dependencies (relations where an entity is the source).\n\nLooking at the `RelationExtractor` and `TypeScriptParser`, relations are extracted via `addRelation` calls where the first named entity is the source.\n\nLet me count outgoing dependencies for the major classes:\n\n**TypeScriptParser** — uses/instantiates:\n1. ClassExtractor\n2. InterfaceExtractor\n3. EnumExtractor\n4. RelationExtractor\n5. FunctionExtractor\n6. Project (ts-morph)\n\n**MermaidDiagramGenerator** — uses:\n1. HeuristicGrouper\n2. ValidatedMermaidGenerator\n3. MermaidValidationPipeline\n4. IsomorphicMermaidRenderer\n5. MermaidAutoRepair\n6. NoopProgressReporter\n7. IProgressReporter\n\n**ValidatedMermaidGenerator** — uses:\n1. CommentGenerator\n2. HeuristicGrouper (via groupEntitiesByPackage)\n3. EntityTypeRegistry\n4. PackageGroup\n5. GroupingDecision\n\n**MermaidValidationPipeline** — uses:\n1. MermaidParseValidator\n2. StructuralValidator\n3. RenderValidator\n4. QualityValidator\n\n**IsomorphicMermaidRenderer** — uses:\n1. sharp\n2. fs-extra\n3. mermaid\n4. inlineEdgeStyles (post-process-svg)\n\n**TypeScriptParser** instantiates 5 extractors + Project, and in `parseProject` also uses `findTsConfigPath`, `loadPathAliases`, making it the highest with direct composition/dependency relations to at least 7 distinct entities.\n\n**MermaidDiagramGenerator** references 7 distinct imported classes/interfaces it directly instantiates or calls.\n\nBoth are close, but `MermaidDiagramGenerator` has 7 clear outgoing dependency targets from its imports and instantiations.\n\n```json\n{\"answer\": \"MermaidDiagramGenerator\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 484,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:57:18.191Z"
+}

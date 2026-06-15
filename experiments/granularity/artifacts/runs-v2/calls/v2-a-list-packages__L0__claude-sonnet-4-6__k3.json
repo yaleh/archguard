@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L0",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-list-packages__L0__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"mermaid\", \"parser\"]}",
+  "promptTokens": 789,
+  "completionTokens": 12,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:06:48.484Z"
+}

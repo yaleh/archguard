@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c2-most-called-elationextractor__L3__claude-sonnet-4-6__k3",
+  "content": "I need to analyze the call graph and class diagram to find which `RelationExtractor` method is called most by external callers.\n\nLooking at the class diagram, `RelationExtractor` has these public methods:\n- `extract(code: string, filePath?: string): Array`\n- `extractFromSourceFile(sourceFile: SourceFile): Array`\n\nThe call graph shown is truncated at 375 edges with only ~50 shown. From the class diagram relationships:\n\n- `TypeScriptParser *-- RelationExtractor` (composition - TypeScriptParser owns RelationExtractor)\n\nThe call graph excerpt doesn't explicitly show calls to `RelationExtractor` methods. However, from the structural relationships:\n\n- `TypeScriptParser` composes `RelationExtractor` and would call its methods internally\n- `RelationExtractor --> Relation` shows it produces relations\n\nLooking at the class diagram, `TypeScriptParser` is the primary external consumer of `RelationExtractor`. The `extract` method takes `code` and `filePath` (matching TypeScriptParser's `parseCode` pattern), while `extractFromSourceFile` takes a `SourceFile` object (matching TypeScriptParser's `ts-morph` Project-based parsing).\n\nGiven that `TypeScriptParser` has both `parseCode` and `parseProject` methods that would need relation extraction, and `extractFromSourceFile` is the more direct integration point when working with `ts-morph` SourceFile objects (which `TypeScriptParser` uses via its `project` field), `extractFromSourceFile` is the method called by the external class.\n\nSince only one external class (`TypeScriptParser`) is shown calling `RelationExtractor`, and both methods could be called once, the answer hinges on which is used more. `extractFromSourceFile` is the primary method for project-level parsing (called per file in a project), making it the most frequently called.\n\n```json\n{\"answer\": \"RelationExtractor.extractFromSourceFile\"}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 559,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:56.085Z"
+}

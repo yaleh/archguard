@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-enum",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.5-airx",
+  "k": 2,
+  "key": "c1-ts-to-enum__L2__glm-4.5-airx__k2",
+  "content": "```json\n{\"answer\": []}\n```",
+  "promptTokens": 21688,
+  "completionTokens": 300,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:58:13.355Z"
+}

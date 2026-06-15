@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaidautorepair-repair",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-b-callees-mermaidautorepair-repair__L4__deepseek-v4-flash__k2",
+  "content": "{\"answer\": [\"MermaidAutoRepair.addDiagramDeclaration\", \"MermaidAutoRepair.fixGenericTypes\", \"MermaidAutoRepair.flattenNestedNamespaces\", \"MermaidAutoRepair.extractNamespaceRelations\", \"MermaidAutoRepair.fixTrailingCommas\", \"MermaidAutoRepair.normalizeWhitespace\", \"MermaidParseValidator.validate\", \"MermaidAutoRepair.attemptAdvancedRepairs\"]}",
+  "promptTokens": 62852,
+  "completionTokens": 802,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:43:07.070Z"
+}

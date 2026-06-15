@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "c2-most-called-elationextractor__L5__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n \"answer\": \"RelationExtractor.extractFromSourceFile\"\n}",
+  "promptTokens": 46286,
+  "completionTokens": 834,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:32:11.877Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-validatedmermaidgenerator-generatepac",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "v2-b-callees-validatedmermaidgenerator-generatepac__L4__deepseek-v4-flash__k5",
+  "content": "{\"answer\": [\"mermaid/generator.ts#ValidatedMermaidGenerator.getArchitecturalLayers\", \"mermaid/generator.ts#ValidatedMermaidGenerator.generateLayeredPackageLevel\", \"mermaid/generator-grouping.ts#groupEntitiesByPackage\", \"mermaid/generator.ts#ValidatedMermaidGenerator.escapeId\", \"mermaid/generator.ts#ValidatedMermaidGenerator.normalizeEntityName\", \"mermaid/generator.ts#ValidatedMermaidGenerator.generateRelations\"]}",
+  "promptTokens": 62853,
+  "completionTokens": 821,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:10:27.411Z"
+}

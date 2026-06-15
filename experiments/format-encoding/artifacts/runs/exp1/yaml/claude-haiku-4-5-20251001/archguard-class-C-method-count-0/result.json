@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\"answer\": 5}\n```",
+    "```json\n{\"answer\": 5}\n```\n\nLooking at the entity `src/mermaid/progress.ts.iprogressreporter`, it's an interface with the following methods:\n1. `fail`\n2. `info`\n3. `start`\n4. `succeed`\n5. `warn`",
+    "```json\n{\"answer\": 5}\n```\n\nThe entity `src/mermaid/progress.ts.iprogressreporter` is an interface with 5 methods:\n1. fail\n2. info\n3. start\n4. succeed\n5. warn",
+    "```json\n{\"answer\": 5}\n```\n\nThe `IProgressReporter` interface defined in `src/mermaid/progress.ts` has 5 methods:\n1. `fail`\n2. `info`\n3. `start`\n4. `succeed`\n5. `warn`",
+    "```json\n{\"answer\": 5}\n```\n\nThe `IProgressReporter` interface located at `src/mermaid/progress.ts.iprogressreporter` has 5 methods:\n1. `fail`\n2. `info`\n3. `start`\n4. `succeed`\n5. `warn`"
+  ],
+  "promptTokens": 231270,
+  "completionTokens": 270
+}

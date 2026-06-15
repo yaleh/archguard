@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "v2-a-list-packages__L4__deepseek-v4-flash__k3",
+  "content": "{\"answer\": [\"analysis\", \"cli\", \"core\", \"mermaid\", \"parser\", \"plugins\", \"types\", \"utils\"]}",
+  "promptTokens": 62851,
+  "completionTokens": 534,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:05:35.200Z"
+}

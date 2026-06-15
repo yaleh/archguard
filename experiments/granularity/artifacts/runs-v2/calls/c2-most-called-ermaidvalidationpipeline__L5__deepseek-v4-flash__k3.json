@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "c2-most-called-ermaidvalidationpipeline__L5__deepseek-v4-flash__k3",
+  "content": "{\"answer\": \"MermaidValidationPipeline.validateFull\"}",
+  "promptTokens": 46680,
+  "completionTokens": 377,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:31:11.001Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-relation-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-dominant-relation-type__L5__claude-sonnet-4-6__k2",
+  "content": "{\"answer\": \"dependency\"}",
+  "promptTokens": 46749,
+  "completionTokens": 9,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:23:59.528Z"
+}

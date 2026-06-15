@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-render",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "c1-pipeline-to-render__L3__claude-sonnet-4-6__k2",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has these validator fields: `parseValidator`, `structuralValidator`, `renderValidator`, `qualityValidator`.\n\nThe `validate` and `validateFull` methods are the ones that orchestrate the pipeline, and the `calculateOverall` private method processes results. The class diagram shows `MermaidValidationPipeline` --> `RenderValidator` as a dependency.\n\nFrom the class definition, the `validate` and `validateFull` methods would call `renderValidator.validate()` as part of the pipeline. The `calculateOverall` method processes results but doesn't call validators directly.\n\nThe call graph excerpt provided doesn't include the internal calls of `MermaidValidationPipeline`, so I need to rely on the class structure. Both `validate` and `validateFull` are the pipeline execution methods that would invoke all four validators including `RenderValidator.validate`.\n\n```json\n{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}\n```",
+  "promptTokens": 35371,
+  "completionTokens": 318,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:47:37.549Z"
+}

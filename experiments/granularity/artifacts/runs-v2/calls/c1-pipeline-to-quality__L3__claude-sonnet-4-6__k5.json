@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-quality",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c1-pipeline-to-quality__L3__claude-sonnet-4-6__k5",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a `*--` composition relationship with `QualityValidator`, and its `validate` and `validateFull` methods are the ones that would orchestrate the pipeline. The call graph snippet shown doesn't include edges for `MermaidValidationPipeline` calling `QualityValidator` methods directly, but the class definition shows `MermaidValidationPipeline` holds a `qualityValidator` field and exposes `validate` and `validateFull` methods.\n\nThe call graph is truncated at \"325 more call edges\" so I cannot confirm specific edges. Based solely on what is explicitly represented in the provided call graph edges, there are no `MermaidValidationPipeline` → `QualityValidator` edges shown.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35371,
+  "completionTokens": 247,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:19:14.730Z"
+}

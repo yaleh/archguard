@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-interface",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-ts-to-interface__L4__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"TypeScriptParser.constructor\", \"TypeScriptParser.parseCode\", \"TypeScriptParser.parseProject\"]}",
+  "promptTokens": 58825,
+  "completionTokens": 40,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:38:03.780Z"
+}

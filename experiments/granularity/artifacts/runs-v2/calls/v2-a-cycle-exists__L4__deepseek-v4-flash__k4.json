@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-cycle-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-a-cycle-exists__L4__deepseek-v4-flash__k4",
+  "content": "{\"answer\": \"no\"}",
+  "promptTokens": 62850,
+  "completionTokens": 1579,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:54:34.267Z"
+}

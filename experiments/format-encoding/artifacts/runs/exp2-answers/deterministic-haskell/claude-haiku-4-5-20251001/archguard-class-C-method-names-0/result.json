@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```",
+    "Looking at the architecture description for `src/plugins/golang/atlas/renderers/mermaid-templates.ts.mermaidtemplates`:\n\n```\n-- | id: src/plugins/golang/atlas/renderers/mermaid-templates.ts.mermaidtemplates\n-- | name: MermaidTemplates\n-- | source: src/plugins/golang/atlas/renderers/mermaid-templates.ts\ndata MermaidTemplates :: class = MermaidTemplates\n  { _method_computePackageEdgeTiers :: (strengths:number_arr) -> Map<number_number>\n  { _method_renderCapabilityGraph :: (graph:CapabilityGraph) -> string\n  { _method_renderFlowGraph :: (graph:FlowGraph, format:string) -> string\n  { _method_renderGoroutineTopology :: (topology:GoroutineTopology) -> string\n  { _method_renderPackageGraph :: (graph:PackageGraph) -> string\n  , _rel_dependency :: [\"flowchart\"]\n  }\n```\n\n```json\n{\n  \"answer\": [\n    \"computePackageEdgeTiers\",\n    \"renderCapabilityGraph\",\n    \"renderFlowGraph\",\n    \"renderGoroutineTopology\",\n    \"renderPackageGraph\"\n  ]\n}\n```"
+  ],
+  "promptTokens": 188900,
+  "completionTokens": 551
+}

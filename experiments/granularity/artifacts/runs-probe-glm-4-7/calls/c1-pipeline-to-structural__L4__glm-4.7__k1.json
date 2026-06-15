@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-structural",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "c1-pipeline-to-structural__L4__glm-4.7__k1",
+  "content": "```json\n[\n  \"MermaidValidationPipeline.validate\",\n  \"MermaidValidationPipeline.validateFull\"\n]\n```",
+  "promptTokens": 57916,
+  "completionTokens": 23,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:42:43.252Z"
+}

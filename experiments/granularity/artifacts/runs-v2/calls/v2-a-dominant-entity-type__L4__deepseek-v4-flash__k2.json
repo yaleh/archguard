@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-entity-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-a-dominant-entity-type__L4__deepseek-v4-flash__k2",
+  "content": "{\"answer\": \"interface\"}",
+  "promptTokens": 62843,
+  "completionTokens": 6115,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:46:20.779Z"
+}

@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-C-return-type-0",
+    "taskClass": "C",
+    "taskType": "return-type",
+    "prompt": "Based only on the representation above: what is the return type of method \"merge\" in entity \"src/plugins/cpp/builders/header-merger.ts.headermerger\"? Respond with JSON: {\"answer\": \"type\"}.",
+    "answerType": "exact",
+    "answer": "MergedCppEntity_arr"
+  },
+  "format": "json-edge-list",
+  "model": "claude-haiku-4-5-20251001"
+}

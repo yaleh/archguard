@@ -1,0 +1,14 @@
+{
+  "taskId": "obf-signature-change-impact-4",
+  "taskClass": "B",
+  "module": "obf",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "obf-signature-change-impact-4__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"Hs51.m125\", \"Hs51.m131\", \"Hs51.m132\", \"Hs51.m133\", \"Hs51.m134\", \"Hs51.m138\", \"Hs51.m148\"]}",
+  "promptTokens": 61291,
+  "completionTokens": 1051,
+  "invalidated": false,
+  "timestamp": "2026-06-11T08:43:19.006Z"
+}

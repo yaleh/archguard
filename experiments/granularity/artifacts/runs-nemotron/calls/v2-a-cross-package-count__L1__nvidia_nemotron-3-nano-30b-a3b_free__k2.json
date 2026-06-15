@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-cross-package-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 2,
+  "key": "v2-a-cross-package-count__L1__nvidia_nemotron-3-nano-30b-a3b_free__k2",
+  "content": "{\"answer\":1}",
+  "promptTokens": 354,
+  "completionTokens": 235,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:56:12.074Z"
+}

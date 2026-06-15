@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L3__claude-sonnet-4-6__k1",
+  "content": "{\"answer\": [\"ArchJSON\", \"DiagramConfig\", \"GoRawData\"]}",
+  "promptTokens": 35364,
+  "completionTokens": 20,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:49:22.759Z"
+}

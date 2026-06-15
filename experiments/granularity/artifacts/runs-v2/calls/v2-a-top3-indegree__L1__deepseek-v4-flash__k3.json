@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L1__deepseek-v4-flash__k3",
+  "content": "{\"answer\": [\"analysis\", \"cli\", \"legend_internal\"]}",
+  "promptTokens": 338,
+  "completionTokens": 1792,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:56.723Z"
+}

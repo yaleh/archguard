@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-top3-indegree__L2__claude-sonnet-4-6__k4",
+  "content": "I'll analyze the class diagrams to count incoming dependencies (arrows pointing TO each entity) across all diagrams.\n\nLet me tally the most referenced targets:\n\n**ArchJSON** - referenced as target in:\n- ArchJSONAggregator → ArchJSON (multiple)\n- ParallelParser → ArchJSON\n- ParseCache → ArchJSON (multiple)\n- TypeScriptParser → ArchJSON\n- GoPlugin → ArchJSON\n- JavaPlugin → ArchJSON\n- TypeScriptPlugin → ArchJSON (multiple diagrams, multiple times)\n- CppPackageFlowchartGenerator → ArchJSON\n- IParser → ArchJSON\n- MetricsCalculator → ArchJSON\n- QueryEngine *-- ArchJSON\n- QueryEngineOptions: archJson field\n- TestCoverageRenderer → ArchJSON\n= ~15+ references\n\n**Entity** - referenced as target in:\n- ArchJSONAggregator → Entity\n- ClassExtractor → Entity\n- EnumExtractor → Entity\n- FunctionExtractor → Entity\n- InterfaceExtractor → Entity\n- ArchJsonMapper (Go) → Entity\n- ArchJsonMapper (Java) → Entity\n- QueryEngine *-- Entity, → Entity\n- TypeScriptAnalyzer → Entity (×2 diagrams)\n= ~12+ references\n\n**TestAnalysis** - referenced as target in:\n- CacheManager → TestAnalysis\n- TestCoverageRenderer → TestAnalysis\n- TestOutputWriter → TestAnalysis\n- TypeScriptPlugin → (via TestPatternConfig chain)\n- ArchJSONExtensions contains testAnalysis\n= ~5+ references\n\n**ParseConfig** - referenced in GoPlugin, JavaPlugin, TypeScriptPlugin (multiple diagrams), IParser = ~6\n\n**PluginInitConfig** - referenced in GoPlugin, JavaPlugin, TypeScriptPlugin (multiple diagrams) = ~5\n\nRanking: ArchJSON >> Entity >> ParseConfig/TestAnalysis\n\n```json\n{\"answer\": [\"ArchJSON\", \"Entity\", \"ParseConfig\"]}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 496,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:17.284Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-pipeline-to-validator__L2__claude-sonnet-4-6__k4",
+  "content": "Looking at the `MermaidValidationPipeline` class definition, it has a method `getParseValidator()` that returns a `MermaidParseValidator`, and the class holds a reference to one (as seen in the constructor taking `MermaidAutoRepair` which uses a `MermaidParseValidator`).\n\nThe diagram shows `MermaidValidationPipeline` has:\n- `validate(mermaidCode, archJson)`\n- `validateFull(mermaidCode, archJson)`\n- `getParseValidator()`\n- `generateReport(result)`\n- `summarize(result)`\n\nAnd `MermaidAutoRepair` takes a `MermaidParseValidator` in its constructor. But the diagram does not show any direct dependency arrow from `MermaidValidationPipeline` to `MermaidParseValidator` — only that `getParseValidator()` returns one.\n\nThe class diagram does not include method body details or call graphs, only signatures. There is no explicit relationship arrow between `MermaidValidationPipeline` and `MermaidParseValidator` shown in the diagram.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 21363,
+  "completionTokens": 300,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:44:32.751Z"
+}

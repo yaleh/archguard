@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\"answer\": 1090}\n```",
+    "```json\n{\"answer\": 1047}\n```\n\nI counted all entries in the \"entities\" array of the provided architecture description.",
+    "```json\n{\"answer\": 1024}\n```",
+    "```json\n{\"answer\": 1019}\n```",
+    "```json\n{\n  \"answer\": 1018\n}\n```"
+  ],
+  "promptTokens": 328985,
+  "completionTokens": 85
+}

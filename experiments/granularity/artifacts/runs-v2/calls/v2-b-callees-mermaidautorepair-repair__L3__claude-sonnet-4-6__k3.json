@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-mermaidautorepair-repair",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-b-callees-mermaidautorepair-repair__L3__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"MermaidAutoRepair.addDiagramDeclaration\", \"MermaidAutoRepair.fixGenericTypes\", \"MermaidAutoRepair.flattenNestedNamespaces\", \"MermaidAutoRepair.extractNamespaceRelations\", \"MermaidAutoRepair.fixTrailingCommas\", \"MermaidAutoRepair.normalizeWhitespace\", \"MermaidParseValidator.validate\", \"MermaidAutoRepair.attemptAdvancedRepairs\"]}",
+  "promptTokens": 35359,
+  "completionTokens": 128,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:43:07.069Z"
+}

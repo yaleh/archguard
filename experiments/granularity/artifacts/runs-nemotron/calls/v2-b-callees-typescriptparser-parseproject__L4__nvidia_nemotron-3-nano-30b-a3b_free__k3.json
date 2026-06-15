@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-b-callees-typescriptparser-parseproject__L4__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n  \"answer\": [\n    \"InterfaceExtractor.extractInterface\",\n    \"EnumExtractor.extractEnum\",\n    \"FunctionExtractor.extract\",\n    \"RelationExtractor.extractFromSourceFile\",\n    \"TypeScriptParser.toRelPath\",\n    \"TypeScriptParser.qualifyRelations\",\n    \"TypeScriptParser.filterExternalRelations\",\n    \"TypeScriptParser.deduplicateRelations\"\n  ]\n}",
+  "promptTokens": 61498,
+  "completionTokens": 1303,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:49:21.341Z"
+}

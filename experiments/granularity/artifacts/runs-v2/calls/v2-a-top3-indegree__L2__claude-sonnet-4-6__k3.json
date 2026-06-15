@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L2__claude-sonnet-4-6__k3",
+  "content": "I need to count incoming dependencies (arrows pointing TO each entity) across all the diagrams.\n\nLet me tally the targets of all relationship lines:\n\n**ArchJSON** - referenced as target in:\n- ArchJSONAggregator --> ArchJSON\n- ParallelParser --> ArchJSON\n- ParseCache *-- ArchJSON, ParseCache --> ArchJSON\n- TypeScriptParser --> ArchJSON\n- GoPlugin --> ArchJSON\n- JavaPlugin --> ArchJSON\n- TypeScriptPlugin --> ArchJSON (multiple namespaces, ~4 times)\n- IParser parseCode returns ArchJSON\n- CppPackageFlowchartGenerator --> ArchJSON\n- TestCoverageRenderer --> ArchJSON\n- CacheManager --> TestAnalysis (not ArchJSON)\n\n**TestAnalysis** - referenced as target in:\n- CacheManager --> TestAnalysis\n- TestCoverageRenderer --> TestAnalysis\n- TestOutputWriter --> TestAnalysis\n\n**Entity** - referenced as target in:\n- ArchJSONAggregator --> Entity\n- ClassExtractor --> Entity\n- EnumExtractor --> Entity\n- FunctionExtractor --> Entity\n- InterfaceExtractor --> Entity\n- ArchJsonMapper (Go) --> Entity\n- ArchJsonMapper (Java) --> Entity\n- QueryEngine *-- Entity, QueryEngine --> Entity\n- TypeScriptAnalyzer --> Entity (×2 namespaces)\n\n**ParseConfig** - referenced in:\n- GoPlugin --> ParseConfig\n- JavaPlugin --> ParseConfig\n- TypeScriptPlugin --> ParseConfig (×2)\n\n**PluginMetadata** - referenced in:\n- GoPlugin *-- PluginMetadata\n- JavaPlugin *-- PluginMetadata\n- TypeScriptPlugin *-- PluginMetadata (×2)\n\n**TsAnalysis** - referenced in:\n- TypeScriptAnalyzer --> TsAnalysis (×2)\n\nCounting the clearest leaders:\n- **ArchJSON**: ~10+ incoming\n- **Entity**: ~10+ incoming\n- **TestAnalysis**: ~3-4 incoming\n- **ParseConfig**: ~4 incoming\n- **PluginMetadata**: ~4 incoming\n\n```json\n{\"answer\": [\"ArchJSON\", \"Entity\", \"TestAnalysis\"]}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 516,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:05.593Z"
+}

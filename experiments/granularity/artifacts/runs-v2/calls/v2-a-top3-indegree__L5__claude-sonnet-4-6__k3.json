@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L5__claude-sonnet-4-6__k3",
+  "content": "I need to analyze the code to find which entities (classes/functions) have the most incoming dependencies — meaning other entities that depend on them.\n\nLet me trace the imports and usages:\n\n**MermaidParseValidator** — used by:\n1. `MermaidAutoRepair` (constructor parameter)\n2. `MermaidValidationPipeline` (instantiated in constructor)\n3. `MermaidDiagramGenerator` (via pipeline.getParseValidator())\n\n**ValidatedMermaidGenerator** — used by:\n1. `MermaidDiagramGenerator` (instantiated in generateOnly)\n2. exported from index\n\n**MermaidValidationPipeline** — used by:\n1. `MermaidDiagramGenerator` (instantiated in generateOnly)\n\n**IsomorphicMermaidRenderer** — used by:\n1. `MermaidDiagramGenerator.renderJobsInParallel`\n2. `MermaidDiagramGenerator.generateAndRender`\n3. `MermaidDiagramGenerator.renderJobsInParallelWithConfig`\n\n**CommentGenerator** — used by:\n1. `ValidatedMermaidGenerator` (instantiated in constructor)\n\n**HeuristicGrouper** — used by:\n1. `MermaidDiagramGenerator` (instantiated in generateOnly)\n\n**groupEntitiesByPackage** — used by:\n1. `ValidatedMermaidGenerator.generatePackageLevel`\n2. `ValidatedMermaidGenerator.generateClassLevel`\n3. `ValidatedMermaidGenerator.generateMethodLevel`\n4. `ValidatedMermaidGenerator.generateClassDiagrams`\n\n**validateGeneratorInput** — used by:\n1. `ValidatedMermaidGenerator.generate`\n\n**IsomorphicMermaidRenderer** has 3 incoming usages, **groupEntitiesByPackage** has 4, **MermaidParseValidator** has 3, **ValidatedMermaidGenerator** has 2.\n\nTop by in-degree:\n1. `groupEntitiesByPackage` — 4\n2. `IsomorphicMermaidRenderer` — 3\n3. `MermaidParseValidator` — 3\n\n```json\n{\"answer\": [\"groupEntitiesByPackage\", \"IsomorphicMermaidRenderer\", \"MermaidParseValidator\"]}\n```",
+  "promptTokens": 46758,
+  "completionTokens": 525,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:44:47.691Z"
+}

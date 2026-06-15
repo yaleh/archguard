@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-inheritance-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-a-inheritance-count__L1__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\"answer\":1}",
+  "promptTokens": 345,
+  "completionTokens": 335,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:12:03.549Z"
+}

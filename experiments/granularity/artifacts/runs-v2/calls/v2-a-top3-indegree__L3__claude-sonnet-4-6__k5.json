@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-top3-indegree__L3__claude-sonnet-4-6__k5",
+  "content": "Looking at the dependency relationships in the class diagram, I need to count incoming arrows (dependencies pointing TO each entity).\n\nCounting the most referenced entities across all `-->` and `*--` relationships:\n\n- `ArchJSON` is referenced as a target extremely frequently — by `TestAnalyzer`, `TestCoverageMapper`, `ArchJsonDiskCache`, `CacheManager`, `ArchJsonProvider`, `DiagramOutputRouter`, `DiagramPipelineRunner`, `DiagramProcessor`, `CppPlugin`, `GoPlugin`, `JavaPlugin`, `PythonPlugin`, `TypeScriptPlugin`, `ParallelParser`, `ParseCache`, `TypeScriptParser`, `ArchJSONAggregator`, `MetricsCalculator`, `MermaidDiagramGenerator`, `ValidatedMermaidGenerator`, `CppPackageFlowchartGenerator`, `TestCoverageRenderer`, `MermaidValidationPipeline`, `StructuralValidator`, `QualityValidator`, `QueryEngine`, `ArchJsonMapper` (multiple), and more.\n\n- `DiagramConfig` is referenced by `TestAnalyzer`, `ArchJsonProvider`, `DiagramOutputRouter`, `DiagramPipelineRunner`, `DiagramProcessor`, `WorkerPoolFactory`, `CommentGenerator`, `MermaidDiagramGenerator`, `ValidatedMermaidGenerator`, `CppPlugin`, `GoPlugin`, etc.\n\n- `Entity` is referenced by `ArchJSONAggregator`, `ClassExtractor`, `EnumExtractor`, `FunctionExtractor`, `InterfaceExtractor`, `TypeScriptParser`, `QueryEngine`, `ValidatedMermaidGenerator`, `ArchJsonMapper` (multiple language layers), `ModuleGraphBuilder`, `TypeScriptAnalyzer`, `BaseArchJsonMapper`, `StructuralValidator`, `QualityValidator`, etc.\n\n```json\n{\"answer\": [\"ArchJSON\", \"DiagramConfig\", \"Entity\"]}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 461,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:49:42.444Z"
+}

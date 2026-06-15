@@ -1,0 +1,59 @@
+{
+  "generated": "2026-06-12T12:32:21.467Z",
+  "hInfoInstances": [
+    {
+      "armId": "rewrite-haskell",
+      "rewriteIdx": 0,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-haskell",
+      "rewriteIdx": 1,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-haskell",
+      "rewriteIdx": 2,
+      "hInfoTriggered": true,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-json",
+      "rewriteIdx": 0,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-json",
+      "rewriteIdx": 1,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-json",
+      "rewriteIdx": 2,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-clean-prose",
+      "rewriteIdx": 0,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-clean-prose",
+      "rewriteIdx": 1,
+      "hInfoTriggered": false,
+      "pass": false
+    },
+    {
+      "armId": "rewrite-clean-prose",
+      "rewriteIdx": 2,
+      "hInfoTriggered": false,
+      "pass": false
+    }
+  ]
+}

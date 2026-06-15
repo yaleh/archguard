@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-indegree-1",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-highest-indegree-1__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": \"ArchJSON\"}",
+  "promptTokens": 36440,
+  "completionTokens": 3237,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:25:26.235Z"
+}

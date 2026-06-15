@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-call-exists-mermaidautorepair-mermaidautorepa",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-b-call-exists-mermaidautorepair-mermaidautorepa__L3__deepseek-v4-flash__k1",
+  "content": "{\"answer\": \"yes\"}",
+  "promptTokens": 36456,
+  "completionTokens": 168,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:50:22.440Z"
+}

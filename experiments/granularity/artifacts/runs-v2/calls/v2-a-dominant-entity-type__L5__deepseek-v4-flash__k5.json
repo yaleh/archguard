@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-entity-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "v2-a-dominant-entity-type__L5__deepseek-v4-flash__k5",
+  "content": "{\"answer\": \"class\"}",
+  "promptTokens": 46670,
+  "completionTokens": 508,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:47:24.447Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-mermaid",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-package-size-mermaid__L5__claude-sonnet-4-6__k1",
+  "content": "I'll count the classes and interfaces defined in the `mermaid` package based on the code above.\n\nFrom the files shown, the `mermaid` package contains:\n\n1. `MermaidAutoRepair` (class)\n2. `CommentGenerator` (class)\n3. `CppPackageFlowchartGenerator` (class)\n4. `MermaidDiagramGenerator` (class)\n5. `ValidatedMermaidGenerator` (class)\n6. `HeuristicGrouper` (class)\n7. `MermaidValidationPipeline` (class)\n8. `MermaidParseValidator` (class)\n9. `QualityValidator` (class)\n10. `RenderValidator` (class)\n11. `StructuralValidator` (class)\n12. `IsomorphicMermaidRenderer` (class)\n13. `NoopProgressReporter` (class)\n14. `MermaidRenderWorkerPool` (class)\n15. `TestCoverageRenderer` (class)\n16. `IProgressReporter` (interface)\n17. `MermaidOutputOptions` (interface)\n18. `RenderJob` (interface) — in diagram-generator\n19. `WorkerInitData` (interface)\n20. `RenderResult` (interface)\n\n{\"answer\": 20}",
+  "promptTokens": 46743,
+  "completionTokens": 276,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:06:33.403Z"
+}

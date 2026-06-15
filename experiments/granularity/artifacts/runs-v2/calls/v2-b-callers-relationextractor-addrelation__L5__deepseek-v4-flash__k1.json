@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-relationextractor-addrelation",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-b-callers-relationextractor-addrelation__L5__deepseek-v4-flash__k1",
+  "content": "{\"answer\": [\"RelationExtractor.extractClassRelations\", \"RelationExtractor.extractInterfaceRelations\", \"RelationExtractor.extractFunctionRelations\"]}",
+  "promptTokens": 46676,
+  "completionTokens": 491,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:12:08.683Z"
+}

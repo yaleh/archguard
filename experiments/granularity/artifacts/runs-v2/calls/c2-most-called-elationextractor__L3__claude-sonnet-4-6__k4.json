@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c2-most-called-elationextractor__L3__claude-sonnet-4-6__k4",
+  "content": "Looking at the call graph and the class relationships in the diagram, I need to find external callers of `RelationExtractor` methods.\n\nFrom the composition/usage relationships, `TypeScriptParser` owns a `RelationExtractor` instance. The call graph edges shown are truncated at 375 edges with only ~50 visible, and none of the visible edges show calls into `RelationExtractor`.\n\nHowever, from the class diagram, `TypeScriptParser` uses `RelationExtractor` and the primary public methods are `extract` and `extractFromSourceFile`. Given that `TypeScriptParser` calls into `RelationExtractor` during its parsing pipeline, and `extract` is the standard entry point used by the parser (consistent with the pattern across all other extractor classes like `ClassExtractor.extract`, `EnumExtractor.extract`, etc.), `extract` is the method that external callers would invoke.\n\n```json\n{\"answer\": \"RelationExtractor.extract\"}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 287,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:56.085Z"
+}

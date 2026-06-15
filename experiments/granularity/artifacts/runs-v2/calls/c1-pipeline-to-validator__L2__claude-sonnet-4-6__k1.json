@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "c1-pipeline-to-validator__L2__claude-sonnet-4-6__k1",
+  "content": "Looking at the `MermaidValidationPipeline` class definition, I can see it has a `getParseValidator()` method that returns a `MermaidParseValidator`, and the class holds a reference to one (passed to `MermaidAutoRepair`'s constructor). However, the diagram only shows method signatures — it does not show method bodies or internal call chains.\n\nFrom the diagram, `validate` and `validateFull` are the pipeline methods that logically would invoke the parse validator, and `getParseValidator()` exposes it. But the diagram does not specify which methods of `MermaidValidationPipeline` internally call methods on `MermaidParseValidator` — that would require inspecting the implementation code.\n\nBased solely on what the diagram represents:\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 21363,
+  "completionTokens": 249,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:44:20.646Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ypescriptparser",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "c2-most-called-ypescriptparser__L5__deepseek-v4-flash__k5",
+  "content": "{\"answer\": \"TypeScriptParser.parseCode\"}",
+  "promptTokens": 46679,
+  "completionTokens": 816,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:09:30.494Z"
+}

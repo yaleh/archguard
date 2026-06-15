@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-a-top3-indegree__L5__glm-4.7__k3",
+  "content": "```json\n{\n  \"answer\": [\n    \"MermaidParseValidator\",\n    \"ValidationError\",\n    \"ArchJSON\"\n  ]\n}\n```",
+  "promptTokens": 43999,
+  "completionTokens": 29,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:41:18.967Z"
+}

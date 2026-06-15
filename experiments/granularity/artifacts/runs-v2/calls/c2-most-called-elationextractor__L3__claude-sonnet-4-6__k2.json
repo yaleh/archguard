@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "c2-most-called-elationextractor__L3__claude-sonnet-4-6__k2",
+  "content": "Looking at the call graph and relationship edges in the diagram, I need to find external callers of `RelationExtractor` methods.\n\nFrom the class diagram, `TypeScriptParser` composes `RelationExtractor` and would call its methods. The relationships show:\n\n- `RelationExtractor` has methods: `extract`, `extractFromSourceFile`, and several private methods\n- `TypeScriptParser *-- RelationExtractor` (composition)\n\nThe call graph provided is truncated at 375 edges with only ~50 shown. From the class relationships, `TypeScriptParser` uses `RelationExtractor` — and the public methods available for external callers are `extract` and `extractFromSourceFile`.\n\nBased on the class diagram, `TypeScriptParser` composes `RelationExtractor` and would call `extract` (the primary public method). The `extractFromSourceFile` method is also public and would be the natural entry point when working with already-parsed source files, which is the pattern TypeScript parsers use internally.\n\nGiven the architecture where `TypeScriptParser` works with `SourceFile` objects (ts-morph), `extractFromSourceFile` is the method that fits the internal workflow, but `extract` is the broader public API.\n\nFrom the visible relationships, only `TypeScriptParser` directly references `RelationExtractor` as a composition member, and it would call `extract` as the primary interface.\n\n```json\n{\"answer\": \"RelationExtractor.extract\"}\n```",
+  "promptTokens": 35364,
+  "completionTokens": 423,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:28:56.085Z"
+}

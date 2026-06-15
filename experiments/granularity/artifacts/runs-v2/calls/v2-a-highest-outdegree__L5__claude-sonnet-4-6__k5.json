@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-highest-outdegree__L5__claude-sonnet-4-6__k5",
+  "content": "I'll analyze the code to find which entity has the highest number of outgoing dependencies by examining relations defined through class inheritance, implementation, composition, aggregation, and dependency patterns.\n\nLet me count outgoing dependencies for the major classes:\n\n**ValidatedMermaidGenerator** — depends on: ArchJSON, DiagramConfig, MermaidGeneratorOptions, MermaidTheme, GroupingDecision, PackageGroup, MermaidDetailLevel, CommentGenerator, EntityTypeRegistry, Entity, Member, Relation, GrouperConfig... and calls groupEntitiesByPackage, validateGeneratorInput, escapeId, normalizeEntityName, sanitizeType, normalizeTypeName, isNoisyTarget, buildModulePrefixIndex, generateClassDefinition, generateRelationLine, generateMemberLine, generateRelations, postProcess, etc.\n\n**TypeScriptParser** — depends on: Project, ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor, FunctionExtractor, ArchJSON, Entity, Relation, findTsConfigPath, loadPathAliases\n\n**MermaidDiagramGenerator** — depends on: HeuristicGrouper, ValidatedMermaidGenerator, MermaidValidationPipeline, IsomorphicMermaidRenderer, MermaidAutoRepair, NoopProgressReporter, pMap, ArchJSON, GlobalConfig, DetailLevel, DiagramConfig, MermaidOutputOptions, RenderJob, IProgressReporter\n\n**IsomorphicMermaidRenderer** — depends on: mermaid, sharp, fs-extra, path, MermaidRendererOptions, MermaidOutputPaths, inlineEdgeStyles\n\n**MermaidValidationPipeline** — depends on: MermaidParseValidator, StructuralValidator, RenderValidator, QualityValidator, ArchJSON, ValidationPipelineResult\n\n**TypeScriptParser** has outgoing dependencies to: Project, ClassExtractor, InterfaceExtractor, EnumExtractor, RelationExtractor, FunctionExtractor, ArchJSON, Entity, Relation, findTsConfigPath, loadPathAliases, path — roughly 11-12 direct type/class dependencies.\n\n**ValidatedMermaidGenerator** references: ArchJSON, DiagramConfig, MermaidDetailLevel, GroupingDecision, MermaidTheme, CommentGenerator, EntityTypeRegistry, groupEntitiesByPackage, validateGeneratorInput, PackageGroup, Entity, Member, Relation, path — roughly 14+ direct dependencies.\n\n```json\n{\"answer\": \"ValidatedMermaidGenerator\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 657,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:58:12.762Z"
+}

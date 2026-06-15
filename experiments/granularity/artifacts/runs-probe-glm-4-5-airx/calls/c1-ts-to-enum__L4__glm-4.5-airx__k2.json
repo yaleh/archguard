@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-enum",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.5-airx",
+  "k": 2,
+  "key": "c1-ts-to-enum__L4__glm-4.5-airx__k2",
+  "content": "```json\n{\n  \"answer\": [\n    \"TypeScriptParser.constructor\",\n    \"TypeScriptParser.parseCode\",\n    \"TypeScriptParser.parseProject\"\n  ]\n}\n```",
+  "promptTokens": 57914,
+  "completionTokens": 322,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:58:43.679Z"
+}

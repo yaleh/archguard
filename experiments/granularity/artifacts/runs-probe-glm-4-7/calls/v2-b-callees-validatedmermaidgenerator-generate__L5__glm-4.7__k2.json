@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-validatedmermaidgenerator-generate",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-b-callees-validatedmermaidgenerator-generate__L5__glm-4.7__k2",
+  "content": "```json\n{\n  \"answer\": [\n    \"ValidatedMermaidGenerator.generatePackageLevel\",\n    \"ValidatedMermaidGenerator.generateClassLevel\",\n    \"ValidatedMermaidGenerator.generateMethodLevel\",\n    \"CommentGenerator.generateAll\",\n    \"CommentGenerator.generateVisibleTitle\",\n    \"ValidatedMermaidGenerator.postProcess\"\n  ]\n}\n```",
+  "promptTokens": 43993,
+  "completionTokens": 71,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:32:03.862Z"
+}

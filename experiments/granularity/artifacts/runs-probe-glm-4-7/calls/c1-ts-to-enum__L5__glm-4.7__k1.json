@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-enum",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "c1-ts-to-enum__L5__glm-4.7__k1",
+  "content": "```json\n[\"EnumExtractor.extractEnum\"]\n```",
+  "promptTokens": 43999,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:30:10.665Z"
+}

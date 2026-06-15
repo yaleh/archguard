@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-quality",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "c1-pipeline-to-quality__L2__claude-sonnet-4-6__k2",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has methods `validate`, `validateFull`, `getParseValidator`, `generateReport`, and `summarize`. The diagram shows `QualityValidator` exists with a `validate` method, but there are no arrows or relationships drawn between `MermaidValidationPipeline` and `QualityValidator` in the diagram. The diagram only shows structural composition and inheritance — it doesn't specify which pipeline methods internally call which validator methods.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 21362,
+  "completionTokens": 169,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:20:08.876Z"
+}

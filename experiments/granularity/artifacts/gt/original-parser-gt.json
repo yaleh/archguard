@@ -1,0 +1,7 @@
+{
+  "tree": "parser",
+  "queries": {
+    "cycles": [],
+    "high-coupling": []
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-pipeline-to-validator__L2__claude-sonnet-4-6__k3",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a `getParseValidator()` method that returns a `MermaidParseValidator`, suggesting it holds a reference. The methods `validate` and `validateFull` both take `mermaidCode` and `archJson` parameters consistent with running a full pipeline, which would logically invoke the parse validator.\n\nHowever, the diagram only shows the method signatures and the existence of `getParseValidator(): MermaidParseValidator` — it does not show any explicit call relationships between specific methods of `MermaidValidationPipeline` and `MermaidParseValidator`. There are no arrows or dependency edges shown between these two classes at the method level.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 21363,
+  "completionTokens": 236,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:44:32.751Z"
+}

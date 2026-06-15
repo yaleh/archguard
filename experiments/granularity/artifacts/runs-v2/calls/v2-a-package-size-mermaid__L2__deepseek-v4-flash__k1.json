@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-package-size-mermaid",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 1,
+  "key": "v2-a-package-size-mermaid__L2__deepseek-v4-flash__k1",
+  "content": "{\"answer\": 45}",
+  "promptTokens": 22175,
+  "completionTokens": 1384,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:08:02.615Z"
+}

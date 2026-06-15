@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-mermaidparsevalidator-validate",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-b-callers-mermaidparsevalidator-validate__L3__deepseek-v4-flash__k2",
+  "content": "{\"answer\": [\"MermaidAutoRepair_repair\", \"MermaidAutoRepair_attemptAdvancedRepairs\", \"MermaidAutoRepair_repairBestEffort\"]}",
+  "promptTokens": 36447,
+  "completionTokens": 442,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:16:44.465Z"
+}

@@ -1,0 +1,928 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:37.093Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d10/f56.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d2/d3/f1.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f3.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f4.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f5.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/d5/f6.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d4/f2.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f11.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f12.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f13.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f14.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f15.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f16.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f17.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f18.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f19.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f21.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f22.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f23.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f24.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f26.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f27.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f28.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f29.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f30.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f7.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f8.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f9.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f31.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f32.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f33.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f34.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f35.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f36.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f37.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f38.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f39.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f40.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f41.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f42.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d7/f43.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f50.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f51.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f44.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f46.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f47.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f48.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f55.ts"
+  ],
+  "entities": [
+    {
+      "id": "d10",
+      "name": "d10",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d10/f56.ts",
+        "startLine": 4,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "d2",
+      "name": "d2",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d2/d3/f1.ts",
+        "startLine": 2,
+        "endLine": 8
+      }
+    },
+    {
+      "id": "d4",
+      "name": "d4",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d4/f2.ts",
+        "startLine": 2,
+        "endLine": 16
+      }
+    },
+    {
+      "id": "d6",
+      "name": "d6",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d6/f10.ts",
+        "startLine": 28,
+        "endLine": 212
+      }
+    },
+    {
+      "id": "d7",
+      "name": "d7",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d7/f31.ts",
+        "startLine": 4,
+        "endLine": 162
+      }
+    },
+    {
+      "id": "d8",
+      "name": "d8",
+      "type": "package",
+      "visibility": "public",
+      "members": [],
+      "sourceLocation": {
+        "file": "d8/f44.ts",
+        "startLine": 2,
+        "endLine": 29
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "d10_dependency_pkg16",
+      "type": "dependency",
+      "source": "d10",
+      "target": "pkg16"
+    },
+    {
+      "id": "d10_dependency_pkg17",
+      "type": "dependency",
+      "source": "d10",
+      "target": "pkg17"
+    },
+    {
+      "id": "d10_dependency_pkg18",
+      "type": "dependency",
+      "source": "d10",
+      "target": "pkg18"
+    },
+    {
+      "id": "d4_dependency_d4/d5",
+      "type": "dependency",
+      "source": "d4",
+      "target": "d4"
+    },
+    {
+      "id": "d4/d5_dependency_d8/d9",
+      "type": "dependency",
+      "source": "d4",
+      "target": "d8"
+    },
+    {
+      "id": "d4/d5_dependency_d8",
+      "type": "dependency",
+      "source": "d4",
+      "target": "d8"
+    },
+    {
+      "id": "d6_dependency_d4",
+      "type": "dependency",
+      "source": "d6",
+      "target": "d4"
+    },
+    {
+      "id": "d6_dependency_d8/d9",
+      "type": "dependency",
+      "source": "d6",
+      "target": "d8"
+    },
+    {
+      "id": "d6_dependency_d8",
+      "type": "dependency",
+      "source": "d6",
+      "target": "d8"
+    },
+    {
+      "id": "d6_dependency_pkg2",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg2"
+    },
+    {
+      "id": "d6_dependency_pkg3",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg3"
+    },
+    {
+      "id": "d6_dependency_pkg4",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg4"
+    },
+    {
+      "id": "d6_dependency_pkg5",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg5"
+    },
+    {
+      "id": "d6_dependency_pkg6",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg6"
+    },
+    {
+      "id": "d6_dependency_pkg7",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg7"
+    },
+    {
+      "id": "d6_dependency_pkg8",
+      "type": "dependency",
+      "source": "d6",
+      "target": "pkg8"
+    },
+    {
+      "id": "d7_dependency_d10",
+      "type": "dependency",
+      "source": "d7",
+      "target": "d10"
+    },
+    {
+      "id": "d7_dependency_d8",
+      "type": "dependency",
+      "source": "d7",
+      "target": "d8"
+    },
+    {
+      "id": "d7_dependency_pkg10",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg10"
+    },
+    {
+      "id": "d7_dependency_pkg11",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg11"
+    },
+    {
+      "id": "d7_dependency_pkg12",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg12"
+    },
+    {
+      "id": "d7_dependency_pkg13",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg13"
+    },
+    {
+      "id": "d7_dependency_pkg14",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg14"
+    },
+    {
+      "id": "d7_dependency_pkg2",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg2"
+    },
+    {
+      "id": "d7_dependency_pkg9",
+      "type": "dependency",
+      "source": "d7",
+      "target": "pkg9"
+    },
+    {
+      "id": "d8_dependency_d2/d3",
+      "type": "dependency",
+      "source": "d8",
+      "target": "d2"
+    },
+    {
+      "id": "d8_dependency_d8/d9",
+      "type": "dependency",
+      "source": "d8",
+      "target": "d8"
+    },
+    {
+      "id": "d8/d9_dependency_pkg15",
+      "type": "dependency",
+      "source": "d8",
+      "target": "pkg15"
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1",
+  "extensions": {
+    "tsAnalysis": {
+      "version": "1.0",
+      "moduleGraph": {
+        "nodes": [
+          {
+            "id": "d10",
+            "name": "d10",
+            "type": "internal",
+            "fileCount": 1,
+            "stats": {
+              "classes": 0,
+              "interfaces": 1,
+              "functions": 2,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d2/d3",
+            "name": "d2/d3",
+            "type": "internal",
+            "fileCount": 1,
+            "stats": {
+              "classes": 0,
+              "interfaces": 4,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d4",
+            "name": "d4",
+            "type": "internal",
+            "fileCount": 1,
+            "stats": {
+              "classes": 1,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d4/d5",
+            "name": "d4/d5",
+            "type": "internal",
+            "fileCount": 4,
+            "stats": {
+              "classes": 0,
+              "interfaces": 15,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d6",
+            "name": "d6",
+            "type": "internal",
+            "fileCount": 24,
+            "stats": {
+              "classes": 15,
+              "interfaces": 29,
+              "functions": 17,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d7",
+            "name": "d7",
+            "type": "internal",
+            "fileCount": 13,
+            "stats": {
+              "classes": 12,
+              "interfaces": 5,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d8",
+            "name": "d8",
+            "type": "internal",
+            "fileCount": 7,
+            "stats": {
+              "classes": 0,
+              "interfaces": 26,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "d8/d9",
+            "name": "d8/d9",
+            "type": "internal",
+            "fileCount": 5,
+            "stats": {
+              "classes": 0,
+              "interfaces": 38,
+              "functions": 2,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg10",
+            "name": "pkg10",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg11",
+            "name": "pkg11",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg12",
+            "name": "pkg12",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg13",
+            "name": "pkg13",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg14",
+            "name": "pkg14",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg15",
+            "name": "pkg15",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg16",
+            "name": "pkg16",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg17",
+            "name": "pkg17",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg18",
+            "name": "pkg18",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg2",
+            "name": "pkg2",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg3",
+            "name": "pkg3",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg4",
+            "name": "pkg4",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg5",
+            "name": "pkg5",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg6",
+            "name": "pkg6",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg7",
+            "name": "pkg7",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg8",
+            "name": "pkg8",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          },
+          {
+            "id": "pkg9",
+            "name": "pkg9",
+            "type": "node_modules",
+            "fileCount": 0,
+            "stats": {
+              "classes": 0,
+              "interfaces": 0,
+              "functions": 0,
+              "enums": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "d10",
+            "to": "pkg16",
+            "strength": 1,
+            "importedNames": [
+              "v1490"
+            ]
+          },
+          {
+            "from": "d10",
+            "to": "pkg17",
+            "strength": 1,
+            "importedNames": [
+              "v1491"
+            ]
+          },
+          {
+            "from": "d10",
+            "to": "pkg18",
+            "strength": 1,
+            "importedNames": [
+              "v1492"
+            ]
+          },
+          {
+            "from": "d4",
+            "to": "d4/d5",
+            "strength": 1,
+            "importedNames": [
+              "Rg15"
+            ]
+          },
+          {
+            "from": "d4/d5",
+            "to": "d8",
+            "strength": 2,
+            "importedNames": [
+              "Vw210"
+            ]
+          },
+          {
+            "from": "d4/d5",
+            "to": "d8/d9",
+            "strength": 1,
+            "importedNames": [
+              "Ym194"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "d4",
+            "strength": 1,
+            "importedNames": [
+              "Bu8",
+              "Gq7"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "d8",
+            "strength": 14,
+            "importedNames": [
+              "Vw210",
+              "Ik144",
+              "Os146",
+              "Fo143",
+              "Jw214",
+              "Ti212",
+              "Uu216",
+              "Yf221"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "d8/d9",
+            "strength": 2,
+            "importedNames": [
+              "Jy196",
+              "Az204",
+              "Mu206",
+              "Go205"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg2",
+            "strength": 2,
+            "importedNames": [
+              "v273",
+              "v677"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg3",
+            "strength": 2,
+            "importedNames": [
+              "v1",
+              "v4",
+              "v5"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg4",
+            "strength": 1,
+            "importedNames": [
+              "v2"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg5",
+            "strength": 1,
+            "importedNames": [
+              "v3"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg6",
+            "strength": 3,
+            "importedNames": [
+              "v669",
+              "v678",
+              "v866"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg7",
+            "strength": 1,
+            "importedNames": [
+              "v676"
+            ]
+          },
+          {
+            "from": "d6",
+            "to": "pkg8",
+            "strength": 1,
+            "importedNames": [
+              "v679"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "d10",
+            "strength": 1,
+            "importedNames": [
+              "Kx227",
+              "Zv228"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "d8",
+            "strength": 11,
+            "importedNames": [
+              "Vw210",
+              "Jw214",
+              "Yf221",
+              "Os146",
+              "Pj213",
+              "Uu216",
+              "Al217",
+              "Mb219",
+              "Si222",
+              "Bj220",
+              "Cf223",
+              "Vm224"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg10",
+            "strength": 1,
+            "importedNames": [
+              "v21"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg11",
+            "strength": 1,
+            "importedNames": [
+              "v1257"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg12",
+            "strength": 1,
+            "importedNames": [
+              "v1258"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg13",
+            "strength": 1,
+            "importedNames": [
+              "v1259"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg14",
+            "strength": 1,
+            "importedNames": [
+              "v1296"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg2",
+            "strength": 3,
+            "importedNames": [
+              "v1019",
+              "v1163",
+              "v1389"
+            ]
+          },
+          {
+            "from": "d7",
+            "to": "pkg9",
+            "strength": 7,
+            "importedNames": [
+              "v6",
+              "v7",
+              "v8",
+              "v9",
+              "v10",
+              "v1079",
+              "v11",
+              "v12",
+              "v13",
+              "v14",
+              "v15",
+              "v16",
+              "v17",
+              "v18",
+              "v19",
+              "v20",
+              "v22",
+              "v23",
+              "v24",
+              "v25",
+              "v26"
+            ]
+          },
+          {
+            "from": "d8",
+            "to": "d2/d3",
+            "strength": 1,
+            "importedNames": [
+              "En5"
+            ]
+          },
+          {
+            "from": "d8",
+            "to": "d8/d9",
+            "strength": 1,
+            "importedNames": [
+              "Iv180"
+            ]
+          },
+          {
+            "from": "d8/d9",
+            "to": "pkg15",
+            "strength": 1,
+            "importedNames": [
+              "v27"
+            ]
+          }
+        ],
+        "cycles": []
+      }
+    },
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metrics": {
+    "level": "package",
+    "entityCount": 6,
+    "relationCount": 1,
+    "relationTypeBreakdown": {
+      "dependency": 1
+    },
+    "stronglyConnectedComponents": 6,
+    "inferredRelationRatio": 0
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 6,
+    "totalRelations": 1,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "dependency": 1
+    },
+    "maxInDegree": 0,
+    "maxOutDegree": 0,
+    "maxPackageSize": 24,
+    "giniInDegree": 0,
+    "giniPackageSize": 0.5357142857142858,
+    "packageCount": 8,
+    "entityCoverageRatio": null
+  }
+}

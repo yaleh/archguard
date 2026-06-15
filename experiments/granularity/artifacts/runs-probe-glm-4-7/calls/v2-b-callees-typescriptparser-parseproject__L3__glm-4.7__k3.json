@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-b-callees-typescriptparser-parseproject__L3__glm-4.7__k3",
+  "content": "```json\n[\n  \"TypeScriptParser.toRelPath\",\n  \"TypeScriptParser.parseCode\",\n  \"TypeScriptParser.qualifyRelations\",\n  \"TypeScriptParser.filterExternalRelations\",\n  \"TypeScriptParser.deduplicateRelations\"\n]\n```",
+  "promptTokens": 35002,
+  "completionTokens": 51,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:32:52.235Z"
+}

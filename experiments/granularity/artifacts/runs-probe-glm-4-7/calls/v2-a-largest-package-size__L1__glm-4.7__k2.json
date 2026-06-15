@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-largest-package-size",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L1",
+  "model": "glm-4.7",
+  "k": 2,
+  "key": "v2-a-largest-package-size__L1__glm-4.7__k2",
+  "content": "```json\n{\"answer\": \"analysis\"}\n```",
+  "promptTokens": 311,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:31:44.044Z"
+}

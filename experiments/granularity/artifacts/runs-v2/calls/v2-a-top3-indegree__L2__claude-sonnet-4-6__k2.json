@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-top3-indegree__L2__claude-sonnet-4-6__k2",
+  "content": "I'll analyze the diagrams to count incoming dependencies (arrows pointing *to* each entity) across all the relationship declarations.\n\nLet me tally the most referenced targets:\n\n**ArchJSON** — referenced as a target in:\n- `CacheManager --> TestAnalysis` (not ArchJSON)\n- `CppPackageFlowchartGenerator --> ArchJSON`\n- `TestCoverageRenderer --> ArchJSON`\n- `GoPlugin --> ArchJSON`\n- `IParser` (parseCode returns ArchJSON, but that's a return type, not a dependency arrow)\n- `ArchJSONAggregator --> ArchJSON`\n- `ParallelParser --> ArchJSON`\n- `ParseCache *-- ArchJSON` (x2)\n- `ParseCache --> ArchJSON`\n- `TypeScriptParser --> ArchJSON`\n- `JavaPlugin --> ArchJSON`\n- `TypeScriptPlugin --> ArchJSON` (appears in two namespaces, x2)\n- `QueryEngine *-- ArchJSON`\n\nCount: ~12\n\n**Entity** — referenced as a target in:\n- `ArchJSONAggregator --> Entity` (x2 for Entity and Relation)\n- `ArchJsonMapper (Go) --> Entity`\n- `ArchJsonMapper (Java) --> Entity`\n- `ClassExtractor --> Entity`\n- `EnumExtractor --> Entity`\n- `FunctionExtractor --> Entity`\n- `InterfaceExtractor --> Entity`\n- `QueryEngine *-- Entity`\n- `QueryEngine --> Entity`\n- `TypeScriptAnalyzer --> Entity` (x2 namespaces)\n\nCount: ~11\n\n**TestAnalysis** — referenced as a target in:\n- `CacheManager --> TestAnalysis`\n- `TestCoverageRenderer --> TestAnalysis`\n- `TestOutputWriter --> TestAnalysis`\n- `QueryEngine --> PackageCoverage` (not TestAnalysis directly)\n\nCount: ~3\n\n**ParseConfig** — referenced in:\n- `GoPlugin --> ParseConfig`\n- `JavaPlugin --> ParseConfig`\n- `TypeScriptPlugin --> ParseConfig` (x2)\n\nCount: ~4\n\n**PluginInitConfig** — referenced in:\n- `GoPlugin --> PluginInitConfig`\n- `JavaPlugin --> PluginInitConfig`\n- `TypeScriptPlugin --> PluginInitConfig` (x2)\n\nCount: ~4\n\n**IDependencyExtractor** — referenced in:\n- `GoPlugin *-- IDependencyExtractor`\n- `TypeScriptPlugin *-- IDependencyExtractor` (x2)\n- `IDependencyExtractor <|.. DependencyExtractor` (Go)\n- `IDependencyExtractor <|.. DependencyExtractor` (Java)\n\nCount: ~5\n\n**PluginMetadata** — referenced in:\n- `GoPlugin *-- PluginMetadata`\n- `JavaPlugin *-- PluginMetadata`\n- `TypeScriptPlugin *-- PluginMetadata` (x2)\n\nCount: ~4\n\n**TsAnalysis** — referenced in:\n- `TypeScriptAnalyzer --> TsAnalysis` (x2)\n\nCount: ~2\n\nArchJSON and Entity clearly lead. Third place goes to IDependencyExtractor or ParseConfig.\n\n```json\n{\"answer\": [\"ArchJSON\", \"Entity\", \"IDependencyExtractor\"]}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 727,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:46:05.592Z"
+}

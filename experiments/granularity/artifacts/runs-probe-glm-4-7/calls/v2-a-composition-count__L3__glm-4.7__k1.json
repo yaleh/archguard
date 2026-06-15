@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-composition-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-a-composition-count__L3__glm-4.7__k1",
+  "content": "```json\n{\"answer\": 0}\n```",
+  "promptTokens": 34988,
+  "completionTokens": 10,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:51.153Z"
+}

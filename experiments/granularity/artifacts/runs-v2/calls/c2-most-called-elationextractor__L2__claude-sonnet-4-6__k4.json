@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c2-most-called-elationextractor__L2__claude-sonnet-4-6__k4",
+  "content": "Looking at the class diagrams, I need to find which method of `RelationExtractor` is called by other classes.\n\n`RelationExtractor` has two methods:\n- `extract(code: string, filePath?: string): Array`\n- `extractFromSourceFile(sourceFile: SourceFile): Array`\n\nScanning all the relationship arrows and dependencies across all namespaces in the diagrams, I can see `RelationExtractor` appears in the Parser_Layer. The diagrams show structural relationships (inheritance, composition, usage) but do not include call-frequency data or method-level call references between classes.\n\nThere is no call frequency information encoded in these class diagrams — only structural relationships like inheritance (`<|--`), composition (`*--`), and dependency (`-->`). The diagrams don't show which methods are invoked by external callers or how often.\n\n```json\n{\"answer\": null, \"reason\": \"The provided class diagrams do not contain method call frequency data. Only structural relationships (inheritance, composition, dependency arrows) are represented, making it impossible to determine which RelationExtractor method is called most frequently by external callers.\"}\n```",
+  "promptTokens": 21354,
+  "completionTokens": 361,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:29:53.030Z"
+}

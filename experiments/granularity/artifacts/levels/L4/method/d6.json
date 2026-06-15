@@ -1,0 +1,4854 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:56.566Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f11.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f12.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f13.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f14.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f15.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f16.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f17.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f18.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f19.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f21.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f22.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f23.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f24.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f26.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f27.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f28.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f29.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f30.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f7.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f8.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f9.ts"
+  ],
+  "entities": [
+    {
+      "id": "f10.ts.Af30",
+      "name": "Af30",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p100",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p101",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p102",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p103: string; p104: string; p105: string; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f10.ts",
+        "startLine": 10,
+        "endLine": 18
+      }
+    },
+    {
+      "id": "f10.ts.Pz31",
+      "name": "Pz31",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p106",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p107",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p103: string; p104: string; p105: string; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f10.ts",
+        "startLine": 19,
+        "endLine": 27
+      }
+    },
+    {
+      "id": "f10.ts.Vr32",
+      "name": "Vr32",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "p109",
+              "type": "Ik144",
+              "isOptional": false
+            },
+            {
+              "name": "v148",
+              "type": "Ed56",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m110",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v149",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v150",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10\").Af30",
+              "isOptional": false
+            },
+            {
+              "name": "v151",
+              "type": "Os146",
+              "isOptional": false
+            },
+            {
+              "name": "v152",
+              "type": "Fo143",
+              "isOptional": true
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10\").Pz31[]>",
+          "decorators": []
+        },
+        {
+          "name": "m111",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": true,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v184",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10\").Pz31[]",
+              "isOptional": false
+            },
+            {
+              "name": "v185",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "v186",
+              "type": "Ed56",
+              "isOptional": true,
+              "defaultValue": "new Jg57()"
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "m112",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v192",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v193",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10\").Af30",
+              "isOptional": false
+            },
+            {
+              "name": "v194",
+              "type": "Os146",
+              "isOptional": false
+            },
+            {
+              "name": "v195",
+              "type": "Fo143",
+              "isOptional": true
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "m113",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": true,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v202",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f10\").Pz31[]",
+              "isOptional": false
+            },
+            {
+              "name": "v203",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "v204",
+              "type": "any",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "p108",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Ed56",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f10.ts",
+        "startLine": 28,
+        "endLine": 212
+      }
+    },
+    {
+      "id": "f11.ts.Rx34",
+      "name": "Rx34",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v208",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f11.ts",
+        "startLine": 34,
+        "endLine": 37
+      }
+    },
+    {
+      "id": "f12.ts.Be42",
+      "name": "Be42",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v225",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Uu216"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 93,
+        "endLine": 104
+      }
+    },
+    {
+      "id": "f12.ts.Bu36",
+      "name": "Bu36",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v210",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Ti212"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 11,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "f12.ts.Is40",
+      "name": "Is40",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v218",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 46,
+        "endLine": 82
+      }
+    },
+    {
+      "id": "f12.ts.Kr45",
+      "name": "Kr45",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v245",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 147,
+        "endLine": 156
+      }
+    },
+    {
+      "id": "f12.ts.Qo43",
+      "name": "Qo43",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v226",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Uu216"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 105,
+        "endLine": 128
+      }
+    },
+    {
+      "id": "f12.ts.Sh37",
+      "name": "Sh37",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v211",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 14,
+        "endLine": 35
+      }
+    },
+    {
+      "id": "f12.ts.Si46",
+      "name": "Si46",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v246",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Jw214"
+        },
+        {
+          "name": "v247",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "number"
+        },
+        {
+          "name": "v248",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "{ p114: boolean; p115: boolean; }"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 157,
+        "endLine": 172
+      }
+    },
+    {
+      "id": "f12.ts.Sz41",
+      "name": "Sz41",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v223",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Uu216"
+        },
+        {
+          "name": "v224",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "{ p114: boolean; p115: boolean; }"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 83,
+        "endLine": 92
+      }
+    },
+    {
+      "id": "f12.ts.Tc44",
+      "name": "Tc44",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v239",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Yf221"
+        },
+        {
+          "name": "v240",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Map<string, string>"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 129,
+        "endLine": 146
+      }
+    },
+    {
+      "id": "f12.ts.Uk38",
+      "name": "Uk38",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v216",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 36,
+        "endLine": 40
+      }
+    },
+    {
+      "id": "f12.ts.Yy39",
+      "name": "Yy39",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v217",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f12.ts",
+        "startLine": 41,
+        "endLine": 45
+      }
+    },
+    {
+      "id": "f13.ts.Ln47",
+      "name": "Ln47",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v253",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Vw210"
+        },
+        {
+          "name": "v254",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Jw85"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f13.ts",
+        "startLine": 3,
+        "endLine": 18
+      }
+    },
+    {
+      "id": "f14.ts.Rx48",
+      "name": "Rx48",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v259",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Vw210"
+        },
+        {
+          "name": "v260",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "boolean"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f14.ts",
+        "startLine": 3,
+        "endLine": 40
+      }
+    },
+    {
+      "id": "f15.ts.Hs51",
+      "name": "Hs51",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v277",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v278",
+              "type": "{ p121: Io83; p122: Jw85; p123?: Iz100; p114?: boolean; p115?: boolean; p124?: number; p50?: boolean; }",
+              "isOptional": false
+            },
+            {
+              "name": "v279",
+              "type": "Fo143",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m125",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m126",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Record<string, string>",
+          "decorators": []
+        },
+        {
+          "name": "m127",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v298",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m128",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v301",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v302",
+              "type": "Record<string, string>",
+              "isOptional": false
+            }
+          ],
+          "returnType": "{ p129: string; p130: string; }",
+          "decorators": []
+        },
+        {
+          "name": "m131",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m132",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m133",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m134",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v388",
+              "type": "Jw214",
+              "isOptional": false
+            },
+            {
+              "name": "v389",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "v390",
+              "type": "boolean",
+              "isOptional": true,
+              "defaultValue": "false"
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m135",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v398",
+              "type": "Uu216",
+              "isOptional": false
+            },
+            {
+              "name": "v399",
+              "type": "boolean",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m136",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v412",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m138",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v418",
+              "type": "Yf221",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m139",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v424",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "m140",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v425",
+              "type": "Set<string>",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Map<string, string>",
+          "decorators": []
+        },
+        {
+          "name": "m141",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v430",
+              "type": "Zf86[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string[]",
+          "decorators": []
+        },
+        {
+          "name": "m142",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Zf86[]",
+          "decorators": []
+        },
+        {
+          "name": "m143",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v445",
+              "type": "Uu216",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "m144",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v446",
+              "type": "Uu216",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m145",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v447",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m146",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v449",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m147",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v454",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m148",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v457",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "{ p19: string; p149: string; }[]",
+          "decorators": []
+        },
+        {
+          "name": "m150",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v493",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m99",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "p116",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Vw210",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "p117",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Rp99",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "p118",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Fo143",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "p119",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Lw28",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "p120",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<string, string>",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "null",
+          "decorators": []
+        },
+        {
+          "name": "p50",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f15.ts",
+        "startLine": 29,
+        "endLine": 628
+      }
+    },
+    {
+      "id": "f16.ts.Lf52",
+      "name": "Lf52",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v495",
+              "type": "Tx104",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m151",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v496",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jw85",
+          "decorators": []
+        },
+        {
+          "name": "m152",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v502",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "any",
+          "decorators": []
+        },
+        {
+          "name": "m153",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v513",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Zf86[]",
+          "decorators": []
+        },
+        {
+          "name": "m154",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v522",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m155",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v526",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m156",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v534",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m157",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v537",
+              "type": "Zf86[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Zf86[]",
+          "decorators": []
+        },
+        {
+          "name": "m158",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v546",
+              "type": "Zf86[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Zf86[]",
+          "decorators": []
+        },
+        {
+          "name": "m159",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v551",
+              "type": "Zf86[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ox87",
+          "decorators": []
+        },
+        {
+          "name": "p109",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Tx104",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f16.ts",
+        "startLine": 3,
+        "endLine": 215
+      }
+    },
+    {
+      "id": "f18.ts.Bz55",
+      "name": "Bz55",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v625",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        },
+        {
+          "name": "v626",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "boolean"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f18.ts",
+        "startLine": 128,
+        "endLine": 137
+      }
+    },
+    {
+      "id": "f18.ts.Cl53",
+      "name": "Cl53",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v554",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "string"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f18.ts",
+        "startLine": 1,
+        "endLine": 119
+      }
+    },
+    {
+      "id": "f19.ts.Ed56",
+      "name": "Ed56",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m160",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v628",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void"
+        },
+        {
+          "name": "m161",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v629",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void"
+        },
+        {
+          "name": "m162",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v630",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void"
+        },
+        {
+          "name": "m163",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v631",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void"
+        },
+        {
+          "name": "m164",
+          "type": "method",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v632",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void"
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f19.ts",
+        "startLine": 1,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "f19.ts.Jg57",
+      "name": "Jg57",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m160",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v633",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m161",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v634",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m162",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v635",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m163",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v636",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m164",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v637",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f19.ts",
+        "startLine": 8,
+        "endLine": 14
+      }
+    },
+    {
+      "id": "f20.ts.Gx58",
+      "name": "Gx58",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p123",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p165",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p166",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p167",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f20.ts",
+        "startLine": 4,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "f20.ts.Mr59",
+      "name": "Mr59",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p106",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p168",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f20.ts",
+        "startLine": 10,
+        "endLine": 13
+      }
+    },
+    {
+      "id": "f20.ts.Pi63",
+      "name": "Pi63",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "p180",
+              "type": "number",
+              "isOptional": false
+            },
+            {
+              "name": "p181",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Gx58",
+              "isOptional": false
+            }
+          ]
+        },
+        {
+          "name": "m160",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m182",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "any",
+          "decorators": []
+        },
+        {
+          "name": "m183",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v646",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v647",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m184",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v655",
+              "type": "Omit<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Mr59, \"p168\">",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Vl60>",
+          "decorators": []
+        },
+        {
+          "name": "m185",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v658",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Mr59",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m186",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v660",
+              "type": "any",
+              "isOptional": false
+            },
+            {
+              "name": "v661",
+              "type": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Vl60",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m187",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "p171",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "any[]",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "[]",
+          "decorators": []
+        },
+        {
+          "name": "p172",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "any[]",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "[]",
+          "decorators": []
+        },
+        {
+          "name": "p173",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "{ p174: import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Mr59; }[]",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "[]",
+          "decorators": []
+        },
+        {
+          "name": "p175",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<string, (v640: import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f20\").Vl60) => void>",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "new Map<string, (v640: Vl60) => void>()",
+          "decorators": []
+        },
+        {
+          "name": "p176",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<any, string>",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "new Map<any, string>()",
+          "decorators": []
+        },
+        {
+          "name": "p177",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Map<any, number>",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "new Map<any, number>()",
+          "decorators": []
+        },
+        {
+          "name": "p178",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "false",
+          "decorators": []
+        },
+        {
+          "name": "p179",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "3",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "3",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f20.ts",
+        "startLine": 24,
+        "endLine": 136
+      }
+    },
+    {
+      "id": "f20.ts.Vl60",
+      "name": "Vl60",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p104",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p168",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p169",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p170",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f20.ts",
+        "startLine": 14,
+        "endLine": 19
+      }
+    },
+    {
+      "id": "f22.ts.Ym67",
+      "name": "Ym67",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v680",
+              "type": "Xp101",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m189",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v681",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "m190",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v685",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "m191",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v688",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v689",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "m192",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v692",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v693",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "m193",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v711",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v712",
+              "type": "Wc102",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "decorators": []
+        },
+        {
+          "name": "m194",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m195",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m196",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Xp101",
+          "decorators": []
+        },
+        {
+          "name": "m197",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v717",
+              "type": "Xp101",
+              "isOptional": false
+            }
+          ],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m198",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v718",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "p117",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Xp101",
+          "isStatic": false,
+          "isReadonly": true,
+          "decorators": []
+        },
+        {
+          "name": "p188",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "false",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f22.ts",
+        "startLine": 8,
+        "endLine": 185
+      }
+    },
+    {
+      "id": "f23.ts.Lm69",
+      "name": "Lm69",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m184",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v721",
+              "type": "Jy196",
+              "isOptional": false
+            },
+            {
+              "name": "v722",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m199",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v743",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m200",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v744",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v745",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f23.ts",
+        "startLine": 4,
+        "endLine": 75
+      }
+    },
+    {
+      "id": "f24.ts.Av82",
+      "name": "Av82",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v791",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Az204"
+        },
+        {
+          "name": "v792",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Dh70"
+        }
+      ],
+      "sourceLocation": {
+        "file": "f24.ts",
+        "startLine": 128,
+        "endLine": 241
+      }
+    },
+    {
+      "id": "f24.ts.Dh70",
+      "name": "Dh70",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p201",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f24.ts",
+        "startLine": 2,
+        "endLine": 4
+      }
+    },
+    {
+      "id": "f24.ts.Og77",
+      "name": "Og77",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p202",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "any",
+          "isReadonly": false
+        },
+        {
+          "name": "p203",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p204",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Og77[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f24.ts",
+        "startLine": 41,
+        "endLine": 45
+      }
+    },
+    {
+      "id": "f25.ts.Ab91",
+      "name": "Ab91",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p215",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ci92[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p72",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 32,
+        "endLine": 35
+      }
+    },
+    {
+      "id": "f25.ts.Al96",
+      "name": "Al96",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p222",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p223",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p224",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p225",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 58,
+        "endLine": 63
+      }
+    },
+    {
+      "id": "f25.ts.Ci92",
+      "name": "Ci92",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s385\" | \"s386\" | \"s387\" | \"s388\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p216",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p217",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "any",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 36,
+        "endLine": 41
+      }
+    },
+    {
+      "id": "f25.ts.Ei88",
+      "name": "Ei88",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p72",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p73",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Nv89[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p74",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Yi90[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 16,
+        "endLine": 20
+      }
+    },
+    {
+      "id": "f25.ts.Hy98",
+      "name": "Hy98",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m184",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Pg93",
+          "isReadonly": false
+        },
+        {
+          "name": "p228",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ei88",
+          "isReadonly": false
+        },
+        {
+          "name": "p229",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ab91",
+          "isReadonly": false
+        },
+        {
+          "name": "p230",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Xn95",
+          "isReadonly": false
+        },
+        {
+          "name": "p231",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p72: boolean; p232: boolean; p233: string[]; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 70,
+        "endLine": 80
+      }
+    },
+    {
+      "id": "f25.ts.If97",
+      "name": "If97",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p209\" | \"p122\" | \"s391\" | \"s392\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p226",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s393\" | \"s134\" | \"s394\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p227",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 64,
+        "endLine": 69
+      }
+    },
+    {
+      "id": "f25.ts.Iz100",
+      "name": "Iz100",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s26\" | \"s309\" | \"s308\" | \"s310\" | \"s307\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p234",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 89,
+        "endLine": 92
+      }
+    },
+    {
+      "id": "f25.ts.Jd94",
+      "name": "Jd94",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p345\" | \"p225\" | \"s389\" | \"s390\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p170\" | \"s27\"",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 47,
+        "endLine": 51
+      }
+    },
+    {
+      "id": "f25.ts.Jw85",
+      "name": "Jw85",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p208",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Zf86[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p209",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ox87",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 3,
+        "endLine": 6
+      }
+    },
+    {
+      "id": "f25.ts.Kc106",
+      "name": "Kc106",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p208",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Zf86[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p209",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ox87",
+          "isReadonly": false
+        },
+        {
+          "name": "p211",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 117,
+        "endLine": 121
+      }
+    },
+    {
+      "id": "f25.ts.Nv89",
+      "name": "Nv89",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p213",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p214",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p68",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 21,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "f25.ts.Ox87",
+      "name": "Ox87",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p211",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p212",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s241\" | \"s382\" | \"s383\" | \"s384\" | \"s279\"",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 12,
+        "endLine": 15
+      }
+    },
+    {
+      "id": "f25.ts.Pg93",
+      "name": "Pg93",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p215",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Jd94[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p218",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p72",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 42,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "f25.ts.Rp99",
+      "name": "Rp99",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p114",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p115",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p121",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Io83",
+          "isReadonly": false
+        },
+        {
+          "name": "p122",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Jw85",
+          "isReadonly": false
+        },
+        {
+          "name": "p123",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Iz100",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p124",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 81,
+        "endLine": 88
+      }
+    },
+    {
+      "id": "f25.ts.Tx104",
+      "name": "Tx104",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p239",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Ln103",
+          "isReadonly": false
+        },
+        {
+          "name": "p240",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p241",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p242",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Xw105[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 106,
+        "endLine": 111
+      }
+    },
+    {
+      "id": "f25.ts.Wc102",
+      "name": "Wc102",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p103",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p104",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p105",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 100,
+        "endLine": 104
+      }
+    },
+    {
+      "id": "f25.ts.Xn95",
+      "name": "Xn95",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p219",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p220",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Al96",
+          "isReadonly": false
+        },
+        {
+          "name": "p221",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").If97[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p72",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 52,
+        "endLine": 57
+      }
+    },
+    {
+      "id": "f25.ts.Xp101",
+      "name": "Xp101",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p123",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d6/f25\").Iz100",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p235",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p104\" | \"p105\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p236",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p237",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p238",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 93,
+        "endLine": 99
+      }
+    },
+    {
+      "id": "f25.ts.Xw105",
+      "name": "Xw105",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p243",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "RegExp",
+          "isReadonly": false
+        },
+        {
+          "name": "p244",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p245",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 112,
+        "endLine": 116
+      }
+    },
+    {
+      "id": "f25.ts.Yi90",
+      "name": "Yi90",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p213",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p71",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 27,
+        "endLine": 31
+      }
+    },
+    {
+      "id": "f25.ts.Zf86",
+      "name": "Zf86",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p210",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p211",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f25.ts",
+        "startLine": 7,
+        "endLine": 11
+      }
+    },
+    {
+      "id": "f26.ts.Gt107",
+      "name": "Gt107",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "v838",
+              "type": "any",
+              "isOptional": true
+            }
+          ]
+        },
+        {
+          "name": "m249",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v846",
+              "type": "{ p228: { p72: boolean; }; p229: { p72: boolean; }; m184: { p72: boolean; p218: boolean; }; p230: { p72: boolean; }; }",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Hy98",
+          "decorators": []
+        },
+        {
+          "name": "m250",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v849",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v850",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<{ p251: boolean; p252: { p19: string; p253: any; }[]; }>",
+          "decorators": []
+        },
+        {
+          "name": "m254",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "Cq108",
+          "decorators": []
+        },
+        {
+          "name": "m255",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v856",
+              "type": "{ p251: boolean; p252: { p19: string; p253: any; }[]; }",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m256",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v863",
+              "type": "Hy98",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v839",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v840",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Hy98>",
+          "decorators": []
+        },
+        {
+          "name": "p246",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Ck111",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p247",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Pt110",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p248",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Vs109",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        },
+        {
+          "name": "p77",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "Cq108",
+          "isStatic": false,
+          "isReadonly": false,
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f26.ts",
+        "startLine": 7,
+        "endLine": 190
+      }
+    },
+    {
+      "id": "f27.ts.Cq108",
+      "name": "Cq108",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": []
+        },
+        {
+          "name": "m194",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [],
+          "returnType": "void",
+          "decorators": []
+        },
+        {
+          "name": "m257",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v869",
+              "type": "unknown",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Nv89[]",
+          "decorators": []
+        },
+        {
+          "name": "m258",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v875",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m259",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v876",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Yi90[]",
+          "decorators": []
+        },
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v867",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<Ei88>",
+          "decorators": []
+        },
+        {
+          "name": "p188",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "boolean",
+          "isStatic": false,
+          "isReadonly": false,
+          "defaultValue": "false",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f27.ts",
+        "startLine": 3,
+        "endLine": 130
+      }
+    },
+    {
+      "id": "f28.ts.Vs109",
+      "name": "Vs109",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m260",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v889",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v890",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Al96",
+          "decorators": []
+        },
+        {
+          "name": "m261",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v891",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v892",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m262",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v903",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m263",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v905",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v906",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m264",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v918",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m265",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v931",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v932",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m266",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v940",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v941",
+              "type": "Vw210",
+              "isOptional": false
+            },
+            {
+              "name": "v942",
+              "type": "Al96",
+              "isOptional": false
+            }
+          ],
+          "returnType": "If97[]",
+          "decorators": []
+        },
+        {
+          "name": "m267",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v945",
+              "type": "Al96",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m268",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v946",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v947",
+              "type": "string[]",
+              "isOptional": false
+            },
+            {
+              "name": "v948",
+              "type": "number",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m269",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v953",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m270",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v957",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v884",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v885",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Xn95",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f28.ts",
+        "startLine": 3,
+        "endLine": 188
+      }
+    },
+    {
+      "id": "f29.ts.Pt110",
+      "name": "Pt110",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m269",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v978",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "number",
+          "decorators": []
+        },
+        {
+          "name": "m273",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v962",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jd94[]",
+          "decorators": []
+        },
+        {
+          "name": "m274",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v968",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jd94[]",
+          "decorators": []
+        },
+        {
+          "name": "m275",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v972",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Jd94[]",
+          "decorators": []
+        },
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v958",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Pg93",
+          "decorators": []
+        },
+        {
+          "name": "p124",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "10",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "10",
+          "decorators": []
+        },
+        {
+          "name": "p271",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "100",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "100",
+          "decorators": []
+        },
+        {
+          "name": "p272",
+          "type": "property",
+          "visibility": "private",
+          "fieldType": "200",
+          "isStatic": false,
+          "isReadonly": true,
+          "defaultValue": "200",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f29.ts",
+        "startLine": 2,
+        "endLine": 98
+      }
+    },
+    {
+      "id": "f30.ts.Ck111",
+      "name": "Ck111",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m270",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1018",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m276",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v985",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v986",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ci92[]",
+          "decorators": []
+        },
+        {
+          "name": "m277",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v990",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v991",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ci92[]",
+          "decorators": []
+        },
+        {
+          "name": "m278",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v998",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ci92[]",
+          "decorators": []
+        },
+        {
+          "name": "m279",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v1008",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v1009",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ci92[]",
+          "decorators": []
+        },
+        {
+          "name": "m76",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v982",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v983",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Ab91",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f30.ts",
+        "startLine": 3,
+        "endLine": 117
+      }
+    },
+    {
+      "id": "f7.ts.Aj27",
+      "name": "Aj27",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "constructor",
+          "type": "constructor",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "p77",
+              "type": "Cq108",
+              "isOptional": false
+            }
+          ]
+        },
+        {
+          "name": "m78",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v44",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v45",
+              "type": "Nv89[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "m79",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v50",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m80",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v53",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m81",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v60",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m82",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v67",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m83",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v74",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "boolean",
+          "decorators": []
+        },
+        {
+          "name": "m84",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v77",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m85",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v79",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m86",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v82",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v83",
+              "type": "Nv89[]",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "decorators": []
+        },
+        {
+          "name": "m87",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v86",
+              "type": "string",
+              "isOptional": false
+            },
+            {
+              "name": "v87",
+              "type": "Nv89",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m88",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v92",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m89",
+          "type": "method",
+          "visibility": "private",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v98",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m90",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": true,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v100",
+              "type": "string",
+              "isOptional": false
+            }
+          ],
+          "returnType": "Promise<{ p91: string; p92: boolean; }>",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f7.ts",
+        "startLine": 3,
+        "endLine": 198
+      }
+    },
+    {
+      "id": "f8.ts.Lw28",
+      "name": "Lw28",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m93",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v103",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m94",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v106",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m95",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v111",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m96",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v116",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m97",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v120",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        },
+        {
+          "name": "m98",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v123",
+              "type": "Fo143",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f8.ts",
+        "startLine": 2,
+        "endLine": 213
+      }
+    },
+    {
+      "id": "f9.ts.Pw29",
+      "name": "Pw29",
+      "type": "class",
+      "visibility": "public",
+      "isAbstract": false,
+      "members": [
+        {
+          "name": "m99",
+          "type": "method",
+          "visibility": "public",
+          "isStatic": false,
+          "isAsync": false,
+          "isAbstract": false,
+          "parameters": [
+            {
+              "name": "v133",
+              "type": "Vw210",
+              "isOptional": false
+            }
+          ],
+          "returnType": "string",
+          "decorators": []
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f9.ts",
+        "startLine": 2,
+        "endLine": 33
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "f10.ts.Vr32_composition_Ed56",
+      "type": "composition",
+      "source": "f10.ts.Vr32",
+      "target": "Ed56"
+    },
+    {
+      "id": "f10.ts.Vr32_composition_Ik144",
+      "type": "composition",
+      "source": "f10.ts.Vr32",
+      "target": "Ik144"
+    },
+    {
+      "id": "f10.ts.Vr32_dependency_Ed56",
+      "type": "dependency",
+      "source": "f10.ts.Vr32",
+      "target": "Ed56"
+    },
+    {
+      "id": "f10.ts.Vr32_dependency_Fo143",
+      "type": "dependency",
+      "source": "f10.ts.Vr32",
+      "target": "Fo143"
+    },
+    {
+      "id": "f10.ts.Vr32_dependency_Os146",
+      "type": "dependency",
+      "source": "f10.ts.Vr32",
+      "target": "Os146"
+    },
+    {
+      "id": "f10.ts.Vr32_dependency_Vw210",
+      "type": "dependency",
+      "source": "f10.ts.Vr32",
+      "target": "Vw210"
+    },
+    {
+      "id": "f14.ts.Rx48_dependency_Rx34",
+      "type": "dependency",
+      "source": "f14.ts.Rx48",
+      "target": "Rx34"
+    },
+    {
+      "id": "f15.ts.Hs51_composition_Fo143",
+      "type": "composition",
+      "source": "f15.ts.Hs51",
+      "target": "Fo143"
+    },
+    {
+      "id": "f15.ts.Hs51_composition_Lw28",
+      "type": "composition",
+      "source": "f15.ts.Hs51",
+      "target": "Lw28"
+    },
+    {
+      "id": "f15.ts.Hs51_composition_Rp99",
+      "type": "composition",
+      "source": "f15.ts.Hs51",
+      "target": "Rp99"
+    },
+    {
+      "id": "f15.ts.Hs51_composition_Vw210",
+      "type": "composition",
+      "source": "f15.ts.Hs51",
+      "target": "Vw210"
+    },
+    {
+      "id": "f15.ts.Hs51_dependency_Jw214",
+      "type": "dependency",
+      "source": "f15.ts.Hs51",
+      "target": "Jw214"
+    },
+    {
+      "id": "f15.ts.Hs51_dependency_Uu216",
+      "type": "dependency",
+      "source": "f15.ts.Hs51",
+      "target": "Uu216"
+    },
+    {
+      "id": "f15.ts.Hs51_dependency_Yf221",
+      "type": "dependency",
+      "source": "f15.ts.Hs51",
+      "target": "Yf221"
+    },
+    {
+      "id": "f15.ts.Hs51_dependency_Zf86",
+      "type": "dependency",
+      "source": "f15.ts.Hs51",
+      "target": "Zf86"
+    },
+    {
+      "id": "f16.ts.Lf52_composition_Tx104",
+      "type": "composition",
+      "source": "f16.ts.Lf52",
+      "target": "Tx104"
+    },
+    {
+      "id": "f16.ts.Lf52_dependency_Jw85",
+      "type": "dependency",
+      "source": "f16.ts.Lf52",
+      "target": "Jw85"
+    },
+    {
+      "id": "f16.ts.Lf52_dependency_Ox87",
+      "type": "dependency",
+      "source": "f16.ts.Lf52",
+      "target": "Ox87"
+    },
+    {
+      "id": "f16.ts.Lf52_dependency_Vw210",
+      "type": "dependency",
+      "source": "f16.ts.Lf52",
+      "target": "Vw210"
+    },
+    {
+      "id": "f16.ts.Lf52_dependency_Zf86",
+      "type": "dependency",
+      "source": "f16.ts.Lf52",
+      "target": "Zf86"
+    },
+    {
+      "id": "f19.ts.Jg57_implementation_f19.ts.Ed56",
+      "type": "implementation",
+      "source": "f19.ts.Jg57",
+      "target": "f19.ts.Ed56"
+    },
+    {
+      "id": "f20.ts.Pi63_composition_3",
+      "type": "composition",
+      "source": "f20.ts.Pi63",
+      "target": "3"
+    },
+    {
+      "id": "f20.ts.Pi63_dependency_\"p168\"",
+      "type": "dependency",
+      "source": "f20.ts.Pi63",
+      "target": "\"p168\""
+    },
+    {
+      "id": "f21.ts.Nb65_dependency_Bz55",
+      "type": "dependency",
+      "source": "f21.ts.Nb65",
+      "target": "Bz55"
+    },
+    {
+      "id": "f21.ts.Nb65_dependency_Mr59",
+      "type": "dependency",
+      "source": "f21.ts.Nb65",
+      "target": "Mr59"
+    },
+    {
+      "id": "f21.ts.Nb65_dependency_Vl60",
+      "type": "dependency",
+      "source": "f21.ts.Nb65",
+      "target": "Vl60"
+    },
+    {
+      "id": "f22.ts.Ym67_composition_Xp101",
+      "type": "composition",
+      "source": "f22.ts.Ym67",
+      "target": "Xp101"
+    },
+    {
+      "id": "f22.ts.Ym67_dependency_Wc102",
+      "type": "dependency",
+      "source": "f22.ts.Ym67",
+      "target": "Wc102"
+    },
+    {
+      "id": "f22.ts.Ym67_dependency_Xp101",
+      "type": "dependency",
+      "source": "f22.ts.Ym67",
+      "target": "Xp101"
+    },
+    {
+      "id": "f23.ts.Lm69_dependency_Jy196",
+      "type": "dependency",
+      "source": "f23.ts.Lm69",
+      "target": "Jy196"
+    },
+    {
+      "id": "f23.ts.Lm69_dependency_Vw210",
+      "type": "dependency",
+      "source": "f23.ts.Lm69",
+      "target": "Vw210"
+    },
+    {
+      "id": "f24.ts.Av82_dependency_Mu206",
+      "type": "dependency",
+      "source": "f24.ts.Av82",
+      "target": "Mu206"
+    },
+    {
+      "id": "f25.ts.Ci92_composition_\"s385\"",
+      "type": "composition",
+      "source": "f25.ts.Ci92",
+      "target": "\"s385\""
+    },
+    {
+      "id": "f25.ts.If97_composition_\"p209\"",
+      "type": "composition",
+      "source": "f25.ts.If97",
+      "target": "\"p209\""
+    },
+    {
+      "id": "f25.ts.If97_composition_\"s393\"",
+      "type": "composition",
+      "source": "f25.ts.If97",
+      "target": "\"s393\""
+    },
+    {
+      "id": "f25.ts.Iz100_composition_\"s26\"",
+      "type": "composition",
+      "source": "f25.ts.Iz100",
+      "target": "\"s26\""
+    },
+    {
+      "id": "f25.ts.Jd94_composition_\"p170\"",
+      "type": "composition",
+      "source": "f25.ts.Jd94",
+      "target": "\"p170\""
+    },
+    {
+      "id": "f25.ts.Jd94_composition_\"p345\"",
+      "type": "composition",
+      "source": "f25.ts.Jd94",
+      "target": "\"p345\""
+    },
+    {
+      "id": "f25.ts.Ox87_composition_\"s241\"",
+      "type": "composition",
+      "source": "f25.ts.Ox87",
+      "target": "\"s241\""
+    },
+    {
+      "id": "f25.ts.Xp101_composition_\"p104\"",
+      "type": "composition",
+      "source": "f25.ts.Xp101",
+      "target": "\"p104\""
+    },
+    {
+      "id": "f26.ts.Gt107_composition_Ck111",
+      "type": "composition",
+      "source": "f26.ts.Gt107",
+      "target": "Ck111"
+    },
+    {
+      "id": "f26.ts.Gt107_composition_Cq108",
+      "type": "composition",
+      "source": "f26.ts.Gt107",
+      "target": "Cq108"
+    },
+    {
+      "id": "f26.ts.Gt107_composition_Pt110",
+      "type": "composition",
+      "source": "f26.ts.Gt107",
+      "target": "Pt110"
+    },
+    {
+      "id": "f26.ts.Gt107_composition_Vs109",
+      "type": "composition",
+      "source": "f26.ts.Gt107",
+      "target": "Vs109"
+    },
+    {
+      "id": "f26.ts.Gt107_dependency_Cq108",
+      "type": "dependency",
+      "source": "f26.ts.Gt107",
+      "target": "Cq108"
+    },
+    {
+      "id": "f26.ts.Gt107_dependency_Hy98",
+      "type": "dependency",
+      "source": "f26.ts.Gt107",
+      "target": "Hy98"
+    },
+    {
+      "id": "f26.ts.Gt107_dependency_Vw210",
+      "type": "dependency",
+      "source": "f26.ts.Gt107",
+      "target": "Vw210"
+    },
+    {
+      "id": "f27.ts.Cq108_dependency_Ei88",
+      "type": "dependency",
+      "source": "f27.ts.Cq108",
+      "target": "Ei88"
+    },
+    {
+      "id": "f27.ts.Cq108_dependency_Nv89",
+      "type": "dependency",
+      "source": "f27.ts.Cq108",
+      "target": "Nv89"
+    },
+    {
+      "id": "f27.ts.Cq108_dependency_Yi90",
+      "type": "dependency",
+      "source": "f27.ts.Cq108",
+      "target": "Yi90"
+    },
+    {
+      "id": "f28.ts.Vs109_dependency_Al96",
+      "type": "dependency",
+      "source": "f28.ts.Vs109",
+      "target": "Al96"
+    },
+    {
+      "id": "f28.ts.Vs109_dependency_If97",
+      "type": "dependency",
+      "source": "f28.ts.Vs109",
+      "target": "If97"
+    },
+    {
+      "id": "f28.ts.Vs109_dependency_Vw210",
+      "type": "dependency",
+      "source": "f28.ts.Vs109",
+      "target": "Vw210"
+    },
+    {
+      "id": "f28.ts.Vs109_dependency_Xn95",
+      "type": "dependency",
+      "source": "f28.ts.Vs109",
+      "target": "Xn95"
+    },
+    {
+      "id": "f29.ts.Pt110_composition_10",
+      "type": "composition",
+      "source": "f29.ts.Pt110",
+      "target": "10"
+    },
+    {
+      "id": "f29.ts.Pt110_composition_100",
+      "type": "composition",
+      "source": "f29.ts.Pt110",
+      "target": "100"
+    },
+    {
+      "id": "f29.ts.Pt110_composition_200",
+      "type": "composition",
+      "source": "f29.ts.Pt110",
+      "target": "200"
+    },
+    {
+      "id": "f29.ts.Pt110_dependency_Jd94",
+      "type": "dependency",
+      "source": "f29.ts.Pt110",
+      "target": "Jd94"
+    },
+    {
+      "id": "f29.ts.Pt110_dependency_Pg93",
+      "type": "dependency",
+      "source": "f29.ts.Pt110",
+      "target": "Pg93"
+    },
+    {
+      "id": "f30.ts.Ck111_dependency_Ab91",
+      "type": "dependency",
+      "source": "f30.ts.Ck111",
+      "target": "Ab91"
+    },
+    {
+      "id": "f30.ts.Ck111_dependency_Ci92",
+      "type": "dependency",
+      "source": "f30.ts.Ck111",
+      "target": "Ci92"
+    },
+    {
+      "id": "f30.ts.Ck111_dependency_Vw210",
+      "type": "dependency",
+      "source": "f30.ts.Ck111",
+      "target": "Vw210"
+    },
+    {
+      "id": "f7.ts.Aj27_composition_Cq108",
+      "type": "composition",
+      "source": "f7.ts.Aj27",
+      "target": "Cq108"
+    },
+    {
+      "id": "f7.ts.Aj27_dependency_Nv89",
+      "type": "dependency",
+      "source": "f7.ts.Aj27",
+      "target": "Nv89"
+    },
+    {
+      "id": "f8.ts.Lw28_dependency_Fo143",
+      "type": "dependency",
+      "source": "f8.ts.Lw28",
+      "target": "Fo143"
+    },
+    {
+      "id": "f9.ts.Pw29_dependency_Vw210",
+      "type": "dependency",
+      "source": "f9.ts.Pw29",
+      "target": "Vw210"
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d6",
+  "metrics": {
+    "level": "method",
+    "entityCount": 61,
+    "relationCount": 66,
+    "relationTypeBreakdown": {
+      "composition": 25,
+      "dependency": 40,
+      "implementation": 1
+    },
+    "stronglyConnectedComponents": 61,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "f10.ts",
+        "loc": 212,
+        "entityCount": 3,
+        "methodCount": 5,
+        "fieldCount": 7,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f11.ts",
+        "loc": 37,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f12.ts",
+        "loc": 172,
+        "entityCount": 11,
+        "methodCount": 0,
+        "fieldCount": 15,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f13.ts",
+        "loc": 18,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 2,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f14.ts",
+        "loc": 40,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 2,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f15.ts",
+        "loc": 628,
+        "entityCount": 1,
+        "methodCount": 24,
+        "fieldCount": 6,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f16.ts",
+        "loc": 215,
+        "entityCount": 1,
+        "methodCount": 10,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f18.ts",
+        "loc": 137,
+        "entityCount": 2,
+        "methodCount": 0,
+        "fieldCount": 3,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f19.ts",
+        "loc": 14,
+        "entityCount": 2,
+        "methodCount": 10,
+        "fieldCount": 0,
+        "inDegree": 1,
+        "outDegree": 1,
+        "cycleCount": 0
+      },
+      {
+        "file": "f20.ts",
+        "loc": 136,
+        "entityCount": 4,
+        "methodCount": 8,
+        "fieldCount": 18,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f22.ts",
+        "loc": 185,
+        "entityCount": 1,
+        "methodCount": 11,
+        "fieldCount": 2,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f23.ts",
+        "loc": 75,
+        "entityCount": 1,
+        "methodCount": 3,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f24.ts",
+        "loc": 241,
+        "entityCount": 3,
+        "methodCount": 0,
+        "fieldCount": 6,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f25.ts",
+        "loc": 121,
+        "entityCount": 21,
+        "methodCount": 0,
+        "fieldCount": 72,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f26.ts",
+        "loc": 190,
+        "entityCount": 1,
+        "methodCount": 7,
+        "fieldCount": 4,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f27.ts",
+        "loc": 130,
+        "entityCount": 1,
+        "methodCount": 6,
+        "fieldCount": 1,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f28.ts",
+        "loc": 188,
+        "entityCount": 1,
+        "methodCount": 12,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f29.ts",
+        "loc": 98,
+        "entityCount": 1,
+        "methodCount": 5,
+        "fieldCount": 3,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f30.ts",
+        "loc": 117,
+        "entityCount": 1,
+        "methodCount": 6,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f7.ts",
+        "loc": 198,
+        "entityCount": 1,
+        "methodCount": 14,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f8.ts",
+        "loc": 213,
+        "entityCount": 1,
+        "methodCount": 6,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f9.ts",
+        "loc": 33,
+        "entityCount": 1,
+        "methodCount": 1,
+        "fieldCount": 0,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 61,
+    "totalRelations": 66,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "composition": 25,
+      "dependency": 40,
+      "implementation": 1
+    },
+    "maxInDegree": 1,
+    "maxOutDegree": 1,
+    "maxPackageSize": 24,
+    "giniInDegree": 0.9545454545454546,
+    "giniPackageSize": 0,
+    "packageCount": 1,
+    "entityCoverageRatio": null
+  }
+}

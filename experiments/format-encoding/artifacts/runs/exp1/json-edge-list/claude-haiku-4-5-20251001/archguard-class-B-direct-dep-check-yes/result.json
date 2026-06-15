@@ -1,0 +1,11 @@
+{
+  "responses": [
+    "```json\n{\"answer\": true}\n```",
+    "```json\n{\"answer\": true}\n```",
+    "```json\n{\"answer\": true}\n```\n\nThe relation shows:\n```\n{\n  \"from\": \"src/cli/git-history/history-loader.ts.loadhistorydata\",\n  \"to\": \"src/types/git-history.ts.githistorymanifest\",\n  \"type\": \"dependency\"\n}\n```",
+    "```json\n{\"answer\": true}\n```",
+    "```json\n{\"answer\": true}\n```"
+  ],
+  "promptTokens": 331375,
+  "completionTokens": 117
+}

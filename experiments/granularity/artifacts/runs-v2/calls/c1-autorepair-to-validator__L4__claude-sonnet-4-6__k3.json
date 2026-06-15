@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-autorepair-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-autorepair-to-validator__L4__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": [\"MermaidAutoRepair.repair\", \"MermaidAutoRepair.repairBestEffort\"]}",
+  "promptTokens": 58826,
+  "completionTokens": 29,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:36:28.260Z"
+}

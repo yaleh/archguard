@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "v2-a-list-packages__L5__glm-4.5-airx__k3",
+  "content": "```json\n{\n  \"answer\": [\"core\", \"parser\", \"mermaid\", \"utils\", \"types\", \"extensions\"]\n}\n```",
+  "promptTokens": 43990,
+  "completionTokens": 1094,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:06.074Z"
+}

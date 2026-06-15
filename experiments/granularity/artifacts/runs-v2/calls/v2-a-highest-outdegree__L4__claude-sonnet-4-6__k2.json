@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 2,
+  "key": "v2-a-highest-outdegree__L4__claude-sonnet-4-6__k2",
+  "content": "Looking at the relations array, I need to count outgoing dependencies (where each entity appears as `source`) across all relation types.\n\nScanning through the relations, `MermaidDiagramGenerator.generateOnly` stands out with a large number of outgoing calls in the callGraph. But the question asks about the `relations` array (structural dependencies), not the callGraph.\n\nLet me count the top candidates in the `relations` array by source:\n\n- `runAnalysis` (cli/analyze/run-analysis.ts): sources include normalizeToDiagrams, cleanStaleDiagrams, readManifest, writeManifest, ConfigLoader, DiagramProcessor, persistQueryScopes, DiagramIndexGenerator, TestOutputWriter, ParseCache, TestAnalyzer, CLIOptions = ~12\n- `createAnalyzeCommand`: ~3\n- `createCacheCommand`: ~4\n- `normalizeToDiagrams`: ~5\n- `ValidatedMermaidGenerator.generateOnly` (callGraph): many, but that's callGraph\n- `registerAnalyzeTool`: ~2\n- `createMcpServer`: ~4\n- `registerTools`: ~6\n- `persistQueryScopes`: ~4\n- `evaluateAllRules`: ~2\n\nIn the callGraph, `MermaidDiagramGenerator.generateOnly` has the most outgoing calls by far — I count roughly 30+ unique targets.\n\nBut for the `relations` array specifically, `runAnalysis` has the most outgoing dependency edges.\n\nThe question says \"outgoing dependencies\" which most naturally maps to the `relations` array with type \"dependency\". `runAnalysis` appears as source ~12 times, which is the highest I can find.\n\n```json\n{\"answer\": \"runAnalysis\"}\n```",
+  "promptTokens": 58808,
+  "completionTokens": 440,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:56:36.302Z"
+}

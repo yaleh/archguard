@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-interface-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-interface-count__L5__claude-sonnet-4-6__k1",
+  "content": "I'll analyze the code to count interface entities defined in this codebase.\n\nLooking through the code for TypeScript `interface` declarations:\n\n1. `MermaidOutputOptions` - in diagram-generator.ts\n2. `RenderJob` - in diagram-generator.ts\n3. `WorkerInitData` - in render-worker-pool.ts\n4. `RenderJob` - in render-worker-pool.ts (same name, same file)\n5. `RenderResult` - in render-worker-pool.ts\n6. `IProgressReporter` - in progress.ts\n7. `ParallelParserOptions` - in parallel-parser.ts\n8. `ParsingMetrics` - in parallel-parser.ts\n9. `ProgressEvent` - in parallel-parser.ts (private interface)\n10. `FileCompleteEvent` - in parallel-parser.ts (private interface)\n11. `CompletionEvent` - in parallel-parser.ts (private interface)\n12. `TsModuleGraphRenderOptions` - in ts-module-graph renderer\n13. `TreeNode` - in ts-module-graph renderer\n14. `MermaidDetailLevel` (type alias, not interface)\n15. `MermaidDiagramType` (type alias)\n16. `GroupingDecision` - in types.ts\n17. `PackageGroup` - in types.ts\n18. `LayoutDecision` - in types.ts\n19. `ParseValidationResult` - in types.ts\n20. `ValidationError` - in types.ts\n21. `ValidationWarning` - in types.ts\n22. `StructuralValidationResult` - in types.ts\n23. `StructuralIssue` - in types.ts\n24. `RenderValidationResult` - in types.ts\n25. `RenderIssue` - in types.ts\n26. `QualityValidationResult` - in types.ts\n27. `QualityMetrics` - in types.ts\n28. `QualitySuggestion` - in types.ts\n29. `ValidationPipelineResult` - in types.ts\n30. `MermaidGeneratorOptions` - in types.ts\n31. `MermaidTheme` - in types.ts\n32. `MermaidRendererOptions` - in types.ts\n33. `MermaidOutputPaths` - in types.ts\n34. `GrouperConfig` - in types.ts\n35. `GroupingRule` - in types.ts\n36. `LLMGrouperResponse` - in types.ts\n\n```json\n{\"answer\": 36}\n```",
+  "promptTokens": 46740,
+  "completionTokens": 527,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:58:54.440Z"
+}

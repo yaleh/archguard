@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-iprogressreporter-start",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "glm-4.7",
+  "k": 1,
+  "key": "v2-b-callers-iprogressreporter-start__L4__glm-4.7__k1",
+  "content": "```json\n[\n  \"mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateOnly\",\n  \"mermaid/diagram-generator.ts#MermaidDiagramGenerator.generateAndRender\",\n  \"mermaid/diagram-generator.ts#MermaidDiagramGenerator.renderJobsInParallel\"\n]\n```",
+  "promptTokens": 57905,
+  "completionTokens": 60,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:03.801Z"
+}

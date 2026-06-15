@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-repair",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "c1-mermaid-to-repair__L2__glm-4.7__k3",
+  "content": "```json\n[]\n```",
+  "promptTokens": 21691,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:35:32.587Z"
+}

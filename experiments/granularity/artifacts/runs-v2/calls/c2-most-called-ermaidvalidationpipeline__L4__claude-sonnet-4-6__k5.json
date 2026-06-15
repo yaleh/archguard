@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ermaidvalidationpipeline",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "c2-most-called-ermaidvalidationpipeline__L4__claude-sonnet-4-6__k5",
+  "content": "{\"answer\": \"MermaidValidationPipeline.validateFull\"}",
+  "promptTokens": 58821,
+  "completionTokens": 19,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:30:57.698Z"
+}

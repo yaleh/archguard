@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-top3-indegree__L5__claude-sonnet-4-6__k1",
+  "content": "I need to analyze the code to find which entities (classes/functions) are most frequently referenced as targets of dependencies (imports, inheritance, composition, etc.).\n\nLet me trace the incoming dependencies for key entities:\n\n**MermaidParseValidator** - used by:\n1. MermaidAutoRepair (constructor param)\n2. MermaidValidationPipeline (instantiated)\n3. MermaidDiagramGenerator (via pipeline.getParseValidator())\n\n**MermaidValidationPipeline** - used by:\n1. MermaidDiagramGenerator (instantiated)\n\n**IsomorphicMermaidRenderer** - used by:\n1. MermaidDiagramGenerator.renderJobsInParallel (instantiated)\n2. MermaidDiagramGenerator.renderJobsInParallelWithConfig (instantiated)\n3. MermaidDiagramGenerator.generateAndRender (instantiated)\n\n**ValidatedMermaidGenerator** - used by:\n1. MermaidDiagramGenerator (instantiated)\n\n**HeuristicGrouper** - used by:\n1. MermaidDiagramGenerator (instantiated)\n\n**CommentGenerator** - used by:\n1. ValidatedMermaidGenerator (instantiated)\n\n**BaseExtractor** - extended by:\n1. ClassExtractor\n2. InterfaceExtractor\n3. EnumExtractor\n4. RelationExtractor\n\n**TypeScriptParser** - used by:\n1. ParallelParser (instantiated)\n\n**MermaidAutoRepair** - used by:\n1. MermaidDiagramGenerator (instantiated)\n\n**postProcessSVG** - used by:\n1. render-worker\n2. IsomorphicMermaidRenderer (imported)\n\n**groupEntitiesByPackage** - used by:\n1. ValidatedMermaidGenerator (multiple methods)\n\n**BaseExtractor** has 4 subclasses inheriting from it, making it the highest in-degree.\n\n**MermaidParseValidator** is referenced by 3 distinct consumers.\n\n**IsomorphicMermaidRenderer** is instantiated in 3 places within MermaidDiagramGenerator plus imported in renderer index.\n\n```json\n{\"answer\": [\"BaseExtractor\", \"IsomorphicMermaidRenderer\", \"MermaidParseValidator\"]}\n```",
+  "promptTokens": 46758,
+  "completionTokens": 532,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:43:32.367Z"
+}

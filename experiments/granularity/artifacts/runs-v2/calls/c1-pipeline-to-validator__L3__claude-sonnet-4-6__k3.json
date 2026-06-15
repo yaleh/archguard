@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-pipeline-to-validator__L3__claude-sonnet-4-6__k3",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a composition relationship with `MermaidParseValidator` (it holds it as a private field `parseValidator`), and the diagram shows:\n\n- `MermaidValidationPipeline --> MermaidParseValidator` (via `getParseValidator()`)\n- `MermaidAutoRepair` uses `MermaidParseValidator_validate`\n\nFrom the call graph edges visible, I can see calls like `MermaidDiagramGenerator_generateOnly --> MermaidValidationPipeline_getParseValidator`, but I need to find which `MermaidValidationPipeline` methods call `MermaidParseValidator` methods directly.\n\nThe call graph shows:\n- `MermaidAutoRepair_repair --> MermaidParseValidator_validate`\n- `MermaidAutoRepair_repairBestEffort --> MermaidParseValidator_validate`\n\nBut for `MermaidValidationPipeline`, looking at the method `validate` and `validateFull` — these would logically call `parseValidator.validate()`, and the `getParseValidator` method returns the parser. However, the call graph is truncated at \"325 more call edges\" so direct evidence is limited.\n\nFrom the class definition, `MermaidValidationPipeline.validate` and `MermaidValidationPipeline.validateFull` both use the parse validator (as `validateFull` is the full pipeline), and `getParseValidator` explicitly returns `MermaidParseValidator`. Based on the visible relationships and the `MermaidValidationPipeline --> MermaidParseValidator` arrow in the diagram:\n\n```json\n{\"answer\": [\"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\", \"MermaidValidationPipeline.getParseValidator\"]}\n```",
+  "promptTokens": 35373,
+  "completionTokens": 471,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:44:56.603Z"
+}

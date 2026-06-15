@@ -1,0 +1,14 @@
+{
+  "task": {
+    "id": "archguard-class-A-highest-out-degree",
+    "taskClass": "A",
+    "taskType": "highest-out-degree",
+    "prompt": "Based only on the representation above: which entity has the highest number of outgoing dependencies (out-degree)? If there is a tie, give any one. Respond with JSON: {\"answer\": \"entity-id\"}.",
+    "answerType": "set",
+    "answer": [
+      "src/cli/analyze/run-analysis.ts.runanalysis"
+    ]
+  },
+  "format": "mermaid",
+  "model": "claude-haiku-4-5-20251001"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-highest-outdegree__L4__claude-sonnet-4-6__k4",
+  "content": "Looking at the relations array, I need to count outgoing dependencies (where each entity appears as `source`) for all entities.\n\nThe most call graph entries by source belong to `ValidatedMermaidGenerator` methods, but the question asks about the structural `relations` array (dependencies, inheritance, composition, implementation).\n\nCounting sources in `relations`:\n\n`runAnalysis` appears as source in: normalizeToDiagrams, cleanStaleDiagrams, readManifest, writeManifest, ConfigLoader, DiagramProcessor, persistQueryScopes, DiagramIndexGenerator, TestOutputWriter, ParseCache, TestAnalyzer, CLIOptions = 12\n\n`evaluateAllRules` = 2, `normalizeToDiagrams` = 4, `createAnalyzeCommand` = 1, etc.\n\nLet me check `registerAnalyzeTool`, `createMcpServer`, `registerTools`, `createCLI`, `loadEngine`, `persistQueryScopes`, `buildArchIndex`, etc.\n\n`registerTools` → loadEngine, PackageStatEntry, PackageStatsResult, CapabilityGraph, GoroutineTopology, PackageGraph, Entity = 7\n\n`createMcpServer` → registerAnalyzeTool, registerGitHistoryAnalyzeTool, registerGitHistoryTools, registerTestAnalysisTools = 4\n\n`registerGitHistoryAnalyzeTool` → getCurrentBranch, getHeadRef, isGitRepo, readGitLog, aggregateFileMetrics, aggregatePackageMetrics, writeHistoryArtifacts, resolveRoot, GitHistoryArtifacts, GitHistoryManifest = 10\n\n`runAnalysis` = 12 (counted above)\n\n`aggregatePackageMetrics` → CochangeEdge, ContributorSummary, FileHistoryMetrics, PackageHistoryMetrics = 4\n\n`renderFlowGraph` → buildPackageTree, createSubgraphId, FLOWCHART_INIT, formatEntryLabel, packageOfEntry, sanitizeId, SEQUENCE_INIT, SUBGRAPH_DEPTH_STYLES, CallEdge, EntryPoint = 10\n\n`renderGoroutineTopology` = 9, `renderCapabilityGraph` = 8, `renderPackageGraph` = 6\n\n`runAnalysis` at 12 seems highest.\n\n```json\n{\"answer\": \"runAnalysis\"}\n```",
+  "promptTokens": 58808,
+  "completionTokens": 544,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:56:36.302Z"
+}

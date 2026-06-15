@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-normalizeen",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 5,
+  "key": "v2-b-callers-validatedmermaidgenerator-normalizeen__L5__deepseek-v4-flash__k5",
+  "content": "{\"answer\":[\"ValidatedMermaidGenerator.generatePackageLevel\",\"ValidatedMermaidGenerator.generateLayeredPackageLevel\",\"ValidatedMermaidGenerator.generateClassLevel\",\"ValidatedMermaidGenerator.generateMethodLevel\",\"ValidatedMermaidGenerator.generateClassDefinition\",\"ValidatedMermaidGenerator.generateRelationLine\",\"ValidatedMermaidGenerator.generateClassDiagrams\"]}",
+  "promptTokens": 46681,
+  "completionTokens": 2646,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:17:48.362Z"
+}

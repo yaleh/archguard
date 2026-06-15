@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-relation-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 3,
+  "key": "v2-a-dominant-relation-type__L5__glm-4.5-airx__k3",
+  "content": "```json\n{\"answer\": \"dependency\"}\n```",
+  "promptTokens": 43988,
+  "completionTokens": 945,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:41:11.162Z"
+}

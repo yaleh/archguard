@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-direct-dep-exists",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-a-direct-dep-exists__L4__deepseek-v4-flash__k2",
+  "content": "{\"answer\": \"yes\"}",
+  "promptTokens": 62871,
+  "completionTokens": 100,
+  "invalidated": false,
+  "timestamp": "2026-06-11T18:09:59.334Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-mermaidparsevalidator-validate",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-b-callers-mermaidparsevalidator-validate__L5__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": [\"MermaidAutoRepair.repair\", \"MermaidAutoRepair.repairBestEffort\", \"MermaidValidationPipeline.validate\", \"MermaidValidationPipeline.validateFull\"]}",
+  "promptTokens": 46753,
+  "completionTokens": 59,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:16:28.250Z"
+}

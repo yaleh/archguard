@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-list-packages",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "v2-a-list-packages__L2__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"Cli_Layer\", \"Core_Layer___Mermaid_Layer\", \"Extensions_Layer\", \"Git_History_Layer\", \"Golang_Layer\", \"Interfaces_Layer\", \"Java_Layer\", \"Parser_Layer\", \"Progress_Layer___Query_Layer\", \"Renderers_Layer\", \"Types_Layer\", \"Typescript_Layer___Extensions_Layer\", \"Typescript_Layer___Types_Layer\", \"Utils_Layer\"]}",
+  "promptTokens": 22183,
+  "completionTokens": 583,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:07:57.553Z"
+}

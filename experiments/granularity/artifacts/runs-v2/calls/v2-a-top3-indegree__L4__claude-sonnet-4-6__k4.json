@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "v2-a-top3-indegree__L4__claude-sonnet-4-6__k4",
+  "content": "I'll analyze the relations array to count incoming dependencies (where each entity appears as a `target`) for all entities.\n\nLet me tally the in-degrees from the `relations` array:\n\n- `ProgressReporterLike`: target of NoopReporter, ProgressReporter, StderrReporter implementations = 3, plus composition refs... let me count direct dependency/implementation/inheritance targets.\n\nGoing through all relations systematically, counting occurrences as `target`:\n\n- `plugins/shared/mapper-utils.ts.BaseArchJsonMapper`: targeted by cpp, golang, java, kotlin, python ArchJsonMapper inheritances = 5\n- `core/interfaces/language-plugin.ts.ILanguagePlugin`: targeted by CppPlugin, GoPlugin, JavaPlugin, KotlinPlugin, PythonPlugin, TypeScriptPlugin implementations = 6\n- `core/interfaces/dependency.ts.IDependencyExtractor`: targeted by cpp, golang, java, kotlin, python DependencyExtractors = 5\n- `plugins/golang/atlas/builders/i-atlas-builder.ts.IAtlasBuilder`: targeted by CapabilityGraphBuilder, FlowGraphBuilder, GoroutineTopologyBuilder, PackageGraphBuilder = 4\n- `parser/base-extractor.ts.BaseExtractor`: targeted by ClassExtractor, EnumExtractor, InterfaceExtractor, RelationExtractor = 4\n- `cli/mcp/mcp-server.ts.resolveRoot`: targeted 3 times\n- `types/index.ts.ArchJSON`: targeted 3 times\n- `plugins/golang/atlas/renderers/template-shared.ts.sanitizeId`: targeted by capability, flow, goroutine, package renderers = 4+\n- `analysis/fim/types.ts.FIMSnapshot`: 2\n- `cli/query/query-manifest.ts.QueryManifest`: 3\n- `cli/git-history/git-log-reader.ts.*`: various\n\nTop candidates:\n- `core/interfaces/language-plugin.ts.ILanguagePlugin`: 6\n- `plugins/shared/mapper-utils.ts.BaseArchJsonMapper`: 5\n- `core/interfaces/dependency.ts.IDependencyExtractor`: 5\n- `parser/base-extractor.ts.BaseExtractor`: 4\n- `plugins/golang/atlas/builders/i-atlas-builder.ts.IAtlasBuilder`: 4\n\n`BaseArchJsonMapper` and `IDependencyExtractor` are tied at 5. Checking `template-shared.ts.sanitizeId` — it appears as target in capability, flow, goroutine, and package renderers = 4 times in relations, but also heavily in callGraph.\n\nThe question specifies \"incoming dependencies\" from the `relations` array only.\n\n```json\n{\"answer\": [\"ILanguagePlugin\", \"BaseArchJsonMapper\", \"IDependencyExtractor\"]}\n```",
+  "promptTokens": 58819,
+  "completionTokens": 681,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:42:32.900Z"
+}

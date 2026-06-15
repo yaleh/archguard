@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ypescriptparser",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "c2-most-called-ypescriptparser__L4__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\n  \"answer\": \"TypeScriptParser.parseProject\"\n}",
+  "promptTokens": 61503,
+  "completionTokens": 4057,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:55:00.202Z"
+}

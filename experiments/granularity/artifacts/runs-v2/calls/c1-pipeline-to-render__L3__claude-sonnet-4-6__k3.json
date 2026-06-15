@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-render",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c1-pipeline-to-render__L3__claude-sonnet-4-6__k3",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a composition relationship with `RenderValidator` (`MermaidValidationPipeline *-- RenderValidator`), and the `validate` and `validateFull` methods are the ones that orchestrate the pipeline validators.\n\nThe call graph provided is truncated at 375 edges with a comment `%% ... and 325 more call edges`, so the specific calls from `MermaidValidationPipeline` to `RenderValidator` methods are not visible in the provided data.\n\nHowever, based strictly on what is represented in the call graph above (not inferred), there are no explicit edges shown from `MermaidValidationPipeline` methods to `RenderValidator` methods.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35371,
+  "completionTokens": 229,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:47:37.549Z"
+}

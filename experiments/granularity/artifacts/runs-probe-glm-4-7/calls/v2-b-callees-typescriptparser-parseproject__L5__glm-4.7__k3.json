@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "v2-b-callees-typescriptparser-parseproject__L5__glm-4.7__k3",
+  "content": "```json\n[\n  \"Project.addSourceFilesAtPaths\",\n  \"SourceFile.getFilePath\",\n  \"SourceFile.getClasses\",\n  \"SourceFile.getInterfaces\",\n  \"SourceFile.getEnums\",\n  \"SourceFile.getImportDeclarations\",\n  \"ImportDeclaration.getModuleSpecifierSourceFile\",\n  \"SourceFile.getFilePath\",\n  \"ImportDeclaration.getNamedImports\",\n  \"NamedImport.getName\",\n  \"RelationExtractor.extractFromSourceFile\",\n  \"ClassExtractor.extractClass\",\n  \"InterfaceExtractor.extractInterface\",\n  \"EnumExtractor.extractEnum\",\n  \"FunctionExtractor.extract\",\n  \"TypeScriptParser.filterExternalRelations\",\n  \"TypeScriptParser.deduplicateRelations\"\n]\n```",
+  "promptTokens": 43992,
+  "completionTokens": 138,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:32:52.235Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-ypescriptparser",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 3,
+  "key": "c2-most-called-ypescriptparser__L4__claude-sonnet-4-6__k3",
+  "content": "{\"answer\": \"TypeScriptParser.constructor\"}",
+  "promptTokens": 58819,
+  "completionTokens": 15,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:10:43.327Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "c2-most-called-elationextractor",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "c2-most-called-elationextractor__L5__glm-4.7__k3",
+  "content": "```json\n{\"answer\": \"TypeScriptParser.parseProject\"}\n```",
+  "promptTokens": 43992,
+  "completionTokens": 14,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:26:14.588Z"
+}

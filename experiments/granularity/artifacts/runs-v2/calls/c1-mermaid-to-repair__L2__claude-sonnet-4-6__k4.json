@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-repair",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "claude-sonnet-4-6",
+  "k": 4,
+  "key": "c1-mermaid-to-repair__L2__claude-sonnet-4-6__k4",
+  "content": "{\"answer\": []}",
+  "promptTokens": 21361,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:26:47.905Z"
+}

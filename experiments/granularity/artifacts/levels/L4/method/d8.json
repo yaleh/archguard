@@ -1,0 +1,4123 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-06-11T06:52:53.878Z",
+  "sourceFiles": [
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f50.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f51.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f44.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f46.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f47.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f48.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54.ts",
+    "/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f55.ts"
+  ],
+  "entities": [
+    {
+      "id": "d9/f49.ts.Ah167",
+      "name": "Ah167",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p493",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s534\" | \"s535\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 134,
+        "endLine": 138
+      }
+    },
+    {
+      "id": "d9/f49.ts.Bb160",
+      "name": "Bb160",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p598\" | \"p600\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p440",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p468",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p469",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p470",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p471",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p472",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 74,
+        "endLine": 84
+      }
+    },
+    {
+      "id": "d9/f49.ts.Bl155",
+      "name": "Bl155",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p208",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s27\" | \"p170\"",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 47,
+        "endLine": 50
+      }
+    },
+    {
+      "id": "d9/f49.ts.Ha156",
+      "name": "Ha156",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s516\" | \"p324\" | \"s517\" | \"s518\" | \"s519\" | \"s520\" | \"s521\" | \"s522\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p320",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p461",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Ri157",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 51,
+        "endLine": 57
+      }
+    },
+    {
+      "id": "d9/f49.ts.Hf164",
+      "name": "Hf164",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p458",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Wb165[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p459",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Ah167[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p490",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Mk168[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p491",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Mu169[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p492",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Ob163[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 114,
+        "endLine": 120
+      }
+    },
+    {
+      "id": "d9/f49.ts.Hj175",
+      "name": "Hj175",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p503",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p504",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Jb176[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p505",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Jb176[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 176,
+        "endLine": 181
+      }
+    },
+    {
+      "id": "d9/f49.ts.Hz154",
+      "name": "Hz154",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p458",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Ha156[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p459",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Lx158[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p460",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Bl155[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 42,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "d9/f49.ts.Jb176",
+      "name": "Jb176",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p598\" | \"s547\" | \"s548\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p474",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 182,
+        "endLine": 187
+      }
+    },
+    {
+      "id": "d9/f49.ts.Jk151",
+      "name": "Jk151",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p439",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Qe152",
+          "isReadonly": false
+        },
+        {
+          "name": "p51",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Kk153",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 2,
+        "endLine": 6
+      }
+    },
+    {
+      "id": "d9/f49.ts.Jq171",
+      "name": "Jq171",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p440",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p483",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p329: string; p213: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p498",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p499",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Oc173",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p500",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p501",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p502",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p69",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 159,
+        "endLine": 172
+      }
+    },
+    {
+      "id": "d9/f49.ts.Kk153",
+      "name": "Kk153",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p223",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p440: number; p441: number; p442: number; p443: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p444",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p445",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p446: \"s285\" | \"s514\" | \"s515\"; p447?: { p448: string[]; p449: boolean; p450: number; p451: number; }; p452: string[]; p453?: string[]; p454: boolean; p455: boolean; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p456",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p320: number; p318: number; p457: number; p321: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p74",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 13,
+        "endLine": 41
+      }
+    },
+    {
+      "id": "d9/f49.ts.Lx158",
+      "name": "Lx158",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p465",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p466",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 63,
+        "endLine": 68
+      }
+    },
+    {
+      "id": "d9/f49.ts.Mk168",
+      "name": "Mk168",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p212",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s536\" | \"s537\" | \"s538\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p483",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p329: string; p213: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p494",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 139,
+        "endLine": 149
+      }
+    },
+    {
+      "id": "d9/f49.ts.Mu169",
+      "name": "Mu169",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p495",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s536\" | \"s539\" | \"s540\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 150,
+        "endLine": 154
+      }
+    },
+    {
+      "id": "d9/f49.ts.Ni170",
+      "name": "Ni170",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p496",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Jq171[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p497",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Hj175[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 155,
+        "endLine": 158
+      }
+    },
+    {
+      "id": "d9/f49.ts.Ob163",
+      "name": "Ob163",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "m199",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p484",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p485",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p486",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p487",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p488",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p476\" | \"s524\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p489",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 105,
+        "endLine": 113
+      }
+    },
+    {
+      "id": "d9/f49.ts.Qe152",
+      "name": "Qe152",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p440",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Hz154",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p441",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Qz159",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p442",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Hf164",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p443",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Ni170",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 7,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "d9/f49.ts.Qz159",
+      "name": "Qz159",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p458",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Bb160[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p459",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Zg161[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p467",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Sq162[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 69,
+        "endLine": 73
+      }
+    },
+    {
+      "id": "d9/f49.ts.Ri157",
+      "name": "Ri157",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p462",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p463",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p464",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 58,
+        "endLine": 62
+      }
+    },
+    {
+      "id": "d9/f49.ts.Sq162",
+      "name": "Sq162",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p477",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p481",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p482",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p483",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 99,
+        "endLine": 104
+      }
+    },
+    {
+      "id": "d9/f49.ts.Wb165",
+      "name": "Wb165",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s525\" | \"s526\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p243",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f49\").Re166",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p440",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p483",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p329: string; p213: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p493",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s527\" | \"s528\" | \"p499\"",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 121,
+        "endLine": 132
+      }
+    },
+    {
+      "id": "d9/f49.ts.Zg161",
+      "name": "Zg161",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p564\" | \"s523\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p22",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p473",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p474",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p475",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p476",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p477?: boolean; p478?: boolean; p479?: boolean; p480: string[]; }",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f49.ts",
+        "startLine": 85,
+        "endLine": 98
+      }
+    },
+    {
+      "id": "d9/f50.ts.Qx177",
+      "name": "Qx177",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p436",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Iv180",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p506",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Jk151",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p507",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Xh203",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p508",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Jy196",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f50.ts",
+        "startLine": 9,
+        "endLine": 14
+      }
+    },
+    {
+      "id": "d9/f51.ts.Cw192",
+      "name": "Cw192",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v1483",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Wg186"
+        },
+        {
+          "name": "v1484",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Wg186"
+        },
+        {
+          "name": "v1485",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "Wg186"
+        }
+      ],
+      "sourceLocation": {
+        "file": "d9/f51.ts",
+        "startLine": 120,
+        "endLine": 152
+      }
+    },
+    {
+      "id": "d9/f51.ts.Eg189",
+      "name": "Eg189",
+      "type": "function",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "v1474",
+          "type": "field",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f51\").Iv180"
+        }
+      ],
+      "sourceLocation": {
+        "file": "d9/f51.ts",
+        "startLine": 74,
+        "endLine": 83
+      }
+    },
+    {
+      "id": "d9/f51.ts.Fz179",
+      "name": "Fz179",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p201",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string>",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p509",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p510",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p511",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p512",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p513",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f51.ts",
+        "startLine": 3,
+        "endLine": 10
+      }
+    },
+    {
+      "id": "d9/f51.ts.Iv180",
+      "name": "Iv180",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s484\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p201",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string>",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p474",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p509",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p510",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p511",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p512",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p513",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p514",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p515",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f51.ts",
+        "startLine": 11,
+        "endLine": 22
+      }
+    },
+    {
+      "id": "d9/f52.ts.Fq195",
+      "name": "Fq195",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p452",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p19: string; p474: \"s393\" | \"s134\" | \"s394\"; p523: string[]; }[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p524",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52\").Ym194",
+          "isReadonly": false
+        },
+        {
+          "name": "p525",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 13,
+        "endLine": 21
+      }
+    },
+    {
+      "id": "d9/f52.ts.Jy196",
+      "name": "Jy196",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p215",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52\").Vr199[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p220",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52\").Kd200",
+          "isReadonly": false
+        },
+        {
+          "name": "p526",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s550\" | \"s551\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p527",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52\").Pi197[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p528",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f52\").Pi198[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 22,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "d9/f52.ts.Kd200",
+      "name": "Kd200",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p532",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p538",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p539",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<\"s19\" | \"s20\" | \"s21\" | \"p456\" | \"s333\" | \"s22\", number>",
+          "isReadonly": false
+        },
+        {
+          "name": "p540",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p541",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p542",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<\"s552\" | \"s553\" | \"s554\" | \"s555\", number>",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 53,
+        "endLine": 60
+      }
+    },
+    {
+      "id": "d9/f52.ts.Oi201",
+      "name": "Oi201",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p440",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p543",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p544",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p545",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p546",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 61,
+        "endLine": 67
+      }
+    },
+    {
+      "id": "d9/f52.ts.Pi197",
+      "name": "Pi197",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p26",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p27",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p28",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p529",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s19\" | \"s20\" | \"s21\" | \"p456\" | \"s333\" | \"s22\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p530",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p531",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p532",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p533",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 30,
+        "endLine": 40
+      }
+    },
+    {
+      "id": "d9/f52.ts.Pi198",
+      "name": "Pi198",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p534",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p535",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p536",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 41,
+        "endLine": 45
+      }
+    },
+    {
+      "id": "d9/f52.ts.Vr199",
+      "name": "Vr199",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s552\" | \"s553\" | \"s554\" | \"s555\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p5",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p537",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s27\" | \"m164\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p71",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 46,
+        "endLine": 52
+      }
+    },
+    {
+      "id": "d9/f52.ts.Ym194",
+      "name": "Ym194",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p516",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p517",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p518",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p519",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p520",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p521",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p522: string; p1: \"s19\" | \"s20\" | \"s21\" | \"p456\"; }[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f52.ts",
+        "startLine": 2,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "d9/f53.ts.Az204",
+      "name": "Az204",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p458",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53\").Go205[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p459",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53\").Mu206[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p460",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53\").He207[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f53.ts",
+        "startLine": 6,
+        "endLine": 10
+      }
+    },
+    {
+      "id": "d9/f53.ts.Go205",
+      "name": "Go205",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s516\" | \"p324\" | \"s361\"",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p320",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p461",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p426: number; p463: number; p464: number; p548: number; }",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f53.ts",
+        "startLine": 11,
+        "endLine": 22
+      }
+    },
+    {
+      "id": "d9/f53.ts.He207",
+      "name": "He207",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p550",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p70",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s27\" | \"p170\"",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f53.ts",
+        "startLine": 29,
+        "endLine": 32
+      }
+    },
+    {
+      "id": "d9/f53.ts.Mu206",
+      "name": "Mu206",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p465",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p549",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p6",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p7",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f53.ts",
+        "startLine": 23,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "d9/f53.ts.Xh203",
+      "name": "Xh203",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p547",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/d9/f53\").Az204",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "d9/f53.ts",
+        "startLine": 2,
+        "endLine": 5
+      }
+    },
+    {
+      "id": "f44.ts.Tq132",
+      "name": "Tq132",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p100",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p109",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p121",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"p440\" | \"s23\" | \"p499\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p235",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Tu149",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p343",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p363",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p364",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p365",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p366",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p367",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p368",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p369",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p370",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s26\" | \"s309\" | \"s308\" | \"s310\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p371",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s502\" | \"p428\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p372",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p373",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p374",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p375",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p376",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p377",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p378",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p379",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p49",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p50",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p63",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f44.ts",
+        "startLine": 2,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "f45.ts.Cb135",
+      "name": "Cb135",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p385",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p393",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Ah136",
+          "isReadonly": false
+        },
+        {
+          "name": "p394",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p395",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 24,
+        "endLine": 30
+      }
+    },
+    {
+      "id": "f45.ts.Fo143",
+      "name": "Fo143",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p121",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Os146",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p235",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Tu149",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p364",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p367",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p385",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p421",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p422",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s510\" | \"s511\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p423",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Kn134",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p424",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Wb138",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p425",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Ke140",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p426",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Yd141",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p51",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Rq133",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p64",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, unknown>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 74,
+        "endLine": 89
+      }
+    },
+    {
+      "id": "f45.ts.Gd137",
+      "name": "Gd137",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p396",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p397",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p398",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p399",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 32,
+        "endLine": 37
+      }
+    },
+    {
+      "id": "f45.ts.Gu139",
+      "name": "Gu139",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p385",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p390",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p403",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p404",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 44,
+        "endLine": 50
+      }
+    },
+    {
+      "id": "f45.ts.Ke140",
+      "name": "Ke140",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p405",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p406",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p407",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p408",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p409",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p410",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "(\"p380\" | \"p381\" | \"p382\" | \"p384\" | \"p387\" | \"p390\" | \"p391\" | \"p424\")[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p411",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s509\" | \"s237\"",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 51,
+        "endLine": 59
+      }
+    },
+    {
+      "id": "f45.ts.Kn134",
+      "name": "Kn134",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p389",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s503\" | \"s504\" | \"s505\" | \"s506\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p390",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Cb135[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p391",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p392",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Gd137[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 18,
+        "endLine": 23
+      }
+    },
+    {
+      "id": "f45.ts.Rq133",
+      "name": "Rq133",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p380",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p381",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p382",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p383",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p384",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p1: string; p385?: string; p386?: string; }",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p387",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p385: string; p388?: string[]; p386?: string; }",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 2,
+        "endLine": 17
+      }
+    },
+    {
+      "id": "f45.ts.Tu142",
+      "name": "Tu142",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p417",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p418",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p419",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p420",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 68,
+        "endLine": 73
+      }
+    },
+    {
+      "id": "f45.ts.Wb138",
+      "name": "Wb138",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p252",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p400",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Gu139[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p401",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p402",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 38,
+        "endLine": 43
+      }
+    },
+    {
+      "id": "f45.ts.Yd141",
+      "name": "Yd141",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p412",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p413",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f45\").Tu142[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p414",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p415?: string[]; p416?: string[]; }",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f45.ts",
+        "startLine": 60,
+        "endLine": 67
+      }
+    },
+    {
+      "id": "f46.ts.Ik144",
+      "name": "Ik144",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p100",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p235",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Tu149",
+          "isReadonly": false
+        },
+        {
+          "name": "p343",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p432: boolean; p433: number; p434?: string; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p366",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p367",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p427",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Pz147",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p428",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "{ p429: string; p430: string[]; p431: number; }",
+          "isReadonly": false
+        },
+        {
+          "name": "p435",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p436",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Iv180",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p437",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "En5",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p50",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false
+        },
+        {
+          "name": "p63",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f46.ts",
+        "startLine": 5,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "f46.ts.Ny145",
+      "name": "Ny145",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p363",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Fo143[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "extends": [
+        "Ik144"
+      ],
+      "sourceLocation": {
+        "file": "f46.ts",
+        "startLine": 27,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "f47.ts.Pz147",
+      "name": "Pz147",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p123",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s26\" | \"s309\" | \"s308\" | \"s310\"",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p166",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p438",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s502\" | \"p428\"",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f47.ts",
+        "startLine": 2,
+        "endLine": 6
+      }
+    },
+    {
+      "id": "f54.ts.Al217",
+      "name": "Al217",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p569",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p570",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 61,
+        "endLine": 66
+      }
+    },
+    {
+      "id": "f54.ts.Ba218",
+      "name": "Ba218",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p329",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p571",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p572",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 67,
+        "endLine": 71
+      }
+    },
+    {
+      "id": "f54.ts.Cf223",
+      "name": "Cf223",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p329",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p330",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p469",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p470",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p579",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p580",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p581",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p582",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 95,
+        "endLine": 104
+      }
+    },
+    {
+      "id": "f54.ts.Jw214",
+      "name": "Jw214",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p35",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, string | number | boolean>",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p414",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Pj213",
+          "isReadonly": false
+        },
+        {
+          "name": "p557",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Uu216[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p558",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Ba218",
+          "isReadonly": false
+        },
+        {
+          "name": "p559",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Mb219[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p560",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p561",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p562",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p563",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p564",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 30,
+        "endLine": 44
+      }
+    },
+    {
+      "id": "f54.ts.Mb219",
+      "name": "Mb219",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p573",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[] | Record<string, unknown>",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 72,
+        "endLine": 75
+      }
+    },
+    {
+      "id": "f54.ts.Si222",
+      "name": "Si222",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p121",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Os146",
+          "isReadonly": false
+        },
+        {
+          "name": "p330",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p331",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p460",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Vm224[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p575",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Partial<Record<import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Bj220, number>>",
+          "isReadonly": false
+        },
+        {
+          "name": "p576",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p577",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p578",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Cf223[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 85,
+        "endLine": 94
+      }
+    },
+    {
+      "id": "f54.ts.Uu216",
+      "name": "Uu216",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Ea215",
+          "isReadonly": false
+        },
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p414",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Pj213",
+          "isReadonly": false
+        },
+        {
+          "name": "p477",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p479",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p559",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Mb219[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p560",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p565",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Al217[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p566",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p567",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p568",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p569",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "boolean",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p570",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 46,
+        "endLine": 60
+      }
+    },
+    {
+      "id": "f54.ts.Vm224",
+      "name": "Vm224",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p345",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p557",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p583",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p584",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 105,
+        "endLine": 110
+      }
+    },
+    {
+      "id": "f54.ts.Vw210",
+      "name": "Vw210",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p20",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p210",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Jw214[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p220",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Si222",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p421",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Up208",
+          "isReadonly": false
+        },
+        {
+          "name": "p48",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p51",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Record<string, unknown>",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p550",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Wr209[]",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p552",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p553",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p554",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Yf221[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p555",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "any",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p556",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "any",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 13,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "f54.ts.Wr209",
+      "name": "Wr209",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p19",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p210",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string[]",
+          "isReadonly": false
+        },
+        {
+          "name": "p551",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Wr209[]",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 8,
+        "endLine": 12
+      }
+    },
+    {
+      "id": "f54.ts.Yf221",
+      "name": "Yf221",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p1",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "import(\"/home/yale/work/archguard/experiments/granularity/obf/d1/d8/f54\").Bj220",
+          "isReadonly": false
+        },
+        {
+          "name": "p205",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p22",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p473",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "string",
+          "isReadonly": false
+        },
+        {
+          "name": "p474",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p574",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "\"s479\" | \"s561\" | \"s562\"",
+          "isReadonly": false,
+          "isOptional": true
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f54.ts",
+        "startLine": 77,
+        "endLine": 84
+      }
+    },
+    {
+      "id": "f55.ts.Fz225",
+      "name": "Fz225",
+      "type": "interface",
+      "visibility": "public",
+      "members": [
+        {
+          "name": "p311",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p540",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false,
+          "isOptional": true
+        },
+        {
+          "name": "p543",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p575",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "Partial<Record<Bj220, number>>",
+          "isReadonly": false
+        },
+        {
+          "name": "p577",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p585",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "1",
+          "isReadonly": false
+        },
+        {
+          "name": "p586",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p587",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p588",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p589",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p590",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p591",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        },
+        {
+          "name": "p592",
+          "type": "property",
+          "visibility": "public",
+          "fieldType": "number",
+          "isReadonly": false
+        }
+      ],
+      "decorators": [],
+      "sourceLocation": {
+        "file": "f55.ts",
+        "startLine": 2,
+        "endLine": 16
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "d9/f49.ts.Ah167_composition_\"s534\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Ah167",
+      "target": "\"s534\""
+    },
+    {
+      "id": "d9/f49.ts.Bb160_composition_\"p598\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Bb160",
+      "target": "\"p598\""
+    },
+    {
+      "id": "d9/f49.ts.Bl155_composition_\"s27\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Bl155",
+      "target": "\"s27\""
+    },
+    {
+      "id": "d9/f49.ts.Ha156_composition_\"s516\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Ha156",
+      "target": "\"s516\""
+    },
+    {
+      "id": "d9/f49.ts.Jb176_composition_\"p598\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Jb176",
+      "target": "\"p598\""
+    },
+    {
+      "id": "d9/f49.ts.Mk168_composition_\"s536\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Mk168",
+      "target": "\"s536\""
+    },
+    {
+      "id": "d9/f49.ts.Mu169_composition_\"s536\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Mu169",
+      "target": "\"s536\""
+    },
+    {
+      "id": "d9/f49.ts.Ob163_composition_\"p476\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Ob163",
+      "target": "\"p476\""
+    },
+    {
+      "id": "d9/f49.ts.Wb165_composition_\"s525\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Wb165",
+      "target": "\"s525\""
+    },
+    {
+      "id": "d9/f49.ts.Wb165_composition_\"s527\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Wb165",
+      "target": "\"s527\""
+    },
+    {
+      "id": "d9/f49.ts.Zg161_composition_\"p564\"",
+      "type": "composition",
+      "source": "d9/f49.ts.Zg161",
+      "target": "\"p564\""
+    },
+    {
+      "id": "d9/f50.ts.Qx177_composition_Iv180",
+      "type": "composition",
+      "source": "d9/f50.ts.Qx177",
+      "target": "Iv180"
+    },
+    {
+      "id": "d9/f50.ts.Qx177_composition_Jk151",
+      "type": "composition",
+      "source": "d9/f50.ts.Qx177",
+      "target": "Jk151"
+    },
+    {
+      "id": "d9/f50.ts.Qx177_composition_Jy196",
+      "type": "composition",
+      "source": "d9/f50.ts.Qx177",
+      "target": "Jy196"
+    },
+    {
+      "id": "d9/f50.ts.Qx177_composition_Xh203",
+      "type": "composition",
+      "source": "d9/f50.ts.Qx177",
+      "target": "Xh203"
+    },
+    {
+      "id": "d9/f51.ts.Iv180_composition_\"s484\"",
+      "type": "composition",
+      "source": "d9/f51.ts.Iv180",
+      "target": "\"s484\""
+    },
+    {
+      "id": "d9/f52.ts.Jy196_composition_\"s550\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Jy196",
+      "target": "\"s550\""
+    },
+    {
+      "id": "d9/f52.ts.Kd200_composition_\"s19\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Kd200",
+      "target": "\"s19\""
+    },
+    {
+      "id": "d9/f52.ts.Kd200_composition_\"s552\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Kd200",
+      "target": "\"s552\""
+    },
+    {
+      "id": "d9/f52.ts.Pi197_composition_\"s19\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Pi197",
+      "target": "\"s19\""
+    },
+    {
+      "id": "d9/f52.ts.Vr199_composition_\"s27\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Vr199",
+      "target": "\"s27\""
+    },
+    {
+      "id": "d9/f52.ts.Vr199_composition_\"s552\"",
+      "type": "composition",
+      "source": "d9/f52.ts.Vr199",
+      "target": "\"s552\""
+    },
+    {
+      "id": "d9/f53.ts.Go205_composition_\"s516\"",
+      "type": "composition",
+      "source": "d9/f53.ts.Go205",
+      "target": "\"s516\""
+    },
+    {
+      "id": "d9/f53.ts.He207_composition_\"s27\"",
+      "type": "composition",
+      "source": "d9/f53.ts.He207",
+      "target": "\"s27\""
+    },
+    {
+      "id": "f44.ts.Tq132_composition_\"p440\"",
+      "type": "composition",
+      "source": "f44.ts.Tq132",
+      "target": "\"p440\""
+    },
+    {
+      "id": "f44.ts.Tq132_composition_\"s26\"",
+      "type": "composition",
+      "source": "f44.ts.Tq132",
+      "target": "\"s26\""
+    },
+    {
+      "id": "f44.ts.Tq132_composition_\"s502\"",
+      "type": "composition",
+      "source": "f44.ts.Tq132",
+      "target": "\"s502\""
+    },
+    {
+      "id": "f44.ts.Tq132_composition_Tu149",
+      "type": "composition",
+      "source": "f44.ts.Tq132",
+      "target": "Tu149"
+    },
+    {
+      "id": "f45.ts.Fo143_composition_\"s510\"",
+      "type": "composition",
+      "source": "f45.ts.Fo143",
+      "target": "\"s510\""
+    },
+    {
+      "id": "f45.ts.Fo143_composition_Os146",
+      "type": "composition",
+      "source": "f45.ts.Fo143",
+      "target": "Os146"
+    },
+    {
+      "id": "f45.ts.Fo143_composition_Tu149",
+      "type": "composition",
+      "source": "f45.ts.Fo143",
+      "target": "Tu149"
+    },
+    {
+      "id": "f45.ts.Ke140_composition_\"s509\"",
+      "type": "composition",
+      "source": "f45.ts.Ke140",
+      "target": "\"s509\""
+    },
+    {
+      "id": "f45.ts.Kn134_composition_\"s503\"",
+      "type": "composition",
+      "source": "f45.ts.Kn134",
+      "target": "\"s503\""
+    },
+    {
+      "id": "f46.ts.Ik144_composition_En5",
+      "type": "composition",
+      "source": "f46.ts.Ik144",
+      "target": "En5"
+    },
+    {
+      "id": "f46.ts.Ik144_composition_Iv180",
+      "type": "composition",
+      "source": "f46.ts.Ik144",
+      "target": "Iv180"
+    },
+    {
+      "id": "f46.ts.Ik144_composition_Pz147",
+      "type": "composition",
+      "source": "f46.ts.Ik144",
+      "target": "Pz147"
+    },
+    {
+      "id": "f46.ts.Ik144_composition_Tu149",
+      "type": "composition",
+      "source": "f46.ts.Ik144",
+      "target": "Tu149"
+    },
+    {
+      "id": "f46.ts.Ny145_composition_Fo143",
+      "type": "composition",
+      "source": "f46.ts.Ny145",
+      "target": "Fo143"
+    },
+    {
+      "id": "f46.ts.Ny145_inheritance_f46.ts.Ik144",
+      "type": "inheritance",
+      "source": "f46.ts.Ny145",
+      "target": "f46.ts.Ik144"
+    },
+    {
+      "id": "f47.ts.Pz147_composition_\"s26\"",
+      "type": "composition",
+      "source": "f47.ts.Pz147",
+      "target": "\"s26\""
+    },
+    {
+      "id": "f47.ts.Pz147_composition_\"s502\"",
+      "type": "composition",
+      "source": "f47.ts.Pz147",
+      "target": "\"s502\""
+    },
+    {
+      "id": "f54.ts.Si222_composition_Os146",
+      "type": "composition",
+      "source": "f54.ts.Si222",
+      "target": "Os146"
+    },
+    {
+      "id": "f54.ts.Yf221_composition_\"s479\"",
+      "type": "composition",
+      "source": "f54.ts.Yf221",
+      "target": "\"s479\""
+    },
+    {
+      "id": "f55.ts.Fz225_composition_1",
+      "type": "composition",
+      "source": "f55.ts.Fz225",
+      "target": "1"
+    },
+    {
+      "id": "f55.ts.Fz225_composition_Bj220",
+      "type": "composition",
+      "source": "f55.ts.Fz225",
+      "target": "Bj220"
+    }
+  ],
+  "workspaceRoot": "/home/yale/work/archguard/experiments/granularity/obf/d1/d8",
+  "metrics": {
+    "level": "method",
+    "entityCount": 66,
+    "relationCount": 45,
+    "relationTypeBreakdown": {
+      "composition": 44,
+      "inheritance": 1
+    },
+    "stronglyConnectedComponents": 66,
+    "inferredRelationRatio": 0,
+    "fileStats": [
+      {
+        "file": "d9/f49.ts",
+        "loc": 187,
+        "entityCount": 22,
+        "methodCount": 0,
+        "fieldCount": 102,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d9/f50.ts",
+        "loc": 14,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 4,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d9/f51.ts",
+        "loc": 152,
+        "entityCount": 4,
+        "methodCount": 0,
+        "fieldCount": 20,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d9/f52.ts",
+        "loc": 67,
+        "entityCount": 8,
+        "methodCount": 0,
+        "fieldCount": 43,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "d9/f53.ts",
+        "loc": 32,
+        "entityCount": 5,
+        "methodCount": 0,
+        "fieldCount": 16,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f44.ts",
+        "loc": 29,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 26,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f45.ts",
+        "loc": 89,
+        "entityCount": 10,
+        "methodCount": 0,
+        "fieldCount": 56,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f46.ts",
+        "loc": 29,
+        "entityCount": 2,
+        "methodCount": 0,
+        "fieldCount": 13,
+        "inDegree": 1,
+        "outDegree": 1,
+        "cycleCount": 0
+      },
+      {
+        "file": "f47.ts",
+        "loc": 6,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 3,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f54.ts",
+        "loc": 110,
+        "entityCount": 11,
+        "methodCount": 0,
+        "fieldCount": 76,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      },
+      {
+        "file": "f55.ts",
+        "loc": 16,
+        "entityCount": 1,
+        "methodCount": 0,
+        "fieldCount": 13,
+        "inDegree": 0,
+        "outDegree": 0,
+        "cycleCount": 0
+      }
+    ],
+    "cycles": []
+  },
+  "extensions": {
+    "projectSemantics": {
+      "version": "1.0",
+      "nonProductionPatterns": [],
+      "barrelFiles": [],
+      "additionalTestPatterns": [],
+      "customAssertionPatterns": []
+    }
+  },
+  "metricVector": {
+    "schemaVersion": 1,
+    "totalEntities": 66,
+    "totalRelations": 45,
+    "inferredRelationRatio": 0,
+    "sccCount": 0,
+    "relationTypeBreakdown": {
+      "composition": 44,
+      "inheritance": 1
+    },
+    "maxInDegree": 1,
+    "maxOutDegree": 1,
+    "maxPackageSize": 7,
+    "giniInDegree": 0.9090909090909092,
+    "giniPackageSize": 0.08333333333333326,
+    "packageCount": 2,
+    "entityCoverageRatio": null
+  }
+}

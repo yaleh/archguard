@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-pipeline-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "c1-pipeline-to-validator__L3__claude-sonnet-4-6__k1",
+  "content": "Looking at the class diagram, `MermaidValidationPipeline` has a composition relationship with `MermaidParseValidator` (via `MermaidValidationPipeline *-- MermaidParseValidator`), and there's a direct dependency arrow `MermaidValidationPipeline --> MermaidParseValidator`.\n\nFrom the call graph edges visible in the flowchart, I can see:\n- `MermaidDiagramGenerator_generateOnly --> MermaidValidationPipeline_getParseValidator`\n\nBut the question asks which methods of `MermaidValidationPipeline` directly call methods of `MermaidParseValidator`. Looking at the call graph section, the edges shown are truncated (\"and 325 more call edges\"), so I need to rely on what's visible plus the structural information.\n\nFrom the visible call graph:\n- `MermaidAutoRepair_repair --> MermaidParseValidator_validate` (this is from `MermaidAutoRepair`, not `MermaidValidationPipeline`)\n- `MermaidAutoRepair_repairBestEffort --> MermaidParseValidator_validate` (same)\n\nThe method `MermaidValidationPipeline.getParseValidator` returns the `MermaidParseValidator` instance, but that's not calling a method on it. The `validate` and `validateFull` methods of `MermaidValidationPipeline` would logically use `MermaidParseValidator`, but from the explicitly shown call edges in the truncated graph, I can only confirm what's directly visible.\n\nFrom the call graph edges shown, there are no explicit edges from `MermaidValidationPipeline_*` to `MermaidParseValidator_*` in the visible portion.\n\n```json\n{\"answer\": []}\n```",
+  "promptTokens": 35373,
+  "completionTokens": 448,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:44:56.603Z"
+}

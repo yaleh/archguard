@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-interface-count",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-a-interface-count__L2__deepseek-v4-flash__k2",
+  "content": "{\"answer\": 185}",
+  "promptTokens": 22169,
+  "completionTokens": 7471,
+  "invalidated": false,
+  "timestamp": "2026-06-11T15:56:06.564Z"
+}

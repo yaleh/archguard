@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers-validatedmermaidgenerator-escapeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "deepseek-v4-flash",
+  "k": 3,
+  "key": "v2-b-callers-validatedmermaidgenerator-escapeid__L4__deepseek-v4-flash__k3",
+  "content": "{\n  \"answer\": [\n    \"ValidatedMermaidGenerator.generatePackageLevel\",\n    \"ValidatedMermaidGenerator.generateLayeredPackageLevel.nodeIdForPackage\",\n    \"ValidatedMermaidGenerator.generateLayeredPackageLevel\",\n    \"ValidatedMermaidGenerator.generateClassLevel\",\n    \"ValidatedMermaidGenerator.generateMethodLevel\",\n    \"ValidatedMermaidGenerator.generateClassDefinition\",\n    \"ValidatedMermaidGenerator.generateRelationLine.resolve\",\n    \"ValidatedMermaidGenerator.generateClassDiagrams\"\n  ]\n}",
+  "promptTokens": 62852,
+  "completionTokens": 2704,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:19:44.942Z"
+}

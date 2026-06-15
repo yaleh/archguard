@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callers--tonodeid",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "glm-4.5-airx",
+  "k": 2,
+  "key": "v2-b-callers--tonodeid__L5__glm-4.5-airx__k2",
+  "content": "```json\n{\n  \"answer\": []\n}\n```",
+  "promptTokens": 43988,
+  "completionTokens": 2211,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:37:40.855Z"
+}

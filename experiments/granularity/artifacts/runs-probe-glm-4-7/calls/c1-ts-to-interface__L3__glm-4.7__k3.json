@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-ts-to-interface",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "glm-4.7",
+  "k": 3,
+  "key": "c1-ts-to-interface__L3__glm-4.7__k3",
+  "content": "```json\n[]\n```",
+  "promptTokens": 35009,
+  "completionTokens": 5,
+  "invalidated": false,
+  "timestamp": "2026-06-12T04:44:59.872Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-dominant-entity-type",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L2",
+  "model": "glm-4.5-airx",
+  "k": 1,
+  "key": "v2-a-dominant-entity-type__L2__glm-4.5-airx__k1",
+  "content": "```json\n{\"answer\": \"interface\"}\n```",
+  "promptTokens": 21673,
+  "completionTokens": 1660,
+  "invalidated": false,
+  "timestamp": "2026-06-12T07:00:12.826Z"
+}

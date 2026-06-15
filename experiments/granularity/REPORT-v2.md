@@ -230,6 +230,42 @@ This diagnostic was flagged IS_POST_HOC=True and is not part of the §10 decisio
 
 ## Appendix
 
+### Model Probe (Post-hoc, 2026-06-12)
+
+Post-hoc small-batch probe to evaluate alternative models for future experiments (format-encoding experiment candidates). Not part of the pre-registered design.
+
+**Setup**: 9 tasks (3 × A/B/C) × 2 levels (L3/L4) × k=2. Scoring identical to main experiment.
+
+#### Complete-run results
+
+| Model | A-L3 | A-L4 | B-L3 | B-L4 | C-L3 | C-L4 | OVERALL | Latency |
+|-------|:----:|:----:|:----:|:----:|:----:|:----:|:-------:|:-------:|
+| claude-haiku-4-5-20251001 (reasoning OFF, confirmed) | 0.000 | 0.278 | 0.467 | 0.856 | 0.667 | 0.889 | **0.526** | 11.3s |
+| glm-4.5-flash (reasoning ON, max=1024) | 0.167 | 0.000 | 0.725 | 0.167 | 0.667 | 0.833 | 0.426 | 35.0s |
+| glm-4.5-flash (reasoning OFF, max=4096) | 0.000 | 0.167 | 0.676 | 0.000 | 0.444 | 0.889 | 0.363 | 3.8s |
+| **glm-4.5-flash (reasoning OFF, max=8192)** | 0.000 | 0.000 | 0.674 | 0.000 | 0.444 | 0.889 | **0.334** | 7.9s |
+| Qwen/Qwen3.6-27B | 0.167 | 0.000 | 0.000 | 0.167 | 0.000 | 0.167 | 0.083 | 6.6s |
+| Qwen/Qwen3.6-35B-A3B | 0.000 | 0.000 | 0.000 | 0.000 | 0.167 | 0.167 | 0.056 | 4.9s |
+| zai-org/GLM-4.5-Air | 0.000 | 0.000 | 0.000 | 0.000 | 0.167 | 0.000 | 0.028 | 5.6s |
+| groq/qwen3-32b | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 7.9s |
+| groq/gpt-oss-120b | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 7.8s |
+
+For reference (main experiment, all levels averaged): claude-sonnet-4-6 OVERALL=0.412; deepseek-v4-flash OVERALL=0.410.
+
+#### GLM-4.5-Flash configuration findings
+
+Reasoning ON (max=1024) produced **empty outputs at L4** (B-L4, C-L4 both empty=2/2 in initial runs), making scores unreliable. Root cause: reasoning tokens exhaust the 1024-token budget leaving zero for content output.
+
+Reasoning OFF eliminates empty outputs entirely. B-L4=0.000 persists across all reasoning-OFF configurations — this is a model capability limitation at L4, not a token budget issue.
+
+**Recommended configuration**: `reasoning OFF, max_tokens=8192` (bold row above). Rationale: no empty outputs, conservative token budget for large prompts, stable behaviour. `extra_body: {thinking: {type: "disabled"}}` must be used (LiteLLM proxy rejects top-level `thinking` param for this model).
+
+#### Candidates for format-encoding experiment
+
+- **Primary**: `claude-haiku-4-5-20251001` — highest probe score (0.526), no reliability issues
+- **Secondary**: `glm-4.5-flash` reasoning OFF max=8192 — fast (7.9s), zero-cost on current gateway, reliable output; lower accuracy (0.334) acceptable for format-sensitivity comparisons
+- **Baseline**: `claude-sonnet-4-6` — full main-experiment data available
+
 ### Raw outputs
 
 - `artifacts/runs-v2/scores-v2.json` — 528 (task × level × model) score rows

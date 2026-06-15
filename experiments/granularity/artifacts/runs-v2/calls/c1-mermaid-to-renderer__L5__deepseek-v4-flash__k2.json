@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-mermaid-to-renderer",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "c1-mermaid-to-renderer__L5__deepseek-v4-flash__k2",
+  "content": "{\"answer\": [\"MermaidDiagramGenerator.renderJobsInParallel\", \"MermaidDiagramGenerator.renderJobsInParallelWithConfig\"]}",
+  "promptTokens": 46688,
+  "completionTokens": 619,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:52:37.735Z"
+}

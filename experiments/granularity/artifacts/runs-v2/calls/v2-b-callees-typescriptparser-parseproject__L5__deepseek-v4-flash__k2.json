@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-b-callees-typescriptparser-parseproject",
+  "taskClass": "B",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "deepseek-v4-flash",
+  "k": 2,
+  "key": "v2-b-callees-typescriptparser-parseproject__L5__deepseek-v4-flash__k2",
+  "content": "{\"answer\": [\"ClassExtractor.extractClass\", \"EnumExtractor.extractEnum\", \"FunctionExtractor.extract\", \"ImportDeclaration.getModuleSpecifierSourceFile\", \"ImportDeclaration.getNamedImports\", \"ImportSpecifier.getName\", \"InterfaceExtractor.extractInterface\", \"Project.addSourceFilesAtPaths\", \"Project.getSourceFiles\", \"RelationExtractor.extractFromSourceFile\", \"SourceFile.getClasses\", \"SourceFile.getEnums\", \"SourceFile.getFilePath\", \"SourceFile.getInterfaces\", \"TypeScriptParser.deduplicateRelations\", \"TypeScriptParser.filterExternalRelations\", \"TypeScriptParser.toRelPath\"]}",
+  "promptTokens": 46677,
+  "completionTokens": 1775,
+  "invalidated": false,
+  "timestamp": "2026-06-11T16:00:11.592Z"
+}

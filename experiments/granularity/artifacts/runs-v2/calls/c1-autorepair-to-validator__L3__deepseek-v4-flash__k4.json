@@ -1,0 +1,14 @@
+{
+  "taskId": "c1-autorepair-to-validator",
+  "taskClass": "C",
+  "module": "v2-arch",
+  "level": "L3",
+  "model": "deepseek-v4-flash",
+  "k": 4,
+  "key": "c1-autorepair-to-validator__L3__deepseek-v4-flash__k4",
+  "content": "{\"answer\": [\"MermaidAutoRepair.repair\", \"MermaidAutoRepair.repairBestEffort\"]}",
+  "promptTokens": 36459,
+  "completionTokens": 325,
+  "invalidated": false,
+  "timestamp": "2026-06-11T14:37:24.319Z"
+}

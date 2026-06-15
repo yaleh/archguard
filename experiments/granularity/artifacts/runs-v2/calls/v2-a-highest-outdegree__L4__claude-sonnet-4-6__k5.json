@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-highest-outdegree__L4__claude-sonnet-4-6__k5",
+  "content": "I need to count outgoing dependencies for each entity by tallying how many times each source appears in the `relations` array (type \"dependency\").\n\nLet me count the notable ones:\n\n`runAnalysis` (cli/analyze/run-analysis.ts): targets TestAnalyzer, normalizeToDiagrams, cleanStaleDiagrams, readManifest, writeManifest, ConfigLoader, DiagramProcessor, persistQueryScopes, DiagramIndexGenerator, TestOutputWriter, ParseCache, CLIOptions = 12\n\n`registerAnalyzeTool`: 2\n`createCLI`: 7\n`normalizeToDiagrams`: 5\n`createCheckCommand`: 4\n`createCacheCommand`: 4\n`createAnalyzeCommand`: 2\n`loadEngine`: 4\n`persistQueryScopes`: 4\n`registerGitHistoryAnalyzeTool`: 9\n`registerGitHistoryTools`: 4\n`registerTools`: 7\n`createMcpServer`: 4\n`aggregateFileMetrics`: 2\n`aggregatePackageMetrics`: 4\n`ValidatedMermaidGenerator.generateOnly` (call graph, not relations)\n\nFor `runAnalysis`, I count: TestAnalyzer, normalizeToDiagrams, cleanStaleDiagrams, readManifest, writeManifest, ConfigLoader, DiagramProcessor, persistQueryScopes, DiagramIndexGenerator, TestOutputWriter, ParseCache, CLIOptions = 12 outgoing dependency relations.\n\n`registerGitHistoryAnalyzeTool`: getCurrentBranch, getHeadRef, isGitRepo, readGitLog, aggregateFileMetrics, aggregatePackageMetrics, writeHistoryArtifacts, resolveRoot, GitHistoryArtifacts, GitHistoryManifest = 10\n\n`runAnalysis` has 12, which appears to be the highest.\n\n```json\n{\"answer\": \"runAnalysis\"}\n```",
+  "promptTokens": 58808,
+  "completionTokens": 426,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:56:36.302Z"
+}

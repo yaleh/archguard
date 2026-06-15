@@ -1,0 +1,12 @@
+{
+  "task": {
+    "id": "archguard-class-C-method-count-0",
+    "taskClass": "C",
+    "taskType": "method-count",
+    "prompt": "Based only on the representation above: how many methods does entity \"src/mermaid/progress.ts.iprogressreporter\" have? Respond with JSON: {\"answer\": <integer>}.",
+    "answerType": "integer",
+    "answer": 5
+  },
+  "arm": "deterministic-haskell",
+  "model": "claude-haiku-4-5-20251001"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-highest-outdegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "claude-sonnet-4-6",
+  "k": 1,
+  "key": "v2-a-highest-outdegree__L5__claude-sonnet-4-6__k1",
+  "content": "I'll analyze the code to find outgoing dependencies (composition, dependency, inheritance, implementation relations where the entity is the source).\n\nLooking at the `RelationExtractor`, it extracts relations where classes/interfaces are sources. Let me trace the entities and their outgoing relations by examining the actual class implementations:\n\n- `ValidatedMermaidGenerator`: depends on/uses `CommentGenerator`, `HeuristicGrouper`, `MermaidValidationPipeline`, `MermaidAutoRepair`, `IsomorphicMermaidRenderer`, `groupEntitiesByPackage`, `validateGeneratorInput`, `EntityTypeRegistry`, etc.\n\n- `MermaidDiagramGenerator`: uses `HeuristicGrouper`, `ValidatedMermaidGenerator`, `MermaidValidationPipeline`, `MermaidAutoRepair`, `IsomorphicMermaidRenderer`, `pMap`, `NoopProgressReporter`\n\n- `TypeScriptParser`: uses `ClassExtractor`, `InterfaceExtractor`, `EnumExtractor`, `RelationExtractor`, `FunctionExtractor`, `Project`, `findTsConfigPath`, `loadPathAliases`\n\n- `IsomorphicMermaidRenderer`: uses `mermaid`, `sharp`, `fs`, `path`, `inlineEdgeStyles`\n\n- `MermaidValidationPipeline`: uses `MermaidParseValidator`, `StructuralValidator`, `RenderValidator`, `QualityValidator`\n\n- `ParallelParser`: uses `TypeScriptParser`, `ParseCache`, `pLimit`, `EventEmitter`, `fs`\n\n- `ValidatedMermaidGenerator` has the most outgoing connections: `CommentGenerator`, `HeuristicGrouper` (via groupEntitiesByPackage), `validateGeneratorInput`, `EntityTypeRegistry`, `globalEntityTypeRegistry`, `path`, `groupEntitiesByPackage` utility, plus multiple validator types when called from diagram-generator.\n\n`TypeScriptParser` explicitly instantiates/depends on: `Project`, `ClassExtractor`, `InterfaceExtractor`, `EnumExtractor`, `RelationExtractor`, `FunctionExtractor`, `findTsConfigPath`, `loadPathAliases`, `path` — that's 9 direct outgoing dependencies.\n\n`ValidatedMermaidGenerator` depends on: `CommentGenerator`, `groupEntitiesByPackage`, `validateGeneratorInput`, `EntityTypeRegistry`, `globalEntityTypeRegistry`, `path`, `ENTITY_CLASSDEF_STYLES` (local), `entityTypeToClassDef` (local) — core external deps are ~6-7.\n\n`TypeScriptParser` has the most distinct outgoing class/module dependencies.\n\n```json\n{\"answer\": \"TypeScriptParser\"}\n```",
+  "promptTokens": 46747,
+  "completionTokens": 670,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:57:18.190Z"
+}

@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-largest-package-size",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L5",
+  "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+  "k": 3,
+  "key": "v2-a-largest-package-size__L5__nvidia_nemotron-3-nano-30b-a3b_free__k3",
+  "content": "{\"answer\":\"Default\"}",
+  "promptTokens": 46272,
+  "completionTokens": 280,
+  "invalidated": false,
+  "timestamp": "2026-06-12T03:44:40.347Z"
+}

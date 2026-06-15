@@ -1,0 +1,14 @@
+{
+  "taskId": "v2-a-top3-indegree",
+  "taskClass": "A",
+  "module": "v2-arch",
+  "level": "L4",
+  "model": "claude-sonnet-4-6",
+  "k": 5,
+  "key": "v2-a-top3-indegree__L4__claude-sonnet-4-6__k5",
+  "content": "I'll analyze the relations to count incoming dependencies (in-degree) for each entity.\n\nLet me count the targets across all dependency/inheritance/implementation/composition relations:\n\nKey entities that appear frequently as targets:\n\n- `plugins/shared/mapper-utils.ts.BaseArchJsonMapper`: targeted by ArchJsonMapper (cpp, golang, java, kotlin, python) = 5 inheritance relations\n- `core/interfaces/language-plugin.ts.ILanguagePlugin`: targeted by CppPlugin, GoPlugin, JavaPlugin, KotlinPlugin, PythonPlugin, TypeScriptPlugin = 6 implementation relations\n- `cli/progress.ts.ProgressReporterLike`: targeted by NoopReporter, ProgressReporter, StderrReporter = 3\n- `plugins/golang/atlas/builders/i-atlas-builder.ts.IAtlasBuilder`: targeted by CapabilityGraphBuilder, FlowGraphBuilder, GoroutineTopologyBuilder, PackageGraphBuilder = 4\n- `core/interfaces/dependency.ts.IDependencyExtractor`: targeted by cpp/DependencyExtractor, golang/DependencyExtractor, java/DependencyExtractor, KotlinDependencyExtractor, python/DependencyExtractor = 5\n- `parser/base-extractor.ts.BaseExtractor`: targeted by ClassExtractor, EnumExtractor, InterfaceExtractor, RelationExtractor = 4\n- `plugins/golang/atlas/renderers/template-shared.ts.sanitizeId`: targeted by renderCapabilityGraph, renderFlowGraph, renderGoroutineTopology, renderPackageGraph = 4\n- `mermaid/post-process-svg.ts.postProcessSVG`: appears in call graph multiple times\n- `types/index.ts.ArchJSON`: targeted by multiple\n- `analysis/fim/types.ts.CoverageMatrix`: 2\n- `mermaid/progress.ts.IProgressReporter`: many calls via interface in call graph\n- `cli/query/engine-loader.ts.loadEngine`: targeted 3 times\n\n`ILanguagePlugin` has 6, `BaseArchJsonMapper` has 5, `IDependencyExtractor` has 5.\n\nFor the tie between `BaseArchJsonMapper` and `IDependencyExtractor`, `IDependencyExtractor` also has a composition relation from `KotlinDependency`, giving it 6 relations.\n\n```json\n{\"answer\": [\"ILanguagePlugin\", \"IDependencyExtractor\", \"BaseArchJsonMapper\"]}\n```",
+  "promptTokens": 58819,
+  "completionTokens": 599,
+  "invalidated": false,
+  "timestamp": "2026-06-11T17:42:32.901Z"
+}
