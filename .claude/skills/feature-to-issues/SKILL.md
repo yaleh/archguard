@@ -1,17 +1,18 @@
 ---
 name: feature-to-issues
-description: "Converts a feature discussion into a single GitHub Issue in the L0 layered format (Background + Goals + Phase A…N sections each with ### Task and ### DoD). Checks implementation state on master before creating each phase — skips already-implemented phases. Creates the issue with agent-run label for L0 loop execution."
+description: "Converts a feature discussion into a single GitHub Issue for the L0 agent queue using a 5-phase iterative pipeline: (1) generate proposal draft, (2) add implementation details, (3) iteratively review proposal until APPROVED (max 3 attempts), (4) iteratively review goal-phase alignment until APPROVED (max 3 attempts), (5) create GitHub Issue without execution labels for human confirmation. No working-tree switching or remote-push operations."
 argument-hint: [feature-topic-or-description]
 allowed-tools: Read, Glob, Grep, Bash, Agent
 ---
 
 ## Role
 
-This skill is an **orchestrator**. It spawns Task agents for proposal generation
-and architect review. It does not write files or code directly.
+This skill is an **orchestrator**. It spawns Task agents for each generation and
+review phase. It does not write files or code directly.
 
-The output of this skill is a **single GitHub Issue** in the L0 layered format,
-ready for the L0 loop to execute sequentially (Phase A → B → … → N).
+The output is a **single GitHub Issue** in the L0 layered format (Background +
+Goals + Phase A…N sections with `### Task` and `### DoD`), created without any
+execution-trigger labels. The human applies those labels after reviewing the issue.
 
 ---
 
@@ -19,147 +20,187 @@ ready for the L0 loop to execute sequentially (Phase A → B → … → N).
 
 `/feature-to-issues <topic>`
 
-`<topic>` is a description of the feature, including:
-- What problem it solves
-- Goals and non-goals (if known)
-- Any design decisions already agreed upon
-
-If `<topic>` is empty, print usage and stop.
+`<topic>` describes the feature: what problem it solves, goals, any design
+decisions already agreed upon. If `<topic>` is empty, print usage and stop.
 
 ---
 
-## Phase 1: Generate Issue Body (via Task agent)
+## Phase 1: Proposal Draft (Task agent)
 
 Spawn a Task agent with this prompt:
 
-> You are drafting a GitHub Issue for the L0 agent queue. The issue format is:
+> You are drafting the proposal section of a GitHub Issue for the L0 agent queue.
+> Write ONLY the Background and Goals sections — do NOT write any Phase, DoD,
+> Constraints, or Acceptance Gate yet.
 >
+> Format:
 > ```
 > ## Background
-> (why this feature is needed, 3-8 lines)
+> (3-8 lines explaining WHY this feature is needed)
 >
 > ## Goals
-> (numbered list of concrete outcomes)
+> 1. (concrete, measurable outcome)
+> 2. ...
+> ```
 >
+> Rules:
+> - Background must state the problem and motivation, not just describe the feature
+> - Each Goal must be verifiable — something that can be confirmed via shell command or human inspection
+> - Do not include implementation details
+>
+> Feature topic: <topic>
+>
+> Output only the raw markdown (Background + Goals sections). No preamble.
+
+Write the output to `$TMPDIR/issue-draft-proposal.md`.
+
+---
+
+## Phase 2: Implementation Details (Task agent)
+
+Spawn a Task agent with this prompt:
+
+> You are expanding a GitHub Issue draft for the L0 agent queue. You have the
+> Background and Goals sections. Now add the implementation phases.
+>
+> Read: `$TMPDIR/issue-draft-proposal.md`
+>
+> Append the following sections to produce a complete issue body:
+>
+> ```
 > ## Phase A: <title>
 > ### Task
-> (what to implement, which files to modify, 3-6 lines)
+> (what to implement, which specific files to modify, 3-6 lines)
 > ### DoD
 > - [ ] `<executable shell command>`
 > - [ ] `<executable shell command>`
 >
-> ## Phase B: <title>
-> ### Task
+> ## Phase B: <title>  (if needed)
 > ...
-> ### DoD
-> - [ ] `<executable shell command>`
 >
 > ## Constraints
-> (global constraints applying to all phases)
+> (global constraints applying to all phases; non-executable acceptance criteria go here)
 >
 > ## Acceptance Gate
 > - [ ] `<final verification shell command>`
 > ```
 >
-> Rules for ### DoD:
-> - Every item MUST be an executable shell command that exits 0 on success
+> DoD rules (STRICT):
+> - Every `### DoD` item MUST be an executable shell command that exits 0 on success
 > - Use: `test -f <file>`, `grep -q <pattern> <file>`, `npm run type-check 2>&1 | grep -c "error TS" | grep -q "^0$"`
-> - Non-verifiable criteria go in ## Constraints, NOT in ### DoD
+> - Absence checks: `! grep -q <pattern> <file>` (NOT `grep -qv`)
+> - Natural language criteria go in `## Constraints`, NOT in `### DoD`
 > - Each phase should be ≤200 lines of code change
+> - Phases must be ordered so earlier phases produce what later phases depend on
 >
-> Feature topic: <topic>
->
-> Output only the raw issue body markdown. No preamble.
-
-Store the generated body as `DRAFT_BODY`.
+> Write the complete issue body (Background + Goals + Phases + Constraints + Gate)
+> to `$TMPDIR/issue-draft-full.md`. Output only the raw markdown.
 
 ---
 
-## Phase 2: Architect Review (via Task agent)
+## Phase 3: Proposal Review Loop (Task agent, max 3 iterations)
+
+Repeat until approved or 3 iterations exhausted:
 
 Spawn a Task agent with this prompt:
 
-> Review the following GitHub Issue draft for an L0 agent queue task.
+> You are a strict architect reviewing the proposal sections (Background + Goals)
+> of a GitHub Issue draft. Read `$TMPDIR/issue-draft-full.md`.
+>
 > Check:
-> 1. Are all ### DoD items executable shell commands? If not, move them to ## Constraints.
-> 2. Is each phase ≤200 lines of change? If a phase is too large, split it.
-> 3. Are phases in the correct dependency order (earlier phases produce files later phases depend on)?
-> 4. Is the Background accurate and the Goals measurable?
+> 1. Background: 3-8 lines? States WHY (motivation), not just WHAT?
+> 2. Goals: Each numbered and concretely verifiable? No vague goals?
+> 3. Background and Goals internally consistent (no contradictions)?
 >
-> Edit the draft directly and return the corrected version.
+> If ALL checks pass: write exactly `APPROVED` to `$TMPDIR/proposal-review-verdict.txt` and stop.
 >
-> Draft:
-> <DRAFT_BODY>
+> If ANY check fails:
+> - Fix the Background and/or Goals sections in `$TMPDIR/issue-draft-full.md` directly
+> - Write `ISSUES: <brief list of what was fixed>` to `$TMPDIR/proposal-review-verdict.txt`
+>
+> Do not touch Phase, DoD, Constraints, or Acceptance Gate sections.
 
-Store the reviewed body as `FINAL_BODY`.
+After the agent runs, read `$TMPDIR/proposal-review-verdict.txt`:
+- If it starts with `APPROVED`: proceed to Phase 4
+- If it starts with `ISSUES`: increment iteration counter; if counter < 3, repeat Phase 3
+- If counter reaches 3 and not yet APPROVED:
+  print `ERROR: Proposal review failed after 3 attempts. Manual review required.`
+  print the contents of `$TMPDIR/proposal-review-verdict.txt`
+  stop
 
 ---
 
-## Phase 3: Implementation State Check
+## Phase 4: Alignment Review Loop (Task agent, max 3 iterations)
 
-For each `## Phase X` section in `FINAL_BODY`:
+Repeat until approved or 3 iterations exhausted:
 
-1. Extract the `### DoD` commands for that phase
-2. Run each DoD command against the current `master` branch:
-   ```bash
-   git stash 2>/dev/null; git checkout master 2>/dev/null
-   <dod-command>
-   ```
-3. If ALL DoD commands pass on master → phase is **already implemented**:
-   - Replace the phase's `### DoD` section with:
-     ```
-     ### DoD
-     - [ ] `echo "already-implemented-on-master"`
-     ```
-   - Add a note to `### Task`: `(Already implemented on master — this phase is a no-op.)`
-4. If any DoD command fails → phase needs implementation (keep as-is)
+Spawn a Task agent with this prompt:
 
-After checking all phases, return to the working branch:
-```bash
-git checkout -
-git stash pop 2>/dev/null || true
-```
+> You are a strict architect doing a final alignment review of a GitHub Issue draft.
+> Read `$TMPDIR/issue-draft-full.md`.
+>
+> Check:
+> 1. Every Goal must be covered by at least one Phase or Acceptance Gate item
+> 2. Every `### DoD` item must be an executable shell command (exit 0 = pass)
+>    — flag any natural language items and move them to `## Constraints`
+>    — verify logical correctness of absence checks
+> 3. Phase ordering: do earlier phases produce what later phases need?
+> 4. Acceptance Gate: does it verify all Goals are achieved?
+> 5. No scope creep: no Phase implements something not backed by a Goal
+>
+> If ALL checks pass: write exactly `APPROVED` to `$TMPDIR/alignment-review-verdict.txt` and stop.
+>
+> If ANY check fails:
+> - Fix both the proposal sections AND the affected Phase sections as needed (full alignment)
+> - Write `ISSUES: <brief list of what was fixed>` to `$TMPDIR/alignment-review-verdict.txt`
 
-Update `FINAL_BODY` with the modified phase sections.
+After the agent runs, read `$TMPDIR/alignment-review-verdict.txt`:
+- If it starts with `APPROVED`: proceed to Phase 5
+- If it starts with `ISSUES`: increment iteration counter; if counter < 3, repeat Phase 4
+- If counter reaches 3 and not yet APPROVED:
+  print `ERROR: Alignment review failed after 3 attempts. Manual review required.`
+  print the contents of `$TMPDIR/alignment-review-verdict.txt`
+  stop
 
 ---
 
-## Phase 4: Create GitHub Issue
+## Phase 5: Create GitHub Issue (no execution-trigger label)
+
+Read `$TMPDIR/issue-draft-full.md` to get the final issue body.
+
+Derive the title: take the first Goal, strip its leading number, truncate to 70
+chars, prefix with `[L0] `.
 
 ```bash
 gh issue create \
   --repo yaleh/archguard \
-  --title "[L0] <feature-title>" \
-  --label "agent-run" \
-  --body "<FINAL_BODY>"
+  --title "[L0] <derived-title>" \
+  --body "$(cat $TMPDIR/issue-draft-full.md)"
 ```
 
-Where `<feature-title>` is a concise (≤70 chars) title derived from the topic.
+Do NOT add any labels to the issue.
 
-Print the created issue URL.
-
----
-
-## Phase 5: Human Review Prompt
-
-After creating the issue, print:
+After creating, print:
 
 ```
 Issue created: <URL>
 
-IMPORTANT: Review the ### DoD commands in each phase before the L0 loop executes.
-- Every DoD command must exit 0 when the phase is correctly implemented
-- If a command is wrong, edit the issue directly on GitHub before triggering the loop
-- To queue for execution: the issue already has the `agent-run` label
-- To defer: remove the `agent-run` label and add it back when ready
+经过两轮生成 + 两轮迭代审查，内容已就绪。
+
+请在 GitHub 上审阅：
+- 各 Phase 的 ### DoD 命令是否正确（实现后能 exit 0）
+- Phase 顺序和依赖是否符合预期
+
+确认无误后，手动添加执行触发标签以进入 L0 执行队列。
 ```
 
 ---
 
 ## Constraints
 
-- Do not apply `in-review` or `plan` labels — this skill creates execution-ready issues
-- Do not create child issues — one issue per feature, all phases inline
-- Do not implement any code — this skill only creates the planning artifact
-- Phase count: minimum 1, maximum 8 per issue; split into multiple issues if more phases needed
+- This skill outputs a GitHub Issue only — it does not implement any code
+- Prohibited operations in any phase: working-tree switching, branch creation, stashing, or remote pushes
+- Use only `grep`, `ls`, `test -f` for any file-state checks within the skill
+- Phase count in generated issues: minimum 1, maximum 8; split into multiple issues if more needed
 - The skill must work from the project root of the archguard repository
+- Do not create child issues — one issue per feature, all phases inline
