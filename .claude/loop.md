@@ -41,10 +41,12 @@ Read the full issue body. Detect the issue format:
 
 ## Step 4: Prepare worktree
 
+REPO_ROOT=$(git rev-parse --show-toplevel)
+git pull origin master
 git worktree add ../archguard-T<number> -b task/T<number>
 cd ../archguard-T<number>
-ln -s /home/yale/work/archguard/node_modules ./node_modules
-ln -s /home/yale/work/archguard/.agents ./.agents
+ln -s "${REPO_ROOT}/node_modules" ./node_modules
+ln -s "${REPO_ROOT}/.agents" ./.agents
 
 Work exclusively inside this worktree. Do not modify the main working tree.
 
@@ -79,7 +81,7 @@ printf "\n## %s ✅\nDate: %s\nIssue: #%s\n" \
 
 git add -A
 git commit -m "<task title> (closes #<number>)"
-gh pr create --title "<task title>" --body "Closes #<number>." --label "ready-for-review"
+gh pr create --title "<task title>" --body "Closes #<number>."
 
 # Run from inside the worktree (../archguard-T<number>) where the branch is checked out:
 PR_URL=$(gh pr view --json url -q .url)
@@ -95,7 +97,7 @@ gh issue edit <number> --remove-label "in-progress" --add-label "done"
 gh issue close <number>
 
 # Remove worktree last; if this fails, run `git worktree prune` manually
-cd /home/yale/work/archguard
+cd "${REPO_ROOT}"
 git worktree remove ../archguard-T<number>
 
 ## Step 8: Failure path
@@ -112,5 +114,5 @@ gh issue edit <number> --remove-label "in-progress" --add-label "needs-human"
 
 Do NOT open a PR. Do NOT close the issue.
 
-cd /home/yale/work/archguard
+cd "${REPO_ROOT}"
 git worktree remove ../archguard-T<number> --force
