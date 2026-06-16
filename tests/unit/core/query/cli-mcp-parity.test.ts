@@ -129,7 +129,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
 
   it('queryFormat=edge-list: result has { entities, relations } top-level structure', () => {
     const engine = makeFixtureEngine();
-    const result = engine.getDependencies('A', 2, { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), { queryFormat: 'edge-list' });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
     const edgeList = result as EdgeListOutput;
@@ -141,7 +141,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
   it('queryFormat=edge-list + outputScope=method: methods[] is populated', () => {
     const engine = makeFixtureEngine();
     // Depth 1: A → B; B has 1 method
-    const result = engine.getDependencies('A', 1, { outputScope: 'method', queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'method', queryFormat: 'edge-list' });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
     const entityBOut = edgeList.entities[0];
@@ -153,7 +153,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
 
   it('queryFormat=edge-list + outputScope=class: methods[] is empty []', () => {
     const engine = makeFixtureEngine();
-    const result = engine.getDependencies('A', 1, { outputScope: 'class', queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'class', queryFormat: 'edge-list' });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
     // scope=class → methods[] stripped (empty)
@@ -174,7 +174,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
 
   it('edge-list relations: source→from, target→to mapping correct', () => {
     const engine = makeFixtureEngine();
-    const result = engine.getDependencies('A', 1, { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { queryFormat: 'edge-list' });
     const edgeList = result as EdgeListOutput;
     // The relation in the fixture is { source: 'pkg.A', target: 'pkg.B', type: 'dependency' }
     // Serialized it should be { from: 'pkg.A', to: 'pkg.B', type: 'dependency' }

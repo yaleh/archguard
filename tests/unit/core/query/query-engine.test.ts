@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '@/core/query/query-engine.js';
 import { buildArchIndex } from '@/core/query/arch-index-builder.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 
@@ -130,7 +131,7 @@ describe('QueryEngine.getDependencies (from @/core/query)', () => {
     const index = buildArchIndex(archJson, 'hash-004');
     const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
 
-    const deps = engine.getDependencies('A', 1);
+    const deps = engine.relationQueryService.getDependencies('A', 1);
     expect(deps).toHaveLength(1);
     expect(deps[0].name).toBe('B');
   });
@@ -151,7 +152,7 @@ describe('QueryEngine.getDependencies (from @/core/query)', () => {
     const index = buildArchIndex(archJson, 'hash-005');
     const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
 
-    const deps = engine.getDependencies('A', 2);
+    const deps = engine.relationQueryService.getDependencies('A', 2);
     expect(deps.map((e) => e.name)).toContain('B');
     expect(deps.map((e) => e.name)).toContain('C');
   });
@@ -237,7 +238,7 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependencies queryFormat=edge-list: returns EdgeListOutput { entities, relations }', () => {
     const engine = makeEngine();
-    const result = engine.getDependencies('A', 1, { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { queryFormat: 'edge-list' });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
     const edgeList = result as { entities: unknown[]; relations: unknown[] };
@@ -252,7 +253,7 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependencies outputScope=method + queryFormat=edge-list: methods[] populated', () => {
     const engine = makeEngine();
-    const result = engine.getDependencies('A', 1, { outputScope: 'method', queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'method', queryFormat: 'edge-list' });
     const edgeList = result as { entities: Array<{ id: string; methods: unknown[] }>; relations: unknown[] };
     expect(edgeList.entities).toHaveLength(1);
     // B has no methods (only a field), so methods[] is empty
@@ -261,7 +262,7 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependents outputScope=class: returns narrowed entities without members', () => {
     const engine = makeEngine();
-    const result = engine.getDependents('B', 1, { outputScope: 'class' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependents('B', 1), { outputScope: 'class' });
     expect(Array.isArray(result)).toBe(true);
     const entities = result as Partial<Entity>[];
     expect(entities).toHaveLength(1);
@@ -283,7 +284,7 @@ describe('QueryEngine options (Phase 84)', () => {
     const index = buildArchIndex(archJson, 'hash-phase84-impl');
     const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
 
-    const result = engine.findImplementers('IFoo');
+    const result = engine.relationQueryService.findImplementers('IFoo');
     expect(Array.isArray(result)).toBe(true);
     const entities = result as Entity[];
     expect(entities).toHaveLength(1);
@@ -364,22 +365,23 @@ describe('QueryEngine — ExtensionAccessor delegation (Phase 111)', () => {
   });
 
   it('getAtlasLayer("package") returns the package graph via ExtensionAccessor', () => {
-    const engine = makeGoEngine();
-    const pg = engine.getAtlasLayer('package');
+    const archJson = makeGoArchJson();
+    const ext = new ExtensionAccessor(archJson);
+    const pg = ext.getAtlasLayer('package');
     expect(pg).toBeDefined();
     expect(pg?.nodes).toHaveLength(1);
     expect(pg?.nodes[0].name).toBe('api');
   });
 
   it('hasAtlasExtension() returns true via ExtensionAccessor', () => {
-    const engine = makeGoEngine();
-    expect(engine.hasAtlasExtension()).toBe(true);
+    const archJson = makeGoArchJson();
+    const ext = new ExtensionAccessor(archJson);
+    expect(ext.hasAtlasExtension()).toBe(true);
   });
 
   it('hasAtlasExtension() returns false when no goAtlas extension', () => {
     const archJson = makeArchJson();
-    const archIndex = buildArchIndex(archJson);
-    const engine = new QueryEngine({ archJson, archIndex, scopeEntry: defaultScope });
-    expect(engine.hasAtlasExtension()).toBe(false);
+    const ext = new ExtensionAccessor(archJson);
+    expect(ext.hasAtlasExtension()).toBe(false);
   });
 });

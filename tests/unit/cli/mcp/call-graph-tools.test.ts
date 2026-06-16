@@ -64,6 +64,10 @@ function createEngine(): QueryEngine {
   return new QueryEngine({ archJson, archIndex, scopeEntry });
 }
 
+function wrapEngine(engine: QueryEngine) {
+  return { engine, extensionAccessor: {} as any, scopeEntry, relationQueryService: engine.relationQueryService };
+}
+
 function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string, Function> {
   const tools = new Map<string, Function>();
   const originalTool = server.tool.bind(server);
@@ -83,7 +87,7 @@ const loadEngineMock = vi.mocked(loadEngine);
 
 beforeEach(() => {
   loadEngineMock.mockReset();
-  loadEngineMock.mockResolvedValue(createEngine());
+  loadEngineMock.mockResolvedValue(wrapEngine(createEngine()));
 });
 
 describe('archguard_find_callers — tool schema', () => {
@@ -97,8 +101,8 @@ describe('archguard_find_callers — tool schema', () => {
 describe('archguard_find_callers — handler', () => {
   it('calls engine.findCallers with correct entityName and depth=1', async () => {
     const engine = createEngine();
-    const spy = vi.spyOn(engine, 'findCallers');
-    loadEngineMock.mockResolvedValue(engine);
+    const spy = vi.spyOn(engine.relationQueryService, 'findCallers');
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -111,8 +115,8 @@ describe('archguard_find_callers — handler', () => {
 
   it('uses depth=1 as default when depth not provided', async () => {
     const engine = createEngine();
-    const spy = vi.spyOn(engine, 'findCallers');
-    loadEngineMock.mockResolvedValue(engine);
+    const spy = vi.spyOn(engine.relationQueryService, 'findCallers');
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -156,7 +160,7 @@ describe('archguard_find_callers — handler', () => {
 
   it('passes projectRoot to resolveRoot for path resolution', async () => {
     const engine = createEngine();
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/default');

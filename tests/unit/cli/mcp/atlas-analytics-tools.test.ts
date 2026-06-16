@@ -22,6 +22,7 @@ import {
   registerAtlasAnalyticsTools,
 } from '@/cli/mcp/tools/atlas-analytics-tools.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
@@ -101,13 +102,14 @@ function makeAtlasArchJson(graph: PackageGraph = PACKAGE_GRAPH): ArchJSON {
   };
 }
 
-function makeAtlasEngine(graph: PackageGraph = PACKAGE_GRAPH): QueryEngine {
+function makeAtlasEngine(graph: PackageGraph = PACKAGE_GRAPH): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson = makeAtlasArchJson(graph);
   const archIndex = buildArchIndex(archJson, 'atlas-hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
+  return { engine, archJson };
 }
 
-function makeNoAtlasEngine(): QueryEngine {
+function makeNoAtlasEngine(): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson: ArchJSON = {
     version: '1.1',
     language: 'typescript',
@@ -127,7 +129,12 @@ function makeNoAtlasEngine(): QueryEngine {
     hasAtlasExtension: false,
   };
   const archIndex = buildArchIndex(archJson, 'ts-hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
+}
+
+function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
+  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry: goAtlasScopeEntry };
 }
 
 // Reusable collectTools helper that accepts a register function
@@ -154,7 +161,7 @@ const loadEngineMock = vi.mocked(loadEngine);
 
 beforeEach(() => {
   loadEngineMock.mockReset();
-  loadEngineMock.mockResolvedValue(makeAtlasEngine());
+  loadEngineMock.mockResolvedValue(wrapEngine(makeAtlasEngine()));
 });
 
 // ── Phase 117: Pure utility functions ─────────────────────────────────────────
@@ -256,7 +263,7 @@ describe('archguard_get_package_fanin — tool schema', () => {
 
 describe('archguard_get_package_fanin — handler', () => {
   it('returns No Atlas data message when hasAtlasExtension returns false', async () => {
-    loadEngineMock.mockResolvedValueOnce(makeNoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeNoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_get_package_fanin')!;
@@ -266,7 +273,7 @@ describe('archguard_get_package_fanin — handler', () => {
 
   it('returns No package data message when packageGraph has no nodes', async () => {
     const emptyGraph: PackageGraph = { nodes: [], edges: [], cycles: [] };
-    loadEngineMock.mockResolvedValueOnce(makeAtlasEngine(emptyGraph));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(emptyGraph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_get_package_fanin')!;
@@ -395,7 +402,7 @@ describe('archguard_detect_god_packages — tool schema', () => {
 
 describe('archguard_detect_god_packages — handler', () => {
   it('returns No Atlas data message when hasAtlasExtension returns false', async () => {
-    loadEngineMock.mockResolvedValueOnce(makeNoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeNoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_detect_god_packages')!;
@@ -405,7 +412,7 @@ describe('archguard_detect_god_packages — handler', () => {
 
   it('returns No package data message when packageGraph has no nodes', async () => {
     const emptyGraph: PackageGraph = { nodes: [], edges: [], cycles: [] };
-    loadEngineMock.mockResolvedValueOnce(makeAtlasEngine(emptyGraph));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(emptyGraph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_detect_god_packages')!;
@@ -497,7 +504,7 @@ describe('archguard_detect_god_packages — handler', () => {
       edges: [],
       cycles: [],
     };
-    loadEngineMock.mockResolvedValueOnce(makeAtlasEngine(graph));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(graph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_detect_god_packages')!;

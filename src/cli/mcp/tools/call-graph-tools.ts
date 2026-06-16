@@ -49,8 +49,8 @@ export function registerCallGraphTools(server: McpServer, defaultRoot: string): 
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const engine = await loadEngine(archDir);
-        const callers = engine.findCallers(entityName, depth ?? 1);
+        const { relationQueryService } = await loadEngine(archDir);
+        const callers = relationQueryService.findCallers(entityName, depth ?? 1);
         return textResponse(JSON.stringify({ entityName, depth: depth ?? 1, callers }, null, 2));
       } catch {
         const root = resolveRoot(projectRoot, defaultRoot);

@@ -27,6 +27,7 @@ import type { Entity, Relation, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import type {
   TestAnalysis,
   TestFileInfo,
@@ -148,33 +149,36 @@ const mockTestAnalysis: TestAnalysis = {
   patternConfigSource: 'auto',
 };
 
-function createTestEngine(atlasGraph?: typeof mockPackageGraph): QueryEngine {
-  const archJson = makeArchJson(
-    atlasGraph
-      ? {
-          extensions: {
-            goAtlas: {
-              version: '2.0',
-              layers: { package: atlasGraph },
-              metadata: {
-                generatedAt: '2026-01-01T00:00:00Z',
-                generationStrategy: {
-                  functionBodyStrategy: 'none',
-                  detectedFrameworks: [],
-                  followIndirectCalls: false,
-                  goplsEnabled: false,
-                },
-                completeness: { package: 1.0, capability: 0, goroutine: 0, flow: 0 },
-                performance: { fileCount: 2, parseTime: 0, totalTime: 0, memoryUsage: 0 },
-              },
-            },
-          },
-        }
-      : {}
-  );
+function createTestEngine(atlasGraph?: typeof mockPackageGraph, testAnalysis?: TestAnalysis): { engine: QueryEngine; archJson: ArchJSON } {
+  const extensions: ArchJSON['extensions'] = {};
+  if (atlasGraph) {
+    extensions.goAtlas = {
+      version: '2.0',
+      layers: { package: atlasGraph },
+      metadata: {
+        generatedAt: '2026-01-01T00:00:00Z',
+        generationStrategy: {
+          functionBodyStrategy: 'none',
+          detectedFrameworks: [],
+          followIndirectCalls: false,
+          goplsEnabled: false,
+        },
+        completeness: { package: 1.0, capability: 0, goroutine: 0, flow: 0 },
+        performance: { fileCount: 2, parseTime: 0, totalTime: 0, memoryUsage: 0 },
+      },
+    };
+  }
+  if (testAnalysis) {
+    extensions.testAnalysis = testAnalysis;
+  }
+  const archJson = makeArchJson(Object.keys(extensions).length > 0 ? { extensions } : {});
   const archIndex = buildArchIndex(archJson, 'testhash');
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry: parsedScope });
-  return engine;
+  return { engine, archJson };
+}
+
+function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
+  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry: parsedScope };
 }
 
 // ── Console capture ───────────────────────────────────────────────────────────
@@ -246,7 +250,7 @@ describe('ADR-007 §4 — new flags registered in createQueryCommand()', () => {
 
 describe('query --atlas-layer', () => {
   it('returns package layer JSON when Atlas data is present', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(mockPackageGraph));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(mockPackageGraph)));
     await runQuery('--atlas-layer', 'package', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     const json = JSON.parse(consoleOutput.join('\n'));
@@ -255,7 +259,7 @@ describe('query --atlas-layer', () => {
   });
 
   it('exits 1 when Atlas data is absent', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--atlas-layer', 'package');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toMatch(/atlas|no.*data/i);
@@ -266,10 +270,7 @@ describe('query --atlas-layer', () => {
 
 describe('query --test-patterns', () => {
   it('returns test pattern config JSON when test analysis is present', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(mockTestAnalysis);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
 
     await runQuery('--test-patterns', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -280,9 +281,7 @@ describe('query --test-patterns', () => {
   });
 
   it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(false);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
 
     await runQuery('--test-patterns');
     expect(process.exit).toHaveBeenCalledWith(1);
@@ -294,10 +293,7 @@ describe('query --test-patterns', () => {
 
 describe('query --test-issues', () => {
   it('returns issues list JSON', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(mockTestAnalysis);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
 
     await runQuery('--test-issues', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -307,10 +303,7 @@ describe('query --test-issues', () => {
   });
 
   it('filters issues by severity when --severity is given', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(mockTestAnalysis);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
 
     await runQuery('--test-issues', '--severity', 'info', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -321,9 +314,7 @@ describe('query --test-issues', () => {
   });
 
   it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(false);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
 
     await runQuery('--test-issues');
     expect(process.exit).toHaveBeenCalledWith(1);
@@ -334,11 +325,9 @@ describe('query --test-issues', () => {
 
 describe('query --test-metrics', () => {
   it('returns metrics JSON', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
-    vi.spyOn(engine, 'getTestAnalysis').mockReturnValue(mockTestAnalysis);
+    const { engine, archJson } = createTestEngine(undefined, mockTestAnalysis);
     vi.spyOn(engine, 'getPackageCoverage').mockReturnValue([]);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine({ engine, archJson }));
 
     await runQuery('--test-metrics', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -348,9 +337,7 @@ describe('query --test-metrics', () => {
   });
 
   it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(false);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
 
     await runQuery('--test-metrics');
     expect(process.exit).toHaveBeenCalledWith(1);
@@ -361,15 +348,14 @@ describe('query --test-metrics', () => {
 
 describe('query --entity-coverage', () => {
   it('returns coverage result JSON for a known entity', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(true);
+    const { engine, archJson } = createTestEngine(undefined, mockTestAnalysis);
     vi.spyOn(engine, 'getEntityCoverage').mockReturnValue({
       found: true,
       entityId: 'e1',
       coverageScore: 0.85,
       coveredBy: [],
     });
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine({ engine, archJson }));
 
     await runQuery('--entity-coverage', 'e1', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -379,9 +365,7 @@ describe('query --entity-coverage', () => {
   });
 
   it('exits 1 when no test analysis data', async () => {
-    const engine = createTestEngine();
-    vi.spyOn(engine, 'hasTestAnalysis').mockReturnValue(false);
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
 
     await runQuery('--entity-coverage', 'e1');
     expect(process.exit).toHaveBeenCalledWith(1);
@@ -392,7 +376,7 @@ describe('query --entity-coverage', () => {
 
 describe('query --package-fanin', () => {
   it('returns packages ranked by fan-in', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(mockPackageGraph));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(mockPackageGraph)));
     await runQuery('--package-fanin', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     const json = JSON.parse(consoleOutput.join('\n'));
@@ -403,7 +387,7 @@ describe('query --package-fanin', () => {
   });
 
   it('exits 1 when Atlas data is absent', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--package-fanin');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toMatch(/atlas|no.*data/i);
@@ -414,7 +398,7 @@ describe('query --package-fanin', () => {
 
 describe('query --package-fanout', () => {
   it('returns packages ranked by fan-out', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(mockPackageGraph));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(mockPackageGraph)));
     await runQuery('--package-fanout', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     const json = JSON.parse(consoleOutput.join('\n'));
@@ -425,7 +409,7 @@ describe('query --package-fanout', () => {
   });
 
   it('exits 1 when Atlas data is absent', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--package-fanout');
     expect(process.exit).toHaveBeenCalledWith(1);
   });
@@ -435,7 +419,7 @@ describe('query --package-fanout', () => {
 
 describe('query --god-packages', () => {
   it('returns god package analysis JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(mockPackageGraph));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(mockPackageGraph)));
     await runQuery('--god-packages', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     const json = JSON.parse(consoleOutput.join('\n'));
@@ -444,7 +428,7 @@ describe('query --god-packages', () => {
   });
 
   it('exits 1 when Atlas data is absent', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--god-packages');
     expect(process.exit).toHaveBeenCalledWith(1);
   });
@@ -454,7 +438,7 @@ describe('query --god-packages', () => {
 
 describe('query --change-context', () => {
   it('calls HistoryQuery.getChangeContext and prints JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockResolvedValue({} as any);
 
     await runQuery('--change-context', 'src/foo.ts', '--format', 'json');
@@ -465,7 +449,7 @@ describe('query --change-context', () => {
   });
 
   it('exits 1 and shows message when git history data not found', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('not found'));
 
     await runQuery('--change-context', 'src/foo.ts');
@@ -478,7 +462,7 @@ describe('query --change-context', () => {
 
 describe('query --cochange', () => {
   it('calls HistoryQuery.getCochange and prints JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockResolvedValue({} as any);
 
     await runQuery('--cochange', 'src/foo.ts', '--format', 'json');
@@ -488,7 +472,7 @@ describe('query --cochange', () => {
   });
 
   it('exits 1 when git history data not found', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('not found'));
 
     await runQuery('--cochange', 'src/foo.ts');
@@ -500,7 +484,7 @@ describe('query --cochange', () => {
 
 describe('query --change-risk', () => {
   it('calls HistoryQuery.getChangeRisk and prints JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockResolvedValue({} as any);
 
     await runQuery('--change-risk', 'src/foo.ts', '--format', 'json');
@@ -510,7 +494,7 @@ describe('query --change-risk', () => {
   });
 
   it('exits 1 when git history data not found', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('not found'));
 
     await runQuery('--change-risk', 'src/foo.ts');
@@ -522,7 +506,7 @@ describe('query --change-risk', () => {
 
 describe('query --ownership', () => {
   it('calls HistoryQuery.getOwnership and prints JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockResolvedValue({} as any);
 
     await runQuery('--ownership', 'src/foo.ts', '--format', 'json');
@@ -532,7 +516,7 @@ describe('query --ownership', () => {
   });
 
   it('exits 1 when git history data not found', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     vi.mocked(loadHistoryData).mockRejectedValue(new GitHistoryNotFoundError('not found'));
 
     await runQuery('--ownership', 'src/foo.ts');
@@ -544,14 +528,14 @@ describe('query --ownership', () => {
 
 describe('validateQueryOptions: new flags included in exclusivity check', () => {
   it('rejects two primary flags together (--atlas-layer + --summary)', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(mockPackageGraph));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(mockPackageGraph)));
     await runQuery('--atlas-layer', 'package', '--summary');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toMatch(/exactly one/i);
   });
 
   it('rejects --change-context + --cochange together', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--change-context', 'src/foo.ts', '--cochange', 'src/foo.ts');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toMatch(/exactly one/i);

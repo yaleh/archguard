@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '@/core/query/query-engine.js';
 import { buildArchIndex } from '@/core/query/arch-index-builder.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 
@@ -154,7 +155,7 @@ describe('QueryEngine.findSubclasses', () => {
     ];
     const engine = makeEngine(makeArchJson({ entities, relations }));
 
-    const result = engine.findSubclasses('Base');
+    const result = engine.relationQueryService.findSubclasses('Base');
     expect(Array.isArray(result)).toBe(true);
     expect((result as Entity[]).map((e) => e.name)).toContain('Child');
     expect((result as Entity[]).map((e) => e.name)).not.toContain('Other');
@@ -163,12 +164,12 @@ describe('QueryEngine.findSubclasses', () => {
   it('returns empty when no subclasses exist', () => {
     const entities = [makeEntity('pkg.Base', 'Base'), makeEntity('pkg.Solo', 'Solo')];
     const engine = makeEngine(makeArchJson({ entities }));
-    expect(engine.findSubclasses('Base')).toHaveLength(0);
+    expect(engine.relationQueryService.findSubclasses('Base')).toHaveLength(0);
   });
 
   it('returns empty for unknown class name', () => {
     const engine = makeEngine(makeArchJson());
-    expect(engine.findSubclasses('Unknown')).toHaveLength(0);
+    expect(engine.relationQueryService.findSubclasses('Unknown')).toHaveLength(0);
   });
 
   it('respects outputScope=class option', () => {
@@ -183,7 +184,7 @@ describe('QueryEngine.findSubclasses', () => {
         relations: [{ source: 'pkg.Child', target: 'pkg.Base', type: 'inheritance' }],
       })
     );
-    const result = engine.findSubclasses('Base', { outputScope: 'class' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.findSubclasses('Base'), { outputScope: 'class' });
     expect((result as Partial<Entity>[])[0].members).toBeUndefined();
   });
 });
@@ -382,21 +383,21 @@ describe('QueryEngine BFS edge cases', () => {
   const engine = makeEngine(makeArchJson({ entities, relations }));
 
   it('getDependencies returns [] for unknown entity', () => {
-    expect(engine.getDependencies('NonExistent', 1)).toHaveLength(0);
+    expect(engine.relationQueryService.getDependencies('NonExistent', 1)).toHaveLength(0);
   });
 
   it('getDependents returns [] for unknown entity', () => {
-    expect(engine.getDependents('NonExistent', 1)).toHaveLength(0);
+    expect(engine.relationQueryService.getDependents('NonExistent', 1)).toHaveLength(0);
   });
 
   it('depth 0 is clamped to 1 (returns direct deps only)', () => {
-    const result = engine.getDependencies('A', 0) as Entity[];
+    const result = engine.relationQueryService.getDependencies('A', 0) as Entity[];
     expect(result.map((e) => e.name)).toEqual(['B']);
   });
 
   it('depth 10 is clamped to 5 (returns at most 5 hops)', () => {
     // Chain A→B→C→D→E→F; clamped depth=5 from A reaches B,C,D,E,F
-    const result = engine.getDependencies('A', 10) as Entity[];
+    const result = engine.relationQueryService.getDependencies('A', 10) as Entity[];
     const names = result.map((e) => e.name);
     expect(names).toContain('B');
     expect(names).toContain('F'); // 5th hop
@@ -404,7 +405,7 @@ describe('QueryEngine BFS edge cases', () => {
 
   it('getDependents traverses reverse direction at depth 2', () => {
     // F is depended on by E (depth 1), E by D (depth 2)
-    const result = engine.getDependents('F', 2) as Entity[];
+    const result = engine.relationQueryService.getDependents('F', 2) as Entity[];
     const names = result.map((e) => e.name);
     expect(names).toContain('E');
     expect(names).toContain('D');
@@ -430,7 +431,7 @@ describe('QueryEngine BFS edge cases', () => {
         ],
       })
     );
-    const result = diamondEngine.getDependencies('A', 2) as Entity[];
+    const result = diamondEngine.relationQueryService.getDependencies('A', 2) as Entity[];
     const dCount = result.filter((e) => e.name === 'D').length;
     expect(dCount).toBe(1);
   });
@@ -440,15 +441,15 @@ describe('QueryEngine BFS edge cases', () => {
 // Extension delegation: hasTestAnalysis, getTestAnalysis
 // ---------------------------------------------------------------------------
 
-describe('QueryEngine extension delegation — testAnalysis', () => {
+describe('ExtensionAccessor — testAnalysis delegation', () => {
   it('hasTestAnalysis() returns false when no extension', () => {
-    const engine = makeEngine(makeArchJson());
-    expect(engine.hasTestAnalysis()).toBe(false);
+    const ext = new ExtensionAccessor(makeArchJson());
+    expect(ext.hasTestAnalysis()).toBe(false);
   });
 
   it('getTestAnalysis() returns undefined when no extension', () => {
-    const engine = makeEngine(makeArchJson());
-    expect(engine.getTestAnalysis()).toBeUndefined();
+    const ext = new ExtensionAccessor(makeArchJson());
+    expect(ext.getTestAnalysis()).toBeUndefined();
   });
 
   it('hasTestAnalysis() returns true when testAnalysis extension is present', () => {
@@ -470,9 +471,9 @@ describe('QueryEngine extension delegation — testAnalysis', () => {
         } as any,
       },
     });
-    const engine = makeEngine(archJson);
-    expect(engine.hasTestAnalysis()).toBe(true);
-    expect(engine.getTestAnalysis()).toBeDefined();
+    const ext = new ExtensionAccessor(archJson);
+    expect(ext.hasTestAnalysis()).toBe(true);
+    expect(ext.getTestAnalysis()).toBeDefined();
   });
 });
 

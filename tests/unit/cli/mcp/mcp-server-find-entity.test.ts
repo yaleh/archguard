@@ -76,6 +76,10 @@ function createTestEngine(): QueryEngine {
   return new QueryEngine({ archJson, archIndex, scopeEntry });
 }
 
+function wrapEngine(engine: QueryEngine) {
+  return { engine, extensionAccessor: {} as any, scopeEntry };
+}
+
 // -- Helper to call tools via McpServer --
 
 function collectTools(
@@ -100,7 +104,7 @@ const loadEngineMock = vi.mocked(loadEngine);
 
 beforeEach(() => {
   loadEngineMock.mockReset();
-  loadEngineMock.mockResolvedValue(createTestEngine());
+  loadEngineMock.mockResolvedValue(wrapEngine(createTestEngine()));
 });
 
 // -- Tests --
@@ -109,7 +113,7 @@ describe('archguard_find_entity MCP tool', () => {
   it('name-based lookup still calls findEntity (existing path unchanged)', async () => {
     const engine = createTestEngine();
     const findEntitySpy = vi.spyOn(engine, 'findEntity');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -124,7 +128,7 @@ describe('archguard_find_entity MCP tool', () => {
     const engine = createTestEngine();
     const findByTypeSpy = vi.spyOn(engine, 'findByType');
     const findEntitySpy = vi.spyOn(engine, 'findEntity');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -142,7 +146,7 @@ describe('archguard_find_entity MCP tool', () => {
   it('entityType + attrFilter calls findByTypeAndAttr', async () => {
     const engine = createTestEngine();
     const findByTypeAndAttrSpy = vi.spyOn(engine, 'findByTypeAndAttr');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -159,7 +163,7 @@ describe('archguard_find_entity MCP tool', () => {
   it('attrFilter without entityType calls findByAttr', async () => {
     const engine = createTestEngine();
     const findByAttrSpy = vi.spyOn(engine, 'findByAttr');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -176,7 +180,7 @@ describe('archguard_find_entity MCP tool', () => {
 
   it('attrFilter with two keys applies AND semantics', async () => {
     const engine = createTestEngine();
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -194,7 +198,7 @@ describe('archguard_find_entity MCP tool', () => {
   it('empty attrFilter with entityType behaves as plain findByType', async () => {
     const engine = createTestEngine();
     const findByTypeSpy = vi.spyOn(engine, 'findByType');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
@@ -210,7 +214,7 @@ describe('archguard_find_entity MCP tool', () => {
 
   it('no name, entityType, or attrFilter returns empty array or error without crashing', async () => {
     const engine = createTestEngine();
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);

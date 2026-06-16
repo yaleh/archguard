@@ -22,3 +22,5 @@ export type {
 } from './query-engine.js';
 
 export * from './arch-metrics.js';
+
+export { RelationQueryService } from './relation-query-service.js';

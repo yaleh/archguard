@@ -99,16 +99,16 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const engine = await loadEngine(archDir, scope);
+        const { extensionAccessor } = await loadEngine(archDir, scope);
 
-        if (!engine.hasAtlasExtension()) {
+        if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
             'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
               `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
           );
         }
 
-        const graph = engine.getAtlasLayer('package');
+        const graph = extensionAccessor.getAtlasLayer('package');
         if (!graph || graph.nodes.length === 0) {
           return textResponse('No package data available in the Atlas package layer.');
         }
@@ -164,16 +164,16 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const engine = await loadEngine(archDir, scope);
+        const { extensionAccessor } = await loadEngine(archDir, scope);
 
-        if (!engine.hasAtlasExtension()) {
+        if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
             'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
               `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
           );
         }
 
-        const graph = engine.getAtlasLayer('package');
+        const graph = extensionAccessor.getAtlasLayer('package');
         if (!graph || graph.nodes.length === 0) {
           return textResponse('No package data available in the Atlas package layer.');
         }
@@ -240,16 +240,16 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const engine = await loadEngine(archDir, scope);
+        const { extensionAccessor } = await loadEngine(archDir, scope);
 
-        if (!engine.hasAtlasExtension()) {
+        if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
             'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
               `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
           );
         }
 
-        const graph = engine.getAtlasLayer('package');
+        const graph = extensionAccessor.getAtlasLayer('package');
         if (!graph || graph.nodes.length === 0) {
           return textResponse('No package data available in the Atlas package layer.');
         }
