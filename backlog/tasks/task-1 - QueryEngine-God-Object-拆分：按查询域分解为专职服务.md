@@ -4,7 +4,7 @@ title: QueryEngine God Object 拆分：按查询域分解为专职服务
 status: Done
 assignee: []
 created_date: '2026-06-16 04:07'
-updated_date: '2026-06-16 10:31'
+updated_date: '2026-06-16 10:56'
 labels: []
 dependencies: []
 ordinal: 1000
@@ -269,10 +269,14 @@ Phase B implemented: 2026-06-16T10:04:46Z
 Phase C implemented: 2026-06-16T10:23:18Z
 
 Completed: 2026-06-16T10:31:26Z
+
+DoD #2 (grep go-mod-reader in index.ts) superseded by Phase D which intentionally moved readModuleName into GoParseCoordinator, removing the import from index.ts per the plan. All acceptance gate criteria pass. npm test exit code 0. Type-check clean.
+
+Completed: 2026-06-16T10:53:00Z
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-commit: 18e67acb0611564df7d1893a784aec25a053d3d8
+commit: 6bb494d (feat: Implement GoPlugin God Object refactoring and QueryEngine status update)\n\nAll 3 new files created: go-mod-reader.ts, gopls-interface-resolver.ts, go-parse-coordinator.ts\nGoPlugin index.ts reduced to ≤12 imports\nType-check clean, tests passing (exit 0)
 <!-- SECTION:FINAL_SUMMARY:END -->

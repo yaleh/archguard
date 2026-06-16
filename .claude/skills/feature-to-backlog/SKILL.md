@@ -9,6 +9,33 @@ allowed-tools: Read, Glob, Grep, Bash, Agent
 
 ## Spec
 
+Config :: {
+  testCmd  : String,   -- per-phase test runner; becomes DoD[0] in generated plans
+  testAll  : String,   -- full suite; becomes Acceptance Gate[0]
+  docPath  : String    -- root for proposals/ and plans/ subdirectories
+}
+
+loadConfig :: () → Config
+loadConfig() =
+  | fromClaudeMd()   -- explicit: "## L0 Config" section in CLAUDE.md
+  | autoDetect()     -- implicit: probe package.json, go.mod, Cargo.toml, etc.
+
+autoDetect :: () → Config
+autoDetect() = case detectLang() of
+  | Node    → { testCmd: "npm test -- --run", testAll: "npm test",            docPath: "docs" }
+  | Go      → { testCmd: "go test ./...",     testAll: "go test ./...",        docPath: "docs" }
+  | Rust    → { testCmd: "cargo test",        testAll: "cargo test --workspace", docPath: "docs" }
+  | Python  → { testCmd: "pytest -k",         testAll: "pytest",               docPath: "docs" }
+  | _       → { testCmd: "make test",         testAll: "make test",            docPath: "docs" }
+
+detectLang :: () → Lang
+detectLang() =
+  | exists("package.json")                           → Node
+  | exists("go.mod")                                 → Go
+  | exists("Cargo.toml")                             → Rust
+  | exists("pyproject.toml") ∨ exists("setup.py")   → Python
+  | otherwise                                        → Unknown
+
 -- Core document types
 
 Proposal :: {
@@ -22,23 +49,24 @@ Phase :: {
   title  : String,
   tests  : [TestSpec],           -- written before implementation; must fail first
   impl   : [FileChange],         -- code that makes the tests pass
-  dod    : [ShellCmd]            -- dod[0] MUST be a test runner command (red→green proof)
+  dod    : [ShellCmd]            -- dod[0] MUST be cfg.testCmd (red→green proof)
 }
 
 Plan :: {
   phases      : [Phase],         -- ordered; earlier phases feed later ones
   constraints : [String],        -- non-executable criteria (NOT in dod)
-  acceptance  : [ShellCmd]       -- final gate; acceptance[0] is a full test run
+  acceptance  : [ShellCmd]       -- acceptance[0] is cfg.testAll
 }
 
 -- Workflow
 
 featureToBacklog :: Topic → BacklogTask
 featureToBacklog(T) = {
+  cfg:      loadConfig(),
   task:     createTask(T),
   proposal: reviewLoop(task, draftProposal(task, T), 8),
-  plan:     reviewLoop(task, draftPlan(task, proposal), 8),
-  _:        finalise(task, proposal, plan),
+  plan:     reviewLoop(task, draftPlan(task, proposal, cfg), 8),
+  _:        finalise(task, proposal, plan, cfg),
   return:   task  -- status: Backlog
 }
 
@@ -52,13 +80,14 @@ reviewLoop(T, doc, n) = {
 
 -- Plan review invariants (all must hold for APPROVED)
 
-reviewPlan :: Plan → Verdict
-reviewPlan(P) = {
+reviewPlan :: (Plan, Config) → Verdict
+reviewPlan(P, cfg) = {
   ∀phase ∈ P.phases: {
-    assert: ¬empty(phase.tests),              -- TDD: Tests section must exist
-    assert: isTestCommand(phase.dod[0]),       -- TDD: first DoD proves red→green
+    assert: ¬empty(phase.tests),                  -- TDD: Tests section must exist
+    assert: phase.dod[0] starts with cfg.testCmd, -- TDD: first DoD proves red→green
     assert: ∀cmd ∈ phase.dod: isShellCmd(cmd)
   },
+  assert: P.acceptance[0] == cfg.testAll,
   assert: ∀goal ∈ proposal.goals: coveredBy(goal, P.phases ∪ P.acceptance),
   assert: ∀phase ∈ P.phases: allFilesExist(phase.impl),
   return: APPROVED | NEEDS_REVISION
@@ -66,7 +95,47 @@ reviewPlan(P) = {
 
 ## Implementation
 
-Derive once and reuse throughout:
+### loadConfig
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# --- fromClaudeMd ---
+L0_SECTION=$(awk '/^## L0 Config/{found=1; next} found && /^## /{exit} found{print}' \
+  "${REPO_ROOT}/CLAUDE.md" 2>/dev/null)
+
+parse_cfg() { echo "$L0_SECTION" | grep -oP "(?<=^$1:\s)\S.*" | head -1 | xargs; }
+
+CFG_TEST_CMD=$(parse_cfg "test-cmd")
+CFG_TEST_ALL=$(parse_cfg "test-all")
+CFG_DOC_PATH=$(parse_cfg "doc-path")
+
+# --- autoDetect fallback ---
+if [ -z "$L0_SECTION" ]; then
+  if   [ -f "${REPO_ROOT}/package.json"  ]; then LANG=node
+  elif [ -f "${REPO_ROOT}/go.mod"        ]; then LANG=go
+  elif [ -f "${REPO_ROOT}/Cargo.toml"    ]; then LANG=rust
+  elif [ -f "${REPO_ROOT}/pyproject.toml" ] || [ -f "${REPO_ROOT}/setup.py" ]; then LANG=python
+  else LANG=unknown; fi
+
+  case "$LANG" in
+    node)   CFG_TEST_CMD="${CFG_TEST_CMD:-npm test -- --run}"; CFG_TEST_ALL="${CFG_TEST_ALL:-npm test}" ;;
+    go)     CFG_TEST_CMD="${CFG_TEST_CMD:-go test ./...}";    CFG_TEST_ALL="${CFG_TEST_ALL:-go test ./...}" ;;
+    rust)   CFG_TEST_CMD="${CFG_TEST_CMD:-cargo test}";       CFG_TEST_ALL="${CFG_TEST_ALL:-cargo test --workspace}" ;;
+    python) CFG_TEST_CMD="${CFG_TEST_CMD:-pytest -k}";        CFG_TEST_ALL="${CFG_TEST_ALL:-pytest}" ;;
+    *)      CFG_TEST_CMD="${CFG_TEST_CMD:-make test}";        CFG_TEST_ALL="${CFG_TEST_ALL:-make test}" ;;
+  esac
+  CFG_DOC_PATH="${CFG_DOC_PATH:-docs}"
+  echo "L0 auto-detected config: lang=${LANG} testCmd=${CFG_TEST_CMD} testAll=${CFG_TEST_ALL} docPath=${CFG_DOC_PATH}"
+else
+  CFG_TEST_CMD="${CFG_TEST_CMD:-make test}"
+  CFG_TEST_ALL="${CFG_TEST_ALL:-make test}"
+  CFG_DOC_PATH="${CFG_DOC_PATH:-docs}"
+  echo "L0 config loaded from CLAUDE.md: testCmd=${CFG_TEST_CMD} testAll=${CFG_TEST_ALL} docPath=${CFG_DOC_PATH}"
+fi
+```
+
+Derive slug and title from `<topic>`:
 
 ```bash
 SLUG=$(echo "<topic>" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | cut -c1-50)
@@ -178,11 +247,14 @@ backlog task edit $TASK_ID \
   --append-notes "Proposal approved. Starting plan draft."
 ```
 
-Spawn Task agent:
+Spawn Task agent (pass `CFG_TEST_CMD`, `CFG_TEST_ALL`, `CFG_DOC_PATH` as literal values):
 
 > Draft a TDD implementation plan and update the backlog task.
 >
 > Task ID: `<TASK_ID>`
+> Test command (per phase): `<CFG_TEST_CMD>`
+> Full suite command: `<CFG_TEST_ALL>`
+> Doc root: `<CFG_DOC_PATH>`
 >
 > 1. Read the approved proposal from `$TMPDIR/ftb-proposal.md`
 > 2. Search the codebase to identify exact file paths to create or modify.
@@ -191,7 +263,7 @@ Spawn Task agent:
 >    ```markdown
 >    # Plan: <title>
 >
->    Proposal: docs/proposals/proposal-<slug>.md
+>    Proposal: <CFG_DOC_PATH>/proposals/proposal-<slug>.md
 >
 >    ## Phase A: <title>
 >    ### Tests (write first)
@@ -199,7 +271,7 @@ Spawn Task agent:
 >    ### Implementation
 >    (Files to create or modify; code that makes the tests pass)
 >    ### DoD
->    - [ ] `npm test -- --run <test-file>`   ← first item MUST be a test runner command
+>    - [ ] `<CFG_TEST_CMD> <test-file-or-pattern>`   ← first item MUST use testCmd
 >    - [ ] `<other verification command>`
 >
 >    ## Phase B: <title>
@@ -208,14 +280,14 @@ Spawn Task agent:
 >    ### Implementation
 >    ...
 >    ### DoD
->    - [ ] `npm test -- --run <test-file>`
+>    - [ ] `<CFG_TEST_CMD> <test-file-or-pattern>`
 >    - [ ] `<other verification command>`
 >
 >    ## Constraints
 >    (Non-executable criteria — goes here, NOT in DoD)
 >
 >    ## Acceptance Gate
->    - [ ] `npm test`                         ← full test suite green
+>    - [ ] `<CFG_TEST_ALL>`                           ← first item MUST be full suite
 >    - [ ] `<final verification command>`
 >    ```
 >
@@ -223,7 +295,8 @@ Spawn Task agent:
 >    - Every `### DoD` and `## Acceptance Gate` item MUST be an executable shell command
 >      (exit 0 = pass)
 >    - `### Tests` section MUST exist in every Phase — this is the TDD specification
->    - First `### DoD` item MUST be a test runner command — proves red→green
+>    - First `### DoD` item MUST use `<CFG_TEST_CMD>` — proves red→green
+>    - First `## Acceptance Gate` item MUST be `<CFG_TEST_ALL>`
 >    - Each Phase ≤ 200 lines of code change
 >    - Absence check: `! grep -q <pattern> <file>` (NOT `grep -qv`)
 >    - Natural-language criteria → `## Constraints` only, never in DoD
@@ -242,11 +315,13 @@ Spawn Task agent:
 
 **Soft limit: 8 iterations.** On exhaustion: move to Needs Human, print plan, stop.
 
-Each iteration — spawn Task agent:
+Each iteration — spawn Task agent (pass `CFG_TEST_CMD`, `CFG_TEST_ALL` as literal values):
 
 > You are a strict software architect reviewing a TDD implementation plan.
 >
 > Task ID: `<TASK_ID>` — Iteration: `<N>`
+> Expected test command: `<CFG_TEST_CMD>`
+> Expected full suite: `<CFG_TEST_ALL>`
 >
 > 1. Read `$TMPDIR/ftb-proposal.md` and `$TMPDIR/ftb-plan.md`
 >
@@ -255,9 +330,10 @@ Each iteration — spawn Task agent:
 >      Acceptance Gate item
 >    - **TDD structure**: Every Phase has a `### Tests` section AND
 >      `### Implementation` section (in that order)
->    - **TDD order**: First `### DoD` item is a test runner command (proves red→green)
+>    - **TDD order**: First `### DoD` item uses `<CFG_TEST_CMD>` (proves red→green)
+>    - **Acceptance gate**: First `## Acceptance Gate` item is `<CFG_TEST_ALL>`
 >    - **DoD executability**: All `### DoD` and `## Acceptance Gate` items are shell
->      commands (exit 0 = pass). Flag natural-language items and move to `## Constraints`
+>      commands. Flag natural-language items and move to `## Constraints`
 >    - **Absence checks**: `! grep -q` pattern used, not `grep -qv`
 >    - **Phase ordering**: Earlier phases produce what later phases need; no circular deps
 >    - **Scope discipline**: No Phase implements something not backed by a Goal
@@ -281,34 +357,35 @@ After each agent run, read `$TMPDIR/ftb-plan-verdict.txt`:
 
 ### Phase 5: finalise
 
-Spawn Task agent:
+Spawn Task agent (pass `CFG_DOC_PATH`, `TASK_ID`, `SLUG` as literal values):
 
 > Finalise the backlog task and commit documents to the repository.
 >
-> Task ID: `<TASK_ID>` — Slug: `<SLUG>`
+> Task ID: `<TASK_ID>` — Slug: `<SLUG>` — Doc root: `<CFG_DOC_PATH>`
 >
-> **Step A — Determine plan number**:
+> **Step A — Plan number**:
 > ```bash
-> NEXT_N=$(ls docs/plans/ 2>/dev/null \
+> NEXT_N=$(ls <CFG_DOC_PATH>/plans/ 2>/dev/null \
 >   | grep -oP '^\d+' | sort -n | tail -1 \
 >   | xargs -I{} expr {} + 1 2>/dev/null || echo "101")
 > ```
 >
 > **Step B — Copy docs**:
 > ```bash
-> mkdir -p docs/proposals docs/plans
-> cp $TMPDIR/ftb-proposal.md docs/proposals/proposal-<SLUG>.md
-> cp $TMPDIR/ftb-plan.md    docs/plans/${NEXT_N}-<SLUG>.md
+> mkdir -p <CFG_DOC_PATH>/proposals <CFG_DOC_PATH>/plans
+> cp $TMPDIR/ftb-proposal.md <CFG_DOC_PATH>/proposals/proposal-<SLUG>.md
+> cp $TMPDIR/ftb-plan.md     <CFG_DOC_PATH>/plans/${NEXT_N}-<SLUG>.md
 > ```
 >
 > **Step C — Commit**:
 > ```bash
-> git add docs/proposals/proposal-<SLUG>.md docs/plans/${NEXT_N}-<SLUG>.md
+> git add <CFG_DOC_PATH>/proposals/proposal-<SLUG>.md \
+>         <CFG_DOC_PATH>/plans/${NEXT_N}-<SLUG>.md
 > git commit -m "docs(<SLUG>): add proposal and plan"
 > ```
 > Only these two files. Verify with `git status` first.
 >
-> **Step D — Extract DoD commands and add to task**:
+> **Step D — Add DoD to task**:
 > ```bash
 > grep -oP '(?<=- \[ \] `)[^`]+(?=`)' $TMPDIR/ftb-plan.md \
 >   > $TMPDIR/ftb-dod-cmds.txt
@@ -320,7 +397,7 @@ Spawn Task agent:
 >
 > backlog task edit <TASK_ID> \
 >   --status "Backlog" \
->   --append-notes "Docs committed: docs/proposals/proposal-<SLUG>.md + docs/plans/${NEXT_N}-<SLUG>.md" \
+>   --append-notes "Docs committed: <CFG_DOC_PATH>/proposals/proposal-<SLUG>.md + <CFG_DOC_PATH>/plans/${NEXT_N}-<SLUG>.md" \
 >   "${DOD_ARGS[@]}"
 > ```
 >
@@ -348,5 +425,5 @@ Spawn Task agent:
 - No branch creation, no worktree operations, no git push, no PR creation
 - One task per feature throughout; the same TASK_ID moves through all columns
 - Phase count in generated plans: minimum 1, maximum 8
-- Must run from the project root of the archguard repository
+- Must run from the project root of a git repository
 - `$TMPDIR` files are ephemeral; do not reference them after Phase 5 completes

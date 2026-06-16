@@ -8,17 +8,40 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, ScheduleWakeup
 
 ## Spec
 
+Config :: {
+  symlinks : [Path]   -- dirs to symlink into worktree ([] = none)
+}
+
+loadConfig :: () → Config
+loadConfig() =
+  | fromClaudeMd()   -- explicit: "## L0 Config" section in CLAUDE.md
+  | autoDetect()     -- implicit: probe package.json, go.mod, Cargo.toml, etc.
+
+autoDetect :: () → Config
+autoDetect() = case detectLang() of
+  | Node    → { symlinks: ["node_modules"] }
+  | _       → { symlinks: [] }
+
+detectLang :: () → Lang
+detectLang() =
+  | exists("package.json") → Node
+  | exists("go.mod")       → Go
+  | exists("Cargo.toml")   → Rust
+  | exists("pyproject.toml") ∨ exists("setup.py") → Python
+  | otherwise              → Unknown
+
 data Outcome = Done CommitHash | NeedsHuman Reason | Idle
 
 workerLoop :: () → Outcome
 workerLoop() = {
+  cfg:    loadConfig(),
   _:      reap(inProgressTasks()),
   task:   claim(),
 
   if (empty(task)):
     return: schedule(270, "queue empty") >> Idle,
 
-  result: withWorktree(task, execute),
+  result: withWorktree(task, cfg, execute),
   _:      schedule(delayFor(result), summarise(task, result)),
   return: result
 }
@@ -42,10 +65,11 @@ claim() = {
   return: Just(t)
 }
 
-withWorktree :: Task → (Task → a) → a
-withWorktree(T, f) = {
-  wt: createWorktree(T),
-  cd: wt,
+withWorktree :: Task → Config → (Task → a) → a
+withWorktree(T, cfg, f) = {
+  wt:  createWorktree(T),
+  _:   ∀s ∈ cfg.symlinks: symlink(repoRoot + "/" + s, wt + "/" + s),
+  cd:  wt,
   return: f(T)
 }
 
@@ -81,10 +105,38 @@ delayFor(Idle)         = 270
 
 ## Implementation
 
-### reap
+### loadConfig
+
+Read `CLAUDE.md` for an `## L0 Config` section. If not found, auto-detect from project files.
 
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# --- fromClaudeMd ---
+L0_SECTION=$(awk '/^## L0 Config/{found=1; next} found && /^## /{exit} found{print}' \
+  "${REPO_ROOT}/CLAUDE.md" 2>/dev/null)
+
+parse_cfg() { echo "$L0_SECTION" | grep -oP "(?<=^$1:\s)\S.*" | head -1 | xargs; }
+
+CFG_SYMLINKS=$(parse_cfg "worktree-symlinks")
+
+# --- autoDetect fallback ---
+if [ -z "$L0_SECTION" ]; then
+  if   [ -f "${REPO_ROOT}/package.json" ]; then CFG_SYMLINKS="${CFG_SYMLINKS:-node_modules}"
+  else                                          CFG_SYMLINKS="${CFG_SYMLINKS:-}"
+  fi
+  echo "L0 auto-detected config: symlinks=${CFG_SYMLINKS:-none}"
+else
+  echo "L0 config loaded from CLAUDE.md: symlinks=${CFG_SYMLINKS:-none}"
+fi
+
+# Normalise "none" → empty
+[ "$CFG_SYMLINKS" = "none" ] && CFG_SYMLINKS=""
+```
+
+### reap
+
+```bash
 backlog task list --status "In Progress" --plain \
   | grep -oP 'TASK-\d+' \
   | while read TASK_ID; do
@@ -120,11 +172,16 @@ backlog task edit "$TASK_ID" --status "In Progress" \
 ### withWorktree
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
 BRANCH="task/${TASK_ID}"
 WORKTREE="${REPO_ROOT}/../archguard-${TASK_ID}"
 git worktree add "$WORKTREE" -b "$BRANCH"
-ln -sf "${REPO_ROOT}/node_modules" "${WORKTREE}/node_modules"
+
+# Symlink configured dirs (e.g. node_modules) to avoid reinstall
+for SYM in $CFG_SYMLINKS; do
+  [ -e "${REPO_ROOT}/${SYM}" ] && \
+    ln -sf "${REPO_ROOT}/${SYM}" "${WORKTREE}/${SYM}"
+done
+
 cd "$WORKTREE"
 ```
 
@@ -164,8 +221,7 @@ for N in $(seq 0 $((DOD_COUNT - 1))); do
       STUCK_INDEX=$N
       STUCK_CMD="$CMD"
       LAST_ERROR="$(eval "$CMD" 2>&1 || true)"
-      # → Failure path below
-      break 2
+      break 2   # → Failure path
     fi
     # Fix the issue causing the failure, then retry
   done
@@ -223,11 +279,11 @@ WORK_DONE=false
 
 Always the last action of every invocation. Never skip.
 
-| Outcome        | delaySeconds | reason                                   |
-|----------------|-------------|------------------------------------------|
-| Done           | 120         | task completed, check for next item      |
-| NeedsHuman     | 270         | escalated, poll at normal cadence        |
-| Idle           | 270         | queue empty, stay within cache window    |
+| Outcome    | delaySeconds | reason                                |
+|------------|-------------|---------------------------------------|
+| Done       | 120         | task completed, check for next item   |
+| NeedsHuman | 270         | escalated, poll at normal cadence     |
+| Idle       | 270         | queue empty, stay within cache window |
 
 ```
 ScheduleWakeup(
