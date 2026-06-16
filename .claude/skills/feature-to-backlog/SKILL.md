@@ -1,45 +1,85 @@
 ---
 name: feature-to-backlog
-description: "Converts a feature description into a single backlog task that moves through Proposal Draft → Proposal Review → Plan Draft → Plan Review → Backlog columns. Two iterative review loops (each converges on APPROVED, soft limit 8 rounds). Ends with a git commit of the docs and the task in Backlog status with native DoD items. No branch creation, no PRs."
+description: "Converts a feature description into a single backlog task with TDD implementation plan, moving through Proposal Draft → Proposal Review → Plan Draft → Plan Review → Backlog. Two iterative review loops (each converges on APPROVED, soft limit 8 rounds). Ends with a git commit of the docs and the task in Backlog status with native DoD items. No branch creation, no PRs."
 argument-hint: [feature-topic-or-description]
 allowed-tools: Read, Glob, Grep, Bash, Agent
 ---
 
-## Role
+λ(topic) → featureToBacklog(topic)
 
-This skill is an **orchestrator**. It spawns Task agents for each generation and
-review phase and does not write files or code directly.
+## Spec
 
-One backlog task is created at the start and moves through columns as work
-progresses. The human sees the task's current column at any time.
+-- Core document types
 
-```
-Proposal Draft → Proposal Review → Plan Draft → Plan Review → Backlog
-```
+Proposal :: {
+  background : String,           -- WHY this feature is needed (3-8 lines)
+  goals      : [VerifiableGoal], -- each Goal checkable by inspection or shell command
+  approach   : String,           -- high-level design; no implementation code
+  tradeoffs  : String            -- what we are NOT doing; known risks
+}
 
-After the skill completes, the human reviews DoD items in the web UI and moves
-the task to **Ready** to trigger L0 execution.
+Phase :: {
+  title  : String,
+  tests  : [TestSpec],           -- written before implementation; must fail first
+  impl   : [FileChange],         -- code that makes the tests pass
+  dod    : [ShellCmd]            -- dod[0] MUST be a test runner command (red→green proof)
+}
 
----
+Plan :: {
+  phases      : [Phase],         -- ordered; earlier phases feed later ones
+  constraints : [String],        -- non-executable criteria (NOT in dod)
+  acceptance  : [ShellCmd]       -- final gate; acceptance[0] is a full test run
+}
 
-## Input
+-- Workflow
 
-`/feature-to-backlog <topic>`
+featureToBacklog :: Topic → BacklogTask
+featureToBacklog(T) = {
+  task:     createTask(T),
+  proposal: reviewLoop(task, draftProposal(task, T), 8),
+  plan:     reviewLoop(task, draftPlan(task, proposal), 8),
+  _:        finalise(task, proposal, plan),
+  return:   task  -- status: Backlog
+}
 
-`<topic>` is the feature description: problem, goals, any agreed design
-decisions. If empty, print usage and stop.
+reviewLoop :: (Task, Doc, MaxRounds) → ApprovedDoc
+reviewLoop(_, doc, 0) = escalate(doc)   -- not converged; move to Needs Human
+reviewLoop(T, doc, n) = {
+  verdict: review(T, doc),
+  if (verdict == APPROVED): return doc,
+  return: reviewLoop(T, revise(doc, verdict.fixes), n - 1)
+}
+
+-- Plan review invariants (all must hold for APPROVED)
+
+reviewPlan :: Plan → Verdict
+reviewPlan(P) = {
+  ∀phase ∈ P.phases: {
+    assert: ¬empty(phase.tests),              -- TDD: Tests section must exist
+    assert: isTestCommand(phase.dod[0]),       -- TDD: first DoD proves red→green
+    assert: ∀cmd ∈ phase.dod: isShellCmd(cmd)
+  },
+  assert: ∀goal ∈ proposal.goals: coveredBy(goal, P.phases ∪ P.acceptance),
+  assert: ∀phase ∈ P.phases: allFilesExist(phase.impl),
+  return: APPROVED | NEEDS_REVISION
+}
+
+## Implementation
 
 Derive once and reuse throughout:
+
 ```bash
 SLUG=$(echo "<topic>" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | cut -c1-50)
 TITLE=$(echo "<topic>" | cut -c1-70)
 ```
 
+If `<topic>` is empty: print usage and stop.
+
 ---
 
-## Phase 1: Create Task + Draft Proposal
+### Phase 1: createTask + draftProposal
 
-**1a. Create the backlog task** (orchestrator runs directly):
+**1a. createTask** (orchestrator runs directly):
 
 ```bash
 backlog task create "$TITLE" \
@@ -48,25 +88,17 @@ backlog task create "$TITLE" \
   --plain
 ```
 
-Extract the task ID from the output line `Task TASK-N`:
-```bash
-TASK_ID=TASK-N   # e.g. TASK-3
-```
+Extract task ID from output line `Task TASK-N`. Write to `$TMPDIR/ftb-task-id.txt`.
 
-Write `$TASK_ID` to `$TMPDIR/ftb-task-id.txt` for use by all subsequent agents.
+**1b. draftProposal** — spawn Task agent:
 
-**1b. Draft the proposal** — spawn a Task agent:
-
-> Draft a technical proposal and update the backlog task description.
+> Draft a technical proposal and update the backlog task.
 >
-> Task ID: `<TASK_ID>` (literal value, e.g. TASK-3)
+> Task ID: `<TASK_ID>`
 >
-> Steps:
+> 1. Search the codebase to understand current architecture relevant to: `<topic>`
 >
-> 1. Search the codebase to understand the current architecture relevant to this
->    feature topic: `<topic>`
->
-> 2. Write the proposal to `$TMPDIR/ftb-proposal.md` in this format:
+> 2. Write `$TMPDIR/ftb-proposal.md`:
 >    ```markdown
 >    # Proposal: <title>
 >
@@ -74,41 +106,40 @@ Write `$TASK_ID` to `$TMPDIR/ftb-task-id.txt` for use by all subsequent agents.
 >    (3-8 lines: WHY this feature is needed, what problem it solves)
 >
 >    ## Goals
->    1. (concrete, measurable outcome)
+>    1. (concrete, verifiable outcome)
 >    2. ...
 >
 >    ## Proposed Approach
->    (High-level design: what to build, key components involved — no implementation code)
+>    (High-level design: what to build, key components — no implementation code)
 >
 >    ## Trade-offs and Risks
 >    (What we are not doing, known risks, alternatives considered)
 >    ```
 >
-> 3. Update the task description with the draft:
+> 3. Update task:
 >    ```bash
 >    backlog task edit <TASK_ID> \
 >      --description "$(cat $TMPDIR/ftb-proposal.md)" \
 >      --status "Proposal Review"
 >    ```
 >
-> Rules:
-> - Background must state WHY, not just WHAT
-> - Each Goal must be verifiable by inspection or shell command
-> - No implementation phases or DoD commands in this document
+> Rules: Background must state WHY, not just WHAT. Each Goal must be verifiable.
+> No implementation phases or DoD commands in this document.
 
 ---
 
-## Phase 2: Proposal Review Loop (until APPROVED)
+### Phase 2: reviewLoop(proposal)
 
-**Soft limit: 8 iterations.** If not APPROVED after 8 rounds:
+**Soft limit: 8 iterations.** On exhaustion:
+
 ```bash
-backlog task edit $TASK_ID \
-  --status "Needs Human" \
+backlog task edit $TASK_ID --status "Needs Human" \
   --append-notes "Proposal review did not converge after 8 iterations. Manual review required."
 ```
-Print the current `$TMPDIR/ftb-proposal.md` and stop.
 
-Repeat until approved — spawn a Task agent each iteration:
+Print current `$TMPDIR/ftb-proposal.md` and stop.
+
+Each iteration — spawn Task agent:
 
 > You are a strict software architect reviewing a proposal.
 >
@@ -118,28 +149,20 @@ Repeat until approved — spawn a Task agent each iteration:
 >
 > 2. Check each item:
 >    - **Motivation**: Does Background explain WHY (not just WHAT)? Is it 3-8 lines?
->    - **Goals**: Are all Goals numbered and concretely verifiable? No vague language?
->    - **Feasibility**: Does the Proposed Approach align with the codebase?
->      Search relevant files to verify.
+>    - **Goals**: All numbered and concretely verifiable? No vague language?
+>    - **Feasibility**: Does Approach align with the codebase? Search to verify.
 >    - **Completeness**: Are trade-offs and risks identified?
 >    - **Consistency**: No contradictions between sections?
 >
-> 3a. If ALL checks pass:
+> 3a. ALL pass:
 >    ```bash
 >    backlog task edit <TASK_ID> \
 >      --append-notes "Proposal review iteration <N>: APPROVED"
 >    echo "APPROVED" > $TMPDIR/ftb-proposal-verdict.txt
 >    ```
 >
-> 3b. If ANY check fails:
->    - Fix the failing sections in `$TMPDIR/ftb-proposal.md` directly
->    - Update the task description with the revised draft:
->      ```bash
->      backlog task edit <TASK_ID> \
->        --description "$(cat $TMPDIR/ftb-proposal.md)" \
->        --append-notes "Proposal review iteration <N>: NEEDS_REVISION — <brief list of fixes>"
->      echo "NEEDS_REVISION" > $TMPDIR/ftb-proposal-verdict.txt
->      ```
+> 3b. ANY fail: fix the failing sections in `$TMPDIR/ftb-proposal.md` directly,
+>    update task description with revised draft, write `NEEDS_REVISION` to verdict file.
 
 After each agent run, read `$TMPDIR/ftb-proposal-verdict.txt`:
 - `APPROVED` → proceed to Phase 3
@@ -147,9 +170,7 @@ After each agent run, read `$TMPDIR/ftb-proposal-verdict.txt`:
 
 ---
 
-## Phase 3: Move to Plan Draft + Draft Plan
-
-**3a. Move column** (orchestrator runs directly):
+### Phase 3: draftPlan
 
 ```bash
 backlog task edit $TASK_ID \
@@ -157,48 +178,58 @@ backlog task edit $TASK_ID \
   --append-notes "Proposal approved. Starting plan draft."
 ```
 
-**3b. Draft the plan** — spawn a Task agent:
+Spawn Task agent:
 
-> Draft an implementation plan and update the backlog task.
+> Draft a TDD implementation plan and update the backlog task.
 >
 > Task ID: `<TASK_ID>`
 >
 > 1. Read the approved proposal from `$TMPDIR/ftb-proposal.md`
+> 2. Search the codebase to identify exact file paths to create or modify.
+> 3. Write `$TMPDIR/ftb-plan.md`:
 >
-> 2. Search the codebase to identify exact file paths to modify.
->
-> 3. Write the plan to `$TMPDIR/ftb-plan.md`:
 >    ```markdown
 >    # Plan: <title>
 >
 >    Proposal: docs/proposals/proposal-<slug>.md
 >
 >    ## Phase A: <title>
->    ### Task
->    (what to implement; which specific files; 3-6 lines)
+>    ### Tests (write first)
+>    (Test file paths and test case names to add; these must fail before implementation)
+>    ### Implementation
+>    (Files to create or modify; code that makes the tests pass)
 >    ### DoD
->    - [ ] `<executable shell command>`
->    - [ ] `<executable shell command>`
+>    - [ ] `npm test -- --run <test-file>`   ← first item MUST be a test runner command
+>    - [ ] `<other verification command>`
 >
 >    ## Phase B: <title>
+>    ### Tests (write first)
 >    ...
+>    ### Implementation
+>    ...
+>    ### DoD
+>    - [ ] `npm test -- --run <test-file>`
+>    - [ ] `<other verification command>`
 >
 >    ## Constraints
->    (global constraints; non-executable criteria go here — NOT in DoD)
+>    (Non-executable criteria — goes here, NOT in DoD)
 >
 >    ## Acceptance Gate
->    - [ ] `<final verification shell command>`
+>    - [ ] `npm test`                         ← full test suite green
+>    - [ ] `<final verification command>`
 >    ```
 >
 >    DoD rules (STRICT):
->    - Every `### DoD` and `## Acceptance Gate` item MUST be a shell command
->      that exits 0 on success
->    - Absence check: `! grep -q <pattern> <file>` (NOT `grep -qv`)
->    - Natural-language criteria → `## Constraints` only
+>    - Every `### DoD` and `## Acceptance Gate` item MUST be an executable shell command
+>      (exit 0 = pass)
+>    - `### Tests` section MUST exist in every Phase — this is the TDD specification
+>    - First `### DoD` item MUST be a test runner command — proves red→green
 >    - Each Phase ≤ 200 lines of code change
+>    - Absence check: `! grep -q <pattern> <file>` (NOT `grep -qv`)
+>    - Natural-language criteria → `## Constraints` only, never in DoD
 >    - Phases ordered so earlier phases produce what later phases need
 >
-> 4. Update the task:
+> 4. Update task:
 >    ```bash
 >    backlog task edit <TASK_ID> \
 >      --description "$(cat $TMPDIR/ftb-plan.md)" \
@@ -207,53 +238,40 @@ backlog task edit $TASK_ID \
 
 ---
 
-## Phase 4: Plan Review Loop (until APPROVED)
+### Phase 4: reviewLoop(plan)
 
-**Soft limit: 8 iterations.** If not APPROVED after 8 rounds:
-```bash
-backlog task edit $TASK_ID \
-  --status "Needs Human" \
-  --append-notes "Plan review did not converge after 8 iterations. Manual review required."
-```
-Print the current `$TMPDIR/ftb-plan.md` and stop.
+**Soft limit: 8 iterations.** On exhaustion: move to Needs Human, print plan, stop.
 
-Repeat until approved — spawn a Task agent each iteration:
+Each iteration — spawn Task agent:
 
-> You are a strict software architect reviewing an implementation plan for
-> alignment with its proposal and for DoD quality.
+> You are a strict software architect reviewing a TDD implementation plan.
 >
 > Task ID: `<TASK_ID>` — Iteration: `<N>`
 >
 > 1. Read `$TMPDIR/ftb-proposal.md` and `$TMPDIR/ftb-plan.md`
 >
 > 2. Check each item:
->    - **Goal coverage**: Every proposal Goal is addressed by at least one
->      Phase Task or Acceptance Gate item
->    - **DoD executability**: Every `### DoD` and `## Acceptance Gate` item
->      is a shell command (exit 0 = pass). Flag natural-language items and
->      move them to `## Constraints`
+>    - **Goal coverage**: Every proposal Goal addressed by at least one Phase or
+>      Acceptance Gate item
+>    - **TDD structure**: Every Phase has a `### Tests` section AND
+>      `### Implementation` section (in that order)
+>    - **TDD order**: First `### DoD` item is a test runner command (proves red→green)
+>    - **DoD executability**: All `### DoD` and `## Acceptance Gate` items are shell
+>      commands (exit 0 = pass). Flag natural-language items and move to `## Constraints`
 >    - **Absence checks**: `! grep -q` pattern used, not `grep -qv`
->    - **Phase ordering**: earlier phases produce what later phases need;
->      no circular dependencies
->    - **Scope discipline**: no Phase implements something not backed by a Goal
->    - **File paths**: referenced files exist in the codebase (search to verify)
+>    - **Phase ordering**: Earlier phases produce what later phases need; no circular deps
+>    - **Scope discipline**: No Phase implements something not backed by a Goal
+>    - **File paths**: Referenced files exist in the codebase (search to verify)
 >
-> 3a. If ALL checks pass:
+> 3a. ALL pass:
 >    ```bash
 >    backlog task edit <TASK_ID> \
 >      --append-notes "Plan review iteration <N>: APPROVED"
 >    echo "APPROVED" > $TMPDIR/ftb-plan-verdict.txt
 >    ```
 >
-> 3b. If ANY check fails:
->    - Fix `$TMPDIR/ftb-plan.md` (and `$TMPDIR/ftb-proposal.md` if needed)
->    - Update the task:
->      ```bash
->      backlog task edit <TASK_ID> \
->        --description "$(cat $TMPDIR/ftb-plan.md)" \
->        --append-notes "Plan review iteration <N>: NEEDS_REVISION — <brief list of fixes>"
->      echo "NEEDS_REVISION" > $TMPDIR/ftb-plan-verdict.txt
->      ```
+> 3b. ANY fail: fix `$TMPDIR/ftb-plan.md` (and `$TMPDIR/ftb-proposal.md` if needed),
+>    update task description, write `NEEDS_REVISION` to verdict file.
 
 After each agent run, read `$TMPDIR/ftb-plan-verdict.txt`:
 - `APPROVED` → proceed to Phase 5
@@ -261,14 +279,13 @@ After each agent run, read `$TMPDIR/ftb-plan-verdict.txt`:
 
 ---
 
-## Phase 5: Commit Docs + Add DoD + Move to Backlog
+### Phase 5: finalise
 
-Spawn a Task agent:
+Spawn Task agent:
 
 > Finalise the backlog task and commit documents to the repository.
 >
-> Task ID: `<TASK_ID>`
-> Slug: `<SLUG>`
+> Task ID: `<TASK_ID>` — Slug: `<SLUG>`
 >
 > **Step A — Determine plan number**:
 > ```bash
@@ -289,15 +306,13 @@ Spawn a Task agent:
 > git add docs/proposals/proposal-<SLUG>.md docs/plans/${NEXT_N}-<SLUG>.md
 > git commit -m "docs(<SLUG>): add proposal and plan"
 > ```
-> Only commit these two files. Verify with `git status` first.
+> Only these two files. Verify with `git status` first.
 >
 > **Step D — Extract DoD commands and add to task**:
 > ```bash
-> # Extract all shell commands from DoD and Acceptance Gate sections
 > grep -oP '(?<=- \[ \] `)[^`]+(?=`)' $TMPDIR/ftb-plan.md \
 >   > $TMPDIR/ftb-dod-cmds.txt
 >
-> # Build and run backlog task edit with one --dod per command
 > DOD_ARGS=()
 > while IFS= read -r cmd; do
 >   DOD_ARGS+=("--dod" "$cmd")
@@ -309,7 +324,7 @@ Spawn a Task agent:
 >   "${DOD_ARGS[@]}"
 > ```
 >
-> **Step E — Print completion message**:
+> **Step E — Print completion**:
 > ```
 > ✅ Task <TASK_ID> is now in Backlog.
 >
@@ -322,7 +337,7 @@ Spawn a Task agent:
 >   backlog task edit <TASK_ID> --status "Ready"
 >
 > 启动 L0 执行：
->   @.claude/loop-backlog.md
+>   /loop-backlog
 > ```
 
 ---
