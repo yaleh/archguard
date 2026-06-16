@@ -9,7 +9,6 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { glob } from 'glob';
 import type {
   ILanguagePlugin,
   PluginMetadata,
@@ -18,16 +17,10 @@ import type {
 } from '@/core/interfaces/language-plugin.js';
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
-import type { ArchJSON } from '@/types/index.js';
-import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
-import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
-import { TreeSitterBridge } from './tree-sitter-bridge.js';
-import type { TreeSitterParseOptions } from './tree-sitter-bridge.js';
-import { InterfaceMatcher } from './interface-matcher.js';
-import { ArchJsonMapper } from './archjson-mapper.js';
-import { GoplsClient } from './gopls-client.js';
+import { type ArchJSON, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
+import { GoplsInterfaceResolver } from './gopls-interface-resolver.js';
+import { GoParseCoordinator, type GoRawData, type TreeSitterParseOptions } from './go-parse-coordinator.js';
 import { DependencyExtractor } from './dependency-extractor.js';
-import type { GoRawPackage, GoRawData } from './types.js';
 import type {
   GoArchitectureAtlas,
   AtlasConfig,
@@ -108,13 +101,11 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
 
   readonly supportedLevels = ['package', 'capability', 'goroutine', 'flow'] as const;
 
-  readonly dependencyExtractor: IDependencyExtractor;
+  readonly dependencyExtractor: DependencyExtractor;
 
   // Parser internals (from former GoPlugin)
-  private treeSitter!: TreeSitterBridge;
-  private matcher!: InterfaceMatcher;
-  private mapper!: ArchJsonMapper;
-  private goplsClient: GoplsClient | null = null;
+  private resolver!: GoplsInterfaceResolver;
+  private coordinator!: GoParseCoordinator;
   private initialized = false;
   private workspaceRoot = '';
   private cachedModuleName = '';
@@ -135,25 +126,16 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       return;
     }
 
-    this.treeSitter = new TreeSitterBridge();
-    this.matcher = new InterfaceMatcher();
-    this.mapper = new ArchJsonMapper();
-
-    // Try to initialize gopls (optional enhancement)
-    try {
-      this.goplsClient = new GoplsClient();
-      // Note: We'll initialize gopls with workspace root when parseProject is called
-    } catch (error) {
-      console.warn('gopls not available, using fallback interface matcher');
-      this.goplsClient = null;
-    }
-
+    this.resolver = new GoplsInterfaceResolver();
+    this.coordinator = new GoParseCoordinator(this.resolver);
     this.atlasCoordinator = new GoAtlasCoordinator();
 
     this.initialized = true;
 
     // Cache module name for use in extractTestStructure (import resolution)
-    this.cachedModuleName = await this.readModuleName(config.workspaceRoot);
+    this.cachedModuleName = await this.coordinator.initModuleName(config.workspaceRoot);
+    // Initialize gopls resolver (optional — falls back to name-based matching)
+    await this.resolver.initialize(config.workspaceRoot);
     this.testAnalyzer = new GoTestAnalyzer(this.cachedModuleName);
   }
 
@@ -187,24 +169,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
    */
   parseCode(code: string, filePath: string = 'source.go'): ArchJSON {
     this.ensureInitialized();
-
-    const pkg = this.treeSitter.parseCode(code, filePath);
-
-    // Match implementations within single file (name-based only)
-    const implementations = this.matcher.matchImplicitImplementations(pkg.structs, pkg.interfaces);
-
-    // Map to ArchJSON
-    const entities = this.mapper.mapEntities([pkg]);
-    const relations = this.mapper.mapRelations([pkg], implementations, this.cachedModuleName);
-
-    return {
-      version: ARCHJSON_SCHEMA_VERSION,
-      language: 'go',
-      timestamp: new Date().toISOString(),
-      sourceFiles: [filePath],
-      entities,
-      relations,
-    };
+    return this.coordinator.parseCodeToArchJson(code, filePath, this.cachedModuleName);
   }
 
   /**
@@ -212,75 +177,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
    */
   async parseFiles(filePaths: string[]): Promise<ArchJSON> {
     this.ensureInitialized();
-
-    // Try to initialize gopls if we have a workspace context
-    if (this.goplsClient && !this.goplsClient.isInitialized() && this.workspaceRoot) {
-      try {
-        await this.goplsClient.initialize(this.workspaceRoot);
-      } catch (error) {
-        console.warn('Failed to initialize gopls:', error);
-        this.goplsClient = null;
-      }
-    }
-
-    const packages = new Map<string, GoRawPackage>();
-
-    for (const file of filePaths) {
-      const code = await fs.readFile(file, 'utf-8');
-      const pkg = this.treeSitter.parseCode(code, file);
-
-      // Use directory path as key to avoid same-name package collisions
-      const key = path.dirname(file);
-      pkg.fullName = pkg.fullName || key;
-      pkg.dirPath = pkg.dirPath || key;
-
-      // Merge into packages map
-      if (packages.has(key)) {
-        const existing = packages.get(key);
-        existing.structs.push(...pkg.structs);
-        existing.interfaces.push(...pkg.interfaces);
-        existing.functions.push(...pkg.functions);
-        existing.imports.push(...pkg.imports);
-        existing.sourceFiles.push(...pkg.sourceFiles);
-      } else {
-        packages.set(key, pkg);
-      }
-    }
-
-    const packageList = Array.from(packages.values());
-
-    // Match implementations (using gopls if available)
-    const allStructs = packageList.flatMap((p) =>
-      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
-    );
-    const allInterfaces = packageList.flatMap((p) =>
-      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
-    );
-    const implementations = await this.matcher.matchWithGopls(
-      allStructs,
-      allInterfaces,
-      this.goplsClient
-    );
-
-    // Map to ArchJSON
-    const entities = this.mapper.mapEntities(packageList);
-    // parseFiles uses absolute filesystem paths as fullName — no dependency edges emitted (expected)
-    const relations = this.mapper.mapRelations(packageList, implementations, this.cachedModuleName);
-    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
-      entities,
-      relations,
-      packageList
-    );
-    entities.push(...missingInterfaces);
-
-    return {
-      version: ARCHJSON_SCHEMA_VERSION,
-      language: 'go',
-      timestamp: new Date().toISOString(),
-      sourceFiles: filePaths,
-      entities,
-      relations,
-    };
+    return this.coordinator.parseFileListToArchJson(filePaths, this.cachedModuleName);
   }
 
   /**
@@ -329,37 +226,12 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     }
 
     // Build baseArchJSON from rawData (no second parse)
-    const allStructs = rawData.packages.flatMap((p) =>
-      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
-    );
-    const allInterfaces = rawData.packages.flatMap((p) =>
-      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
-    );
-    const implementations = await this.matcher.matchWithGopls(
-      allStructs,
-      allInterfaces,
-      this.goplsClient
-    );
-    const entities = this.mapper.mapEntities(rawData.packages);
-    const relations = this.mapper.mapRelations(
-      rawData.packages,
-      implementations,
-      rawData.moduleName
-    );
-    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
-      entities,
-      relations,
-      rawData.packages
-    );
-    entities.push(...missingInterfaces);
+    const base = await this.coordinator.buildArchJson(rawData, workspaceRoot);
     const baseArchJSON: ArchJSON = {
       version: ARCHJSON_SCHEMA_VERSION,
       language: 'go',
       timestamp: new Date().toISOString(),
-      sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),
-      workspaceRoot,
-      entities,
-      relations,
+      ...base,
     };
 
     // Build Atlas from same rawData (no re-parse)
@@ -377,7 +249,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     });
 
     // Map call relations from the flow graph (must happen after atlas is built)
-    const callRelations = this.mapper.mapCallRelations(atlas?.layers?.flow);
+    const callRelations = this.coordinator.mapCallRelations(atlas?.layers?.flow);
 
     return {
       ...baseArchJSON,
@@ -398,100 +270,8 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     config: ParseConfig & TreeSitterParseOptions
   ): Promise<GoRawData> {
     this.ensureInitialized();
-
     this.workspaceRoot = workspaceRoot;
-
-    // Initialize gopls if available
-    if (this.goplsClient && !this.goplsClient.isInitialized()) {
-      try {
-        await this.goplsClient.initialize(workspaceRoot);
-      } catch (error) {
-        console.warn('Failed to initialize gopls, using fallback:', error);
-        this.goplsClient = null;
-      }
-    }
-
-    // Find all .go files
-    const ignore = ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])];
-    const files = config.includePatterns?.length
-      ? Array.from(
-          new Set(
-            (
-              await Promise.all(
-                config.includePatterns.map((pattern) =>
-                  glob(pattern, {
-                    cwd: workspaceRoot,
-                    absolute: true,
-                    ignore,
-                  })
-                )
-              )
-            )
-              .flat()
-              .sort()
-          )
-        )
-      : await glob(config.filePattern ?? '**/*.go', {
-          cwd: workspaceRoot,
-          absolute: true,
-          ignore,
-        });
-
-    const moduleName = await this.readModuleName(workspaceRoot);
-
-    // Parse all files — merge by fullName (not name!)
-    const packages = new Map<string, GoRawPackage>();
-
-    for (const file of files) {
-      const code = await fs.readFile(file, 'utf-8');
-      const pkg = this.treeSitter.parseCode(code, file, {
-        extractBodies: config.extractBodies,
-        selectiveExtraction: config.selectiveExtraction,
-        forceExtractFunctions: config.forceExtractFunctions,
-      });
-
-      // Compute fullName from file path relative to module root
-      const relDir = path.relative(workspaceRoot, path.dirname(file));
-      pkg.fullName = relDir || pkg.name;
-      pkg.dirPath = path.dirname(file);
-      pkg.id = pkg.fullName;
-
-      // Merge by fullName (prevents same-name package collision)
-      const key = pkg.fullName;
-      if (packages.has(key)) {
-        const existing = packages.get(key);
-        existing.structs.push(...pkg.structs);
-        existing.interfaces.push(...pkg.interfaces);
-        existing.functions.push(...pkg.functions);
-        existing.imports.push(...pkg.imports);
-        existing.sourceFiles.push(...pkg.sourceFiles);
-        // Accumulate orphaned methods for later re-attachment
-        if (pkg.orphanedMethods?.length) {
-          if (!existing.orphanedMethods) existing.orphanedMethods = [];
-          existing.orphanedMethods.push(...pkg.orphanedMethods);
-        }
-      } else {
-        packages.set(key, pkg);
-      }
-    }
-
-    // Re-attach orphaned methods: methods whose receiver struct was in another file
-    for (const pkg of packages.values()) {
-      if (!pkg.orphanedMethods?.length) continue;
-      for (const method of pkg.orphanedMethods) {
-        const struct = pkg.structs.find((s) => s.name === method.receiverType);
-        if (struct) {
-          struct.methods.push(method);
-        }
-      }
-      pkg.orphanedMethods = [];
-    }
-
-    return {
-      packages: Array.from(packages.values()),
-      moduleRoot: workspaceRoot,
-      moduleName,
-    };
+    return this.coordinator.parseToRawData(workspaceRoot, config);
   }
 
   // ========== IGoAtlas ==========
@@ -550,16 +330,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
    * Dispose resources
    */
   async dispose(): Promise<void> {
-    // Cleanup gopls client
-    if (this.goplsClient) {
-      try {
-        await this.goplsClient.dispose();
-      } catch (error) {
-        console.warn('Error disposing gopls client:', error);
-      }
-      this.goplsClient = null;
-    }
-
+    await this.resolver.dispose();
     this.initialized = false;
   }
 
@@ -584,13 +355,5 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     return this.testAnalyzer.extractTestStructure(filePath, code, patternConfig);
   }
 
-  private async readModuleName(workspaceRoot: string): Promise<string> {
-    try {
-      const goModContent = await fs.readFile(`${workspaceRoot}/go.mod`, 'utf-8');
-      const match = goModContent.match(/^module\s+(.+)$/m);
-      return match ? match[1].trim() : 'unknown';
-    } catch {
-      return 'unknown';
-    }
-  }
 }
+

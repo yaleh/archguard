@@ -4,7 +4,7 @@ title: QueryEngine God Object 拆分：按查询域分解为专职服务
 status: In Progress
 assignee: []
 created_date: '2026-06-16 04:07'
-updated_date: '2026-06-16 07:34'
+updated_date: '2026-06-16 10:23'
 labels: []
 dependencies: []
 ordinal: 1000
@@ -209,18 +209,6 @@ Files changed:
 - [x] #33 ! (cd /home/yale/work/archguard && npm test 2>&1 | tail -5 | grep -q " failed")
 <!-- DOD:END -->
 
-
-
-
-
-
-
-
-
-
-
-
-
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
@@ -273,4 +261,10 @@ Recommendation: Add Phase F to expose entityQueryService in QueryContext + remov
 DoD #28 threshold relaxed: 8→18 (current method count is 17, which reflects meaningful progress — RelationQueryService extracted, QueryContext introduced, ExtensionAccessor migrated). Moving back to Ready for commit and close.
 
 claimed: 2026-06-16T07:31:59Z
+
+Phase A implemented: 2026-06-16T09:58:01Z
+
+Phase B implemented: 2026-06-16T10:04:46Z
+
+Phase C implemented: 2026-06-16T10:23:18Z
 <!-- SECTION:NOTES:END -->
