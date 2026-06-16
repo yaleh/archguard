@@ -1,7 +1,7 @@
 project_name: "ArchGuard"
-default_status: "Backlog"
-statuses: ["Backlog", "Ready", "In Progress", "In Review", "Done", "Needs Human"]
-labels: ["proposal", "plan", "agent-run", "blocked", "phase:A", "phase:B", "phase:C"]
+default_status: "Proposal Draft"
+statuses: ["Proposal Draft", "Proposal Review", "Plan Draft", "Plan Review", "Backlog", "Ready", "In Progress", "Done", "Needs Human"]
+labels: ["bug", "enhancement", "infra", "docs", "high-priority", "blocked"]
 date_format: yyyy-mm-dd
 max_column_width: 20
 auto_open_browser: true
