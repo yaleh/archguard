@@ -1,0 +1,42 @@
+[
+  {
+    "name": "cli",
+    "fanin": 32,
+    "fanout": 95
+  },
+  {
+    "name": "plugins",
+    "fanin": 18,
+    "fanout": 68
+  },
+  {
+    "name": "types",
+    "fanin": 43,
+    "fanout": 3
+  },
+  {
+    "name": "core",
+    "fanin": 17,
+    "fanout": 10
+  },
+  {
+    "name": "analysis",
+    "fanin": 5,
+    "fanout": 12
+  },
+  {
+    "name": "parser",
+    "fanin": 4,
+    "fanout": 12
+  },
+  {
+    "name": "mermaid",
+    "fanin": 2,
+    "fanout": 10
+  },
+  {
+    "name": "utils",
+    "fanin": 2,
+    "fanout": 4
+  }
+]
