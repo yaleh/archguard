@@ -113,7 +113,9 @@ function serializeResult(result: unknown): string {
 }
 
 const verboseParam = z
-  .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().default(false))
+  .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean())
+  .optional()
+  .default(false)
   .describe('Return full entities with members. Default false returns summary only.');
 
 function outputScopeParam(defaultScope: OutputScope = 'class') {
