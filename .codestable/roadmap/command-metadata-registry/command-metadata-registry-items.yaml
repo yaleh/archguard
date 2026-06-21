@@ -1,0 +1,35 @@
+roadmap: command-metadata-registry
+created: 2026-06-21
+
+items:
+  - slug: command-metadata-registry-core
+    description: Add typed command/tool metadata registry covering current CLI commands, query flags, MCP tools, examples, agent guidance, and verification hints.
+    depends_on: []
+    status: done
+    feature: 2026-06-21-command-metadata-registry-core
+    minimal_loop: true
+    notes: "Must validate uniqueness, complete current surface inventory, and ADR-007 CLI/MCP mappings without changing runtime behavior."
+
+  - slug: cli-help-from-registry
+    description: Drive CLI command descriptions, catalog, and structured help JSON from the registry while preserving existing command behavior.
+    depends_on: [command-metadata-registry-core]
+    status: done
+    feature: 2026-06-21-cli-help-from-registry
+    minimal_loop: false
+    notes: "Must keep human-readable Commander help and add deterministic structured help output for agents."
+
+  - slug: mcp-agent-descriptions-from-registry
+    description: Drive MCP tool descriptions and agent-oriented guidance from the registry, including call-first workflow hints, limitations, and failure recovery.
+    depends_on: [command-metadata-registry-core]
+    status: done
+    feature: 2026-06-21-mcp-agent-descriptions-from-registry
+    minimal_loop: false
+    notes: "Must preserve current MCP tool names, schemas, and behavior; verification cannot rely on a long-running Claude Code hosted MCP process."
+
+  - slug: docs-agent-surface-generation
+    description: Generate or verify README/help/user-guide and agent surface blocks from the registry with drift tests across CLI, MCP, and docs.
+    depends_on: [cli-help-from-registry, mcp-agent-descriptions-from-registry]
+    status: done
+    feature: 2026-06-21-docs-agent-surface-generation
+    minimal_loop: false
+    notes: "Must use deterministic marker-bounded generated sections or equivalent stale-doc checks; should cover Claude and Codex agent workflows."

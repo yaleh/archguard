@@ -1,0 +1,45 @@
+feature: 2026-06-21-mcp-agent-descriptions-from-registry
+created: 2026-06-21
+
+steps:
+  - action: "MCP helper layer: add registry lookup helpers for tool and parameter descriptions"
+    exit_signal: "Helpers return metadata for all 24 MCP tools"
+    status: done
+  - action: "Tool descriptions: replace hard-coded MCP tool descriptions with registry-derived text"
+    exit_signal: "In-process MCP list tools still exposes the same 24 tool names"
+    status: done
+  - action: "Parameter descriptions: source common params from metadata or add drift checks for inline descriptions"
+    exit_signal: "MCP drift test compares exposed parameter descriptions to registry expectations"
+    status: done
+  - action: "Schema shape snapshot: preserve all MCP input schema field names and required/optional status"
+    exit_signal: "24-tool schema shape assertions show no unintended field or requiredness changes"
+    status: done
+  - action: "Behavior preservation: run representative MCP tool calls"
+    exit_signal: "Existing MCP tests and selected in-process calls pass without output-shape regressions"
+    status: done
+  - action: "MCP E2E metadata: verify agent guidance is exposed for analysis/test/git workflows"
+    exit_signal: "E2E test proves callFirst/failureRecovery guidance appears for every workflow-dependent tool category"
+    status: done
+
+checks:
+  - item: "All 24 MCP tool names are preserved"
+    source: 验收场景
+    status: passed
+  - item: "Tool descriptions include useWhen/callFirst/failureRecovery/limitations where applicable"
+    source: 流程级约束
+    status: passed
+  - item: "Parameter descriptions are registry-derived or drift-tested"
+    source: 名词契约
+    status: passed
+  - item: "No MCP handler behavior or schema shape changes unintentionally"
+    source: 范围守护
+    status: passed
+  - item: "All 24 MCP tools have schema field names and requiredness asserted"
+    source: 验收场景
+    status: passed
+  - item: "Validation uses in-process MCP or independent stdio process, not Claude Code hosted MCP"
+    source: 流程级约束
+    status: passed
+  - item: "ADR-006 low-priority description issues are resolved"
+    source: 验收场景
+    status: passed

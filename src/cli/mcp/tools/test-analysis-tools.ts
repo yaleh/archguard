@@ -13,6 +13,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine, readManifest } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
+import { mcpToolDescription } from '../metadata.js';
 
 /**
  * Build a suggested TestPatternConfig based on detected framework names.
@@ -160,7 +161,7 @@ const patternConfigSchema = z
 export function registerTestAnalysisTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_detect_test_patterns',
-    'Pattern-First tool: call this FIRST before any other test analysis tool. Detects test frameworks and conventions in the project. Returns suggestedPatternConfig and notes. Review the notes and correct the config if needed before passing to other tools.',
+    mcpToolDescription('archguard_detect_test_patterns'),
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
@@ -250,9 +251,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_issues',
-    'Return static-analysis test quality issues (orphan_test, zero_assertion, skip_accumulation); ' +
-      'orphan_test and zero_assertion results may include false positives when tests use import ' +
-      'aliases, custom assertion helpers, or long setup blocks. Call archguard_detect_test_patterns first.',
+    mcpToolDescription('archguard_get_test_issues'),
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
@@ -290,9 +289,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_metrics',
-    'Return test metrics summary (coverage ratios, assertion density, test file counts); ' +
-      'coverage is inferred from static import-path and filename matching, not runtime tracing — ' +
-      'scores are an approximation. Call archguard_detect_test_patterns first.',
+    mcpToolDescription('archguard_get_test_metrics'),
     {
       projectRoot: z.string().optional().describe('Project root (default: server startup cwd)'),
       scope: z
@@ -336,9 +333,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_entity_coverage',
-    'Return coverage details for a single source entity by its dotted-path ID. ' +
-      'Call archguard_detect_test_patterns first. Returns found:false when the entity ID ' +
-      'is unknown (not in analysis data) — this may mean a typo or entity added after last analysis.',
+    mcpToolDescription('archguard_get_entity_coverage'),
     {
       projectRoot: z
         .string()

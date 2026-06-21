@@ -32,6 +32,20 @@ npx archguard analyze -s ./src
 
 ## Commands
 
+<!-- ARCHGUARD_METADATA:cli-usage-commands:START -->
+> Generated from `src/cli/metadata/registry.ts`; run `npm run docs:check` after editing registry metadata.
+
+| Command | Description | MCP Mapping |
+|---|---|---|
+| `archguard analyze` | Analyze source code and generate architecture diagrams and query artifacts | 1 mapped option(s) |
+| `archguard cache` | Manage ArchGuard cache operations | - |
+| `archguard check` | Check architecture fitness rules against snapshots | - |
+| `archguard diff` | Compare two architecture metric snapshots | - |
+| `archguard init` | Initialize an ArchGuard configuration file | - |
+| `archguard mcp` | Start the ArchGuard MCP server over stdio | - |
+| `archguard query` | Query architecture entities, relationships, metrics, tests, git history, and Atlas data | 24 mapped option(s) |
+<!-- ARCHGUARD_METADATA:cli-usage-commands:END -->
+
 ### analyze
 
 Analyze a project and generate architecture diagrams.

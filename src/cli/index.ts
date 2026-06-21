@@ -11,6 +11,8 @@ import { createQueryCommand } from './commands/query.js';
 import { createMcpCommand } from './commands/mcp.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createCheckCommand } from './commands/check.js';
+import { createHelpCommand } from './commands/help.js';
+import { getCliCommandMetadata } from './metadata/index.js';
 import { createRequire } from 'module';
 
 // Read package.json for version
@@ -29,15 +31,21 @@ export function createCLI(): Command {
     .description('ArchGuard - Multi-Language Architecture Analyzer and Documentation Generator');
 
   // Add commands
-  program.addCommand(createAnalyzeCommand());
-  program.addCommand(createCacheCommand());
-  program.addCommand(createInitCommand());
-  program.addCommand(createQueryCommand());
-  program.addCommand(createMcpCommand());
-  program.addCommand(createDiffCommand());
-  program.addCommand(createCheckCommand());
+  program.addCommand(withRegistryDescription(createAnalyzeCommand()));
+  program.addCommand(withRegistryDescription(createCacheCommand()));
+  program.addCommand(withRegistryDescription(createInitCommand()));
+  program.addCommand(withRegistryDescription(createQueryCommand()));
+  program.addCommand(withRegistryDescription(createMcpCommand()));
+  program.addCommand(withRegistryDescription(createDiffCommand()));
+  program.addCommand(withRegistryDescription(createCheckCommand()));
+  program.addCommand(createHelpCommand());
 
   return program;
+}
+
+function withRegistryDescription(command: Command): Command {
+  const metadata = getCliCommandMetadata(command.name());
+  return metadata ? command.description(metadata.cli.description) : command;
 }
 
 import * as fs from 'fs';

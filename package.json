@@ -39,6 +39,8 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "type-check": "tsc --noEmit",
+    "docs:check": "node scripts/check-metadata-docs.mjs",
+    "docs:write": "node scripts/check-metadata-docs.mjs --write",
     "clean": "rm -rf dist coverage",
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "generate": "node dist/cli/index.js generate",

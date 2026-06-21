@@ -1,0 +1,48 @@
+feature: 2026-06-21-cli-help-from-registry
+created: 2026-06-21
+
+steps:
+  - action: "Structured help command: add archguard help --json using registry metadata"
+    exit_signal: "Built CLI prints valid deterministic JSON for help --json"
+    status: done
+  - action: "Human help compatibility: connect safe command descriptions to registry"
+    exit_signal: "`archguard --help` and `archguard query --help` remain human-readable and list current commands/flags"
+    status: done
+  - action: "CLI drift tests: compare Commander commands/options with registry metadata"
+    exit_signal: "Tests traverse createCLI().commands and fail on missing command/option metadata or required MCP mappings"
+    status: done
+  - action: "Human help snapshot: preserve Commander help output structure"
+    exit_signal: "`node dist/cli/index.js --help` and `node dist/cli/index.js query --help` snapshots keep text help shape stable"
+    status: done
+  - action: "CLI E2E: spawn CLI and parse structured help"
+    exit_signal: "E2E test verifies query --summary maps to archguard_summary in parsed JSON"
+    status: done
+  - action: "Validation: run targeted CLI tests, build, and type-check"
+    exit_signal: "Required validation commands pass"
+    status: done
+
+checks:
+  - item: "archguard help --json is the structured help entrypoint"
+    source: 名词契约
+    status: passed
+  - item: "Existing Commander human help remains readable"
+    source: 范围守护
+    status: passed
+  - item: "Structured help includes all 7 CLI commands"
+    source: 验收场景
+    status: passed
+  - item: "Structured help includes query option to MCP mappings"
+    source: 验收场景
+    status: passed
+  - item: "CLI drift test detects missing registry metadata"
+    source: 验收场景
+    status: passed
+  - item: "CLI drift test enumerates Commander runtime commands/options rather than source grep"
+    source: 编排骨架
+    status: passed
+  - item: "Human help output shape is snapshot-tested"
+    source: 验收场景
+    status: passed
+  - item: "No command handler behavior changes"
+    source: 范围守护
+    status: passed

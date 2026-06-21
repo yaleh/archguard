@@ -39,6 +39,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Metadata docs check
+        run: npm run docs:check
+
       - name: Run tests
         run: npm run test:coverage
 

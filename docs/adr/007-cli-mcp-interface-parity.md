@@ -140,7 +140,7 @@ const SCRUB_KEYS = ['generatedAt', 'createdAt', 'timestamp', 'lastRun', 'archJso
 | `archguard_get_change_risk` | `query --change-risk <path> [--target-type file\|package]` | ✅ |
 | `archguard_get_ownership` | `query --ownership <path> [--target-type file\|package]` | ✅ |
 
-> 最后更新：2026-06-15。所有 22 个 MCP 工具均有对应 CLI flag。`archguard_analyze` 和 `archguard_analyze_git` 是触发分析的写操作工具，对应 `archguard analyze` 和 `archguard analyze-git` 子命令，不在此对称表范围内。
+> 最后更新：2026-06-21。所有 22 个查询类 MCP 工具均有对应 CLI flag。`archguard_analyze` 和 `archguard_analyze_git` 是触发分析的写操作工具，对应 `archguard analyze` 和 `archguard analyze --include-git`，不在此对称表范围内。CLI/MCP parity 元数据的当前事实源是 `src/cli/metadata/registry.ts`，并由 CLI/MCP/docs drift tests 校验。
 
 **新增工具检查清单**（PR 必须满足）：
 
@@ -148,6 +148,8 @@ const SCRUB_KEYS = ['generatedAt', 'createdAt', 'timestamp', 'lastRun', 'archJso
 - [ ] CLI `query` 命令有对应 `--flag`，命名与 MCP 工具名对称
 - [ ] MCP 工具有对应 CLI flag
 - [ ] 两侧 handler 均调用同一 `QueryEngine` 方法
+- [ ] 已更新 `src/cli/metadata/registry.ts` 的 `queryMappings`
+- [ ] 已运行 `npm run docs:check` 和 metadata surface E2E
 - [ ] 补充了 CLI flag 的单元测试（happy path + 缺数据 exit 1 + 无效参数拒绝）
 
 ---

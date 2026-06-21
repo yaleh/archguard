@@ -123,9 +123,15 @@ describe('CLI / MCP analyze equivalence', () => {
     const contents: Record<string, string> = {};
     for (const file of files) {
       const fullPath = path.join(archRoot, file);
-      contents[file] = normalizeArtifact(await fs.readFile(fullPath, 'utf-8'), root);
+      contents[normalizeArtifactPath(file)] = normalizeArtifact(await fs.readFile(fullPath, 'utf-8'), root);
     }
-    return { files, contents };
+    return { files: files.map(normalizeArtifactPath).sort(), contents };
+  }
+
+  function normalizeArtifactPath(file: string): string {
+    return file
+      .replace(/^cache\/archjson\/[0-9a-f]{2}\/[0-9a-f]{64}\.json$/, 'cache/archjson/<HASH>/<HASH>.json')
+      .replace(/^query\/[0-9a-f]{8}\//, 'query/<SCOPE>/');
   }
 
   async function collectFiles(root: string): Promise<string[]> {
@@ -150,7 +156,7 @@ describe('CLI / MCP analyze equivalence', () => {
 
   function normalizeArtifact(content: string, root: string): string {
     const normalizedRoot = root.replace(/\\/g, '/');
-    const value = content.replaceAll(normalizedRoot, '<ROOT>');
+    const value = content.replaceAll(normalizedRoot, '<ROOT>').replaceAll('/private<ROOT>', '<ROOT>');
     try {
       const parsed = JSON.parse(value) as Record<string, unknown>;
       scrub(parsed);
@@ -184,6 +190,12 @@ describe('CLI / MCP analyze equivalence', () => {
         record[key] = '<TIME>';
       } else if (key === 'archJsonHash') {
         record[key] = '<HASH>';
+      } else if (
+        (key === 'globalScopeKey' || key === 'key') &&
+        typeof record[key] === 'string' &&
+        /^[0-9a-f]{8}$/.test(record[key])
+      ) {
+        record[key] = '<SCOPE>';
       } else {
         scrub(record[key]);
       }

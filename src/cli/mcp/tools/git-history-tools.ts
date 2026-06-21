@@ -16,6 +16,7 @@ import path from 'path';
 import { resolveRoot } from '../mcp-server.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '../../git-history/history-loader.js';
 import { HistoryQuery } from '../../git-history/history-query.js';
+import { mcpToolDescription } from '../metadata.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,7 +44,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
 
   server.tool(
     'archguard_get_change_context',
-    'Get change-context summary for a file or package before editing. Returns churn, ownership, top co-change neighbors, and risk hints. Requires archguard_analyze_git to have been run first. Results reflect the analyzed time window only; rename and entity-level tracking are not supported in v1.',
+    mcpToolDescription('archguard_get_change_context'),
     {
       projectRoot: z
         .string()
@@ -83,7 +84,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
 
   server.tool(
     'archguard_get_cochange',
-    'Return strongest co-change neighbors for a file or package. Co-change is an evolutionary signal only — it does not imply direct runtime or static dependency. Requires archguard_analyze_git.',
+    mcpToolDescription('archguard_get_cochange'),
     {
       projectRoot: z
         .string()
@@ -126,7 +127,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
 
   server.tool(
     'archguard_get_change_risk',
-    'Return an explainable risk score for changing a file or package. Score is a heuristic based on churn, author count, ownership concentration, co-change breadth, and recent activity — not a predictive defect model. Requires archguard_analyze_git.',
+    mcpToolDescription('archguard_get_change_risk'),
     {
       projectRoot: z
         .string()
@@ -162,7 +163,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
 
   server.tool(
     'archguard_get_ownership',
-    'Return maintainer concentration data for a file or package: contributors ranked by commit share, primary owner, active maintainers count, and bus-factor proxy. Requires archguard_analyze_git.',
+    mcpToolDescription('archguard_get_ownership'),
     {
       projectRoot: z
         .string()
