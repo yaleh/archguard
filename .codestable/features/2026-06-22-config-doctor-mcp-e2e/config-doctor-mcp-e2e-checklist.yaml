@@ -1,0 +1,45 @@
+feature: 2026-06-22-config-doctor-mcp-e2e
+created: 2026-06-22
+
+steps:
+  - action: "Add stdio MCP probe helper with timeout and teardown"
+    exit_signal: "Test lists MCP tools from current built CLI process and tears down the child process within 500ms"
+    status: done
+  - action: "Implement DoctorResult aggregation"
+    exit_signal: "Unit tests cover pass, warn, fail, and skipped checks"
+    status: done
+  - action: "Expose config doctor human and JSON output"
+    exit_signal: "Built CLI returns stable JSON with recovery"
+    status: done
+  - action: "Add temp HOME E2E for Codex and Claude install/doctor"
+    exit_signal: "npm run test:e2e runs agent-onboarding and config-doctor scenarios without empty-running"
+    status: done
+  - action: "Add broken config fixtures and ADR verification note"
+    exit_signal: "Tests cover JSON empty object, TOML other-section-only, missing command entry, and ADR-007 records the MCP verification rule"
+    status: done
+
+checks:
+  - item: "Doctor fails with recovery before provider config exists"
+    source: 验收场景
+    status: passed
+  - item: "Doctor succeeds or warns only for query artifacts after install"
+    source: 验收场景
+    status: passed
+  - item: "Stdio MCP probe listTools includes ArchGuard MCP tools"
+    source: 流程级约束
+    status: passed
+  - item: "Broken config fixture returns fail and recovery"
+    source: 错误路径
+    status: passed
+  - item: "Doctor without provider returns multi-provider checks with top-level provider omitted"
+    source: 名词契约
+    status: passed
+  - item: "config.ts change only appends doctor subcommand"
+    source: 范围守护
+    status: passed
+  - item: "E2E writes only temp HOME"
+    source: 清洁度规则
+    status: passed
+  - item: "Required validation commands are run and recorded"
+    source: 验收场景
+    status: passed

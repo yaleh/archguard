@@ -13,12 +13,40 @@ export type MetadataCategory =
   | 'mcp'
   | 'docs';
 
+export type SurfacePolicy = 'both' | 'cli-only' | 'mcp-only' | 'docs-only' | 'internal';
+
+export type Lifecycle = 'stable' | 'experimental' | 'deprecated';
+
 export interface AgentGuidance {
   useWhen: string[];
+  avoidWhen?: string[];
   callFirst?: string[];
   followWith?: string[];
   failureRecovery: string[];
   limitations: string[];
+  freshness?: string;
+}
+
+export interface DocsContract {
+  includeInReadme?: boolean;
+  includeInCliGuide?: boolean;
+  includeInMcpGuide?: boolean;
+  includeInAgentSurface?: boolean;
+}
+
+export interface ArtifactContract {
+  reads?: string[];
+  writes?: string[];
+  requiresAnalyze?: boolean;
+  requiresGitAnalyze?: boolean;
+  requiresTestAnalyze?: boolean;
+}
+
+export interface InstallContract {
+  provider?: 'claude' | 'codex' | 'all';
+  configScope?: 'user' | 'project';
+  writesConfig?: boolean;
+  writesInstructions?: boolean;
 }
 
 export interface UsageExample {
@@ -77,13 +105,19 @@ export interface ArchGuardMetadataEntry {
   summary: string;
   category: MetadataCategory;
   surfaces: ArchGuardSurface[];
+  surfacePolicy?: SurfacePolicy;
+  lifecycle?: Lifecycle;
   agent: AgentGuidance;
+  artifacts?: ArtifactContract;
+  docs?: DocsContract;
+  install?: InstallContract;
   examples: UsageExample[];
   verification: VerificationHint[];
 }
 
 export interface ArchGuardMetadataRegistry {
   cliCommands: CliCommandMetadata[];
+  stagedCliCommands?: CliCommandMetadata[];
   mcpTools: McpToolMetadata[];
   queryMappings: QueryMappingMetadata[];
 }

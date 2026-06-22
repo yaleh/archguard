@@ -1,0 +1,45 @@
+feature: 2026-06-22-provider-config-adapters
+created: 2026-06-22
+
+steps:
+  - action: "Add shared provider adapter types"
+    exit_signal: "type-check passes and command code can import adapter interfaces"
+    status: done
+  - action: "Implement Claude Code JSON adapter"
+    exit_signal: "Unit tests read/write/remove ArchGuard entry while preserving unrelated Claude config"
+    status: done
+  - action: "Implement Codex TOML adapter with smol-toml"
+    exit_signal: "Unit tests read/write/remove ArchGuard entry while preserving unrelated Codex config and package lock records smol-toml"
+    status: done
+  - action: "Add dry-run and backup behavior"
+    exit_signal: "Tests prove dry-run does not mutate files and write creates timestamped backups"
+    status: done
+
+checks:
+  - item: "Adapters only modify ArchGuard entry"
+    source: 范围守护
+    status: passed
+  - item: "Claude JSON round-trip preserves unrelated config"
+    source: 验收场景
+    status: passed
+  - item: "Codex TOML round-trip preserves unrelated config"
+    source: 验收场景
+    status: passed
+  - item: "Codex adapter uses a maintained TOML parser/serializer dependency"
+    source: 名词契约
+    status: passed
+  - item: "Detection returns documented Codex and Claude user/project config paths"
+    source: 名词契约
+    status: passed
+  - item: "WriteOptions includes scope, dryRun, force, and backup semantics"
+    source: 名词契约
+    status: passed
+  - item: "Dry-run never writes disk"
+    source: 流程级约束
+    status: passed
+  - item: "Non-dry-run creates backup before overwrite"
+    source: 流程级约束
+    status: passed
+  - item: "Required validation commands are run and recorded"
+    source: 验收场景
+    status: passed

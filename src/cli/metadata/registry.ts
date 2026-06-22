@@ -3,6 +3,7 @@ import type {
   ArchGuardMetadataRegistry,
   CliCommandMetadata,
   CliOptionMetadata,
+  DocsContract,
   McpParameterMetadata,
   McpToolMetadata,
   MetadataCategory,
@@ -18,12 +19,17 @@ const atlasCallFirst = ['archguard_analyze'];
 
 export const cliCommandBaseline = [
   'analyze',
+  'agent',
   'cache',
   'check',
+  'config',
   'diff',
+  'help',
   'init',
+  'install',
   'mcp',
   'query',
+  'update',
 ] as const;
 
 export const mcpToolBaseline = [
@@ -80,13 +86,16 @@ export const workflowDependentMcpTools = [
 
 function guidance(args: {
   useWhen: string[];
+  avoidWhen?: string[];
   callFirst?: string[];
   followWith?: string[];
   recovery?: string[];
   limitations?: string[];
+  freshness?: string;
 }): AgentGuidance {
   return {
     useWhen: args.useWhen,
+    avoidWhen: args.avoidWhen,
     callFirst: args.callFirst,
     followWith: args.followWith,
     failureRecovery: args.recovery ?? [
@@ -95,7 +104,40 @@ function guidance(args: {
     limitations: args.limitations ?? [
       'Results reflect static ArchGuard analysis artifacts and may be stale until analysis is rerun.',
     ],
+    freshness: args.freshness,
   };
+}
+
+function docsForSurfaces(surfaces: readonly string[]): DocsContract {
+  return {
+    includeInReadme: surfaces.includes('cli') || surfaces.includes('mcp'),
+    includeInCliGuide: surfaces.includes('cli'),
+    includeInMcpGuide: surfaces.includes('mcp'),
+    includeInAgentSurface: surfaces.includes('agent'),
+  };
+}
+
+function freshnessForCategory(category: MetadataCategory): string | undefined {
+  switch (category) {
+    case 'analysis':
+      return 'Refreshes source-derived ArchGuard artifacts for the current project when it runs.';
+    case 'query':
+      return 'Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes.';
+    case 'test-analysis':
+      return 'Reads the last test-analysis artifacts; rerun archguard_analyze with includeTests and archguard_detect_test_patterns after test changes.';
+    case 'git-history':
+      return 'Reads the last git-history analysis snapshot; rerun archguard_analyze_git after new commits or when changing the history window.';
+    case 'atlas':
+      return 'Reads the last Go Atlas artifacts; rerun archguard_analyze on the Go project after source changes.';
+    case 'docs':
+      return 'Reflects generated documentation blocks from the metadata registry; rerun npm run docs:check after metadata changes.';
+    case 'cache':
+    case 'configuration':
+    case 'fitness':
+    case 'metrics':
+    case 'mcp':
+      return undefined;
+  }
 }
 
 function examples(command: string, description: string): UsageExample[] {
@@ -409,22 +451,76 @@ function cliCommand(
   options: CliOptionMetadata[],
   extraGuidance?: Partial<AgentGuidance>
 ): CliCommandMetadata {
+  const surfaces = ['cli', 'docs', 'agent'] as const;
+  const freshness = extraGuidance?.freshness ?? freshnessForCategory(category);
   return {
     id: command,
     title,
     summary,
     category,
-    surfaces: ['cli', 'docs', 'agent'],
+    surfaces: [...surfaces],
+    surfacePolicy: 'both',
+    lifecycle: 'stable',
     agent: {
       ...guidance({
         useWhen: [`Use ${command} when ${summary.toLowerCase()}.`],
+        avoidWhen: ['Use MCP tools instead when an agent needs structured architecture data.'],
         recovery: ['Run with --help for valid flags; fix missing project artifacts, then retry.'],
+        freshness,
       }),
       ...extraGuidance,
     },
+    docs: docsForSurfaces(surfaces),
     examples: examples(`archguard ${command}`, summary),
     verification: verify('npm test -- tests/unit/cli/command.test.ts'),
     cli: { command, description: summary, options },
+  };
+}
+
+function cliOnlyCommand(
+  command: string,
+  title: string,
+  summary: string,
+  category: MetadataCategory,
+  options: CliOptionMetadata[],
+  extraGuidance?: Partial<AgentGuidance>
+): CliCommandMetadata {
+  return {
+    ...cliCommand(command, title, summary, category, options, extraGuidance),
+    surfaces: ['cli', 'docs', 'agent'],
+    surfacePolicy: 'cli-only',
+    verification: verify('npm test -- tests/unit/cli/help-command.test.ts'),
+  };
+}
+
+const onboardingOptions: CliOptionMetadata[] = [
+  { flags: '--scope <scope>', description: 'Config scope: user or project.', defaultValue: 'user' },
+  { flags: '--home <dir>', description: 'Home directory override for user-scope config.' },
+  { flags: '--project-root <dir>', description: 'Project root override for project-scope config.' },
+  { flags: '--dry-run', description: 'Show planned changes without writing files.' },
+  { flags: '--json', description: 'Emit operation result as JSON.' },
+];
+
+function onboardingCliCommand(args: {
+  command: string;
+  title: string;
+  summary: string;
+  options: CliOptionMetadata[];
+  install: NonNullable<CliCommandMetadata['install']>;
+  extraGuidance?: Partial<AgentGuidance>;
+}): CliCommandMetadata {
+  return {
+    ...cliCommand(
+      args.command,
+      args.title,
+      args.summary,
+      'configuration',
+      args.options,
+      args.extraGuidance
+    ),
+    lifecycle: 'experimental',
+    install: args.install,
+    verification: verify('npm test -- tests/unit/cli/onboarding-cli.test.ts'),
   };
 }
 
@@ -438,6 +534,21 @@ export const cliCommands: CliCommandMetadata[] = [
     {
       followWith: ['archguard query --summary'],
       limitations: ['Analysis artifacts are static snapshots; rerun analyze after code changes.'],
+    }
+  ),
+  cliCommand(
+    'agent',
+    'Agent Instructions',
+    'Generate registry-derived instructions for Claude Code and Codex agents',
+    'docs',
+    [],
+    {
+      callFirst: ['archguard help --json'],
+      freshness:
+        'Reflects the current metadata registry in the installed ArchGuard build; rebuild after metadata changes.',
+      limitations: [
+        'This command is read-only and does not write Claude Code or Codex configuration files.',
+      ],
     }
   ),
   cliCommand('cache', 'Cache Management', 'Manage ArchGuard cache operations', 'cache', []),
@@ -459,6 +570,39 @@ export const cliCommands: CliCommandMetadata[] = [
       },
     ]
   ),
+  onboardingCliCommand({
+    command: 'config',
+    title: 'Agent Config Management',
+    summary: 'Show and remove ArchGuard agent configuration',
+    options: [
+      {
+        flags: '--scope <scope>',
+        description: 'Config scope: user or project.',
+        defaultValue: 'user',
+      },
+      { flags: '--home <dir>', description: 'Home directory override for user-scope config.' },
+      {
+        flags: '--project-root <dir>',
+        description: 'Project root override for project-scope config.',
+      },
+      { flags: '--dry-run', description: 'Show planned removals without writing files.' },
+      { flags: '--force', description: 'Required for non-dry-run removal.' },
+      { flags: '--json', description: 'Emit config state or operation result as JSON.' },
+    ],
+    install: {
+      provider: 'all',
+      configScope: 'user',
+      writesConfig: true,
+      writesInstructions: false,
+    },
+    extraGuidance: {
+      useWhen: ['Use config when inspecting or removing ArchGuard agent configuration.'],
+      freshness: 'Reads Claude Code and Codex config files from disk at command runtime.',
+      limitations: [
+        'Use config doctor for MCP handshake validation after that command is available.',
+      ],
+    },
+  }),
   cliCommand('diff', 'Metric Diff', 'Compare two architecture metric snapshots', 'metrics', [
     { flags: '--from <sha>', description: 'Source snapshot SHA prefix.' },
     { flags: '--to <sha>', description: 'Target snapshot SHA prefix.' },
@@ -468,6 +612,19 @@ export const cliCommands: CliCommandMetadata[] = [
       defaultValue: '.archguard',
     },
   ]),
+  cliOnlyCommand(
+    'help',
+    'Structured Help',
+    'Show registry-backed structured ArchGuard CLI help for agents',
+    'docs',
+    [{ flags: '--json', description: 'Emit structured help as JSON.' }],
+    {
+      useWhen: ['Use help when an agent needs the current ArchGuard CLI catalog.'],
+      freshness:
+        'Reflects the current metadata registry in the installed ArchGuard build; rebuild after metadata changes.',
+      limitations: ['Structured help reports top-level commands and registry metadata.'],
+    }
+  ),
   cliCommand(
     'init',
     'Initialize Configuration',
@@ -482,6 +639,29 @@ export const cliCommands: CliCommandMetadata[] = [
       },
     ]
   ),
+  onboardingCliCommand({
+    command: 'install',
+    title: 'Install Agent Integration',
+    summary: 'Install ArchGuard MCP config and generated instructions for Claude Code or Codex',
+    options: [
+      ...onboardingOptions,
+      { flags: '--force', description: 'Overwrite an existing divergent ArchGuard entry.' },
+      { flags: '--mcp-only', description: 'Only write MCP server config.' },
+      { flags: '--instructions-only', description: 'Only write generated instructions.' },
+    ],
+    install: {
+      provider: 'all',
+      configScope: 'user',
+      writesConfig: true,
+      writesInstructions: true,
+    },
+    extraGuidance: {
+      useWhen: ['Use install when setting up ArchGuard for Claude Code or Codex.'],
+      freshness:
+        'Writes the current ArchGuard executable command and metadata-generated instructions.',
+      limitations: ['Use --dry-run first when auditing planned changes.'],
+    },
+  }),
   cliCommand('mcp', 'MCP Server', 'Start the ArchGuard MCP server over stdio', 'mcp', []),
   cliCommand(
     'query',
@@ -494,7 +674,30 @@ export const cliCommands: CliCommandMetadata[] = [
       limitations: ['Most query flags require existing .archguard/query artifacts.'],
     }
   ),
+  onboardingCliCommand({
+    command: 'update',
+    title: 'Update Agent Integration',
+    summary: 'Refresh existing ArchGuard agent configuration and generated instructions',
+    options: [
+      ...onboardingOptions,
+      { flags: '--mcp-only', description: 'Only refresh MCP server config.' },
+      { flags: '--instructions-only', description: 'Only refresh generated instructions.' },
+    ],
+    install: {
+      provider: 'all',
+      configScope: 'user',
+      writesConfig: true,
+      writesInstructions: true,
+    },
+    extraGuidance: {
+      useWhen: ['Use update when an existing ArchGuard agent integration should be refreshed.'],
+      freshness: 'Regenerates instructions from current metadata and refreshes config entries.',
+      limitations: ['Use --instructions-only to avoid changing MCP server config.'],
+    },
+  }),
 ];
+
+export const stagedCliCommands: CliCommandMetadata[] = [];
 
 const queryMappings: QueryMappingMetadata[] = [
   ['archguard_summary', 'archguard query --summary'],
@@ -555,15 +758,19 @@ function mcpTool(args: {
   parameterDescriptions?: Record<string, string>;
   requiredParameters?: string[];
   verification?: string;
+  freshness?: string;
 }): McpToolMetadata {
+  const surfaces = ['mcp', 'docs', 'agent'] as const;
+  const freshness = args.freshness ?? freshnessForCategory(args.category);
   return {
     id: args.toolName,
     title: args.title,
     summary: args.summary,
     category: args.category,
-    surfaces: ['mcp', 'docs', 'agent'],
+    surfaces: [...surfaces],
     agent: guidance({
       useWhen: [`Use ${args.toolName} to ${lowercaseFirst(args.summary)}`],
+      avoidWhen: ['Use the CLI equivalent when a human needs terminal output instead of MCP JSON.'],
       callFirst: args.callFirst,
       followWith: args.followWith,
       recovery: [
@@ -572,7 +779,9 @@ function mcpTool(args: {
           : 'If the result is empty, verify the target path/name and rerun analysis if code changed.',
       ],
       limitations: args.limitations,
+      freshness,
     }),
+    docs: docsForSurfaces(surfaces),
     examples: mcpExample(args.toolName, args.summary),
     verification: verify(args.verification ?? 'npm test -- tests/unit/cli/mcp/mcp-server.test.ts'),
     mcp: {
@@ -930,6 +1139,7 @@ export const mcpTools: McpToolMetadata[] = [
 
 export const archGuardMetadataRegistry: ArchGuardMetadataRegistry = {
   cliCommands,
+  stagedCliCommands,
   mcpTools,
   queryMappings,
 };

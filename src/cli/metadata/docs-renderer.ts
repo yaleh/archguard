@@ -1,10 +1,9 @@
-import {
-  archGuardMetadataRegistry,
-  cliCommandBaseline,
-  mcpToolBaseline,
-  workflowDependentMcpTools,
-} from './registry.js';
-import type { ArchGuardMetadataRegistry, McpToolMetadata } from './types.js';
+import { archGuardMetadataRegistry, cliCommandBaseline, mcpToolBaseline } from './registry.js';
+import { renderAgentInstructions } from './instruction-renderer.js';
+import type { ArchGuardMetadataRegistry } from './types.js';
+
+type CliBaselineCommand = (typeof cliCommandBaseline)[number];
+type McpBaselineTool = (typeof mcpToolBaseline)[number];
 
 export type MetadataDocsBlockId =
   | 'readme-cli-commands'
@@ -65,8 +64,9 @@ export function replaceMetadataDocsBlock(
 }
 
 function renderCliCommands(registry: ArchGuardMetadataRegistry): string {
+  const baseline = new Set<CliBaselineCommand>(cliCommandBaseline);
   const rows = registry.cliCommands
-    .filter((command) => cliCommandBaseline.includes(command.cli.command as any))
+    .filter((command) => baseline.has(command.cli.command as CliBaselineCommand))
     .map((command) => {
       const mappedTools = command.cli.options
         .map((option) => option.mapsToMcpTool)
@@ -85,8 +85,9 @@ function renderCliCommands(registry: ArchGuardMetadataRegistry): string {
 }
 
 function renderMcpTools(registry: ArchGuardMetadataRegistry): string {
+  const baseline = new Set<McpBaselineTool>(mcpToolBaseline);
   const rows = registry.mcpTools
-    .filter((tool) => mcpToolBaseline.includes(tool.mcp.toolName as any))
+    .filter((tool) => baseline.has(tool.mcp.toolName as McpBaselineTool))
     .map((tool) => {
       const callFirst = tool.agent.callFirst?.join(', ') ?? '-';
       return `| \`${tool.mcp.toolName}\` | ${tool.summary} | \`${tool.mcp.cliEquivalent ?? '-'}\` | ${callFirst} |`;
@@ -102,12 +103,6 @@ function renderMcpTools(registry: ArchGuardMetadataRegistry): string {
 }
 
 function renderAgentSurface(registry: ArchGuardMetadataRegistry): string {
-  const analysisTools = toolsByCategory(registry, 'analysis');
-  const queryTools = toolsByCategory(registry, 'query');
-  const testTools = toolsByCategory(registry, 'test-analysis');
-  const gitTools = toolsByCategory(registry, 'git-history');
-  const atlasTools = toolsByCategory(registry, 'atlas');
-
   return [
     '# ArchGuard Agent Surface',
     '',
@@ -135,56 +130,6 @@ function renderAgentSurface(registry: ArchGuardMetadataRegistry): string {
     'args = ["mcp"]',
     '```',
     '',
-    '## Workflows',
-    '',
-    '- Architecture orientation: call `archguard_analyze`, then `archguard_summary`, then query tools such as `archguard_find_entity`, `archguard_get_dependencies`, or `archguard_get_dependents`.',
-    '- Test analysis: call `archguard_analyze` with `includeTests: true`, then `archguard_detect_test_patterns`, then `archguard_get_test_metrics`, `archguard_get_test_issues`, or `archguard_get_entity_coverage`.',
-    '- Git history: run `archguard analyze --include-git` in CLI workflows or call `archguard_analyze_git` in MCP workflows, then use change context, co-change, risk, or ownership tools.',
-    '- Go Atlas: call `archguard_analyze` on a Go project, then inspect `archguard_get_atlas_layer`, `archguard_get_package_fanin`, `archguard_get_package_fanout`, or `archguard_detect_god_packages`.',
-    '',
-    '## Analysis Tools',
-    '',
-    renderAgentToolList(analysisTools),
-    '',
-    '## Query Tools',
-    '',
-    renderAgentToolList(queryTools),
-    '',
-    '## Test Analysis Tools',
-    '',
-    renderAgentToolList(testTools),
-    '',
-    '## Git History Tools',
-    '',
-    renderAgentToolList(gitTools),
-    '',
-    '## Atlas Tools',
-    '',
-    renderAgentToolList(atlasTools),
-    '',
-    '## Recovery Rules',
-    '',
-    ...workflowDependentMcpTools.map((toolName) => {
-      const tool = registry.mcpTools.find((entry) => entry.mcp.toolName === toolName);
-      return `- \`${toolName}\`: call ${tool?.agent.callFirst?.join(', ') ?? 'the prerequisite tool'} first. ${tool?.agent.failureRecovery[0] ?? 'Retry after refreshing analysis data.'}`;
-    }),
+    renderAgentInstructions(registry, { provider: 'codex', format: 'markdown' }).content,
   ].join('\n');
-}
-
-function toolsByCategory(
-  registry: ArchGuardMetadataRegistry,
-  category: McpToolMetadata['category']
-): McpToolMetadata[] {
-  return registry.mcpTools.filter((tool) => tool.category === category);
-}
-
-function renderAgentToolList(tools: McpToolMetadata[]): string {
-  return tools
-    .map((tool) => {
-      const callFirst = tool.agent.callFirst?.length
-        ? ` Call first: ${tool.agent.callFirst.join(', ')}.`
-        : '';
-      return `- \`${tool.mcp.toolName}\`: ${tool.summary}${callFirst}`;
-    })
-    .join('\n');
 }

@@ -143,12 +143,17 @@ archguard analyze -s ./cmd --lang go
 | Command | Description | MCP Mapping |
 |---|---|---|
 | `archguard analyze` | Analyze source code and generate architecture diagrams and query artifacts | 1 mapped option(s) |
+| `archguard agent` | Generate registry-derived instructions for Claude Code and Codex agents | - |
 | `archguard cache` | Manage ArchGuard cache operations | - |
 | `archguard check` | Check architecture fitness rules against snapshots | - |
+| `archguard config` | Show and remove ArchGuard agent configuration | - |
 | `archguard diff` | Compare two architecture metric snapshots | - |
+| `archguard help` | Show registry-backed structured ArchGuard CLI help for agents | - |
 | `archguard init` | Initialize an ArchGuard configuration file | - |
+| `archguard install` | Install ArchGuard MCP config and generated instructions for Claude Code or Codex | - |
 | `archguard mcp` | Start the ArchGuard MCP server over stdio | - |
 | `archguard query` | Query architecture entities, relationships, metrics, tests, git history, and Atlas data | 24 mapped option(s) |
+| `archguard update` | Refresh existing ArchGuard agent configuration and generated instructions | - |
 <!-- ARCHGUARD_METADATA:readme-cli-commands:END -->
 
 ### `analyze`

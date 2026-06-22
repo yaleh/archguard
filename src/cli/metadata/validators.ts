@@ -1,4 +1,9 @@
-import type { ArchGuardMetadataEntry, ArchGuardMetadataRegistry } from './types.js';
+import type {
+  ArchGuardMetadataEntry,
+  ArchGuardMetadataRegistry,
+  CliCommandMetadata,
+  McpToolMetadata,
+} from './types.js';
 import {
   archGuardMetadataRegistry,
   cliCommandBaseline,
@@ -23,9 +28,11 @@ export function validateMetadataRegistry(
     options.expectedWorkflowDependentTools ?? workflowDependentMcpTools;
 
   const cliIds = registry.cliCommands.map((command) => command.cli.command);
+  const stagedCliIds = registry.stagedCliCommands?.map((command) => command.cli.command) ?? [];
   const toolNames = registry.mcpTools.map((tool) => tool.mcp.toolName);
   const allEntryIds = [
     ...registry.cliCommands.map((command) => command.id),
+    ...(registry.stagedCliCommands?.map((command) => command.id) ?? []),
     ...registry.mcpTools.map((tool) => tool.id),
   ];
 
@@ -33,9 +40,14 @@ export function validateMetadataRegistry(
   collectSetErrors(errors, 'MCP tool', expectedMcpTools, toolNames);
   collectDuplicateErrors(errors, 'metadata id', allEntryIds);
   collectDuplicateErrors(errors, 'CLI command', cliIds);
+  collectDuplicateErrors(errors, 'staged CLI command', stagedCliIds);
   collectDuplicateErrors(errors, 'MCP tool', toolNames);
 
-  for (const entry of [...registry.cliCommands, ...registry.mcpTools]) {
+  for (const entry of [
+    ...registry.cliCommands,
+    ...(registry.stagedCliCommands ?? []),
+    ...registry.mcpTools,
+  ]) {
     collectEntryCompletenessErrors(errors, entry);
   }
 
@@ -55,6 +67,9 @@ export function validateMetadataRegistry(
     if (!tool) continue;
     if (!tool.agent.callFirst || tool.agent.callFirst.length === 0) {
       errors.push(`${toolName} is workflow-dependent but has no callFirst guidance`);
+    }
+    if (!tool.agent.freshness?.trim()) {
+      errors.push(`${toolName} is workflow-dependent but has no freshness guidance`);
     }
   }
 
@@ -87,11 +102,11 @@ export function assertValidMetadataRegistry(
   }
 }
 
-export function getCliCommandMetadata(command: string) {
+export function getCliCommandMetadata(command: string): CliCommandMetadata | undefined {
   return archGuardMetadataRegistry.cliCommands.find((entry) => entry.cli.command === command);
 }
 
-export function getMcpToolMetadata(toolName: string) {
+export function getMcpToolMetadata(toolName: string): McpToolMetadata | undefined {
   return archGuardMetadataRegistry.mcpTools.find((entry) => entry.mcp.toolName === toolName);
 }
 
@@ -130,6 +145,14 @@ function collectEntryCompletenessErrors(errors: string[], entry: ArchGuardMetada
     errors.push(`${entry.id} is missing agent.failureRecovery`);
   }
   if (entry.agent.limitations.length === 0) errors.push(`${entry.id} is missing agent.limitations`);
+  if (entry.surfaces.includes('agent') && !entry.docs?.includeInAgentSurface) {
+    errors.push(`${entry.id} is agent-facing but missing docs.includeInAgentSurface`);
+  }
+  if (entry.surfaces.includes('docs') && !hasDocsPolicy(entry)) {
+    errors.push(`${entry.id} is docs-facing but missing docs include policy`);
+  }
+  collectSurfacePolicyErrors(errors, entry);
+  collectInstallContractErrors(errors, entry);
   if (entry.examples.length === 0) errors.push(`${entry.id} is missing examples`);
   if (entry.verification.length === 0) errors.push(`${entry.id} is missing verification hints`);
   for (const hint of entry.verification) {
@@ -137,6 +160,40 @@ function collectEntryCompletenessErrors(errors: string[], entry: ArchGuardMetada
       errors.push(`${entry.id} verification target is not concrete: ${hint.target}`);
     }
   }
+}
+
+function collectSurfacePolicyErrors(errors: string[], entry: ArchGuardMetadataEntry): void {
+  const policy = entry.surfacePolicy ?? 'both';
+  if (policy === 'cli-only' && entry.surfaces.includes('mcp')) {
+    errors.push(`${entry.id} has cli-only surfacePolicy but declares mcp surface`);
+  }
+  if (policy === 'mcp-only' && entry.surfaces.includes('cli')) {
+    errors.push(`${entry.id} has mcp-only surfacePolicy but declares cli surface`);
+  }
+  if (policy === 'internal' && entry.surfaces.includes('docs')) {
+    errors.push(`${entry.id} has internal surfacePolicy but declares docs surface`);
+  }
+}
+
+function collectInstallContractErrors(errors: string[], entry: ArchGuardMetadataEntry): void {
+  if (!entry.install) return;
+  if (entry.install.writesInstructions && !entry.docs?.includeInAgentSurface) {
+    errors.push(`${entry.id} writes instructions but is missing docs.includeInAgentSurface`);
+  }
+  if (entry.install.provider === 'all' && entry.install.configScope !== undefined) {
+    if (!['user', 'project'].includes(entry.install.configScope)) {
+      errors.push(`${entry.id} uses invalid install configScope: ${entry.install.configScope}`);
+    }
+  }
+}
+
+function hasDocsPolicy(entry: ArchGuardMetadataEntry): boolean {
+  return Boolean(
+    entry.docs?.includeInReadme ||
+    entry.docs?.includeInCliGuide ||
+    entry.docs?.includeInMcpGuide ||
+    entry.docs?.includeInAgentSurface
+  );
 }
 
 function isRealVerificationTarget(target: string): boolean {

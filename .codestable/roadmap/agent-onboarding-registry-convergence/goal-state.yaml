@@ -1,0 +1,59 @@
+roadmap: agent-onboarding-registry-convergence
+status: complete
+baseline_ref: 6096568b00aa2f986433fae5746ee91c8ce5a5e8
+current_feature_index: 6
+features:
+- slug: registry-agent-guidance-contract
+  roadmap_item: registry-agent-guidance-contract
+  feature_dir: .codestable/features/2026-06-22-registry-agent-guidance-contract
+  design: .codestable/features/2026-06-22-registry-agent-guidance-contract/registry-agent-guidance-contract-design.md
+  checklist: .codestable/features/2026-06-22-registry-agent-guidance-contract/registry-agent-guidance-contract-checklist.yaml
+  review: .codestable/features/2026-06-22-registry-agent-guidance-contract/registry-agent-guidance-contract-review.md
+  qa: .codestable/features/2026-06-22-registry-agent-guidance-contract/registry-agent-guidance-contract-qa.md
+  acceptance: .codestable/features/2026-06-22-registry-agent-guidance-contract/registry-agent-guidance-contract-acceptance.md
+  status: accepted
+- slug: agent-instructions-renderer
+  roadmap_item: agent-instructions-renderer
+  feature_dir: .codestable/features/2026-06-22-agent-instructions-renderer
+  design: .codestable/features/2026-06-22-agent-instructions-renderer/agent-instructions-renderer-design.md
+  checklist: .codestable/features/2026-06-22-agent-instructions-renderer/agent-instructions-renderer-checklist.yaml
+  review: .codestable/features/2026-06-22-agent-instructions-renderer/agent-instructions-renderer-review.md
+  qa: .codestable/features/2026-06-22-agent-instructions-renderer/agent-instructions-renderer-qa.md
+  acceptance: .codestable/features/2026-06-22-agent-instructions-renderer/agent-instructions-renderer-acceptance.md
+  status: accepted
+- slug: registry-install-config-contract
+  roadmap_item: registry-install-config-contract
+  feature_dir: .codestable/features/2026-06-22-registry-install-config-contract
+  design: .codestable/features/2026-06-22-registry-install-config-contract/registry-install-config-contract-design.md
+  checklist: .codestable/features/2026-06-22-registry-install-config-contract/registry-install-config-contract-checklist.yaml
+  review: .codestable/features/2026-06-22-registry-install-config-contract/registry-install-config-contract-review.md
+  qa: .codestable/features/2026-06-22-registry-install-config-contract/registry-install-config-contract-qa.md
+  acceptance: .codestable/features/2026-06-22-registry-install-config-contract/registry-install-config-contract-acceptance.md
+  status: accepted
+- slug: provider-config-adapters
+  roadmap_item: provider-config-adapters
+  feature_dir: .codestable/features/2026-06-22-provider-config-adapters
+  design: .codestable/features/2026-06-22-provider-config-adapters/provider-config-adapters-design.md
+  checklist: .codestable/features/2026-06-22-provider-config-adapters/provider-config-adapters-checklist.yaml
+  review: .codestable/features/2026-06-22-provider-config-adapters/provider-config-adapters-review.md
+  qa: .codestable/features/2026-06-22-provider-config-adapters/provider-config-adapters-qa.md
+  acceptance: .codestable/features/2026-06-22-provider-config-adapters/provider-config-adapters-acceptance.md
+  status: accepted
+- slug: agent-onboarding-cli
+  roadmap_item: agent-onboarding-cli
+  feature_dir: .codestable/features/2026-06-22-agent-onboarding-cli
+  design: .codestable/features/2026-06-22-agent-onboarding-cli/agent-onboarding-cli-design.md
+  checklist: .codestable/features/2026-06-22-agent-onboarding-cli/agent-onboarding-cli-checklist.yaml
+  review: .codestable/features/2026-06-22-agent-onboarding-cli/agent-onboarding-cli-review.md
+  qa: .codestable/features/2026-06-22-agent-onboarding-cli/agent-onboarding-cli-qa.md
+  acceptance: .codestable/features/2026-06-22-agent-onboarding-cli/agent-onboarding-cli-acceptance.md
+  status: accepted
+- slug: config-doctor-mcp-e2e
+  roadmap_item: config-doctor-mcp-e2e
+  feature_dir: .codestable/features/2026-06-22-config-doctor-mcp-e2e
+  design: .codestable/features/2026-06-22-config-doctor-mcp-e2e/config-doctor-mcp-e2e-design.md
+  checklist: .codestable/features/2026-06-22-config-doctor-mcp-e2e/config-doctor-mcp-e2e-checklist.yaml
+  review: .codestable/features/2026-06-22-config-doctor-mcp-e2e/config-doctor-mcp-e2e-review.md
+  qa: .codestable/features/2026-06-22-config-doctor-mcp-e2e/config-doctor-mcp-e2e-qa.md
+  acceptance: .codestable/features/2026-06-22-config-doctor-mcp-e2e/config-doctor-mcp-e2e-acceptance.md
+  status: accepted

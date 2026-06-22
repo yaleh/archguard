@@ -17,7 +17,7 @@ describe('ArchGuard command metadata registry', () => {
     expect(archGuardMetadataRegistry.cliCommands.map((command) => command.cli.command)).toEqual([
       ...cliCommandBaseline,
     ]);
-    expect(archGuardMetadataRegistry.cliCommands).toHaveLength(7);
+    expect(archGuardMetadataRegistry.cliCommands).toHaveLength(12);
   });
 
   it('covers the exact MCP tool baseline', () => {
@@ -29,6 +29,42 @@ describe('ArchGuard command metadata registry', () => {
 
   it('passes registry validation', () => {
     expect(validateMetadataRegistry()).toEqual([]);
+  });
+
+  it('promotes install/update/config metadata into the runtime CLI baseline', () => {
+    const onboardingCommands = archGuardMetadataRegistry.cliCommands.filter((command) =>
+      ['install', 'update', 'config'].includes(command.cli.command)
+    );
+
+    expect(onboardingCommands.map((command) => command.cli.command)).toEqual([
+      'config',
+      'install',
+      'update',
+    ]);
+    expect(cliCommandBaseline).toContain('install');
+    expect(cliCommandBaseline).toContain('update');
+    expect(cliCommandBaseline).toContain('config');
+    expect(archGuardMetadataRegistry.stagedCliCommands).toEqual([]);
+
+    for (const command of onboardingCommands) {
+      expect(command.lifecycle, command.id).toBe('experimental');
+      expect(command.install, command.id).toBeDefined();
+    }
+  });
+
+  it('registers help as immediate cli-only metadata', () => {
+    const help = archGuardMetadataRegistry.cliCommands.find(
+      (command) => command.cli.command === 'help'
+    );
+
+    expect(help).toBeDefined();
+    expect(help?.surfacePolicy).toBe('cli-only');
+    expect(help?.surfaces).toContain('cli');
+    expect(help?.surfaces).not.toContain('mcp');
+    expect(help?.install).toBeUndefined();
+    expect(help?.verification.map((hint) => hint.target)).toContain(
+      'npm test -- tests/unit/cli/help-command.test.ts'
+    );
   });
 
   it('records ADR-007 query mappings plus analysis equivalents', () => {
@@ -50,7 +86,7 @@ describe('ArchGuard command metadata registry', () => {
   it('keeps query option MCP mappings aligned with registered MCP tools', () => {
     const toolNames = new Set(archGuardMetadataRegistry.mcpTools.map((tool) => tool.mcp.toolName));
     for (const option of queryOptions.filter((item) => item.mapsToMcpTool)) {
-      expect(toolNames.has(option.mapsToMcpTool!)).toBe(true);
+      expect(toolNames.has(option.mapsToMcpTool)).toBe(true);
     }
   });
 
@@ -65,6 +101,8 @@ describe('ArchGuard command metadata registry', () => {
       expect(entry.agent.useWhen.length, entry.id).toBeGreaterThan(0);
       expect(entry.agent.failureRecovery.length, entry.id).toBeGreaterThan(0);
       expect(entry.agent.limitations.length, entry.id).toBeGreaterThan(0);
+      expect(entry.docs?.includeInAgentSurface, entry.id).toBe(true);
+      expect(entry.docs, entry.id).toBeDefined();
       expect(entry.examples.length, entry.id).toBeGreaterThan(0);
       expect(entry.verification.length, entry.id).toBeGreaterThan(0);
       for (const hint of entry.verification) {
@@ -81,6 +119,7 @@ describe('ArchGuard command metadata registry', () => {
       const tool = getMcpToolMetadata(toolName);
       expect(tool, toolName).toBeDefined();
       expect(tool?.agent.callFirst?.length, toolName).toBeGreaterThan(0);
+      expect(tool?.agent.freshness?.trim(), toolName).toBeTruthy();
     }
 
     expect(getMcpToolMetadata('archguard_summary')?.agent.callFirst).toContain('archguard_analyze');
@@ -119,6 +158,67 @@ describe('ArchGuard command metadata registry', () => {
 
     expect(validateMetadataRegistry(broken)).toContain(
       'archguard_summary callFirst references unknown target: archguard_missing'
+    );
+  });
+
+  it('fails validation when a workflow-dependent tool has no freshness guidance', () => {
+    const broken: ArchGuardMetadataRegistry = {
+      ...archGuardMetadataRegistry,
+      mcpTools: archGuardMetadataRegistry.mcpTools.map((tool) =>
+        tool.mcp.toolName === 'archguard_summary'
+          ? { ...tool, agent: { ...tool.agent, freshness: '' } }
+          : tool
+      ),
+    };
+
+    expect(validateMetadataRegistry(broken)).toContain(
+      'archguard_summary is workflow-dependent but has no freshness guidance'
+    );
+  });
+
+  it('fails validation when an agent-facing entry lacks docs include policy', () => {
+    const broken: ArchGuardMetadataRegistry = {
+      ...archGuardMetadataRegistry,
+      cliCommands: archGuardMetadataRegistry.cliCommands.map((command) =>
+        command.cli.command === 'analyze' ? { ...command, docs: undefined } : command
+      ),
+    };
+
+    expect(validateMetadataRegistry(broken)).toEqual(
+      expect.arrayContaining([
+        'analyze is agent-facing but missing docs.includeInAgentSurface',
+        'analyze is docs-facing but missing docs include policy',
+      ])
+    );
+  });
+
+  it('fails validation for inconsistent surface policies', () => {
+    const broken: ArchGuardMetadataRegistry = {
+      ...archGuardMetadataRegistry,
+      cliCommands: archGuardMetadataRegistry.cliCommands.map((command) =>
+        command.cli.command === 'help'
+          ? { ...command, surfaces: [...command.surfaces, 'mcp' as const] }
+          : command
+      ),
+    };
+
+    expect(validateMetadataRegistry(broken)).toContain(
+      'help has cli-only surfacePolicy but declares mcp surface'
+    );
+  });
+
+  it('fails validation when an install entry writes instructions without agent-surface docs', () => {
+    const broken: ArchGuardMetadataRegistry = {
+      ...archGuardMetadataRegistry,
+      cliCommands: archGuardMetadataRegistry.cliCommands.map((command) =>
+        command.cli.command === 'install'
+          ? { ...command, docs: { ...command.docs, includeInAgentSurface: false } }
+          : command
+      ),
+    };
+
+    expect(validateMetadataRegistry(broken)).toContain(
+      'install writes instructions but is missing docs.includeInAgentSurface'
     );
   });
 

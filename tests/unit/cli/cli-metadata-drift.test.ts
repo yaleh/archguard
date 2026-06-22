@@ -11,7 +11,7 @@ function optionLongFromFlags(flags: string): string | undefined {
 }
 
 function businessCommands(program: Command): Command[] {
-  return program.commands.filter((command) => command.name() !== 'help');
+  return program.commands;
 }
 
 function runtimeLongOptions(command: Command): Set<string> {
@@ -25,7 +25,7 @@ function registryLongOptions(commandName: string): Set<string> {
   expect(metadata, commandName).toBeDefined();
 
   return new Set(
-    metadata!.cli.options.map((option) => optionLongFromFlags(option.flags)).filter(Boolean)
+    metadata.cli.options.map((option) => optionLongFromFlags(option.flags)).filter(Boolean)
   );
 }
 
@@ -75,15 +75,15 @@ describe('CLI metadata drift', () => {
       (command) => command.cli.command === 'query'
     );
 
-    for (const option of queryMetadata!.cli.options.filter((item) => item.mapsToMcpTool)) {
-      expect(mcpTools.has(option.mapsToMcpTool!), option.flags).toBe(true);
+    for (const option of queryMetadata.cli.options.filter((item) => item.mapsToMcpTool)) {
+      expect(mcpTools.has(option.mapsToMcpTool), option.flags).toBe(true);
     }
   });
 
   it('keeps query mappings attached to the corresponding query options', () => {
     const queryMetadata = archGuardMetadataRegistry.cliCommands.find(
       (command) => command.cli.command === 'query'
-    )!;
+    );
 
     for (const mapping of archGuardMetadataRegistry.queryMappings.filter(
       (item) => item.kind === 'query'
@@ -100,10 +100,10 @@ describe('CLI metadata drift', () => {
   });
 
   it('detects missing registry metadata for a runtime option', () => {
-    const queryCommand = createCLI().commands.find((command) => command.name() === 'query')!;
+    const queryCommand = createCLI().commands.find((command) => command.name() === 'query');
     const queryMetadata = archGuardMetadataRegistry.cliCommands.find(
       (command) => command.cli.command === 'query'
-    )!;
+    );
     const metadataLongOptions = new Set(
       queryMetadata.cli.options
         .filter((option) => option.flags !== '--summary')

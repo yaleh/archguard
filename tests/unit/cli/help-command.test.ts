@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { createHelpCommand, createStructuredHelp } from '@/cli/commands/help';
 import { createCLI } from '@/cli/index';
 import { cliCommandBaseline } from '@/cli/metadata';
+import type { StructuredCliHelp } from '@/cli/commands/help';
 
 describe('structured help command', () => {
   afterEach(() => {
@@ -25,10 +26,12 @@ describe('structured help command', () => {
 
   it('prints only JSON for --json', async () => {
     let stdout = '';
-    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
-      stdout += String(chunk);
-      return true;
-    });
+    const stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stdout += String(chunk);
+        return true;
+      });
     const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     const command = createHelpCommand();
@@ -36,14 +39,14 @@ describe('structured help command', () => {
 
     expect(stdoutSpy).toHaveBeenCalledTimes(1);
     expect(stderrSpy).not.toHaveBeenCalled();
-    const parsed = JSON.parse(stdout);
-    expect(parsed.commands).toHaveLength(7);
-    expect(parsed.commands.find((item: any) => item.name === 'query')).toBeDefined();
+    const parsed = JSON.parse(stdout) as StructuredCliHelp;
+    expect(parsed.commands).toHaveLength(12);
+    expect(parsed.commands.find((item) => item.name === 'query')).toBeDefined();
   });
 
   it('falls back to human-readable program help without --json', async () => {
     let stdout = '';
-    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
       stdout += String(chunk);
       return true;
     });
@@ -52,10 +55,7 @@ describe('structured help command', () => {
     const command = createCLI();
     command.exitOverride();
 
-    await expect(command.parseAsync(['node', 'archguard', 'help'])).rejects.toMatchObject({
-      code: 'commander.help',
-      exitCode: 0,
-    });
+    await command.parseAsync(['node', 'archguard', 'help']);
     expect(stdout).toContain('Usage: archguard [options] [command]');
     expect(stdout).toContain('help [options] [command]');
     expect(stdout).not.toContain('"schemaVersion"');
@@ -63,7 +63,7 @@ describe('structured help command', () => {
 
   it('falls back to human-readable command help with a command argument', async () => {
     let stdout = '';
-    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
       stdout += String(chunk);
       return true;
     });
@@ -80,7 +80,7 @@ describe('structured help command', () => {
 
   it('fails clearly when a command argument is passed with --json', async () => {
     let stderr = '';
-    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: any) => {
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: string | Uint8Array) => {
       stderr += String(chunk);
       return true;
     });

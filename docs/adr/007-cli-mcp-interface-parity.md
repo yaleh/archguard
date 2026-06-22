@@ -86,6 +86,7 @@ node dist/cli/index.js mcp  # 独立启动，通过 stdio transport 调用
 **实施要求**：
 - 涉及 `src/cli/mcp/` 的功能变更，验证步骤必须使用以上两种方式之一
 - 不得在 PR 描述中写"已通过 Claude Code MCP 验证"作为等价证明
+- 涉及当前构建产物或 MCP 启动链路的端到端验证时，优先使用独立 stdio 进程；`archguard config doctor` 的 MCP probe 必须启动当前 build 的 `node dist/cli/index.js mcp` 并执行 `listTools`，不能复用当前 agent 会话中已经托管的 MCP server
 
 ---
 

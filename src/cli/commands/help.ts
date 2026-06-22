@@ -55,11 +55,12 @@ export function createHelpCommand(): Command {
 function showHumanHelp(command: Command, targetCommand: string | undefined): void {
   const program = command.parent;
   if (!program) {
-    command.help();
+    command.outputHelp();
+    return;
   }
 
   if (!targetCommand) {
-    program.help();
+    program.outputHelp();
     return;
   }
 
@@ -67,7 +68,7 @@ function showHumanHelp(command: Command, targetCommand: string | undefined): voi
   if (!target) {
     command.error(`unknown command '${targetCommand}'`);
   }
-  target.help();
+  target.outputHelp();
 }
 
 function toStructuredCommand(command: CliCommandMetadata): StructuredCliHelpCommand {

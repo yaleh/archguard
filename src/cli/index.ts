@@ -12,6 +12,10 @@ import { createMcpCommand } from './commands/mcp.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createCheckCommand } from './commands/check.js';
 import { createHelpCommand } from './commands/help.js';
+import { createAgentCommand } from './commands/agent.js';
+import { createInstallCommand } from './commands/install.js';
+import { createUpdateCommand } from './commands/update.js';
+import { createConfigCommand } from './commands/config.js';
 import { getCliCommandMetadata } from './metadata/index.js';
 import { createRequire } from 'module';
 
@@ -38,7 +42,11 @@ export function createCLI(): Command {
   program.addCommand(withRegistryDescription(createMcpCommand()));
   program.addCommand(withRegistryDescription(createDiffCommand()));
   program.addCommand(withRegistryDescription(createCheckCommand()));
-  program.addCommand(createHelpCommand());
+  program.addCommand(withRegistryDescription(createAgentCommand()));
+  program.addCommand(withRegistryDescription(createInstallCommand()));
+  program.addCommand(withRegistryDescription(createUpdateCommand()));
+  program.addCommand(withRegistryDescription(createConfigCommand()));
+  program.addCommand(withRegistryDescription(createHelpCommand()));
 
   return program;
 }

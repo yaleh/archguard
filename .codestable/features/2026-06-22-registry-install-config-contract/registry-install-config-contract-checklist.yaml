@@ -1,0 +1,47 @@
+feature: 2026-06-22-registry-install-config-contract
+created: 2026-06-22
+steps:
+- action: Add lifecycle, surface policy, artifact, and install contract metadata types
+  exit_signal: type-check passes with new contract fields
+  status: done
+- action: Add validator rules for install/docs and provider/scope interactions
+  exit_signal: Unit tests fail invalid install/docs, provider/scope, and surfacePolicy
+    combinations
+  status: done
+- action: Add help registry entry and immediate CLI baseline enforcement
+  exit_signal: help is cli-only, has examples/verification, and help-command tests
+    pass
+  status: done
+- action: Add staged registry entries for install, update, and config
+  exit_signal: install/update/config metadata validates without causing runtime drift
+    before command shells are registered
+  status: done
+- action: Run docs and metadata surface checks
+  exit_signal: docs:check and metadata tests pass
+  status: done
+checks:
+- item: help command is present as cli-only metadata
+  source: 名词契约
+  status: passed
+- item: help command includes real examples and help-command verification
+  source: 清洁度规则
+  status: passed
+- item: install/update/config metadata exists without causing runtime drift before
+    command registration
+  source: 名词契约
+  status: passed
+- item: install/update/config entries declare InstallContract
+  source: 名词契约
+  status: passed
+- item: writesInstructions requires includeInAgentSurface
+  source: 流程级约束
+  status: passed
+- item: provider all is reported per provider and not confused with scope
+  source: 流程级约束
+  status: passed
+- item: surfacePolicy validators reject inconsistent surfaces
+  source: 流程级约束
+  status: passed
+- item: Required validation commands are run and recorded
+  source: 验收场景
+  status: passed

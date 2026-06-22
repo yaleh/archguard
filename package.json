@@ -66,6 +66,7 @@
     "p-limit": "^7.3.0",
     "p-map": "^7.0.4",
     "sharp": "^0.34.5",
+    "smol-toml": "^1.7.0",
     "tree-sitter": "^0.25.0",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",
