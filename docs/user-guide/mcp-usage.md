@@ -686,6 +686,81 @@ Test discovery recursively scans the `tests/` directory without excluding sub-`n
 
 ---
 
+## archguard_get_cognitive_summary
+
+Returns a compact structural digest for each requested entity name, read from existing `.archguard/` artifacts. No LLM calls are made — this is a pure mechanical aggregator intended to give an AI assistant just enough context about a class or interface without loading full source text.
+
+**Schema**
+
+```
+entities  : string[]   — 1 to 20 entity names (exact match)
+archDir?  : string     — path to .archguard directory (default: <projectRoot>/.archguard)
+projectRoot? : string  — project root (default: MCP server startup cwd)
+```
+
+**Per-entity output**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | The requested name |
+| `found` | boolean | `false` when the entity is not in the index |
+| `entityId` | string? | Fully-qualified dotted-path ID |
+| `methodCount` | number? | Methods + constructors |
+| `fieldCount` | number? | Properties + fields |
+| `inDegree` | number? | Count of internal relations where this entity is the target (fan-in) |
+| `outDegree` | number? | Count of internal relations where this entity is the source (fan-out) |
+| `topDependents` | `{name,type}[]` | Up to 5 entities that depend on this entity |
+| `topDependencies` | `{name,type}[]` | Up to 5 entities this entity depends on |
+| `testCoverageRatio` | number \| null | Static coverage score [0–1]; `null` when test artifacts absent |
+| `gitRiskLevel` | string \| null | `'low'|'medium'|'high'|'critical'`; `null` when git artifacts absent |
+
+**Example input**
+
+```json
+{
+  "entities": ["QueryEngine"],
+  "archDir": ".archguard"
+}
+```
+
+**Example output**
+
+```json
+[
+  {
+    "name": "QueryEngine",
+    "found": true,
+    "entityId": "cli/query/query-engine.ts.QueryEngine",
+    "methodCount": 18,
+    "fieldCount": 5,
+    "inDegree": 12,
+    "outDegree": 6,
+    "topDependents": [
+      { "name": "AnalyzeCommand", "type": "class" },
+      { "name": "McpServer", "type": "class" }
+    ],
+    "topDependencies": [
+      { "name": "ArchIndex", "type": "interface" },
+      { "name": "EntityQueryService", "type": "class" }
+    ],
+    "testCoverageRatio": 0.85,
+    "gitRiskLevel": "medium"
+  }
+]
+```
+
+**Graceful nulls**
+
+- `testCoverageRatio` is `null` when `archguard_analyze(includeTests: true)` has not been run or when the entity is not tracked by the test index.
+- `gitRiskLevel` is `null` when `archguard_analyze_git` has not been run or when the entity's source file is not in the git history index.
+- An entity that is not found in the ArchJSON index returns `{ name: "...", found: false }` without throwing.
+
+**Payload size**
+
+The tool caps `topDependents` and `topDependencies` at 5 entries each to ensure each entry stays well under 2 KB, making it safe to include multiple summaries in a single LLM context window.
+
+---
+
 ## Related
 
 - [Architecture Checking Scenarios](./architecture-checking-scenarios.md)
