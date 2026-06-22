@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execa } from 'execa';
 import { describe, expect, it } from 'vitest';
+import { cliCommandBaseline } from '../../../src/cli/metadata/registry.js';
 
 const builtCliPath = resolve(process.cwd(), 'dist/cli/index.js');
 const describeIfBuilt = existsSync(builtCliPath) ? describe : describe.skip;
@@ -17,7 +18,7 @@ describeIfBuilt('built CLI structured help', () => {
 
     expect(parsed.program).toBe('archguard');
     expect(parsed.schemaVersion).toBe(1);
-    expect(parsed.commands).toHaveLength(7);
+    expect(parsed.commands.map((command: any) => command.name).sort()).toEqual([...cliCommandBaseline].sort());
 
     const queryCommand = parsed.commands.find((command: any) => command.name === 'query');
     expect(queryCommand).toBeDefined();
