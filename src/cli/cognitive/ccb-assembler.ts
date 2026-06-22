@@ -15,6 +15,7 @@ import type {
   CognitiveContextBundle,
   CognitiveBehavioralSignals,
   CognitiveGitSignals,
+  CognitiveDocumentationSignals,
 } from './ccb-schema.js';
 import type { CognitiveSummaryEntry } from '@/types/cognitive-summary.js';
 import { loadEngine } from '../query/engine-loader.js';
@@ -119,6 +120,59 @@ function fetchBehavioral(): Promise<CognitiveBehavioralSignals | null> {
   return Promise.resolve(null);
 }
 
+/** Documentation file extensions considered for docFreshnessGap calculation. */
+const DOC_EXTENSIONS = new Set(['.md', '.rst', '.txt', '.adoc']);
+
+/**
+ * Compute the documentation freshness gap from co-change neighbors.
+ *
+ * Returns the fraction of co-change neighbors that are documentation files.
+ * A low value (< 0.3) suggests code changes rarely co-occur with doc updates.
+ * Returns null when cochangeNeighbors is empty (no co-change data available).
+ */
+export function computeDocFreshnessGap(cochangeNeighbors: string[]): number | null {
+  if (cochangeNeighbors.length === 0) {
+    return null;
+  }
+  const docCount = cochangeNeighbors.filter((f) => {
+    const ext = path.extname(f).toLowerCase();
+    return DOC_EXTENSIONS.has(ext);
+  }).length;
+  return docCount / cochangeNeighbors.length;
+}
+
+/**
+ * Fetch documentation signals, combining git co-change analysis and meta-cc session history.
+ * docVoid and specPrecisionGap default to false when meta-cc is unavailable.
+ * deFactoSpec and freshnessWarning are always null in stored CCBs (LLM layer responsibility).
+ */
+function fetchDocumentationSignals(
+  cochangeNeighbors: string[]
+): Promise<CognitiveDocumentationSignals> {
+  const docFreshnessGap = computeDocFreshnessGap(cochangeNeighbors);
+
+  // Integration point for meta-cc query_edit_sequences.
+  // When meta-cc proposal-doc-session-signals.md ships, replace the body of this
+  // try block with the actual meta-cc call and extract DocVoid / SpecPrecisionGap.
+  const docVoid = false;
+  const specPrecisionGap = false;
+  // try {
+  //   const result = await queryEditSequences({ filePath });
+  //   docVoid = result.DocVoid ?? false;
+  //   specPrecisionGap = result.SpecPrecisionGap ?? false;
+  // } catch {
+  //   // meta-cc unavailable or fields not present — keep defaults (false)
+  // }
+
+  return Promise.resolve({
+    docFreshnessGap,
+    docVoid,
+    specPrecisionGap,
+    deFactoSpec: null,
+    freshnessWarning: null,
+  });
+}
+
 /**
  * Assemble a CognitiveContextBundle for a source file.
  *
@@ -149,6 +203,9 @@ export async function assembleCcb(
     fetchBehavioral(),
   ]);
 
+  // Fetch documentation signals after git (needs cochangeNeighbors)
+  const documentation = await fetchDocumentationSignals(git?.cochangeNeighbors ?? []);
+
   const bundle: CognitiveContextBundle = {
     fileId,
     filePath,
@@ -158,6 +215,7 @@ export async function assembleCcb(
     behavioral,
     git,
     guidance: null,
+    documentation,
   };
 
   await writeCcb(bundle, archDir);

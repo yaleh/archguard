@@ -38,6 +38,39 @@ export interface CognitiveGuidance {
   editPrecautions: string[];
 }
 
+export interface CognitiveDocumentationSignals {
+  /**
+   * Fraction of co-change neighbors that are documentation files (.md .rst .txt .adoc).
+   * A low value (< 0.3) suggests code changes rarely touch docs — possible doc freshness gap.
+   * null when cochangeNeighbors is empty (no co-change data available).
+   */
+  docFreshnessGap: number | null;
+  /**
+   * True when meta-cc session history shows the file was edited without any associated
+   * documentation reads/edits in the same session (doc void pattern).
+   * Defaults to false when meta-cc is unavailable.
+   */
+  docVoid: boolean;
+  /**
+   * True when meta-cc signals suggest spec documents were not consulted before editing
+   * (spec precision gap pattern).
+   * Defaults to false when meta-cc is unavailable.
+   */
+  specPrecisionGap: boolean;
+  /**
+   * Always null in stored CCBs.
+   * LLM agent calling archguard_get_ccb should generate this field on the fly
+   * when docVoid=true or docFreshnessGap < 0.3, by reading co-changed doc files.
+   */
+  deFactoSpec: string | null;
+  /**
+   * Always null in stored CCBs.
+   * LLM agent calling archguard_get_ccb should generate a human-readable warning
+   * on the fly when docFreshnessGap is low or docVoid is true.
+   */
+  freshnessWarning: string | null;
+}
+
 export interface CognitiveContextBundle {
   /** Stable file identifier (dotted path or slug, no extension). */
   fileId: string;
@@ -55,4 +88,9 @@ export interface CognitiveContextBundle {
   git: CognitiveGitSignals | null;
   /** LLM-derived cognitive guidance; null when not yet computed. */
   guidance: CognitiveGuidance | null;
+  /**
+   * Documentation freshness signals combining git co-change analysis and meta-cc
+   * session history. Null when not yet computed (legacy bundles).
+   */
+  documentation?: CognitiveDocumentationSignals | null;
 }
