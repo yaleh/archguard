@@ -33,6 +33,7 @@ import { registerGitHistoryTools } from './tools/git-history-tools.js';
 import { registerCallGraphTools } from './tools/call-graph-tools.js';
 import { registerAtlasAnalyticsTools } from './tools/atlas-analytics-tools.js';
 import { registerCognitiveSummaryTool } from './tools/cognitive-summary-tool.js';
+import { registerCcbTool } from './tools/ccb-tool.js';
 
 const projectRootParam = z
   .string()
@@ -90,6 +91,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerCallGraphTools(server, defaultRoot);
   registerAtlasAnalyticsTools(server, defaultRoot);
   registerCognitiveSummaryTool(server, defaultRoot);
+  registerCcbTool(server, defaultRoot);
   return server;
 }
 

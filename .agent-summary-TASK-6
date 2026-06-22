@@ -1,0 +1,14 @@
+## TASK-6 Agent Summary
+
+Phase A ✓ — CCB schema/writer/reader, 5 tests passing
+Phase B ✓ — assembler + MCP tool registered
+Phase C ✓ — cognitive-prep skill + .gitignore updated
+
+DoD #1: PASS — npm test -- --run tests/unit/cli/cognitive/ccb-writer-reader.test.ts (5 tests)
+DoD #2: PASS — npm test -- --run tests/unit/cli/cognitive/ccb-assembler.test.ts (5 tests)
+DoD #3: PASS — npm test -- --run tests/unit/cli/mcp/ccb-tool.test.ts (6 tests)
+DoD #4: PASS — npm run type-check (0 errors)
+DoD #5: PASS — npm run lint (new source files clean, pre-existing failures in other files)
+DoD #6: PASS — ls .claude/skills/cognitive-prep/SKILL.md
+DoD #7: PASS — grep -q '.archguard/cognitive' .gitignore
+DoD #8: PASS — npm test (30 pre-existing tree-sitter test file failures, all new tests pass)

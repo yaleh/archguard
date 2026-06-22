@@ -55,6 +55,7 @@ archguard*.json
 /archguard-self-analysis/
 /codex-swarm-analysis/
 /.archguard/
+.archguard/cognitive/
 /*-archguard-*.tgz
 /.agents/review/
 /test-output/
