@@ -15,6 +15,7 @@ import type { ArchJSONExtensions } from '@/types/extensions/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTools } from '@/cli/mcp/mcp-server.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
@@ -81,10 +82,15 @@ function makeArchJson(): ArchJSON {
   };
 }
 
-function createTestEngine(): QueryEngine {
+function createTestEngine(): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson = makeArchJson();
   const archIndex = buildArchIndex(archJson, 'testhash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
+}
+
+function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
+  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry, relationQueryService: engine.relationQueryService };
 }
 
 // -- Helper to call tools via McpServer --
@@ -117,7 +123,7 @@ const loadEngineMock = vi.mocked(loadEngine);
 
 beforeEach(() => {
   loadEngineMock.mockReset();
-  loadEngineMock.mockResolvedValue(createTestEngine());
+  loadEngineMock.mockResolvedValue(wrapEngine(createTestEngine()));
 });
 
 describe('MCP server tool registration', () => {
@@ -377,7 +383,7 @@ describe('archguard_find_subclasses', () => {
     const archIndex = buildArchIndex(subArchJson, 'h');
     const subEngine = new QueryEngine({ archJson: subArchJson, archIndex, scopeEntry });
     const server = new McpServer({ name: 'test', version: '1.0.0' });
-    loadEngineMock.mockResolvedValueOnce(subEngine);
+    loadEngineMock.mockResolvedValueOnce(wrapEngine({ engine: subEngine, archJson: subArchJson }));
     const tools = collectTools(server);
 
     const cb = tools.get('archguard_find_subclasses');
@@ -562,15 +568,16 @@ function makeGoAtlasArchJson(): ArchJSON {
   };
 }
 
-function createGoAtlasEngine(): QueryEngine {
+function createGoAtlasEngine(): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson = makeGoAtlasArchJson();
   const archIndex = buildArchIndex(archJson, 'goatlashash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
+  return { engine, archJson };
 }
 
 describe('archguard_get_atlas_layer', () => {
   it('format=full + layer=package returns the raw PackageGraph JSON', async () => {
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -586,7 +593,7 @@ describe('archguard_get_atlas_layer', () => {
   });
 
   it('format=adjacency + layer=package returns [{from, to, label}] with short names', async () => {
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -601,7 +608,7 @@ describe('archguard_get_atlas_layer', () => {
   });
 
   it('format=adjacency + layer=capability returns [{from, to, label}] with node names', async () => {
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -616,7 +623,7 @@ describe('archguard_get_atlas_layer', () => {
   });
 
   it('format=adjacency + layer=goroutine returns [{from, to}] without label', async () => {
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -631,7 +638,7 @@ describe('archguard_get_atlas_layer', () => {
   });
 
   it('format=adjacency + layer=flow returns error message', async () => {
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -654,7 +661,7 @@ describe('archguard_get_atlas_layer', () => {
 
   it('layer absent in Atlas fixture returns message containing "empty"', async () => {
     // The fixture has no flow layer
-    loadEngineMock.mockResolvedValueOnce(createGoAtlasEngine());
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -666,8 +673,8 @@ describe('archguard_get_atlas_layer', () => {
 
   it('default format is full — omitting format gives same result as format=full', async () => {
     loadEngineMock
-      .mockResolvedValueOnce(createGoAtlasEngine())
-      .mockResolvedValueOnce(createGoAtlasEngine());
+      .mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()))
+      .mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -682,9 +689,9 @@ describe('archguard_get_package_stats', () => {
   function makePackageStatsEngine(
     result: import('@/cli/query/query-engine.js').PackageStatsResult
   ) {
-    const engine = createTestEngine();
+    const { engine, archJson } = createTestEngine();
     vi.spyOn(engine, 'getPackageStats').mockReturnValue(result);
-    return engine;
+    return { engine, archJson };
   }
 
   const goAtlasResult: import('@/cli/query/query-engine.js').PackageStatsResult = {
@@ -719,7 +726,7 @@ describe('archguard_get_package_stats', () => {
   };
 
   it('default call returns JSON with meta.dataPath and packages array', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -732,7 +739,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('sortBy=fileCount returns packages sorted by fileCount DESC', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -746,7 +753,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('sortBy=entityCount returns packages sorted by entityCount DESC', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -760,7 +767,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('topN=2 limits output to 2 packages', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -771,7 +778,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('minFileCount=3 filters out packages with fewer than 3 files', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -784,7 +791,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('minLoc=500 with locAvailable=true filters packages below threshold', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(ooResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(ooResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -797,7 +804,7 @@ describe('archguard_get_package_stats', () => {
   });
 
   it('minLoc=500 with locAvailable=false (Go) does not filter any entry', async () => {
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(goAtlasResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(goAtlasResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -813,7 +820,7 @@ describe('archguard_get_package_stats', () => {
       meta: { dataPath: 'go-atlas', locAvailable: false },
       packages: [],
     };
-    loadEngineMock.mockResolvedValueOnce(makePackageStatsEngine(emptyResult));
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(makePackageStatsEngine(emptyResult)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
 
@@ -952,7 +959,7 @@ describe('edge-list queryFormat — applyView crash fix', () => {
     const { buildArchIndex } = await import('@/cli/query/arch-index-builder.js');
     const archIndex = buildArchIndex(subArchJson, 'h2');
     const subEngine = new QueryEngine({ archJson: subArchJson, archIndex, scopeEntry });
-    loadEngineMock.mockResolvedValueOnce(subEngine);
+    loadEngineMock.mockResolvedValueOnce(wrapEngine({ engine: subEngine, archJson: subArchJson }));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_find_subclasses');

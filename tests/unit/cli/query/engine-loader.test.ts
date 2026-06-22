@@ -205,7 +205,7 @@ describe('loadEngine', () => {
     await writeManifest([scope1]);
     await writeScopeArchJson(scope1.key, archJson);
 
-    const engine = await loadEngine(tmpDir);
+    const { engine } = await loadEngine(tmpDir);
     expect(engine.findEntity('Alpha')).toHaveLength(1);
 
     // Verify that arch-index.json was persisted
@@ -219,7 +219,7 @@ describe('loadEngine', () => {
     const { archJsonHash } = await writeScopeArchJson(scope1.key, archJson);
     await writeScopeArchIndex(scope1.key, archJson, archJsonHash);
 
-    const engine = await loadEngine(tmpDir);
+    const { engine } = await loadEngine(tmpDir);
     expect(engine.findEntity('Alpha')).toHaveLength(1);
   });
 
@@ -233,7 +233,7 @@ describe('loadEngine', () => {
     const staleIndex = buildArchIndex(archJson, 'wrong-hash');
     await fs.writeJson(path.join(scopeDir, 'arch-index.json'), staleIndex);
 
-    const engine = await loadEngine(tmpDir);
+    const { engine } = await loadEngine(tmpDir);
     // Engine should still work correctly after rebuild
     expect(engine.findEntity('Alpha')).toHaveLength(1);
 
@@ -259,7 +259,7 @@ describe('loadEngine', () => {
     const scopeDir = path.join(tmpDir, 'query', scope1.key);
     await fs.writeFile(path.join(scopeDir, 'arch-index.json'), 'not valid json{{{', 'utf-8');
 
-    const engine = await loadEngine(tmpDir);
+    const { engine } = await loadEngine(tmpDir);
     expect(engine.findEntity('Alpha')).toHaveLength(1);
   });
 });

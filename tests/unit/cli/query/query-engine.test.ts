@@ -6,6 +6,7 @@ import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { PackageGraph } from '@/types/extensions/go-atlas.js';
 import type { PackageCoverage, TestAnalysis } from '@/types/extensions/test-analysis.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -170,7 +171,7 @@ describe('QueryEngine', () => {
   describe('getDependencies', () => {
     it('returns one-hop dependencies', () => {
       const engine = createEngine(baseArchJson);
-      const results = engine.getDependencies('Alpha');
+      const results = engine.relationQueryService.getDependencies('Alpha');
       const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).toContain('C');
@@ -180,7 +181,7 @@ describe('QueryEngine', () => {
     it('returns two-hop dependencies with depth=2', () => {
       const engine = createEngine(twoHopArchJson);
       // A → B → C, D is disconnected
-      const results = engine.getDependencies('Alpha', 2);
+      const results = engine.relationQueryService.getDependencies('Alpha', 2);
       const ids = results.map((e) => e.id);
       expect(ids).toContain('B'); // hop 1
       expect(ids).toContain('C'); // hop 2
@@ -190,7 +191,7 @@ describe('QueryEngine', () => {
     it('does not infinite loop with cycles', () => {
       const engine = createEngine(cyclicArchJson);
       // A → B → C → A (cycle), depth=5
-      const results = engine.getDependencies('Alpha', 5);
+      const results = engine.relationQueryService.getDependencies('Alpha', 5);
       expect(Array.isArray(results)).toBe(true);
       // Should find B and C but not loop
       const ids = results.map((e) => e.id);
@@ -202,7 +203,7 @@ describe('QueryEngine', () => {
     it('clamps depth to maximum of 5', () => {
       const engine = createEngine(twoHopArchJson);
       // depth=100 should be clamped to 5 — still finds B and C
-      const results = engine.getDependencies('Alpha', 100);
+      const results = engine.relationQueryService.getDependencies('Alpha', 100);
       const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
       expect(ids).toContain('C');
@@ -210,7 +211,7 @@ describe('QueryEngine', () => {
 
     it('clamps depth to minimum of 1', () => {
       const engine = createEngine(twoHopArchJson);
-      const results = engine.getDependencies('Alpha', 0);
+      const results = engine.relationQueryService.getDependencies('Alpha', 0);
       // depth clamped to 1, should find B only (one hop)
       const ids = results.map((e) => e.id);
       expect(ids).toContain('B');
@@ -219,7 +220,7 @@ describe('QueryEngine', () => {
 
     it('returns empty array for unknown entity name', () => {
       const engine = createEngine(baseArchJson);
-      const results = engine.getDependencies('NonExistent');
+      const results = engine.relationQueryService.getDependencies('NonExistent');
       expect(results).toHaveLength(0);
     });
   });
@@ -228,7 +229,7 @@ describe('QueryEngine', () => {
     it('returns reverse direction (who depends on entity)', () => {
       const engine = createEngine(baseArchJson);
       // B is depended on by A (dependency) and C (implementation)
-      const results = engine.getDependents('Beta');
+      const results = engine.relationQueryService.getDependents('Beta');
       const ids = results.map((e) => e.id);
       expect(ids).toContain('A');
       expect(ids).toContain('C');
@@ -237,7 +238,7 @@ describe('QueryEngine', () => {
     it('returns multi-hop dependents with depth=2', () => {
       const engine = createEngine(twoHopArchJson);
       // A → B → C; dependents of Gamma (C): B at hop 1, A at hop 2
-      const results = engine.getDependents('Gamma', 2);
+      const results = engine.relationQueryService.getDependents('Gamma', 2);
       const ids = results.map((e) => e.id);
       expect(ids).toContain('B'); // hop 1
       expect(ids).toContain('A'); // hop 2
@@ -247,7 +248,7 @@ describe('QueryEngine', () => {
   describe('findImplementers', () => {
     it('returns only entities with implementation relation', () => {
       const engine = createEngine(baseArchJson);
-      const results = engine.findImplementers('Beta');
+      const results = engine.relationQueryService.findImplementers('Beta');
       const ids = results.map((e) => e.id);
       expect(ids).toContain('C'); // C implements B
       expect(ids).not.toContain('A'); // A has dependency on B, not implementation
@@ -255,7 +256,7 @@ describe('QueryEngine', () => {
 
     it('returns empty for entity with no implementers', () => {
       const engine = createEngine(baseArchJson);
-      const results = engine.findImplementers('Alpha');
+      const results = engine.relationQueryService.findImplementers('Alpha');
       expect(results).toHaveLength(0);
     });
   });
@@ -263,14 +264,14 @@ describe('QueryEngine', () => {
   describe('findSubclasses', () => {
     it('returns only entities with inheritance relation', () => {
       const engine = createEngine(inheritanceArchJson);
-      const results = engine.findSubclasses('Alpha');
+      const results = engine.relationQueryService.findSubclasses('Alpha');
       const ids = results.map((e) => e.id);
       expect(ids).toContain('C'); // C inherits A
     });
 
     it('returns empty when no inheritance exists', () => {
       const engine = createEngine(baseArchJson);
-      const results = engine.findSubclasses('Alpha');
+      const results = engine.relationQueryService.findSubclasses('Alpha');
       expect(results).toHaveLength(0);
     });
   });
@@ -481,24 +482,24 @@ describe('QueryEngine', () => {
   // Group A: getAtlasLayer() tests
   // ---------------------------------------------------------------------------
 
-  describe('getAtlasLayer', () => {
+  describe('getAtlasLayer (via ExtensionAccessor)', () => {
     it('returns the PackageGraph when Atlas extension has a package layer', () => {
-      const engine = createEngine(goAtlasArchJson);
-      const layer = engine.getAtlasLayer('package');
+      const ext = new ExtensionAccessor(goAtlasArchJson);
+      const layer = ext.getAtlasLayer('package');
       expect(layer).toBeDefined();
       expect(layer.nodes).toHaveLength(2);
       expect(layer.edges).toHaveLength(1);
     });
 
     it('returns undefined for a layer absent from the fixture (flow)', () => {
-      const engine = createEngine(goAtlasArchJson);
-      const layer = engine.getAtlasLayer('flow');
+      const ext = new ExtensionAccessor(goAtlasArchJson);
+      const layer = ext.getAtlasLayer('flow');
       expect(layer).toBeUndefined();
     });
 
     it('returns undefined when ArchJSON has no Atlas extension', () => {
-      const engine = createEngine(baseArchJson); // TypeScript, no extensions
-      const layer = engine.getAtlasLayer('package');
+      const ext = new ExtensionAccessor(baseArchJson); // TypeScript, no extensions
+      const layer = ext.getAtlasLayer('package');
       expect(layer).toBeUndefined();
     });
   });

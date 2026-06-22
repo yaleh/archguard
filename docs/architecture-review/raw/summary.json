@@ -1,0 +1,977 @@
+{
+  "totalEntities": 524,
+  "totalRelations": 1457,
+  "totalPackages": 194,
+  "packages": [
+    {
+      "name": "types/extensions/go-atlas",
+      "entities": 22,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/types",
+      "entities": 21,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/template-shared",
+      "entities": 17,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/types",
+      "entities": 17,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/types",
+      "entities": 12,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/types",
+      "entities": 12,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/generator-formatting",
+      "entities": 11,
+      "methods": 0
+    },
+    {
+      "name": "types/index",
+      "entities": 11,
+      "methods": 0
+    },
+    {
+      "name": "types/config-diagram",
+      "entities": 10,
+      "methods": 0
+    },
+    {
+      "name": "cli/git-history/git-log-reader",
+      "entities": 9,
+      "methods": 0
+    },
+    {
+      "name": "cli/git-history/history-aggregator",
+      "entities": 8,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/types",
+      "entities": 8,
+      "methods": 0
+    },
+    {
+      "name": "types/extensions/test-analysis",
+      "entities": 8,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/language-plugin",
+      "entities": 7,
+      "methods": 0
+    },
+    {
+      "name": "core/query/query-engine",
+      "entities": 7,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/types",
+      "entities": 7,
+      "methods": 0
+    },
+    {
+      "name": "types/git-history",
+      "entities": 7,
+      "methods": 0
+    },
+    {
+      "name": "analysis/snapshot-store",
+      "entities": 6,
+      "methods": 0
+    },
+    {
+      "name": "cli/git-history/history-query",
+      "entities": 6,
+      "methods": 0
+    },
+    {
+      "name": "cli/progress/index",
+      "entities": 6,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/errors",
+      "entities": 6,
+      "methods": 0
+    },
+    {
+      "name": "parser/parallel-parser",
+      "entities": 6,
+      "methods": 0
+    },
+    {
+      "name": "cli/cache/diagram-manifest",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/errors/index",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/mcp-server",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/query/engine-loader",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/query/query-artifacts",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/default-scope-planner",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/output-path-resolver",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/gopls-client",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/types",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "types/extensions/ts-analysis",
+      "entities": 5,
+      "methods": 0
+    },
+    {
+      "name": "analysis/fitness/rule-types",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "cli/cache/cache-manager",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/query",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/tools/atlas-analytics-tools",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/project-language-detector",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/project-structure-detector",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/validation",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "core/query/arch-metrics",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/render-worker-pool",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "types/extensions/project-semantics",
+      "entities": 4,
+      "methods": 0
+    },
+    {
+      "name": "analysis/snapshot-diff",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "analysis/test-analyzer",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/analyze/normalize-to-diagrams",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/analyze/run-analysis",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/git-history/history-loader",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/diagram-processor",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/query/query-manifest",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/types",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/cpp-project-structure-detector",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "core/query/output-scope-filter",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/diagram-generator",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/ts-module-graph-renderer",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/go-mod-resolver",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "plugins/shared/mapper-utils",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "utils/cli-detector",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "utils/tsconfig-finder",
+      "entities": 3,
+      "methods": 0
+    },
+    {
+      "name": "analysis/fitness/rule-evaluator",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/cache/arch-json-disk-cache",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/cache/render-hash-cache",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/config-loader",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/analyze-tool",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/arch-json-provider-types",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/arch-json-utils",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/progress/parallel-progress",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/file-discovery-service",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/dependency",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/parser",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "core/plugin-registry",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/post-process-svg",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/progress",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "parser/typescript-parser",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/builders/flow-graph-builder",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/dependency-extractor",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/index",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/source-scope",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/tree-sitter-bridge",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/maven-crossmodule-parser",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/dependency-extractor",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/import-extractor",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/typescript/builders/module-graph-builder",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "plugins/typescript/index",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "types/config-global",
+      "entities": 2,
+      "methods": 0
+    },
+    {
+      "name": "analysis/fitness/dependency-checker",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "analysis/gini",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "analysis/metric-vector-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "analysis/project-semantics-loader",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "analysis/test-coverage-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "analysis/test-issue-detector",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/analyze",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/cache",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/check",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/diff",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/init",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/commands/mcp",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/git-history/history-writer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/tools/call-graph-tools",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/tools/git-history-analyze-tool",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/tools/git-history-tools",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/mcp/tools/test-analysis-tools",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/arch-json-provider",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/diagram-output-router",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/diagram-pipeline-runner",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/query-scope-collector",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/test-coverage-writer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/processors/worker-pool-factory",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/canonicalize-arch-json",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/diagram-index-generator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/java-project-structure-detector",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/kotlin-project-structure-detector",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "cli/utils/test-output-writer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/entity-type-registry",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/parser-facade",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/interfaces/renderer-facade",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/arch-index-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/arch-index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/edge-list-serializer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/entity-query-service",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/extension-accessor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "core/query/relation-query-service",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/auto-repair",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/comment-generator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/cpp-package-flowchart-generator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/external-dependencies",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/generator-grouping",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/generator-validation",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/generator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/grouper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/renderer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/test-coverage-renderer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/validation-pipeline",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/validator-parse",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/validator-quality",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/validator-render",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "mermaid/validator-structural",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/archjson-aggregator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/base-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/call-edge-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/class-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/enum-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/errors",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/function-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/interface-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/metrics-calculator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/parse-cache",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "parser/relation-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/archjson-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/builders/class-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/builders/header-merger",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/cpp-type-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/dependency-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/cpp/tree-sitter-bridge",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/archjson-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/behavior-analyzer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/builders/capability-graph-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/builders/goroutine-topology-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/builders/i-atlas-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/builders/package-graph-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/framework-detector",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/atlas-renderer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/capability-mermaid-template",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/flow-mermaid-template",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/goroutine-mermaid-template",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/mermaid-templates",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/atlas/renderers/package-mermaid-template",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/go-atlas-coordinator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/go-mod-reader",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/go-parse-coordinator",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/go-test-analyzer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/gopls-interface-resolver",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/golang/interface-matcher",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/archjson-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/dependency-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/java/tree-sitter-bridge",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/archjson-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/builders/class-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/builders/function-builder",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/builders/import-resolver",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/kotlin-type-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/kotlin/tree-sitter-bridge",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/archjson-mapper",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/dependency-extractor",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/python/tree-sitter-bridge",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "plugins/typescript/typescript-analyzer",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "types/config-cli",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "types/config-mermaid",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "types/extensions/index",
+      "entities": 1,
+      "methods": 0
+    },
+    {
+      "name": "types/metric-vector",
+      "entities": 1,
+      "methods": 0
+    }
+  ]
+}

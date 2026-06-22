@@ -16,6 +16,7 @@ import type { ArchJSONExtensions, TestAnalysis } from '@/types/extensions.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTestAnalysisTools } from '@/cli/mcp/tools/test-analysis-tools.js';
 import { loadEngine, readManifest } from '@/cli/query/engine-loader.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
@@ -85,7 +86,7 @@ const sampleAnalysis: TestAnalysis = {
 };
 
 /** Engine with test analysis containing 0 test files — simulates src-only scope */
-function createEngineWithZeroTestFiles(): QueryEngine {
+function createEngineWithZeroTestFiles(): { engine: QueryEngine; archJson: ArchJSON } {
   const emptyAnalysis: TestAnalysis = {
     ...sampleAnalysis,
     testFiles: [],
@@ -107,11 +108,12 @@ function createEngineWithZeroTestFiles(): QueryEngine {
     extensions,
   };
   const archIndex = buildArchIndex(archJson, 'hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
 }
 
 /** Engine with test analysis containing test files */
-function createEngineWithTestFiles(): QueryEngine {
+function createEngineWithTestFiles(): { engine: QueryEngine; archJson: ArchJSON } {
   const extensions: ArchJSONExtensions = { testAnalysis: sampleAnalysis };
   const archJson: ArchJSON = {
     version: '1.1',
@@ -123,11 +125,12 @@ function createEngineWithTestFiles(): QueryEngine {
     extensions,
   };
   const archIndex = buildArchIndex(archJson, 'hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
 }
 
 /** Engine with no test analysis at all */
-function createEngineWithoutAnalysis(): QueryEngine {
+function createEngineWithoutAnalysis(): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson: ArchJSON = {
     version: '1.1',
     language: 'typescript',
@@ -137,7 +140,12 @@ function createEngineWithoutAnalysis(): QueryEngine {
     relations: [],
   };
   const archIndex = buildArchIndex(archJson, 'hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
+}
+
+function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
+  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry };
 }
 
 function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string, Function> {
@@ -169,7 +177,7 @@ beforeEach(() => {
 
 describe('38D — diagnostic when totalTestFiles is 0', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithZeroTestFiles());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithZeroTestFiles()));
     // readManifest returns scopes listing so we can show them in diagnostic
     readManifestMock.mockResolvedValue({
       version: '1.1',
@@ -262,7 +270,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
 
 describe('38D — scope parameter threading', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithTestFiles());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithTestFiles()));
   });
 
   it('archguard_detect_test_patterns threads scope to loadEngine', async () => {
@@ -313,7 +321,7 @@ describe('38D — scope parameter threading', () => {
 
 describe('38D — normal response when test data exists', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithTestFiles());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithTestFiles()));
   });
 
   it('archguard_detect_test_patterns returns frameworks when data present', async () => {
@@ -355,7 +363,7 @@ describe('38D — normal response when test data exists', () => {
 
 describe('38D — diagnostic fallback when readManifest fails', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithZeroTestFiles());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithZeroTestFiles()));
     readManifestMock.mockRejectedValue(new Error('No query data found'));
   });
 

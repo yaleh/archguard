@@ -1,0 +1,18 @@
+{
+  "threshold": {
+    "maxFanout": 20,
+    "maxCoupling": 50
+  },
+  "godPackages": [
+    {
+      "name": "cli",
+      "fanin": 32,
+      "fanout": 95
+    },
+    {
+      "name": "plugins",
+      "fanin": 18,
+      "fanout": 68
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+project_name: "ArchGuard"
+default_status: "Basic: Proposal"
+statuses: ["Epic: Proposal", "Epic: Plan", "Epic: Backlog", "Epic: Ready", "Epic: Decomposing", "Epic: Awaiting Children", "Epic: Evaluating", "Epic: Done", "Epic: Needs Human", "Basic: Proposal", "Basic: Plan", "Basic: Backlog", "Basic: Ready", "Basic: In Progress", "Basic: Done", "Basic: Needs Human"]
+labels: ["bug", "enhancement", "infra", "docs", "high-priority", "blocked"]
+date_format: yyyy-mm-dd
+max_column_width: 20
+auto_open_browser: true
+default_port: 6420
+remote_operations: true
+auto_commit: false
+filesystem_only: false
+bypass_git_hooks: false
+check_active_branches: true
+active_branch_days: 30
+task_prefix: "task"

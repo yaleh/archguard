@@ -234,7 +234,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
 
         // Phase 1: look up with structured format so the result is always Entity[]
         // and safe for .filter(). Edge-list serialization is applied in Phase 2.
@@ -297,12 +297,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.getDependencies(name, depth, queryOptions), verbose);
+        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.getDependencies(name, depth), queryOptions), verbose);
         return textResponse(serializeResult(payload));
       });
     }
@@ -323,12 +323,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.getDependents(name, depth, queryOptions), verbose);
+        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.getDependents(name, depth), queryOptions), verbose);
         return textResponse(serializeResult(payload));
       });
     }
@@ -348,12 +348,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.findImplementers(name, queryOptions), verbose);
+        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.findImplementers(name), queryOptions), verbose);
         return textResponse(serializeResult(payload));
       });
     }
@@ -373,12 +373,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.findSubclasses(name, queryOptions), verbose);
+        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.findSubclasses(name), queryOptions), verbose);
         return textResponse(serializeResult(payload));
       });
     }
@@ -398,7 +398,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, filePath, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
@@ -421,7 +421,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         return textResponse(JSON.stringify(engine.getCycles(), null, 2));
       });
     }
@@ -439,7 +439,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         return textResponse(JSON.stringify(engine.getSummary(), null, 2));
       });
     }
@@ -466,9 +466,9 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, layer, format }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { extensionAccessor } = await loadEngine(path.join(root, '.archguard'), scope);
 
-        if (!engine.hasAtlasExtension()) {
+        if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
             'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
               `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
@@ -481,7 +481,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           );
         }
 
-        const data = engine.getAtlasLayer(layer as any);
+        const data = extensionAccessor.getAtlasLayer(layer as any);
 
         if (data === undefined) {
           return textResponse(
@@ -547,7 +547,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, depth, sortBy, minFileCount, minLoc, topN }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const engine = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         const result: PackageStatsResult = engine.getPackageStats(depth);
 
         let packages = result.packages;

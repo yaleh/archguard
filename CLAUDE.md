@@ -323,8 +323,40 @@ progress.succeed('Done');
 - **Parallel Parsing**: Configurable concurrency (default: CPU cores)
 - **Targets**: <10s for 30 files, ~4 files/sec, <300MB memory
 
+## Autonomous Task Queue
+
+Tasks are created by skills and executed autonomously by the L0 worker:
+
+```bash
+/backlog-setup                          # one-time: initialize Kanban columns
+/feature-to-backlog <feature>           # dev task: TDD plan + proposal/plan docs
+/task-to-backlog <topic>                # non-dev task: analysis, docs, research
+backlog task edit TASK-N --status Ready # approve and queue
+/loop-backlog                           # start worker (self-schedules until session ends)
+```
+
+See `docs/dev-guide/backlog-workflow.md` for the full guide (columns, failure
+handling, worktree layout, configuration).
+
+### L0 Config (optional)
+
+Add to `CLAUDE.md` to override auto-detected defaults:
+
+```markdown
+## L0 Config
+
+test-cmd: npm test -- --run     # per-phase test runner
+test-all: npm test              # full suite
+worktree-symlinks: node_modules # dirs to symlink into worktree
+doc-path: docs                  # root for proposals/ and plans/
+```
+
+Without this section, skills auto-detect from `package.json` / `go.mod` /
+`Cargo.toml` / `pyproject.toml`.
+
 ## Documentation
 
 - `docs/dev-guide/architecture.md` - System architecture
 - `docs/dev-guide/specs.md` - Requirements and specifications
+- `docs/dev-guide/backlog-workflow.md` - Autonomous task queue guide
 - `docs/user-guide/migration-v2.0.md` - Migration guide from PlantUML to Mermaid

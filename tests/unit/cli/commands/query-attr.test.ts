@@ -64,6 +64,10 @@ function makeEngine(entities: Entity[]): QueryEngine {
   return new QueryEngine({ archJson, archIndex, scopeEntry });
 }
 
+function wrapEngine(engine: QueryEngine) {
+  return { engine, extensionAccessor: {} as any, scopeEntry };
+}
+
 const loadEngineMock = vi.mocked(loadEngine);
 
 beforeEach(() => {
@@ -164,7 +168,7 @@ describe('queryHandler routing', () => {
     const engine = makeEngine(entities);
     const findByTypeSpy = vi.spyOn(engine, 'findByType');
     const findByTypeAndAttrSpy = vi.spyOn(engine, 'findByTypeAndAttr');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     await runQuery(['--type', 'lock_domain', '--format', 'json']);
 
@@ -176,7 +180,7 @@ describe('queryHandler routing', () => {
     const entities = [makeEntity('e1', 'LockDomain', 'lock_domain', 'src/foo.ts', { irq_safe: true })];
     const engine = makeEngine(entities);
     const findByTypeAndAttrSpy = vi.spyOn(engine, 'findByTypeAndAttr');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     await runQuery(['--type', 'lock_domain', '--attr', 'irq_safe=true', '--format', 'json']);
 
@@ -187,7 +191,7 @@ describe('queryHandler routing', () => {
     const entities = [makeEntity('e1', 'Worker', 'class', 'src/w.ts', { execution_context: 'irq' })];
     const engine = makeEngine(entities);
     const findByAttrSpy = vi.spyOn(engine, 'findByAttr');
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     // Note: --attr alone without --type is validated to require a primary option.
     // We bypass this via --type to avoid validation error, but test the attr routing.
@@ -236,7 +240,7 @@ describe('queryHandler routing', () => {
       makeEntity('e3', 'LockC', 'lock_domain', 'src/c.ts', { irq_safe: false, priority: 1 }),
     ];
     const engine = makeEngine(entities);
-    loadEngineMock.mockResolvedValue(engine);
+    loadEngineMock.mockResolvedValue(wrapEngine(engine));
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 

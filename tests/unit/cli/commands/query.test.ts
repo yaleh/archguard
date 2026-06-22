@@ -92,6 +92,10 @@ function createTestEngine(scope: QueryScopeEntry = parsedScope): QueryEngine {
   return new QueryEngine({ archJson, archIndex, scopeEntry: scope });
 }
 
+function wrapEngine(engine: QueryEngine, scope: QueryScopeEntry = parsedScope) {
+  return { engine, extensionAccessor: {} as any, scopeEntry: scope, relationQueryService: engine.relationQueryService };
+}
+
 // -- Console capture --
 
 let consoleOutput: string[];
@@ -193,21 +197,21 @@ describe('query --list-scopes', () => {
 
 describe('query --entity', () => {
   it('finds entity and outputs text', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager');
     const output = consoleOutput.join('\n');
     expect(output).toContain('CacheManager');
   });
 
   it('reports when not found', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'NonExistent');
     const output = consoleOutput.join('\n');
     expect(output).toContain('none');
   });
 
   it('outputs summary JSON by default', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -217,7 +221,7 @@ describe('query --entity', () => {
   });
 
   it('outputs full entities when --verbose is set', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--format', 'json', '--verbose');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -229,26 +233,26 @@ describe('query --entity', () => {
 describe('query --deps-of', () => {
   it('calls getDependencies', async () => {
     const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getDependencies');
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    const spy = vi.spyOn(engine.relationQueryService, 'getDependencies');
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--deps-of', 'DiagramProcessor', '--depth', '2');
-    expect(spy).toHaveBeenCalledWith('DiagramProcessor', 2, undefined);
+    expect(spy).toHaveBeenCalledWith('DiagramProcessor', 2);
   });
 });
 
 describe('query --used-by', () => {
   it('calls getDependents', async () => {
     const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getDependents');
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    const spy = vi.spyOn(engine.relationQueryService, 'getDependents');
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--used-by', 'CacheManager');
-    expect(spy).toHaveBeenCalledWith('CacheManager', 1, undefined);
+    expect(spy).toHaveBeenCalledWith('CacheManager', 1);
   });
 });
 
 describe('query --implementers-of', () => {
   it('finds implementers', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--implementers-of', 'ILanguagePlugin');
     const output = consoleOutput.join('\n');
     expect(output).toContain('TypeScriptPlugin');
@@ -257,7 +261,7 @@ describe('query --implementers-of', () => {
 
 describe('query --file', () => {
   it('finds entities in file', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--file', 'src/cache.ts');
     const output = consoleOutput.join('\n');
     expect(output).toContain('CacheManager');
@@ -266,7 +270,7 @@ describe('query --file', () => {
 
 describe('query --cycles', () => {
   it('shows cycles', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--cycles');
     const output = consoleOutput.join('\n');
     expect(output).toContain('CacheManager');
@@ -276,7 +280,7 @@ describe('query --cycles', () => {
 
 describe('query --summary', () => {
   it('shows summary', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     expect(output).toContain('5'); // entities
@@ -286,7 +290,7 @@ describe('query --summary', () => {
 
 describe('query --type', () => {
   it('filters by type', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--type', 'interface');
     const output = consoleOutput.join('\n');
     expect(output).toContain('ILanguagePlugin');
@@ -296,7 +300,7 @@ describe('query --type', () => {
 
 describe('query --orphans', () => {
   it('finds orphans', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--orphans');
     const output = consoleOutput.join('\n');
     expect(output).toContain('OrphanClass');
@@ -305,7 +309,7 @@ describe('query --orphans', () => {
 
 describe('query --in-cycles', () => {
   it('finds entities in cycles', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--in-cycles');
     const output = consoleOutput.join('\n');
     expect(output).toContain('CacheManager');
@@ -316,7 +320,7 @@ describe('query --in-cycles', () => {
 
 describe('query --format json', () => {
   it('outputs JSON for --entity', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -325,7 +329,7 @@ describe('query --format json', () => {
   });
 
   it('outputs JSON for --summary', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -335,7 +339,7 @@ describe('query --format json', () => {
 
 describe('derived scope warning', () => {
   it('shows note when scope is derived', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine(derivedScope));
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(derivedScope), derivedScope));
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     expect(output).toContain('derived');
@@ -354,35 +358,35 @@ describe('error handling', () => {
   });
 
   it('passes --arch-dir and --scope to loadEngine', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'Foo', '--arch-dir', '/custom', '--scope', 'my-scope');
     expect(resolveArchDir).toHaveBeenCalledWith('/custom');
     expect(loadEngine).toHaveBeenCalledWith(expect.any(String), 'my-scope');
   });
 
   it('rejects conflicting primary query options', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'Foo', '--summary');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Specify exactly one primary query option');
   });
 
   it('rejects invalid depth values', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--deps-of', 'Foo', '--depth', 'abc');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --depth');
   });
 
   it('rejects out-of-range depth values', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--deps-of', 'Foo', '--depth', '7');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --depth');
   });
 
   it('rejects invalid threshold values', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--high-coupling', '--threshold', 'abc');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --threshold');
@@ -429,7 +433,7 @@ describe('query --package-stats', () => {
     const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
       makePackageStatsResult([{ package: 'src/cli', fileCount: 3 }])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats');
     expect(spy).toHaveBeenCalledWith(2);
   });
@@ -439,7 +443,7 @@ describe('query --package-stats', () => {
     const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
       makePackageStatsResult([{ package: 'src', fileCount: 5 }])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '3');
     expect(spy).toHaveBeenCalledWith(3);
   });
@@ -452,7 +456,7 @@ describe('query --package-stats', () => {
         { package: 'src/parser', fileCount: 2, entityCount: 5, methodCount: 8 },
       ])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats');
     const output = consoleOutput.join('\n');
     expect(output).toContain('src/cli');
@@ -466,7 +470,7 @@ describe('query --package-stats', () => {
     vi.spyOn(engine, 'getPackageStats').mockReturnValue(
       makePackageStatsResult([{ package: 'src/cli', fileCount: 4, entityCount: 10, methodCount: 5 }])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -483,7 +487,7 @@ describe('query --package-stats', () => {
         { package: 'small', fileCount: 1 },
       ])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-min-files', '5');
     const output = consoleOutput.join('\n');
     expect(output).toContain('big');
@@ -501,7 +505,7 @@ describe('query --package-stats', () => {
         true /* locAvailable */
       )
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-min-loc', '100');
     const output = consoleOutput.join('\n');
     expect(output).toContain('heavy');
@@ -519,7 +523,7 @@ describe('query --package-stats', () => {
         false /* locAvailable=false */
       )
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-min-loc', '9999');
     const output = consoleOutput.join('\n');
     // Neither should be filtered since loc is unavailable
@@ -536,7 +540,7 @@ describe('query --package-stats', () => {
         { package: 'c', fileCount: 3 },
       ])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-top', '2', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -551,7 +555,7 @@ describe('query --package-stats', () => {
         { package: 'few-files', fileCount: 2, entityCount: 50 },
       ])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-sort-by', 'fileCount', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -566,7 +570,7 @@ describe('query --package-stats', () => {
         { package: 'high-entities', fileCount: 1, entityCount: 100 },
       ])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-sort-by', 'entityCount', '--format', 'json');
     const output = consoleOutput.join('\n');
     const parsed = JSON.parse(output);
@@ -578,14 +582,14 @@ describe('query --package-stats', () => {
     vi.spyOn(engine, 'getPackageStats').mockReturnValue(
       makePackageStatsResult([{ package: 'tiny', fileCount: 1 }])
     );
-    vi.mocked(loadEngine).mockResolvedValue(engine);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--package-stats-min-files', '999');
     const output = consoleOutput.join('\n');
     expect(output).toContain('No package statistics');
   });
 
   it('conflicts with other primary query options', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--package-stats', '--summary');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Specify exactly one primary query option');
@@ -594,7 +598,7 @@ describe('query --package-stats', () => {
 
 describe('query command Phase 85 options', () => {
   it('validates --output-scope: invalid value throws error', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary', '--output-scope', 'module');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --output-scope');
@@ -603,7 +607,7 @@ describe('query command Phase 85 options', () => {
 
   it('validates --output-scope: valid values do not throw', async () => {
     for (const scope of ['package', 'class', 'method']) {
-      vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+      vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
       consoleErrorOutput = [];
       await runQuery('--summary', '--output-scope', scope);
       expect(consoleErrorOutput.join('\n')).not.toContain('Invalid --output-scope');
@@ -611,7 +615,7 @@ describe('query command Phase 85 options', () => {
   });
 
   it('validates --query-format: invalid value throws error', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary', '--query-format', 'csv');
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(consoleErrorOutput.join('\n')).toContain('Invalid --query-format');
@@ -620,7 +624,7 @@ describe('query command Phase 85 options', () => {
 
   it('validates --query-format: valid values do not throw', async () => {
     for (const fmt of ['structured', 'edge-list']) {
-      vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+      vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
       consoleErrorOutput = [];
       await runQuery('--summary', '--query-format', fmt);
       expect(consoleErrorOutput.join('\n')).not.toContain('Invalid --query-format');
@@ -635,7 +639,7 @@ describe('query command Phase 85 options', () => {
   });
 
   it('formatSummary prints relationCountByType when present', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     // The test engine has relations: dependency (x3) and implementation (x1)
@@ -645,14 +649,14 @@ describe('query command Phase 85 options', () => {
   });
 
   it('formatSummary prints topByMethodCount when present', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     expect(output).toContain('Top by method count:');
   });
 
   it('formatSummary prints topByOutDegree when present', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     expect(output).toContain('Top by out-degree:');
@@ -661,14 +665,14 @@ describe('query command Phase 85 options', () => {
 
 describe('query command --output-scope / edge-list safety (Phase 101)', () => {
   it('--entity --output-scope method does not crash (structured)', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--output-scope', 'method');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     expect(consoleOutput.join('\n')).toContain('CacheManager');
   });
 
   it('--entity --output-scope method --query-format edge-list does not crash', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--output-scope', 'method', '--query-format', 'edge-list', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
     // JSON output should be edge-list shape { entities, relations }
@@ -679,7 +683,7 @@ describe('query command --output-scope / edge-list safety (Phase 101)', () => {
   });
 
   it('--entity --output-scope package does not crash (regression)', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(createTestEngine());
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--output-scope', 'package');
     expect(process.exit).not.toHaveBeenCalledWith(1);
   });

@@ -13,6 +13,15 @@ import type { ArchIndex } from './arch-index.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { atomicWriteFile } from './query-artifacts.js';
 import { QueryEngine } from './query-engine.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
+import { RelationQueryService } from '@/core/query/relation-query-service.js';
+
+export interface QueryContext {
+  engine: QueryEngine;
+  extensionAccessor: ExtensionAccessor;
+  scopeEntry: QueryScopeEntry;
+  relationQueryService: RelationQueryService;
+}
 
 /**
  * Resolve the .archguard directory path.
@@ -109,7 +118,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
  * 3. Loads or rebuilds arch-index.json (validates via SHA-256 hash)
  * 4. Returns a ready-to-use QueryEngine
  */
-export async function loadEngine(archDir: string, scopeKey?: string): Promise<QueryEngine> {
+export async function loadEngine(archDir: string, scopeKey?: string): Promise<QueryContext> {
   const queryRoot = archDir;
   const scopeEntry = await resolveScope(queryRoot, scopeKey);
 
@@ -162,5 +171,8 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
     }
   }
 
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  const extensionAccessor = new ExtensionAccessor(archJson);
+  const relationQueryService = engine.relationQueryService;
+  return { engine, extensionAccessor, scopeEntry, relationQueryService };
 }

@@ -236,7 +236,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
 
     // Load engine
     const archDir = resolveArchDir(opts.archDir);
-    const engine = await loadEngine(archDir, opts.scope);
+    const { engine, extensionAccessor, relationQueryService } = await loadEngine(archDir, opts.scope);
     const isJson = opts.format === 'json';
     const scopeEntry = engine.getScopeEntry();
 
@@ -264,23 +264,23 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) formatEntityList(entities, `Entities matching "${opts.entity}"`);
     } else if (opts.depsOf) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
-      const raw = engine.getDependencies(opts.depsOf, depth, queryOptions);
+      const raw = engine.applyOutputOptions(relationQueryService.getDependencies(opts.depsOf, depth), queryOptions);
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependencies of "${opts.depsOf}" (depth: ${depth})`);
     } else if (opts.usedBy) {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
-      const raw = engine.getDependents(opts.usedBy, depth, queryOptions);
+      const raw = engine.applyOutputOptions(relationQueryService.getDependents(opts.usedBy, depth), queryOptions);
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Dependents of "${opts.usedBy}" (depth: ${depth})`);
     } else if (opts.implementersOf) {
-      const raw = engine.findImplementers(opts.implementersOf, queryOptions);
+      const raw = engine.applyOutputOptions(relationQueryService.findImplementers(opts.implementersOf), queryOptions);
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Implementers of "${opts.implementersOf}"`);
     } else if (opts.subclassesOf) {
-      const raw = engine.findSubclasses(opts.subclassesOf, queryOptions);
+      const raw = engine.applyOutputOptions(relationQueryService.findSubclasses(opts.subclassesOf), queryOptions);
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Subclasses of "${opts.subclassesOf}"`);
@@ -335,7 +335,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) formatEntityList(entities, 'Entities in dependency cycles');
     } else if (opts.callers) {
       const callersDepth = parseBoundedInt(opts.callersDepth ?? '1', '--callers-depth', 1, 5);
-      const callers = engine.findCallers(opts.callers, callersDepth);
+      const callers = relationQueryService.findCallers(opts.callers, callersDepth);
       result = { entityName: opts.callers, depth: callersDepth, callers };
       if (!isJson) {
         console.log(`Callers of "${opts.callers}" (depth: ${callersDepth}):`);
@@ -348,11 +348,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
         }
       }
     } else if (opts.atlasLayer) {
-      if (!engine.hasAtlasExtension()) {
+      if (!extensionAccessor.hasAtlasExtension()) {
         console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
         process.exit(1);
       }
-      const layerData = engine.getAtlasLayer(opts.atlasLayer as any);
+      const layerData = extensionAccessor.getAtlasLayer(opts.atlasLayer as any);
       if (layerData === undefined) {
         console.error(`Error: Atlas layer "${opts.atlasLayer}" is empty or not generated.`);
         process.exit(1);
@@ -360,13 +360,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = layerData;
       if (!isJson) console.log(JSON.stringify(layerData, null, 2));
     } else if (opts.testPatterns) {
-      if (!engine.hasTestAnalysis()) {
+      if (!extensionAccessor.hasTestAnalysis()) {
         console.error(
           'Error: No test analysis data. Run archguard analyze with --include-tests first.'
         );
         process.exit(1);
       }
-      const analysis = engine.getTestAnalysis()!;
+      const analysis = extensionAccessor.getTestAnalysis()!;
       const frameworks = [...new Set(analysis.testFiles.flatMap((f) => f.frameworks))];
       result = {
         patternConfigSource: analysis.patternConfigSource,
@@ -375,30 +375,30 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.testIssues) {
-      if (!engine.hasTestAnalysis()) {
+      if (!extensionAccessor.hasTestAnalysis()) {
         console.error(
           'Error: No test analysis data. Run archguard analyze with --include-tests first.'
         );
         process.exit(1);
       }
-      const analysis = engine.getTestAnalysis()!;
+      const analysis = extensionAccessor.getTestAnalysis()!;
       const issues = opts.severity
         ? analysis.issues.filter((i) => i.severity === opts.severity)
         : analysis.issues;
       result = { issues };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.testMetrics) {
-      if (!engine.hasTestAnalysis()) {
+      if (!extensionAccessor.hasTestAnalysis()) {
         console.error(
           'Error: No test analysis data. Run archguard analyze with --include-tests first.'
         );
         process.exit(1);
       }
-      const analysis = engine.getTestAnalysis()!;
+      const analysis = extensionAccessor.getTestAnalysis()!;
       result = { ...analysis.metrics, packageCoverage: engine.getPackageCoverage() };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.entityCoverage) {
-      if (!engine.hasTestAnalysis()) {
+      if (!extensionAccessor.hasTestAnalysis()) {
         console.error(
           'Error: No test analysis data. Run archguard analyze with --include-tests first.'
         );
@@ -407,11 +407,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = engine.getEntityCoverage(opts.entityCoverage);
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.packageFanin) {
-      if (!engine.hasAtlasExtension()) {
+      if (!extensionAccessor.hasAtlasExtension()) {
         console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
         process.exit(1);
       }
-      const graph = engine.getAtlasLayer('package');
+      const graph = extensionAccessor.getAtlasLayer('package');
       if (!graph) {
         console.error('Error: No package data in Atlas package layer.');
         process.exit(1);
@@ -422,11 +422,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = { packages: enriched };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.packageFanout) {
-      if (!engine.hasAtlasExtension()) {
+      if (!extensionAccessor.hasAtlasExtension()) {
         console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
         process.exit(1);
       }
-      const graph = engine.getAtlasLayer('package');
+      const graph = extensionAccessor.getAtlasLayer('package');
       if (!graph) {
         console.error('Error: No package data in Atlas package layer.');
         process.exit(1);
@@ -437,11 +437,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = { packages: enriched };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.godPackages) {
-      if (!engine.hasAtlasExtension()) {
+      if (!extensionAccessor.hasAtlasExtension()) {
         console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
         process.exit(1);
       }
-      const graph = engine.getAtlasLayer('package');
+      const graph = extensionAccessor.getAtlasLayer('package');
       if (!graph) {
         console.error('Error: No package data in Atlas package layer.');
         process.exit(1);

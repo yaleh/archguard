@@ -15,6 +15,7 @@ import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTestAnalysisTools } from '@/cli/mcp/tools/test-analysis-tools.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
+import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
@@ -89,7 +90,7 @@ const sampleAnalysis: TestAnalysis = {
   },
 };
 
-function createEngineWithoutAnalysis(): QueryEngine {
+function createEngineWithoutAnalysis(): { engine: QueryEngine; archJson: ArchJSON } {
   const archJson: ArchJSON = {
     version: '1.1',
     language: 'typescript',
@@ -99,10 +100,11 @@ function createEngineWithoutAnalysis(): QueryEngine {
     relations: [],
   };
   const archIndex = buildArchIndex(archJson, 'hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
 }
 
-function createEngineWithAnalysis(): QueryEngine {
+function createEngineWithAnalysis(): { engine: QueryEngine; archJson: ArchJSON } {
   const extensions: ArchJSONExtensions = { testAnalysis: sampleAnalysis };
   const archJson: ArchJSON = {
     version: '1.1',
@@ -114,7 +116,18 @@ function createEngineWithAnalysis(): QueryEngine {
     extensions,
   };
   const archIndex = buildArchIndex(archJson, 'hash');
-  return new QueryEngine({ archJson, archIndex, scopeEntry });
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson };
+}
+
+function wrapEngine(
+  arg: { engine: QueryEngine; archJson: ArchJSON } | { extensionAccessor: Record<string, unknown> }
+) {
+  if ('archJson' in arg) {
+    return { engine: arg.engine, extensionAccessor: new ExtensionAccessor(arg.archJson), scopeEntry };
+  }
+  // Partial mock: caller supplies just the extensionAccessor stub
+  return { engine: {} as any, extensionAccessor: arg.extensionAccessor as any, scopeEntry };
 }
 
 function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string, Function> {
@@ -143,7 +156,7 @@ const NOT_ANALYZED_MSG =
 
 describe('test analysis MCP tools — no analysis present', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithoutAnalysis()));
   });
 
   it('archguard_get_test_issues returns NOT_ANALYZED_MSG', async () => {
@@ -176,7 +189,7 @@ describe('test analysis MCP tools — no analysis present', () => {
 
 describe('test analysis MCP tools — analysis present', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithAnalysis());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithAnalysis()));
   });
 
   it('archguard_get_test_issues returns all issues when no severity filter', async () => {
@@ -238,14 +251,16 @@ describe('test analysis MCP tools — analysis present', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_detect_test_patterns');
-    loadEngineMock.mockResolvedValueOnce({
-      hasTestAnalysis: () => true,
-      getTestAnalysis: () => ({
-        testFiles: [{ frameworks: ['junit4'] }],
-        metrics: { totalTestFiles: 1 },
-        patternConfigSource: 'auto',
-      }),
-    } as any);
+    loadEngineMock.mockResolvedValueOnce(wrapEngine({
+      extensionAccessor: {
+        hasTestAnalysis: () => true,
+        getTestAnalysis: () => ({
+          testFiles: [{ frameworks: ['junit4'] }],
+          metrics: { totalTestFiles: 1 },
+          patternConfigSource: 'auto',
+        }),
+      },
+    }));
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(Array.isArray(parsed.suggestedPatternConfig.assertionPatterns)).toBe(true);
@@ -267,14 +282,16 @@ describe('test analysis MCP tools — analysis present', () => {
 
   // pytest framework should suggest patterns that cover torch.testing.assert_close style calls
   it('archguard_detect_test_patterns: pytest framework suggests .assert style patterns', async () => {
-    loadEngineMock.mockResolvedValueOnce({
-      hasTestAnalysis: () => true,
-      getTestAnalysis: () => ({
-        testFiles: [{ frameworks: ['pytest'] }],
-        metrics: { totalTestFiles: 1 },
-        patternConfigSource: 'auto',
-      }),
-    } as any);
+    loadEngineMock.mockResolvedValueOnce(wrapEngine({
+      extensionAccessor: {
+        hasTestAnalysis: () => true,
+        getTestAnalysis: () => ({
+          testFiles: [{ frameworks: ['pytest'] }],
+          metrics: { totalTestFiles: 1 },
+          patternConfigSource: 'auto',
+        }),
+      },
+    }));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_detect_test_patterns');
@@ -352,7 +369,7 @@ describe('test analysis MCP tools — analysis present', () => {
 
 describe('test analysis MCP tools — no analysis present (metrics)', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithoutAnalysis()));
   });
 
   it('archguard_get_test_metrics returns NOT_ANALYZED_MSG when no analysis', async () => {
@@ -366,7 +383,7 @@ describe('test analysis MCP tools — no analysis present (metrics)', () => {
 
 describe('archguard_get_entity_coverage — no analysis present', () => {
   beforeEach(() => {
-    loadEngineMock.mockResolvedValue(createEngineWithoutAnalysis());
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngineWithoutAnalysis()));
   });
 
   it('archguard_get_entity_coverage returns NOT_ANALYZED_MSG when analysis absent', async () => {

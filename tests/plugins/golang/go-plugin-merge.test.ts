@@ -49,7 +49,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const { glob } = await import('glob');
     vi.mocked(glob).mockResolvedValue([serverFile, handlerFile] as any);
 
-    const bridge = (plugin as any).treeSitter;
+    const bridge = (plugin as any).coordinator.treeSitter;
     vi.spyOn(bridge, 'parseCode').mockImplementation(
       (_code: string, filePath: string): GoRawPackage => {
         if (filePath === serverFile) {
@@ -143,7 +143,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const { glob } = await import('glob');
     vi.mocked(glob).mockResolvedValue([handlerFile] as any);
 
-    const bridge = (plugin as any).treeSitter;
+    const bridge = (plugin as any).coordinator.treeSitter;
     vi.spyOn(bridge, 'parseCode').mockReturnValue({
       name: 'api',
       fullName: '',
@@ -187,7 +187,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const { glob } = await import('glob');
     vi.mocked(glob).mockResolvedValue([typesFile, userFile, authFile] as any);
 
-    const bridge = (plugin as any).treeSitter;
+    const bridge = (plugin as any).coordinator.treeSitter;
     vi.spyOn(bridge, 'parseCode').mockImplementation(
       (_code: string, filePath: string): GoRawPackage => {
         if (filePath === typesFile) {
@@ -306,7 +306,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
       throw new Error(`unexpected pattern: ${String(pattern)}`);
     });
 
-    const bridge = (plugin as any).treeSitter;
+    const bridge = (plugin as any).coordinator.treeSitter;
     const parseSpy = vi.spyOn(bridge, 'parseCode').mockImplementation(
       (_code: string, filePath: string): GoRawPackage => ({
         name: 'hub',
@@ -343,7 +343,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
     const { glob } = await import('glob');
     vi.mocked(glob).mockResolvedValue([file] as any);
 
-    const bridge = (plugin as any).treeSitter;
+    const bridge = (plugin as any).coordinator.treeSitter;
     const parseSpy = vi.spyOn(bridge, 'parseCode').mockImplementation(
       (_code: string, filePath: string): GoRawPackage => ({
         name: 'handler',

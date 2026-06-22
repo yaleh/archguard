@@ -87,7 +87,7 @@ describe('QueryEngine.findCallers()', () => {
       ];
       const engine = makeEngine(entities, relations);
 
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers).toHaveLength(2);
       const callerEntities = callers.map((c) => c.callerEntity).sort();
       expect(callerEntities).toEqual(['pkg.A', 'pkg.C']);
@@ -98,7 +98,7 @@ describe('QueryEngine.findCallers()', () => {
       const relations = [makeCallEdge('pkg.A', 'pkg.B', 'go', 'run', 'direct')];
       const engine = makeEngine(entities, relations);
 
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers[0].depth).toBe(1);
     });
 
@@ -109,7 +109,7 @@ describe('QueryEngine.findCallers()', () => {
       ];
       const engine = makeEngine(entities, relations);
 
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers).toHaveLength(0);
     });
   });
@@ -129,7 +129,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // Looking for callers of C
-      const callers = engine.findCallers('C', 2);
+      const callers = engine.relationQueryService.findCallers('C', 2);
       expect(callers).toHaveLength(2);
 
       const byEntity = Object.fromEntries(callers.map((c) => [c.callerEntity, c]));
@@ -142,7 +142,7 @@ describe('QueryEngine.findCallers()', () => {
       const relations = [makeCallEdge('pkg.A', 'pkg.B', 'invoke', 'handle', 'interface')];
       const engine = makeEngine(entities, relations);
 
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers[0].callType).toBe('interface');
     });
 
@@ -153,7 +153,7 @@ describe('QueryEngine.findCallers()', () => {
       ];
       const engine = makeEngine(entities, relations);
 
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers[0].callType).toBe('direct');
     });
   });
@@ -168,7 +168,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // Should terminate without throwing
-      const callers = engine.findCallers('B', 5);
+      const callers = engine.relationQueryService.findCallers('B', 5);
       // pkg.A calls B directly (depth 1)
       const depth1 = callers.filter((c) => c.callerEntity === 'pkg.A' && c.depth === 1);
       expect(depth1).toHaveLength(1);
@@ -187,7 +187,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // Only callers of B.doWork, not B.otherMethod
-      const callers = engine.findCallers('B.doWork', 1);
+      const callers = engine.relationQueryService.findCallers('B.doWork', 1);
       expect(callers).toHaveLength(1);
       expect(callers[0].callerEntity).toBe('pkg.A');
       expect(callers[0].callerMethod).toBe('x');
@@ -202,7 +202,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // No method filter → both callers returned
-      const callers = engine.findCallers('B', 1);
+      const callers = engine.relationQueryService.findCallers('B', 1);
       expect(callers).toHaveLength(2);
     });
 
@@ -214,7 +214,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // Entity name is just "Service", but target ID is "com.example.Service"
-      const callers = engine.findCallers('Service', 1);
+      const callers = engine.relationQueryService.findCallers('Service', 1);
       expect(callers).toHaveLength(1);
       expect(callers[0].callerEntity).toBe('com.example.Client');
     });
@@ -237,7 +237,7 @@ describe('QueryEngine.findCallers()', () => {
       const engine = makeEngine(entities, relations);
 
       // depth=10 should be clamped to 5 → only 5 levels of callers for G
-      const callers = engine.findCallers('G', 10);
+      const callers = engine.relationQueryService.findCallers('G', 10);
       const depths = callers.map((c) => c.depth);
       expect(Math.max(...depths)).toBeLessThanOrEqual(5);
     });
@@ -248,7 +248,7 @@ describe('QueryEngine.findCallers()', () => {
       const entities = [makeEntity('pkg.A', 'A')];
       const engine = makeEngine(entities, []);
 
-      const callers = engine.findCallers('A', 1);
+      const callers = engine.relationQueryService.findCallers('A', 1);
       expect(callers).toHaveLength(0);
     });
   });
