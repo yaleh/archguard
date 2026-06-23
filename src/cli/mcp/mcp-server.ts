@@ -387,6 +387,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_file_entities',
+    // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return all entities defined in..."
     'Get all entities defined in a specific file. Use outputScope param to control result granularity.',
     {
       projectRoot: projectRootParam,
@@ -506,6 +507,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_package_stats',
+    // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return per-package volume metrics..."
     'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped.',
     {
       projectRoot: projectRootParam,

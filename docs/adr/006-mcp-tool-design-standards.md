@@ -339,6 +339,21 @@ try {
 
 ---
 
+## Mechanical Check
+
+Automated compliance check via `npm run check:adr` (scripts/check-adr.ts):
+
+- **ADR-006 rule**: scans `src/cli/mcp/**/*.ts` for `server.tool(` calls; flags any tool whose description string starts with `/^get\s/i`.
+- **Suppression**: add `// adr-ok: ADR-006 — <reason>` in the 3 lines before the description string to suppress a known violation.
+- **Currently known suppressions** (low-priority legacy descriptions):
+  - `archguard_get_file_entities` — pending fix to "Return all entities defined in..."
+  - `archguard_get_package_stats` — pending fix to "Return per-package volume metrics..."
+  - `archguard_get_change_context` — pending fix to "Return change-context summary..."
+
+The check runs as a Stop hook in `.claude/settings.json` and must pass before any session ends.
+
+---
+
 ## 相关决策
 
 - [ADR-004: CLI 与 MCP 必须共享单一分析写盘路径](./004-single-analysis-write-path-for-cli-and-mcp.md)
