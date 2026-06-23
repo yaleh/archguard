@@ -164,6 +164,21 @@ export interface GoRawPackage {
 }
 
 /**
+ * Parse options for TreeSitterBridge
+ *
+ * DESIGN: Single entry point, options control behavior.
+ * Avoids double-parsing (no separate parseCode vs parseCodeWithBodies).
+ */
+export interface TreeSitterParseOptions {
+  /** Whether to extract function body behavior data (default false) */
+  extractBodies?: boolean;
+  /** Whether to use selective extraction (only functions with target AST nodes) */
+  selectiveExtraction?: boolean;
+  /** Function names that must always have their body extracted, regardless of selective triggers */
+  forceExtractFunctions?: string[];
+}
+
+/**
  * Complete Go project raw data
  */
 export interface GoRawData {
