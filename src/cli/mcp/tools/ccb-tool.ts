@@ -26,11 +26,20 @@ export function registerCcbTool(server: McpServer, defaultRoot: string): void {
     'archguard_get_ccb',
     'Return a Cognitive Context Bundle (CCB) for a source file. ' +
       'The CCB combines structural digest (method/field counts, in/out degree), ' +
-      'git history signals (risk level, hotspot score), and behavioral signals ' +
-      '(read/edit counts from agent history). ' +
+      'git history signals (risk level, hotspot score), behavioral signals ' +
+      '(read/edit counts from agent history), and documentation freshness signals. ' +
       'Bundles are SHA-256-keyed and cached in .archguard/cognitive/; ' +
       'they are invalidated automatically when the source file changes. ' +
-      'Call with forceRefresh:true to bypass the cache.',
+      'Call with forceRefresh:true to bypass the cache. ' +
+      'DOCUMENTATION SIGNALS: The returned bundle includes a `documentation` field with ' +
+      '`docFreshnessGap` (fraction of co-changed files that are docs; null if no data), ' +
+      '`docVoid` (true when session history shows edits without doc reads), and ' +
+      '`specPrecisionGap` (true when spec docs were not consulted before editing). ' +
+      'NOTE: `documentation.deFactoSpec` and `documentation.freshnessWarning` are ' +
+      'ALWAYS null in stored CCBs — these are LLM-layer responsibilities. ' +
+      'When you receive a CCB with docVoid=true or docFreshnessGap < 0.3, you should ' +
+      'generate deFactoSpec by reading the co-changed doc files listed in git.cochangeNeighbors, ' +
+      'and generate a freshnessWarning to alert the user that documentation may be stale.',
     {
       filePath: z
         .string()
