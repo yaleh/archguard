@@ -1,6 +1,6 @@
 # Cognitive Context Bundle (CCB): Standardized Pre-Edit Context
 
-> Status: Draft (rev 1)
+> Status: Implemented (merged 2026-01-16, TASK-6)
 > Scope: Standard format + assembly workflow for the context package Claude prepares before
 >        editing a file; cached to disk and reused across sessions
 > Branch: `feat/cognitive-context-bundle` (future)

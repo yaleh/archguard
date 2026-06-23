@@ -1,6 +1,6 @@
 # archguard_get_cognitive_summary: Batch Structural Digest for LLM Consumption
 
-> Status: Draft (rev 1)
+> Status: Implemented (merged 2026-01-16, TASK-4)
 > Scope: New MCP tool — replaces `archguard_get_dependencies` for initial orientation on
 >        high-complexity entities; designed for LLM token budget constraints
 > Branch: `feat/cognitive-summary-mcp` (future)

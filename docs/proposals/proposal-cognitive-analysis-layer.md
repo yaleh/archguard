@@ -1,6 +1,6 @@
 # Cognitive Analysis Layer: AI-Driven Code Comprehension Signals
 
-> Status: Draft (rev 1)
+> Status: Implemented (merged 2026-01-16, TASK-5)
 > Scope: Framework — combines archguard (structural sensor) + meta-cc (behavioral sensor) with LLM reasoning to produce cognitive load intelligence
 > Branch: `feat/cognitive-analysis` (future)
 
