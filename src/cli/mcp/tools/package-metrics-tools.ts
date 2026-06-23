@@ -25,7 +25,7 @@ function textResponse(text: string) {
  * or `<package>/<EntityName>` (for Go). We take everything before the last
  * separator. If no separator is present, the entity itself is the package.
  */
-function extractPackageName(entityId: string): string {
+export function extractPackageName(entityId: string): string {
   // Go-style: pkg/path/TypeName → pkg/path
   const slashIdx = entityId.lastIndexOf('/');
   if (slashIdx > 0) {

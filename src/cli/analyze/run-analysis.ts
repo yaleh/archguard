@@ -22,6 +22,12 @@ import {
   mergeProjectSemantics,
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
+import { MetricsHistoryWriter } from '../metrics-history-writer.js';
+import {
+  computePackageFanMetricsFromRelations,
+  computeCycleMetrics,
+  extractPackageName,
+} from '../mcp/tools/package-metrics-tools.js';
 
 async function loadPluginForLanguage(
   language: string,
@@ -224,6 +230,58 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       reporter.warn(`[query] Failed to persist query scopes: ${msg}`);
+    }
+  }
+
+  // Metrics history — append per-analyze package metrics snapshot to JSONL
+  {
+    const metricsArchJson = processor.getLastArchJson();
+    if (metricsArchJson && metricsArchJson.entities && metricsArchJson.relations) {
+      try {
+        const entityIds = metricsArchJson.entities.map((e) => e.id);
+        const allPackageNames = new Set(entityIds.map(extractPackageName));
+
+        const { fanIn, fanOut } = computePackageFanMetricsFromRelations(
+          metricsArchJson.relations,
+          allPackageNames
+        );
+
+        const cycleMetrics = computeCycleMetrics([], allPackageNames);
+
+        // Count entities per package
+        const entityCountByPackage = new Map<string, number>();
+        for (const pkg of allPackageNames) {
+          entityCountByPackage.set(pkg, 0);
+        }
+        for (const entityId of entityIds) {
+          const pkg = extractPackageName(entityId);
+          if (allPackageNames.has(pkg)) {
+            entityCountByPackage.set(pkg, (entityCountByPackage.get(pkg) ?? 0) + 1);
+          }
+        }
+
+        const packages = Array.from(allPackageNames).map((pkg) => {
+          const cm = cycleMetrics.get(pkg) ?? { cycleCount: 0, cyclesWith: [] };
+          return {
+            name: pkg,
+            fanIn: fanIn.get(pkg) ?? 0,
+            fanOut: fanOut.get(pkg) ?? 0,
+            cycleCount: cm.cycleCount,
+            entityCount: entityCountByPackage.get(pkg) ?? 0,
+          };
+        });
+
+        const metricsOutputDir = config.workDir || workDir;
+        const metricsWriter = new MetricsHistoryWriter();
+        await metricsWriter.append(packages, metricsOutputDir);
+
+        if (config.verbose) {
+          reporter.info(`[metrics-history] Appended snapshot for ${packages.length} packages`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        reporter.warn(`[metrics-history] Failed to append metrics snapshot: ${msg}`);
+      }
     }
   }
 
