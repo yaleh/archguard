@@ -49,6 +49,27 @@ vi.mock('crypto', () => ({
   createHash: (...args: unknown[]) => mockCreateHash(...args),
 }));
 
+// ── child_process mock — prevents real subprocess spawn in unit tests ─────────
+
+vi.mock('child_process', async () => {
+  const { EventEmitter } = await import('events');
+  return {
+    spawn: vi.fn().mockImplementation(() => {
+      const child = new EventEmitter() as NodeJS.EventEmitter & {
+        stdout: NodeJS.EventEmitter;
+        stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
+        kill: ReturnType<typeof vi.fn>;
+      };
+      child.stdout = new EventEmitter();
+      child.stdin = { write: vi.fn(), end: vi.fn() };
+      child.kill = vi.fn();
+      // Simulate meta-cc unavailable: emit close with no data
+      setImmediate(() => child.emit('close', 0, null));
+      return child;
+    }),
+  };
+});
+
 // ── Phase B helper ────────────────────────────────────────────────────────────
 
 function setupAssemblerMocks(): void {
