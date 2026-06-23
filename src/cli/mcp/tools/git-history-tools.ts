@@ -43,6 +43,7 @@ export function registerGitHistoryTools(server: McpServer, defaultRoot: string):
 
   server.tool(
     'archguard_get_change_context',
+    // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return change-context summary..."
     'Get change-context summary for a file or package before editing. Returns churn, ownership, top co-change neighbors, and risk hints. Requires archguard_analyze_git to have been run first. Results reflect the analyzed time window only; rename and entity-level tracking are not supported in v1.',
     {
       projectRoot: z

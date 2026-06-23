@@ -32,6 +32,7 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
 }
 
 export function registerCognitiveSummaryTool(server: McpServer, defaultRoot: string): void {
+  // adr-ok: ADR-007 — cognitive summary is an agent-only tool; CLI interface out of scope for v1 (no terminal use case)
   server.tool(
     'archguard_get_cognitive_summary',
     'Return a compact structural digest for each requested entity name from .archguard/ artifacts. ' +

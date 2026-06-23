@@ -22,6 +22,7 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
 }
 
 export function registerCcbTool(server: McpServer, defaultRoot: string): void {
+  // adr-ok: ADR-007 — CCB is an agent-only cognitive tool; CLI interface out of scope for v1 (no terminal use case)
   server.tool(
     'archguard_get_ccb',
     'Return a Cognitive Context Bundle (CCB) for a source file. ' +

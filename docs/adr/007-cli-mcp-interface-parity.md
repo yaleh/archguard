@@ -168,6 +168,22 @@ const SCRUB_KEYS = ['generatedAt', 'createdAt', 'timestamp', 'lastRun', 'archJso
 
 ---
 
+## Mechanical Check
+
+Automated compliance check via `npm run check:adr` (scripts/check-adr.ts):
+
+- **ADR-007 rule**: scans `src/cli/mcp/**/*.ts` for all `server.tool(` tool names; verifies each has a matching `--flag` in `src/cli/commands/query.ts`.
+- **Matching strategy**: canonical form comparison (strip prefix/verb, replace `_` with `-`) + known semantic aliases (e.g. `dependencies` → `deps-of`) + plural variants.
+- **Exclusions**: `archguard_analyze` and `archguard_analyze_git` map to top-level subcommands, not `--flags` on `query`.
+- **Suppression**: add `// adr-ok: ADR-007 — <reason>` in the 3 lines before the tool name string for agent-only tools with no CLI use case.
+- **Currently suppressed** (no CLI terminal use case):
+  - `archguard_get_ccb` — cognitive bundle, agent-only tool
+  - `archguard_get_cognitive_summary` — cognitive summary, agent-only tool
+
+The check runs as a Stop hook in `.claude/settings.json` and must pass before any session ends.
+
+---
+
 ## 相关决策
 
 - [ADR-004: CLI 与 MCP 必须共享单一分析写盘路径](./004-single-analysis-write-path-for-cli-and-mcp.md)
