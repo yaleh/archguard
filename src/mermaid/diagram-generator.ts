@@ -218,24 +218,24 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       const qualityStage = report.stages.find((s) => s.name === 'quality');
       if (qualityStage && qualityStage.result) {
         const metrics = qualityStage.result;
-        console.log('\n📊 Quality Metrics:');
-        console.log(`  Overall Score: ${metrics.score?.toFixed(1) || 'N/A'}/100`);
+        progress.info?.('\n📊 Quality Metrics:');
+        progress.info?.(`  Overall Score: ${metrics.score?.toFixed(1) || 'N/A'}/100`);
 
         if (metrics.metrics) {
-          console.log(`  Readability: ${metrics.metrics.readability?.toFixed(1) || 'N/A'}/100`);
-          console.log(`  Completeness: ${metrics.metrics.completeness?.toFixed(1) || 'N/A'}/100`);
-          console.log(`  Consistency: ${metrics.metrics.consistency?.toFixed(1) || 'N/A'}/100`);
-          console.log(`  Complexity: ${metrics.metrics.complexity?.toFixed(1) || 'N/A'}/100`);
+          progress.info?.(`  Readability: ${metrics.metrics.readability?.toFixed(1) || 'N/A'}/100`);
+          progress.info?.(`  Completeness: ${metrics.metrics.completeness?.toFixed(1) || 'N/A'}/100`);
+          progress.info?.(`  Consistency: ${metrics.metrics.consistency?.toFixed(1) || 'N/A'}/100`);
+          progress.info?.(`  Complexity: ${metrics.metrics.complexity?.toFixed(1) || 'N/A'}/100`);
         }
 
         // Print suggestions if any
         if (metrics.suggestions && metrics.suggestions.length > 0) {
-          console.log('\n⚠️  Quality Suggestions:');
+          progress.info?.('\n⚠️  Quality Suggestions:');
           for (const suggestion of metrics.suggestions.slice(0, 3)) {
-            console.log(`  - [${suggestion.impact || 'medium'}] ${suggestion.message}`);
+            progress.info?.(`  - [${suggestion.impact || 'medium'}] ${suggestion.message}`);
           }
           if (metrics.suggestions.length > 3) {
-            console.log(`  ... and ${metrics.suggestions.length - 3} more`);
+            progress.info?.(`  ... and ${metrics.suggestions.length - 3} more`);
           }
         }
       }
@@ -351,14 +351,14 @@ export class MermaidDiagramGenerator implements IRendererFacade {
 
       progress.succeed('✅ Diagram rendered successfully');
 
-      console.log('\n✨ Generated files:');
+      progress.info?.('\n✨ Generated files:');
       if (allRenderJobs.length === 1 && allRenderJobs[0]?.outputPath === outputOptions.paths) {
-        console.log(`  📄 ${outputOptions.paths.mmd}`);
-        console.log(`  🖼️  ${outputOptions.paths.svg}`);
-        console.log(`  📊 ${outputOptions.paths.png}`);
+        progress.info?.(`  📄 ${outputOptions.paths.mmd}`);
+        progress.info?.(`  🖼️  ${outputOptions.paths.svg}`);
+        progress.info?.(`  📊 ${outputOptions.paths.png}`);
       } else {
         for (const job of allRenderJobs) {
-          console.log(`  📄 ${job.outputPath.mmd}`);
+          progress.info?.(`  📄 ${job.outputPath.mmd}`);
         }
       }
     } catch (error) {
