@@ -1,14 +1,14 @@
 ---
 id: TASK-13
 title: 'Refactor: split golang/tree-sitter-bridge.ts into builder modules'
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-23 06:29'
-updated_date: '2026-06-23 06:31'
+updated_date: '2026-06-23 08:44'
 labels:
   - 'kind:basic'
 dependencies: []
-ordinal: 8000
+ordinal: 1000
 ---
 
 ## Description
@@ -266,6 +266,26 @@ premise-ledger:
 [E] absence checks: ! grep -q pattern used throughout
 [H] DoD sufficiency baseline: judgment that per-builder + golang/ directory + full suite is adequate coverage
 GCL-self-report: E=6 C=1 H=1
+
+claimed: 2026-06-23T08:23:37Z
+
+## Execution Summary
+
+Refactored `src/plugins/golang/tree-sitter-bridge.ts` (890 lines) into 5 focused builder modules under `src/plugins/golang/builders/`:
+
+- **node-utils.ts** — `NodeUtils` class with static helpers: `isExported()`, `nodeText()`, `nodeToLocation()`
+- **struct-builder.ts** — `StructBuilder` class: extracts structs from `type_declaration` AST nodes; delegates interface extraction to InterfaceBuilder in the same AST walk
+- **interface-builder.ts** — `InterfaceBuilder` class: extracts interfaces, handles `method_elem` (methods) and `type_elem` (embedded interfaces) per current tree-sitter-go grammar
+- **function-builder.ts** — `FunctionBuilder` class: extracts standalone functions and struct methods with optional body extraction and selective extraction logic
+- **goroutine-builder.ts** — `GoroutineBuilder` class: extracts goroutine spawns, channel ops (send/receive/make), and call expressions from function bodies
+
+`tree-sitter-bridge.ts` reduced from 890 to 120 lines (thin facade).
+
+`TreeSitterParseOptions` moved from `tree-sitter-bridge.ts` to `types.ts` (re-exported for backward compatibility).
+
+**Test results**: 29 new tests (TDD: written before implementation), all 486 golang tests pass, full suite 3903 tests pass, type-check clean, build succeeds.
+
+Completed: 2026-06-23T08:44:26Z
 <!-- SECTION:NOTES:END -->
 
 ## Definition of Done

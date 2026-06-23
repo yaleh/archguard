@@ -68,3 +68,5 @@ experiments/granularity/artifacts/embeddings/dim-input.json
 experiments/granularity/artifacts/embeddings/dim-lm-real.json
 experiments/granularity/artifacts/embeddings/dim-lm-real-input.json
 experiments/granularity/artifacts/embeddings/cache/
+/backlog/.caps/TASK-*
+/backlog/.*.pid
