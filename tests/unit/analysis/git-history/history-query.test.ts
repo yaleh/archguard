@@ -1,11 +1,11 @@
 /**
- * Unit tests for history-query.ts (Stage 2.2 + 2.3)
+ * Unit tests for history-query.ts (canonical location: src/analysis/git-history/)
  *
- * TDD — written before implementation.
+ * Stage 2.2 + 2.3 of Phase 2 (Query Layer).
  */
 
 import { describe, it, expect } from 'vitest';
-import { HistoryQuery } from '@/cli/git-history/history-query.js';
+import { HistoryQuery } from '@/analysis/git-history/history-query.js';
 import type { LoadedHistoryData } from '@/cli/git-history/history-loader.js';
 import type {
   GitHistoryManifest,

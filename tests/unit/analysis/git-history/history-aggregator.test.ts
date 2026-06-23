@@ -1,18 +1,18 @@
 /**
- * Unit tests for history-aggregator.ts
+ * Unit tests for history-aggregator.ts (canonical location: src/analysis/git-history/)
  *
  * Tests aggregation logic with synthetic commit data — no actual git required.
  */
 
 import { describe, it, expect } from 'vitest';
-import type { CommitRecord } from '@/cli/git-history/git-log-reader.js';
+import type { CommitRecord } from '@/analysis/git-history/git-log-reader.js';
 import {
   aggregateFileMetrics,
   aggregatePackageMetrics,
   buildCochangeIndex,
   computeRiskFactors,
   extractPackagePath,
-} from '@/cli/git-history/history-aggregator.js';
+} from '@/analysis/git-history/history-aggregator.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
