@@ -1,10 +1,10 @@
 ---
 id: TASK-12
 title: 'ADR compliance checker: mechanical script for ADR-006 and ADR-007'
-status: 'Basic: In Progress'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-23 06:28'
-updated_date: '2026-06-23 07:02'
+updated_date: '2026-06-23 07:28'
 labels:
   - 'kind:basic'
 dependencies: []
@@ -240,6 +240,8 @@ Files to create or modify:
 Proposal approved. Starting plan draft.
 
 claimed: 2026-06-23T07:02:11Z
+
+Completed: 2026-06-23T07:28:53Z
 <!-- SECTION:NOTES:END -->
 
 ## Definition of Done
