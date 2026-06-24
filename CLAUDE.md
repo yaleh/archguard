@@ -285,6 +285,28 @@ When importing, use these aliases instead of relative paths:
 6. **Self-validate**: `node dist/cli/index.js analyze -v`
 7. **After rebuilding with new MCP tools**: Run `/mcp` → Reconnect in Claude Code to reload MCP tool definitions in the current session.
 
+## CLI/MCP Metadata Registry Rule
+
+When adding or changing a CLI command, query option, MCP tool, or agent onboarding surface, treat `src/cli/metadata/registry.ts` as the source of truth. Do not add runtime command/tool behavior without updating the registry-driven metadata, generated docs, structured help, and drift tests.
+
+Required pattern:
+- Add top-level CLI commands to `cliCommandBaseline` and `cliCommands`.
+- Add query CLI options to `queryOptions` with `mapsToMcpTool` when they expose an MCP-equivalent operation.
+- Add MCP tools to `mcpToolBaseline` and `mcpTools`.
+- Add MCP tools to `workflowDependentMcpTools` when they require analysis, git-history, test-analysis, Atlas, or other prerequisite artifacts.
+- Add `queryMappings` only when a real `archguard query ...` CLI option exists. Do not invent a CLI equivalent for MCP-only or agent-only tools.
+- Use `mcpToolDescription()` and `mcpParamDescription()` in MCP registration code so listTools descriptions and schema parameter docs come from the registry.
+- Keep generated docs in sync with `npm run build && npm run docs:write`.
+
+Validation for registry-affecting changes:
+```bash
+npm run build
+npm run type-check
+npm run docs:check
+npm test -- tests/unit/cli/metadata-registry.test.ts tests/unit/cli/cli-metadata-drift.test.ts tests/unit/cli/mcp/mcp-metadata-drift.test.ts
+npm test -- tests/integration/cli-mcp/metadata-surface-e2e.test.ts
+```
+
 ## Project-Specific Patterns
 
 ### Error Handling
