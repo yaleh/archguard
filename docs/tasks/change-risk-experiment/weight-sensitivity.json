@@ -1,0 +1,207 @@
+{
+  "data_source": "measured",
+  "current_weights": {
+    "churn": 0.25,
+    "authorCount": 0.2,
+    "ownerConcentration": 0.2,
+    "cochangeBreadth": 0.15,
+    "recency": 0.2
+  },
+  "archguard": {
+    "current_rho": 0.3413,
+    "optimal_rho": 0.3474,
+    "optimal_weights": {
+      "churn": 0.4,
+      "authorCount": 0.16,
+      "ownerConcentration": 0.16,
+      "cochangeBreadth": 0.12,
+      "recency": 0.16
+    },
+    "delta_rho": 0.0061,
+    "sensitivity_data": [
+      {
+        "churn_weight": 0.1,
+        "weights": {
+          "churn": 0.1,
+          "authorCount": 0.24,
+          "ownerConcentration": 0.24,
+          "cochangeBreadth": 0.18,
+          "recency": 0.24
+        },
+        "spearman_rho": 0.2901,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.15,
+        "weights": {
+          "churn": 0.15,
+          "authorCount": 0.2267,
+          "ownerConcentration": 0.2267,
+          "cochangeBreadth": 0.17,
+          "recency": 0.22660000000000002
+        },
+        "spearman_rho": 0.3188,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.2,
+        "weights": {
+          "churn": 0.2,
+          "authorCount": 0.2133,
+          "ownerConcentration": 0.2133,
+          "cochangeBreadth": 0.16,
+          "recency": 0.21339999999999998
+        },
+        "spearman_rho": 0.3356,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.25,
+        "weights": {
+          "churn": 0.25,
+          "authorCount": 0.2,
+          "ownerConcentration": 0.2,
+          "cochangeBreadth": 0.15,
+          "recency": 0.2
+        },
+        "spearman_rho": 0.3413,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.3,
+        "weights": {
+          "churn": 0.3,
+          "authorCount": 0.1867,
+          "ownerConcentration": 0.1867,
+          "cochangeBreadth": 0.14,
+          "recency": 0.18660000000000002
+        },
+        "spearman_rho": 0.3421,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.35,
+        "weights": {
+          "churn": 0.35,
+          "authorCount": 0.1733,
+          "ownerConcentration": 0.1733,
+          "cochangeBreadth": 0.13,
+          "recency": 0.1734
+        },
+        "spearman_rho": 0.3438,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.4,
+        "weights": {
+          "churn": 0.4,
+          "authorCount": 0.16,
+          "ownerConcentration": 0.16,
+          "cochangeBreadth": 0.12,
+          "recency": 0.16
+        },
+        "spearman_rho": 0.3474,
+        "p_value": 0.0
+      }
+    ]
+  },
+  "meta_cc": {
+    "current_rho": 0.5733,
+    "optimal_rho": 0.5835,
+    "optimal_weights": {
+      "churn": 0.4,
+      "authorCount": 0.16,
+      "ownerConcentration": 0.16,
+      "cochangeBreadth": 0.12,
+      "recency": 0.16
+    },
+    "delta_rho": 0.0102,
+    "sensitivity_data": [
+      {
+        "churn_weight": 0.1,
+        "weights": {
+          "churn": 0.1,
+          "authorCount": 0.24,
+          "ownerConcentration": 0.24,
+          "cochangeBreadth": 0.18,
+          "recency": 0.24
+        },
+        "spearman_rho": 0.5662,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.15,
+        "weights": {
+          "churn": 0.15,
+          "authorCount": 0.2267,
+          "ownerConcentration": 0.2267,
+          "cochangeBreadth": 0.17,
+          "recency": 0.22660000000000002
+        },
+        "spearman_rho": 0.5671,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.2,
+        "weights": {
+          "churn": 0.2,
+          "authorCount": 0.2133,
+          "ownerConcentration": 0.2133,
+          "cochangeBreadth": 0.16,
+          "recency": 0.21339999999999998
+        },
+        "spearman_rho": 0.5743,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.25,
+        "weights": {
+          "churn": 0.25,
+          "authorCount": 0.2,
+          "ownerConcentration": 0.2,
+          "cochangeBreadth": 0.15,
+          "recency": 0.2
+        },
+        "spearman_rho": 0.5733,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.3,
+        "weights": {
+          "churn": 0.3,
+          "authorCount": 0.1867,
+          "ownerConcentration": 0.1867,
+          "cochangeBreadth": 0.14,
+          "recency": 0.18660000000000002
+        },
+        "spearman_rho": 0.5756,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.35,
+        "weights": {
+          "churn": 0.35,
+          "authorCount": 0.1733,
+          "ownerConcentration": 0.1733,
+          "cochangeBreadth": 0.13,
+          "recency": 0.1734
+        },
+        "spearman_rho": 0.5802,
+        "p_value": 0.0
+      },
+      {
+        "churn_weight": 0.4,
+        "weights": {
+          "churn": 0.4,
+          "authorCount": 0.16,
+          "ownerConcentration": 0.16,
+          "cochangeBreadth": 0.12,
+          "recency": 0.16
+        },
+        "spearman_rho": 0.5835,
+        "p_value": 0.0
+      }
+    ]
+  },
+  "recommendation": "maintain_current"
+}
