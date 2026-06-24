@@ -32,6 +32,9 @@ import { registerGitHistoryAnalyzeTool } from './tools/git-history-analyze-tool.
 import { registerGitHistoryTools } from './tools/git-history-tools.js';
 import { registerCallGraphTools } from './tools/call-graph-tools.js';
 import { registerAtlasAnalyticsTools } from './tools/atlas-analytics-tools.js';
+import { registerCognitiveSummaryTool } from './tools/cognitive-summary-tool.js';
+import { registerCcbTool } from './tools/ccb-tool.js';
+import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { mcpToolDescription } from './metadata.js';
 
 const projectRootParam = z
@@ -89,6 +92,9 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerGitHistoryTools(server, defaultRoot);
   registerCallGraphTools(server, defaultRoot);
   registerAtlasAnalyticsTools(server, defaultRoot);
+  registerCognitiveSummaryTool(server, defaultRoot);
+  registerCcbTool(server, defaultRoot);
+  registerPackageMetricsTools(server, defaultRoot);
   return server;
 }
 

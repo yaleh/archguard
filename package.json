@@ -1,6 +1,6 @@
 {
   "name": "@yalehwang/archguard",
-  "version": "0.1.24",
+  "version": "0.1.27",
   "type": "module",
   "description": "Automated architecture documentation generation tool with AI-powered Mermaid diagrams",
   "keywords": [
@@ -44,7 +44,8 @@
     "clean": "rm -rf dist coverage",
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "generate": "node dist/cli/index.js generate",
-    "migrate": "node dist/scripts/migrate-to-mermaid.js"
+    "migrate": "node dist/scripts/migrate-to-mermaid.js",
+    "check:adr": "node --experimental-strip-types scripts/check-adr.ts"
   },
   "engines": {
     "node": ">=20.19.0"

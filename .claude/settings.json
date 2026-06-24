@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run check:adr 2>&1 | grep -E 'violation|VIOLATION' | head -10 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

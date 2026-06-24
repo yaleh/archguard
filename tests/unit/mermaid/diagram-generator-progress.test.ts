@@ -80,6 +80,49 @@ describe('MermaidDiagramGenerator - progress injection', () => {
     });
   });
 
+  describe('generateOnly - progress.info called, console.log not called', () => {
+    it('should call progress.info (not console.log) when generating output', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const reporter: IProgressReporter = {
+        start: vi.fn(),
+        succeed: vi.fn(),
+        fail: vi.fn(),
+        warn: vi.fn(),
+        info: vi.fn(),
+      };
+      const generator = new MermaidDiagramGenerator(config, reporter);
+      const archJSON = makeArchJSON();
+      try {
+        await generator.generateOnly(archJSON, {
+          outputDir: '/tmp',
+          baseName: 'test',
+          paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+        }, 'class');
+      } catch {
+        // acceptable
+      }
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('should not call console.log when constructed without a progress reporter', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const generator = new MermaidDiagramGenerator(config);
+      const archJSON = makeArchJSON();
+      try {
+        await generator.generateOnly(archJSON, {
+          outputDir: '/tmp',
+          baseName: 'test',
+          paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+        }, 'class');
+      } catch {
+        // acceptable
+      }
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('generateOnly - progress calls', () => {
     it('should call progress.start and progress.succeed during generation', async () => {
       const reporter: IProgressReporter = {

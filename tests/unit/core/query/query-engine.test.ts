@@ -165,8 +165,32 @@ describe('QueryEngine.getDependencies (from @/core/query)', () => {
 // ---------------------------------------------------------------------------
 
 describe('QueryEngine.findByAttr (from @/core/query, Plan 58)', () => {
-  it.todo('finds entities with a given attribute key (no value filter)');
-  it.todo('finds entities matching a specific attribute value');
+  it('finds entities with a given attribute key (no value filter)', () => {
+    const entities = [
+      makeEntity('a.Foo', 'Foo', { attributes: { deprecated: true, version: '2' } }),
+      makeEntity('b.Bar', 'Bar', { attributes: { version: '2' } }),
+      makeEntity('c.Baz', 'Baz'),
+    ];
+    const archJson = makeArchJson({ entities });
+    const index = buildArchIndex(archJson, 'hash-findByAttr-1');
+    const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+    const results = engine.findByAttr('deprecated') as Entity[];
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Foo');
+  });
+
+  it('finds entities matching a specific attribute value', () => {
+    const entities = [
+      makeEntity('a.Foo', 'Foo', { attributes: { version: '2' } }),
+      makeEntity('b.Bar', 'Bar', { attributes: { version: '3' } }),
+    ];
+    const archJson = makeArchJson({ entities });
+    const index = buildArchIndex(archJson, 'hash-findByAttr-2');
+    const engine = new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+    const results = engine.findByAttr('version', '2') as Entity[];
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Foo');
+  });
 });
 
 // ---------------------------------------------------------------------------
