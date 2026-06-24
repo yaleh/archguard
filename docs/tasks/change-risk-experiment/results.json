@@ -1,0 +1,129 @@
+{
+  "data_source": "measured",
+  "analysis_date": "2026-06-24",
+  "projects": [
+    {
+      "project": "archguard",
+      "data_source": "measured",
+      "file_extension": "ts",
+      "sample_n": 481,
+      "files_with_bug_fixes": 229,
+      "factor_correlations": {
+        "churn": {
+          "spearman_rho": 0.5825,
+          "p_value": 0.0
+        },
+        "authorCount": {
+          "spearman_rho": 0.0827,
+          "p_value": 0.0705
+        },
+        "ownerConcentration": {
+          "spearman_rho": 0.0827,
+          "p_value": 0.0705
+        },
+        "cochangeBreadth": {
+          "spearman_rho": 0.0953,
+          "p_value": 0.037
+        },
+        "recency": {
+          "spearman_rho": 0.293,
+          "p_value": 0.0
+        }
+      },
+      "composite_riskScore": {
+        "spearman_rho": 0.3413,
+        "p_value": 0.0
+      },
+      "hypotheses": [
+        {
+          "id": "H-W1",
+          "claim": "churn \u56e0\u5b50\u4e0e bug-fix \u63d0\u4ea4\u6570\u7684 Spearman \u03c1 \u5728\u4e24\u9879\u76ee\u4e0a\u5747 > \u5176\u4f59\u56db\u56e0\u5b50",
+          "verdict": "REFUTED",
+          "evidence": "churn \u03c1=0.5825 > max(others)=0.2930 | Cross-project: churn not > others in both projects (ag=0.5825 vs 0.2930, mc=0.6249 vs 0.6751)"
+        },
+        {
+          "id": "H-W2",
+          "claim": "recency \u56e0\u5b50\u7684 Spearman \u03c1 < churn \u56e0\u5b50\u7684 \u03c1\uff08recency \u88ab\u9ad8\u4f30\uff09",
+          "verdict": "CONFIRMED",
+          "evidence": "recency \u03c1=0.293 < churn \u03c1=0.5825"
+        },
+        {
+          "id": "H-W3",
+          "claim": "ownerConcentration \u65b9\u5411\u6b63\u786e\uff1aprimaryOwnerShare \u9ad8 \u2192 riskFactor \u4f4e\uff08\u8d1f\u76f8\u5173\u4e8e bug \u6570\uff09",
+          "verdict": "CONFIRMED",
+          "evidence": "ownerConcentration \u03c1=0.0827 > 0 (high owner risk \u2192 more bugs, direction correct)"
+        },
+        {
+          "id": "H-W4",
+          "claim": "\u7efc\u5408 riskScore \u4e0e bug-fix \u63d0\u4ea4\u6570\u7684 Spearman \u03c1 > 0.40",
+          "verdict": "REFUTED",
+          "evidence": "riskScore \u03c1=0.3413 <= 0.40"
+        }
+      ]
+    },
+    {
+      "project": "meta-cc",
+      "data_source": "measured",
+      "file_extension": "go",
+      "sample_n": 108,
+      "files_with_bug_fixes": 53,
+      "factor_correlations": {
+        "churn": {
+          "spearman_rho": 0.6249,
+          "p_value": 0.0
+        },
+        "authorCount": {
+          "spearman_rho": 0.385,
+          "p_value": 0.0001
+        },
+        "ownerConcentration": {
+          "spearman_rho": 0.3677,
+          "p_value": 0.0002
+        },
+        "cochangeBreadth": {
+          "spearman_rho": 0.4779,
+          "p_value": 0.0
+        },
+        "recency": {
+          "spearman_rho": 0.6751,
+          "p_value": 0.0
+        }
+      },
+      "composite_riskScore": {
+        "spearman_rho": 0.5733,
+        "p_value": 0.0
+      },
+      "hypotheses": [
+        {
+          "id": "H-W1",
+          "claim": "churn \u56e0\u5b50\u4e0e bug-fix \u63d0\u4ea4\u6570\u7684 Spearman \u03c1 \u5728\u4e24\u9879\u76ee\u4e0a\u5747 > \u5176\u4f59\u56db\u56e0\u5b50",
+          "verdict": "REFUTED",
+          "evidence": "churn \u03c1=0.6249 NOT > recency \u03c1=0.6751"
+        },
+        {
+          "id": "H-W2",
+          "claim": "recency \u56e0\u5b50\u7684 Spearman \u03c1 < churn \u56e0\u5b50\u7684 \u03c1\uff08recency \u88ab\u9ad8\u4f30\uff09",
+          "verdict": "REFUTED",
+          "evidence": "recency \u03c1=0.6751 >= churn \u03c1=0.6249"
+        },
+        {
+          "id": "H-W3",
+          "claim": "ownerConcentration \u65b9\u5411\u6b63\u786e\uff1aprimaryOwnerShare \u9ad8 \u2192 riskFactor \u4f4e\uff08\u8d1f\u76f8\u5173\u4e8e bug \u6570\uff09",
+          "verdict": "CONFIRMED",
+          "evidence": "ownerConcentration \u03c1=0.3677 > 0 (high owner risk \u2192 more bugs, direction correct)"
+        },
+        {
+          "id": "H-W4",
+          "claim": "\u7efc\u5408 riskScore \u4e0e bug-fix \u63d0\u4ea4\u6570\u7684 Spearman \u03c1 > 0.40",
+          "verdict": "CONFIRMED",
+          "evidence": "riskScore \u03c1=0.5733 > 0.40"
+        }
+      ]
+    }
+  ],
+  "cross_project_notes": {
+    "h_w1_both_confirmed": false,
+    "archguard_churn_rho": 0.5825,
+    "meta_cc_churn_rho": 0.6249
+  }
+}

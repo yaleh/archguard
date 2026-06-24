@@ -1,0 +1,37 @@
+{
+  "frozen_at": "2026-06-24T00:00:00Z",
+  "data_source": "measured",
+  "risk_weights": {
+    "churn": 0.25,
+    "authorCount": 0.20,
+    "ownerConcentration": 0.20,
+    "cochangeBreadth": 0.15,
+    "recency": 0.20
+  },
+  "hypotheses": [
+    {
+      "id": "H-W1",
+      "claim": "churn 因子与 bug-fix 提交数的 Spearman ρ 在两项目上均 > 其余四因子",
+      "threshold": 0.0,
+      "verdict": "PENDING"
+    },
+    {
+      "id": "H-W2",
+      "claim": "recency 因子的 Spearman ρ < churn 因子的 ρ（recency 被高估）",
+      "threshold": 0.0,
+      "verdict": "PENDING"
+    },
+    {
+      "id": "H-W3",
+      "claim": "ownerConcentration 方向正确：primaryOwnerShare 高 → riskFactor 低（负相关于 bug 数）",
+      "threshold": 0.0,
+      "verdict": "PENDING"
+    },
+    {
+      "id": "H-W4",
+      "claim": "综合 riskScore 与 bug-fix 提交数的 Spearman ρ > 0.40",
+      "threshold": 0.4,
+      "verdict": "PENDING"
+    }
+  ]
+}
