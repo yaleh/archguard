@@ -13,6 +13,7 @@ import path from 'path';
 import type { PackageGraph, PackageNode } from '@/types/extensions/go-atlas.js';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
+import { mcpToolDescription } from '../metadata.js';
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
@@ -70,8 +71,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   // ── archguard_get_package_fanin ──────────────────────────────────────────────
   server.tool(
     'archguard_get_package_fanin',
-    'List Go Atlas packages ranked by fan-in (number of packages that depend on them). ' +
-      'High fan-in packages are critical hub packages. Requires an Atlas-mode Go project.',
+    mcpToolDescription('archguard_get_package_fanin'),
     {
       projectRoot: z
         .string()
@@ -135,8 +135,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   // ── archguard_get_package_fanout ─────────────────────────────────────────────
   server.tool(
     'archguard_get_package_fanout',
-    'List Go Atlas packages ranked by fan-out (number of packages they depend on). ' +
-      'High fan-out packages have many dependencies and may be fragile. Requires an Atlas-mode Go project.',
+    mcpToolDescription('archguard_get_package_fanout'),
     {
       projectRoot: z
         .string()
@@ -200,8 +199,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   // ── archguard_detect_god_packages ────────────────────────────────────────────
   server.tool(
     'archguard_detect_god_packages',
-    'Detect "god packages" — packages that violate single-responsibility by exceeding size or coupling thresholds. ' +
-      'Each flagged package includes a list of violated thresholds (reasons). Requires an Atlas-mode Go project.',
+    mcpToolDescription('archguard_detect_god_packages'),
     {
       projectRoot: z
         .string()

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
 import { StderrReporter } from '../progress/index.js';
+import { mcpToolDescription } from './metadata.js';
 
 export interface AnalyzeToolContext {
   defaultRoot: string;
@@ -74,7 +75,7 @@ const analyzeSchema = {
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
   server.tool(
     'archguard_analyze',
-    'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
+    mcpToolDescription('archguard_analyze'),
     analyzeSchema,
     async ({ projectRoot, sources, lang, diagrams, format, noCache, includeTests, testsOnly, includeGit }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);

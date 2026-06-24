@@ -113,13 +113,12 @@ describe('registerAnalyzeTool', () => {
     });
 
     const registration = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze');
-    const description = registration?.[1];
     const schema = registration?.[2] as Record<
       string,
-      { safeParse: (value: unknown) => { success: boolean } }
+      { description?: string; safeParse: (value: unknown) => { success: boolean } }
     >;
 
-    expect(description).toContain('code-language plugin override');
+    expect(schema.lang.description).toContain('Source code language plugin');
     expect(schema.lang.safeParse('typescript').success).toBe(true);
     expect(schema.lang.safeParse('go').success).toBe(true);
     expect(schema.lang.safeParse('kotlin').success).toBe(true);
@@ -333,10 +332,9 @@ describe('registerAnalyzeTool', () => {
       const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
       registerAnalyzeTool(server, { defaultRoot: '/project' });
 
-      const schema = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[2] as Record<
-        string,
-        { safeParse: (value: unknown) => { success: boolean } }
-      >;
+      const schema = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[2] as Record<string, { safeParse: (value: unknown) => { success: boolean } }>;
 
       expect(schema.explore).toBeUndefined();
       expect(schema.includeGit.safeParse(true).success).toBe(true);
@@ -381,9 +379,7 @@ describe('registerAnalyzeTool', () => {
           workDir: '/project/.archguard',
           outputDir: '/project/.archguard/output',
         },
-        diagrams: [
-          { name: 'architecture', level: 'package', sources: [], language: 'typescript' },
-        ],
+        diagrams: [{ name: 'architecture', level: 'package', sources: [], language: 'typescript' }],
         results: [],
         queryScopesPersisted: 1,
         persistedScopeKeys: ['abc123'],

@@ -11,6 +11,7 @@ import path from 'path';
 import type { CycleInfo, Relation } from '@/types/index.js';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
+import { mcpParamDescription, mcpToolDescription } from '../metadata.js';
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
@@ -136,27 +137,20 @@ export function computeCycleMetrics(
 export function registerPackageMetricsTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_get_package_metrics',
-    'Aggregate fan-in, fan-out, and cycle count per package. ' +
-      'fan-in = number of incoming cross-package relations; ' +
-      'fan-out = number of outgoing cross-package relations; ' +
-      'cycleCount = number of SCCs the package participates in; ' +
-      'cyclesWith = entity names from co-cycling SCCs. ' +
-      'Works for all languages (TypeScript, Go, Java, Python, C++, Kotlin).',
+    mcpToolDescription('archguard_get_package_metrics'),
     {
       projectRoot: z
         .string()
         .optional()
-        .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
+        .describe(mcpParamDescription('archguard_get_package_metrics', 'projectRoot')),
       scope: z
         .string()
         .optional()
-        .describe('Query scope key. Omit to use manifest.globalScopeKey.'),
+        .describe(mcpParamDescription('archguard_get_package_metrics', 'scope')),
       packageName: z
         .string()
         .optional()
-        .describe(
-          'Filter results to a single package name. Omit to return metrics for all packages.'
-        ),
+        .describe(mcpParamDescription('archguard_get_package_metrics', 'packageName')),
     },
     async ({ projectRoot, scope, packageName }) => {
       try {

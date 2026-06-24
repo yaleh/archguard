@@ -35,6 +35,7 @@ import { registerAtlasAnalyticsTools } from './tools/atlas-analytics-tools.js';
 import { registerCognitiveSummaryTool } from './tools/cognitive-summary-tool.js';
 import { registerCcbTool } from './tools/ccb-tool.js';
 import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
+import { mcpToolDescription } from './metadata.js';
 
 const projectRootParam = z
   .string()
@@ -93,7 +94,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerAtlasAnalyticsTools(server, defaultRoot);
   registerCognitiveSummaryTool(server, defaultRoot);
   registerCcbTool(server, defaultRoot);
-  registerPackageMetricsTools(server, defaultRoot); // registers: archguard_get_package_metrics
+  registerPackageMetricsTools(server, defaultRoot);
   return server;
 }
 
@@ -118,7 +119,9 @@ function serializeResult(result: unknown): string {
 }
 
 const verboseParam = z
-  .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().default(false))
+  .preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean())
+  .optional()
+  .default(false)
   .describe('Return full entities with members. Default false returns summary only.');
 
 function outputScopeParam(defaultScope: OutputScope = 'class') {
@@ -209,7 +212,7 @@ function toAtlasAdjacency(
 export function registerTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_find_entity',
-    "Find entities by name, type, or attribute filter. Provide 'name' for exact match, 'entityType' to filter by type, or 'attrFilter' for attribute key-value pairs (AND-composed). Use outputScope param to control result granularity.",
+    mcpToolDescription('archguard_find_entity'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -287,7 +290,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependencies',
-    'Return direct and transitive class-level dependency graph with method signatures (outputScope=method by default); call graph edges (method→method calls) are not included — only class-level structural relations. For Go package-level dependencies use archguard_get_atlas_layer.',
+    mcpToolDescription('archguard_get_dependencies'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -313,7 +316,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependents',
-    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). For Go package-level reverse dependencies use archguard_get_atlas_layer.',
+    mcpToolDescription('archguard_get_dependents'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -339,7 +342,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_find_implementers',
-    'Find classes that implement a given interface. For Go, finds struct types satisfying an interface via implicit structural typing. Use outputScope param to control result granularity.',
+    mcpToolDescription('archguard_find_implementers'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -364,7 +367,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_find_subclasses',
-    'Find subclasses of a given class. Only applicable to OO languages; Go has no class inheritance and will always return empty. Use outputScope param to control result granularity.',
+    mcpToolDescription('archguard_find_subclasses'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -389,8 +392,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_file_entities',
-    // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return all entities defined in..."
-    'Get all entities defined in a specific file. Use outputScope param to control result granularity.',
+    mcpToolDescription('archguard_get_file_entities'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -415,7 +417,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_detect_cycles',
-    'Detect dependency cycles in the architecture. For Go: the compiler prevents import cycles, so this tool will return empty for any valid Go project. Use outputScope param to control result granularity.',
+    mcpToolDescription('archguard_detect_cycles'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -433,7 +435,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_summary',
-    'Return pre-computed architecture statistics: exact entity/relation counts (no graph enumeration needed), relation breakdown by type, top-N entities by in-degree / out-degree / method count. ALWAYS call this tool first for any counting or ranking query — do NOT attempt to enumerate or count items from other tool outputs. Default outputScope=package (L1 granularity); for method-level detail call archguard_get_dependencies.',
+    mcpToolDescription('archguard_summary'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -451,8 +453,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_atlas_layer',
-    'Query a named layer of the Go Atlas architecture graph; returns nodes and edges for ' +
-      '`package`, `capability`, `goroutine`, or call chains for `flow`.',
+    mcpToolDescription('archguard_get_atlas_layer'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -509,8 +510,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_package_stats',
-    // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return per-package volume metrics..."
-    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped.',
+    mcpToolDescription('archguard_get_package_stats'),
     {
       projectRoot: projectRootParam,
       scope: scopeParam,

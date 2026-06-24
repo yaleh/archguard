@@ -27,6 +27,7 @@ import {
 } from '../../git-history/history-aggregator.js';
 import { writeHistoryArtifacts } from '../../git-history/history-writer.js';
 import type { GitHistoryManifest, GitHistoryArtifacts } from '@/types/git-history.js';
+import { mcpToolDescription } from '../metadata.js';
 
 // ---------------------------------------------------------------------------
 // Tool registration
@@ -35,7 +36,7 @@ import type { GitHistoryManifest, GitHistoryArtifacts } from '@/types/git-histor
 export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_analyze_git',
-    'Analyze git commit history for a project and generate file/package churn metrics, co-change coupling, and risk scores. Results are written to .archguard/query/git-history/ and can be queried with archguard_get_git_history.',
+    mcpToolDescription('archguard_analyze_git'),
     {
       projectRoot: z
         .string()

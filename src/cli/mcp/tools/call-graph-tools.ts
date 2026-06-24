@@ -10,6 +10,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
+import { mcpToolDescription } from '../metadata.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -18,14 +19,7 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
 export function registerCallGraphTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_find_callers',
-    'Return direct and transitive callers of an entity or method using ' +
-      'statically-extracted call edges; call archguard_analyze first. ' +
-      'Precision: TypeScript ~85% (TypeChecker-resolved; parseProject path only — ' +
-      'parseCode and ParallelParser paths do not generate call edges), ' +
-      'Go ~90% (gopls-assisted; entry-point-reachable paths only), ' +
-      'Java ~60% (tree-sitter heuristic; field-type resolution only), ' +
-      'Python ~40% (duck-typed; self.field calls only). ' +
-      'Dynamic dispatch, callbacks, and reflection are not resolved.',
+    mcpToolDescription('archguard_find_callers'),
     {
       entityName: z
         .string()

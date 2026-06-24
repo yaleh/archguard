@@ -198,10 +198,7 @@ export function createQueryCommand(): Command {
       // ADR-007 §4: Test analysis (mirrors archguard_detect_test_patterns / get_test_*)
       .option('--test-patterns', 'Show detected test pattern config and framework summary')
       .option('--test-issues', 'Show static test quality issues (orphans, zero-assertions, skips)')
-      .option(
-        '--severity <level>',
-        'Filter --test-issues by severity: warning|info (default: all)'
-      )
+      .option('--severity <level>', 'Filter --test-issues by severity: warning|info (default: all)')
       .option('--test-metrics', 'Show test suite metrics and package coverage breakdown')
       .option('--entity-coverage <entityId>', 'Show test coverage for a specific entity ID')
 
@@ -364,7 +361,9 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) console.log(JSON.stringify(layerData, null, 2));
     } else if (opts.testPatterns) {
       if (!extensionAccessor.hasTestAnalysis()) {
-        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        console.error(
+          'Error: No test analysis data. Run archguard analyze with --include-tests first.'
+        );
         process.exit(1);
       }
       const analysis = extensionAccessor.getTestAnalysis()!;
@@ -377,7 +376,9 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.testIssues) {
       if (!extensionAccessor.hasTestAnalysis()) {
-        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        console.error(
+          'Error: No test analysis data. Run archguard analyze with --include-tests first.'
+        );
         process.exit(1);
       }
       const analysis = extensionAccessor.getTestAnalysis()!;
@@ -388,7 +389,9 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.testMetrics) {
       if (!extensionAccessor.hasTestAnalysis()) {
-        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        console.error(
+          'Error: No test analysis data. Run archguard analyze with --include-tests first.'
+        );
         process.exit(1);
       }
       const analysis = extensionAccessor.getTestAnalysis()!;
@@ -396,7 +399,9 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.entityCoverage) {
       if (!extensionAccessor.hasTestAnalysis()) {
-        console.error('Error: No test analysis data. Run archguard analyze with --include-tests first.');
+        console.error(
+          'Error: No test analysis data. Run archguard analyze with --include-tests first.'
+        );
         process.exit(1);
       }
       result = engine.getEntityCoverage(opts.entityCoverage);
@@ -476,7 +481,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       } catch (err) {
         if (err instanceof GitHistoryNotFoundError) {
           console.error(
-            'Error: No git history data found. Run archguard analyze-git first.'
+            'Error: No git history data found. Run archguard analyze --include-git first.'
           );
         } else {
           console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);

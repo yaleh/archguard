@@ -137,6 +137,25 @@ archguard analyze -s ./cmd --lang go
 
 ## CLI Commands
 
+<!-- ARCHGUARD_METADATA:readme-cli-commands:START -->
+> Generated from `src/cli/metadata/registry.ts`; run `npm run docs:check` after editing registry metadata.
+
+| Command | Description | MCP Mapping |
+|---|---|---|
+| `archguard analyze` | Analyze source code and generate architecture diagrams and query artifacts | 1 mapped option(s) |
+| `archguard agent` | Generate registry-derived instructions for Claude Code and Codex agents | - |
+| `archguard cache` | Manage ArchGuard cache operations | - |
+| `archguard check` | Check architecture fitness rules against snapshots | - |
+| `archguard config` | Show and remove ArchGuard agent configuration | - |
+| `archguard diff` | Compare two architecture metric snapshots | - |
+| `archguard help` | Show registry-backed structured ArchGuard CLI help for agents | - |
+| `archguard init` | Initialize an ArchGuard configuration file | - |
+| `archguard install` | Install ArchGuard MCP config and generated instructions for Claude Code or Codex | - |
+| `archguard mcp` | Start the ArchGuard MCP server over stdio | - |
+| `archguard query` | Query architecture entities, relationships, metrics, tests, git history, and Atlas data | 24 mapped option(s) |
+| `archguard update` | Refresh existing ArchGuard agent configuration and generated instructions | - |
+<!-- ARCHGUARD_METADATA:readme-cli-commands:END -->
+
 ### `analyze`
 
 Analyze a project and generate architecture diagrams.
@@ -272,6 +291,40 @@ codex mcp add archguard -- archguard mcp
 ```
 
 **Available MCP tools:**
+
+<!-- ARCHGUARD_METADATA:readme-mcp-tools:START -->
+> Generated from `src/cli/metadata/registry.ts`; run `npm run docs:check` after editing MCP metadata.
+
+| MCP Tool | Description | CLI Equivalent | Call First |
+|---|---|---|---|
+| `archguard_find_entity` | Find entities by name, type, or attribute filters. | `archguard query --entity <name>` | archguard_analyze |
+| `archguard_get_dependencies` | Return direct and transitive dependencies for an entity. | `archguard query --deps-of <name>` | archguard_analyze |
+| `archguard_get_dependents` | Return entities that depend on a named entity. | `archguard query --used-by <name>` | archguard_analyze |
+| `archguard_find_implementers` | Find classes or structs implementing an interface. | `archguard query --implementers-of <name>` | archguard_analyze |
+| `archguard_find_subclasses` | Find subclasses of a class in object-oriented languages. | `archguard query --subclasses-of <name>` | archguard_analyze |
+| `archguard_get_file_entities` | Return entities defined in a specific source file. | `archguard query --file <path>` | archguard_analyze |
+| `archguard_detect_cycles` | Detect dependency cycles in analyzed architecture data. | `archguard query --cycles` | archguard_analyze |
+| `archguard_summary` | Return pre-computed architecture counts, relation breakdowns, and top rankings. | `archguard query --summary` | archguard_analyze |
+| `archguard_get_atlas_layer` | Return a Go Atlas architecture layer such as package, capability, goroutine, or flow. | `archguard query --atlas-layer <layer>` | archguard_analyze |
+| `archguard_get_ccb` | Return a cached Cognitive Context Bundle for a source file. | `-` | archguard_analyze, archguard_analyze_git |
+| `archguard_get_cognitive_summary` | Return compact structural digests for requested entity names. | `-` | archguard_analyze |
+| `archguard_get_package_stats` | Return per-package file, entity, method, and approximate line metrics. | `archguard query --package-stats` | archguard_analyze |
+| `archguard_get_package_metrics` | Aggregate fan-in, fan-out, and cycle count per package. | `-` | archguard_analyze |
+| `archguard_analyze` | Analyze project sources and refresh ArchGuard query artifacts. | `archguard analyze` | - |
+| `archguard_detect_test_patterns` | Detect test frameworks and convention hints before reading test metrics or issues. | `archguard query --test-patterns` | archguard_analyze |
+| `archguard_get_test_issues` | Return static-analysis test quality issues such as orphan tests, zero assertions, and skips. | `archguard query --test-issues` | archguard_analyze, archguard_detect_test_patterns |
+| `archguard_get_test_metrics` | Return test suite metrics and optional package coverage breakdowns. | `archguard query --test-metrics` | archguard_analyze, archguard_detect_test_patterns |
+| `archguard_get_entity_coverage` | Return inferred coverage details for a single source entity. | `archguard query --entity-coverage <entityId>` | archguard_analyze, archguard_detect_test_patterns |
+| `archguard_analyze_git` | Analyze git history and write churn, co-change, risk, and ownership artifacts. | `archguard analyze --include-git` | - |
+| `archguard_get_change_context` | Return churn, ownership, co-change, and risk context for a file or package before editing. | `archguard query --change-context <path>` | archguard_analyze_git |
+| `archguard_get_cochange` | Return strongest co-change neighbors for a file or package. | `archguard query --cochange <path>` | archguard_analyze_git |
+| `archguard_get_change_risk` | Return an explainable heuristic risk score for changing a file or package. | `archguard query --change-risk <path>` | archguard_analyze_git |
+| `archguard_get_ownership` | Return maintainer concentration and bus-factor proxy data for a file or package. | `archguard query --ownership <path>` | archguard_analyze_git |
+| `archguard_find_callers` | Return direct and transitive callers of an entity or method from static call edges. | `archguard query --callers <entity>` | archguard_analyze |
+| `archguard_get_package_fanin` | List Go Atlas packages ranked by incoming package dependencies. | `archguard query --package-fanin` | archguard_analyze |
+| `archguard_get_package_fanout` | List Go Atlas packages ranked by outgoing package dependencies. | `archguard query --package-fanout` | archguard_analyze |
+| `archguard_detect_god_packages` | Detect Go Atlas packages that exceed coupling, file, struct, or function thresholds. | `archguard query --god-packages` | archguard_analyze |
+<!-- ARCHGUARD_METADATA:readme-mcp-tools:END -->
 
 Architecture query:
 
