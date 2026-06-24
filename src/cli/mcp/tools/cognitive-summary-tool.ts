@@ -26,6 +26,7 @@ import { resolveRoot } from '../mcp-server.js';
 import { loadHistoryData } from '../../git-history/history-loader.js';
 import { HistoryQuery } from '../../git-history/history-query.js';
 import type { CognitiveSummaryEntry } from '@/types/cognitive-summary.js';
+import { mcpParamDescription, mcpToolDescription } from '../metadata.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -35,25 +36,21 @@ export function registerCognitiveSummaryTool(server: McpServer, defaultRoot: str
   // adr-ok: ADR-007 — cognitive summary is an agent-only tool; CLI interface out of scope for v1 (no terminal use case)
   server.tool(
     'archguard_get_cognitive_summary',
-    'Return a compact structural digest for each requested entity name from .archguard/ artifacts. ' +
-      'For each entity: method/field counts, in/out degree, top-5 dependents and dependencies, ' +
-      'static test coverage ratio (null when test artifacts absent), and git risk level ' +
-      '(null when git artifacts absent). Missing entities return { name, found: false }. ' +
-      'Payload is < 2 KB per entity. No LLM calls are made — pure mechanical aggregation.',
+    mcpToolDescription('archguard_get_cognitive_summary'),
     {
       entities: z
         .array(z.string())
         .min(1)
         .max(20)
-        .describe('Entity names to summarize (1–20 names, exact match).'),
+        .describe(mcpParamDescription('archguard_get_cognitive_summary', 'entities')),
       archDir: z
         .string()
         .optional()
-        .describe('Path to .archguard directory (default: <projectRoot>/.archguard).'),
+        .describe(mcpParamDescription('archguard_get_cognitive_summary', 'archDir')),
       projectRoot: z
         .string()
         .optional()
-        .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
+        .describe(mcpParamDescription('archguard_get_cognitive_summary', 'projectRoot')),
     },
     async ({ entities, archDir, projectRoot }) => {
       try {

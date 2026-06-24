@@ -81,11 +81,11 @@ describe('MCP metadata drift', () => {
     );
   });
 
-  it('exposes the same 24 tool names over in-process MCP listTools', async () => {
+  it('exposes the same 27 tool names over in-process MCP listTools', async () => {
     const tools = await listRegisteredTools();
 
     expect(new Set(tools.map((tool) => tool.name))).toEqual(new Set(mcpToolBaseline));
-    expect(tools).toHaveLength(24);
+    expect(tools).toHaveLength(27);
   });
 
   it('keeps in-process MCP descriptions aligned with registry renderer', async () => {

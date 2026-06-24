@@ -24,7 +24,7 @@ describe('ArchGuard command metadata registry', () => {
     expect(archGuardMetadataRegistry.mcpTools.map((tool) => tool.mcp.toolName)).toEqual([
       ...mcpToolBaseline,
     ]);
-    expect(archGuardMetadataRegistry.mcpTools).toHaveLength(24);
+    expect(archGuardMetadataRegistry.mcpTools).toHaveLength(27);
   });
 
   it('passes registry validation', () => {

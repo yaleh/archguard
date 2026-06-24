@@ -29,7 +29,7 @@ args = ["mcp"]
 
 Codex MCP config uses `~/.codex/config.toml` with `[mcp_servers.archguard]` running `archguard mcp`.
 
-Source metadata hash: `4aecc7bb4db2cf5129ab165a26509541427302c9f4e859ec27c9c5f6c765b386`
+Source metadata hash: `07a5bce6fc156e17c8a204df31c30e44c781adf5f8aca9b67d28ce9c3e269c4d`
 
 ## Operating Rules
 
@@ -54,7 +54,10 @@ Source metadata hash: `4aecc7bb4db2cf5129ab165a26509541427302c9f4e859ec27c9c5f6c
 - `archguard_get_file_entities`: Return entities defined in a specific source file. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_detect_cycles`: Detect dependency cycles in analyzed architecture data. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_summary`: Return pre-computed architecture counts, relation breakdowns, and top rankings. Call first: archguard_analyze. Follow with: archguard_find_entity, archguard_get_dependencies. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
+- `archguard_get_ccb`: Return a cached Cognitive Context Bundle for a source file. Call first: archguard_analyze, archguard_analyze_git. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and archguard_analyze_git and retry.
+- `archguard_get_cognitive_summary`: Return compact structural digests for requested entity names. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_get_package_stats`: Return per-package file, entity, method, and approximate line metrics. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
+- `archguard_get_package_metrics`: Aggregate fan-in, fan-out, and cycle count per package. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_find_callers`: Return direct and transitive callers of an entity or method from static call edges. Call first: archguard_analyze. Freshness: Reads the last .archguard/query analysis snapshot; rerun archguard_analyze after source changes. Recovery: If prerequisite data is missing, call archguard_analyze and retry.
 
 ### Test Analysis
@@ -91,7 +94,10 @@ Source metadata hash: `4aecc7bb4db2cf5129ab165a26509541427302c9f4e859ec27c9c5f6c
 - `archguard_detect_cycles`: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_summary`: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_get_atlas_layer`: If prerequisite data is missing, call archguard_analyze and retry.
+- `archguard_get_ccb`: If prerequisite data is missing, call archguard_analyze and archguard_analyze_git and retry.
+- `archguard_get_cognitive_summary`: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_get_package_stats`: If prerequisite data is missing, call archguard_analyze and retry.
+- `archguard_get_package_metrics`: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_detect_test_patterns`: If prerequisite data is missing, call archguard_analyze and retry.
 - `archguard_get_test_issues`: If prerequisite data is missing, call archguard_analyze and archguard_detect_test_patterns and retry.
 - `archguard_get_test_metrics`: If prerequisite data is missing, call archguard_analyze and archguard_detect_test_patterns and retry.

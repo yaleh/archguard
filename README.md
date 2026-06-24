@@ -306,7 +306,10 @@ codex mcp add archguard -- archguard mcp
 | `archguard_detect_cycles` | Detect dependency cycles in analyzed architecture data. | `archguard query --cycles` | archguard_analyze |
 | `archguard_summary` | Return pre-computed architecture counts, relation breakdowns, and top rankings. | `archguard query --summary` | archguard_analyze |
 | `archguard_get_atlas_layer` | Return a Go Atlas architecture layer such as package, capability, goroutine, or flow. | `archguard query --atlas-layer <layer>` | archguard_analyze |
+| `archguard_get_ccb` | Return a cached Cognitive Context Bundle for a source file. | `-` | archguard_analyze, archguard_analyze_git |
+| `archguard_get_cognitive_summary` | Return compact structural digests for requested entity names. | `-` | archguard_analyze |
 | `archguard_get_package_stats` | Return per-package file, entity, method, and approximate line metrics. | `archguard query --package-stats` | archguard_analyze |
+| `archguard_get_package_metrics` | Aggregate fan-in, fan-out, and cycle count per package. | `-` | archguard_analyze |
 | `archguard_analyze` | Analyze project sources and refresh ArchGuard query artifacts. | `archguard analyze` | - |
 | `archguard_detect_test_patterns` | Detect test frameworks and convention hints before reading test metrics or issues. | `archguard query --test-patterns` | archguard_analyze |
 | `archguard_get_test_issues` | Return static-analysis test quality issues such as orphan tests, zero assertions, and skips. | `archguard query --test-issues` | archguard_analyze, archguard_detect_test_patterns |
