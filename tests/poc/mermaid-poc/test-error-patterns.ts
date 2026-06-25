@@ -72,18 +72,14 @@ classDiagram
   }
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-nested-namespace', diagram);
-    // If we get here, check if SVG is valid or if it silently failed
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG output - nested namespaces not supported');
-    }
-    // Mermaid might render this but with incorrect behavior
-    if (!svg.includes('Outer') || !svg.includes('Inner')) {
-      throw new Error('Nested namespaces not properly rendered');
-    }
-  } catch (error) {
-    throw error; // Re-throw to be caught by test runner
+  const { svg } = await mermaid.render('test-nested-namespace', diagram);
+  // If we get here, check if SVG is valid or if it silently failed
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG output - nested namespaces not supported');
+  }
+  // Mermaid might render this but with incorrect behavior
+  if (!svg.includes('Outer') || !svg.includes('Inner')) {
+    throw new Error('Nested namespaces not properly rendered');
   }
 }
 
@@ -104,20 +100,16 @@ classDiagram
   }
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-intra-namespace-rel', diagram);
+  const { svg } = await mermaid.render('test-intra-namespace-rel', diagram);
 
-    // Mermaid might render this but could have issues
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG output - intra-namespace relationships not supported');
-    }
+  // Mermaid might render this but could have issues
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG output - intra-namespace relationships not supported');
+  }
 
-    // Verify both classes and relationship are in the diagram
-    if (!svg.includes('A') || !svg.includes('B')) {
-      throw new Error('Classes not found in SVG');
-    }
-  } catch (error) {
-    throw error;
+  // Verify both classes and relationship are in the diagram
+  if (!svg.includes('A') || !svg.includes('B')) {
+    throw new Error('Classes not found in SVG');
   }
 }
 
@@ -137,20 +129,16 @@ classDiagram
   Parser~string, Result~ --> Result : produces
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-comma-generics', diagram);
+  const { svg } = await mermaid.render('test-comma-generics', diagram);
 
-    // Mermaid typically doesn't support comma-separated generics
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG output - comma generics not supported');
-    }
+  // Mermaid typically doesn't support comma-separated generics
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG output - comma generics not supported');
+  }
 
-    // Check if generics were properly parsed
-    if (!svg.includes('Parser') || !svg.includes('Result')) {
-      throw new Error('Classes not found in SVG');
-    }
-  } catch (error) {
-    throw error;
+  // Check if generics were properly parsed
+  if (!svg.includes('Parser') || !svg.includes('Result')) {
+    throw new Error('Classes not found in SVG');
   }
 }
 
@@ -162,19 +150,15 @@ classDiagram
     +method() void
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-invalid-syntax', diagram);
+  const { svg } = await mermaid.render('test-invalid-syntax', diagram);
 
-    // Mermaid should catch this syntax error
-    if (!svg || svg.length === 0) {
-      throw new Error('Syntax error detected - missing closing brace');
-    }
-
-    // If SVG was generated, it might be incomplete or invalid
-    throw new Error('Invalid syntax was not caught');
-  } catch (error) {
-    throw error;
+  // Mermaid should catch this syntax error
+  if (!svg || svg.length === 0) {
+    throw new Error('Syntax error detected - missing closing brace');
   }
+
+  // If SVG was generated, it might be incomplete or invalid
+  throw new Error('Invalid syntax was not caught');
 }
 
 // Error Test 5: Invalid relationship type
@@ -192,14 +176,10 @@ classDiagram
   A ==> B : invalid_type
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-invalid-rel-type', diagram);
+  const { svg } = await mermaid.render('test-invalid-rel-type', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Invalid relationship type detected');
-    }
-  } catch (error) {
-    throw error;
+  if (!svg || svg.length === 0) {
+    throw new Error('Invalid relationship type detected');
   }
 }
 
@@ -212,14 +192,10 @@ classDiagram
   }
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-invalid-method', diagram);
+  const { svg } = await mermaid.render('test-invalid-method', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Invalid method syntax detected');
-    }
-  } catch (error) {
-    throw error;
+  if (!svg || svg.length === 0) {
+    throw new Error('Invalid method syntax detected');
   }
 }
 
@@ -238,19 +214,15 @@ classDiagram
   }
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-deep-nesting', diagram);
+  const { svg } = await mermaid.render('test-deep-nesting', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG - deeply nested namespaces not supported');
-    }
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG - deeply nested namespaces not supported');
+  }
 
-    // Verify all levels are present
-    if (!svg.includes('Level1') || !svg.includes('Level2') || !svg.includes('Level3')) {
-      throw new Error('Not all namespace levels rendered');
-    }
-  } catch (error) {
-    throw error;
+  // Verify all levels are present
+  if (!svg.includes('Level1') || !svg.includes('Level2') || !svg.includes('Level3')) {
+    throw new Error('Not all namespace levels rendered');
   }
 }
 
@@ -274,18 +246,14 @@ classDiagram
   ClassA~string~ --> Result~string~ : creates
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-cross-namespace-generics', diagram);
+  const { svg } = await mermaid.render('test-cross-namespace-generics', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG - cross-namespace generics not supported');
-    }
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG - cross-namespace generics not supported');
+  }
 
-    if (!svg.includes('NS1') || !svg.includes('NS2')) {
-      throw new Error('Namespaces not found in SVG');
-    }
-  } catch (error) {
-    throw error;
+  if (!svg.includes('NS1') || !svg.includes('NS2')) {
+    throw new Error('Namespaces not found in SVG');
   }
 }
 
@@ -304,14 +272,10 @@ classDiagram
   "Class-With-Special_Chars" --> "Class@With$Special#Chars" : dependency
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-special-chars', diagram);
+  const { svg } = await mermaid.render('test-special-chars', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG - special characters not supported');
-    }
-  } catch (error) {
-    throw error;
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG - special characters not supported');
   }
 }
 
@@ -324,14 +288,10 @@ classDiagram
   }
 `;
 
-  try {
-    const { svg } = await mermaid.render('test-long-methods', diagram);
+  const { svg } = await mermaid.render('test-long-methods', diagram);
 
-    if (!svg || svg.length === 0) {
-      throw new Error('Empty SVG - long method signatures not supported');
-    }
-  } catch (error) {
-    throw error;
+  if (!svg || svg.length === 0) {
+    throw new Error('Empty SVG - long method signatures not supported');
   }
 }
 

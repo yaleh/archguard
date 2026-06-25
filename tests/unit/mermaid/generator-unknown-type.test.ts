@@ -9,7 +9,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { ValidatedMermaidGenerator } from '@/mermaid/generator.js';
-import { EntityTypeRegistry, globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
+import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { GroupingDecision } from '@/mermaid/types.js';
 

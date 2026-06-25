@@ -38,9 +38,36 @@ describe('buildMetricVector', () => {
         stronglyConnectedComponents: 3,
         relationTypeBreakdown: { inheritance: 2 },
         fileStats: [
-          { file: 'a.ts', loc: 10, entityCount: 1, methodCount: 1, fieldCount: 0, inDegree: 0, outDegree: 1, cycleCount: 0 },
-          { file: 'b.ts', loc: 20, entityCount: 1, methodCount: 1, fieldCount: 0, inDegree: 2, outDegree: 0, cycleCount: 0 },
-          { file: 'c.ts', loc: 30, entityCount: 1, methodCount: 1, fieldCount: 0, inDegree: 10, outDegree: 3, cycleCount: 0 },
+          {
+            file: 'a.ts',
+            loc: 10,
+            entityCount: 1,
+            methodCount: 1,
+            fieldCount: 0,
+            inDegree: 0,
+            outDegree: 1,
+            cycleCount: 0,
+          },
+          {
+            file: 'b.ts',
+            loc: 20,
+            entityCount: 1,
+            methodCount: 1,
+            fieldCount: 0,
+            inDegree: 2,
+            outDegree: 0,
+            cycleCount: 0,
+          },
+          {
+            file: 'c.ts',
+            loc: 30,
+            entityCount: 1,
+            methodCount: 1,
+            fieldCount: 0,
+            inDegree: 10,
+            outDegree: 3,
+            cycleCount: 0,
+          },
         ],
         cycles: [],
       },
@@ -168,10 +195,46 @@ describe('buildMetricVector', () => {
         stronglyConnectedComponents: 4,
         relationTypeBreakdown: {},
         fileStats: [
-          { file: 'a.ts', loc: 1, entityCount: 1, methodCount: 0, fieldCount: 0, inDegree: 0, outDegree: 0, cycleCount: 0 },
-          { file: 'b.ts', loc: 1, entityCount: 1, methodCount: 0, fieldCount: 0, inDegree: 2, outDegree: 0, cycleCount: 0 },
-          { file: 'c.ts', loc: 1, entityCount: 1, methodCount: 0, fieldCount: 0, inDegree: 4, outDegree: 0, cycleCount: 0 },
-          { file: 'd.ts', loc: 1, entityCount: 1, methodCount: 0, fieldCount: 0, inDegree: 10, outDegree: 0, cycleCount: 0 },
+          {
+            file: 'a.ts',
+            loc: 1,
+            entityCount: 1,
+            methodCount: 0,
+            fieldCount: 0,
+            inDegree: 0,
+            outDegree: 0,
+            cycleCount: 0,
+          },
+          {
+            file: 'b.ts',
+            loc: 1,
+            entityCount: 1,
+            methodCount: 0,
+            fieldCount: 0,
+            inDegree: 2,
+            outDegree: 0,
+            cycleCount: 0,
+          },
+          {
+            file: 'c.ts',
+            loc: 1,
+            entityCount: 1,
+            methodCount: 0,
+            fieldCount: 0,
+            inDegree: 4,
+            outDegree: 0,
+            cycleCount: 0,
+          },
+          {
+            file: 'd.ts',
+            loc: 1,
+            entityCount: 1,
+            methodCount: 0,
+            fieldCount: 0,
+            inDegree: 10,
+            outDegree: 0,
+            cycleCount: 0,
+          },
         ],
       },
     });
@@ -206,12 +269,26 @@ describe('buildMetricVector', () => {
   it('[integration] schemaVersion is always 1 for any realistic ArchJSON input', () => {
     const archJson = makeArchJson({
       entities: [
-        { id: 'pkg.A', name: 'A', type: 'class', visibility: 'public', methods: [], fields: [], sourceLocation: { file: 'src/a.ts', startLine: 1, endLine: 50 } },
-        { id: 'pkg.B', name: 'B', type: 'class', visibility: 'public', methods: [], fields: [], sourceLocation: { file: 'src/b.ts', startLine: 1, endLine: 30 } },
+        {
+          id: 'pkg.A',
+          name: 'A',
+          type: 'class',
+          visibility: 'public',
+          methods: [],
+          fields: [],
+          sourceLocation: { file: 'src/a.ts', startLine: 1, endLine: 50 },
+        },
+        {
+          id: 'pkg.B',
+          name: 'B',
+          type: 'class',
+          visibility: 'public',
+          methods: [],
+          fields: [],
+          sourceLocation: { file: 'src/b.ts', startLine: 1, endLine: 30 },
+        },
       ],
-      relations: [
-        { from: 'pkg.A', to: 'pkg.B', type: 'dependency' },
-      ],
+      relations: [{ from: 'pkg.A', to: 'pkg.B', type: 'dependency' }],
       metrics: {
         level: 'class',
         entityCount: 2,
@@ -220,8 +297,26 @@ describe('buildMetricVector', () => {
         stronglyConnectedComponents: 2,
         relationTypeBreakdown: { dependency: 1 },
         fileStats: [
-          { file: 'src/a.ts', loc: 50, entityCount: 1, methodCount: 2, fieldCount: 1, inDegree: 0, outDegree: 1, cycleCount: 0 },
-          { file: 'src/b.ts', loc: 30, entityCount: 1, methodCount: 1, fieldCount: 0, inDegree: 1, outDegree: 0, cycleCount: 0 },
+          {
+            file: 'src/a.ts',
+            loc: 50,
+            entityCount: 1,
+            methodCount: 2,
+            fieldCount: 1,
+            inDegree: 0,
+            outDegree: 1,
+            cycleCount: 0,
+          },
+          {
+            file: 'src/b.ts',
+            loc: 30,
+            entityCount: 1,
+            methodCount: 1,
+            fieldCount: 0,
+            inDegree: 1,
+            outDegree: 0,
+            cycleCount: 0,
+          },
         ],
         cycles: [],
       },
@@ -316,7 +411,15 @@ describe('buildMetricVector', () => {
     const archJson = makeArchJson({
       // metrics intentionally absent — simulates a freshly-parsed ArchJSON before MetricsCalculator runs
       entities: [
-        { id: 'x.Foo', name: 'Foo', type: 'class', visibility: 'public', methods: [], fields: [], sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 10 } },
+        {
+          id: 'x.Foo',
+          name: 'Foo',
+          type: 'class',
+          visibility: 'public',
+          methods: [],
+          fields: [],
+          sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 10 },
+        },
       ],
       relations: [],
     });
@@ -324,7 +427,7 @@ describe('buildMetricVector', () => {
     const vec = buildMetricVector(archJson, packageStats);
 
     expect(vec.schemaVersion).toBe(1);
-    expect(vec.totalEntities).toBe(0);      // from metrics (undefined → 0)
+    expect(vec.totalEntities).toBe(0); // from metrics (undefined → 0)
     expect(vec.totalRelations).toBe(0);
     expect(vec.sccCount).toBe(0);
     expect(vec.maxInDegree).toBe(0);

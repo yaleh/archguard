@@ -11,11 +11,7 @@
 import type { ArchJSON, Entity, RelationType, CycleInfo } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
-import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
-import type {
-  PackageCoverage,
-  TestFileInfo,
-} from '@/types/extensions/test-analysis.js';
+import type { PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
 import { narrowEntities, filterRelationsForScope } from './output-scope-filter.js';
 import { serialize } from './edge-list-serializer.js';
 import { ArchMetrics } from './arch-metrics.js';
@@ -86,7 +82,11 @@ export class QueryEngine {
     this.scopeEntry = options.scopeEntry;
     this.extensionAccessor = new ExtensionAccessor(options.archJson);
     this.entityQueryService = new EntityQueryService(options.archJson, options.archIndex);
-    this.relationQueryService = new RelationQueryService(options.archJson, options.archIndex, this.entityQueryService);
+    this.relationQueryService = new RelationQueryService(
+      options.archJson,
+      options.archIndex,
+      this.entityQueryService
+    );
     this.metrics = new ArchMetrics(options.archJson, options.archIndex, this.extensionAccessor);
   }
 
@@ -286,5 +286,4 @@ export class QueryEngine {
       fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
     };
   }
-
 }

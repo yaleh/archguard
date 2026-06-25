@@ -5,7 +5,6 @@
  */
 
 import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-java doesn't have proper type definitions
 import Java from 'tree-sitter-java';
 import type {
   JavaRawPackage,
@@ -25,7 +24,7 @@ export class TreeSitterBridge {
 
   constructor() {
     this.parser = new Parser();
-    // @ts-ignore - tree-sitter-java language definition compatibility
+    // @ts-expect-error -- tree-sitter language definition type incompatibility
     this.parser.setLanguage(Java);
   }
 
@@ -491,7 +490,7 @@ export class TreeSitterBridge {
   /**
    * Extract modifiers from a node
    */
-  private extractModifiers(node: Parser.SyntaxNode, code: string): string[] {
+  private extractModifiers(node: Parser.SyntaxNode, _code: string): string[] {
     const modifiers: string[] = [];
     const modifierNodes = node.children.filter((n) => n.type === 'modifiers');
 

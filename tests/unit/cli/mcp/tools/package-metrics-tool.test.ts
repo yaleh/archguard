@@ -99,10 +99,7 @@ function buildCycleArchJson(): ArchJSON {
       makeEntity('pkgX.Foo', 'Foo', 'src/pkgX/foo.ts'),
       makeEntity('pkgY.Bar', 'Bar', 'src/pkgY/bar.ts'),
     ],
-    relations: [
-      makeRelation('pkgX.Foo', 'pkgY.Bar'),
-      makeRelation('pkgY.Bar', 'pkgX.Foo'),
-    ],
+    relations: [makeRelation('pkgX.Foo', 'pkgY.Bar'), makeRelation('pkgY.Bar', 'pkgX.Foo')],
   };
 }
 
@@ -166,11 +163,19 @@ describe('archguard_get_package_metrics — all packages', () => {
   it('returns fanIn, fanOut, cycleCount fields for each package', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const text = result.content[0].text as string;
-    const payload = JSON.parse(text) as { packages: Array<{ packageName: string; fanIn: number; fanOut: number; cycleCount: number; cyclesWith: string[] }> };
+    const payload = JSON.parse(text) as {
+      packages: Array<{
+        packageName: string;
+        fanIn: number;
+        fanOut: number;
+        cycleCount: number;
+        cyclesWith: string[];
+      }>;
+    };
 
     expect(payload.packages).toBeDefined();
     expect(payload.packages.length).toBeGreaterThan(0);
@@ -188,7 +193,7 @@ describe('archguard_get_package_metrics — all packages', () => {
   it('returns all packages when no packageName filter specified', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);
@@ -201,7 +206,7 @@ describe('archguard_get_package_metrics — all packages', () => {
   it('computes correct fanOut for pkgA (2 outgoing cross-package relations)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);
@@ -215,7 +220,7 @@ describe('archguard_get_package_metrics — all packages', () => {
   it('computes correct fanIn for pkgB (2 incoming cross-package relations)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);
@@ -229,7 +234,7 @@ describe('archguard_get_package_metrics — all packages', () => {
   it('sets cycleCount=0 and cyclesWith=[] when no cycles', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);
@@ -253,7 +258,7 @@ describe('archguard_get_package_metrics — packageName filter', () => {
   it('returns only the specified package when packageName is provided', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace', packageName: 'pkgA' });
     const payload = JSON.parse(result.content[0].text);
@@ -265,7 +270,7 @@ describe('archguard_get_package_metrics — packageName filter', () => {
   it('returns empty array when packageName does not match any package', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace', packageName: 'nonexistent' });
     const payload = JSON.parse(result.content[0].text);
@@ -286,7 +291,7 @@ describe('archguard_get_package_metrics — cycle detection', () => {
   it('sets cycleCount>0 when a cycle exists between packages', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);
@@ -304,7 +309,7 @@ describe('archguard_get_package_metrics — cycle detection', () => {
   it('populates cyclesWith with names of co-cycling entities when cycleCount>0', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const handler = tools.get('archguard_get_package_metrics')!;
+    const handler = tools.get('archguard_get_package_metrics');
 
     const result = await handler({ projectRoot: '/workspace' });
     const payload = JSON.parse(result.content[0].text);

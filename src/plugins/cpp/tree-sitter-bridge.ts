@@ -2,7 +2,6 @@
  * Tree-sitter bridge for C++ language parsing
  */
 import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-cpp doesn't have proper type definitions
 import Cpp from 'tree-sitter-cpp';
 import { ClassBuilder } from './builders/class-builder.js';
 import type { RawCppFile, RawClass, RawEnum, RawFunction } from './types.js';
@@ -13,7 +12,7 @@ export class TreeSitterBridge {
 
   constructor() {
     this.parser = new Parser();
-    // @ts-ignore - tree-sitter-cpp language definition compatibility
+    // @ts-expect-error -- tree-sitter-cpp language definition type incompatibility
     this.parser.setLanguage(Cpp);
     this.classBuilder = new ClassBuilder();
   }

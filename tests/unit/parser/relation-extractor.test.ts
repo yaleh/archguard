@@ -395,7 +395,9 @@ describe('RelationExtractor - Gap A: Function Import Relations', () => {
 
     const relations = extractor.extract(code);
 
-    const selfRels = relations.filter((r) => r.source === 'useWeather' && r.target === 'useWeather');
+    const selfRels = relations.filter(
+      (r) => r.source === 'useWeather' && r.target === 'useWeather'
+    );
     expect(selfRels).toHaveLength(0);
   });
 
@@ -550,23 +552,28 @@ describe('RelationExtractor - Cross-file type resolution (import() format)', () 
     const crossExtractor = new RelationExtractor();
     // Add the "other" file first so TypeChecker can resolve across files
     crossExtractor['project'].createSourceFile('/types.ts', 'export class Foo {}');
-    const barFile = crossExtractor['project'].createSourceFile('/bar.ts', `
+    const barFile = crossExtractor['project'].createSourceFile(
+      '/bar.ts',
+      `
       import { Foo } from './types.js';
       export class Bar {
         private foo: Foo;
       }
-    `);
+    `
+    );
     const relations = crossExtractor.extractFromSourceFile(barFile);
-    const comp = relations.filter(r => r.type === 'composition' && r.source === 'Bar' && r.target === 'Foo');
+    const comp = relations.filter(
+      (r) => r.type === 'composition' && r.source === 'Bar' && r.target === 'Foo'
+    );
     expect(comp).toHaveLength(1);
   });
 
   it('extractTypeName handles import() format directly', () => {
     const ext = new RelationExtractor();
     // Access private method via type cast
-    const result = (ext as unknown as { extractTypeName(s: string): string | null }).extractTypeName(
-      'import("/home/user/project/src/types/index").ArchJSON'
-    );
+    const result = (
+      ext as unknown as { extractTypeName(s: string): string | null }
+    ).extractTypeName('import("/home/user/project/src/types/index").ArchJSON');
     expect(result).toBe('ArchJSON');
   });
 });
@@ -613,7 +620,7 @@ describe('RelationExtractor - Function signature type extraction', () => {
       }
     `;
     const relations = extractor.extract(code);
-    const depsToFoo = relations.filter(r => r.source === 'useFoo' && r.target === 'Foo');
+    const depsToFoo = relations.filter((r) => r.source === 'useFoo' && r.target === 'Foo');
     expect(depsToFoo).toHaveLength(1); // dedup by relationSet
   });
 

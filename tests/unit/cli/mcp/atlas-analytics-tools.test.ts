@@ -58,9 +58,27 @@ const goAtlasScopeEntry: QueryScopeEntry = {
  *   fanIn:  A=1, B=1, C=2
  *   fanOut: A=2, B=1, C=1
  */
-const NODE_A: PackageNode = { id: 'pkg/a', name: 'a', type: 'internal', fileCount: 5, stats: { structs: 3, interfaces: 1, functions: 10 } };
-const NODE_B: PackageNode = { id: 'pkg/b', name: 'b', type: 'internal', fileCount: 2, stats: { structs: 1, interfaces: 0, functions: 4 } };
-const NODE_C: PackageNode = { id: 'pkg/c', name: 'c', type: 'internal', fileCount: 8, stats: { structs: 5, interfaces: 2, functions: 20 } };
+const NODE_A: PackageNode = {
+  id: 'pkg/a',
+  name: 'a',
+  type: 'internal',
+  fileCount: 5,
+  stats: { structs: 3, interfaces: 1, functions: 10 },
+};
+const NODE_B: PackageNode = {
+  id: 'pkg/b',
+  name: 'b',
+  type: 'internal',
+  fileCount: 2,
+  stats: { structs: 1, interfaces: 0, functions: 4 },
+};
+const NODE_C: PackageNode = {
+  id: 'pkg/c',
+  name: 'c',
+  type: 'internal',
+  fileCount: 8,
+  stats: { structs: 5, interfaces: 2, functions: 20 },
+};
 
 const PACKAGE_GRAPH: PackageGraph = {
   nodes: [NODE_A, NODE_B, NODE_C],
@@ -102,7 +120,10 @@ function makeAtlasArchJson(graph: PackageGraph = PACKAGE_GRAPH): ArchJSON {
   };
 }
 
-function makeAtlasEngine(graph: PackageGraph = PACKAGE_GRAPH): { engine: QueryEngine; archJson: ArchJSON } {
+function makeAtlasEngine(graph: PackageGraph = PACKAGE_GRAPH): {
+  engine: QueryEngine;
+  archJson: ArchJSON;
+} {
   const archJson = makeAtlasArchJson(graph);
   const archIndex = buildArchIndex(archJson, 'atlas-hash');
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry: goAtlasScopeEntry });
@@ -134,7 +155,11 @@ function makeNoAtlasEngine(): { engine: QueryEngine; archJson: ArchJSON } {
 }
 
 function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
-  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry: goAtlasScopeEntry };
+  return {
+    engine,
+    extensionAccessor: new ExtensionAccessor(archJson),
+    scopeEntry: goAtlasScopeEntry,
+  };
 }
 
 // Reusable collectTools helper that accepts a register function
@@ -266,7 +291,7 @@ describe('archguard_get_package_fanin — handler', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(makeNoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     expect(result.content[0].text).toMatch(/No Atlas data/i);
   });
@@ -276,7 +301,7 @@ describe('archguard_get_package_fanin — handler', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(emptyGraph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     expect(result.content[0].text).toMatch(/No package data/i);
   });
@@ -284,7 +309,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('returns packages sorted descending by fanIn', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     const fanIns = parsed.packages.map((p: { fanIn: number }) => p.fanIn);
@@ -296,7 +321,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('applies minFanIn filter before sorting', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     // minFanIn=2 should keep only node C (fanIn=2)
     const result = await cb({ minFanIn: 2 });
     const parsed = JSON.parse(result.content[0].text);
@@ -308,7 +333,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('limits results to requested limit (default 20)', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({ limit: 1 });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.packages.length).toBeLessThanOrEqual(1);
@@ -317,7 +342,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('response includes fanIn and fanOut fields in each entry', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     for (const pkg of parsed.packages) {
@@ -329,7 +354,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('response includes id, name, type, fileCount in each entry', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     for (const pkg of parsed.packages) {
@@ -343,7 +368,7 @@ describe('archguard_get_package_fanin — handler', () => {
   it('stats field included when node carries stats', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanin')!;
+    const cb = tools.get('archguard_get_package_fanin');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     // NODE_A, B, C all have stats
@@ -356,7 +381,7 @@ describe('archguard_get_package_fanout — handler', () => {
   it('returns packages sorted descending by fanOut', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanout')!;
+    const cb = tools.get('archguard_get_package_fanout');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     const fanOuts = parsed.packages.map((p: { fanOut: number }) => p.fanOut);
@@ -368,7 +393,7 @@ describe('archguard_get_package_fanout — handler', () => {
   it('applies minFanOut filter before sorting', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanout')!;
+    const cb = tools.get('archguard_get_package_fanout');
     // minFanOut=2 should keep only node A (fanOut=2)
     const result = await cb({ minFanOut: 2 });
     const parsed = JSON.parse(result.content[0].text);
@@ -380,7 +405,7 @@ describe('archguard_get_package_fanout — handler', () => {
   it('response includes both fanIn and fanOut for cross-reference', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_get_package_fanout')!;
+    const cb = tools.get('archguard_get_package_fanout');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     for (const pkg of parsed.packages) {
@@ -405,7 +430,7 @@ describe('archguard_detect_god_packages — handler', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(makeNoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     const result = await cb({});
     expect(result.content[0].text).toMatch(/No Atlas data/i);
   });
@@ -415,7 +440,7 @@ describe('archguard_detect_god_packages — handler', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(emptyGraph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     const result = await cb({});
     expect(result.content[0].text).toMatch(/No package data/i);
   });
@@ -425,7 +450,7 @@ describe('archguard_detect_god_packages — handler', () => {
     // Our fixture nodes: fanIn max=2, structs max=5, functions max=20, files max=8 — all well below
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(Array.isArray(parsed.godPackages)).toBe(true);
@@ -435,7 +460,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('flags package exceeding minFanIn threshold', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minFanIn=2 → node C (fanIn=2) gets flagged
     const result = await cb({ minFanIn: 2 });
     const parsed = JSON.parse(result.content[0].text);
@@ -447,7 +472,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('flags package exceeding minStructs threshold', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minStructs=4 → node C (structs=5) gets flagged
     const result = await cb({ minStructs: 4 });
     const parsed = JSON.parse(result.content[0].text);
@@ -459,7 +484,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('flags package exceeding minFunctions threshold', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minFunctions=15 → node C (functions=20) gets flagged
     const result = await cb({ minFunctions: 15 });
     const parsed = JSON.parse(result.content[0].text);
@@ -471,7 +496,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('flags package exceeding minFiles threshold', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minFiles=7 → node C (fileCount=8) gets flagged
     const result = await cb({ minFiles: 7 });
     const parsed = JSON.parse(result.content[0].text);
@@ -483,7 +508,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('flags package with multiple threshold violations; reasons lists all', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // Node C: fanIn=2, structs=5, functions=20, fileCount=8
     // Set all thresholds low enough to catch C
     const result = await cb({ minFanIn: 2, minStructs: 4, minFunctions: 15, minFiles: 7 });
@@ -498,7 +523,12 @@ describe('archguard_detect_god_packages — handler', () => {
   });
 
   it('does not flag package with stats=undefined for struct/function thresholds', async () => {
-    const nodeNoStats: PackageNode = { id: 'pkg/no-stats', name: 'no-stats', type: 'internal', fileCount: 10 };
+    const nodeNoStats: PackageNode = {
+      id: 'pkg/no-stats',
+      name: 'no-stats',
+      type: 'internal',
+      fileCount: 10,
+    };
     const graph: PackageGraph = {
       nodes: [nodeNoStats],
       edges: [],
@@ -507,7 +537,7 @@ describe('archguard_detect_god_packages — handler', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(makeAtlasEngine(graph)));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minStructs=1, minFunctions=1 — would flag if stats present; stats=undefined → no flag for structs/functions
     const result = await cb({ minStructs: 1, minFunctions: 1 });
     const parsed = JSON.parse(result.content[0].text);
@@ -521,7 +551,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('applies custom threshold overrides from params', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // very high thresholds → nothing flagged
     const result = await cb({ minFanIn: 100, minStructs: 100, minFunctions: 100, minFiles: 100 });
     const parsed = JSON.parse(result.content[0].text);
@@ -531,7 +561,7 @@ describe('archguard_detect_god_packages — handler', () => {
   it('response includes fanIn, fanOut, fileCount in each god package entry', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
-    const cb = tools.get('archguard_detect_god_packages')!;
+    const cb = tools.get('archguard_detect_god_packages');
     // minFanIn=2 → flags node C
     const result = await cb({ minFanIn: 2 });
     const parsed = JSON.parse(result.content[0].text);

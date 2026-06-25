@@ -119,7 +119,10 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
           relations.push({
             from: fromId,
             to: `${pkg.fullName}.${func.name}.spawn-${spawn.location.startLine}`,
-            spawnType: !spawn.call.functionName || spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
+            spawnType:
+              !spawn.call.functionName || spawn.call.functionName === '<anonymous>'
+                ? 'go-func'
+                : 'go-stmt',
           });
         }
       }
@@ -134,7 +137,10 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
             relations.push({
               from: fromId,
               to: `${pkg.fullName}.${struct.name}.${method.name}.spawn-${spawn.location.startLine}`,
-              spawnType: !spawn.call.functionName || spawn.call.functionName === '<anonymous>' ? 'go-func' : 'go-stmt',
+              spawnType:
+                !spawn.call.functionName || spawn.call.functionName === '<anonymous>'
+                  ? 'go-func'
+                  : 'go-stmt',
             });
           }
         }

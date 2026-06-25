@@ -5,7 +5,11 @@
  */
 
 import fs from 'fs-extra';
-import type { IDependencyExtractor, Dependency, DependencyScope } from '@/core/interfaces/dependency.js';
+import type {
+  IDependencyExtractor,
+  Dependency,
+  DependencyScope,
+} from '@/core/interfaces/dependency.js';
 
 function toScope(gradleScope: string): DependencyScope {
   if (gradleScope.toLowerCase().includes('test')) return 'development';
@@ -43,13 +47,11 @@ const GRADLE_SCOPES = [
 ].join('|');
 
 // Matches: implementation("com.squareup.okhttp3:okhttp:4.12.0")
-const LITERAL_REGEX = new RegExp(
-  `^\\s*(${GRADLE_SCOPES})\\s*\\(\\s*"([^"]+)"\\s*\\)`,
-);
+const LITERAL_REGEX = new RegExp(`^\\s*(${GRADLE_SCOPES})\\s*\\(\\s*"([^"]+)"\\s*\\)`);
 
 // Matches: implementation(libs.androidx.core.ktx)
 const CATALOG_REGEX = new RegExp(
-  `^\\s*(${GRADLE_SCOPES})\\s*\\(\\s*(libs\\.[a-zA-Z0-9._-]+)\\s*\\)`,
+  `^\\s*(${GRADLE_SCOPES})\\s*\\(\\s*(libs\\.[a-zA-Z0-9._-]+)\\s*\\)`
 );
 
 export class KotlinDependencyExtractor implements IDependencyExtractor {

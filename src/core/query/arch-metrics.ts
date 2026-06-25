@@ -8,10 +8,7 @@
 import path from 'path';
 import type { ArchJSON, Entity, RelationType } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
-import type {
-  PackageCoverage,
-  TestFileInfo,
-} from '@/types/extensions/test-analysis.js';
+import type { PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
 import { ExtensionAccessor } from './extension-accessor.js';
 
 // ── Re-exported types ────────────────────────────────────────────────────────
@@ -153,25 +150,35 @@ export class ArchMetrics {
     // ── Path A: Go Atlas ──────────────────────────────────────────────────
     const pg = this.ext.getAtlasLayer('package');
     if (pg) {
-      const sourceNodes = pg.nodes.filter((n: { type: string }) => n.type === 'internal' || n.type === 'cmd');
-      const packages: PackageStatEntry[] = sourceNodes.map((node: { name: string; fileCount: number; stats?: { structs?: number; interfaces?: number; functions?: number } }) => {
-        const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.name);
-        return {
-          package: node.name,
-          fileCount: node.fileCount,
-          entityCount,
-          methodCount,
-          fieldCount,
-          languageStats: node.stats
-            ? {
-                structs: node.stats.structs,
-                interfaces: node.stats.interfaces,
-                functions: node.stats.functions,
-              }
-            : undefined,
-        };
-      });
-      const sorted = packages.sort((a: PackageStatEntry, b: PackageStatEntry) => b.fileCount - a.fileCount);
+      const sourceNodes = pg.nodes.filter(
+        (n: { type: string }) => n.type === 'internal' || n.type === 'cmd'
+      );
+      const packages: PackageStatEntry[] = sourceNodes.map(
+        (node: {
+          name: string;
+          fileCount: number;
+          stats?: { structs?: number; interfaces?: number; functions?: number };
+        }) => {
+          const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.name);
+          return {
+            package: node.name,
+            fileCount: node.fileCount,
+            entityCount,
+            methodCount,
+            fieldCount,
+            languageStats: node.stats
+              ? {
+                  structs: node.stats.structs,
+                  interfaces: node.stats.interfaces,
+                  functions: node.stats.functions,
+                }
+              : undefined,
+          };
+        }
+      );
+      const sorted = packages.sort(
+        (a: PackageStatEntry, b: PackageStatEntry) => b.fileCount - a.fileCount
+      );
       return {
         meta: { dataPath: 'go-atlas', locAvailable: false },
         packages: topN !== undefined ? sorted.slice(0, topN) : sorted,
@@ -193,26 +200,35 @@ export class ArchMetrics {
       }
       const packages: PackageStatEntry[] = mg.nodes
         .filter((n: { type: string }) => n.type === 'internal')
-        .map((node: { id: string; name: string; fileCount: number; stats: { classes: number; interfaces: number; functions: number; enums: number } }) => {
-          const files = moduleFiles.get(node.id) ?? [];
-          const testFileCount = files.filter((f) => testPattern.test(f)).length;
-          const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.id);
-          return {
-            package: node.name,
-            fileCount: node.fileCount,
-            testFileCount,
-            entityCount,
-            methodCount,
-            fieldCount,
-            languageStats: {
-              classes: node.stats.classes,
-              interfaces: node.stats.interfaces,
-              functions: node.stats.functions,
-              enums: node.stats.enums,
-            },
-          };
-        });
-      const sorted = packages.sort((a: PackageStatEntry, b: PackageStatEntry) => b.fileCount - a.fileCount);
+        .map(
+          (node: {
+            id: string;
+            name: string;
+            fileCount: number;
+            stats: { classes: number; interfaces: number; functions: number; enums: number };
+          }) => {
+            const files = moduleFiles.get(node.id) ?? [];
+            const testFileCount = files.filter((f) => testPattern.test(f)).length;
+            const { entityCount, methodCount, fieldCount } = this.aggregateEntityMetrics(node.id);
+            return {
+              package: node.name,
+              fileCount: node.fileCount,
+              testFileCount,
+              entityCount,
+              methodCount,
+              fieldCount,
+              languageStats: {
+                classes: node.stats.classes,
+                interfaces: node.stats.interfaces,
+                functions: node.stats.functions,
+                enums: node.stats.enums,
+              },
+            };
+          }
+        );
+      const sorted = packages.sort(
+        (a: PackageStatEntry, b: PackageStatEntry) => b.fileCount - a.fileCount
+      );
       return {
         meta: { dataPath: 'ts-module-graph', locAvailable: false },
         packages: topN !== undefined ? sorted.slice(0, topN) : sorted,
@@ -313,7 +329,7 @@ export class ArchMetrics {
       if (!pkgData.has(pkg)) {
         pkgData.set(pkg, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
       }
-      const data = pkgData.get(pkg)!;
+      const data = pkgData.get(pkg);
 
       let file = entity.sourceLocation.file;
       if (path.isAbsolute(file) && ws) file = path.relative(ws, file);
@@ -347,7 +363,7 @@ export class ArchMetrics {
       if (!pkgData.has(pkgPath)) {
         pkgData.set(pkgPath, { files: new Map(), entityCount: 0, methodCount: 0, fieldCount: 0 });
       }
-      pkgData.get(pkgPath)!.files.set(file, 0);
+      pkgData.get(pkgPath).files.set(file, 0);
     }
 
     const packages: PackageStatEntry[] = Array.from(pkgData.entries()).map(([pkg, data]) => {
@@ -401,7 +417,7 @@ export class ArchMetrics {
       if (!buckets.has(pkg)) {
         buckets.set(pkg, { total: 0, covered: 0, testIds: new Set() });
       }
-      const bucket = buckets.get(pkg)!;
+      const bucket = buckets.get(pkg);
       bucket.total++;
 
       const link = linkByEntity.get(entity.id);
@@ -559,7 +575,7 @@ export class ArchMetrics {
       case 'python':
         return /(^|[\\/])test_[^\\/]+\.py$|_test\.py$/;
       case 'cpp':
-        return /\.(test|spec)\.(cpp|cc|cxx)$|([\\/]|^)test[_\-]/i;
+        return /\.(test|spec)\.(cpp|cc|cxx)$|([\\/]|^)test[_-]/i;
       default:
         return /\.(test|spec)\./;
     }

@@ -3,7 +3,7 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
 import fs from 'fs-extra';
 import path from 'path';

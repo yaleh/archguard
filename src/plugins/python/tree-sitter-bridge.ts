@@ -5,7 +5,6 @@
  */
 
 import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-python doesn't have proper type definitions
 import Python from 'tree-sitter-python';
 import path from 'path';
 import type {
@@ -25,7 +24,7 @@ export class TreeSitterBridge {
 
   constructor() {
     this.parser = new Parser();
-    // @ts-ignore - tree-sitter-python language definition compatibility
+    // @ts-expect-error -- tree-sitter language definition type incompatibility
     this.parser.setLanguage(Python);
   }
 

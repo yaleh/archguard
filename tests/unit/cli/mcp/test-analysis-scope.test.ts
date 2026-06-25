@@ -129,21 +129,6 @@ function createEngineWithTestFiles(): { engine: QueryEngine; archJson: ArchJSON 
   return { engine, archJson };
 }
 
-/** Engine with no test analysis at all */
-function createEngineWithoutAnalysis(): { engine: QueryEngine; archJson: ArchJSON } {
-  const archJson: ArchJSON = {
-    version: '1.1',
-    language: 'typescript',
-    timestamp: '2026-01-01T00:00:00Z',
-    sourceFiles: [],
-    entities: [makeEntity('entity-1', 'Foo')],
-    relations: [],
-  };
-  const archIndex = buildArchIndex(archJson, 'hash');
-  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
-  return { engine, archJson };
-}
-
 function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
   return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry };
 }

@@ -154,12 +154,10 @@ describe('registerEvidencePackTool — registration', () => {
 
 describe('archguard_get_evidence_pack', () => {
   it('single known target: response includes riskScore, riskLevel, topFactor and ## Evidence Pack header', async () => {
-    loadHistoryDataMock.mockResolvedValue(
-      makeMockData([{ path: 'src/cli/mcp-server.ts' }])
-    );
+    loadHistoryDataMock.mockResolvedValue(makeMockData([{ path: 'src/cli/mcp-server.ts' }]));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_evidence_pack')!;
+    const cb = tools.get('archguard_get_evidence_pack');
 
     const result = await cb({
       targets: [{ targetType: 'file', target: 'src/cli/mcp-server.ts' }],
@@ -184,7 +182,7 @@ describe('archguard_get_evidence_pack', () => {
     );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_evidence_pack')!;
+    const cb = tools.get('archguard_get_evidence_pack');
 
     const result = await cb({
       targets: [
@@ -203,7 +201,7 @@ describe('archguard_get_evidence_pack', () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData([]));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_evidence_pack')!;
+    const cb = tools.get('archguard_get_evidence_pack');
 
     // Should not throw — returns a response with notFound info
     const result = await cb({
@@ -220,7 +218,7 @@ describe('archguard_get_evidence_pack', () => {
     loadHistoryDataMock.mockRejectedValue(new GitHistoryNotFoundError('/workspace/.archguard'));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_evidence_pack')!;
+    const cb = tools.get('archguard_get_evidence_pack');
 
     const result = await cb({
       targets: [{ targetType: 'file', target: 'src/any.ts' }],
@@ -230,12 +228,10 @@ describe('archguard_get_evidence_pack', () => {
   });
 
   it('response JSON data is parseable and has results/hotspots/notFound fields', async () => {
-    loadHistoryDataMock.mockResolvedValue(
-      makeMockData([{ path: 'src/foo.ts' }])
-    );
+    loadHistoryDataMock.mockResolvedValue(makeMockData([{ path: 'src/foo.ts' }]));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_evidence_pack')!;
+    const cb = tools.get('archguard_get_evidence_pack');
 
     const result = await cb({
       targets: [{ targetType: 'file', target: 'src/foo.ts' }],
@@ -245,7 +241,7 @@ describe('archguard_get_evidence_pack', () => {
     // Extract embedded JSON — it's in a fenced block after the markdown
     const jsonMatch = text.match(/```json\n([\s\S]+?)\n```/);
     expect(jsonMatch).not.toBeNull();
-    const parsed = JSON.parse(jsonMatch![1]);
+    const parsed = JSON.parse(jsonMatch[1]);
     expect(parsed).toHaveProperty('results');
     expect(parsed).toHaveProperty('hotspots');
     expect(parsed).toHaveProperty('notFound');

@@ -4,12 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/python/archjson-mapper.js';
-import type {
-  PythonRawModule,
-  PythonRawClass,
-  PythonRawFunction,
-  PythonRawMethod,
-} from '@/plugins/python/types.js';
+import type { PythonRawModule } from '@/plugins/python/types.js';
 
 describe('ArchJsonMapper', () => {
   const mapper = new ArchJsonMapper();

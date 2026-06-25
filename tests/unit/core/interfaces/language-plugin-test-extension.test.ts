@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import type {
   ILanguagePlugin,
   RawTestFile,
-  RawTestCase,
   PluginCapabilities,
 } from '@/core/interfaces/language-plugin.js';
 

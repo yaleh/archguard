@@ -483,9 +483,9 @@ class TestAsyncHelper:
 `;
     const result = plugin.extractTestStructure('/project/tests/test_async_helper.py', code);
     expect(result).not.toBeNull();
-    expect(result!.testCases).toHaveLength(2);
+    expect(result.testCases).toHaveLength(2);
     // Each test case should have assertionCount >= 1 (fallback distributes file-level assertions)
-    for (const tc of result!.testCases) {
+    for (const tc of result.testCases) {
       expect(tc.assertionCount).toBeGreaterThanOrEqual(1);
     }
   });
@@ -501,7 +501,7 @@ def test_also_nothing():
 `;
     const result = plugin.extractTestStructure('/project/test_no_assert.py', code);
     expect(result).not.toBeNull();
-    for (const tc of result!.testCases) {
+    for (const tc of result.testCases) {
       expect(tc.assertionCount).toBe(0);
     }
   });
@@ -517,8 +517,8 @@ def test_b():
     const result = plugin.extractTestStructure('/project/test_mixed.py', code);
     expect(result).not.toBeNull();
     // test_a should have 1, test_b should have 0 (no fallback since not ALL zero)
-    const testA = result!.testCases.find((tc) => tc.name === 'test_a');
-    const testB = result!.testCases.find((tc) => tc.name === 'test_b');
+    const testA = result.testCases.find((tc) => tc.name === 'test_a');
+    const testB = result.testCases.find((tc) => tc.name === 'test_b');
     expect(testA?.assertionCount).toBe(1);
     expect(testB?.assertionCount).toBe(0);
   });

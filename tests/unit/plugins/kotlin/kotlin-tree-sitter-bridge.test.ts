@@ -62,10 +62,9 @@ describe('TreeSitterBridge', () => {
   // ─── data class extraction ─────────────────────────────────────────────────
 
   it('extracts top-level data class', () => {
-    const code = [
-      'package com.example.app',
-      'data class User(val id: Int, val name: String)',
-    ].join('\n');
+    const code = ['package com.example.app', 'data class User(val id: Int, val name: String)'].join(
+      '\n'
+    );
     const result = bridge.parseCode(code, 'User.kt');
     expect(result.classes).toHaveLength(1);
     const cls = result.classes[0];
@@ -77,12 +76,9 @@ describe('TreeSitterBridge', () => {
   // ─── object declaration ────────────────────────────────────────────────────
 
   it('extracts top-level object declaration', () => {
-    const code = [
-      'package com.example.app',
-      'object AppConfig {',
-      '  val DEBUG = false',
-      '}',
-    ].join('\n');
+    const code = ['package com.example.app', 'object AppConfig {', '  val DEBUG = false', '}'].join(
+      '\n'
+    );
     const result = bridge.parseCode(code, 'AppConfig.kt');
     expect(result.classes).toHaveLength(1);
     const obj = result.classes[0];
@@ -105,14 +101,14 @@ describe('TreeSitterBridge', () => {
     const result = bridge.parseCode(code, 'UserScreen.kt');
     expect(result.functions.length).toBeGreaterThanOrEqual(2);
 
-    const composable = result.functions.find(f => f.name === 'UserScreen');
+    const composable = result.functions.find((f) => f.name === 'UserScreen');
     expect(composable).toBeDefined();
-    expect(composable!.isComposable).toBe(true);
-    expect(composable!.packageName).toBe('com.example.app');
+    expect(composable.isComposable).toBe(true);
+    expect(composable.packageName).toBe('com.example.app');
 
-    const helper = result.functions.find(f => f.name === 'helperFn');
+    const helper = result.functions.find((f) => f.name === 'helperFn');
     expect(helper).toBeDefined();
-    expect(helper!.isComposable).toBe(false);
+    expect(helper.isComposable).toBe(false);
   });
 
   // ─── error resilience ─────────────────────────────────────────────────────

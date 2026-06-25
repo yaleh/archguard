@@ -119,7 +119,7 @@ export class ArchJsonProvider {
         diagram.sources,
         diagram.language
       );
-      if (deferred) {
+      if (deferred !== null) {
         const parent = await deferred;
         return {
           archJson: deriveSubModuleArchJSON(
@@ -148,7 +148,11 @@ export class ArchJsonProvider {
       }
     }
 
-    if (diagram.language === 'python' || diagram.language === 'java' || diagram.language === 'kotlin') {
+    if (
+      diagram.language === 'python' ||
+      diagram.language === 'java' ||
+      diagram.language === 'kotlin'
+    ) {
       const archJson = await this.registerDeferred(
         diagram.sources,
         diagram.language,
@@ -194,7 +198,7 @@ export class ArchJsonProvider {
 
     // ⑤ General ParallelParser path (Path B)
     const { deferred, normParentPath } = this.findParentCoverage(diagram.sources, diagram.language);
-    if (deferred) {
+    if (deferred !== null) {
       const parent = await deferred;
       if (process.env.ArchGuardDebug === 'true') {
         console.debug(

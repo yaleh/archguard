@@ -51,6 +51,7 @@ export interface ResolveOptions {
 /**
  * New interface for Task #4 (alias for ResolveOptions)
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OutputPathOptions extends ResolveOptions {}
 
 /**

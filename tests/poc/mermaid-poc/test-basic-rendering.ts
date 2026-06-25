@@ -260,7 +260,7 @@ classDiagram
 
 // Test 7: Bundle size check
 async function testBundleSize() {
-  const packageJsonPath = path.join(
+  const _packageJsonPath = path.join(
     __dirname,
     'node_modules',
     'isomorphic-mermaid',

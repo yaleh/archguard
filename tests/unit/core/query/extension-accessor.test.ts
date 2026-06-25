@@ -88,7 +88,7 @@ describe('ExtensionAccessor — with goAtlas extension', () => {
   it('getAtlasLayers() returns the full layers object', () => {
     const layers = accessor.getAtlasLayers();
     expect(layers).toBeDefined();
-    expect(Object.keys(layers!)).toContain('package');
+    expect(Object.keys(layers)).toContain('package');
   });
 
   it('hasAtlasExtension() returns true when goAtlas is present', () => {

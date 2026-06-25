@@ -12,15 +12,21 @@ import type { CommitRecord } from '@/cli/git-history/git-log-reader.js';
 // Hoisted mock functions (must be top-level so vi.mock factories can close over them)
 // ---------------------------------------------------------------------------
 
-const { mockPathExists, mockReadGitLog, mockIsGitRepo, mockGetHeadRef, mockGetBranch, mockWriteArtifacts } =
-  vi.hoisted(() => ({
-    mockPathExists: vi.fn(),
-    mockReadGitLog: vi.fn(),
-    mockIsGitRepo: vi.fn().mockReturnValue(true),
-    mockGetHeadRef: vi.fn().mockReturnValue('abc1234'),
-    mockGetBranch: vi.fn().mockReturnValue('master'),
-    mockWriteArtifacts: vi.fn().mockResolvedValue(undefined),
-  }));
+const {
+  mockPathExists,
+  mockReadGitLog,
+  mockIsGitRepo,
+  mockGetHeadRef,
+  mockGetBranch,
+  mockWriteArtifacts,
+} = vi.hoisted(() => ({
+  mockPathExists: vi.fn(),
+  mockReadGitLog: vi.fn(),
+  mockIsGitRepo: vi.fn().mockReturnValue(true),
+  mockGetHeadRef: vi.fn().mockReturnValue('abc1234'),
+  mockGetBranch: vi.fn().mockReturnValue('master'),
+  mockWriteArtifacts: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('@/cli/git-history/git-log-reader.js', () => ({
   readGitLog: mockReadGitLog,
@@ -53,9 +59,8 @@ vi.mock('@/cli/git-history/history-writer.js', () => ({
 // Import the module under test (after mocks are registered)
 // ---------------------------------------------------------------------------
 
-const { registerGitHistoryAnalyzeTool } = await import(
-  '@/cli/mcp/tools/git-history-analyze-tool.js'
-);
+const { registerGitHistoryAnalyzeTool } =
+  await import('@/cli/mcp/tools/git-history-analyze-tool.js');
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -129,7 +134,10 @@ describe('archguard_analyze_git — summary: active vs deleted files', () => {
     const result = await cb({ projectRoot: '/workspace' });
     const text: string = result.content[0].text;
 
-    const activeSection = text.slice(0, text.indexOf('Deleted') === -1 ? undefined : text.indexOf('Deleted'));
+    const activeSection = text.slice(
+      0,
+      text.indexOf('Deleted') === -1 ? undefined : text.indexOf('Deleted')
+    );
     expect(activeSection).toContain('src/cli/run.ts');
     expect(activeSection).not.toContain('src/analysis/fim/old.ts');
   });

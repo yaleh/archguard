@@ -5,15 +5,21 @@ import type {
   RawKotlinMember,
   RawKotlinClass,
   RawKotlinFunction,
-  RawKotlinImport,
   RawKotlinFile,
 } from '@/plugins/kotlin/types.js';
 
 describe('KotlinClassKind', () => {
   it('covers all class kinds', () => {
     const kinds: KotlinClassKind[] = [
-      'class', 'abstract_class', 'interface', 'data_class',
-      'sealed_class', 'sealed_interface', 'object', 'companion_object', 'enum_class',
+      'class',
+      'abstract_class',
+      'interface',
+      'data_class',
+      'sealed_class',
+      'sealed_interface',
+      'object',
+      'companion_object',
+      'enum_class',
     ];
     expect(kinds).toHaveLength(9);
   });
@@ -86,8 +92,26 @@ describe('RawKotlinClass', () => {
       packageName: 'com.example.app.data',
       superTypes: [],
       members: [
-        { name: 'name', kind: 'field', visibility: 'public', type: 'String', isStatic: false, decorators: [], startLine: 1, endLine: 1 },
-        { name: 'id', kind: 'field', visibility: 'public', type: 'Int', isStatic: false, decorators: [], startLine: 1, endLine: 1 },
+        {
+          name: 'name',
+          kind: 'field',
+          visibility: 'public',
+          type: 'String',
+          isStatic: false,
+          decorators: [],
+          startLine: 1,
+          endLine: 1,
+        },
+        {
+          name: 'id',
+          kind: 'field',
+          visibility: 'public',
+          type: 'Int',
+          isStatic: false,
+          decorators: [],
+          startLine: 1,
+          endLine: 1,
+        },
       ],
       decorators: [],
       filePath: 'src/UserProfile.kt',

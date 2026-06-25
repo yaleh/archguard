@@ -4,7 +4,7 @@
  * Tests parseGitLogOutput and getGitRoot with synthetic input — no actual git required.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { parseGitLogOutput } from '@/analysis/git-history/git-log-reader.js';
 
 // ---------------------------------------------------------------------------
@@ -64,13 +64,9 @@ describe('parseGitLogOutput', () => {
   });
 
   it('handles commits with no changed files', () => {
-    const raw = [
-      'COMMIT_START',
-      'sha1234567890abcdef',
-      'alice@example.com',
-      '2024-01-15',
-      '',
-    ].join('\n');
+    const raw = ['COMMIT_START', 'sha1234567890abcdef', 'alice@example.com', '2024-01-15', ''].join(
+      '\n'
+    );
 
     const commits = parseGitLogOutput(raw);
     expect(commits).toHaveLength(1);
@@ -90,12 +86,9 @@ describe('parseGitLogOutput', () => {
   });
 
   it('skips commits with invalid date format', () => {
-    const raw = [
-      'COMMIT_START',
-      'abc1234567890abcdef',
-      'alice@example.com',
-      'not-a-date',
-    ].join('\n');
+    const raw = ['COMMIT_START', 'abc1234567890abcdef', 'alice@example.com', 'not-a-date'].join(
+      '\n'
+    );
 
     const commits = parseGitLogOutput(raw);
     expect(commits).toHaveLength(0);

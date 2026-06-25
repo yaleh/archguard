@@ -259,13 +259,23 @@ export class RelationExtractor extends BaseExtractor {
       // Parameter types
       for (const param of parameters) {
         const typeName = this.extractTypeName(param.getType().getText());
-        if (typeName && this.isCustomType(typeName) && !externalNames.has(typeName) && typeName !== funcName) {
+        if (
+          typeName &&
+          this.isCustomType(typeName) &&
+          !externalNames.has(typeName) &&
+          typeName !== funcName
+        ) {
           this.addRelation(relations, relationSet, 'dependency', funcName, typeName);
         }
       }
       // Return type
       const retTypeName = this.extractTypeName(returnType.getText());
-      if (retTypeName && this.isCustomType(retTypeName) && !externalNames.has(retTypeName) && retTypeName !== funcName) {
+      if (
+        retTypeName &&
+        this.isCustomType(retTypeName) &&
+        !externalNames.has(retTypeName) &&
+        retTypeName !== funcName
+      ) {
         this.addRelation(relations, relationSet, 'dependency', funcName, retTypeName);
       }
     };
@@ -378,7 +388,7 @@ export class RelationExtractor extends BaseExtractor {
     // Must handle BEFORE checking primitive types
     const genericMatch = typeText.match(/^(\w+)<(.+)>$/);
     if (genericMatch) {
-      const containerType = genericMatch[1];
+      const _containerType = genericMatch[1];
       // For containers like Map, Set, Promise, etc., extract the inner type(s)
       const innerType = genericMatch[2];
 

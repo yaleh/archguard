@@ -870,7 +870,7 @@ describe('regression: external source module paths must be absolute', () => {
 
     // First arg = cwd, second arg = resolved absolute path
     expect(calls[0][0]).toBe(process.cwd());
-    const resolvedSrc = require('path').resolve('./src');
+    const resolvedSrc = (await import('path')).resolve('./src');
     expect(calls[0][1]).toBe(resolvedSrc);
   });
 

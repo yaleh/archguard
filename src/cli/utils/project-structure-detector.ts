@@ -180,12 +180,12 @@ export async function detectProjectStructure(
 ): Promise<DiagramConfig[]> {
   let sourceRoot: string;
   let projectRoot: string;
-  let useAbsolutePaths: boolean;
+  let _useAbsolutePaths: boolean;
 
   if (externalSourceRoot !== undefined) {
     // External mode: use the provided absolute path directly
     sourceRoot = externalSourceRoot;
-    useAbsolutePaths = true;
+    _useAbsolutePaths = true;
 
     // Derive projectRoot: if the basename is a known source dir, use the parent
     const basename = path.basename(externalSourceRoot);
@@ -198,7 +198,7 @@ export async function detectProjectStructure(
     // Default mode: detect relative source root from rootDir
     sourceRoot = await findSourceRoot(rootDir);
     projectRoot = rootDir;
-    useAbsolutePaths = false;
+    _useAbsolutePaths = false;
   }
 
   const modules = await getTopLevelModules(projectRoot, sourceRoot);

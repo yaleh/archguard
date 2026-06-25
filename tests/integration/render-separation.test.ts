@@ -6,13 +6,13 @@
  * Stage 2: Batch parallel render (I/O intensive)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import { HeuristicGrouper } from '@/mermaid/grouper.js';
 import { ValidatedMermaidGenerator } from '@/mermaid/generator.js';
 import { MermaidValidationPipeline } from '@/mermaid/validation-pipeline.js';
 import { IsomorphicMermaidRenderer } from '@/mermaid/renderer.js';
-import type { GlobalConfig, DiagramConfig, DetailLevel } from '@/types/config.js';
+import type { GlobalConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { RenderJob } from '@/mermaid/diagram-generator.js';
 

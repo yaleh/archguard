@@ -1,8 +1,8 @@
 export type ComparisonOp = '<' | '<=' | '>' | '>=' | '==' | '!=';
 
 export interface MetricThresholdRule {
-  type?: 'metric';       // default when omitted
-  metric: string;        // key from MetricVector (e.g. 'sccCount', 'maxInDegree')
+  type?: 'metric'; // default when omitted
+  metric: string; // key from MetricVector (e.g. 'sccCount', 'maxInDegree')
   op: ComparisonOp;
   value: number;
   message: string;
@@ -10,8 +10,8 @@ export interface MetricThresholdRule {
 
 export interface DependencyConstraintRule {
   type: 'no-dependency';
-  from: string;          // glob pattern (e.g. 'src/parser/**')
-  to: string;            // glob pattern (e.g. 'src/cli/**')
+  from: string; // glob pattern (e.g. 'src/parser/**')
+  to: string; // glob pattern (e.g. 'src/cli/**')
   message: string;
 }
 

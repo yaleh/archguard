@@ -18,7 +18,12 @@
  *   - annotations       → `annotation` nodes (before or inside modifiers)
  */
 
-import type { RawKotlinClass, RawKotlinMember, KotlinClassKind, KotlinVisibility } from '../types.js';
+import type {
+  RawKotlinClass,
+  RawKotlinMember,
+  KotlinClassKind,
+  KotlinVisibility,
+} from '../types.js';
 
 export class ClassBuilder {
   /**
@@ -261,9 +266,7 @@ export class ClassBuilder {
       if (param.type !== 'class_parameter') continue;
 
       // Only val/var parameters become fields; plain parameters don't
-      const hasValVar = param.children.some(
-        (c: any) => c.type === 'val' || c.type === 'var'
-      );
+      const hasValVar = param.children.some((c: any) => c.type === 'val' || c.type === 'var');
       if (!hasValVar) continue;
 
       const nameNode = param.namedChildren.find((c: any) => c.type === 'identifier');
@@ -323,9 +326,8 @@ export class ClassBuilder {
 
     // Type: look for user_type or nullable_type inside variable_declaration
     const typeNode =
-      this.findChild(varDecl, 'user_type') ??
-      this.findChild(varDecl, 'nullable_type');
-    const typeText = typeNode ? this.extractUserTypeName(typeNode) ?? typeNode.text : undefined;
+      this.findChild(varDecl, 'user_type') ?? this.findChild(varDecl, 'nullable_type');
+    const typeText = typeNode ? (this.extractUserTypeName(typeNode) ?? typeNode.text) : undefined;
 
     const modifiers = this.findChild(node, 'modifiers');
     const visibility = this.extractVisibility(modifiers);

@@ -95,11 +95,7 @@ export class InterfaceBuilder {
     };
   }
 
-  extractParametersFromElem(
-    node: Parser.SyntaxNode,
-    code: string,
-    filePath: string
-  ): GoField[] {
+  extractParametersFromElem(node: Parser.SyntaxNode, code: string, filePath: string): GoField[] {
     const parameters: GoField[] = [];
 
     const paramList = node.namedChildren.find((child) => child.type === 'parameter_list');

@@ -124,7 +124,11 @@ function wrapEngine(
   arg: { engine: QueryEngine; archJson: ArchJSON } | { extensionAccessor: Record<string, unknown> }
 ) {
   if ('archJson' in arg) {
-    return { engine: arg.engine, extensionAccessor: new ExtensionAccessor(arg.archJson), scopeEntry };
+    return {
+      engine: arg.engine,
+      extensionAccessor: new ExtensionAccessor(arg.archJson),
+      scopeEntry,
+    };
   }
   // Partial mock: caller supplies just the extensionAccessor stub
   return { engine: {} as any, extensionAccessor: arg.extensionAccessor as any, scopeEntry };
@@ -251,16 +255,18 @@ describe('test analysis MCP tools — analysis present', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_detect_test_patterns');
-    loadEngineMock.mockResolvedValueOnce(wrapEngine({
-      extensionAccessor: {
-        hasTestAnalysis: () => true,
-        getTestAnalysis: () => ({
-          testFiles: [{ frameworks: ['junit4'] }],
-          metrics: { totalTestFiles: 1 },
-          patternConfigSource: 'auto',
-        }),
-      },
-    }));
+    loadEngineMock.mockResolvedValueOnce(
+      wrapEngine({
+        extensionAccessor: {
+          hasTestAnalysis: () => true,
+          getTestAnalysis: () => ({
+            testFiles: [{ frameworks: ['junit4'] }],
+            metrics: { totalTestFiles: 1 },
+            patternConfigSource: 'auto',
+          }),
+        },
+      })
+    );
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     expect(Array.isArray(parsed.suggestedPatternConfig.assertionPatterns)).toBe(true);
@@ -282,16 +288,18 @@ describe('test analysis MCP tools — analysis present', () => {
 
   // pytest framework should suggest patterns that cover torch.testing.assert_close style calls
   it('archguard_detect_test_patterns: pytest framework suggests .assert style patterns', async () => {
-    loadEngineMock.mockResolvedValueOnce(wrapEngine({
-      extensionAccessor: {
-        hasTestAnalysis: () => true,
-        getTestAnalysis: () => ({
-          testFiles: [{ frameworks: ['pytest'] }],
-          metrics: { totalTestFiles: 1 },
-          patternConfigSource: 'auto',
-        }),
-      },
-    }));
+    loadEngineMock.mockResolvedValueOnce(
+      wrapEngine({
+        extensionAccessor: {
+          hasTestAnalysis: () => true,
+          getTestAnalysis: () => ({
+            testFiles: [{ frameworks: ['pytest'] }],
+            metrics: { totalTestFiles: 1 },
+            patternConfigSource: 'auto',
+          }),
+        },
+      })
+    );
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_detect_test_patterns');

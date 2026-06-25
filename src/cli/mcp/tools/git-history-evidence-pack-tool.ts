@@ -87,6 +87,7 @@ function formatEvidencePack(pack: EvidencePackResult): string {
 
 export function registerEvidencePackTool(server: McpServer, defaultRoot: string): void {
   server.tool(
+    // adr-ok: ADR-007 — MCP-only aggregation tool; no direct CLI equivalent needed
     'archguard_get_evidence_pack',
     'Return a gate-ready aggregated risk evidence pack for multiple files or packages. Each target returns riskScore, riskLevel, and topFactor. Response includes per-target details, top-3 hotspots sorted by risk, and any not-found targets. Use before dispatching tasks to inject structural risk context. Requires archguard_analyze_git.',
     {

@@ -92,8 +92,10 @@ describe('RelationQueryService — getDependencies', () => {
     // A depends on B and C
     const archJson = makeArchJson(
       [entityA, entityB, entityC],
-      [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
-       makeRelation('src/a.ts.A', 'src/c.ts.C', 'dependency')]
+      [
+        makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
+        makeRelation('src/a.ts.A', 'src/c.ts.C', 'dependency'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.getDependencies('A', 1);
@@ -105,8 +107,10 @@ describe('RelationQueryService — getDependencies', () => {
     // A → B → C (chain)
     const archJson = makeArchJson(
       [entityA, entityB, entityC],
-      [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
-       makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency')]
+      [
+        makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
+        makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.getDependencies('A', 2);
@@ -123,9 +127,11 @@ describe('RelationQueryService — getDependencies', () => {
     // A → B → C → D (3 hops) — requesting depth=99 should still find them all
     const archJson = makeArchJson(
       [entityA, entityB, entityC, entityD],
-      [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
-       makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency'),
-       makeRelation('src/c.ts.C', 'src/d.ts.D', 'dependency')]
+      [
+        makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
+        makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency'),
+        makeRelation('src/c.ts.C', 'src/d.ts.D', 'dependency'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.getDependencies('A', 99);
@@ -136,8 +142,10 @@ describe('RelationQueryService — getDependencies', () => {
     // Cycle: A → B → A
     const archJson = makeArchJson(
       [entityA, entityB],
-      [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
-       makeRelation('src/b.ts.B', 'src/a.ts.A', 'dependency')]
+      [
+        makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency'),
+        makeRelation('src/b.ts.B', 'src/a.ts.A', 'dependency'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.getDependencies('A', 5);
@@ -155,8 +163,10 @@ describe('RelationQueryService — getDependents', () => {
     // A and B both depend on C → C's dependents are A, B
     const archJson = makeArchJson(
       [entityA, entityB, entityC],
-      [makeRelation('src/a.ts.A', 'src/c.ts.C', 'dependency'),
-       makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency')]
+      [
+        makeRelation('src/a.ts.A', 'src/c.ts.C', 'dependency'),
+        makeRelation('src/b.ts.B', 'src/c.ts.C', 'dependency'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.getDependents('C', 1);
@@ -165,7 +175,10 @@ describe('RelationQueryService — getDependents', () => {
   });
 
   it('returns empty array when no one depends on entity', () => {
-    const archJson = makeArchJson([entityA, entityB], [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency')]);
+    const archJson = makeArchJson(
+      [entityA, entityB],
+      [makeRelation('src/a.ts.A', 'src/b.ts.B', 'dependency')]
+    );
     const svc = buildService(archJson);
     // A has no dependents
     expect(svc.getDependents('A', 1)).toHaveLength(0);
@@ -201,7 +214,10 @@ describe('RelationQueryService — findImplementers', () => {
   });
 
   it('returns empty for unknown interface name', () => {
-    const archJson = makeArchJson([iface, impl], [makeRelation('src/impl.ts.RepoImpl', 'src/iface.ts.IRepo', 'implementation')]);
+    const archJson = makeArchJson(
+      [iface, impl],
+      [makeRelation('src/impl.ts.RepoImpl', 'src/iface.ts.IRepo', 'implementation')]
+    );
     const svc = buildService(archJson);
     expect(svc.findImplementers('IUnknown')).toHaveLength(0);
   });
@@ -210,8 +226,10 @@ describe('RelationQueryService — findImplementers', () => {
     const impl2 = makeEntity('src/impl2.ts.RepoImpl2', 'RepoImpl2');
     const archJson = makeArchJson(
       [iface, impl, impl2],
-      [makeRelation('src/impl.ts.RepoImpl', 'src/iface.ts.IRepo', 'implementation'),
-       makeRelation('src/impl2.ts.RepoImpl2', 'src/iface.ts.IRepo', 'implementation')]
+      [
+        makeRelation('src/impl.ts.RepoImpl', 'src/iface.ts.IRepo', 'implementation'),
+        makeRelation('src/impl2.ts.RepoImpl2', 'src/iface.ts.IRepo', 'implementation'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.findImplementers('IRepo');
@@ -254,8 +272,10 @@ describe('RelationQueryService — findSubclasses', () => {
     const child2 = makeEntity('src/child2.ts.Child2', 'Child2');
     const archJson = makeArchJson(
       [base, child, child2],
-      [makeRelation('src/child.ts.Child', 'src/base.ts.Base', 'inheritance'),
-       makeRelation('src/child2.ts.Child2', 'src/base.ts.Base', 'inheritance')]
+      [
+        makeRelation('src/child.ts.Child', 'src/base.ts.Base', 'inheritance'),
+        makeRelation('src/child2.ts.Child2', 'src/base.ts.Base', 'inheritance'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.findSubclasses('Base');
@@ -274,8 +294,10 @@ describe('RelationQueryService — findCallers', () => {
     // A calls B, C calls B → callers of B are A and C
     const archJson = makeArchJson(
       [entityA, entityB, entityC],
-      [makeCallRelation('src/a.ts.A', 'src/b.ts.B', 'methodA', 'methodB'),
-       makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'methodC', 'methodB')]
+      [
+        makeCallRelation('src/a.ts.A', 'src/b.ts.B', 'methodA', 'methodB'),
+        makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'methodC', 'methodB'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.findCallers('B', 1);
@@ -300,8 +322,10 @@ describe('RelationQueryService — findCallers', () => {
     // A calls B.doWork; C calls B.doOther
     const archJson = makeArchJson(
       [entityA, entityB, entityC],
-      [makeCallRelation('src/a.ts.A', 'src/b.ts.B', 'callA', 'doWork'),
-       makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'callC', 'doOther')]
+      [
+        makeCallRelation('src/a.ts.A', 'src/b.ts.B', 'callA', 'doWork'),
+        makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'callC', 'doOther'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.findCallers('B.doWork', 1);
@@ -313,8 +337,10 @@ describe('RelationQueryService — findCallers', () => {
     // D calls C, C calls B → callers of B at depth 2 include D
     const archJson = makeArchJson(
       [entityB, entityC, entityD],
-      [makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'methodC', 'methodB'),
-       makeCallRelation('src/d.ts.D', 'src/c.ts.C', 'methodD', 'methodC')]
+      [
+        makeCallRelation('src/c.ts.C', 'src/b.ts.B', 'methodC', 'methodB'),
+        makeCallRelation('src/d.ts.D', 'src/c.ts.C', 'methodD', 'methodC'),
+      ]
     );
     const svc = buildService(archJson);
     const result = svc.findCallers('B', 2);

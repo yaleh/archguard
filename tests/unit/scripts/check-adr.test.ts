@@ -162,10 +162,7 @@ describe('hasSuppression()', () => {
   });
 
   it('returns false for bare // adr-ok (no ADR number)', () => {
-    const fileLines = [
-      '// adr-ok',
-      "  'Get all entities defined in a specific file.',",
-    ];
+    const fileLines = ['// adr-ok', "  'Get all entities defined in a specific file.',"];
     const violation: Violation = {
       adr: 'ADR-006',
       file: '/fake/file.ts',
@@ -177,10 +174,7 @@ describe('hasSuppression()', () => {
   });
 
   it('returns false for // adr-ok: ADR-006 without em-dash and reason', () => {
-    const fileLines = [
-      '// adr-ok: ADR-006',
-      "  'Get all entities defined in a specific file.',",
-    ];
+    const fileLines = ['// adr-ok: ADR-006', "  'Get all entities defined in a specific file.',"];
     const violation: Violation = {
       adr: 'ADR-006',
       file: '/fake/file.ts',

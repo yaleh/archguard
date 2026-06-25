@@ -85,7 +85,7 @@ describe('archguard_get_ccb tool behaviour', () => {
     const { tools, assembleCcbMock } = await registerAndCapture();
     assembleCcbMock.mockResolvedValue(mockBundle);
 
-    const cb = tools.get('archguard_get_ccb')!;
+    const cb = tools.get('archguard_get_ccb');
     const result = await cb({ filePath: 'src/cli/query/query-engine.ts' });
     const parsed = JSON.parse(result.content[0].text);
 
@@ -98,7 +98,7 @@ describe('archguard_get_ccb tool behaviour', () => {
     const { tools, assembleCcbMock } = await registerAndCapture();
     assembleCcbMock.mockResolvedValue(mockBundle);
 
-    const cb = tools.get('archguard_get_ccb')!;
+    const cb = tools.get('archguard_get_ccb');
     await cb({ filePath: 'src/cli/query/query-engine.ts', forceRefresh: true });
 
     expect(assembleCcbMock).toHaveBeenCalledWith(
@@ -113,7 +113,7 @@ describe('archguard_get_ccb tool behaviour', () => {
     const { tools, assembleCcbMock } = await registerAndCapture();
     assembleCcbMock.mockRejectedValue(new Error('assembly failed'));
 
-    const cb = tools.get('archguard_get_ccb')!;
+    const cb = tools.get('archguard_get_ccb');
     const result = await cb({ filePath: 'src/nonexistent.ts' });
     expect(result.content[0].text).toContain('Error');
   });

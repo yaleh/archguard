@@ -38,7 +38,7 @@ function makeEntity(
   return {
     id,
     name,
-    type: type as Entity['type'],
+    type: type,
     visibility: 'public',
     members: [],
     sourceLocation: { file, startLine: 1, endLine: 10 },
@@ -90,7 +90,12 @@ function createTestEngine(): { engine: QueryEngine; archJson: ArchJSON } {
 }
 
 function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
-  return { engine, extensionAccessor: new ExtensionAccessor(archJson), scopeEntry, relationQueryService: engine.relationQueryService };
+  return {
+    engine,
+    extensionAccessor: new ExtensionAccessor(archJson),
+    scopeEntry,
+    relationQueryService: engine.relationQueryService,
+  };
 }
 
 // -- Helper to call tools via McpServer --
@@ -843,9 +848,15 @@ describe('archguard_get_package_stats', () => {
 });
 
 describe('Phase 86 MCP schema outputScope/queryFormat', () => {
-  function getToolSchema(server: McpServer, toolName: string): z.ZodObject<z.ZodRawShape> | undefined {
+  function getToolSchema(
+    server: McpServer,
+    toolName: string
+  ): z.ZodObject<z.ZodRawShape> | undefined {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const registeredTools = (server as any)._registeredTools as Record<string, { inputSchema?: z.ZodObject<z.ZodRawShape> }>;
+    const registeredTools = (server as any)._registeredTools as Record<
+      string,
+      { inputSchema?: z.ZodObject<z.ZodRawShape> }
+    >;
     return registeredTools[toolName]?.inputSchema;
   }
 
@@ -854,7 +865,7 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
     registerTools(server, '/workspace');
     const schema = getToolSchema(server, 'archguard_get_dependencies');
     expect(schema).toBeDefined();
-    const result = schema!.parse({ name: 'Foo', depth: 1 });
+    const result = schema.parse({ name: 'Foo', depth: 1 });
     expect(result.outputScope).toBe('method');
   });
 
@@ -863,7 +874,7 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
     registerTools(server, '/workspace');
     const schema = getToolSchema(server, 'archguard_summary');
     expect(schema).toBeDefined();
-    const result = schema!.parse({});
+    const result = schema.parse({});
     expect(result.outputScope).toBe('package');
   });
 
@@ -873,11 +884,11 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
     const schema = getToolSchema(server, 'archguard_find_entity');
     expect(schema).toBeDefined();
     // Valid values should parse
-    expect(() => schema!.parse({ outputScope: 'package' })).not.toThrow();
-    expect(() => schema!.parse({ outputScope: 'class' })).not.toThrow();
-    expect(() => schema!.parse({ outputScope: 'method' })).not.toThrow();
+    expect(() => schema.parse({ outputScope: 'package' })).not.toThrow();
+    expect(() => schema.parse({ outputScope: 'class' })).not.toThrow();
+    expect(() => schema.parse({ outputScope: 'method' })).not.toThrow();
     // Default is class for find_entity
-    const result = schema!.parse({});
+    const result = schema.parse({});
     expect(result.outputScope).toBe('class');
   });
 
@@ -886,7 +897,7 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
     registerTools(server, '/workspace');
     const schema = getToolSchema(server, 'archguard_get_dependencies');
     expect(schema).toBeDefined();
-    expect(() => schema!.parse({ name: 'Foo', depth: 1, queryFormat: 'invalid' })).toThrow();
+    expect(() => schema.parse({ name: 'Foo', depth: 1, queryFormat: 'invalid' })).toThrow();
   });
 
   it('queryFormat param: value "edge-list" passes zod parse', () => {
@@ -894,7 +905,7 @@ describe('Phase 86 MCP schema outputScope/queryFormat', () => {
     registerTools(server, '/workspace');
     const schema = getToolSchema(server, 'archguard_get_dependencies');
     expect(schema).toBeDefined();
-    const result = schema!.parse({ name: 'Foo', depth: 1, queryFormat: 'edge-list' });
+    const result = schema.parse({ name: 'Foo', depth: 1, queryFormat: 'edge-list' });
     expect(result.queryFormat).toBe('edge-list');
   });
 });
@@ -1026,24 +1037,9 @@ describe('createMcpCommand', () => {
 // ── Phase 120: Atlas analytics tool registration via createMcpServer ──────────
 
 describe('createMcpServer — atlas analytics tool registration', () => {
-  function collectAllTools(server: McpServer, defaultRoot: string = '/workspace'): Map<string, Function> {
-    const { createMcpServer: _create, registerTools: _reg } = require('@/cli/mcp/mcp-server.js');
-    // Use same spy pattern as the module-level collectTools but targeting createMcpServer
-    const tools = new Map<string, Function>();
-    const originalTool = server.tool.bind(server);
-    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
-      const name = args[0] as string;
-      const cb = args[args.length - 1] as Function;
-      tools.set(name, cb);
-      return (originalTool as Function)(...args);
-    });
-    // registerTools is exported and covers the base 10 tools
-    _reg(server, defaultRoot);
-    return tools;
-  }
-
   it('registers archguard_get_package_fanin', async () => {
-    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const { registerAtlasAnalyticsTools } =
+      await import('@/cli/mcp/tools/atlas-analytics-tools.js');
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = new Map<string, Function>();
     const originalTool = server.tool.bind(server);
@@ -1058,7 +1054,8 @@ describe('createMcpServer — atlas analytics tool registration', () => {
   });
 
   it('registers archguard_get_package_fanout', async () => {
-    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const { registerAtlasAnalyticsTools } =
+      await import('@/cli/mcp/tools/atlas-analytics-tools.js');
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = new Map<string, Function>();
     const originalTool = server.tool.bind(server);
@@ -1073,7 +1070,8 @@ describe('createMcpServer — atlas analytics tool registration', () => {
   });
 
   it('registers archguard_detect_god_packages', async () => {
-    const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const { registerAtlasAnalyticsTools } =
+      await import('@/cli/mcp/tools/atlas-analytics-tools.js');
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = new Map<string, Function>();
     const originalTool = server.tool.bind(server);

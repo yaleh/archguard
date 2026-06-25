@@ -32,7 +32,9 @@ function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
     try {
       return [new RegExp(pattern)];
     } catch (error) {
-      console.warn(`[cpp:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      console.warn(
+        `[cpp:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`
+      );
       return [];
     }
   });

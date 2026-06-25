@@ -58,23 +58,23 @@ describe('ArchJsonMapper.mapCallRelations()', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const rel = results.find((r) => r.sourceMethod === 'handleUser' && r.target === 'svc');
     expect(rel).toBeDefined();
-    expect(rel!.source).toBe('api');
-    expect(rel!.sourceMethod).toBe('handleUser');
+    expect(rel.source).toBe('api');
+    expect(rel.sourceMethod).toBe('handleUser');
   });
 
   it('simple "svc.Save" edge: target="svc", targetMethod="Save"', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const rel = results.find((r) => r.target === 'svc' && r.targetMethod === 'Save');
     expect(rel).toBeDefined();
-    expect(rel!.target).toBe('svc');
-    expect(rel!.targetMethod).toBe('Save');
+    expect(rel.target).toBe('svc');
+    expect(rel.targetMethod).toBe('Save');
   });
 
   it('multi-level "svc.store.Save": target="svc.store", targetMethod="Save"', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const rel = results.find((r) => r.target === 'svc.store');
     expect(rel).toBeDefined();
-    expect(rel!.targetMethod).toBe('Save');
+    expect(rel.targetMethod).toBe('Save');
   });
 
   it('deduplicates identical from/to pairs', () => {
@@ -137,13 +137,13 @@ describe('ArchJsonMapper.mapCallRelations()', () => {
   it('callType maps correctly: edge.type="direct" → callType="direct"', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const directRel = results.find((r) => r.target === 'svc' && r.targetMethod === 'Save');
-    expect(directRel!.callType).toBe('direct');
+    expect(directRel.callType).toBe('direct');
   });
 
   it('callType maps correctly: edge.type="interface" → callType="interface"', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const ifaceRel = results.find((r) => r.target === 'svc.store');
-    expect(ifaceRel!.callType).toBe('interface');
+    expect(ifaceRel.callType).toBe('interface');
   });
 
   it('callType maps correctly: edge.type="indirect" → callType="interface"', () => {
@@ -164,7 +164,7 @@ describe('ArchJsonMapper.mapCallRelations()', () => {
   it('confidence is propagated from edge to relation', () => {
     const results = mapper.mapCallRelations(minimalFlowGraph);
     const rel = results.find((r) => r.target === 'svc' && r.targetMethod === 'Save');
-    expect(rel!.confidence).toBe(0.9);
+    expect(rel.confidence).toBe(0.9);
   });
 
   it('deduplication works across multiple chains', () => {

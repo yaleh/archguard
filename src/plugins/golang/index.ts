@@ -19,7 +19,11 @@ import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import { type ArchJSON, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { GoplsInterfaceResolver } from './gopls-interface-resolver.js';
-import { GoParseCoordinator, type GoRawData, type TreeSitterParseOptions } from './go-parse-coordinator.js';
+import {
+  GoParseCoordinator,
+  type GoRawData,
+  type TreeSitterParseOptions,
+} from './go-parse-coordinator.js';
 import { DependencyExtractor } from './dependency-extractor.js';
 import type {
   GoArchitectureAtlas,
@@ -156,7 +160,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
           return true;
         }
       }
-    } catch (error) {
+    } catch {
       return false;
     }
 
@@ -354,6 +358,4 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   ): RawTestFile | null {
     return this.testAnalyzer.extractTestStructure(filePath, code, patternConfig);
   }
-
 }
-

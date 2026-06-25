@@ -18,8 +18,8 @@ public class OrderService {
     const pkg = bridge.parseCode(code, 'OrderService.java');
     const method = pkg.classes[0].methods[0];
     expect(method.callSites).toBeDefined();
-    expect(method.callSites!.length).toBeGreaterThanOrEqual(1);
-    const site = method.callSites![0];
+    expect(method.callSites.length).toBeGreaterThanOrEqual(1);
+    const site = method.callSites[0];
     expect(site.receiverName).toBe('paymentService');
     expect(site.receiverType).toBe('PaymentService');
     expect(site.methodName).toBe('charge');
@@ -35,11 +35,11 @@ public class Service {
   public void process() { repo.save(); }
 }`;
     const pkg = bridge.parseCode(code, 'Service.java');
-    const method = pkg.classes[0].methods.find(m => m.name === 'process')!;
+    const method = pkg.classes[0].methods.find((m) => m.name === 'process');
     expect(method.callSites).toBeDefined();
-    const site = method.callSites!.find(s => s.methodName === 'save');
+    const site = method.callSites.find((s) => s.methodName === 'save');
     expect(site).toBeDefined();
-    expect(site!.receiverType).toBe('Repo');
+    expect(site.receiverType).toBe('Repo');
   });
 
   it('skips calls with unresolvable receiver (confidence=0.5 fallback)', () => {
@@ -50,10 +50,10 @@ public class Foo {
 }`;
     const pkg = bridge.parseCode(code, 'Foo.java');
     const method = pkg.classes[0].methods[0];
-    const site = method.callSites?.find(s => s.methodName === 'someMethod');
+    const site = method.callSites?.find((s) => s.methodName === 'someMethod');
     // unresolvable → site still emitted but receiverType is undefined
     expect(site).toBeDefined();
-    expect(site!.receiverType).toBeUndefined();
+    expect(site.receiverType).toBeUndefined();
   });
 
   it('skips this-object calls (same-class invocations)', () => {
@@ -64,9 +64,9 @@ public class Bar {
   public void b() {}
 }`;
     const pkg = bridge.parseCode(code, 'Bar.java');
-    const method = pkg.classes[0].methods.find(m => m.name === 'a')!;
+    const method = pkg.classes[0].methods.find((m) => m.name === 'a');
     // this.b() → same-class call, should be skipped
-    expect(method.callSites?.filter(s => s.methodName === 'b').length ?? 0).toBe(0);
+    expect(method.callSites?.filter((s) => s.methodName === 'b').length ?? 0).toBe(0);
   });
 
   it('mapCallRelations emits call relations for known entities', () => {

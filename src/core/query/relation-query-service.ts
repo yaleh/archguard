@@ -40,7 +40,7 @@ export class RelationQueryService {
       .map(([source]) => source);
     const entities = [...new Set(implementerIds)]
       .map((id) => this.entityQueryService.getById(id))
-      .filter(Boolean) as Entity[];
+      .filter(Boolean);
     return entities;
   }
 
@@ -54,7 +54,7 @@ export class RelationQueryService {
       .map(([source]) => source);
     const entities = [...new Set(subclassIds)]
       .map((id) => this.entityQueryService.getById(id))
-      .filter(Boolean) as Entity[];
+      .filter(Boolean);
     return entities;
   }
 
@@ -97,7 +97,7 @@ export class RelationQueryService {
     const queue: QueueItem[] = [{ targetIds, targetMethod, currentDepth: 1 }];
 
     while (queue.length > 0) {
-      const item = queue.shift()!;
+      const item = queue.shift();
       const { targetIds: tIds, targetMethod: tMethod, currentDepth } = item;
       if (currentDepth > maxDepth) continue;
 

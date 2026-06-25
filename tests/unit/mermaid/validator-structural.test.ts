@@ -5,7 +5,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StructuralValidator } from '../../../src/mermaid/validator-structural';
 import type { ArchJSON } from '../../../src/types';
-import type { StructuralValidationResult } from '../../../src/mermaid/types';
 
 describe('StructuralValidator', () => {
   let validator: StructuralValidator;

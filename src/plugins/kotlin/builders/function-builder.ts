@@ -138,7 +138,11 @@ export class FunctionBuilder {
   private extractUserTypeName(userTypeNode: any): string | undefined {
     // Actual AST: user_type > identifier (not type_identifier or simple_identifier)
     for (const child of userTypeNode.namedChildren as any[]) {
-      if (child.type === 'identifier' || child.type === 'type_identifier' || child.type === 'simple_identifier') {
+      if (
+        child.type === 'identifier' ||
+        child.type === 'type_identifier' ||
+        child.type === 'simple_identifier'
+      ) {
         return child.text as string;
       }
     }

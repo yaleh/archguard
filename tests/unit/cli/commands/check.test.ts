@@ -96,9 +96,12 @@ describe('createCheckCommand', () => {
 
     // Set up default mock for ConfigLoader
     mockLoad = vi.fn();
-    vi.mocked(ConfigLoader).mockImplementation(() => ({
-      load: mockLoad,
-    }) as unknown as InstanceType<typeof ConfigLoader>);
+    vi.mocked(ConfigLoader).mockImplementation(
+      () =>
+        ({
+          load: mockLoad,
+        }) as unknown as InstanceType<typeof ConfigLoader>
+    );
   });
 
   afterEach(() => {
@@ -110,7 +113,9 @@ describe('createCheckCommand', () => {
   it('all rules pass → exits with 0 (or no exit call)', async () => {
     mockLoad.mockResolvedValue({
       fitness: {
-        rules: [{ metric: 'sccCount', op: '<=', value: 0, message: 'No cyclic dependencies allowed' }],
+        rules: [
+          { metric: 'sccCount', op: '<=', value: 0, message: 'No cyclic dependencies allowed' },
+        ],
         failOnViolation: true,
       },
     });

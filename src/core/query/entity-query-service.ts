@@ -24,7 +24,7 @@ export class EntityQueryService {
   /** Find entities by exact name match. */
   findEntity(name: string): Entity[] {
     const ids = this.index.nameToIds[name] ?? [];
-    return ids.map((id) => this.entityMap.get(id)).filter(Boolean) as Entity[];
+    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** Find entities matching a given EntityType. */
@@ -70,7 +70,7 @@ export class EntityQueryService {
   /** Get all entities defined in a given file. */
   getFileEntities(filePath: string): Entity[] {
     const ids = this.index.fileToIds[filePath] ?? [];
-    return ids.map((id) => this.entityMap.get(id)).filter(Boolean) as Entity[];
+    return ids.map((id) => this.entityMap.get(id)).filter(Boolean);
   }
 
   /** Lookup a single entity by ID. */

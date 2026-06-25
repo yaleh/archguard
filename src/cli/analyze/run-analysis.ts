@@ -11,10 +11,7 @@ import { persistQueryScopes } from '../query/query-artifacts.js';
 import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
-import {
-  TestAnalyzer,
-  mergeProjectSemanticsIntoPatternConfig,
-} from '@/analysis/test-analyzer.js';
+import { TestAnalyzer } from '@/analysis/test-analyzer.js';
 import { TestOutputWriter } from '../utils/test-output-writer.js';
 import { loadProjectSemanticsSidecar } from '@/analysis/project-semantics-loader.js';
 import {
@@ -302,8 +299,13 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   if (cliOptions.includeGit) {
     try {
       reporter.start('Analyzing git history...');
-      const { readGitLog, getHeadRef, getCurrentBranch, isGitRepo, getGitRoot: getGitRootFn } =
-        await import('../git-history/git-log-reader.js');
+      const {
+        readGitLog,
+        getHeadRef,
+        getCurrentBranch,
+        isGitRepo,
+        getGitRoot: getGitRootFn,
+      } = await import('../git-history/git-log-reader.js');
       const { aggregateFileMetrics, aggregatePackageMetrics } =
         await import('../git-history/history-aggregator.js');
       const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
@@ -323,7 +325,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           gitRepoRoot !== projectRoot
             ? path.relative(gitRepoRoot, projectRoot).replace(/\\/g, '/')
             : undefined;
-        const rawCommits = readGitLog(gitRepoRoot, { sinceDays, maxCommits, includeMerges, pathFilter: gitSubDir });
+        const rawCommits = readGitLog(gitRepoRoot, {
+          sinceDays,
+          maxCommits,
+          includeMerges,
+          pathFilter: gitSubDir,
+        });
         // Strip the subdirectory prefix from file paths so metrics are relative to projectRoot
         const subDirPrefix = gitSubDir ? gitSubDir + '/' : '';
         const commits = subDirPrefix

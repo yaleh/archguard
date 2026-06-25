@@ -5,12 +5,12 @@
 import { describe, it, expect } from 'vitest';
 import { NodeUtils } from '../../../../src/plugins/golang/builders/node-utils.js';
 import Parser from 'tree-sitter';
-// @ts-ignore
+// @ts-expect-error -- tree-sitter-go has no TypeScript types
 import Go from 'tree-sitter-go';
 
 function parse(code: string): Parser.SyntaxNode {
   const parser = new Parser();
-  // @ts-ignore
+  // @ts-expect-error -- setLanguage accepts any Language object
   parser.setLanguage(Go);
   return parser.parse(code).rootNode;
 }
@@ -40,7 +40,7 @@ describe('NodeUtils', () => {
       expect(typeDecl).toBeDefined();
       const typeSpec = typeDecl.namedChildren.find((c) => c.type === 'type_spec');
       expect(typeSpec).toBeDefined();
-      const nameNode = typeSpec!.childForFieldName('name')!;
+      const nameNode = typeSpec.childForFieldName('name');
       expect(NodeUtils.nodeText(nameNode, 'package main\n\ntype User struct{}')).toBe('User');
     });
   });

@@ -55,10 +55,7 @@ function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
 
 describe('buildArchIndex (from @/core/query)', () => {
   it('indexes entities by name and file', () => {
-    const entities = [
-      makeEntity('src/foo.ts.Foo', 'Foo'),
-      makeEntity('src/bar.ts.Bar', 'Bar'),
-    ];
+    const entities = [makeEntity('src/foo.ts.Foo', 'Foo'), makeEntity('src/bar.ts.Bar', 'Bar')];
     const archJson = makeArchJson({ entities, sourceFiles: ['src/foo.ts', 'src/bar.ts'] });
     const index = buildArchIndex(archJson, 'test-hash-001');
 
@@ -69,10 +66,7 @@ describe('buildArchIndex (from @/core/query)', () => {
   });
 
   it('computes dependency edges from relations', () => {
-    const entities = [
-      makeEntity('pkg.A', 'A'),
-      makeEntity('pkg.B', 'B'),
-    ];
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B')];
     const archJson = makeArchJson({
       entities,
       relations: [{ source: 'pkg.A', target: 'pkg.B', type: 'dependency' }],
@@ -116,11 +110,7 @@ describe('QueryEngine.findByType (from @/core/query)', () => {
 
 describe('QueryEngine.getDependencies (from @/core/query)', () => {
   it('returns direct dependencies at depth 1', () => {
-    const entities = [
-      makeEntity('pkg.A', 'A'),
-      makeEntity('pkg.B', 'B'),
-      makeEntity('pkg.C', 'C'),
-    ];
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B'), makeEntity('pkg.C', 'C')];
     const archJson = makeArchJson({
       entities,
       relations: [
@@ -137,11 +127,7 @@ describe('QueryEngine.getDependencies (from @/core/query)', () => {
   });
 
   it('traverses 2 levels when depth=2', () => {
-    const entities = [
-      makeEntity('pkg.A', 'A'),
-      makeEntity('pkg.B', 'B'),
-      makeEntity('pkg.C', 'C'),
-    ];
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B'), makeEntity('pkg.C', 'C')];
     const archJson = makeArchJson({
       entities,
       relations: [
@@ -247,7 +233,7 @@ describe('QueryEngine options (Phase 84)', () => {
     const entities = result as Entity[];
     expect(entities).toHaveLength(1);
     expect(entities[0].members).toBeDefined();
-    expect(entities[0].members!.length).toBeGreaterThan(0);
+    expect(entities[0].members.length).toBeGreaterThan(0);
   });
 
   it('findEntity outputScope=class: returns entities WITHOUT members key', () => {
@@ -262,7 +248,9 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependencies queryFormat=edge-list: returns EdgeListOutput { entities, relations }', () => {
     const engine = makeEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      queryFormat: 'edge-list',
+    });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
     const edgeList = result as { entities: unknown[]; relations: unknown[] };
@@ -277,8 +265,14 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependencies outputScope=method + queryFormat=edge-list: methods[] populated', () => {
     const engine = makeEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'method', queryFormat: 'edge-list' });
-    const edgeList = result as { entities: Array<{ id: string; methods: unknown[] }>; relations: unknown[] };
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      outputScope: 'method',
+      queryFormat: 'edge-list',
+    });
+    const edgeList = result as {
+      entities: Array<{ id: string; methods: unknown[] }>;
+      relations: unknown[];
+    };
     expect(edgeList.entities).toHaveLength(1);
     // B has no methods (only a field), so methods[] is empty
     expect(edgeList.entities[0].methods).toEqual([]);
@@ -286,7 +280,9 @@ describe('QueryEngine options (Phase 84)', () => {
 
   it('getDependents outputScope=class: returns narrowed entities without members', () => {
     const engine = makeEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependents('B', 1), { outputScope: 'class' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependents('B', 1), {
+      outputScope: 'class',
+    });
     expect(Array.isArray(result)).toBe(true);
     const entities = result as Partial<Entity>[];
     expect(entities).toHaveLength(1);
@@ -310,7 +306,7 @@ describe('QueryEngine options (Phase 84)', () => {
 
     const result = engine.relationQueryService.findImplementers('IFoo');
     expect(Array.isArray(result)).toBe(true);
-    const entities = result as Entity[];
+    const entities = result;
     expect(entities).toHaveLength(1);
     expect(entities[0].members).toBeDefined();
   });

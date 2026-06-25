@@ -6,8 +6,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TypeScriptParser } from '@/parser/typescript-parser';
 import { ParallelParser } from '@/parser/parallel-parser';
-import { PlantUMLGenerator } from '@/ai/plantuml-generator';
-import { PlantUMLValidator } from '@/ai/plantuml-validator';
 import { CacheManager } from '@/cli/cache/cache-manager.js';
 import fs from 'fs/promises';
 import path from 'path';

@@ -181,7 +181,7 @@ describe('DiagramProcessor.parallel', () => {
       const startTime = Date.now();
       const results = await processor.processAll();
       const endTime = Date.now();
-      const duration = endTime - startTime;
+      const _duration = endTime - startTime;
 
       // Verify all diagrams processed
       expect(results).toHaveLength(3);

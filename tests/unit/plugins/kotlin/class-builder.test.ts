@@ -23,10 +23,9 @@ let builder: ClassBuilder;
 let parse: (code: string) => any;
 
 beforeAll(async () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Parser = require('tree-sitter');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const KotlinLanguage = require('@tree-sitter-grammars/tree-sitter-kotlin');
+  const { default: Parser } = await import('tree-sitter');
+
+  const { default: KotlinLanguage } = await import('@tree-sitter-grammars/tree-sitter-kotlin');
 
   const parser = new Parser();
   parser.setLanguage(KotlinLanguage);
@@ -152,9 +151,9 @@ class WithCompanion {
     const classes = extractClasses(code);
     const companion = classes.find((c) => c.kind === 'companion_object');
     expect(companion).toBeDefined();
-    const member = companion!.members.find((m) => m.name === 'X');
+    const member = companion.members.find((m) => m.name === 'X');
     expect(member).toBeDefined();
-    expect(member!.isStatic).toBe(true);
+    expect(member.isStatic).toBe(true);
   });
 });
 
@@ -241,8 +240,8 @@ class Repo {
     const classes = extractClasses(code);
     const field = classes[0].members.find((m) => m.name === 'db');
     expect(field).toBeDefined();
-    expect(field!.kind).toBe('field');
-    expect(field!.visibility).toBe('private');
+    expect(field.kind).toBe('field');
+    expect(field.visibility).toBe('private');
   });
 
   it('extracts method from function_declaration', () => {
@@ -253,7 +252,7 @@ class Service {
     const classes = extractClasses(code);
     const method = classes[0].members.find((m) => m.name === 'doWork');
     expect(method).toBeDefined();
-    expect(method!.kind).toBe('method');
+    expect(method.kind).toBe('method');
   });
 });
 

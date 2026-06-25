@@ -7,17 +7,45 @@
 
 export const KOTLIN_PRIMITIVE_TYPES = new Set([
   // Scalar / built-in types
-  'String', 'Int', 'Long', 'Double', 'Float', 'Boolean', 'Byte', 'Short', 'Char',
-  'Unit', 'Any', 'Nothing', 'Number',
+  'String',
+  'Int',
+  'Long',
+  'Double',
+  'Float',
+  'Boolean',
+  'Byte',
+  'Short',
+  'Char',
+  'Unit',
+  'Any',
+  'Nothing',
+  'Number',
   // Standard collections
-  'List', 'MutableList', 'Map', 'MutableMap', 'Set', 'MutableSet',
-  'Array', 'Pair', 'Triple', 'Sequence',
+  'List',
+  'MutableList',
+  'Map',
+  'MutableMap',
+  'Set',
+  'MutableSet',
+  'Array',
+  'Pair',
+  'Triple',
+  'Sequence',
   // Byte / int arrays
-  'InputStream', 'OutputStream', 'ByteArray', 'IntArray',
+  'InputStream',
+  'OutputStream',
+  'ByteArray',
+  'IntArray',
   // Kotlin coroutines
-  'Flow', 'StateFlow', 'SharedFlow', 'Channel',
+  'Flow',
+  'StateFlow',
+  'SharedFlow',
+  'Channel',
   // Android basics
-  'Context', 'Intent', 'Bundle', 'Uri',
+  'Context',
+  'Intent',
+  'Bundle',
+  'Uri',
 ]);
 
 export class KotlinTypeExtractor {

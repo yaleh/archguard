@@ -16,10 +16,10 @@ class OrderService:
         self.payment_service.charge(item)
 `;
     const modules = bridge.parseCode(code, 'order_service.py');
-    const method = modules.classes[0].methods.find(m => m.name === 'place_order')!;
+    const method = modules.classes[0].methods.find((m) => m.name === 'place_order');
     expect(method.callSites).toBeDefined();
-    expect(method.callSites!.length).toBeGreaterThanOrEqual(1);
-    const site = method.callSites![0];
+    expect(method.callSites.length).toBeGreaterThanOrEqual(1);
+    const site = method.callSites[0];
     expect(site.receiverField).toBe('payment_service');
     expect(site.methodName).toBe('charge');
     expect(site.callerMethod).toBe('place_order');
@@ -33,7 +33,7 @@ class Foo:
         print("hello")
 `;
     const modules = bridge.parseCode(code, 'foo.py');
-    const method = modules.classes[0].methods.find(m => m.name === 'bar')!;
+    const method = modules.classes[0].methods.find((m) => m.name === 'bar');
     // standalone calls should not appear in callSites
     expect(method.callSites?.length ?? 0).toBe(0);
   });
@@ -47,7 +47,7 @@ class Foo:
         pass
 `;
     const modules = bridge.parseCode(code, 'foo.py');
-    const method = modules.classes[0].methods.find(m => m.name === 'a')!;
+    const method = modules.classes[0].methods.find((m) => m.name === 'a');
     // self.b() → same-class call (self, not a field), should be skipped
     expect(method.callSites?.length ?? 0).toBe(0);
   });

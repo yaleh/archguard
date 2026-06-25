@@ -3,13 +3,7 @@
  */
 
 import type Parser from 'tree-sitter';
-import type {
-  GoFunction,
-  GoMethod,
-  GoField,
-  GoFunctionBody,
-  GoRawStruct,
-} from '../types.js';
+import type { GoFunction, GoMethod, GoField, GoFunctionBody, GoRawStruct } from '../types.js';
 import { NodeUtils } from './node-utils.js';
 import { GoroutineBuilder } from './goroutine-builder.js';
 import type { TreeSitterParseOptions } from '../types.js';
@@ -230,11 +224,7 @@ export class FunctionBuilder {
    * Selective extraction: AST node type pre-scanning
    */
   shouldExtractBody(blockNode: Parser.SyntaxNode, code: string): boolean {
-    const targetNodeTypes = [
-      'go_statement',
-      'send_statement',
-      'receive_expression',
-    ];
+    const targetNodeTypes = ['go_statement', 'send_statement', 'receive_expression'];
 
     if (targetNodeTypes.some((nodeType) => blockNode.descendantsOfType(nodeType).length > 0)) {
       return true;

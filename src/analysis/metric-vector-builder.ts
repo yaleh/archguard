@@ -4,12 +4,15 @@ import type { PackageStatEntry } from '@/cli/query/query-engine.js';
 import type { MetricVector } from '@/types/metric-vector.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
-export function buildMetricVector(archJson: ArchJSON, packageStats: PackageStatEntry[]): MetricVector {
+export function buildMetricVector(
+  archJson: ArchJSON,
+  packageStats: PackageStatEntry[]
+): MetricVector {
   const metrics = archJson.metrics;
   const fileStats = metrics?.fileStats ?? [];
 
   // Compute inDegree distribution from fileStats (file-level)
-  const fileInDegrees = fileStats.map(f => f.inDegree);
+  const fileInDegrees = fileStats.map((f) => f.inDegree);
   const fileMaxInDegree = fileInDegrees.length > 0 ? Math.max(...fileInDegrees) : 0;
 
   // When Go Atlas package graph is present, compute package-level inDegree distribution
@@ -28,14 +31,18 @@ export function buildMetricVector(archJson: ArchJSON, packageStats: PackageStatE
   }
 
   const effectiveInDegrees = atlasInDegrees ?? fileInDegrees;
-  const effectiveMaxInDegree = atlasInDegrees !== undefined
-    ? (atlasInDegrees.length > 0 ? Math.max(...atlasInDegrees) : 0)
-    : fileMaxInDegree;
+  const effectiveMaxInDegree =
+    atlasInDegrees !== undefined
+      ? atlasInDegrees.length > 0
+        ? Math.max(...atlasInDegrees)
+        : 0
+      : fileMaxInDegree;
 
   // Take the max of both when both are available
-  const maxInDegree = atlasInDegrees !== undefined
-    ? Math.max(effectiveMaxInDegree, fileMaxInDegree)
-    : fileMaxInDegree;
+  const maxInDegree =
+    atlasInDegrees !== undefined
+      ? Math.max(effectiveMaxInDegree, fileMaxInDegree)
+      : fileMaxInDegree;
 
   return {
     schemaVersion: 1,
@@ -45,10 +52,10 @@ export function buildMetricVector(archJson: ArchJSON, packageStats: PackageStatE
     sccCount: (metrics?.cycles ?? []).length,
     relationTypeBreakdown: metrics?.relationTypeBreakdown ?? {},
     maxInDegree,
-    maxOutDegree: fileStats.length > 0 ? Math.max(...fileStats.map(f => f.outDegree)) : 0,
-    maxPackageSize: packageStats.length > 0 ? Math.max(...packageStats.map(p => p.fileCount)) : 0,
+    maxOutDegree: fileStats.length > 0 ? Math.max(...fileStats.map((f) => f.outDegree)) : 0,
+    maxPackageSize: packageStats.length > 0 ? Math.max(...packageStats.map((p) => p.fileCount)) : 0,
     giniInDegree: giniCoefficient(effectiveInDegrees),
-    giniPackageSize: giniCoefficient(packageStats.map(p => p.fileCount)),
+    giniPackageSize: giniCoefficient(packageStats.map((p) => p.fileCount)),
     packageCount: packageStats.length,
     entityCoverageRatio: accessor.getTestAnalysis()?.metrics?.entityCoverageRatio ?? null,
   };

@@ -340,11 +340,7 @@ describe('ArchMetrics.findOrphans', () => {
 
 describe('ArchMetrics.findInCycles', () => {
   it('returns entities that participate in cycles', () => {
-    const entities = [
-      makeEntity('pkg.A', 'A'),
-      makeEntity('pkg.B', 'B'),
-      makeEntity('pkg.C', 'C'),
-    ];
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B'), makeEntity('pkg.C', 'C')];
     const archJson = makeArchJson({
       entities,
       relations: [

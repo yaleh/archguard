@@ -246,7 +246,10 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         // Phase 1: look up with structured format so the result is always Entity[]
         // and safe for .filter(). Edge-list serialization is applied in Phase 2.
         const lookupScope = resolveOutputScope(outputScope, verbose);
-        const lookupOptions: QueryMethodOptions = { outputScope: lookupScope, queryFormat: 'structured' };
+        const lookupOptions: QueryMethodOptions = {
+          outputScope: lookupScope,
+          queryFormat: 'structured',
+        };
 
         let rawEntities: Entity[];
 
@@ -304,12 +307,22 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(
+          path.join(root, '.archguard'),
+          scope
+        );
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.getDependencies(name, depth), queryOptions), verbose);
+        const payload = applyView(
+          engine,
+          engine.applyOutputOptions(
+            relationQueryService.getDependencies(name, depth),
+            queryOptions
+          ),
+          verbose
+        );
         return textResponse(serializeResult(payload));
       });
     }
@@ -330,12 +343,19 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(
+          path.join(root, '.archguard'),
+          scope
+        );
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.getDependents(name, depth), queryOptions), verbose);
+        const payload = applyView(
+          engine,
+          engine.applyOutputOptions(relationQueryService.getDependents(name, depth), queryOptions),
+          verbose
+        );
         return textResponse(serializeResult(payload));
       });
     }
@@ -355,12 +375,19 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(
+          path.join(root, '.archguard'),
+          scope
+        );
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.findImplementers(name), queryOptions), verbose);
+        const payload = applyView(
+          engine,
+          engine.applyOutputOptions(relationQueryService.findImplementers(name), queryOptions),
+          verbose
+        );
         return textResponse(serializeResult(payload));
       });
     }
@@ -380,12 +407,19 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = await loadEngine(
+          path.join(root, '.archguard'),
+          scope
+        );
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
-        const payload = applyView(engine, engine.applyOutputOptions(relationQueryService.findSubclasses(name), queryOptions), verbose);
+        const payload = applyView(
+          engine,
+          engine.applyOutputOptions(relationQueryService.findSubclasses(name), queryOptions),
+          verbose
+        );
         return textResponse(serializeResult(payload));
       });
     }

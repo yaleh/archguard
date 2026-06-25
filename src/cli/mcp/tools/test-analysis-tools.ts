@@ -174,10 +174,11 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        let engine: Awaited<ReturnType<typeof loadEngine>>['engine'] | null = null;
-        let extensionAccessor: Awaited<ReturnType<typeof loadEngine>>['extensionAccessor'] | null = null;
+        let _engine: Awaited<ReturnType<typeof loadEngine>>['engine'] | null = null;
+        let extensionAccessor: Awaited<ReturnType<typeof loadEngine>>['extensionAccessor'] | null =
+          null;
         try {
-          ({ engine, extensionAccessor } = await loadEngine(archDir, scope));
+          ({ engine: _engine, extensionAccessor } = await loadEngine(archDir, scope));
         } catch {
           // No prior analysis — fall back to package.json detection
         }
@@ -217,7 +218,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
           );
         }
 
-        const analysis = extensionAccessor!.getTestAnalysis();
+        const analysis = extensionAccessor.getTestAnalysis();
 
         // Scope mismatch guard: engine loaded but no test files found
         if (analysis.metrics.totalTestFiles === 0) {
@@ -273,7 +274,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { engine, extensionAccessor } = await loadEngine(archDir, scope);
+        const { engine: _engine, extensionAccessor } = await loadEngine(archDir, scope);
         if (!extensionAccessor.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = extensionAccessor.getTestAnalysis();
         if (analysis.metrics.totalTestFiles === 0) {

@@ -37,7 +37,6 @@ export function createCheckCommand(): Command {
       const config = await loader.load({}, options.config);
       const rawConfig = config as unknown as Record<string, unknown>;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fitnessConfig = rawConfig['fitness'] as
         | { rules: unknown[]; failOnViolation: boolean }
         | undefined;
@@ -61,8 +60,12 @@ export function createCheckCommand(): Command {
       const relations: Relation[] = [];
 
       // 5. Evaluate rules
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = evaluateAllRules(fitnessConfig.rules as any[], snapshot.metricVector, relations);
+
+      const results = evaluateAllRules(
+        fitnessConfig.rules as any[],
+        snapshot.metricVector,
+        relations
+      );
 
       // 6. Print results
       for (const result of results) {

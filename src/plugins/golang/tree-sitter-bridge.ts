@@ -6,7 +6,6 @@
  */
 
 import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-go doesn't have proper type definitions
 import Go from 'tree-sitter-go';
 import type { GoRawPackage, GoImport, TreeSitterParseOptions } from './types.js';
 import { NodeUtils } from './builders/node-utils.js';
@@ -23,7 +22,7 @@ export class TreeSitterBridge {
 
   constructor() {
     this.parser = new Parser();
-    // @ts-ignore - tree-sitter-go language definition compatibility
+    // @ts-expect-error -- tree-sitter-go language definition type incompatibility
     this.parser.setLanguage(Go);
     this.structBuilder = new StructBuilder();
     this.functionBuilder = new FunctionBuilder();
@@ -46,7 +45,12 @@ export class TreeSitterBridge {
     const imports = this.extractImports(rootNode, code, filePath);
 
     // Extract type declarations (structs + interfaces share AST walk via StructBuilder)
-    const { structs, interfaces } = this.structBuilder.extract(filePath, rootNode, code, packageName);
+    const { structs, interfaces } = this.structBuilder.extract(
+      filePath,
+      rootNode,
+      code,
+      packageName
+    );
 
     // Extract methods and attach to structs; collect orphaned methods
     const { orphanedMethods } = this.functionBuilder.extractMethods(

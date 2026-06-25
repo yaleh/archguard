@@ -2,7 +2,7 @@
  * Tests for CLI Detector
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { detectClaudeCodeCLI, isClaudeCodeAvailable } from '../../../src/utils/cli-detector.js';
 
 describe('CLI Detector', () => {

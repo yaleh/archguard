@@ -3,9 +3,8 @@
  * TDD approach: Tests written first
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ParallelParser, ParallelParserOptions } from '@/parser/parallel-parser';
-import type { ArchJSON } from '@/types';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ParallelParser } from '@/parser/parallel-parser';
 import { EventEmitter } from 'events';
 import os from 'os';
 

@@ -6,7 +6,6 @@
  * and that isTestFile() correctly identifies .tsx test files.
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import path from 'path';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
 
 // ---------------------------------------------------------------------------
@@ -84,11 +83,9 @@ describe('parseProject default pattern includes .tsx files', () => {
 
     try {
       // Use a real temp dir (or just let it fail on empty result — we only care about pattern)
-      await plugin
-        .parseProject('/nonexistent-workspace', {})
-        .catch(() => {
-          /* ignore parse errors */
-        });
+      await plugin.parseProject('/nonexistent-workspace', {}).catch(() => {
+        /* ignore parse errors */
+      });
     } finally {
       TypeScriptParser.prototype.parseProject = origParseProject;
     }
@@ -112,11 +109,9 @@ describe('parseProject default pattern includes .tsx files', () => {
     };
 
     try {
-      await plugin
-        .parseProject('/nonexistent-workspace', { filePattern: '**/*.ts' })
-        .catch(() => {
-          /* ignore parse errors */
-        });
+      await plugin.parseProject('/nonexistent-workspace', { filePattern: '**/*.ts' }).catch(() => {
+        /* ignore parse errors */
+      });
     } finally {
       TypeScriptParser.prototype.parseProject = origParseProject;
     }
@@ -133,11 +128,15 @@ describe('initTsProject built-in excludes cover tsx/jsx test files', () => {
   it('excludes *.test.tsx from the ts-morph Project by default', async () => {
     // Access private method via cast
     const pluginAny = plugin as unknown as {
-      initTsProject: (root: string, pattern: string, excludes?: string[]) => import('ts-morph').Project;
+      initTsProject: (
+        root: string,
+        pattern: string,
+        excludes?: string[]
+      ) => import('ts-morph').Project;
     };
 
     const tsProject = pluginAny.initTsProject('/nonexistent', '**/*.{ts,tsx}');
-    const sourceFiles = tsProject.getSourceFiles().map((sf) => sf.getFilePath());
+    const _sourceFiles = tsProject.getSourceFiles().map((sf) => sf.getFilePath());
 
     // No source files expected (workspace doesn't exist), but we verify the pattern
     // doesn't accidentally include test files when real files are added.
@@ -146,10 +145,10 @@ describe('initTsProject built-in excludes cover tsx/jsx test files', () => {
     // The point is confirmed by the unit tests below that check pattern strings
   });
 
-  it('built-in exclude list contains *.test.tsx pattern', () => {
+  it('built-in exclude list contains *.test.tsx pattern', async () => {
     // Test the pattern array by inspecting the constructed ts-morph project's glob patterns
     // We verify this via the Project.addSourceFilesAtPaths spy approach
-    const { Project } = require('ts-morph');
+    const { Project } = await import('ts-morph');
     const addSpy = vi.fn().mockReturnValue([]);
     const fakeProject = { addSourceFilesAtPaths: addSpy, getSourceFiles: () => [] };
     vi.spyOn({ Project }, 'Project').mockReturnValue(fakeProject);

@@ -48,10 +48,10 @@ export interface JavaRawField {
  * Java call site (method invocation from within a method body)
  */
 export interface JavaRawCallSite {
-  receiverName: string;    // raw receiver text (e.g. "paymentService")
-  receiverType?: string;   // resolved class type (e.g. "PaymentService"), undefined if unresolvable
-  methodName: string;      // called method name
-  callerMethod: string;    // enclosing method name
+  receiverName: string; // raw receiver text (e.g. "paymentService")
+  receiverType?: string; // resolved class type (e.g. "PaymentService"), undefined if unresolvable
+  methodName: string; // called method name
+  callerMethod: string; // enclosing method name
 }
 
 /**

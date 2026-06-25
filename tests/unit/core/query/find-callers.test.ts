@@ -104,9 +104,7 @@ describe('QueryEngine.findCallers()', () => {
 
     it('returns empty array when no call edges match', () => {
       const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B')];
-      const relations = [
-        { source: 'pkg.A', target: 'pkg.B', type: 'dependency' as const },
-      ];
+      const relations = [{ source: 'pkg.A', target: 'pkg.B', type: 'dependency' as const }];
       const engine = makeEngine(entities, relations);
 
       const callers = engine.relationQueryService.findCallers('B', 1);
@@ -223,9 +221,7 @@ describe('QueryEngine.findCallers()', () => {
   describe('depth clamping', () => {
     it('clamps depth=10 to 5', () => {
       // Chain: A→B→C→D→E→F→G  (7 levels)
-      const entities = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((n) =>
-        makeEntity(`pkg.${n}`, n)
-      );
+      const entities = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((n) => makeEntity(`pkg.${n}`, n));
       const relations = [
         makeCallEdge('pkg.A', 'pkg.B', 'f', 'g'),
         makeCallEdge('pkg.B', 'pkg.C', 'f', 'g'),

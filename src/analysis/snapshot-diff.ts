@@ -38,7 +38,7 @@ export function diffSnapshots(from: MetricSnapshot, to: MetricSnapshot): MetricD
 
   if (schemaVersionMismatch) {
     warnings.push(
-      `Schema version mismatch: from=${from.metricVector.schemaVersion}, to=${to.metricVector.schemaVersion}. Comparison may be unreliable.`,
+      `Schema version mismatch: from=${from.metricVector.schemaVersion}, to=${to.metricVector.schemaVersion}. Comparison may be unreliable.`
     );
   }
 
@@ -48,8 +48,8 @@ export function diffSnapshots(from: MetricSnapshot, to: MetricSnapshot): MetricD
     const toVal =
       (to.metricVector as unknown as Record<string, number | null | undefined>)[field] ?? null;
 
-    const fromNum = fromVal !== null && fromVal !== undefined ? (fromVal as number) : null;
-    const toNum = toVal !== null && toVal !== undefined ? (toVal as number) : null;
+    const fromNum = fromVal !== null && fromVal !== undefined ? fromVal : null;
+    const toNum = toVal !== null && toVal !== undefined ? toVal : null;
 
     let delta: number | null = null;
     let percentChange: number | null = null;

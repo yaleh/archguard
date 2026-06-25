@@ -76,7 +76,17 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
     'archguard_analyze',
     'Analyze project sources with an optional code-language plugin override and refresh query artifacts for the target project.',
     analyzeSchema,
-    async ({ projectRoot, sources, lang, diagrams, format, noCache, includeTests, testsOnly, includeGit }) => {
+    async ({
+      projectRoot,
+      sources,
+      lang,
+      diagrams,
+      format,
+      noCache,
+      includeTests,
+      testsOnly,
+      includeGit,
+    }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
 

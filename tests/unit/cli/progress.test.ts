@@ -3,7 +3,7 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ProgressReporter } from '@/cli/progress';
 
 describe('Story 2: Progress Display', () => {

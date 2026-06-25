@@ -34,7 +34,9 @@ describe('checkDependencyConstraint', () => {
 
   it('test 4: nested paths caught by rule: src/parser/deep/nested/file.ts → src/cli/commands/analyze.ts', () => {
     const rule = makeRule('src/parser/**', 'src/cli/**');
-    const relations = [makeRelation('src/parser/deep/nested/file.ts', 'src/cli/commands/analyze.ts')];
+    const relations = [
+      makeRelation('src/parser/deep/nested/file.ts', 'src/cli/commands/analyze.ts'),
+    ];
     const result = checkDependencyConstraint(rule, relations);
     expect(result.passed).toBe(false);
   });

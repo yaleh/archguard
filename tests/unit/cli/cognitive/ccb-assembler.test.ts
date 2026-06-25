@@ -56,7 +56,17 @@ const mockBundle: CognitiveContextBundle = {
   filePath: 'src/cli/query/query-engine.ts',
   fileHash: 'deadbeef1234',
   assembledAt: '2026-06-22T00:00:00.000Z',
-  structural: { name: 'QueryEngine', found: true, entityId: 'foo', methodCount: 5, fieldCount: 2, inDegree: 3, outDegree: 4, topDependents: [], topDependencies: [] },
+  structural: {
+    name: 'QueryEngine',
+    found: true,
+    entityId: 'foo',
+    methodCount: 5,
+    fieldCount: 2,
+    inDegree: 3,
+    outDegree: 4,
+    topDependents: [],
+    topDependencies: [],
+  },
   behavioral: null,
   git: null,
   guidance: null,
@@ -76,7 +86,11 @@ describe('ccb-assembler', () => {
     mockReadCcb.mockResolvedValue({ bundle: mockBundle, stale: false });
 
     const { assembleCcb } = await import('@/cli/cognitive/ccb-assembler.js');
-    const result = await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch');
+    const result = await assembleCcb(
+      'src-cli-query-query-engine',
+      'src/cli/query/query-engine.ts',
+      '/tmp/arch'
+    );
 
     expect(result).toEqual(mockBundle);
     // Should not fetch structural data or write
@@ -94,7 +108,11 @@ describe('ccb-assembler', () => {
     });
 
     const { assembleCcb } = await import('@/cli/cognitive/ccb-assembler.js');
-    const result = await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch');
+    const result = await assembleCcb(
+      'src-cli-query-query-engine',
+      'src/cli/query/query-engine.ts',
+      '/tmp/arch'
+    );
 
     expect(mockWriteCcb).toHaveBeenCalled();
     expect(result.fileId).toBe('src-cli-query-query-engine');
@@ -110,7 +128,11 @@ describe('ccb-assembler', () => {
     });
 
     const { assembleCcb } = await import('@/cli/cognitive/ccb-assembler.js');
-    const result = await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch');
+    const result = await assembleCcb(
+      'src-cli-query-query-engine',
+      'src/cli/query/query-engine.ts',
+      '/tmp/arch'
+    );
 
     expect(result.behavioral).toBeNull();
   });
@@ -124,7 +146,9 @@ describe('ccb-assembler', () => {
     });
 
     const { assembleCcb } = await import('@/cli/cognitive/ccb-assembler.js');
-    await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch', { forceRefresh: true });
+    await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch', {
+      forceRefresh: true,
+    });
 
     // Should have fetched fresh data despite non-stale cache
     expect(mockLoadEngine).toHaveBeenCalled();
@@ -141,7 +165,11 @@ describe('ccb-assembler', () => {
     mockLoadHistoryData.mockRejectedValue(new Error('git artifacts absent'));
 
     const { assembleCcb } = await import('@/cli/cognitive/ccb-assembler.js');
-    const result = await assembleCcb('src-cli-query-query-engine', 'src/cli/query/query-engine.ts', '/tmp/arch');
+    const result = await assembleCcb(
+      'src-cli-query-query-engine',
+      'src/cli/query/query-engine.ts',
+      '/tmp/arch'
+    );
 
     expect(result.git).toBeNull();
   });

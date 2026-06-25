@@ -25,7 +25,9 @@ import path from 'path';
  * @param relations - Array of Relation objects to filter
  * @returns New array with experiment-path relations removed
  */
-export function filterExperimentRelations(relations: readonly import('@/types').Relation[]): import('@/types').Relation[] {
+export function filterExperimentRelations(
+  relations: readonly import('@/types').Relation[]
+): import('@/types').Relation[] {
   return relations.filter((rel) => {
     const isExperimentPath = (id: string): boolean =>
       id.startsWith('experiments/') || id.includes('/experiments/');

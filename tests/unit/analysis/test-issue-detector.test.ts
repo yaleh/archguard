@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { TestFileInfo, CoverageLink } from '@/types/extensions/test-analysis.js';
+import type { TestFileInfo } from '@/types/extensions/test-analysis.js';
 
 function makeTestFile(overrides: Partial<TestFileInfo> = {}): TestFileInfo {
   return {

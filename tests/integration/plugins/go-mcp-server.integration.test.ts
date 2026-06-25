@@ -35,9 +35,7 @@ describe('Go MCP server — Atlas Flow integration', () => {
     expect(atlas).toBeDefined();
     expect(atlas.layers.flow).toBeDefined();
 
-    const mcpEntries = atlas.layers.flow.entryPoints.filter(
-      (e: any) => e.protocol === 'mcp'
-    );
+    const mcpEntries = atlas.layers.flow.entryPoints.filter((e: any) => e.protocol === 'mcp');
     expect(mcpEntries).toHaveLength(2);
   });
 
@@ -58,9 +56,8 @@ describe('Go MCP server — Atlas Flow integration', () => {
     });
 
     const flow = (result as any).extensions?.goAtlas?.layers?.flow;
-    const handlers = flow?.entryPoints
-      ?.filter((e: any) => e.protocol === 'mcp')
-      .map((e: any) => e.handler) ?? [];
+    const handlers =
+      flow?.entryPoints?.filter((e: any) => e.protocol === 'mcp').map((e: any) => e.handler) ?? [];
 
     expect(handlers).toContain('listFilesHandler');
     expect(handlers).toContain('readFileHandler');
@@ -72,11 +69,10 @@ describe('Go MCP server — Atlas Flow integration', () => {
     });
 
     const flow = (result as any).extensions?.goAtlas?.layers?.flow;
-    const mcpChains = flow?.callChains?.filter((c: any) =>
-      flow.entryPoints.find(
-        (e: any) => e.id === c.entryPoint && e.protocol === 'mcp'
-      )
-    ) ?? [];
+    const mcpChains =
+      flow?.callChains?.filter((c: any) =>
+        flow.entryPoints.find((e: any) => e.id === c.entryPoint && e.protocol === 'mcp')
+      ) ?? [];
 
     expect(mcpChains).toHaveLength(2);
   });

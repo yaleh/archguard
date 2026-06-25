@@ -71,9 +71,7 @@ function sanitizeStringArray(values?: string[]): string[] | undefined {
   return values.filter((value) => !isUnsafePathLikeValue(value));
 }
 
-function sanitizeLayers(
-  layers?: Record<string, string>
-): Record<string, string> | undefined {
+function sanitizeLayers(layers?: Record<string, string>): Record<string, string> | undefined {
   if (!layers) return undefined;
 
   const sanitized = Object.entries(layers).reduce<Record<string, string>>((acc, [key, value]) => {
@@ -97,7 +95,9 @@ export function sanitizeProjectSemantics(raw: ProjectSemantics): ProjectSemantic
   };
 }
 
-function sanitizeProjectSemanticsInput(raw?: ProjectSemanticsMergeInput): Partial<ProjectSemantics> {
+function sanitizeProjectSemanticsInput(
+  raw?: ProjectSemanticsMergeInput
+): Partial<ProjectSemantics> {
   if (!raw) return {};
 
   return {
@@ -110,9 +110,7 @@ function sanitizeProjectSemanticsInput(raw?: ProjectSemanticsMergeInput): Partia
   };
 }
 
-function mergeArrayField(
-  ...sources: Array<string[] | undefined>
-): string[] {
+function mergeArrayField(...sources: Array<string[] | undefined>): string[] {
   const merged: string[] = [];
   const seen = new Set<string>();
 
@@ -179,22 +177,16 @@ export function mergeProjectSemantics(
       sanitizedLlm.customAssertionPatterns,
       sanitizedUser.customAssertionPatterns
     ),
-    architecturalLayers: Object.keys(architecturalLayers).length > 0 ? architecturalLayers : undefined,
+    architecturalLayers:
+      Object.keys(architecturalLayers).length > 0 ? architecturalLayers : undefined,
     suggestedDepth:
       sanitizedUser.suggestedDepth ??
       sanitizedLlm.suggestedDepth ??
       sanitizedDefaults.suggestedDepth,
-    confidence:
-      sanitizedUser.confidence ??
-      sanitizedLlm.confidence ??
-      sanitizedDefaults.confidence,
+    confidence: sanitizedUser.confidence ?? sanitizedLlm.confidence ?? sanitizedDefaults.confidence,
     _dirTreeHash:
-      sanitizedUser._dirTreeHash ??
-      sanitizedLlm._dirTreeHash ??
-      sanitizedDefaults._dirTreeHash,
+      sanitizedUser._dirTreeHash ?? sanitizedLlm._dirTreeHash ?? sanitizedDefaults._dirTreeHash,
     _generatedAt:
-      sanitizedUser._generatedAt ??
-      sanitizedLlm._generatedAt ??
-      sanitizedDefaults._generatedAt,
+      sanitizedUser._generatedAt ?? sanitizedLlm._generatedAt ?? sanitizedDefaults._generatedAt,
   };
 }

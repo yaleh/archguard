@@ -69,7 +69,9 @@ function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
     try {
       return [new RegExp(pattern)];
     } catch (error) {
-      console.warn(`[typescript:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      console.warn(
+        `[typescript:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`
+      );
       return [];
     }
   });
@@ -124,7 +126,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   /**
    * Initialize the plugin
    */
-  async initialize(config: PluginInitConfig): Promise<void> {
+  async initialize(_config: PluginInitConfig): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -160,7 +162,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
           return true;
         }
       }
-    } catch (error) {
+    } catch {
       return false;
     }
 

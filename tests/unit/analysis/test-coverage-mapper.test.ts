@@ -317,10 +317,7 @@ describe('TestCoverageMapper', () => {
     const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
     const mapper = new TestCoverageMapper();
     const testFiles = [
-      makeTestFile(
-        'app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt',
-        []
-      ),
+      makeTestFile('app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt', []),
     ];
     const archJson = makeArchJson([
       {
@@ -339,10 +336,10 @@ describe('TestCoverageMapper', () => {
       (l: CoverageLink) => l.sourceEntityId === 'com.example.usb.UsbDeviceRefreshController'
     );
     expect(link).toBeDefined();
-    expect(link!.coveredByTestIds).toContain(
+    expect(link.coveredByTestIds).toContain(
       'app/src/test/java/com/example/usb/UsbDeviceRefreshControllerTest.kt'
     );
-    expect(link!.coverageScore).toBeGreaterThan(0);
+    expect(link.coverageScore).toBeGreaterThan(0);
   });
 
   it('Kotlin: AppShellTest.kt (androidTest) matches AppShell.kt entity via path-convention', async () => {
@@ -366,10 +363,10 @@ describe('TestCoverageMapper', () => {
     const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
     const link = result.find((l: CoverageLink) => l.sourceEntityId === 'com.example.app.AppShell');
     expect(link).toBeDefined();
-    expect(link!.coveredByTestIds).toContain(
+    expect(link.coveredByTestIds).toContain(
       'app/src/androidTest/java/com/example/app/AppShellTest.kt'
     );
-    expect(link!.coverageScore).toBeGreaterThan(0);
+    expect(link.coverageScore).toBeGreaterThan(0);
   });
 
   it('Kotlin: ExampleInstrumentedTest.kt (no Test-suffix match) does not falsely link', async () => {

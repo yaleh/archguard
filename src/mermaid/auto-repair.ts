@@ -15,7 +15,7 @@ export class MermaidAutoRepair {
   /**
    * Attempt to repair Mermaid code
    */
-  async repair(mermaidCode: string, errors: ValidationError[]): Promise<string> {
+  async repair(mermaidCode: string, _errors: ValidationError[]): Promise<string> {
     let repaired = mermaidCode;
 
     // Apply common repairs
@@ -91,7 +91,7 @@ export class MermaidAutoRepair {
     const lines = code.split('\n');
     const result: string[] = [];
     let namespaceDepth = 0;
-    let currentNamespace = '';
+    let _currentNamespace = '';
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -100,14 +100,14 @@ export class MermaidAutoRepair {
         if (namespaceDepth === 0) {
           // Keep only top-level namespace
           result.push(line);
-          currentNamespace = trimmed;
+          _currentNamespace = trimmed;
         }
         namespaceDepth++;
       } else if (trimmed === '}') {
         namespaceDepth--;
         if (namespaceDepth === 0) {
           result.push(line);
-          currentNamespace = '';
+          _currentNamespace = '';
         }
       } else if (namespaceDepth <= 1) {
         // Keep content at most 1 level deep
@@ -277,10 +277,10 @@ export class MermaidAutoRepair {
       if (trimmed.length === 0 || trimmed.startsWith('%%')) return true;
       if (/^\s*(classDiagram|class|namespace|%%)/.test(trimmed)) return true;
       if (/^\s*\w+\s*(-->\|<--\|--|<\|\.\.|\.\.|-->)/.test(trimmed)) return true;
-      if (/^\s*[\+\-#]\s*\w+/.test(trimmed)) return true;
+      if (/^\s*[+\-#]\s*\w+/.test(trimmed)) return true;
 
       // Skip lines with problematic tokens
-      return !/[|{}\[\]\\]/.test(trimmed);
+      return !/[|{}[\]\\]/.test(trimmed);
     });
 
     return filtered.join('\n');

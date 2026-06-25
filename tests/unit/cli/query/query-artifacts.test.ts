@@ -1,8 +1,7 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import crypto from 'crypto';
 import type { ArchJSON } from '@/types/index.js';
 import {
   atomicWriteFile,
@@ -317,7 +316,7 @@ describe('persistQueryScopes', () => {
     tmpDirs.push(dir);
 
     // Create a file where a directory is expected, to cause a write error
-    const badScopeDirPath = path.join(dir, 'query', 'bad-scope');
+    const _badScopeDirPath = path.join(dir, 'query', 'bad-scope');
     await fs.ensureDir(path.join(dir, 'query'));
     // Create a regular file at the path where ensureDir would need to create a directory
     await fs.writeFile(path.join(dir, 'query', 'bad-scope'), 'blocker');

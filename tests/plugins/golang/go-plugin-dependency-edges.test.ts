@@ -49,6 +49,7 @@ describe('GoPlugin - dependency edges via parseToRawData pipeline', () => {
 
     vi.mocked(glob).mockResolvedValue([apiFile, svcFile] as never);
     vi.mocked(fs.default.existsSync).mockImplementation((p) => p === goModPath);
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     vi.mocked(fs.default.readFile).mockImplementation(async (p) => {
       if (p === goModPath) return 'module github.com/org/app\n\ngo 1.21\n';
       if (p === apiFile) return `package api\nimport "github.com/org/app/internal/svc"\n`;
@@ -71,6 +72,7 @@ describe('GoPlugin - dependency edges via parseToRawData pipeline', () => {
 
     vi.mocked(glob).mockResolvedValue([apiFile, svcFile] as never);
     vi.mocked(fs.default.existsSync).mockImplementation((p) => p === goModPath);
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     vi.mocked(fs.default.readFile).mockImplementation(async (p) => {
       if (p === goModPath) return 'module github.com/org/app\n\ngo 1.21\n';
       if (p === apiFile) return `package api\nimport "github.com/org/app/internal/svc"\n`;

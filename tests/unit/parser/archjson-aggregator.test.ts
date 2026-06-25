@@ -6,8 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
-import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
-import type { DetailLevel } from '@/types/config.js';
+import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 
 describe('ArchJSONAggregator', () => {
   const aggregator = new ArchJSONAggregator();
@@ -612,7 +611,11 @@ describe('ArchJSONAggregator', () => {
           name: 'Foo',
           type: 'class',
           visibility: 'public',
-          sourceLocation: { file: '/ws/app/src/main/java/com/example/app/Foo.kt', startLine: 1, endLine: 10 },
+          sourceLocation: {
+            file: '/ws/app/src/main/java/com/example/app/Foo.kt',
+            startLine: 1,
+            endLine: 10,
+          },
           members: [],
         },
         {
@@ -620,7 +623,11 @@ describe('ArchJSONAggregator', () => {
           name: 'Bar',
           type: 'class',
           visibility: 'public',
-          sourceLocation: { file: '/ws/app/src/main/java/com/example/app/Bar.kt', startLine: 1, endLine: 10 },
+          sourceLocation: {
+            file: '/ws/app/src/main/java/com/example/app/Bar.kt',
+            startLine: 1,
+            endLine: 10,
+          },
           members: [],
         },
         {
@@ -628,7 +635,11 @@ describe('ArchJSONAggregator', () => {
           name: 'Baz',
           type: 'class',
           visibility: 'public',
-          sourceLocation: { file: '/ws/app/src/main/java/com/example/usb/Baz.kt', startLine: 1, endLine: 10 },
+          sourceLocation: {
+            file: '/ws/app/src/main/java/com/example/usb/Baz.kt',
+            startLine: 1,
+            endLine: 10,
+          },
           members: [],
         },
       ];
@@ -749,7 +760,11 @@ describe('ArchJSONAggregator', () => {
             name: 'Foo',
             type: 'class',
             visibility: 'public',
-            sourceLocation: { file: '/workspace/app/src/main/java/com/example/app/Foo.kt', startLine: 1, endLine: 10 },
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/app/Foo.kt',
+              startLine: 1,
+              endLine: 10,
+            },
             members: [],
           },
           {
@@ -757,7 +772,11 @@ describe('ArchJSONAggregator', () => {
             name: 'Bar',
             type: 'class',
             visibility: 'public',
-            sourceLocation: { file: '/workspace/app/src/main/java/com/example/app/Bar.kt', startLine: 1, endLine: 10 },
+            sourceLocation: {
+              file: '/workspace/app/src/main/java/com/example/app/Bar.kt',
+              startLine: 1,
+              endLine: 10,
+            },
             members: [],
           },
         ],

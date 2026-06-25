@@ -61,7 +61,9 @@ describe('GoAtlasPlugin', () => {
       vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
 
       // Mock resolveProject to avoid reading real go.mod
-      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(undefined);
+      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(
+        undefined
+      );
     });
 
     it('returns version "2.0"', async () => {
@@ -103,7 +105,9 @@ describe('GoAtlasPlugin', () => {
       await plugin.initialize({ workspaceRoot: '/test' });
 
       vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
-      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(undefined);
+      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(
+        undefined
+      );
     });
 
     it('no atlas config → atlas mode by default (result has extensions.goAtlas)', async () => {
@@ -130,7 +134,9 @@ describe('GoAtlasPlugin', () => {
       await plugin.initialize({ workspaceRoot: '/test' });
 
       vi.spyOn(plugin as any, 'parseToRawData').mockResolvedValue(minimalRawData);
-      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(undefined);
+      vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(
+        undefined
+      );
     });
 
     it('atlas enabled=true → atlas mode (result has extensions.goAtlas with all 4 layers)', async () => {

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { renderCapabilityGraph } from '@/plugins/golang/atlas/renderers/capability-mermaid-template.js';
-import type { CapabilityGraph, CapabilityNode, CapabilityRelation } from '@/plugins/golang/atlas/types.js';
+import type {
+  CapabilityGraph,
+  CapabilityNode,
+  CapabilityRelation,
+} from '@/plugins/golang/atlas/types.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,9 +75,7 @@ describe('renderCapabilityGraph — direct import', () => {
 
   it('hotspot node (fanIn > 5) gets :::hotspot style', () => {
     const graph: CapabilityGraph = {
-      nodes: [
-        makeCapNode('pkg/hub.CoreAdapter', 'CoreAdapter', 'struct', 'pkg/hub', { fanIn: 8 }),
-      ],
+      nodes: [makeCapNode('pkg/hub.CoreAdapter', 'CoreAdapter', 'struct', 'pkg/hub', { fanIn: 8 })],
       edges: [],
     };
     const result = renderCapabilityGraph(graph);

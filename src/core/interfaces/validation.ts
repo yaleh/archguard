@@ -5,11 +5,6 @@
 import type { ArchJSON } from '@/types/index.js';
 
 /**
- * Severity level for validation issues
- */
-type ValidationSeverity = 'error' | 'warning';
-
-/**
  * Validation error that prevents successful processing
  */
 export interface ValidationError {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { KotlinPlugin } from '@/plugins/kotlin/index.js';
 
 describe('KotlinPlugin', () => {

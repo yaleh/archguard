@@ -32,7 +32,7 @@ function makeEntity(
   return {
     id,
     name,
-    type: type as Entity['type'],
+    type: type,
     visibility: 'public',
     members: [],
     sourceLocation: { file, startLine: 1, endLine: 10 },
@@ -177,7 +177,9 @@ describe('queryHandler routing', () => {
   });
 
   it('--type + --attr=key=value calls findByTypeAndAttr with parsed value', async () => {
-    const entities = [makeEntity('e1', 'LockDomain', 'lock_domain', 'src/foo.ts', { irq_safe: true })];
+    const entities = [
+      makeEntity('e1', 'LockDomain', 'lock_domain', 'src/foo.ts', { irq_safe: true }),
+    ];
     const engine = makeEngine(entities);
     const findByTypeAndAttrSpy = vi.spyOn(engine, 'findByTypeAndAttr');
     loadEngineMock.mockResolvedValue(wrapEngine(engine));
@@ -188,7 +190,9 @@ describe('queryHandler routing', () => {
   });
 
   it('standalone --attr key (no =) calls findByAttr with undefined value', async () => {
-    const entities = [makeEntity('e1', 'Worker', 'class', 'src/w.ts', { execution_context: 'irq' })];
+    const entities = [
+      makeEntity('e1', 'Worker', 'class', 'src/w.ts', { execution_context: 'irq' }),
+    ];
     const engine = makeEngine(entities);
     const findByAttrSpy = vi.spyOn(engine, 'findByAttr');
     loadEngineMock.mockResolvedValue(wrapEngine(engine));
@@ -244,7 +248,16 @@ describe('queryHandler routing', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await runQuery(['--type', 'lock_domain', '--attr', 'irq_safe=true', '--attr', 'priority=1', '--format', 'json']);
+    await runQuery([
+      '--type',
+      'lock_domain',
+      '--attr',
+      'irq_safe=true',
+      '--attr',
+      'priority=1',
+      '--format',
+      'json',
+    ]);
 
     // Only e1 has both irq_safe=true AND priority=1
     const jsonOutput = consoleSpy.mock.calls

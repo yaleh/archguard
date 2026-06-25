@@ -6,7 +6,6 @@
  */
 
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,7 +32,8 @@ async function runChecker(
   mcpDir: string,
   queryFile: string
 ): Promise<{ violations: import('../../../scripts/check-adr.js').Violation[] }> {
-  const { checkAdr006, checkAdr007, filterViolations } = await import('../../../scripts/check-adr.js');
+  const { checkAdr006, checkAdr007, filterViolations } =
+    await import('../../../scripts/check-adr.js');
   const raw006 = checkAdr006(mcpDir);
   const raw007 = checkAdr007(mcpDir, queryFile);
   const violations = filterViolations([...raw006, ...raw007]);

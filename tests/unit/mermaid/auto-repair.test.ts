@@ -21,7 +21,7 @@ describe('MermaidAutoRepair', () => {
       const mermaidCode = `  class User
   class Admin`;
 
-      const { repaired, successful } = await repair.repairBestEffort(mermaidCode);
+      const { repaired, successful: _successful } = await repair.repairBestEffort(mermaidCode);
 
       expect(repaired).toMatch(/^classDiagram/);
       expect(repaired).toContain('class User');
@@ -31,7 +31,7 @@ describe('MermaidAutoRepair', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const { repaired, successful } = await repair.repairBestEffort(mermaidCode);
+      const { repaired, successful: _successful } = await repair.repairBestEffort(mermaidCode);
 
       const count = (repaired.match(/classDiagram/g) || []).length;
       expect(count).toBe(1);
@@ -368,7 +368,7 @@ describe('MermaidAutoRepair', () => {
   UserService --> UserRepository
   UserService --> User`;
 
-      const { repaired, successful } = await repair.repairBestEffort(mermaidCode);
+      const { repaired, successful: _successful } = await repair.repairBestEffort(mermaidCode);
 
       expect(repaired).toMatch(/^classDiagram/);
       expect(repaired).toContain('~');
@@ -400,7 +400,7 @@ describe('MermaidAutoRepair', () => {
   class Admin
   User --> Admin`;
 
-      const { repaired, successful } = await repair.repairBestEffort(mermaidCode);
+      const { repaired, successful: _successful } = await repair.repairBestEffort(mermaidCode);
 
       expect(repaired).toContain('class User');
       expect(repaired).toContain('class Admin');

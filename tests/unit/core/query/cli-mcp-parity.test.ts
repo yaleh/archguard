@@ -109,7 +109,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
     const entities = result as Entity[];
     expect(entities).toHaveLength(1);
     expect(entities[0].members).toBeDefined();
-    expect(entities[0].members!.length).toBe(3); // 2 methods + 1 field
+    expect(entities[0].members.length).toBe(3); // 2 methods + 1 field
   });
 
   it('outputScope=package: result does NOT contain members or visibility', () => {
@@ -129,7 +129,9 @@ describe('CLI/MCP parity (Phase 88)', () => {
 
   it('queryFormat=edge-list: result has { entities, relations } top-level structure', () => {
     const engine = makeFixtureEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), {
+      queryFormat: 'edge-list',
+    });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
     const edgeList = result as EdgeListOutput;
@@ -141,7 +143,10 @@ describe('CLI/MCP parity (Phase 88)', () => {
   it('queryFormat=edge-list + outputScope=method: methods[] is populated', () => {
     const engine = makeFixtureEngine();
     // Depth 1: A → B; B has 1 method
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'method', queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      outputScope: 'method',
+      queryFormat: 'edge-list',
+    });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
     const entityBOut = edgeList.entities[0];
@@ -153,7 +158,10 @@ describe('CLI/MCP parity (Phase 88)', () => {
 
   it('queryFormat=edge-list + outputScope=class: methods[] is empty []', () => {
     const engine = makeFixtureEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { outputScope: 'class', queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      outputScope: 'class',
+      queryFormat: 'edge-list',
+    });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
     // scope=class → methods[] stripped (empty)
@@ -168,26 +176,29 @@ describe('CLI/MCP parity (Phase 88)', () => {
     expect(entities).toHaveLength(1);
     // Full entity returned — members should be intact
     expect(entities[0].members).toBeDefined();
-    expect(entities[0].members!.length).toBe(3);
+    expect(entities[0].members.length).toBe(3);
     expect(entities[0].visibility).toBe('public');
   });
 
   it('edge-list relations: source→from, target→to mapping correct', () => {
     const engine = makeFixtureEngine();
-    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), { queryFormat: 'edge-list' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      queryFormat: 'edge-list',
+    });
     const edgeList = result as EdgeListOutput;
     // The relation in the fixture is { source: 'pkg.A', target: 'pkg.B', type: 'dependency' }
     // Serialized it should be { from: 'pkg.A', to: 'pkg.B', type: 'dependency' }
-    const rel = edgeList.relations.find(r => r.from === 'pkg.A' && r.to === 'pkg.B');
+    const rel = edgeList.relations.find((r) => r.from === 'pkg.A' && r.to === 'pkg.B');
     expect(rel).toBeDefined();
-    expect(rel!.type).toBe('dependency');
+    expect(rel.type).toBe('dependency');
   });
 
   it('edge-list sourceFile fallback: entity without sourceLocation gets "unknown"', () => {
     // Simulate a Partial<Entity> that has no sourceLocation (e.g. derived or stripped entity)
     const entityNoFile = makeEntity('pkg.X', 'X');
     // Force sourceLocation to be absent by casting (simulates edge case in derived data)
-    (entityNoFile as Partial<Entity>).sourceLocation = undefined as unknown as Entity['sourceLocation'];
+    (entityNoFile as Partial<Entity>).sourceLocation =
+      undefined as unknown as Entity['sourceLocation'];
 
     const archJson = makeArchJson({
       entities: [entityNoFile],

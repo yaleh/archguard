@@ -68,7 +68,11 @@ function parentPath(id: string): string | null {
 }
 
 function normalizeLayerPrefix(prefix: string): string {
-  return prefix.replace(/\\/g, '/').replace(/^@?\//, '').replace(/^src\//, '').replace(/\/+$/, '');
+  return prefix
+    .replace(/\\/g, '/')
+    .replace(/^@?\//, '')
+    .replace(/^src\//, '')
+    .replace(/\/+$/, '');
 }
 
 function findMatchingLayer(

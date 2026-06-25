@@ -5,7 +5,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { QualityValidator } from '../../../src/mermaid/validator-quality';
 import type { ArchJSON } from '../../../src/types';
-import type { QualityValidationResult } from '../../../src/mermaid/types';
 
 describe('QualityValidator', () => {
   let validator: QualityValidator;

@@ -83,7 +83,7 @@ export class CacheManager {
         this.updateHitRate();
         return entry.data;
       }
-    } catch (error) {
+    } catch {
       // Cache read error, treat as miss
     }
 
@@ -153,7 +153,7 @@ export class CacheManager {
       try {
         const stat = await fs.stat(file);
         totalSize += stat.size;
-      } catch (error) {
+      } catch {
         // Ignore errors for individual files
       }
     }

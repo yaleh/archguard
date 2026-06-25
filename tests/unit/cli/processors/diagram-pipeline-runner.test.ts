@@ -336,7 +336,7 @@ describe('DiagramPipelineRunner', () => {
       await runner.run(makeDiagram({ level: 'package' }), makeArchJson(), pool);
 
       const router = (DiagramOutputRouter as any).mock.results[0].value;
-      const routeMock = (router.route as any).mock;
+      const routeMock = router.route.mock;
       expect(routeMock.calls[0][0].extensions?.projectSemantics).toEqual(
         expect.objectContaining({
           suggestedDepth: 2,

@@ -2,7 +2,11 @@
  * TDD tests for OutputScopeFilter — written before implementation.
  */
 import { describe, it, expect } from 'vitest';
-import { narrowEntity, narrowEntities, filterRelationsForScope } from '@/core/query/output-scope-filter.js';
+import {
+  narrowEntity,
+  narrowEntities,
+  filterRelationsForScope,
+} from '@/core/query/output-scope-filter.js';
 import type { Entity, Relation } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------
@@ -121,7 +125,12 @@ describe('narrowEntities', () => {
 // filterRelationsForScope
 // ---------------------------------------------------------------------------
 
-function makeRelation(id: string, source: string, target: string, type: Relation['type']): Relation {
+function makeRelation(
+  id: string,
+  source: string,
+  target: string,
+  type: Relation['type']
+): Relation {
   return { id, source, target, type };
 }
 

@@ -1,5 +1,5 @@
 import type { ModuleInfo } from './go-mod-resolver.js';
-import type { GoRawData, GoRawPackage, GoMethod } from '../types.js';
+import type { GoRawData, GoMethod } from '../types.js';
 import type { DetectedFrameworks } from './types.js';
 
 // Built-in go.mod module-path → framework key mapping (Layer 1)

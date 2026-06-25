@@ -29,7 +29,9 @@ function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
     try {
       return [new RegExp(pattern)];
     } catch (error) {
-      console.warn(`[python:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`);
+      console.warn(
+        `[python:test-analysis] Invalid custom assertion regex "${pattern}": ${String(error)}`
+      );
       return [];
     }
   });
@@ -67,7 +69,7 @@ export class PythonPlugin implements ILanguagePlugin {
   /**
    * Initialize the plugin
    */
-  async initialize(config: PluginInitConfig): Promise<void> {
+  async initialize(_config: PluginInitConfig): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -99,7 +101,7 @@ export class PythonPlugin implements ILanguagePlugin {
           }
         }
       }
-    } catch (error) {
+    } catch {
       return false;
     }
 
@@ -185,7 +187,7 @@ export class PythonPlugin implements ILanguagePlugin {
     for (const mod of modules) {
       for (const cls of mod.classes) {
         for (const method of cls.methods) {
-          for (const site of (method.callSites ?? [])) {
+          for (const site of method.callSites ?? []) {
             allReceiverFields.add(site.receiverField);
           }
         }
@@ -496,7 +498,7 @@ export class PythonPlugin implements ILanguagePlugin {
             files.push(fullPath);
           }
         }
-      } catch (error) {
+      } catch {
         // Skip directories we can't read
       }
     };

@@ -81,7 +81,7 @@ export class GoplsClient {
     try {
       // Try to spawn gopls with version flag to verify it exists
       await this.checkGoplsAvailable();
-    } catch (error) {
+    } catch {
       throw new Error(`gopls binary not found at: ${this.goplsPath}`);
     }
 
@@ -99,7 +99,7 @@ export class GoplsClient {
       this.handleData(data);
     });
 
-    this.process.stderr?.on('data', (data: Buffer) => {
+    this.process.stderr?.on('data', (_data: Buffer) => {
       // Log stderr for debugging, but don't fail
       // gopls writes trace info to stderr
     });
@@ -256,7 +256,7 @@ export class GoplsClient {
       }
 
       return implementations;
-    } catch (error) {
+    } catch {
       // Return empty array on error (non-fatal)
       return [];
     }
@@ -311,7 +311,7 @@ export class GoplsClient {
         kind: 'type',
         signature: contents,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -343,7 +343,7 @@ export class GoplsClient {
       try {
         await this.sendRequest('shutdown', null);
         this.sendNotification('exit', null);
-      } catch (error) {
+      } catch {
         // Ignore errors during shutdown
       }
     }
@@ -414,7 +414,7 @@ export class GoplsClient {
       }
 
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

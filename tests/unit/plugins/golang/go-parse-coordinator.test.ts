@@ -4,13 +4,23 @@ import { GoplsInterfaceResolver } from '@/plugins/golang/gopls-interface-resolve
 
 vi.mock('glob', () => ({ glob: vi.fn() }));
 vi.mock('fs-extra', () => ({
-  default: { readFile: vi.fn().mockResolvedValue('package foo'), existsSync: vi.fn().mockReturnValue(false) },
+  default: {
+    readFile: vi.fn().mockResolvedValue('package foo'),
+    existsSync: vi.fn().mockReturnValue(false),
+  },
 }));
 vi.mock('@/plugins/golang/tree-sitter-bridge.js', () => ({
   TreeSitterBridge: vi.fn().mockImplementation(() => ({
     parseCode: vi.fn().mockReturnValue({
-      name: 'foo', fullName: '', id: '', dirPath: '',
-      sourceFiles: [], imports: [], structs: [], interfaces: [], functions: [],
+      name: 'foo',
+      fullName: '',
+      id: '',
+      dirPath: '',
+      sourceFiles: [],
+      imports: [],
+      structs: [],
+      interfaces: [],
+      functions: [],
     }),
   })),
 }));
@@ -55,7 +65,19 @@ describe('GoParseCoordinator', () => {
 
   it('buildArchJson returns non-empty entities and relations arrays', async () => {
     const rawData = {
-      packages: [{ name: 'foo', fullName: 'foo', id: 'foo', dirPath: '/ws', sourceFiles: ['/ws/foo.go'], imports: [], structs: [], interfaces: [], functions: [] }],
+      packages: [
+        {
+          name: 'foo',
+          fullName: 'foo',
+          id: 'foo',
+          dirPath: '/ws',
+          sourceFiles: ['/ws/foo.go'],
+          imports: [],
+          structs: [],
+          interfaces: [],
+          functions: [],
+        },
+      ],
       moduleRoot: '/ws',
       moduleName: 'github.com/test/mod',
     };

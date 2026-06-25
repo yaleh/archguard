@@ -144,7 +144,7 @@ describe('getSummary().topByMethodCount', () => {
     const summary = engine.getSummary();
     const aEntry = summary.topByMethodCount.find((e) => e.name === 'A');
     expect(aEntry).toBeDefined();
-    expect(aEntry!.methodCount).toBe(3); // 2 methods + 1 constructor
+    expect(aEntry.methodCount).toBe(3); // 2 methods + 1 constructor
   });
 
   it('entities with 0 methods still appear in top-10 (not filtered out)', () => {
@@ -162,7 +162,7 @@ describe('getSummary().topByMethodCount', () => {
     const names = summary.topByMethodCount.map((e) => e.name);
     expect(names).toContain('B');
     const bEntry = summary.topByMethodCount.find((e) => e.name === 'B');
-    expect(bEntry!.methodCount).toBe(0);
+    expect(bEntry.methodCount).toBe(0);
   });
 
   it('is capped at 10 entries even with more entities', () => {
@@ -210,10 +210,7 @@ describe('getSummary().topByOutDegree', () => {
   });
 
   it('entity with no deps has outDegree: 0', () => {
-    const entities = [
-      makeEntity('pkg.A', 'A'),
-      makeEntity('pkg.B', 'B'),
-    ];
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B')];
     const archJson = makeArchJson({
       entities,
       relations: [{ source: 'pkg.A', target: 'pkg.B', type: 'dependency' }],
@@ -224,7 +221,7 @@ describe('getSummary().topByOutDegree', () => {
     const summary = engine.getSummary();
     const bEntry = summary.topByOutDegree.find((e) => e.name === 'B');
     expect(bEntry).toBeDefined();
-    expect(bEntry!.outDegree).toBe(0);
+    expect(bEntry.outDegree).toBe(0);
   });
 
   it('is independent of topDependedOn (which counts INCOMING edges)', () => {
@@ -292,7 +289,7 @@ describe('getSummary() — depth=3 package grouping', () => {
     // topPackages should show all 3 packages
     expect(summary.topPackages.length).toBe(3);
     // Each package has exactly 1 entity
-    expect(summary.topPackages.every(p => p.entityCount === 1)).toBe(true);
+    expect(summary.topPackages.every((p) => p.entityCount === 1)).toBe(true);
   });
 });
 

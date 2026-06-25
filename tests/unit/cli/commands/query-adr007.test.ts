@@ -28,11 +28,7 @@ import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
-import type {
-  TestAnalysis,
-  TestFileInfo,
-  TestIssue,
-} from '@/types/extensions/test-analysis.js';
+import type { TestAnalysis, TestFileInfo, TestIssue } from '@/types/extensions/test-analysis.js';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +55,6 @@ vi.mock('@/cli/git-history/history-query.js', () => ({
 import { createQueryCommand } from '@/cli/commands/query.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '@/cli/git-history/history-loader.js';
-import { HistoryQuery } from '@/cli/git-history/history-query.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -103,9 +98,7 @@ const mockPackageGraph = {
     { id: 'pkg/a', name: 'a', type: 'internal' as const, fileCount: 3 },
     { id: 'pkg/b', name: 'b', type: 'internal' as const, fileCount: 1 },
   ],
-  edges: [
-    { from: 'pkg/b', to: 'pkg/a', source: 'pkg/b', target: 'pkg/a', strength: 2 },
-  ],
+  edges: [{ from: 'pkg/b', to: 'pkg/a', source: 'pkg/b', target: 'pkg/a', strength: 2 }],
   cycles: [],
 };
 
@@ -149,7 +142,10 @@ const mockTestAnalysis: TestAnalysis = {
   patternConfigSource: 'auto',
 };
 
-function createTestEngine(atlasGraph?: typeof mockPackageGraph, testAnalysis?: TestAnalysis): { engine: QueryEngine; archJson: ArchJSON } {
+function createTestEngine(
+  atlasGraph?: typeof mockPackageGraph,
+  testAnalysis?: TestAnalysis
+): { engine: QueryEngine; archJson: ArchJSON } {
   const extensions: ArchJSON['extensions'] = {};
   if (atlasGraph) {
     extensions.goAtlas = {
@@ -270,7 +266,9 @@ describe('query --atlas-layer', () => {
 
 describe('query --test-patterns', () => {
   it('returns test pattern config JSON when test analysis is present', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
+    vi.mocked(loadEngine).mockResolvedValue(
+      wrapEngine(createTestEngine(undefined, mockTestAnalysis))
+    );
 
     await runQuery('--test-patterns', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -293,7 +291,9 @@ describe('query --test-patterns', () => {
 
 describe('query --test-issues', () => {
   it('returns issues list JSON', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
+    vi.mocked(loadEngine).mockResolvedValue(
+      wrapEngine(createTestEngine(undefined, mockTestAnalysis))
+    );
 
     await runQuery('--test-issues', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);
@@ -303,7 +303,9 @@ describe('query --test-issues', () => {
   });
 
   it('filters issues by severity when --severity is given', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(undefined, mockTestAnalysis)));
+    vi.mocked(loadEngine).mockResolvedValue(
+      wrapEngine(createTestEngine(undefined, mockTestAnalysis))
+    );
 
     await runQuery('--test-issues', '--severity', 'info', '--format', 'json');
     expect(process.exit).not.toHaveBeenCalledWith(1);

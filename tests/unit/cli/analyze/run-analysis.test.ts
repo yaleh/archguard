@@ -174,12 +174,16 @@ describe('runAnalysis', () => {
     getLastArchJsonMock.mockReturnValue(null);
     generateTestCoverageHeatmapMock.mockResolvedValue(undefined);
     testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 0 } });
-    mergeProjectSemanticsIntoPatternConfigMock.mockImplementation((_patternConfig, projectSemantics) => ({
-      testFileGlobs: projectSemantics?.additionalTestPatterns ?? [],
-      customAssertionRegexes: projectSemantics?.customAssertionPatterns ?? [],
-    }));
+    mergeProjectSemanticsIntoPatternConfigMock.mockImplementation(
+      (_patternConfig, projectSemantics) => ({
+        testFileGlobs: projectSemantics?.additionalTestPatterns ?? [],
+        customAssertionRegexes: projectSemantics?.customAssertionPatterns ?? [],
+      })
+    );
     testOutputWriterWriteMock.mockResolvedValue(undefined);
-    readGitLogMock.mockReturnValue([{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }]);
+    readGitLogMock.mockReturnValue([
+      { sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] },
+    ]);
     isGitRepoMock.mockReturnValue(true);
     getGitRootMock.mockReturnValue('/tmp/project');
     loadProjectSemanticsSidecarMock.mockResolvedValue(undefined);

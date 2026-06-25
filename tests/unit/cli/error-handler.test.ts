@@ -4,7 +4,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ErrorHandler, ParseError, APIError, ValidationError, FileError } from '@/cli/errors/index.js';
+import {
+  ErrorHandler,
+  ParseError,
+  APIError,
+  ValidationError,
+  FileError,
+} from '@/cli/errors/index.js';
 
 describe('Story 4: Error Handling Optimization', () => {
   const handler = new ErrorHandler();

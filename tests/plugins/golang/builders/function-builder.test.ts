@@ -5,12 +5,12 @@
 import { describe, it, expect } from 'vitest';
 import { FunctionBuilder } from '../../../../src/plugins/golang/builders/function-builder.js';
 import Parser from 'tree-sitter';
-// @ts-ignore
+// @ts-expect-error -- tree-sitter-go has no TypeScript types
 import Go from 'tree-sitter-go';
 
 function parse(code: string): Parser.SyntaxNode {
   const parser = new Parser();
-  // @ts-ignore
+  // @ts-expect-error -- setLanguage accepts any Language object
   parser.setLanguage(Go);
   return parser.parse(code).rootNode;
 }

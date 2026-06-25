@@ -1,11 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/java/archjson-mapper.js';
-import type {
-  JavaRawPackage,
-  JavaRawClass,
-  JavaRawInterface,
-  JavaRawEnum,
-} from '@/plugins/java/types.js';
+import type { JavaRawPackage } from '@/plugins/java/types.js';
 
 describe('JavaArchJsonMapper', () => {
   let mapper: ArchJsonMapper;

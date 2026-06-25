@@ -159,7 +159,7 @@ export class MetricsCalculator {
       const file = normalise(e.sourceLocation?.file ?? '');
       if (!file) continue;
       if (!fileEntityMap.has(file)) fileEntityMap.set(file, []);
-      fileEntityMap.get(file)!.push(e);
+      fileEntityMap.get(file).push(e);
     }
 
     // Build per-entity degree maps (internal relations only)

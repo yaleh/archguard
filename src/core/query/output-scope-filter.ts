@@ -30,7 +30,10 @@ export function narrowEntities(entities: readonly Entity[], scope: OutputScope):
  *   by an existing dependency relation are NOT duplicated
  * - scope='method': preserve all relations including call edges with sourceMethod/targetMethod
  */
-export function filterRelationsForScope(relations: readonly Relation[], scope: OutputScope): Relation[] {
+export function filterRelationsForScope(
+  relations: readonly Relation[],
+  scope: OutputScope
+): Relation[] {
   if (scope === 'package') {
     return relations.filter((r) => r.type !== 'call');
   }
@@ -38,9 +41,7 @@ export function filterRelationsForScope(relations: readonly Relation[], scope: O
     const callEdges = relations.filter((r) => r.type === 'call');
     const nonCallEdges = relations.filter((r) => r.type !== 'call');
     const existingDeps = new Set(
-      nonCallEdges
-        .filter((r) => r.type === 'dependency')
-        .map((r) => `${r.source}:${r.target}`)
+      nonCallEdges.filter((r) => r.type === 'dependency').map((r) => `${r.source}:${r.target}`)
     );
     const aggregated: Relation[] = [];
     const seen = new Set<string>();

@@ -86,11 +86,7 @@ export class KotlinPlugin implements ILanguagePlugin {
   async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
     this.ensureInitialized();
 
-    const defaultIgnore = [
-      '**/build/**',
-      '**/.gradle/**',
-      '**/node_modules/**',
-    ];
+    const defaultIgnore = ['**/build/**', '**/.gradle/**', '**/node_modules/**'];
     const ignorePatterns = [...defaultIgnore, ...(config.excludePatterns ?? [])];
 
     const files = await glob('**/*.kt', {
@@ -228,7 +224,7 @@ export class KotlinPlugin implements ILanguagePlugin {
       if (/^@(Test|ParameterizedTest|RepeatedTest)\b/.test(trimmed)) {
         // Look forward for the function declaration
         for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-          const m = lines[j].match(/fun\s+(`[^`]+`|\w+)\s*[\(<]/);
+          const m = lines[j].match(/fun\s+(`[^`]+`|\w+)\s*[(<]/);
           if (m) {
             testCases.push({
               name: m[1],
@@ -247,7 +243,7 @@ export class KotlinPlugin implements ILanguagePlugin {
           const annotLine = lines[j].trim();
           if (/^@(Test|ParameterizedTest|RepeatedTest)\b/.test(annotLine)) {
             for (let k = j + 1; k < Math.min(j + 4, lines.length); k++) {
-              const m = lines[k].match(/fun\s+(`[^`]+`|\w+)\s*[\(<]/);
+              const m = lines[k].match(/fun\s+(`[^`]+`|\w+)\s*[(<]/);
               if (m) {
                 testCases.push({
                   name: m[1],
@@ -341,7 +337,11 @@ export class KotlinPlugin implements ILanguagePlugin {
 
     // Fallback: scan first few .kt files for package declarations
     try {
-      const ktFiles = await glob('**/*.kt', { cwd: workspaceRoot, absolute: true, ignore: ['**/build/**'] });
+      const ktFiles = await glob('**/*.kt', {
+        cwd: workspaceRoot,
+        absolute: true,
+        ignore: ['**/build/**'],
+      });
       for (const f of ktFiles.slice(0, 5)) {
         const content = await fs.readFile(f, 'utf-8');
         const m = content.match(/^package\s+([\w.]+)/m);

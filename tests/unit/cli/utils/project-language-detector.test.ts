@@ -108,6 +108,6 @@ describe('project-language-detector', () => {
     const javaCandidate = candidates.find((c) => c.language === 'java');
 
     expect(kotlinCandidate).toBeDefined();
-    expect(kotlinCandidate!.score).toBeGreaterThan(javaCandidate?.score ?? 0);
+    expect(kotlinCandidate.score).toBeGreaterThan(javaCandidate?.score ?? 0);
   });
 });

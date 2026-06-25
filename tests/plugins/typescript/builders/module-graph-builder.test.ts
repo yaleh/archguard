@@ -10,13 +10,6 @@ import { Project } from 'ts-morph';
 import type { Entity } from '@/types/index.js';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
 
-function makeProject(): Project {
-  return new Project({
-    useInMemoryFileSystem: true,
-    compilerOptions: { target: 99 },
-  });
-}
-
 describe('ModuleGraphBuilder', () => {
   let project: Project;
 

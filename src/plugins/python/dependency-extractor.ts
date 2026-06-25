@@ -115,7 +115,7 @@ export class DependencyExtractor implements IDependencyExtractor {
         source: 'requirements.txt',
         isDirect: true,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }

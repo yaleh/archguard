@@ -123,13 +123,13 @@ describe('QueryEngine.findByTypeAndAttr', () => {
 
   it('filters by type + attrKey presence', () => {
     const result = engine.findByTypeAndAttr('class', 'deprecated');
-    expect((result as Entity[])).toHaveLength(1);
+    expect(result as Entity[]).toHaveLength(1);
     expect((result as Entity[])[0].name).toBe('A');
   });
 
   it('filters by type + attrKey + attrValue', () => {
     const result = engine.findByTypeAndAttr('class', 'module', 'core');
-    expect((result as Entity[])).toHaveLength(1);
+    expect(result as Entity[]).toHaveLength(1);
     expect((result as Entity[])[0].name).toBe('A');
   });
 
@@ -157,8 +157,8 @@ describe('QueryEngine.findSubclasses', () => {
 
     const result = engine.relationQueryService.findSubclasses('Base');
     expect(Array.isArray(result)).toBe(true);
-    expect((result as Entity[]).map((e) => e.name)).toContain('Child');
-    expect((result as Entity[]).map((e) => e.name)).not.toContain('Other');
+    expect(result.map((e) => e.name)).toContain('Child');
+    expect(result.map((e) => e.name)).not.toContain('Other');
   });
 
   it('returns empty when no subclasses exist', () => {
@@ -184,7 +184,9 @@ describe('QueryEngine.findSubclasses', () => {
         relations: [{ source: 'pkg.Child', target: 'pkg.Base', type: 'inheritance' }],
       })
     );
-    const result = engine.applyOutputOptions(engine.relationQueryService.findSubclasses('Base'), { outputScope: 'class' });
+    const result = engine.applyOutputOptions(engine.relationQueryService.findSubclasses('Base'), {
+      outputScope: 'class',
+    });
     expect((result as Partial<Entity>[])[0].members).toBeUndefined();
   });
 });
@@ -196,9 +198,15 @@ describe('QueryEngine.findSubclasses', () => {
 describe('QueryEngine.getFileEntities', () => {
   it('returns all entities defined in a given file', () => {
     const entities = [
-      makeEntity('pkg.A', 'A', { sourceLocation: { file: 'src/core.ts', startLine: 1, endLine: 10 } }),
-      makeEntity('pkg.B', 'B', { sourceLocation: { file: 'src/core.ts', startLine: 12, endLine: 20 } }),
-      makeEntity('pkg.C', 'C', { sourceLocation: { file: 'src/other.ts', startLine: 1, endLine: 5 } }),
+      makeEntity('pkg.A', 'A', {
+        sourceLocation: { file: 'src/core.ts', startLine: 1, endLine: 10 },
+      }),
+      makeEntity('pkg.B', 'B', {
+        sourceLocation: { file: 'src/core.ts', startLine: 12, endLine: 20 },
+      }),
+      makeEntity('pkg.C', 'C', {
+        sourceLocation: { file: 'src/other.ts', startLine: 1, endLine: 5 },
+      }),
     ];
     const engine = makeEngine(makeArchJson({ entities }));
 
@@ -273,7 +281,11 @@ describe('QueryEngine.findHighCoupling (delegation)', () => {
 
 describe('QueryEngine.findOrphans (delegation)', () => {
   it('returns entities with no incoming or outgoing edges', () => {
-    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B'), makeEntity('pkg.Lone', 'Lone')];
+    const entities = [
+      makeEntity('pkg.A', 'A'),
+      makeEntity('pkg.B', 'B'),
+      makeEntity('pkg.Lone', 'Lone'),
+    ];
     const engine = makeEngine(
       makeArchJson({
         entities,
@@ -314,7 +326,13 @@ describe('QueryEngine.toSummary', () => {
     const entity = makeEntity('pkg.A', 'A', {
       members: [
         { name: 'run', type: 'method', visibility: 'public', returnType: 'void', parameters: [] },
-        { name: 'init', type: 'constructor', visibility: 'public', returnType: 'void', parameters: [] },
+        {
+          name: 'init',
+          type: 'constructor',
+          visibility: 'public',
+          returnType: 'void',
+          parameters: [],
+        },
         { name: 'count', type: 'field', visibility: 'private' },
         { name: 'label', type: 'property', visibility: 'public' },
       ],
@@ -326,7 +344,7 @@ describe('QueryEngine.toSummary', () => {
     expect(summary.id).toBe('pkg.A');
     expect(summary.type).toBe('class');
     expect(summary.methodCount).toBe(2); // method + constructor
-    expect(summary.fieldCount).toBe(2);  // field + property
+    expect(summary.fieldCount).toBe(2); // field + property
   });
 
   it('returns zero counts when members is empty', () => {
@@ -391,13 +409,13 @@ describe('QueryEngine BFS edge cases', () => {
   });
 
   it('depth 0 is clamped to 1 (returns direct deps only)', () => {
-    const result = engine.relationQueryService.getDependencies('A', 0) as Entity[];
+    const result = engine.relationQueryService.getDependencies('A', 0);
     expect(result.map((e) => e.name)).toEqual(['B']);
   });
 
   it('depth 10 is clamped to 5 (returns at most 5 hops)', () => {
     // Chain A→B→C→D→E→F; clamped depth=5 from A reaches B,C,D,E,F
-    const result = engine.relationQueryService.getDependencies('A', 10) as Entity[];
+    const result = engine.relationQueryService.getDependencies('A', 10);
     const names = result.map((e) => e.name);
     expect(names).toContain('B');
     expect(names).toContain('F'); // 5th hop
@@ -405,7 +423,7 @@ describe('QueryEngine BFS edge cases', () => {
 
   it('getDependents traverses reverse direction at depth 2', () => {
     // F is depended on by E (depth 1), E by D (depth 2)
-    const result = engine.relationQueryService.getDependents('F', 2) as Entity[];
+    const result = engine.relationQueryService.getDependents('F', 2);
     const names = result.map((e) => e.name);
     expect(names).toContain('E');
     expect(names).toContain('D');
@@ -431,7 +449,7 @@ describe('QueryEngine BFS edge cases', () => {
         ],
       })
     );
-    const result = diamondEngine.relationQueryService.getDependencies('A', 2) as Entity[];
+    const result = diamondEngine.relationQueryService.getDependencies('A', 2);
     const dCount = result.filter((e) => e.name === 'D').length;
     expect(dCount).toBe(1);
   });
@@ -502,10 +520,16 @@ describe('QueryEngine delegation smoke tests', () => {
 
   it('getPackageStats(depth) partitions entities by path depth', () => {
     const entities = [
-      makeEntity('a', 'A', { sourceLocation: { file: 'src/parser/ast.ts', startLine: 1, endLine: 5 } }),
-      makeEntity('b', 'B', { sourceLocation: { file: 'src/mermaid/gen.ts', startLine: 1, endLine: 5 } }),
+      makeEntity('a', 'A', {
+        sourceLocation: { file: 'src/parser/ast.ts', startLine: 1, endLine: 5 },
+      }),
+      makeEntity('b', 'B', {
+        sourceLocation: { file: 'src/mermaid/gen.ts', startLine: 1, endLine: 5 },
+      }),
     ];
-    const engine = makeEngine(makeArchJson({ entities, sourceFiles: ['src/parser/ast.ts', 'src/mermaid/gen.ts'] }));
+    const engine = makeEngine(
+      makeArchJson({ entities, sourceFiles: ['src/parser/ast.ts', 'src/mermaid/gen.ts'] })
+    );
     const result = engine.getPackageStats(2);
     expect(result.packages.length).toBe(2);
     const pkgNames = result.packages.map((p) => p.package);

@@ -2,7 +2,7 @@
  * ArchJSON Mapper - Convert Go raw data to ArchJSON format
  */
 
-import type { ArchJSON, Entity, Relation, Member } from '@/types/index.js';
+import type { Entity, Relation, Member } from '@/types/index.js';
 import type { GoRawPackage, GoRawStruct, GoRawInterface, InferredImplementation } from './types.js';
 import type { FlowGraph } from '@/types/extensions/go-atlas.js';
 import { BaseArchJsonMapper } from '@/plugins/shared/mapper-utils.js';
@@ -234,7 +234,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<GoRawPackage> {
           target: targetClass,
           sourceMethod,
           targetMethod,
-          callType: edge.type === 'indirect' ? 'interface' : (edge.type as 'direct' | 'interface'),
+          callType: edge.type === 'indirect' ? 'interface' : edge.type,
           confidence: edge.confidence,
           inferenceSource: 'gopls',
         });

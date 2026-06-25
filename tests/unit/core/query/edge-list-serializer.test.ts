@@ -101,7 +101,7 @@ describe('serialize', () => {
 
     it('members with type=property are NOT included in methods', () => {
       const output = serialize([makeEntity()], [], 'method');
-      const methodNames = output.entities[0].methods.map(m => m.name);
+      const methodNames = output.entities[0].methods.map((m) => m.name);
       // 'label' is a property, should not appear
       expect(methodNames).not.toContain('label');
     });

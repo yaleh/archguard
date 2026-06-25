@@ -7,8 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TypeScriptParser } from '@/parser/typescript-parser';
-import type { ArchJSON, Relation } from '@/types';
+import type { Relation } from '@/types';
 
 // Helper to extract filtered relations from TypeScriptParser
 // We test the private filterExperimentRelations via the public interface

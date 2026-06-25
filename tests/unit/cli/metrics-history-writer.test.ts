@@ -110,8 +110,14 @@ describe('MetricsHistoryWriter', () => {
   it('preserves previously written lines when appending', async () => {
     const writer = new MetricsHistoryWriter();
 
-    await writer.append([{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }], tmpDir);
-    await writer.append([{ name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 2, entityCount: 8 }], tmpDir);
+    await writer.append(
+      [{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }],
+      tmpDir
+    );
+    await writer.append(
+      [{ name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 2, entityCount: 8 }],
+      tmpDir
+    );
 
     const filePath = path.join(tmpDir, 'metrics-history.jsonl');
     const content = await fs.readFile(filePath, 'utf-8');

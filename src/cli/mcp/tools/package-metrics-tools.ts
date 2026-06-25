@@ -115,7 +115,7 @@ export function computeCycleMetrics(
     if (pkgsInCycle.size === 0) continue;
 
     for (const pkg of pkgsInCycle) {
-      const entry = result.get(pkg)!;
+      const entry = result.get(pkg);
       entry.cycleCount += 1;
       // Add all memberNames from this cycle to cyclesWith (deduped)
       const existingSet = new Set(entry.cyclesWith);
@@ -135,6 +135,7 @@ export function computeCycleMetrics(
 
 export function registerPackageMetricsTools(server: McpServer, defaultRoot: string): void {
   server.tool(
+    // adr-ok: ADR-007 — MCP-only package metrics aggregation; no direct CLI equivalent needed
     'archguard_get_package_metrics',
     'Aggregate fan-in, fan-out, and cycle count per package. ' +
       'fan-in = number of incoming cross-package relations; ' +

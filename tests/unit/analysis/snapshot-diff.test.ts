@@ -63,17 +63,17 @@ describe('diffSnapshots', () => {
 
     const sccEntry = result.entries.find((e) => e.metric === 'sccCount');
     expect(sccEntry).toBeDefined();
-    expect(sccEntry!.from).toBe(3);
-    expect(sccEntry!.to).toBe(1);
-    expect(sccEntry!.delta).toBe(-2);
-    expect(sccEntry!.percentChange).toBeCloseTo(-66.7, 1);
+    expect(sccEntry.from).toBe(3);
+    expect(sccEntry.to).toBe(1);
+    expect(sccEntry.delta).toBe(-2);
+    expect(sccEntry.percentChange).toBeCloseTo(-66.7, 1);
 
     const inDegEntry = result.entries.find((e) => e.metric === 'maxInDegree');
     expect(inDegEntry).toBeDefined();
-    expect(inDegEntry!.from).toBe(15);
-    expect(inDegEntry!.to).toBe(12);
-    expect(inDegEntry!.delta).toBe(-3);
-    expect(inDegEntry!.percentChange).toBeCloseTo(-20, 1);
+    expect(inDegEntry.from).toBe(15);
+    expect(inDegEntry.to).toBe(12);
+    expect(inDegEntry.delta).toBe(-3);
+    expect(inDegEntry.percentChange).toBeCloseTo(-20, 1);
   });
 
   it('test 3: schema version mismatch → schemaVersionMismatch=true, warnings non-empty', () => {
@@ -103,8 +103,8 @@ describe('diffSnapshots', () => {
 
     const sccEntry = result.entries.find((e) => e.metric === 'sccCount');
     expect(sccEntry).toBeDefined();
-    expect(sccEntry!.delta).toBe(5);
-    expect(sccEntry!.percentChange).toBeNull();
+    expect(sccEntry.delta).toBe(5);
+    expect(sccEntry.percentChange).toBeNull();
   });
 
   it('test 5: optional field null in from but number in to → delta = null, entry still present', () => {
@@ -119,9 +119,9 @@ describe('diffSnapshots', () => {
 
     const coverageEntry = result.entries.find((e) => e.metric === 'entityCoverageRatio');
     expect(coverageEntry).toBeDefined();
-    expect(coverageEntry!.from).toBeNull();
-    expect(coverageEntry!.to).toBe(0.75);
-    expect(coverageEntry!.delta).toBeNull();
-    expect(coverageEntry!.percentChange).toBeNull();
+    expect(coverageEntry.from).toBeNull();
+    expect(coverageEntry.to).toBe(0.75);
+    expect(coverageEntry.delta).toBeNull();
+    expect(coverageEntry.percentChange).toBeNull();
   });
 });

@@ -18,7 +18,7 @@ export class CppPackageFlowchartGenerator {
     ];
 
     // Sanitize node IDs (replace . and / and - with _)
-    const sanitize = (id: string) => id.replace(/[.\-\/]/g, '_');
+    const sanitize = (id: string) => id.replace(/[.\-/]/g, '_');
 
     // Node declarations
     for (const entity of entities) {

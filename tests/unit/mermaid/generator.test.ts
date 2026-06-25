@@ -5,11 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ValidatedMermaidGenerator } from '../../../src/mermaid/generator';
 import { ArchJSON } from '../../../src/types';
-import type {
-  MermaidDetailLevel,
-  GroupingDecision,
-  PackageGroup,
-} from '../../../src/mermaid/types';
+import type { GroupingDecision } from '../../../src/mermaid/types';
 
 describe('ValidatedMermaidGenerator', () => {
   let archJson: ArchJSON;
@@ -252,10 +248,7 @@ describe('ValidatedMermaidGenerator', () => {
     it('keeps non-conflicting package layer labels as outer grouping only', () => {
       const layeredArchJson: ArchJSON = {
         ...archJson,
-        sourceFiles: [
-          'src/domain/model/User.ts',
-          'src/infra/http/AuthService.ts',
-        ],
+        sourceFiles: ['src/domain/model/User.ts', 'src/infra/http/AuthService.ts'],
         entities: [
           {
             ...archJson.entities[0],

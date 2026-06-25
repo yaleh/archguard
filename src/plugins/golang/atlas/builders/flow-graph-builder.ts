@@ -425,7 +425,11 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     return null;
   }
 
-  private buildCallChains(rawData: GoRawData, entryPoints: EntryPoint[], options: FlowBuildOptions): CallChain[] {
+  private buildCallChains(
+    rawData: GoRawData,
+    entryPoints: EntryPoint[],
+    options: FlowBuildOptions
+  ): CallChain[] {
     const interfaceNames = FlowGraphBuilder.buildInterfaceNameSet(rawData);
     const chains: CallChain[] = [];
     for (const entry of entryPoints) {
@@ -449,7 +453,10 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
     for (const pkg of rawData.packages) {
       for (const func of pkg.functions) {
         if (func.name === fnName && func.body) {
-          return { body: func.body, contextTypes: FlowGraphBuilder.buildContextTypes(func.parameters) };
+          return {
+            body: func.body,
+            contextTypes: FlowGraphBuilder.buildContextTypes(func.parameters),
+          };
         }
       }
       for (const struct of pkg.structs || []) {
@@ -497,9 +504,20 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
         if (!found) continue;
 
         for (const call of found.body.calls) {
-          const callType = FlowGraphBuilder.classifyCallType(call, found.contextTypes, interfaceNames);
-          const to = call.packageName ? `${call.packageName}.${call.functionName}` : call.functionName;
-          const edge: CallEdge = { from: fromDisplay, to, type: callType, confidence: callType === 'interface' ? 0.8 : 0.7 };
+          const callType = FlowGraphBuilder.classifyCallType(
+            call,
+            found.contextTypes,
+            interfaceNames
+          );
+          const to = call.packageName
+            ? `${call.packageName}.${call.functionName}`
+            : call.functionName;
+          const edge: CallEdge = {
+            from: fromDisplay,
+            to,
+            type: callType,
+            confidence: callType === 'interface' ? 0.8 : 0.7,
+          };
 
           const edgeKey = `${fromDisplay}\x00${to}`;
           if (!seenEdges.has(edgeKey) && !FlowGraphBuilder.isNoisyCall(edge)) {
@@ -508,7 +526,10 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
           }
 
           // Only recurse into same-module functions (present in rawData) that aren't already visited
-          if (!visitedFns.has(call.functionName) && this.findBodyByName(rawData, call.functionName) !== null) {
+          if (
+            !visitedFns.has(call.functionName) &&
+            this.findBodyByName(rawData, call.functionName) !== null
+          ) {
             nextFrontier.push({ short: call.functionName, display: to });
           }
         }

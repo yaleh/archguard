@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RenderValidator } from '../../../src/mermaid/validator-render';
-import type { RenderValidationResult } from '../../../src/mermaid/types';
 
 describe('RenderValidator', () => {
   let validator: RenderValidator;
@@ -79,7 +78,7 @@ describe('RenderValidator', () => {
       const result = validator.validate(mermaidCode);
 
       // At exactly max should still pass
-      const nodeWarning = result.issues.find((i) => i.message.includes('nodes'));
+      const _nodeWarning = result.issues.find((i) => i.message.includes('nodes'));
       expect(result.valid).toBe(true);
       expect(result.canRender).toBe(true);
     });
@@ -96,7 +95,7 @@ describe('RenderValidator', () => {
       const result = validator.validate(mermaidCode);
 
       // At exactly max should still pass
-      const edgeWarning = result.issues.find((i) => i.message.includes('edges'));
+      const _edgeWarning = result.issues.find((i) => i.message.includes('edges'));
       expect(result.valid).toBe(true);
       expect(result.canRender).toBe(true);
     });

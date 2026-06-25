@@ -178,7 +178,9 @@ async function queryMetaCcDocSignals(
       clearTimeout(timer);
       try {
         child.kill();
-      } catch {}
+      } catch {
+        // no-op
+      }
       resolve(result);
     };
 
@@ -217,7 +219,9 @@ async function queryMetaCcDocSignals(
             }
           }
           settle(null);
-        } catch {}
+        } catch {
+          // no-op
+        }
       }
     });
 

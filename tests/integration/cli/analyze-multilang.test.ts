@@ -35,7 +35,7 @@ describe('CLI Multi-language Support', () => {
 
     // Verify --lang option is available in command options
     const options = command.options;
-    const hasLangOption = options.some((opt) => opt.long === '--lang' || opt.short === '--lang');
+    const _hasLangOption = options.some((opt) => opt.long === '--lang' || opt.short === '--lang');
 
     // Note: Commander doesn't make it easy to check options, so we verify by parsing
     // The real test is that the command doesn't throw when we add the option

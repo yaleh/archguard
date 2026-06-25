@@ -6,7 +6,9 @@ describe('ImportResolver', () => {
 
   describe('isInternal', () => {
     it('returns true for package within moduleRoot', () => {
-      expect(resolver.isInternal('com.example.app.data.UserRepository', 'com.example.app')).toBe(true);
+      expect(resolver.isInternal('com.example.app.data.UserRepository', 'com.example.app')).toBe(
+        true
+      );
     });
 
     it('returns false for external package', () => {
@@ -43,7 +45,10 @@ describe('ImportResolver', () => {
 
     it('converts deeply nested import', () => {
       expect(
-        resolver.toRelativePath('com.example.app.feature.projects.ProjectRepository', 'com.example.app')
+        resolver.toRelativePath(
+          'com.example.app.feature.projects.ProjectRepository',
+          'com.example.app'
+        )
       ).toBe('feature/projects/ProjectRepository');
     });
 

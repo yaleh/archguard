@@ -124,7 +124,7 @@ export class RenderValidator {
     // Check for special characters that might cause issues
     const specialCharMatches = mermaidCode.matchAll(/class\s+([^w\s]+[w\s]*)/g);
     for (const match of specialCharMatches) {
-      if (match[1] && /[|{}\[\]()]/.test(match[1])) {
+      if (match[1] && /[|{}[\]()]/.test(match[1])) {
         issues.push({
           type: 'syntax',
           message: `Class name with special characters may cause issues: ${match[1]}`,

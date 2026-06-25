@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TreeSitterBridge } from '../../../src/plugins/golang/tree-sitter-bridge.js';
-import type { GoRawPackage } from '../../../src/plugins/golang/types.js';
 
 describe('TreeSitterBridge', () => {
   let bridge: TreeSitterBridge;

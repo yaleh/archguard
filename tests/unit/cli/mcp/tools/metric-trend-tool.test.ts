@@ -18,7 +18,16 @@ import type { MetricsHistoryEntry } from '@/cli/metrics-history-writer.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function makeEntry(packages: Array<{ name: string; fanIn: number; fanOut: number; cycleCount: number; entityCount: number }>, timestamp?: string): MetricsHistoryEntry {
+function makeEntry(
+  packages: Array<{
+    name: string;
+    fanIn: number;
+    fanOut: number;
+    cycleCount: number;
+    entityCount: number;
+  }>,
+  timestamp?: string
+): MetricsHistoryEntry {
   return {
     timestamp: timestamp ?? new Date().toISOString(),
     packages,
@@ -36,7 +45,7 @@ async function writeHistory(projectRoot: string, entries: MetricsHistoryEntry[])
 
 function collectTools(server: McpServer, defaultRoot: string): Map<string, Function> {
   const tools = new Map<string, Function>();
-  const original = server.tool.bind(server);
+  const _original = server.tool.bind(server);
   vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
     const name = args[0] as string;
     const cb = args[args.length - 1] as Function;
@@ -65,7 +74,7 @@ describe('archguard_get_metric_trend', () => {
   it('returns empty array when no history file exists', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir });
     const text = result.content[0].text as string;
@@ -76,13 +85,19 @@ describe('archguard_get_metric_trend', () => {
   });
 
   it('returns time series with length equal to number of snapshots', async () => {
-    const entry1 = makeEntry([{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }], '2026-01-01T00:00:00Z');
-    const entry2 = makeEntry([{ name: 'pkgA', fanIn: 2, fanOut: 3, cycleCount: 0, entityCount: 4 }], '2026-01-02T00:00:00Z');
+    const entry1 = makeEntry(
+      [{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }],
+      '2026-01-01T00:00:00Z'
+    );
+    const entry2 = makeEntry(
+      [{ name: 'pkgA', fanIn: 2, fanOut: 3, cycleCount: 0, entityCount: 4 }],
+      '2026-01-02T00:00:00Z'
+    );
     await writeHistory(tmpDir, [entry1, entry2]);
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir });
     const payload = JSON.parse(result.content[0].text);
@@ -99,7 +114,7 @@ describe('archguard_get_metric_trend', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir });
     const payload = JSON.parse(result.content[0].text);
@@ -117,19 +132,25 @@ describe('archguard_get_metric_trend', () => {
   });
 
   it('returns only the specified package history when packageName is provided', async () => {
-    const entry1 = makeEntry([
-      { name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 },
-      { name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 1, entityCount: 8 },
-    ], '2026-01-01T00:00:00Z');
-    const entry2 = makeEntry([
-      { name: 'pkgA', fanIn: 2, fanOut: 3, cycleCount: 0, entityCount: 4 },
-      { name: 'pkgB', fanIn: 6, fanOut: 2, cycleCount: 1, entityCount: 9 },
-    ], '2026-01-02T00:00:00Z');
+    const entry1 = makeEntry(
+      [
+        { name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 },
+        { name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 1, entityCount: 8 },
+      ],
+      '2026-01-01T00:00:00Z'
+    );
+    const entry2 = makeEntry(
+      [
+        { name: 'pkgA', fanIn: 2, fanOut: 3, cycleCount: 0, entityCount: 4 },
+        { name: 'pkgB', fanIn: 6, fanOut: 2, cycleCount: 1, entityCount: 9 },
+      ],
+      '2026-01-02T00:00:00Z'
+    );
     await writeHistory(tmpDir, [entry1, entry2]);
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir, packageName: 'pkgA' });
     const payload = JSON.parse(result.content[0].text);
@@ -142,13 +163,19 @@ describe('archguard_get_metric_trend', () => {
   });
 
   it('excludes snapshots where specified package does not appear', async () => {
-    const entry1 = makeEntry([{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }], '2026-01-01T00:00:00Z');
-    const entry2 = makeEntry([{ name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 0, entityCount: 8 }], '2026-01-02T00:00:00Z');
+    const entry1 = makeEntry(
+      [{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }],
+      '2026-01-01T00:00:00Z'
+    );
+    const entry2 = makeEntry(
+      [{ name: 'pkgB', fanIn: 5, fanOut: 1, cycleCount: 0, entityCount: 8 }],
+      '2026-01-02T00:00:00Z'
+    );
     await writeHistory(tmpDir, [entry1, entry2]);
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir, packageName: 'pkgA' });
     const payload = JSON.parse(result.content[0].text);
@@ -164,7 +191,7 @@ describe('archguard_get_metric_trend', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, tmpDir);
-    const handler = tools.get('archguard_get_metric_trend')!;
+    const handler = tools.get('archguard_get_metric_trend');
 
     const result = await handler({ projectRoot: tmpDir, packageName: 'nonexistent' });
     const payload = JSON.parse(result.content[0].text);

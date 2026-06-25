@@ -123,7 +123,9 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
     await plugin.initialize({ workspaceRoot: '/test' });
 
     // Mock resolveProject to avoid reading real go.mod
-    vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(undefined);
+    vi.spyOn((plugin as any).atlasCoordinator.goModResolver, 'resolveProject').mockResolvedValue(
+      undefined
+    );
   });
 
   describe('excludeTests: false (default behaviour)', () => {

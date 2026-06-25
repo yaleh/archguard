@@ -6,7 +6,10 @@ import type { CustomEntityTypeDeclaration } from '@/core/interfaces/language-plu
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDecl(type: string, overrides: Partial<CustomEntityTypeDeclaration> = {}): CustomEntityTypeDeclaration {
+function makeDecl(
+  type: string,
+  overrides: Partial<CustomEntityTypeDeclaration> = {}
+): CustomEntityTypeDeclaration {
   return {
     type,
     display: type.replace(/_/g, ' '),

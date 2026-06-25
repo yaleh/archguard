@@ -26,7 +26,7 @@ import { diffSnapshots } from '@/analysis/snapshot-diff.js';
 function makeSnapshot(
   commitSha: string,
   timestamp: string,
-  schemaVersion: number = 1,
+  schemaVersion: number = 1
 ): MetricSnapshot {
   return {
     schemaVersion,
@@ -112,7 +112,9 @@ describe('createDiffCommand', () => {
   });
 
   it('prints error message when fewer than 2 snapshots exist', async () => {
-    vi.mocked(loadSnapshots).mockResolvedValue([makeSnapshot('abc1234def', '2024-01-01T00:00:00.000Z')]);
+    vi.mocked(loadSnapshots).mockResolvedValue([
+      makeSnapshot('abc1234def', '2024-01-01T00:00:00.000Z'),
+    ]);
     vi.mocked(diffSnapshots).mockReturnValue(makeDiffResult());
 
     const cmd = createDiffCommand();
@@ -154,7 +156,7 @@ describe('createDiffCommand', () => {
       makeDiffResult({
         schemaVersionMismatch: true,
         warnings: ['Schema version mismatch: from=1, to=2. Comparison may be unreliable.'],
-      }),
+      })
     );
 
     const cmd = createDiffCommand();

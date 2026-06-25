@@ -2,7 +2,7 @@
  * Unit tests for HeuristicGrouper
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { HeuristicGrouper } from '../../../src/mermaid/grouper';
 import { ArchJSON } from '../../../src/types';
 

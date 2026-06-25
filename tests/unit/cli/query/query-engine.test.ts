@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '@/cli/query/query-engine.js';
-import type { QueryEngineOptions } from '@/cli/query/query-engine.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
-import type { PackageGraph } from '@/types/extensions/go-atlas.js';
-import type { PackageCoverage, TestAnalysis } from '@/types/extensions/test-analysis.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 // ---------------------------------------------------------------------------
@@ -1368,11 +1366,7 @@ describe('QueryEngine', () => {
       const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
       const result = engine.getPackageStats();
       const pkgNames = result.packages.map((p) => p.package).sort();
-      expect(pkgNames).toEqual([
-        'com.example.app',
-        'com.example.data.api',
-        'com.example.usb',
-      ]);
+      expect(pkgNames).toEqual(['com.example.app', 'com.example.data.api', 'com.example.usb']);
     });
 
     it('com.example.app has fileCount=3 (2 main + 1 test), entityCount=2, methodCount=1, fieldCount=2', () => {
@@ -1380,17 +1374,17 @@ describe('QueryEngine', () => {
       const result = engine.getPackageStats();
       const pkg = result.packages.find((p) => p.package === 'com.example.app');
       expect(pkg).toBeDefined();
-      expect(pkg!.fileCount).toBe(3); // AppShell.kt + AppDestination.kt + AppShellTest.kt
-      expect(pkg!.entityCount).toBe(2);
-      expect(pkg!.methodCount).toBe(1);
-      expect(pkg!.fieldCount).toBe(2);
+      expect(pkg.fileCount).toBe(3); // AppShell.kt + AppDestination.kt + AppShellTest.kt
+      expect(pkg.entityCount).toBe(2);
+      expect(pkg.methodCount).toBe(1);
+      expect(pkg.fieldCount).toBe(2);
     });
 
     it('test files are counted in testFileCount for the correct package', () => {
       const engine = createEngine(kotlinArchJson, { ...defaultScope, language: 'kotlin' });
       const result = engine.getPackageStats();
       const pkg = result.packages.find((p) => p.package === 'com.example.app');
-      expect(pkg!.testFileCount).toBe(1);
+      expect(pkg.testFileCount).toBe(1);
     });
 
     it('meta.dataPath is kotlin-package', () => {

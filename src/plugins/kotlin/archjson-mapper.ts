@@ -11,7 +11,7 @@
 
 import { BaseArchJsonMapper, createRelation } from '@/plugins/shared/mapper-utils.js';
 import { KotlinTypeExtractor } from './kotlin-type-extractor.js';
-import type { RawKotlinFile, RawKotlinClass, RawKotlinMember, KotlinClassKind } from './types.js';
+import type { RawKotlinFile, RawKotlinMember, KotlinClassKind } from './types.js';
 import type {
   ArchJSON,
   Entity,
@@ -86,7 +86,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<RawKotlinFile> {
 
         // Merge kind-implied decorators with explicit class-level decorators
         const extraDecorators = kindDecorators(cls.kind);
-        const classDecorators: Decorator[] = cls.decorators.map(d => ({ name: d }));
+        const classDecorators: Decorator[] = cls.decorators.map((d) => ({ name: d }));
         const allDecorators: Decorator[] = [...extraDecorators, ...classDecorators];
 
         const members = this.mapMembers(cls.members);
@@ -201,7 +201,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<RawKotlinFile> {
     const entities = this.mapEntities(files);
     const relations = this.mapRelations(files, entities);
 
-    const sourceFiles = files.map(f => f.filePath);
+    const sourceFiles = files.map((f) => f.filePath);
 
     return {
       version: ARCHJSON_SCHEMA_VERSION,
@@ -217,14 +217,14 @@ export class ArchJsonMapper extends BaseArchJsonMapper<RawKotlinFile> {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private mapMembers(rawMembers: RawKotlinMember[]): Member[] {
-    return rawMembers.map(m => this.mapMember(m));
+    return rawMembers.map((m) => this.mapMember(m));
   }
 
   private mapMember(m: RawKotlinMember): Member {
     const memberType: MemberType = m.kind === 'field' ? 'field' : 'method';
 
     const decorators: Decorator[] | undefined =
-      m.decorators.length > 0 ? m.decorators.map(d => ({ name: d })) : undefined;
+      m.decorators.length > 0 ? m.decorators.map((d) => ({ name: d })) : undefined;
 
     const base: Member = {
       name: m.name,

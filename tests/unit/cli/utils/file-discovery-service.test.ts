@@ -3,7 +3,7 @@
  * TDD: Red phase - These tests should fail initially
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service';
 import fs from 'fs-extra';
 import path from 'path';

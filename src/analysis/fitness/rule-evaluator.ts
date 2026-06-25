@@ -20,12 +20,18 @@ const KNOWN_METRIC_KEYS = new Set<string>([
 
 function compare(actual: number, op: MetricThresholdRule['op'], threshold: number): boolean {
   switch (op) {
-    case '<':  return actual < threshold;
-    case '<=': return actual <= threshold;
-    case '>':  return actual > threshold;
-    case '>=': return actual >= threshold;
-    case '==': return actual === threshold;
-    case '!=': return actual !== threshold;
+    case '<':
+      return actual < threshold;
+    case '<=':
+      return actual <= threshold;
+    case '>':
+      return actual > threshold;
+    case '>=':
+      return actual >= threshold;
+    case '==':
+      return actual === threshold;
+    case '!=':
+      return actual !== threshold;
   }
 }
 
@@ -53,11 +59,15 @@ export function evaluateMetricRule(rule: MetricThresholdRule, vector: MetricVect
   return { rule, passed, actual };
 }
 
-export function evaluateAllRules(rules: FitnessRule[], vector: MetricVector, relations: Relation[]): RuleResult[] {
+export function evaluateAllRules(
+  rules: FitnessRule[],
+  vector: MetricVector,
+  relations: Relation[]
+): RuleResult[] {
   return rules.map((rule) => {
     if (rule.type === 'no-dependency') {
       return checkDependencyConstraint(rule, relations);
     }
-    return evaluateMetricRule(rule as MetricThresholdRule, vector);
+    return evaluateMetricRule(rule, vector);
   });
 }

@@ -11,10 +11,10 @@
  * @module mermaid/diagram-generator
  */
 
+import os from 'os';
 import type { ArchJSON } from '../types/index.js';
 import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
 import type { IRendererFacade } from '@/core/interfaces/renderer-facade.js';
-import type { GroupingDecision } from './types.js';
 import { HeuristicGrouper } from './grouper.js';
 import { ValidatedMermaidGenerator } from './generator.js';
 import { MermaidValidationPipeline } from './validation-pipeline.js';
@@ -200,7 +200,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
           } else {
             throw new Error('Auto-repair completed but validation still fails');
           }
-        } catch (repairError) {
+        } catch {
           progress.fail('❌ Auto-repair failed');
           const errorMessages =
             report.stages
@@ -223,7 +223,9 @@ export class MermaidDiagramGenerator implements IRendererFacade {
 
         if (metrics.metrics) {
           progress.info?.(`  Readability: ${metrics.metrics.readability?.toFixed(1) || 'N/A'}/100`);
-          progress.info?.(`  Completeness: ${metrics.metrics.completeness?.toFixed(1) || 'N/A'}/100`);
+          progress.info?.(
+            `  Completeness: ${metrics.metrics.completeness?.toFixed(1) || 'N/A'}/100`
+          );
           progress.info?.(`  Consistency: ${metrics.metrics.consistency?.toFixed(1) || 'N/A'}/100`);
           progress.info?.(`  Complexity: ${metrics.metrics.complexity?.toFixed(1) || 'N/A'}/100`);
         }
@@ -340,7 +342,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       }
 
       // Render with higher concurrency for I/O-bound operations
-      const renderConcurrency = (this.config.concurrency || require('os').cpus().length) * 2;
+      const renderConcurrency = (this.config.concurrency || os.cpus().length) * 2;
 
       // Use the static method for rendering
       await MermaidDiagramGenerator.renderJobsInParallelWithConfig(

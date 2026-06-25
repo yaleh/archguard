@@ -174,7 +174,7 @@ export class QualityValidator {
       entityConnectivity.set(relation.target, (entityConnectivity.get(relation.target) ?? 0) + 1);
     }
 
-    for (const [entity, connections] of entityConnectivity) {
+    for (const [_entity, connections] of entityConnectivity) {
       if (connections > 10) {
         score -= (connections - 10) * 2;
       }

@@ -12,9 +12,7 @@
  *   - Top-level functions: delegated to FunctionBuilder
  */
 
-// @ts-ignore - tree-sitter typings
 import Parser from 'tree-sitter';
-// @ts-ignore - tree-sitter-kotlin has no type declarations
 import KotlinLanguage from '@tree-sitter-grammars/tree-sitter-kotlin';
 import { ClassBuilder } from './builders/class-builder.js';
 import { FunctionBuilder } from './builders/function-builder.js';
@@ -27,7 +25,7 @@ export class TreeSitterBridge {
 
   constructor() {
     this.parser = new Parser();
-    // @ts-ignore
+    // @ts-expect-error -- tree-sitter language definition type incompatibility
     this.parser.setLanguage(KotlinLanguage);
     this.classBuilder = new ClassBuilder();
     this.functionBuilder = new FunctionBuilder();
@@ -56,7 +54,11 @@ export class TreeSitterBridge {
     const packageName = this.extractPackageName(rootNode);
     const imports = this.extractImports(rootNode);
     const classes = this.classBuilder.extractClasses(rootNode, packageName, filePath);
-    const functions = this.functionBuilder.extractTopLevelFunctions(rootNode, packageName, filePath);
+    const functions = this.functionBuilder.extractTopLevelFunctions(
+      rootNode,
+      packageName,
+      filePath
+    );
     return { filePath, packageName, imports, classes, functions };
   }
 

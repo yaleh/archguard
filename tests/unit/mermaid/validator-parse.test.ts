@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MermaidParseValidator } from '../../../src/mermaid/validator-parse';
-import type { ParseValidationResult } from '../../../src/mermaid/types';
 
 describe('MermaidParseValidator', () => {
   let validator: MermaidParseValidator;

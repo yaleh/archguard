@@ -8,12 +8,7 @@ function makePackageGraph(overrides?: Partial<PackageGraph>): PackageGraph {
   return { nodes: [], edges: [], cycles: [], ...overrides };
 }
 
-function makeNode(
-  id: string,
-  name: string,
-  type: PackageNode['type'],
-  fileCount = 1
-): PackageNode {
+function makeNode(id: string, name: string, type: PackageNode['type'], fileCount = 1): PackageNode {
   return { id, name, type, fileCount };
 }
 
@@ -86,10 +81,7 @@ describe('renderPackageGraph — direct import', () => {
 
   it('nodes in a multi-package cycle get :::cycle style', () => {
     const graph = makePackageGraph({
-      nodes: [
-        makeNode('pkg/a', 'pkg/a', 'internal'),
-        makeNode('pkg/b', 'pkg/b', 'internal'),
-      ],
+      nodes: [makeNode('pkg/a', 'pkg/a', 'internal'), makeNode('pkg/b', 'pkg/b', 'internal')],
       edges: [
         { source: 'pkg/a', target: 'pkg/b', strength: 1 },
         { source: 'pkg/b', target: 'pkg/a', strength: 1 },

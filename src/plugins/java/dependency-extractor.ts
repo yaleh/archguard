@@ -57,7 +57,7 @@ export class DependencyExtractor implements IDependencyExtractor {
 
       let match;
       while ((match = dependencyPattern.exec(content)) !== null) {
-        const [, groupId, artifactId, version, scope] = match;
+        const [, _groupId, artifactId, version, scope] = match;
 
         dependencies.push({
           name: artifactId.trim(),
@@ -96,7 +96,7 @@ export class DependencyExtractor implements IDependencyExtractor {
 
       let match;
       while ((match = dependencyPattern.exec(content)) !== null) {
-        const [, scope, groupId, artifactId, version] = match;
+        const [, scope, _groupId, artifactId, version] = match;
 
         dependencies.push({
           name: artifactId.trim(),

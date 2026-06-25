@@ -119,7 +119,7 @@ describe('renderTsModuleGraph', () => {
     // Only check node declaration lines (contain "[") and edge lines (contain "-->", "==>")
     const declLines = lines.filter((l) => l.includes('[') || l.match(/--?>|==>/));
     for (const line of declLines) {
-      const beforeLabel = line.split(/[\[\(]/)[0];
+      const beforeLabel = line.split(/[[(]/)[0];
       // Node IDs must not contain colons (invalid Mermaid syntax)
       expect(beforeLabel).not.toMatch(/:/);
     }
@@ -140,7 +140,7 @@ describe('renderTsModuleGraph', () => {
     for (const line of nodeLines) {
       // Check that arrow lines don't have bare slashes in node identifiers
       // (label text in quotes/brackets is okay)
-      const beforeLabel = line.split(/[\[\(]/)[0];
+      const beforeLabel = line.split(/[[(]/)[0];
       expect(beforeLabel).not.toMatch(/\//);
     }
   });

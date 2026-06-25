@@ -333,10 +333,9 @@ describe('registerAnalyzeTool', () => {
       const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
       registerAnalyzeTool(server, { defaultRoot: '/project' });
 
-      const schema = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[2] as Record<
-        string,
-        { safeParse: (value: unknown) => { success: boolean } }
-      >;
+      const schema = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[2] as Record<string, { safeParse: (value: unknown) => { success: boolean } }>;
 
       expect(schema.explore).toBeUndefined();
       expect(schema.includeGit.safeParse(true).success).toBe(true);
@@ -381,9 +380,7 @@ describe('registerAnalyzeTool', () => {
           workDir: '/project/.archguard',
           outputDir: '/project/.archguard/output',
         },
-        diagrams: [
-          { name: 'architecture', level: 'package', sources: [], language: 'typescript' },
-        ],
+        diagrams: [{ name: 'architecture', level: 'package', sources: [], language: 'typescript' }],
         results: [],
         queryScopesPersisted: 1,
         persistedScopeKeys: ['abc123'],

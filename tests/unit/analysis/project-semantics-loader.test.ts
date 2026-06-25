@@ -12,7 +12,9 @@ async function makeWorkDir(): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(cleanupPaths.splice(0).map((target) => fs.rm(target, { recursive: true, force: true })));
+  await Promise.all(
+    cleanupPaths.splice(0).map((target) => fs.rm(target, { recursive: true, force: true }))
+  );
 });
 
 describe('project-semantics-loader', () => {

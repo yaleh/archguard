@@ -31,7 +31,7 @@ function makeEntity(
   return {
     id,
     name,
-    type: type as Entity['type'],
+    type: type,
     visibility: 'public',
     members: [],
     sourceLocation: { file, startLine: 1, endLine: 10 },
@@ -93,7 +93,12 @@ function createTestEngine(scope: QueryScopeEntry = parsedScope): QueryEngine {
 }
 
 function wrapEngine(engine: QueryEngine, scope: QueryScopeEntry = parsedScope) {
-  return { engine, extensionAccessor: {} as any, scopeEntry: scope, relationQueryService: engine.relationQueryService };
+  return {
+    engine,
+    extensionAccessor: {} as any,
+    scopeEntry: scope,
+    relationQueryService: engine.relationQueryService,
+  };
 }
 
 // -- Console capture --
@@ -339,7 +344,9 @@ describe('query --format json', () => {
 
 describe('derived scope warning', () => {
   it('shows note when scope is derived', async () => {
-    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine(derivedScope), derivedScope));
+    vi.mocked(loadEngine).mockResolvedValue(
+      wrapEngine(createTestEngine(derivedScope), derivedScope)
+    );
     await runQuery('--summary');
     const output = consoleOutput.join('\n');
     expect(output).toContain('derived');
@@ -430,9 +437,9 @@ describe('query --package-stats', () => {
 
   it('calls getPackageStats with default depth 2', async () => {
     const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
-      makePackageStatsResult([{ package: 'src/cli', fileCount: 3 }])
-    );
+    const spy = vi
+      .spyOn(engine, 'getPackageStats')
+      .mockReturnValue(makePackageStatsResult([{ package: 'src/cli', fileCount: 3 }]));
     vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats');
     expect(spy).toHaveBeenCalledWith(2);
@@ -440,9 +447,9 @@ describe('query --package-stats', () => {
 
   it('calls getPackageStats with explicit depth', async () => {
     const engine = createTestEngine();
-    const spy = vi.spyOn(engine, 'getPackageStats').mockReturnValue(
-      makePackageStatsResult([{ package: 'src', fileCount: 5 }])
-    );
+    const spy = vi
+      .spyOn(engine, 'getPackageStats')
+      .mockReturnValue(makePackageStatsResult([{ package: 'src', fileCount: 5 }]));
     vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '3');
     expect(spy).toHaveBeenCalledWith(3);
@@ -468,7 +475,9 @@ describe('query --package-stats', () => {
   it('outputs JSON when --format json', async () => {
     const engine = createTestEngine();
     vi.spyOn(engine, 'getPackageStats').mockReturnValue(
-      makePackageStatsResult([{ package: 'src/cli', fileCount: 4, entityCount: 10, methodCount: 5 }])
+      makePackageStatsResult([
+        { package: 'src/cli', fileCount: 4, entityCount: 10, methodCount: 5 },
+      ])
     );
     vi.mocked(loadEngine).mockResolvedValue(wrapEngine(engine));
     await runQuery('--package-stats', '--format', 'json');
@@ -673,7 +682,16 @@ describe('query command --output-scope / edge-list safety (Phase 101)', () => {
 
   it('--entity --output-scope method --query-format edge-list does not crash', async () => {
     vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
-    await runQuery('--entity', 'CacheManager', '--output-scope', 'method', '--query-format', 'edge-list', '--format', 'json');
+    await runQuery(
+      '--entity',
+      'CacheManager',
+      '--output-scope',
+      'method',
+      '--query-format',
+      'edge-list',
+      '--format',
+      'json'
+    );
     expect(process.exit).not.toHaveBeenCalledWith(1);
     // JSON output should be edge-list shape { entities, relations }
     const output = consoleOutput.join('\n');

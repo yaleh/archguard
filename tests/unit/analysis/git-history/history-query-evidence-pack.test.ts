@@ -38,10 +38,7 @@ function makeManifest(overrides: Partial<GitHistoryManifest> = {}): GitHistoryMa
   };
 }
 
-function makeFileMetric(
-  path_: string,
-  riskFactors: Partial<RiskFactors> = {}
-): FileHistoryMetrics {
+function makeFileMetric(path_: string, riskFactors: Partial<RiskFactors> = {}): FileHistoryMetrics {
   const rf: RiskFactors = {
     churn: 0.3,
     authorCount: 0.3,
@@ -244,8 +241,20 @@ describe('HistoryQuery.getEvidencePack', () => {
   });
 
   it('hotspots from results have correct riskScore ordering', () => {
-    const file1 = makeFileMetric('src/a.ts', { churn: 0.2, authorCount: 0.2, ownerConcentration: 0.2, cochangeBreadth: 0.2, recency: 0.2 });
-    const file2 = makeFileMetric('src/b.ts', { churn: 0.8, authorCount: 0.8, ownerConcentration: 0.8, cochangeBreadth: 0.8, recency: 0.8 });
+    const file1 = makeFileMetric('src/a.ts', {
+      churn: 0.2,
+      authorCount: 0.2,
+      ownerConcentration: 0.2,
+      cochangeBreadth: 0.2,
+      recency: 0.2,
+    });
+    const file2 = makeFileMetric('src/b.ts', {
+      churn: 0.8,
+      authorCount: 0.8,
+      ownerConcentration: 0.8,
+      cochangeBreadth: 0.8,
+      recency: 0.8,
+    });
     const data = makeData([file1, file2], []);
     const q = new HistoryQuery(data);
 

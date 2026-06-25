@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { KotlinTypeExtractor, KOTLIN_PRIMITIVE_TYPES } from '@/plugins/kotlin/kotlin-type-extractor.js';
+import {
+  KotlinTypeExtractor,
+  KOTLIN_PRIMITIVE_TYPES,
+} from '@/plugins/kotlin/kotlin-type-extractor.js';
 
 describe('KOTLIN_PRIMITIVE_TYPES', () => {
   it('includes Kotlin built-in types', () => {

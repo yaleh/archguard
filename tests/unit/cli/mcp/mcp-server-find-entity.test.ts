@@ -36,7 +36,7 @@ function makeEntity(
   return {
     id,
     name,
-    type: type as Entity['type'],
+    type: type,
     visibility: 'public',
     members: [],
     sourceLocation: { file, startLine: 1, endLine: 10 },
@@ -117,11 +117,14 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     await tool({ name: 'CacheManager' });
 
-    expect(findEntitySpy).toHaveBeenCalledWith('CacheManager', expect.objectContaining({ outputScope: expect.any(String) }));
+    expect(findEntitySpy).toHaveBeenCalledWith(
+      'CacheManager',
+      expect.objectContaining({ outputScope: expect.any(String) })
+    );
   });
 
   it('entityType filter calls findByType', async () => {
@@ -132,12 +135,15 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     const result = await tool({ entityType: 'lock_domain' });
 
     expect(findEntitySpy).not.toHaveBeenCalled();
-    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain', expect.objectContaining({ outputScope: expect.any(String) }));
+    expect(findByTypeSpy).toHaveBeenCalledWith(
+      'lock_domain',
+      expect.objectContaining({ outputScope: expect.any(String) })
+    );
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(3); // ld1, ld2, ld3
@@ -150,11 +156,16 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     const result = await tool({ entityType: 'lock_domain', attrFilter: { irq_safe: true } });
 
-    expect(findByTypeAndAttrSpy).toHaveBeenCalledWith('lock_domain', 'irq_safe', true, expect.objectContaining({ outputScope: expect.any(String) }));
+    expect(findByTypeAndAttrSpy).toHaveBeenCalledWith(
+      'lock_domain',
+      'irq_safe',
+      true,
+      expect.objectContaining({ outputScope: expect.any(String) })
+    );
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(2); // ld1 and ld3 have irq_safe=true
@@ -167,11 +178,15 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     const result = await tool({ attrFilter: { execution_context: 'irq' } });
 
-    expect(findByAttrSpy).toHaveBeenCalledWith('execution_context', 'irq', expect.objectContaining({ outputScope: expect.any(String) }));
+    expect(findByAttrSpy).toHaveBeenCalledWith(
+      'execution_context',
+      'irq',
+      expect.objectContaining({ outputScope: expect.any(String) })
+    );
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(1); // only w1
@@ -184,10 +199,13 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     // irq_safe=true AND priority=1 → only ld1
-    const result = await tool({ entityType: 'lock_domain', attrFilter: { irq_safe: true, priority: 1 } });
+    const result = await tool({
+      entityType: 'lock_domain',
+      attrFilter: { irq_safe: true, priority: 1 },
+    });
 
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
@@ -202,11 +220,14 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     const result = await tool({ entityType: 'lock_domain', attrFilter: {} });
 
-    expect(findByTypeSpy).toHaveBeenCalledWith('lock_domain', expect.objectContaining({ outputScope: expect.any(String) }));
+    expect(findByTypeSpy).toHaveBeenCalledWith(
+      'lock_domain',
+      expect.objectContaining({ outputScope: expect.any(String) })
+    );
     const text = result.content[0].text;
     const parsed = JSON.parse(text);
     expect(parsed).toHaveLength(3); // all lock_domain entities
@@ -218,7 +239,7 @@ describe('archguard_find_entity MCP tool', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const tool = tools.get('archguard_find_entity')!;
+    const tool = tools.get('archguard_find_entity');
 
     // Should not throw; returns a valid MCP content response
     const result = await tool({});

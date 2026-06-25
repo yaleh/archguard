@@ -48,7 +48,11 @@ describe('Relation schema — call edge fields (Phase 89)', () => {
   });
 
   it('callType accepts all three variants', () => {
-    const variants: Array<'direct' | 'interface' | 'indirect'> = ['direct', 'interface', 'indirect'];
+    const variants: Array<'direct' | 'interface' | 'indirect'> = [
+      'direct',
+      'interface',
+      'indirect',
+    ];
     for (const v of variants) {
       const r: Relation = { id: `call:${v}`, type: 'call', source: 'A', target: 'B', callType: v };
       expect(r.callType).toBe(v);

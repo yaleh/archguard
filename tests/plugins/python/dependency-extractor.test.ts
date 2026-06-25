@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { DependencyExtractor } from '@/plugins/python/dependency-extractor.js';
-import type { Dependency } from '@/core/interfaces/dependency.js';
 
 describe('DependencyExtractor', () => {
   let extractor: DependencyExtractor;

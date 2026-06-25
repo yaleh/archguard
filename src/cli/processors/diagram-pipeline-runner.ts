@@ -26,7 +26,12 @@ import type { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import { buildMetricVector } from '@/analysis/metric-vector-builder.js';
 import { buildArchIndex } from '@/core/query/arch-index-builder.js';
 import { QueryEngine } from '@/core/query/query-engine.js';
-import { saveSnapshot, pruneSnapshots, resolveCommitSha, resolveBranch } from '@/analysis/snapshot-store.js';
+import {
+  saveSnapshot,
+  pruneSnapshots,
+  resolveCommitSha,
+  resolveBranch,
+} from '@/analysis/snapshot-store.js';
 import type { MetricSnapshot } from '@/analysis/snapshot-store.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import { createRequire } from 'node:module';
@@ -34,7 +39,6 @@ import { createRequire } from 'node:module';
 const _require = createRequire(import.meta.url);
 let _archguardVersion: string;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   _archguardVersion = (_require('../../../package.json') as { version: string }).version;
 } catch {
   _archguardVersion = '0.1.23';
@@ -120,7 +124,11 @@ export class DiagramPipelineRunner {
         extensions: {
           ...(aggregatedJSON.extensions ?? {}),
           ...(this.globalConfig.projectSemantics
-            ? { projectSemantics: this.globalConfig.projectSemantics as NonNullable<ArchJSON['extensions']>['projectSemantics'] }
+            ? {
+                projectSemantics: this.globalConfig.projectSemantics as NonNullable<
+                  ArchJSON['extensions']
+                >['projectSemantics'],
+              }
             : {}),
         },
       };
@@ -171,8 +179,8 @@ export class DiagramPipelineRunner {
         const v = outputJSON.metricVector;
         console.log(
           `MetricVector: entities=${v.totalEntities}, relations=${v.totalRelations}, ` +
-          `sccCount=${v.sccCount}, maxInDegree=${v.maxInDegree}, ` +
-          `giniInDegree=${v.giniInDegree.toFixed(2)}, packages=${v.packageCount}`
+            `sccCount=${v.sccCount}, maxInDegree=${v.maxInDegree}, ` +
+            `giniInDegree=${v.giniInDegree.toFixed(2)}, packages=${v.packageCount}`
         );
       }
 

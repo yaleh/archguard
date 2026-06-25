@@ -1118,11 +1118,31 @@ describe('traceCallsFromEntry - stdlib filtering', () => {
               name: 'handler',
               body: {
                 calls: [
-                  { functionName: 'Info', packageName: 'slog', location: { file: 'r.go', startLine: 10, endLine: 10 } },
-                  { functionName: 'Error', packageName: 'slog', location: { file: 'r.go', startLine: 11, endLine: 11 } },
-                  { functionName: 'Warn', packageName: 'slog', location: { file: 'r.go', startLine: 12, endLine: 12 } },
-                  { functionName: 'Debug', packageName: 'slog', location: { file: 'r.go', startLine: 13, endLine: 13 } },
-                  { functionName: 'Process', packageName: 'biz', location: { file: 'r.go', startLine: 14, endLine: 14 } },
+                  {
+                    functionName: 'Info',
+                    packageName: 'slog',
+                    location: { file: 'r.go', startLine: 10, endLine: 10 },
+                  },
+                  {
+                    functionName: 'Error',
+                    packageName: 'slog',
+                    location: { file: 'r.go', startLine: 11, endLine: 11 },
+                  },
+                  {
+                    functionName: 'Warn',
+                    packageName: 'slog',
+                    location: { file: 'r.go', startLine: 12, endLine: 12 },
+                  },
+                  {
+                    functionName: 'Debug',
+                    packageName: 'slog',
+                    location: { file: 'r.go', startLine: 13, endLine: 13 },
+                  },
+                  {
+                    functionName: 'Process',
+                    packageName: 'biz',
+                    location: { file: 'r.go', startLine: 14, endLine: 14 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2232,7 +2252,10 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
               packageName: 'server',
               body: {
                 calls: [
-                  { functionName: 'processRequest', location: { file: 'server.go', startLine: 5, endLine: 5 } },
+                  {
+                    functionName: 'processRequest',
+                    location: { file: 'server.go', startLine: 5, endLine: 5 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2243,7 +2266,11 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
               packageName: 'server',
               body: {
                 calls: [
-                  { functionName: 'Query', packageName: 'db', location: { file: 'server.go', startLine: 15, endLine: 15 } },
+                  {
+                    functionName: 'Query',
+                    packageName: 'db',
+                    location: { file: 'server.go', startLine: 15, endLine: 15 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2282,7 +2309,10 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
               packageName: 'server',
               body: {
                 calls: [
-                  { functionName: 'processRequest', location: { file: 'server.go', startLine: 5, endLine: 5 } },
+                  {
+                    functionName: 'processRequest',
+                    location: { file: 'server.go', startLine: 5, endLine: 5 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2293,7 +2323,11 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
               packageName: 'server',
               body: {
                 calls: [
-                  { functionName: 'Query', packageName: 'db', location: { file: 'server.go', startLine: 15, endLine: 15 } },
+                  {
+                    functionName: 'Query',
+                    packageName: 'db',
+                    location: { file: 'server.go', startLine: 15, endLine: 15 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2330,22 +2364,52 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
             makeFunction({
               name: 'entryA',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'callB', location: { file: 'svc.go', startLine: 1, endLine: 1 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  { functionName: 'callB', location: { file: 'svc.go', startLine: 1, endLine: 1 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
             makeFunction({
               name: 'callB',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'callC', location: { file: 'svc.go', startLine: 5, endLine: 5 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  { functionName: 'callC', location: { file: 'svc.go', startLine: 5, endLine: 5 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
             makeFunction({
               name: 'callC',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'callD', location: { file: 'svc.go', startLine: 10, endLine: 10 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  {
+                    functionName: 'callD',
+                    location: { file: 'svc.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
             makeFunction({
               name: 'callD',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'callE', location: { file: 'svc.go', startLine: 15, endLine: 15 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  {
+                    functionName: 'callE',
+                    location: { file: 'svc.go', startLine: 15, endLine: 15 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
           ],
         }),
@@ -2379,12 +2443,24 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
             makeFunction({
               name: 'fnA',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'fnB', location: { file: 'svc.go', startLine: 1, endLine: 1 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  { functionName: 'fnB', location: { file: 'svc.go', startLine: 1, endLine: 1 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
             makeFunction({
               name: 'fnB',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'fnA', location: { file: 'svc.go', startLine: 5, endLine: 5 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  { functionName: 'fnA', location: { file: 'svc.go', startLine: 5, endLine: 5 } },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
           ],
         }),
@@ -2418,9 +2494,20 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
               packageName: 'svc',
               body: {
                 calls: [
-                  { functionName: 'Info', packageName: 'slog', location: { file: 'svc.go', startLine: 3, endLine: 3 } },
-                  { functionName: 'Println', packageName: 'fmt', location: { file: 'svc.go', startLine: 4, endLine: 4 } },
-                  { functionName: 'doWork', location: { file: 'svc.go', startLine: 5, endLine: 5 } },
+                  {
+                    functionName: 'Info',
+                    packageName: 'slog',
+                    location: { file: 'svc.go', startLine: 3, endLine: 3 },
+                  },
+                  {
+                    functionName: 'Println',
+                    packageName: 'fmt',
+                    location: { file: 'svc.go', startLine: 4, endLine: 4 },
+                  },
+                  {
+                    functionName: 'doWork',
+                    location: { file: 'svc.go', startLine: 5, endLine: 5 },
+                  },
                 ],
                 goSpawns: [],
                 channelOps: [],
@@ -2429,7 +2516,16 @@ describe('FlowGraphBuilder - followIndirectCalls BFS', () => {
             makeFunction({
               name: 'doWork',
               packageName: 'svc',
-              body: { calls: [{ functionName: 'deepFn', location: { file: 'svc.go', startLine: 10, endLine: 10 } }], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [
+                  {
+                    functionName: 'deepFn',
+                    location: { file: 'svc.go', startLine: 10, endLine: 10 },
+                  },
+                ],
+                goSpawns: [],
+                channelOps: [],
+              },
             }),
           ],
         }),

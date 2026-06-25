@@ -11,7 +11,6 @@ import type {
   ParseConfig,
 } from '@/core/interfaces/index.js';
 import type { ArchJSON } from '@/types/index.js';
-import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -126,7 +125,7 @@ export default class MockPlugin implements ILanguagePlugin {
   /**
    * Parse entire project
    */
-  async parseProject(workspaceRoot: string, config: ParseConfig): Promise<ArchJSON> {
+  async parseProject(workspaceRoot: string, _config: ParseConfig): Promise<ArchJSON> {
     if (!this.initialized) {
       throw new Error('Plugin must be initialized before parsing');
     }

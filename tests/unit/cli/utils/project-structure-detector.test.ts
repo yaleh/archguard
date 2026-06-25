@@ -3,7 +3,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import path from 'path';
 
 // Mock fs-extra before importing the module under test
 vi.mock('fs-extra', () => ({

@@ -4,7 +4,7 @@
  */
 
 import { execSync } from 'child_process';
-import path from 'path';
+import _path from 'path';
 
 // ---------------------------------------------------------------------------
 // Public types

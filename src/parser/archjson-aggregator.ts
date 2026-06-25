@@ -82,8 +82,7 @@ export class ArchJSONAggregator {
     // Create package entities
     const packageEntities: Entity[] = packages.map((pkg) => {
       const firstEntityInPackage = archJSON.entities.find(
-        (e) =>
-          this.extractPackageFromEntity(e, workspaceRoot, archJSON.language) === pkg
+        (e) => this.extractPackageFromEntity(e, workspaceRoot, archJSON.language) === pkg
       );
 
       return {

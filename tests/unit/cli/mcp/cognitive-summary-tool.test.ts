@@ -55,7 +55,6 @@ vi.mock('@/cli/git-history/history-query.js', () => {
 // ── Import mocks after vi.mock calls ─────────────────────────────────────────
 
 import { loadHistoryData } from '@/cli/git-history/history-loader.js';
-import { HistoryQuery } from '@/cli/git-history/history-query.js';
 
 const loadEngineMock = vi.mocked(loadEngine);
 const loadHistoryDataMock = vi.mocked(loadHistoryData);
@@ -99,7 +98,12 @@ function buildEngineContext(entities: Entity[], relations: ArchJSON['relations']
   const archIndex = buildArchIndex(archJson, 'hash');
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
   const extensionAccessor = new ExtensionAccessor(archJson);
-  return { engine, extensionAccessor, scopeEntry, relationQueryService: engine.relationQueryService };
+  return {
+    engine,
+    extensionAccessor,
+    scopeEntry,
+    relationQueryService: engine.relationQueryService,
+  };
 }
 
 /** Collect all registered tool callbacks by tool name. */
@@ -134,7 +138,7 @@ describe('archguard_get_cognitive_summary — single entity', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const result = await cb({ entities: ['QueryEngine'] });
     const parsed = JSON.parse(result.content[0].text) as any[];
@@ -153,7 +157,9 @@ describe('archguard_get_cognitive_summary — single entity', () => {
     expect(Array.isArray(entry.topDependencies)).toBe(true);
     expect(entry.topDependencies.length).toBeLessThanOrEqual(5);
     // testCoverageRatio — null when no test analysis
-    expect(entry.testCoverageRatio === null || typeof entry.testCoverageRatio === 'number').toBe(true);
+    expect(entry.testCoverageRatio === null || typeof entry.testCoverageRatio === 'number').toBe(
+      true
+    );
     // gitRiskLevel — string when git artifacts present
     expect(entry.gitRiskLevel === null || typeof entry.gitRiskLevel === 'string').toBe(true);
   });
@@ -168,7 +174,7 @@ describe('archguard_get_cognitive_summary — batch of 10', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const entityNames = entities.map((e) => e.name);
     const result = await cb({ entities: entityNames });
@@ -186,7 +192,7 @@ describe('archguard_get_cognitive_summary — missing entity', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const result = await cb({ entities: ['NonExistent'] });
     const parsed = JSON.parse(result.content[0].text) as any[];
@@ -215,7 +221,7 @@ describe('archguard_get_cognitive_summary — absent test artifacts', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const result = await cb({ entities: ['MyClass'] });
     const parsed = JSON.parse(result.content[0].text) as any[];
@@ -234,7 +240,7 @@ describe('archguard_get_cognitive_summary — absent git artifacts', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const result = await cb({ entities: ['BazClass'] });
     const parsed = JSON.parse(result.content[0].text) as any[];
@@ -286,7 +292,7 @@ describe('archguard_get_cognitive_summary — payload size constraint', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_get_cognitive_summary')!;
+    const cb = tools.get('archguard_get_cognitive_summary');
 
     const result = await cb({ entities: ['Hub'] });
     const parsed = JSON.parse(result.content[0].text) as any[];

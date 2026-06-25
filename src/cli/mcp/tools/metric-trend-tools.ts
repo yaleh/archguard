@@ -30,7 +30,10 @@ async function readHistoryEntries(outputDir: string): Promise<MetricsHistoryEntr
   }
 
   const content = await fs.readFile(filePath, 'utf-8');
-  const lines = content.trim().split('\n').filter((l) => l.trim().length > 0);
+  const lines = content
+    .trim()
+    .split('\n')
+    .filter((l) => l.trim().length > 0);
 
   const entries: MetricsHistoryEntry[] = [];
   for (const line of lines) {
@@ -50,6 +53,7 @@ export interface TrendSnapshot {
 
 export function registerMetricTrendTools(server: McpServer, defaultRoot: string): void {
   server.tool(
+    // adr-ok: ADR-007 — MCP-only trend query; no direct CLI equivalent needed
     'archguard_get_metric_trend',
     'Return the historical time series of package-level structural metrics ' +
       '(fan-in, fan-out, cycle count, entity count) recorded by each analyze run. ' +

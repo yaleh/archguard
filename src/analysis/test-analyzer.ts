@@ -72,7 +72,11 @@ export class TestAnalyzer {
       patternConfig,
       projectSemantics
     );
-    const testFilePaths = await this.discoverTestFiles(workspaceRoot, plugin, effectivePatternConfig);
+    const testFilePaths = await this.discoverTestFiles(
+      workspaceRoot,
+      plugin,
+      effectivePatternConfig
+    );
     const rawFiles = await this.collectRawTestFiles(testFilePaths, plugin, effectivePatternConfig);
     const testFiles = this.buildTestFileInfos(rawFiles, archJson, workspaceRoot);
     const coverageMap = this.mapper.buildCoverageMap(testFiles, archJson, workspaceRoot);
@@ -104,7 +108,10 @@ export class TestAnalyzer {
 
     // Go: scan entire workspace since _test.go files live beside source
     if (plugin.metadata.fileExtensions.includes('.go')) {
-      const defaultMatches = await globby(`${workspaceRoot}/**/*_test.go`, { onlyFiles: true, absolute: true });
+      const defaultMatches = await globby(`${workspaceRoot}/**/*_test.go`, {
+        onlyFiles: true,
+        absolute: true,
+      });
       return uniqueStrings([...defaultMatches, ...extraMatches]);
     }
 

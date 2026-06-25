@@ -67,7 +67,7 @@ export class JavaPlugin implements ILanguagePlugin {
   /**
    * Initialize the plugin
    */
-  async initialize(config: PluginInitConfig): Promise<void> {
+  async initialize(_config: PluginInitConfig): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -99,7 +99,7 @@ export class JavaPlugin implements ILanguagePlugin {
           return true;
         }
       }
-    } catch (error) {
+    } catch {
       return false;
     }
 

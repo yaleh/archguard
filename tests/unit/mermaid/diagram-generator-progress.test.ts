@@ -93,11 +93,15 @@ describe('MermaidDiagramGenerator - progress injection', () => {
       const generator = new MermaidDiagramGenerator(config, reporter);
       const archJSON = makeArchJSON();
       try {
-        await generator.generateOnly(archJSON, {
-          outputDir: '/tmp',
-          baseName: 'test',
-          paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
-        }, 'class');
+        await generator.generateOnly(
+          archJSON,
+          {
+            outputDir: '/tmp',
+            baseName: 'test',
+            paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+          },
+          'class'
+        );
       } catch {
         // acceptable
       }
@@ -110,11 +114,15 @@ describe('MermaidDiagramGenerator - progress injection', () => {
       const generator = new MermaidDiagramGenerator(config);
       const archJSON = makeArchJSON();
       try {
-        await generator.generateOnly(archJSON, {
-          outputDir: '/tmp',
-          baseName: 'test',
-          paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
-        }, 'class');
+        await generator.generateOnly(
+          archJSON,
+          {
+            outputDir: '/tmp',
+            baseName: 'test',
+            paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+          },
+          'class'
+        );
       } catch {
         // acceptable
       }

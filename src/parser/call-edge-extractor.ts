@@ -23,10 +23,10 @@ export class CallEdgeExtractor {
   constructor(
     private readonly project: Project,
     entities: Entity[],
-    private readonly workspaceRoot: string,
+    private readonly workspaceRoot: string
   ) {
-    this.projectEntityNames = new Set(entities.map(e => e.name));
-    this.nameToEntityId = new Map(entities.map(e => [e.name, e.id]));
+    this.projectEntityNames = new Set(entities.map((e) => e.name));
+    this.nameToEntityId = new Map(entities.map((e) => [e.name, e.id]));
   }
 
   extractAll(): Relation[] {
@@ -42,11 +42,7 @@ export class CallEdgeExtractor {
     return path.relative(this.workspaceRoot, absPath).replace(/\\/g, '/');
   }
 
-  private extractFromFile(
-    sourceFile: SourceFile,
-    seen: Set<string>,
-    relations: Relation[],
-  ): void {
+  private extractFromFile(sourceFile: SourceFile, seen: Set<string>, relations: Relation[]): void {
     const checker = this.project.getTypeChecker();
     const relPath = this.toRelPath(sourceFile.getFilePath());
 
@@ -61,7 +57,7 @@ export class CallEdgeExtractor {
         const body = method.getBody();
         if (!body) continue;
 
-        body.getDescendantsOfKind(SyntaxKind.CallExpression).forEach(call => {
+        body.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call) => {
           const access = call.getExpression();
           if (!Node.isPropertyAccessExpression(access)) return;
 
@@ -75,8 +71,8 @@ export class CallEdgeExtractor {
           seen.add(id);
 
           const sym = receiverType.getSymbol();
-          const isInterface = sym?.getDeclarations()
-            .some(d => Node.isInterfaceDeclaration(d)) ?? false;
+          const isInterface =
+            sym?.getDeclarations().some((d) => Node.isInterfaceDeclaration(d)) ?? false;
 
           // Resolve target entity ID (prefer fully qualified ID if available)
           const targetEntityId = this.nameToEntityId.get(targetClass) ?? targetClass;

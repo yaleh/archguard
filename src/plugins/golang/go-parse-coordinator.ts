@@ -25,10 +25,25 @@ export class GoParseCoordinator {
     this.resolver = resolver;
   }
 
-  async parseToRawData(workspaceRoot: string, config: ParseConfig & TreeSitterParseOptions): Promise<GoRawData> {
+  async parseToRawData(
+    workspaceRoot: string,
+    config: ParseConfig & TreeSitterParseOptions
+  ): Promise<GoRawData> {
     const ignore = ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])];
     const files = config.includePatterns?.length
-      ? Array.from(new Set((await Promise.all(config.includePatterns.map((p) => glob(p, { cwd: workspaceRoot, absolute: true, ignore })))).flat().sort()))
+      ? Array.from(
+          new Set(
+            (
+              await Promise.all(
+                config.includePatterns.map((p) =>
+                  glob(p, { cwd: workspaceRoot, absolute: true, ignore })
+                )
+              )
+            )
+              .flat()
+              .sort()
+          )
+        )
       : await glob(config.filePattern ?? '**/*.go', { cwd: workspaceRoot, absolute: true, ignore });
 
     const moduleName = await readModuleName(workspaceRoot);
@@ -75,15 +90,35 @@ export class GoParseCoordinator {
     return { packages: Array.from(packages.values()), moduleRoot: workspaceRoot, moduleName };
   }
 
-  async buildArchJson(rawData: GoRawData, workspaceRoot: string): Promise<Pick<ArchJSON, 'entities' | 'relations' | 'sourceFiles'> & { workspaceRoot: string }> {
-    const allStructs = rawData.packages.flatMap((p) => p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name })));
-    const allInterfaces = rawData.packages.flatMap((p) => p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name })));
+  async buildArchJson(
+    rawData: GoRawData,
+    workspaceRoot: string
+  ): Promise<Pick<ArchJSON, 'entities' | 'relations' | 'sourceFiles'> & { workspaceRoot: string }> {
+    const allStructs = rawData.packages.flatMap((p) =>
+      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
+    );
+    const allInterfaces = rawData.packages.flatMap((p) =>
+      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
+    );
     const implementations = await this.resolver.resolve(allStructs, allInterfaces);
     const entities = this.mapper.mapEntities(rawData.packages);
-    const relations = this.mapper.mapRelations(rawData.packages, implementations, rawData.moduleName);
-    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(entities, relations, rawData.packages);
+    const relations = this.mapper.mapRelations(
+      rawData.packages,
+      implementations,
+      rawData.moduleName
+    );
+    const missingInterfaces = this.mapper.mapMissingInterfaceEntities(
+      entities,
+      relations,
+      rawData.packages
+    );
     entities.push(...missingInterfaces);
-    return { entities, relations, sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles), workspaceRoot };
+    return {
+      entities,
+      relations,
+      sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),
+      workspaceRoot,
+    };
   }
 
   parseCodeToArchJson(code: string, filePath: string, cachedModuleName: string): ArchJSON {
@@ -93,7 +128,9 @@ export class GoParseCoordinator {
       pkg.interfaces.map((i) => ({ ...i, packageName: pkg.fullName || pkg.name }))
     );
     return {
-      version: ARCHJSON_SCHEMA_VERSION, language: 'go', timestamp: new Date().toISOString(),
+      version: ARCHJSON_SCHEMA_VERSION,
+      language: 'go',
+      timestamp: new Date().toISOString(),
       sourceFiles: [filePath],
       entities: this.mapper.mapEntities([pkg]),
       relations: this.mapper.mapRelations([pkg], impls, cachedModuleName),
@@ -110,23 +147,33 @@ export class GoParseCoordinator {
       pkg.dirPath = pkg.dirPath || key;
       if (packages.has(key)) {
         const e = packages.get(key);
-        e.structs.push(...pkg.structs); e.interfaces.push(...pkg.interfaces);
-        e.functions.push(...pkg.functions); e.imports.push(...pkg.imports);
+        e.structs.push(...pkg.structs);
+        e.interfaces.push(...pkg.interfaces);
+        e.functions.push(...pkg.functions);
+        e.imports.push(...pkg.imports);
         e.sourceFiles.push(...pkg.sourceFiles);
       } else {
         packages.set(key, pkg);
       }
     }
     const packageList = Array.from(packages.values());
-    const allStructs = packageList.flatMap((p) => p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name })));
-    const allInterfaces = packageList.flatMap((p) => p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name })));
+    const allStructs = packageList.flatMap((p) =>
+      p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
+    );
+    const allInterfaces = packageList.flatMap((p) =>
+      p.interfaces.map((i) => ({ ...i, packageName: p.fullName || p.name }))
+    );
     const impls = await this.resolver.resolve(allStructs, allInterfaces);
     const entities = this.mapper.mapEntities(packageList);
     const relations = this.mapper.mapRelations(packageList, impls, cachedModuleName);
     entities.push(...this.mapper.mapMissingInterfaceEntities(entities, relations, packageList));
     return {
-      version: ARCHJSON_SCHEMA_VERSION, language: 'go', timestamp: new Date().toISOString(),
-      sourceFiles: filePaths, entities, relations,
+      version: ARCHJSON_SCHEMA_VERSION,
+      language: 'go',
+      timestamp: new Date().toISOString(),
+      sourceFiles: filePaths,
+      entities,
+      relations,
     };
   }
 

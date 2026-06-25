@@ -18,7 +18,7 @@ function makeImportDecl(
   specifier: string,
   resolvedFile: SourceFile | null = null,
   namedImports: string[] = [],
-  defaultImport: string | null = null,
+  defaultImport: string | null = null
 ): ImportDeclaration {
   return {
     getModuleSpecifierSourceFile: () => resolvedFile,
@@ -55,8 +55,8 @@ describe('ModuleGraphBuilder — relative import fallback resolution', () => {
     const graph = builder.build(projectRoot, [callerFile, targetFile], []);
 
     // Should have exactly one internal edge: hooks → utils
-    const internalEdges = graph.edges.filter(
-      (e) => e.from !== 'hooks' || e.to !== 'utils' ? false : true,
+    const _internalEdges = graph.edges.filter((e) =>
+      e.from !== 'hooks' || e.to !== 'utils' ? false : true
     );
     expect(graph.edges.length).toBeGreaterThan(0);
     const edge = graph.edges.find((e) => e.from === 'hooks' && e.to === 'utils');
@@ -86,8 +86,8 @@ describe('ModuleGraphBuilder — relative import fallback resolution', () => {
     const graph = builder.build(projectRoot, [callerFile], []);
 
     // There should be no internal→internal edges
-    const internalEdges = graph.edges.filter(
-      (e) => !graph.nodes.find((n) => n.id === e.to && n.type === 'node_modules'),
+    const _internalEdges = graph.edges.filter(
+      (e) => !graph.nodes.find((n) => n.id === e.to && n.type === 'node_modules')
     );
     // The 'lodash' module should be tracked as external, not as an internal edge
     const internalToInternal = graph.edges.filter((e) => {

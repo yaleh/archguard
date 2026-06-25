@@ -78,7 +78,7 @@ export class TestCoverageMapper {
               if (!linkMap.has(entity.id)) {
                 linkMap.set(entity.id, { testIds: new Set(), score: 0 });
               }
-              const link = linkMap.get(entity.id)!;
+              const link = linkMap.get(entity.id);
               link.testIds.add(testFile.id);
               link.score = Math.min(1.0, link.score + 0.25 * 0.5);
             }

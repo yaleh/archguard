@@ -10,11 +10,10 @@ import { FunctionBuilder } from '@/plugins/kotlin/builders/function-builder.js';
 
 let parse: (code: string) => any;
 
-beforeAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Parser = require('tree-sitter');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const KotlinLanguage = require('@tree-sitter-grammars/tree-sitter-kotlin');
+beforeAll(async () => {
+  const { default: Parser } = await import('tree-sitter');
+
+  const { default: KotlinLanguage } = await import('@tree-sitter-grammars/tree-sitter-kotlin');
   const p = new Parser();
   p.setLanguage(KotlinLanguage);
   parse = (code: string) => p.parse(code).rootNode;

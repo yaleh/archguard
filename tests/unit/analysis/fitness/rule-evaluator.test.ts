@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateMetricRule, evaluateAllRules } from '@/analysis/fitness/rule-evaluator.js';
-import type { MetricThresholdRule, DependencyConstraintRule, FitnessRule } from '@/analysis/fitness/rule-types.js';
+import type { MetricThresholdRule, FitnessRule } from '@/analysis/fitness/rule-types.js';
 import type { MetricVector } from '@/types/metric-vector.js';
 import type { Relation } from '@/types/index.js';
 
@@ -24,7 +24,12 @@ function makeVector(overrides: Partial<MetricVector> = {}): MetricVector {
 
 describe('evaluateMetricRule', () => {
   it('test 1: sccCount <= 0, actual=0 → passed=true', () => {
-    const rule: MetricThresholdRule = { metric: 'sccCount', op: '<=', value: 0, message: 'No cycles allowed' };
+    const rule: MetricThresholdRule = {
+      metric: 'sccCount',
+      op: '<=',
+      value: 0,
+      message: 'No cycles allowed',
+    };
     const vector = makeVector({ sccCount: 0 });
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(true);
@@ -32,7 +37,12 @@ describe('evaluateMetricRule', () => {
   });
 
   it('test 2: sccCount <= 0, actual=2 → passed=false, actual=2', () => {
-    const rule: MetricThresholdRule = { metric: 'sccCount', op: '<=', value: 0, message: 'No cycles allowed' };
+    const rule: MetricThresholdRule = {
+      metric: 'sccCount',
+      op: '<=',
+      value: 0,
+      message: 'No cycles allowed',
+    };
     const vector = makeVector({ sccCount: 2 });
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(false);
@@ -40,7 +50,12 @@ describe('evaluateMetricRule', () => {
   });
 
   it('test 3: maxInDegree < 20, actual=15 → passed=true', () => {
-    const rule: MetricThresholdRule = { metric: 'maxInDegree', op: '<', value: 20, message: 'Max in-degree too high' };
+    const rule: MetricThresholdRule = {
+      metric: 'maxInDegree',
+      op: '<',
+      value: 20,
+      message: 'Max in-degree too high',
+    };
     const vector = makeVector({ maxInDegree: 15 });
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(true);
@@ -48,7 +63,12 @@ describe('evaluateMetricRule', () => {
   });
 
   it('test 4: maxInDegree < 20, actual=25 → passed=false, actual=25', () => {
-    const rule: MetricThresholdRule = { metric: 'maxInDegree', op: '<', value: 20, message: 'Max in-degree too high' };
+    const rule: MetricThresholdRule = {
+      metric: 'maxInDegree',
+      op: '<',
+      value: 20,
+      message: 'Max in-degree too high',
+    };
     const vector = makeVector({ maxInDegree: 25 });
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(false);
@@ -90,7 +110,12 @@ describe('evaluateMetricRule', () => {
   });
 
   it('test 6: unknown metric key → passed=false, detail includes "Unknown metric"', () => {
-    const rule: MetricThresholdRule = { metric: 'nonExistentMetric', op: '<', value: 10, message: 'Should fail' };
+    const rule: MetricThresholdRule = {
+      metric: 'nonExistentMetric',
+      op: '<',
+      value: 10,
+      message: 'Should fail',
+    };
     const vector = makeVector();
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(false);
@@ -98,7 +123,12 @@ describe('evaluateMetricRule', () => {
   });
 
   it('test 7: null metric value (entityCoverageRatio=null) → passed=false, detail includes "not available"', () => {
-    const rule: MetricThresholdRule = { metric: 'entityCoverageRatio', op: '>', value: 0.5, message: 'Coverage too low' };
+    const rule: MetricThresholdRule = {
+      metric: 'entityCoverageRatio',
+      op: '>',
+      value: 0.5,
+      message: 'Coverage too low',
+    };
     const vector = makeVector({ entityCoverageRatio: null });
     const result = evaluateMetricRule(rule, vector);
     expect(result.passed).toBe(false);
@@ -108,8 +138,18 @@ describe('evaluateMetricRule', () => {
 
 describe('evaluateAllRules', () => {
   it('evaluates metric rules and dependency rules together', () => {
-    const metricRule: FitnessRule = { metric: 'sccCount', op: '<=', value: 0, message: 'No cycles' };
-    const depRule: FitnessRule = { type: 'no-dependency', from: 'src/parser/**', to: 'src/cli/**', message: 'No parser→cli' };
+    const metricRule: FitnessRule = {
+      metric: 'sccCount',
+      op: '<=',
+      value: 0,
+      message: 'No cycles',
+    };
+    const depRule: FitnessRule = {
+      type: 'no-dependency',
+      from: 'src/parser/**',
+      to: 'src/cli/**',
+      message: 'No parser→cli',
+    };
     const vector = makeVector({ sccCount: 0 });
     const relations: Relation[] = [
       { id: 'r1', type: 'dependency', source: 'src/parser/foo', target: 'src/utils/bar' },

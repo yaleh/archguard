@@ -11,24 +11,32 @@ const {
   mockPlanDefault,
   mockDetectProjectLanguages,
 } = vi.hoisted(() => ({
-  mockDetectKotlin: vi.fn().mockResolvedValue([
-    { name: 'kotlin/overview/package', sources: ['/src'], level: 'package', language: 'kotlin' },
-  ]),
-  mockDetectCpp: vi.fn().mockResolvedValue([
-    { name: 'mymod/overview/package', sources: ['/src'], level: 'package', language: 'cpp' },
-  ]),
-  mockDetectJava: vi.fn().mockResolvedValue([
-    { name: 'java/overview/package', sources: ['/src'], level: 'package', language: 'java' },
-  ]),
-  mockDetectProject: vi.fn().mockResolvedValue([
-    { name: 'ts/overview/package', sources: ['/src'], level: 'package', language: 'typescript' },
-  ]),
-  mockCreateProjectRoot: vi.fn().mockReturnValue([
-    { name: 'root/overview/package', sources: ['/src'], level: 'package' },
-  ]),
-  mockPlanDefault: vi.fn().mockResolvedValue([
-    { name: 'default/overview/package', sources: ['/src'], level: 'package' },
-  ]),
+  mockDetectKotlin: vi
+    .fn()
+    .mockResolvedValue([
+      { name: 'kotlin/overview/package', sources: ['/src'], level: 'package', language: 'kotlin' },
+    ]),
+  mockDetectCpp: vi
+    .fn()
+    .mockResolvedValue([
+      { name: 'mymod/overview/package', sources: ['/src'], level: 'package', language: 'cpp' },
+    ]),
+  mockDetectJava: vi
+    .fn()
+    .mockResolvedValue([
+      { name: 'java/overview/package', sources: ['/src'], level: 'package', language: 'java' },
+    ]),
+  mockDetectProject: vi
+    .fn()
+    .mockResolvedValue([
+      { name: 'ts/overview/package', sources: ['/src'], level: 'package', language: 'typescript' },
+    ]),
+  mockCreateProjectRoot: vi
+    .fn()
+    .mockReturnValue([{ name: 'root/overview/package', sources: ['/src'], level: 'package' }]),
+  mockPlanDefault: vi
+    .fn()
+    .mockResolvedValue([{ name: 'default/overview/package', sources: ['/src'], level: 'package' }]),
   mockDetectProjectLanguages: vi.fn().mockResolvedValue([{ language: 'typescript', score: 1 }]),
 }));
 
@@ -227,59 +235,35 @@ describe('normalizeToDiagrams — without sources', () => {
   });
 
   it('routes kotlin → detectKotlinProjectStructure', async () => {
-    const result = await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'kotlin' }),
-      root
-    );
+    const result = await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'kotlin' }), root);
     expect(mockDetectKotlin).toHaveBeenCalledOnce();
     expect(result.length).toBeGreaterThan(0);
   });
 
   it('routes java → detectJavaProjectStructure', async () => {
-    const result = await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'java' }),
-      root
-    );
+    const result = await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'java' }), root);
     expect(mockDetectJava).toHaveBeenCalledOnce();
     expect(result.length).toBeGreaterThan(0);
   });
 
   it('routes cpp → createProjectRootLanguageDiagrams (no-sources path uses generic fallback for cpp)', async () => {
-    await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'cpp' }),
-      root
-    );
+    await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'cpp' }), root);
     expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
     expect(mockDetectCpp).not.toHaveBeenCalled();
   });
 
   it('typescript routes to createProjectRootLanguageDiagrams', async () => {
-    await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'typescript' }),
-      root
-    );
+    await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'typescript' }), root);
     expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
   });
 
   it('python routes to createProjectRootLanguageDiagrams', async () => {
-    await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'python' }),
-      root
-    );
+    await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'python' }), root);
     expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
   });
 
   it('go returns atlas diagram (special path)', async () => {
-    const result = await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'go' }),
-      root
-    );
+    const result = await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'go' }), root);
     expect(result).toHaveLength(1);
     expect(result[0].languageSpecific?.atlas).toBeDefined();
   });
@@ -352,11 +336,7 @@ describe('normalizeToDiagrams — atlasEntryPattern wiring', () => {
   });
 
   it('entryPointPattern is undefined when atlasEntryPattern not set', async () => {
-    const result = await normalizeToDiagrams(
-      makeConfig(),
-      makeOptions({ lang: 'go' }),
-      root
-    );
+    const result = await normalizeToDiagrams(makeConfig(), makeOptions({ lang: 'go' }), root);
     expect(result[0].languageSpecific?.atlas?.entryPointPattern).toBeUndefined();
   });
 });

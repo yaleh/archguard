@@ -66,9 +66,7 @@ describe('renderGoroutineTopology — direct import', () => {
           location: { file: 'hub.go', line: 10 },
         },
       ],
-      channelEdges: [
-        { from: 'pkg/hub.Worker.spawn-1', to: 'chan-pkg/hub-10', edgeType: 'send' },
-      ],
+      channelEdges: [{ from: 'pkg/hub.Worker.spawn-1', to: 'chan-pkg/hub-10', edgeType: 'send' }],
     });
     const result = renderGoroutineTopology(topology);
     expect(result).toContain('chan_pkg_hub_10');

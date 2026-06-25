@@ -9,7 +9,12 @@ import { describe, it, expect } from 'vitest';
 import { MermaidTemplates } from '@/plugins/golang/atlas/renderers/mermaid-templates.js';
 import type { PackageGraph } from '@/types/extensions/go-atlas.js';
 import type { CapabilityGraph, CapabilityNode } from '@/plugins/golang/atlas/types.js';
-import type { GoroutineTopology, GoroutineNode, FlowGraph, EntryPoint } from '@/types/extensions/go-atlas.js';
+import type {
+  GoroutineTopology,
+  GoroutineNode,
+  FlowGraph,
+  EntryPoint,
+} from '@/types/extensions/go-atlas.js';
 
 // ─── Package layer ────────────────────────────────────────────────────────────
 

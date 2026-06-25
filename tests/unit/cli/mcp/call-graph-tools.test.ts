@@ -65,7 +65,12 @@ function createEngine(): QueryEngine {
 }
 
 function wrapEngine(engine: QueryEngine) {
-  return { engine, extensionAccessor: {} as any, scopeEntry, relationQueryService: engine.relationQueryService };
+  return {
+    engine,
+    extensionAccessor: {} as any,
+    scopeEntry,
+    relationQueryService: engine.relationQueryService,
+  };
 }
 
 function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string, Function> {
@@ -106,7 +111,7 @@ describe('archguard_find_callers — handler', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     await cb({ entityName: 'B', depth: 1 });
 
@@ -120,7 +125,7 @@ describe('archguard_find_callers — handler', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     await cb({ entityName: 'B' });
 
@@ -130,7 +135,7 @@ describe('archguard_find_callers — handler', () => {
   it('response JSON contains entityName, depth, and callers fields', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     const result = await cb({ entityName: 'B', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
@@ -144,7 +149,7 @@ describe('archguard_find_callers — handler', () => {
   it('callers array contains expected caller data', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     const result = await cb({ entityName: 'B', depth: 1 });
     const parsed = JSON.parse(result.content[0].text);
@@ -164,7 +169,7 @@ describe('archguard_find_callers — handler', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/default');
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     await cb({ entityName: 'B', projectRoot: '/custom-root' });
 
@@ -177,7 +182,7 @@ describe('archguard_find_callers — handler', () => {
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
-    const cb = tools.get('archguard_find_callers')!;
+    const cb = tools.get('archguard_find_callers');
 
     const result = await cb({ entityName: 'B', depth: 1 });
     expect(result.content[0].text).toContain('archguard_analyze');

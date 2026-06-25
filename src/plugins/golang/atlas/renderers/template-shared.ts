@@ -1,6 +1,5 @@
 import path from 'path';
 import type {
-  PackageGraph,
   PackageNode,
   CapabilityNode,
   GoroutineLifecycleSummary,

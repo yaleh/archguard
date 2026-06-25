@@ -26,7 +26,7 @@ export function createRelation(type: RelationType, source: string, target: strin
   };
 }
 
-export abstract class BaseArchJsonMapper<TPackage, TRawEntity = never> {
+export abstract class BaseArchJsonMapper<_TPackage, _TRawEntity = never> {
   protected createEntityId(packageName: string, entityName: string): string {
     return generateEntityId(packageName, entityName);
   }

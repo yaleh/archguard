@@ -47,7 +47,13 @@ function makeArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   };
 }
 
-function makeCallRelation(id: string, source: string, target: string, sourceMethod?: string, targetMethod?: string): Relation {
+function makeCallRelation(
+  id: string,
+  source: string,
+  target: string,
+  sourceMethod?: string,
+  targetMethod?: string
+): Relation {
   return {
     id,
     type: 'call',
@@ -79,10 +85,10 @@ function makeEngine(relations: Relation[], entities: Entity[] = []): QueryEngine
 
 describe('filterRelationsForScope (named export from output-scope-filter)', () => {
   // Test fixture: A->B call, A->C call, A->B dep, A->D inheritance
-  const entityA = makeEntity('pkg.A', 'A');
-  const entityB = makeEntity('pkg.B', 'B');
-  const entityC = makeEntity('pkg.C', 'C');
-  const entityD = makeEntity('pkg.D', 'D');
+  const _entityA = makeEntity('pkg.A', 'A');
+  const _entityB = makeEntity('pkg.B', 'B');
+  const _entityC = makeEntity('pkg.C', 'C');
+  const _entityD = makeEntity('pkg.D', 'D');
 
   const callAB = makeCallRelation('call-ab', 'pkg.A', 'pkg.B', 'methodX', 'methodY');
   const callAC = makeCallRelation('call-ac', 'pkg.A', 'pkg.C', 'methodX', 'methodZ');
@@ -91,43 +97,35 @@ describe('filterRelationsForScope (named export from output-scope-filter)', () =
 
   describe('scope=package', () => {
     it('removes all call edges', () => {
-      const result = filterRelationsForScope(
-        [callAB, callAC, depAB, inheritAD],
-        'package'
-      ) as Relation[];
-      expect(result.some(r => r.type === 'call')).toBe(false);
+      const result = filterRelationsForScope([callAB, callAC, depAB, inheritAD], 'package');
+      expect(result.some((r) => r.type === 'call')).toBe(false);
     });
 
     it('keeps non-call edges', () => {
-      const result = filterRelationsForScope(
-        [callAB, callAC, depAB, inheritAD],
-        'package'
-      ) as Relation[];
+      const result = filterRelationsForScope([callAB, callAC, depAB, inheritAD], 'package');
       expect(result).toHaveLength(2);
-      expect(result.find(r => r.id === 'dep-ab')).toBeDefined();
-      expect(result.find(r => r.id === 'inh-ad')).toBeDefined();
+      expect(result.find((r) => r.id === 'dep-ab')).toBeDefined();
+      expect(result.find((r) => r.id === 'inh-ad')).toBeDefined();
     });
   });
 
   describe('scope=class', () => {
     it('aggregates call edges into type=dependency with inferenceSource=call-aggregated', () => {
       // A->C: no existing dep, should be aggregated
-      const result = filterRelationsForScope(
-        [callAC, inheritAD],
-        'class'
-      ) as Relation[];
-      const aggregated = result.find(r => r.source === 'pkg.A' && r.target === 'pkg.C' && r.type === 'dependency');
+      const result = filterRelationsForScope([callAC, inheritAD], 'class');
+      const aggregated = result.find(
+        (r) => r.source === 'pkg.A' && r.target === 'pkg.C' && r.type === 'dependency'
+      );
       expect(aggregated).toBeDefined();
       expect(aggregated?.inferenceSource).toBe('call-aggregated');
     });
 
     it('does NOT duplicate if existing dependency already covers same pair', () => {
       // A->B: callAB + depAB both exist. Should NOT produce two dep-ab relations.
-      const result = filterRelationsForScope(
-        [callAB, depAB],
-        'class'
-      ) as Relation[];
-      const depsAB = result.filter(r => r.source === 'pkg.A' && r.target === 'pkg.B' && r.type === 'dependency');
+      const result = filterRelationsForScope([callAB, depAB], 'class');
+      const depsAB = result.filter(
+        (r) => r.source === 'pkg.A' && r.target === 'pkg.B' && r.type === 'dependency'
+      );
       expect(depsAB).toHaveLength(1);
       // The original dep-ab is kept
       expect(depsAB[0].id).toBe('dep-ab');
@@ -135,62 +133,52 @@ describe('filterRelationsForScope (named export from output-scope-filter)', () =
 
     it('multiple call edges with same source+target produce exactly ONE aggregated dependency', () => {
       const callAB2 = makeCallRelation('call-ab-2', 'pkg.A', 'pkg.B', 'methodP', 'methodQ');
-      const result = filterRelationsForScope(
-        [callAB, callAB2],
-        'class'
-      ) as Relation[];
-      const depsAB = result.filter(r => r.source === 'pkg.A' && r.target === 'pkg.B' && r.type === 'dependency');
+      const result = filterRelationsForScope([callAB, callAB2], 'class');
+      const depsAB = result.filter(
+        (r) => r.source === 'pkg.A' && r.target === 'pkg.B' && r.type === 'dependency'
+      );
       expect(depsAB).toHaveLength(1);
       expect(depsAB[0].inferenceSource).toBe('call-aggregated');
     });
 
     it('keeps non-call edges unchanged', () => {
-      const result = filterRelationsForScope(
-        [callAB, depAB, inheritAD],
-        'class'
-      ) as Relation[];
-      expect(result.find(r => r.id === 'dep-ab')).toBeDefined();
-      expect(result.find(r => r.id === 'inh-ad')).toBeDefined();
+      const result = filterRelationsForScope([callAB, depAB, inheritAD], 'class');
+      expect(result.find((r) => r.id === 'dep-ab')).toBeDefined();
+      expect(result.find((r) => r.id === 'inh-ad')).toBeDefined();
     });
   });
 
   describe('scope=method', () => {
     it('keeps all call edges intact with sourceMethod/targetMethod', () => {
-      const result = filterRelationsForScope(
-        [callAB, callAC, inheritAD],
-        'method'
-      ) as Relation[];
+      const result = filterRelationsForScope([callAB, callAC, inheritAD], 'method');
       expect(result).toHaveLength(3);
-      const callEdges = result.filter(r => r.type === 'call');
+      const callEdges = result.filter((r) => r.type === 'call');
       expect(callEdges).toHaveLength(2);
       expect(callEdges[0].sourceMethod).toBe('methodX');
     });
 
     it('keeps non-call edges', () => {
-      const result = filterRelationsForScope(
-        [callAB, inheritAD],
-        'method'
-      ) as Relation[];
-      expect(result.find(r => r.type === 'inheritance')).toBeDefined();
+      const result = filterRelationsForScope([callAB, inheritAD], 'method');
+      expect(result.find((r) => r.type === 'inheritance')).toBeDefined();
     });
   });
 
   describe('edge case: no call edges', () => {
     it('returns unchanged relations for package scope', () => {
       const input = [depAB, inheritAD];
-      const result = filterRelationsForScope(input, 'package') as Relation[];
+      const result = filterRelationsForScope(input, 'package');
       expect(result).toHaveLength(2);
     });
 
     it('returns unchanged relations for class scope', () => {
       const input = [depAB, inheritAD];
-      const result = filterRelationsForScope(input, 'class') as Relation[];
+      const result = filterRelationsForScope(input, 'class');
       expect(result).toHaveLength(2);
     });
 
     it('returns unchanged relations for method scope', () => {
       const input = [depAB, inheritAD];
-      const result = filterRelationsForScope(input, 'method') as Relation[];
+      const result = filterRelationsForScope(input, 'method');
       expect(result).toHaveLength(2);
     });
   });
@@ -212,7 +200,7 @@ describe('applyOutputOptions integration with call-edge filter', () => {
       entities: unknown[];
       relations: Array<{ type: string }>;
     };
-    expect(output.relations.some(r => r.type === 'call')).toBe(false);
+    expect(output.relations.some((r) => r.type === 'call')).toBe(false);
   });
 
   it('edge-list with scope=class converts call to dependency with call-aggregated', () => {
@@ -222,7 +210,7 @@ describe('applyOutputOptions integration with call-edge filter', () => {
       entities: unknown[];
       relations: Array<{ type: string; inferenceSource?: string }>;
     };
-    const deps = output.relations.filter(r => r.type === 'dependency');
+    const deps = output.relations.filter((r) => r.type === 'dependency');
     // The serializer maps relations involving the found entity
     // A is found, so relations from/to A should appear
     expect(deps.length).toBeGreaterThanOrEqual(0); // may be empty if B not in result set; main logic tested via private method
