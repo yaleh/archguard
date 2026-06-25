@@ -36,6 +36,7 @@ import { registerCognitiveSummaryTool } from './tools/cognitive-summary-tool.js'
 import { registerCcbTool } from './tools/ccb-tool.js';
 import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
+import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
 
 const projectRootParam = z
   .string()
@@ -96,6 +97,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerCcbTool(server, defaultRoot);
   registerPackageMetricsTools(server, defaultRoot); // registers: archguard_get_package_metrics
   registerMetricTrendTools(server, defaultRoot); // registers: archguard_get_metric_trend
+  registerEvidencePackTool(server, defaultRoot); // registers: archguard_get_evidence_pack
   return server;
 }
 
