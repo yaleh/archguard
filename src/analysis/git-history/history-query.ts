@@ -62,6 +62,26 @@ export interface ChangeRiskResult {
   limitation: string;
 }
 
+export interface EvidencePackEntry {
+  target: string;
+  targetType: 'package' | 'file';
+  riskScore: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  topFactor: string;
+}
+
+export interface EvidencePackNotFound {
+  target: string;
+  targetType: 'package' | 'file';
+  reason: string;
+}
+
+export interface EvidencePackResult {
+  results: EvidencePackEntry[];
+  hotspots: EvidencePackEntry[];
+  notFound: EvidencePackNotFound[];
+}
+
 export interface ChangeContextResult {
   target: string;
   targetType: 'package' | 'file';
@@ -277,6 +297,39 @@ export class HistoryQuery {
   // -------------------------------------------------------------------------
   // getChangeContext
   // -------------------------------------------------------------------------
+
+  // -------------------------------------------------------------------------
+  // getEvidencePack
+  // -------------------------------------------------------------------------
+
+  getEvidencePack(
+    targets: Array<{ targetType: 'file' | 'package'; target: string }>
+  ): EvidencePackResult {
+    const results: EvidencePackEntry[] = [];
+    const notFound: EvidencePackNotFound[] = [];
+
+    for (const { targetType, target } of targets) {
+      try {
+        const m = this.getMetrics(targetType, target);
+        const rf = m.riskFactors;
+        const riskScore = computeRiskScore(rf);
+        const riskLevel = classifyRiskLevel(riskScore);
+        const topFactor = topRiskFactor(rf);
+        results.push({ target, targetType, riskScore, riskLevel, topFactor });
+      } catch {
+        notFound.push({
+          target,
+          targetType,
+          reason: `Target "${target}" (type: ${targetType}) not found in git history data.`,
+        });
+      }
+    }
+
+    // Top-3 hotspots sorted descending by riskScore
+    const hotspots = [...results].sort((a, b) => b.riskScore - a.riskScore).slice(0, 3);
+
+    return { results, hotspots, notFound };
+  }
 
   getChangeContext(targetType: 'package' | 'file', target: string): ChangeContextResult {
     const m = this.getMetrics(targetType, target);
