@@ -3,10 +3,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { execSync } from 'child_process';
 import { InterfaceMatcher } from '../../../src/plugins/golang/interface-matcher.js';
 import { GoplsClient } from '../../../src/plugins/golang/gopls-client.js';
 import type { GoRawStruct, GoRawInterface } from '../../../src/plugins/golang/types.js';
 import path from 'path';
+
+let goplsAvailable = false;
+try {
+  execSync('which gopls', { stdio: 'ignore' });
+  goplsAvailable = true;
+} catch {
+  goplsAvailable = false;
+}
 
 describe('InterfaceMatcher', () => {
   const matcher = new InterfaceMatcher();
@@ -144,7 +153,7 @@ describe('InterfaceMatcher', () => {
     expect(results).toHaveLength(0);
   });
 
-  describe('gopls-based matching', () => {
+  describe.skipIf(!goplsAvailable)('gopls-based matching', () => {
     let goplsClient: GoplsClient;
     const workspaceRoot = path.resolve(__dirname, '../../fixtures/go');
     const sampleFile = path.join(workspaceRoot, 'sample.go');
@@ -319,7 +328,7 @@ describe('InterfaceMatcher', () => {
     });
   });
 
-  describe('hybrid matching (gopls + fallback)', () => {
+  describe.skipIf(!goplsAvailable)('hybrid matching (gopls + fallback)', () => {
     it('should combine gopls results with fallback when gopls available', async () => {
       const goplsClient = new GoplsClient();
       const workspaceRoot = path.resolve(__dirname, '../../fixtures/go');
