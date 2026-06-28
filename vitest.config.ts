@@ -54,6 +54,7 @@ export default defineConfig({
       '@/utils': resolve(__dirname, './src/utils'),
       '@/core': resolve(__dirname, './src/core'),       // NEW (Stage A-0)
       '@/analysis': resolve(__dirname, './src/analysis'), // NEW (Stage A-0)
+      '@/integrations': resolve(__dirname, './src/integrations'),
     }
   }
 });

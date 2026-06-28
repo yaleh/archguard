@@ -1,0 +1,19 @@
+TASK-22.1 — Codebase Memory integration scaffold (Client + Project Resolver + Result Envelope)
+
+Implemented (proposal phase 1):
+- src/integrations/codebase-memory/types.ts: BackendResult<T> envelope (backend/projectRoot/codebaseMemoryProject/stale/data/diagnostics) + BackendDiagnostic (code/severity/message/nextSteps) + factory helpers createDiagnostic/createBackendResult/hasErrorDiagnostic. No deps.
+- src/integrations/codebase-memory/client.ts: CodebaseMemoryClient wrapping `codebase-memory-mcp cli <tool> <json>` via node:child_process execFile. Injectable ProcessRunner seam for testing. Normalizes all failures to diagnostics: binary-missing (ENOENT), timeout, backend-error (non-zero exit / thrown), parse-error. No subprocess detail leaks (no ENOENT in messages, output truncated). Depends on types.
+- src/integrations/codebase-memory/project-resolver.ts: resolveProject(client, projectRoot) via list_projects. Precedence: exact root-path -> unique directory-name -> not-indexed/ambiguous diagnostics. Never auto-indexes; emits index_repository next-step. Depends on client + types.
+- Added @/integrations/* alias to tsconfig.json and vitest.config.ts.
+- Fixtures: tests/fixtures/codebase-memory/{list_projects.json, search_graph.class.json, trace_path.inbound.json}.
+- Tests (all mock-based, no external binary): types.test.ts (10), client.test.ts (8, covers success/binary-missing/timeout/parse-error/backend-error), project-resolver.test.ts (8, covers exact-path/dir-name/ambiguous/not-indexed/passthrough).
+
+DoD results:
+1. types.test.ts -> PASS (10)
+2. client.test.ts -> PASS (8)
+3. project-resolver.test.ts -> PASS (8)
+4. npm test -> new code PASS; 7 pre-existing failures unrelated (gopls binary absent, missing .agents/skills/* untracked files, CLI/MCP analyze-equivalence artifact). Verified none touch src/integrations.
+5. npm run type-check -> PASS
+Lint: 0 errors added (project tolerates warnings; warnings-only exit 0).
+
+Scope respected: layer-only, no CLI/MCP/adapter wiring, no package.json dependency added.
