@@ -1,10 +1,10 @@
 ---
 id: TASK-22
 title: 接入 Codebase Memory MCP 查询后端适配层
-status: 'Epic: Backlog'
+status: 'Epic: Done'
 assignee: []
 created_date: '2026-06-28 01:25'
-updated_date: '2026-06-28 01:34'
+updated_date: '2026-06-28 03:07'
 labels:
   - 'kind:epic'
 dependencies: []
@@ -237,4 +237,42 @@ premise-ledger:
 GCL-self-report: E=3 C=3 H=2
 
 cap:propose=approved
+
+cap:decompose=started
+
+cap:decompose=done
+epicDecompose: 子任务已创建并停在 Basic: Backlog。人类将选中的子任务提升到 Basic: Ready 来执行。
+children: TASK-22.1(集成层骨架 feature-to-backlog) TASK-22.2(配置 schema queryBackends feature-to-backlog) TASK-22.3(查询意图映射 adapter feature-to-backlog) TASK-22.4(CLI query 后端接入 feature-to-backlog) TASK-22.5(MCP 查询工具后端接入 feature-to-backlog) TASK-22.6(config doctor 只读检查 feature-to-backlog) TASK-22.7(文档与示例 task-to-backlog)
+R1-guard: PASS (7/7 children carry DoD shell-gate). 注：verify-subtask-dod.sh 依赖 grep -P，本机 BSD grep 不支持，已用 PCRE-capable grep shim 通过校验。
+
+Sub-task TASK-22.1 completed: 2026-06-28T02:32:29Z
+
+Sub-task TASK-22.2 completed: 2026-06-28T02:32:29Z
+
+Sub-task TASK-22.3 completed: 2026-06-28T02:39:58Z
+
+Sub-task TASK-22.4 completed: 2026-06-28T02:50:46Z
+
+Sub-task TASK-22.5 completed: 2026-06-28T02:50:46Z
+
+Sub-task TASK-22.6 completed: 2026-06-28T02:58:52Z
+
+Sub-task TASK-22.7 completed: 2026-06-28T03:04:31Z
+
+cap:evaluate=recommendation:FINISH | done=7/7 needsHuman=0 dod_pass=true | data_source: measured (每个子任务合并前独立复跑目标 DoD + 全量 npm test，最终集成 4033 通过/7 失败=基线/0 新增)
+
+RECOMMENDATION: FINISH.
+To finish: set status → Epic: Done.
+To iterate: set status → Epic: Proposal 或 Epic: Plan 并重跑 /epic-to-backlog。
+7 子任务全部 Basic: Done，实现累积在 epic/codebase-memory-backend-adapter 分支（commit 610d74c），新增约 1852 行 src（集成层 + CLI/MCP/doctor/config），全部 TDD，零新增测试失败，type-check 干净。
+
+epic-evaluate GCL-self-report:
+premise-ledger:
+[E] child done count: 7/7 直接从任务状态读取
+[E] dod_pass: 每子任务合并前独立复跑目标 DoD + 最终集成全量 npm test（0 新增失败）
+[C] child DoD content: 已读取各子任务文件确认 DoD 命令
+[H] FINISH/ITERATE 充分性基准: 何为足够完成靠背景知识判断
+GCL-self-report: E=2 C=1 H=1
+
+Human confirmed FINISH: 2026-06-28T03:07:41Z. Epic 完成，实现已合入 epic/codebase-memory-backend-adapter。
 <!-- SECTION:NOTES:END -->
