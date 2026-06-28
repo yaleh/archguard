@@ -1,0 +1,2 @@
+{"task_id": "TASK-22", "gate_type": "proposal", "task_kind": "epic", "timestamp": "2026-06-28T01:29:19Z", "E": 6, "C": 2, "H": 2, "GCL": 10, "reviewer_model": "claude-sonnet-4-6", "sample_run_id": null, "evidence_independence": "low", "gate_actor_type": "llm", "premise_lines": 10}
+{"task_id": "TASK-22", "gate_type": "plan", "task_kind": "epic", "timestamp": "2026-06-28T01:33:48Z", "E": 3, "C": 3, "H": 2, "GCL": 8, "reviewer_model": "claude-sonnet-4-6", "sample_run_id": null, "evidence_independence": "low", "gate_actor_type": "llm", "premise_lines": 8}
