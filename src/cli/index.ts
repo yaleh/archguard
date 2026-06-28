@@ -11,6 +11,7 @@ import { createQueryCommand } from './commands/query.js';
 import { createMcpCommand } from './commands/mcp.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createCheckCommand } from './commands/check.js';
+import { createConfigCommand } from './commands/doctor.js';
 import { createRequire } from 'module';
 
 // Read package.json for version
@@ -36,6 +37,7 @@ export function createCLI(): Command {
   program.addCommand(createMcpCommand());
   program.addCommand(createDiffCommand());
   program.addCommand(createCheckCommand());
+  program.addCommand(createConfigCommand());
 
   return program;
 }
