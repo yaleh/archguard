@@ -1,0 +1,13 @@
+{
+  "qualified_name": "src.orders.OrderHandler",
+  "file": "src/orders/order-handler.ts",
+  "start_line": 12,
+  "end_line": 28,
+  "snippet": "export class OrderHandler {\n  handle(order: Order): void {\n    this.validate(order);\n    this.persist(order);\n  }\n}",
+  "neighbors": [
+    {
+      "qualified_name": "src.orders.OrderValidator",
+      "relation": "calls"
+    }
+  ]
+}
