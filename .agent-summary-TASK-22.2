@@ -1,0 +1,28 @@
+TASK-22.2: 配置 schema 接入 queryBackends — Summary
+
+Changes:
+- src/types/config-global.ts: added QueryBackendKind, CodebaseMemoryConfig,
+  QueryBackendsConfig types; added optional `queryBackends?` to GlobalConfig
+  (inherited by ArchGuardConfig).
+- src/cli/config-loader.ts: added QueryBackendKindSchema / CodebaseMemoryConfigSchema /
+  QueryBackendsConfigSchema (zod). queryBackends is optional on configSchema;
+  when present, primary defaults to 'archguard', and codebaseMemory sub-fields
+  (command, project, autoIndex, timeoutMs, maxResults) get defaults. Added
+  queryBackends to FileConfig so CLI/MCP options deep-merge (CLI > config > default).
+- tests/unit/cli/config-loader.queryBackends.test.ts: 10 tests (Phase A optional+
+  default equivalence; Phase B defaults/rejection/precedence; backward compat).
+
+DoD results:
+1. npm test -- --run config-loader.queryBackends.test.ts -> 10 passed.
+2. grep -q queryBackends src/cli/config-loader.ts -> OK.
+3. npm test -> 3938 passed; 7 PRE-EXISTING failures unrelated to this task
+   (project-semantics-discovery missing .agents/skills reference files;
+   golang interface-matcher requires gopls (not installed); cli-mcp
+   analyze-equivalence artifact deep-equal). Verified failing identically
+   on clean base via git stash (6/6 same failures reproduced without my changes;
+   analyze-equivalence is an analyze-artifact comparison untouched by config schema).
+4. npm run type-check -> clean.
+5. eslint on changed files -> clean.
+
+No adapter/CLI/MCP/doctor implemented (out of scope). All new fields optional;
+omitting queryBackends == primary archguard; old config tests stay green.
