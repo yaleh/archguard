@@ -10,6 +10,17 @@
 import { Command } from 'commander';
 import _path from 'path';
 import { resolveArchDir, loadEngine, readManifest } from '../query/engine-loader.js';
+import {
+  createCodebaseMemoryAdapter,
+  resolveProjectRoot,
+  formatEntityHits,
+  formatCallerEdges,
+  formatCandidates,
+  printProvenanceFooter,
+} from '../query/query-backend.js';
+import { ConfigLoader } from '../config-loader.js';
+import type { QueryBackendKind, QueryBackendsConfig } from '@/types/config-global.js';
+import type { CodebaseMemoryAdapter } from '@/integrations/codebase-memory/adapter.js';
 import type {
   QueryEngine,
   PackageStatEntry,
@@ -31,6 +42,10 @@ interface QueryOptions {
   scope?: string;
   format: string;
   verbose?: boolean;
+
+  // TASK-22.4: query backend selection
+  backend?: string;
+  cbmProject?: string;
 
   // Phase 3: entity queries
   entity?: string;
@@ -126,6 +141,165 @@ function buildAttrQueryLabel(
   return `Entities matching ${parts.join(', ')}`;
 }
 
+const VALID_BACKENDS: QueryBackendKind[] = ['archguard', 'codebase-memory', 'auto'];
+
+/**
+ * Resolve the effective query backend.
+ *
+ * Precedence: explicit `--backend` flag > config `queryBackends.primary` >
+ * default `archguard`. Throws on an invalid explicit value.
+ */
+export function resolveQueryBackend(
+  flag: string | undefined,
+  config: QueryBackendsConfig | undefined
+): QueryBackendKind {
+  if (flag !== undefined) {
+    if (!VALID_BACKENDS.includes(flag as QueryBackendKind)) {
+      throw new Error(`Invalid --backend: "${flag}". Expected: ${VALID_BACKENDS.join('|')}.`);
+    }
+    return flag as QueryBackendKind;
+  }
+  return config?.primary ?? 'archguard';
+}
+
+/**
+ * Load the optional `queryBackends` config block, tolerating any failure.
+ *
+ * Returns `undefined` when no config file exists or it cannot be parsed, so the
+ * default ArchGuard behavior is never blocked by config-loading errors.
+ */
+async function loadQueryBackendsConfig(): Promise<QueryBackendsConfig | undefined> {
+  try {
+    const config = await new ConfigLoader(process.cwd()).load();
+    return config.queryBackends as QueryBackendsConfig | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** True when the query intent can be served by the Codebase Memory backend. */
+function isBackendRoutableQuery(opts: QueryOptions): boolean {
+  return Boolean(opts.entity || opts.file || opts.callers);
+}
+
+type BackendOutcome = 'handled' | 'use-archguard';
+
+/**
+ * Handle an entity/file/callers query for the codebase-memory / auto backends.
+ *
+ * - `codebase-memory`: always route to the adapter.
+ * - `auto`: try ArchGuard first; fall back to the adapter only when ArchGuard
+ *   artifacts are missing or the query yields no results.
+ *
+ * Returns `'handled'` when output has been produced, or `'use-archguard'` when
+ * the caller should continue the normal engine path (auto chose ArchGuard).
+ */
+async function handleBackendQuery(
+  opts: QueryOptions,
+  backend: QueryBackendKind,
+  backendsConfig: QueryBackendsConfig | undefined
+): Promise<BackendOutcome> {
+  const isJson = opts.format === 'json';
+
+  // auto: probe ArchGuard first; use it when it yields a non-empty result.
+  if (backend === 'auto') {
+    const archResult = await tryArchguardRoutable(opts);
+    if (archResult.ok && !archResult.empty) {
+      return 'use-archguard';
+    }
+    // Otherwise fall through to the codebase-memory adapter (fallback).
+  }
+
+  const archDir = resolveArchDir(opts.archDir);
+  const adapter = createCodebaseMemoryAdapter({
+    projectRoot: resolveProjectRoot(archDir),
+    ...(opts.cbmProject !== undefined ? { project: opts.cbmProject } : {}),
+    ...(backendsConfig?.codebaseMemory ? { config: backendsConfig.codebaseMemory } : {}),
+  });
+
+  const fellBack = backend === 'auto';
+  await runAdapterQuery(opts, adapter, isJson, fellBack);
+  return 'handled';
+}
+
+/**
+ * Probe the ArchGuard engine for an entity/file/callers query without printing.
+ * Used by `--backend auto` to decide whether to fall back.
+ */
+async function tryArchguardRoutable(opts: QueryOptions): Promise<{ ok: boolean; empty: boolean }> {
+  try {
+    const archDir = resolveArchDir(opts.archDir);
+    const { engine, relationQueryService } = await loadEngine(archDir, opts.scope);
+    if (opts.entity) {
+      const raw = engine.findEntity(opts.entity);
+      return { ok: true, empty: toDisplayEntities(raw).length === 0 };
+    }
+    if (opts.file) {
+      const raw = engine.getFileEntities(opts.file);
+      return { ok: true, empty: toDisplayEntities(raw).length === 0 };
+    }
+    if (opts.callers) {
+      const depth = parseBoundedInt(opts.callersDepth ?? '1', '--callers-depth', 1, 5);
+      const callers = relationQueryService.findCallers(opts.callers, depth);
+      return { ok: true, empty: callers.length === 0 };
+    }
+    return { ok: true, empty: true };
+  } catch {
+    // Missing/corrupt artifacts -> ArchGuard cannot answer; signal fallback.
+    return { ok: false, empty: true };
+  }
+}
+
+/** Run the mapped Codebase Memory adapter call and render its result. */
+async function runAdapterQuery(
+  opts: QueryOptions,
+  adapter: CodebaseMemoryAdapter,
+  isJson: boolean,
+  fellBack: boolean
+): Promise<void> {
+  if (opts.entity) {
+    const res = await adapter.findEntity(opts.entity);
+    if (isJson) {
+      console.log(JSON.stringify(res, null, 2));
+    } else {
+      formatEntityHits(res.data.results, `Entities matching "${opts.entity}"`);
+      printBackendFooter(res, fellBack);
+    }
+    return;
+  }
+  if (opts.file) {
+    const res = await adapter.getFileEntities(opts.file);
+    if (isJson) {
+      console.log(JSON.stringify(res, null, 2));
+    } else {
+      formatEntityHits(res.data.results, `Entities in ${opts.file}`);
+      printBackendFooter(res, fellBack);
+    }
+    return;
+  }
+  // opts.callers
+  const depth = parseBoundedInt(opts.callersDepth ?? '1', '--callers-depth', 1, 5);
+  const res = await adapter.findCallers(opts.callers, { depth });
+  if (isJson) {
+    console.log(JSON.stringify(res, null, 2));
+  } else {
+    formatCallerEdges(res.data.callers, `Callers of "${opts.callers}" (depth: ${depth})`);
+    if (res.data.candidates) formatCandidates(res.data.candidates);
+    printBackendFooter(res, fellBack);
+  }
+}
+
+/** Print the provenance footer, prefixed with a fallback note when applicable. */
+function printBackendFooter(
+  res: Parameters<typeof printProvenanceFooter>[0],
+  fellBack: boolean
+): void {
+  if (fellBack) {
+    console.log('\nNote: ArchGuard had no answer; fell back to Codebase Memory.');
+  }
+  printProvenanceFooter(res);
+}
+
 /**
  * Create the query command
  */
@@ -139,6 +313,13 @@ export function createQueryCommand(): Command {
       .option('--scope <key>', 'Query scope key')
       .option('--format <type>', 'Output format: json|text', 'text')
       .option('--verbose', 'Return full entities in JSON output instead of summary')
+
+      // TASK-22.4: query backend selection
+      .option(
+        '--backend <backend>',
+        'Query backend: archguard|codebase-memory|auto (default: archguard)'
+      )
+      .option('--cbm-project <name>', 'Codebase Memory project name (skips auto-resolution)')
 
       // Phase 3: entity queries
       .option('--entity <name>', 'Find entity by name')
@@ -232,6 +413,22 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     if (opts.listScopes) {
       await handleListScopes(opts);
       return;
+    }
+
+    // TASK-22.4: resolve the effective query backend (explicit flag > config > default).
+    const backendsConfig = await loadQueryBackendsConfig();
+    const backend = resolveQueryBackend(opts.backend, backendsConfig);
+
+    // Backend-aware routing for the entity / file / callers intents. --summary is
+    // enrichment-only and other intents are ArchGuard-exclusive, so they fall
+    // through to the engine path below regardless of backend.
+    let printArchguardFooter = false;
+    if (backend !== 'archguard' && isBackendRoutableQuery(opts)) {
+      const outcome = await handleBackendQuery(opts, backend, backendsConfig);
+      if (outcome === 'handled') return;
+      // 'use-archguard': auto chose ArchGuard; continue the engine path and
+      // append a provenance footer noting the backend.
+      printArchguardFooter = true;
     }
 
     // Load engine
@@ -553,6 +750,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       console.log(
         '\n[Note: This scope is a derived (partial) view, not a complete project analysis.]'
       );
+    }
+
+    // TASK-22.4: backend provenance footer for the auto-selected ArchGuard path.
+    if (printArchguardFooter && !isJson) {
+      console.log(`\nBackend: archguard`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
