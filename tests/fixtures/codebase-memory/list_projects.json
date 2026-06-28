@@ -1,0 +1,22 @@
+{
+  "projects": [
+    {
+      "name": "archguard",
+      "root": "/Users/me/work/archguard",
+      "indexed": true,
+      "files": 312
+    },
+    {
+      "name": "orders-service",
+      "root": "/Users/me/work/orders-service",
+      "indexed": true,
+      "files": 89
+    },
+    {
+      "name": "orders-service-fork",
+      "root": "/Users/me/work/forks/orders-service",
+      "indexed": true,
+      "files": 90
+    }
+  ]
+}

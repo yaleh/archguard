@@ -1,0 +1,18 @@
+{
+  "function_name": "OrderHandler.handle",
+  "direction": "inbound",
+  "paths": [
+    {
+      "from": "OrderController.create",
+      "to": "OrderHandler.handle",
+      "file": "src/orders/order-controller.ts",
+      "line": 34
+    },
+    {
+      "from": "OrderRetryJob.run",
+      "to": "OrderHandler.handle",
+      "file": "src/jobs/order-retry-job.ts",
+      "line": 51
+    }
+  ]
+}
