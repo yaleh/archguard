@@ -60,6 +60,25 @@ describe('GoModResolver', () => {
 
       expect(resolver.classifyImport('vendor/github.com/pkg/errors')).toBe('vendor');
     });
+
+    it('should classify internal imports for dot-free module names (e.g. "manda")', () => {
+      // Regression: isStandardLibrary() uses "no dot in first segment" heuristic,
+      // which incorrectly matched dotless module names like "manda" before this fix.
+      const resolver = new GoModResolver();
+      (resolver as unknown as { moduleInfo: object }).moduleInfo = {
+        moduleName: 'manda',
+        moduleRoot: '/work/manda',
+        goModPath: '/work/manda/go.mod',
+      };
+
+      expect(resolver.classifyImport('manda/internal/channels')).toBe('internal');
+      expect(resolver.classifyImport('manda/internal/adapter')).toBe('internal');
+      expect(resolver.classifyImport('manda/cmd/manda')).toBe('internal');
+      // std and external must still work correctly
+      expect(resolver.classifyImport('fmt')).toBe('std');
+      expect(resolver.classifyImport('encoding/json')).toBe('std');
+      expect(resolver.classifyImport('github.com/some/dep')).toBe('external');
+    });
   });
 
   describe('getModuleName', () => {
