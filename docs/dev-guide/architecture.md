@@ -93,6 +93,17 @@ Responsibilities:
 
 This is what makes ArchGuard usable for architecture review, not just diagram generation.
 
+#### Optional query backend (codebase-memory)
+
+A subset of query intents (`--entity` / `--file` / `--callers`) can optionally be
+routed to an external `codebase-memory` graph backend, selected via the `--backend`
+flag (`archguard` | `codebase-memory` | `auto`) or `queryBackends` config. The
+default backend stays `archguard`. CLI and MCP entry points depend only on the
+adapter in `src/integrations/codebase-memory/`; they never spawn the subprocess
+directly. Every backend result is wrapped in a `BackendResult<T>` envelope carrying
+provenance and normalized diagnostics. See
+[Codebase Memory Integration](./codebase-memory-integration.md).
+
 ### 2.5 Language Plugin Layer
 
 Language support is built around `ILanguagePlugin` in `src/core/interfaces/language-plugin.ts` and `PluginRegistry` in `src/core/plugin-registry.ts`.
@@ -252,6 +263,8 @@ These are manageable, but they are the right places to watch during future refac
 - [Architecture Checking Scenarios](../user-guide/architecture-checking-scenarios.md)
 - [CLI Usage](../user-guide/cli-usage.md)
 - [Plugin Development Guide](./plugin-development-guide.md)
+- [Codebase Memory Integration](./codebase-memory-integration.md)
+- [Codebase Memory Backend (User Guide)](../user-guide/codebase-memory-backend.md)
 - [ArchJSON Levels](./archjson-levels.md)
 - [ADR-001: GoAtlasPlugin Composition](../adr/001-goatlas-plugin-composition.md)
 - [ADR-004: Single Analysis Write Path for CLI and MCP](../adr/004-single-analysis-write-path-for-cli-and-mcp.md)

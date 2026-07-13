@@ -138,6 +138,29 @@ const ClassHighlightConfigSchema = z.object({
     .optional(),
 });
 
+// ========== Query Backends Configuration (codebase-memory-backend-adapter) ==========
+// Backend identifier shared by primary/fallback selection.
+const QueryBackendKindSchema = z.enum(['archguard', 'codebase-memory', 'auto']);
+
+// Codebase Memory adapter settings; every field carries a default so an empty
+// object expands to the full default set.
+const CodebaseMemoryConfigSchema = z.object({
+  command: z.string().default('codebase-memory-mcp'),
+  project: z.string().default('auto'),
+  autoIndex: z.boolean().default(false),
+  timeoutMs: z.number().default(10000),
+  maxResults: z.number().default(20),
+});
+
+// Optional query backend selection. Omitting `queryBackends` entirely is
+// equivalent to `{ primary: 'archguard' }` (existing behavior). When present,
+// `primary` defaults to archguard and `codebaseMemory` defaults are filled.
+const QueryBackendsConfigSchema = z.object({
+  primary: QueryBackendKindSchema.default('archguard'),
+  fallback: QueryBackendKindSchema.optional(),
+  codebaseMemory: CodebaseMemoryConfigSchema.optional(),
+});
+
 const configSchema = z.object({
   // ========== Global Configuration ==========
   workDir: z.string().default('./.archguard'),
@@ -180,6 +203,9 @@ const configSchema = z.object({
   concurrency: z.number().default(os.cpus().length),
   verbose: z.boolean().default(false),
   projectSemantics: PartialProjectSemanticsSchema.optional(),
+
+  // ========== Query Backends (optional; default primary archguard) ==========
+  queryBackends: QueryBackendsConfigSchema.optional(),
 
   // ========== v2.1.0: Root Metadata (Optional) ==========
   metadata: z
@@ -291,6 +317,17 @@ interface FileConfig {
   };
   concurrency?: number;
   verbose?: boolean;
+  queryBackends?: {
+    primary?: 'archguard' | 'codebase-memory' | 'auto';
+    fallback?: 'archguard' | 'codebase-memory' | 'auto';
+    codebaseMemory?: {
+      command?: string;
+      project?: string;
+      autoIndex?: boolean;
+      timeoutMs?: number;
+      maxResults?: number;
+    };
+  };
   projectSemantics?: {
     nonProductionPatterns?: string[];
     barrelFiles?: string[];

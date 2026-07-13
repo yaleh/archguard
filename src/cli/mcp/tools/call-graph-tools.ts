@@ -10,6 +10,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
+import { runBackendQuery } from '../codebase-memory-backend.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -44,16 +45,43 @@ export function registerCallGraphTools(server: McpServer, defaultRoot: string): 
         .string()
         .optional()
         .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
+      backend: z
+        .enum(['archguard', 'codebase-memory'])
+        .optional()
+        .describe(
+          'Optional query backend. Omit (or "archguard") for the default ArchGuard ' +
+            'call-graph path (unchanged behavior). "codebase-memory" traces callers via ' +
+            'the external Codebase Memory backend and returns a BackendResult envelope.'
+        ),
+      codebaseMemoryProject: z
+        .string()
+        .optional()
+        .describe(
+          'Explicit Codebase Memory project name. Only used when backend="codebase-memory"; ' +
+            'when omitted the project is resolved from projectRoot.'
+        ),
     },
-    async ({ entityName, depth, projectRoot }) => {
+    async ({ entityName, depth, projectRoot, backend, codebaseMemoryProject }) => {
+      const root = resolveRoot(projectRoot, defaultRoot);
+
+      if (backend === 'codebase-memory') {
+        const envelope = await runBackendQuery(
+          {
+            projectRoot: root,
+            ...(codebaseMemoryProject !== undefined ? { codebaseMemoryProject } : {}),
+          },
+          (adapter) => adapter.findCallers(entityName, { depth: depth ?? 1 }),
+          { callers: [] }
+        );
+        return textResponse(JSON.stringify(envelope, null, 2));
+      }
+
       try {
-        const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
         const { relationQueryService } = await loadEngine(archDir);
         const callers = relationQueryService.findCallers(entityName, depth ?? 1);
         return textResponse(JSON.stringify({ entityName, depth: depth ?? 1, callers }, null, 2));
       } catch {
-        const root = resolveRoot(projectRoot, defaultRoot);
         return textResponse(
           `No analysis data found for project at "${root}".\n` +
             `Run archguard_analyze({ projectRoot: "${root}" }) first.`

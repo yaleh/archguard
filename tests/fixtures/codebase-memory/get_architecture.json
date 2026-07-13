@@ -1,0 +1,17 @@
+{
+  "project": "orders-service",
+  "packages": [
+    { "name": "src.orders", "fileCount": 12, "nodeCount": 40 },
+    { "name": "src.jobs", "fileCount": 4, "nodeCount": 11 }
+  ],
+  "clusters": [
+    { "name": "order-processing", "members": ["src.orders", "src.jobs"] }
+  ],
+  "highlyConnected": [
+    { "qualified_name": "src.orders.OrderHandler", "degree": 17 }
+  ],
+  "stats": {
+    "totalNodes": 312,
+    "totalEdges": 904
+  }
+}

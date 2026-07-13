@@ -37,11 +37,30 @@ import { registerCcbTool } from './tools/ccb-tool.js';
 import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
+import { runBackendQuery } from './codebase-memory-backend.js';
 
 const projectRootParam = z
   .string()
   .optional()
   .describe('Root directory of the target project. Defaults to the MCP server startup cwd.');
+
+const backendParam = z
+  .enum(['archguard', 'codebase-memory'])
+  .optional()
+  .describe(
+    'Optional query backend. Omit (or "archguard") for the default ArchGuard ' +
+      '.archguard/query path (unchanged behavior). "codebase-memory" routes the ' +
+      'query through the external Codebase Memory graph backend and returns a ' +
+      'BackendResult envelope with provenance and diagnostics.'
+  );
+
+const codebaseMemoryProjectParam = z
+  .string()
+  .optional()
+  .describe(
+    'Explicit Codebase Memory project name. Only used when backend="codebase-memory"; ' +
+      'when omitted the project is resolved from projectRoot.'
+  );
 
 const scopeParam = z
   .string()
@@ -119,6 +138,19 @@ export async function startMcpServer(defaultRoot: string = process.cwd()): Promi
 
 function serializeResult(result: unknown): string {
   return JSON.stringify(result, null, 2);
+}
+
+/** True when the caller explicitly selected the Codebase Memory backend. */
+function isCodebaseMemoryBackend(backend: string | undefined): boolean {
+  return backend === 'codebase-memory';
+}
+
+/** Build the backend adapter context (resolved root + optional project). */
+function backendContext(root: string, codebaseMemoryProject: string | undefined) {
+  return {
+    projectRoot: root,
+    ...(codebaseMemoryProject !== undefined ? { codebaseMemoryProject } : {}),
+  };
 }
 
 const verboseParam = z
@@ -228,6 +260,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       verbose: verboseParam,
       outputScope: outputScopeParam('class'),
       queryFormat: queryFormatParam,
+      backend: backendParam,
+      codebaseMemoryProject: codebaseMemoryProjectParam,
     },
     async ({
       projectRoot,
@@ -238,8 +272,18 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       verbose,
       outputScope,
       queryFormat,
+      backend,
+      codebaseMemoryProject,
     }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
+      if (isCodebaseMemoryBackend(backend)) {
+        const envelope = await runBackendQuery(
+          backendContext(root, codebaseMemoryProject),
+          (adapter) => adapter.findEntity(name ?? ''),
+          { results: [] }
+        );
+        return textResponse(serializeResult(envelope));
+      }
       return withEngineErrorContext(root, async () => {
         const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
 
@@ -436,9 +480,28 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       verbose: verboseParam,
       outputScope: outputScopeParam('class'),
       queryFormat: queryFormatParam,
+      backend: backendParam,
+      codebaseMemoryProject: codebaseMemoryProjectParam,
     },
-    async ({ projectRoot, scope, filePath, verbose, outputScope, queryFormat }) => {
+    async ({
+      projectRoot,
+      scope,
+      filePath,
+      verbose,
+      outputScope,
+      queryFormat,
+      backend,
+      codebaseMemoryProject,
+    }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
+      if (isCodebaseMemoryBackend(backend)) {
+        const envelope = await runBackendQuery(
+          backendContext(root, codebaseMemoryProject),
+          (adapter) => adapter.getFileEntities(filePath),
+          { file: filePath, results: [] }
+        );
+        return textResponse(serializeResult(envelope));
+      }
       return withEngineErrorContext(root, async () => {
         const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         const queryOptions: QueryMethodOptions = {
@@ -477,9 +540,19 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       scope: scopeParam,
       outputScope: outputScopeParam('package'),
       queryFormat: queryFormatParam,
+      backend: backendParam,
+      codebaseMemoryProject: codebaseMemoryProjectParam,
     },
-    async ({ projectRoot, scope }) => {
+    async ({ projectRoot, scope, backend, codebaseMemoryProject }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
+      if (isCodebaseMemoryBackend(backend)) {
+        const envelope = await runBackendQuery(
+          backendContext(root, codebaseMemoryProject),
+          (adapter) => adapter.getArchitecture(),
+          {}
+        );
+        return textResponse(serializeResult(envelope));
+      }
       return withEngineErrorContext(root, async () => {
         const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
         return textResponse(JSON.stringify(engine.getSummary(), null, 2));

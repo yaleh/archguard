@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "name": "OrderHandler",
+      "qualified_name": "src.orders.OrderHandler",
+      "kind": "Class",
+      "file": "src/orders/order-handler.ts",
+      "line": 12
+    },
+    {
+      "name": "OrderHandlerFactory",
+      "qualified_name": "src.orders.OrderHandlerFactory",
+      "kind": "Class",
+      "file": "src/orders/order-handler-factory.ts",
+      "line": 8
+    }
+  ]
+}
