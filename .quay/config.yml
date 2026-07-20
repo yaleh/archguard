@@ -1,0 +1,18 @@
+# .quay/config.yml — quay Provider map for the archguard workspace.
+#
+# Deploys quay (github.com/yaleh/quay) as a task client over archguard's REAL backend
+# via the Provider ABI. This is the first off-repo deployment of quay — DIR-036-A of the
+# quay-perpetual-stream experiment (ADR-013 Validation Ladder, Level 2).
+#
+# quay (Core) + quay-github (provider) are installed to user scope via `npm link`, so the
+# `mcp_entry` below resolves the bare `quay-github` bin on PATH (no cross-package file path —
+# ABI only, per ADR-013 item 1). Auth is provided by the `gh` CLI. quay-github is read-only v1.
+#
+# Usage:  quay task list            # archguard's GitHub issues, via the ABI
+#         quay task view gh-<n>     # one issue
+providers:
+  github:
+    enabled: true
+    mcp_entry: ["quay-github", "mcp"]
+    env:
+      QUAY_GITHUB_REPO: "yaleh/archguard"
