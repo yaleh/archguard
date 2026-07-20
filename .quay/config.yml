@@ -8,11 +8,24 @@
 # `mcp_entry` below resolves the bare `quay-github` bin on PATH (no cross-package file path —
 # ABI only, per ADR-013 item 1). Auth is provided by the `gh` CLI. quay-github is read-only v1.
 #
-# Usage:  quay task list            # archguard's GitHub issues, via the ABI
-#         quay task view gh-<n>     # one issue
+# Usage:
+#   quay task list                      # DEFAULT (github): archguard's GitHub issues (read-only v1)
+#   quay task view gh-<n>               # one issue
+#   quay --provider native task list    # the WRITABLE quay-native board (loop plumbing; ./quay-tasks)
+#
+# The `native` provider is the writable board for a future exp5-style loop on archguard (DIR-036-B):
+# quay-native is the reference provider — full task_write — so a loop can SELECT + write status here
+# with no dependency on github write-back (DIR-041). Seeded with real archguard refactor tasks.
 providers:
   github:
-    enabled: true
+    enabled: true                       # DEFAULT — bare `quay ...` reads GitHub issues (unchanged)
     mcp_entry: ["quay-github", "mcp"]
     env:
       QUAY_GITHUB_REPO: "yaleh/archguard"
+  native:
+    enabled: false                      # selectable via `quay --provider native ...`; the writable loop board
+    tasks_dir: "./quay-tasks"
+    mcp_entry: ["quay-native", "mcp"]
+    env:
+      QUAY_NATIVE_TASKS_DIR: "./quay-tasks"
+      QUAY_NATIVE_ADR_DIR: "./quay-adr"
