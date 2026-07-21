@@ -22,6 +22,7 @@ providers:
     enabled: true                       # PRIMARY — the writable loop board; MCP serves this
     tasks_dir: "./quay-tasks"
     mcp_entry: ["quay-native", "mcp"]
+    default_task_status: ready          # DIR-047: tasks land ready → loop picks them up without manual promotion
     env:
       QUAY_NATIVE_TASKS_DIR: "./quay-tasks"
       QUAY_NATIVE_ADR_DIR: "./quay-adr"
