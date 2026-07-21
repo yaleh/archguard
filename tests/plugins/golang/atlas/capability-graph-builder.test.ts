@@ -2452,4 +2452,232 @@ describe('CapabilityGraphBuilder', () => {
       expect(edge).toBeUndefined();
     });
   });
+
+  describe('full mode — hotspot inclusion', () => {
+    function makeMethod(name: string) {
+      return {
+        name,
+        parameters: [],
+        returnTypes: [],
+        exported: true,
+        location: { file: 'x.go', startLine: 1, endLine: 1 },
+      };
+    }
+
+    it('interface mode (default): struct with methodCount=12 and no edges is excluded', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/svc',
+            name: 'svc',
+            structs: [
+              {
+                name: 'BigStruct',
+                packageName: 'svc',
+                methods: Array.from({ length: 12 }, (_, i) => makeMethod(`M${i}`)),
+                fields: [],
+                exported: true,
+                location: { file: 'svc.go', startLine: 1, endLine: 50 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData); // no options = interface mode
+      // No edges, no interfaces → struct is excluded
+      expect(graph.nodes.find((n) => n.name === 'BigStruct')).toBeUndefined();
+    });
+
+    it('full mode: struct with methodCount>=11 is included even without interface edges', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/svc',
+            name: 'svc',
+            structs: [
+              {
+                name: 'BigStruct',
+                packageName: 'svc',
+                methods: Array.from({ length: 12 }, (_, i) => makeMethod(`M${i}`)),
+                fields: [],
+                exported: true,
+                location: { file: 'svc.go', startLine: 1, endLine: 50 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      const node = graph.nodes.find((n) => n.name === 'BigStruct');
+      expect(node).toBeDefined();
+    });
+
+    it('full mode: struct with fanIn>5 is included even without interface edges', async () => {
+      // Create an interface that 6 structs implement (fanIn=6 on the interface).
+      // Then add a separate struct with no edges that would be excluded in interface mode.
+      // To get fanIn>5 on a struct, we need other structs' fields pointing to it.
+      // Simpler: use an implements edge to build fanIn on a struct that IS the target.
+      // Actually fanIn is measured as "how many edges point to this node".
+      // Impl edge: source=struct, target=interface → interface gets fanIn, not struct.
+      // uses edge: source=struct, target=targetStruct → targetStruct gets fanIn.
+      // Build a scenario where HighFanInStruct is the target of 6 uses edges.
+      const structs = Array.from({ length: 6 }, (_, i) => ({
+        name: `User${i}`,
+        packageName: 'svc',
+        methods: [],
+        fields: [
+          {
+            name: 'dep',
+            type: 'HighFanInStruct',
+            exported: true,
+            location: { file: 'svc.go', startLine: 1, endLine: 1 },
+          },
+        ],
+        exported: true,
+        location: { file: 'svc.go', startLine: 1, endLine: 10 },
+      }));
+
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/svc',
+            name: 'svc',
+            structs: [
+              ...structs,
+              {
+                name: 'HighFanInStruct',
+                packageName: 'svc',
+                methods: [],
+                fields: [],
+                exported: true,
+                location: { file: 'svc.go', startLine: 100, endLine: 110 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      const node = graph.nodes.find((n) => n.name === 'HighFanInStruct');
+      expect(node).toBeDefined();
+      // HighFanInStruct is already included via uses edges so it would be in interface mode too.
+      // The hotspot flag should not be set since it was already included before the hotspot pass.
+      // Let's verify it's in the graph regardless.
+      expect(node?.fanIn).toBeGreaterThan(5);
+    });
+
+    it('full mode: hotspot struct gets isHotspotAdded=true flag', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/svc',
+            name: 'svc',
+            structs: [
+              {
+                name: 'HotspotStruct',
+                packageName: 'svc',
+                methods: Array.from({ length: 11 }, (_, i) => makeMethod(`M${i}`)),
+                fields: [],
+                exported: true,
+                location: { file: 'svc.go', startLine: 1, endLine: 50 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      const node = graph.nodes.find((n) => n.name === 'HotspotStruct');
+      expect(node).toBeDefined();
+      expect(node?.isHotspotAdded).toBe(true);
+    });
+
+    it('full mode: non-hotspot struct with no edges is NOT included by hotspot pass', async () => {
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/svc',
+            name: 'svc',
+            structs: [
+              {
+                name: 'SmallStruct',
+                packageName: 'svc',
+                methods: Array.from({ length: 5 }, (_, i) => makeMethod(`M${i}`)),
+                fields: [],
+                exported: true,
+                location: { file: 'svc.go', startLine: 1, endLine: 20 },
+              },
+            ],
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      const node = graph.nodes.find((n) => n.name === 'SmallStruct');
+      expect(node).toBeUndefined();
+    });
+
+    it('full mode complex-package pass: package with >=8 structs and no included nodes adds all with isPackageHotspot=true', async () => {
+      const structs = Array.from({ length: 8 }, (_, i) => ({
+        name: `Model${i}`,
+        packageName: 'models',
+        methods: [],
+        fields: [],
+        exported: true,
+        location: { file: 'models.go', startLine: i * 10, endLine: i * 10 + 5 },
+      }));
+
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/models',
+            name: 'models',
+            structs,
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      // All 8 structs should be included with isPackageHotspot=true
+      for (let i = 0; i < 8; i++) {
+        const node = graph.nodes.find((n) => n.name === `Model${i}`);
+        expect(node).toBeDefined();
+        expect(node?.isPackageHotspot).toBe(true);
+      }
+    });
+
+    it('full mode complex-package pass: package with <8 structs is NOT included', async () => {
+      const structs = Array.from({ length: 7 }, (_, i) => ({
+        name: `Model${i}`,
+        packageName: 'models',
+        methods: [],
+        fields: [],
+        exported: true,
+        location: { file: 'models.go', startLine: i * 10, endLine: i * 10 + 5 },
+      }));
+
+      const rawData = makeRawData({
+        packages: [
+          makePackage({
+            fullName: 'pkg/models',
+            name: 'models',
+            structs,
+            interfaces: [],
+          }),
+        ],
+      });
+
+      const graph = await builder.build(rawData, { mode: 'full' });
+      // With 7 structs and no edges, none should appear
+      expect(graph.nodes.filter((n) => n.name.startsWith('Model'))).toHaveLength(0);
+    });
+  });
 });

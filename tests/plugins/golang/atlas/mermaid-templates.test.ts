@@ -74,6 +74,85 @@ describe('MermaidTemplates.renderGoroutineTopology — smoke', () => {
   });
 });
 
+// ─── Capability layer — concrete-heavy style (full mode) ─────────────────────
+
+describe('MermaidTemplates.renderCapabilityGraph — concrete-heavy style', () => {
+  it('node with isHotspotAdded=true gets :::concrete-heavy suffix', () => {
+    const node: CapabilityNode = {
+      id: 'pkg/svc.BigStruct',
+      name: 'BigStruct',
+      package: 'pkg/svc',
+      type: 'struct',
+      exported: true,
+      isHotspotAdded: true,
+    };
+    const graph: CapabilityGraph = { nodes: [node], edges: [] };
+    const result = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(result).toContain(':::concrete-heavy');
+  });
+
+  it('node with isPackageHotspot=true gets :::concrete-heavy suffix', () => {
+    const node: CapabilityNode = {
+      id: 'pkg/models.ModelA',
+      name: 'ModelA',
+      package: 'pkg/models',
+      type: 'struct',
+      exported: true,
+      isPackageHotspot: true,
+    };
+    const graph: CapabilityGraph = { nodes: [node], edges: [] };
+    const result = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(result).toContain(':::concrete-heavy');
+  });
+
+  it('concrete-heavy node includes classDef and legend entry', () => {
+    const node: CapabilityNode = {
+      id: 'pkg/svc.HotStruct',
+      name: 'HotStruct',
+      package: 'pkg/svc',
+      type: 'struct',
+      exported: true,
+      isHotspotAdded: true,
+    };
+    const graph: CapabilityGraph = { nodes: [node], edges: [] };
+    const result = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(result).toContain('classDef concrete-heavy');
+    expect(result).toContain('legend_cheavy');
+  });
+
+  it('normal struct does NOT get :::concrete-heavy suffix', () => {
+    const iface: CapabilityNode = {
+      id: 'pkg/api.Handler',
+      name: 'Handler',
+      package: 'pkg/api',
+      type: 'interface',
+      exported: true,
+    };
+    const impl: CapabilityNode = {
+      id: 'pkg/api.HandlerImpl',
+      name: 'HandlerImpl',
+      package: 'pkg/api',
+      type: 'struct',
+      exported: true,
+    };
+    const graph: CapabilityGraph = {
+      nodes: [iface, impl],
+      edges: [
+        {
+          id: 'impl-pkg/api.HandlerImpl-pkg/api.Handler',
+          type: 'implements',
+          source: 'pkg/api.HandlerImpl',
+          target: 'pkg/api.Handler',
+          confidence: 1,
+        },
+      ],
+    };
+    const result = MermaidTemplates.renderCapabilityGraph(graph);
+    expect(result).not.toContain(':::concrete-heavy');
+    expect(result).not.toContain('classDef concrete-heavy');
+  });
+});
+
 // ─── Flow layer ───────────────────────────────────────────────────────────────
 
 describe('MermaidTemplates.renderFlowGraph — smoke', () => {

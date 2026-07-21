@@ -167,6 +167,10 @@ export function createAnalyzeCommand(): Command {
         '--atlas-entry-pattern <pattern>',
         'Regex matched against call.functionName for custom entry point detection (protocol: custom)'
       )
+      .option(
+        '--atlas-capability-mode <mode>',
+        'Capability diagram mode: interface (default) | full (adds hotspot/complex-package structs)'
+      )
       .option('--gim', 'Output GIM direction hint to .archguard/gim/direction.json', false)
 
       .action(analyzeCommandHandler)

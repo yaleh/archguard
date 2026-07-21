@@ -1,13 +1,18 @@
 ---
 id: TASK-26
-title: "Test: add integration tests for aggregated MCP tools (evidence_pack,
-  metric_trend)"
-status: done
+title: >-
+  Test: add integration tests for aggregated MCP tools (evidence_pack,
+  metric_trend)
+status: 'Basic: Backlog'
+assignee: []
+created_date: '2026-06-30 05:20'
+updated_date: '2026-06-30 05:21'
 labels:
-  - source:backlog-TASK-26
-parent: null
-children: []
+  - 'kind:basic'
+dependencies: []
+ordinal: 18000
 ---
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
@@ -97,17 +102,8 @@ ArchGuard 当前全项目仅有 22 个集成测试文件，而 MCP 工具层（1
 - [ ] `npm run type-check`
 <!-- SECTION:PLAN:END -->
 
-## Acceptance Criteria
-
-- [x] #1 `npm test -- --run tests/integration/cli-mcp/evidence-pack.integration.test.ts` passes (5 tests)
-- [x] #2 `npm test -- --run tests/integration/cli-mcp/metric-trend.integration.test.ts` passes (6 tests)
-- [x] #3 `grep -q "describe.*evidence.pack" tests/integration/cli-mcp/evidence-pack.integration.test.ts` exits 0
-- [x] #4 `grep -q "describe.*metric.trend" tests/integration/cli-mcp/metric-trend.integration.test.ts` exits 0
-- [x] #5 `npm test` passes (3993 tests, 0 failures)
-- [x] #6 `npm run type-check` exits 0
-
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [x] #1 npm test
-- [x] #2 npm run type-check
+- [ ] #1 npm test
+- [ ] #2 npm run type-check
 <!-- DOD:END -->

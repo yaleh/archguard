@@ -3,14 +3,14 @@ id: TASK-21
 title: >-
   Metrics history JSONL: append per-analyze snapshot and get_metric_trend MCP
   tool
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-23 15:38'
-updated_date: '2026-06-23 15:39'
+updated_date: '2026-06-23 16:31'
 labels:
   - 'kind:basic'
 dependencies: []
-ordinal: 16000
+ordinal: 1000
 ---
 
 ## Description
@@ -70,3 +70,27 @@ ordinal: 16000
 - [ ] `npm test`
 - [ ] `grep -q "metrics-history.jsonl" src/cli/metrics-history-writer.ts`
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+claimed: 2026-06-23T16:21:57Z
+
+Phase A ✓ 2026-06-23T08:30:00Z — MetricsHistoryWriter implemented; 6 TDD tests pass; MetricsHistoryWriter integrated into run-analysis.ts after persistQueryScopes
+
+Phase B ✓ 2026-06-23T08:30:00Z — metric-trend-tools.ts implemented; 7 TDD tests pass; archguard_get_metric_trend registered in mcp-server.ts
+
+DoD PASS: npm test -- --run tests/unit/cli/metrics-history-writer.test.ts (6/6)
+
+DoD PASS: npm test -- --run tests/unit/cli/mcp/tools/metric-trend-tool.test.ts (7/7)
+
+DoD PASS: grep -q MetricsHistoryWriter src/cli/commands/analyze.ts (via run-analysis.ts)
+
+DoD PASS: grep -q get_metric_trend src/cli/mcp/mcp-server.ts
+
+DoD PASS: grep -q metrics-history.jsonl src/cli/metrics-history-writer.ts
+
+Full test suite: 3925 pass, 3 pre-existing failures in project-semantics-discovery-skill.test.ts (missing references file, unrelated to this task)
+
+Completed: 2026-06-23T16:31:53Z
+<!-- SECTION:NOTES:END -->

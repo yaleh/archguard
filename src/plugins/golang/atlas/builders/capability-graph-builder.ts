@@ -7,6 +7,11 @@ import type {
 } from '../types.js';
 import type { IAtlasBuilder } from './i-atlas-builder.js';
 
+export interface CapabilityBuildOptions {
+  mode?: 'interface' | 'full';
+  minPackageStructs?: number; // default 8
+}
+
 /**
  * Capability (interface usage) graph builder
  *
@@ -17,7 +22,7 @@ import type { IAtlasBuilder } from './i-atlas-builder.js';
  * implementors/consumers fields on InterfaceCapability).
  */
 export class CapabilityGraphBuilder implements IAtlasBuilder<CapabilityGraph> {
-  build(rawData: GoRawData): Promise<CapabilityGraph> {
+  build(rawData: GoRawData, options?: CapabilityBuildOptions): Promise<CapabilityGraph> {
     const allNodes = this.buildNodes(rawData);
     const rawEdges = this.buildEdges(rawData, allNodes);
 
@@ -44,6 +49,52 @@ export class CapabilityGraphBuilder implements IAtlasBuilder<CapabilityGraph> {
     const nodes = allNodes.filter(
       (node) => node.type === 'interface' || referencedIds.has(node.id)
     );
+
+    // Full-mode hotspot pass: include structs with methodCount>=11 or fanIn>5
+    if (options?.mode === 'full') {
+      const includedIds = new Set(nodes.map((n) => n.id));
+
+      // Compute pre-filter fanIn from all edges (edges before node filtering)
+      const preFanIn = new Map<string, number>();
+      for (const edge of edges) {
+        preFanIn.set(edge.target, (preFanIn.get(edge.target) ?? 0) + 1);
+      }
+
+      for (const node of allNodes) {
+        if (node.type !== 'struct' || includedIds.has(node.id)) continue;
+        const fi = preFanIn.get(node.id) ?? 0;
+        const mc = node.methodCount ?? 0;
+        if (mc >= 11 || fi > 5) {
+          node.isHotspotAdded = true;
+          nodes.push(node);
+          includedIds.add(node.id);
+        }
+      }
+
+      // Complex-package pass: packages with struct count >= minPackageStructs and no included nodes
+      const minStructs = options.minPackageStructs ?? 8;
+      const packageStructCounts = new Map<string, CapabilityNode[]>();
+      for (const node of allNodes) {
+        if (node.type !== 'struct') continue;
+        if (!packageStructCounts.has(node.package)) packageStructCounts.set(node.package, []);
+        packageStructCounts.get(node.package).push(node);
+      }
+      const hasIncludedInPkg = new Map<string, boolean>();
+      for (const node of nodes) {
+        hasIncludedInPkg.set(node.package, true);
+      }
+      for (const [pkg, structs] of packageStructCounts) {
+        if (structs.length >= minStructs && !hasIncludedInPkg.get(pkg)) {
+          for (const node of structs) {
+            if (!includedIds.has(node.id)) {
+              node.isPackageHotspot = true;
+              nodes.push(node);
+              includedIds.add(node.id);
+            }
+          }
+        }
+      }
+    }
 
     // Post-process: compute fanIn / fanOut for each node (distinct node counts)
     const fanInSources = new Map<string, Set<string>>(); // targetId → Set of sourceIds

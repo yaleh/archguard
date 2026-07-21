@@ -117,6 +117,8 @@ export interface CapabilityNode {
   fieldCount?: number;
   fanIn?: number; // count of distinct source nodes pointing to this node
   fanOut?: number; // count of distinct target nodes this node points to
+  isHotspotAdded?: boolean; // true when added by full-mode hotspot pass (methodCount>=11 or fanIn>5)
+  isPackageHotspot?: boolean; // true when added by full-mode complex-package pass (mutually exclusive with isHotspotAdded)
 }
 
 export interface CapabilityRelation {

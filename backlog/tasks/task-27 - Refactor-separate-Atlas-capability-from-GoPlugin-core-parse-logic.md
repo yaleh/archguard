@@ -1,12 +1,16 @@
 ---
 id: TASK-27
-title: "Refactor: separate Atlas capability from GoPlugin core parse logic"
-status: done
+title: 'Refactor: separate Atlas capability from GoPlugin core parse logic'
+status: 'Basic: Backlog'
+assignee: []
+created_date: '2026-06-30 05:20'
+updated_date: '2026-06-30 05:21'
 labels:
-  - source:backlog-TASK-27
-parent: null
-children: []
+  - 'kind:basic'
+dependencies: []
+ordinal: 19000
 ---
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
@@ -110,19 +114,9 @@ GoAtlasAdapter
 - 不采用继承（ADR-001 已拒绝此方案）
 <!-- SECTION:PLAN:END -->
 
-## Acceptance Criteria
-
-- [x] #1 `GoAtlasAdapter` exists at `src/plugins/golang/go-atlas-adapter.ts` with `generateAtlas()` and `renderLayer()` implementations
-- [x] #2 `GoPlugin.generateAtlas()` and `renderLayer()` proxy to `GoAtlasAdapter` (confirmed by tests/plugins/golang/go-atlas-adapter.test.ts)
-- [x] #3 `parseToRawData` called exactly once per `parseProject()` invocation (double-parse protection test passes)
-- [x] #4 `npm test -- --run tests/plugins/golang/` passes (503 tests across 32 files)
-- [x] #5 `npm test` passes (3998 tests, 0 failures)
-- [x] #6 `npm run type-check` exits 0
-- [x] #7 `npm run lint` exits 0
-
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [x] #1 npm test
-- [x] #2 npm run type-check
-- [x] #3 npm run lint
+- [ ] #1 npm test
+- [ ] #2 npm run type-check
+- [ ] #3 npm run lint
 <!-- DOD:END -->

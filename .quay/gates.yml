@@ -10,6 +10,7 @@
 testPass:
   - name: vitest
     command: "npx vitest run"
+    timeoutMs: 300000
 # coverageFloor: add once archguard's baseline coverage is known, e.g.
 #   - name: coverage
 #     command: "npx vitest run --coverage"

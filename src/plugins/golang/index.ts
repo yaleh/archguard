@@ -5,6 +5,9 @@
  * Absorbs all fields and methods from the former GoPlugin and GoAtlasPlugin,
  * fixes the double-parse bug (parseToRawData called exactly once per parseProject),
  * and removes the atlasConfig.enabled === false standard-mode fallback.
+ *
+ * Atlas-specific standalone methods (generateAtlas, renderLayer) are delegated
+ * to GoAtlasAdapter — GoPlugin retains the IGoAtlas interface via proxy methods.
  */
 
 import path from 'path';
@@ -34,17 +37,12 @@ import type {
   RenderResult,
 } from './atlas/types.js';
 import { GoAtlasCoordinator } from './go-atlas-coordinator.js';
+import { GoAtlasAdapter } from './go-atlas-adapter.js';
 import { GoTestAnalyzer } from './go-test-analyzer.js';
 
 // Re-export types for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 
-/**
- * Returns true if a package's fullName indicates it is a test or testutil package.
- * Used to filter test packages from rawData when excludeTests is set.
- *
- * Matches: tests/*, tests, pkg/testutil, pkg/hub/testutil, pkg/hubtest
- */
 function isTestPackage(fullName: string): boolean {
   if (fullName.startsWith('tests/') || fullName === 'tests') return true;
   const segs = fullName.split('/');
@@ -116,6 +114,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
 
   // Atlas + test analysis coordinators
   private atlasCoordinator!: GoAtlasCoordinator;
+  private atlasAdapter!: GoAtlasAdapter;
   private testAnalyzer!: GoTestAnalyzer;
 
   constructor() {
@@ -133,6 +132,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     this.resolver = new GoplsInterfaceResolver();
     this.coordinator = new GoParseCoordinator(this.resolver);
     this.atlasCoordinator = new GoAtlasCoordinator();
+    this.atlasAdapter = new GoAtlasAdapter(this, this.atlasCoordinator);
 
     this.initialized = true;
 
@@ -250,6 +250,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       entryPoints: atlasConfig?.entryPoints,
       followIndirectCalls: atlasConfig?.followIndirectCalls,
       entryPointPattern: atlasConfig?.entryPointPattern,
+      capabilityMode: atlasConfig?.capabilityMode,
     });
 
     // Map call relations from the flow graph (must happen after atlas is built)
@@ -282,52 +283,25 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
 
   /**
    * Generate Go Architecture Atlas from a given root path.
-   *
-   * This method calls parseToRawData internally and is intended for
-   * standalone invocation (not from parseProject, which uses buildAtlasFromRawData
-   * to avoid double-parsing).
+   * Delegates to GoAtlasAdapter to keep GoPlugin focused on ILanguagePlugin.
    */
   async generateAtlas(
     rootPath: string,
     options: AtlasGenerationOptions = {}
   ): Promise<GoArchitectureAtlas> {
-    const startTime = performance.now();
-
-    // Get raw data (with body extraction integrated)
-    const excludePatterns = [
-      ...(options.excludePatterns || []),
-      '**/vendor/**',
-      '**/testdata/**',
-      ...(options.excludeTests ? ['**/*_test.go'] : []),
-    ];
-    let rawData = await this.parseToRawData(rootPath, {
-      workspaceRoot: rootPath,
-      includePatterns: options.includePatterns,
-      excludePatterns,
-      extractBodies: options.functionBodyStrategy !== 'none',
-      selectiveExtraction: options.functionBodyStrategy === 'selective',
-    });
-
-    // Filter test packages from rawData when excludeTests is set
-    if (options.excludeTests) {
-      rawData = {
-        ...rawData,
-        packages: rawData.packages.filter((pkg) => !isTestPackage(pkg.fullName)),
-      };
-    }
-
-    return this.atlasCoordinator.buildAtlasFromRawData(rootPath, rawData, options, startTime);
+    return this.atlasAdapter.generateAtlas(rootPath, options);
   }
 
   /**
    * Render a specific layer of the atlas.
+   * Delegates to GoAtlasAdapter.
    */
   async renderLayer(
     atlas: GoArchitectureAtlas,
     layer: AtlasLayer = 'all',
     format: RenderFormat = 'mermaid'
   ): Promise<RenderResult> {
-    return this.atlasCoordinator.renderLayer(atlas, layer, format);
+    return this.atlasAdapter.renderLayer(atlas, layer, format);
   }
 
   /**

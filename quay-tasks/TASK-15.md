@@ -1,7 +1,7 @@
 ---
 id: TASK-15
 title: "Go Atlas capability coverage: hotspot structs and --capability-mode flag"
-status: ready
+status: done
 labels:
   - source:backlog-TASK-15
 parent: null
@@ -212,14 +212,25 @@ New test group `"AtlasConfig.capabilityMode wiring"`:
 - [ ] `grep -q 'atlas-capability-mode' src/cli/commands/analyze.ts`
 <!-- SECTION:PLAN:END -->
 
+## Acceptance Criteria
+
+- [x] #1 `npm test -- --run tests/plugins/golang/atlas/capability-graph-builder.test.ts` passes (50 tests)
+- [x] #2 `npm test -- --run tests/plugins/golang/atlas/mermaid-templates.test.ts` passes (8 tests)
+- [x] #3 `npm test -- --run tests/plugins/golang/atlas/` passes (315 tests across 16 files)
+- [x] #4 `grep -q 'atlas-capability-mode' src/cli/commands/analyze.ts` exits 0
+- [x] #5 `grep -q 'capabilityMode' src/plugins/golang/atlas/types.ts` exits 0
+- [x] #6 `grep -q 'isHotspotAdded' src/types/extensions/go-atlas.ts` exits 0
+- [x] #7 `grep -q 'concrete-heavy' src/plugins/golang/atlas/renderers/capability-mermaid-template.ts` exits 0
+- [x] #8 `npm test` passes (3982 tests, 0 failures)
+
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 npm test -- --run tests/plugins/golang/atlas/capability-graph-builder.test.ts
-- [ ] #2 npm test -- --run tests/plugins/golang/atlas/mermaid-templates.test.ts
-- [ ] #3 npm test -- --run tests/plugins/golang/atlas/
-- [ ] #4 grep -q 'atlas-capability-mode' src/cli/commands/analyze.ts
-- [ ] #5 grep -q 'capabilityMode' src/plugins/golang/atlas/types.ts
-- [ ] #6 grep -q 'isHotspotAdded' src/types/extensions/go-atlas.ts
-- [ ] #7 grep -q 'concrete-heavy' src/plugins/golang/atlas/renderers/capability-mermaid-template.ts
-- [ ] #8 npm test
+- [x] #1 npm test -- --run tests/plugins/golang/atlas/capability-graph-builder.test.ts
+- [x] #2 npm test -- --run tests/plugins/golang/atlas/mermaid-templates.test.ts
+- [x] #3 npm test -- --run tests/plugins/golang/atlas/
+- [x] #4 grep -q 'atlas-capability-mode' src/cli/commands/analyze.ts
+- [x] #5 grep -q 'capabilityMode' src/plugins/golang/atlas/types.ts
+- [x] #6 grep -q 'isHotspotAdded' src/types/extensions/go-atlas.ts
+- [x] #7 grep -q 'concrete-heavy' src/plugins/golang/atlas/renderers/capability-mermaid-template.ts
+- [x] #8 npm test
 <!-- DOD:END -->

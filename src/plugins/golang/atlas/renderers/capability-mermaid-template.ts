@@ -25,6 +25,7 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   const usedSubgraphIds = new Set<string>();
   const capDepthMap = new Map<string, number>();
   let hasHotspotNode = false;
+  let hasConcreteHeavyNode = false;
 
   const renderCapNode = (
     treeNode: { pkg: string; isVirtual: boolean; children: any[] },
@@ -42,12 +43,16 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
         const id = sanitizeId(node.id);
         const label = formatCapabilityLabel(node);
         const hotspot = isHotspot(node);
+        const concreteHeavy = node.isHotspotAdded === true || node.isPackageHotspot === true;
         if (hotspot) hasHotspotNode = true;
-        const classSuffix = hotspot
-          ? ':::hotspot'
-          : node.type === 'interface'
-            ? ':::interface'
-            : ':::concrete';
+        if (concreteHeavy) hasConcreteHeavyNode = true;
+        const classSuffix = concreteHeavy
+          ? ':::concrete-heavy'
+          : hotspot
+            ? ':::hotspot'
+            : node.type === 'interface'
+              ? ':::interface'
+              : ':::concrete';
         output +=
           node.type === 'interface'
             ? `${indent}  ${id}{{"${label}"}}${classSuffix}\n`
@@ -73,6 +78,7 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   output += '    legend_interface{{"interface"}}:::interface\n';
   output += '    legend_concrete["concrete"]:::concrete\n';
   if (hasHotspotNode) output += '    legend_hotspot["hotspot (≥11m or fi>5)"]:::hotspot\n';
+  if (hasConcreteHeavyNode) output += '    legend_cheavy["concrete-heavy (full mode)"]:::concrete-heavy\n';
   output += '    legend_impl["-.-> implements"]\n';
   output += '    legend_uses["--> uses"]\n';
   if (hasConcreteEdge) output += '    legend_conc["==> concrete usage"]\n';
@@ -82,6 +88,9 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   output += '  classDef concrete fill:#dafbe1,stroke:#2da44e,color:#116329\n';
   if (hasHotspotNode) {
     output += '  classDef hotspot fill:#ffebe9,stroke:#cf222e,stroke-width:2px,color:#82071e\n';
+  }
+  if (hasConcreteHeavyNode) {
+    output += '  classDef concrete-heavy fill:#fff3cd,stroke:#856404,color:#533f03\n';
   }
 
   for (const edge of graph.edges) {

@@ -102,6 +102,7 @@ export async function normalizeToDiagrams(
             protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
             layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             entryPointPattern: cliOptions.atlasEntryPattern,
+            capabilityMode: cliOptions.atlasCapabilityMode as 'interface' | 'full' | undefined,
           },
         },
       };
@@ -162,6 +163,7 @@ export async function normalizeToDiagrams(
             protocols: cliOptions.atlasProtocols?.split(',').map((s) => s.trim()),
             layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             entryPointPattern: cliOptions.atlasEntryPattern,
+            capabilityMode: cliOptions.atlasCapabilityMode as 'interface' | 'full' | undefined,
           },
         },
       },

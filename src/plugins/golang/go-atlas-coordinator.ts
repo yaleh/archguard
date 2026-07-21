@@ -34,7 +34,7 @@ export class GoAtlasCoordinator {
 
     const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
       this.behaviorAnalyzer.buildPackageGraph(rawData),
-      this.behaviorAnalyzer.buildCapabilityGraph(rawData),
+      this.behaviorAnalyzer.buildCapabilityGraph(rawData, { mode: options.capabilityMode }),
       this.behaviorAnalyzer.buildGoroutineTopology(rawData, {
         includeTests: options.includeTests,
       }),

@@ -70,3 +70,13 @@ experiments/granularity/artifacts/embeddings/dim-lm-real-input.json
 experiments/granularity/artifacts/embeddings/cache/
 /backlog/.caps/TASK-*
 /backlog/.*.pid
+
+# Loop-driver runtime artifacts (backlog-loop / manda)
+/.manda/
+/backlog/.active-agents
+/backlog/.loop-checkpoint
+/backlog/.loop-lock
+/backlog/.loop-stop
+/backlog/.monitor-task-id
+/.quay/gate-events.jsonl
+/docs/research/

@@ -1,0 +1,19 @@
+# .quay/loop.yml — archguard loop params (DIR-045 universality proof).
+#
+# The loop-driver skill reads this file first; absent/malformed = FAIL-CLOSED.
+# This is archguard's instance of the universal `iterate` contract — the SAME
+# skill as exp5 uses (experiments/quay-perpetual-stream/.quay/loop.yml),
+# differing ONLY in these params.
+#
+# board:  native provider (quay-tasks/*.md in this workspace)
+# gates:  vitest — declared in archguard's .quay/gates.yml (testPass entry),
+#         run as `npx vitest run` in the worktree; PASS iff exit 0
+# stop:   once — drive one iteration (TASK-25) then return (not persistent)
+# policy: ready-first — take the first ready task
+# coexist: pause(backlog/.loop-stop) — quay backlog loop stop sentinel
+
+board: native
+gates: [vitest]
+stop: once
+policy: ready-first
+coexist: "pause(backlog/.loop-stop)"

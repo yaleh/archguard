@@ -113,6 +113,7 @@ export interface AtlasGenerationOptions {
   entryPoints?: ManualEntryPoint[];
   followIndirectCalls?: boolean;
   entryPointPattern?: string;
+  capabilityMode?: 'interface' | 'full';
 }
 
 /**
@@ -131,4 +132,5 @@ export interface AtlasConfig {
   followIndirectCalls?: boolean;
   excludePatterns?: string[];
   entryPointPattern?: string; // regex matched against call.functionName; protocol: 'custom'
+  capabilityMode?: 'interface' | 'full'; // 'interface' (default) = interface-centric filter; 'full' = add hotspot/complex-package structs
 }

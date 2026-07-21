@@ -6,6 +6,7 @@ import type {
   FlowGraph,
   FlowBuildOptions,
 } from './types.js';
+import type { CapabilityBuildOptions } from './builders/capability-graph-builder.js';
 import type { AtlasGenerationOptions } from './types.js';
 import {
   PackageGraphBuilder,
@@ -38,7 +39,7 @@ export class BehaviorAnalyzer {
     return this.packageGraphBuilder.build(rawData);
   }
 
-  async buildCapabilityGraph(rawData: GoRawData): Promise<CapabilityGraph> {
+  async buildCapabilityGraph(rawData: GoRawData, options?: CapabilityBuildOptions): Promise<CapabilityGraph> {
     if (!rawData.implementations?.length) {
       // Use fullName as packageName so InterfaceMatcher produces unambiguous
       // structPackageId / interfacePackageId values (full import path, not short name).
@@ -56,7 +57,7 @@ export class BehaviorAnalyzer {
         interfaces
       );
     }
-    return this.capabilityGraphBuilder.build(rawData);
+    return this.capabilityGraphBuilder.build(rawData, options);
   }
 
   async buildGoroutineTopology(
