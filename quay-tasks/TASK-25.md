@@ -1,7 +1,7 @@
 ---
 id: TASK-25
 title: "Refactor: move MCP tool business logic into analysis layer (ADR-006)"
-status: todo
+status: ready
 labels:
   - refactor
   - source:backlog-TASK-25
