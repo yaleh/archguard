@@ -1,7 +1,7 @@
 ---
 id: TASK-29
-title: "实验：执行 GIM A/B/C 方法论对照实验，验证 GIM system prompt 有效性"
-status: ready
+title: 实验：执行 GIM A/B/C 方法论对照实验，验证 GIM system prompt 有效性
+status: done
 labels:
   - experiment
   - gim
@@ -80,15 +80,15 @@ giniInDegree: 0.776, packageCount: 33, maxInDegree: 22
 
 ## Acceptance Criteria
 
-- [ ] `ls docs/experiments/gim-abc-shared-context.md` 退出 0（共享输入已准备）
-- [ ] `ls docs/experiments/gim-abc-results/group-a.md docs/experiments/gim-abc-results/group-b.md docs/experiments/gim-abc-results/group-c.md` 退出 0（三组结果已收集）
-- [ ] `grep -q '总分\|排名\|TASK-10' docs/experiments/gim-abc-results/conclusion.md` 退出 0（结论已写明）
-- [ ] `grep -q '预测准确性\|ground truth' docs/experiments/gim-abc-results/evaluation.md` 退出 0（盲评包含 ground truth 对照）
+- [x] `ls docs/experiments/gim-abc-shared-context.md` 退出 0（共享输入已准备）
+- [x] `ls docs/experiments/gim-abc-results/group-a.md docs/experiments/gim-abc-results/group-b.md docs/experiments/gim-abc-results/group-c.md` 退出 0（三组结果已收集）
+- [x] `grep -q '总分\|排名\|TASK-10' docs/experiments/gim-abc-results/conclusion.md` 退出 0（结论已写明）
+- [x] `grep -q '预测准确性\|ground truth' docs/experiments/gim-abc-results/evaluation.md` 退出 0（盲评包含 ground truth 对照）
 
 ## Definition of Done
 
-- [ ] 三组 agent 结果文件存在且内容完整（各含状态评估 + 3 个 Plan 提案）
-- [ ] 盲评打分表完成，5 个维度 + 预测准确性维度均有分数
-- [ ] `conclusion.md` 中有对 TASK-10 的明确建议（实施/缩减/搁置）
+- [x] 三组 agent 结果文件存在且内容完整（各含状态评估 + 3 个 Plan 提案）
+- [x] 盲评打分表完成，5 个维度 + 预测准确性维度均有分数
+- [x] `conclusion.md` 中有对 TASK-10 的明确建议（实施/缩减/搁置）
 
 实验结论必须落地为对 TASK-10 状态的实际操作（`done` 且 TASK-10 状态更新），不允许结论停留在文档中而 TASK-10 维持原状。

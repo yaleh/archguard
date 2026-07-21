@@ -1,11 +1,22 @@
 ---
 id: TASK-10
-title: "GIM methodology integration: direction-hint, loss rules, MCP tool, system-prompt (Plans 53-56)"
+title: "GIM methodology integration — SCOPE REDUCED per TASK-29 experiment:
+  start with gim-diagnosis MCP tool only (plan 53-like)"
 status: todo
 labels:
   - source:backlog-TASK-10
+  - scope:reduced
+  - experiment:task-29
 parent: null
 children: []
+extra:
+  scopeNote: "TASK-29 A/B/C experiment (2026-07-21): GIT methodology (Group A)
+    scored 23/25 vs 21/25 (no-framework) vs 19/25 (simple rules). Advantage
+    concentrated in vision breadth (CI monitoring alert, crystallization
+    vocabulary) not recommendation content. Recommendation: implement TASK-10A
+    (archguard_get_gim_context MCP tool) first; defer TASK-10B (system-prompt
+    generator + project semantics) until TASK-10A is validated. See
+    docs/experiments/gim-abc-results/conclusion.md."
 ---
 ## Description
 
