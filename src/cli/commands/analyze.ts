@@ -14,12 +14,15 @@
 import { Command } from 'commander';
 import path from 'path';
 import os from 'os';
+import fs from 'fs-extra';
 import { ProgressReporter } from '../progress/index.js';
 import { ErrorHandler } from '../errors/index.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
+import { loadSnapshots } from '@/analysis/snapshot-store.js';
+import { computeDirectionHint } from '@/analysis/gim/direction-hint.js';
 
 /**
  * Normalize CLI options to DiagramConfig[]
@@ -164,6 +167,7 @@ export function createAnalyzeCommand(): Command {
         '--atlas-entry-pattern <pattern>',
         'Regex matched against call.functionName for custom entry point detection (protocol: custom)'
       )
+      .option('--gim', 'Output GIM direction hint to .archguard/gim/direction.json', false)
 
       .action(analyzeCommandHandler)
   );
@@ -188,6 +192,11 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
       process.exit(0);
     }
     displayResults(result.results, result.config);
+
+    if (cliOptions.gim) {
+      await writeGimOutput(result.config.outputDir);
+    }
+
     process.exit(result.hasDiagramFailures ? 1 : 0);
   } catch (error) {
     progress.fail('Analysis failed');
@@ -195,6 +204,16 @@ async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<void> {
     console.error(errorHandler.format(error, { verbose: cliOptions.verbose || false }));
     process.exit(1);
   }
+}
+
+async function writeGimOutput(outputDir: string): Promise<void> {
+  const snapshots = await loadSnapshots(outputDir);
+  const hint = computeDirectionHint(snapshots);
+  const gimDir = path.join(outputDir, 'gim');
+  await fs.mkdirp(gimDir);
+  await fs.writeJson(path.join(gimDir, 'direction.json'), hint, { spaces: 2 });
+  console.log(`\n🔭 GIM direction: ${hint.direction} (confidence: ${hint.confidence ?? 'n/a'})`);
+  console.log(`   → ${hint.recommendation}`);
 }
 
 function inferCliWorkDir(sessionRoot: string, cliOptions: CLIOptions): string {

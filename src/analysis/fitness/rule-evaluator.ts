@@ -1,4 +1,5 @@
 import type { MetricThresholdRule, FitnessRule, RuleResult } from './rule-types.js';
+import { evaluateGimLossRule } from '@/analysis/gim/gim-loss-evaluator.js';
 import type { MetricVector } from '@/types/metric-vector.js';
 import type { Relation } from '@/types/index.js';
 import { checkDependencyConstraint } from './dependency-checker.js';
@@ -67,6 +68,9 @@ export function evaluateAllRules(
   return rules.map((rule) => {
     if (rule.type === 'no-dependency') {
       return checkDependencyConstraint(rule, relations);
+    }
+    if (rule.type === 'gim-loss') {
+      return evaluateGimLossRule(rule, vector);
     }
     return evaluateMetricRule(rule, vector);
   });

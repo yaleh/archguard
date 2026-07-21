@@ -15,7 +15,17 @@ export interface DependencyConstraintRule {
   message: string;
 }
 
-export type FitnessRule = MetricThresholdRule | DependencyConstraintRule;
+export type GimLossType = 'feasibility' | 'consistency' | 'description-length' | 'generation-alignment';
+
+export interface GimLossRule {
+  type: 'gim-loss';
+  loss: GimLossType;
+  op: ComparisonOp;
+  value: number;
+  message: string;
+}
+
+export type FitnessRule = MetricThresholdRule | DependencyConstraintRule | GimLossRule;
 
 export interface FitnessConfig {
   rules: FitnessRule[];

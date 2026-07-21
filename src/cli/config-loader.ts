@@ -212,6 +212,13 @@ const configSchema = z.object({
               to: z.string(),
               message: z.string(),
             }),
+            z.object({
+              type: z.literal('gim-loss'),
+              loss: z.enum(['feasibility', 'consistency', 'description-length', 'generation-alignment']),
+              op: z.enum(['<', '<=', '>', '>=', '==', '!=']),
+              value: z.number(),
+              message: z.string(),
+            }),
           ])
         )
         .default([]),

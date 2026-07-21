@@ -37,6 +37,7 @@ import { registerCcbTool } from './tools/ccb-tool.js';
 import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
+import { registerGIMTools } from './tools/gim-tools.js';
 
 const projectRootParam = z
   .string()
@@ -98,6 +99,7 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerPackageMetricsTools(server, defaultRoot); // registers: archguard_get_package_metrics
   registerMetricTrendTools(server, defaultRoot); // registers: archguard_get_metric_trend
   registerEvidencePackTool(server, defaultRoot); // registers: archguard_get_evidence_pack
+  registerGIMTools(server, defaultRoot); // registers: archguard_get_gim_context
   return server;
 }
 

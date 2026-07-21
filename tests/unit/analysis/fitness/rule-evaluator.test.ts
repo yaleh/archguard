@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateMetricRule, evaluateAllRules } from '@/analysis/fitness/rule-evaluator.js';
-import type { MetricThresholdRule, FitnessRule } from '@/analysis/fitness/rule-types.js';
+import type { MetricThresholdRule, FitnessRule, GimLossRule } from '@/analysis/fitness/rule-types.js';
 import type { MetricVector } from '@/types/metric-vector.js';
 import type { Relation } from '@/types/index.js';
 
@@ -158,5 +158,23 @@ describe('evaluateAllRules', () => {
     expect(results).toHaveLength(2);
     expect(results[0].passed).toBe(true);
     expect(results[1].passed).toBe(true);
+  });
+
+  it('evaluates gim-loss rule alongside metric and dependency rules', () => {
+    const metricRule: FitnessRule = { metric: 'sccCount', op: '==', value: 0, message: 'No cycles' };
+    const depRule: FitnessRule = { type: 'no-dependency', from: 'src/parser/**', to: 'src/cli/**', message: 'No parser→cli' };
+    const gimRule: GimLossRule = { type: 'gim-loss', loss: 'feasibility', op: '==', value: 0, message: 'No feasibility loss' };
+    const vector = makeVector({ sccCount: 0 });
+    const results = evaluateAllRules([metricRule, depRule, gimRule], vector, []);
+    expect(results).toHaveLength(3);
+    expect(results[2].passed).toBe(true);
+  });
+
+  it('gim-loss rule dispatches to evaluateGimLossRule (feasibility branch)', () => {
+    const gimRule: GimLossRule = { type: 'gim-loss', loss: 'feasibility', op: '==', value: 0, message: 'No cycles' };
+    const vector = makeVector({ sccCount: 3 });
+    const results = evaluateAllRules([gimRule], vector, []);
+    expect(results[0].passed).toBe(false);
+    expect(results[0].actual).toBe(3);
   });
 });

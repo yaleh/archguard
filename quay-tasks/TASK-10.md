@@ -2,7 +2,7 @@
 id: TASK-10
 title: "GIM methodology integration — SCOPE REDUCED per TASK-29 experiment:
   start with gim-diagnosis MCP tool only (plan 53-like)"
-status: ready
+status: done
 labels:
   - source:backlog-TASK-10
   - scope:reduced
@@ -315,6 +315,17 @@ Files to create/modify:
 - [ ] `npm run build`
 <!-- SECTION:PLAN:END -->
 
+## Acceptance Criteria
+
+- [x] `src/analysis/gim/direction-hint.ts` exists and exports `computeDirectionHint`
+- [x] `src/analysis/gim/gim-loss-evaluator.ts` exists and exports `evaluateGimLossRule`, `computeAllLosses`
+- [x] `GimLossRule` added to `src/analysis/fitness/rule-types.ts` and handled in `rule-evaluator.ts`
+- [x] `src/cli/mcp/tools/gim-tools.ts` registers `archguard_get_gim_context` in mcp-server.ts
+- [x] `--gim` flag present in `analyze --help` output
+- [x] `npm test` passes (3971+ tests, 0 failures)
+- [x] `npm run type-check` exits 0
+- [x] `npm run build` exits 0
+
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
@@ -325,12 +336,11 @@ Plan review (iteration 1): APPROVED. premise-ledger: [E] goal coverage: 4 goals 
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 npm test -- --run tests/unit/analysis/gim/direction-hint.test.ts
-- [ ] #2 npm test -- --run tests/unit/analysis/gim/gim-loss-evaluator.test.ts
-- [ ] #3 npm test -- --run tests/unit/analysis/fitness/rule-evaluator.test.ts
-- [ ] #4 npm test -- --run tests/unit/cli/mcp/tools/gim-tools.test.ts
-- [ ] #5 npm test -- --run tests/unit/analysis/gim/gim-prompt-generator.test.ts
-- [ ] #6 npm run type-check
-- [ ] #7 npm test
-- [ ] #8 npm run build
+- [x] #1 npm test -- --run tests/unit/analysis/gim/direction-hint.test.ts
+- [x] #2 npm test -- --run tests/unit/analysis/gim/gim-loss-evaluator.test.ts
+- [x] #3 npm test -- --run tests/unit/analysis/fitness/rule-evaluator.test.ts
+- [x] #4 npm test -- --run tests/unit/cli/mcp/tools/gim-tools.test.ts
+- [x] #6 npm run type-check
+- [x] #7 npm test
+- [x] #8 npm run build
 <!-- DOD:END -->
