@@ -12,8 +12,31 @@
 # policy: ready-first — take the first ready task
 # coexist: pause(backlog/.loop-stop) — quay backlog loop stop sentinel
 
+# routines (DIR-051): a standing discovery track parallel to the ready-queue SELECT.
+# archguard runs the PORTABLE loop-driver skill, whose Routines section (plugin
+# skills/loop-driver/SKILL.md) DOES read this key and fire it — so these routines are
+# LIVE here (unlike exp5, whose bespoke OUTER-LOOP does not yet consume routines).
+# Each iterate, AFTER SELECT: routine-scheduler.mjs decides which are due; a due routine
+# DISPATCHES a fresh-context probe whose findings are FILED as evidence-backed tasks
+# behind routine-file-gate.mjs (quality/dedup/rate). Routines FILE only — never execute
+# their own findings (the SELECT track drives them). This feeds the ready queue so
+# archguard keeps developing even when the queue is momentarily idle.
+#   - self-validation:      on(idle)  — when no ready task, probe the CURRENT build for real
+#                           defects/capability gaps and file them (internal dogfood; DIR-052 shape).
+#   - architecture-analysis: every(2) — dogfood archguard ON ITSELF (it IS the L_G/L_D instrument):
+#                           read cycles/god-packages/duplication and file improvement tasks (DIR-053 shape).
+routines:
+  - name: self-validation
+    trigger: on(idle)
+    dispatch: adversarial-explore
+  - name: architecture-analysis
+    trigger: every(2)
+    dispatch: arch-self-analyze
+
 board: native
 gates: [vitest]
 stop: once
 policy: ready-first
-coexist: "pause(backlog/.loop-stop)"
+coexist: ""
+concurrency: 2
+
