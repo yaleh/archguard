@@ -9,23 +9,24 @@
 # ABI only, per ADR-013 item 1). Auth is provided by the `gh` CLI. quay-github is read-only v1.
 #
 # Usage:
-#   quay task list                      # DEFAULT (github): archguard's GitHub issues (read-only v1)
-#   quay task view gh-<n>               # one issue
-#   quay --provider native task list    # the WRITABLE quay-native board (loop plumbing; ./quay-tasks)
+#   quay task list                      # DEFAULT (native): writable loop board (./quay-tasks)
+#   quay task view TASK-N               # one task
+#   quay --provider github task list    # archguard's GitHub issues (read-only)
 #
-# The `native` provider is the writable board for a future exp5-style loop on archguard (DIR-036-B):
-# quay-native is the reference provider — full task_write — so a loop can SELECT + write status here
-# with no dependency on github write-back (DIR-041). Seeded with real archguard refactor tasks.
+# native is the PRIMARY provider (enabled) for the exp5-style dev loop (DIR-036-B):
+# quay-native is the reference provider — full task_write — so /quay:loop-driver can
+# SELECT + write status here. The MCP served by the quay plugin uses the enabled provider.
+# Github issues are still accessible via `--provider github`.
 providers:
-  github:
-    enabled: true                       # DEFAULT — bare `quay ...` reads GitHub issues (unchanged)
-    mcp_entry: ["quay-github", "mcp"]
-    env:
-      QUAY_GITHUB_REPO: "yaleh/archguard"
   native:
-    enabled: false                      # selectable via `quay --provider native ...`; the writable loop board
+    enabled: true                       # PRIMARY — the writable loop board; MCP serves this
     tasks_dir: "./quay-tasks"
     mcp_entry: ["quay-native", "mcp"]
     env:
       QUAY_NATIVE_TASKS_DIR: "./quay-tasks"
       QUAY_NATIVE_ADR_DIR: "./quay-adr"
+  github:
+    enabled: false                      # selectable via `quay --provider github ...`; read-only v1
+    mcp_entry: ["quay-github", "mcp"]
+    env:
+      QUAY_GITHUB_REPO: "yaleh/archguard"
