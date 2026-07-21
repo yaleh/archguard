@@ -1,6 +1,6 @@
 ---
 id: TASK-6
-title: ">-"
+title: "T3-Cognitive Context Bundle — CCB schema writer reader MCP tool and cognitive-prep skill"
 status: done
 labels:
   - source:backlog-TASK-6

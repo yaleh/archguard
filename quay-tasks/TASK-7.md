@@ -1,6 +1,6 @@
 ---
 id: TASK-7
-title: ">-"
+title: "T4-Documentation signals — CCB documentation field and docFreshnessGap integration"
 status: done
 labels:
   - source:backlog-TASK-7

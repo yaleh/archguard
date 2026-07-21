@@ -1,6 +1,6 @@
 ---
 id: TASK-16
-title: ">-"
+title: "Language knowledge registry: PackRegistry + RuleEngine + Java/Python migration (Phases 1-2)"
 status: todo
 labels:
   - source:backlog-TASK-16

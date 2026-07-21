@@ -1,6 +1,6 @@
 ---
 id: TASK-10
-title: ">-"
+title: "GIM methodology integration: direction-hint, loss rules, MCP tool, system-prompt (Plans 53-56)"
 status: todo
 labels:
   - source:backlog-TASK-10

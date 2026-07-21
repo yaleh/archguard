@@ -1,6 +1,6 @@
 ---
 id: TASK-26
-title: ">-"
+title: "Test: add integration tests for aggregated MCP tools (evidence_pack, metric_trend)"
 status: todo
 labels:
   - source:backlog-TASK-26

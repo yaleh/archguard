@@ -1,6 +1,6 @@
 ---
 id: TASK-21
-title: ">-"
+title: "Metrics history JSONL: append per-analyze snapshot and get_metric_trend MCP tool"
 status: done
 labels:
   - source:backlog-TASK-21
