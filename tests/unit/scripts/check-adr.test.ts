@@ -437,17 +437,17 @@ server.tool(
 // ---------------------------------------------------------------------------
 
 describe('ADR documents and settings.json contain expected content', () => {
-  it('docs/adr/006-mcp-tool-design-standards.md contains ## Mechanical Check', () => {
+  it('quay-adr/ADR-006.md contains ## Mechanical Check', () => {
     const content = fs.readFileSync(
-      path.join(process.cwd(), 'docs', 'adr', '006-mcp-tool-design-standards.md'),
+      path.join(process.cwd(), 'quay-adr', 'ADR-006.md'),
       'utf-8'
     );
     expect(content).toContain('## Mechanical Check');
   });
 
-  it('docs/adr/007-cli-mcp-interface-parity.md contains ## Mechanical Check', () => {
+  it('quay-adr/ADR-007.md contains ## Mechanical Check', () => {
     const content = fs.readFileSync(
-      path.join(process.cwd(), 'docs', 'adr', '007-cli-mcp-interface-parity.md'),
+      path.join(process.cwd(), 'quay-adr', 'ADR-007.md'),
       'utf-8'
     );
     expect(content).toContain('## Mechanical Check');

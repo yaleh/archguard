@@ -10,40 +10,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
-import fs from 'fs-extra';
-import { MetricsHistoryWriter } from '../../metrics-history-writer.js';
-import type { MetricsHistoryEntry, PackageMetricsSnapshot } from '../../metrics-history-writer.js';
+import type { PackageMetricsSnapshot } from '../../metrics-history-writer.js';
 import { resolveRoot } from '../mcp-server.js';
+import { readHistoryEntries } from '@/analysis/metrics-history-reader.js';
 
 function textResponse(text: string) {
   return { content: [{ type: 'text' as const, text }] };
-}
-
-/**
- * Read all JSONL lines from the metrics-history file.
- * Returns an empty array if the file does not exist.
- */
-async function readHistoryEntries(outputDir: string): Promise<MetricsHistoryEntry[]> {
-  const filePath = path.join(outputDir, MetricsHistoryWriter.FILENAME);
-  if (!(await fs.pathExists(filePath))) {
-    return [];
-  }
-
-  const content = await fs.readFile(filePath, 'utf-8');
-  const lines = content
-    .trim()
-    .split('\n')
-    .filter((l) => l.trim().length > 0);
-
-  const entries: MetricsHistoryEntry[] = [];
-  for (const line of lines) {
-    try {
-      entries.push(JSON.parse(line) as MetricsHistoryEntry);
-    } catch {
-      // Skip malformed lines
-    }
-  }
-  return entries;
 }
 
 export interface TrendSnapshot {
