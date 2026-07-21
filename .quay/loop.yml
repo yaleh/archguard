@@ -38,5 +38,5 @@ gates: [vitest]
 stop: once
 policy: ready-first
 coexist: ""
-concurrency: 2
+concurrency: 4
 
