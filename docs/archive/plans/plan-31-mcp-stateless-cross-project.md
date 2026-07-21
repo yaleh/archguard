@@ -2,7 +2,7 @@
 
 **Source proposal**: `docs/proposals/proposal-mcp-stateless-cross-project.md` (rev 4)
 **Depends on**: Plan 30 (`archguard_analyze` MCP Tool)
-**Related ADR**: `docs/adr/004-single-analysis-write-path-for-cli-and-mcp.md`
+**Related ADR**: `quay-adr/ADR-004.md`
 **Branch**: `feat/mcp-stateless`
 **Status**: Draft
 

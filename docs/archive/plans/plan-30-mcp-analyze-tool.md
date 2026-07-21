@@ -1,7 +1,7 @@
 # Plan 30: `archguard_analyze` MCP Tool — Development Plan
 
 **Source proposal**: `docs/proposals/proposal-mcp-analyze-tool.md`
-**Related ADR**: `docs/adr/004-single-analysis-write-path-for-cli-and-mcp.md`
+**Related ADR**: `quay-adr/ADR-004.md`
 **Branch**: `feat/mcp-analyze-tool`
 **Status**: Draft
 
@@ -371,7 +371,7 @@ npm test -- cli/commands/analyze
 | File | Type | Description |
 |------|------|-------------|
 | `tests/integration/cli-mcp/analyze-equivalence.test.ts` | New | CLI 与 MCP 分析产物等价测试 |
-| `docs/adr/004-single-analysis-write-path-for-cli-and-mcp.md` | Reference | 评审约束的长期依据 |
+| `quay-adr/ADR-004.md` | Reference | 评审约束的长期依据 |
 
 ### Required design constraints
 

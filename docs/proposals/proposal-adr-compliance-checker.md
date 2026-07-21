@@ -230,4 +230,4 @@ The hook is not shared via `.githooks/` in this proposal; installation is manual
 - [ ] `.git/hooks/pre-commit` calls `npm run check:adr`; a commit that introduces a bare `"Get"` description is blocked.
 - [ ] The same commit succeeds after adding a valid `// adr-ok: ADR-006 — ...` annotation and re-staging.
 - [ ] The `Stop` hook in `.claude/settings.json` runs `check-adr.ts` and surfaces violation lines to the current session; clean runs produce no hook output.
-- [ ] `docs/adr/006-mcp-tool-design-standards.md` and `docs/adr/007-cli-mcp-interface-parity.md` each include a `## Mechanical Check` section referencing the corresponding script assertion.
+- [ ] `quay-adr/ADR-006.md` and `quay-adr/ADR-007.md` each include a `## Mechanical Check` section referencing the corresponding script assertion.

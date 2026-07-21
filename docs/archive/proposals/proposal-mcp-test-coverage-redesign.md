@@ -358,7 +358,7 @@ The only downstream consumers of the `archguard_get_test_coverage` MCP tool name
    `archguard_get_entity_coverage` and `archguard_get_test_metrics` with
    `includePackageBreakdown: true`.
 
-2. **Documentation**: `docs/adr/006-mcp-tool-design-standards.md` (currently untracked) and any
+2. **Documentation**: `quay-adr/ADR-006.md` (currently untracked) and any
    usage examples in `docs/` that reference `archguard_get_test_coverage` by name must be updated.
    Check `docs/plans/` and `docs/proposals/proposal-test-analysis.md` for references.
 
@@ -461,5 +461,5 @@ fuzzy matching would complicate the return type (multiple results) and is out of
     with 5 references; replace with `### archguard_get_entity_coverage` documentation and update
     `### archguard_get_test_metrics` to show the new `includePackageBreakdown` parameter
   - `docs/user-guide/architecture-checking-scenarios.md` — 1 reference to update
-  - `docs/adr/006-mcp-tool-design-standards.md` (currently untracked) and any usage examples in
+  - `quay-adr/ADR-006.md` (currently untracked) and any usage examples in
     `docs/plans/` and `docs/proposals/proposal-test-analysis.md` for remaining references

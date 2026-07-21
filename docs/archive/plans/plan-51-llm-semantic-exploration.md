@@ -1,7 +1,7 @@
 # Plan 51 — LLM Semantic Exploration Before Analysis
 
 > Proposal: `docs/proposals/proposal-llm-semantic-exploration.md` (v2 — reviewed)
-> ADR: `docs/adr/008-llm-semantic-exploration-before-analysis.md`
+> ADR: `quay-adr/ADR-008.md`
 > Status: Draft
 > Priority: MEDIUM (improves FIM accuracy and test analysis for non-standard projects)
 > Estimated total changes: ~650 lines source + ~550 lines test
@@ -680,7 +680,7 @@ Per architect review, these items are **not** part of this plan:
 ## References
 
 - `docs/proposals/proposal-llm-semantic-exploration.md` (v2 — reviewed)
-- `docs/adr/008-llm-semantic-exploration-before-analysis.md`
+- `quay-adr/ADR-008.md`
 - `src/analysis/fim/fim-builder.ts` — `NON_PRODUCTION_PREFIXES`, `isProductionPackage`, `filterProductionPackages`
 - `src/analysis/fim/fim-analysis.ts` — `ComputeImportApproximationFIMOptions`, `computeImportApproximationFIM`
 - `src/analysis/fim/coverage-parser.ts` — `isTestLikePath`

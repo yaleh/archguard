@@ -735,7 +735,7 @@ Final test count delta: −3 (deleted) + 3 (Stage 2.1) + 3 (Stage 2.2) = +3 net 
 
 - `docs/user-guide/mcp-usage.md` — has a dedicated `### archguard_get_test_coverage` section with approximately 5 references; replace with `### archguard_get_entity_coverage` documentation and update `### archguard_get_test_metrics` to show the new `includePackageBreakdown` parameter.
 - `docs/user-guide/architecture-checking-scenarios.md` — 1 reference to update.
-- `docs/adr/006-mcp-tool-design-standards.md` (currently untracked) — check for references and update.
+- `quay-adr/ADR-006.md` (currently untracked) — check for references and update.
 - `docs/proposals/proposal-test-analysis.md` — check for references; update or annotate as superseded.
 - Any files under `docs/plans/` — check for references and update.
 

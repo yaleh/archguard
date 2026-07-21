@@ -45,7 +45,7 @@ GIT 的基本公理是：
 参考：
 
 - [README.md](/home/yale/work/archguard/README.md#L3)
-- [docs/adr/002-archjson-extensions.md](/home/yale/work/archguard/docs/adr/002-archjson-extensions.md#L55)
+- [quay-adr/ADR-002.md](/home/yale/work/archguard/quay-adr/ADR-002.md#L55)
 
 ---
 

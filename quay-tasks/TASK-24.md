@@ -1,13 +1,15 @@
 ---
 id: TASK-24
 title: "Refactor: split arch-metrics.ts by metric domain"
-status: todo
+status: done
 labels:
   - refactor
   - source:backlog-TASK-24
 parent: null
 children: []
-extra: {}
+extra:
+  acceptance: npm run type-check && npx vitest run
+    tests/unit/core/query/arch-metrics.test.ts
 ---
 Split `src/core/query/arch-metrics.ts` (583 lines — the largest file in the project) into metric-domain-focused modules (structure / quality / cognitive). Keep `core/query/index.ts` re-exports for compatibility; do NOT change the public API.
 

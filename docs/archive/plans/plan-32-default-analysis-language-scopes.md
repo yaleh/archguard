@@ -1,7 +1,7 @@
 # Plan 32: Default Analysis via Primary-Language Project Scopes
 
 **Source proposal**: `docs/proposals/proposal-default-analysis-language-scopes.md`
-**Related ADRs**: `docs/adr/004-single-analysis-write-path-for-cli-and-mcp.md`, `docs/adr/005-default-analysis-uses-primary-language-project-scope.md`
+**Related ADRs**: `quay-adr/ADR-004.md`, `quay-adr/ADR-005.md`
 **Branch**: `feat/default-language-scopes`
 **Status**: Draft
 
@@ -31,7 +31,7 @@
 2. 一个 scope 只属于一种语言
 3. 默认缺省分析不能混合多语言进入同一 scope
 4. 多语言 scope 结果必须允许并存
-5. 所有分析写盘仍必须经由共享核心 `runAnalysis()`（来源：ADR-004 `docs/adr/004-single-analysis-write-path-for-cli-and-mcp.md`）
+5. 所有分析写盘仍必须经由共享核心 `runAnalysis()`（来源：ADR-004 `quay-adr/ADR-004.md`）
 
 建议按 4 个 Phase 推进（对应 Proposal 的"两步"：Phase 1 对应 Proposal 第一步"修正当前错误默认行为"；Phase 2-4 对应 Proposal 第二步"引入多语言多 scope 自动发现"）：
 
@@ -309,7 +309,7 @@ npm test -- query-artifacts
 | `tests/integration/cli/analyze-multilang.test.ts` | Modify | 缺省分析、多语言追加分析集成测试 |
 | `tests/integration/cli-mcp/cross-project-query.test.ts` | Modify | 补 `projectRoot + globalScopeKey + explicit scope` 的端到端测试 |
 | `docs/proposals/proposal-default-analysis-language-scopes.md` | Modify | 同步 proposal 中的实施状态 |
-| `docs/adr/005-default-analysis-uses-primary-language-project-scope.md` | Modify | 同步 ADR 中的实现状态与决策记录 |
+| `quay-adr/ADR-005.md` | Modify | 同步 ADR 中的实现状态与决策记录 |
 | `CLAUDE.md` | Modify | 更新 CLI 用法说明中关于缺省分析行为的描述 |
 
 ### Query semantics

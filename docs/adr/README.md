@@ -6,14 +6,14 @@ This directory contains Architecture Decision Records for the ArchGuard project.
 
 | ID | Title | Status | Date | Related |
 |----|-------|--------|------|---------|
-| [ADR-001](./001-goatlas-plugin-composition.md) | GoAtlasPlugin 使用组合模式 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
-| [ADR-002](./002-archjson-extensions.md) | ArchJSON extensions 字段设计 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
-| [ADR-003](./003-librsvg-css-inline-patching.md) | Inline SVG Style Patching for librsvg Compatibility | Accepted | 2026-03-05 | `src/mermaid/renderer.ts`, `tests/unit/mermaid/edge-style-inline.test.ts` |
-| [ADR-004](./004-single-analysis-write-path-for-cli-and-mcp.md) | CLI 与 MCP 必须共享单一分析写盘路径 | Proposed | 2026-03-07 | [proposal-mcp-analyze-tool.md](../proposals/proposal-mcp-analyze-tool.md) |
-| [ADR-005](./005-default-analysis-uses-primary-language-project-scope.md) | 缺省分析自动发现主语言并使用项目级 scope | Proposed | 2026-03-08 | [proposal-default-analysis-language-scopes.md](../proposals/proposal-default-analysis-language-scopes.md) |
-| [ADR-006](./006-mcp-tool-design-standards.md) | MCP Tool 设计规范 | Accepted | 2026-03-12 | `src/cli/mcp/mcp-server.ts` |
-| [ADR-007](./007-cli-mcp-interface-parity.md) | CLI 与 MCP 接口一致性规范 | Accepted | 2026-03-13 | `src/cli/commands/query.ts`, `src/cli/mcp/mcp-server.ts`, `tests/integration/cli-mcp/` |
-| [ADR-008](./008-llm-semantic-exploration-before-analysis.md) | 分析前 LLM 语义探索层 | Proposed | 2026-03-30 | [proposal-llm-semantic-exploration.md](../proposals/proposal-llm-semantic-exploration.md) |
+| [ADR-001](../../quay-adr/ADR-001.md) | GoAtlasPlugin 使用组合模式 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
+| [ADR-002](../../quay-adr/ADR-002.md) | ArchJSON extensions 字段设计 | 已采纳 | 2026-02-24 | [Proposal 16](../archive/refactoring/proposals/16-go-architecture-atlas.md), [Plan 16](../archive/refactoring/plans/16-go-architecture-atlas-implementation-plan.md) |
+| [ADR-003](../../quay-adr/ADR-003.md) | Inline SVG Style Patching for librsvg Compatibility | Accepted | 2026-03-05 | `src/mermaid/renderer.ts`, `tests/unit/mermaid/edge-style-inline.test.ts` |
+| [ADR-004](../../quay-adr/ADR-004.md) | CLI 与 MCP 必须共享单一分析写盘路径 | Proposed | 2026-03-07 | [proposal-mcp-analyze-tool.md](../proposals/proposal-mcp-analyze-tool.md) |
+| [ADR-005](../../quay-adr/ADR-005.md) | 缺省分析自动发现主语言并使用项目级 scope | Proposed | 2026-03-08 | [proposal-default-analysis-language-scopes.md](../proposals/proposal-default-analysis-language-scopes.md) |
+| [ADR-006](../../quay-adr/ADR-006.md) | MCP Tool 设计规范 | Accepted | 2026-03-12 | `src/cli/mcp/mcp-server.ts` |
+| [ADR-007](../../quay-adr/ADR-007.md) | CLI 与 MCP 接口一致性规范 | Accepted | 2026-03-13 | `src/cli/commands/query.ts`, `src/cli/mcp/mcp-server.ts`, `tests/integration/cli-mcp/` |
+| [ADR-008](../../quay-adr/ADR-008.md) | 分析前 LLM 语义探索层 | Proposed | 2026-03-30 | [proposal-llm-semantic-exploration.md](../proposals/proposal-llm-semantic-exploration.md) |
 
 ## How to Read ADRs
 

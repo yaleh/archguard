@@ -19,7 +19,7 @@ ArchGuard already covers the "current structure" side of project understanding w
   ([src/cli/mcp/mcp-server.ts](/home/yale/work/archguard/src/cli/mcp/mcp-server.ts)).
 - Existing proposals and ADRs already emphasize bounded responses, explicit workflow
   dependencies, and "query-first" interfaces instead of dumping raw data
-  ([docs/adr/006-mcp-tool-design-standards.md](/home/yale/work/archguard/docs/adr/006-mcp-tool-design-standards.md)).
+  ([quay-adr/ADR-006.md](/home/yale/work/archguard/quay-adr/ADR-006.md)).
 
 What ArchGuard does not currently capture is the time dimension: where the architecture is
 stable vs. unstable, which files and packages repeatedly change together, whether ownership is

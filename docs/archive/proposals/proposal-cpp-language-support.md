@@ -4,7 +4,7 @@
 **创建日期**: 2026-03-05
 **最后修改**: 2026-03-05（架构审查修订）
 **分支**: `feat/cpp`
-**关联文档**: `docs/dev-guide/plugin-development-guide.md`, `docs/adr/001-goatlas-plugin-composition.md`, `docs/adr/002-archjson-extensions.md`
+**关联文档**: `docs/dev-guide/plugin-development-guide.md`, `quay-adr/ADR-001.md`, `quay-adr/ADR-002.md`
 
 ---
 
