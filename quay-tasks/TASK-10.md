@@ -2,7 +2,7 @@
 id: TASK-10
 title: "GIM methodology integration — SCOPE REDUCED per TASK-29 experiment:
   start with gim-diagnosis MCP tool only (plan 53-like)"
-status: todo
+status: ready
 labels:
   - source:backlog-TASK-10
   - scope:reduced
