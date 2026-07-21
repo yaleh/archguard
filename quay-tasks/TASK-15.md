@@ -1,7 +1,7 @@
 ---
 id: TASK-15
 title: "Go Atlas capability coverage: hotspot structs and --capability-mode flag"
-status: todo
+status: ready
 labels:
   - source:backlog-TASK-15
 parent: null

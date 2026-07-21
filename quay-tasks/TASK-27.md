@@ -1,7 +1,7 @@
 ---
 id: TASK-27
 title: "Refactor: separate Atlas capability from GoPlugin core parse logic"
-status: todo
+status: ready
 labels:
   - source:backlog-TASK-27
 parent: null
