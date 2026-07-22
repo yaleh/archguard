@@ -598,6 +598,15 @@ export class ValidatedMermaidGenerator {
       // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
       const modulePrefixIndexGroup = this.buildModulePrefixIndex(knownEntityIds);
 
+      // Build a set of entity names for the current group only
+      const groupEntityNameSet = new Set(groupEntities.map((e) => e.name));
+
+      // Track cross-group targets that need stub declarations to avoid undeclared ghost nodes.
+      // A cross-group target is a relation target that belongs to a known entity in a DIFFERENT
+      // group — it would be emitted in a relation line but never declared in this group's
+      // namespace block, causing Mermaid to render it as an unstyled ghost node.
+      const crossGroupTargetNames = new Set<string>();
+
       // Emit relations: source must be in this group (or a module prefix of a group entity);
       // target must be a known entity or a non-noisy external ghost node.
       for (const relation of this.archJson.relations) {
@@ -612,8 +621,31 @@ export class ValidatedMermaidGenerator {
         if (sourceInGroup && targetOk) {
           {
             const _line = _generateRelationLine(relation, this.entityIdToName);
-            if (_line !== null) lines.push(`  ${_line}`);
+            if (_line !== null) {
+              lines.push(`  ${_line}`);
+              // If the target is a known entity from a different group, track it for stub emission
+              const targetInCurrentGroup =
+                groupEntityIdSet.has(relation.target) || groupEntityNameSet.has(relation.target);
+              if (!targetInCurrentGroup && targetKnown) {
+                // Resolve the target's display name (same logic as _generateRelationLine)
+                const targetDisplayName =
+                  this.entityIdToName.get(relation.target) ??
+                  (knownEntityNames.has(relation.target) ? relation.target : null);
+                if (targetDisplayName !== null) {
+                  crossGroupTargetNames.add(normalizeEntityName(targetDisplayName));
+                }
+              }
+            }
           }
+        }
+      }
+
+      // Emit stub declarations for cross-group targets so Mermaid does not render ghost nodes
+      if (crossGroupTargetNames.size > 0) {
+        lines.push('');
+        lines.push('  %% Cross-group stubs (targets from other groups — declared to prevent ghost nodes)');
+        for (const stubName of crossGroupTargetNames) {
+          lines.push(`  class ${escapeId(stubName)}`);
         }
       }
 
