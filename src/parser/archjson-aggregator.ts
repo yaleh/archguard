@@ -308,7 +308,7 @@ export class ArchJSONAggregator {
 
       if (!packageRelationsMap.has(key)) {
         packageRelationsMap.set(key, {
-          id: `pkg-${sourcePackage}-${targetPackage}`,
+          id: `pkg-${sourcePackage}-${targetPackage}-${relation.type}`,
           type: relation.type,
           source: sourcePackage,
           target: targetPackage,

@@ -411,7 +411,7 @@ describe('ArchJSONAggregator', () => {
       ]);
       expect(result.relations).toEqual([
         {
-          id: 'pkg-jlama-cli-jlama-core',
+          id: 'pkg-jlama-cli-jlama-core-dependency',
           type: 'dependency',
           source: 'jlama-cli',
           target: 'jlama-core',
@@ -739,7 +739,7 @@ describe('ArchJSONAggregator', () => {
       const result = aggregator['aggregateToPackageLevel'](archJSON);
       expect(result.relations).toEqual([
         {
-          id: 'pkg-com.example.app-com.example.usb',
+          id: 'pkg-com.example.app-com.example.usb-implementation',
           type: 'implementation',
           source: 'com.example.app',
           target: 'com.example.usb',
@@ -930,6 +930,40 @@ describe('ArchJSONAggregator', () => {
       const packageRelations = aggregator['analyzePackageDependencies'](entities, relations);
 
       expect(packageRelations[0].type).toBe('composition');
+    });
+
+    it('should produce distinct IDs when multiple relation types exist between the same package pair', () => {
+      const entities: Entity[] = [
+        {
+          id: 'a.A',
+          name: 'A',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: 'a/a.ts', startLine: 1, endLine: 1 },
+          members: [],
+        },
+        {
+          id: 'b.B',
+          name: 'B',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: 'b/b.ts', startLine: 1, endLine: 1 },
+          members: [],
+        },
+      ];
+
+      const relations: Relation[] = [
+        { id: 'rel-1', type: 'dependency', source: 'a.A', target: 'b.B' },
+        { id: 'rel-2', type: 'inheritance', source: 'a.A', target: 'b.B' },
+      ];
+
+      const packageRelations = aggregator['analyzePackageDependencies'](entities, relations);
+
+      expect(packageRelations).toHaveLength(2);
+      const ids = packageRelations.map((r) => r.id);
+      expect(new Set(ids).size).toBe(2); // all IDs must be unique
+      expect(ids).toContain('pkg-a-b-dependency');
+      expect(ids).toContain('pkg-a-b-inheritance');
     });
   });
 
