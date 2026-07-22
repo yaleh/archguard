@@ -232,7 +232,7 @@ export class CacheManager {
    * Used to key test analysis results that depend on both source files and pattern config.
    */
   getCompositeKey(files: string[], configBlob: string): string {
-    const combined = files.sort().join('|') + '|' + configBlob;
+    const combined = [...files].sort().join('|') + '|' + configBlob;
     return createHash('sha256').update(combined).digest('hex').slice(0, 16);
   }
 

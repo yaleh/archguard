@@ -69,6 +69,14 @@ describe('CacheManager composite key', () => {
       expect(key1).toBe(key2);
     });
 
+    it('does not mutate the caller\'s files array', () => {
+      const files = ['z.ts', 'a.ts', 'm.ts'];
+      cache.getCompositeKey(files, 'config');
+      expect(files[0]).toBe('z.ts');
+      expect(files[1]).toBe('a.ts');
+      expect(files[2]).toBe('m.ts');
+    });
+
     it('invalidates cache when patternConfig changes', () => {
       const files = ['tests/foo.test.ts', 'tests/bar.test.ts'];
       const keyWithDefault = cache.getCompositeKey(files, 'auto');
