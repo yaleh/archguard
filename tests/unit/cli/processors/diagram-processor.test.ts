@@ -440,6 +440,114 @@ describe('deriveSubModuleArchJSON – relative filePath + absolute subPath (work
   });
 });
 
+describe('deriveSubModuleArchJSON – moduleGraph filter uses relSub when workspaceRoot provided', () => {
+  // Regression test for: moduleGraph filter used parts.slice(-2) heuristic instead of relSub,
+  // causing silent empty moduleGraph when workspaceRoot is provided and node IDs are single-segment.
+  it('filters moduleGraph nodes using relSub (not slice(-2) heuristic) when workspaceRoot is provided', () => {
+    const parent: ArchJSON = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        tsAnalysis: {
+          version: '1.1',
+          moduleGraph: {
+            nodes: [
+              {
+                id: 'core',
+                name: 'core',
+                type: 'internal' as const,
+                fileCount: 3,
+                stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'shared',
+                name: 'shared',
+                type: 'internal' as const,
+                fileCount: 1,
+                stats: { classes: 0, interfaces: 1, functions: 0, enums: 0 },
+              },
+            ],
+            edges: [{ from: 'core', to: 'shared', strength: 2, importedNames: [] }],
+            cycles: [],
+          },
+        },
+      },
+    };
+    // workspaceRoot='/myproject/src', subPath='/myproject/src/core'
+    // relSub = 'core'; node IDs are 'core' and 'shared'
+    const result = deriveSubModuleArchJSON(parent, '/myproject/src/core', '/myproject/src');
+    const mg = result.extensions?.tsAnalysis?.moduleGraph;
+    // Must contain exactly 'core', NOT 'shared'
+    expect(mg?.nodes).toHaveLength(1);
+    expect(mg?.nodes[0].id).toBe('core');
+    // Edge 'core'→'shared' is filtered out (target 'shared' not in sub-module)
+    expect(mg?.edges).toHaveLength(0);
+  });
+
+  it('preserves all moduleGraph nodes when relSub is empty (subPath equals workspaceRoot)', () => {
+    const parent: ArchJSON = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        tsAnalysis: {
+          version: '1.1',
+          moduleGraph: {
+            nodes: [
+              { id: 'core', name: 'core', type: 'internal' as const, fileCount: 1, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
+              { id: 'shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+            ],
+            edges: [{ from: 'core', to: 'shared', strength: 1, importedNames: [] }],
+            cycles: [],
+          },
+        },
+      },
+    };
+    // subPath equals workspaceRoot → relSub = '' → match everything
+    const result = deriveSubModuleArchJSON(parent, '/myproject/src', '/myproject/src');
+    const mg = result.extensions?.tsAnalysis?.moduleGraph;
+    expect(mg?.nodes).toHaveLength(2);
+    expect(mg?.edges).toHaveLength(1);
+  });
+
+  it('falls back to slice(-2) heuristic when workspaceRoot is not provided', () => {
+    // Without workspaceRoot, the old heuristic is retained for backward compatibility.
+    // Node IDs like 'src/core' match when subPath ends with '/src/core'.
+    const parent: ArchJSON = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: {
+        tsAnalysis: {
+          version: '1.1',
+          moduleGraph: {
+            nodes: [
+              { id: 'src/core', name: 'core', type: 'internal' as const, fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
+              { id: 'src/shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+            ],
+            edges: [],
+            cycles: [],
+          },
+        },
+      },
+    };
+    const result = deriveSubModuleArchJSON(parent, '/abs/path/src/core');
+    const mg = result.extensions?.tsAnalysis?.moduleGraph;
+    expect(mg?.nodes).toHaveLength(1);
+    expect(mg?.nodes[0].id).toBe('src/core');
+  });
+});
+
 describe('DiagramProcessor', () => {
   // Test data
   const createGlobalConfig = (): GlobalConfig => ({

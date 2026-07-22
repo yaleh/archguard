@@ -98,16 +98,24 @@ export function deriveSubModuleArchJSON(
   let extensions = parent.extensions;
   const mg = parent.extensions?.tsAnalysis?.moduleGraph;
   if (mg) {
-    // TsModuleNode.id is a relative module path (e.g. "src/core").
-    // Derive the relative prefix from normSub by taking the last 2 path segments
-    // (heuristic for standard src/* layout; works for web-llm case).
-    const parts = normSub.split('/').filter(Boolean);
-    const relPrefix =
-      parts.length >= 2 ? parts.slice(-2).join('/') : (parts[parts.length - 1] ?? normSub);
+    // TsModuleNode.id is a relative module path (e.g. "core" or "src/core").
+    // When workspaceRoot is provided, relSub is already the correct relative prefix
+    // (e.g. 'core' for subPath='/myproject/src/core', workspaceRoot='/myproject/src').
+    // Fall back to a last-2-segments heuristic for callers that do not supply workspaceRoot.
+    let relPrefix: string;
+    if (relSub !== null) {
+      // workspaceRoot was provided — use the already-computed relSub
+      relPrefix = relSub; // '' means match everything (subPath === workspaceRoot)
+    } else {
+      const parts = normSub.split('/').filter(Boolean);
+      relPrefix =
+        parts.length >= 2 ? parts.slice(-2).join('/') : (parts[parts.length - 1] ?? normSub);
+    }
 
-    const filteredNodes = mg.nodes.filter(
-      (n) => n.id === relPrefix || n.id.startsWith(relPrefix + '/')
-    );
+    const filteredNodes =
+      relPrefix === ''
+        ? mg.nodes // empty relPrefix means match everything (subPath === workspaceRoot)
+        : mg.nodes.filter((n) => n.id === relPrefix || n.id.startsWith(relPrefix + '/'));
     const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
     const filteredEdges = mg.edges.filter(
       (e) => filteredNodeIds.has(e.from) && filteredNodeIds.has(e.to)
