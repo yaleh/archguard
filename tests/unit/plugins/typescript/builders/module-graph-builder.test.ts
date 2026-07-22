@@ -39,6 +39,32 @@ function makeSourceFile(filePath: string, imports: ImportDeclaration[] = []): So
 // Test suite
 // ---------------------------------------------------------------------------
 
+describe('ModuleGraphBuilder — root-level entity stats', () => {
+  const builder = new ModuleGraphBuilder();
+  const projectRoot = '/project/src';
+
+  it('counts a root-level class entity in the root module stats', () => {
+    // index.ts lives at projectRoot — its module ID normalises to ''
+    const rootFile = makeSourceFile('/project/src/index.ts');
+
+    // Entity whose id encodes the root file: "index.ts.MyClass"
+    const rootEntity: Entity = {
+      id: 'index.ts.MyClass',
+      name: 'MyClass',
+      type: 'class',
+      methods: [],
+      fields: [],
+      sourceLocation: { file: '/project/src/index.ts', line: 1 },
+    } as unknown as Entity;
+
+    const graph = builder.build(projectRoot, [rootFile], [rootEntity]);
+
+    const rootNode = graph.nodes.find((n) => n.id === '');
+    expect(rootNode).toBeDefined();
+    expect(rootNode?.stats.classes).toBe(1);
+  });
+});
+
 describe('ModuleGraphBuilder — relative import fallback resolution', () => {
   const builder = new ModuleGraphBuilder();
   const projectRoot = '/project/src';
