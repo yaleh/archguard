@@ -1775,6 +1775,67 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     }
   });
 
+  it('cross-group relation does not produce ghost target in source group sub-diagram', () => {
+    // EntityA (groupA) has a relation to EntityB (groupB).
+    // When split, if groupA's diagram references EntityB (from groupB) in a relation line,
+    // EntityB must also be declared (as a stub) so Mermaid does not render it as an unstyled
+    // ghost node. Undeclared relation targets break Mermaid rendering.
+    const entityA = makeCppEntity('groupA', 'ClassA');
+    const entityB = makeCppEntity('groupB', 'ClassB');
+    const entities = [entityA, entityB];
+    const relations: ArchJSON['relations'] = [
+      { source: entityA.id, target: entityB.id, type: 'dependency' },
+    ];
+    const grouping = makeGrouping([
+      { name: 'groupA', entities: [entityA] },
+      { name: 'groupB', entities: [entityB] },
+    ]);
+    const gen = new ValidatedMermaidGenerator(
+      {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: new Date().toISOString(),
+        sourceFiles: [],
+        entities,
+        relations,
+      },
+      { level: 'class', grouping }
+    );
+    // maxNodes=1 forces split (2 entities total, 1 per group)
+    const result = gen.generateClassDiagrams(1);
+    const diagA = result.find((r) => r.name === 'groupA');
+    expect(diagA).toBeDefined();
+
+    const linesA = diagA!.content.split('\n');
+
+    // Collect all node IDs referenced in relation lines
+    const relationNodeIds = new Set<string>();
+    for (const line of linesA) {
+      const m = line.match(/(\w+)\s+(?:<\|--|<\|\.\.|\*--|o--|-->)\s+(\w+)/);
+      if (m) {
+        relationNodeIds.add(m[1]);
+        relationNodeIds.add(m[2]);
+      }
+    }
+
+    // Collect all declared class node IDs — from namespace blocks AND standalone class declarations
+    const classDefs = new Set<string>();
+    for (const line of linesA) {
+      // namespace block class: "    class ClassName {"
+      const mBlock = line.match(/^\s+class (\w+)\s*\{/);
+      if (mBlock) classDefs.add(mBlock[1]);
+      // standalone declaration: "  class ClassName" (annotation or stub, no braces required)
+      const mStub = line.match(/^\s+class (\w+)\s*$/);
+      if (mStub) classDefs.add(mStub[1]);
+    }
+
+    // Every relation node ID must be declared somewhere in groupA's diagram
+    // (either in the namespace block, or as an explicit stub — no undeclared ghost nodes)
+    for (const id of relationNodeIds) {
+      expect(classDefs, `ghost node "${id}" appears in relation but is not declared in groupA's diagram`).toContain(id);
+    }
+  });
+
   it('backward compat: TypeScript scoped IDs (.ts.ClassName) still normalise correctly', () => {
     // TypeScript entities: id="src/foo.ts.MyService" name="MyService"
     const entityA = {
