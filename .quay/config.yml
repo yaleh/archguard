@@ -1,8 +1,8 @@
-# .quay/config.yml — quay Provider map for the archguard workspace.
+# .quay/config.yml — unified per-workspace config for archguard (DIR-050).
 #
-# Deploys quay (github.com/yaleh/quay) as a task client over archguard's REAL backend
-# via the Provider ABI. This is the first off-repo deployment of quay — DIR-036-A of the
-# quay-perpetual-stream experiment (ADR-013 Validation Ladder, Level 2).
+# Unified format (DIR-050): providers: / gates: / loop: sections in ONE file.
+# Merges the former config.yml (providers), gates.yml, and loop.yml into a
+# single source of truth. Legacy separate files removed.
 #
 # quay (Core) + quay-github (provider) are installed to user scope via `npm link`, so the
 # `mcp_entry` below resolves the bare `quay-github` bin on PATH (no cross-package file path —
@@ -31,3 +31,43 @@ providers:
     mcp_entry: ["quay-github", "mcp"]
     env:
       QUAY_GITHUB_REPO: "yaleh/archguard"
+
+# DIR-050: gates section (formerly .quay/gates.yml).
+# quay's product ships GENERIC, runner-agnostic gate factories (DIR-042-A): test-pass,
+# coverage-floor, red-green. quay code NEVER names a test runner — the actual command is
+# WORKSPACE DATA, declared here. So archguard's DoD audit runs THROUGH quay's runner-agnostic
+# gate, with archguard's own vitest command supplied ONCE, here, as data.
+gates:
+  testPass:
+    - name: vitest
+      command: "npx vitest run"
+      timeoutMs: 300000
+  # coverageFloor: add once archguard's baseline coverage is known, e.g.
+  #   - name: coverage
+  #     command: "npx vitest run --coverage"
+  #     floor: 80
+
+# DIR-050: loop section (formerly .quay/loop.yml). coexist removed (retired DIR-050).
+#
+# board:  native provider (quay-tasks/*.md in this workspace)
+# gates:  vitest — declared in gates: section above (testPass entry),
+#         run as `npx vitest run` in the worktree; PASS iff exit 0
+# stop:   once — drive one iteration then return (not persistent)
+# policy: ready-first — take the first ready task
+#
+# routines (DIR-051): a standing discovery track parallel to the ready-queue SELECT.
+# archguard runs the PORTABLE loop-driver skill, whose Routines section DOES read
+# this key and fire it — so these routines are LIVE here (unlike exp5, whose bespoke
+# OUTER-LOOP does not yet consume routines).
+loop:
+  board: native
+  gates: [vitest]
+  stop: until(.halt)
+  policy: ready-first
+  concurrency: 4
+  routines:
+    - name: self-validation
+      trigger: on(idle)
+      dispatch: adversarial-explore
+    - name: architecture-analysis
+      trigger: every(2)
