@@ -1,118 +1,33 @@
-# ArchGuard L0 Worker
+# ArchGuard Quay Development Loop
 
-Poll the GitHub Issue queue for pending development tasks. Work autonomously. Do not ask for clarification.
+Use the quay MCP tools (task_list, task_get, task_write, gate_run, lifecycle_promote)
+to drive development of the archguard project's quay task board at
+/home/yale/work/archguard/tasks/.
 
-## Step 0: Reaper — recover stuck tasks
+## Cycle
 
-gh issue list --label "in-progress" --state open --json number,updatedAt --limit 10
+**0. DRAIN.** task_list --label directive --status todo. Disposition each pending directive:
+  - milestone-candidate (add label, set dirStatus: applied)
+  - standing-rule amendment
+  - out-of-cycle action
+  Record disposition on the directive task.
 
-For each result: if updatedAt is more than 30 minutes ago:
-  gh issue edit <number> --remove-label "in-progress" --add-label "agent-run"
-  gh issue comment <number> --body "Requeued by L0 reaper: in-progress timeout exceeded 30 minutes."
+**1. SELECT.** task_list --label milestone-candidate --status ready.
+  Pick the highest-priority ready task. Exclude label:human-steered.
+  If none ready: check for todo candidates that can be promoted.
 
-## Step 1: Claim next task
+**2. BUILD.** For the selected task:
+  - Set status to in_progress via task_write
+  - Create a git worktree: git worktree add ../archguard-<task-id> -b task/<task-id>
+  - Implement the task's acceptance criteria in the worktree
+  - Run tests: archguard's test suite must stay green
 
-gh issue list --label "agent-run" --state open \
-  --author yaleh \
-  --json number,title,body --limit 1
+**3. GATE.** task_check the task. All AC checkboxes must be ticked.
+  Run any configured gates from .quay/config.yml.
 
-If no results: print "Queue empty." and stop.
+**4. LAND.** lifecycle_promote the task (todo→ready→done).
+  Merge worktree to master: git merge task/<task-id>
+  Remove worktree: git worktree remove ../archguard-<task-id>
+  Record evidence in the task body.
 
-## Step 2: Atomic claim
-
-gh issue edit <number> --remove-label "agent-run" --add-label "in-progress"
-
-(Do this immediately. Do not read the issue body first. This minimises the window in which
-two sessions could claim the same issue.)
-
-## Step 3: Read and parse
-
-Read the full issue body. Detect the issue format:
-
-**Multi-phase format** (body contains one or more `## Phase` headings):
-- Extract all `## Phase X: <title>` sections in order
-- For each phase: extract its `### Task` and `### DoD` sub-sections
-- Extract global `## Constraints` section if present
-
-**Single-task format** (no `## Phase` headings — legacy):
-- Extract `## Task` description
-- Extract `## DoD` section (list of shell commands)
-- Extract `## Constraints` section if present
-
-## Step 4: Prepare worktree
-
-REPO_ROOT=$(git rev-parse --show-toplevel)
-git pull origin master
-git worktree add ../archguard-T<number> -b task/T<number>
-cd ../archguard-T<number>
-ln -s "${REPO_ROOT}/node_modules" ./node_modules
-ln -s "${REPO_ROOT}/.agents" ./.agents
-
-Work exclusively inside this worktree. Do not modify the main working tree.
-
-## Step 5: Implement
-
-**Multi-phase**: implement phases in order. For each phase:
-1. Implement the work described in `### Task`
-2. Run all `### DoD` commands (see Step 6 for retry logic)
-3. If pass → post `gh issue comment <number> --body "Phase X ✅"` and continue to next phase
-4. If fail after 3 retries → proceed to Step 8 (note which phase failed)
-
-**Single-task**: implement the task described in Step 3.
-
-Follow all constraints. Do not introduce changes outside the described scope.
-
-## Step 6: Verify DoD
-
-Run each DoD command in order. Commands must exit 0.
-
-If all pass → proceed to Step 7.
-If any fail → fix and retry (maximum 3 attempts total). If still failing → proceed to Step 8.
-
-## Step 7: Success path
-
-# Append implementation log before committing
-SLUG=$(gh issue view <number> --json title -q '.title' \
-  | sed 's/^\[L0\] //' | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | cut -c1-60)
-mkdir -p docs/implemented
-printf "\n## %s ✅\nDate: %s\nIssue: #%s\n" \
-  "$(gh issue view <number> --json title -q '.title')" \
-  "$(date +%Y-%m-%d)" "<number>" >> "docs/implemented/${SLUG}.md"
-
-git add -A
-git commit -m "<task title> (closes #<number>)"
-gh pr create --title "<task title>" --body "Closes #<number>."
-
-# Run from inside the worktree (../archguard-T<number>) where the branch is checked out:
-PR_URL=$(gh pr view --json url -q .url)
-
-# Append PR URL to the log entry
-printf "PR: %s\n" "$PR_URL" >> "docs/implemented/${SLUG}.md"
-git add "docs/implemented/${SLUG}.md"
-git commit --amend --no-edit
-
-# Update issue state before removing worktree (update is idempotent; removal might fail)
-gh issue comment <number> --body "PR opened: ${PR_URL}"
-gh issue edit <number> --remove-label "in-progress" --add-label "done"
-gh issue close <number>
-
-# Remove worktree last; if this fails, run `git worktree prune` manually
-cd "${REPO_ROOT}"
-git worktree remove ../archguard-T<number>
-
-## Step 8: Failure path
-
-gh issue comment <number> --body "L0 failed after 3 attempts. Last DoD failure:
-
-\`\`\`
-<paste the exact failing command and its output>
-\`\`\`
-
-Escalating to human."
-
-gh issue edit <number> --remove-label "in-progress" --add-label "needs-human"
-
-Do NOT open a PR. Do NOT close the issue.
-
-cd "${REPO_ROOT}"
-git worktree remove ../archguard-T<number> --force
+Stop when .halt exists. Otherwise continue.
