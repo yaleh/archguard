@@ -1,7 +1,7 @@
 import type { DiagramConfig } from './config-diagram.js';
 import type { ProjectSemantics } from './extensions/project-semantics.js';
 import type { MermaidConfig, OutputFormat } from './config-mermaid.js';
-import type { FitnessConfig } from '../analysis/fitness/rule-types.js';
+import type { FitnessConfig } from './fitness-rules.js';
 
 export interface GlobalConfig {
   workDir?: string;

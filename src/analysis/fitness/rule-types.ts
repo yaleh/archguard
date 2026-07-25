@@ -1,40 +1,18 @@
-export type ComparisonOp = '<' | '<=' | '>' | '>=' | '==' | '!=';
+/**
+ * Re-exports from src/types/fitness-rules.js to avoid breaking existing imports.
+ *
+ * The canonical definitions now live in src/types/ to break the types↔analysis
+ * bidirectional dependency cycle (DIR-001). This file exists for backward
+ * compatibility — new code should import from '@/types/fitness-rules.js'.
+ */
 
-export interface MetricThresholdRule {
-  type?: 'metric'; // default when omitted
-  metric: string; // key from MetricVector (e.g. 'sccCount', 'maxInDegree')
-  op: ComparisonOp;
-  value: number;
-  message: string;
-}
-
-export interface DependencyConstraintRule {
-  type: 'no-dependency';
-  from: string; // glob pattern (e.g. 'src/parser/**')
-  to: string; // glob pattern (e.g. 'src/cli/**')
-  message: string;
-}
-
-export type GimLossType = 'feasibility' | 'consistency' | 'description-length' | 'generation-alignment';
-
-export interface GimLossRule {
-  type: 'gim-loss';
-  loss: GimLossType;
-  op: ComparisonOp;
-  value: number;
-  message: string;
-}
-
-export type FitnessRule = MetricThresholdRule | DependencyConstraintRule | GimLossRule;
-
-export interface FitnessConfig {
-  rules: FitnessRule[];
-  failOnViolation: boolean;
-}
-
-export interface RuleResult {
-  rule: FitnessRule;
-  passed: boolean;
-  actual?: number | string;
-  detail?: string;
-}
+export type {
+  ComparisonOp,
+  MetricThresholdRule,
+  DependencyConstraintRule,
+  GimLossType,
+  GimLossRule,
+  FitnessRule,
+  FitnessConfig,
+  RuleResult,
+} from '@/types/fitness-rules.js';

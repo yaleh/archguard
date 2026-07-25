@@ -1,73 +1,11 @@
-# .quay/config.yml — unified per-workspace config for archguard (DIR-050).
-#
-# Unified format (DIR-050): providers: / gates: / loop: sections in ONE file.
-# Merges the former config.yml (providers), gates.yml, and loop.yml into a
-# single source of truth. Legacy separate files removed.
-#
-# quay (Core) + quay-github (provider) are installed to user scope via `npm link`, so the
-# `mcp_entry` below resolves the bare `quay-github` bin on PATH (no cross-package file path —
-# ABI only, per ADR-013 item 1). Auth is provided by the `gh` CLI. quay-github is read-only v1.
-#
-# Usage:
-#   quay task list                      # DEFAULT (native): writable loop board (./quay-tasks)
-#   quay task view TASK-N               # one task
-#   quay --provider github task list    # archguard's GitHub issues (read-only)
-#
-# native is the PRIMARY provider (enabled) for the exp5-style dev loop (DIR-036-B):
-# quay-native is the reference provider — full task_write — so /quay:loop-driver can
-# SELECT + write status here. The MCP served by the quay plugin uses the enabled provider.
-# Github issues are still accessible via `--provider github`.
+# archguard quay-native task board
 providers:
   native:
-    enabled: true                       # PRIMARY — the writable loop board; MCP serves this
-    tasks_dir: "./quay-tasks"
-    mcp_entry: ["quay-native", "mcp"]
-    default_task_status: ready          # DIR-047: tasks land ready → loop picks them up without manual promotion
-    env:
-      QUAY_NATIVE_TASKS_DIR: "./quay-tasks"
-      QUAY_NATIVE_ADR_DIR: "./quay-adr"
-  github:
-    enabled: false                      # selectable via `quay --provider github ...`; read-only v1
-    mcp_entry: ["quay-github", "mcp"]
-    env:
-      QUAY_GITHUB_REPO: "yaleh/archguard"
-
-# DIR-050: gates section (formerly .quay/gates.yml).
-# quay's product ships GENERIC, runner-agnostic gate factories (DIR-042-A): test-pass,
-# coverage-floor, red-green. quay code NEVER names a test runner — the actual command is
-# WORKSPACE DATA, declared here. So archguard's DoD audit runs THROUGH quay's runner-agnostic
-# gate, with archguard's own vitest command supplied ONCE, here, as data.
-gates:
-  testPass:
-    - name: vitest
-      command: "npx vitest run"
-      timeoutMs: 300000
-  # coverageFloor: add once archguard's baseline coverage is known, e.g.
-  #   - name: coverage
-  #     command: "npx vitest run --coverage"
-  #     floor: 80
-
-# DIR-050: loop section (formerly .quay/loop.yml). coexist removed (retired DIR-050).
-#
-# board:  native provider (quay-tasks/*.md in this workspace)
-# gates:  vitest — declared in gates: section above (testPass entry),
-#         run as `npx vitest run` in the worktree; PASS iff exit 0
-# stop:   once — drive one iteration then return (not persistent)
-# policy: ready-first — take the first ready task
-#
-# routines (DIR-051): a standing discovery track parallel to the ready-queue SELECT.
-# archguard runs the PORTABLE loop-driver skill, whose Routines section DOES read
-# this key and fire it — so these routines are LIVE here (unlike exp5, whose bespoke
-# OUTER-LOOP does not yet consume routines).
+    path: /home/yale/work/archguard/tasks
+gates: {}
 loop:
   board: native
-  gates: [vitest]
   stop: until(.halt)
   policy: ready-first
-  concurrency: 4
-  routines:
-    - name: self-validation
-      trigger: on(idle)
-      dispatch: adversarial-explore
-    - name: architecture-analysis
-      trigger: every(2)
+  execution: dispatched
+  audit: adversarial

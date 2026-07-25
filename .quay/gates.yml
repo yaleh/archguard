@@ -1,17 +1,3 @@
-# .quay/gates.yml — WORKSPACE-OWNED gate data for archguard.
-#
-# quay's product ships GENERIC, runner-agnostic gate factories (DIR-042-A): `test-pass`,
-# `coverage-floor`, `red-green`. quay code NEVER names a test runner — the actual command is
-# WORKSPACE DATA, declared here. So archguard's DoD audit runs THROUGH quay's runner-agnostic
-# gate, with archguard's own vitest command supplied ONCE, here, as data — not baked into quay
-# and not hardcoded into any driving prompt.
-#
-# Usage:  quay gate <task> --gate vitest --provider native   # behavior-preserving test gate
-testPass:
-  - name: vitest
-    command: "npx vitest run"
-    timeoutMs: 300000
-# coverageFloor: add once archguard's baseline coverage is known, e.g.
-#   - name: coverage
-#     command: "npx vitest run --coverage"
-#     floor: 80
+# DIR-050: gates config migrated to .quay/config.yml (gates: section).
+# This file is kept as an empty stub for back-compat; the unified reader
+# in registry.ts prefers the gates: section in config.yml when present.
