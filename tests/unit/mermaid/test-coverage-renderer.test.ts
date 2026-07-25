@@ -181,4 +181,48 @@ describe('TestCoverageRenderer', () => {
     // Should contain the truncated version: slice(0, 29) + ellipsis character
     expect(result).toContain('AVeryLongServiceNameThatExcee');
   });
+
+  it('generates distinct node IDs for labels differing only in non-alphanumeric characters', () => {
+    const renderer = new TestCoverageRenderer();
+    const archJson = makeArchJson([
+      { id: 'e1', name: 'Hello-World', type: 'class', sourceLocation: { file: 'src/a.ts' } },
+      { id: 'e2', name: 'Hello_World', type: 'class', sourceLocation: { file: 'src/b.ts' } },
+    ]);
+    const result = renderer.render(makeAnalysis(), archJson);
+    // Both entities should appear in the output — not silently dropped by Mermaid
+    expect(result).toContain('Hello-World');
+    expect(result).toContain('Hello_World');
+    // Node IDs must be distinct — strip the line to just the node ID part
+    const nodeIdLines = result
+      .split('\n')
+      .filter((l) => l.includes('["'))
+      .filter((l) => l.includes('Hello'));
+    expect(nodeIdLines.length).toBeGreaterThanOrEqual(2);
+    const nodeIds = nodeIdLines.map((l) => l.trim().split('["')[0].trim());
+    const uniqueIds = new Set(nodeIds);
+    expect(uniqueIds.size).toBe(nodeIds.length);
+  });
+
+  it('generates distinct node IDs for truncated labels that differ only beyond the truncation point', () => {
+    const renderer = new TestCoverageRenderer();
+    // Two entities with names that share the first 29 chars — truncation makes them identical
+    const nameA = 'VeryLongServiceNameThatIsExtendedWithA';
+    const nameB = 'VeryLongServiceNameThatIsExtendedWithB';
+    const archJson = makeArchJson([
+      { id: 'e1', name: nameA, type: 'class', sourceLocation: { file: 'src/a.ts' } },
+      { id: 'e2', name: nameB, type: 'class', sourceLocation: { file: 'src/b.ts' } },
+    ]);
+    const result = renderer.render(makeAnalysis(), archJson);
+    // Both truncated labels should appear in the output
+    const truncated = result.includes('VeryLongServiceNameThatIsExte');
+    // The truncated text (first 29 chars of both names) appears but node IDs must be distinct
+    const nodeIdLines = result
+      .split('\n')
+      .filter((l) => l.includes('["'))
+      .filter((l) => l.includes('VeryLongServiceName'));
+    expect(nodeIdLines.length).toBeGreaterThanOrEqual(2);
+    const nodeIds = nodeIdLines.map((l) => l.trim().split('["')[0].trim());
+    const uniqueIds = new Set(nodeIds);
+    expect(uniqueIds.size).toBe(nodeIds.length);
+  });
 });
