@@ -71,6 +71,7 @@
     "tree-sitter-java": "^0.23.5",
     "tree-sitter-python": "^0.25.0",
     "ts-morph": "^27.0.2",
+    "typescript": "^5.3.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
@@ -90,7 +91,6 @@
     "memfs": "^4.56.11",
     "prettier": "^3.1.0",
     "tsc-alias": "^1.8.16",
-    "typescript": "^5.3.0",
     "vitest": "^3.2.4"
   },
   "bundleDependencies": [
