@@ -1,7 +1,7 @@
 ---
 id: TASK-31
 title: Package archguard as an npm-installed Claude Code plugin
-status: needs-human
+status: ready
 labels:
   - enhancement
   - packaging

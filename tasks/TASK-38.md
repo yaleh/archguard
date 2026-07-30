@@ -1,7 +1,7 @@
 ---
 id: TASK-38
 title: Add a web-tree-sitter backend with bundled WASM grammars
-status: needs-human
+status: ready
 labels:
   - parser
   - tree-sitter

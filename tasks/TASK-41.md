@@ -1,7 +1,7 @@
 ---
 id: TASK-41
 title: Guarantee a WASM-baseline install with opt-in native discovery
-status: needs-human
+status: ready
 labels:
   - install
   - packaging

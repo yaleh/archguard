@@ -1,7 +1,7 @@
 ---
 id: TASK-39
 title: Add per-language native-first Tree-sitter runtime selection
-status: needs-human
+status: ready
 labels:
   - parser
   - tree-sitter
