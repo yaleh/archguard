@@ -1,6 +1,7 @@
 /**
  * ImportResolver — classifies Kotlin imports as internal (same module) or external,
- * and converts internal import paths to relative path segments.
+ * and converts internal import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
+import paths to relative path segments.
  *
  * "Internal" means the import starts with the module's root package prefix.
  * Example: moduleRoot = 'com.example.app'

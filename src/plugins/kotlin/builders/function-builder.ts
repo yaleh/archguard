@@ -29,6 +29,7 @@
  *     [function_body]?
  */
 
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { RawKotlinFunction, KotlinVisibility } from '../types.js';
 
 export class FunctionBuilder {
@@ -38,13 +39,13 @@ export class FunctionBuilder {
    * because they reside inside a `class_body` subtree.
    */
   extractTopLevelFunctions(
-    rootNode: any,
+    rootNode: SyntaxNodeLike,
     packageName: string,
     filePath: string
   ): RawKotlinFunction[] {
     const results: RawKotlinFunction[] = [];
 
-    for (const child of rootNode.namedChildren as any[]) {
+    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
       if (child.type !== 'function_declaration') continue;
 
       const name = this.extractName(child);
@@ -78,8 +79,8 @@ export class FunctionBuilder {
   // ---------------------------------------------------------------------------
 
   /** Extract function name from `identifier` direct child of the declaration. */
-  private extractName(node: any): string | undefined {
-    for (const child of node.namedChildren as any[]) {
+  private extractName(node: SyntaxNodeLike): string | undefined {
+    for (const child of node.namedChildren as SyntaxNodeLike[]) {
       if (child.type === 'identifier' || child.type === 'simple_identifier') {
         return child.text as string;
       }
@@ -97,13 +98,13 @@ export class FunctionBuilder {
    * We normalise both by drilling into the first `user_type` we find and
    * returning its first `type_identifier` (or `simple_identifier`) text.
    */
-  private extractAnnotations(fnNode: any): string[] {
+  private extractAnnotations(fnNode: SyntaxNodeLike): string[] {
     const names: string[] = [];
 
     const modifiers = this.findDirectChild(fnNode, 'modifiers');
     if (!modifiers) return names;
 
-    for (const child of modifiers.namedChildren as any[]) {
+    for (const child of modifiers.namedChildren as SyntaxNodeLike[]) {
       if (child.type !== 'annotation') continue;
 
       const name = this.resolveAnnotationName(child);
@@ -117,8 +118,8 @@ export class FunctionBuilder {
    * Resolve annotation name from an `annotation` node.
    * Drills through optional `constructor_invocation` → `user_type`.
    */
-  private resolveAnnotationName(annotationNode: any): string | undefined {
-    for (const child of annotationNode.namedChildren as any[]) {
+  private resolveAnnotationName(annotationNode: SyntaxNodeLike): string | undefined {
+    for (const child of annotationNode.namedChildren as SyntaxNodeLike[]) {
       if (child.type === 'user_type') {
         return this.extractUserTypeName(child);
       }
@@ -135,9 +136,9 @@ export class FunctionBuilder {
    * Handles both `type_identifier` and `simple_identifier` children
    * (tree-sitter-kotlin uses `type_identifier` for type positions).
    */
-  private extractUserTypeName(userTypeNode: any): string | undefined {
+  private extractUserTypeName(userTypeNode: SyntaxNodeLike): string | undefined {
     // Actual AST: user_type > identifier (not type_identifier or simple_identifier)
-    for (const child of userTypeNode.namedChildren as any[]) {
+    for (const child of userTypeNode.namedChildren as SyntaxNodeLike[]) {
       if (
         child.type === 'identifier' ||
         child.type === 'type_identifier' ||
@@ -156,11 +157,11 @@ export class FunctionBuilder {
    * Extract visibility from `modifiers` → `visibility_modifier` text.
    * Defaults to 'public' if no modifier is present.
    */
-  private extractVisibility(fnNode: any): KotlinVisibility {
+  private extractVisibility(fnNode: SyntaxNodeLike): KotlinVisibility {
     const modifiers = this.findDirectChild(fnNode, 'modifiers');
     if (!modifiers) return 'public';
 
-    for (const child of modifiers.namedChildren as any[]) {
+    for (const child of modifiers.namedChildren as SyntaxNodeLike[]) {
       if (child.type === 'visibility_modifier') {
         const text = (child.text as string).trim().toLowerCase();
         if (text === 'private' || text === 'protected' || text === 'internal') {
@@ -183,14 +184,14 @@ export class FunctionBuilder {
    * For the type we take the last named child of `parameter` that is a
    * type-bearing node (user_type, nullable_type, function_type, …).
    */
-  private extractParamTypes(fnNode: any): string[] {
+  private extractParamTypes(fnNode: SyntaxNodeLike): string[] {
     const types: string[] = [];
 
     const paramsNode = this.findDirectChild(fnNode, 'function_value_parameters');
     if (!paramsNode) return types;
 
     // Actual AST: function_value_parameters → parameter (direct, no function_value_parameter wrapper)
-    for (const param of paramsNode.namedChildren as any[]) {
+    for (const param of paramsNode.namedChildren as SyntaxNodeLike[]) {
       if (param.type !== 'parameter') continue;
       const typeName = this.extractParamTypeName(param);
       if (typeName) types.push(typeName);
@@ -208,9 +209,9 @@ export class FunctionBuilder {
    * We iterate namedChildren and pick the first that looks like a type node
    * (anything that is NOT the param name `simple_identifier`).
    */
-  private extractParamTypeName(paramNode: any): string | undefined {
+  private extractParamTypeName(paramNode: SyntaxNodeLike): string | undefined {
     // namedChildren: [simple_identifier "name", <type_node>]
-    const named: any[] = paramNode.namedChildren;
+    const named: SyntaxNodeLike[] = paramNode.namedChildren;
     if (named.length < 2) return undefined;
 
     // The type is the second named child (after the identifier)
@@ -228,8 +229,8 @@ export class FunctionBuilder {
    *
    * We find it by scanning named children after `function_value_parameters`.
    */
-  private extractReturnType(fnNode: any): string | undefined {
-    const named: any[] = fnNode.namedChildren;
+  private extractReturnType(fnNode: SyntaxNodeLike): string | undefined {
+    const named: SyntaxNodeLike[] = fnNode.namedChildren;
     let seenParams = false;
 
     for (const child of named) {
@@ -274,7 +275,7 @@ export class FunctionBuilder {
    * For nullable_type: recurses into inner user_type and appends `?`.
    * Fallback: return the raw `.text` of the node (trimmed).
    */
-  private typeNodeToString(typeNode: any): string | undefined {
+  private typeNodeToString(typeNode: SyntaxNodeLike): string | undefined {
     if (!typeNode) return undefined;
 
     switch (typeNode.type as string) {
@@ -311,8 +312,8 @@ export class FunctionBuilder {
   /**
    * Return the first direct named child of `node` whose `.type` matches `type`.
    */
-  private findDirectChild(node: any, type: string): any | undefined {
-    for (const child of node.namedChildren as any[]) {
+  private findDirectChild(node: SyntaxNodeLike, type: string): SyntaxNodeLike | undefined {
+    for (const child of node.namedChildren as SyntaxNodeLike[]) {
       if (child.type === type) return child;
     }
     return undefined;

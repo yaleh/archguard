@@ -22,6 +22,9 @@ import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
+import type { ParserSession } from '../shared/syntax-tree.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { KotlinDependencyExtractor } from './dependency-extractor.js';
 
@@ -51,11 +54,12 @@ export class KotlinPlugin implements ILanguagePlugin {
   private bridge!: TreeSitterBridge;
   private mapper!: ArchJsonMapper;
   private initialized = false;
-  private moduleRoot = '';
+  private parserSession?: ParserSession;
 
-  constructor() {
+  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {
     this.dependencyExtractor = new KotlinDependencyExtractor();
   }
+  private moduleRoot = '';
 
   /**
    * Initialize plugin resources.
@@ -63,8 +67,8 @@ export class KotlinPlugin implements ILanguagePlugin {
    */
   async initialize(config: PluginInitConfig): Promise<void> {
     if (this.initialized) return;
-    this.bridge = new TreeSitterBridge();
-    this.bridge.initialize();
+    this.parserSession = await this.parserBackend.createSession('kotlin');
+    this.bridge = new TreeSitterBridge(this.parserSession);
     this.mapper = new ArchJsonMapper();
     this.moduleRoot = await this.detectModuleRoot(config.workspaceRoot);
     this.initialized = true;
@@ -138,6 +142,8 @@ export class KotlinPlugin implements ILanguagePlugin {
    * Sets initialized = false so subsequent calls throw a clear error.
    */
   async dispose(): Promise<void> {
+    this.parserSession?.dispose();
+    this.parserSession = undefined;
     this.initialized = false;
     this.bridge = undefined as any;
     this.mapper = undefined as any;

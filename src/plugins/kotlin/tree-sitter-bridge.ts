@@ -12,45 +12,41 @@
  *   - Top-level functions: delegated to FunctionBuilder
  */
 
-import Parser from 'tree-sitter';
-import KotlinLanguage from '@tree-sitter-grammars/tree-sitter-kotlin';
+import type { ParserSession, SyntaxNodeLike } from '../shared/syntax-tree.js';
 import { ClassBuilder } from './builders/class-builder.js';
 import { FunctionBuilder } from './builders/function-builder.js';
 import type { RawKotlinFile, RawKotlinImport } from './types.js';
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private readonly parser: ParserSession;
   private classBuilder: ClassBuilder;
   private functionBuilder: FunctionBuilder;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-expect-error -- tree-sitter language definition type incompatibility
-    this.parser.setLanguage(KotlinLanguage);
+  constructor(parser: ParserSession) {
+    this.parser = parser;
     this.classBuilder = new ClassBuilder();
     this.functionBuilder = new FunctionBuilder();
   }
-
-  /** No-op — kept for API compatibility; initialization now happens in constructor. */
-  initialize(): void {}
 
   /**
    * Parse Kotlin source text and return a RawKotlinFile.
    * On parse failure returns an empty stub so the pipeline can continue.
    */
   parseCode(code: string, filePath: string): RawKotlinFile {
+    const tree = this.parser.parse(code);
     try {
-      const tree = this.parser.parse(code);
       return this.extractFile(tree.rootNode, filePath);
     } catch (e) {
       console.warn(`[kotlin] Failed to parse ${filePath}:`, e);
       return { filePath, packageName: '', imports: [], classes: [], functions: [] };
+    } finally {
+      tree.dispose();
     }
   }
 
   // ─── private extraction ────────────────────────────────────────────────────
 
-  private extractFile(rootNode: any, filePath: string): RawKotlinFile {
+  private extractFile(rootNode: SyntaxNodeLike, filePath: string): RawKotlinFile {
     const packageName = this.extractPackageName(rootNode);
     const imports = this.extractImports(rootNode);
     const classes = this.classBuilder.extractClasses(rootNode, packageName, filePath);
@@ -64,11 +60,11 @@ export class TreeSitterBridge {
 
   // ─── package_header ────────────────────────────────────────────────────────
 
-  private extractPackageName(rootNode: any): string {
-    for (const child of rootNode.namedChildren as any[]) {
+  private extractPackageName(rootNode: SyntaxNodeLike): string {
+    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
       if (child.type === 'package_header') {
         // Verified: package_header → qualified_identifier (not `identifier`)
-        for (const c of child.namedChildren as any[]) {
+        for (const c of child.namedChildren as SyntaxNodeLike[]) {
           if (c.type === 'qualified_identifier') return c.text as string;
         }
         // Fallback: strip keyword prefix from raw text
@@ -80,10 +76,10 @@ export class TreeSitterBridge {
 
   // ─── import nodes ──────────────────────────────────────────────────────────
 
-  private extractImports(rootNode: any): RawKotlinImport[] {
+  private extractImports(rootNode: SyntaxNodeLike): RawKotlinImport[] {
     const imports: RawKotlinImport[] = [];
 
-    for (const child of rootNode.namedChildren as any[]) {
+    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
       // Verified: node type is 'import' (not 'import_header')
       if (child.type !== 'import') continue;
 
@@ -103,10 +99,10 @@ export class TreeSitterBridge {
    * the `*` is an anonymous token.  We append `.*` when the raw text ends with
    * `.*` to preserve the wildcard information.
    */
-  private extractImportPath(importNode: any): string | undefined {
+  private extractImportPath(importNode: SyntaxNodeLike): string | undefined {
     // Verified: namedChildren[0] is qualified_identifier
-    const qid = (importNode.namedChildren as any[]).find(
-      (c: any) => c.type === 'qualified_identifier'
+    const qid = (importNode.namedChildren as SyntaxNodeLike[]).find(
+      (c: SyntaxNodeLike) => c.type === 'qualified_identifier'
     );
     if (qid) {
       const base = qid.text as string;
@@ -124,8 +120,8 @@ export class TreeSitterBridge {
    * Import alias: `import Foo as Bar`
    * Verified: when an alias exists, namedChildren[1] has type 'identifier'.
    */
-  private extractImportAlias(importNode: any): string | undefined {
-    const named = importNode.namedChildren as any[];
+  private extractImportAlias(importNode: SyntaxNodeLike): string | undefined {
+    const named = importNode.namedChildren as SyntaxNodeLike[];
     // namedChildren[1] (if present) is the alias identifier
     if (named.length >= 2) {
       const aliasNode = named[1];

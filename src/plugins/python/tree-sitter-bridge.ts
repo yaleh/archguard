@@ -4,8 +4,7 @@
  * Uses tree-sitter-python to parse Python source code into raw AST data
  */
 
-import Parser from 'tree-sitter';
-import Python from 'tree-sitter-python';
+import type { ParserSession, SyntaxNodeLike } from '../shared/syntax-tree.js';
 import path from 'path';
 import type {
   PythonRawModule,
@@ -20,12 +19,10 @@ import type {
 } from './types.js';
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private readonly parser: ParserSession;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-expect-error -- tree-sitter language definition type incompatibility
-    this.parser.setLanguage(Python);
+  constructor(parser: ParserSession) {
+    this.parser = parser;
   }
 
   /**
@@ -33,60 +30,64 @@ export class TreeSitterBridge {
    */
   parseCode(code: string, filePath: string): PythonRawModule {
     const tree = this.parser.parse(code);
-    const rootNode = tree.rootNode;
+    try {
+      const rootNode = tree.rootNode;
 
-    // Extract module name from file path
-    const moduleName = this.extractModuleName(filePath);
+      // Extract module name from file path
+      const moduleName = this.extractModuleName(filePath);
 
-    // Extract declarations
-    const classes: PythonRawClass[] = [];
-    const functions: PythonRawFunction[] = [];
-    const imports: PythonRawImport[] = [];
+      // Extract declarations
+      const classes: PythonRawClass[] = [];
+      const functions: PythonRawFunction[] = [];
+      const imports: PythonRawImport[] = [];
 
-    // Process all top-level declarations
-    for (const child of rootNode.namedChildren) {
-      try {
-        if (child.type === 'class_definition') {
-          const cls = this.extractClass(child, moduleName, code, filePath);
-          if (cls) classes.push(cls);
-        } else if (child.type === 'function_definition') {
-          const func = this.extractFunction(child, moduleName, code, filePath);
-          if (func) functions.push(func);
-        } else if (child.type === 'decorated_definition') {
-          // Decorated class or function
-          const decorators = this.extractDecorators(child, code);
-          const definition = child.childForFieldName('definition');
+      // Process all top-level declarations
+      for (const child of rootNode.namedChildren) {
+        try {
+          if (child.type === 'class_definition') {
+            const cls = this.extractClass(child, moduleName, code, filePath);
+            if (cls) classes.push(cls);
+          } else if (child.type === 'function_definition') {
+            const func = this.extractFunction(child, moduleName, code, filePath);
+            if (func) functions.push(func);
+          } else if (child.type === 'decorated_definition') {
+            // Decorated class or function
+            const decorators = this.extractDecorators(child, code);
+            const definition = child.childForFieldName('definition');
 
-          if (definition?.type === 'class_definition') {
-            const cls = this.extractClass(definition, moduleName, code, filePath);
-            if (cls) {
-              cls.decorators = decorators;
-              classes.push(cls);
+            if (definition?.type === 'class_definition') {
+              const cls = this.extractClass(definition, moduleName, code, filePath);
+              if (cls) {
+                cls.decorators = decorators;
+                classes.push(cls);
+              }
+            } else if (definition?.type === 'function_definition') {
+              const func = this.extractFunction(definition, moduleName, code, filePath);
+              if (func) {
+                func.decorators = decorators;
+                functions.push(func);
+              }
             }
-          } else if (definition?.type === 'function_definition') {
-            const func = this.extractFunction(definition, moduleName, code, filePath);
-            if (func) {
-              func.decorators = decorators;
-              functions.push(func);
-            }
+          } else if (child.type === 'import_statement' || child.type === 'import_from_statement') {
+            const imp = this.extractImport(child, code);
+            if (imp) imports.push(imp);
           }
-        } else if (child.type === 'import_statement' || child.type === 'import_from_statement') {
-          const imp = this.extractImport(child, code);
-          if (imp) imports.push(imp);
+        } catch (error) {
+          // Skip errors in individual declarations
+          console.warn(`Error parsing declaration in ${filePath}:`, error);
         }
-      } catch (error) {
-        // Skip errors in individual declarations
-        console.warn(`Error parsing declaration in ${filePath}:`, error);
       }
-    }
 
-    return {
-      name: moduleName,
-      filePath,
-      classes,
-      functions,
-      imports,
-    };
+      return {
+        name: moduleName,
+        filePath,
+        classes,
+        functions,
+        imports,
+      };
+    } finally {
+      tree.dispose();
+    }
   }
 
   /**
@@ -101,7 +102,7 @@ export class TreeSitterBridge {
    * Extract class definition
    */
   private extractClass(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     moduleName: string,
     code: string,
     filePath: string
@@ -187,7 +188,7 @@ export class TreeSitterBridge {
   /**
    * Extract method definition
    */
-  private extractMethod(node: Parser.SyntaxNode, code: string): PythonRawMethod | null {
+  private extractMethod(node: SyntaxNodeLike, code: string): PythonRawMethod | null {
     const nameNode = node.childForFieldName('name');
     if (!nameNode) return null;
 
@@ -235,7 +236,7 @@ export class TreeSitterBridge {
    * Skips standalone function calls and same-class self.method() calls.
    */
   private extractCallSites(
-    bodyNode: Parser.SyntaxNode,
+    bodyNode: SyntaxNodeLike,
     code: string,
     callerMethodName: string
   ): PythonRawCallSite[] {
@@ -297,7 +298,7 @@ export class TreeSitterBridge {
    * or when the left-hand side is not a simple identifier (e.g. self.x).
    */
   private extractAnnotatedAssignment(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     code: string
   ): PythonRawAttribute | null {
     try {
@@ -330,7 +331,7 @@ export class TreeSitterBridge {
    * Extract function definition
    */
   private extractFunction(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     moduleName: string,
     code: string,
     filePath: string
@@ -370,7 +371,7 @@ export class TreeSitterBridge {
   /**
    * Extract function/method parameters
    */
-  private extractParameters(node: Parser.SyntaxNode, code: string): PythonRawParameter[] {
+  private extractParameters(node: SyntaxNodeLike, code: string): PythonRawParameter[] {
     const parameters: PythonRawParameter[] = [];
     const paramsNode = node.childForFieldName('parameters');
 
@@ -463,7 +464,7 @@ export class TreeSitterBridge {
   /**
    * Extract return type annotation
    */
-  private extractReturnType(node: Parser.SyntaxNode, code: string): string | undefined {
+  private extractReturnType(node: SyntaxNodeLike, code: string): string | undefined {
     const returnTypeNode = node.childForFieldName('return_type');
     if (!returnTypeNode) return undefined;
 
@@ -473,7 +474,7 @@ export class TreeSitterBridge {
   /**
    * Extract decorators from decorated_definition
    */
-  private extractDecorators(node: Parser.SyntaxNode, code: string): PythonRawDecorator[] {
+  private extractDecorators(node: SyntaxNodeLike, code: string): PythonRawDecorator[] {
     const decorators: PythonRawDecorator[] = [];
 
     for (const child of node.children) {
@@ -513,7 +514,7 @@ export class TreeSitterBridge {
   /**
    * Extract docstring from body
    */
-  private extractDocstring(bodyNode: Parser.SyntaxNode | null, code: string): string | undefined {
+  private extractDocstring(bodyNode: SyntaxNodeLike | null, code: string): string | undefined {
     if (!bodyNode) return undefined;
 
     // Look for first expression_statement containing a string
@@ -547,7 +548,7 @@ export class TreeSitterBridge {
   /**
    * Extract import statement
    */
-  private extractImport(node: Parser.SyntaxNode, code: string): PythonRawImport | null {
+  private extractImport(node: SyntaxNodeLike, code: string): PythonRawImport | null {
     try {
       if (node.type === 'import_statement') {
         // import module [as alias]

@@ -1,11 +1,11 @@
-import type Parser from 'tree-sitter';
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { RawField, RawMethod } from '../types.js';
 
 type Visibility = 'public' | 'private' | 'protected';
 
 export class ClassBuilder {
   extractMembers(
-    bodyNode: Parser.SyntaxNode,
+    bodyNode: SyntaxNodeLike,
     sourceFile: string,
     defaultVisibility: Visibility = 'private'
   ): { fields: RawField[]; methods: RawMethod[] } {
@@ -40,7 +40,7 @@ export class ClassBuilder {
   }
 
   private tryExtractMethod(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     sourceFile: string,
     visibility: Visibility
   ): RawMethod | null {
@@ -75,7 +75,7 @@ export class ClassBuilder {
     };
   }
 
-  private tryExtractField(node: Parser.SyntaxNode, visibility: Visibility): RawField | null {
+  private tryExtractField(node: SyntaxNodeLike, visibility: Visibility): RawField | null {
     const typeNode = node.childForFieldName('type');
     const declarator = node.childForFieldName('declarator');
     if (!typeNode || !declarator) return null;
@@ -101,7 +101,7 @@ export class ClassBuilder {
     };
   }
 
-  private extractParams(declaratorNode: Parser.SyntaxNode): Array<{ name: string; type: string }> {
+  private extractParams(declaratorNode: SyntaxNodeLike): Array<{ name: string; type: string }> {
     const paramsNode = declaratorNode.childForFieldName('parameters');
     if (!paramsNode) return [];
 
@@ -120,7 +120,7 @@ export class ClassBuilder {
       });
   }
 
-  private findDescendant(node: Parser.SyntaxNode, type: string): Parser.SyntaxNode | null {
+  private findDescendant(node: SyntaxNodeLike, type: string): SyntaxNodeLike | null {
     if (node.type === type) return node;
     for (const child of node.namedChildren) {
       const found = this.findDescendant(child, type);

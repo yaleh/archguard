@@ -4,8 +4,7 @@
  * Uses tree-sitter-java to parse Java source code into raw AST data
  */
 
-import Parser from 'tree-sitter';
-import Java from 'tree-sitter-java';
+import type { ParserSession, SyntaxNodeLike } from '../shared/syntax-tree.js';
 import type {
   JavaRawPackage,
   JavaRawClass,
@@ -20,12 +19,10 @@ import type {
 } from './types.js';
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private readonly parser: ParserSession;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-expect-error -- tree-sitter language definition type incompatibility
-    this.parser.setLanguage(Java);
+  constructor(parser: ParserSession) {
+    this.parser = parser;
   }
 
   /**
@@ -33,42 +30,46 @@ export class TreeSitterBridge {
    */
   parseCode(code: string, filePath: string): JavaRawPackage {
     const tree = this.parser.parse(code);
-    const rootNode = tree.rootNode;
+    try {
+      const rootNode = tree.rootNode;
 
-    // Extract package name
-    const packageName = this.extractPackageName(rootNode, code);
+      // Extract package name
+      const packageName = this.extractPackageName(rootNode, code);
 
-    // Extract declarations
-    const classes: JavaRawClass[] = [];
-    const interfaces: JavaRawInterface[] = [];
-    const enums: JavaRawEnum[] = [];
+      // Extract declarations
+      const classes: JavaRawClass[] = [];
+      const interfaces: JavaRawInterface[] = [];
+      const enums: JavaRawEnum[] = [];
 
-    // Process all top-level declarations
-    for (const child of rootNode.namedChildren) {
-      if (child.type === 'class_declaration') {
-        const cls = this.extractClass(child, packageName, code, filePath);
-        if (cls) classes.push(cls);
-      } else if (child.type === 'interface_declaration') {
-        const iface = this.extractInterface(child, packageName, code, filePath);
-        if (iface) interfaces.push(iface);
-      } else if (child.type === 'enum_declaration') {
-        const enumDecl = this.extractEnum(child, packageName, code, filePath);
-        if (enumDecl) enums.push(enumDecl);
+      // Process all top-level declarations
+      for (const child of rootNode.namedChildren) {
+        if (child.type === 'class_declaration') {
+          const cls = this.extractClass(child, packageName, code, filePath);
+          if (cls) classes.push(cls);
+        } else if (child.type === 'interface_declaration') {
+          const iface = this.extractInterface(child, packageName, code, filePath);
+          if (iface) interfaces.push(iface);
+        } else if (child.type === 'enum_declaration') {
+          const enumDecl = this.extractEnum(child, packageName, code, filePath);
+          if (enumDecl) enums.push(enumDecl);
+        }
       }
-    }
 
-    return {
-      name: packageName,
-      classes,
-      interfaces,
-      enums,
-    };
+      return {
+        name: packageName,
+        classes,
+        interfaces,
+        enums,
+      };
+    } finally {
+      tree.dispose();
+    }
   }
 
   /**
    * Extract package name from AST
    */
-  private extractPackageName(rootNode: Parser.SyntaxNode, code: string): string {
+  private extractPackageName(rootNode: SyntaxNodeLike, code: string): string {
     const packageDecl = rootNode.children.find((n) => n.type === 'package_declaration');
     if (!packageDecl) {
       return '';
@@ -92,7 +93,7 @@ export class TreeSitterBridge {
    * Extract class declaration
    */
   private extractClass(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     packageName: string,
     code: string,
     filePath: string
@@ -197,7 +198,7 @@ export class TreeSitterBridge {
    * Extract interface declaration
    */
   private extractInterface(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     packageName: string,
     code: string,
     filePath: string
@@ -250,7 +251,7 @@ export class TreeSitterBridge {
    * Extract enum declaration
    */
   private extractEnum(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     packageName: string,
     code: string,
     filePath: string
@@ -289,7 +290,7 @@ export class TreeSitterBridge {
   /**
    * Extract field declarations
    */
-  private extractFields(node: Parser.SyntaxNode, code: string): JavaRawField[] {
+  private extractFields(node: SyntaxNodeLike, code: string): JavaRawField[] {
     const fields: JavaRawField[] = [];
     const modifiers = this.extractModifiers(node, code);
     const annotations = this.extractAnnotations(node, code);
@@ -328,7 +329,7 @@ export class TreeSitterBridge {
    * Extract method declaration
    */
   private extractMethod(
-    node: Parser.SyntaxNode,
+    node: SyntaxNodeLike,
     code: string,
     fieldTypeMap: Map<string, string> = new Map()
   ): JavaRawMethod | null {
@@ -371,7 +372,7 @@ export class TreeSitterBridge {
    * Only captures external-object calls (receiver is a field/local variable, not `this`).
    */
   private extractCallSites(
-    bodyNode: Parser.SyntaxNode,
+    bodyNode: SyntaxNodeLike,
     code: string,
     callerMethodName: string,
     fieldTypeMap: Map<string, string>
@@ -445,7 +446,7 @@ export class TreeSitterBridge {
   /**
    * Extract constructor declaration
    */
-  private extractConstructor(node: Parser.SyntaxNode, code: string): JavaRawConstructor | null {
+  private extractConstructor(node: SyntaxNodeLike, code: string): JavaRawConstructor | null {
     const modifiers = this.extractModifiers(node, code);
     const annotations = this.extractAnnotations(node, code);
 
@@ -463,7 +464,7 @@ export class TreeSitterBridge {
   /**
    * Extract method/constructor parameters
    */
-  private extractParameters(node: Parser.SyntaxNode, code: string): JavaRawParameter[] {
+  private extractParameters(node: SyntaxNodeLike, code: string): JavaRawParameter[] {
     const parameters: JavaRawParameter[] = [];
     const formalParams = node.descendantsOfType('formal_parameter');
 
@@ -490,7 +491,7 @@ export class TreeSitterBridge {
   /**
    * Extract modifiers from a node
    */
-  private extractModifiers(node: Parser.SyntaxNode, _code: string): string[] {
+  private extractModifiers(node: SyntaxNodeLike, _code: string): string[] {
     const modifiers: string[] = [];
     const modifierNodes = node.children.filter((n) => n.type === 'modifiers');
 
@@ -523,7 +524,7 @@ export class TreeSitterBridge {
   /**
    * Extract annotations from a node
    */
-  private extractAnnotations(node: Parser.SyntaxNode, code: string): JavaRawAnnotation[] {
+  private extractAnnotations(node: SyntaxNodeLike, code: string): JavaRawAnnotation[] {
     const annotations: JavaRawAnnotation[] = [];
 
     // Look for annotations in modifiers
@@ -551,7 +552,7 @@ export class TreeSitterBridge {
   /**
    * Extract type name from type node
    */
-  private extractTypeName(node: Parser.SyntaxNode, code: string): string {
+  private extractTypeName(node: SyntaxNodeLike, code: string): string {
     // Handle different type node structures
     if (node.type === 'type_identifier' || node.type === 'identifier') {
       return code.substring(node.startIndex, node.endIndex);
@@ -578,7 +579,7 @@ export class TreeSitterBridge {
   /**
    * Extract list of type names (for interfaces, extends)
    */
-  private extractTypeList(node: Parser.SyntaxNode, code: string): string[] {
+  private extractTypeList(node: SyntaxNodeLike, code: string): string[] {
     const types: string[] = [];
     const typeNodes = node.descendantsOfType([
       'type_identifier',

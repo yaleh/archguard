@@ -19,6 +19,9 @@ import type { ArchJSON } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
+import type { ParserSession } from '../shared/syntax-tree.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
 import { MavenCrossModuleParser } from './maven-crossmodule-parser.js';
@@ -55,6 +58,9 @@ export class JavaPlugin implements ILanguagePlugin {
   private mapper!: ArchJsonMapper;
   private depExtractor!: DependencyExtractor;
   private initialized = false;
+  private parserSession?: ParserSession;
+
+  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {}
 
   /**
    * Dependency extractor instance
@@ -72,7 +78,8 @@ export class JavaPlugin implements ILanguagePlugin {
       return;
     }
 
-    this.treeSitter = new TreeSitterBridge();
+    this.parserSession = await this.parserBackend.createSession('java');
+    this.treeSitter = new TreeSitterBridge(this.parserSession);
     this.mapper = new ArchJsonMapper();
     this.depExtractor = new DependencyExtractor();
 
@@ -455,6 +462,8 @@ export class JavaPlugin implements ILanguagePlugin {
    * Dispose resources
    */
   async dispose(): Promise<void> {
+    this.parserSession?.dispose();
+    this.parserSession = undefined;
     this.initialized = false;
   }
 

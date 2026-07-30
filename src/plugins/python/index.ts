@@ -19,6 +19,9 @@ import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON, TestPatternConfig } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
+import type { ParserSession } from '../shared/syntax-tree.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
 import { PythonImportExtractor } from './import-extractor.js';
@@ -63,6 +66,9 @@ export class PythonPlugin implements ILanguagePlugin {
   private treeSitterBridge!: TreeSitterBridge;
   private archJsonMapper!: ArchJsonMapper;
   private initialized = false;
+  private parserSession?: ParserSession;
+
+  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {}
 
   readonly dependencyExtractor = new DependencyExtractor();
 
@@ -74,7 +80,8 @@ export class PythonPlugin implements ILanguagePlugin {
       return;
     }
 
-    this.treeSitterBridge = new TreeSitterBridge();
+    this.parserSession = await this.parserBackend.createSession('python');
+    this.treeSitterBridge = new TreeSitterBridge(this.parserSession);
     this.archJsonMapper = new ArchJsonMapper();
     this.initialized = true;
   }
@@ -446,6 +453,8 @@ export class PythonPlugin implements ILanguagePlugin {
    * Dispose resources
    */
   async dispose(): Promise<void> {
+    this.parserSession?.dispose();
+    this.parserSession = undefined;
     this.initialized = false;
   }
 

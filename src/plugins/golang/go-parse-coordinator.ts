@@ -10,25 +10,43 @@ import type { ParseConfig } from '@/core/interfaces/parser.js';
 import { type ArchJSON, type Relation, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { GoRawPackage, GoRawData } from './types.js';
 import type { FlowGraph } from '@/types/extensions/go-atlas.js';
+import type { ParserSession } from '../shared/syntax-tree.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
 
 export type { GoRawData } from './types.js';
 export type { TreeSitterParseOptions } from './tree-sitter-bridge.js';
 
 export class GoParseCoordinator {
-  private treeSitter: TreeSitterBridge;
+  private treeSitter?: TreeSitterBridge;
+  private readonly parserSession?: ParserSession;
   private mapper: ArchJsonMapper;
   private resolver: GoplsInterfaceResolver;
 
-  constructor(resolver: GoplsInterfaceResolver) {
-    this.treeSitter = new TreeSitterBridge();
-    this.mapper = new ArchJsonMapper();
+  constructor(resolver: GoplsInterfaceResolver, parserSession?: ParserSession) {
     this.resolver = resolver;
+    this.parserSession = parserSession;
+    if (parserSession) this.treeSitter = new TreeSitterBridge(parserSession);
+    this.mapper = new ArchJsonMapper();
+  }
+
+  async initializeParser(): Promise<void> {
+    if (this.treeSitter) return;
+    const session = this.parserSession ?? (await nativeParserBackend.createSession('go'));
+    this.treeSitter = new TreeSitterBridge(session);
+  }
+
+  private get bridge(): TreeSitterBridge {
+    if (!this.treeSitter) {
+      throw new Error('Go parser not initialized. Call initializeParser() first.');
+    }
+    return this.treeSitter;
   }
 
   async parseToRawData(
     workspaceRoot: string,
     config: ParseConfig & TreeSitterParseOptions
   ): Promise<GoRawData> {
+    await this.initializeParser();
     const ignore = ['**/vendor/**', '**/node_modules/**', ...(config.excludePatterns ?? [])];
     const files = config.includePatterns?.length
       ? Array.from(
@@ -51,7 +69,7 @@ export class GoParseCoordinator {
 
     for (const file of files) {
       const code = await fs.readFile(file, 'utf-8');
-      const pkg = this.treeSitter.parseCode(code, file, {
+      const pkg = this.bridge.parseCode(code, file, {
         extractBodies: config.extractBodies,
         selectiveExtraction: config.selectiveExtraction,
         forceExtractFunctions: config.forceExtractFunctions,
@@ -122,7 +140,7 @@ export class GoParseCoordinator {
   }
 
   parseCodeToArchJson(code: string, filePath: string, cachedModuleName: string): ArchJSON {
-    const pkg = this.treeSitter.parseCode(code, filePath);
+    const pkg = this.bridge.parseCode(code, filePath);
     const impls = this.resolver.resolveSync(
       pkg.structs.map((s) => ({ ...s, packageName: pkg.fullName || pkg.name })),
       pkg.interfaces.map((i) => ({ ...i, packageName: pkg.fullName || pkg.name }))
@@ -138,10 +156,11 @@ export class GoParseCoordinator {
   }
 
   async parseFileListToArchJson(filePaths: string[], cachedModuleName: string): Promise<ArchJSON> {
+    await this.initializeParser();
     const packages = new Map<string, GoRawPackage>();
     for (const file of filePaths) {
       const code = await fs.readFile(file, 'utf-8');
-      const pkg = this.treeSitter.parseCode(code, file);
+      const pkg = this.bridge.parseCode(code, file);
       const key = path.dirname(file);
       pkg.fullName = pkg.fullName || key;
       pkg.dirPath = pkg.dirPath || key;
@@ -182,6 +201,7 @@ export class GoParseCoordinator {
   }
 
   async initModuleName(workspaceRoot: string): Promise<string> {
+    await this.initializeParser();
     return readModuleName(workspaceRoot);
   }
 }
