@@ -79,6 +79,34 @@
     "web-tree-sitter": "0.25.10",
     "zod": "^4.3.6"
   },
+  "peerDependencies": {
+    "@tree-sitter-grammars/tree-sitter-kotlin": "^1.1.0",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-cpp": "^0.23.4",
+    "tree-sitter-go": "^0.25.0",
+    "tree-sitter-java": "^0.23.5",
+    "tree-sitter-python": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "@tree-sitter-grammars/tree-sitter-kotlin": {
+      "optional": true
+    },
+    "tree-sitter": {
+      "optional": true
+    },
+    "tree-sitter-cpp": {
+      "optional": true
+    },
+    "tree-sitter-go": {
+      "optional": true
+    },
+    "tree-sitter-java": {
+      "optional": true
+    },
+    "tree-sitter-python": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.4",
     "@eslint/js": "^9.39.3",

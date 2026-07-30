@@ -51,27 +51,38 @@ Blocked by TASK-37 and TASK-38.
 
 ## Acceptance Criteria
 
-- [ ] `auto`, `native`, and `wasm` policies are documented and tested.
-- [ ] Selection occurs per language, allowing a mixed native/WASM process.
-- [ ] Default discovery never loads a native addon from the project being
-      analyzed.
-- [ ] A healthy native install selects native and passes parity tests.
-- [ ] Missing, broken, ABI-incompatible, or grammar-incompatible native
-      bindings fall back to WASM in `auto`.
-- [ ] Forced native reports a clear error and never silently uses WASM.
-- [ ] Forced WASM does not attempt to import native modules.
-- [ ] A failed Go/Java/Python/C++/Kotlin initialization is never silently
-      analyzed as TypeScript.
-- [ ] Runtime choice and fallback reason are visible in diagnostics without
-      polluting MCP stdout.
+- [x] `auto`, `native`, and `wasm` policies are documented and tested.
+      (docs/user-guide/parser-runtime.md; tests/unit/plugins/shared/parser-runtime.test.ts)
+- [x] Selection occurs per language, allowing a mixed native/WASM process.
+      (mixed selection unit test + tests/plugins/parser-runtime/mixed-selection.test.ts)
+- [x] Default discovery never loads a native addon from the project being
+      analyzed. (createRequire from the facade's own scope; sabotaged
+      project-local node_modules test in parser-runtime.test.ts)
+- [x] A healthy native install selects native and passes parity tests.
+      (auto selects native for all 5 languages; byte-identical ArchJSON vs explicit native)
+- [x] Missing, broken, ABI-incompatible, or grammar-incompatible native
+      bindings fall back to WASM in `auto`. (fault-injected loaders)
+- [x] Forced native reports a clear error and never silently uses WASM.
+      (ParserInitializationError with remediation text)
+- [x] Forced WASM does not attempt to import native modules. (loader call counters stay 0)
+- [x] A failed Go/Java/Python/C++/Kotlin initialization is never silently
+      analyzed as TypeScript. (broad catch removed from loadPluginForLanguage;
+      tests/unit/cli/analyze/run-analysis-plugin-loading.test.ts)
+- [x] Runtime choice and fallback reason are visible in diagnostics without
+      polluting MCP stdout. (getParserRuntimeDiagnostics + verbose reporter;
+      MCP uses StderrReporter)
 
 ## Definition of Done
 
-- [ ] Fault-injection tests cover missing and broken native bindings.
-- [ ] A normal packed install passes all language tests without native
+- [x] Fault-injection tests cover missing and broken native bindings.
+      (missing runtime, missing grammar, ABI-incompatible, grammar-mismatch loaders)
+- [x] A normal packed install passes all language tests without native
       Tree-sitter packages; a separate trusted native fixture exercises
-      native selection.
-- [ ] Runtime policy and dependency metadata changes are committed.
+      native selection. (tests/integration/parser-runtime-packed.test.ts:
+      npm pack + WASM-only overlay + ARCHGUARD_NATIVE_MODULE_ROOT fixture)
+- [x] Runtime policy and dependency metadata changes are committed.
+      (ARCHGUARD_PARSER_RUNTIME canonical + ARCHGUARD_PARSER_BACKEND alias;
+      native tree-sitter packages declared optional peers in package.json/lock)
 
 ## Coordination
 
