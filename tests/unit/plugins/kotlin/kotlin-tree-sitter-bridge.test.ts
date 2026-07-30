@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { nativeParserBackend } from '../../../../src/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '@/plugins/kotlin/tree-sitter-bridge.js';
 
 describe('TreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeAll(() => {
-    bridge = new TreeSitterBridge();
-    bridge.initialize();
+  beforeAll(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('kotlin'));
   });
 
   // ─── package name ──────────────────────────────────────────────────────────
@@ -125,8 +125,8 @@ describe('TreeSitterBridge', () => {
 
   // ─── constructor initialization ───────────────────────────────────────────
 
-  it('parses code immediately after construction without calling initialize()', () => {
-    const bridge = new TreeSitterBridge();
+  it('parses code immediately after construction without calling initialize()', async () => {
+    const bridge = new TreeSitterBridge(await nativeParserBackend.createSession('kotlin'));
     const result = bridge.parseCode('class Foo', 'Foo.kt');
     expect(result.filePath).toBe('Foo.kt');
   });

@@ -10,6 +10,7 @@
 - [Go Plugin Usage](user-guide/golang-plugin-usage.md)
 - [Custom Config Paths](user-guide/custom-config-paths.md)
 - [Plugin Registry](user-guide/plugin-registry.md)
+- [Parser Runtime Selection (auto|native|wasm)](user-guide/parser-runtime.md)
 
 ## Developer Guide
 

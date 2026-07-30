@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '@/plugins/java/tree-sitter-bridge.js';
 import { ArchJsonMapper } from '@/plugins/java/archjson-mapper.js';
 
 describe('Java call edge extraction', () => {
-  const bridge = new TreeSitterBridge();
+  let bridge: TreeSitterBridge;
   const mapper = new ArchJsonMapper();
+
+  beforeAll(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('java'));
+  });
 
   it('extracts method_invocation call sites from method body', () => {
     const code = `

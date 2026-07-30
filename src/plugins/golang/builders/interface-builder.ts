@@ -2,7 +2,7 @@
  * InterfaceBuilder — interface extraction for Go parsing
  */
 
-import type Parser from 'tree-sitter';
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { GoRawInterface, GoMethod, GoField } from '../types.js';
 import { NodeUtils } from './node-utils.js';
 
@@ -12,7 +12,7 @@ export class InterfaceBuilder {
    */
   extract(
     filePath: string,
-    rootNode: Parser.SyntaxNode,
+    rootNode: SyntaxNodeLike,
     code: string,
     packageName: string
   ): GoRawInterface[] {
@@ -39,7 +39,7 @@ export class InterfaceBuilder {
 
   private extractInterface(
     name: string,
-    interfaceNode: Parser.SyntaxNode,
+    interfaceNode: SyntaxNodeLike,
     packageName: string,
     code: string,
     filePath: string
@@ -95,7 +95,7 @@ export class InterfaceBuilder {
     };
   }
 
-  extractParametersFromElem(node: Parser.SyntaxNode, code: string, filePath: string): GoField[] {
+  extractParametersFromElem(node: SyntaxNodeLike, code: string, filePath: string): GoField[] {
     const parameters: GoField[] = [];
 
     const paramList = node.namedChildren.find((child) => child.type === 'parameter_list');
@@ -136,7 +136,7 @@ export class InterfaceBuilder {
     return parameters;
   }
 
-  extractReturnTypesFromElem(node: Parser.SyntaxNode, code: string): string[] {
+  extractReturnTypesFromElem(node: SyntaxNodeLike, code: string): string[] {
     const returnTypes: string[] = [];
 
     const children = node.namedChildren;

@@ -1,0 +1,66 @@
+{
+  "generatedBy": "scripts/fetch-grammar-wasms.mjs",
+  "abi": "tree-sitter ABI 14/15 (web-tree-sitter 0.25.x)",
+  "sources": [
+    {
+      "asset": "tree-sitter.wasm",
+      "role": "runtime",
+      "package": "web-tree-sitter",
+      "version": "0.25.10",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter.LICENSE",
+      "tarball": "https://registry.npmjs.org/web-tree-sitter/-/web-tree-sitter-0.25.10.tgz",
+      "tarballIntegrity": "sha512-Y09sF44/13XvgVKgO2cNDw5rGk6s26MgoZPXLESvMXeefBf7i6/73eFurre0IsTW6E14Y0ArIzhUMmjoc7xyzA=="
+    },
+    {
+      "asset": "tree-sitter-go.wasm",
+      "role": "grammar",
+      "package": "tree-sitter-go",
+      "version": "0.25.0",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-go.LICENSE",
+      "tarball": "https://registry.npmjs.org/tree-sitter-go/-/tree-sitter-go-0.25.0.tgz",
+      "tarballIntegrity": "sha512-APBc/Dq3xz/e35Xpkhb1blu5UgW+2E3RyGWawZSCNcbGwa7jhSQPS8KsUupuzBla8PCo8+lz9W/JDJjmfRa2tw=="
+    },
+    {
+      "asset": "tree-sitter-java.wasm",
+      "role": "grammar",
+      "package": "tree-sitter-java",
+      "version": "0.23.5",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-java.LICENSE",
+      "tarball": "https://registry.npmjs.org/tree-sitter-java/-/tree-sitter-java-0.23.5.tgz",
+      "tarballIntegrity": "sha512-Yju7oQ0Xx7GcUT01mUglPP+bYfvqjNCGdxqigTnew9nLGoII42PNVP3bHrYeMxswiCRM0yubWmN5qk+zsg0zMA=="
+    },
+    {
+      "asset": "tree-sitter-python.wasm",
+      "role": "grammar",
+      "package": "tree-sitter-python",
+      "version": "0.25.0",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-python.LICENSE",
+      "tarball": "https://registry.npmjs.org/tree-sitter-python/-/tree-sitter-python-0.25.0.tgz",
+      "tarballIntegrity": "sha512-eCmJx6zQa35GxaCtQD+wXHOhYqBxEL+bp71W/s3fcDMu06MrtzkVXR437dRrCrbrDbyLuUDJpAgycs7ncngLXw=="
+    },
+    {
+      "asset": "tree-sitter-cpp.wasm",
+      "role": "grammar",
+      "package": "tree-sitter-cpp",
+      "version": "0.23.4",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-cpp.LICENSE",
+      "tarball": "https://registry.npmjs.org/tree-sitter-cpp/-/tree-sitter-cpp-0.23.4.tgz",
+      "tarballIntegrity": "sha512-qR5qUDyhZ5jJ6V8/umiBxokRbe89bCGmcq/dk94wI4kN86qfdV8k0GHIUEKaqWgcu42wKal5E97LKpLeVW8sKw=="
+    },
+    {
+      "asset": "tree-sitter-kotlin.wasm",
+      "role": "grammar",
+      "package": "@tree-sitter-grammars/tree-sitter-kotlin",
+      "version": "1.1.0",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-kotlin.LICENSE",
+      "tarball": "https://registry.npmjs.org/@tree-sitter-grammars/tree-sitter-kotlin/-/tree-sitter-kotlin-1.1.0.tgz",
+      "tarballIntegrity": "sha512-vlVXaxEE8t2kpJgfZpa8XVvxcnKw9AYtRTgy7KWjsDmAsadk06RxAT80IXOgGQnmM9i/orQn1nD84gPNUHu6DQ=="
+    }
+  ]
+}

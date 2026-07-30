@@ -2,7 +2,7 @@
  * FunctionBuilder — function/method extraction for Go parsing
  */
 
-import type Parser from 'tree-sitter';
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { GoFunction, GoMethod, GoField, GoFunctionBody, GoRawStruct } from '../types.js';
 import { NodeUtils } from './node-utils.js';
 import { GoroutineBuilder } from './goroutine-builder.js';
@@ -24,7 +24,7 @@ export class FunctionBuilder {
    */
   extractFunctions(
     filePath: string,
-    rootNode: Parser.SyntaxNode,
+    rootNode: SyntaxNodeLike,
     code: string,
     packageName: string,
     options?: TreeSitterParseOptions
@@ -61,7 +61,7 @@ export class FunctionBuilder {
    */
   extractMethods(
     filePath: string,
-    rootNode: Parser.SyntaxNode,
+    rootNode: SyntaxNodeLike,
     code: string,
     structs: GoRawStruct[],
     options?: TreeSitterParseOptions
@@ -85,7 +85,7 @@ export class FunctionBuilder {
   }
 
   private extractFunctionSignature(
-    funcDecl: Parser.SyntaxNode,
+    funcDecl: SyntaxNodeLike,
     code: string,
     filePath: string,
     packageName: string
@@ -107,7 +107,7 @@ export class FunctionBuilder {
   }
 
   private extractMethod(
-    methodDecl: Parser.SyntaxNode,
+    methodDecl: SyntaxNodeLike,
     code: string,
     filePath: string,
     options?: TreeSitterParseOptions
@@ -159,7 +159,7 @@ export class FunctionBuilder {
     };
   }
 
-  private extractParameters(node: Parser.SyntaxNode, code: string, filePath: string): GoField[] {
+  private extractParameters(node: SyntaxNodeLike, code: string, filePath: string): GoField[] {
     const parameters: GoField[] = [];
     const paramsNode = node.childForFieldName('parameters');
 
@@ -199,7 +199,7 @@ export class FunctionBuilder {
     return parameters;
   }
 
-  private extractReturnTypes(node: Parser.SyntaxNode, code: string): string[] {
+  private extractReturnTypes(node: SyntaxNodeLike, code: string): string[] {
     const resultNode = node.childForFieldName('result');
     if (!resultNode) return [];
 
@@ -223,7 +223,7 @@ export class FunctionBuilder {
   /**
    * Selective extraction: AST node type pre-scanning
    */
-  shouldExtractBody(blockNode: Parser.SyntaxNode, code: string): boolean {
+  shouldExtractBody(blockNode: SyntaxNodeLike, code: string): boolean {
     const targetNodeTypes = ['go_statement', 'send_statement', 'receive_expression'];
 
     if (targetNodeTypes.some((nodeType) => blockNode.descendantsOfType(nodeType).length > 0)) {
@@ -273,7 +273,7 @@ export class FunctionBuilder {
   }
 
   private extractFunctionBody(
-    blockNode: Parser.SyntaxNode,
+    blockNode: SyntaxNodeLike,
     code: string,
     filePath: string
   ): GoFunctionBody {

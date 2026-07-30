@@ -2,6 +2,7 @@
  * TreeSitterBridge tests for Python parser
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '../../../src/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '@/plugins/python/tree-sitter-bridge.js';
 import fs from 'fs-extra';
 import path from 'path';
@@ -9,8 +10,8 @@ import path from 'path';
 describe('PythonTreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('python'));
   });
 
   describe('Simple class parsing', () => {

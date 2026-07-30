@@ -5,7 +5,7 @@
  * Delegates interface extraction to InterfaceBuilder in the same AST walk.
  */
 
-import type Parser from 'tree-sitter';
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { GoRawStruct, GoRawInterface, GoField } from '../types.js';
 import { NodeUtils } from './node-utils.js';
 import { InterfaceBuilder } from './interface-builder.js';
@@ -24,7 +24,7 @@ export class StructBuilder {
    */
   extract(
     filePath: string,
-    rootNode: Parser.SyntaxNode,
+    rootNode: SyntaxNodeLike,
     code: string,
     packageName: string
   ): StructBuilderResult {
@@ -55,7 +55,7 @@ export class StructBuilder {
 
   private extractStruct(
     name: string,
-    structNode: Parser.SyntaxNode,
+    structNode: SyntaxNodeLike,
     packageName: string,
     code: string,
     filePath: string

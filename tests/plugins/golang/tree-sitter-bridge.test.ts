@@ -3,13 +3,14 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '../../../src/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '../../../src/plugins/golang/tree-sitter-bridge.js';
 
 describe('TreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('go'));
   });
 
   describe('parseCode', () => {
@@ -437,8 +438,8 @@ func start() chan int {
   });
 
   describe('orphaned methods — receiver struct in another file', () => {
-    it('should store methods whose receiver struct is defined in another file as orphanedMethods', () => {
-      const bridge = new TreeSitterBridge();
+    it('should store methods whose receiver struct is defined in another file as orphanedMethods', async () => {
+      const bridge = new TreeSitterBridge(await nativeParserBackend.createSession('go'));
       // File contains ONLY a method — no struct definition
       const code = `package hub
 

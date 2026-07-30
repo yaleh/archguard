@@ -23,6 +23,9 @@ import type { ArchJSON } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
+import type { ParserSession } from '../shared/syntax-tree.js';
 import { HeaderMerger } from './builders/header-merger.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
@@ -66,8 +69,9 @@ export class CppPlugin implements ILanguagePlugin {
   private merger!: HeaderMerger;
   private mapper!: ArchJsonMapper;
   private initialized = false;
+  private parserSession?: ParserSession;
 
-  constructor() {
+  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {
     this.dependencyExtractor = new DependencyExtractor();
   }
 
@@ -77,7 +81,8 @@ export class CppPlugin implements ILanguagePlugin {
    */
   async initialize(_config: PluginInitConfig): Promise<void> {
     if (this.initialized) return;
-    this.bridge = new TreeSitterBridge();
+    this.parserSession = await this.parserBackend.createSession('cpp');
+    this.bridge = new TreeSitterBridge(this.parserSession);
     this.merger = new HeaderMerger();
     this.mapper = new ArchJsonMapper();
     this.initialized = true;
@@ -192,6 +197,8 @@ export class CppPlugin implements ILanguagePlugin {
    * Sets initialized = false so subsequent calls throw a clear error.
    */
   async dispose(): Promise<void> {
+    this.parserSession?.dispose();
+    this.parserSession = undefined;
     this.initialized = false;
   }
 

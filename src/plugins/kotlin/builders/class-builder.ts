@@ -18,6 +18,7 @@
  *   - annotations       → `annotation` nodes (before or inside modifiers)
  */
 
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type {
   RawKotlinClass,
   RawKotlinMember,
@@ -33,7 +34,11 @@ export class ClassBuilder {
    * @param packageName  package extracted by the caller (may be '')
    * @param filePath  absolute path of the source file
    */
-  extractClasses(rootNode: any, packageName: string, filePath: string): RawKotlinClass[] {
+  extractClasses(
+    rootNode: SyntaxNodeLike,
+    packageName: string,
+    filePath: string
+  ): RawKotlinClass[] {
     const results: RawKotlinClass[] = [];
     this.visitNode(rootNode, packageName, filePath, false, results);
     return results;
@@ -42,7 +47,7 @@ export class ClassBuilder {
   // ─── private traversal ───────────────────────────────────────────────────
 
   private visitNode(
-    node: any,
+    node: SyntaxNodeLike,
     packageName: string,
     filePath: string,
     insideCompanion: boolean,
@@ -75,7 +80,7 @@ export class ClassBuilder {
   }
 
   private visitChildren(
-    node: any,
+    node: SyntaxNodeLike,
     packageName: string,
     filePath: string,
     insideCompanion: boolean,
@@ -89,7 +94,7 @@ export class ClassBuilder {
   // ─── class_declaration builder ───────────────────────────────────────────
 
   private buildClass(
-    node: any,
+    node: SyntaxNodeLike,
     packageName: string,
     filePath: string,
     _insideCompanion: boolean
@@ -102,7 +107,7 @@ export class ClassBuilder {
     const decorators = this.extractAnnotations(modifiers);
 
     // Determine keyword: `class` vs `interface`
-    const isInterface = node.children.some((c: any) => c.type === 'interface');
+    const isInterface = node.children.some((c: SyntaxNodeLike) => c.type === 'interface');
     const classModifiers = this.extractClassModifiers(modifiers);
     const inheritanceModifiers = this.extractInheritanceModifiers(modifiers);
 
@@ -137,7 +142,7 @@ export class ClassBuilder {
   // ─── object_declaration builder ──────────────────────────────────────────
 
   private buildObject(
-    node: any,
+    node: SyntaxNodeLike,
     packageName: string,
     filePath: string,
     _insideCompanion: boolean
@@ -170,12 +175,12 @@ export class ClassBuilder {
   // ─── companion_object builder ─────────────────────────────────────────────
 
   private buildCompanionObject(
-    node: any,
+    node: SyntaxNodeLike,
     packageName: string,
     filePath: string
   ): RawKotlinClass | null {
     // companion object may have a name or be anonymous → use 'Companion' as fallback
-    const nameNode = node.namedChildren.find((c: any) => c.type === 'identifier');
+    const nameNode = node.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
     const name = nameNode?.text ?? 'Companion';
 
     const modifiers = this.findChild(node, 'modifiers');
@@ -224,7 +229,7 @@ export class ClassBuilder {
 
   // ─── supertype extraction ─────────────────────────────────────────────────
 
-  private extractSuperTypes(node: any): string[] {
+  private extractSuperTypes(node: SyntaxNodeLike): string[] {
     const delegationSpecifiers = this.findChild(node, 'delegation_specifiers');
     if (!delegationSpecifiers) return [];
 
@@ -254,7 +259,7 @@ export class ClassBuilder {
 
   // ─── primary constructor parameter extraction ─────────────────────────────
 
-  private extractPrimaryCtorMembers(node: any): RawKotlinMember[] {
+  private extractPrimaryCtorMembers(node: SyntaxNodeLike): RawKotlinMember[] {
     const primaryCtor = this.findChild(node, 'primary_constructor');
     if (!primaryCtor) return [];
 
@@ -266,10 +271,12 @@ export class ClassBuilder {
       if (param.type !== 'class_parameter') continue;
 
       // Only val/var parameters become fields; plain parameters don't
-      const hasValVar = param.children.some((c: any) => c.type === 'val' || c.type === 'var');
+      const hasValVar = param.children.some(
+        (c: SyntaxNodeLike) => c.type === 'val' || c.type === 'var'
+      );
       if (!hasValVar) continue;
 
-      const nameNode = param.namedChildren.find((c: any) => c.type === 'identifier');
+      const nameNode = param.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
       if (!nameNode) continue;
 
       const typeText = this.extractTypeFromParam(param);
@@ -294,7 +301,7 @@ export class ClassBuilder {
 
   // ─── class body member extraction ────────────────────────────────────────
 
-  private extractBodyMembers(bodyNode: any, forceStatic: boolean): RawKotlinMember[] {
+  private extractBodyMembers(bodyNode: SyntaxNodeLike, forceStatic: boolean): RawKotlinMember[] {
     const members: RawKotlinMember[] = [];
 
     for (const child of bodyNode.namedChildren) {
@@ -317,11 +324,11 @@ export class ClassBuilder {
     return members;
   }
 
-  private buildFieldMember(node: any, forceStatic: boolean): RawKotlinMember | null {
+  private buildFieldMember(node: SyntaxNodeLike, forceStatic: boolean): RawKotlinMember | null {
     const varDecl = this.findChild(node, 'variable_declaration');
     if (!varDecl) return null;
 
-    const nameNode = varDecl.namedChildren.find((c: any) => c.type === 'identifier');
+    const nameNode = varDecl.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
     if (!nameNode) return null;
 
     // Type: look for user_type or nullable_type inside variable_declaration
@@ -345,8 +352,8 @@ export class ClassBuilder {
     };
   }
 
-  private buildMethodMember(node: any, forceStatic: boolean): RawKotlinMember | null {
-    const nameNode = node.namedChildren.find((c: any) => c.type === 'identifier');
+  private buildMethodMember(node: SyntaxNodeLike, forceStatic: boolean): RawKotlinMember | null {
+    const nameNode = node.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
     if (!nameNode) return null;
 
     const modifiers = this.findChild(node, 'modifiers');
@@ -366,13 +373,13 @@ export class ClassBuilder {
 
   // ─── enum entry extraction ────────────────────────────────────────────────
 
-  private extractEnumEntries(bodyNode: any): RawKotlinMember[] {
+  private extractEnumEntries(bodyNode: SyntaxNodeLike): RawKotlinMember[] {
     if (bodyNode.type !== 'enum_class_body') return [];
 
     const members: RawKotlinMember[] = [];
     for (const child of bodyNode.namedChildren) {
       if (child.type !== 'enum_entry') continue;
-      const nameNode = child.namedChildren.find((c: any) => c.type === 'identifier');
+      const nameNode = child.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
       if (!nameNode) continue;
 
       members.push({
@@ -391,7 +398,7 @@ export class ClassBuilder {
   // ─── modifier helpers ─────────────────────────────────────────────────────
 
   /** Returns the text tokens inside `class_modifier` children of modifiers node */
-  private extractClassModifiers(modifiers: any): string[] {
+  private extractClassModifiers(modifiers: SyntaxNodeLike): string[] {
     if (!modifiers) return [];
     const result: string[] = [];
     for (const child of modifiers.namedChildren) {
@@ -405,7 +412,7 @@ export class ClassBuilder {
   }
 
   /** Returns the text tokens inside `inheritance_modifier` children */
-  private extractInheritanceModifiers(modifiers: any): string[] {
+  private extractInheritanceModifiers(modifiers: SyntaxNodeLike): string[] {
     if (!modifiers) return [];
     const result: string[] = [];
     for (const child of modifiers.namedChildren) {
@@ -417,7 +424,7 @@ export class ClassBuilder {
     return result;
   }
 
-  private extractVisibility(modifiers: any): KotlinVisibility {
+  private extractVisibility(modifiers: SyntaxNodeLike): KotlinVisibility {
     if (!modifiers) return 'public';
     for (const child of modifiers.namedChildren) {
       if (child.type === 'visibility_modifier') {
@@ -433,7 +440,7 @@ export class ClassBuilder {
 
   // ─── annotation helpers ───────────────────────────────────────────────────
 
-  private extractAnnotations(modifiers: any): string[] {
+  private extractAnnotations(modifiers: SyntaxNodeLike): string[] {
     if (!modifiers) return [];
     const names: string[] = [];
     for (const child of modifiers.namedChildren) {
@@ -445,7 +452,7 @@ export class ClassBuilder {
     return names;
   }
 
-  private extractAnnotationName(annotationNode: any): string | null {
+  private extractAnnotationName(annotationNode: SyntaxNodeLike): string | null {
     // Simple: @Module → annotation > user_type > identifier
     const userType = this.findChild(annotationNode, 'user_type');
     if (userType) return this.extractUserTypeName(userType);
@@ -465,16 +472,16 @@ export class ClassBuilder {
    * Extract a simple name from a `user_type` node.
    * For `List<String>` returns `List`; for `Map.Entry` returns `Map.Entry`.
    */
-  private extractUserTypeName(userTypeNode: any): string | null {
+  private extractUserTypeName(userTypeNode: SyntaxNodeLike): string | null {
     if (!userTypeNode) return null;
     // user_type may have multiple `type_identifier` children separated by `.`
     const identifiers = userTypeNode.namedChildren
-      .filter((c: any) => c.type === 'type_identifier')
-      .map((c: any) => c.text as string);
+      .filter((c: SyntaxNodeLike) => c.type === 'type_identifier')
+      .map((c: SyntaxNodeLike) => c.text as string);
     if (identifiers.length > 0) return identifiers.join('.');
 
     // fallback: direct identifier child
-    const ident = userTypeNode.namedChildren.find((c: any) => c.type === 'identifier');
+    const ident = userTypeNode.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
     if (ident) return ident.text as string;
 
     // last resort: raw text stripped of generics
@@ -482,7 +489,7 @@ export class ClassBuilder {
   }
 
   /** Extract type text from a `class_parameter` node (primary ctor param) */
-  private extractTypeFromParam(paramNode: any): string | undefined {
+  private extractTypeFromParam(paramNode: SyntaxNodeLike): string | undefined {
     const userType = this.findChild(paramNode, 'user_type');
     if (userType) return this.extractUserTypeName(userType) ?? undefined;
     const nullableType = this.findChild(paramNode, 'nullable_type');
@@ -493,14 +500,14 @@ export class ClassBuilder {
   // ─── general AST helpers ─────────────────────────────────────────────────
 
   /** Find the first direct named child with the given type */
-  private findChild(node: any, type: string): any | null {
+  private findChild(node: SyntaxNodeLike, type: string): SyntaxNodeLike | null {
     if (!node) return null;
-    return node.namedChildren?.find((c: any) => c.type === type) ?? null;
+    return node.namedChildren?.find((c: SyntaxNodeLike) => c.type === type) ?? null;
   }
 
   /** Extract the `identifier` that represents the declaration's name */
-  private extractIdentifier(node: any): string | null {
-    const identNode = node.namedChildren?.find((c: any) => c.type === 'identifier');
+  private extractIdentifier(node: SyntaxNodeLike): string | null {
+    const identNode = node.namedChildren?.find((c: SyntaxNodeLike) => c.type === 'identifier');
     return identNode?.text ?? null;
   }
 }

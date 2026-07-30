@@ -5,8 +5,7 @@
  * Mirrors the C++/Kotlin builder pattern.
  */
 
-import Parser from 'tree-sitter';
-import Go from 'tree-sitter-go';
+import type { ParserSession, SyntaxNodeLike } from '../shared/syntax-tree.js';
 import type { GoRawPackage, GoImport, TreeSitterParseOptions } from './types.js';
 import { NodeUtils } from './builders/node-utils.js';
 import { StructBuilder } from './builders/struct-builder.js';
@@ -16,14 +15,12 @@ import { FunctionBuilder } from './builders/function-builder.js';
 export type { TreeSitterParseOptions };
 
 export class TreeSitterBridge {
-  private parser: Parser;
+  private readonly parser: ParserSession;
   private structBuilder: StructBuilder;
   private functionBuilder: FunctionBuilder;
 
-  constructor() {
-    this.parser = new Parser();
-    // @ts-expect-error -- tree-sitter-go language definition type incompatibility
-    this.parser.setLanguage(Go);
+  constructor(parser: ParserSession) {
+    this.parser = parser;
     this.structBuilder = new StructBuilder();
     this.functionBuilder = new FunctionBuilder();
   }
@@ -35,56 +32,61 @@ export class TreeSitterBridge {
    * Body extraction controlled by options.
    */
   parseCode(code: string, filePath: string, options?: TreeSitterParseOptions): GoRawPackage {
-    const tree = this.parser.parse(code); // Only parsed ONCE
-    const rootNode = tree.rootNode;
+    const tree = this.parser.parse(code);
+    try {
+      // Only parsed ONCE
+      const rootNode = tree.rootNode;
 
-    // Extract package name
-    const packageName = this.extractPackageName(rootNode, code);
+      // Extract package name
+      const packageName = this.extractPackageName(rootNode, code);
 
-    // Extract imports
-    const imports = this.extractImports(rootNode, code, filePath);
+      // Extract imports
+      const imports = this.extractImports(rootNode, code, filePath);
 
-    // Extract type declarations (structs + interfaces share AST walk via StructBuilder)
-    const { structs, interfaces } = this.structBuilder.extract(
-      filePath,
-      rootNode,
-      code,
-      packageName
-    );
+      // Extract type declarations (structs + interfaces share AST walk via StructBuilder)
+      const { structs, interfaces } = this.structBuilder.extract(
+        filePath,
+        rootNode,
+        code,
+        packageName
+      );
 
-    // Extract methods and attach to structs; collect orphaned methods
-    const { orphanedMethods } = this.functionBuilder.extractMethods(
-      filePath,
-      rootNode,
-      code,
-      structs,
-      options
-    );
+      // Extract methods and attach to structs; collect orphaned methods
+      const { orphanedMethods } = this.functionBuilder.extractMethods(
+        filePath,
+        rootNode,
+        code,
+        structs,
+        options
+      );
 
-    // Extract functions (with optional bodies)
-    const functions = this.functionBuilder.extractFunctions(
-      filePath,
-      rootNode,
-      code,
-      packageName,
-      options
-    );
+      // Extract functions (with optional bodies)
+      const functions = this.functionBuilder.extractFunctions(
+        filePath,
+        rootNode,
+        code,
+        packageName,
+        options
+      );
 
-    return {
-      id: packageName,
-      name: packageName,
-      fullName: '', // Filled by caller (needs moduleRoot context)
-      dirPath: '',
-      imports,
-      structs,
-      interfaces,
-      functions,
-      sourceFiles: [filePath],
-      ...(orphanedMethods.length > 0 ? { orphanedMethods } : {}),
-    };
+      return {
+        id: packageName,
+        name: packageName,
+        fullName: '', // Filled by caller (needs moduleRoot context)
+        dirPath: '',
+        imports,
+        structs,
+        interfaces,
+        functions,
+        sourceFiles: [filePath],
+        ...(orphanedMethods.length > 0 ? { orphanedMethods } : {}),
+      };
+    } finally {
+      tree.dispose();
+    }
   }
 
-  private extractPackageName(rootNode: Parser.SyntaxNode, code: string): string {
+  private extractPackageName(rootNode: SyntaxNodeLike, code: string): string {
     const packageClause = rootNode.namedChildren.find((c) => c.type === 'package_clause');
     if (!packageClause) return 'main';
 
@@ -94,7 +96,7 @@ export class TreeSitterBridge {
     return NodeUtils.nodeText(nameNode, code);
   }
 
-  private extractImports(rootNode: Parser.SyntaxNode, code: string, filePath: string): GoImport[] {
+  private extractImports(rootNode: SyntaxNodeLike, code: string, filePath: string): GoImport[] {
     const imports: GoImport[] = [];
     const importDecls = rootNode.descendantsOfType('import_declaration');
 

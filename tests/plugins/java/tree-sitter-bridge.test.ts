@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '../../../src/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '@/plugins/java/tree-sitter-bridge.js';
 
 describe('JavaTreeSitterBridge', () => {
   let bridge: TreeSitterBridge;
 
-  beforeEach(() => {
-    bridge = new TreeSitterBridge();
+  beforeEach(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('java'));
   });
 
   describe('Simple Class Parsing', () => {

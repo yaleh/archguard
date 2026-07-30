@@ -2,7 +2,7 @@
  * GoroutineBuilder — goroutine spawn/channel detection for Go parsing
  */
 
-import type Parser from 'tree-sitter';
+import type { SyntaxNodeLike } from '../../shared/syntax-tree.js';
 import type { GoFunctionBody, GoCallExpr, GoSpawnStmt, GoChannelOp } from '../types.js';
 import { NodeUtils } from './node-utils.js';
 
@@ -10,7 +10,7 @@ export class GoroutineBuilder {
   /**
    * Extract goroutine and channel information from a function body block node.
    */
-  extract(filePath: string, block: Parser.SyntaxNode, code: string): GoFunctionBody {
+  extract(filePath: string, block: SyntaxNodeLike, code: string): GoFunctionBody {
     return {
       calls: this.extractCallExprs(block, code, filePath),
       goSpawns: this.extractGoSpawns(block, code, filePath),
@@ -18,7 +18,7 @@ export class GoroutineBuilder {
     };
   }
 
-  private extractGoSpawns(block: Parser.SyntaxNode, code: string, filePath: string): GoSpawnStmt[] {
+  private extractGoSpawns(block: SyntaxNodeLike, code: string, filePath: string): GoSpawnStmt[] {
     const spawns: GoSpawnStmt[] = [];
     const goStmts = block.descendantsOfType('go_statement');
 
@@ -45,7 +45,7 @@ export class GoroutineBuilder {
     return spawns;
   }
 
-  private extractCallExprs(block: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr[] {
+  private extractCallExprs(block: SyntaxNodeLike, code: string, filePath: string): GoCallExpr[] {
     const calls: GoCallExpr[] = [];
     const callExprs = block.descendantsOfType('call_expression');
 
@@ -56,7 +56,7 @@ export class GoroutineBuilder {
     return calls;
   }
 
-  private extractCallExpr(callExpr: Parser.SyntaxNode, code: string, filePath: string): GoCallExpr {
+  private extractCallExpr(callExpr: SyntaxNodeLike, code: string, filePath: string): GoCallExpr {
     const funcNode = callExpr.childForFieldName('function');
     let functionName = '';
     let packageName: string | undefined;
@@ -97,11 +97,7 @@ export class GoroutineBuilder {
     };
   }
 
-  private extractChannelOps(
-    block: Parser.SyntaxNode,
-    code: string,
-    filePath: string
-  ): GoChannelOp[] {
+  private extractChannelOps(block: SyntaxNodeLike, code: string, filePath: string): GoChannelOp[] {
     const ops: GoChannelOp[] = [];
 
     for (const sendStmt of block.descendantsOfType('send_statement')) {
@@ -142,8 +138,8 @@ export class GoroutineBuilder {
     return ops;
   }
 
-  private extractMakeChanVarName(callExpr: Parser.SyntaxNode, code: string): string {
-    let node: Parser.SyntaxNode | null = callExpr.parent;
+  private extractMakeChanVarName(callExpr: SyntaxNodeLike, code: string): string {
+    let node: SyntaxNodeLike | null = callExpr.parent;
 
     while (node) {
       if (node.type === 'short_var_declaration' || node.type === 'assignment_statement') {
