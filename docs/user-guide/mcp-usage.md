@@ -93,31 +93,75 @@ claude mcp remove archguard
 
 ### Codex
 
-Use the `codex mcp add` command:
+Codex does not consume Claude plugin manifests, so its MCP configuration must
+launch an ArchGuard installation that owns its own runtime dependency closure.
+The user-scope installer writes exactly one TOML-safe
+`[mcp_servers.archguard]` table into the Codex user config
+(`~/.codex/config.toml`, or `$CODEX_HOME/config.toml`) pointing at the
+npm-installed `@yalehwang/archguard` CLI — never Claude's versioned plugin
+cache (`~/.claude/plugins/cache/**`) and never the source checkout:
+
+```bash
+# Register the global npm install (discovered via `npm root -g`):
+bash scripts/install-codex-user-scope.sh
+
+# Or target a specific npm-installed root and parser-runtime policy:
+bash scripts/install-codex-user-scope.sh \
+  --archguard-root "$(npm root -g)" \
+  --parser-runtime wasm
+```
+
+The installer is idempotent: re-running it updates the single archguard table
+in place (never duplicates it) and leaves all unrelated top-level keys and
+other `[mcp_servers.*]` tables byte-for-byte intact. It writes this shape:
+
+```toml
+[mcp_servers.archguard]
+command = "node"
+args = ["<npm-install>/@yalehwang/archguard/dist/cli/index.js", "mcp"]
+env = { ARCHGUARD_PARSER_RUNTIME = "auto" }
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+```
+
+With a custom work directory, pass `--arch-dir` to the installer (it appends
+`--arch-dir <dir>` to `args`), or configure the table manually:
+
+```toml
+[mcp_servers.archguard]
+command = "node"
+args = ["<npm-install>/@yalehwang/archguard/dist/cli/index.js", "mcp", "--arch-dir", "/path/to/project/.archguard"]
+```
+
+A plain global-binary registration also works when `archguard` is on Codex's
+`PATH`:
 
 ```bash
 codex mcp add archguard -- archguard mcp
 ```
 
-Or configure directly in `~/.codex/config.toml` (project-scoped: `.codex/config.toml`):
+#### Parser-runtime diagnostics through Codex
 
-```toml
-[mcp_servers.archguard]
-command = "archguard"
-args = ["mcp"]
-startup_timeout_sec = 30
-tool_timeout_sec = 60
+The installer forwards the same `auto|native|wasm` policy as the CLI (see
+[Parser Runtime Selection](parser-runtime.md)) by setting
+`ARCHGUARD_PARSER_RUNTIME` in the server's `env` table. Query-only tools work
+under any policy; analysis falls back to the portable WASM baseline when native
+Tree-sitter is unavailable (`auto`), or fails loudly under `native`. To change
+the policy, re-run the installer with a different `--parser-runtime` — it
+updates the existing table rather than adding a second one.
+
+#### Verifying the Codex connection
+
+```bash
+codex mcp list            # human-readable
+codex mcp list --json     # machine-readable; archguard should be enabled
+codex mcp get archguard
 ```
 
-With a custom work directory:
+Or type `/mcp` in the Codex TUI. `codex mcp list --json` should report an
+`archguard` entry with `enabled: true`, `transport.command: "node"`, and
+`transport.env.ARCHGUARD_PARSER_RUNTIME` set to your chosen policy.
 
-```toml
-[mcp_servers.archguard]
-command = "archguard"
-args = ["mcp", "--arch-dir", "/path/to/project/.archguard"]
-```
-
-Verify in the Codex TUI by typing `/mcp`.
 
 ### Custom Work Directory
 
