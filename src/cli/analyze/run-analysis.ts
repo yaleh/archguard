@@ -2,6 +2,7 @@ import path from 'path';
 import { ConfigLoader } from '../config-loader.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
+import type { GlobalConfig } from '@/types/config.js';
 import type { ProgressReporterLike } from '../progress/index.js';
 import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import { DiagramProcessor } from '../processors/diagram-processor.js';
@@ -25,51 +26,59 @@ import {
   computeCycleMetrics,
   extractPackageName,
 } from '../mcp/tools/package-metrics-tools.js';
+import {
+  hasParserRuntimeEnvOverride,
+  selectParserBackendFor,
+  type SelectParserBackendOptions,
+} from '@/plugins/shared/parser-runtime.js';
+import type { ParserBackend } from '@/plugins/shared/parser-backend.js';
 
-async function loadPluginForLanguage(
+/**
+ * Load and initialize the plugin for a language, injecting the parser backend
+ * selected by the per-language runtime resolver (TASK-39).
+ *
+ * There is deliberately NO language-plugin→TypeScript fallback here: a failed
+ * Go/Java/Python/C++/Kotlin initialization surfaces as an explicit
+ * language-specific error (e.g. ParserInitializationError) and is never
+ * silently analyzed as TypeScript.
+ */
+export async function loadPluginForLanguage(
   language: string,
-  workspaceRoot: string
+  workspaceRoot: string,
+  parserRuntime: SelectParserBackendOptions = {}
 ): Promise<import('@/core/interfaces/language-plugin.js').ILanguagePlugin> {
-  let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin | null = null;
+  let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin;
 
-  try {
-    if (language === 'go') {
-      const { GoPlugin } = await import('@/plugins/golang/index.js');
-      plugin = new GoPlugin();
-    } else if (language === 'java') {
-      const { JavaPlugin } = await import('@/plugins/java/index.js');
-      plugin = new JavaPlugin();
-    } else if (language === 'python') {
-      const { PythonPlugin } = await import('@/plugins/python/index.js');
-      plugin = new PythonPlugin();
-    } else if (language === 'cpp') {
-      const { CppPlugin } = await import('@/plugins/cpp/index.js');
-      plugin = new CppPlugin();
-    } else if (language === 'kotlin') {
-      const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
-      plugin = new KotlinPlugin();
-    } else {
-      const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
-      plugin = new TypeScriptPlugin();
-    }
-    await plugin.initialize?.({ workspaceRoot });
-    if (plugin.metadata?.customEntityTypes) {
-      for (const decl of plugin.metadata.customEntityTypes) {
-        globalEntityTypeRegistry.register(decl);
-      }
-    }
-    return plugin;
-  } catch {
+  const backendFor = async (
+    lang: 'go' | 'java' | 'python' | 'cpp' | 'kotlin'
+  ): Promise<ParserBackend> => (await selectParserBackendFor(lang, parserRuntime)).backend;
+
+  if (language === 'go') {
+    const { GoPlugin } = await import('@/plugins/golang/index.js');
+    plugin = new GoPlugin(await backendFor('go'));
+  } else if (language === 'java') {
+    const { JavaPlugin } = await import('@/plugins/java/index.js');
+    plugin = new JavaPlugin(await backendFor('java'));
+  } else if (language === 'python') {
+    const { PythonPlugin } = await import('@/plugins/python/index.js');
+    plugin = new PythonPlugin(await backendFor('python'));
+  } else if (language === 'cpp') {
+    const { CppPlugin } = await import('@/plugins/cpp/index.js');
+    plugin = new CppPlugin(await backendFor('cpp'));
+  } else if (language === 'kotlin') {
+    const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
+    plugin = new KotlinPlugin(await backendFor('kotlin'));
+  } else {
     const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
     plugin = new TypeScriptPlugin();
-    await plugin.initialize?.({ workspaceRoot });
-    if (plugin.metadata?.customEntityTypes) {
-      for (const decl of plugin.metadata.customEntityTypes) {
-        globalEntityTypeRegistry.register(decl);
-      }
-    }
-    return plugin;
   }
+  await plugin.initialize?.({ workspaceRoot });
+  if (plugin.metadata?.customEntityTypes) {
+    for (const decl of plugin.metadata.customEntityTypes) {
+      globalEntityTypeRegistry.register(decl);
+    }
+  }
+  return plugin;
 }
 
 export interface RunAnalysisOptions {
@@ -155,7 +164,20 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         reporter.start('Running test analysis...');
         const language = archJson.language ?? 'typescript';
         const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
-        const plugin = await loadPluginForLanguage(language, workspaceRoot);
+        // parserRuntime/nativeModuleRoot are optional GlobalConfig extensions
+        // (src/types/config-global.ts); the zod file schema does not strip
+        // them when a Config object is constructed programmatically.
+        const runtimeConfig = config as Config &
+          Pick<GlobalConfig, 'parserRuntime' | 'nativeModuleRoot'>;
+        const plugin = await loadPluginForLanguage(language, workspaceRoot, {
+          // Canonical env policy (ARCHGUARD_PARSER_RUNTIME) takes precedence
+          // over the config value when set.
+          policy: hasParserRuntimeEnvOverride() ? undefined : runtimeConfig.parserRuntime,
+          nativeModuleRoot: runtimeConfig.nativeModuleRoot,
+          // Verbose diagnostics go through the reporter (stderr in MCP mode),
+          // never to MCP stdout.
+          onDiagnostic: config.verbose ? (line) => reporter.info(line) : undefined,
+        });
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, {
           workspaceRoot,
