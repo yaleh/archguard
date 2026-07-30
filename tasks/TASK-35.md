@@ -1,7 +1,7 @@
 ---
 id: TASK-35
 title: Finalize the installer for the npm-source Claude plugin
-status: ready
+status: done
 labels:
   - install
   - packaging
