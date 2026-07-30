@@ -335,7 +335,6 @@ def test_readers():
     const code = `import os
 import sys
 import re
-import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 def test_env():
     assert os.path.exists('/')
