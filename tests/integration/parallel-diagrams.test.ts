@@ -450,28 +450,38 @@ describe('DiagramProcessor.parallel', () => {
     });
   });
 
-  describe('performance validation', () => {
-    it('should complete faster than serial processing', async () => {
-      // This is a conceptual test - in real scenarios with actual parsing,
-      // parallel should be 3-4x faster than serial
-      // For unit tests, we just verify the structure is correct
+  describe('concurrency validation', () => {
+    it('overlaps diagram processing instead of running serially', async () => {
+      let activeDiscoveries = 0;
+      let maxActiveDiscoveries = 0;
+      let releaseDiscoveries!: () => void;
+      let reportAllStarted!: () => void;
+      const release = new Promise<void>((resolve) => {
+        releaseDiscoveries = resolve;
+      });
+      const allStarted = new Promise<void>((resolve) => {
+        reportAllStarted = resolve;
+      });
 
-      // Mock FileDiscoveryService with realistic delay
+      // Each diagram blocks at the same synchronization point. The third call
+      // can only start if processAll schedules diagrams concurrently; serial
+      // execution would never reach reportAllStarted and the test would fail.
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       const mockDiscoverFiles = vi.fn().mockImplementation(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        activeDiscoveries += 1;
+        maxActiveDiscoveries = Math.max(maxActiveDiscoveries, activeDiscoveries);
+        if (activeDiscoveries === 3) reportAllStarted();
+        await release;
+        activeDiscoveries -= 1;
         return ['/src/test.ts'];
       });
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
       }));
 
-      // Mock ParallelParser with delay
+      // Mock ParallelParser
       const { ParallelParser } = await import('@/parser/parallel-parser.js');
-      const mockParseFiles = vi.fn().mockImplementation(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        return createTestArchJSON();
-      });
+      const mockParseFiles = vi.fn().mockResolvedValue(createTestArchJSON());
       (ParallelParser as any).mockImplementation(() => ({
         parseFiles: mockParseFiles,
       }));
@@ -527,20 +537,15 @@ describe('DiagramProcessor.parallel', () => {
       const globalConfig = createGlobalConfig();
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
 
-      // Process and time
-      const startTime = Date.now();
-      const results = await processor.processAll();
-      const endTime = Date.now();
-      const parallelTime = endTime - startTime;
+      const processing = processor.processAll();
+      await allStarted;
+      expect(activeDiscoveries).toBe(3);
+      expect(maxActiveDiscoveries).toBe(3);
+      releaseDiscoveries();
+      const results = await processing;
 
-      // Verify all completed
       expect(results.every((r) => r.success)).toBe(true);
-
-      // In serial mode, this would take ~450ms (3 * 150ms)
-      // In parallel mode with concurrency 3, it should take ~150ms
-      // We use a loose threshold to account for test environment variations
-      // Parallel should be at least somewhat faster
-      expect(parallelTime).toBeLessThan(400); // Serial would be ~450ms
+      expect(mockDiscoverFiles).toHaveBeenCalledTimes(3);
     });
   });
 });
