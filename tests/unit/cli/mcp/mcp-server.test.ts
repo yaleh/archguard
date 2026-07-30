@@ -13,7 +13,8 @@ import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSONExtensions } from '@/types/extensions/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
-import { registerTools } from '@/cli/mcp/mcp-server.js';
+import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
@@ -1031,6 +1032,16 @@ describe('createMcpCommand', () => {
     const optionNames = cmd.options.map((o) => o.long);
     expect(optionNames).not.toContain('--arch-dir');
     expect(optionNames).not.toContain('--scope');
+  });
+});
+
+describe('MCP parse pool transport teardown', () => {
+  it('terminates process pools on transport EOF/close', async () => {
+    const transport = new StdioServerTransport();
+    const terminate = vi.fn().mockResolvedValue(undefined);
+    wireParsePoolTeardown(transport, { terminate } as never);
+    transport.onclose?.();
+    await vi.waitFor(() => expect(terminate).toHaveBeenCalledTimes(1));
   });
 });
 

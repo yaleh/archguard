@@ -26,6 +26,14 @@ export class ProcessParseWorkerPools {
     return pool;
   }
 
+  get dispatchCount(): number {
+    return [...this.pools.values()].reduce((total, pool) => total + pool.dispatchCount, 0);
+  }
+
+  get workerCount(): number {
+    return [...this.pools.values()].reduce((total, pool) => total + pool.size, 0);
+  }
+
   get size(): number {
     return this.pools.size;
   }

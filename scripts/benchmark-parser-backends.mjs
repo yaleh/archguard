@@ -38,7 +38,9 @@ const { PythonPlugin } = await import(path.join(repoRoot, 'dist/plugins/python/i
 const { CppPlugin } = await import(path.join(repoRoot, 'dist/plugins/cpp/index.js'));
 const { KotlinPlugin } = await import(path.join(repoRoot, 'dist/plugins/kotlin/index.js'));
 const { runAnalysis } = await import(path.join(repoRoot, 'dist/cli/analyze/run-analysis.js'));
-const { ProcessParseWorkerPools } = await import(path.join(repoRoot, 'dist/parser/process-parse-worker-pools.js'));
+const { ProcessParseWorkerPools } = await import(
+  path.join(repoRoot, 'dist/parser/process-parse-worker-pools.js')
+);
 const silentReporter = { start() {}, succeed() {}, fail() {}, warn() {}, info() {}, update() {} };
 
 const CASES = [
@@ -96,7 +98,6 @@ async function benchPipeline(PluginClass, testCase, code) {
   }
 }
 
-
 async function benchEndToEnd(testCase, code) {
   const project = mkdtempSync(path.join(os.tmpdir(), `archguard-bench-${testCase.language}-`));
   const extension = path.extname(testCase.file);
@@ -115,10 +116,20 @@ async function benchEndToEnd(testCase, code) {
       await runAnalysis({
         sessionRoot: project,
         workDir: path.join(project, `.archguard-${runtime}`),
-        cliOptions: { sources: [path.join(project, 'src')], lang: testCase.language, format: 'json', cache: false },
+        cliOptions: {
+          sources: [path.join(project, 'src')],
+          lang: testCase.language,
+          format: 'json',
+          cache: false,
+        },
         reporter: silentReporter,
         parseWorkerPools: pools,
       });
+      if (pools.dispatchCount === 0) {
+        throw new Error(
+          `benchmark did not dispatch ${testCase.language}/${runtime} through a parse worker`
+        );
+      }
       return performance.now() - started;
     } finally {
       await pools.terminate();
@@ -138,7 +149,13 @@ function median(samples) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-const PLUGINS = { go: GoPlugin, java: JavaPlugin, python: PythonPlugin, cpp: CppPlugin, kotlin: KotlinPlugin };
+const PLUGINS = {
+  go: GoPlugin,
+  java: JavaPlugin,
+  python: PythonPlugin,
+  cpp: CppPlugin,
+  kotlin: KotlinPlugin,
+};
 
 const rows = [];
 for (const testCase of CASES) {
@@ -173,10 +190,17 @@ console.log(`# Parser backend benchmark (native vs WASM)\n`);
 console.log(`- date: ${new Date().toISOString().slice(0, 10)}`);
 console.log(`- node: ${process.version}`);
 console.log(`- platform: ${process.platform}/${process.arch}`);
-console.log(`- load average (1/5/15m): ${os.loadavg().map((n) => n.toFixed(2)).join('/')}`);
+console.log(
+  `- load average (1/5/15m): ${os
+    .loadavg()
+    .map((n) => n.toFixed(2))
+    .join('/')}`
+);
 console.log(`- fixture size: ${rows[0]?.size ?? 'small'} (--size small|medium|large)`);
 console.log(`- iterations per fixture: ${ITERATIONS} (after warm-up)\n`);
-console.log(`| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio | end-to-end native (ms) | end-to-end wasm (ms) | ratio |`);
+console.log(
+  `| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio | end-to-end native (ms) | end-to-end wasm (ms) | ratio |`
+);
 console.log(`|---|---|---|---|---|---|---|---|---|---|`);
 for (const row of rows) {
   console.log(
@@ -186,6 +210,10 @@ for (const row of rows) {
 console.log(
   `| **mean** | ${avg(rows.map((r) => r.nativeParse)).toFixed(3)} | ${avg(rows.map((r) => r.wasmParse)).toFixed(3)} | **${avg(rows.map((r) => r.parseRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativePipeline)).toFixed(3)} | ${avg(rows.map((r) => r.wasmPipeline)).toFixed(3)} | **${avg(rows.map((r) => r.pipelineRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativeEndToEnd)).toFixed(1)} | ${avg(rows.map((r) => r.wasmEndToEnd)).toFixed(1)} | **${avg(rows.map((r) => r.endToEndRatio)).toFixed(2)}x** |`
 );
-console.log(`\n"full-analysis" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),`);
+console.log(
+  `\n"full-analysis" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),`
+);
 console.log(`the parse-dominated portion of an end-to-end ArchGuard analysis.`);
-console.log(`"end-to-end" = file discovery + threshold decision + worker pool + merge + query persistence.`);
+console.log(
+  `"end-to-end" = file discovery + threshold decision + worker pool + merge + query persistence.`
+);

@@ -113,6 +113,22 @@ export function createMcpServer(
   return server;
 }
 
+export function wireParsePoolTeardown(
+  transport: StdioServerTransport,
+  parseWorkerPools: ProcessParseWorkerPools
+): void {
+  const terminatePools = (): void => {
+    void parseWorkerPools.terminate();
+  };
+  const previousOnClose = transport.onclose;
+  transport.onclose = (): void => {
+    terminatePools();
+    previousOnClose?.();
+  };
+  process.once('SIGINT', terminatePools);
+  process.once('SIGTERM', terminatePools);
+}
+
 /**
  * Create and start the MCP server.
  *
@@ -120,11 +136,15 @@ export function createMcpServer(
  * the server). Query data is resolved per tool call from the target project's
  * .archguard directory.
  */
-export async function startMcpServer(defaultRoot: string = process.cwd()): Promise<void> {
-  const server = createMcpServer(defaultRoot);
+export async function startMcpServer(
+  defaultRoot: string = process.cwd(),
+  parseWorkerPools = new ProcessParseWorkerPools()
+): Promise<void> {
+  const server = createMcpServer(defaultRoot, parseWorkerPools);
 
   // Connect transport before any I/O so Claude Code can complete the handshake.
   const transport = new StdioServerTransport();
+  wireParsePoolTeardown(transport, parseWorkerPools);
   await server.connect(transport);
   console.error('ArchGuard MCP server running on stdio');
 }

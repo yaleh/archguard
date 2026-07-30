@@ -2,21 +2,25 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { TypeScriptParser } from './typescript-parser.js';
 import { resolveParserBackend } from '@/plugins/shared/parser-backend.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { ParseJob, ParseResult, ParseWorkerInitData } from './parse-worker-pool.js';
+import type { ParseResult, ParseWorkerInitData, ParseWorkerJob } from './parse-worker-pool.js';
 
 const initData = workerData as ParseWorkerInitData;
 
 type WorkerParser = {
   parseCode(code: string, filePath: string): ArchJSON;
+  parseProject?: (...args: never[]) => ArchJSON | Promise<ArchJSON>;
   dispose?: () => void;
 };
 
 async function createParser(): Promise<WorkerParser> {
-  if (initData.language === 'typescript') return new TypeScriptParser(initData.workspaceRoot);
+  if (initData.language === 'typescript') {
+    const parser = new TypeScriptParser(initData.workspaceRoot);
+    return { parseCode: (code, filePath) => parser.parseCode(code, filePath) };
+  }
   const backend = await resolveParserBackend(initData.runtime);
   const module =
     initData.language === 'go'
-      ? await import('@/plugins/golang/index.js')
+      ? await import('@/plugins/golang/atlas/index.js')
       : initData.language === 'java'
         ? await import('@/plugins/java/index.js')
         : initData.language === 'python'
@@ -25,8 +29,8 @@ async function createParser(): Promise<WorkerParser> {
             ? await import('@/plugins/cpp/index.js')
             : await import('@/plugins/kotlin/index.js');
   const Plugin =
-    'GoPlugin' in module
-      ? module.GoPlugin
+    'GoAtlasPlugin' in module
+      ? module.GoAtlasPlugin
       : 'JavaPlugin' in module
         ? module.JavaPlugin
         : 'PythonPlugin' in module
@@ -47,15 +51,25 @@ parentPort?.once('close', () => {
   void parserPromise.then((parser) => parser.dispose?.());
 });
 
-parentPort?.on('message', (job: ParseJob) => {
+parentPort?.on('message', (job: ParseWorkerJob) => {
   void parserPromise
-    .then((parser) => {
+    .then(async (parser) => {
       let result: ParseResult;
       try {
+        const archJson =
+          job.kind === 'project'
+            ? await (
+                parser.parseProject as (
+                  workspaceRoot: string,
+                  config: import('@/core/interfaces/parser.js').ParseConfig
+                ) => Promise<ArchJSON> | ArchJSON
+              )?.(job.workspaceRoot, job.config)
+            : parser.parseCode(job.code, job.filePath);
+        if (!archJson) throw new Error(`Project parsing is unsupported for ${initData.language}`);
         result = {
           jobId: job.jobId,
           success: true,
-          archJson: parser.parseCode(job.code, job.filePath),
+          archJson,
         };
       } catch (error) {
         result = {

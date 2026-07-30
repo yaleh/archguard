@@ -30,9 +30,10 @@ import {
 } from '@/plugins/shared/parser-runtime.js';
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
-import { PARSE_WORKER_THRESHOLD } from '@/parser/parallel-parser.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import path from 'path';
+import { globby } from 'globby';
+import { PARSE_WORKER_THRESHOLD } from '@/parser/parallel-parser.js';
 
 export type { ArchJsonProviderOptions, ArchJsonGetOptions } from './arch-json-provider-types.js';
 export { hashSources, deriveSubModuleArchJSON } from './arch-json-utils.js';
@@ -53,6 +54,11 @@ export class ArchJsonProvider {
   private readonly registry?: PluginRegistry;
   private readonly parseWorkerPool?: ParseWorkerPool;
   private readonly parserRuntime: ParserRuntimeKind;
+  private readonly projectFileCounter: (
+    workspaceRoot: string,
+    globs: string[],
+    exclude: string[]
+  ) => Promise<number>;
   private readonly fileDiscovery: FileDiscoveryService;
   private readonly archJsonDiskCache: ArchJsonDiskCache;
 
@@ -78,6 +84,10 @@ export class ArchJsonProvider {
     this.registry = options.registry;
     this.parseWorkerPool = options.parseWorkerPool;
     this.parserRuntime = options.parserRuntime ?? 'native';
+    this.projectFileCounter =
+      options.projectFileCounter ??
+      (async (root, globs, exclude) =>
+        (await globby(globs, { cwd: root, absolute: true, ignore: exclude })).length);
     this.fileDiscovery = new FileDiscoveryService();
 
     const diskCacheRoot = this.globalConfig.cache?.dir ?? path.join('.archguard', 'cache');
@@ -371,12 +381,47 @@ export class ArchJsonProvider {
     return [key.slice(0, separator), key.slice(separator + 2)];
   }
 
+  private async parseProjectWithPool(
+    language: 'go' | 'java' | 'python' | 'cpp' | 'kotlin',
+    workspaceRoot: string,
+    config: import('@/core/interfaces/parser.js').ParseConfig,
+    fileGlobs: string[]
+  ): Promise<ArchJSON | undefined> {
+    if (!this.parseWorkerPool) return undefined;
+    const fileCount = await this.projectFileCounter(
+      workspaceRoot,
+      fileGlobs,
+      config.excludePatterns ?? []
+    );
+    if (fileCount < PARSE_WORKER_THRESHOLD) return undefined;
+    const result = await this.parseWorkerPool.parseProject({
+      kind: 'project',
+      workspaceRoot,
+      config,
+    });
+    if (!result.success || !result.archJson) {
+      throw new Error(result.error ?? `${language} parse worker returned no project result`);
+    }
+    return result.archJson;
+  }
+
   /**
    * Parse a Go project via the plugin registry (preferred) or GoAtlasPlugin directly.
    */
   private async parseGoProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const plan = await planGoAnalysisScope(diagram.sources);
     const workspaceRoot = plan.workspaceRoot;
+    const config = {
+      workspaceRoot,
+      includePatterns: plan.includePatterns,
+      excludePatterns: [
+        ...(diagram.exclude ?? this.globalConfig.exclude ?? []),
+        ...plan.excludePatterns,
+      ],
+      languageSpecific: diagram.languageSpecific,
+    };
+    const pooled = await this.parseProjectWithPool('go', workspaceRoot, config, ['**/*.go']);
+    if (pooled) return pooled;
     const registryPlugin = this.registry?.getByName('golang');
     const plugin =
       registryPlugin ?? (await createLanguagePlugin('go', this.parserRuntimeOptions()));
@@ -387,15 +432,7 @@ export class ArchJsonProvider {
         globalEntityTypeRegistry.register(decl);
       }
     }
-    return plugin.parseProject(workspaceRoot, {
-      workspaceRoot,
-      includePatterns: plan.includePatterns,
-      excludePatterns: [
-        ...(diagram.exclude ?? this.globalConfig.exclude ?? []),
-        ...plan.excludePatterns,
-      ],
-      languageSpecific: diagram.languageSpecific,
-    });
+    return plugin.parseProject(workspaceRoot, config);
   }
 
   /**
@@ -403,6 +440,14 @@ export class ArchJsonProvider {
    */
   private async parseCppProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
+    const config = {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+    };
+    const pooled = await this.parseProjectWithPool('cpp', workspaceRoot, config, [
+      '**/*.{cpp,cxx,cc,hpp,hxx,h}',
+    ]);
+    if (pooled) return pooled;
     const registryPlugin = this.registry?.getByName('cpp');
     const plugin =
       registryPlugin ?? (await createLanguagePlugin('cpp', this.parserRuntimeOptions()));
@@ -413,10 +458,7 @@ export class ArchJsonProvider {
         globalEntityTypeRegistry.register(decl);
       }
     }
-    return plugin.parseProject(workspaceRoot, {
-      workspaceRoot,
-      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
-    });
+    return plugin.parseProject(workspaceRoot, config);
   }
 
   /**
@@ -452,6 +494,16 @@ export class ArchJsonProvider {
   private async parseGenericLanguageProject(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
     const pluginName = diagram.language;
+    const config = {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+    };
+    if (pluginName === 'python' || pluginName === 'java' || pluginName === 'kotlin') {
+      const glob =
+        pluginName === 'python' ? ['**/*.py'] : pluginName === 'java' ? ['**/*.java'] : ['**/*.kt'];
+      const pooled = await this.parseProjectWithPool(pluginName, workspaceRoot, config, glob);
+      if (pooled) return pooled;
+    }
 
     if (pluginName === 'python') {
       const registryPlugin = this.registry?.getByName('python');
@@ -464,10 +516,7 @@ export class ArchJsonProvider {
           globalEntityTypeRegistry.register(decl);
         }
       }
-      return plugin.parseProject(workspaceRoot, {
-        workspaceRoot,
-        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
-      });
+      return plugin.parseProject(workspaceRoot, config);
     }
 
     if (pluginName === 'java') {
@@ -481,10 +530,7 @@ export class ArchJsonProvider {
           globalEntityTypeRegistry.register(decl);
         }
       }
-      return plugin.parseProject(workspaceRoot, {
-        workspaceRoot,
-        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
-      });
+      return plugin.parseProject(workspaceRoot, config);
     }
 
     if (pluginName === 'kotlin') {
@@ -498,10 +544,7 @@ export class ArchJsonProvider {
           globalEntityTypeRegistry.register(decl);
         }
       }
-      return plugin.parseProject(workspaceRoot, {
-        workspaceRoot,
-        excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
-      });
+      return plugin.parseProject(workspaceRoot, config);
     }
 
     throw new Error(`Unsupported language plugin route: ${pluginName}`);

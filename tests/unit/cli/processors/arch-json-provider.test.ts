@@ -525,6 +525,24 @@ describe('ArchJsonProvider', () => {
     );
   });
 
+  it('dispatches eligible non-TypeScript project parsing through the pool protocol', async () => {
+    const expected = makeArchJSON({ language: 'python' });
+    const parseProject = vi.fn().mockResolvedValue({ success: true, archJson: expected });
+    const provider = new ArchJsonProvider({
+      globalConfig: makeGlobalConfig(),
+      parseWorkerPool: { parseProject } as never,
+      parserRuntime: 'wasm',
+      projectFileCounter: vi.fn().mockResolvedValue(12),
+    });
+    const result = await provider.get(makeDiagram({ language: 'python', sources: ['/project'] }), {
+      needsModuleGraph: false,
+    });
+    expect(result.archJson).toBe(expected);
+    expect(parseProject).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'project', workspaceRoot: '/project' })
+    );
+  });
+
   // ---- 12. files.length === 0 with parent → derives successfully ----------
 
   it('derives from parent when files array is empty for sub-path (Path B)', async () => {

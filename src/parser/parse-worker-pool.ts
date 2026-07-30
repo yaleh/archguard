@@ -6,6 +6,7 @@ import path from 'node:path';
 import type { ArchJSON } from '@/types/index.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import type { ParserLanguage } from '@/plugins/shared/parser-backend.js';
+import type { ParseConfig } from '@/core/interfaces/parser.js';
 
 export type ParseWorkerLanguage = 'typescript' | ParserLanguage;
 
@@ -17,9 +18,19 @@ export interface ParseWorkerInitData {
 
 export interface ParseJob {
   jobId: string;
+  kind: 'file';
   code: string;
   filePath: string;
 }
+
+export interface ParseProjectJob {
+  jobId: string;
+  kind: 'project';
+  workspaceRoot: string;
+  config: ParseConfig;
+}
+
+export type ParseWorkerJob = ParseJob | ParseProjectJob;
 
 export interface ParseResult {
   jobId: string;
@@ -41,12 +52,13 @@ function sanitizeWorkerExecArgv(execArgv: string[]): string[] {
 export class ParseWorkerPool {
   private readonly workers: Worker[] = [];
   private readonly idle: Worker[] = [];
-  private readonly queue: ParseJob[] = [];
+  private readonly queue: ParseWorkerJob[] = [];
   private readonly pending = new Map<string, (result: ParseResult) => void>();
   private readonly inFlight = new Map<Worker, string>();
   private readonly failedWorkers = new WeakSet<Worker>();
   private started = false;
   private terminating = false;
+  private dispatched = 0;
 
   constructor(
     private readonly poolSize: number,
@@ -61,18 +73,34 @@ export class ParseWorkerPool {
     return this.workers.length;
   }
 
+  get dispatchCount(): number {
+    return this.dispatched;
+  }
+
+  get workerIds(): readonly number[] {
+    return this.workers.map((worker) => worker.threadId);
+  }
+
   start(): void {
     if (this.started) return;
     this.started = true;
     for (let index = 0; index < this.poolSize; index++) this.spawnWorker();
   }
 
-  parse(job: Omit<ParseJob, 'jobId'>): Promise<ParseResult> {
+  parseProject(job: Omit<ParseProjectJob, 'jobId'>): Promise<ParseResult> {
+    return this.enqueue(job);
+  }
+
+  parse(job: Omit<ParseJob, 'jobId' | 'kind'>): Promise<ParseResult> {
+    return this.enqueue({ ...job, kind: 'file' });
+  }
+
+  private enqueue(job: Omit<ParseWorkerJob, 'jobId'>): Promise<ParseResult> {
     if (this.terminating) {
       return Promise.resolve({ jobId: '', success: false, error: 'Pool terminated' });
     }
     if (!this.started) this.start();
-    const fullJob = { ...job, jobId: randomUUID() };
+    const fullJob = { ...job, jobId: randomUUID() } as ParseWorkerJob;
     return new Promise((resolve) => {
       this.pending.set(fullJob.jobId, resolve);
       this.dispatch(fullJob);
@@ -105,13 +133,14 @@ export class ParseWorkerPool {
     this.idle.push(worker);
   }
 
-  private dispatch(job: ParseJob): void {
+  private dispatch(job: ParseWorkerJob): void {
     const worker = this.idle.pop();
     if (!worker) {
       this.queue.push(job);
       return;
     }
     this.inFlight.set(worker, job.jobId);
+    this.dispatched++;
     worker.postMessage(job);
   }
 
@@ -127,8 +156,9 @@ export class ParseWorkerPool {
     else this.idle.push(worker);
   }
 
-  private dispatchTo(worker: Worker, job: ParseJob): void {
+  private dispatchTo(worker: Worker, job: ParseWorkerJob): void {
     this.inFlight.set(worker, job.jobId);
+    this.dispatched++;
     worker.postMessage(job);
   }
 

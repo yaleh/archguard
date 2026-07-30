@@ -10,6 +10,12 @@ export interface ArchJsonProviderOptions {
   registry?: PluginRegistry;
   parseWorkerPool?: ParseWorkerPool;
   parserRuntime?: ParserRuntimeKind;
+  /** Test/embedding hook for measured project file counts. */
+  projectFileCounter?: (
+    workspaceRoot: string,
+    globs: string[],
+    exclude: string[]
+  ) => Promise<number>;
 }
 
 export interface ArchJsonGetOptions {
