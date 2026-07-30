@@ -60,8 +60,14 @@ const DEPRECATED_MARKER_PREFIX = 'Deprecated:';
 export function isLegacyArchguardEntry(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const command = value.command;
+  const args = value.args;
   if (typeof command !== 'string' || command.length === 0) return false;
-  return path.basename(command) === 'archguard';
+  return (
+    path.basename(command) === 'archguard' &&
+    Array.isArray(args) &&
+    args.length === 1 &&
+    args[0] === 'mcp'
+  );
 }
 
 /**
@@ -119,7 +125,11 @@ export function cleanupDeprecatedMcpJson(filePath) {
     }
   }
 
-  if (typeof doc._deprecated === 'string' && doc._deprecated.startsWith(DEPRECATED_MARKER_PREFIX)) {
+  if (
+    result.removedEntry &&
+    typeof doc._deprecated === 'string' &&
+    doc._deprecated.startsWith(DEPRECATED_MARKER_PREFIX)
+  ) {
     delete doc._deprecated;
     result.removedMarker = true;
   }
@@ -139,6 +149,24 @@ export function cleanupDeprecatedMcpJson(filePath) {
   return result;
 }
 
+/** Return true when a configured marketplace already points at the requested source. */
+export function marketplaceSourceMatches(marketplace, requestedSource) {
+  if (!marketplace || typeof marketplace !== 'object') return false;
+  if (marketplace.source === 'directory') {
+    const configured = marketplace.path ?? marketplace.installLocation;
+    if (typeof configured !== 'string') return false;
+    return path.resolve(configured) === path.resolve(requestedSource);
+  }
+  if (marketplace.source === 'github') {
+    const configured = marketplace.repo ?? marketplace.repository;
+    return typeof configured === 'string' && configured === requestedSource;
+  }
+  // Claude versions may return the original source string rather than a
+  // source-specific field. Compare it directly, but never infer equality from
+  // the marketplace name alone.
+  return typeof marketplace.source === 'string' && marketplace.source === requestedSource;
+}
+
 /**
  * Pure planning function: given the current marketplace/plugin state (as
  * reported by `claude plugin marketplace list --json` and
@@ -151,20 +179,34 @@ export function planActions({ marketplaces, plugins, marketplaceSource }) {
   const marketplace = Array.isArray(marketplaces)
     ? marketplaces.find((m) => m && m.name === MARKETPLACE_NAME)
     : undefined;
-  if (marketplace) {
-    actions.push({
-      kind: 'marketplace-update',
-      args: ['plugin', 'marketplace', 'update', MARKETPLACE_NAME],
-    });
-  } else {
+  if (!marketplace) {
     actions.push({
       kind: 'marketplace-add',
       args: ['plugin', 'marketplace', 'add', marketplaceSource],
     });
+  } else if (!marketplaceSourceMatches(marketplace, marketplaceSource)) {
+    actions.push({
+      kind: 'marketplace-remove',
+      args: ['plugin', 'marketplace', 'remove', MARKETPLACE_NAME],
+    });
+    actions.push({
+      kind: 'marketplace-add',
+      args: ['plugin', 'marketplace', 'add', marketplaceSource],
+    });
+  } else {
+    actions.push({
+      kind: 'marketplace-update',
+      args: ['plugin', 'marketplace', 'update', MARKETPLACE_NAME],
+    });
   }
 
-  const entries = Array.isArray(plugins) ? plugins.filter((p) => p && p.id === PLUGIN_ID) : [];
-  if (entries.length > 0) {
+  // Plugin list can contain the same id at multiple scopes. Only a user-scope
+  // entry satisfies this user-scope installer; a project/local entry must not
+  // suppress user installation or make verification pass.
+  const userEntries = Array.isArray(plugins)
+    ? plugins.filter((p) => p && p.id === PLUGIN_ID && p.scope === 'user')
+    : [];
+  if (userEntries.length > 0) {
     actions.push({
       kind: 'plugin-update',
       args: ['plugin', 'update', PLUGIN_ID, '--scope', 'user'],
@@ -225,7 +267,15 @@ export function main(
     }
   }
 
-  const claudeDir = env.CLAUDE_CONFIG_DIR || path.join(env.HOME || '', '.claude');
+  let claudeDir;
+  if (env.CLAUDE_CONFIG_DIR) {
+    claudeDir = env.CLAUDE_CONFIG_DIR;
+  } else if (env.HOME) {
+    claudeDir = path.join(env.HOME, '.claude');
+  } else {
+    fail('HOME or CLAUDE_CONFIG_DIR is required; refusing to infer a config path from cwd');
+    return 1;
+  }
   const deprecatedMcpJson = path.join(claudeDir, 'mcp.json');
 
   const claude = (args) =>
@@ -295,27 +345,24 @@ export function main(
 
   // Step 3: ensure the plugin is enabled and exactly one instance exists.
   let plugins = parseJsonOutput(claude(['plugin', 'list', '--json']), 'claude plugin list --json');
-  let entries = plugins.filter((p) => p && p.id === PLUGIN_ID);
+  let entries = plugins.filter((p) => p && p.id === PLUGIN_ID && p.scope === 'user');
   if (entries.length === 0) {
-    fail(`plugin ${PLUGIN_ID} not installed after install step`);
+    fail(`user-scope plugin ${PLUGIN_ID} not installed after install step`);
     return 1;
   }
   if (entries.length > 1) {
-    warn(
-      `${PLUGIN_ID} is installed at ${entries.length} scopes (${entries
-        .map((e) => e.scope)
-        .join(', ')}); expected a single user-scope install`
-    );
+    fail(`expected exactly one user-scope ${PLUGIN_ID} instance, found ${entries.length}`);
+    return 1;
   }
-  if (!entries.some((e) => e.enabled)) {
-    log(`enabling plugin: claude plugin enable ${PLUGIN_ID}`);
-    claudeMutate(['plugin', 'enable', PLUGIN_ID]);
+  if (!entries[0].enabled) {
+    log(`enabling plugin: claude plugin enable ${PLUGIN_ID} --scope user`);
+    claudeMutate(['plugin', 'enable', PLUGIN_ID, '--scope', 'user']);
     plugins = parseJsonOutput(claude(['plugin', 'list', '--json']), 'claude plugin list --json');
-    entries = plugins.filter((p) => p && p.id === PLUGIN_ID);
+    entries = plugins.filter((p) => p && p.id === PLUGIN_ID && p.scope === 'user');
   }
   const enabled = entries.filter((e) => e.enabled);
   if (enabled.length !== 1) {
-    fail(`expected exactly one enabled ${PLUGIN_ID} instance, found ${enabled.length}`);
+    fail(`expected exactly one enabled user-scope ${PLUGIN_ID} instance, found ${enabled.length}`);
     return 1;
   }
 

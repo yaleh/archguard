@@ -49,17 +49,19 @@ function fail(msg) {
 
 const args = process.argv.slice(2);
 
-// Strip global flags we accept anywhere.
+// Strip global flags we accept anywhere, retaining the requested scope so the
+// fake can model duplicate ids installed at different scopes.
 function takeFlag(flag) {
   const idx = args.indexOf(flag);
   if (idx >= 0) args.splice(idx, 1);
   return idx >= 0;
 }
 const wantJson = takeFlag('--json');
-// `--scope user` / `-s user` pairs.
+let requestedScope = 'user';
 for (const flag of ['--scope', '-s']) {
   let idx = args.indexOf(flag);
   while (idx >= 0) {
+    requestedScope = args[idx + 1] ?? requestedScope;
     args.splice(idx, 2);
     idx = args.indexOf(flag);
   }
@@ -68,7 +70,8 @@ for (const flag of ['--scope', '-s']) {
 const state = loadState();
 
 function marketplaceManifest(marketplace) {
-  const manifestPath = path.join(marketplace.path, '.claude-plugin', 'marketplace.json');
+  const root = marketplace.path ?? process.env.FAKE_GITHUB_MARKETPLACE_DIR;
+  const manifestPath = path.join(root, '.claude-plugin', 'marketplace.json');
   if (!existsSync(manifestPath)) fail(`marketplace manifest missing: ${manifestPath}`);
   return JSON.parse(readFileSync(manifestPath, 'utf8'));
 }
@@ -77,13 +80,19 @@ if (args[0] === '--version') {
   console.log('2.1.220 (fake-claude)');
 } else if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'add') {
   const source = args[3];
-  if (!source || !existsSync(path.join(source, '.claude-plugin', 'marketplace.json'))) {
-    fail(
-      `marketplace source must be a directory containing .claude-plugin/marketplace.json: ${source}`
-    );
+  const isDirectory = Boolean(
+    source && existsSync(path.join(source, '.claude-plugin', 'marketplace.json'))
+  );
+  const githubRoot = process.env.FAKE_GITHUB_MARKETPLACE_DIR;
+  if (!source || (!isDirectory && source !== 'yaleh/archguard')) {
+    fail(`unsupported marketplace source: ${source}`);
+  }
+  const manifestRoot = isDirectory ? source : githubRoot;
+  if (!manifestRoot || !existsSync(path.join(manifestRoot, '.claude-plugin', 'marketplace.json'))) {
+    fail(`marketplace manifest unavailable for source: ${source}`);
   }
   const manifest = JSON.parse(
-    readFileSync(path.join(source, '.claude-plugin', 'marketplace.json'), 'utf8')
+    readFileSync(path.join(manifestRoot, '.claude-plugin', 'marketplace.json'), 'utf8')
   );
   const existing = state.marketplaces.find((m) => m.name === manifest.name);
   if (existing) {
@@ -91,14 +100,21 @@ if (args[0] === '--version') {
   } else {
     state.marketplaces.push({
       name: manifest.name,
-      source: 'directory',
-      path: source,
-      installLocation: source,
+      source: isDirectory ? 'directory' : 'github',
+      ...(isDirectory ? { path: source } : { repo: source }),
+      installLocation: isDirectory ? source : manifestRoot,
       lastUpdated: new Date().toISOString(),
     });
     saveState(state);
     console.log(`Successfully added marketplace: ${manifest.name} (declared in user settings)`);
   }
+} else if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'remove') {
+  const name = args[3];
+  const idx = state.marketplaces.findIndex((m) => m.name === name);
+  if (idx < 0) fail(`Marketplace '${name}' not found`);
+  state.marketplaces.splice(idx, 1);
+  saveState(state);
+  console.log(`Removed marketplace: ${name}`);
 } else if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'update') {
   const name = args[3];
   const targets = name ? state.marketplaces.filter((m) => m.name === name) : state.marketplaces;
@@ -110,10 +126,11 @@ if (args[0] === '--version') {
   if (wantJson) {
     console.log(
       JSON.stringify(
-        state.marketplaces.map(({ name, source, path: p, installLocation }) => ({
+        state.marketplaces.map(({ name, source, path: p, repo, installLocation }) => ({
           name,
           source,
-          path: p,
+          ...(p ? { path: p } : {}),
+          ...(repo ? { repo } : {}),
           installLocation,
         })),
         null,
@@ -136,7 +153,7 @@ if (args[0] === '--version') {
   if (!entry) fail(`Plugin '${pluginName}' not found in marketplace '${marketplaceName}'`);
   const version = entry.version ?? entry.source?.version;
   if (!version) fail(`Plugin '${pluginName}' in marketplace '${marketplaceName}' has no version`);
-  const existing = state.plugins.find((p) => p.id === id);
+  const existing = state.plugins.find((p) => p.id === id && p.scope === requestedScope);
   if (existing) {
     console.log(`Plugin "${id}" is already installed`);
   } else {
@@ -144,7 +161,7 @@ if (args[0] === '--version') {
     state.plugins.push({
       id,
       version,
-      scope: 'user',
+      scope: requestedScope,
       enabled: true,
       installPath: path.join(configDir, 'plugins', 'cache', marketplaceName, pluginName, version),
       installedAt: now,
@@ -156,7 +173,7 @@ if (args[0] === '--version') {
 } else if (args[0] === 'plugin' && args[1] === 'update') {
   const id = args[2];
   const [pluginName, marketplaceName] = String(id).split('@');
-  const plugin = state.plugins.find((p) => p.id === id);
+  const plugin = state.plugins.find((p) => p.id === id && p.scope === requestedScope);
   if (!plugin) fail(`Plugin "${pluginName}" is not installed`);
   const marketplace = state.marketplaces.find((m) => m.name === marketplaceName);
   if (!marketplace) fail(`Marketplace '${marketplaceName}' not found`);

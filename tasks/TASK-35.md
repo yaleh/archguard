@@ -36,7 +36,8 @@ plugin dependencies and is no longer the selected design.
 
 ## Touches
 
-- scripts/install-claude-user-scope.sh (npm-source marketplace flow, idempotency, deprecated mcp.json cleanup)
+- scripts/install-claude-user-scope.sh (shell entrypoint)
+- scripts/install-claude-user-scope.mjs (npm-source marketplace flow, scope-aware idempotency, source switching, deprecated mcp.json cleanup)
 - plugin/** (registration references only — package coordinates/paths the installer points at)
 - README.md (install docs matching actual commands)
 - docs/** (native auto-detect / WASM fallback / force-runtime install docs)
@@ -101,7 +102,7 @@ Implementation:
   docs/user-guide/mcp-usage.md helper-script section rewritten to the
   npm-source marketplace flow.
 
-Tests (NEW: tests/integration/installer-claude-user-scope.test.ts, 25 tests;
+Tests (NEW: tests/integration/installer-claude-user-scope.test.ts, 33 tests after audit remediation;
 fixture: tests/fixtures/installer/fake-claude.mjs):
 - cleanupDeprecatedMcpJson: 8 fixture tests (absent, archguard-only → file
   deleted, mixed entries → unrelated preserved, residue-free byte-identical,
@@ -140,6 +141,31 @@ REAL vs SIMULATED summary:
   files). The npm registry is not simulated here at all — it is simply
   unreachable for the unpublished packages (E404 boundary).
 
-Gate: `npx vitest run` in the worktree — 274 passed | 2 skipped files,
-4284 passed | 11 skipped tests (base was 4259 passed; +25 new), exit 0.
+Initial gate: `npx vitest run` in the worktree — 274 passed | 2 skipped files,
+4284 passed | 11 skipped tests, exit 0. Remediation gate: 274 passed | 2 skipped
+files, 4292 passed | 11 skipped tests (base was 4259; +33), exit 0.
 `npm run type-check` clean. ESLint on changed files: 0 errors.
+
+## Adversarial audit remediation (2026-07-30)
+
+Blocking findings from the first land were fixed with TDD:
+- Legacy cleanup now requires both `basename(command) == archguard` and exactly
+  `args: [mcp]`; `archguard serve`, missing args, extra args, and node launchers
+  survive byte-identically. `_deprecated` is removed only in the same operation
+  that removes an actual legacy ArchGuard MCP entry. Missing both HOME and
+  CLAUDE_CONFIG_DIR fails closed before inspecting cwd.
+- Idempotency is user-scope-specific: project/local entries do not satisfy the
+  installer; install/update/enable all pass `--scope user`; verification filters
+  to exactly one enabled user entry. Cross-scope duplicate tests cover
+  project-enabled/user-disabled and project-only states.
+- Marketplace state compares the configured source to the requested source. A
+  change (for example checkout directory to `yaleh/archguard`) executes
+  marketplace remove + add before updating the plugin, rather than updating a
+  stale source. End-to-end transition test asserts final source and invocations.
+- The real-Claude boundary test uses `it.skipIf` when unavailable, a minimal
+  environment, isolated HOME/CLAUDE_CONFIG_DIR, a fresh explicit npmrc pinned to
+  registry.npmjs.org, and scrubbed npm auth variables. It accepts only the
+  specific public-registry E404/unpublished boundary (rejects network/auth errors).
+
+Remediation test count: 33/33 installer tests passed. Full-suite evidence is
+recorded after the remediation commit.

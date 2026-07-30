@@ -41,6 +41,7 @@ import {
   planActions,
   isLegacyArchguardEntry,
   findLegacyPlugins,
+  marketplaceSourceMatches,
   PLUGIN_ID,
   MARKETPLACE_NAME,
   PLUGIN_PACKAGE,
@@ -152,6 +153,32 @@ describe('cleanupDeprecatedMcpJson', () => {
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 
+  it('preserves ArchGuard commands that are not MCP registrations', () => {
+    for (const entry of [
+      { command: '/opt/archguard', args: ['serve'] },
+      { command: 'archguard', args: [] },
+      { command: 'archguard' },
+      { command: 'archguard', args: ['mcp', '--other'] },
+    ]) {
+      const file = seed({ mcpServers: { archguard: entry }, _deprecated: MARKER });
+      const before = readFileSync(file, 'utf8');
+      const result = cleanupDeprecatedMcpJson(file);
+      expect(result.status).toBe('no-residue');
+      expect(result.removedEntry).toBe(false);
+      expect(result.removedMarker).toBe(false);
+      expect(readFileSync(file, 'utf8')).toBe(before);
+    }
+  });
+
+  it('keeps an unrelated top-level _deprecated marker unless it removes ArchGuard MCP residue', () => {
+    const file = seed({ _deprecated: MARKER, custom: true });
+    const before = readFileSync(file, 'utf8');
+    const result = cleanupDeprecatedMcpJson(file);
+    expect(result.status).toBe('no-residue');
+    expect(result.removedMarker).toBe(false);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+  });
+
   it('is idempotent: a second run finds no residue', () => {
     const file = seed({ mcpServers: { archguard: LEGACY_ENTRY, other: { command: 'x' } } });
     expect(cleanupDeprecatedMcpJson(file).status).toBe('cleaned');
@@ -162,7 +189,9 @@ describe('cleanupDeprecatedMcpJson', () => {
     expect(isLegacyArchguardEntry({ command: '/usr/local/bin/archguard', args: ['mcp'] })).toBe(
       true
     );
-    expect(isLegacyArchguardEntry({ command: 'archguard' })).toBe(true);
+    expect(isLegacyArchguardEntry({ command: 'archguard', args: ['mcp'] })).toBe(true);
+    expect(isLegacyArchguardEntry({ command: 'archguard', args: ['serve'] })).toBe(false);
+    expect(isLegacyArchguardEntry({ command: 'archguard' })).toBe(false);
     expect(isLegacyArchguardEntry({ command: 'node', args: ['mcp-launcher.mjs'] })).toBe(false);
     expect(isLegacyArchguardEntry('archguard')).toBe(false);
   });
@@ -193,11 +222,39 @@ describe('planActions', () => {
 
   it('installs the plugin when the marketplace exists but the plugin does not', () => {
     const actions = planActions({
-      marketplaces: [{ name: MARKETPLACE_NAME }],
+      marketplaces: [{ name: MARKETPLACE_NAME, source: 'directory', path: SRC }],
       plugins: [],
       marketplaceSource: SRC,
     });
     expect(actions.map((a) => a.kind)).toEqual(['marketplace-update', 'plugin-install']);
+  });
+
+  it('plans remove + add when the requested marketplace source changed', () => {
+    const actions = planActions({
+      marketplaces: [{ name: MARKETPLACE_NAME, source: 'directory', path: SRC }],
+      plugins: [{ id: PLUGIN_ID, scope: 'user', enabled: true }],
+      marketplaceSource: 'yaleh/archguard',
+    });
+    expect(actions.map((a) => a.kind)).toEqual([
+      'marketplace-remove',
+      'marketplace-add',
+      'plugin-update',
+    ]);
+    expect(actions[1].args).toEqual(['plugin', 'marketplace', 'add', 'yaleh/archguard']);
+    expect(marketplaceSourceMatches({ source: 'directory', path: SRC }, SRC)).toBe(true);
+    expect(marketplaceSourceMatches({ source: 'github', repo: 'yaleh/archguard' }, SRC)).toBe(
+      false
+    );
+  });
+
+  it('treats only user-scope plugin state as satisfying the installer', () => {
+    const actions = planActions({
+      marketplaces: [{ name: MARKETPLACE_NAME, source: 'directory', path: SRC }],
+      plugins: [{ id: PLUGIN_ID, version: '0.1.31', scope: 'project', enabled: true }],
+      marketplaceSource: SRC,
+    });
+    expect(actions.map((a) => a.kind)).toEqual(['marketplace-update', 'plugin-install']);
+    expect(actions[1].args).toEqual(['plugin', 'install', PLUGIN_ID, '--scope', 'user']);
   });
 
   it('ignores legacy archguard plugins from other marketplaces when planning', () => {
@@ -227,6 +284,7 @@ interface FakeEnv {
   binDir: string;
   marketplaceDir: string;
   logPath: string;
+  extraEnv?: Record<string, string>;
 }
 
 function writeMarketplaceManifest(dir: string, version: string): void {
@@ -294,6 +352,7 @@ async function runInstaller(
         HOME: env.home,
         CLAUDE_CONFIG_DIR: env.configDir,
         FAKE_CLAUDE_LOG: env.logPath,
+        ...(env.extraEnv ?? {}),
       },
       timeout: 60_000,
     });
@@ -407,6 +466,98 @@ describe('installer with fake claude CLI (isolated config)', () => {
     expect(state.plugins[0].enabled).toBe(true);
   });
 
+  it('project-enabled/user-disabled re-enables user scope explicitly and does not pass on project state', async () => {
+    const env = makeFakeEnv();
+    expect((await runInstaller(env)).code).toBe(0);
+    const statePath = path.join(env.configDir, 'fake-claude-state.json');
+    const state = fakeState(env);
+    state.plugins[0].enabled = false;
+    state.plugins.push({
+      ...state.plugins[0],
+      scope: 'project',
+      enabled: true,
+      installPath: '/tmp/project-plugin',
+    });
+    writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
+
+    const result = await runInstaller(env);
+    expect(result.code, result.stderr).toBe(0);
+    const final = fakeState(env).plugins;
+    expect(final.find((p) => p.scope === 'user')).toMatchObject({ enabled: true });
+    expect(final.find((p) => p.scope === 'project')).toMatchObject({ enabled: true });
+    const calls = claudeCalls(env);
+    expect(calls).toContainEqual(['plugin', 'enable', PLUGIN_ID, '--scope', 'user']);
+    expect(calls).toContainEqual(['plugin', 'update', PLUGIN_ID, '--scope', 'user']);
+  });
+
+  it('project-only plugin state installs a separate user-scope instance', async () => {
+    const env = makeFakeEnv();
+    // Register marketplace first so the project fixture is a valid state.
+    execFileSync(
+      path.join(env.binDir, 'claude'),
+      ['plugin', 'marketplace', 'add', env.marketplaceDir],
+      {
+        env: { ...process.env, CLAUDE_CONFIG_DIR: env.configDir },
+      }
+    );
+    execFileSync(
+      path.join(env.binDir, 'claude'),
+      ['plugin', 'install', PLUGIN_ID, '--scope', 'project'],
+      { env: { ...process.env, CLAUDE_CONFIG_DIR: env.configDir } }
+    );
+    const result = await runInstaller(env);
+    expect(result.code, result.stderr).toBe(0);
+    const plugins = fakeState(env).plugins;
+    expect(plugins.filter((p) => p.scope === 'user')).toHaveLength(1);
+    expect(plugins.filter((p) => p.scope === 'project')).toHaveLength(1);
+    expect(claudeCalls(env)).toContainEqual(['plugin', 'install', PLUGIN_ID, '--scope', 'user']);
+  });
+
+  it('switches a stale checkout marketplace source to the requested GitHub source', async () => {
+    const env = makeFakeEnv();
+    expect((await runInstaller(env)).code).toBe(0);
+    env.extraEnv = { FAKE_GITHUB_MARKETPLACE_DIR: env.marketplaceDir };
+    const second = await runInstaller(env, ['--marketplace-source', 'yaleh/archguard']);
+    expect(second.code, second.stderr).toBe(0);
+    expect(fakeState(env).marketplaces).toEqual([
+      expect.objectContaining({
+        name: MARKETPLACE_NAME,
+        source: 'github',
+        repo: 'yaleh/archguard',
+      }),
+    ]);
+    const calls = claudeCalls(env);
+    expect(calls).toContainEqual(['plugin', 'marketplace', 'remove', MARKETPLACE_NAME]);
+    expect(calls).toContainEqual(['plugin', 'marketplace', 'add', 'yaleh/archguard']);
+  });
+
+  it('refuses to infer .claude under cwd when HOME and CLAUDE_CONFIG_DIR are absent', async () => {
+    const env = makeFakeEnv();
+    const cwd = makeTempDir('archguard-no-home-');
+    const localClaude = path.join(cwd, '.claude');
+    mkdirSync(localClaude, { recursive: true });
+    const residue = path.join(localClaude, 'mcp.json');
+    writeFileSync(
+      residue,
+      JSON.stringify({ mcpServers: { archguard: { command: 'archguard', args: ['mcp'] } } })
+    );
+    let code = 0;
+    let stderr = '';
+    try {
+      await execFileAsync(process.execPath, [installerMjs], {
+        cwd,
+        env: { PATH: `${env.binDir}:${path.dirname(process.execPath)}:/usr/bin:/bin` },
+      });
+    } catch (error) {
+      const err = error as { code?: number; stderr?: string };
+      code = err.code ?? 1;
+      stderr = String(err.stderr ?? '');
+    }
+    expect(code).toBe(1);
+    expect(stderr).toContain('HOME or CLAUDE_CONFIG_DIR is required');
+    expect(existsSync(residue)).toBe(true);
+  });
+
   it('removes deprecated mcp.json residue during install, preserving unrelated entries', async () => {
     const env = makeFakeEnv();
     writeFileSync(
@@ -504,76 +655,94 @@ describe('installer static invariants', () => {
 // ---------------------------------------------------------------------------
 
 describe('real claude CLI boundary (isolated config)', () => {
-  function realClaudeAvailable(): boolean {
+  const realClaudeAvailable = (() => {
     try {
       execFileSync('claude', ['--version'], { stdio: 'pipe', timeout: 30_000 });
       return true;
     } catch {
       return false;
     }
-  }
+  })();
 
-  it('registers the marketplace for real, cleans residue, then stops at the unpublished npm boundary', async () => {
-    if (!realClaudeAvailable()) {
-      console.warn('[TASK-35 boundary test] real claude CLI not available; skipped');
-      return;
-    }
-    const root = makeTempDir('archguard-installer-real-');
-    const home = path.join(root, 'home');
-    const configDir = path.join(root, 'claude-config');
-    mkdirSync(home, { recursive: true });
-    mkdirSync(configDir, { recursive: true });
-    // Deprecated residue must be cleaned even though the install later fails.
-    writeFileSync(
-      path.join(configDir, 'mcp.json'),
-      `${JSON.stringify({
-        mcpServers: {
-          archguard: { command: 'archguard', args: ['mcp'] },
-          github: { command: 'docker', args: ['run', 'github-mcp'] },
-        },
-      })}\n`
-    );
+  it.skipIf(!realClaudeAvailable)(
+    'registers the marketplace for real, cleans residue, then stops specifically at the unpublished npm E404 boundary',
+    async () => {
+      const root = makeTempDir('archguard-installer-real-');
+      const home = path.join(root, 'home');
+      const configDir = path.join(root, 'claude-config');
+      const npmUserConfig = path.join(root, 'empty-npmrc');
+      mkdirSync(home, { recursive: true });
+      mkdirSync(configDir, { recursive: true });
+      writeFileSync(npmUserConfig, 'registry=https://registry.npmjs.org/\nalways-auth=false\n');
 
-    let code = 0;
-    let stdout = '';
-    let stderr = '';
-    try {
-      const out = await execFileAsync(
-        process.execPath,
-        [installerMjs, '--marketplace-source', repoRoot],
-        {
-          env: { ...process.env, HOME: home, CLAUDE_CONFIG_DIR: configDir },
-          timeout: 180_000,
-        }
+      // Start with a deliberately minimal environment: retain only executable
+      // lookup/runtime essentials; scrub registry/auth credentials and npm
+      // configuration so the E404 proves the public unpublished boundary.
+      const boundaryEnv: NodeJS.ProcessEnv = {
+        PATH: process.env.PATH,
+        HOME: home,
+        CLAUDE_CONFIG_DIR: configDir,
+        NPM_CONFIG_USERCONFIG: npmUserConfig,
+        NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/',
+        NPM_CONFIG_ALWAYS_AUTH: 'false',
+        NPM_CONFIG_TOKEN: '',
+        NODE_AUTH_TOKEN: '',
+      };
+      // Deprecated residue must be cleaned even though the install later fails.
+      writeFileSync(
+        path.join(configDir, 'mcp.json'),
+        `${JSON.stringify({
+          mcpServers: {
+            archguard: { command: 'archguard', args: ['mcp'] },
+            github: { command: 'docker', args: ['run', 'github-mcp'] },
+          },
+        })}\n`
       );
-      stdout = String(out.stdout);
-      stderr = String(out.stderr);
-    } catch (error) {
-      const err = error as { code?: number; stdout?: string; stderr?: string };
-      code = err.code ?? 1;
-      stdout = String(err.stdout ?? '');
-      stderr = String(err.stderr ?? '');
-    }
 
-    const combined = `${stdout}\n${stderr}`;
-    // Boundary: the unpublished plugin package cannot come from the registry.
-    expect(code, `expected the npm boundary failure:\n${combined}`).toBe(1);
-    expect(combined).toContain(PLUGIN_PACKAGE);
-    expect(combined).toMatch(/E404|404|ENOTFOUND|network|ETIMEDOUT|ECONNREFUSED/i);
+      let code = 0;
+      let stdout = '';
+      let stderr = '';
+      try {
+        const out = await execFileAsync(
+          process.execPath,
+          [installerMjs, '--marketplace-source', repoRoot],
+          {
+            env: boundaryEnv,
+            timeout: 180_000,
+          }
+        );
+        stdout = String(out.stdout);
+        stderr = String(out.stderr);
+      } catch (error) {
+        const err = error as { code?: number; stdout?: string; stderr?: string };
+        code = err.code ?? 1;
+        stdout = String(err.stdout ?? '');
+        stderr = String(err.stderr ?? '');
+      }
 
-    // Everything before the boundary is real and succeeded:
-    const marketplacesJson = execFileSync('claude', ['plugin', 'marketplace', 'list', '--json'], {
-      env: { ...process.env, HOME: home, CLAUDE_CONFIG_DIR: configDir },
-      encoding: 'utf8',
-      timeout: 60_000,
-    });
-    const marketplaces = JSON.parse(marketplacesJson) as Array<{ name: string }>;
-    expect(marketplaces.map((m) => m.name)).toContain(MARKETPLACE_NAME);
+      const combined = `${stdout}\n${stderr}`;
+      // Boundary: the unpublished plugin package cannot come from the registry.
+      expect(code, `expected the npm boundary failure:\n${combined}`).toBe(1);
+      expect(combined).toContain(PLUGIN_PACKAGE);
+      expect(combined).toMatch(/npm error code E404/i);
+      expect(combined).toMatch(/404 Not Found.*registry\.npmjs\.org/i);
+      expect(combined).not.toMatch(/ENOTFOUND|ETIMEDOUT|ECONNREFUSED|E401|E403/i);
 
-    // Residue cleaned, unrelated entry preserved, and the deprecated file
-    // was never re-created with a registration.
-    const doc = JSON.parse(readFileSync(path.join(configDir, 'mcp.json'), 'utf8'));
-    expect(doc.mcpServers.archguard).toBeUndefined();
-    expect(doc.mcpServers.github).toEqual({ command: 'docker', args: ['run', 'github-mcp'] });
-  }, 240_000);
+      // Everything before the boundary is real and succeeded:
+      const marketplacesJson = execFileSync('claude', ['plugin', 'marketplace', 'list', '--json'], {
+        env: { ...process.env, HOME: home, CLAUDE_CONFIG_DIR: configDir },
+        encoding: 'utf8',
+        timeout: 60_000,
+      });
+      const marketplaces = JSON.parse(marketplacesJson) as Array<{ name: string }>;
+      expect(marketplaces.map((m) => m.name)).toContain(MARKETPLACE_NAME);
+
+      // Residue cleaned, unrelated entry preserved, and the deprecated file
+      // was never re-created with a registration.
+      const doc = JSON.parse(readFileSync(path.join(configDir, 'mcp.json'), 'utf8'));
+      expect(doc.mcpServers.archguard).toBeUndefined();
+      expect(doc.mcpServers.github).toEqual({ command: 'docker', args: ['run', 'github-mcp'] });
+    },
+    240_000
+  );
 });
