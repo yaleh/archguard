@@ -24,6 +24,8 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck && chmod +x dist/cli/index.js",
+    "postbuild": "npm run check:runtime-deps",
+    "check:runtime-deps": "node --experimental-strip-types scripts/check-runtime-deps.ts",
     "dev": "tsc --watch",
     "postinstall": "node scripts/postinstall-tree-sitter.mjs",
     "prepack": "node scripts/stage-tree-sitter-prebuild.mjs",
