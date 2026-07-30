@@ -153,3 +153,15 @@ baseline inflates RSS — generous, not stingy).
 - A parallel session on this shared host wrote a byte-identical copy of the fix
   into the main workspace (blob 19294d8); preserved as stash "parallel-session
   parser-pool fix" rather than discarded.
+
+### Provenance correction (driver, 2026-07-30)
+The first build's independent fact-check (git log -L) refuted two claims in the
+original comment: the 256MiB cap was added the SAME DAY in commit 50672b4
+(16:12 UTC) — it never fit this hardware class, it was not outgrown; and the
+"flat ±1.5MB" figure is the FULL-SUITE singleFork plateau — fresh-fork
+standalone runs measure ~90-177MB (gc() is a no-op without --expose-gc, so RSS
+includes uncollected garbage; growth is context-dependent). The code comment
+was corrected on master accordingly. Assertion semantics UNCHANGED (cap =
+max(300MB, 290MB×2.0); 3GB leak ≈ 10.6× still fails) — no re-gate required;
+this is a comment-provenance fix only. (The floor constant is defensive: dead
+at ratio 2.0/290MB, retained for future baseline edits.)
