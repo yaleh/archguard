@@ -38,6 +38,7 @@ import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
 import { registerGIMTools } from './tools/gim-tools.js';
+import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 
 const projectRootParam = z
   .string()
@@ -79,7 +80,10 @@ async function withEngineErrorContext<T>(
   }
 }
 
-export function createMcpServer(defaultRoot: string = process.cwd()): McpServer {
+export function createMcpServer(
+  defaultRoot: string = process.cwd(),
+  parseWorkerPools = new ProcessParseWorkerPools()
+): McpServer {
   const server = new McpServer({
     name: 'archguard',
     version: '1.0.0',
@@ -88,7 +92,13 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerTools(server, defaultRoot);
   registerAnalyzeTool(server, {
     defaultRoot,
+    parseWorkerPools,
   });
+  const originalClose = server.close.bind(server);
+  server.close = async (): Promise<void> => {
+    await parseWorkerPools.terminate();
+    await originalClose();
+  };
   registerTestAnalysisTools(server, defaultRoot);
   registerGitHistoryAnalyzeTool(server, defaultRoot);
   registerGitHistoryTools(server, defaultRoot);

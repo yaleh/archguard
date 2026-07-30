@@ -28,9 +28,12 @@ import {
 } from '../mcp/tools/package-metrics-tools.js';
 import {
   hasParserRuntimeEnvOverride,
+  selectParserBackendFor,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
+import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -74,6 +77,7 @@ export interface RunAnalysisOptions {
   workDir: string;
   cliOptions: Partial<CLIOptions>;
   reporter: ProgressReporterLike;
+  parseWorkerPools?: ProcessParseWorkerPools;
 }
 
 export interface RunAnalysisResult {
@@ -135,14 +139,40 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   }
 
   const parseCache = new ParseCache();
+  const poolRegistry = options.parseWorkerPools ?? new ProcessParseWorkerPools();
+  const ownsPools = options.parseWorkerPools === undefined;
+  const language = (selectedDiagrams[0]?.language ?? 'typescript') as ParseWorkerLanguage;
+  const runtimeConfig = config as Config & Pick<GlobalConfig, 'parserRuntime' | 'nativeModuleRoot'>;
+  const parserRuntime =
+    language === 'typescript'
+      ? 'native'
+      : (
+          await selectParserBackendFor(language, {
+            policy: hasParserRuntimeEnvOverride() ? undefined : runtimeConfig.parserRuntime,
+            nativeModuleRoot: runtimeConfig.nativeModuleRoot,
+          })
+        ).runtime;
+  const parseWorkerPool = poolRegistry.get({
+    language,
+    runtime: parserRuntime,
+    workspaceRoot: sessionRoot,
+    concurrency: config.concurrency,
+  });
   const processor = new DiagramProcessor({
     diagrams: selectedDiagrams,
     globalConfig: config as any,
     progress: reporter,
     parseCache,
+    parseWorkerPool,
+    parserRuntime,
   });
 
-  const results = await processor.processAll();
+  let results: DiagramResult[];
+  try {
+    results = await processor.processAll();
+  } finally {
+    if (ownsPools) await poolRegistry.terminate();
+  }
 
   // Test analysis — invoked when --include-tests or --tests-only is set
   if (cliOptions.includeTests || cliOptions.testsOnly) {

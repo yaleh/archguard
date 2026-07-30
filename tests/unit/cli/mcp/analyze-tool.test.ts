@@ -13,6 +13,33 @@ describe('registerAnalyzeTool', () => {
     runAnalysisMock.mockReset();
   });
 
+  it('passes the process-owned pool registry through repeated MCP analyses', async () => {
+    runAnalysisMock.mockResolvedValue({
+      config: { workDir: '/workspace/.archguard', outputDir: '/workspace/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: [],
+      hasDiagramFailures: false,
+    });
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+    const pools = {
+      get: vi.fn(),
+      terminate: vi.fn(),
+    } as unknown as import('@/parser/process-parse-worker-pools.js').ProcessParseWorkerPools;
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, { defaultRoot: '/workspace', parseWorkerPools: pools });
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
+    await callback({ lang: 'python', sources: ['./src'] });
+    await callback({ lang: 'python', sources: ['./src'] });
+    expect(runAnalysisMock).toHaveBeenCalledTimes(2);
+    expect(runAnalysisMock.mock.calls[0][0].parseWorkerPools).toBe(pools);
+    expect(runAnalysisMock.mock.calls[1][0].parseWorkerPools).toBe(pools);
+  });
+
   it('registers archguard_analyze and resolves projectRoot for sessionRoot/workDir/sources', async () => {
     runAnalysisMock.mockResolvedValue({
       config: {

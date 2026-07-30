@@ -168,7 +168,7 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
 
     // Worker threads only win above the measured crossover. A supplied pool is
     // process-owned (MCP); otherwise this analysis owns and terminates its pool.
-    const useWorkers = filePaths.length >= this.workerThreshold && !this.parseCache;
+    const useWorkers = filePaths.length >= this.workerThreshold;
     let ownedPool: ParseWorkerPool | undefined;
     const workerPool = useWorkers
       ? (this.externalWorkerPool ??

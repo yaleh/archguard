@@ -3,6 +3,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ParallelParser, PARSE_WORKER_THRESHOLD } from '@/parser/parallel-parser.js';
+import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
+import { runAnalysis } from '@/cli/analyze/run-analysis.js';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -35,6 +37,32 @@ describe('parse worker pool integration', () => {
     expect(parallel.relations).toEqual(serial.relations);
     expect(parallel.sourceFiles).toEqual(serial.sourceFiles);
   });
+
+  it('reuses one process pool across warm analyses and releases it on shutdown', async () => {
+    const files = await fixtures(PARSE_WORKER_THRESHOLD);
+    const root = path.dirname(files[0]);
+    const pools = new ProcessParseWorkerPools();
+    const reporter = { start() {}, succeed() {}, fail() {}, warn() {}, info() {}, update() {} };
+    const options = {
+      sessionRoot: root,
+      workDir: path.join(root, '.archguard'),
+      cliOptions: {
+        sources: [root],
+        lang: 'typescript' as const,
+        format: 'json' as const,
+        cache: false,
+      },
+      reporter,
+      parseWorkerPools: pools,
+    };
+    await runAnalysis(options);
+    const poolCount = pools.size;
+    await runAnalysis(options);
+    expect(poolCount).toBe(1);
+    expect(pools.size).toBe(1);
+    await pools.terminate();
+    expect(pools.size).toBe(0);
+  }, 120_000);
 
   it('terminates owned workers when one file errors', async () => {
     const files = await fixtures(PARSE_WORKER_THRESHOLD);

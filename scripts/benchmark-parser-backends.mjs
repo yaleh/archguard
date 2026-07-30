@@ -10,7 +10,7 @@
  *
  * Usage: node scripts/benchmark-parser-backends.mjs [--iterations N]
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
@@ -37,6 +37,9 @@ const { JavaPlugin } = await import(path.join(repoRoot, 'dist/plugins/java/index
 const { PythonPlugin } = await import(path.join(repoRoot, 'dist/plugins/python/index.js'));
 const { CppPlugin } = await import(path.join(repoRoot, 'dist/plugins/cpp/index.js'));
 const { KotlinPlugin } = await import(path.join(repoRoot, 'dist/plugins/kotlin/index.js'));
+const { runAnalysis } = await import(path.join(repoRoot, 'dist/cli/analyze/run-analysis.js'));
+const { ProcessParseWorkerPools } = await import(path.join(repoRoot, 'dist/parser/process-parse-worker-pools.js'));
+const silentReporter = { start() {}, succeed() {}, fail() {}, warn() {}, info() {}, update() {} };
 
 const CASES = [
   { language: 'go', file: 'tests/fixtures/go/sample.go' },
@@ -93,6 +96,43 @@ async function benchPipeline(PluginClass, testCase, code) {
   }
 }
 
+
+async function benchEndToEnd(testCase, code) {
+  const project = mkdtempSync(path.join(os.tmpdir(), `archguard-bench-${testCase.language}-`));
+  const extension = path.extname(testCase.file);
+  const count = Math.max(12, SIZE_MULTIPLIERS[FIXTURE_SIZE]);
+  for (let index = 0; index < count; index++) {
+    const dir = path.join(project, 'src');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, `fixture-${index}${extension}`), code);
+  }
+  const sample = async (runtime) => {
+    const pools = new ProcessParseWorkerPools();
+    const previous = process.env.ARCHGUARD_PARSER_RUNTIME;
+    process.env.ARCHGUARD_PARSER_RUNTIME = runtime;
+    const started = performance.now();
+    try {
+      await runAnalysis({
+        sessionRoot: project,
+        workDir: path.join(project, `.archguard-${runtime}`),
+        cliOptions: { sources: [path.join(project, 'src')], lang: testCase.language, format: 'json', cache: false },
+        reporter: silentReporter,
+        parseWorkerPools: pools,
+      });
+      return performance.now() - started;
+    } finally {
+      await pools.terminate();
+      if (previous === undefined) delete process.env.ARCHGUARD_PARSER_RUNTIME;
+      else process.env.ARCHGUARD_PARSER_RUNTIME = previous;
+    }
+  };
+  try {
+    return { native: await sample('native'), wasm: await sample('wasm') };
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+}
+
 function median(samples) {
   const sorted = [...samples].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];
@@ -110,6 +150,7 @@ for (const testCase of CASES) {
   const nativeParse = await benchParserOnly(nativeParserBackend, testCase, code);
   const wasmParse = await benchParserOnly(wasmParserBackend, testCase, code);
   const pipeline = await benchPipeline(PLUGINS[testCase.language], testCase, code);
+  const endToEnd = await benchEndToEnd(testCase, fixtureCode);
   rows.push({
     language: testCase.language,
     fixture: testCase.file,
@@ -120,6 +161,9 @@ for (const testCase of CASES) {
     nativePipeline: pipeline.native,
     wasmPipeline: pipeline.wasm,
     pipelineRatio: pipeline.wasm / pipeline.native,
+    nativeEndToEnd: endToEnd.native,
+    wasmEndToEnd: endToEnd.wasm,
+    endToEndRatio: endToEnd.wasm / endToEnd.native,
   });
 }
 
@@ -132,15 +176,16 @@ console.log(`- platform: ${process.platform}/${process.arch}`);
 console.log(`- load average (1/5/15m): ${os.loadavg().map((n) => n.toFixed(2)).join('/')}`);
 console.log(`- fixture size: ${rows[0]?.size ?? 'small'} (--size small|medium|large)`);
 console.log(`- iterations per fixture: ${ITERATIONS} (after warm-up)\n`);
-console.log(`| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio |`);
-console.log(`|---|---|---|---|---|---|---|`);
+console.log(`| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio | end-to-end native (ms) | end-to-end wasm (ms) | ratio |`);
+console.log(`|---|---|---|---|---|---|---|---|---|---|`);
 for (const row of rows) {
   console.log(
-    `| ${row.language} | ${row.nativeParse.toFixed(3)} | ${row.wasmParse.toFixed(3)} | ${row.parseRatio.toFixed(2)}x | ${row.nativePipeline.toFixed(3)} | ${row.wasmPipeline.toFixed(3)} | ${row.pipelineRatio.toFixed(2)}x |`
+    `| ${row.language} | ${row.nativeParse.toFixed(3)} | ${row.wasmParse.toFixed(3)} | ${row.parseRatio.toFixed(2)}x | ${row.nativePipeline.toFixed(3)} | ${row.wasmPipeline.toFixed(3)} | ${row.pipelineRatio.toFixed(2)}x | ${row.nativeEndToEnd.toFixed(1)} | ${row.wasmEndToEnd.toFixed(1)} | ${row.endToEndRatio.toFixed(2)}x |`
   );
 }
 console.log(
-  `| **mean** | ${avg(rows.map((r) => r.nativeParse)).toFixed(3)} | ${avg(rows.map((r) => r.wasmParse)).toFixed(3)} | **${avg(rows.map((r) => r.parseRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativePipeline)).toFixed(3)} | ${avg(rows.map((r) => r.wasmPipeline)).toFixed(3)} | **${avg(rows.map((r) => r.pipelineRatio)).toFixed(2)}x** |`
+  `| **mean** | ${avg(rows.map((r) => r.nativeParse)).toFixed(3)} | ${avg(rows.map((r) => r.wasmParse)).toFixed(3)} | **${avg(rows.map((r) => r.parseRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativePipeline)).toFixed(3)} | ${avg(rows.map((r) => r.wasmPipeline)).toFixed(3)} | **${avg(rows.map((r) => r.pipelineRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativeEndToEnd)).toFixed(1)} | ${avg(rows.map((r) => r.wasmEndToEnd)).toFixed(1)} | **${avg(rows.map((r) => r.endToEndRatio)).toFixed(2)}x** |`
 );
 console.log(`\n"full-analysis" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),`);
 console.log(`the parse-dominated portion of an end-to-end ArchGuard analysis.`);
+console.log(`"end-to-end" = file discovery + threshold decision + worker pool + merge + query persistence.`);

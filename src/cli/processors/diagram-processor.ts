@@ -16,6 +16,8 @@
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
 import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import type { ParseCache } from '@/parser/parse-cache.js';
+import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
+import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
 import type { QuerySourceGroup } from '@/cli/query/query-manifest.js';
@@ -58,6 +60,10 @@ export interface DiagramProcessorOptions {
    * in multiple overlapping source sets.
    */
   parseCache?: ParseCache;
+  /** Process-owned parse pool reused by long-lived MCP analyses. */
+  parseWorkerPool?: ParseWorkerPool;
+  /** Runtime selected in the parent and propagated unchanged to workers. */
+  parserRuntime?: ParserRuntimeKind;
   /**
    * Optional plugin registry for language routing.
    * When provided, language-specific diagrams are routed through the registered
@@ -152,6 +158,8 @@ export class DiagramProcessor {
       globalConfig: options.globalConfig,
       parseCache: options.parseCache,
       registry: options.registry,
+      parseWorkerPool: options.parseWorkerPool,
+      parserRuntime: options.parserRuntime,
     });
     this.router = new DiagramOutputRouter(options.globalConfig, options.progress);
     this.poolFactory = options.poolFactory ?? new WorkerPoolFactory();

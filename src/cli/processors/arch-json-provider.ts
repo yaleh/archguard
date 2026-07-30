@@ -29,6 +29,9 @@ import {
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
+import { PARSE_WORKER_THRESHOLD } from '@/parser/parallel-parser.js';
+import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import path from 'path';
 
 export type { ArchJsonProviderOptions, ArchJsonGetOptions } from './arch-json-provider-types.js';
@@ -48,6 +51,8 @@ export class ArchJsonProvider {
   private readonly globalConfig: GlobalConfig;
   private readonly parseCache?: ParseCache;
   private readonly registry?: PluginRegistry;
+  private readonly parseWorkerPool?: ParseWorkerPool;
+  private readonly parserRuntime: ParserRuntimeKind;
   private readonly fileDiscovery: FileDiscoveryService;
   private readonly archJsonDiskCache: ArchJsonDiskCache;
 
@@ -71,6 +76,8 @@ export class ArchJsonProvider {
     this.globalConfig = options.globalConfig;
     this.parseCache = options.parseCache;
     this.registry = options.registry;
+    this.parseWorkerPool = options.parseWorkerPool;
+    this.parserRuntime = options.parserRuntime ?? 'native';
     this.fileDiscovery = new FileDiscoveryService();
 
     const diskCacheRoot = this.globalConfig.cache?.dir ?? path.join('.archguard', 'cache');
@@ -512,7 +519,15 @@ export class ArchJsonProvider {
     const parser = new ParallelParser({
       concurrency: this.globalConfig.concurrency,
       continueOnError: true,
-      parseCache: this.parseCache,
+      // ParseCache remains active on the serial path. Worker results are already
+      // isolated per file and the provider's memory/disk caches deduplicate
+      // complete analyses, so it must not disable CPU offload.
+      parseCache:
+        this.parseWorkerPool && files.length >= PARSE_WORKER_THRESHOLD
+          ? undefined
+          : this.parseCache,
+      workerPool: this.parseWorkerPool,
+      parserRuntime: this.parserRuntime,
       workspaceRoot,
     });
     return parser.parseFiles(files);

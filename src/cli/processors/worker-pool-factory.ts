@@ -9,7 +9,7 @@
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import os from 'os';
-import { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
+import { ParseWorkerPool, type ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 
 /**
@@ -29,11 +29,12 @@ export class WorkerPoolFactory {
   createParsePool(
     concurrency: number | undefined,
     selectedRuntime: ParserRuntimeKind,
-    workspaceRoot?: string
+    workspaceRoot?: string,
+    language: ParseWorkerLanguage = 'typescript'
   ): ParseWorkerPool {
     const poolSize = Math.max(1, Math.min(concurrency ?? os.cpus().length - 1, 4));
     return new ParseWorkerPool(poolSize, {
-      language: 'typescript',
+      language,
       runtime: selectedRuntime,
       workspaceRoot,
     });

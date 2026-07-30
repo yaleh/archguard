@@ -43,3 +43,21 @@ full-analysis ratios are below 1x on this host (and therefore within the stated
 comparison; the contended after run must not be read as an absolute speedup.
 Memory/shutdown evidence is enforced by `wasm-memory.test.ts` and
 `parser-pool.test.ts` (success/error termination and serial/parallel determinism).
+
+
+### TASK-40 audit remediation: real end-to-end path
+
+Measured after production wiring on Node v26.5.0, linux/x64, 4 cores, 1-minute
+load 2.44. Each end-to-end fixture is a 12-file project and includes file
+discovery, runtime selection, threshold decision, process pool lifecycle,
+analysis merge, and query persistence.
+
+| scope | parser-only ratio | parse+extract ratio | end-to-end ratio |
+|---|---:|---:|---:|
+| five-language mean | **1.32x** | **0.54x** | **0.62x** |
+
+Per-language end-to-end WASM/native ratios: Go 0.17x, Java 0.66x, Python
+0.97x, C++ 0.64x, Kotlin 0.65x. No result exceeds the 2.5x ceiling. Absolute
+means were 127.9 ms native and 86.5 ms WASM under the recorded load. The
+benchmark uses `runAnalysis()` rather than treating `plugin.parseCode()` as a
+complete analysis; the latter remains separately reported as parse+extract.
