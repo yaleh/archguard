@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { JavaPlugin } from '@/plugins/java/index.js';
 import path from 'path';
 
@@ -6,7 +7,7 @@ describe('JavaPlugin', () => {
   let plugin: JavaPlugin;
 
   beforeEach(async () => {
-    plugin = new JavaPlugin();
+    plugin = new JavaPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: process.cwd() });
   });
 

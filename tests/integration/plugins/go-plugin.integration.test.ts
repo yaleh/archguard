@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 import { PluginRegistry } from '../../../src/core/plugin-registry.js';
 
@@ -11,7 +12,7 @@ describe('Go Plugin Integration', () => {
   let registry: PluginRegistry;
 
   beforeEach(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: '/tmp' });
 
     registry = new PluginRegistry();

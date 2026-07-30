@@ -23,7 +23,6 @@ import type { ArchJSON } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
-import { nativeParserBackend } from '../shared/native-parser-backend.js';
 import type { ParserBackend } from '../shared/parser-backend.js';
 import type { ParserSession } from '../shared/syntax-tree.js';
 import { HeaderMerger } from './builders/header-merger.js';
@@ -71,7 +70,10 @@ export class CppPlugin implements ILanguagePlugin {
   private initialized = false;
   private parserSession?: ParserSession;
 
-  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {
+  constructor(private readonly parserBackend: ParserBackend) {
+    if (!parserBackend) {
+      throw new TypeError('A resolver-selected parser backend is required');
+    }
     this.dependencyExtractor = new DependencyExtractor();
   }
 

@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
 import { GoPlugin } from '@/plugins/golang/index.js';
 import { GoAtlasPlugin } from '@/plugins/golang/atlas/index.js';
@@ -16,32 +17,32 @@ describe('ILanguagePlugin.supportedLevels', () => {
   });
 
   it('GoPlugin has supportedLevels ["package", "capability", "goroutine", "flow"]', () => {
-    const plugin = new GoPlugin();
+    const plugin = new GoPlugin(nativeParserBackend);
     expect(plugin.supportedLevels).toEqual(['package', 'capability', 'goroutine', 'flow']);
   });
 
   it('GoAtlasPlugin (shim alias for GoPlugin) has supportedLevels ["package", "capability", "goroutine", "flow"]', () => {
-    const plugin = new GoAtlasPlugin();
+    const plugin = new GoAtlasPlugin(nativeParserBackend);
     expect(plugin.supportedLevels).toEqual(['package', 'capability', 'goroutine', 'flow']);
   });
 
   it('JavaPlugin has supportedLevels ["package", "class", "method"]', () => {
-    const plugin = new JavaPlugin();
+    const plugin = new JavaPlugin(nativeParserBackend);
     expect(plugin.supportedLevels).toEqual(['package', 'class', 'method']);
   });
 
   it('PythonPlugin has supportedLevels ["package", "class", "method"]', () => {
-    const plugin = new PythonPlugin();
+    const plugin = new PythonPlugin(nativeParserBackend);
     expect(plugin.supportedLevels).toEqual(['package', 'class', 'method']);
   });
 
   it('supportedLevels is a readonly array on each plugin', () => {
     const plugins = [
       new TypeScriptPlugin(),
-      new GoPlugin(),
-      new GoAtlasPlugin(),
-      new JavaPlugin(),
-      new PythonPlugin(),
+      new GoPlugin(nativeParserBackend),
+      new GoAtlasPlugin(nativeParserBackend),
+      new JavaPlugin(nativeParserBackend),
+      new PythonPlugin(nativeParserBackend),
     ];
 
     for (const plugin of plugins) {

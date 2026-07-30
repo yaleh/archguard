@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { JavaPlugin } from '@/plugins/java/index.js';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 describe('JavaPlugin — parseProject cross-module pom.xml relations', () => {
   let tmpDir: string;
@@ -47,7 +48,7 @@ describe('JavaPlugin — parseProject cross-module pom.xml relations', () => {
       'package com.example.cli; public class Main {}'
     );
 
-    const plugin = new JavaPlugin();
+    const plugin = new JavaPlugin(nativeParserBackend);
     await plugin.initialize({});
     const result = await plugin.parseProject(tmpDir, { excludePatterns: [] });
 
@@ -70,7 +71,7 @@ describe('JavaPlugin — parseProject cross-module pom.xml relations', () => {
       'package com.example; public class Service {}'
     );
 
-    const plugin = new JavaPlugin();
+    const plugin = new JavaPlugin(nativeParserBackend);
     await plugin.initialize({});
     const result = await plugin.parseProject(tmpDir, { excludePatterns: [] });
 

@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 import { ArchJsonMapper } from '../../../src/plugins/golang/archjson-mapper.js';
 
@@ -31,7 +32,7 @@ describe('GoPlugin - dependency edges via parseToRawData pipeline', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: WS });
   });
 

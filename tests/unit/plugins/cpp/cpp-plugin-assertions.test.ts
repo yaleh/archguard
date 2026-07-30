@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 /**
  * Fix B: C++ assertion patterns for custom testing frameworks.
@@ -15,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 
 async function extractTestStructure(filePath: string, code: string) {
   const { CppPlugin } = await import('@/plugins/cpp/index.js');
-  const plugin = new CppPlugin();
+  const plugin = new CppPlugin(nativeParserBackend);
   return (plugin as any).extractTestStructure(filePath, code);
 }
 
@@ -87,7 +88,7 @@ int main() {}`;
 
   it('counts customAssertionRegexes from patternConfig', async () => {
     const { CppPlugin } = await import('@/plugins/cpp/index.js');
-    const plugin = new CppPlugin();
+    const plugin = new CppPlugin(nativeParserBackend);
     const code = `int main() { MY_CHECK(value); }`;
     const r = plugin.extractTestStructure('/tests/test-only-custom.cpp', code, {
       customAssertionRegexes: ['\\bMY_CHECK\\s*\\('],

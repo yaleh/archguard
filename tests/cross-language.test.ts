@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { PluginRegistry } from '@/core/plugin-registry.js';
@@ -55,7 +56,7 @@ describe('Cross-Language Consistency', () => {
   beforeAll(async () => {
     // Initialize plugins
     typescriptPlugin = new TypeScriptPlugin();
-    goPlugin = new GoPlugin();
+    goPlugin = new GoPlugin(nativeParserBackend);
 
     await typescriptPlugin.initialize({ workspaceRoot: '/tmp' });
     await goPlugin.initialize({ workspaceRoot: '/tmp' });

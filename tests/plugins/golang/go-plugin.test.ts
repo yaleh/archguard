@@ -3,13 +3,14 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 
 describe('GoPlugin', () => {
   let plugin: GoPlugin;
 
   beforeEach(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: '/tmp' });
   });
 
@@ -185,7 +186,7 @@ func (u User) GetName() string {
 
   describe('initialization', () => {
     it('should require initialization before use', async () => {
-      const uninitializedPlugin = new GoPlugin();
+      const uninitializedPlugin = new GoPlugin(nativeParserBackend);
 
       expect(() => {
         uninitializedPlugin.parseCode('package main', 'test.go');
@@ -331,7 +332,7 @@ func BenchmarkFoo(b *testing.B) {
           pathMod.default.join(tmpDir, 'go.mod'),
           'module github.com/myorg/myapp\n\ngo 1.21\n'
         );
-        const localPlugin = new GoPlugin();
+        const localPlugin = new GoPlugin(nativeParserBackend);
         await localPlugin.initialize({ workspaceRoot: tmpDir });
 
         const code = `
@@ -367,7 +368,7 @@ func TestFoo(t *testing.T) {
           pathMod.default.join(tmpDir, 'go.mod'),
           'module github.com/myorg/myapp\n\ngo 1.21\n'
         );
-        const localPlugin = new GoPlugin();
+        const localPlugin = new GoPlugin(nativeParserBackend);
         await localPlugin.initialize({ workspaceRoot: tmpDir });
 
         const code = `

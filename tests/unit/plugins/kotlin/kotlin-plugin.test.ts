@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { KotlinPlugin } from '@/plugins/kotlin/index.js';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 describe('KotlinPlugin', () => {
   let plugin: KotlinPlugin;
 
   beforeEach(() => {
-    plugin = new KotlinPlugin();
+    plugin = new KotlinPlugin(nativeParserBackend);
   });
 
   describe('metadata', () => {

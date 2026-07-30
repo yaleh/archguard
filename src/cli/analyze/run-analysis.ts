@@ -28,10 +28,9 @@ import {
 } from '../mcp/tools/package-metrics-tools.js';
 import {
   hasParserRuntimeEnvOverride,
-  selectParserBackendFor,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
-import type { ParserBackend } from '@/plugins/shared/parser-backend.js';
+import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -49,25 +48,14 @@ export async function loadPluginForLanguage(
 ): Promise<import('@/core/interfaces/language-plugin.js').ILanguagePlugin> {
   let plugin: import('@/core/interfaces/language-plugin.js').ILanguagePlugin;
 
-  const backendFor = async (
-    lang: 'go' | 'java' | 'python' | 'cpp' | 'kotlin'
-  ): Promise<ParserBackend> => (await selectParserBackendFor(lang, parserRuntime)).backend;
-
-  if (language === 'go') {
-    const { GoPlugin } = await import('@/plugins/golang/index.js');
-    plugin = new GoPlugin(await backendFor('go'));
-  } else if (language === 'java') {
-    const { JavaPlugin } = await import('@/plugins/java/index.js');
-    plugin = new JavaPlugin(await backendFor('java'));
-  } else if (language === 'python') {
-    const { PythonPlugin } = await import('@/plugins/python/index.js');
-    plugin = new PythonPlugin(await backendFor('python'));
-  } else if (language === 'cpp') {
-    const { CppPlugin } = await import('@/plugins/cpp/index.js');
-    plugin = new CppPlugin(await backendFor('cpp'));
-  } else if (language === 'kotlin') {
-    const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
-    plugin = new KotlinPlugin(await backendFor('kotlin'));
+  if (
+    language === 'go' ||
+    language === 'java' ||
+    language === 'python' ||
+    language === 'cpp' ||
+    language === 'kotlin'
+  ) {
+    plugin = await createLanguagePlugin(language, parserRuntime);
   } else {
     const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
     plugin = new TypeScriptPlugin();

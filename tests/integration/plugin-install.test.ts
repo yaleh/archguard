@@ -257,6 +257,18 @@ describe('MCP startup from the isolated plugin cache', () => {
 });
 
 describe('analysis through the plugin-installed closure', () => {
+  it('packs the production analyze path through the resolver-mediated factory', () => {
+    const providerSource = readFileSync(
+      path.join(corePkgDir(), 'dist', 'cli', 'processors', 'arch-json-provider.js'),
+      'utf8'
+    );
+    expect(providerSource).toContain('plugin-factory.js');
+    expect(providerSource).toContain('createLanguagePlugin');
+    expect(providerSource).not.toMatch(
+      /new\s+(?:GoPlugin|GoAtlasPlugin|JavaPlugin|PythonPlugin|CppPlugin|KotlinPlugin)\s*\(/
+    );
+  });
+
   for (const { language, source } of LANGUAGE_CASES) {
     it(`analyzes ${language} via the CLI with the WASM runtime forced`, () => {
       // File fixtures (cpp/kotlin samples) get a per-language source dir.

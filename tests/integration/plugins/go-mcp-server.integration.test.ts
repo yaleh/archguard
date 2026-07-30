@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import path from 'path';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 
@@ -18,7 +19,7 @@ describe('Go MCP server — Atlas Flow integration', () => {
   let plugin: GoPlugin;
 
   beforeEach(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: FIXTURE_PATH });
 
     // The fixture has a real go.mod; let the resolver read it normally.

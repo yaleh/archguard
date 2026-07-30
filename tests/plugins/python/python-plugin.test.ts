@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { PythonPlugin } from '@/plugins/python/index.js';
@@ -13,7 +14,7 @@ describe('PythonPlugin', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    plugin = new PythonPlugin();
+    plugin = new PythonPlugin(nativeParserBackend);
     tempDir = path.join(process.cwd(), 'test-temp-python-plugin');
     await fs.ensureDir(tempDir);
   });

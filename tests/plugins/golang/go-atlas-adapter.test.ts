@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '@/plugins/golang/index.js';
 import type { GoRawData } from '@/plugins/golang/types.js';
 
@@ -49,14 +50,16 @@ describe('GoAtlasAdapter', () => {
   let plugin: GoPlugin;
 
   beforeEach(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: '/tmp' });
   });
 
   describe('generateAtlas() — parseToRawData call count', () => {
     it('calls parseToRawData exactly once per generateAtlas() invocation', async () => {
       const spy = vi.spyOn(plugin, 'parseToRawData').mockResolvedValue(FAKE_RAW_DATA);
-      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(FAKE_ATLAS);
+      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(
+        FAKE_ATLAS
+      );
 
       await plugin.generateAtlas('/tmp', { excludeTests: true });
 
@@ -65,7 +68,9 @@ describe('GoAtlasAdapter', () => {
 
     it('each separate generateAtlas() call invokes parseToRawData exactly once', async () => {
       const spy = vi.spyOn(plugin, 'parseToRawData').mockResolvedValue(FAKE_RAW_DATA);
-      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(FAKE_ATLAS);
+      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(
+        FAKE_ATLAS
+      );
 
       await plugin.generateAtlas('/tmp');
       expect(spy).toHaveBeenCalledTimes(1);
@@ -86,10 +91,9 @@ describe('GoAtlasAdapter', () => {
     });
 
     it('delegates to atlasCoordinator.renderLayer()', async () => {
-      const coordinatorSpy = vi.spyOn(
-        (plugin as any).atlasCoordinator,
-        'renderLayer'
-      ).mockResolvedValue({ content: 'mocked', format: 'mermaid', layer: 'flow' });
+      const coordinatorSpy = vi
+        .spyOn((plugin as any).atlasCoordinator, 'renderLayer')
+        .mockResolvedValue({ content: 'mocked', format: 'mermaid', layer: 'flow' });
 
       const result = await plugin.renderLayer(FAKE_ATLAS as any, 'flow', 'mermaid');
       expect(coordinatorSpy).toHaveBeenCalledTimes(1);
@@ -103,7 +107,9 @@ describe('GoAtlasAdapter', () => {
       const spy = vi.spyOn(plugin, 'parseToRawData').mockResolvedValue(FAKE_RAW_DATA);
       vi.spyOn((plugin as any).coordinator, 'buildArchJson').mockResolvedValue(FAKE_ARCH_JSON_BASE);
       vi.spyOn((plugin as any).coordinator, 'mapCallRelations').mockReturnValue([]);
-      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(FAKE_ATLAS);
+      vi.spyOn((plugin as any).atlasCoordinator, 'buildAtlasFromRawData').mockResolvedValue(
+        FAKE_ATLAS
+      );
 
       await plugin.parseProject('/tmp', {
         workspaceRoot: '/tmp',

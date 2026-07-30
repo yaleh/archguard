@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 import type { GoRawPackage } from '../../../src/plugins/golang/types.js';
 
@@ -33,7 +34,7 @@ describe('GoPlugin - orphaned method re-attachment', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: WS });
   });
 
