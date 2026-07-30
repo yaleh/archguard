@@ -2,7 +2,7 @@
 id: TASK-45
 title: Make tests/integration/parser-pool.test.ts honest and passable on this
   hardware class (gate unblocker)
-status: ready
+status: done
 labels:
   - reliability
   - testing
@@ -74,7 +74,7 @@ one needs-human).
 
 ## Definition of Done
 
-- [ ] Fix committed to master; before/after run summaries appended here.
+- [x] Fix committed to master; before/after run summaries appended here.
 
 ## Coordination
 
@@ -138,3 +138,18 @@ baseline inflates RSS — generous, not stingy).
   exist); the driver re-verified the diff line-by-line, re-ran verification
   personally, authored this Evidence section, and committed the branch
   personally.
+
+## Loop-driver land evidence (2026-07-30)
+
+- Driver gate: vitest **PASS**, GateEvent 44d66d2c-f2e0-4412-9862-30b5f62923f9
+  (exit 0, 279.0s, cwd=/tmp/wt-archguard-TASK-45, committed tree 8085929b).
+  (The gate_run wrapper additionally records a fail-closed acceptance-layer
+  event — TASK-45 carries no extra.acceptance; the vitest event is the verdict.)
+- Anti-drift (committed diff): OK — exactly {tests/integration/parser-pool.test.ts,
+  tasks/TASK-45.md}, no out-of-declared writes.
+- Two fresh-context adversarial audits: NO REFUTATION — relaxation certified
+  honest (guard arithmetic verified from code constants; leak detection preserved).
+- Merged to master: c310daa (--no-ff milestones/archguard/TASK-45).
+- A parallel session on this shared host wrote a byte-identical copy of the fix
+  into the main workspace (blob 19294d8); preserved as stash "parallel-session
+  parser-pool fix" rather than discarded.
