@@ -1,12 +1,16 @@
 /**
  * Isomorphic Mermaid Renderer
  * Renders Mermaid diagrams to SVG and PNG using isomorphic-mermaid and sharp
+ *
+ * sharp is loaded lazily (dynamic import inside convertSVGToPNG): it is only
+ * needed for PNG rasterization, and keeping it out of the static import graph
+ * keeps the MCP query-only startup path free of native image libraries
+ * (TASK-31).
  */
 
 import fs from 'fs-extra';
 import path from 'path';
 import mermaid from 'isomorphic-mermaid';
-import sharp from 'sharp';
 import type { MermaidRendererOptions, MermaidOutputPaths } from './types.js';
 export { inlineEdgeStyles } from './post-process-svg.js';
 import { inlineEdgeStyles } from './post-process-svg.js';
@@ -106,6 +110,9 @@ export class IsomorphicMermaidRenderer {
    * post-processing.
    */
   async convertSVGToPNG(svg: string, outputPath: string): Promise<void> {
+    // Lazy: sharp (and its platform-specific native packages) load only when
+    // PNG rendering is actually requested — never at MCP query-only startup.
+    const { default: sharp } = await import('sharp');
     const svgBuffer = Buffer.from(svg);
     await fs.ensureDir(path.dirname(outputPath));
 

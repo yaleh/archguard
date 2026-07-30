@@ -1,0 +1,29 @@
+{
+  "name": "@yalehwang/archguard-claude-plugin",
+  "version": "0.1.31",
+  "description": "ArchGuard Claude Code plugin: architecture analysis MCP server plus feature-developer and project-semantics-discovery skills. npm-source marketplace package; depends on the exact matching @yalehwang/archguard runtime.",
+  "type": "module",
+  "files": [
+    ".claude-plugin/",
+    ".mcp.json",
+    "mcp-launcher.mjs",
+    "skills/"
+  ],
+  "dependencies": {
+    "@yalehwang/archguard": "0.1.31"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yaleh/archguard.git",
+    "directory": "plugin"
+  },
+  "license": "MIT",
+  "author": "yalehwang",
+  "bugs": {
+    "url": "https://github.com/yaleh/archguard/issues"
+  },
+  "homepage": "https://github.com/yaleh/archguard#readme"
+}

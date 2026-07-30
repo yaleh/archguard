@@ -1,0 +1,16 @@
+{
+	"name": "archguard",
+	"version": "0.1.31",
+	"description": "ArchGuard: automated multi-language architecture documentation and analysis. Bundles the archguard MCP server (summary, dependency, cycle-detection, test-quality, and git-history query tools) plus the feature-developer and project-semantics-discovery skills.",
+	"author": {
+		"name": "yalehwang",
+		"url": "https://github.com/yaleh"
+	},
+	"license": "MIT",
+	"homepage": "https://github.com/yaleh/archguard#readme",
+	"repository": "https://github.com/yaleh/archguard",
+	"commands": [
+		"./skills/feature-developer/SKILL.md",
+		"./skills/project-semantics-discovery/SKILL.md"
+	]
+}
