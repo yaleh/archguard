@@ -89,6 +89,20 @@ prerequisite for packaging.
 7. Run a clean end-to-end plugin install, restart/reload plugins, and verify
    `claude mcp list` reports ArchGuard as connected.
 
+## Touches
+
+- plugin/** (publishable npm plugin package: manifests, .mcp.json, skills, package.json/files)
+- package.json / package-lock.json (version pin + published files for the core package)
+- .claude-plugin/** (marketplace entry switch to npm source)
+- src/cli/mcp/** (lazy MCP launch graph: no sharp / no language parsers at query-only startup)
+- src/mermaid/** (sharp behind lazy load, only when rendering)
+- README.md (npm-source install, runtime selection, WASM fallback, force-runtime diagnostics)
+- tests/** (plugin packaging, lazy-startup graph, clean-cache MCP startup tests)
+- tasks/TASK-31.md
+
+scripts/install-claude-user-scope.sh finalization is TASK-35; Codex integration
+is TASK-36; parser internals (37/38/39/41) are done and out of scope.
+
 ## Acceptance Criteria
 
 - [x] `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and

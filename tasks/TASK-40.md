@@ -44,6 +44,19 @@ Blocked by TASK-39 so both backends share the same worker/session protocol.
 7. Keep a serial path for small inputs where worker startup would cost more
    than it saves.
 
+## Touches
+
+- src/plugins/shared/** (process-lifetime WASM runtime/language caches, safe parser-session reuse)
+- src/parser/** (bounded long-lived parsing worker pool, separate from Mermaid render workers)
+- src/cli/processors/** (worker-pool wiring + selected-runtime propagation to workers; serial path for small inputs)
+- scripts/benchmark-parser-backends.mjs (repeatable parser-only + full-analysis benchmarks)
+- assets/grammars/benchmarks.md (before/after benchmark evidence + chosen thresholds)
+- tests/** (performance, determinism, error-path, leak tests)
+- tasks/TASK-40.md
+
+Runtime selection semantics (TASK-39) and WASM backend correctness (TASK-38)
+are out of scope; no behavior change to output content.
+
 ## Acceptance Criteria
 
 - [ ] Benchmarks report parser-only and full-analysis native/WASM ratios.
