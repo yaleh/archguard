@@ -129,6 +129,7 @@ export function readParserRuntimePolicy(env: NodeJS.ProcessEnv = process.env): P
   // ARCHGUARD_PARSER_RUNTIME when both are set.
   const backend = env.ARCHGUARD_PARSER_BACKEND;
   if (backend !== undefined && backend !== '') {
+    emitDeprecatedAliasWarning();
     if (backend === 'native' || backend === 'wasm') return backend;
     throw new Error(
       `Invalid ARCHGUARD_PARSER_BACKEND value "${backend}" (expected "native" or "wasm")`
@@ -142,9 +143,14 @@ export function hasParserRuntimeEnvOverride(env: NodeJS.ProcessEnv = process.env
   return Boolean(env.ARCHGUARD_PARSER_RUNTIME || env.ARCHGUARD_PARSER_BACKEND);
 }
 
+/** Where the effective policy came from (TASK-43 effective-runtime visibility). */
+export type ParserRuntimeChoiceSource = 'default' | 'env' | 'config' | 'explicit';
+
 export interface ParserBackendSelection {
   readonly language: ParserLanguage;
   readonly policy: ParserRuntimePolicy;
+  /** How the effective policy was chosen: default auto, env var, config file, or explicit caller override. */
+  readonly source: ParserRuntimeChoiceSource;
   readonly runtime: ParserRuntimeKind;
   readonly backend: ParserBackend;
   /** Why native was rejected in `auto` mode; undefined when native was selected or policy is wasm/native. */
@@ -156,12 +162,14 @@ export interface ParserBackendSelection {
 export interface SelectParserBackendOptions {
   /** Explicit policy override; defaults to env (ARCHGUARD_PARSER_RUNTIME, legacy ARCHGUARD_PARSER_BACKEND) then 'auto'. */
   policy?: ParserRuntimePolicy;
+  /** Annotates where an explicit `policy` came from: 'config' (config file) or 'explicit' (caller default). */
+  policySource?: 'config' | 'explicit';
   /** Fault-injection point for tests; bypasses the per-language selection cache. */
   nativeLoaders?: NativeModuleLoaders;
   /** Explicitly trusted external module root for native packages. */
   nativeModuleRoot?: string;
   /** Sink for the selection diagnostic line (e.g. verbose reporter). Never written to stdout by default. */
-  onDiagnostic?: (line: string) => void;
+  onDiagnostic?: (line: string, selection: ParserBackendSelection) => void;
 }
 
 const selectionCache = new Map<string, Promise<ParserBackendSelection>>();
@@ -172,10 +180,35 @@ export function getParserRuntimeDiagnostics(): readonly string[] {
   return diagnosticsLog;
 }
 
+/**
+ * Whether a runtime diagnostic line should be surfaced to the user (TASK-43):
+ * always in verbose mode, and always on a fallback event (even non-verbose),
+ * so "did my fallback work?" never requires guesswork.
+ */
+export function runtimeDiagnosticVisible(
+  verbose: boolean,
+  selection: { fallbackReason?: string }
+): boolean {
+  return verbose || selection.fallbackReason !== undefined;
+}
+
+let deprecatedAliasWarningEmitted = false;
+
+/** Loud, exactly-once-per-process stderr warning for the deprecated alias (TASK-43). */
+function emitDeprecatedAliasWarning(): void {
+  if (deprecatedAliasWarningEmitted) return;
+  deprecatedAliasWarningEmitted = true;
+  console.error(
+    '[parser-runtime] WARNING: ARCHGUARD_PARSER_BACKEND is deprecated and will be removed in a ' +
+      'future release; use the canonical ARCHGUARD_PARSER_RUNTIME (auto|native|wasm) instead.'
+  );
+}
+
 /** Test hook: clear the per-language selection cache and diagnostics log. */
 export function resetParserBackendSelectionCache(): void {
   selectionCache.clear();
   diagnosticsLog.length = 0;
+  deprecatedAliasWarningEmitted = false;
 }
 
 /**
@@ -189,16 +222,22 @@ export async function selectParserBackendFor(
   options: SelectParserBackendOptions = {}
 ): Promise<ParserBackendSelection> {
   const policy = options.policy ?? readParserRuntimePolicy();
+  const source: ParserRuntimeChoiceSource =
+    options.policy !== undefined
+      ? (options.policySource ?? 'explicit')
+      : hasParserRuntimeEnvOverride()
+        ? 'env'
+        : 'default';
   const cacheable = options.nativeLoaders === undefined && options.nativeModuleRoot === undefined;
   if (!cacheable) {
-    return computeSelection(language, policy, options);
+    return computeSelection(language, policy, options, source);
   }
   const key = `${policy}:${language}`;
   const cached = selectionCache.get(key);
   if (cached !== undefined) {
     return cached;
   }
-  const selection = computeSelection(language, policy, options);
+  const selection = computeSelection(language, policy, options, source);
   selectionCache.set(key, selection);
   // Do not cache rejections forever: a forced-native failure must not poison
   // a later auto-mode selection for the same language in long-lived hosts.
@@ -209,12 +248,14 @@ export async function selectParserBackendFor(
 async function computeSelection(
   language: ParserLanguage,
   policy: ParserRuntimePolicy,
-  options: SelectParserBackendOptions
+  options: SelectParserBackendOptions,
+  source: ParserRuntimeChoiceSource
 ): Promise<ParserBackendSelection> {
   if (policy === 'wasm') {
     const { wasmParserBackend } = await import('./wasm-parser-backend.js');
     return finishSelection(
       { language, policy, runtime: 'wasm', backend: wasmParserBackend },
+      source,
       options
     );
   }
@@ -243,6 +284,7 @@ async function computeSelection(
     const { wasmParserBackend } = await import('./wasm-parser-backend.js');
     return finishSelection(
       { language, policy, runtime: 'wasm', backend: wasmParserBackend, fallbackReason: reason },
+      source,
       options
     );
   }
@@ -250,18 +292,22 @@ async function computeSelection(
   // The native backend parses through the same loaders the probe used, so an
   // explicitly trusted module root (or injected loaders) governs both.
   const backend = loaders ? new NativeParserBackend({ loaders }) : nativeParserBackend;
-  return finishSelection({ language, policy, runtime: 'native', backend }, options);
+  return finishSelection({ language, policy, runtime: 'native', backend }, source, options);
 }
 
 function finishSelection(
-  selection: Omit<ParserBackendSelection, 'diagnostic'>,
+  selection: Omit<ParserBackendSelection, 'diagnostic' | 'source'>,
+  source: ParserRuntimeChoiceSource,
   options: SelectParserBackendOptions
 ): ParserBackendSelection {
+  // Effective-runtime one-liner (TASK-43): language -> backend chosen -> source
+  // of choice -> fallback reason when applicable.
   const diagnostic = selection.fallbackReason
-    ? `[parser-runtime] ${selection.language}: policy=${selection.policy} -> ${selection.runtime} ` +
-      `(native probe failed: ${selection.fallbackReason})`
-    : `[parser-runtime] ${selection.language}: policy=${selection.policy} -> ${selection.runtime}`;
+    ? `[parser-runtime] ${selection.language}: policy=${selection.policy} source=${source} -> ` +
+      `${selection.runtime} (native probe failed: ${selection.fallbackReason})`
+    : `[parser-runtime] ${selection.language}: policy=${selection.policy} source=${source} -> ${selection.runtime}`;
   diagnosticsLog.push(diagnostic);
-  options.onDiagnostic?.(diagnostic);
-  return { ...selection, diagnostic };
+  const full: ParserBackendSelection = { ...selection, source, diagnostic };
+  options.onDiagnostic?.(diagnostic, full);
+  return full;
 }

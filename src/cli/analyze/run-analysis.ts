@@ -28,6 +28,7 @@ import {
 } from '../mcp/tools/package-metrics-tools.js';
 import {
   hasParserRuntimeEnvOverride,
+  runtimeDiagnosticVisible,
   selectParserBackendFor,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
@@ -143,15 +144,23 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   const ownsPools = options.parseWorkerPools === undefined;
   const language = (selectedDiagrams[0]?.language ?? 'typescript') as ParseWorkerLanguage;
   const runtimeConfig = config as Config & Pick<GlobalConfig, 'parserRuntime' | 'nativeModuleRoot'>;
-  const parserRuntime =
-    language === 'typescript'
-      ? 'native'
-      : (
-          await selectParserBackendFor(language, {
-            policy: hasParserRuntimeEnvOverride() ? undefined : runtimeConfig.parserRuntime,
-            nativeModuleRoot: runtimeConfig.nativeModuleRoot,
-          })
-        ).runtime;
+  let parserRuntime: 'native' | 'wasm';
+  if (language === 'typescript') {
+    parserRuntime = 'native';
+  } else {
+    const selection = await selectParserBackendFor(language, {
+      policy: hasParserRuntimeEnvOverride() ? undefined : runtimeConfig.parserRuntime,
+      policySource:
+        !hasParserRuntimeEnvOverride() && runtimeConfig.parserRuntime ? 'config' : undefined,
+      nativeModuleRoot: runtimeConfig.nativeModuleRoot,
+    });
+    parserRuntime = selection.runtime;
+    // TASK-43: effective-runtime visibility — verbose mode, or any fallback event
+    // even non-verbose. Via the reporter: stderr in MCP mode, never stdout.
+    if (runtimeDiagnosticVisible(config.verbose === true, selection)) {
+      reporter.info(selection.diagnostic);
+    }
+  }
   const parseWorkerPool = poolRegistry.get({
     language,
     runtime: parserRuntime,
@@ -191,10 +200,14 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           // Canonical env policy (ARCHGUARD_PARSER_RUNTIME) takes precedence
           // over the config value when set.
           policy: hasParserRuntimeEnvOverride() ? undefined : runtimeConfig.parserRuntime,
+          policySource:
+            !hasParserRuntimeEnvOverride() && runtimeConfig.parserRuntime ? 'config' : undefined,
           nativeModuleRoot: runtimeConfig.nativeModuleRoot,
-          // Verbose diagnostics go through the reporter (stderr in MCP mode),
-          // never to MCP stdout.
-          onDiagnostic: config.verbose ? (line) => reporter.info(line) : undefined,
+          // TASK-43: surface diagnostics through the reporter (stderr in MCP mode,
+          // never MCP stdout) when verbose OR on any fallback event.
+          onDiagnostic: (line, sel) => {
+            if (runtimeDiagnosticVisible(config.verbose === true, sel)) reporter.info(line);
+          },
         });
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, {

@@ -458,3 +458,37 @@ describe('registerAnalyzeTool', () => {
     });
   });
 });
+
+describe('TASK-43: actionable MCP analyze error mapping', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    runAnalysisMock.mockReset();
+  });
+
+  it('maps ParserInitializationError to a payload carrying the actionable remediation', async () => {
+    const { ParserInitializationError } = await import('@/plugins/shared/parser-backend.js');
+    runAnalysisMock.mockRejectedValue(
+      new ParserInitializationError(
+        'go',
+        'native',
+        new Error(
+          'cannot load native tree-sitter runtime\n' +
+            'Native tree-sitter is required by policy (ARCHGUARD_PARSER_RUNTIME=native). ' +
+            'set ARCHGUARD_NATIVE_MODULE_ROOT to a trusted module root, or relax the policy to ARCHGUARD_PARSER_RUNTIME=auto|wasm.'
+        )
+      )
+    );
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, { defaultRoot: '/project' });
+    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+
+    const result = await callback({ lang: 'go' });
+    expect(result.content[0].text).toContain('Analysis failed (parser initialization)');
+    expect(result.content[0].text).toContain('Failed to initialize go parser with native backend');
+    expect(result.content[0].text).toContain('ARCHGUARD_PARSER_RUNTIME');
+    expect(result.content[0].text).toContain('ARCHGUARD_NATIVE_MODULE_ROOT');
+  });
+});

@@ -109,3 +109,47 @@ describe('loadPluginForLanguage (no TypeScript fallback)', () => {
     expect(lines.some((line) => line.includes('python') && line.includes('wasm'))).toBe(true);
   });
 });
+
+describe('TASK-43: actionable ParserInitializationError remediation on the analyze path', () => {
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of ENV_KEYS) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+    resetParserBackendSelectionCache();
+  });
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (savedEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = savedEnv[key];
+    }
+    resetParserBackendSelectionCache();
+  });
+
+  it.each(['go', 'java', 'python', 'cpp', 'kotlin'] as const)(
+    '%s failure surfaces actionable remediation (runtime var + module root + policy relax), never a bare module-not-found stack',
+    async (language) => {
+      const attempt = loadPluginForLanguage(language, '/tmp', {
+        policy: 'native',
+        nativeLoaders: missingNativeLoaders(),
+      });
+      let caught: unknown;
+      try {
+        await attempt;
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(ParserInitializationError);
+      const message = caught instanceof Error ? caught.message : String(caught);
+      expect(message).toContain(`Failed to initialize ${language} parser with native backend`);
+      expect(message).toContain('ARCHGUARD_PARSER_RUNTIME');
+      expect(message).toContain('ARCHGUARD_NATIVE_MODULE_ROOT');
+      expect(message).toMatch(/relax the policy/);
+      // The error identity is ParserInitializationError, not a raw resolution failure:
+      expect((caught as Error).name).toBe('ParserInitializationError');
+    }
+  );
+});

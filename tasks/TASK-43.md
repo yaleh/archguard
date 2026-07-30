@@ -74,21 +74,94 @@ files, package manifests, or installer files.
 
 ## Acceptance Criteria
 
-- [ ] CLI analyze with a failed language init prints the actionable
+- [x] CLI analyze with a failed language init prints the actionable
       ParserInitializationError remediation (test per language family).
-- [ ] MCP analyze error payloads carry the actionable message, and MCP stdout
+      (tests/unit/cli/analyze/run-analysis-plugin-loading.test.ts: per-family
+      it.each asserts the remediation text — ARCHGUARD_PARSER_RUNTIME,
+      ARCHGUARD_NATIVE_MODULE_ROOT, "relax the policy" — and the
+      ParserInitializationError identity, never a bare module-not-found stack.)
+- [x] MCP analyze error payloads carry the actionable message, and MCP stdout
       remains protocol-clean (guard test).
-- [ ] Verbose (and fallback-triggered non-verbose) output shows language →
+      (tests/integration/mcp-runtime-diagnostics.test.ts: diagnostics reach
+      stderr via StderrReporter and never the MCP payload; error payloads are
+      prefixed "Analysis failed (parser initialization):" with the full
+      remediation — tests/unit/cli/mcp/analyze-tool.test.ts.)
+- [x] Verbose (and fallback-triggered non-verbose) output shows language →
       backend → choice-source → fallback reason.
-- [ ] Deprecated-alias usage emits exactly one stderr warning per process.
-- [ ] README/docs updated; the canonical variable is unambiguous.
+      (Diagnostic format `[parser-runtime] <lang>: policy=<p> source=<s> ->
+      <runtime> (native probe failed: <reason>)`; surfaced via
+      runtimeDiagnosticVisible(verbose, selection) = verbose OR fallback;
+      wired in run-analysis.ts, arch-json-provider.ts; format + source labels
+      tested in tests/unit/plugins/shared/parser-runtime.test.ts.)
+- [x] Deprecated-alias usage emits exactly one stderr warning per process.
+      (parser-runtime.ts emitDeprecatedAliasWarning + module flag, re-armed by
+      the reset test hook; three tests cover once-only, canonical-wins-silently,
+      and re-arm behavior.)
+- [x] README/docs updated; the canonical variable is unambiguous.
+      (README runtime section: canonical-setting paragraph + deprecation +
+      diagnostics; docs/user-guide/parser-runtime.md: warning text, new
+      diagnostic format with examples, selection.source in the API section.)
 
 ## Definition of Done
 
-- [ ] Tests and docs committed; before/after CLI/MCP error text samples
-      appended to this task body.
+- [x] Tests and docs committed; before/after CLI/MCP error text samples
+      appended to this task body (see Evidence).
 
 ## Coordination
 
 Independent of TASK-44. Follows TASK-42 structurally but may start once
 TASK-31 lands if scoped to surfacing only.
+
+## Evidence (landed 2026-07-30)
+
+### Before/after error text (the meta-cc incident shape)
+
+BEFORE (2026-07-30 incident): a WASM-only install analyzing Go surfaced a raw
+`ERR_MODULE_NOT_FOUND: Cannot find package 'tree-sitter'` stack from the
+pipeline's direct construction (bypassing the resolver), and
+`ARCHGUARD_PARSER_BACKEND=wasm` was silently a no-op on that path with no
+indication of which backend actually ran.
+
+AFTER (asserted by the test suite, green on this machine):
+```text
+Analysis failed (parser initialization): Failed to initialize go parser with native backend:
+cannot load native tree-sitter runtime ("tree-sitter"): Cannot find module 'tree-sitter'
+Native tree-sitter is required by policy (ARCHGUARD_PARSER_RUNTIME=native). Install the
+optional native accelerator packages ("tree-sitter" and "<grammar>") into ArchGuard's own
+package scope, or set ARCHGUARD_NATIVE_MODULE_ROOT to a trusted module root containing them,
+or relax the policy to ARCHGUARD_PARSER_RUNTIME=auto|wasm.
+Previous query state is unchanged.
+```
+plus, on every analyze surface (stderr; MCP stdout stays protocol-clean):
+```text
+[parser-runtime] go: policy=auto source=default -> native
+[parser-runtime] java: policy=auto source=env -> wasm (native probe failed: cannot load native tree-sitter runtime ("tree-sitter"): ...)
+[parser-runtime] WARNING: ARCHGUARD_PARSER_BACKEND is deprecated and will be removed in a future release; use the canonical ARCHGUARD_PARSER_RUNTIME (auto|native|wasm) instead.
+```
+
+### REAL vs SIMULATED
+- REAL: the resolver/factory/CLI/MCP code paths under test (env handling,
+  diagnostic format, source labels, once-only warning, error mapping, stdout
+  cleanliness) — exercised by 78 targeted tests, all green
+  (tests/unit/plugins/shared/parser-runtime.test.ts,
+  tests/unit/cli/analyze/run-analysis-plugin-loading.test.ts,
+  tests/unit/cli/mcp/analyze-tool.test.ts,
+  tests/integration/mcp-runtime-diagnostics.test.ts); `npx tsc --noEmit` clean.
+- SIMULATED: native binding failures are injected via NativeModuleLoaders
+  (the established TASK-39 fault-injection pattern); the MCP server object in
+  guard tests is the real McpServer with a mocked runAnalysis (same pattern as
+  the pre-existing analyze-tool tests).
+- The "before" text is the incident record from this task's proposal; the
+  "after" text is what the current code produces per the cited tests.
+
+### Notes
+- plugin-factory.ts required NO change: onDiagnostic propagation is inherent
+  in its options pass-through to selectParserBackendFor (Touches listed it as
+  an upper bound; empty diff, no drift).
+- Defensive "env/config setting had no effect on a given path" case: after
+  TASK-42 every construction goes through the resolver, so the setting always
+  takes effect; the effective-runtime line (with source=) makes any future
+  regression visible instead of silent.
+- Execution deviation: built INLINE by the loop driver after two dispatched
+  builders produced zero artifacts in 40-50 minutes each (API contention on
+  this shared host); all verification is driver-run and recorded above.

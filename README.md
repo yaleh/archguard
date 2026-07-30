@@ -96,6 +96,14 @@ backend:
   probe fails (never silently substitutes WASM).
 - `wasm` — never touch native modules; portable and deterministic.
 
+`ARCHGUARD_PARSER_RUNTIME` is the canonical setting. The former
+`ARCHGUARD_PARSER_BACKEND` is a deprecated alias: it applies only when the
+canonical variable is unset, and ArchGuard then prints a one-time stderr
+warning. Every analysis surfaces a one-line effective-runtime summary —
+language → backend chosen → source of choice → fallback reason — in
+`--verbose` mode and always when a fallback occurs; MCP protocol output
+stays clean (diagnostics route to stderr).
+
 ```bash
 # Force the portable baseline (diagnostics, restricted CI)
 ARCHGUARD_PARSER_RUNTIME=wasm archguard analyze -s ./src --lang go
