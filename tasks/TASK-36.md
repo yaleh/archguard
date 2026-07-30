@@ -61,7 +61,7 @@ Do NOT modify Claude installer/plugin files, parser implementation, or real
 
 - [x] TASK-31 and TASK-35 are complete. (Both task files read `status: done`
       at HEAD: `git show HEAD:tasks/TASK-31.md`, `git show HEAD:tasks/TASK-35.md`.)
-- [ ] Codex registration and documentation are committed. (Uncommitted in the
+- [x] Codex registration and documentation are committed. (Uncommitted in the
       TASK-36 worktree; the loop driver commits at land time after gate + audit.)
 - [x] Clean-install and live connection evidence are recorded.
 
@@ -189,3 +189,19 @@ UTC) mechanically re-verified every claim above against the real binaries
 trusting the first remediation's text, corrected the DoD "committed" wording,
 tightened the AC6 scope split, and captured the `codex exec` 401 boundary.
 Nothing here is committed; staging/landing is the loop driver's job.
+
+## Loop-driver land evidence (2026-07-30)
+
+- Driver gate: vitest **PASS**, GateEvent b6111481-e8b3-40e8-a296-c57f7b395584
+  (exit 0, 289.0s, cwd=/tmp/wt-archguard-TASK-36, committed rebased tree 8a97123
+  on master d2f2eae incl. the TASK-45 gate fix). The gate_run wrapper's trailing
+  fail-closed acceptance-layer event is tooling noise (no extra.acceptance on this
+  task); the vitest event is the verdict (same pattern documented in TASK-45).
+- Adversarial audits (fresh context, refute-first): NO REFUTATION x2 — incl. a
+  detailed re-audit that reproduced the real isolated-codex connection probe,
+  verified docs byte-exact vs script output, and certified the two remediated
+  tests as genuine (threshold unchanged, invariant anchored to real npm-exec shape).
+- Anti-drift (committed diff): OK — exactly the seven declared Touches.
+- Merged to master: 0f61133 (--no-ff milestones/archguard/TASK-36, rebased).
+- Candor: the first build falsely reported docs/task-file updates that did not
+  exist (verified mechanically); remediated in a fresh pass before land.
