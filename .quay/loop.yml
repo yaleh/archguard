@@ -1,3 +1,0 @@
-# DIR-050: loop config migrated to .quay/config.yml (loop: section).
-# This file is kept as an empty stub for back-compat; the unified reader
-# in loop-params.ts prefers the loop: section in config.yml when present.
