@@ -76,33 +76,33 @@ root explicitly.
 
 ## Acceptance Criteria
 
-- [ ] `web-tree-sitter` is installed by every supported normal npm install.
-- [ ] `tree-sitter` and all native grammar packages are absent from
+- [x] `web-tree-sitter` is installed by every supported normal npm install.
+- [x] `tree-sitter` and all native grammar packages are absent from
       `dependencies`, `optionalDependencies`, and `bundleDependencies`.
-- [ ] A clean production dependency tree contains no native Tree-sitter
+- [x] A clean production dependency tree contains no native Tree-sitter
       runtime or native grammar packages.
-- [ ] No install/preinstall/postinstall script attempts to build or fetch
+- [x] No install/preinstall/postinstall script attempts to build or fetch
       native Tree-sitter.
-- [ ] The clean installed package analyzes Go, Java, Python, C++, and Kotlin
+- [x] The clean installed package analyzes Go, Java, Python, C++, and Kotlin
       through WASM.
-- [ ] Optional peer metadata, if used, does not cause npm to install the peers
+- [x] Optional peer metadata, if used, does not cause npm to install the peers
       and does not emit required-peer failures.
-- [ ] A trusted explicitly supplied native module root selects native after
+- [x] A trusted explicitly supplied native module root selects native after
       runtime-and-grammar health checks.
-- [ ] Auto mode ignores native packages placed only in the analyzed project's
+- [x] Auto mode ignores native packages placed only in the analyzed project's
       `node_modules`.
-- [ ] Missing or broken native packages never prevent installation and fall
+- [x] Missing or broken native packages never prevent installation and fall
       back to WASM at runtime.
-- [ ] Documentation distinguishes the npm package name `tree-sitter` from the
+- [x] Documentation distinguishes the npm package name `tree-sitter` from the
       `web-tree-sitter` fallback and explains how to force either backend.
 
 ## Definition of Done
 
-- [ ] Clean `npm pack`/install and Claude npm-source plugin install evidence is
+- [x] Clean `npm pack`/install and Claude npm-source plugin install evidence is
       appended here, including the installed dependency tree and lifecycle
       script log.
-- [ ] Native-injection, project-isolation, and WASM-baseline tests pass.
-- [ ] Package metadata, installer documentation, and removal of obsolete
+- [x] Native-injection, project-isolation, and WASM-baseline tests pass.
+- [x] Package metadata, installer documentation, and removal of obsolete
       native staging behavior are committed.
 
 ## Coordination
@@ -110,3 +110,106 @@ root explicitly.
 TASK-31 consumes this policy in the Claude npm plugin. TASK-35 documents the
 user-facing installation flow. TASK-40 may optimize WASM performance but must
 not weaken the default no-native-install guarantee.
+
+## Implementation Notes (2026-07-30)
+
+- `package.json`: `tree-sitter` + 5 native grammar packages removed from
+  `dependencies`; `bundleDependencies` and the `tree-sitter` `overrides` pin
+  removed; `postinstall` (postinstall-tree-sitter.mjs) and `prepack`
+  (stage-tree-sitter-prebuild.mjs) hooks deleted along with both scripts;
+  `web-tree-sitter` remains a pinned production dependency; optional peers
+  from TASK-39 kept (see kotlin deviation below).
+- `package-lock.json` regenerated (surgical prune + `npm install
+  --package-lock-only` in a temp copy so the shared node_modules was never
+  touched): 0 version changes, 0 additions, 10 removals (6 native packages,
+  nested `tree-sitter-c`, `node-addon-api`, `node-gyp-build`,
+  `npm-check-updates`).
+- Deviation from TASK-39 metadata: `@tree-sitter-grammars/tree-sitter-kotlin`
+  is NOT declared as an optional peer. Its only release (1.1.0) peer-depends
+  on `tree-sitter@^0.22.4`, which conflicts with our `tree-sitter@^0.25.0`
+  optional peer; npm 11 resolves that optional-peer conflict with a hard
+  ERESOLVE for the CONSUMER's install (reproduced minimally and in the
+  clean-room test). Keeping it as a peer would violate the AC "optional peer
+  metadata ... does not emit required-peer failures". The kotlin grammar is
+  documented for explicit host installation instead
+  (docs/user-guide/parser-runtime.md).
+- src/plugins/shared/** unchanged: TASK-39's createRequire-based trusted
+  module-root resolution already satisfies the policy (verified by the
+  clean-room native-injection and analyzed-project isolation tests).
+
+## DoD Evidence (2026-07-30)
+
+### Clean-room npm pack/install (also what a Claude npm-source plugin install consumes)
+
+ArchGuard has no marketplace plugin manifest; a Claude "npm-source" plugin
+install consumes the same npm tarball this evidence installs, so the
+`npm pack` + `npm install <tarball>` run below is the shared code path for
+both install routes.
+
+```
+$ npm pack --ignore-scripts                 # yalehwang-archguard-0.1.31.tgz
+$ mkdir app && cd app && npm init -y
+$ npm install ../yalehwang-archguard-0.1.31.tgz --omit=dev --no-audit --no-fund --foreground-scripts
+
+> sharp@0.34.5 install
+> node install/check.js || npm run build
+
+added 356 packages in 40s
+INSTALL_EXIT=0
+```
+
+Lifecycle-script audit: the ONLY lifecycle script in the entire install is
+sharp's own `install` (sharp's platform-package policy, tracked by TASK-31).
+No `node-gyp`, `prebuild-install`, `postinstall-tree-sitter`,
+`stage-tree-sitter`, or `tree_sitter_runtime_binding` output. No `ERESOLVE`,
+no peer warnings for tree-sitter packages.
+
+Installed dependency tree (`npm ls --all --omit=dev`, 559 lines): every
+tree-sitter line is unmet-optional metadata, nothing native materialized:
+
+```
+  ├── UNMET OPTIONAL DEPENDENCY tree-sitter-cpp@^0.23.4
+  ├── UNMET OPTIONAL DEPENDENCY tree-sitter-go@^0.25.0
+  ├── UNMET OPTIONAL DEPENDENCY tree-sitter-java@^0.23.5
+  ├── UNMET OPTIONAL DEPENDENCY tree-sitter-python@^0.25.0
+  ├── UNMET OPTIONAL DEPENDENCY tree-sitter@^0.25.0
+  ├─┬ web-tree-sitter@0.25.10          <- installed (WASM baseline)
+```
+
+`node_modules/` contains `web-tree-sitter` and NONE of `tree-sitter`,
+`tree-sitter-go`, `tree-sitter-java`, `tree-sitter-python`, `tree-sitter-cpp`,
+`@tree-sitter-grammars/tree-sitter-kotlin`. The installed package ships
+`assets/grammars/tree-sitter.wasm` + the five grammar WASMs.
+
+### Tests
+
+- `tests/unit/packaging/install-policy.test.ts` (15 tests): package.json /
+  lockfile invariants — WASM baseline required, natives absent from
+  dependencies/optionalDependencies/bundleDependencies/overrides, optional
+  peers optional, kotlin peer exclusion rationale, no install/prepack hooks,
+  staging scripts deleted, lockfile root + entries clean.
+- `tests/integration/install-policy.test.ts` (8 tests): real tarball install
+  into an isolated temp project (own node_modules from the registry) —
+  dependency-tree and lifecycle-log audits; the clean installed package
+  analyzes Go/Java/Python/C++/Kotlin through WASM (ArchJSON byte-identical to
+  the in-repo WASM baseline); ARCHGUARD_NATIVE_MODULE_ROOT injection selects
+  native for all five languages (byte-identical to the native baseline)
+  without ArchGuard having installed anything; native packages placed only in
+  the analyzed project's node_modules are ignored even with cwd and the entry
+  script inside that project (WASM selected, fallback reason recorded).
+- Regression: TASK-39 packed-install, wasm-assets, parser-runtime unit and
+  mixed-selection suites all pass unchanged (61 tests).
+- Full gate: `npx vitest run` — see Land Evidence below.
+
+### Known pre-existing caveat (base branch, out of TASK-41 scope)
+
+`src/cli/processors/arch-json-provider.ts` still constructs language plugins
+with their default native backend when the optional plugin registry is unset,
+so a registry-less CLI `analyze --lang go` in a native-free install fails
+instead of falling back to WASM. TASK-39's adversarial audit explicitly
+adjudicated this main-pipeline routing gap NON-BLOCKING (no AC routes that
+file through the resolver), and TASK-41's declared touches exclude it. The
+guarantee delivered here is at the package/resolver level, proven by the
+clean-room tests above. Follow-up candidate: route arch-json-provider plugin
+construction through `selectParserBackendFor`.
+
