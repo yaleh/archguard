@@ -34,12 +34,21 @@ gate failure could be dismissed as "probably the flake".
 ## Touches
 
 - tasks/TASK-33.md
+- .gitignore
+- .agents/skills/project-semantics-discovery/references/archguard-project-semantics.json
+- tests/integration/parallel-diagrams.test.ts
 
-The initial touch set is evidence-only: repeated runs may update this task but
-must not modify tests or product code concurrently with another batch member.
-If reproduction identifies a defect, remove the task from the active batch and
-update this declaration with the concrete test and/or `src/<area>/**` paths
-before making the fix.
+The task was removed from the prior active batch before expanding this touch set.
+The reproduced failure was a dependency-readiness/tracking defect: the required
+skill fixture existed in the main working tree but was excluded by the broad
+`archguard*.json` ignore rule. The declaration now includes the narrow ignore
+exception and fixture. A later full-suite run identified the original timing
+flake exactly: `tests/integration/parallel-diagrams.test.ts` asserted that three
+parallel operations finished within an arbitrary 400 ms wall-clock threshold;
+under concurrent load they took 440 ms even though completion time cannot prove
+or disprove overlap. The expanded declaration includes that exact test so it can
+replace elapsed-time inference with deterministic concurrency evidence. Product
+code remains out of scope.
 
 ## Acceptance Criteria
 
