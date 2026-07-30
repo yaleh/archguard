@@ -1,0 +1,10 @@
+{
+  "nonProductionPatterns": ["tests", "docs", "scripts"],
+  "barrelFiles": ["src/types/index.ts", "src/types/extensions/index.ts"],
+  "architecturalLayers": {
+    "src/analysis": "analysis",
+    "src/cli": "cli",
+    "src/mermaid": "rendering"
+  },
+  "suggestedDepth": 2
+}
