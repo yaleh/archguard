@@ -19,6 +19,7 @@ import type {
   MethodSignature,
 } from './types.js';
 import type { GoplsClient } from './gopls-client.js';
+import { isGoplsPoisoned } from './gopls-client.js';
 
 export class InterfaceMatcher {
   /**
@@ -26,68 +27,75 @@ export class InterfaceMatcher {
    *
    * Primary strategy: Use gopls for semantic analysis
    * Fallback: Use name-based matching when gopls unavailable or fails
+   *
+   * Reliability (TASK-44): every per-interface gopls query is individually
+   * bounded and guarded — a single slow/failing query falls back for that
+   * interface instead of aborting the whole pass, and a poison-pill disabled
+   * gopls short-circuits straight to name-based matching.
    */
   async matchWithGopls(
     structs: GoRawStruct[],
     interfaces: GoRawInterface[],
     goplsClient: GoplsClient | null
   ): Promise<InferredImplementation[]> {
-    // If gopls not available, fall back to name-based matching
-    if (!goplsClient || !goplsClient.isInitialized()) {
+    // If gopls not available (or disabled process-wide), fall back to
+    // name-based matching.
+    if (!goplsClient || !goplsClient.isInitialized() || isGoplsPoisoned()) {
       return this.matchImplicitImplementations(structs, interfaces);
     }
 
     const results: InferredImplementation[] = [];
 
-    try {
-      // Query gopls for each interface
-      for (const iface of interfaces) {
-        const implementations = await goplsClient.getImplementations(
+    // Query gopls for each interface. Each query is guarded so one bounded
+    // timeout/failure degrades that interface only, never the entire run.
+    for (const iface of interfaces) {
+      let implementations;
+      try {
+        implementations = await goplsClient.getImplementations(
           iface.name,
           iface.location.file,
           iface.location.startLine
         );
+      } catch (error) {
+        console.warn(`gopls query failed for interface ${iface.name}, using fallback:`, error);
+        continue;
+      }
 
-        // Match gopls results to our structs
-        for (const impl of implementations) {
-          const matchedStruct = structs.find((s) => s.name === impl.structName);
+      // Match gopls results to our structs
+      for (const impl of implementations) {
+        const matchedStruct = structs.find((s) => s.name === impl.structName);
 
-          if (matchedStruct) {
-            // Get matched methods
-            const ifaceMethodNames = iface.methods.map((m) => m.name);
-            const structMethodNames = matchedStruct.methods.map((m) => m.name);
-            const matchedMethods = ifaceMethodNames.filter((name) =>
-              structMethodNames.includes(name)
-            );
+        if (matchedStruct) {
+          // Get matched methods
+          const ifaceMethodNames = iface.methods.map((m) => m.name);
+          const structMethodNames = matchedStruct.methods.map((m) => m.name);
+          const matchedMethods = ifaceMethodNames.filter((name) =>
+            structMethodNames.includes(name)
+          );
 
-            results.push({
-              structName: matchedStruct.name,
-              structPackageId: matchedStruct.packageName,
-              interfaceName: iface.name,
-              interfacePackageId: iface.packageName,
-              confidence: 0.99, // High confidence from gopls
-              matchedMethods,
-              source: 'gopls',
-            });
-          }
+          results.push({
+            structName: matchedStruct.name,
+            structPackageId: matchedStruct.packageName,
+            interfaceName: iface.name,
+            interfacePackageId: iface.packageName,
+            confidence: 0.99, // High confidence from gopls
+            matchedMethods,
+            source: 'gopls',
+          });
         }
       }
-
-      // Fall back to name-based matching for structs not found by gopls
-      const goplsMatchedStructs = new Set(results.map((r) => r.structName));
-      const unmatchedStructs = structs.filter((s) => !goplsMatchedStructs.has(s.name));
-
-      if (unmatchedStructs.length > 0) {
-        const fallbackResults = this.matchImplicitImplementations(unmatchedStructs, interfaces);
-        results.push(...fallbackResults);
-      }
-
-      return results;
-    } catch (error) {
-      // On error, fall back completely to name-based matching
-      console.warn('gopls matching failed, using fallback:', error);
-      return this.matchImplicitImplementations(structs, interfaces);
     }
+
+    // Fall back to name-based matching for structs not found by gopls
+    const goplsMatchedStructs = new Set(results.map((r) => r.structName));
+    const unmatchedStructs = structs.filter((s) => !goplsMatchedStructs.has(s.name));
+
+    if (unmatchedStructs.length > 0) {
+      const fallbackResults = this.matchImplicitImplementations(unmatchedStructs, interfaces);
+      results.push(...fallbackResults);
+    }
+
+    return results;
   }
 
   /**

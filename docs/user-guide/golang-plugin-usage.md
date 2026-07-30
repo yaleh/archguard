@@ -33,6 +33,73 @@ gopls version
 
 **Without gopls**: Plugin works perfectly, using name-based matching (same as Phase 2.A baseline).
 
+## Reliability: gopls Timeout Budget & Graceful Degradation
+
+gopls startup and workspace analysis on a very large Go module can stall
+indefinitely (first-run module resolution, broken toolchains, huge dependency
+graphs). To guarantee `archguard analyze --lang go` never hangs the whole run,
+every gopls-dependent stage is bounded by a **timeout budget**:
+
+- The budget covers gopls startup + workspace load, including the `gopls version`
+  probe and the LSP `initialize` handshake (both previously unbounded).
+- When the budget is exceeded, ArchGuard **cancels the gopls operation, reaps the
+  gopls child process, emits a loud warning, and continues with
+  tree-sitter-only analysis** (package/struct/interface relations without the
+  gopls call graph). Analysis always completes — it is never stalled by gopls.
+- Degraded output is **explicitly marked**: the ArchJSON carries
+  `metadata.goGoplsDegraded: true` and `metadata.goGoplsDegradedReason`, and
+  `metadata.goGoplsAvailable` reports whether gopls contributed.
+- After a timeout, gopls is **poison-pill disabled for the rest of the
+  process** — it is never re-spawned within the same CLI/MCP process, so a
+  known-bad gopls cannot reintroduce the stall. The poisoned state is surfaced
+  in the gopls diagnostics.
+
+### Configuring the budget
+
+| Mechanism | Key | Default |
+|-----------|-----|---------|
+| Environment variable (takes precedence) | `ARCHGUARD_GOPLS_TIMEOUT_MS` | — |
+| Config file (`archguard.config.json`) | `atlas.goplsTimeoutMs` | `120000` (120s) |
+
+**Precedence**: `ARCHGUARD_GOPLS_TIMEOUT_MS` (env) > `atlas.goplsTimeoutMs`
+(config file) > `120000` (default). The config-file value is read from
+`archguard.config.json` in the CLI's working directory (the default config
+location); when using a custom `--config <path>` or `archguard.config.js`,
+set the environment variable instead.
+
+```bash
+# Give gopls 3 minutes on a very large module:
+ARCHGUARD_GOPLS_TIMEOUT_MS=180000 archguard analyze --lang go -s ./my-project
+
+# Or fail fast in CI (degrade to tree-sitter after 5s):
+ARCHGUARD_GOPLS_TIMEOUT_MS=5000 archguard analyze --lang go -s ./my-project
+```
+
+```json
+// archguard.config.json
+{
+  "atlas": { "goplsTimeoutMs": 180000 }
+}
+```
+
+Invalid or non-positive values fall through to the next source in the
+precedence chain (env → config file → 120s default), so a malformed override
+can never disable the bound.
+
+### Degraded output example
+
+```json
+{
+  "version": "1.1",
+  "language": "go",
+  "metadata": {
+    "goGoplsAvailable": false,
+    "goGoplsDegraded": true,
+    "goGoplsDegradedReason": "gopls timed out (gopls startup exceeded budget of 120000ms)"
+  }
+}
+```
+
 ## Usage
 
 ### Basic Usage
@@ -186,15 +253,25 @@ func (s *Service) Stop() { }
 
 **Symptom**:
 ```
-⚠ Failed to initialize gopls, using fallback: Request timeout
+⚠ Go analysis degraded — gopls timed out (gopls startup exceeded budget of 120000ms).
+  Falling back to tree-sitter-only interface matching; gopls call-graph layers will be missing.
 ```
 
-**Solution**:
-1. Check gopls version: `gopls version` (should be recent)
-2. Check project size: Very large projects may need more time
-3. Verify Go module: Ensure `go.mod` exists
+This is the reliability bound doing its job: gopls did not come up within the
+configured budget, so ArchGuard cancelled it, reaped the process, and continued
+with tree-sitter-only analysis. The run is **not** hung — it completes with
+degraded output marked by `metadata.goGoplsDegraded: true`.
 
-**Impact**: Falls back to name-based matching for this run
+**Solution**:
+1. Raise the budget for very large modules: `ARCHGUARD_GOPLS_TIMEOUT_MS=180000`
+   (or `atlas.goplsTimeoutMs` in `archguard.config.json`).
+2. Check gopls version: `gopls version` (should be recent)
+3. Verify Go module: ensure `go.mod` exists and dependencies resolve
+   (`go mod download`); first-run module resolution is a common cause of stalls.
+
+**Impact**: Falls back to name-based matching; gopls is poison-pill disabled
+for the rest of the process (not retried). Restart the CLI/MCP process to
+re-arm gopls after fixing the environment.
 
 ### No Implementations Detected
 
@@ -258,13 +335,16 @@ await plugin.dispose();
 
 ### Custom gopls Configuration
 
+The gopls startup budget is configurable via the `ARCHGUARD_GOPLS_TIMEOUT_MS`
+environment variable or `atlas.goplsTimeoutMs` in `archguard.config.json` (see
+[Reliability](#reliability-gopls-timeout-budget--graceful-degradation)).
+
 ```typescript
-// Not yet exposed in config, but internally:
-const goplsClient = new GoplsClient('/custom/path/gopls', 60000); // 60s timeout
+// Programmatic construction still accepts explicit bounds:
+//   new GoplsClient(goplsPath, perRequestTimeoutMs, startupBudgetMs)
+const goplsClient = new GoplsClient('/custom/path/gopls', 60000, 120000);
 await goplsClient.initialize(workspaceRoot);
 ```
-
-**Future**: Configuration options will be exposed in `archguard.config.json`.
 
 ## Comparison: gopls vs Fallback
 

@@ -119,7 +119,12 @@ export class GoParseCoordinator {
   async buildArchJson(
     rawData: GoRawData,
     workspaceRoot: string
-  ): Promise<Pick<ArchJSON, 'entities' | 'relations' | 'sourceFiles'> & { workspaceRoot: string }> {
+  ): Promise<
+    Pick<ArchJSON, 'entities' | 'relations' | 'sourceFiles'> & {
+      workspaceRoot: string;
+      metadata?: Record<string, unknown>;
+    }
+  > {
     const allStructs = rawData.packages.flatMap((p) =>
       p.structs.map((s) => ({ ...s, packageName: p.fullName || p.name }))
     );
@@ -144,7 +149,37 @@ export class GoParseCoordinator {
       relations,
       sourceFiles: rawData.packages.flatMap((p) => p.sourceFiles),
       workspaceRoot,
+      metadata: this.buildGoplsMetadata(),
     };
+  }
+
+  /**
+   * Propagate gopls degradation state into the ArchJSON metadata so consumers
+   * can tell when the call-graph / semantic layers are missing (TASK-44).
+   *
+   * Guarded with `typeof` checks so a resolver double that does not implement
+   * the degradation API (e.g. test mocks) degrades to a plain availability
+   * flag instead of throwing.
+   */
+  private buildGoplsMetadata(): Record<string, unknown> {
+    const resolver = this.resolver as unknown as {
+      isDegraded?: () => boolean;
+      getDegradedReason?: () => string | null;
+      isGoplsAvailable?: () => boolean;
+    };
+    const degraded =
+      typeof resolver.isDegraded === 'function' ? resolver.isDegraded() : false;
+    const available =
+      typeof resolver.isGoplsAvailable === 'function' ? resolver.isGoplsAvailable() : false;
+    const metadata: Record<string, unknown> = { goGoplsAvailable: available };
+    if (degraded) {
+      metadata.goGoplsDegraded = true;
+      metadata.goGoplsDegradedReason =
+        typeof resolver.getDegradedReason === 'function'
+          ? resolver.getDegradedReason()
+          : 'gopls unavailable';
+    }
+    return metadata;
   }
 
   parseCodeToArchJson(code: string, filePath: string, cachedModuleName: string): ArchJSON {

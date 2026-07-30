@@ -5,11 +5,205 @@
  * - Interface implementation detection
  * - Type information queries
  * - Symbol resolution
+ *
+ * Reliability bounds (TASK-44):
+ * - A configurable startup budget bounds gopls startup + workspace load.
+ *   Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file
+ *   atlas.goplsTimeoutMs (archguard.config.json) > default (120s). The budget
+ *   covers the previously unbounded `gopls version` probe and the LSP
+ *   `initialize` handshake.
+ * - On budget exhaustion the client cancels the gopls operation, reaps every
+ *   child process, raises GoplsTimeoutError, and sets a process-wide
+ *   poison-pill so gopls is never re-spawned within the same process.
+ * - Every spawned child (version probe + serve) is tracked and reaped on
+ *   success, timeout, error, dispose, and process exit — no orphans.
  */
 
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
+
+// ---------------------------------------------------------------------------
+// Timeout budget configuration
+// ---------------------------------------------------------------------------
+
+/** Default total budget (ms) for gopls startup + workspace load. */
+export const DEFAULT_GOPLS_TIMEOUT_MS = 120_000;
+
+/** Environment variable overriding the gopls timeout budget. */
+export const GOPLS_TIMEOUT_ENV = 'ARCHGUARD_GOPLS_TIMEOUT_MS';
+
+/**
+ * Resolve the effective gopls timeout budget (ms).
+ *
+ * Precedence: `ARCHGUARD_GOPLS_TIMEOUT_MS` env override → `configMs`
+ * (e.g. `atlas.goplsTimeoutMs` from archguard.config.json) → default (120s).
+ * Invalid / non-positive values from any source fall through to the next
+ * source in the chain so a malformed override can never disable the bound.
+ */
+export function resolveGoplsTimeoutMs(
+  env: NodeJS.ProcessEnv = process.env,
+  configMs?: number
+): number {
+  const raw = env[GOPLS_TIMEOUT_ENV];
+  if (raw !== undefined && raw !== '') {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.floor(parsed);
+    }
+    // Invalid env value → fall through to config / default.
+  }
+  if (configMs !== undefined && Number.isFinite(configMs) && configMs > 0) {
+    return Math.floor(configMs);
+  }
+  return DEFAULT_GOPLS_TIMEOUT_MS;
+}
+
+/**
+ * Read `atlas.goplsTimeoutMs` from `archguard.config.json` in `cwd` (default:
+ * process.cwd(), matching the CLI's default config discovery). Returns
+ * undefined when the file is absent / unreadable / malformed JSON, or when
+ * `atlas.goplsTimeoutMs` is absent, non-numeric, or non-positive — callers
+ * then fall through resolveGoplsTimeoutMs's precedence chain.
+ *
+ * Scope note: this covers the default JSON config location only. A custom
+ * `--config <path>` file or `archguard.config.js` is not visible to the
+ * plugin layer; use the ARCHGUARD_GOPLS_TIMEOUT_MS env override there.
+ */
+export function readGoplsTimeoutFromConfigFile(cwd: string = process.cwd()): number | undefined {
+  try {
+    const raw = fs.readFileSync(path.join(cwd, 'archguard.config.json'), 'utf-8');
+    const parsed = JSON.parse(raw) as { atlas?: { goplsTimeoutMs?: unknown } } | null;
+    const value = parsed?.atlas?.goplsTimeoutMs;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+      return undefined;
+    }
+    return Math.floor(value);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve the effective gopls budget from ALL three sources, converged:
+ * env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file atlas.goplsTimeoutMs > 120s.
+ */
+export function resolveEffectiveGoplsTimeoutMs(
+  env: NodeJS.ProcessEnv = process.env,
+  cwd: string = process.cwd()
+): number {
+  return resolveGoplsTimeoutMs(env, readGoplsTimeoutFromConfigFile(cwd));
+}
+
+// ---------------------------------------------------------------------------
+// Error types
+// ---------------------------------------------------------------------------
+
+/** Raised when a gopls stage exceeds its configured time budget. */
+export class GoplsTimeoutError extends Error {
+  readonly budgetExceeded: boolean;
+  readonly stage?: string;
+
+  constructor(
+    message: string,
+    opts: { budgetExceeded?: boolean; stage?: string } = {}
+  ) {
+    super(message);
+    this.name = 'GoplsTimeoutError';
+    this.budgetExceeded = opts.budgetExceeded ?? false;
+    this.stage = opts.stage;
+  }
+}
+
+/** Raised when gopls is disabled process-wide by the poison-pill. */
+export class GoplsPoisonedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GoplsPoisonedError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Process-wide poison-pill
+// ---------------------------------------------------------------------------
+//
+// Once gopls blows its startup budget in a process we never spawn it again in
+// that process: a hung gopls is almost always environmental (huge module,
+// broken toolchain) and retrying only re-introduces the stall. The poisoned
+// state is surfaced through getGoplsDiagnostics().
+
+const poisonState: { poisoned: boolean; reason: string | null } = {
+  poisoned: false,
+  reason: null,
+};
+
+/** Whether gopls has been poison-pill disabled in this process. */
+export function isGoplsPoisoned(): boolean {
+  return poisonState.poisoned;
+}
+
+/** The reason gopls was poisoned, or null when not poisoned. */
+export function getGoplsPoisonReason(): string | null {
+  return poisonState.reason;
+}
+
+/** Mark gopls as poisoned for the remainder of this process. */
+export function poisonGopls(reason: string): void {
+  poisonState.poisoned = true;
+  poisonState.reason = reason;
+}
+
+/**
+ * Clear the poison-pill. Intended for tests and long-lived hosts that want to
+ * re-arm gopls after the environment has changed.
+ */
+export function resetGoplsPoison(): void {
+  poisonState.poisoned = false;
+  poisonState.reason = null;
+}
+
+/** Human-readable diagnostics for the gopls subsystem (poison state + budget). */
+export function getGoplsDiagnostics(): readonly string[] {
+  const lines = [
+    `gopls: startup budget default ${DEFAULT_GOPLS_TIMEOUT_MS}ms (override via ${GOPLS_TIMEOUT_ENV})`,
+  ];
+  if (poisonState.poisoned) {
+    lines.push(
+      `gopls: POISON-PILL active — gopls disabled for this process (${poisonState.reason ?? 'unknown reason'})`
+    );
+  } else {
+    lines.push('gopls: poison-pill inactive');
+  }
+  return lines;
+}
+
+// ---------------------------------------------------------------------------
+// Global child-process reaper
+// ---------------------------------------------------------------------------
+//
+// Track every live gopls child so we can guarantee no orphan survives process
+// exit (CLI exit or MCP shutdown). A single 'exit' handler is registered lazily
+// on first spawn; kill() is synchronous and safe in the 'exit' hook.
+
+const liveGoplsChildren = new Set<ChildProcess>();
+let globalReaperRegistered = false;
+
+function registerGlobalReaper(): void {
+  if (globalReaperRegistered) {
+    return;
+  }
+  globalReaperRegistered = true;
+  process.on('exit', () => {
+    for (const child of liveGoplsChildren) {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // best-effort reaping; ignore
+      }
+    }
+    liveGoplsChildren.clear();
+  });
+}
 
 interface LSPMessage {
   jsonrpc: '2.0';
@@ -57,16 +251,28 @@ export class GoplsClient {
   private messageBuffer = '';
   private initialized = false;
   private workspaceRoot = '';
+  /** Per-instance set of live child processes (serve + version probe). */
+  private liveChildren = new Set<ChildProcess>();
+  /** Total startup budget (ms). */
+  private readonly budgetMs: number;
 
   constructor(
     private goplsPath: string = 'gopls',
-    private timeout: number = 30000 // 30s default timeout
-  ) {}
+    private timeout: number = 30000, // 30s default per-request timeout
+    budgetMs?: number
+  ) {
+    this.budgetMs = budgetMs ?? resolveEffectiveGoplsTimeoutMs();
+  }
 
   /**
-   * Initialize gopls language server
+   * Initialize gopls language server.
+   *
+   * The entire startup sequence (version probe + spawn + LSP initialize
+   * handshake) is bounded by the configured budget. On budget exhaustion the
+   * operation is cancelled, all children are reaped, the process-wide
+   * poison-pill is set, and a GoplsTimeoutError is thrown.
    */
-  async initialize(workspaceRoot: string): Promise<void> {
+  async initialize(workspaceRoot: string, budgetMs?: number): Promise<void> {
     if (this.initialized) {
       return; // Already initialized
     }
@@ -75,20 +281,51 @@ export class GoplsClient {
       throw new Error('Workspace root is required');
     }
 
-    this.workspaceRoot = workspaceRoot;
+    if (isGoplsPoisoned()) {
+      throw new GoplsPoisonedError(
+        `gopls is disabled in this process (poison-pill): ${getGoplsPoisonReason()}`
+      );
+    }
 
-    // Verify gopls binary exists
+    this.workspaceRoot = workspaceRoot;
+    const budget = budgetMs ?? this.budgetMs;
+
     try {
-      // Try to spawn gopls with version flag to verify it exists
-      await this.checkGoplsAvailable();
-    } catch {
+      await this.runWithBudget(this.startup(workspaceRoot, budget), budget, 'startup');
+      this.initialized = true;
+    } catch (error) {
+      // Always reap on failure so no child is left behind.
+      this.reapAll();
+      if (error instanceof GoplsTimeoutError && error.budgetExceeded) {
+        poisonGopls(`startup exceeded budget of ${budget}ms`);
+      }
+      if (error instanceof GoplsTimeoutError || error instanceof GoplsPoisonedError) {
+        throw error;
+      }
+      throw new Error(`Failed to initialize gopls: ${error}`);
+    }
+  }
+
+  /**
+   * Startup sequence executed under the budget timer.
+   */
+  private async startup(workspaceRoot: string, budget: number): Promise<void> {
+    // Verify gopls binary exists (bounded + reaped).
+    try {
+      await this.checkGoplsAvailable(budget);
+    } catch (error) {
+      if (error instanceof GoplsTimeoutError) {
+        throw error;
+      }
       throw new Error(`gopls binary not found at: ${this.goplsPath}`);
     }
 
     // Spawn gopls process
-    this.process = spawn(this.goplsPath, ['serve', '-rpc.trace'], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    this.process = this.trackProcess(
+      spawn(this.goplsPath, ['serve', '-rpc.trace'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
 
     if (!this.process.stdout || !this.process.stdin) {
       throw new Error('Failed to create gopls process streams');
@@ -113,44 +350,110 @@ export class GoplsClient {
     });
 
     // Send LSP initialize request
-    try {
-      await this.sendRequest('initialize', {
-        processId: process.pid,
-        rootUri: `file://${workspaceRoot}`,
-        capabilities: {
-          textDocument: {
-            implementation: {
-              linkSupport: true,
-            },
-            hover: {
-              contentFormat: ['plaintext', 'markdown'],
-            },
+    await this.sendRequest('initialize', {
+      processId: process.pid,
+      rootUri: `file://${workspaceRoot}`,
+      capabilities: {
+        textDocument: {
+          implementation: {
+            linkSupport: true,
+          },
+          hover: {
+            contentFormat: ['plaintext', 'markdown'],
           },
         },
-      });
+      },
+    });
 
-      // Send initialized notification
-      this.sendNotification('initialized', {});
-
-      this.initialized = true;
-    } catch (error) {
-      await this.dispose();
-      throw new Error(`Failed to initialize gopls: ${error}`);
-    }
+    // Send initialized notification
+    this.sendNotification('initialized', {});
   }
 
   /**
-   * Check if gopls is available
+   * Run a unit of work under a hard time budget. When the budget fires first
+   * the returned promise rejects with a GoplsTimeoutError; the inner promise
+   * is still awaited/swallowed so it cannot produce an unhandled rejection.
    */
-  private async checkGoplsAvailable(): Promise<void> {
+  private runWithBudget<T>(work: Promise<T>, budget: number, stage: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(
+          new GoplsTimeoutError(`gopls ${stage} exceeded budget of ${budget}ms`, {
+            budgetExceeded: true,
+            stage,
+          })
+        );
+      }, budget);
+      // Do not keep the event loop alive solely for this timer.
+      timer.unref?.();
+
+      work.then(
+        (value) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          reject(error);
+        }
+      );
+    });
+  }
+
+  /**
+   * Check if gopls is available. Bounded by `timeoutMs`; the probe child is
+   * reaped on both timeout and completion.
+   */
+  private checkGoplsAvailable(timeoutMs: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      const proc = spawn(this.goplsPath, ['version']);
+      const proc = this.trackProcess(spawn(this.goplsPath, ['version']));
+      let settled = false;
+
+      const timer = setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        this.reapProcess(proc);
+        reject(
+          new GoplsTimeoutError(`gopls version probe exceeded budget of ${timeoutMs}ms`, {
+            budgetExceeded: true,
+            stage: 'version-probe',
+          })
+        );
+      }, timeoutMs);
+      timer.unref?.();
 
       proc.on('error', (error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        this.reapProcess(proc);
         reject(error);
       });
 
       proc.on('exit', (code) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        this.untrackProcess(proc);
         if (code === 0) {
           resolve();
         } else {
@@ -324,10 +627,10 @@ export class GoplsClient {
   }
 
   /**
-   * Dispose gopls client and cleanup resources
+   * Dispose gopls client and cleanup resources. Always reaps child processes.
    */
   async dispose(): Promise<void> {
-    if (!this.initialized && !this.process) {
+    if (!this.initialized && !this.process && this.liveChildren.size === 0) {
       return; // Already disposed
     }
 
@@ -348,11 +651,8 @@ export class GoplsClient {
       }
     }
 
-    // Kill process
-    if (this.process) {
-      this.process.kill();
-      this.process = null;
-    }
+    // Reap all child processes (serve + any lingering version probe).
+    this.reapAll();
 
     this.initialized = false;
     this.messageBuffer = '';
@@ -566,5 +866,45 @@ export class GoplsClient {
       request.reject(error);
       this.pendingRequests.delete(id);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Child-process tracking / reaping
+  // -------------------------------------------------------------------------
+
+  private trackProcess(proc: ChildProcess): ChildProcess {
+    this.liveChildren.add(proc);
+    liveGoplsChildren.add(proc);
+    registerGlobalReaper();
+    return proc;
+  }
+
+  private untrackProcess(proc: ChildProcess): void {
+    this.liveChildren.delete(proc);
+    liveGoplsChildren.delete(proc);
+  }
+
+  private reapProcess(proc: ChildProcess): void {
+    try {
+      // SIGKILL: a hung gopls may ignore SIGTERM; guarantee no survivor.
+      proc.kill('SIGKILL');
+    } catch {
+      // best-effort
+    }
+    this.untrackProcess(proc);
+  }
+
+  /** Kill and forget every tracked child process. */
+  private reapAll(): void {
+    for (const proc of this.liveChildren) {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        // best-effort
+      }
+      liveGoplsChildren.delete(proc);
+    }
+    this.liveChildren.clear();
+    this.process = null;
   }
 }
