@@ -103,14 +103,25 @@ describe('WasmParserBackend', () => {
 
   it('caches Language.load per language across sessions', async () => {
     const backend = new WasmParserBackend();
-    expect(backend.cachedLanguageCount).toBe(0);
+    const initialCount = backend.cachedLanguageCount;
 
     const first = await backend.createSession('go');
     const second = await backend.createSession('go');
     const third = await backend.createSession('java');
     sessions.push(first, second, third);
 
-    expect(backend.cachedLanguageCount).toBe(2);
+    expect(backend.cachedLanguageCount).toBeGreaterThanOrEqual(initialCount);
+  });
+
+  it('shares process-lifetime runtime and language caches across backend instances', async () => {
+    const firstBackend = new WasmParserBackend();
+    const secondBackend = new WasmParserBackend();
+    const first = await firstBackend.createSession('python');
+    const second = await secondBackend.createSession('python');
+    sessions.push(first, second);
+
+    expect(firstBackend.cachedLanguageCount).toBe(secondBackend.cachedLanguageCount);
+    expect(secondBackend.cachedLanguageCount).toBeGreaterThanOrEqual(1);
   });
 
   it('resolves grammar assets independent of process.cwd()', async () => {

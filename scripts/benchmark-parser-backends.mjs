@@ -14,12 +14,17 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
+import os from 'node:os';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const iterationsArg = process.argv.indexOf('--iterations');
 const ITERATIONS = iterationsArg > 0 ? Number(process.argv[iterationsArg + 1]) : 50;
 const REPETITIONS = 5; // median-of-N per measurement
+const SIZE_MULTIPLIERS = { small: 1, medium: 10, large: 50 };
+const sizeArg = process.argv.indexOf('--size');
+const FIXTURE_SIZE = sizeArg > 0 ? process.argv[sizeArg + 1] : 'small';
+if (!(FIXTURE_SIZE in SIZE_MULTIPLIERS)) throw new Error('--size must be small, medium, or large');
 
 const { nativeParserBackend } = await import(
   path.join(repoRoot, 'dist/plugins/shared/native-parser-backend.js')
@@ -97,13 +102,18 @@ const PLUGINS = { go: GoPlugin, java: JavaPlugin, python: PythonPlugin, cpp: Cpp
 
 const rows = [];
 for (const testCase of CASES) {
-  const code = readFileSync(path.join(repoRoot, testCase.file), 'utf8');
+  const fixtureCode = readFileSync(path.join(repoRoot, testCase.file), 'utf8');
+  // Representative sizes repeat valid top-level declarations. Parser-only and
+  // full plugin analysis therefore scale over identical input bytes.
+  const size = FIXTURE_SIZE;
+  const code = Array.from({ length: SIZE_MULTIPLIERS[size] }, () => fixtureCode).join('\n');
   const nativeParse = await benchParserOnly(nativeParserBackend, testCase, code);
   const wasmParse = await benchParserOnly(wasmParserBackend, testCase, code);
   const pipeline = await benchPipeline(PLUGINS[testCase.language], testCase, code);
   rows.push({
     language: testCase.language,
     fixture: testCase.file,
+    size,
     nativeParse,
     wasmParse,
     parseRatio: wasmParse / nativeParse,
@@ -119,8 +129,10 @@ console.log(`# Parser backend benchmark (native vs WASM)\n`);
 console.log(`- date: ${new Date().toISOString().slice(0, 10)}`);
 console.log(`- node: ${process.version}`);
 console.log(`- platform: ${process.platform}/${process.arch}`);
+console.log(`- load average (1/5/15m): ${os.loadavg().map((n) => n.toFixed(2)).join('/')}`);
+console.log(`- fixture size: ${rows[0]?.size ?? 'small'} (--size small|medium|large)`);
 console.log(`- iterations per fixture: ${ITERATIONS} (after warm-up)\n`);
-console.log(`| language | parser-only native (ms) | parser-only wasm (ms) | ratio | pipeline native (ms) | pipeline wasm (ms) | ratio |`);
+console.log(`| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio |`);
 console.log(`|---|---|---|---|---|---|---|`);
 for (const row of rows) {
   console.log(
@@ -130,5 +142,5 @@ for (const row of rows) {
 console.log(
   `| **mean** | ${avg(rows.map((r) => r.nativeParse)).toFixed(3)} | ${avg(rows.map((r) => r.wasmParse)).toFixed(3)} | **${avg(rows.map((r) => r.parseRatio)).toFixed(2)}x** | ${avg(rows.map((r) => r.nativePipeline)).toFixed(3)} | ${avg(rows.map((r) => r.wasmPipeline)).toFixed(3)} | **${avg(rows.map((r) => r.pipelineRatio)).toFixed(2)}x** |`
 );
-console.log(`\n"pipeline" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),`);
+console.log(`\n"full-analysis" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),`);
 console.log(`the parse-dominated portion of an end-to-end ArchGuard analysis.`);

@@ -17,3 +17,29 @@
 
 "pipeline" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),
 the parse-dominated portion of an end-to-end ArchGuard analysis.
+
+## TASK-40 after: process caches and parse-worker crossover
+
+Measured 2026-07-30 on Node v26.5.0, linux/x64, 4 cores. The small/medium
+runs were heavily contended by three concurrent task worktrees (1-minute load
+9.40-9.97); the large run had load 2.47. Ratios, not absolute timings, are the
+decision evidence.
+
+| fixture size | iterations | parser-only native (mean ms) | parser-only WASM (mean ms) | ratio | full-analysis native (mean ms) | full-analysis WASM (mean ms) | ratio |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| small (1x) | 20 | 0.677 | 0.589 | **1.09x** | 3.400 | 1.188 | **0.45x** |
+| medium (10x) | 10 | 13.719 | 8.378 | **1.05x** | 38.818 | 14.469 | **0.42x** |
+| large (50x) | 5 | 48.947 | 28.224 | **0.93x** | 157.095 | 54.580 | **0.41x** |
+
+The committed worker threshold is **12 files** (`PARSE_WORKER_THRESHOLD`). Below
+that, serial parsing avoids worker startup; above it, synchronous parsing runs
+in a bounded pool (maximum configured concurrency). WASM runtime and grammar
+promises are cached per asset directory for the process lifetime and parser
+sessions are reused within their owning worker/plugin.
+
+Decision: no exception to the 2.5x full-analysis ceiling is needed. Both measured
+full-analysis ratios are below 1x on this host (and therefore within the stated
+"never exceeds 2.5x" bound). The earlier uncontended baseline remains above for
+comparison; the contended after run must not be read as an absolute speedup.
+Memory/shutdown evidence is enforced by `wasm-memory.test.ts` and
+`parser-pool.test.ts` (success/error termination and serial/parallel determinism).
