@@ -35,6 +35,28 @@ must preserve current native behavior; it does not add fallback yet.
    failed plugin initialization.
 6. Preserve current ArchJSON output with snapshot/fixture tests.
 
+## Touches
+
+- src/plugins/shared/**
+- src/plugins/golang/tree-sitter-bridge.ts
+- src/plugins/golang/go-parse-coordinator.ts
+- src/plugins/golang/builders/**
+- src/plugins/java/tree-sitter-bridge.ts
+- src/plugins/java/index.ts
+- src/plugins/python/tree-sitter-bridge.ts
+- src/plugins/python/index.ts
+- src/plugins/cpp/tree-sitter-bridge.ts
+- src/plugins/cpp/index.ts
+- src/plugins/cpp/builders/**
+- src/plugins/kotlin/tree-sitter-bridge.ts
+- src/plugins/kotlin/index.ts
+- src/plugins/kotlin/builders/**
+- tests/plugins/golang/**
+- tests/plugins/java/**
+- tests/plugins/python/**
+- tests/plugins/cpp/**
+- tests/unit/plugins/kotlin/**
+
 ## Acceptance Criteria
 
 - [ ] No language bridge or builder imports runtime values or types directly

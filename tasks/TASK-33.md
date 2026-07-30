@@ -31,6 +31,16 @@ gate failure could be dismissed as "probably the flake".
    close with the evidence.
 4. Do not blanket-skip tests to make the problem disappear.
 
+## Touches
+
+- tasks/TASK-33.md
+
+The initial touch set is evidence-only: repeated runs may update this task but
+must not modify tests or product code concurrently with another batch member.
+If reproduction identifies a defect, remove the task from the active batch and
+update this declaration with the concrete test and/or `src/<area>/**` paths
+before making the fix.
+
 ## Acceptance Criteria
 
 - [ ] Either (a) the flaky test is identified by name, root-caused, and
