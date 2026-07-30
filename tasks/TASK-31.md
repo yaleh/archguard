@@ -118,7 +118,7 @@ prerequisite for packaging.
 ## Definition of Done
 
 - [x] TASK-37, TASK-38, TASK-39, and TASK-41 are complete.
-- [ ] The npm plugin artifact and install flow are committed.
+- [x] The npm plugin artifact and install flow are committed.
 - [x] Clean-cache install and live MCP connection evidence are appended here.
 - [x] README documents npm-source installation, runtime selection, WASM
       fallback, and how to force native or WASM for diagnostics.
