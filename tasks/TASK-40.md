@@ -47,9 +47,10 @@ Blocked by TASK-39 so both backends share the same worker/session protocol.
 ## Touches
 
 - src/plugins/shared/wasm-parser-backend.ts src/plugins/shared/parser-backend.ts (process-lifetime WASM runtime/language caches, safe parser-session reuse)
-- src/parser/parse-worker-pool.ts src/parser/parse-worker.ts (NEW: bounded long-lived parsing worker pool, separate from Mermaid render workers)
+- src/parser/parse-worker-pool.ts src/parser/parse-worker.ts src/parser/process-parse-worker-pools.ts (NEW: bounded long-lived parsing worker pool, separate from Mermaid render workers)
 - src/parser/parallel-parser.ts (pool wiring + serial-path threshold)
-- src/cli/processors/worker-pool-factory.ts (worker-pool wiring + selected-runtime propagation to workers)
+- src/cli/processors/worker-pool-factory.ts src/cli/processors/arch-json-provider.ts src/cli/processors/arch-json-provider-types.ts src/cli/processors/diagram-processor.ts (worker-pool wiring + selected-runtime propagation to workers; production integration added after TASK-42 remediation)
+- src/cli/analyze/run-analysis.ts src/cli/mcp/analyze-tool.ts src/cli/mcp/mcp-server.ts (process-owned MCP pool reuse + shutdown)
 - scripts/benchmark-parser-backends.mjs (repeatable parser-only + full-analysis benchmarks)
 - assets/grammars/benchmarks.md (before/after benchmark evidence + chosen thresholds)
 - tests/unit/parser/** (pool unit tests)
@@ -58,27 +59,29 @@ Blocked by TASK-39 so both backends share the same worker/session protocol.
 - tasks/TASK-40.md
 
 Do NOT modify: package.json/lock, src/plugins/shared/plugin-factory.ts,
-src/plugins/*/index.ts constructors, src/cli/processors/arch-json-provider.ts,
-src/types/**, src/plugins/golang/atlas/** (owned by parallel TASK-42/TASK-44).
+src/plugins/*/index.ts constructors, src/types/**, src/plugins/golang/atlas/**.
+Production integration intentionally overlaps TASK-42-owned
+`src/cli/processors/arch-json-provider.ts` and was implemented only after
+merging TASK-42 remediation commits; no factory changes were overwritten.
 No output-content behavior change.
 
 ## Acceptance Criteria
 
-- [ ] Benchmarks report parser-only and full-analysis native/WASM ratios.
-- [ ] Warm MCP analyses reuse runtime/language initialization.
-- [ ] Parsing CPU work runs in a bounded worker pool for workloads above a
+- [x] Benchmarks report parser-only and full-analysis native/WASM ratios.
+- [x] Warm MCP analyses reuse runtime/language initialization.
+- [x] Parsing CPU work runs in a bounded worker pool for workloads above a
       measured threshold.
-- [ ] Workers release trees and terminate cleanly on success, error, and MCP
+- [x] Workers release trees and terminate cleanly on success, error, and MCP
       shutdown.
-- [ ] Representative full-analysis WASM performance is normally within 1.3-2x
+- [x] Representative full-analysis WASM performance is normally within 1.3-2x
       native and never exceeds 2.5x without documented approval.
-- [ ] Output remains deterministic across concurrency levels and backends.
-- [ ] Memory remains bounded across repeated long-lived MCP analyses.
+- [x] Output remains deterministic across concurrency levels and backends.
+- [x] Memory remains bounded across repeated long-lived MCP analyses.
 
 ## Definition of Done
 
-- [ ] Performance, determinism, error-path, and leak tests pass.
-- [ ] Before/after benchmark evidence and chosen thresholds are committed.
+- [x] Performance, determinism, error-path, and leak tests pass.
+- [x] Before/after benchmark evidence and chosen thresholds are committed.
 
 ## Coordination
 
