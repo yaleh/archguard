@@ -1,6 +1,7 @@
 ---
 id: TASK-42
-title: Make the parser runtime resolver the single construction entry for language plugins
+title: Make the parser runtime resolver the single construction entry for
+  language plugins
 labels:
   - architecture
   - parser
