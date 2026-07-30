@@ -83,7 +83,7 @@ runtime, worker-pool, CLI/MCP, package manifests, or non-Go languages.
 
 ## Definition of Done
 
-- [ ] Implementation + tests committed. (Left UNCOMMITTED in the worktree per
+- [x] Implementation + tests committed. (Left UNCOMMITTED in the worktree per
       the quay loop contract — the driver commits at land after gate + audit.)
 - [x] A reproduction on meta-cc (or an equivalent large Go module) showing
       bounded completion with degraded output is appended to this task body.
@@ -183,3 +183,18 @@ Two independent adversarial audits returned REFUTATION FOUND on:
 2. **This Evidence section did not exist** although DoD box 2 was checked.
    Added (this section). The DoD box stands checked only now that the section
    exists.
+
+## Loop-driver land evidence (2026-07-30)
+
+- Driver gate: vitest **PASS**, GateEvent 54415d9d-2234-489e-ba9d-a573c11038b6
+  (exit 0, 285.4s, cwd=/tmp/wt-archguard-TASK-44, committed tree 9934c57 on
+  master d2f2eae incl. the TASK-45 gate fix). This run returned ok:true outright.
+- Adversarial audits (fresh context, refute-first): the first two REFUTED (config
+  dead-code; missing Evidence) → remediated → the final audit found NO REFUTATION
+  across all six lenses (wiring live and genuinely tested 26/26; Evidence honest;
+  scope exact; no unbounded awaits; nothing weakened).
+- Anti-drift (committed diff): OK — 14 files, all within the declared Touches
+  (src/types/config.ts declared as an upper bound, untouched — empty diff, no drift).
+- Merged to master: c2ce379 (--no-ff milestones/archguard/TASK-44).
+- Candor: first-build DoD box was checked before the Evidence section existed;
+  remediation added it with REAL/SIMULATED labeling and both findings disclosed.
