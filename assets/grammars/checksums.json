@@ -1,0 +1,8 @@
+{
+  "tree-sitter.wasm": "sha256:f38dcc4b43b818f9a0785bc1c6d5611a75ac4cdd428ff3f02757c34ca4e46d7f",
+  "tree-sitter-go.wasm": "sha256:9504573f352b20be7f2f1911754d710622aedc15afff16d5ed8fb5645681aee7",
+  "tree-sitter-java.wasm": "sha256:4fdeac4ca6ca089f06c6f7e562abcac1733cd465728cc7031ebb73c2019122c4",
+  "tree-sitter-python.wasm": "sha256:16108b50df4ee9a30168794252ab55e7c93bfc5765d7fa0aa3e335752c515f47",
+  "tree-sitter-cpp.wasm": "sha256:174eb0deb75b2ec7881bcacda9f995648d8e683956e5c2267e69ab6dc503fcbf",
+  "tree-sitter-kotlin.wasm": "sha256:7009d69453bc8735e438b2818a633efb21c88f99782769abba60dffedfab73f7"
+}

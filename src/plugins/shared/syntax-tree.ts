@@ -1,4 +1,4 @@
-export type ParserRuntimeKind = 'native';
+export type ParserRuntimeKind = 'native' | 'wasm';
 
 export interface SyntaxPointLike {
   readonly row: number;
