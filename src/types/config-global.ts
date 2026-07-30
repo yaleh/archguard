@@ -38,6 +38,19 @@ export interface GlobalConfig {
    * from ArchGuard's own package scope — never from the analyzed project.
    */
   nativeModuleRoot?: string;
+  /**
+   * Go Atlas / gopls reliability bounds (TASK-44).
+   */
+  atlas?: {
+    /**
+     * Total time budget (ms) for gopls startup + workspace load before the Go
+     * plugin degrades to tree-sitter-only analysis (no gopls call graph).
+     * Default: 120000 (120s). The ARCHGUARD_GOPLS_TIMEOUT_MS environment
+     * variable takes precedence when set. See
+     * docs/user-guide/golang-plugin-usage.md.
+     */
+    goplsTimeoutMs?: number;
+  };
 }
 
 export interface ArchGuardConfig extends GlobalConfig {

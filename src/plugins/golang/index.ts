@@ -22,6 +22,7 @@ import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import { type ArchJSON, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { GoplsInterfaceResolver } from './gopls-interface-resolver.js';
+import { resolveEffectiveGoplsTimeoutMs } from './gopls-client.js';
 import {
   GoParseCoordinator,
   type GoRawData,
@@ -133,7 +134,13 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       return;
     }
 
-    this.resolver = new GoplsInterfaceResolver();
+    // TASK-44 AC5: the config-file half of the budget actually reaches gopls.
+    // Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file
+    // atlas.goplsTimeoutMs (archguard.config.json) > 120s default. The
+    // resolver forwards budgetMs into the GoplsClient constructor.
+    this.resolver = new GoplsInterfaceResolver({
+      budgetMs: resolveEffectiveGoplsTimeoutMs(),
+    });
     this.coordinator = new GoParseCoordinator(this.resolver, this.parserBackend);
     this.atlasCoordinator = new GoAtlasCoordinator();
     this.atlasAdapter = new GoAtlasAdapter(this, this.atlasCoordinator);
@@ -233,7 +240,8 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       };
     }
 
-    // Build baseArchJSON from rawData (no second parse)
+    // Build baseArchJSON from rawData (no second parse). `base.metadata`
+    // carries the gopls degradation flag propagated from the resolver.
     const base = await this.coordinator.buildArchJson(rawData, workspaceRoot);
     const baseArchJSON: ArchJSON = {
       version: ARCHJSON_SCHEMA_VERSION,
@@ -241,6 +249,17 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       timestamp: new Date().toISOString(),
       ...base,
     };
+
+    // Loud, analysis-time warning when gopls degraded (TASK-44). The resolver
+    // already warns at init; this repeats at output time and points at the
+    // persistent metadata marker so CLI and MCP consumers both see it.
+    if (this.resolver.isDegraded()) {
+      console.warn(
+        `⚠ Go Atlas analysis is DEGRADED: ${this.resolver.getDegradedReason()} ` +
+          'Output is marked with metadata.goGoplsDegraded=true; gopls call-graph ' +
+          'layers are missing (tree-sitter-only results).'
+      );
+    }
 
     // Build Atlas from same rawData (no re-parse)
     const atlas = await this.atlasCoordinator.buildAtlasFromRawData(workspaceRoot, rawData, {
