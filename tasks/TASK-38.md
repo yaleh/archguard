@@ -1,7 +1,7 @@
 ---
 id: TASK-38
 title: Add a web-tree-sitter backend with bundled WASM grammars
-status: ready
+status: done
 labels:
   - parser
   - tree-sitter
@@ -100,3 +100,21 @@ Product code outside `src/plugins/shared/**` (language bridges/builders, CLI, MC
 TASK-39 adds native-first automatic selection. TASK-41 enforces the final
 install-time dependency policy. TASK-40 optimizes long-running and parallel
 performance after correctness is established.
+
+## Loop-driver land evidence (2026-07-30)
+
+- **Gate**: vitest **PASS** (exit 0), GateEvent `155d7b8c-a55b-45d6-89e6-4304547cef77`
+  (2026-07-30T07:31:33Z), run with cwd = worktree `/tmp/wt-archguard-TASK-38`.
+  Prior FAIL GateEvent `9bbd9473` root-caused to the pre-existing
+  `parallel-diagrams.test.ts` timing flake (already fixed on master by TASK-33);
+  remediated by merging master into this branch — environmental, not a task defect.
+- **Adversarial audit** (fresh-context, refute-first): **NO REFUTATION FOUND**.
+  Auditor independently recomputed sha256 for all six WASM assets (match),
+  verified real native↔WASM parity (16 fixtures × 5 languages), disposal +
+  memory bound, cwd-independent asset loading, and Touches scope. Non-blocking
+  observations: c0ccb69 also removed a stray tracked `node_modules` symlink
+  (benign hygiene); lockfile bumped native `tree-sitter` 0.25.0→0.25.1
+  (patch, range unchanged); 64MB/200-iter memory bound is generous; new-test
+  count is ~51 rather than the claimed 54.
+- Merge to master pending human-steered merge (same convention as
+  TASK-30/32/33/37).
