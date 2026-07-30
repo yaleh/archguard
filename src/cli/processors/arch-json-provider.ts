@@ -471,6 +471,27 @@ export class ArchJsonProvider {
    */
   private async parseTsPlugin(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
+    const config = {
+      workspaceRoot,
+      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+    };
+    if (this.parseWorkerPool) {
+      const fileCount = await this.projectFileCounter(
+        workspaceRoot,
+        ['**/*.{ts,tsx}'],
+        config.excludePatterns
+      );
+      if (fileCount >= PARSE_WORKER_THRESHOLD) {
+        const result = await this.parseWorkerPool.parseProject({
+          kind: 'project',
+          workspaceRoot,
+          config,
+        });
+        if (!result.success || !result.archJson)
+          throw new Error(result.error ?? 'TypeScript project worker failed');
+        return result.archJson;
+      }
+    }
     const registryPlugin = this.registry?.getByName('typescript');
     const plugin =
       registryPlugin ??
@@ -485,10 +506,7 @@ export class ArchJsonProvider {
         globalEntityTypeRegistry.register(decl);
       }
     }
-    return plugin.parseProject(workspaceRoot, {
-      workspaceRoot,
-      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
-    });
+    return plugin.parseProject(workspaceRoot, config);
   }
 
   private async parseGenericLanguageProject(diagram: DiagramConfig): Promise<ArchJSON> {

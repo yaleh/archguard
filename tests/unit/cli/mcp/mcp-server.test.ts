@@ -15,6 +15,7 @@ import type { ArchJSONExtensions } from '@/types/extensions/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { PassThrough } from 'node:stream';
 import { loadEngine } from '@/cli/query/engine-loader.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
@@ -1036,12 +1037,14 @@ describe('createMcpCommand', () => {
 });
 
 describe('MCP parse pool transport teardown', () => {
-  it('terminates process pools on transport EOF/close', async () => {
-    const transport = new StdioServerTransport();
+  it('terminates process pools on actual input EOF', async () => {
+    const input = new PassThrough();
+    const transport = new StdioServerTransport(input);
     const terminate = vi.fn().mockResolvedValue(undefined);
-    wireParsePoolTeardown(transport, { terminate } as never);
-    transport.onclose?.();
+    const dispose = wireParsePoolTeardown(transport, { terminate } as never, input);
+    input.emit('end');
     await vi.waitFor(() => expect(terminate).toHaveBeenCalledTimes(1));
+    dispose();
   });
 });
 

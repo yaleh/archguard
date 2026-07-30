@@ -1,5 +1,4 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { TypeScriptParser } from './typescript-parser.js';
 import { resolveParserBackend } from '@/plugins/shared/parser-backend.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ParseResult, ParseWorkerInitData, ParseWorkerJob } from './parse-worker-pool.js';
@@ -14,8 +13,10 @@ type WorkerParser = {
 
 async function createParser(): Promise<WorkerParser> {
   if (initData.language === 'typescript') {
-    const parser = new TypeScriptParser(initData.workspaceRoot);
-    return { parseCode: (code, filePath) => parser.parseCode(code, filePath) };
+    const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
+    const plugin = new TypeScriptPlugin();
+    await plugin.initialize({ workspaceRoot: initData.workspaceRoot ?? process.cwd() });
+    return plugin;
   }
   const backend = await resolveParserBackend(initData.runtime);
   const module =

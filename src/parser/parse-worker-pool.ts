@@ -55,7 +55,8 @@ export class ParseWorkerPool {
   private readonly queue: ParseWorkerJob[] = [];
   private readonly pending = new Map<string, (result: ParseResult) => void>();
   private readonly inFlight = new Map<Worker, string>();
-  private readonly failedWorkers = new WeakSet<Worker>();
+  private readonly restartCount = new Map<Worker, number>();
+  private readonly maxRestarts = 3;
   private started = false;
   private terminating = false;
   private dispatched = 0;
@@ -117,7 +118,7 @@ export class ParseWorkerPool {
     this.inFlight.clear();
   }
 
-  private spawnWorker(): void {
+  private spawnWorker(restarts = 0): Worker {
     const worker = new Worker(WORKER_FILE, {
       workerData: this.initData,
       execArgv: sanitizeWorkerExecArgv(process.execArgv),
@@ -129,8 +130,10 @@ export class ParseWorkerPool {
         this.onWorkerFailure(worker, `Worker exited unexpectedly (code=${code})`);
       }
     });
+    this.restartCount.set(worker, restarts);
     this.workers.push(worker);
     this.idle.push(worker);
+    return worker;
   }
 
   private dispatch(job: ParseWorkerJob): void {
@@ -145,6 +148,9 @@ export class ParseWorkerPool {
   }
 
   private onResult(worker: Worker, result: ParseResult): void {
+    if (!this.workers.includes(worker)) return;
+    const currentJob = this.inFlight.get(worker);
+    if (!currentJob || currentJob !== result.jobId) return;
     this.inFlight.delete(worker);
     const resolve = this.pending.get(result.jobId);
     if (resolve) {
@@ -163,8 +169,8 @@ export class ParseWorkerPool {
   }
 
   private onWorkerFailure(worker: Worker, message: string): void {
-    if (this.failedWorkers.has(worker)) return;
-    this.failedWorkers.add(worker);
+    if (!this.workers.includes(worker)) return;
+    const restarts = this.restartCount.get(worker) ?? 0;
     const jobId = this.inFlight.get(worker);
     if (jobId) {
       this.inFlight.delete(worker);
@@ -178,12 +184,16 @@ export class ParseWorkerPool {
     if (idleIndex >= 0) this.idle.splice(idleIndex, 1);
     const workerIndex = this.workers.indexOf(worker);
     if (workerIndex >= 0) this.workers.splice(workerIndex, 1);
-    if (!this.terminating) {
-      this.spawnWorker();
-      const replacement = this.idle.pop();
+    this.restartCount.delete(worker);
+    if (!this.terminating && restarts < this.maxRestarts) {
+      const replacement = this.spawnWorker(restarts + 1);
+      const idleIndex = this.idle.indexOf(replacement);
+      if (idleIndex >= 0) this.idle.splice(idleIndex, 1);
       const next = this.queue.shift();
-      if (replacement && next) this.dispatchTo(replacement, next);
-      else if (replacement) this.idle.push(replacement);
+      if (next) this.dispatchTo(replacement, next);
+      else this.idle.push(replacement);
+    } else if (!this.terminating) {
+      this.drain(`Parse worker restart limit exceeded: ${message}`);
     }
   }
 

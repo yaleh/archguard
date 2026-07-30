@@ -8,6 +8,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import path from 'path';
+import type { Readable } from 'node:stream';
 import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
 import type {
@@ -115,18 +116,35 @@ export function createMcpServer(
 
 export function wireParsePoolTeardown(
   transport: StdioServerTransport,
-  parseWorkerPools: ProcessParseWorkerPools
-): void {
-  const terminatePools = (): void => {
-    void parseWorkerPools.terminate();
-  };
+  parseWorkerPools: ProcessParseWorkerPools,
+  input: Readable = process.stdin,
+  exit: (code: number) => never = process.exit
+): () => void {
+  let cleanup: Promise<void> | undefined;
+  const terminatePools = (): Promise<void> =>
+    (cleanup ??= Promise.resolve(parseWorkerPools.terminate()));
   const previousOnClose = transport.onclose;
+  const onInputClose = (): void => void terminatePools();
+  const onSigint = (): void => {
+    void terminatePools().finally(() => exit(130));
+  };
+  const onSigterm = (): void => {
+    void terminatePools().finally(() => exit(143));
+  };
   transport.onclose = (): void => {
-    terminatePools();
+    void terminatePools();
     previousOnClose?.();
   };
-  process.once('SIGINT', terminatePools);
-  process.once('SIGTERM', terminatePools);
+  input.once('end', onInputClose);
+  input.once('close', onInputClose);
+  process.once('SIGINT', onSigint);
+  process.once('SIGTERM', onSigterm);
+  return () => {
+    input.off('end', onInputClose);
+    input.off('close', onInputClose);
+    process.off('SIGINT', onSigint);
+    process.off('SIGTERM', onSigterm);
+  };
 }
 
 /**

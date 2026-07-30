@@ -59,6 +59,24 @@ describe('ParseWorkerPool', () => {
     await pool.terminate();
   });
 
+  it('ignores stale, duplicate, and wrong-job messages', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });
+    const result = pool.parse({ code: 'const a = 1', filePath: 'a.ts' });
+    const job = workers[0].posted[0] as { jobId: string };
+    workers[0].emit('message', { jobId: 'wrong', success: true, archJson: {} });
+    expect(pool.dispatchCount).toBe(1);
+    workers[0].emit('message', { jobId: job.jobId, success: true, archJson: {} });
+    workers[0].emit('message', { jobId: job.jobId, success: true, archJson: {} });
+    await expect(result).resolves.toMatchObject({ success: true });
+    const next = pool.parse({ code: 'const b = 2', filePath: 'b.ts' });
+    expect(workers[0].posted).toHaveLength(2);
+    const nextJob = workers[0].posted[1] as { jobId: string };
+    workers[0].emit('message', { jobId: nextJob.jobId, success: true, archJson: {} });
+    await next;
+    await pool.terminate();
+  });
+
   it('queues work, returns results, and drains on termination', async () => {
     const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
     const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });

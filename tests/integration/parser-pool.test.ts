@@ -38,6 +38,28 @@ describe('parse worker pool integration', () => {
     expect(parallel.sourceFiles).toEqual(serial.sourceFiles);
   });
 
+  it('dispatches complete TypeScript package analysis with module semantics', async () => {
+    const files = await fixtures(PARSE_WORKER_THRESHOLD);
+    const root = path.dirname(files[0]);
+    const pools = new ProcessParseWorkerPools();
+    const pool = pools.get({
+      language: 'typescript',
+      runtime: 'native',
+      workspaceRoot: root,
+      concurrency: 2,
+    });
+    const result = await pool.parseProject({
+      kind: 'project',
+      workspaceRoot: root,
+      config: { workspaceRoot: root, excludePatterns: [] },
+    });
+    expect(result.success).toBe(true);
+    expect(result.archJson?.entities).toHaveLength(PARSE_WORKER_THRESHOLD);
+    expect(result.archJson?.extensions?.tsAnalysis).toBeDefined();
+    expect(pool.dispatchCount).toBe(1);
+    await pools.terminate();
+  }, 120_000);
+
   it('dispatches real non-TypeScript projects and releases all worker threads', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'archguard-python-pool-'));
     roots.push(root);
