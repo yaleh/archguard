@@ -44,6 +44,7 @@ export class ParseWorkerPool {
   private readonly queue: ParseJob[] = [];
   private readonly pending = new Map<string, (result: ParseResult) => void>();
   private readonly inFlight = new Map<Worker, string>();
+  private readonly failedWorkers = new WeakSet<Worker>();
   private started = false;
   private terminating = false;
 
@@ -132,6 +133,8 @@ export class ParseWorkerPool {
   }
 
   private onWorkerFailure(worker: Worker, message: string): void {
+    if (this.failedWorkers.has(worker)) return;
+    this.failedWorkers.add(worker);
     const jobId = this.inFlight.get(worker);
     if (jobId) {
       this.inFlight.delete(worker);
@@ -145,7 +148,13 @@ export class ParseWorkerPool {
     if (idleIndex >= 0) this.idle.splice(idleIndex, 1);
     const workerIndex = this.workers.indexOf(worker);
     if (workerIndex >= 0) this.workers.splice(workerIndex, 1);
-    if (!this.terminating) this.spawnWorker();
+    if (!this.terminating) {
+      this.spawnWorker();
+      const replacement = this.idle.pop();
+      const next = this.queue.shift();
+      if (replacement && next) this.dispatchTo(replacement, next);
+      else if (replacement) this.idle.push(replacement);
+    }
   }
 
   private drain(error: string): void {

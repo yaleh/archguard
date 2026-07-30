@@ -2,7 +2,11 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { WasmParserBackend, wasmParserBackend } from '@/plugins/shared/wasm-parser-backend.js';
+import {
+  WasmParserBackend,
+  resetWasmParserRuntimeCache,
+  wasmParserBackend,
+} from '@/plugins/shared/wasm-parser-backend.js';
 import {
   ParserInitializationError,
   resolveParserBackend,
@@ -25,6 +29,7 @@ describe('WasmParserBackend', () => {
 
   afterEach(() => {
     while (sessions.length > 0) sessions.pop()?.dispose();
+    resetWasmParserRuntimeCache();
   });
 
   it('exposes the wasm runtime kind', () => {
@@ -103,14 +108,14 @@ describe('WasmParserBackend', () => {
 
   it('caches Language.load per language across sessions', async () => {
     const backend = new WasmParserBackend();
-    const initialCount = backend.cachedLanguageCount;
+    expect(backend.cachedLanguageCount).toBe(0);
 
     const first = await backend.createSession('go');
     const second = await backend.createSession('go');
     const third = await backend.createSession('java');
     sessions.push(first, second, third);
 
-    expect(backend.cachedLanguageCount).toBeGreaterThanOrEqual(initialCount);
+    expect(backend.cachedLanguageCount).toBe(2);
   });
 
   it('shares process-lifetime runtime and language caches across backend instances', async () => {

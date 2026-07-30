@@ -6,7 +6,10 @@ import type { ParseJob, ParseResult, ParseWorkerInitData } from './parse-worker-
 
 const initData = workerData as ParseWorkerInitData;
 
-type WorkerParser = { parseCode(code: string, filePath: string): ArchJSON };
+type WorkerParser = {
+  parseCode(code: string, filePath: string): ArchJSON;
+  dispose?: () => void;
+};
 
 async function createParser(): Promise<WorkerParser> {
   if (initData.language === 'typescript') return new TypeScriptParser(initData.workspaceRoot);
@@ -40,22 +43,34 @@ async function createParser(): Promise<WorkerParser> {
 // the parent and is propagated unchanged; no worker may independently select.
 const parserPromise = createParser();
 
+parentPort?.once('close', () => {
+  void parserPromise.then((parser) => parser.dispose?.());
+});
+
 parentPort?.on('message', (job: ParseJob) => {
-  void parserPromise.then((parser) => {
-    let result: ParseResult;
-    try {
-      result = {
-        jobId: job.jobId,
-        success: true,
-        archJson: parser.parseCode(job.code, job.filePath),
-      };
-    } catch (error) {
-      result = {
+  void parserPromise
+    .then((parser) => {
+      let result: ParseResult;
+      try {
+        result = {
+          jobId: job.jobId,
+          success: true,
+          archJson: parser.parseCode(job.code, job.filePath),
+        };
+      } catch (error) {
+        result = {
+          jobId: job.jobId,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+      parentPort?.postMessage(result);
+    })
+    .catch((error: unknown) => {
+      parentPort?.postMessage({
         jobId: job.jobId,
         success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-    parentPort?.postMessage(result);
-  });
+        error: `Parser initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+      } satisfies ParseResult);
+    });
 });

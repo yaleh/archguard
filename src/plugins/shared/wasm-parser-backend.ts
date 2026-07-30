@@ -78,6 +78,11 @@ interface WasmRuntimeCache {
 // directories so tests and embedded installations cannot cross-contaminate.
 const runtimeCaches = new Map<string, WasmRuntimeCache>();
 
+/** Test hook; production caches intentionally live for the process lifetime. */
+export function resetWasmParserRuntimeCache(): void {
+  runtimeCaches.clear();
+}
+
 export class WasmParserBackend implements ParserBackend {
   readonly runtime = 'wasm' as const;
 
@@ -116,7 +121,8 @@ export class WasmParserBackend implements ParserBackend {
 
   /** One-time web-tree-sitter runtime initialization, cached per backend. */
   private initializeRuntime(): Promise<WtsModule> {
-    this.cache.modulePromise ??= (async () => {
+    if (this.cache.modulePromise) return this.cache.modulePromise;
+    const initialized = (async () => {
       const wts = (await import('web-tree-sitter')) as unknown as WtsModule;
       const runtimePath = path.join(this.assetsDir, RUNTIME_WASM_FILE);
       // Fall back to web-tree-sitter's own bundled runtime if our copy is not
@@ -125,6 +131,10 @@ export class WasmParserBackend implements ParserBackend {
       await wts.Parser.init(locateFile);
       return wts;
     })();
+    initialized.catch(() => {
+      if (this.cache.modulePromise === initialized) this.cache.modulePromise = undefined;
+    });
+    this.cache.modulePromise ??= initialized;
     return this.cache.modulePromise;
   }
 

@@ -39,6 +39,26 @@ describe('ParseWorkerPool', () => {
     await pool.terminate();
   });
 
+  it('deduplicates worker error+exit and dispatches queued work to one replacement', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'python', runtime: 'wasm' });
+    pool.start();
+    const first = pool.parse({ code: 'a = 1', filePath: 'a.py' });
+    const queued = pool.parse({ code: 'b = 2', filePath: 'b.py' });
+    workers[0].emit('error', new Error('crashed'));
+    workers[0].emit('exit', 1);
+
+    await expect(first).resolves.toMatchObject({ success: false, error: 'crashed' });
+    expect(workers).toHaveLength(2);
+    expect(workers[1].posted).toHaveLength(1);
+    expect(pool.size).toBe(1);
+
+    const queuedJob = workers[1].posted[0] as { jobId: string };
+    workers[1].emit('message', { jobId: queuedJob.jobId, success: true, archJson: {} });
+    await expect(queued).resolves.toMatchObject({ success: true });
+    await pool.terminate();
+  });
+
   it('queues work, returns results, and drains on termination', async () => {
     const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
     const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });
