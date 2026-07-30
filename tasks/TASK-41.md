@@ -1,7 +1,7 @@
 ---
 id: TASK-41
 title: Guarantee a WASM-baseline install with opt-in native discovery
-status: ready
+status: done
 labels:
   - install
   - packaging
@@ -213,3 +213,26 @@ guarantee delivered here is at the package/resolver level, proven by the
 clean-room tests above. Follow-up candidate: route arch-json-provider plugin
 construction through `selectParserBackendFor`.
 
+
+## Loop-driver land evidence (2026-07-30)
+
+- **Gate**: vitest **PASS** (exit 0), GateEvent `ac0832b8-c114-4cf8-8863-53d59e59d62e`
+  (2026-07-30T09:59:51Z), run with cwd = worktree and a 600s timeoutMs override
+  (machine under load; 4226 passed | 11 skipped per the builder's run).
+- **Adversarial audit** (fresh-context, refute-first): **NO REFUTATION FOUND**.
+  Kotlin-peer removal adjudicated a reasonable conservative resolution (stale
+  `tree-sitter@^0.22.4` peer range verified from the old lockfile; decision
+  pinned by unit test + documented override path). Lockfile diff verified
+  surgical: zero added lines, exactly the 10 claimed removals, web-tree-sitter
+  untouched. node_modules hygiene verified (no tracked symlink/dir). Clean-room
+  tarball install asserts zero ERESOLVE/peer complaints, five-language WASM
+  analysis byte-identical to baseline, trusted-root native injection with real
+  native modules, and analyzed-project isolation.
+- **Non-blocking observations**: ERESOLVE-with-kotlin-peer rests on builder's
+  minimal-repro prose (not a committed test); `scripts/stage-tree-sitter-prebuild.mjs`
+  + `prepack` deletion slightly exceeds the literal Touches list (same intended
+  category); branch task file lacked ## Touches/status (stacking artifact —
+  declaration lives on master as df20e8a); `scripts/fetch-grammar-wasms.mjs`
+  retained deliberately (dev-time WASM vendoring, no lifecycle hook).
+- Merge to master pending human-steered merge (same convention as
+  TASK-30/32/33/37/38/39).
