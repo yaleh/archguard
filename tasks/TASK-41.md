@@ -74,6 +74,18 @@ root explicitly.
 7. Document that the policy applies to Tree-sitter. `sharp` has its own
    platform-package installation policy and is tracked separately by TASK-31.
 
+## Touches
+
+- package.json / package-lock.json (remove tree-sitter + 5 native grammar packages from dependencies/bundleDependencies; keep web-tree-sitter in dependencies; optional peers stay per TASK-39)
+- scripts/postinstall-tree-sitter.mjs (remove obsolete native staging; drop the postinstall hook)
+- src/plugins/shared/** (trusted module-root resolution adjustments only, if needed)
+- tests/unit/** (dependency-policy invariant tests: no native Tree-sitter in prod closure, no native install hooks)
+- tests/integration/** (clean-room npm pack/install dependency-tree + lifecycle-script audit; native-injection via ARCHGUARD_NATIVE_MODULE_ROOT; analyzed-project isolation)
+- docs/** (install policy: WASM baseline guaranteed, tree-sitter vs web-tree-sitter distinction, forcing backends)
+- tasks/TASK-41.md
+
+Parser selection logic (TASK-39) and WASM backend internals (TASK-38) are out of scope.
+
 ## Acceptance Criteria
 
 - [ ] `web-tree-sitter` is installed by every supported normal npm install.
