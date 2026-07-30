@@ -1,6 +1,7 @@
 ---
 id: TASK-43
-title: Surface actionable parser-backend errors and effective-runtime diagnostics on the analyze paths
+title: Surface actionable parser-backend errors and effective-runtime
+  diagnostics on the analyze paths
 labels:
   - ux
   - diagnostics
@@ -8,7 +9,7 @@ labels:
 parent: null
 children: []
 extra: {}
-status: ready
+status: done
 ---
 ## Proposal
 
@@ -165,3 +166,23 @@ plus, on every analyze surface (stderr; MCP stdout stays protocol-clean):
 - Execution deviation: built INLINE by the loop driver after two dispatched
   builders produced zero artifacts in 40-50 minutes each (API contention on
   this shared host); all verification is driver-run and recorded above.
+
+## Loop-driver land evidence (2026-07-30)
+
+- Driver gate: vitest **PASS**, GateEvent e9827951-9217-4d2f-ac8f-0b5e262c7895
+  (ok:true, "acceptance passed (exit 0)", cwd=/tmp/wt-archguard-TASK-43,
+  committed tree 4e05d2c + a8b5e0d). Two earlier attempts failed on quay
+  infra (missing worktree dist/ — parse workers resolve <root>/dist/parser/
+  parse-worker.js — and a hung MCP handler), not the diff.
+- Direct corroboration (driver-run, full output logged): npx vitest run
+  exit 0 — 4424 passed | 12 skipped | 0 failed (289 files, 457s).
+- Final fresh-context audit: NO REFUTATION (AC1-5 genuinely tested; additions-
+  only test changes; TASK-42 invariants intact; scope exact; evidence matches
+  code). One REFUTATION en route (README missing the ARCHGUARD_PARSER_RUNTIME=auto
+  example) was fixed in a8b5e0d before land.
+- Anti-drift (committed diff c2ce379..HEAD): OK — 11 files, all within the
+  declared Touches (plugin-factory.ts declared as upper bound, untouched).
+- Merged to master: ab223a6 (--no-ff milestones/archguard/TASK-43).
+- Deviation: executed INLINE by the loop driver after two dispatched builders
+  produced zero artifacts in 40-50 min each (host API contention from 4-5
+  co-tenant sessions); all verification driver-run and recorded.
