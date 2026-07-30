@@ -146,21 +146,45 @@ Claude will call `archguard_analyze(includeTests: true)`, then sequence through 
 
 ### Using with Codex
 
-Register the MCP server:
+Codex does not read Claude plugin manifests, so its MCP configuration must
+launch an ArchGuard installation that owns its own runtime dependency closure.
+`scripts/install-codex-user-scope.sh` registers exactly one TOML-safe
+`[mcp_servers.archguard]` table in the Codex user config
+(`~/.codex/config.toml`, or `$CODEX_HOME/config.toml`) that invokes the
+npm-installed `@yalehwang/archguard` CLI — never Claude's versioned plugin
+cache and never the source checkout:
+
+```bash
+# Registers the global npm install (discovered via `npm root -g`):
+bash scripts/install-codex-user-scope.sh
+
+# Or point at a specific npm-installed ArchGuard root explicitly:
+bash scripts/install-codex-user-scope.sh --archguard-root "$(npm root -g)"
+```
+
+The installer is idempotent (re-run it to refresh after an upgrade): it updates
+the single archguard table in place, preserves all unrelated Codex
+configuration, and forwards the parser-runtime policy as
+`ARCHGUARD_PARSER_RUNTIME` (`--parser-runtime auto|native|wasm`, default
+`auto`). It writes an entry of this shape:
+
+```toml
+[mcp_servers.archguard]
+command = "node"
+args = ["<npm-install>/@yalehwang/archguard/dist/cli/index.js", "mcp"]
+env = { ARCHGUARD_PARSER_RUNTIME = "auto" }
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+```
+
+Alternatively, register manually (requires `archguard` on Codex's `PATH`):
 
 ```bash
 codex mcp add archguard -- archguard mcp
 ```
 
-Or add to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.archguard]
-command = "archguard"
-args = ["mcp"]
-```
-
-Then prompt Codex in the same way. The same MCP tools are available.
+Then prompt Codex in the same way and verify in the Codex TUI with `/mcp` (or
+`codex mcp list`). The same MCP tools are available.
 
 ### Analyzing an External Project
 
@@ -315,10 +339,12 @@ The MCP server exposes the query tools plus `archguard_analyze`, which refreshes
 claude mcp add --scope project archguard -- archguard mcp
 ```
 
-**Codex** — add via CLI or `~/.codex/config.toml`:
+**Codex** — register at user scope via the installer (launches the
+npm-installed CLI), or manually via CLI / `~/.codex/config.toml`:
 
 ```bash
-codex mcp add archguard -- archguard mcp
+bash scripts/install-codex-user-scope.sh        # idempotent, TOML-safe
+codex mcp add archguard -- archguard mcp        # manual alternative
 ```
 
 **Available MCP tools:**
