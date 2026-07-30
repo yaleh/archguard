@@ -21,6 +21,11 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const iterationsArg = process.argv.indexOf('--iterations');
 const ITERATIONS = iterationsArg > 0 ? Number(process.argv[iterationsArg + 1]) : 50;
 const REPETITIONS = 5; // median-of-N per measurement
+const e2eIterationsArg = process.argv.indexOf('--e2e-iterations');
+const E2E_ITERATIONS = e2eIterationsArg > 0 ? Number(process.argv[e2eIterationsArg + 1]) : 3;
+if (!Number.isInteger(E2E_ITERATIONS) || E2E_ITERATIONS < 3) {
+  throw new Error('--e2e-iterations must be an integer >= 3');
+}
 const SIZE_MULTIPLIERS = { small: 1, medium: 10, large: 50 };
 const sizeArg = process.argv.indexOf('--size');
 const FIXTURE_SIZE = sizeArg > 0 ? process.argv[sizeArg + 1] : 'small';
@@ -40,6 +45,9 @@ const { KotlinPlugin } = await import(path.join(repoRoot, 'dist/plugins/kotlin/i
 const { runAnalysis } = await import(path.join(repoRoot, 'dist/cli/analyze/run-analysis.js'));
 const { ProcessParseWorkerPools } = await import(
   path.join(repoRoot, 'dist/parser/process-parse-worker-pools.js')
+);
+const { canonicalizeArchJson } = await import(
+  path.join(repoRoot, 'dist/cli/utils/canonicalize-arch-json.js')
 );
 const silentReporter = { start() {}, succeed() {}, fail() {}, warn() {}, info() {}, update() {} };
 
@@ -107,13 +115,16 @@ async function benchEndToEnd(testCase, code) {
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, `fixture-${index}${extension}`), code);
   }
+  if (testCase.language === 'go') {
+    writeFileSync(path.join(project, 'go.mod'), 'module benchmark.local/project\n\ngo 1.22\n');
+  }
   const sample = async (runtime) => {
     const pools = new ProcessParseWorkerPools();
     const previous = process.env.ARCHGUARD_PARSER_RUNTIME;
     process.env.ARCHGUARD_PARSER_RUNTIME = runtime;
     const started = performance.now();
     try {
-      await runAnalysis({
+      const analysis = await runAnalysis({
         sessionRoot: project,
         workDir: path.join(project, `.archguard-${runtime}`),
         cliOptions: {
@@ -130,7 +141,29 @@ async function benchEndToEnd(testCase, code) {
           `benchmark did not dispatch ${testCase.language}/${runtime} through a parse worker`
         );
       }
-      return performance.now() - started;
+      const jsonPath = analysis.results.find((result) => result.success)?.paths?.json;
+      if (!jsonPath) throw new Error(`${testCase.language}/${runtime} produced no ArchJSON path`);
+      const archJson = JSON.parse(readFileSync(jsonPath, 'utf8'));
+      const canonical = canonicalizeArchJson(archJson);
+      return {
+        elapsed: performance.now() - started,
+        canonical: JSON.parse(
+          JSON.stringify(
+            {
+              version: canonical.version,
+              language: canonical.language,
+              sourceFiles: canonical.sourceFiles,
+              entities: canonical.entities,
+              relations: canonical.relations,
+              modules: canonical.modules,
+            },
+            (key, value) =>
+              ['timestamp', 'generatedAt', 'parseTime', 'workspaceRoot'].includes(key)
+                ? undefined
+                : value
+          )
+        ),
+      };
     } finally {
       await pools.terminate();
       if (previous === undefined) delete process.env.ARCHGUARD_PARSER_RUNTIME;
@@ -138,7 +171,24 @@ async function benchEndToEnd(testCase, code) {
     }
   };
   try {
-    return { native: await sample('native'), wasm: await sample('wasm') };
+    const samples = { native: [], wasm: [] };
+    let expected;
+    for (let iteration = 0; iteration < E2E_ITERATIONS; iteration++) {
+      const order = iteration % 2 === 0 ? ['native', 'wasm'] : ['wasm', 'native'];
+      const outputs = {};
+      for (const runtime of order) {
+        outputs[runtime] = await sample(runtime);
+        samples[runtime].push(outputs[runtime].elapsed);
+      }
+      const nativeJson = JSON.stringify(outputs.native.canonical);
+      const wasmJson = JSON.stringify(outputs.wasm.canonical);
+      if (nativeJson !== wasmJson)
+        throw new Error(`${testCase.language} native/WASM output mismatch`);
+      expected ??= nativeJson;
+      if (nativeJson !== expected)
+        throw new Error(`${testCase.language} output changed between iterations`);
+    }
+    return { native: median(samples.native), wasm: median(samples.wasm) };
   } finally {
     rmSync(project, { recursive: true, force: true });
   }
@@ -197,7 +247,8 @@ console.log(
     .join('/')}`
 );
 console.log(`- fixture size: ${rows[0]?.size ?? 'small'} (--size small|medium|large)`);
-console.log(`- iterations per fixture: ${ITERATIONS} (after warm-up)\n`);
+console.log(`- parser iterations per fixture: ${ITERATIONS} (after warm-up)`);
+console.log(`- end-to-end iterations per backend: ${E2E_ITERATIONS} (alternating order)\n`);
 console.log(
   `| language | parser-only native (ms) | parser-only wasm (ms) | ratio | full-analysis native (ms) | full-analysis wasm (ms) | ratio | end-to-end native (ms) | end-to-end wasm (ms) | ratio |`
 );

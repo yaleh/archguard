@@ -77,6 +77,28 @@ describe('ParseWorkerPool', () => {
     await pool.terminate();
   });
 
+  it('stops after restart budget exhaustion and fails queued work', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'python', runtime: 'wasm' });
+    const jobs: Array<Promise<unknown>> = [];
+    for (let generation = 0; generation < 3; generation++) {
+      jobs.push(pool.parse({ code: `x=${generation}`, filePath: `${generation}.py` }));
+      workers[generation].emit('error', new Error(`crash-${generation}`));
+    }
+    const current = pool.parse({ code: 'current=1', filePath: 'current.py' });
+    const queued = pool.parse({ code: 'queued=1', filePath: 'queued.py' });
+    workers[3].emit('error', new Error('crash-3'));
+    jobs.push(current);
+    await expect(Promise.all(jobs)).resolves.toHaveLength(4);
+    await expect(queued).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('restart limit'),
+    });
+    expect(workers).toHaveLength(4);
+    expect(pool.size).toBe(0);
+    await pool.terminate();
+  });
+
   it('queues work, returns results, and drains on termination', async () => {
     const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
     const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });

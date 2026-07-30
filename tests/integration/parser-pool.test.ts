@@ -38,6 +38,38 @@ describe('parse worker pool integration', () => {
     expect(parallel.sourceFiles).toEqual(serial.sourceFiles);
   });
 
+  it('routes TypeScript production analysis at threshold and keeps small projects serial', async () => {
+    const files = await fixtures(PARSE_WORKER_THRESHOLD);
+    const root = path.dirname(files[0]);
+    const pools = new ProcessParseWorkerPools();
+    const reporter = { start() {}, succeed() {}, fail() {}, warn() {}, info() {}, update() {} };
+    const result = await runAnalysis({
+      sessionRoot: root,
+      workDir: path.join(root, '.archguard'),
+      cliOptions: { sources: [root], lang: 'typescript', format: 'json', cache: false },
+      reporter,
+      parseWorkerPools: pools,
+    });
+    expect(result.results.some((entry) => entry.success)).toBe(true);
+    expect(pools.dispatchCount).toBeGreaterThan(0);
+    const pool = pools.get({ language: 'typescript', runtime: 'native', workspaceRoot: root });
+    expect(pool.dispatchCount).toBeGreaterThan(0);
+    await pools.terminate();
+
+    const smallFiles = await fixtures(PARSE_WORKER_THRESHOLD - 1);
+    const smallRoot = path.dirname(smallFiles[0]);
+    const smallPools = new ProcessParseWorkerPools();
+    await runAnalysis({
+      sessionRoot: smallRoot,
+      workDir: path.join(smallRoot, '.archguard'),
+      cliOptions: { sources: [smallRoot], lang: 'typescript', format: 'json', cache: false },
+      reporter,
+      parseWorkerPools: smallPools,
+    });
+    expect(smallPools.dispatchCount).toBe(0);
+    await smallPools.terminate();
+  }, 120_000);
+
   it('dispatches complete TypeScript package analysis with module semantics', async () => {
     const files = await fixtures(PARSE_WORKER_THRESHOLD);
     const root = path.dirname(files[0]);
@@ -106,11 +138,19 @@ describe('parse worker pool integration', () => {
     };
     await runAnalysis(options);
     const poolCount = pools.size;
-    await runAnalysis(options);
+    globalThis.gc?.();
+    const baseline = process.memoryUsage().rss;
+    for (let iteration = 0; iteration < 3; iteration++) await runAnalysis(options);
+    globalThis.gc?.();
+    const growth = process.memoryUsage().rss - baseline;
     expect(poolCount).toBe(1);
     expect(pools.size).toBe(1);
+    expect(pools.workerCount).toBeGreaterThan(0);
+    // Includes ts-morph and worker JIT high-water allocations; catches unbounded per-run growth.
+    expect(growth).toBeLessThan(256 * 1024 * 1024);
     await pools.terminate();
     expect(pools.size).toBe(0);
+    expect(pools.workerCount).toBe(0);
   }, 120_000);
 
   it('terminates owned workers when one file errors', async () => {

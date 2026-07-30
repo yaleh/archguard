@@ -82,3 +82,20 @@ End-to-end per-language ratios: Go 0.17x, Java 0.77x, Python 0.95x, C++
 1.05x, Kotlin 0.76x. No 2.5x exception is required. The higher absolute times
 relative to the earlier audit run are worker startup and complete project
 plugin initialization now honestly included rather than bypassed.
+
+### TASK-40 targeted audit: alternating repeated E2E samples
+
+Clean build, Node v26.5.0, linux/x64, 4 cores; load 3.53/2.23/1.74.
+Each backend ran three complete 12-file analyses, alternating order by
+iteration. The benchmark fails closed when worker dispatch is zero and compares
+canonical structural output (version, language, source files, entities,
+relations, modules) across native/WASM and all iterations.
+
+| measure | native mean | WASM mean | ratio |
+|---|---:|---:|---:|
+| parser-only | 0.766 ms | 0.688 ms | **1.33x** mean language ratio |
+| parse+extract | 3.818 ms | 1.735 ms | **0.54x** |
+| E2E median of 3/backend | 781.1 ms | 774.1 ms | **1.00x** |
+
+E2E ratios: Go 1.01x, Java 1.13x, Python 1.02x, C++ 0.89x, Kotlin
+0.95x. All structural outputs were equivalent and no ratio exceeded 2.5x.
