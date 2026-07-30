@@ -105,7 +105,7 @@ loop:
   policy: ready-first
   execution: dispatched
   audit: adversarial
-  concurrency: 1
+  concurrency: 4
 
   # routines:
   #   - name: architecture-analysis
