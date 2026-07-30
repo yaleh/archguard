@@ -3,9 +3,11 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
 import { StderrReporter } from '../progress/index.js';
+import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 
 export interface AnalyzeToolContext {
   defaultRoot: string;
+  parseWorkerPools?: ProcessParseWorkerPools;
 }
 
 export const PARADIGM_BLOCK_GO = `Paradigm: package (Go Atlas)
@@ -107,6 +109,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               includeGit,
             },
             reporter: new StderrReporter(),
+            parseWorkerPools: ctx.parseWorkerPools,
           });
 
           if (result.queryScopesPersisted === 0) {

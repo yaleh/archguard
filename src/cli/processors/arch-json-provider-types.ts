@@ -1,11 +1,21 @@
 import type { GlobalConfig } from '@/types/config.js';
 import type { ParseCache } from '@/parser/parse-cache.js';
 import type { PluginRegistry } from '@/core/plugin-registry.js';
+import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
+import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 
 export interface ArchJsonProviderOptions {
   globalConfig: GlobalConfig;
   parseCache?: ParseCache;
   registry?: PluginRegistry;
+  parseWorkerPool?: ParseWorkerPool;
+  parserRuntime?: ParserRuntimeKind;
+  /** Test/embedding hook for measured project file counts. */
+  projectFileCounter?: (
+    workspaceRoot: string,
+    globs: string[],
+    exclude: string[]
+  ) => Promise<number>;
 }
 
 export interface ArchJsonGetOptions {

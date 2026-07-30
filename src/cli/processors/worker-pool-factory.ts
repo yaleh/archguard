@@ -9,6 +9,8 @@
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import os from 'os';
+import { ParseWorkerPool, type ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
+import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 
 /**
  * WorkerPoolFactory
@@ -24,6 +26,20 @@ import os from 'os';
  * so that all four Atlas layers can be rendered concurrently.
  */
 export class WorkerPoolFactory {
+  createParsePool(
+    concurrency: number | undefined,
+    selectedRuntime: ParserRuntimeKind,
+    workspaceRoot?: string,
+    language: ParseWorkerLanguage = 'typescript'
+  ): ParseWorkerPool {
+    const poolSize = Math.max(1, Math.min(concurrency ?? os.cpus().length - 1, 4));
+    return new ParseWorkerPool(poolSize, {
+      language,
+      runtime: selectedRuntime,
+      workspaceRoot,
+    });
+  }
+
   /**
    * Create a MermaidRenderWorkerPool sized for the given diagrams.
    *

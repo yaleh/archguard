@@ -17,3 +17,85 @@
 
 "pipeline" = plugin.parseCode() (tree-sitter parse + extractor + ArchJSON mapping),
 the parse-dominated portion of an end-to-end ArchGuard analysis.
+
+## TASK-40 after: process caches and parse-worker crossover
+
+Measured 2026-07-30 on Node v26.5.0, linux/x64, 4 cores. The small/medium
+runs were heavily contended by three concurrent task worktrees (1-minute load
+9.40-9.97); the large run had load 2.47. Ratios, not absolute timings, are the
+decision evidence.
+
+| fixture size | iterations | parser-only native (mean ms) | parser-only WASM (mean ms) | ratio | full-analysis native (mean ms) | full-analysis WASM (mean ms) | ratio |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| small (1x) | 20 | 0.677 | 0.589 | **1.09x** | 3.400 | 1.188 | **0.45x** |
+| medium (10x) | 10 | 13.719 | 8.378 | **1.05x** | 38.818 | 14.469 | **0.42x** |
+| large (50x) | 5 | 48.947 | 28.224 | **0.93x** | 157.095 | 54.580 | **0.41x** |
+
+The committed worker threshold is **12 files** (`PARSE_WORKER_THRESHOLD`). Below
+that, serial parsing avoids worker startup; above it, synchronous parsing runs
+in a bounded pool (maximum configured concurrency). WASM runtime and grammar
+promises are cached per asset directory for the process lifetime and parser
+sessions are reused within their owning worker/plugin.
+
+Decision: no exception to the 2.5x full-analysis ceiling is needed. Both measured
+full-analysis ratios are below 1x on this host (and therefore within the stated
+"never exceeds 2.5x" bound). The earlier uncontended baseline remains above for
+comparison; the contended after run must not be read as an absolute speedup.
+Memory/shutdown evidence is enforced by `wasm-memory.test.ts` and
+`parser-pool.test.ts` (success/error termination and serial/parallel determinism).
+
+
+### TASK-40 audit remediation: real end-to-end path
+
+Measured after production wiring on Node v26.5.0, linux/x64, 4 cores, 1-minute
+load 2.44. Each end-to-end fixture is a 12-file project and includes file
+discovery, runtime selection, threshold decision, process pool lifecycle,
+analysis merge, and query persistence.
+
+| scope | parser-only ratio | parse+extract ratio | end-to-end ratio |
+|---|---:|---:|---:|
+| five-language mean | **1.32x** | **0.54x** | **0.62x** |
+
+Per-language end-to-end WASM/native ratios: Go 0.17x, Java 0.66x, Python
+0.97x, C++ 0.64x, Kotlin 0.65x. No result exceeds the 2.5x ceiling. Absolute
+means were 127.9 ms native and 86.5 ms WASM under the recorded load. The
+benchmark uses `runAnalysis()` rather than treating `plugin.parseCode()` as a
+complete analysis; the latter remains separately reported as parse+extract.
+
+
+### TASK-40 final audit: verified project-worker dispatch
+
+Node v26.5.0, linux/x64, 4 cores; load average 3.30/1.58/1.36. The benchmark
+now fails if `ProcessParseWorkerPools.dispatchCount` remains zero, proving each
+native and WASM sample crossed the 12-file threshold and executed the language
+plugin's complete `parseProject()` inside a real worker. Three measured runs per
+parser-only fixture were used; each end-to-end runtime analyzed one 12-file
+project.
+
+| measure | native mean | WASM mean | WASM/native |
+|---|---:|---:|---:|
+| parser-only | 0.713 ms | 0.665 ms | **1.32x** (mean language ratio) |
+| parse+extract | 3.586 ms | 1.476 ms | **0.50x** |
+| end-to-end project | 2141.8 ms | 1858.0 ms | **0.74x** |
+
+End-to-end per-language ratios: Go 0.17x, Java 0.77x, Python 0.95x, C++
+1.05x, Kotlin 0.76x. No 2.5x exception is required. The higher absolute times
+relative to the earlier audit run are worker startup and complete project
+plugin initialization now honestly included rather than bypassed.
+
+### TASK-40 targeted audit: alternating repeated E2E samples
+
+Clean build, Node v26.5.0, linux/x64, 4 cores; load 3.53/2.23/1.74.
+Each backend ran three complete 12-file analyses, alternating order by
+iteration. The benchmark fails closed when worker dispatch is zero and compares
+canonical structural output (version, language, source files, entities,
+relations, modules) across native/WASM and all iterations.
+
+| measure | native mean | WASM mean | ratio |
+|---|---:|---:|---:|
+| parser-only | 0.766 ms | 0.688 ms | **1.33x** mean language ratio |
+| parse+extract | 3.818 ms | 1.735 ms | **0.54x** |
+| E2E median of 3/backend | 781.1 ms | 774.1 ms | **1.00x** |
+
+E2E ratios: Go 1.01x, Java 1.13x, Python 1.02x, C++ 0.89x, Kotlin
+0.95x. All structural outputs were equivalent and no ratio exceeded 2.5x.

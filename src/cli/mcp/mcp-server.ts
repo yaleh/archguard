@@ -8,6 +8,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import path from 'path';
+import type { Readable } from 'node:stream';
+import type { EventEmitter } from 'node:events';
 import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
 import type {
@@ -38,6 +40,7 @@ import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
 import { registerGIMTools } from './tools/gim-tools.js';
+import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 
 const projectRootParam = z
   .string()
@@ -79,7 +82,10 @@ async function withEngineErrorContext<T>(
   }
 }
 
-export function createMcpServer(defaultRoot: string = process.cwd()): McpServer {
+export function createMcpServer(
+  defaultRoot: string = process.cwd(),
+  parseWorkerPools = new ProcessParseWorkerPools()
+): McpServer {
   const server = new McpServer({
     name: 'archguard',
     version: '1.0.0',
@@ -88,7 +94,13 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   registerTools(server, defaultRoot);
   registerAnalyzeTool(server, {
     defaultRoot,
+    parseWorkerPools,
   });
+  const originalClose = server.close.bind(server);
+  server.close = async (): Promise<void> => {
+    await parseWorkerPools.terminate();
+    await originalClose();
+  };
   registerTestAnalysisTools(server, defaultRoot);
   registerGitHistoryAnalyzeTool(server, defaultRoot);
   registerGitHistoryTools(server, defaultRoot);
@@ -103,6 +115,40 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
   return server;
 }
 
+export function wireParsePoolTeardown(
+  transport: StdioServerTransport,
+  parseWorkerPools: ProcessParseWorkerPools,
+  input: Readable = process.stdin,
+  exit: (code: number) => never = process.exit,
+  signals: Pick<EventEmitter, 'once' | 'off'> = process
+): () => void {
+  let cleanup: Promise<void> | undefined;
+  const terminatePools = (): Promise<void> =>
+    (cleanup ??= Promise.resolve(parseWorkerPools.terminate()));
+  const previousOnClose = transport.onclose;
+  const onInputClose = (): void => void terminatePools();
+  const onSigint = (): void => {
+    void terminatePools().finally(() => exit(130));
+  };
+  const onSigterm = (): void => {
+    void terminatePools().finally(() => exit(143));
+  };
+  transport.onclose = (): void => {
+    void terminatePools();
+    previousOnClose?.();
+  };
+  input.once('end', onInputClose);
+  input.once('close', onInputClose);
+  signals.once('SIGINT', onSigint);
+  signals.once('SIGTERM', onSigterm);
+  return () => {
+    input.off('end', onInputClose);
+    input.off('close', onInputClose);
+    signals.off('SIGINT', onSigint);
+    signals.off('SIGTERM', onSigterm);
+  };
+}
+
 /**
  * Create and start the MCP server.
  *
@@ -110,11 +156,15 @@ export function createMcpServer(defaultRoot: string = process.cwd()): McpServer 
  * the server). Query data is resolved per tool call from the target project's
  * .archguard directory.
  */
-export async function startMcpServer(defaultRoot: string = process.cwd()): Promise<void> {
-  const server = createMcpServer(defaultRoot);
+export async function startMcpServer(
+  defaultRoot: string = process.cwd(),
+  parseWorkerPools = new ProcessParseWorkerPools()
+): Promise<void> {
+  const server = createMcpServer(defaultRoot, parseWorkerPools);
 
   // Connect transport before any I/O so Claude Code can complete the handshake.
   const transport = new StdioServerTransport();
+  wireParsePoolTeardown(transport, parseWorkerPools);
   await server.connect(transport);
   console.error('ArchGuard MCP server running on stdio');
 }

@@ -46,24 +46,20 @@ Blocked by TASK-39 so both backends share the same worker/session protocol.
 
 ## Touches
 
-- src/plugins/shared/wasm-parser-backend.ts src/plugins/shared/parser-backend.ts (process-lifetime WASM runtime/language caches, safe parser-session reuse)
-- src/parser/parse-worker-pool.ts src/parser/parse-worker.ts src/parser/process-parse-worker-pools.ts (NEW: bounded long-lived parsing worker pool, separate from Mermaid render workers)
-- src/parser/parallel-parser.ts (pool wiring + serial-path threshold)
-- src/cli/processors/worker-pool-factory.ts src/cli/processors/arch-json-provider.ts src/cli/processors/arch-json-provider-types.ts src/cli/processors/diagram-processor.ts (worker-pool wiring + selected-runtime propagation to workers; production integration added after TASK-42 remediation)
-- src/cli/analyze/run-analysis.ts src/cli/mcp/analyze-tool.ts src/cli/mcp/mcp-server.ts (process-owned MCP pool reuse + shutdown)
-- scripts/benchmark-parser-backends.mjs (repeatable parser-only + full-analysis benchmarks)
-- assets/grammars/benchmarks.md (before/after benchmark evidence + chosen thresholds)
-- tests/unit/parser/** (pool unit tests)
-- tests/unit/plugins/shared/wasm-parser-backend.test.ts (reuse/cache tests)
-- tests/integration/wasm-memory.test.ts tests/integration/parser-pool*.test.ts (NEW integration: determinism, error-path, leak)
+- src/plugins/shared/wasm-parser-backend.ts (process-lifetime WASM runtime/language caches and parser reuse)
+- src/parser/parse-worker-pool.ts src/parser/parse-worker.ts src/parser/process-parse-worker-pools.ts (bounded long-lived parsing worker pool, separate from Mermaid render workers)
+- src/parser/parallel-parser.ts (pool wiring and serial-path threshold)
+- src/cli/processors/worker-pool-factory.ts src/cli/processors/arch-json-provider.ts src/cli/processors/arch-json-provider-types.ts src/cli/processors/diagram-processor.ts (worker-pool wiring and selected-runtime propagation)
+- src/cli/analyze/run-analysis.ts src/cli/mcp/analyze-tool.ts src/cli/mcp/mcp-server.ts (CLI/MCP pool ownership, reuse, and shutdown)
+- scripts/benchmark-parser-backends.mjs assets/grammars/benchmarks.md (repeatable benchmarks and performance evidence)
+- tests/integration/parser-pool.test.ts (worker-pool integration coverage)
+- tests/unit/parser/parse-worker-pool.test.ts tests/unit/parser/process-parse-worker-pools.test.ts (pool lifecycle and process reuse coverage)
+- tests/unit/plugins/shared/wasm-parser-backend.test.ts (WASM reuse/cache coverage)
+- tests/unit/cli/processors/arch-json-provider.test.ts tests/unit/cli/mcp/analyze-tool.test.ts tests/unit/cli/mcp/mcp-server.test.ts (production wiring, reuse, signal, and shutdown coverage)
 - tasks/TASK-40.md
 
-Do NOT modify: package.json/lock, src/plugins/shared/plugin-factory.ts,
-src/plugins/*/index.ts constructors, src/types/**, src/plugins/golang/atlas/**.
-Production integration intentionally overlaps TASK-42-owned
-`src/cli/processors/arch-json-provider.ts` and was implemented only after
-merging TASK-42 remediation commits; no factory changes were overwritten.
-No output-content behavior change.
+This serial scope builds on the landed TASK-42 resolver-mediated plugin
+construction. No output-content behavior changes.
 
 ## Acceptance Criteria
 

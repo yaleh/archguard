@@ -12,6 +12,11 @@ import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import fs from 'fs/promises';
 import type { ParseCache } from './parse-cache.js';
 import type { IParserFacade } from '@/core/interfaces/parser-facade.js';
+import { ParseWorkerPool } from './parse-worker-pool.js';
+import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
+
+/** Worker startup is slower than serial parsing below this measured crossover. */
+export const PARSE_WORKER_THRESHOLD = 12;
 
 /**
  * Options for ParallelParser configuration
@@ -41,6 +46,15 @@ export interface ParallelParserOptions {
    * for files appearing in multiple overlapping source sets.
    */
   parseCache?: ParseCache;
+
+  /** Parent-selected runtime propagated unchanged to parsing workers. */
+  parserRuntime?: ParserRuntimeKind;
+
+  /** File-count crossover for worker parsing. Set Infinity to force serial. */
+  workerThreshold?: number;
+
+  /** Long-lived externally owned pool (for MCP process reuse). */
+  workerPool?: ParseWorkerPool;
 }
 
 /**
@@ -103,6 +117,9 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
   private limit: ReturnType<typeof pLimit>;
   private workspaceRoot?: string;
   private parseCache?: ParseCache;
+  private readonly parserRuntime: ParserRuntimeKind;
+  private readonly workerThreshold: number;
+  private readonly externalWorkerPool?: ParseWorkerPool;
 
   constructor(options: ParallelParserOptions = {}) {
     super();
@@ -111,6 +128,9 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
     this.continueOnError = options.continueOnError ?? true;
     this.workspaceRoot = options.workspaceRoot;
     this.parseCache = options.parseCache;
+    this.parserRuntime = options.parserRuntime ?? 'native';
+    this.workerThreshold = options.workerThreshold ?? PARSE_WORKER_THRESHOLD;
+    this.externalWorkerPool = options.workerPool;
     this.limit = pLimit(this.concurrency);
   }
 
@@ -146,56 +166,76 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
     let errorCount = 0;
     let completedCount = 0;
 
-    // Parse files in parallel with concurrency control
-    const results = await Promise.all(
-      filePaths.map((filePath) =>
-        this.limit(async () => {
-          try {
-            this.emit('file:start', { file: filePath });
+    // Worker threads only win above the measured crossover. A supplied pool is
+    // process-owned (MCP); otherwise this analysis owns and terminates its pool.
+    const useWorkers = filePaths.length >= this.workerThreshold;
+    let ownedPool: ParseWorkerPool | undefined;
+    const workerPool = useWorkers
+      ? (this.externalWorkerPool ??
+        (ownedPool = new ParseWorkerPool(Math.min(this.concurrency, filePaths.length), {
+          language: 'typescript',
+          runtime: this.parserRuntime,
+          workspaceRoot: this.workspaceRoot,
+        })))
+      : undefined;
+    workerPool?.start();
 
-            const result = await this.parseFile(filePath);
+    let results: ArchJSON[];
+    try {
+      results = await Promise.all(
+        filePaths.map((filePath) =>
+          this.limit(async () => {
+            try {
+              this.emit('file:start', { file: filePath });
 
-            successCount++;
-            completedCount++;
+              const result = workerPool
+                ? await this.parseFileInWorker(filePath, workerPool)
+                : await this.parseFile(filePath);
 
-            this.emit('file:complete', {
-              file: filePath,
-              entityCount: result.entities.length,
-              relationCount: result.relations.length,
-            } as FileCompleteEvent);
+              successCount++;
+              completedCount++;
 
-            this.emit('progress', {
-              completed: completedCount,
-              total: filePaths.length,
-              percentage: Math.round((completedCount / filePaths.length) * 100),
-            } as ProgressEvent);
+              this.emit('file:complete', {
+                file: filePath,
+                entityCount: result.entities.length,
+                relationCount: result.relations.length,
+              } as FileCompleteEvent);
 
-            return result;
-          } catch (error) {
-            errorCount++;
-            completedCount++;
+              this.emit('progress', {
+                completed: completedCount,
+                total: filePaths.length,
+                percentage: Math.round((completedCount / filePaths.length) * 100),
+              } as ProgressEvent);
 
-            this.emit('file:error', {
-              file: filePath,
-              error: error instanceof Error ? error.message : String(error),
-            });
+              return result;
+            } catch (error) {
+              errorCount++;
+              completedCount++;
 
-            this.emit('progress', {
-              completed: completedCount,
-              total: filePaths.length,
-              percentage: Math.round((completedCount / filePaths.length) * 100),
-            } as ProgressEvent);
+              this.emit('file:error', {
+                file: filePath,
+                error: error instanceof Error ? error.message : String(error),
+              });
 
-            if (!this.continueOnError) {
-              throw error;
+              this.emit('progress', {
+                completed: completedCount,
+                total: filePaths.length,
+                percentage: Math.round((completedCount / filePaths.length) * 100),
+              } as ProgressEvent);
+
+              if (!this.continueOnError) {
+                throw error;
+              }
+
+              // Return empty result on error
+              return this.createEmptyArchJSON();
             }
-
-            // Return empty result on error
-            return this.createEmptyArchJSON();
-          }
-        })
-      )
-    );
+          })
+        )
+      );
+    } finally {
+      await ownedPool?.terminate();
+    }
 
     // Merge all results
     const merged = this.mergeResults(results);
@@ -278,6 +318,20 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
     }
     const parser = new TypeScriptParser(this.workspaceRoot);
     return parser.parseCode(content, filePath);
+  }
+
+  private async parseFileInWorker(filePath: string, pool: ParseWorkerPool): Promise<ArchJSON> {
+    let content: string;
+    try {
+      content = await fs.readFile(filePath, 'utf-8');
+    } catch {
+      return this.createEmptyArchJSON([filePath]);
+    }
+    const result = await pool.parse({ filePath, code: content });
+    if (!result.success || !result.archJson) {
+      throw new Error(result.error ?? `Parse worker returned no result for ${filePath}`);
+    }
+    return result.archJson;
   }
 
   /**

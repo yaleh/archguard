@@ -1,0 +1,119 @@
+import { EventEmitter } from 'node:events';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const workers: FakeWorker[] = [];
+
+class FakeWorker extends EventEmitter {
+  readonly posted: unknown[] = [];
+  terminated = false;
+  constructor(
+    _file: string,
+    readonly options: unknown
+  ) {
+    super();
+    workers.push(this);
+  }
+  postMessage(message: unknown): void {
+    this.posted.push(message);
+  }
+  async terminate(): Promise<number> {
+    this.terminated = true;
+    this.emit('exit', 1);
+    return 1;
+  }
+}
+
+vi.mock('node:worker_threads', () => ({ Worker: FakeWorker }));
+
+describe('ParseWorkerPool', () => {
+  beforeEach(() => workers.splice(0));
+
+  it('bounds workers and propagates the parent-selected runtime', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(2, { language: 'python', runtime: 'wasm' });
+    pool.start();
+    expect(workers).toHaveLength(2);
+    expect(workers[0].options).toMatchObject({
+      workerData: { language: 'python', runtime: 'wasm' },
+    });
+    await pool.terminate();
+  });
+
+  it('deduplicates worker error+exit and dispatches queued work to one replacement', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'python', runtime: 'wasm' });
+    pool.start();
+    const first = pool.parse({ code: 'a = 1', filePath: 'a.py' });
+    const queued = pool.parse({ code: 'b = 2', filePath: 'b.py' });
+    workers[0].emit('error', new Error('crashed'));
+    workers[0].emit('exit', 1);
+
+    await expect(first).resolves.toMatchObject({ success: false, error: 'crashed' });
+    expect(workers).toHaveLength(2);
+    expect(workers[1].posted).toHaveLength(1);
+    expect(pool.size).toBe(1);
+
+    const queuedJob = workers[1].posted[0] as { jobId: string };
+    workers[1].emit('message', { jobId: queuedJob.jobId, success: true, archJson: {} });
+    await expect(queued).resolves.toMatchObject({ success: true });
+    await pool.terminate();
+  });
+
+  it('ignores stale, duplicate, and wrong-job messages', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });
+    const result = pool.parse({ code: 'const a = 1', filePath: 'a.ts' });
+    const job = workers[0].posted[0] as { jobId: string };
+    workers[0].emit('message', { jobId: 'wrong', success: true, archJson: {} });
+    expect(pool.dispatchCount).toBe(1);
+    workers[0].emit('message', { jobId: job.jobId, success: true, archJson: {} });
+    workers[0].emit('message', { jobId: job.jobId, success: true, archJson: {} });
+    await expect(result).resolves.toMatchObject({ success: true });
+    const next = pool.parse({ code: 'const b = 2', filePath: 'b.ts' });
+    expect(workers[0].posted).toHaveLength(2);
+    const nextJob = workers[0].posted[1] as { jobId: string };
+    workers[0].emit('message', { jobId: nextJob.jobId, success: true, archJson: {} });
+    await next;
+    await pool.terminate();
+  });
+
+  it('stops after restart budget exhaustion and fails queued work', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'python', runtime: 'wasm' });
+    const jobs: Array<Promise<unknown>> = [];
+    for (let generation = 0; generation < 3; generation++) {
+      jobs.push(pool.parse({ code: `x=${generation}`, filePath: `${generation}.py` }));
+      workers[generation].emit('error', new Error(`crash-${generation}`));
+    }
+    const current = pool.parse({ code: 'current=1', filePath: 'current.py' });
+    const queued = pool.parse({ code: 'queued=1', filePath: 'queued.py' });
+    workers[3].emit('error', new Error('crash-3'));
+    jobs.push(current);
+    await expect(Promise.all(jobs)).resolves.toHaveLength(4);
+    await expect(queued).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('restart limit'),
+    });
+    expect(workers).toHaveLength(4);
+    expect(pool.size).toBe(0);
+    await pool.terminate();
+  });
+
+  it('queues work, returns results, and drains on termination', async () => {
+    const { ParseWorkerPool } = await import('@/parser/parse-worker-pool.js');
+    const pool = new ParseWorkerPool(1, { language: 'typescript', runtime: 'native' });
+    pool.start();
+    const first = pool.parse({ code: 'const a = 1', filePath: 'a.ts' });
+    const second = pool.parse({ code: 'const b = 2', filePath: 'b.ts' });
+    const firstJob = workers[0].posted[0] as { jobId: string };
+    workers[0].emit('message', {
+      jobId: firstJob.jobId,
+      success: true,
+      archJson: { entities: [] },
+    });
+    await expect(first).resolves.toMatchObject({ success: true });
+    expect(workers[0].posted).toHaveLength(2);
+    await pool.terminate();
+    await expect(second).resolves.toMatchObject({ success: false, error: 'Pool terminated' });
+  });
+});

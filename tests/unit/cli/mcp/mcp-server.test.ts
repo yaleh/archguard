@@ -13,7 +13,10 @@ import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSONExtensions } from '@/types/extensions/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
-import { registerTools } from '@/cli/mcp/mcp-server.js';
+import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { PassThrough } from 'node:stream';
+import { EventEmitter } from 'node:events';
 import { loadEngine } from '@/cli/query/engine-loader.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
@@ -1032,6 +1035,59 @@ describe('createMcpCommand', () => {
     expect(optionNames).not.toContain('--arch-dir');
     expect(optionNames).not.toContain('--scope');
   });
+});
+
+describe('MCP parse pool transport teardown', () => {
+  it('coalesces input end then close into exactly one cleanup', async () => {
+    const input = new PassThrough();
+    const transport = new StdioServerTransport(input);
+    const signals = new EventEmitter();
+    const terminate = vi.fn().mockResolvedValue(undefined);
+    const dispose = wireParsePoolTeardown(
+      transport,
+      { terminate } as never,
+      input,
+      process.exit,
+      signals
+    );
+    input.emit('end');
+    input.emit('close');
+    await vi.waitFor(() => expect(terminate).toHaveBeenCalledTimes(1));
+    dispose();
+  });
+
+  it.each([
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+  ] as const)(
+    'awaits cleanup before %s exit and disposer removes handlers',
+    async (signal, code) => {
+      const input = new PassThrough();
+      const transport = new StdioServerTransport(input);
+      const signals = new EventEmitter();
+      let release!: () => void;
+      const terminate = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+      const exit = vi.fn() as unknown as (code: number) => never;
+      const dispose = wireParsePoolTeardown(
+        transport,
+        { terminate } as never,
+        input,
+        exit,
+        signals
+      );
+      signals.emit(signal);
+      expect(terminate).toHaveBeenCalledTimes(1);
+      expect(exit).not.toHaveBeenCalled();
+      release();
+      await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(code));
+      dispose();
+      expect(signals.listenerCount('SIGINT')).toBe(0);
+      expect(signals.listenerCount('SIGTERM')).toBe(0);
+      signals.emit(signal);
+      expect(terminate).toHaveBeenCalledTimes(1);
+      expect(exit).toHaveBeenCalledTimes(1);
+    }
+  );
 });
 
 // ── Phase 120: Atlas analytics tool registration via createMcpServer ──────────

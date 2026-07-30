@@ -2,7 +2,11 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { WasmParserBackend, wasmParserBackend } from '@/plugins/shared/wasm-parser-backend.js';
+import {
+  WasmParserBackend,
+  resetWasmParserRuntimeCache,
+  wasmParserBackend,
+} from '@/plugins/shared/wasm-parser-backend.js';
 import {
   ParserInitializationError,
   resolveParserBackend,
@@ -25,6 +29,7 @@ describe('WasmParserBackend', () => {
 
   afterEach(() => {
     while (sessions.length > 0) sessions.pop()?.dispose();
+    resetWasmParserRuntimeCache();
   });
 
   it('exposes the wasm runtime kind', () => {
@@ -111,6 +116,17 @@ describe('WasmParserBackend', () => {
     sessions.push(first, second, third);
 
     expect(backend.cachedLanguageCount).toBe(2);
+  });
+
+  it('shares process-lifetime runtime and language caches across backend instances', async () => {
+    const firstBackend = new WasmParserBackend();
+    const secondBackend = new WasmParserBackend();
+    const first = await firstBackend.createSession('python');
+    const second = await secondBackend.createSession('python');
+    sessions.push(first, second);
+
+    expect(firstBackend.cachedLanguageCount).toBe(secondBackend.cachedLanguageCount);
+    expect(secondBackend.cachedLanguageCount).toBeGreaterThanOrEqual(1);
   });
 
   it('resolves grammar assets independent of process.cwd()', async () => {

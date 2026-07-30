@@ -68,20 +68,40 @@ function defaultAssetsDir(): string {
   return fileURLToPath(new URL('../../../assets/grammars/', import.meta.url));
 }
 
+interface WasmRuntimeCache {
+  modulePromise?: Promise<WtsModule>;
+  readonly languagePromises: Map<ParserLanguage, Promise<WtsLanguage>>;
+}
+
+// web-tree-sitter initialization and grammar compilation are process-scoped,
+// not analysis-scoped. Keep distinct caches for explicitly different asset
+// directories so tests and embedded installations cannot cross-contaminate.
+const runtimeCaches = new Map<string, WasmRuntimeCache>();
+
+/** Test hook; production caches intentionally live for the process lifetime. */
+export function resetWasmParserRuntimeCache(): void {
+  runtimeCaches.clear();
+}
+
 export class WasmParserBackend implements ParserBackend {
   readonly runtime = 'wasm' as const;
 
   private readonly assetsDir: string;
-  private modulePromise?: Promise<WtsModule>;
-  private readonly languagePromises = new Map<ParserLanguage, Promise<WtsLanguage>>();
+  private readonly cache: WasmRuntimeCache;
 
   constructor(options: WasmParserBackendOptions = {}) {
-    this.assetsDir = options.assetsDir ?? defaultAssetsDir();
+    this.assetsDir = path.resolve(options.assetsDir ?? defaultAssetsDir());
+    let cache = runtimeCaches.get(this.assetsDir);
+    if (!cache) {
+      cache = { languagePromises: new Map() };
+      runtimeCaches.set(this.assetsDir, cache);
+    }
+    this.cache = cache;
   }
 
   /** Number of languages whose WASM grammar has been loaded (test visibility). */
   get cachedLanguageCount(): number {
-    return this.languagePromises.size;
+    return this.cache.languagePromises.size;
   }
 
   async createSession(language: ParserLanguage): Promise<ParserSession> {
@@ -101,7 +121,8 @@ export class WasmParserBackend implements ParserBackend {
 
   /** One-time web-tree-sitter runtime initialization, cached per backend. */
   private initializeRuntime(): Promise<WtsModule> {
-    this.modulePromise ??= (async () => {
+    if (this.cache.modulePromise) return this.cache.modulePromise;
+    const initialized = (async () => {
       const wts = (await import('web-tree-sitter')) as unknown as WtsModule;
       const runtimePath = path.join(this.assetsDir, RUNTIME_WASM_FILE);
       // Fall back to web-tree-sitter's own bundled runtime if our copy is not
@@ -110,13 +131,17 @@ export class WasmParserBackend implements ParserBackend {
       await wts.Parser.init(locateFile);
       return wts;
     })();
-    return this.modulePromise;
+    initialized.catch(() => {
+      if (this.cache.modulePromise === initialized) this.cache.modulePromise = undefined;
+    });
+    this.cache.modulePromise ??= initialized;
+    return this.cache.modulePromise;
   }
 
   /** Per-language Language.load() caching: each grammar WASM is read once. */
   private loadLanguage(wts: WtsModule, language: ParserLanguage): Promise<WtsLanguage> {
-    if (this.languagePromises.has(language)) {
-      return this.languagePromises.get(language);
+    if (this.cache.languagePromises.has(language)) {
+      return this.cache.languagePromises.get(language);
     }
     const loaded: Promise<WtsLanguage> = (async () => {
       const grammarPath = path.join(this.assetsDir, GRAMMAR_WASM_FILES[language]);
@@ -129,8 +154,8 @@ export class WasmParserBackend implements ParserBackend {
       return wts.Language.load(grammarPath);
     })();
     // Do not cache failures: a transient read error must not poison the cache.
-    loaded.catch(() => this.languagePromises.delete(language));
-    this.languagePromises.set(language, loaded);
+    loaded.catch(() => this.cache.languagePromises.delete(language));
+    this.cache.languagePromises.set(language, loaded);
     return loaded;
   }
 }
