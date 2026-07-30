@@ -105,6 +105,9 @@ language → backend chosen → source of choice → fallback reason — in
 stays clean (diagnostics route to stderr).
 
 ```bash
+# Default (auto): per-language health-checked native-first selection with WASM fallback
+ARCHGUARD_PARSER_RUNTIME=auto archguard analyze -s ./src --lang go
+
 # Force the portable baseline (diagnostics, restricted CI)
 ARCHGUARD_PARSER_RUNTIME=wasm archguard analyze -s ./src --lang go
 
