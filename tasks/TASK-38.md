@@ -45,6 +45,20 @@ Blocked by TASK-37's runtime-neutral parser facade.
 8. Compare native and WASM ArchJSON across representative fixtures for all five
    languages.
 
+## Touches
+
+- package.json
+- package-lock.json
+- src/plugins/shared/** (WASM backend + runtime/Language.load caching alongside the TASK-37 facade)
+- assets/grammars/** (new: five pinned grammar .wasm files + checksums/provenance)
+- scripts/** (new: reproducible WASM grammar acquisition + checksum verification script)
+- tests/unit/plugins/shared/** (forced-WASM backend unit tests)
+- tests/plugins/** (native↔WASM ArchJSON parity fixtures for all five languages)
+- tests/integration/** (packed-install / cwd-independent asset-loading integration tests)
+- tasks/TASK-38.md
+
+Product code outside `src/plugins/shared/**` (language bridges/builders, CLI, MCP) is out of scope; the WASM backend is consumed through the TASK-37 facade.
+
 ## Acceptance Criteria
 
 - [ ] A normal clean install parses all five languages without any native
