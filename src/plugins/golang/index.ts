@@ -39,6 +39,8 @@ import type {
 import { GoAtlasCoordinator } from './go-atlas-coordinator.js';
 import { GoAtlasAdapter } from './go-atlas-adapter.js';
 import { GoTestAnalyzer } from './go-test-analyzer.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
+import { nativeParserBackend } from '../shared/native-parser-backend.js';
 
 // Re-export types for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -117,7 +119,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   private atlasAdapter!: GoAtlasAdapter;
   private testAnalyzer!: GoTestAnalyzer;
 
-  constructor() {
+  constructor(private readonly parserBackend: ParserBackend = nativeParserBackend) {
     this.dependencyExtractor = new DependencyExtractor();
   }
 
@@ -130,7 +132,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
     }
 
     this.resolver = new GoplsInterfaceResolver();
-    this.coordinator = new GoParseCoordinator(this.resolver);
+    this.coordinator = new GoParseCoordinator(this.resolver, this.parserBackend);
     this.atlasCoordinator = new GoAtlasCoordinator();
     this.atlasAdapter = new GoAtlasAdapter(this, this.atlasCoordinator);
 
@@ -309,6 +311,7 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
    */
   async dispose(): Promise<void> {
     await this.resolver.dispose();
+    this.coordinator.dispose();
     this.initialized = false;
   }
 

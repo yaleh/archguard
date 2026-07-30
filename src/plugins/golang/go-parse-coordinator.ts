@@ -11,6 +11,7 @@ import { type ArchJSON, type Relation, ARCHJSON_SCHEMA_VERSION } from '@/types/i
 import type { GoRawPackage, GoRawData } from './types.js';
 import type { FlowGraph } from '@/types/extensions/go-atlas.js';
 import type { ParserSession } from '../shared/syntax-tree.js';
+import type { ParserBackend } from '../shared/parser-backend.js';
 import { nativeParserBackend } from '../shared/native-parser-backend.js';
 
 export type { GoRawData } from './types.js';
@@ -18,21 +19,28 @@ export type { TreeSitterParseOptions } from './tree-sitter-bridge.js';
 
 export class GoParseCoordinator {
   private treeSitter?: TreeSitterBridge;
-  private readonly parserSession?: ParserSession;
+  private parserSession?: ParserSession;
   private mapper: ArchJsonMapper;
   private resolver: GoplsInterfaceResolver;
+  private readonly parserBackend: ParserBackend;
 
-  constructor(resolver: GoplsInterfaceResolver, parserSession?: ParserSession) {
+  constructor(resolver: GoplsInterfaceResolver, parserBackend: ParserBackend = nativeParserBackend) {
     this.resolver = resolver;
-    this.parserSession = parserSession;
-    if (parserSession) this.treeSitter = new TreeSitterBridge(parserSession);
+    this.parserBackend = parserBackend;
     this.mapper = new ArchJsonMapper();
   }
 
   async initializeParser(): Promise<void> {
     if (this.treeSitter) return;
-    const session = this.parserSession ?? (await nativeParserBackend.createSession('go'));
-    this.treeSitter = new TreeSitterBridge(session);
+    this.parserSession = await this.parserBackend.createSession('go');
+    this.treeSitter = new TreeSitterBridge(this.parserSession);
+  }
+
+  /** Dispose the parser session. Safe to call multiple times. */
+  dispose(): void {
+    this.parserSession?.dispose();
+    this.parserSession = undefined;
+    this.treeSitter = undefined;
   }
 
   private get bridge(): TreeSitterBridge {
