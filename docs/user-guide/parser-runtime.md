@@ -58,13 +58,70 @@ canonical variable is set. New automation should use
 
 ## Dependency policy
 
-The native runtime and grammar packages are **optional peers**
-(`peerDependencies` + `peerDependenciesMeta.optional`), not required
-dependencies: a host that wants the native accelerator installs them
-explicitly; everyone else gets the WASM baseline. `web-tree-sitter` and the
-vendored WASM assets remain required, guaranteed-baseline runtime
-dependencies. (The install-time removal of the native packages from
-`dependencies`/`bundleDependencies` is handled separately by TASK-41.)
+A normal ArchGuard install (`npm install @yalehwang/archguard`, or a Claude
+npm-source plugin install) is deterministic and portable:
+
+- **Always installed (WASM baseline):** `web-tree-sitter` is a required
+  production dependency and the five grammar WASM assets are vendored under
+  `assets/grammars/` (pinned and checksummed). Every install can parse Go,
+  Java, Python, C++, and Kotlin out of the box.
+- **Never installed by ArchGuard:** the native `tree-sitter` Node addon and
+  the native grammar packages (`tree-sitter-go`, `tree-sitter-java`,
+  `tree-sitter-python`, `tree-sitter-cpp`,
+  `@tree-sitter-grammars/tree-sitter-kotlin`) are **not** in `dependencies`,
+  `optionalDependencies`, or `bundleDependencies`, and no
+  install/preinstall/postinstall/prepack script builds, downloads, or vendors
+  them. The runtime and the Go/Java/Python/C++ grammars are declared only as
+  **optional peers** (`peerDependencies` + `peerDependenciesMeta.optional`) —
+  metadata that tells a compatible host which versions work; npm does not
+  install optional peers and does not warn when they are absent. The Kotlin
+  grammar is documented for explicit installation instead (see below).
+
+Note the similar package names: `tree-sitter` (npm) is the **native** Node
+addon — optional accelerator, never auto-installed. `web-tree-sitter` is the
+**WASM** runtime — required, always installed, guaranteed baseline.
+
+### Installing the native accelerator (opt-in)
+
+Native parsing is an opportunistic runtime accelerator, never a requirement:
+
+```bash
+# Option 1: host project installs the optional peers alongside ArchGuard
+npm install tree-sitter tree-sitter-go   # plus the grammars you need
+
+# Option 2: point ArchGuard at a trusted, separately installed module root
+ARCHGUARD_NATIVE_MODULE_ROOT=/opt/archguard-native archguard analyze -s ./src --lang go
+```
+
+The optional-peer metadata covers `tree-sitter` and the Go/Java/Python/C++
+grammars. The Kotlin grammar (`@tree-sitter-grammars/tree-sitter-kotlin`) is
+deliberately **not** declared as a peer: its current release peer-depends on
+`tree-sitter@^0.22.4`, which conflicts with the `tree-sitter@^0.25.0` runtime
+the other grammars use and would make npm fail consumer installs with
+`ERESOLVE`. For native Kotlin parsing, install the grammar explicitly into a
+trusted module root (an npm `overrides` entry for `tree-sitter` may be needed
+to bypass its stale peer range) and use `ARCHGUARD_NATIVE_MODULE_ROOT`:
+
+```bash
+mkdir -p /opt/archguard-native && cd /opt/archguard-native
+npm install tree-sitter @tree-sitter-grammars/tree-sitter-kotlin \
+  --override tree-sitter@^0.25.0
+ARCHGUARD_NATIVE_MODULE_ROOT=/opt/archguard-native archguard analyze -s ./src --lang kotlin
+```
+
+In `auto` mode ArchGuard uses native only when the `(runtime, grammar)` tuple
+resolves from a trusted scope (ArchGuard's own package scope, or the explicit
+`ARCHGUARD_NATIVE_MODULE_ROOT`) **and** passes a real parse health check.
+Missing or broken native packages never fail the install or the analysis — the
+resolver records a fallback reason and selects WASM. To force a backend:
+
+```bash
+ARCHGUARD_PARSER_RUNTIME=wasm   archguard analyze -s ./src --lang go   # always WASM
+ARCHGUARD_PARSER_RUNTIME=native archguard analyze -s ./src --lang go   # require native, fail loudly
+```
+
+This policy applies to Tree-sitter. `sharp` (image rendering) has its own
+platform-package installation policy, tracked separately by TASK-31.
 
 ## Fallback semantics
 
