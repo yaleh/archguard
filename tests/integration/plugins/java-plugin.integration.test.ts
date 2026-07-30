@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { JavaPlugin } from '@/plugins/java/index.js';
 import path from 'path';
 import fs from 'fs-extra';
@@ -8,7 +9,7 @@ describe('JavaPlugin Integration Tests', () => {
   const fixturesPath = path.join(process.cwd(), 'tests', 'fixtures', 'java');
 
   beforeEach(async () => {
-    plugin = new JavaPlugin();
+    plugin = new JavaPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: process.cwd() });
   });
 

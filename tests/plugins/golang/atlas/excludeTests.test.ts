@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoAtlasPlugin } from '@/plugins/golang/atlas/index.js';
 import type { GoRawData } from '@/plugins/golang/types.js';
 
@@ -118,7 +119,7 @@ describe('GoAtlasPlugin – excludeTests filter', () => {
   let plugin: GoAtlasPlugin;
 
   beforeEach(async () => {
-    plugin = new GoAtlasPlugin();
+    plugin = new GoAtlasPlugin(nativeParserBackend);
 
     await plugin.initialize({ workspaceRoot: '/test' });
 

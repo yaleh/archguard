@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '@/plugins/golang/index.js';
 import type { GoRawData } from '@/plugins/golang/types.js';
 
@@ -24,7 +25,7 @@ describe('GoAtlasPlugin', () => {
   let plugin: GoPlugin;
 
   beforeEach(() => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
   });
 
   // ---- Metadata and delegation tests ----

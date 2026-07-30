@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { PythonPlugin } from '@/plugins/python/index.js';
@@ -15,7 +16,7 @@ describe('PythonPlugin Integration Tests', () => {
   let fixturesDir: string;
 
   beforeAll(async () => {
-    plugin = new PythonPlugin();
+    plugin = new PythonPlugin(nativeParserBackend);
     fixturesDir = path.join(process.cwd(), 'tests', 'fixtures', 'python');
 
     const config: PluginInitConfig = {

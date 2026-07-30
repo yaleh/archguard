@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import type { ILanguagePlugin, RawTestFile } from '@/core/interfaces/language-plugin.js';
 import type { ArchJSON } from '@/types/index.js';
 import { JavaPlugin } from '@/plugins/java/index.js';
@@ -424,7 +425,7 @@ describe('TestAnalyzer.discoverTestFiles — Java multi-module (real filesystem)
 
   it('discovers test files in all sub-modules when workspaceRoot is the project root', async () => {
     const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
-    const plugin = new JavaPlugin();
+    const plugin = new JavaPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: tmpDir });
 
     const analyzer = new TestAnalyzer();
@@ -443,7 +444,7 @@ describe('TestAnalyzer.discoverTestFiles — Java multi-module (real filesystem)
 
   it('discovers only test files within the given sub-module when workspaceRoot is a single sub-module root', async () => {
     const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
-    const plugin = new JavaPlugin();
+    const plugin = new JavaPlugin(nativeParserBackend);
     const subRoot = path.join(tmpDir, 'jlama-tests');
     await plugin.initialize({ workspaceRoot: subRoot });
 

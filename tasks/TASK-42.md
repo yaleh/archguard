@@ -61,7 +61,28 @@ Blocked by TASK-31 (its pipeline wiring fix is the starting point).
 - tests/plugins/plugin-factory/** (NEW: factory tests incl. Go constructor migration)
 - tests/unit/architecture/** (NEW: static guard test — no direct five-plugin construction in src/)
 - tests/unit/plugins/java/** tests/unit/plugins/python/** tests/unit/plugins/cpp/** tests/unit/plugins/kotlin/** (constructor migration)
+- tests/cross-language.test.ts
+- tests/integration/plugins/go-mcp-server.integration.test.ts
+- tests/integration/plugins/go-plugin-gopls.integration.test.ts
+- tests/integration/plugins/go-plugin.integration.test.ts
+- tests/integration/plugins/java-plugin.integration.test.ts
+- tests/integration/plugins/python-plugin.integration.test.ts
+- tests/plugins/cpp/cpp-plugin.test.ts
+- tests/plugins/golang/atlas/excludeTests.test.ts
+- tests/plugins/golang/atlas/go-atlas-plugin.test.ts
+- tests/plugins/golang/go-atlas-adapter.test.ts
+- tests/plugins/golang/go-plugin-dependency-edges.test.ts
+- tests/plugins/golang/go-plugin-merge.test.ts
+- tests/plugins/golang/go-plugin.test.ts
+- tests/plugins/java/java-plugin.test.ts
+- tests/plugins/python/python-plugin.test.ts
+- tests/unit/analysis/test-analyzer.test.ts
+- tests/unit/plugins/supported-levels.test.ts
 - tasks/TASK-42.md
+
+The exact test files above were transferred to TASK-42 for constructor-call
+migration only after TASK-44 was paused with zero changes. This supersedes the
+earlier test-directory exclusion; TASK-44 product files remain excluded.
 
 Do NOT modify: package.json/lock, src/types/**, src/plugins/shared/parser-runtime.ts,
 src/plugins/shared/wasm-parser-backend.ts, src/plugins/golang/atlas/**,
@@ -80,6 +101,8 @@ Before (master HEAD `06255e8`):
   provider's local `selectParserBackendFor` wrapper.
 - Plugin constructors defaulted omitted arguments to the exported
   `nativeParserBackend` singleton.
+- Tests contained no-argument construction in 17 files (enumerated in the
+  transferred Touches list above).
 
 After:
 
@@ -93,6 +116,8 @@ After:
 - Public constructor implementation signatures require a `ParserBackend`; omitted
   arguments fail TypeScript compilation and a runtime guard rejects untyped
   JavaScript/`any` construction. Constructors contain no backend fallback.
+- All 17 transferred test files now pass `nativeParserBackend` explicitly;
+  mechanical inventory finds zero no-argument constructions under `tests/`.
 
 ## Acceptance Criteria
 

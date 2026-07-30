@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 // Mock fs-extra before importing the module under test
 vi.mock('fs-extra', () => ({
@@ -122,7 +123,7 @@ public:
 };
 `);
 
-    plugin = new CppPlugin();
+    plugin = new CppPlugin(nativeParserBackend);
     await plugin.initialize({ workspaceRoot: '/proj' });
   });
 
@@ -186,7 +187,7 @@ public:
     });
 
     it('throws when not initialized', async () => {
-      const fresh = new CppPlugin();
+      const fresh = new CppPlugin(nativeParserBackend);
       expect(() => fresh.parseCode('class A {};', 'a.cpp')).toThrow('CppPlugin not initialized');
     });
   });

@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { GoPlugin } from '../../../src/plugins/golang/index.js';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -25,7 +26,7 @@ describe.skipIf(!goplsAvailable)('GoPlugin with gopls integration', () => {
   const fixtureDir = path.resolve(__dirname, '../../fixtures/go');
 
   beforeAll(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({});
   });
 
@@ -99,7 +100,7 @@ describe('GoPlugin without gopls (graceful degradation)', () => {
   const fixtureDir = path.resolve(__dirname, '../../fixtures/go');
 
   beforeAll(async () => {
-    plugin = new GoPlugin();
+    plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({});
   });
 
@@ -167,7 +168,7 @@ func (f *FileReader) Read() string {
 
 describe('Performance with gopls', () => {
   it('should complete parsing within reasonable time with gopls', async () => {
-    const plugin = new GoPlugin();
+    const plugin = new GoPlugin(nativeParserBackend);
     await plugin.initialize({});
 
     const fixtureDir = path.resolve(__dirname, '../../fixtures/go');
