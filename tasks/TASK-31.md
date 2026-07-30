@@ -1,7 +1,7 @@
 ---
 id: TASK-31
 title: Package archguard as an npm-installed Claude Code plugin
-status: ready
+status: done
 labels:
   - enhancement
   - packaging
@@ -93,8 +93,10 @@ prerequisite for packaging.
 
 - [x] `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
       `.mcp.json` exist and pass `claude plugin validate`.
-- [x] The deprecated installer no longer writes new registrations to
-      `~/.claude/mcp.json`.
+- [ ] The deprecated installer no longer writes new registrations to
+      `~/.claude/mcp.json`. **UNCHECKED 2026-07-30 per adversarial-audit
+      refutation**: the installer still writes the registration (with a
+      `_deprecated` marker); removal is TASK-35 scope. See Land Evidence.
 - [x] Native dependency audit records the Tree-sitter and `sharp` import paths
       and distinguishes startup-time from analyze-time loading.
 - [x] The published plugin package contains its manifests, MCP config, skills,
@@ -231,3 +233,28 @@ resolution, MCP launch, and the protocol handshake are all real:
   `scripts/install-claude-user-scope.sh` STILL writes the registration (with a
   `_deprecated` marker). Left untouched per instructions; finalization is
   TASK-35.
+
+## Loop-driver land evidence (2026-07-30)
+
+- **Gate**: vitest **PASS** (exit 0), GateEvent `b176ba74-bf02-4ca2-851b-37e26ce448c7`
+  (2026-07-30T10:57:12Z), cwd = worktree, 600s timeoutMs override under load
+  (4259 passed | 11 skipped per the builder's run).
+- **Adversarial audit** (fresh-context, refute-first): **REFUTATION FOUND →
+  remediated**. The single blocking clause was the pre-checked installer AC
+  (installer still writes `~/.claude/mcp.json`; TASK-35 scope) — remediated by
+  unchecking it with user approval (parity with the honestly-unchecked
+  "claude mcp list Connected" AC). Everything else verified clean:
+  arch-json-provider scope extension JUSTIFIED (fallback constructions are the
+  live production path; all five constructors defaulted to native backend —
+  the meta-cc crash was real; fix is minimal, tested for all five languages on
+  WASM-only packed installs, native-healthy behavior unchanged); sharp
+  lazy-loading real (static import-graph test + physical-deletion handshake
+  test); mcp-launcher resolves core from the plugin's own dependency tree;
+  plugin package + marketplace pinned by unit tests; README matches reality;
+  WASM-baseline ACs hold in the packed context; diff hygiene clean.
+- **Non-blocking observations**: native-dependency-audit AC is prose-only
+  (thin); implicit inter-test dependency in plugin-install tests
+  (sharp-deletion runs before analyze tests — harmless, `-f json` needs no
+  sharp).
+- Merged to master by the loop-driver at land (post-revision rule for
+  pre-dispatched tasks).
