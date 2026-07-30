@@ -44,33 +44,26 @@ ArchGuard entry looks like this:
 }
 ```
 
-If you are installing from a local ArchGuard checkout, the helper script runs
-the full npm-source marketplace flow at user scope:
+If you are installing from a local ArchGuard checkout and also want the repo's
+Claude skill copied into user scope, use the helper script:
 
 ```bash
 bash scripts/install-claude-user-scope.sh
 ```
 
-That script performs these user-scope steps:
+That script performs four user-scope steps:
 
-1. Removes any legacy ArchGuard entry (the global-binary registration written
-   by older installers) from the deprecated `~/.claude/mcp.json`, preserving
-   unrelated MCP entries and other keys; it never writes registrations to
-   that file.
-2. Adds (or updates) the `archguard` marketplace registration from your
-   checkout (`--marketplace-source yaleh/archguard` uses the GitHub source
-   instead).
-3. Installs (or updates) the `archguard@archguard` plugin at user scope —
-   Claude Code resolves `@yalehwang/archguard-claude-plugin` and its exact
-   `@yalehwang/archguard` runtime dependency from npm, so no global
-   `archguard` binary is installed or required.
-4. Verifies that exactly one enabled plugin instance remains.
+1. Builds the current checkout
+2. Installs `archguard` globally for the current user via a packed tarball
+3. Registers or updates the `archguard` MCP server in `~/.claude/mcp.json`
+4. Syncs every repo-owned skill from `.agents/skills/` into `~/.claude/skills/`
 
-The script is idempotent: re-running it after pulling a new version upgrades
-the plugin in place. It does not install, build, or globally mutate native
-Tree-sitter runtime or grammar packages — the installed runtime is the
-deterministic WASM baseline, with native acceleration opt-in at runtime (see
-[Parser Runtime Selection](parser-runtime.md)).
+If you already built the current checkout and only want to refresh the user-scope
+installation, run:
+
+```bash
+bash scripts/install-claude-user-scope.sh --skip-build
+```
 
 **Custom work directory** (when artifacts are not in the default `.archguard`):
 
