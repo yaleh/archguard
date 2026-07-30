@@ -49,6 +49,22 @@ Blocked by TASK-37 and TASK-38.
 7. Never switch backend after extraction begins; parser/extractor bugs must
    surface instead of being hidden by mid-run fallback.
 
+## Touches
+
+- package.json / package-lock.json (optional peer metadata only if used; dependency-policy removal stays with TASK-41)
+- src/plugins/shared/** (per-language runtime selection resolver, health probe, selection cache — extends the TASK-37/38 facade)
+- src/cli/analyze/run-analysis.ts (remove the broad language-plugin→TypeScript fallback)
+- src/types/** (parser-runtime policy config type: auto|native|wasm)
+- tests/unit/plugins/shared/** (selection + fault-injection unit tests)
+- tests/plugins/** (mixed native/WASM per-language selection tests)
+- tests/integration/** (packed WASM-only install; trusted native fixture)
+- docs/** (documented auto|native|wasm policy + ARCHGUARD_PARSER_RUNTIME)
+- tasks/TASK-39.md
+
+Language bridges/builders stay untouched (backend injected via the facade);
+WASM backend internals (TASK-38) and install-time dependency policy
+(TASK-41) are out of scope.
+
 ## Acceptance Criteria
 
 - [ ] `auto`, `native`, and `wasm` policies are documented and tested.
