@@ -9,6 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import path from 'path';
 import type { Readable } from 'node:stream';
+import type { EventEmitter } from 'node:events';
 import { z } from 'zod';
 import { loadEngine } from '../query/engine-loader.js';
 import type {
@@ -118,7 +119,8 @@ export function wireParsePoolTeardown(
   transport: StdioServerTransport,
   parseWorkerPools: ProcessParseWorkerPools,
   input: Readable = process.stdin,
-  exit: (code: number) => never = process.exit
+  exit: (code: number) => never = process.exit,
+  signals: Pick<EventEmitter, 'once' | 'off'> = process
 ): () => void {
   let cleanup: Promise<void> | undefined;
   const terminatePools = (): Promise<void> =>
@@ -137,13 +139,13 @@ export function wireParsePoolTeardown(
   };
   input.once('end', onInputClose);
   input.once('close', onInputClose);
-  process.once('SIGINT', onSigint);
-  process.once('SIGTERM', onSigterm);
+  signals.once('SIGINT', onSigint);
+  signals.once('SIGTERM', onSigterm);
   return () => {
     input.off('end', onInputClose);
     input.off('close', onInputClose);
-    process.off('SIGINT', onSigint);
-    process.off('SIGTERM', onSigterm);
+    signals.off('SIGINT', onSigint);
+    signals.off('SIGTERM', onSigterm);
   };
 }
 
