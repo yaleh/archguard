@@ -62,16 +62,31 @@ scope, requires a global `archguard` install):
 claude mcp add --scope project archguard -- archguard mcp
 ```
 
-For a local checkout, `scripts/install-claude-user-scope.sh` builds the
-current tree, installs the `archguard` binary globally, and syncs the
-repository skills (`--skip-build` reuses existing `dist/` artifacts).
+For a local checkout, `scripts/install-claude-user-scope.sh` runs the same
+npm-source marketplace flow against your checkout: it adds (or updates) the
+`archguard` marketplace registration, installs (or updates) the
+`archguard@archguard` plugin at user scope, and removes any legacy ArchGuard
+entry that older installers left in the deprecated `~/.claude/mcp.json`. It
+never installs a global `archguard` binary, never writes a registration into
+`~/.claude/mcp.json`, and never installs or builds native Tree-sitter
+packages. The script is idempotent — re-run it to upgrade after pulling a
+new version:
+
+```bash
+bash scripts/install-claude-user-scope.sh
+# Register the GitHub marketplace source instead of the local checkout:
+bash scripts/install-claude-user-scope.sh --marketplace-source yaleh/archguard
+```
 
 ### Parser runtime selection (auto | native | wasm)
 
 A normal install is the **deterministic WASM baseline**: `web-tree-sitter`
 plus the bundled grammar WASM assets are always installed, and the native
 `tree-sitter` runtime/grammar packages are never installed or built by
-ArchGuard itself. Per language, `ARCHGUARD_PARSER_RUNTIME` selects the
+ArchGuard itself. This holds for the Claude plugin installer as well:
+`scripts/install-claude-user-scope.sh` never installs, builds, or globally
+mutates native Tree-sitter packages — the plugin closure it registers is the
+WASM baseline. Per language, `ARCHGUARD_PARSER_RUNTIME` selects the
 backend:
 
 - `auto` (default) — probe the native `(runtime, grammar)` tuple with a health
