@@ -45,7 +45,5 @@ function readBackendEnvOverride(): ParserRuntimeKind | undefined {
   const raw = process.env.ARCHGUARD_PARSER_BACKEND;
   if (raw === undefined || raw === '') return undefined;
   if (raw === 'native' || raw === 'wasm') return raw;
-  throw new Error(
-    `Invalid ARCHGUARD_PARSER_BACKEND value "${raw}" (expected "native" or "wasm")`
-  );
+  throw new Error(`Invalid ARCHGUARD_PARSER_BACKEND value "${raw}" (expected "native" or "wasm")`);
 }

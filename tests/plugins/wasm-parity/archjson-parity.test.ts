@@ -115,11 +115,11 @@ describe('native vs WASM ArchJSON parity', () => {
         archjsonByKey.set(key, entry);
       }
 
-      go.dispose?.();
-      java.dispose?.();
-      python.dispose?.();
-      cpp.dispose?.();
-      kotlin.dispose?.();
+      await go.dispose?.();
+      await java.dispose?.();
+      await python.dispose?.();
+      await cpp.dispose?.();
+      await kotlin.dispose?.();
     }
   }, 120_000);
 
@@ -127,6 +127,7 @@ describe('native vs WASM ArchJSON parity', () => {
     const key = `${testCase.language}:${path.basename(testCase.filePath)}`;
     const entry = archjsonByKey.get(key);
     expect(entry).toBeDefined();
-    expect(entry!.wasm).toBe(entry!.native);
+    if (!entry) return;
+    expect(entry.wasm).toBe(entry.native);
   });
 });

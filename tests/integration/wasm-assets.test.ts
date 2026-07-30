@@ -5,13 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-} from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { WasmParserBackend } from '@/plugins/shared/wasm-parser-backend.js';

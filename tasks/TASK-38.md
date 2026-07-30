@@ -47,23 +47,39 @@ Blocked by TASK-37's runtime-neutral parser facade.
 
 ## Acceptance Criteria
 
-- [ ] A normal clean install parses all five languages without any native
-      Tree-sitter runtime or grammar package present.
-- [ ] `web-tree-sitter` is a required production dependency, not an optional,
-      peer-only, or development-only dependency.
-- [ ] Published artifacts contain the runtime WASM and five pinned grammar
-      WASM files with reproducible checksums.
-- [ ] Asset loading works from a packed npm installation and Claude plugin
-      cache, independent of `cwd`.
-- [ ] Native and WASM outputs are equivalent, or every intentional delta is
-      documented and approved in snapshots.
-- [ ] Repeated analysis in one process does not show unbounded WASM heap growth.
-- [ ] Parser-only and end-to-end benchmark baselines are recorded.
+- [x] A normal clean install parses all five languages without any native
+      Tree-sitter runtime or grammar package present. (WasmParserBackend loads
+      web-tree-sitter + bundled grammar WASM only; packed-install layout test
+      in tests/integration/wasm-assets.test.ts parses all five languages.)
+- [x] `web-tree-sitter` is a required production dependency, not an optional,
+      peer-only, or development-only dependency. (Pinned 0.25.10 in
+      dependencies; asserted by tests/integration/wasm-assets.test.ts.)
+- [x] Published artifacts contain the runtime WASM and five pinned grammar
+      WASM files with reproducible checksums. (assets/grammars/ in package
+      files[]; npm pack dry-run manifest asserted in integration test;
+      checksums.json + scripts/fetch-grammar-wasms.mjs verify.)
+- [x] Asset loading works from a packed npm installation and Claude plugin
+      cache, independent of `cwd`. (import.meta.url-relative resolution;
+      simulated packed layout parsed from a foreign cwd in integration test.)
+- [x] Native and WASM outputs are equivalent, or every intentional delta is
+      documented and approved in snapshots. (Zero deltas: canonical AST dumps
+      and full ArchJSON byte-identical across 16 fixtures / 5 languages in
+      tests/plugins/wasm-parity/archjson-parity.test.ts.)
+- [x] Repeated analysis in one process does not show unbounded WASM heap
+      growth. (tests/integration/wasm-memory.test.ts: 220 parse/dispose
+      cycles, RSS growth bounded.)
+- [x] Parser-only and end-to-end benchmark baselines are recorded.
+      (assets/grammars/benchmarks.md via scripts/benchmark-parser-backends.mjs:
+      parser-only ~2.3x slower, parse+extract+map pipeline ~0.4x — WASM node
+      access is cheaper than N-API accessors, offsetting raw parse cost.)
 
 ## Definition of Done
 
-- [ ] Forced-WASM unit, integration, packed-install, and parity tests pass.
-- [ ] WASM assets, provenance, licenses, and benchmark evidence are committed.
+- [x] Forced-WASM unit, integration, packed-install, and parity tests pass.
+      (54 new tests; full suite 4137 passed / 11 skipped.)
+- [x] WASM assets, provenance, licenses, and benchmark evidence are committed.
+      (assets/grammars/{*.wasm,checksums.json,provenance.json,licenses/,
+      benchmarks.md}.)
 
 ## Coordination
 

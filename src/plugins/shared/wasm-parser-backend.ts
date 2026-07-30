@@ -115,23 +115,23 @@ export class WasmParserBackend implements ParserBackend {
 
   /** Per-language Language.load() caching: each grammar WASM is read once. */
   private loadLanguage(wts: WtsModule, language: ParserLanguage): Promise<WtsLanguage> {
-    let cached = this.languagePromises.get(language);
-    if (!cached) {
-      cached = (async () => {
-        const grammarPath = path.join(this.assetsDir, GRAMMAR_WASM_FILES[language]);
-        if (!existsSync(grammarPath)) {
-          throw new Error(
-            `bundled ${language} grammar WASM not found at ${grammarPath} ` +
-              `(rebuild with: node scripts/fetch-grammar-wasms.mjs --update)`
-          );
-        }
-        return wts.Language.load(grammarPath);
-      })();
-      // Do not cache failures: a transient read error must not poison the cache.
-      cached.catch(() => this.languagePromises.delete(language));
-      this.languagePromises.set(language, cached);
+    if (this.languagePromises.has(language)) {
+      return this.languagePromises.get(language);
     }
-    return cached;
+    const loaded: Promise<WtsLanguage> = (async () => {
+      const grammarPath = path.join(this.assetsDir, GRAMMAR_WASM_FILES[language]);
+      if (!existsSync(grammarPath)) {
+        throw new Error(
+          `bundled ${language} grammar WASM not found at ${grammarPath} ` +
+            `(rebuild with: node scripts/fetch-grammar-wasms.mjs --update)`
+        );
+      }
+      return wts.Language.load(grammarPath);
+    })();
+    // Do not cache failures: a transient read error must not poison the cache.
+    loaded.catch(() => this.languagePromises.delete(language));
+    this.languagePromises.set(language, loaded);
+    return loaded;
   }
 }
 
