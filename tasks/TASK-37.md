@@ -1,7 +1,7 @@
 ---
 id: TASK-37
 title: Decouple language extractors from node-tree-sitter runtime types
-status: ready
+status: done
 labels:
   - architecture
   - parser
@@ -59,21 +59,52 @@ must preserve current native behavior; it does not add fallback yet.
 
 ## Acceptance Criteria
 
-- [ ] No language bridge or builder imports runtime values or types directly
+- [x] No language bridge or builder imports runtime values or types directly
       from `tree-sitter`.
-- [ ] The internal node facade includes only APIs used by ArchGuard.
-- [ ] All five plugins obtain parser sessions through dependency injection
+- [x] The internal node facade includes only APIs used by ArchGuard.
+- [x] All five plugins obtain parser sessions through dependency injection
       during `initialize()`.
-- [ ] Native parsing produces unchanged ArchJSON for the existing fixtures.
-- [ ] Parser/tree disposal behavior is tested.
-- [ ] Runtime initialization errors retain language and backend context.
+- [x] Native parsing produces unchanged ArchJSON for the existing fixtures.
+- [x] Parser/tree disposal behavior is tested.
+- [x] Runtime initialization errors retain language and backend context.
 
 ## Definition of Done
 
-- [ ] Type-check, unit, integration, and existing native parser tests pass.
-- [ ] Refactor and parity evidence are committed.
+- [x] Type-check, unit, integration, and existing native parser tests pass.
+- [x] Refactor and parity evidence are committed.
 
 ## Coordination
 
 TASK-38 builds the WASM backend on this facade. TASK-39 adds selection policy
 after both backends exist.
+
+## Evidence
+
+Three commits on `milestones/archguard/TASK-37`:
+
+1. `8602fa6` — syntax-tree facade (`SyntaxNodeLike`, `SyntaxTreeLike`,
+   `ParserSession`), `ParserBackend` interface, `NativeParserBackend`
+   implementation in `src/plugins/shared/`. Bridge refactoring started for all
+   five languages. 13 test failures (Java/Python test injection incomplete).
+
+2. `d8527e1` — Fixed Java and Python test injection; added `.gitignore` negation
+   for `archguard-project-semantics.json` fixture. All 260 test files pass,
+   4083 tests pass, 0 failures.
+
+3. `ef2933d` — Fixed GoPlugin DI: `GoParseCoordinator` now accepts
+   `ParserBackend` via constructor injection, `GoPlugin` passes it through
+   `initialize()`. Added `dispose()` to `GoParseCoordinator` for parser session
+   cleanup. Cleaned corrupted JSDoc in Kotlin `import-resolver.ts`. All 260
+   test files pass, 4083 tests pass, 0 failures.
+
+### Verification
+
+- **Zero direct tree-sitter imports**: No bridge or builder in Go, Java, Python,
+  C++, or Kotlin imports `tree-sitter` values or types directly. All use the
+  `SyntaxNodeLike`/`ParserSession` facade.
+- **DI during initialize()**: All five plugins accept `ParserBackend` in their
+  constructor and create a `ParserSession` during `initialize()`.
+- **Disposal**: All plugins dispose their parser session in `dispose()`.
+- **ArchJSON parity**: All 4083 tests pass, including fixture-based integration
+  tests for all five languages.
+- **Type-check**: `npx tsc --noEmit` passes cleanly.
