@@ -24,6 +24,12 @@ import type { PluginRegistry } from '@/core/plugin-registry.js';
 import { ArchJsonDiskCache } from '@/cli/cache/arch-json-disk-cache.js';
 import { planGoAnalysisScope } from '@/plugins/golang/source-scope.js';
 import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
+import {
+  hasParserRuntimeEnvOverride,
+  selectParserBackendFor,
+  type SelectParserBackendOptions,
+} from '@/plugins/shared/parser-runtime.js';
+import type { ParserBackend, ParserLanguage } from '@/plugins/shared/parser-backend.js';
 import path from 'path';
 
 export type { ArchJsonProviderOptions, ArchJsonGetOptions } from './arch-json-provider-types.js';
@@ -79,6 +85,28 @@ export class ArchJsonProvider {
    */
   public cacheSize(): number {
     return this.archJsonCache.size;
+  }
+
+  /**
+   * Parser-runtime options for per-language backend selection (TASK-39 wiring,
+   * completed in TASK-31): the canonical ARCHGUARD_PARSER_RUNTIME env policy
+   * takes precedence over the config value; nativeModuleRoot comes from config.
+   */
+  private parserRuntimeOptions(): SelectParserBackendOptions {
+    return {
+      policy: hasParserRuntimeEnvOverride() ? undefined : this.globalConfig.parserRuntime,
+      nativeModuleRoot: this.globalConfig.nativeModuleRoot,
+    };
+  }
+
+  /**
+   * Select the parser backend for a Tree-sitter backed language. Without this,
+   * the fallback plugin constructions below default to the native backend and
+   * crash on WASM-only installs (e.g. the npm Claude plugin cache) instead of
+   * falling back per the runtime policy.
+   */
+  private async selectBackend(language: ParserLanguage): Promise<ParserBackend> {
+    return (await selectParserBackendFor(language, this.parserRuntimeOptions())).backend;
   }
 
   /**
@@ -358,7 +386,7 @@ export class ArchJsonProvider {
       registryPlugin ??
       (await (async () => {
         const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
-        return new GoAtlasPlugin();
+        return new GoAtlasPlugin(await this.selectBackend('go'));
       })());
 
     await plugin.initialize({ workspaceRoot });
@@ -388,7 +416,7 @@ export class ArchJsonProvider {
       registryPlugin ??
       (await (async () => {
         const { CppPlugin } = await import('@/plugins/cpp/index.js');
-        return new CppPlugin();
+        return new CppPlugin(await this.selectBackend('cpp'));
       })());
 
     await plugin.initialize({ workspaceRoot });
@@ -443,7 +471,7 @@ export class ArchJsonProvider {
         registryPlugin ??
         (await (async () => {
           const { PythonPlugin } = await import('@/plugins/python/index.js');
-          return new PythonPlugin();
+          return new PythonPlugin(await this.selectBackend('python'));
         })());
 
       await plugin.initialize({ workspaceRoot });
@@ -464,7 +492,7 @@ export class ArchJsonProvider {
         registryPlugin ??
         (await (async () => {
           const { JavaPlugin } = await import('@/plugins/java/index.js');
-          return new JavaPlugin();
+          return new JavaPlugin(await this.selectBackend('java'));
         })());
 
       await plugin.initialize({ workspaceRoot });
@@ -485,7 +513,7 @@ export class ArchJsonProvider {
         registryPlugin ??
         (await (async () => {
           const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
-          return new KotlinPlugin();
+          return new KotlinPlugin(await this.selectBackend('kotlin'));
         })());
 
       await plugin.initialize({ workspaceRoot });

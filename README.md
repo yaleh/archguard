@@ -38,29 +38,64 @@ npm install -g @yalehwang/archguard
 
 ### Using with Claude Code
 
-Register the MCP server (project scope):
+Install ArchGuard as a Claude Code plugin from the npm-source marketplace.
+Claude Code runs `npm install` of the plugin package, which depends on an
+exact `@yalehwang/archguard` version — the full runtime dependency closure
+(ordinary JS dependencies, `web-tree-sitter`, bundled grammar WASM assets,
+platform-selected optional packages) is resolved on your machine, with no
+global `archguard` binary, vendored `node_modules`, or `NODE_PATH` involved:
+
+```bash
+claude plugin marketplace add yaleh/archguard
+claude plugin install archguard@archguard
+```
+
+Restart Claude Code afterwards so the plugin loads. The plugin bundles the
+`archguard` MCP server (launched via `plugin/mcp-launcher.mjs`, which resolves
+the ArchGuard CLI entry from the plugin's own npm dependency tree) plus the
+`feature-developer` and `project-semantics-discovery` skills.
+
+Alternatively, register the MCP server directly without the plugin (project
+scope, requires a global `archguard` install):
 
 ```bash
 claude mcp add --scope project archguard -- archguard mcp
 ```
 
-Or install it for Claude Code user scope, including the bundled repository
-skills from this checkout:
+For a local checkout, `scripts/install-claude-user-scope.sh` builds the
+current tree, installs the `archguard` binary globally, and syncs the
+repository skills (`--skip-build` reuses existing `dist/` artifacts).
+
+### Parser runtime selection (auto | native | wasm)
+
+A normal install is the **deterministic WASM baseline**: `web-tree-sitter`
+plus the bundled grammar WASM assets are always installed, and the native
+`tree-sitter` runtime/grammar packages are never installed or built by
+ArchGuard itself. Per language, `ARCHGUARD_PARSER_RUNTIME` selects the
+backend:
+
+- `auto` (default) — probe the native `(runtime, grammar)` tuple with a health
+  check; use native only when the probe passes, otherwise fall back to WASM
+  and record the reason in diagnostics.
+- `native` — require native; fail loudly with an actionable error if the
+  probe fails (never silently substitutes WASM).
+- `wasm` — never touch native modules; portable and deterministic.
 
 ```bash
-bash scripts/install-claude-user-scope.sh
+# Force the portable baseline (diagnostics, restricted CI)
+ARCHGUARD_PARSER_RUNTIME=wasm archguard analyze -s ./src --lang go
+
+# Require the native accelerator; fail if unavailable or ABI-incompatible
+ARCHGUARD_PARSER_RUNTIME=native archguard analyze -s ./src --lang go
 ```
 
-This installs the `archguard` binary globally for the current user, registers
-`archguard mcp` in `~/.claude/mcp.json`, and syncs all skills from
-`.agents/skills/` into `~/.claude/skills/`.
-
-If you already have fresh `dist/` artifacts and only want to re-install the user
-scope wiring, use:
-
-```bash
-bash scripts/install-claude-user-scope.sh --skip-build
-```
+Native acceleration is opt-in and discovered only at runtime: install the
+optional native packages (`tree-sitter` + the per-language grammar packages,
+declared as optional peers) into ArchGuard's own package scope, or point
+`ARCHGUARD_NATIVE_MODULE_ROOT=/path/to/root` at a trusted module root
+containing them. The analyzed project's `node_modules` is never consulted.
+See [Parser Runtime Selection](docs/user-guide/parser-runtime.md) for the
+full policy.
 
 Then ask Claude to analyze any project:
 

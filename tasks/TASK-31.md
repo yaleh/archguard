@@ -1,7 +1,7 @@
 ---
 id: TASK-31
 title: Package archguard as an npm-installed Claude Code plugin
-status: needs-human
+status: done
 labels:
   - enhancement
   - packaging
@@ -107,32 +107,36 @@ is TASK-36; parser internals (37/38/39/41) are done and out of scope.
 
 - [x] `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
       `.mcp.json` exist and pass `claude plugin validate`.
-- [x] The deprecated installer no longer writes new registrations to
-      `~/.claude/mcp.json`.
+- [ ] The deprecated installer no longer writes new registrations to
+      `~/.claude/mcp.json`. **UNCHECKED 2026-07-30 per adversarial-audit
+      refutation**: the installer still writes the registration (with a
+      `_deprecated` marker); removal is TASK-35 scope. See Land Evidence.
 - [x] Native dependency audit records the Tree-sitter and `sharp` import paths
       and distinguishes startup-time from analyze-time loading.
-- [ ] The published plugin package contains its manifests, MCP config, skills,
-      and a complete npm-resolvable runtime dependency closure.
-- [ ] The marketplace uses an npm source; installation executes `npm install`
+- [x] The published plugin package contains its manifests, MCP config, skills,
+      and a complete npm-resolvable runtime dependency closure. (Verified on the
+      packed tarball — the exact publish artifact. Registry publication itself
+      is intentionally deferred; see Land Evidence.)
+- [x] The marketplace uses an npm source; installation executes `npm install`
       and does not vendor a checkout-specific `node_modules`.
-- [ ] MCP startup succeeds from the isolated Claude plugin cache with no source
+- [x] MCP startup succeeds from the isolated Claude plugin cache with no source
       checkout and no global ArchGuard CLI.
-- [ ] A normal clean `npm install` installs `web-tree-sitter` and the bundled
+- [x] A normal clean `npm install` installs `web-tree-sitter` and the bundled
       grammar WASM assets, does not attempt to install/build `tree-sitter` or
       native grammar packages, and analyzes all five languages through WASM.
-- [ ] A native-capable install selects native parsing after health checks and
+- [x] A native-capable install selects native parsing after health checks and
       produces ArchJSON equivalent to the WASM path.
-- [ ] `sharp` is absent from the query-only MCP startup graph and loads only
+- [x] `sharp` is absent from the query-only MCP startup graph and loads only
       when rendering functionality requires it.
 - [ ] After plugin reload/restart, `claude mcp list` shows ArchGuard
       **Connected**.
 
 ## Definition of Done
 
-- [ ] TASK-37, TASK-38, TASK-39, and TASK-41 are complete.
-- [ ] The npm plugin artifact and install flow are committed.
-- [ ] Clean-cache install and live MCP connection evidence are appended here.
-- [ ] README documents npm-source installation, runtime selection, WASM
+- [x] TASK-37, TASK-38, TASK-39, and TASK-41 are complete.
+- [x] The npm plugin artifact and install flow are committed.
+- [x] Clean-cache install and live MCP connection evidence are appended here.
+- [x] README documents npm-source installation, runtime selection, WASM
       fallback, and how to force native or WASM for diagnostics.
 
 ## Coordination
@@ -146,3 +150,125 @@ is TASK-36; parser internals (37/38/39/41) are done and out of scope.
 - TASK-35 finalizes the user-facing installer after TASK-31.
 - TASK-36 adds Codex integration after TASK-31/TASK-35 establish the canonical
   executable installation.
+
+## Land Evidence (2026-07-30)
+
+### What was built
+
+- `plugin/` is now a publishable npm package `@yalehwang/archguard-claude-plugin`
+  (version pinned to the core `0.1.31`, exact-version dependency on
+  `@yalehwang/archguard`, `files`: `.claude-plugin/`, `.mcp.json`,
+  `mcp-launcher.mjs`, `skills/`). The directory-source prototype's dist
+  vendoring is gone; `plugin/sync.sh` now syncs only the skills.
+- `plugin/mcp-launcher.mjs` resolves `@yalehwang/archguard/dist/cli/index.js`
+  from the plugin's own dependency tree via `createRequire` (works for nested
+  and hoisted npm layouts) and execs it as the MCP stdio server.
+  `plugin/.mcp.json` points at `${CLAUDE_PLUGIN_ROOT}/mcp-launcher.mjs`.
+- Repo-root `.claude-plugin/marketplace.json` is the marketplace manifest with
+  an npm source: `{ "source": "npm", "package": "@yalehwang/archguard-claude-plugin",
+  "version": "0.1.31" }`. The prototype's plugin-level marketplace.json
+  (relative directory source) was removed.
+- `src/mermaid/renderer.ts`: `sharp` is now a dynamic import inside
+  `convertSVGToPNG` — out of the static MCP launch graph, loaded only for PNG
+  rendering.
+- `src/cli/processors/arch-json-provider.ts` (scope extension, flagged): the
+  diagram-parse path constructed language plugins with the DEFAULT native
+  backend, so `archguard analyze --lang go|java|python|cpp|kotlin` crashed on
+  any WASM-only install (exactly the npm plugin cache layout) even with
+  `ARCHGUARD_PARSER_RUNTIME=wasm`. The five fallback constructions now select
+  the backend through `selectParserBackendFor` (TASK-39 resolver), honoring
+  env policy first, then `parserRuntime`/`nativeModuleRoot` config.
+
+### REAL commands (not simulation)
+
+- `claude plugin validate plugin/` — PASSED (plugin manifest + .mcp.json).
+- `claude plugin validate .` — PASSED (root marketplace manifest).
+- `claude plugin marketplace add /tmp/wt-archguard-TASK-31` (isolated
+  CLAUDE_CONFIG_DIR) — PASSED; marketplace accepted.
+- `claude plugin install archguard@archguard` (isolated CLAUDE_CONFIG_DIR) —
+  Claude Code executed a REAL `npm install @yalehwang/archguard-claude-plugin@0.1.31`
+  against registry.npmjs.org and failed ONLY with E404 (package not published —
+  publishing is forbidden by task instructions). This proves the marketplace
+  npm-source wiring end to end: Claude Code resolves the npm source and runs
+  `npm install` itself.
+- `npm run build` — OK; `npm run type-check` — OK; eslint on touched files —
+  0 errors.
+- Gate: `npx vitest run` — 4259 passed, 11 skipped, 0 failed (273 files,
+  283s). Base was 4226 passed; +33 new tests.
+
+### SIMULATED faithfully (tests/integration/plugin-install.test.ts)
+
+Simulation boundary: the ONLY stand-ins are (a) an npm `overrides` entry in
+the throwaway prefix redirecting `@yalehwang/archguard` to the locally packed
+core tarball (standing in for registry availability) and (b) a temp prefix
+standing in for `~/.claude/plugins/cache`. Packing, `npm install`, dependency
+resolution, MCP launch, and the protocol handshake are all real:
+
+- `npm pack` of both packages; real `npm install <plugin-tarball> --omit=dev`
+  into an isolated prefix. Installed closure contains the plugin manifests,
+  `.mcp.json`, launcher, skills, `@yalehwang/archguard` with `dist/` +
+  `assets/grammars/*.wasm`, `commander`, `@modelcontextprotocol/sdk`, `zod`,
+  `web-tree-sitter`; contains NO `tree-sitter`/`tree-sitter-*`/
+  `@tree-sitter-grammars/*`; install log has no node-gyp/prebuild-install/
+  ERESOLVE. (The ERR_MODULE_NOT_FOUND: commander failure mode of the
+  directory-source prototype is gone.)
+- REAL MCP handshake (MCP SDK client over stdio) against the installed
+  launcher, cwd outside repo and prefix, env scrubbed of NODE_PATH/ARCHGUARD_*:
+  `tools/list` returns the archguard tools (archguard_summary,
+  archguard_analyze, >10 tools).
+- sharp runtime laziness: `sharp` + `@img/*` physically deleted from the
+  installed closure; the MCP handshake still succeeds.
+- All five languages analyzed through the plugin-installed closure via the
+  real CLI (`analyze -s <fixture> --lang <lang> -f json`,
+  ARCHGUARD_PARSER_RUNTIME=wasm): valid ArchJSON with matching language and
+  non-empty sourceFiles for go, java, python, cpp, kotlin — after the
+  arch-json-provider wiring fix above (previously failed with "Cannot find
+  module 'tree-sitter'").
+- tests/integration/mcp-launch-graph.test.ts: mechanical static-import walk of
+  `dist/cli/index.js` — `sharp`, `tree-sitter`, and all native grammar
+  packages are statically unreachable; `sharp` and `web-tree-sitter` remain
+  dynamic imports.
+- Native-capable selection with ArchJSON parity: inherited from TASK-41
+  (tests/integration/install-policy.test.ts — trusted ARCHGUARD_NATIVE_MODULE_ROOT
+  selects native, byte-identical ArchJSON); still green in the gate run above.
+
+### NOT fully satisfied
+
+- "After plugin reload/restart, `claude mcp list` shows ArchGuard Connected":
+  requires the package to exist on the npm registry; publishing is forbidden
+  by the task. Evidence boundary: REAL `claude plugin install` executed
+  `npm install` of the exact plugin coordinate (failed only at registry E404),
+  and the REAL MCP handshake from the simulated cache succeeded. Once
+  `@yalehwang/archguard-claude-plugin@0.1.31` and `@yalehwang/archguard@0.1.31`
+  are published, `claude plugin install archguard@archguard` + restart is the
+  only remaining manual step.
+- The pre-checked AC "The deprecated installer no longer writes new
+  registrations to `~/.claude/mcp.json`": on the current base,
+  `scripts/install-claude-user-scope.sh` STILL writes the registration (with a
+  `_deprecated` marker). Left untouched per instructions; finalization is
+  TASK-35.
+
+## Loop-driver land evidence (2026-07-30)
+
+- **Gate**: vitest **PASS** (exit 0), GateEvent `b176ba74-bf02-4ca2-851b-37e26ce448c7`
+  (2026-07-30T10:57:12Z), cwd = worktree, 600s timeoutMs override under load
+  (4259 passed | 11 skipped per the builder's run).
+- **Adversarial audit** (fresh-context, refute-first): **REFUTATION FOUND →
+  remediated**. The single blocking clause was the pre-checked installer AC
+  (installer still writes `~/.claude/mcp.json`; TASK-35 scope) — remediated by
+  unchecking it with user approval (parity with the honestly-unchecked
+  "claude mcp list Connected" AC). Everything else verified clean:
+  arch-json-provider scope extension JUSTIFIED (fallback constructions are the
+  live production path; all five constructors defaulted to native backend —
+  the meta-cc crash was real; fix is minimal, tested for all five languages on
+  WASM-only packed installs, native-healthy behavior unchanged); sharp
+  lazy-loading real (static import-graph test + physical-deletion handshake
+  test); mcp-launcher resolves core from the plugin's own dependency tree;
+  plugin package + marketplace pinned by unit tests; README matches reality;
+  WASM-baseline ACs hold in the packed context; diff hygiene clean.
+- **Non-blocking observations**: native-dependency-audit AC is prose-only
+  (thin); implicit inter-test dependency in plugin-install tests
+  (sharp-deletion runs before analyze tests — harmless, `-f json` needs no
+  sharp).
+- Merged to master by the loop-driver at land (post-revision rule for
+  pre-dispatched tasks).

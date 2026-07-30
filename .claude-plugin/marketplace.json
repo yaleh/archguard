@@ -1,0 +1,29 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "archguard",
+  "description": "ArchGuard: automated multi-language architecture documentation and analysis, with an MCP query interface and authoring skills",
+  "owner": {
+    "name": "yalehwang",
+    "url": "https://github.com/yaleh"
+  },
+  "plugins": [
+    {
+      "name": "archguard",
+      "source": {
+        "source": "npm",
+        "package": "@yalehwang/archguard-claude-plugin",
+        "version": "0.1.31"
+      },
+      "description": "ArchGuard: automated multi-language architecture documentation and analysis. Bundles the archguard MCP server and the feature-developer / project-semantics-discovery skills.",
+      "license": "MIT",
+      "homepage": "https://github.com/yaleh/archguard#readme",
+      "category": "productivity",
+      "tags": [
+        "architecture",
+        "documentation",
+        "mermaid",
+        "static-analysis"
+      ]
+    }
+  ]
+}
