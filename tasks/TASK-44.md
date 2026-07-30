@@ -48,14 +48,18 @@ gopls call graph) with a loud warning — never hang the whole run.
 
 ## Touches
 
-- src/plugins/golang/atlas/** (timeout budget, cancellation, degradation, poison-pill)
-- src/plugins/golang/** (degraded-mode propagation into Go analysis result)
-- src/types/** (atlas timeout config fields)
-- docs/** (Atlas timeout + degradation behavior documentation)
-- tests/** (fake-gopls unit tests, cleanup tests, optional real-gopls integration)
+- src/plugins/golang/atlas/** (timeout budget, cancellation, degradation, poison-pill, gopls reaping)
+- src/plugins/golang/go-parse-coordinator.ts (degraded-mode propagation into Go analysis result)
+- src/types/config.ts src/types/config-global.ts (atlas.goplsTimeoutMs config fields)
+- docs/user-guide/golang-plugin-usage.md (Atlas timeout + degradation documentation)
+- tests/unit/plugins/golang/** (fake-gopls unit tests, cleanup tests)
+- tests/plugins/golang/** (degraded-mode plugin tests)
+- tests/integration/atlas-*.test.ts (NEW: optional real-gopls integration, skip-if-absent)
 - tasks/TASK-44.md
 
-Parser backend selection (TASK-39/42/43) and non-Go languages are out of scope.
+Do NOT modify: package.json/lock, src/plugins/golang/index.ts (constructor —
+owned by parallel TASK-42), src/plugins/shared/**, src/cli/**,
+src/parser/** (owned by parallel TASK-40).
 
 ## Acceptance Criteria
 

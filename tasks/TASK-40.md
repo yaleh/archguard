@@ -46,16 +46,21 @@ Blocked by TASK-39 so both backends share the same worker/session protocol.
 
 ## Touches
 
-- src/plugins/shared/** (process-lifetime WASM runtime/language caches, safe parser-session reuse)
-- src/parser/** (bounded long-lived parsing worker pool, separate from Mermaid render workers)
-- src/cli/processors/** (worker-pool wiring + selected-runtime propagation to workers; serial path for small inputs)
+- src/plugins/shared/wasm-parser-backend.ts src/plugins/shared/parser-backend.ts (process-lifetime WASM runtime/language caches, safe parser-session reuse)
+- src/parser/parse-worker-pool.ts src/parser/parse-worker.ts (NEW: bounded long-lived parsing worker pool, separate from Mermaid render workers)
+- src/parser/parallel-parser.ts (pool wiring + serial-path threshold)
+- src/cli/processors/worker-pool-factory.ts (worker-pool wiring + selected-runtime propagation to workers)
 - scripts/benchmark-parser-backends.mjs (repeatable parser-only + full-analysis benchmarks)
 - assets/grammars/benchmarks.md (before/after benchmark evidence + chosen thresholds)
-- tests/** (performance, determinism, error-path, leak tests)
+- tests/unit/parser/** (pool unit tests)
+- tests/unit/plugins/shared/wasm-parser-backend.test.ts (reuse/cache tests)
+- tests/integration/wasm-memory.test.ts tests/integration/parser-pool*.test.ts (NEW integration: determinism, error-path, leak)
 - tasks/TASK-40.md
 
-Runtime selection semantics (TASK-39) and WASM backend correctness (TASK-38)
-are out of scope; no behavior change to output content.
+Do NOT modify: package.json/lock, src/plugins/shared/plugin-factory.ts,
+src/plugins/*/index.ts constructors, src/cli/processors/arch-json-provider.ts,
+src/types/**, src/plugins/golang/atlas/** (owned by parallel TASK-42/TASK-44).
+No output-content behavior change.
 
 ## Acceptance Criteria
 

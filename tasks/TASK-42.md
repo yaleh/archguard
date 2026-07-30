@@ -53,15 +53,20 @@ Blocked by TASK-31 (its pipeline wiring fix is the starting point).
 
 ## Touches
 
-- src/plugins/shared/** (single plugin factory; singleton restriction)
-- src/plugins/golang/** src/plugins/java/** src/plugins/python/** src/plugins/cpp/** src/plugins/kotlin/** (constructor signatures only: require explicit backend)
-- src/cli/processors/** src/cli/analyze/** src/cli/mcp/** (caller migration to the factory)
+- src/plugins/shared/plugin-factory.ts (NEW: single resolver-mediated factory)
+- src/plugins/golang/index.ts src/plugins/java/index.ts src/plugins/python/index.ts src/plugins/cpp/index.ts src/plugins/kotlin/index.ts (constructor signatures only: require explicit backend)
+- src/cli/processors/arch-json-provider.ts (caller migration)
+- src/cli/analyze/run-analysis.ts src/cli/mcp/analyze-tool.ts (caller migration)
 - src/core/plugin-registry.ts (registry-mediated construction if applicable)
-- tests/** (caller migration + static guard test)
+- tests/plugins/plugin-factory/** (NEW: factory tests incl. Go constructor migration)
+- tests/unit/architecture/** (NEW: static guard test — no direct five-plugin construction in src/)
+- tests/unit/plugins/java/** tests/unit/plugins/python/** tests/unit/plugins/cpp/** tests/unit/plugins/kotlin/** (constructor migration)
 - tasks/TASK-42.md
 
-No behavior change to selection semantics (TASK-39) or backends
-(TASK-37/38); this is a structural/compile-time refactor.
+Do NOT modify: package.json/lock, src/types/**, src/plugins/shared/parser-runtime.ts,
+src/plugins/shared/wasm-parser-backend.ts, src/plugins/golang/atlas/**,
+tests/unit/plugins/golang/**, tests/unit/plugins/shared/** (owned by parallel
+TASK-40/TASK-44). No behavior change to selection semantics or backends.
 
 ## Acceptance Criteria
 
