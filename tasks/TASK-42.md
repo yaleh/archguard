@@ -90,9 +90,9 @@ After:
 - `run-analysis.ts` and `arch-json-provider.ts` call
   `createLanguagePlugin(language, options)`; there are no other direct
   constructions in `src/`.
-- Public constructor overloads require a `ParserBackend`, so omitted arguments
-  fail TypeScript compilation; the implementation retains a non-singleton
-  native fallback only for existing untyped JavaScript callers.
+- Public constructor implementation signatures require a `ParserBackend`; omitted
+  arguments fail TypeScript compilation and a runtime guard rejects untyped
+  JavaScript/`any` construction. Constructors contain no backend fallback.
 
 ## Acceptance Criteria
 

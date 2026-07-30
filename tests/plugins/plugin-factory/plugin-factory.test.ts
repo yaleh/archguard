@@ -21,6 +21,15 @@ describe('createLanguagePlugin', () => {
     }
   );
 
+  it.each([GoPlugin, JavaPlugin, PythonPlugin, CppPlugin, KotlinPlugin])(
+    'rejects omitted backends at runtime for %s',
+    (PluginClass) => {
+      expect(() => Reflect.construct(PluginClass, [])).toThrow(
+        'A resolver-selected parser backend is required'
+      );
+    }
+  );
+
   it('does not probe native modules under forced WASM', async () => {
     let nativeImports = 0;
     await createLanguagePlugin('java', {

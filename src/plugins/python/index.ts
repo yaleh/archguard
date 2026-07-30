@@ -20,7 +20,6 @@ import type { ArchJSON, TestPatternConfig } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { TreeSitterBridge } from './tree-sitter-bridge.js';
 import type { ParserBackend } from '../shared/parser-backend.js';
-import { NativeParserBackend } from '../shared/native-parser-backend.js';
 import type { ParserSession } from '../shared/syntax-tree.js';
 import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
@@ -68,11 +67,10 @@ export class PythonPlugin implements ILanguagePlugin {
   private initialized = false;
   private parserSession?: ParserSession;
 
-  private readonly parserBackend: ParserBackend;
-
-  constructor(parserBackend: ParserBackend);
-  constructor(parserBackend?: ParserBackend) {
-    this.parserBackend = parserBackend ?? new NativeParserBackend();
+  constructor(private readonly parserBackend: ParserBackend) {
+    if (!parserBackend) {
+      throw new TypeError('A resolver-selected parser backend is required');
+    }
   }
 
   readonly dependencyExtractor = new DependencyExtractor();

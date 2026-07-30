@@ -40,7 +40,6 @@ import { GoAtlasCoordinator } from './go-atlas-coordinator.js';
 import { GoAtlasAdapter } from './go-atlas-adapter.js';
 import { GoTestAnalyzer } from './go-test-analyzer.js';
 import type { ParserBackend } from '../shared/parser-backend.js';
-import { NativeParserBackend } from '../shared/native-parser-backend.js';
 
 // Re-export types for external use
 export type { IDependencyExtractor } from '@/core/interfaces/dependency.js';
@@ -119,11 +118,10 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
   private atlasAdapter!: GoAtlasAdapter;
   private testAnalyzer!: GoTestAnalyzer;
 
-  private readonly parserBackend: ParserBackend;
-
-  constructor(parserBackend: ParserBackend);
-  constructor(parserBackend?: ParserBackend) {
-    this.parserBackend = parserBackend ?? new NativeParserBackend();
+  constructor(private readonly parserBackend: ParserBackend) {
+    if (!parserBackend) {
+      throw new TypeError('A resolver-selected parser backend is required');
+    }
     this.dependencyExtractor = new DependencyExtractor();
   }
 
