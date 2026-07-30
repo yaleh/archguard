@@ -1,7 +1,7 @@
 ---
 id: TASK-39
 title: Add per-language native-first Tree-sitter runtime selection
-status: ready
+status: done
 labels:
   - parser
   - tree-sitter
@@ -104,3 +104,28 @@ without changing selection semantics.
 - Note: web-tree-sitter@0.25.10 (a declared production dependency since
   TASK-38) was missing from the shared node_modules and was installed;
   the native tree-sitter addons there were rebuilt for the host Node ABI.
+
+## Loop-driver land evidence (2026-07-30)
+
+- **Gate**: vitest **PASS** (exit 0), GateEvent `f5508eab-5aa6-401b-af4c-9e166a06c2cc`
+  (2026-07-30T09:05:07Z), run with cwd = worktree and a 600s timeoutMs override
+  (machine heavily loaded; configured 300s suffices unloaded).
+- **Adversarial audit** (fresh-context, refute-first): **NO REFUTATION FOUND**.
+  Per-AC verification against real code: all three policies implemented +
+  tested; per-language mixed native/WASM process proven (cache key
+  `policy:language`, real-plugin test); health probe parses a minimal fixture;
+  four injected-loader fault families fall back to WASM; forced native throws
+  actionable `ParserInitializationError`; forced WASM loader-spy asserts zero
+  native imports; TypeScript fallback genuinely removed with per-language
+  rejection tests; native resolution scoped to ArchGuard's own package scope
+  (sabotaged-project test); diagnostics via StderrReporter off MCP stdout;
+  packed-install integration test does real `npm pack` + WASM-only overlay +
+  trusted-native-root runs. Main-pipeline caveat adjudicated NON-BLOCKING (no
+  AC requires routing arch-json-provider.ts through the resolver; negative
+  guarantees hold there too).
+- **Non-blocking observations** (follow-up candidates): zod `configSchema` in
+  src/cli/config-loader.ts does not declare `parserRuntime`/`nativeModuleRoot`
+  (file-based config silently strips them; env vars are canonical and
+  unaffected); selection cache is keyed by env read at call time.
+- Merge to master pending human-steered merge (same convention as
+  TASK-30/32/33/37/38).
