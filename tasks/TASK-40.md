@@ -1,7 +1,7 @@
 ---
 id: TASK-40
 title: Bound WASM overhead with parser reuse and a long-lived worker pool
-status: ready
+status: done
 labels:
   - performance
   - parser
