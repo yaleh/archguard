@@ -39,6 +39,17 @@ published file layout, and MCP entry path are stable.
    install native Tree-sitter packages.
 6. Verify repeated installation and upgrade from an older plugin version.
 
+## Touches
+
+- scripts/install-claude-user-scope.sh (npm-source marketplace flow, idempotency, deprecated mcp.json cleanup)
+- plugin/** (registration references only — package coordinates/paths the installer points at)
+- README.md (install docs matching actual commands)
+- docs/** (native auto-detect / WASM fallback / force-runtime install docs)
+- tests/** (installer idempotency, clean-install, upgrade, mcp.json-residue cleanup tests — in ISOLATED config dirs)
+- tasks/TASK-35.md
+
+Core/plugin packaging (TASK-31, done) and Codex integration (TASK-36) are out of scope.
+
 ## Acceptance Criteria
 
 - [ ] Running the installer twice succeeds and leaves one enabled plugin.
