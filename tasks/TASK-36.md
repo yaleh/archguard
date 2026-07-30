@@ -35,6 +35,19 @@ entry point, upgrade behavior, and runtime-selection configuration.
    TASK-39.
 5. Verify connection and at least one query plus one analysis through Codex.
 
+## Touches
+
+- scripts/install-codex-user-scope.mjs (NEW: idempotent TOML-safe Codex registration)
+- scripts/install-codex-user-scope.sh (NEW: thin shell wrapper)
+- README.md (Codex user-scope install commands)
+- docs/user-guide/mcp-usage.md (Codex config/runtime diagnostics)
+- tests/integration/installer-codex-user-scope.test.ts (NEW: isolated config/idempotency tests)
+- tests/fixtures/installer/fake-codex.mjs (NEW: stateful Codex CLI fixture)
+- tasks/TASK-36.md
+
+Do NOT modify Claude installer/plugin files, parser implementation, or real
+`~/.codex/config.toml`; all tests use isolated HOME/config.
+
 ## Acceptance Criteria
 
 - [ ] Codex has one valid ArchGuard MCP entry at the intended user scope.

@@ -56,12 +56,21 @@ task only standardizes surfacing.
 
 ## Touches
 
-- src/cli/analyze/** src/cli/processors/** (error surfacing + effective-runtime summary)
-- src/cli/mcp/** (MCP error mapping to actionable text, stdout cleanliness)
-- src/plugins/shared/** (diagnostic plumbing only, if needed)
-- README.md docs/user-guide/parser-runtime.md
-- tests/** (error-surfacing tests per surface; alias-warning tests; stdout-pollution guard)
+- src/plugins/shared/parser-runtime.ts (diagnostic source/fallback metadata + once-only alias warning)
+- src/plugins/shared/plugin-factory.ts (diagnostic propagation only)
+- src/cli/analyze/run-analysis.ts (CLI error/effective-runtime surfacing)
+- src/cli/mcp/analyze-tool.ts (MCP actionable error mapping + stderr diagnostics)
+- src/cli/processors/arch-json-provider.ts (diagnostic propagation only)
+- README.md
+- docs/user-guide/parser-runtime.md
+- tests/unit/plugins/shared/parser-runtime.test.ts
+- tests/unit/cli/analyze/run-analysis-plugin-loading.test.ts
+- tests/unit/cli/mcp/analyze-tool.test.ts
+- tests/integration/mcp-runtime-diagnostics.test.ts (NEW: stdout cleanliness)
 - tasks/TASK-43.md
+
+Do NOT modify worker-pool files, language plugin constructors, Go gopls/Atlas
+files, package manifests, or installer files.
 
 ## Acceptance Criteria
 

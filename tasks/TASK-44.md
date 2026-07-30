@@ -48,18 +48,25 @@ gopls call graph) with a loud warning — never hang the whole run.
 
 ## Touches
 
-- src/plugins/golang/atlas/** (timeout budget, cancellation, degradation, poison-pill, gopls reaping)
-- src/plugins/golang/go-parse-coordinator.ts (degraded-mode propagation into Go analysis result)
-- src/types/config.ts src/types/config-global.ts (atlas.goplsTimeoutMs config fields)
-- docs/user-guide/golang-plugin-usage.md (Atlas timeout + degradation documentation)
-- tests/unit/plugins/golang/** (fake-gopls unit tests, cleanup tests)
-- tests/plugins/golang/** (degraded-mode plugin tests)
-- tests/integration/atlas-*.test.ts (NEW: optional real-gopls integration, skip-if-absent)
+- src/plugins/golang/gopls-client.ts (startup/query timeout, cancellation, process reaping, poison-pill)
+- src/plugins/golang/gopls-interface-resolver.ts (timeout/degradation propagation)
+- src/plugins/golang/interface-matcher.ts (bounded gopls query integration)
+- src/plugins/golang/index.ts (minimal initialization fallback wiring after landed TASK-42)
+- src/plugins/golang/go-parse-coordinator.ts (degraded metadata propagation)
+- src/types/config.ts
+- src/types/config-global.ts
+- docs/user-guide/golang-plugin-usage.md
+- tests/unit/plugins/golang/gopls-client.test.ts
+- tests/unit/plugins/golang/gopls-interface-resolver.test.ts
+- tests/unit/plugins/golang/interface-matcher.test.ts
+- tests/unit/plugins/golang/go-plugin.test.ts
+- tests/plugins/golang/atlas/gopls-timeout.test.ts (NEW: degraded/poison-pill behavior)
+- tests/integration/atlas-gopls-timeout.test.ts (NEW: optional real-gopls integration)
 - tasks/TASK-44.md
 
-Do NOT modify: package.json/lock, src/plugins/golang/index.ts (constructor —
-owned by parallel TASK-42), src/plugins/shared/**, src/cli/**,
-src/parser/** (owned by parallel TASK-40).
+This corrected scope supersedes the original mistaken `atlas/**` declaration:
+the gopls lifecycle is in the exact files above. Do NOT modify shared parser
+runtime, worker-pool, CLI/MCP, package manifests, or non-Go languages.
 
 ## Acceptance Criteria
 
