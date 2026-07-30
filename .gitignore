@@ -51,6 +51,7 @@ archguard/
 .archguardrc.json
 /archguard-modules/
 archguard*.json
+!/.agents/skills/project-semantics-discovery/references/archguard-project-semantics.json
 /archguard-diagrams/
 /archguard-self-analysis/
 /codex-swarm-analysis/

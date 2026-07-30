@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 import { TreeSitterBridge } from '@/plugins/python/tree-sitter-bridge.js';
 import { ArchJsonMapper } from '@/plugins/python/archjson-mapper.js';
 
 describe('Python call edge extraction', () => {
-  const bridge = new TreeSitterBridge();
+  let bridge: TreeSitterBridge;
   const mapper = new ArchJsonMapper();
+
+  beforeAll(async () => {
+    bridge = new TreeSitterBridge(await nativeParserBackend.createSession('python'));
+  });
 
   it('extracts self.field.method() call sites from method body', () => {
     const code = `
