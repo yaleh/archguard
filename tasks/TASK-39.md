@@ -89,3 +89,18 @@ Blocked by TASK-37 and TASK-38.
 TASK-41 fixes the install-time dependency policy around this resolver. TASK-31
 then consumes both in the npm Claude plugin. TASK-40 improves performance
 without changing selection semantics.
+
+## Land Evidence
+
+- Gate: `npx vitest run` in the TASK-39 worktree — 268 files passed, 4203
+  tests passed, 11 skipped, 0 failed (base 4137 + 66 new: 36 resolver unit,
+  10 plugin-loading, 17 mixed-selection, 3 packed-install).
+- `npx tsc --noEmit` clean; `check:runtime-deps` guard passes on the rebuilt
+  dist; eslint 0 errors on touched files.
+- Env reconciliation: `ARCHGUARD_PARSER_RUNTIME` (auto|native|wasm) is the
+  canonical mechanism; `ARCHGUARD_PARSER_BACKEND` (native|wasm) remains a
+  deprecated alias applied only when the canonical variable is unset —
+  documented in docs/user-guide/parser-runtime.md and parser-backend.ts.
+- Note: web-tree-sitter@0.25.10 (a declared production dependency since
+  TASK-38) was missing from the shared node_modules and was installed;
+  the native tree-sitter addons there were rebuilt for the host Node ABI.
