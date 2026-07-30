@@ -68,20 +68,46 @@ src/plugins/shared/wasm-parser-backend.ts, src/plugins/golang/atlas/**,
 tests/unit/plugins/golang/**, tests/unit/plugins/shared/** (owned by parallel
 TASK-40/TASK-44). No behavior change to selection semantics or backends.
 
+## Construction-site inventory
+
+Before (master HEAD `06255e8`):
+
+- `src/cli/analyze/run-analysis.ts`: five direct constructions; Go, Java,
+  Python, C++, and Kotlin each passed a backend returned by a local
+  `selectParserBackendFor` wrapper.
+- `src/cli/processors/arch-json-provider.ts`: five direct constructions; Go,
+  C++, Python, Java, and Kotlin each passed a backend returned by the
+  provider's local `selectParserBackendFor` wrapper.
+- Plugin constructors defaulted omitted arguments to the exported
+  `nativeParserBackend` singleton.
+
+After:
+
+- `src/plugins/shared/plugin-factory.ts` is the only source file that directly
+  constructs the five plugins (including the `GoAtlasPlugin` compatibility
+  alias), and every construction receives the backend selected internally by
+  `selectParserBackendFor`.
+- `run-analysis.ts` and `arch-json-provider.ts` call
+  `createLanguagePlugin(language, options)`; there are no other direct
+  constructions in `src/`.
+- Public constructor overloads require a `ParserBackend`, so omitted arguments
+  fail TypeScript compilation; the implementation retains a non-singleton
+  native fallback only for existing untyped JavaScript callers.
+
 ## Acceptance Criteria
 
-- [ ] Every language-plugin construction in `src/` goes through the single
+- [x] Every language-plugin construction in `src/` goes through the single
       resolver-mediated factory (enumerate before/after sites as evidence).
-- [ ] `new <Lang>Plugin()` without an explicit backend is a compile error.
-- [ ] A static guard test fails CI if a new direct construction site appears.
-- [ ] WASM-only packed-install analyze for all five languages still passes
+- [x] `new <Lang>Plugin()` without an explicit backend is a compile error.
+- [x] A static guard test fails CI if a new direct construction site appears.
+- [x] WASM-only packed-install analyze for all five languages still passes
       (regression guard for the meta-cc incident shape).
-- [ ] All existing tests pass without weakened assertions.
+- [x] All existing tests pass without weakened assertions.
 
 ## Definition of Done
 
-- [ ] Refactor and guard test committed.
-- [ ] Before/after construction-site inventory appended to this task body.
+- [x] Refactor and guard test committed.
+- [x] Before/after construction-site inventory appended to this task body.
 
 ## Coordination
 

@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PythonPlugin } from '@/plugins/python/index.js';
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 // ---------------------------------------------------------------------------
 // Shared setup
@@ -13,7 +14,7 @@ import { PythonPlugin } from '@/plugins/python/index.js';
 let plugin: PythonPlugin;
 
 beforeEach(async () => {
-  plugin = new PythonPlugin();
+  plugin = new PythonPlugin(nativeParserBackend);
   await plugin.initialize({ workspaceRoot: '/project' });
 });
 
@@ -334,6 +335,7 @@ def test_readers():
     const code = `import os
 import sys
 import re
+import { nativeParserBackend } from '@/plugins/shared/native-parser-backend.js';
 
 def test_env():
     assert os.path.exists('/')

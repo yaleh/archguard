@@ -26,10 +26,9 @@ import { planGoAnalysisScope } from '@/plugins/golang/source-scope.js';
 import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import {
   hasParserRuntimeEnvOverride,
-  selectParserBackendFor,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
-import type { ParserBackend, ParserLanguage } from '@/plugins/shared/parser-backend.js';
+import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 import path from 'path';
 
 export type { ArchJsonProviderOptions, ArchJsonGetOptions } from './arch-json-provider-types.js';
@@ -97,16 +96,6 @@ export class ArchJsonProvider {
       policy: hasParserRuntimeEnvOverride() ? undefined : this.globalConfig.parserRuntime,
       nativeModuleRoot: this.globalConfig.nativeModuleRoot,
     };
-  }
-
-  /**
-   * Select the parser backend for a Tree-sitter backed language. Without this,
-   * the fallback plugin constructions below default to the native backend and
-   * crash on WASM-only installs (e.g. the npm Claude plugin cache) instead of
-   * falling back per the runtime policy.
-   */
-  private async selectBackend(language: ParserLanguage): Promise<ParserBackend> {
-    return (await selectParserBackendFor(language, this.parserRuntimeOptions())).backend;
   }
 
   /**
@@ -383,11 +372,7 @@ export class ArchJsonProvider {
     const workspaceRoot = plan.workspaceRoot;
     const registryPlugin = this.registry?.getByName('golang');
     const plugin =
-      registryPlugin ??
-      (await (async () => {
-        const { GoAtlasPlugin } = await import('@/plugins/golang/atlas/index.js');
-        return new GoAtlasPlugin(await this.selectBackend('go'));
-      })());
+      registryPlugin ?? (await createLanguagePlugin('go', this.parserRuntimeOptions()));
 
     await plugin.initialize({ workspaceRoot });
     if (plugin.metadata?.customEntityTypes) {
@@ -413,11 +398,7 @@ export class ArchJsonProvider {
     const workspaceRoot = path.resolve(diagram.sources[0]);
     const registryPlugin = this.registry?.getByName('cpp');
     const plugin =
-      registryPlugin ??
-      (await (async () => {
-        const { CppPlugin } = await import('@/plugins/cpp/index.js');
-        return new CppPlugin(await this.selectBackend('cpp'));
-      })());
+      registryPlugin ?? (await createLanguagePlugin('cpp', this.parserRuntimeOptions()));
 
     await plugin.initialize({ workspaceRoot });
     if (plugin.metadata?.customEntityTypes) {
@@ -468,11 +449,7 @@ export class ArchJsonProvider {
     if (pluginName === 'python') {
       const registryPlugin = this.registry?.getByName('python');
       const plugin =
-        registryPlugin ??
-        (await (async () => {
-          const { PythonPlugin } = await import('@/plugins/python/index.js');
-          return new PythonPlugin(await this.selectBackend('python'));
-        })());
+        registryPlugin ?? (await createLanguagePlugin('python', this.parserRuntimeOptions()));
 
       await plugin.initialize({ workspaceRoot });
       if (plugin.metadata?.customEntityTypes) {
@@ -489,11 +466,7 @@ export class ArchJsonProvider {
     if (pluginName === 'java') {
       const registryPlugin = this.registry?.getByName('java');
       const plugin =
-        registryPlugin ??
-        (await (async () => {
-          const { JavaPlugin } = await import('@/plugins/java/index.js');
-          return new JavaPlugin(await this.selectBackend('java'));
-        })());
+        registryPlugin ?? (await createLanguagePlugin('java', this.parserRuntimeOptions()));
 
       await plugin.initialize({ workspaceRoot });
       if (plugin.metadata?.customEntityTypes) {
@@ -510,11 +483,7 @@ export class ArchJsonProvider {
     if (pluginName === 'kotlin') {
       const registryPlugin = this.registry?.getByName('kotlin');
       const plugin =
-        registryPlugin ??
-        (await (async () => {
-          const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
-          return new KotlinPlugin(await this.selectBackend('kotlin'));
-        })());
+        registryPlugin ?? (await createLanguagePlugin('kotlin', this.parserRuntimeOptions()));
 
       await plugin.initialize({ workspaceRoot });
       if (plugin.metadata?.customEntityTypes) {
