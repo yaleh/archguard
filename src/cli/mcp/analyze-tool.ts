@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
 import { StderrReporter } from '../progress/index.js';
+import { ParserInitializationError } from '@/plugins/shared/parser-backend.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 
 export interface AnalyzeToolContext {
@@ -126,6 +127,14 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
           );
         });
       } catch (error) {
+        // TASK-43: map parser initialization failures to a payload that carries
+        // the actionable remediation (env var / trusted module root / policy
+        // relaxation) instead of a raw module-load stack.
+        if (error instanceof ParserInitializationError) {
+          return textResponse(
+            `Analysis failed (parser initialization): ${error.message}\nPrevious query state is unchanged.`
+          );
+        }
         const message = error instanceof Error ? error.message : String(error);
         return textResponse(`Analysis failed: ${message}\nPrevious query state is unchanged.`);
       }

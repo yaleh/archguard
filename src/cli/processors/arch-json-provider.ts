@@ -26,6 +26,7 @@ import { planGoAnalysisScope } from '@/plugins/golang/source-scope.js';
 import { globalEntityTypeRegistry } from '@/core/entity-type-registry.js';
 import {
   hasParserRuntimeEnvOverride,
+  runtimeDiagnosticVisible,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
@@ -111,7 +112,16 @@ export class ArchJsonProvider {
   private parserRuntimeOptions(): SelectParserBackendOptions {
     return {
       policy: hasParserRuntimeEnvOverride() ? undefined : this.globalConfig.parserRuntime,
+      policySource:
+        !hasParserRuntimeEnvOverride() && this.globalConfig.parserRuntime ? 'config' : undefined,
       nativeModuleRoot: this.globalConfig.nativeModuleRoot,
+      // TASK-43: propagate effective-runtime diagnostics to stderr (console.error)
+      // when verbose or on any fallback event — MCP stdout is never touched.
+      onDiagnostic: (line, selection) => {
+        if (runtimeDiagnosticVisible(this.globalConfig.verbose === true, selection)) {
+          console.error(line);
+        }
+      },
     };
   }
 

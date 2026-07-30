@@ -5,7 +5,7 @@
  * simulate missing, broken, ABI-incompatible, and grammar-incompatible native
  * bindings without mutating node_modules.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -510,5 +510,116 @@ describe('resolveParserBackend env reconciliation (legacy global API)', () => {
     process.env.ARCHGUARD_PARSER_RUNTIME = 'auto';
     process.env.ARCHGUARD_PARSER_BACKEND = 'wasm';
     expect((await resolveParserBackend()).runtime).toBe('wasm');
+  });
+});
+
+describe('TASK-43: choice-source metadata, diagnostic format, deprecated-alias warning', () => {
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of ['ARCHGUARD_PARSER_RUNTIME', 'ARCHGUARD_PARSER_BACKEND'] as const) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+    resetParserBackendSelectionCache();
+  });
+
+  afterEach(() => {
+    for (const key of ['ARCHGUARD_PARSER_RUNTIME', 'ARCHGUARD_PARSER_BACKEND'] as const) {
+      if (savedEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = savedEnv[key];
+    }
+    resetParserBackendSelectionCache();
+    vi.restoreAllMocks();
+  });
+
+  it('labels source=default when neither env nor explicit policy is set', async () => {
+    const selection = await selectParserBackendFor('go', {
+      policy: undefined,
+      nativeLoaders: healthyLoaders(),
+    });
+    expect(selection.source).toBe('default');
+    expect(selection.diagnostic).toContain('source=default');
+  });
+
+  it('labels source=explicit for a caller-supplied policy', async () => {
+    const selection = await selectParserBackendFor('java', {
+      policy: 'wasm',
+      nativeLoaders: healthyLoaders(),
+    });
+    expect(selection.source).toBe('explicit');
+    expect(selection.diagnostic).toContain('source=explicit');
+  });
+
+  it('labels source=config when the caller annotates a config-derived policy', async () => {
+    const selection = await selectParserBackendFor('python', {
+      policy: 'wasm',
+      policySource: 'config',
+      nativeLoaders: healthyLoaders(),
+    });
+    expect(selection.source).toBe('config');
+    expect(selection.diagnostic).toContain('source=config');
+  });
+
+  it('labels source=env when ARCHGUARD_PARSER_RUNTIME drives the policy', async () => {
+    process.env.ARCHGUARD_PARSER_RUNTIME = 'wasm';
+    const selection = await selectParserBackendFor('cpp', { nativeLoaders: healthyLoaders() });
+    expect(selection.source).toBe('env');
+    expect(selection.diagnostic).toContain('source=env');
+  });
+
+  it('diagnostic carries language, backend, source, and fallback reason on auto fallback', async () => {
+    const selection = await selectParserBackendFor('kotlin', {
+      nativeLoaders: {
+        loadRuntime: () => {
+          throw new Error('no native here');
+        },
+        loadGrammar: () => ({}),
+      },
+    });
+    expect(selection.diagnostic).toContain('kotlin');
+    expect(selection.diagnostic).toContain('-> wasm');
+    expect(selection.diagnostic).toContain('source=default');
+    expect(selection.diagnostic).toContain('native probe failed: cannot load native tree-sitter runtime');
+    expect(selection.diagnostic).toContain('no native here');
+  });
+
+  it('runtimeDiagnosticVisible: verbose OR fallback, never silent otherwise', async () => {
+    const { runtimeDiagnosticVisible } = await import(
+      '../../../../src/plugins/shared/parser-runtime.js'
+    );
+    expect(runtimeDiagnosticVisible(false, {})).toBe(false);
+    expect(runtimeDiagnosticVisible(true, {})).toBe(true);
+    expect(runtimeDiagnosticVisible(false, { fallbackReason: 'x' })).toBe(true);
+    expect(runtimeDiagnosticVisible(true, { fallbackReason: 'x' })).toBe(true);
+  });
+
+  it('warns exactly once per process when the deprecated ARCHGUARD_PARSER_BACKEND alias is used', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'wasm' })).toBe('wasm');
+    expect(readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'native' })).toBe('native');
+    const warnings = spy.mock.calls.filter((args) =>
+      String(args[0]).includes('ARCHGUARD_PARSER_BACKEND') && String(args[0]).includes('deprecated')
+    );
+    expect(warnings).toHaveLength(1);
+    expect(String(warnings[0][0])).toContain('ARCHGUARD_PARSER_RUNTIME');
+  });
+
+  it('does not warn about the alias when the canonical variable is set (canonical wins silently)', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(
+      readParserRuntimePolicy({ ARCHGUARD_PARSER_RUNTIME: 'wasm', ARCHGUARD_PARSER_BACKEND: 'native' })
+    ).toBe('wasm');
+    const warnings = spy.mock.calls.filter((args) => String(args[0]).includes('deprecated'));
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('the once-only alias warning re-arms after resetParserBackendSelectionCache (test hook)', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'wasm' });
+    resetParserBackendSelectionCache();
+    readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'wasm' });
+    const warnings = spy.mock.calls.filter((args) => String(args[0]).includes('deprecated'));
+    expect(warnings).toHaveLength(2);
   });
 });

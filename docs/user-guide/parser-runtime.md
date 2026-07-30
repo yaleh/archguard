@@ -41,8 +41,14 @@ The same policy can be set on a programmatically constructed config object via
 TASK-38 introduced `ARCHGUARD_PARSER_BACKEND=native|wasm` for forced-WASM test
 runs. It is kept as a **deprecated alias**: when `ARCHGUARD_PARSER_RUNTIME` is
 unset it maps to the `native`/`wasm` policies, and it is ignored when the
-canonical variable is set. New automation should use
-`ARCHGUARD_PARSER_RUNTIME`.
+canonical variable is set. When the alias is consumed, ArchGuard prints a
+stderr warning exactly once per process:
+
+```text
+[parser-runtime] WARNING: ARCHGUARD_PARSER_BACKEND is deprecated and will be removed in a future release; use the canonical ARCHGUARD_PARSER_RUNTIME (auto|native|wasm) instead.
+```
+
+New automation should use `ARCHGUARD_PARSER_RUNTIME`.
 
 ## Native module discovery
 
@@ -131,13 +137,20 @@ platform-package installation policy, tracked separately by TASK-31.
 - If the selected backend cannot initialize, the error is an explicit,
   language-specific `ParserInitializationError` — a failed Go/Java/Python/
   C++/Kotlin initialization is never silently analyzed as TypeScript.
-- Diagnostics: every selection emits one line
-  (`[parser-runtime] <language>: policy=<policy> -> <runtime>` plus the
-  fallback reason when native was rejected). With `--verbose`, CLI analysis
-  forwards these through the progress reporter (stderr in MCP mode, so MCP
-  stdout stays clean); programmatic consumers can read
-  `getParserRuntimeDiagnostics()` from
-  `src/plugins/shared/parser-runtime.ts`.
+- Diagnostics (TASK-43): every selection emits one line —
+  `[parser-runtime] <language>: policy=<policy> source=<default|env|config|explicit> -> <runtime>`
+  plus `(native probe failed: <reason>)` when native was rejected. The line is
+  surfaced in `--verbose` mode AND on any fallback event even non-verbose, so
+  "did my fallback work?" never requires guesswork. CLI/MCP analysis routes it
+  through the progress reporter (stderr in MCP mode, so MCP protocol stdout
+  stays clean); programmatic consumers can read `getParserRuntimeDiagnostics()`
+  from `src/plugins/shared/parser-runtime.ts`. Examples:
+
+  ```text
+  [parser-runtime] go: policy=auto source=default -> native
+  [parser-runtime] java: policy=auto source=env -> wasm (native probe failed: cannot load native tree-sitter runtime ("tree-sitter"): Cannot find module 'tree-sitter')
+  [parser-runtime] cpp: policy=wasm source=config -> wasm
+  ```
 
 ## API
 
@@ -152,6 +165,7 @@ const selection = await selectParserBackendFor('go'); // honors env policy
 selection.runtime;         // 'native' | 'wasm'
 selection.backend;         // ParserBackend — inject into GoPlugin etc.
 selection.fallbackReason;  // why native was rejected (auto mode only)
+selection.source;          // 'default' | 'env' | 'config' | 'explicit' — where the effective policy came from
 ```
 
 Language plugins accept the selected backend via constructor injection, e.g.
