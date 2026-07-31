@@ -78,6 +78,33 @@ afterAll(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
 });
 
+// Module-level real-codex and global-install detection so both boundary
+// describe blocks (CLI + exec) can reference them. Evaluated at load time.
+const realCodexAvailable = (() => {
+  try {
+    execFileSync('codex', ['--version'], { stdio: 'pipe', timeout: 30_000 });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+const globalEntry = (() => {
+  try {
+    const root = execFileSync('npm', ['root', '-g'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    }).trim();
+    const entry = path.join(root, CORE_PACKAGE, CLI_SUBPATH);
+    return existsSync(entry) ? entry : null;
+  } catch {
+    return null;
+  }
+})();
+
+// OpenAI credentials detection: OPENAI_API_KEY env only, never logged/printed.
+const openAiCreds = !!process.env.OPENAI_API_KEY;
+
 const UNRELATED_CONFIG = `model = "gpt-5-codex"
 approval_policy = "never"
 
@@ -673,28 +700,6 @@ describe('installer static invariants', () => {
 // ---------------------------------------------------------------------------
 
 describe('real codex CLI boundary (isolated config)', () => {
-  const realCodexAvailable = (() => {
-    try {
-      execFileSync('codex', ['--version'], { stdio: 'pipe', timeout: 30_000 });
-      return true;
-    } catch {
-      return false;
-    }
-  })();
-
-  const globalEntry = (() => {
-    try {
-      const root = execFileSync('npm', ['root', '-g'], {
-        encoding: 'utf8',
-        timeout: 30_000,
-      }).trim();
-      const entry = path.join(root, CORE_PACKAGE, CLI_SUBPATH);
-      return existsSync(entry) ? entry : null;
-    } catch {
-      return null;
-    }
-  })();
-
   it.skipIf(!realCodexAvailable || !globalEntry)(
     'registers a valid user-scope entry that real codex lists and the real server serves',
     async () => {
@@ -764,6 +769,95 @@ describe('real codex CLI boundary (isolated config)', () => {
       expect(analysis.entityCount).toBeGreaterThanOrEqual(3);
     },
     240_000
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Real codex exec LLM-driven tool-call boundary (isolated config). This is
+// the honest remaining gap from TASK-36 AC6: the MCP connection layer is real,
+// but an LLM-driven tool call inside a codex agent session requires OpenAI
+// credentials (OPENAI_API_KEY). When absent the test skips cleanly with a
+// documented reason — no mock credentials, no simulated LLM leg.
+// ---------------------------------------------------------------------------
+
+describe('real codex exec LLM-driven tool-call boundary (isolated config)', () => {
+  it.skipIf(!realCodexAvailable || !globalEntry || !openAiCreds)(
+    'codex exec calls archguard_summary via the LLM on the configured server',
+    async () => {
+      // 1. Isolated CODEX_HOME / HOME.
+      const root = makeTempDir('archguard-codex-exec-');
+      const home = path.join(root, 'home');
+      const codexHome = path.join(root, 'codex-home');
+      mkdirSync(home, { recursive: true });
+      mkdirSync(codexHome, { recursive: true });
+
+      // 2. Installer writes the archguard MCP entry.
+      const npmRoot = path.dirname(path.dirname(path.dirname(globalEntry!)));
+      const result = await runInstallerReal({
+        home,
+        codexHome,
+        npmRoot,
+        args: ['--parser-runtime', 'wasm'],
+      });
+      expect(result.code, result.stderr).toBe(0);
+
+      // 3. Create a tiny TypeScript fixture the LLM can analyze.
+      const fixtureDir = makeTempDir('archguard-codex-exec-fixture-');
+      mkdirSync(path.join(fixtureDir, 'src'), { recursive: true });
+      writeFileSync(
+        path.join(fixtureDir, 'src', 'greeter.ts'),
+        'export interface Greeter { greet(): string }\n' +
+          'export class HelloGreeter implements Greeter { greet() { return "hello"; } }\n' +
+          'export class GoodbyeGreeter implements Greeter { greet() { return "goodbye"; } }\n'
+      );
+
+      // 4. Run codex exec with a prompt that forces an archguard tool call.
+      // Use --no-approval to avoid interactive prompts; redirect stdout to
+      // capture the full session transcript.
+      const prompt =
+        `Use ONLY the archguard_summary tool to analyze the TypeScript project at ` +
+        `${fixtureDir}. Report the entity count and the language. Do NOT use any ` +
+        `other tools.`;
+
+      let stdout = '';
+      let stderr = '';
+      let code = 0;
+      try {
+        const out = await execFileAsync(
+          'codex',
+          ['exec', '--no-approval', prompt],
+          {
+            env: { ...process.env, HOME: home, CODEX_HOME: codexHome },
+            timeout: 300_000,
+            maxBuffer: 2 * 1024 * 1024,
+            encoding: 'utf8',
+          }
+        );
+        stdout = out.stdout;
+        stderr = out.stderr;
+      } catch (error) {
+        const err = error as { code?: number; stdout?: string; stderr?: string };
+        code = err.code ?? 1;
+        stdout = String(err.stdout ?? '');
+        stderr = String(err.stderr ?? '');
+      }
+
+      // 5. Assert the tool call appeared in the session output.
+      // When the LLM calls archguard_summary, the response includes
+      // entity/relation counts and the detected language.
+      const combined = stdout + '\n' + stderr;
+      expect(code, `codex exec failed (exit ${code}):\n${combined}`).toBe(0);
+
+      // The archguard_summary tool was called: look for the analysis result
+      // (entityCount and language are always present in a summary response).
+      expect(
+        combined,
+        `expected archguard_summary tool call evidence in output:\n${combined}`
+      ).toMatch(/archguard_summary/);
+      expect(combined).toMatch(/entityCount/);
+      expect(combined).toMatch(/language/);
+    },
+    600_000 // generous timeout: LLM inference + MCP handshake + analysis
   );
 });
 
