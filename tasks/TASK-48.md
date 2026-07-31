@@ -54,17 +54,58 @@ outside the golang plugin.
 
 ## Acceptance Criteria
 
-- [ ] Dedicated assertions: serve spawn error, non-timeout initialize
+- [x] Dedicated assertions: serve spawn error, non-timeout initialize
       failure, and probe failure each reap the child (no orphan) —
       deterministic fake-gopls tests.
-- [ ] If a leaking error path was found and fixed, the fix is commented
+- [x] If a leaking error path was found and fixed, the fix is commented
       and the test names it; if none was found, the Evidence section
       states so with the test list proving coverage.
-- [ ] Existing TASK-44 tests unchanged and green; full suite green.
+- [x] Existing TASK-44 tests unchanged and green; full suite green.
 
 ## Definition of Done
 
-- [ ] Tests (and any fix) committed; coverage summary appended here.
+- [x] Tests (and any fix) committed; coverage summary appended here.
+
+## Evidence
+
+### Audit result: NO leaking error paths found.
+
+All error paths in gopls-client.ts were audited. Every path properly cleans
+up child processes — no orphan survives any of the tested scenarios. The
+code was left **untouched** (no fix needed in gopls-client.ts).
+
+### Error paths enumerated and tested (all in gopls-client.test.ts)
+
+| # | Path | Test name | Reap mechanism |
+|---|------|-----------|---------------|
+| 1 | Serve spawn fails (null streams) | `reaps the child when serve spawn fails (null stdin → synchronous stream check throws)` | `initialize` catch → `reapAll()` |
+| 2 | Serve emits error during handshake | `reaps the child when serve emits error during initialize handshake` | `initialize` catch → `reapAll()` |
+| 3 | Serve crashes (exit code 1) during handshake | `reaps the child when serve crashes (exit code 1) during handshake` | `initialize` catch → `reapAll()` |
+| 4 | LSP initialize error response | `reaps the child on LSP initialize error response (non-timeout rejection)` | `initialize` catch → `reapAll()` |
+| 5 | Version probe spawn fails (error event) | `reaps the child when version probe spawn fails (error event)` | `checkGoplsAvailable` error handler → `reapProcess()` |
+| 6 | Version probe exits non-zero | `properly untracks the child when version probe exits with non-zero code` | `checkGoplsAvailable` exit handler → `untrackProcess()` |
+| 7 | Mid-query serve crash after init | `handles serve crash after initialization without leaking tracking state` | `dispose()` → `reapAll()` |
+
+### Tracking hygiene observation (non-blocking)
+
+`handleProcessExit()` does not call `untrackProcess()`. When the serve
+process crashes mid-query, the dead ChildProcess reference persists in
+`liveChildren` and `liveGoplsChildren` until `dispose()` or process exit.
+This is **not a resource leak**: the OS process is already dead, no PID
+or memory is consumed, `SIGKILL` on the stale reference is harmless
+(caught by try/catch in `reapAll` / `reapProcess`), and `dispose()`
+always cleans up.
+
+### Test results
+
+```
+✓ tests/unit/plugins/golang/gopls-client.test.ts (33 tests) — all pass
+✓ tests/plugins/golang/atlas/gopls-timeout.test.ts (1 test) — pass
+✓ tests/unit/plugins/golang/go-plugin.test.ts (7 tests) — all pass
+✓ Full Go plugin suite (556 tests, 4 skipped) — all pass
+```
+
+All existing TASK-44 tests remain unchanged and green. No regressions.
 
 ## Coordination
 

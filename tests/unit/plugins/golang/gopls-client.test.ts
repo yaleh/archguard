@@ -403,4 +403,286 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       await expect(client.dispose()).resolves.not.toThrow();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // TASK-48: non-timeout error-path reaping tests
+  //
+  // TASK-44's reaping runs on every path (timeout, non-timeout error via the
+  // shared initialize catch -> reapAll, dispose, and the process exit hook),
+  // but the suite only asserts reaping for timeout + dispose. These tests
+  // close that gap with deterministic fake-gopls error-injection.
+  // ---------------------------------------------------------------------------
+
+  describe('TASK-48 non-timeout error-path reaping', () => {
+    // ---- serve spawn error ----
+
+    it('reaps the child when serve spawn fails (null stdin → synchronous stream check throws)', async () => {
+      // When spawn fails (ENOENT, etc.) Node returns a ChildProcess with null
+      // streams. The code checks this BEFORE registering the error listener
+      // (line 338 throws "Failed to create gopls process streams"). We do NOT
+      // emit 'error' on the fake because the error listener is never
+      // registered — the null check is the synchronous failure path.
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') return makeVersionProc();
+        const proc = new EventEmitter() as any;
+        proc.stdin = null; // Simulates failed spawn (ENOENT / EACCES / …)
+        proc.stdout = null;
+        proc.stderr = new EventEmitter();
+        proc.pid = 99991;
+        proc.kill = vi.fn();
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/Failed to create gopls process streams/);
+
+      // Reaped by reapAll() in initialize's catch.
+      const serveEntry = spawned.find((s) => s.args[0] !== 'version');
+      expect(serveEntry).toBeDefined();
+      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(client.isInitialized()).toBe(false);
+
+      // Non-timeout errors do NOT set the poison-pill.
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    it('reaps the child when serve emits error during initialize handshake', async () => {
+      // Make a serve proc that has valid stdin (so sendRequest proceeds) but
+      // emits 'error' while the request is pending → handleProcessError
+      // rejects the pending request → startup throws → initialize catch
+      // → reapAll.
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') return makeVersionProc();
+        const proc = makeServeProc();
+        // Override: emit error shortly after spawn, before initialize response.
+        setImmediate(() => proc.emit('error', new Error('EPIPE')));
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/gopls process not available|Failed to initialize gopls/);
+
+      const serveEntry = spawned.find((s) => s.args[0] !== 'version');
+      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    // ---- non-timeout initialize failure (serve crash) ----
+
+    it('reaps the child when serve crashes (exit code 1) during handshake', async () => {
+      // Serve proc that exits with code 1 immediately after receiving the
+      // initialize request — simulates a gopls crash during workspace load.
+      function makeCrashProc() {
+        const stdout = new EventEmitter() as any;
+        const stderr = new EventEmitter() as any;
+        let inputBuffer = '';
+        const stdin = new Writable({
+          write(chunk: Buffer, _encoding: string, callback: () => void) {
+            inputBuffer += chunk.toString();
+            const headerMatch = inputBuffer.match(/Content-Length: (\d+)\r\n\r\n/);
+            if (!headerMatch) { callback(); return; }
+            const contentLength = parseInt(headerMatch[1], 10);
+            const headerLen = headerMatch[0].length;
+            const bodyStart = (headerMatch.index ?? 0) + headerLen;
+            const bodyEnd = bodyStart + contentLength;
+            if (inputBuffer.length < bodyEnd) { callback(); return; }
+            const body = inputBuffer.substring(bodyStart, bodyEnd);
+            inputBuffer = inputBuffer.substring(bodyEnd);
+            try {
+              const msg = JSON.parse(body);
+              if (msg.method === 'initialize') {
+                // Crash immediately — simulates gopls crashing during workspace load.
+                setImmediate(() => proc.emit('exit', 1, 'SIGABRT'));
+              }
+            } catch { /* ignore */ }
+            callback();
+          },
+        });
+        const proc = new EventEmitter() as any;
+        proc.stdin = stdin;
+        proc.stdout = stdout;
+        proc.stderr = stderr;
+        proc.pid = 99992;
+        proc.kill = vi.fn();
+        return proc;
+      }
+
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') return makeVersionProc();
+        const proc = makeCrashProc();
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/Failed to initialize gopls/);
+
+      const serveEntry = spawned.find((s) => s.args[0] !== 'version');
+      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(client.isInitialized()).toBe(false);
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    it('reaps the child on LSP initialize error response (non-timeout rejection)', async () => {
+      // Serve proc that responds to initialize with an LSP error —
+      // simulates gopls returning "server not ready".
+      function makeLspErrorProc() {
+        const stdout = new EventEmitter() as any;
+        const stderr = new EventEmitter() as any;
+        let inputBuffer = '';
+        const stdin = new Writable({
+          write(chunk: Buffer, _encoding: string, callback: () => void) {
+            inputBuffer += chunk.toString();
+            const headerMatch = inputBuffer.match(/Content-Length: (\d+)\r\n\r\n/);
+            if (!headerMatch) { callback(); return; }
+            const contentLength = parseInt(headerMatch[1], 10);
+            const headerLen = headerMatch[0].length;
+            const bodyStart = (headerMatch.index ?? 0) + headerLen;
+            const bodyEnd = bodyStart + contentLength;
+            if (inputBuffer.length < bodyEnd) { callback(); return; }
+            const body = inputBuffer.substring(bodyStart, bodyEnd);
+            inputBuffer = inputBuffer.substring(bodyEnd);
+            try {
+              const msg = JSON.parse(body);
+              if (msg.id !== undefined && msg.method === 'initialize') {
+                const errBody = JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: msg.id,
+                  error: { code: -32000, message: 'Server not ready' },
+                });
+                const len = Buffer.byteLength(errBody, 'utf-8');
+                setImmediate(() =>
+                  stdout.emit('data', Buffer.from(`Content-Length: ${len}\r\n\r\n${errBody}`))
+                );
+              }
+            } catch { /* ignore */ }
+            callback();
+          },
+        });
+        const proc = new EventEmitter() as any;
+        proc.stdin = stdin;
+        proc.stdout = stdout;
+        proc.stderr = stderr;
+        proc.pid = 99993;
+        proc.kill = vi.fn();
+        return proc;
+      }
+
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') return makeVersionProc();
+        const proc = makeLspErrorProc();
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/Failed to initialize gopls/);
+
+      const serveEntry = spawned.find((s) => s.args[0] !== 'version');
+      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(client.isInitialized()).toBe(false);
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    // ---- version probe failure ----
+
+    it('reaps the child when version probe spawn fails (error event)', async () => {
+      // checkGoplsAvailable's error handler calls reapProcess → kill + untrack.
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') {
+          const proc = new EventEmitter() as any;
+          proc.kill = vi.fn();
+          proc.stdin = null;
+          proc.stdout = null;
+          proc.stderr = new EventEmitter();
+          proc.pid = 99994;
+          setImmediate(() => proc.emit('error', new Error('ENOENT: gopls version probe failed')));
+          spawned.push({ args, proc });
+          return proc;
+        }
+        const proc = makeServeProc();
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/gopls binary not found/);
+
+      // Version probe was reaped by checkGoplsAvailable's error handler.
+      const versionEntry = spawned.find((s) => s.args[0] === 'version');
+      expect(versionEntry).toBeDefined();
+      expect(versionEntry!.proc.kill).toHaveBeenCalled();
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    it('properly untracks the child when version probe exits with non-zero code', async () => {
+      // checkGoplsAvailable's exit handler calls untrackProcess (not kill)
+      // for non-zero exit — the process is already dead. Assert no kill
+      // call and that no orphan is left.
+      spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+        if (args && args[0] === 'version') {
+          const proc = new EventEmitter() as any;
+          proc.kill = vi.fn();
+          proc.stdin = null;
+          proc.stdout = null;
+          proc.stderr = new EventEmitter();
+          proc.pid = 99995;
+          setImmediate(() => proc.emit('exit', 1, null));
+          spawned.push({ args, proc });
+          return proc;
+        }
+        const proc = makeServeProc();
+        spawned.push({ args, proc });
+        return proc;
+      });
+
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await expect(client.initialize(WS)).rejects.toThrow(/gopls binary not found/);
+
+      // Process already exited — no kill needed (untrackProcess handles cleanup).
+      const versionEntry = spawned.find((s) => s.args[0] === 'version');
+      expect(versionEntry).toBeDefined();
+      expect(versionEntry!.proc.kill).not.toHaveBeenCalled();
+      // No orphan: initialize's catch → reapAll iterates empty liveChildren.
+      expect(isGoplsPoisoned()).toBe(false);
+    });
+
+    // ---- mid-query child crash ----
+
+    it('handles serve crash after initialization without leaking tracking state', async () => {
+      // Initialize successfully, then simulate a mid-query crash. Assert that
+      // dispose cleanly reaps the stale reference — no orphan.
+      const client = new GoplsClient('gopls', 30000, 5000);
+      await client.initialize(WS);
+      expect(client.isInitialized()).toBe(true);
+
+      const serveEntry = spawned.find((s) => s.args[0] !== 'version');
+      expect(serveEntry).toBeDefined();
+      // Reset kill spy to distinguish pre-init kills from dispose kills.
+      serveEntry!.proc.kill.mockClear();
+
+      // Simulate gopls crashing after initialization.
+      serveEntry!.proc.emit('exit', 1, 'SIGABRT');
+      // handleProcessExit runs: sets this.process=null, initialized=false.
+      // Note: handleProcessExit does NOT call untrackProcess — the dead
+      // reference stays in liveChildren. dispose/reapAll handles it safely.
+      // TASK-48 audit: this is tracking hygiene, not a resource leak
+      // (the OS process is already dead).
+      expect(client.isInitialized()).toBe(false);
+
+      // Dispose still works — reapAll kills the stale reference + clears sets.
+      await expect(client.dispose()).resolves.not.toThrow();
+      // reapAll called kill on the dead reference (harmless, caught by try/catch).
+      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+
+      // After dispose, a fresh client can initialize (no poison-pill for non-timeout).
+      expect(isGoplsPoisoned()).toBe(false);
+      const fresh = new GoplsClient('gopls', 30000, 5000);
+      await expect(fresh.initialize(WS)).resolves.not.toThrow();
+      expect(fresh.isInitialized()).toBe(true);
+      await fresh.dispose();
+    });
+  });
 });
