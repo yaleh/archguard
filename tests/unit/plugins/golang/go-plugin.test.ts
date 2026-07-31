@@ -261,66 +261,61 @@ describe('GoPlugin (TASK-44 end-to-end degradation)', () => {
     await plugin.dispose();
   }, 20000);
 
-  // TASK-47: resolved config (languageSpecific) reaches GoplsClient
-  it('passes atlas.goplsTimeoutMs from resolved config (languageSpecific) to GoplsClient', async () => {
+  // ── TASK-47: resolved config (PluginInitConfig.goplsTimeoutMs) ────────
+
+  it('programmatic goplsTimeoutMs in PluginInitConfig reaches GoplsClient', async () => {
     delete process.env.ARCHGUARD_GOPLS_TIMEOUT_MS;
     spawnMock.mockImplementation((_cmd: string, args: string[]) =>
       args && args[0] === 'version' ? makeVersionProc() : makeServeProc({ hang: true })
     );
 
-    // Ensure cwd has NO config file — the budget comes purely from languageSpecific.
     const plugin = new GoPlugin(nativeParserBackend);
+    // Pass goplsTimeoutMs via PluginInitConfig — simulates the resolved
+    // config flowing through from a custom --config file.
     const start = Date.now();
-    await plugin.initialize({
-      workspaceRoot: tmpDir,
-      languageSpecific: { atlas: { goplsTimeoutMs: 200 } },
-    });
+    await plugin.initialize({ workspaceRoot: tmpDir, goplsTimeoutMs: 250 });
     const result = await plugin.parseProject(tmpDir, {
       workspaceRoot: tmpDir,
       excludePatterns: [],
     });
     const elapsed = Date.now() - start;
 
-    // Bounded by the resolved-config budget, not the 120s default.
+    // Bounded by the programmatic budget, not the 120s default.
     expect(elapsed).toBeLessThan(15000);
     expect(result.metadata?.goGoplsDegraded).toBe(true);
-    // Mechanical proof the config value reached GoplsClient: the budget in
-    // the timeout message is exactly the languageSpecific value.
-    expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 200ms/);
+    // Mechanical proof: the budget in the error message matches exactly.
+    expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 250ms/);
     expect(result.entities.map((e) => e.name)).toContain('Service');
 
     await plugin.dispose();
   }, 20000);
 
-  it('env override still wins over resolved config (languageSpecific)', async () => {
-    process.env.ARCHGUARD_GOPLS_TIMEOUT_MS = '150';
+  it('env override wins over programmatic PluginInitConfig.goplsTimeoutMs', async () => {
+    process.env.ARCHGUARD_GOPLS_TIMEOUT_MS = '100';
     spawnMock.mockImplementation((_cmd: string, args: string[]) =>
       args && args[0] === 'version' ? makeVersionProc() : makeServeProc({ hang: true })
     );
 
     const plugin = new GoPlugin(nativeParserBackend);
-    await plugin.initialize({
-      workspaceRoot: tmpDir,
-      languageSpecific: { atlas: { goplsTimeoutMs: 8000 } },
-    });
+    // env=100 beats programmatic=5000
+    await plugin.initialize({ workspaceRoot: tmpDir, goplsTimeoutMs: 5000 });
     const result = await plugin.parseProject(tmpDir, {
       workspaceRoot: tmpDir,
       excludePatterns: [],
     });
 
     expect(result.metadata?.goGoplsDegraded).toBe(true);
-    // 150ms (env), NOT 8000ms (resolved config): env takes precedence.
-    expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 150ms/);
+    expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 100ms/);
 
     await plugin.dispose();
   }, 20000);
 
-  it('falls back to cwd-file when resolved config is absent (backward compat)', async () => {
-    // No env override, no languageSpecific — should read from cwd config file.
+  it('cwd config file is still honoured when PluginInitConfig.goplsTimeoutMs is absent', async () => {
     delete process.env.ARCHGUARD_GOPLS_TIMEOUT_MS;
+    // Place a config file in tmpDir so the cwd-based fallback finds it.
     await writeFile(
       path.join(tmpDir, 'archguard.config.json'),
-      JSON.stringify({ atlas: { goplsTimeoutMs: 200 } })
+      JSON.stringify({ atlas: { goplsTimeoutMs: 300 } })
     );
     spawnMock.mockImplementation((_cmd: string, args: string[]) =>
       args && args[0] === 'version' ? makeVersionProc() : makeServeProc({ hang: true })
@@ -330,7 +325,7 @@ describe('GoPlugin (TASK-44 end-to-end degradation)', () => {
     process.chdir(tmpDir);
     try {
       const plugin = new GoPlugin(nativeParserBackend);
-      // initialize WITHOUT languageSpecific → should fall back to cwd-file read.
+      // NO goplsTimeoutMs in PluginInitConfig — falls back to cwd-based config file.
       await plugin.initialize({ workspaceRoot: tmpDir });
       const result = await plugin.parseProject(tmpDir, {
         workspaceRoot: tmpDir,
@@ -338,7 +333,7 @@ describe('GoPlugin (TASK-44 end-to-end degradation)', () => {
       });
 
       expect(result.metadata?.goGoplsDegraded).toBe(true);
-      expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 200ms/);
+      expect(String(result.metadata?.goGoplsDegradedReason)).toMatch(/budget of 300ms/);
 
       await plugin.dispose();
     } finally {

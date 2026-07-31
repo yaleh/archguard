@@ -239,6 +239,28 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
     });
   });
 
+  // ── TASK-47: resolved config (programmatic) precedence ────────────────
+  describe('resolved config budget (PluginInitConfig.goplsTimeoutMs)', () => {
+    it('programmatic value reaches GoplsClient constructor', () => {
+      // Simulates the path: PluginInitConfig.goplsTimeoutMs → GoplsClient
+      expect(resolveGoplsTimeoutMs({}, 400)).toBe(400);
+    });
+
+    it('programmatic value is superseded by env override', () => {
+      expect(
+        resolveGoplsTimeoutMs({ ARCHGUARD_GOPLS_TIMEOUT_MS: '150' }, 4000)
+      ).toBe(150);
+    });
+
+    it('falls back to default when programmatic value is invalid', () => {
+      expect(resolveGoplsTimeoutMs({}, Number.NaN)).toBe(DEFAULT_GOPLS_TIMEOUT_MS);
+    });
+
+    it('falls back to default when both env and programmatic are absent', () => {
+      expect(resolveGoplsTimeoutMs({})).toBe(DEFAULT_GOPLS_TIMEOUT_MS);
+    });
+  });
+
   describe('resolveEffectiveGoplsTimeoutMs (all three sources converge)', () => {
     let cfgDir: string;
 

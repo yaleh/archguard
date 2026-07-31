@@ -42,6 +42,20 @@ import type { ArchJsonProviderOptions, ArchJsonGetOptions } from './arch-json-pr
 import { hashSources, deriveSubModuleArchJSON } from './arch-json-utils.js';
 
 /**
+ * Extract `atlas.goplsTimeoutMs` from a DiagramConfig's languageSpecific bag.
+ * Returns undefined when absent, non-numeric, or non-positive — callers then fall
+ * through the standard precedence chain.
+ */
+function resolveGoplsTimeoutFromDiagram(diagram: DiagramConfig): number | undefined {
+  const atlas = diagram.languageSpecific?.['atlas'] as Record<string, unknown> | undefined;
+  const value = atlas?.goplsTimeoutMs;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  return Math.floor(value);
+}
+
+/**
  * ArchJsonProvider - handles all ArchJSON acquisition logic.
  *
  * Responsible for:
@@ -436,10 +450,9 @@ export class ArchJsonProvider {
     const plugin =
       registryPlugin ?? (await createLanguagePlugin('go', this.parserRuntimeOptions()));
 
-    await plugin.initialize({
-      workspaceRoot,
-      languageSpecific: diagram.languageSpecific,
-    });
+    const goplsTimeoutMs = resolveGoplsTimeoutFromDiagram(diagram);
+
+    await plugin.initialize({ workspaceRoot, goplsTimeoutMs });
     if (plugin.metadata?.customEntityTypes) {
       for (const decl of plugin.metadata.customEntityTypes) {
         globalEntityTypeRegistry.register(decl);

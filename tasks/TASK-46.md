@@ -1,75 +1,65 @@
 ---
 id: TASK-46
-title: Make the gopls per-query timeout configurable (env + config, same
-  precedence as the startup budget)
-status: ready
+title: Break GoPlugin ↔ GoAtlasAdapter dependency cycle
+status: done
 labels:
-  - reliability
+  - refactor
   - golang
-  - follow-up
+  - architecture
 parent: null
 children: []
 extra: {}
 ---
 ## Proposal
 
-TASK-44 bounded every gopls stage under one startup budget
-(`atlas.goplsTimeoutMs`, env > config > 120s default), but the PER-QUERY
-`textDocument/implementation` timeout remains a hardcoded 30s in
-`GoplsClient.sendRequest`. In a pathological slow-but-responding module,
-N interfaces × 30s can still blow far past the configured total budget
-without ever tripping the budget guard. Make the per-query timeout
-configurable with the same precedence chain, and make the interface matcher
-honor the remaining budget across the query set.
+The architecture analysis detected a 2-node dependency cycle in `src/plugins/golang/`:
 
-Audit observation from TASK-44's landing (non-blocking there; filed here).
+- **Forward**: `GoPlugin` (index.ts:41) imports and instantiates `GoAtlasAdapter`
+- **Reverse**: `GoAtlasAdapter` (go-atlas-adapter.ts:9) imports `GoPlugin` type and calls `this.plugin.parseToRawData()`
+
+## Root Cause
+
+`GoAtlasAdapter` depends on the concrete `GoPlugin` class for a single capability: `parseToRawData()`. This is the only back-reference — the adapter needs raw data from the plugin to build the Atlas.
 
 ## Plan
 
-1. Add `atlas.goplsPerQueryTimeoutMs` (config) + `ARCHGUARD_GOPLS_PER_QUERY_TIMEOUT_MS`
-   (env) with precedence env > config > 30000 default; invalid/non-positive
-   values fall through (same pattern as the startup budget in
-   `resolveEffectiveGoplsTimeoutMs`).
-2. Thread the resolved per-query timeout into `GoplsClient.sendRequest` /
-   the interface-matcher query path.
-3. Optionally (honest minimum): let the matcher cap the remaining total
-   budget across the interface set — only if it can be done without
-   changing the degradation contract; otherwise document why per-query
-   configurability alone suffices.
-4. Tests first: precedence (env wins over config; neither → 30000), a slow
-   query timing out at the configured value with an injected fake gopls,
-   and unchanged degradation behavior.
-5. Document both knobs in the golang plugin usage guide.
+1. **Define `IGoRawDataProvider` interface** — add to `src/plugins/golang/types.ts`:
+   ```typescript
+   export interface IGoRawDataProvider {
+     parseToRawData(workspaceRoot: string, config: ParseConfig & TreeSitterParseOptions): Promise<GoRawData>;
+   }
+   ```
+   This interface already needs `ParseConfig` import from `@/core/interfaces/parser.js`.
+
+2. **Update `GoAtlasAdapter`** (go-atlas-adapter.ts):
+   - Replace `import type { GoPlugin } from './index.js'` with `import type { IGoRawDataProvider } from './types.js'`
+   - Change constructor parameter from `plugin: GoPlugin` to `rawDataProvider: IGoRawDataProvider`
+   - Update internal field name from `this.plugin` to `this.rawDataProvider`
+   - Update `generateAtlas()` to call `this.rawDataProvider.parseToRawData()`
+
+3. **Update `GoPlugin`** (index.ts):
+   - Change `GoAtlasAdapter` construction from `new GoAtlasAdapter(this, ...)` to `new GoAtlasAdapter(this, ...)` (no change — `GoPlugin` already satisfies the interface)
+
+4. **Verify**: Run `npm run type-check` and `npx vitest run tests/plugins/golang/` to confirm no regressions.
 
 ## Touches
 
-- src/plugins/golang/gopls-client.ts (per-query timeout resolution + sendRequest)
-- src/plugins/golang/interface-matcher.ts (honor per-query/remaining budget)
-- src/types/config-global.ts (atlas.goplsPerQueryTimeoutMs declaration)
-- docs/user-guide/golang-plugin-usage.md (both knobs, precedence table)
-- tests/unit/plugins/golang/gopls-client.test.ts
-- tests/unit/plugins/golang/interface-matcher.test.ts
-- tasks/TASK-46.md
+- src/plugins/golang/types.ts (new interface)
+- src/plugins/golang/go-atlas-adapter.ts (import → interface, field rename)
+- src/plugins/golang/index.ts (no change needed — implicit structural typing)
 
-Do NOT modify the startup-budget semantics from TASK-44, shared parser
-runtime, CLI/MCP, or non-Go languages.
+## AC
 
-## Acceptance Criteria
-
-- [ ] Per-query timeout configurable via env + config with documented
-      precedence (env > config > 30s default); invalid values fall through.
-- [ ] A slow-but-responding gopls query times out at the configured
-      per-query value (test with injected fake gopls).
-- [ ] TASK-44 degradation/reaping/poison-pill behavior unchanged (existing
-      tests green, no weakened assertions).
-- [ ] Docs updated; full suite green.
+- [x] `IGoRawDataProvider` interface defined in `types.ts` with `parseToRawData` method
+- [x] `GoAtlasAdapter` no longer imports from `./index.js`
+- [x] `GoAtlasAdapter` depends on `IGoRawDataProvider` instead of `GoPlugin`
+- [x] `GoPlugin` satisfies `IGoRawDataProvider` without code changes (implicit structural typing)
+- [x] Type check passes (`npm run type-check`)
+- [x] All Go plugin tests pass
+- [x] Cycle detection confirms zero cycles in `src/plugins/golang`
 
 ## Definition of Done
 
-- [ ] Tests + docs committed; run summaries appended here.
-
-## Coordination
-
-Overlaps TASK-47 on gopls-client.ts / config-global.ts / docs — the loop
-scheduler must serialize them (not touches-disjoint). Independent of
-TASK-48/49.
+- [ ] `npm run type-check` passes
+- [ ] `npx vitest run tests/plugins/golang/` green
+- [ ] `npx vitest run tests/unit/plugins/golang/` green

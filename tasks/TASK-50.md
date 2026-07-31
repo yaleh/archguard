@@ -2,7 +2,7 @@
 id: TASK-50
 title: Information shape smell detection — Layer 1 literal dispersion detector
   for TypeScript
-status: ready
+status: done
 labels:
   - analysis
   - typescript

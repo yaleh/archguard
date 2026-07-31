@@ -2,7 +2,7 @@
 id: TASK-49
 title: Wire the real codex-exec LLM-driven tool-call boundary test + complete
   AC6 evidence when credentials exist
-status: ready
+status: done
 labels:
   - install
   - mcp

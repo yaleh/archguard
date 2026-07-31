@@ -22,7 +22,7 @@ import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import { type ArchJSON, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { GoplsInterfaceResolver } from './gopls-interface-resolver.js';
-import { resolveGoplsTimeoutMs, resolveEffectiveGoplsTimeoutMs } from './gopls-client.js';
+import { resolveEffectiveGoplsTimeoutMs, resolveGoplsTimeoutMs } from './gopls-client.js';
 import {
   GoParseCoordinator,
   type GoRawData,
@@ -134,19 +134,17 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       return;
     }
 
-    // TASK-47: gopls timeout budget resolution honours the resolved config.
-    // Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > resolved config
-    // atlas.goplsTimeoutMs (PluginInitConfig.languageSpecific) > 120s default.
-    // When resolved config is not available, fall back to reading
-    // archguard.config.json from process.cwd() (backward compat).
-    const resolvedMs = (
-      config.languageSpecific?.['atlas'] as { goplsTimeoutMs?: number } | undefined
-    )?.goplsTimeoutMs;
+    // TASK-47: the resolved config (PluginInitConfig.goplsTimeoutMs) supersedes
+    // the cwd-relative config-file read. Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS >
+    // PluginInitConfig.goplsTimeoutMs (resolved config) > cwd-relative config-file
+    // (archguard.config.json) > 120s default. The resolver forwards budgetMs into
+    // the GoplsClient constructor.
+    const budgetMs =
+      config.goplsTimeoutMs !== undefined
+        ? resolveGoplsTimeoutMs(process.env, config.goplsTimeoutMs)
+        : resolveEffectiveGoplsTimeoutMs();
     this.resolver = new GoplsInterfaceResolver({
-      budgetMs:
-        resolvedMs !== undefined
-          ? resolveGoplsTimeoutMs(process.env, resolvedMs)
-          : resolveEffectiveGoplsTimeoutMs(),
+      budgetMs,
     });
     this.coordinator = new GoParseCoordinator(this.resolver, this.parserBackend);
     this.atlasCoordinator = new GoAtlasCoordinator();

@@ -177,14 +177,15 @@ export interface PluginInitConfig {
   verbose?: boolean;
 
   /**
-   * Language-specific configuration from the resolved config.
+   * Resolved gopls startup budget (ms). When provided, this value is the
+   * result of reading `atlas.goplsTimeoutMs` from the resolved config file
+   * (e.g. `--config /path/to/config.json`) and takes precedence over the
+   * cwd-relative `archguard.config.json` read. Ignored by non-Go plugins.
    *
-   * Carries sections such as `atlas.goplsTimeoutMs` that the plugin
-   * should consume directly rather than re-reading from a cwd-relative
-   * config file. When absent the plugin may fall back to its own
-   * default discovery (e.g. archguard.config.json at cwd).
+   * The full precedence chain is: env ARCHGUARD_GOPLS_TIMEOUT_MS >
+   * PluginInitConfig.goplsTimeoutMs > cwd-relative config file > 120s default.
    */
-  languageSpecific?: Record<string, unknown>;
+  goplsTimeoutMs?: number;
 }
 
 /**

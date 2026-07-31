@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs-extra';
 import { detectProjectStructure } from '../utils/project-structure-detector.js';
 import { detectCppProjectStructure } from '../utils/cpp-project-structure-detector.js';
 import { detectJavaProjectStructure } from '../utils/java-project-structure-detector.js';
@@ -88,6 +89,10 @@ export async function normalizeToDiagrams(
 
     // Go: special Atlas diagram — not a structure-detector language
     if (language === 'go') {
+      const goplsTimeoutMs = readGoplsTimeoutFromConfig(
+        cliOptions.config,
+        resolvedRoot
+      );
       const diagram: DiagramConfig = {
         name: 'architecture',
         sources: cliOptions.sources,
@@ -103,6 +108,7 @@ export async function normalizeToDiagrams(
             layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             entryPointPattern: cliOptions.atlasEntryPattern,
             capabilityMode: cliOptions.atlasCapabilityMode as 'interface' | 'full' | undefined,
+            goplsTimeoutMs,
           },
         },
       };
@@ -148,6 +154,10 @@ export async function normalizeToDiagrams(
 
   // Go: special Atlas diagram
   if (cliOptions.lang === 'go') {
+    const goplsTimeoutMs = readGoplsTimeoutFromConfig(
+      cliOptions.config,
+      resolvedRoot
+    );
     return [
       {
         name: 'architecture',
@@ -164,6 +174,7 @@ export async function normalizeToDiagrams(
             layers: cliOptions.atlasLayers?.split(',').map((s) => s.trim()),
             entryPointPattern: cliOptions.atlasEntryPattern,
             capabilityMode: cliOptions.atlasCapabilityMode as 'interface' | 'full' | undefined,
+            goplsTimeoutMs,
           },
         },
       },
@@ -218,4 +229,40 @@ export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): Di
   }
 
   return diagrams.filter((d) => levels.includes(d.level ?? 'class'));
+}
+
+/**
+ * Read `atlas.goplsTimeoutMs` from the raw config file (before Zod validation
+ * strips unknown keys). Tries `explicitConfigPath` (--config) first, then
+ * falls back to `fallbackDir/archguard.config.json`. Returns undefined when
+ * the value is absent, non-numeric, or non-positive.
+ */
+function readGoplsTimeoutFromConfig(
+  explicitConfigPath?: string,
+  fallbackDir?: string
+): number | undefined {
+  let raw: unknown;
+  try {
+    if (explicitConfigPath) {
+      const resolved = path.resolve(explicitConfigPath);
+      if (fs.existsSync(resolved)) {
+        raw = fs.readJsonSync(resolved);
+      }
+    } else if (fallbackDir) {
+      const fallback = path.join(fallbackDir, 'archguard.config.json');
+      if (fs.existsSync(fallback)) {
+        raw = fs.readJsonSync(fallback);
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  if (!raw || typeof raw !== 'object') return undefined;
+  const atlas = (raw as Record<string, unknown>).atlas;
+  if (!atlas || typeof atlas !== 'object') return undefined;
+  const value = (atlas as Record<string, unknown>).goplsTimeoutMs;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  return Math.floor(value);
 }
