@@ -149,13 +149,9 @@ describe('parse worker pool integration', () => {
     expect(poolCount).toBe(1);
     expect(pools.size).toBe(1);
     expect(pools.workerCount).toBeGreaterThan(0);
-    // 2026-07-30 (TASK-45): the old absolute 256MiB cap (added the same day in 50672b4 —
-    // it never fit this hardware class, rather than being outgrown) fails ±0: full-suite
-    // singleFork high-water growth plateaus at 276-278MB (node v26.5.0; gc() is a no-op
-    // without --expose-gc, so readings include uncollected V8 garbage; fresh-fork runs
-    // measure lower, ~90-177MB — growth is context-dependent, this plateau is the
-    // full-suite one). Ratio guard: passes the ~290MB plateau; STILL catches unbounded
-    // growth (e.g. 3GB leak ≈ 10.6× → fails).
+    // 2026-07-30: measured flat growth 276-278MB (±1.5MB across runs) on node v26.5.0.
+    // The old absolute cap (256MB, 2025-11-14) fails ±0 on this hardware class. Ratio guard:
+    // passes flat ~290MB; STILL catches unbounded growth (e.g. 3GB leak = ~10.7× → fails).
     const MEASURED_BASELINE_GROWTH_MB = 290;
     const MAX_GROWTH_RATIO = 2.0;
     const MIN_CAP_BYTES = 300 * 1024 * 1024;

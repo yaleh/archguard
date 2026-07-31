@@ -62,6 +62,7 @@ archguard*.json
 /test-output/
 /.claude/review/
 /.claude/worktrees/
+/.claude/settings.local.json
 
 # Experiment artifacts (large generated files)
 experiments/granularity/artifacts/embeddings/embeddings.json
