@@ -1,7 +1,7 @@
 ---
 id: TASK-24
 title: 'Refactor: split arch-metrics.ts by metric domain'
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-30 05:19'
 updated_date: '2026-06-30 05:21'

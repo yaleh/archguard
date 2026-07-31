@@ -11,6 +11,15 @@ dependencies: []
 ordinal: 12000
 ---
 
+> **Archived 2026-07-31**: Project moved to quay-driven task queue (`tasks/TASK-N.md`).
+> Reviewed for continued relevance — nothing implemented in `src/`, and the mandatory
+> Phase-A performance spike (`docs/spikes/jl-performance-spike.mjs`) required before any
+> other work here was never run, so the core technical premise (SVD cost, whether rising
+> d_int reflects real architectural decay) is still unvalidated 5+ weeks after filing.
+> `archguard_get_metric_trend`/`get_change_risk` already give a cheaper "track health over
+> time" story. Recommend stale-abandon; if revisited, re-author from scratch via quay
+> starting with the spike, don't resurrect this plan verbatim. Chained with task-18/task-19.
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

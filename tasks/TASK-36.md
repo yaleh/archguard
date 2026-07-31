@@ -1,7 +1,7 @@
 ---
 id: TASK-36
 title: Add Codex user-scope MCP integration for archguard
-status: ready
+status: done
 labels:
   - install
   - mcp

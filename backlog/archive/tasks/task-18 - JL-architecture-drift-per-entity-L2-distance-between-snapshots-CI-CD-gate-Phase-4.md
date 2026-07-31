@@ -17,6 +17,12 @@ references:
 ordinal: 13000
 ---
 
+> **Archived 2026-07-31**: Project moved to quay-driven task queue (`tasks/TASK-N.md`).
+> Depends on TASK-17 (intrinsic dimension), which is itself archived stale-abandon — its
+> foundational performance spike was never run and nothing in this JL chain is implemented
+> in `src/`. Recommend stale-abandon alongside task-17/task-19; re-author via quay only
+> after task-17's premise is independently revalidated.
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

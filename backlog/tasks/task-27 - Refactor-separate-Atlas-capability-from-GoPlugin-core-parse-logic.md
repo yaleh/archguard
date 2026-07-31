@@ -1,7 +1,7 @@
 ---
 id: TASK-27
 title: 'Refactor: separate Atlas capability from GoPlugin core parse logic'
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-30 05:20'
 updated_date: '2026-06-30 05:21'

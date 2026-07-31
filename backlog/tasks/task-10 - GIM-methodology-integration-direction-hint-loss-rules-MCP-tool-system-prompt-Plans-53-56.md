@@ -3,7 +3,7 @@ id: TASK-10
 title: >-
   GIM methodology integration: direction-hint, loss rules, MCP tool,
   system-prompt (Plans 53-56)
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-23 06:28'
 updated_date: '2026-06-23 06:33'

@@ -3,7 +3,7 @@ id: TASK-26
 title: >-
   Test: add integration tests for aggregated MCP tools (evidence_pack,
   metric_trend)
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-30 05:20'
 updated_date: '2026-06-30 05:21'

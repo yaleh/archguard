@@ -15,6 +15,13 @@ references:
 ordinal: 11000
 ---
 
+> **Archived 2026-07-31**: Project moved to quay-driven task queue (`tasks/TASK-N.md`).
+> Reviewed for continued relevance — no `PackRegistry`/`RuleEngine`/YAML knowledge packs
+> exist in `src/`, so the gap is real, but this is a large speculative architecture bet
+> with no concrete contribution-barrier or maintenance incident forcing it now. Sat
+> untouched since 2026-06-23 while smaller, concretely-scoped work shipped. Parked here
+> as reference; re-author via quay if Java/Python plugin maintenance pain becomes acute.
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

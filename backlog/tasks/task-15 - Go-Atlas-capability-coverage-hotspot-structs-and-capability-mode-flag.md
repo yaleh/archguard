@@ -1,7 +1,7 @@
 ---
 id: TASK-15
 title: 'Go Atlas capability coverage: hotspot structs and --capability-mode flag'
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-23 06:29'
 updated_date: '2026-06-23 06:32'

@@ -13,6 +13,10 @@ dependencies: []
 ordinal: 9000
 ---
 
+> **Ported 2026-07-31**: Project moved to quay-driven task queue. Converted to
+> `tasks/TASK-50.md` (status: ready) — see that file for the live version of
+> this proposal/plan. Kept here for history; not tracked on this board anymore.
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

@@ -1,7 +1,7 @@
 ---
 id: TASK-25
 title: 'Refactor: move MCP tool business logic into analysis layer (ADR-006)'
-status: 'Basic: Backlog'
+status: 'Basic: Done'
 assignee: []
 created_date: '2026-06-30 05:19'
 updated_date: '2026-06-30 05:22'

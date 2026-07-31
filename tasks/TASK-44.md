@@ -9,7 +9,7 @@ labels:
 parent: null
 children: []
 extra: {}
-status: ready
+status: done
 ---
 ## Proposal
 

@@ -15,6 +15,13 @@ references:
 ordinal: 6000
 ---
 
+> **Archived 2026-07-31**: Project moved to quay-driven task queue (`tasks/TASK-N.md`).
+> Reviewed for continued relevance — the underlying gap (imperative tree-sitter traversal,
+> no `.scm`/`QueryLoader`/`CaptureMapper`) still exists, but this is a large speculative
+> refactor (~2361 LOC across 5 bridges) with no concrete correctness or reliability driver
+> forcing it. Sat untouched since 2026-06-23 while smaller, concretely-scoped work shipped.
+> Parked here as reference; re-author via quay if a real maintenance pain point emerges.
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
