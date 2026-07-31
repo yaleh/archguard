@@ -40,6 +40,7 @@ import { registerPackageMetricsTools } from './tools/package-metrics-tools.js';
 import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
 import { registerGIMTools } from './tools/gim-tools.js';
+import { registerShapeSmellTools } from './tools/shape-smell-tools.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 
 const projectRootParam = z
@@ -112,6 +113,7 @@ export function createMcpServer(
   registerMetricTrendTools(server, defaultRoot); // registers: archguard_get_metric_trend
   registerEvidencePackTool(server, defaultRoot); // registers: archguard_get_evidence_pack
   registerGIMTools(server, defaultRoot); // registers: archguard_get_gim_context
+  registerShapeSmellTools(server, defaultRoot); // registers: archguard_detect_shape_smells, archguard_get_literal_dispersion
   return server;
 }
 
