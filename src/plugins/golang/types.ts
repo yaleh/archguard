@@ -5,6 +5,21 @@
  * before mapping to ArchJSON
  */
 
+import type { ParseConfig } from '@/core/interfaces/parser.js';
+
+/**
+ * Interface for providing raw Go parse data.
+ *
+ * Extracted to break the dependency cycle between GoPlugin and GoAtlasAdapter.
+ * GoPlugin satisfies this interface via structural typing — no code changes needed.
+ */
+export interface IGoRawDataProvider {
+  parseToRawData(
+    workspaceRoot: string,
+    config: ParseConfig & TreeSitterParseOptions
+  ): Promise<GoRawData>;
+}
+
 /**
  * Source location in a Go file
  */

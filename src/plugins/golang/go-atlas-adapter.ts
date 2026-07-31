@@ -6,7 +6,7 @@ import type {
   RenderFormat,
   RenderResult,
 } from './atlas/types.js';
-import type { GoPlugin } from './index.js';
+import type { IGoRawDataProvider } from './types.js';
 
 function isTestPackage(fullName: string): boolean {
   if (fullName.startsWith('tests/') || fullName === 'tests') return true;
@@ -30,13 +30,13 @@ function inferBodyStrategy(
  * is preserved externally (GoPlugin still implements IGoAtlas).
  *
  * ADR-001 constraint: parseToRawData is called exactly once per generateAtlas()
- * invocation via plugin.parseToRawData() (the public API). Never calls
+ * invocation via rawDataProvider.parseToRawData() (the public API). Never calls
  * parseProject() internally — that path calls buildAtlasFromRawData directly
  * to avoid double-parse.
  */
 export class GoAtlasAdapter {
   constructor(
-    private readonly plugin: GoPlugin,
+    private readonly rawDataProvider: IGoRawDataProvider,
     private readonly atlasCoordinator: GoAtlasCoordinator
   ) {}
 
@@ -55,7 +55,7 @@ export class GoAtlasAdapter {
 
     const functionBodyStrategy = inferBodyStrategy(options.functionBodyStrategy);
 
-    let rawData = await this.plugin.parseToRawData(rootPath, {
+    let rawData = await this.rawDataProvider.parseToRawData(rootPath, {
       workspaceRoot: rootPath,
       includePatterns: options.includePatterns,
       excludePatterns,
