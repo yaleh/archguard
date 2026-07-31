@@ -12,7 +12,7 @@
       "source": {
         "source": "npm",
         "package": "@yalehwang/archguard-claude-plugin",
-        "version": "0.1.31"
+        "version": "0.1.32"
       },
       "description": "ArchGuard: automated multi-language architecture documentation and analysis. Bundles the archguard MCP server and the feature-developer / project-semantics-discovery skills.",
       "license": "MIT",

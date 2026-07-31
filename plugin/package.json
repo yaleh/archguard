@@ -1,6 +1,6 @@
 {
   "name": "@yalehwang/archguard-claude-plugin",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "ArchGuard Claude Code plugin: architecture analysis MCP server plus feature-developer and project-semantics-discovery skills. npm-source marketplace package; depends on the exact matching @yalehwang/archguard runtime.",
   "type": "module",
   "files": [
@@ -10,7 +10,7 @@
     "skills/"
   ],
   "dependencies": {
-    "@yalehwang/archguard": "0.1.31"
+    "@yalehwang/archguard": "0.1.32"
   },
   "engines": {
     "node": ">=18.0.0"

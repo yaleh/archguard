@@ -1,6 +1,6 @@
 {
 	"name": "archguard",
-	"version": "0.1.31",
+	"version": "0.1.32",
 	"description": "ArchGuard: automated multi-language architecture documentation and analysis. Bundles the archguard MCP server (summary, dependency, cycle-detection, test-quality, and git-history query tools) plus the feature-developer and project-semantics-discovery skills.",
 	"author": {
 		"name": "yalehwang",
