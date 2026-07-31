@@ -175,6 +175,16 @@ export interface PluginInitConfig {
    * Whether to enable verbose logging
    */
   verbose?: boolean;
+
+  /**
+   * Language-specific configuration from the resolved config.
+   *
+   * Carries sections such as `atlas.goplsTimeoutMs` that the plugin
+   * should consume directly rather than re-reading from a cwd-relative
+   * config file. When absent the plugin may fall back to its own
+   * default discovery (e.g. archguard.config.json at cwd).
+   */
+  languageSpecific?: Record<string, unknown>;
 }
 
 /**
