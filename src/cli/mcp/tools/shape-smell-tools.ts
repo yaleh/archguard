@@ -50,6 +50,7 @@ function unimplementedLayer(layer: ShapeSmellLayer): ShapeSmellResult {
 }
 
 export function registerShapeSmellTools(server: McpServer, defaultRoot: string): void {
+  // adr-ok: ADR-007 — agent-only tools; shape-smell detection and literal dispersion query have no CLI use case
   // Tool: detect shape smells
   server.tool(
     'archguard_detect_shape_smells',
@@ -174,6 +175,7 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
     }
   );
 
+  // adr-ok: ADR-007 — agent-only tool; literal-dispersion query has no CLI use case
   // Tool: get literal dispersion results
   server.tool(
     'archguard_get_literal_dispersion',
