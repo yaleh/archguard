@@ -59,18 +59,58 @@ config (~/.codex) outside isolated temp dirs.
 
 ## Acceptance Criteria
 
-- [ ] Real `codex exec` LLM-driven tool-call test exists, runs under
+- [x] Real `codex exec` LLM-driven tool-call test exists, runs under
       isolated config, and skips cleanly (documented reason) when
       codex or OpenAI credentials are absent.
 - [ ] If credentials are present in the environment: the test runs for
       real and the captured tool-call evidence is appended here and in
       TASK-36's AC6 note. If absent: both task bodies state the exact
       boundary (401, no OPENAI_API_KEY) — NOT checked as satisfied.
-- [ ] Existing 44 installer tests unchanged and green; suite green.
+- [x] Existing 44 installer tests unchanged and green; suite green.
 
 ## Definition of Done
 
-- [ ] Test committed; evidence/boundary status appended here.
+- [x] Test committed; evidence/boundary status appended here.
+
+## Evidence (2026-07-31)
+
+### REAL (boundary wired, skipping cleanly)
+
+- **Test added.** `tests/integration/installer-codex-user-scope.test.ts`
+  now includes `describe('real codex exec LLM-driven tool-call boundary
+  (isolated config)')` with one test: creates an isolated CODEX_HOME/HOME,
+  runs the installer to write the archguard MCP entry, creates a tiny
+  TypeScript fixture project, and runs `codex exec --no-approval` with a
+  prompt that forces use of `archguard_summary`. Assertions: exit code 0,
+  `archguard_summary` tool call name in output, `entityCount` and
+  `language` fields in output. Timeout: 600s (LLM inference).
+- **Gate: `it.skipIf(!realCodexAvailable || !globalEntry || !openAiCreds)`.**
+  `openAiCreds` is detected from `process.env.OPENAI_API_KEY` only and is
+  never logged or printed. No fake/mock credentials — the point is the
+  real LLM boundary.
+- **Skip status (2026-07-31):** `realCodexAvailable=true` (codex-cli
+  0.146.0 on PATH), `globalEntry` present (npm global
+  `@yalehwang/archguard`), but `openAiCreds=false` — no
+  `OPENAI_API_KEY` in this environment. The test skips cleanly with
+  vitest's standard skip output.
+- **Existing tests: 44 passed, unchanged and green.**
+  `npx vitest run tests/integration/installer-codex-user-scope.test.ts`
+  → 44 passed, 1 skipped, exit 0, duration ~27s. The two real-codex-CLI
+  boundary tests also pass (real MCP handshake + analysis).
+
+### Boundary status (why AC6 remains unchecked in TASK-36)
+
+The MCP connection layer is fully real and tested (codex lists the
+installer-written entry, `tools/list` returns 30 tools,
+`archguard_summary` and `archguard_analyze` work over stdio JSON-RPC).
+TASK-49 adds the wired `codex exec` test that would complete AC6 the
+moment `OPENAI_API_KEY` exists.
+
+Without credentials, the LLM-driven `codex exec` call fails at the model
+backend (`401 Unauthorized` from `api.openai.com/v1/responses`). This is
+documented in both TASK-36.md (AC6 scope section, TASK-49 follow-up note)
+and this file. The honest terminal state: the test is committed and
+skipping cleanly; real evidence requires OpenAI credentials.
 
 ## Coordination
 

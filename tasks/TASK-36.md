@@ -158,6 +158,31 @@ AC6 is checked with this explicit split:
   OpenAI credentials exist in this environment. This is the honest remaining
   boundary for AC6.
 
+### TASK-49 follow-up (2026-07-31): real codex exec boundary test
+
+TASK-49 added a real `codex exec` LLM-driven tool-call boundary test
+(`describe('real codex exec LLM-driven tool-call boundary (isolated config)')`)
+to `tests/integration/installer-codex-user-scope.test.ts`. The test:
+
+- Creates an isolated CODEX_HOME/HOME, runs the installer to write an
+  archguard MCP entry, creates a tiny TypeScript fixture, and runs
+  `codex exec --no-approval` with a prompt that forces use of
+  `archguard_summary`.
+- Gate: `it.skipIf(!realCodexAvailable || !globalEntry || !openAiCreds)`
+  where `openAiCreds` is detected from `process.env.OPENAI_API_KEY` only
+  (never logged/printed). The test timeout is 600s to accommodate LLM
+  inference.
+- **Current status (2026-07-31): SKIPPED** — `realCodexAvailable=true`,
+  `globalEntry` present, but `OPENAI_API_KEY` is absent in this
+  environment. The skip reason is `openAiCreds` (no OpenAI credentials).
+  The test skips cleanly with vitest's documented skip reason.
+- **The AC6 boundary remains exactly as documented above**: the MCP
+  connection + stdio tool calls are real and green; the LLM-driven leg
+  requires OPENAI_API_KEY. The wired test is committed and will run for
+  real the moment credentials exist in the environment — at which point
+  the captured evidence should be appended here and the AC6 checkbox
+  marked satisfied.
+
 The real-CLI tests are gated with `it.skipIf(!realCodexAvailable || !globalEntry)`
 and run (not skipped) here because both `codex` and the global npm install are
 present.
