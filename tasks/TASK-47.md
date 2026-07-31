@@ -2,7 +2,7 @@
 id: TASK-47
 title: Honor custom --config paths in the gopls budget config read (eliminate
   the cwd-only caveat)
-status: ready
+status: done
 labels:
   - reliability
   - golang

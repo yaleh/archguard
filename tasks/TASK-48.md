@@ -2,7 +2,7 @@
 id: TASK-48
 title: Dedicated tests for non-timeout-error gopls reaping paths (close the
   TASK-44 test gap)
-status: ready
+status: done
 labels:
   - reliability
   - golang
