@@ -6,10 +6,10 @@
  * - Type information queries
  * - Symbol resolution
  *
- * Reliability bounds (TASK-44):
+ * Reliability bounds (TASK-44 / TASK-47):
  * - A configurable startup budget bounds gopls startup + workspace load.
- *   Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file
- *   atlas.goplsTimeoutMs (archguard.config.json) > default (120s). The budget
+ *   Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > resolved config
+ *   atlas.goplsTimeoutMs (honours --config <path>) > default (120s). The budget
  *   covers the previously unbounded `gopls version` probe and the LSP
  *   `initialize` handshake.
  * - On budget exhaustion the client cancels the gopls operation, reaps every
@@ -66,9 +66,12 @@ export function resolveGoplsTimeoutMs(
  * `atlas.goplsTimeoutMs` is absent, non-numeric, or non-positive — callers
  * then fall through resolveGoplsTimeoutMs's precedence chain.
  *
- * Scope note: this covers the default JSON config location only. A custom
- * `--config <path>` file or `archguard.config.js` is not visible to the
- * plugin layer; use the ARCHGUARD_GOPLS_TIMEOUT_MS env override there.
+ * Scope note: this covers the cwd-relative fallback only. The preferred path
+ * is for GoPlugin.initialize to supply the resolved config's value via
+ * resolveGoplsTimeoutMs(env, resolvedMs) so that --config <path> and
+ * programmatic configs are honoured. This function is retained for backward
+ * compatibility and as the last-resort fallback inside
+ * resolveEffectiveGoplsTimeoutMs.
  */
 export function readGoplsTimeoutFromConfigFile(cwd: string = process.cwd()): number | undefined {
   try {
@@ -85,8 +88,13 @@ export function readGoplsTimeoutFromConfigFile(cwd: string = process.cwd()): num
 }
 
 /**
- * Resolve the effective gopls budget from ALL three sources, converged:
+ * Resolve the effective gopls budget from cwd config file fallback:
  * env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file atlas.goplsTimeoutMs > 120s.
+ *
+ * This is the backward-compat fallback for when no resolved config
+ * (PluginInitConfig.languageSpecific) is available. Prefer the resolved
+ * config path (resolveGoplsTimeoutMs with a caller-supplied configMs)
+ * when the loaded config is in scope (TASK-47).
  */
 export function resolveEffectiveGoplsTimeoutMs(
   env: NodeJS.ProcessEnv = process.env,

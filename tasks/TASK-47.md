@@ -62,18 +62,45 @@ CLI argument handling, STOP and re-scope this task before editing.
 
 ## Acceptance Criteria
 
-- [ ] `atlas.goplsTimeoutMs` set in a custom `--config` file (or
+- [x] `atlas.goplsTimeoutMs` set in a custom `--config` file (or
       programmatically supplied config) reaches GoplsClient (mechanical
       test proof, not a docs claim).
-- [ ] Documented precedence chain matches code exactly; env override
+- [x] Documented precedence chain matches code exactly; env override
       still wins; default 120s intact when nothing is set.
-- [ ] No behavior change for the cwd-config and env-only paths (existing
+- [x] No behavior change for the cwd-config and env-only paths (existing
       tests green, no weakened assertions).
-- [ ] Docs updated; full suite green.
+- [x] Docs updated; full suite green.
 
 ## Definition of Done
 
-- [ ] Tests + docs committed; before/after behavior summary appended.
+- [x] Tests + docs committed; before/after behavior summary appended.
+
+## Before/After Behavior Summary (TASK-47, 2026-07-31)
+
+**Before:** `GoPlugin.initialize` always called `resolveEffectiveGoplsTimeoutMs()`,
+which reads `archguard.config.json` from `process.cwd()` only. A user who ran
+`archguard analyze --config /path/to/custom.json` with `atlas.goplsTimeoutMs`
+in that file got their setting silently ignored. The docs disclosed this caveat
+and advised using the env variable workaround.
+
+**After:** `GoPlugin.initialize` checks `PluginInitConfig.languageSpecific` for
+the resolved configuration's `atlas.goplsTimeoutMs`. When present, it wins over
+the cwd-file read. The CLI's `arch-json-provider.ts` passes
+`diagram.languageSpecific` (already in scope) into `plugin.initialize`. The
+precedence chain is: `ARCHGUARD_GOPLS_TIMEOUT_MS` (env) > `atlas.goplsTimeoutMs`
+(resolved config, honours --config) > 120s default. When no resolved config is
+available (e.g. programmatic plugins not using the CLI path), the plugin falls
+back to `resolveEffectiveGoplsTimeoutMs()` (cwd-file read) for backward
+compatibility.
+
+**Files changed:**
+- `src/core/interfaces/language-plugin.ts`: added `languageSpecific` to `PluginInitConfig`
+- `src/plugins/golang/index.ts`: read budget from `config.languageSpecific?.atlas?.goplsTimeoutMs`
+- `src/plugins/golang/gopls-client.ts`: updated scope note on `readGoplsTimeoutFromConfigFile`
+- `src/cli/processors/arch-json-provider.ts`: pass `languageSpecific` in `plugin.initialize` for Go
+- `docs/user-guide/golang-plugin-usage.md`: removed --config caveat, documented new precedence
+- `tests/unit/plugins/golang/go-plugin.test.ts`: 3 new tests (resolved config, env wins, cwd fallback)
+- `tasks/TASK-47.md`: this summary
 
 ## Coordination
 

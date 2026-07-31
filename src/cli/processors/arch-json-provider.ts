@@ -436,7 +436,10 @@ export class ArchJsonProvider {
     const plugin =
       registryPlugin ?? (await createLanguagePlugin('go', this.parserRuntimeOptions()));
 
-    await plugin.initialize({ workspaceRoot });
+    await plugin.initialize({
+      workspaceRoot,
+      languageSpecific: diagram.languageSpecific,
+    });
     if (plugin.metadata?.customEntityTypes) {
       for (const decl of plugin.metadata.customEntityTypes) {
         globalEntityTypeRegistry.register(decl);

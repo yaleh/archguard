@@ -59,13 +59,14 @@ every gopls-dependent stage is bounded by a **timeout budget**:
 | Mechanism | Key | Default |
 |-----------|-----|---------|
 | Environment variable (takes precedence) | `ARCHGUARD_GOPLS_TIMEOUT_MS` | — |
-| Config file (`archguard.config.json`) | `atlas.goplsTimeoutMs` | `120000` (120s) |
+| Resolved config (any form — `archguard.config.json`, `--config <path>`, programmatic) | `atlas.goplsTimeoutMs` | `120000` (120s) |
 
 **Precedence**: `ARCHGUARD_GOPLS_TIMEOUT_MS` (env) > `atlas.goplsTimeoutMs`
-(config file) > `120000` (default). The config-file value is read from
-`archguard.config.json` in the CLI's working directory (the default config
-location); when using a custom `--config <path>` or `archguard.config.js`,
-set the environment variable instead.
+(resolved config) > `120000` (default). The `atlas.goplsTimeoutMs` value is
+consumed from the resolved configuration that ArchGuard loads — it honours
+`archguard.config.json` at cwd, a custom `--config <path>`, programmatic
+configs, and `archguard.config.js`. No environment variable workaround is
+needed for custom config paths.
 
 ```bash
 # Give gopls 3 minutes on a very large module:

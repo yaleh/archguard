@@ -22,7 +22,7 @@ import type { TestPatternConfig } from '@/types/extensions/test-analysis.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import { type ArchJSON, ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { GoplsInterfaceResolver } from './gopls-interface-resolver.js';
-import { resolveEffectiveGoplsTimeoutMs } from './gopls-client.js';
+import { resolveGoplsTimeoutMs, resolveEffectiveGoplsTimeoutMs } from './gopls-client.js';
 import {
   GoParseCoordinator,
   type GoRawData,
@@ -134,12 +134,19 @@ export class GoPlugin implements ILanguagePlugin, IGoAtlas {
       return;
     }
 
-    // TASK-44 AC5: the config-file half of the budget actually reaches gopls.
-    // Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > config-file
-    // atlas.goplsTimeoutMs (archguard.config.json) > 120s default. The
-    // resolver forwards budgetMs into the GoplsClient constructor.
+    // TASK-47: gopls timeout budget resolution honours the resolved config.
+    // Precedence: env ARCHGUARD_GOPLS_TIMEOUT_MS > resolved config
+    // atlas.goplsTimeoutMs (PluginInitConfig.languageSpecific) > 120s default.
+    // When resolved config is not available, fall back to reading
+    // archguard.config.json from process.cwd() (backward compat).
+    const resolvedMs = (
+      config.languageSpecific?.['atlas'] as { goplsTimeoutMs?: number } | undefined
+    )?.goplsTimeoutMs;
     this.resolver = new GoplsInterfaceResolver({
-      budgetMs: resolveEffectiveGoplsTimeoutMs(),
+      budgetMs:
+        resolvedMs !== undefined
+          ? resolveGoplsTimeoutMs(process.env, resolvedMs)
+          : resolveEffectiveGoplsTimeoutMs(),
     });
     this.coordinator = new GoParseCoordinator(this.resolver, this.parserBackend);
     this.atlasCoordinator = new GoAtlasCoordinator();
