@@ -82,6 +82,17 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
   - 选中集绿（17/17）；对抗自查 2 轮：改 `mc >= 11`→12 抓到 1 fail、改 filter 条件抓到 3 fail。
   - 注：fi>5 分支对「已引用 struct」实际不可达（isHotspotAdded 只标记新加入节点），已按真实行为钉住。
 
+- **Module 1b — atlas builders / flow-graph-builder.ts**（597 行，原 0 测试）
+  - `tests/unit/plugins/golang/atlas/builders/flow-graph-builder.test.ts`（23 tests）
+  - 覆盖分支：空图；net/http HandleFunc；gin GET/Any（httpMethod 映射）；gorilla/mux
+    receiverContains（absent-skip 与 present-mismatch 两向）；grpc methodSuffix（含负例
+    RegisterClient 不匹配）；main() 注入；method body 入口；generic-heuristic 回退
+    （AddTool）；manual entry points；entryPointPattern 扫描 + 无效正则 never-match；
+    protocol 过滤；direct call chain 追踪；interface 分类（receiver 变量解析 + * 剥前缀 +
+    shortName）；无 packageName → direct；noisy 过滤（builtin/stdlib/w./ctx./r.URL）；
+    BFS followIndirectCalls（maxDepth/visited 去重）；空 handler → 空 calls；method handler 追踪。
+  - 选中集绿（23/23）；对抗自查 2 轮：methodSuffix 破坏抓到负例 fail、stdlib noisy 破坏抓到 fail。
+
 ## Dispatch review
 
 | Field | Value |
