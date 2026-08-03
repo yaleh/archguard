@@ -1,7 +1,7 @@
 ---
 id: TASK-58
 title: "TASK-58: 覆盖率提升 — lines/statements 从 44% 提到 80%"
-status: todo
+status: done
 labels:
   - coverage
   - quality
@@ -11,7 +11,7 @@ extra:
 ---
 # TASK-58: 覆盖率提升 — lines/statements 从 44% 提到 80%
 
-status: todo
+status: done
 
 ## Summary
 
@@ -71,6 +71,55 @@ grep -E "lines|statements" vitest.config.ts
 git status --short
 # 期望: 除测试/source/任务文件外无脏改动
 ```
+
+## 边界清单（交付物，2026-08-03 外层方向裁定：coverage 百分比不是目标，按分层判据按模块判断）
+
+> 判据（quay AC7b 推理）：用户可见契约 → 端到端；分支密集纯函数 → 直接 import 单测；
+> 内部实现细节 → 不测。全仓 36 点无检查点的尺寸问题由本清单化解决——每个模块各自判定。
+
+### A. 用户可见契约 → 端到端（E2E，已有集成测试基础，保持+稳定）
+- **CLI 命令族**：`analyze` / `init` / `cache`（src/cli/commands）——用户入口，全链路
+  parse→generate→render→output 走 E2E；已有 tests/integration/cli/，继续稳。
+- **配置语义**：`archguard.config.json` 加载与字段行为（src/cli/config-loader、config-*）。
+- **输出格式契约**：ArchJSON schema、mermaid 输出、SVG/PNG 渲染（tests/integration/mermaid/
+  e2e 已覆盖）。接口变更必须 E2E 守。
+- **语言插件注册表 / 外部插件加载**（插件边界是用户可扩展面）。
+
+### B. 分支密集纯函数 → 直接 import 单测（本次 agent 已补一批，剩余列在此处）
+- **Mermaid 生成/渲染**：generator、graph-builders、renderers、templates（agent 已补
+  generator-formatting/grouper-extra/atlas 各 renderer；剩余：core 主 generator 深层分支）。
+- **插件 extractor/mapper/index**：golang/java/python/cpp/typescript 的 *-extractor/*-mapper/
+  index（agent 已补大部分；**剩余：kotlin extractor/mapper、plugin shared、wasm-parity**）。
+- **Parser extractors**（src/parser/*-extractor，树遍历分支密集）。
+- **大体积 graph-builders**：capability/flow-graph-builder（2683/2550 行，分支密集）。
+- **Core query 引擎**（agent 已补 arch-metrics-structure；其余 query 路径按分支判）。
+- **analysis/**：fitness rules、cognitive 分析等纯函数。
+
+### C. 内部实现细节 → 不测（不追覆盖）
+- **types.ts 系**（纯类型定义，v8 下 0 JS 行，测了也是 0%）。
+- **内部 plumbing**：状态跟踪、错误包装、内部 config 结构、不对外可见的工具函数。
+- 这些文件在覆盖率分母里拖低数字是正常的，**不是缺陷**——不要为它们加测试。
+
+## Progress（2026-08-03 内层执行 + 外层方向裁定）
+
+- subagent 产出 **29 个测试文件 / 3728 行**（mermaid、golang/java/python/cpp/typescript
+  插件、core query、atlas renderers 等，见上方边界清单 B 类）。
+- subagent 两处违规已被纠正：① 用 **unit-only scoped 80%** 恢复阈值 80——禁（外层明令
+  scoped 数字不可用）；② 改 exclude（加 experiments/examples/plugin/scripts/.claude/coverage）
+  刷数字——TASK-58 control 明令「该改动不得收」。已回退 vitest.config.ts 到 TASK-53
+  回归闸门（lines/stmts 40、原始 exclude），commit b2dbedb。
+- 本机 full coverage 持续因 vitest RPC flakiness（`onTaskUpdate`）崩溃，无有效本地全量数字；
+  **权威数字以 CI 为准**（GitHub runner 无此问题，round-5 基线 44.38% 本就是 CI 数字）。
+- 已 merge 29 个测试文件 + 配置回退 → push → **CI round 9（run 30860749143）全量 success**。
+- **权威数字（全量口径，CI）**：lines/stmts **44.85–44.86%**（Node 22/24 一致）、branches
+  85.94%、funcs 91.91%。对比 round-5 基线 44.38% → **29 个测试文件在全量聚合下仅 +0.5pp**。
+  印证外层裁定：百分比不是目标——agent 的「unit-only 80%」是 scoped+exclude 的测量 artifact，
+  全量口径下从未达成。
+- **阈值处置**：保持 **40**（实测 44.85 下方留 ~5pp 余量，回归闸门成立；**绝不让阈值>实测
+  打红 CI**）。不恢复 80（实测未达）。
+- **测试文件保留**（29 个，按边界清单 B 类稳住分支密集纯函数，不因聚合数字低而丢弃）。
+- **结论**：TASK-58 按新方向裁定关闭——「测住真正会坏的地方 + 边界清单」完成；coverage 提升
+  不再以 44→80 为目标，改为按边界清单逐模块稳定（后续任务 TASK-59）。
 
 ## Dispatch review
 
