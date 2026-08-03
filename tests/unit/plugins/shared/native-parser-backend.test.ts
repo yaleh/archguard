@@ -20,7 +20,6 @@ import {
   ParserInitializationError,
   resolveParserBackend,
 } from '@/plugins/shared/parser-backend.js';
-import type { ParserLanguage } from '@/plugins/shared/parser-backend.js';
 
 describe('nativeGrammarModule', () => {
   it('maps each language to its native grammar package', () => {
@@ -39,9 +38,9 @@ describe('readNativeModuleRootEnv', () => {
   });
 
   it('returns the configured root', () => {
-    expect(
-      readNativeModuleRootEnv({ ARCHGUARD_NATIVE_MODULE_ROOT: '/opt/native' })
-    ).toBe('/opt/native');
+    expect(readNativeModuleRootEnv({ ARCHGUARD_NATIVE_MODULE_ROOT: '/opt/native' })).toBe(
+      '/opt/native'
+    );
   });
 });
 
@@ -187,7 +186,10 @@ describe('defaultNativeLoaders', () => {
 });
 
 describe('resolveParserBackend (legacy global API)', () => {
-  const original = { runtime: process.env.ARCHGUARD_PARSER_RUNTIME, backend: process.env.ARCHGUARD_PARSER_BACKEND };
+  const original = {
+    runtime: process.env.ARCHGUARD_PARSER_RUNTIME,
+    backend: process.env.ARCHGUARD_PARSER_BACKEND,
+  };
 
   afterEach(() => {
     if (original.runtime === undefined) delete process.env.ARCHGUARD_PARSER_RUNTIME;

@@ -66,10 +66,7 @@ describe('CapabilityGraphBuilder.build', () => {
                 { name: 'pub', type: 'string', exported: true } as never,
                 { name: 'hidden', type: 'string', exported: false } as never,
               ],
-              methods: [
-                { name: 'Get' } as never,
-                { name: 'Put' } as never,
-              ],
+              methods: [{ name: 'Get' } as never, { name: 'Put' } as never],
               embeddedTypes: [],
               exported: true,
             } as never,
@@ -111,8 +108,12 @@ describe('CapabilityGraphBuilder.build', () => {
     const raw = makeRawData({
       packages: [
         makePackage({
-          interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
-          structs: [{ name: 'Impl', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+          interfaces: [
+            { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+          ],
+          structs: [
+            { name: 'Impl', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
+          ],
         }),
       ],
       implementations: [
@@ -146,8 +147,18 @@ describe('CapabilityGraphBuilder.build', () => {
         makePackage({
           name: 'store',
           fullName: 'pkg/hub/store',
-          interfaces: [{ name: 'SQLiteStore', methods: [], embeddedInterfaces: [], exported: true } as never],
-          structs: [{ name: 'StoreImpl', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+          interfaces: [
+            { name: 'SQLiteStore', methods: [], embeddedInterfaces: [], exported: true } as never,
+          ],
+          structs: [
+            {
+              name: 'StoreImpl',
+              fields: [],
+              methods: [],
+              embeddedTypes: [],
+              exported: true,
+            } as never,
+          ],
         }),
       ],
       implementations: [
@@ -173,7 +184,9 @@ describe('CapabilityGraphBuilder.build', () => {
     const raw = makeRawData({
       packages: [
         makePackage({
-          interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
+          interfaces: [
+            { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+          ],
           structs: [
             { name: 'Impl', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
             { name: 'Orphan', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
@@ -210,13 +223,24 @@ describe('CapabilityGraphBuilder.build', () => {
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'dep', type: 'Dependency', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'dep',
+                    type: 'Dependency',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
                 exported: true,
               } as never,
-              { name: 'Dependency', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
+              {
+                name: 'Dependency',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
             ],
           }),
         ],
@@ -237,12 +261,22 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            imports: [{ path: 'example.com/proj/pkg/hub/engine', location: { file: 'a.go', startLine: 1 } } as never],
+            imports: [
+              {
+                path: 'example.com/proj/pkg/hub/engine',
+                location: { file: 'a.go', startLine: 1 },
+              } as never,
+            ],
             structs: [
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'e', type: 'engine.Engine', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'e',
+                    type: 'engine.Engine',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -253,7 +287,15 @@ describe('CapabilityGraphBuilder.build', () => {
           makePackage({
             name: 'engine',
             fullName: 'pkg/hub/engine',
-            structs: [{ name: 'Engine', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+            structs: [
+              {
+                name: 'Engine',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
+            ],
           }),
         ],
       });
@@ -268,12 +310,22 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            imports: [{ path: 'example.com/proj/pkg/hub/engine', location: { file: 'a.go', startLine: 1 } } as never],
+            imports: [
+              {
+                path: 'example.com/proj/pkg/hub/engine',
+                location: { file: 'a.go', startLine: 1 },
+              } as never,
+            ],
             structs: [
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'e', type: 'external.Thing', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'e',
+                    type: 'external.Thing',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -284,7 +336,15 @@ describe('CapabilityGraphBuilder.build', () => {
           makePackage({
             name: 'engine',
             fullName: 'pkg/hub/engine',
-            structs: [{ name: 'Engine', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+            structs: [
+              {
+                name: 'Engine',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
+            ],
           }),
         ],
       });
@@ -303,7 +363,12 @@ describe('CapabilityGraphBuilder.build', () => {
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'e', type: 'engine.Engine', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'e',
+                    type: 'engine.Engine',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -314,7 +379,15 @@ describe('CapabilityGraphBuilder.build', () => {
           makePackage({
             name: 'engine',
             fullName: 'pkg/hub/engine',
-            structs: [{ name: 'Engine', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+            structs: [
+              {
+                name: 'Engine',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
+            ],
           }),
         ],
       });
@@ -334,10 +407,30 @@ describe('CapabilityGraphBuilder.build', () => {
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'a', type: '*DepA', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
-                  { name: 'b', type: '[]DepB', exported: true, location: { file: 'a.go', startLine: 6 } } as never,
-                  { name: 'c', type: 'map[string]DepC', exported: true, location: { file: 'a.go', startLine: 7 } } as never,
-                  { name: 'd', type: 'svc.DepD', exported: true, location: { file: 'a.go', startLine: 8 } } as never,
+                  {
+                    name: 'a',
+                    type: '*DepA',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
+                  {
+                    name: 'b',
+                    type: '[]DepB',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 6 },
+                  } as never,
+                  {
+                    name: 'c',
+                    type: 'map[string]DepC',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 7 },
+                  } as never,
+                  {
+                    name: 'd',
+                    type: 'svc.DepD',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 8 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -353,7 +446,10 @@ describe('CapabilityGraphBuilder.build', () => {
       });
 
       const graph = await builder.build(raw);
-      const targets = graph.edges.filter((e) => e.type === 'uses').map((e) => e.target).sort();
+      const targets = graph.edges
+        .filter((e) => e.type === 'uses')
+        .map((e) => e.target)
+        .sort();
       expect(targets).toEqual(
         ['pkg/svc.DepA', 'pkg/svc.DepB', 'pkg/svc.DepC', 'pkg/svc.DepD'].sort()
       );
@@ -368,8 +464,18 @@ describe('CapabilityGraphBuilder.build', () => {
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'a', type: 'Dep', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
-                  { name: 'b', type: 'Dep', exported: true, location: { file: 'a.go', startLine: 6 } } as never,
+                  {
+                    name: 'a',
+                    type: 'Dep',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
+                  {
+                    name: 'b',
+                    type: 'Dep',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 6 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -399,10 +505,18 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
+            interfaces: [
+              { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+            ],
             structs: [
               { name: 'Big', fields: [], methods, embeddedTypes: [], exported: true } as never,
-              { name: 'Small', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
+              {
+                name: 'Small',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
             ],
           }),
         ],
@@ -417,11 +531,15 @@ describe('CapabilityGraphBuilder.build', () => {
 
     it('keeps already-referenced high-fanIn structs (no re-flag needed)', async () => {
       const builder = new CapabilityGraphBuilder();
-      const structs: any[] = [{ name: 'Target', fields: [], methods: [], embeddedTypes: [], exported: true }];
+      const structs: any[] = [
+        { name: 'Target', fields: [], methods: [], embeddedTypes: [], exported: true },
+      ];
       for (let i = 0; i < 6; i++) {
         structs.push({
           name: `Src${i}`,
-          fields: [{ name: 't', type: 'Target', exported: true, location: { file: 'a.go', startLine: i } }],
+          fields: [
+            { name: 't', type: 'Target', exported: true, location: { file: 'a.go', startLine: i } },
+          ],
           methods: [],
           embeddedTypes: [],
           exported: true,
@@ -430,7 +548,9 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
+            interfaces: [
+              { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+            ],
             structs,
           }),
         ],
@@ -458,7 +578,9 @@ describe('CapabilityGraphBuilder.build', () => {
           // Interface lives in a different package so pkg/hub/complex has NO included nodes
           makePackage({
             fullName: 'pkg/api',
-            interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
+            interfaces: [
+              { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+            ],
             structs: [],
           }),
           makePackage({
@@ -488,8 +610,12 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            interfaces: [{ name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never],
-            structs: [{ name: 'Big', fields: [], methods, embeddedTypes: [], exported: true } as never],
+            interfaces: [
+              { name: 'API', methods: [], embeddedInterfaces: [], exported: true } as never,
+            ],
+            structs: [
+              { name: 'Big', fields: [], methods, embeddedTypes: [], exported: true } as never,
+            ],
           }),
         ],
       });
@@ -505,12 +631,22 @@ describe('CapabilityGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            imports: [{ path: 'example.com/proj/pkg/hub/engine', location: { file: 'a.go', startLine: 1 } } as never],
+            imports: [
+              {
+                path: 'example.com/proj/pkg/hub/engine',
+                location: { file: 'a.go', startLine: 1 },
+              } as never,
+            ],
             structs: [
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'e', type: '*engine.Engine', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'e',
+                    type: '*engine.Engine',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],
@@ -522,7 +658,15 @@ describe('CapabilityGraphBuilder.build', () => {
             name: 'engine',
             fullName: 'pkg/hub/engine',
             imports: [],
-            structs: [{ name: 'Engine', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+            structs: [
+              {
+                name: 'Engine',
+                fields: [],
+                methods: [],
+                embeddedTypes: [],
+                exported: true,
+              } as never,
+            ],
           }),
         ],
       });
@@ -547,7 +691,12 @@ describe('CapabilityGraphBuilder.build', () => {
               {
                 name: 'Holder',
                 fields: [
-                  { name: 'd', type: 'Dep', exported: true, location: { file: 'a.go', startLine: 5 } } as never,
+                  {
+                    name: 'd',
+                    type: 'Dep',
+                    exported: true,
+                    location: { file: 'a.go', startLine: 5 },
+                  } as never,
                 ],
                 methods: [],
                 embeddedTypes: [],

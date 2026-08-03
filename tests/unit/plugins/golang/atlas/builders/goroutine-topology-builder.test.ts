@@ -132,7 +132,15 @@ describe('GoroutineTopologyBuilder.build', () => {
               exported: false,
               body: {
                 calls: [],
-                goSpawns: [spawn({ call: { functionName: '<anonymous>', args: [], location: { file: 'a.go', startLine: 20 } } })],
+                goSpawns: [
+                  spawn({
+                    call: {
+                      functionName: '<anonymous>',
+                      args: [],
+                      location: { file: 'a.go', startLine: 20 },
+                    },
+                  }),
+                ],
                 channelOps: [],
               },
             } as never,
@@ -166,7 +174,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                   exported: true,
                   body: {
                     calls: [],
-                    goSpawns: [spawn({ call: { functionName: 'worker', args: [], location: { file: 'a.go', startLine: 25 } } })],
+                    goSpawns: [
+                      spawn({
+                        call: {
+                          functionName: 'worker',
+                          args: [],
+                          location: { file: 'a.go', startLine: 25 },
+                        },
+                      }),
+                    ],
                     channelOps: [],
                   },
                 } as never,
@@ -200,7 +216,11 @@ describe('GoroutineTopologyBuilder.build', () => {
                 calls: [],
                 goSpawns: [],
                 channelOps: [
-                  { channelName: 'jobs', operation: 'make', location: { file: 'a.go', startLine: 5 } },
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'a.go', startLine: 5 },
+                  },
                 ],
               },
             } as never,
@@ -234,11 +254,19 @@ describe('GoroutineTopologyBuilder.build', () => {
                 calls: [],
                 goSpawns: [
                   spawn({
-                    call: { functionName: 'worker', args: ['jobs'], location: { file: 'a.go', startLine: 15 } },
+                    call: {
+                      functionName: 'worker',
+                      args: ['jobs'],
+                      location: { file: 'a.go', startLine: 15 },
+                    },
                   }),
                 ],
                 channelOps: [
-                  { channelName: 'jobs', operation: 'make', location: { file: 'a.go', startLine: 5 } },
+                  {
+                    channelName: 'jobs',
+                    operation: 'make',
+                    location: { file: 'a.go', startLine: 5 },
+                  },
                 ],
               },
             } as never,
@@ -267,7 +295,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: '', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: '',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,
@@ -299,7 +335,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: 'remoteFn', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: 'remoteFn',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,
@@ -326,7 +370,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: 'worker', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: 'worker',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,
@@ -337,7 +389,14 @@ describe('GoroutineTopologyBuilder.build', () => {
                 returnTypes: [],
                 exported: false,
                 body: {
-                  calls: [{ functionName: 'Done', packageName: 'ctx', args: [], location: { file: 'a.go', startLine: 30 } }],
+                  calls: [
+                    {
+                      functionName: 'Done',
+                      packageName: 'ctx',
+                      args: [],
+                      location: { file: 'a.go', startLine: 30 },
+                    },
+                  ],
                   goSpawns: [],
                   channelOps: [],
                 },
@@ -371,7 +430,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: 'worker', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: 'worker',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,
@@ -384,7 +451,13 @@ describe('GoroutineTopologyBuilder.build', () => {
                 body: {
                   calls: [],
                   goSpawns: [],
-                  channelOps: [{ channelName: 'stop', operation: 'receive', location: { file: 'a.go', startLine: 40 } }],
+                  channelOps: [
+                    {
+                      channelName: 'stop',
+                      operation: 'receive',
+                      location: { file: 'a.go', startLine: 40 },
+                    },
+                  ],
                 },
               } as never,
             ],
@@ -416,7 +489,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: 'worker', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: 'worker',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,
@@ -455,7 +536,15 @@ describe('GoroutineTopologyBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [],
-                  goSpawns: [spawn({ call: { functionName: 'worker', args: [], location: { file: 'a.go', startLine: 15 } } })],
+                  goSpawns: [
+                    spawn({
+                      call: {
+                        functionName: 'worker',
+                        args: [],
+                        location: { file: 'a.go', startLine: 15 },
+                      },
+                    }),
+                  ],
                   channelOps: [],
                 },
               } as never,

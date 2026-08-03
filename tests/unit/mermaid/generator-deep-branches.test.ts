@@ -57,10 +57,14 @@ describe('ValidatedMermaidGenerator — visible title branches', () => {
   }
 
   it('appends visible title at the bottom by default', () => {
-    const gen = new ValidatedMermaidGenerator(archJson, {
-      level: 'class',
-      grouping,
-    }, config());
+    const gen = new ValidatedMermaidGenerator(
+      archJson,
+      {
+        level: 'class',
+        grouping,
+      },
+      config()
+    );
     const code = gen.generate();
     expect(code).toContain('classDiagram');
     expect(code).toContain('The Title');
@@ -77,10 +81,14 @@ describe('ValidatedMermaidGenerator — visible title branches', () => {
   });
 
   it('inserts visible title at the top when titlePosition=top', () => {
-    const gen = new ValidatedMermaidGenerator(archJson, {
-      level: 'class',
-      grouping,
-    }, config({ annotations: { enableVisibleTitle: true, titlePosition: 'top' } }));
+    const gen = new ValidatedMermaidGenerator(
+      archJson,
+      {
+        level: 'class',
+        grouping,
+      },
+      config({ annotations: { enableVisibleTitle: true, titlePosition: 'top' } })
+    );
     const code = gen.generate();
     expect(code).toContain('The Title');
     // top → note appears before the classDef block (first diagram content)
@@ -92,13 +100,17 @@ describe('ValidatedMermaidGenerator — visible title branches', () => {
   });
 
   it('suppresses comment block when enableComments=false', () => {
-    const gen = new ValidatedMermaidGenerator(archJson, {
-      level: 'class',
-      grouping,
-    }, config({
-      metadata: { title: 'Hidden Title' },
-      annotations: { enableComments: false }, // note: no enableVisibleTitle
-    }));
+    const gen = new ValidatedMermaidGenerator(
+      archJson,
+      {
+        level: 'class',
+        grouping,
+      },
+      config({
+        metadata: { title: 'Hidden Title' },
+        annotations: { enableComments: false }, // note: no enableVisibleTitle
+      })
+    );
     const code = gen.generate();
     // generateAll comment header is suppressed
     expect(code).not.toContain('%% =================');
@@ -106,22 +118,30 @@ describe('ValidatedMermaidGenerator — visible title branches', () => {
   });
 
   it('does not emit visible title when enableVisibleTitle is absent', () => {
-    const gen = new ValidatedMermaidGenerator(archJson, {
-      level: 'class',
-      grouping,
-    }, config({
-      metadata: { title: 'Should Not Appear' },
-      annotations: { enableComments: false }, // comments off so only title could add it
-    }));
+    const gen = new ValidatedMermaidGenerator(
+      archJson,
+      {
+        level: 'class',
+        grouping,
+      },
+      config({
+        metadata: { title: 'Should Not Appear' },
+        annotations: { enableComments: false }, // comments off so only title could add it
+      })
+    );
     const code = gen.generate();
     expect(code).not.toContain('Should Not Appear');
   });
 
   it('no-ops when diagramConfig has no metadata', () => {
-    const gen = new ValidatedMermaidGenerator(archJson, {
-      level: 'class',
-      grouping,
-    }, config({ annotations: { enableVisibleTitle: true } }));
+    const gen = new ValidatedMermaidGenerator(
+      archJson,
+      {
+        level: 'class',
+        grouping,
+      },
+      config({ annotations: { enableVisibleTitle: true } })
+    );
     const code = gen.generate();
     expect(code).toContain('classDiagram');
   });

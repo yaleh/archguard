@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { FlowGraphBuilder } from '@/plugins/golang/atlas/builders/flow-graph-builder.js';
-import type { GoRawData, GoRawPackage, GoCallExpr, GoField } from '@/plugins/golang/types.js';
+import type { GoRawData, GoRawPackage, GoCallExpr } from '@/plugins/golang/types.js';
 
 function makePackage(overrides: Partial<GoRawPackage>): GoRawPackage {
   return {
@@ -61,7 +61,11 @@ describe('FlowGraphBuilder.build', () => {
               parameters: [],
               returnTypes: [],
               exported: false,
-              body: { calls: [call({ functionName: 'SomethingElse' })], goSpawns: [], channelOps: [] },
+              body: {
+                calls: [call({ functionName: 'SomethingElse' })],
+                goSpawns: [],
+                channelOps: [],
+              },
             } as never,
           ],
         }),
@@ -173,7 +177,9 @@ describe('FlowGraphBuilder.build', () => {
               returnTypes: [],
               exported: false,
               body: {
-                calls: [call({ functionName: 'Handle', args: ['/a', 'h'], receiverType: 'mux.Router' })],
+                calls: [
+                  call({ functionName: 'Handle', args: ['/a', 'h'], receiverType: 'mux.Router' }),
+                ],
                 goSpawns: [],
                 channelOps: [],
               },
@@ -226,7 +232,9 @@ describe('FlowGraphBuilder.build', () => {
               returnTypes: [],
               exported: false,
               body: {
-                calls: [call({ functionName: 'Handle', args: ['/a', 'h'], receiverType: 'http.Server' })],
+                calls: [
+                  call({ functionName: 'Handle', args: ['/a', 'h'], receiverType: 'http.Server' }),
+                ],
                 goSpawns: [],
                 channelOps: [],
               },
@@ -526,7 +534,12 @@ describe('FlowGraphBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [
-                    { functionName: 'loadData', packageName: 'svc', args: [], location: { file: 'a.go', startLine: 20 } },
+                    {
+                      functionName: 'loadData',
+                      packageName: 'svc',
+                      args: [],
+                      location: { file: 'a.go', startLine: 20 },
+                    },
                   ],
                   goSpawns: [],
                   channelOps: [],
@@ -562,7 +575,9 @@ describe('FlowGraphBuilder.build', () => {
       const raw = makeRawData({
         packages: [
           makePackage({
-            interfaces: [{ name: 'Repo', methods: [], embeddedInterfaces: [], exported: true } as never],
+            interfaces: [
+              { name: 'Repo', methods: [], embeddedInterfaces: [], exported: true } as never,
+            ],
             functions: [
               {
                 name: 'main',
@@ -634,7 +649,11 @@ describe('FlowGraphBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [
-                    { functionName: 'localFn', args: [], location: { file: 'a.go', startLine: 20 } } as GoCallExpr,
+                    {
+                      functionName: 'localFn',
+                      args: [],
+                      location: { file: 'a.go', startLine: 20 },
+                    } as GoCallExpr,
                   ],
                   goSpawns: [],
                   channelOps: [],
@@ -677,12 +696,37 @@ describe('FlowGraphBuilder.build', () => {
                 exported: false,
                 body: {
                   calls: [
-                    { functionName: 'Println', packageName: 'fmt', args: [], location: { file: 'a.go', startLine: 20 } },
+                    {
+                      functionName: 'Println',
+                      packageName: 'fmt',
+                      args: [],
+                      location: { file: 'a.go', startLine: 20 },
+                    },
                     { functionName: 'make', args: [], location: { file: 'a.go', startLine: 21 } },
-                    { functionName: 'Write', packageName: 'w', args: [], location: { file: 'a.go', startLine: 22 } },
-                    { functionName: 'Done', packageName: 'ctx', args: [], location: { file: 'a.go', startLine: 23 } },
-                    { functionName: 'URL', packageName: 'r', args: [], location: { file: 'a.go', startLine: 24 } },
-                    { functionName: 'realFn', packageName: 'svc', args: [], location: { file: 'a.go', startLine: 25 } },
+                    {
+                      functionName: 'Write',
+                      packageName: 'w',
+                      args: [],
+                      location: { file: 'a.go', startLine: 22 },
+                    },
+                    {
+                      functionName: 'Done',
+                      packageName: 'ctx',
+                      args: [],
+                      location: { file: 'a.go', startLine: 23 },
+                    },
+                    {
+                      functionName: 'URL',
+                      packageName: 'r',
+                      args: [],
+                      location: { file: 'a.go', startLine: 24 },
+                    },
+                    {
+                      functionName: 'realFn',
+                      packageName: 'svc',
+                      args: [],
+                      location: { file: 'a.go', startLine: 25 },
+                    },
                   ] as GoCallExpr[],
                   goSpawns: [],
                   channelOps: [],
@@ -708,8 +752,18 @@ describe('FlowGraphBuilder.build', () => {
         exported: false,
         body: {
           calls: [
-            { functionName: 'b', packageName: 'svc', args: [], location: { file: 'a.go', startLine: 30 } } as GoCallExpr,
-            { functionName: 'a', packageName: 'svc', args: [], location: { file: 'a.go', startLine: 31 } } as GoCallExpr,
+            {
+              functionName: 'b',
+              packageName: 'svc',
+              args: [],
+              location: { file: 'a.go', startLine: 30 },
+            } as GoCallExpr,
+            {
+              functionName: 'a',
+              packageName: 'svc',
+              args: [],
+              location: { file: 'a.go', startLine: 31 },
+            } as GoCallExpr,
           ],
           goSpawns: [],
           channelOps: [],
@@ -723,7 +777,12 @@ describe('FlowGraphBuilder.build', () => {
         exported: false,
         body: {
           calls: [
-            { functionName: 'c', packageName: 'svc', args: [], location: { file: 'a.go', startLine: 40 } } as GoCallExpr,
+            {
+              functionName: 'c',
+              packageName: 'svc',
+              args: [],
+              location: { file: 'a.go', startLine: 40 },
+            } as GoCallExpr,
           ],
           goSpawns: [],
           channelOps: [],

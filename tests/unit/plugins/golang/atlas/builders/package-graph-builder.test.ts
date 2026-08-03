@@ -53,9 +53,19 @@ describe('PackageGraphBuilder.build', () => {
       packages: [
         makePackage({
           fullName: 'pkg/svc',
-          structs: [{ name: 'A', fields: [], methods: [], embeddedTypes: [], exported: true } as never],
+          structs: [
+            { name: 'A', fields: [], methods: [], embeddedTypes: [], exported: true } as never,
+          ],
           interfaces: [{ name: 'I', methods: [], embeddedInterfaces: [], exported: true } as never],
-          functions: [{ name: 'f', packageName: 'svc', parameters: [], returnTypes: [], exported: false } as never],
+          functions: [
+            {
+              name: 'f',
+              packageName: 'svc',
+              parameters: [],
+              returnTypes: [],
+              exported: false,
+            } as never,
+          ],
         }),
       ],
     });
@@ -91,7 +101,9 @@ describe('PackageGraphBuilder.build', () => {
 
   it('builds edges skipping std imports and aggregating duplicate counts', async () => {
     const resolver = makeResolver('internal');
-    vi.spyOn(resolver, 'classifyImport').mockImplementation((p) => (p === 'fmt' ? 'std' : 'internal'));
+    vi.spyOn(resolver, 'classifyImport').mockImplementation((p) =>
+      p === 'fmt' ? 'std' : 'internal'
+    );
     const builder = new PackageGraphBuilder(resolver);
     const raw = makeRawData({
       packages: [
