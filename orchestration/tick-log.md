@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 3 |
+| no-action | 4 |
 | unblock | 0 |
 | correct | 0 |
 | escalate | 0 |
@@ -27,4 +27,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 1 | 09:53Z | no-action | 冷启动恢复。读 COLD-START-SEED.md → 读 orchestrator-loop-tick.md → 实况检查 → 建 gaps 清单 → 建 cron → 给内层发第一条指令：测 npm test 真实耗时 | idle（显示 `❯ Try "fix lint errors"`），待指令 |
 | 2 | 10:05Z | no-action | npm test 实测完成：492s 墙钟（远超 300s timeout），退出码 1（非 124），4506 passed / 1 failed / 13 skipped。内层已写 `docs/analysis/npm-test-real-duration.md`。唯一失败是 installer E404 边界断言——archguard 已发布到 npm。下一步：lint 480 errors | 完成任务后 idle，md5sum 确认空闲 |
 | 3 | 10:11Z | no-action | **收尾 tick**。lint errors 分析已派发（eslint --fix 后台运行中）。更新 cold-start-gaps.md 写入实测结论。按人指示：archguard 即将 .halt，资源交还 quay 产品化交付。本 tick 后停止。 | eslint --fix 仍在后台跑，留给下次恢复 |
+| 4 | 15:31Z | no-action | **AC3 下半程启动**。quay-init 幂等验证通过（21 skipped）。挂载 inner-state.sh + session-liveness.sh 两个监视器。遥测确认队列全空（0 inProgress）。建 TASK-51（修 E404 边界测试）和 TASK-52（lint 归零）。派发 TASK-51 给内层。 | 内层 idle（md5sum 确认），已接收 TASK-51 指令 |
 
