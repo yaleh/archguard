@@ -145,6 +145,18 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
   - 选中集绿（9/9）；对抗自查 2 轮：titlePosition 分支破坏抓到 1 fail、unmatched-package
     flat 分支破坏抓到 4 fail。
 
+- **Module 5 — analysis/**（整体已 87.8% stmts / 89.8% branch；补齐两个分支缺口文件）
+  - `tests/unit/analysis/test-coverage-mapper.test.ts` +4 tests（21 total）
+    - 覆盖缺口分支：covered entity 不在 archJson entities → 动态建 link（import 层）；TS 目录
+      约定（canonical test dir == canonical entity dir → 0.25*0.5，与 path-convention 叠加 0.425）；
+      无 sourceLocation.file 的 entity 在目录约定 pass 跳过；Go 目录匹配层要求同目录（不同目录
+      不跨）。
+  - `tests/unit/analysis/git-history/history-aggregator.test.ts` +2 tests（38 total）
+    - 覆盖：空 fileMetrics → []（early-return）；无 commitShas → 回退 summed commitCount。
+  - 选中集绿（23/23）；对抗自查 2 轮：目录约定破坏抓到 2 fail、SHA 回退破坏抓到 4 fail。
+  - 注：fitness rule-evaluator / dependency-checker / gim / gini / shape-smells / snapshot 等
+    已 100% stmts，不重复加。git-history index.ts 为 barrel re-export（C 类）。
+
 ## Dispatch review
 
 | Field | Value |

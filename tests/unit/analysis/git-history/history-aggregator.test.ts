@@ -533,4 +533,29 @@ describe('aggregatePackageMetrics — contributor share correctness', () => {
     // ownerConcentration = 1 - primaryOwnerShare; sole owner → ownerConcentration ≈ 0
     expect(src.riskFactors.ownerConcentration).toBeCloseTo(0, 1);
   });
+
+  it('returns [] when aggregatePackageMetrics receives no file metrics', () => {
+    expect(aggregatePackageMetrics([])).toEqual([]);
+  });
+
+  it('falls back to summed commitCount when a package has no commitShas', () => {
+    const fileMetrics = [
+      {
+        path: 'src/a.ts',
+        commitCount: 3,
+        authorCount: 1,
+        addedLines: 3,
+        deletedLines: 1,
+        activeDays: 2,
+        primaryOwner: 'alice@x.com',
+        primaryOwnerShare: 1,
+        lastChangedAt: '2024-01-03',
+        topCochangeNeighbors: [],
+        commitShas: [], // empty → fallback path
+      } as never,
+    ];
+    const packageMetrics = aggregatePackageMetrics(fileMetrics as never);
+    expect(packageMetrics).toHaveLength(1);
+    expect(packageMetrics[0].commitCount).toBe(3);
+  });
 });
