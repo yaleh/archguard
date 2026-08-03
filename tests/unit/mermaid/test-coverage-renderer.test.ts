@@ -215,6 +215,7 @@ describe('TestCoverageRenderer', () => {
     const result = renderer.render(makeAnalysis(), archJson);
     // Both truncated labels should appear in the output
     const truncated = result.includes('VeryLongServiceNameThatIsExte');
+    expect(truncated).toBe(true);
     // The truncated text (first 29 chars of both names) appears but node IDs must be distinct
     const nodeIdLines = result
       .split('\n')

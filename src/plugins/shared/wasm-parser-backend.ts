@@ -121,7 +121,7 @@ export class WasmParserBackend implements ParserBackend {
 
   /** One-time web-tree-sitter runtime initialization, cached per backend. */
   private initializeRuntime(): Promise<WtsModule> {
-    if (this.cache.modulePromise) return this.cache.modulePromise;
+    if (this.cache.modulePromise !== undefined) return this.cache.modulePromise;
     const initialized = (async () => {
       const wts = (await import('web-tree-sitter')) as unknown as WtsModule;
       const runtimePath = path.join(this.assetsDir, RUNTIME_WASM_FILE);

@@ -412,7 +412,7 @@ export class GoplsClient {
           }
           settled = true;
           clearTimeout(timer);
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         }
       );
     });

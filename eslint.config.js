@@ -69,6 +69,10 @@ export default [
       'examples/**',
       'experiments/**',
       'scripts/**',
+      // Self-contained sub-package: its compiled output (dist) and AC3
+      // orchestration scripts are not part of the root project's lint surface.
+      // Root TS rules intentionally apply only to src/** and tests/**.
+      'plugin/**',
       '.claude/**',
       'templates/**',
       '**/*.config.ts',
