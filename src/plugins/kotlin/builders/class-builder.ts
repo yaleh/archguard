@@ -477,12 +477,12 @@ export class ClassBuilder {
     // user_type may have multiple `type_identifier` children separated by `.`
     const identifiers = userTypeNode.namedChildren
       .filter((c: SyntaxNodeLike) => c.type === 'type_identifier')
-      .map((c: SyntaxNodeLike) => c.text as string);
+      .map((c: SyntaxNodeLike) => c.text);
     if (identifiers.length > 0) return identifiers.join('.');
 
     // fallback: direct identifier child
     const ident = userTypeNode.namedChildren.find((c: SyntaxNodeLike) => c.type === 'identifier');
-    if (ident) return ident.text as string;
+    if (ident) return ident.text;
 
     // last resort: raw text stripped of generics
     return userTypeNode.text.replace(/<.*>/, '').trim() || null;

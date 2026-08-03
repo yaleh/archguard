@@ -155,7 +155,10 @@ describe('parse worker pool integration', () => {
     const MEASURED_BASELINE_GROWTH_MB = 290;
     const MAX_GROWTH_RATIO = 2.0;
     const MIN_CAP_BYTES = 300 * 1024 * 1024;
-    const cap = Math.max(MIN_CAP_BYTES, MEASURED_BASELINE_GROWTH_MB * 1024 * 1024 * MAX_GROWTH_RATIO);
+    const cap = Math.max(
+      MIN_CAP_BYTES,
+      MEASURED_BASELINE_GROWTH_MB * 1024 * 1024 * MAX_GROWTH_RATIO
+    );
     expect(growth).toBeLessThan(cap);
     await pools.terminate();
     expect(pools.size).toBe(0);

@@ -89,10 +89,7 @@ export async function normalizeToDiagrams(
 
     // Go: special Atlas diagram — not a structure-detector language
     if (language === 'go') {
-      const goplsTimeoutMs = readGoplsTimeoutFromConfig(
-        cliOptions.config,
-        resolvedRoot
-      );
+      const goplsTimeoutMs = readGoplsTimeoutFromConfig(cliOptions.config, resolvedRoot);
       const diagram: DiagramConfig = {
         name: 'architecture',
         sources: cliOptions.sources,
@@ -154,10 +151,7 @@ export async function normalizeToDiagrams(
 
   // Go: special Atlas diagram
   if (cliOptions.lang === 'go') {
-    const goplsTimeoutMs = readGoplsTimeoutFromConfig(
-      cliOptions.config,
-      resolvedRoot
-    );
+    const goplsTimeoutMs = readGoplsTimeoutFromConfig(cliOptions.config, resolvedRoot);
     return [
       {
         name: 'architecture',

@@ -483,7 +483,9 @@ describe('TASK-43: actionable MCP analyze error mapping', () => {
     const toolSpy = vi.spyOn(server, 'tool');
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, { defaultRoot: '/project' });
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
 
     const result = await callback({ lang: 'go' });
     expect(result.content[0].text).toContain('Analysis failed (parser initialization)');

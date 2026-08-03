@@ -44,7 +44,11 @@ export class GoModResolver {
     // Check module-name prefix before std-library heuristic: modules without a
     // dot in the first path segment (e.g. "manda") would otherwise be
     // misclassified as standard-library by isStandardLibrary().
-    if (importPath.startsWith(this.moduleInfo.moduleName + '/') || importPath === this.moduleInfo.moduleName) return 'internal';
+    if (
+      importPath.startsWith(this.moduleInfo.moduleName + '/') ||
+      importPath === this.moduleInfo.moduleName
+    )
+      return 'internal';
     if (importPath.startsWith('./') || importPath.startsWith('../')) return 'internal';
     if (this.isStandardLibrary(importPath)) return 'std';
     return 'external';

@@ -59,7 +59,7 @@ describe('isNoisyTarget', () => {
     expect(isNoisyTarget('"some-string"')).toBe(true);
   });
 
-  it('flags string-literal targets (starts with \')', () => {
+  it("flags string-literal targets (starts with ')", () => {
     expect(isNoisyTarget("'some-string'")).toBe(true);
   });
 

@@ -643,7 +643,9 @@ export class ValidatedMermaidGenerator {
       // Emit stub declarations for cross-group targets so Mermaid does not render ghost nodes
       if (crossGroupTargetNames.size > 0) {
         lines.push('');
-        lines.push('  %% Cross-group stubs (targets from other groups — declared to prevent ghost nodes)');
+        lines.push(
+          '  %% Cross-group stubs (targets from other groups — declared to prevent ghost nodes)'
+        );
         for (const stubName of crossGroupTargetNames) {
           lines.push(`  class ${escapeId(stubName)}`);
         }

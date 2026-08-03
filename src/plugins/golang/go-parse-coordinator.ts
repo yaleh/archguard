@@ -24,7 +24,10 @@ export class GoParseCoordinator {
   private resolver: GoplsInterfaceResolver;
   private readonly parserBackend: ParserBackend;
 
-  constructor(resolver: GoplsInterfaceResolver, parserBackend: ParserBackend = nativeParserBackend) {
+  constructor(
+    resolver: GoplsInterfaceResolver,
+    parserBackend: ParserBackend = nativeParserBackend
+  ) {
     this.resolver = resolver;
     this.parserBackend = parserBackend;
     this.mapper = new ArchJsonMapper();
@@ -167,8 +170,7 @@ export class GoParseCoordinator {
       getDegradedReason?: () => string | null;
       isGoplsAvailable?: () => boolean;
     };
-    const degraded =
-      typeof resolver.isDegraded === 'function' ? resolver.isDegraded() : false;
+    const degraded = typeof resolver.isDegraded === 'function' ? resolver.isDegraded() : false;
     const available =
       typeof resolver.isGoplsAvailable === 'function' ? resolver.isGoplsAvailable() : false;
     const metadata: Record<string, unknown> = { goGoplsAvailable: available };

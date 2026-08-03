@@ -46,36 +46,45 @@ export function registerGIMTools(server: McpServer, defaultRoot: string): void {
         const direction = computeDirectionHint(snapshots);
 
         // Use latest snapshot's MetricVector for loss computation; fall back to zero-vector
-        const latestVector = snapshots.length > 0
-          ? snapshots[0].metricVector
-          : {
-              schemaVersion: 1 as const,
-              totalEntities: 0,
-              totalRelations: 0,
-              inferredRelationRatio: 0,
-              sccCount: 0,
-              relationTypeBreakdown: {},
-              maxInDegree: 0,
-              maxOutDegree: 0,
-              maxPackageSize: 0,
-              giniInDegree: 0,
-              giniPackageSize: 0,
-              packageCount: 0,
-            };
+        const latestVector =
+          snapshots.length > 0
+            ? snapshots[0].metricVector
+            : {
+                schemaVersion: 1 as const,
+                totalEntities: 0,
+                totalRelations: 0,
+                inferredRelationRatio: 0,
+                sccCount: 0,
+                relationTypeBreakdown: {},
+                maxInDegree: 0,
+                maxOutDegree: 0,
+                maxPackageSize: 0,
+                giniInDegree: 0,
+                giniPackageSize: 0,
+                packageCount: 0,
+              };
 
         const losses = computeAllLosses(latestVector);
 
         // Compute high-influence packages via engine (graceful degradation on failure)
-        let highInfluencePackages: Array<{ packageName: string; fanIn: number; fanOut: number }> = [];
+        let highInfluencePackages: Array<{ packageName: string; fanIn: number; fanOut: number }> =
+          [];
         try {
           const { extensionAccessor } = await loadEngine(archDir);
           const entityIds = extensionAccessor.getEntityIds();
           const allPackageNames = new Set(entityIds.map(extractPackageName));
           const relations = extensionAccessor.getRelations();
-          const { fanIn, fanOut } = computePackageFanMetricsFromRelations(relations, allPackageNames);
+          const { fanIn, fanOut } = computePackageFanMetricsFromRelations(
+            relations,
+            allPackageNames
+          );
 
           highInfluencePackages = Array.from(allPackageNames)
-            .map((pkg) => ({ packageName: pkg, fanIn: fanIn.get(pkg) ?? 0, fanOut: fanOut.get(pkg) ?? 0 }))
+            .map((pkg) => ({
+              packageName: pkg,
+              fanIn: fanIn.get(pkg) ?? 0,
+              fanOut: fanOut.get(pkg) ?? 0,
+            }))
             .sort((a, b) => b.fanIn - a.fanIn)
             .slice(0, 5);
         } catch {

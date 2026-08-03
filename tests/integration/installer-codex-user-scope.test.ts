@@ -511,9 +511,9 @@ describe('installer with fake codex CLI (isolated config)', () => {
       env: { ARCHGUARD_PARSER_RUNTIME: 'auto' },
     });
     // Never the source checkout or Claude cache.
-    expect(validateEntryTarget(entry!.args[0], { repoRoot, home: env.home })).toEqual([]);
-    expect(entry!.args[0]).not.toContain(`${path.sep}.claude${path.sep}`);
-    expect(entry!.args[0]).not.toContain(repoRoot);
+    expect(validateEntryTarget(entry.args[0], { repoRoot, home: env.home })).toEqual([]);
+    expect(entry.args[0]).not.toContain(`${path.sep}.claude${path.sep}`);
+    expect(entry.args[0]).not.toContain(repoRoot);
     // Real user config untouched (isolated HOME had no .codex written).
     expect(existsSync(path.join(env.home, '.codex', 'config.toml'))).toBe(false);
   });
@@ -580,10 +580,10 @@ describe('installer with fake codex CLI (isolated config)', () => {
     const servers = await fakeCodexListJson(env);
     const ag = servers.find((s) => s.name === SERVER_NAME);
     expect(ag).toBeDefined();
-    expect(ag!.enabled).toBe(true);
-    expect(ag!.transport.command).toBe('node');
-    expect(ag!.transport.args).toEqual([env.entry, 'mcp']);
-    expect(ag!.transport.env).toEqual({ ARCHGUARD_PARSER_RUNTIME: 'auto' });
+    expect(ag.enabled).toBe(true);
+    expect(ag.transport.command).toBe('node');
+    expect(ag.transport.args).toEqual([env.entry, 'mcp']);
+    expect(ag.transport.env).toEqual({ ARCHGUARD_PARSER_RUNTIME: 'auto' });
   });
 
   it('refuses to register an entry inside Claude’s plugin cache', async () => {
@@ -711,7 +711,7 @@ describe('real codex CLI boundary (isolated config)', () => {
       // Seed unrelated config to prove preservation against the real codex.
       writeFileSync(path.join(codexHome, 'config.toml'), UNRELATED_CONFIG);
 
-      const npmRoot = path.dirname(path.dirname(path.dirname(globalEntry!))); // .../node_modules
+      const npmRoot = path.dirname(path.dirname(path.dirname(globalEntry))); // .../node_modules
       const result = await runInstallerReal({
         home,
         codexHome,
@@ -739,10 +739,10 @@ describe('real codex CLI boundary (isolated config)', () => {
       expect(servers.find((s: any) => s.name === 'github')).toBeDefined();
 
       // The registered target is the npm install, not the cache or checkout.
-      expect(validateEntryTarget(globalEntry!, { repoRoot, home })).toEqual([]);
+      expect(validateEntryTarget(globalEntry, { repoRoot, home })).toEqual([]);
 
       // Real MCP handshake + query through exactly the command Codex uses.
-      const handshake = await mcpHandshake(globalEntry!, { ARCHGUARD_PARSER_RUNTIME: 'wasm' });
+      const handshake = await mcpHandshake(globalEntry, { ARCHGUARD_PARSER_RUNTIME: 'wasm' });
       expect(handshake.toolCount).toBeGreaterThan(0);
       expect(handshake.tools).toContain('archguard_summary');
       expect(handshake.tools).toContain('archguard_analyze');
@@ -762,7 +762,7 @@ describe('real codex CLI boundary (isolated config)', () => {
           'export class HelloGreeter implements Greeter { greet() { return "hi"; } }\n' +
           'export function makeGreeter(): Greeter { return new HelloGreeter(); }\n'
       );
-      const analysis = await mcpAnalyze(globalEntry!, projectRoot, {
+      const analysis = await mcpAnalyze(globalEntry, projectRoot, {
         ARCHGUARD_PARSER_RUNTIME: 'wasm',
       });
       expect(analysis.analyzeOk).toBe(true);
@@ -792,7 +792,7 @@ describe('real codex exec LLM-driven tool-call boundary (isolated config)', () =
       mkdirSync(codexHome, { recursive: true });
 
       // 2. Installer writes the archguard MCP entry.
-      const npmRoot = path.dirname(path.dirname(path.dirname(globalEntry!)));
+      const npmRoot = path.dirname(path.dirname(path.dirname(globalEntry)));
       const result = await runInstallerReal({
         home,
         codexHome,
@@ -823,16 +823,12 @@ describe('real codex exec LLM-driven tool-call boundary (isolated config)', () =
       let stderr = '';
       let code = 0;
       try {
-        const out = await execFileAsync(
-          'codex',
-          ['exec', '--no-approval', prompt],
-          {
-            env: { ...process.env, HOME: home, CODEX_HOME: codexHome },
-            timeout: 300_000,
-            maxBuffer: 2 * 1024 * 1024,
-            encoding: 'utf8',
-          }
-        );
+        const out = await execFileAsync('codex', ['exec', '--no-approval', prompt], {
+          env: { ...process.env, HOME: home, CODEX_HOME: codexHome },
+          timeout: 300_000,
+          maxBuffer: 2 * 1024 * 1024,
+          encoding: 'utf8',
+        });
         stdout = out.stdout;
         stderr = out.stderr;
       } catch (error) {
@@ -917,7 +913,7 @@ class McpClient {
       stdio: ['pipe', 'pipe', 'ignore'],
       env: { ...process.env, ...extraEnv },
     });
-    this.child.stdout!.on('data', (d: Buffer) => this.onData(d));
+    this.child.stdout.on('data', (d: Buffer) => this.onData(d));
   }
 
   private onData(d: Buffer): void {
@@ -934,7 +930,7 @@ class McpClient {
         continue;
       }
       if (msg.id != null && this.pending.has(msg.id)) {
-        this.pending.get(msg.id)!(msg);
+        this.pending.get(msg.id)(msg);
         this.pending.delete(msg.id);
       }
     }
@@ -949,12 +945,12 @@ class McpClient {
         reject(new Error(`timeout ${method}`));
       }, timeoutMs);
       this.timers.add(timer);
-      this.child.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+      this.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
     });
   }
 
   notify(method: string, params: any): void {
-    this.child.stdin!.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n');
+    this.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n');
   }
 
   async initialize(): Promise<void> {
@@ -970,7 +966,7 @@ class McpClient {
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
     try {
-      this.child.stdin!.destroy();
+      this.child.stdin.destroy();
     } catch {
       /* already closed */
     }

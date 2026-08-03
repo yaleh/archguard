@@ -70,10 +70,7 @@ function fixtureInterface(name = 'Runner'): GoRawInterface {
 }
 
 /** Duck-typed fake GoplsClient with programmable behaviour. */
-function makeFakeClient(opts: {
-  initialized?: boolean;
-  throwOnQuery?: boolean;
-}): GoplsClient {
+function makeFakeClient(opts: { initialized?: boolean; throwOnQuery?: boolean }): GoplsClient {
   return {
     isInitialized: () => opts.initialized ?? true,
     getImplementations: vi.fn(async () => {
@@ -95,11 +92,7 @@ describe('InterfaceMatcher (TASK-44 bounded gopls integration)', () => {
   });
 
   it('falls back to name-based matching when the client is null', async () => {
-    const results = await matcher.matchWithGopls(
-      [fixtureStruct()],
-      [fixtureInterface()],
-      null
-    );
+    const results = await matcher.matchWithGopls([fixtureStruct()], [fixtureInterface()], null);
     expect(results).toHaveLength(1);
     expect(results[0].source).toBe('inferred');
   });
@@ -107,11 +100,7 @@ describe('InterfaceMatcher (TASK-44 bounded gopls integration)', () => {
   it('falls back when gopls is disabled by the poison-pill', async () => {
     poisonGopls('budget exceeded');
     const client = makeFakeClient({ initialized: true });
-    const results = await matcher.matchWithGopls(
-      [fixtureStruct()],
-      [fixtureInterface()],
-      client
-    );
+    const results = await matcher.matchWithGopls([fixtureStruct()], [fixtureInterface()], client);
     // Even though the client claims to be initialized, poison forces fallback.
     expect(results).toHaveLength(1);
     expect(results[0].source).toBe('inferred');
@@ -120,11 +109,7 @@ describe('InterfaceMatcher (TASK-44 bounded gopls integration)', () => {
 
   it('falls back when the client is not initialized', async () => {
     const client = makeFakeClient({ initialized: false });
-    const results = await matcher.matchWithGopls(
-      [fixtureStruct()],
-      [fixtureInterface()],
-      client
-    );
+    const results = await matcher.matchWithGopls([fixtureStruct()], [fixtureInterface()], client);
     expect(results).toHaveLength(1);
     expect(results[0].source).toBe('inferred');
     expect(client.getImplementations).not.toHaveBeenCalled();
@@ -135,11 +120,7 @@ describe('InterfaceMatcher (TASK-44 bounded gopls integration)', () => {
     const client = makeFakeClient({ initialized: true, throwOnQuery: true });
 
     // Must resolve (not reject) and still yield name-based results.
-    const results = await matcher.matchWithGopls(
-      [fixtureStruct()],
-      [fixtureInterface()],
-      client
-    );
+    const results = await matcher.matchWithGopls([fixtureStruct()], [fixtureInterface()], client);
 
     expect(results).toHaveLength(1);
     expect(results[0].source).toBe('inferred');

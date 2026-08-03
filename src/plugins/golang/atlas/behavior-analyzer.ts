@@ -39,7 +39,10 @@ export class BehaviorAnalyzer {
     return this.packageGraphBuilder.build(rawData);
   }
 
-  async buildCapabilityGraph(rawData: GoRawData, options?: CapabilityBuildOptions): Promise<CapabilityGraph> {
+  async buildCapabilityGraph(
+    rawData: GoRawData,
+    options?: CapabilityBuildOptions
+  ): Promise<CapabilityGraph> {
     if (!rawData.implementations?.length) {
       // Use fullName as packageName so InterfaceMatcher produces unambiguous
       // structPackageId / interfacePackageId values (full import path, not short name).

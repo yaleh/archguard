@@ -87,10 +87,7 @@ import {
   isGoplsPoisoned,
   getGoplsDiagnostics,
 } from '../../../../src/plugins/golang/gopls-client.js';
-import type {
-  GoRawStruct,
-  GoRawInterface,
-} from '../../../../src/plugins/golang/types.js';
+import type { GoRawStruct, GoRawInterface } from '../../../../src/plugins/golang/types.js';
 
 const WS = '/tmp/atlas-gopls-ws';
 
@@ -161,7 +158,7 @@ describe('Atlas gopls timeout → degradation + poison-pill', () => {
 
     // Hung serve child reaped.
     const serveEntry = spawned.find((s) => s.args[0] !== 'version');
-    expect(serveEntry!.proc.kill).toHaveBeenCalled();
+    expect(serveEntry.proc.kill).toHaveBeenCalled();
 
     // Degraded resolver still produces tree-sitter results.
     const results = await first.resolve([struct], [iface]);

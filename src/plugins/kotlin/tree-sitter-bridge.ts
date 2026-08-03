@@ -61,14 +61,14 @@ export class TreeSitterBridge {
   // ─── package_header ────────────────────────────────────────────────────────
 
   private extractPackageName(rootNode: SyntaxNodeLike): string {
-    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
+    for (const child of rootNode.namedChildren) {
       if (child.type === 'package_header') {
         // Verified: package_header → qualified_identifier (not `identifier`)
-        for (const c of child.namedChildren as SyntaxNodeLike[]) {
-          if (c.type === 'qualified_identifier') return c.text as string;
+        for (const c of child.namedChildren) {
+          if (c.type === 'qualified_identifier') return c.text;
         }
         // Fallback: strip keyword prefix from raw text
-        return (child.text as string).replace(/^package\s+/, '').trim();
+        return child.text.replace(/^package\s+/, '').trim();
       }
     }
     return '';
@@ -79,7 +79,7 @@ export class TreeSitterBridge {
   private extractImports(rootNode: SyntaxNodeLike): RawKotlinImport[] {
     const imports: RawKotlinImport[] = [];
 
-    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
+    for (const child of rootNode.namedChildren) {
       // Verified: node type is 'import' (not 'import_header')
       if (child.type !== 'import') continue;
 
@@ -101,18 +101,18 @@ export class TreeSitterBridge {
    */
   private extractImportPath(importNode: SyntaxNodeLike): string | undefined {
     // Verified: namedChildren[0] is qualified_identifier
-    const qid = (importNode.namedChildren as SyntaxNodeLike[]).find(
+    const qid = importNode.namedChildren.find(
       (c: SyntaxNodeLike) => c.type === 'qualified_identifier'
     );
     if (qid) {
-      const base = qid.text as string;
+      const base = qid.text;
       // Preserve wildcard: raw import text ends with '.*' but namedChildren don't include '*'
-      const raw = (importNode.text as string).trim();
+      const raw = importNode.text.trim();
       return raw.endsWith('.*') ? base + '.*' : base;
     }
 
     // Fallback: strip 'import ' keyword from raw text
-    const raw = (importNode.text as string).replace(/^import\s+/, '').trim();
+    const raw = importNode.text.replace(/^import\s+/, '').trim();
     return raw || undefined;
   }
 
@@ -121,12 +121,12 @@ export class TreeSitterBridge {
    * Verified: when an alias exists, namedChildren[1] has type 'identifier'.
    */
   private extractImportAlias(importNode: SyntaxNodeLike): string | undefined {
-    const named = importNode.namedChildren as SyntaxNodeLike[];
+    const named = importNode.namedChildren;
     // namedChildren[1] (if present) is the alias identifier
     if (named.length >= 2) {
       const aliasNode = named[1];
       if (aliasNode.type === 'identifier') {
-        return aliasNode.text as string;
+        return aliasNode.text;
       }
     }
     return undefined;

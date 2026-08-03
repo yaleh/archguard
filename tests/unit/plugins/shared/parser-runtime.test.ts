@@ -580,14 +580,15 @@ describe('TASK-43: choice-source metadata, diagnostic format, deprecated-alias w
     expect(selection.diagnostic).toContain('kotlin');
     expect(selection.diagnostic).toContain('-> wasm');
     expect(selection.diagnostic).toContain('source=default');
-    expect(selection.diagnostic).toContain('native probe failed: cannot load native tree-sitter runtime');
+    expect(selection.diagnostic).toContain(
+      'native probe failed: cannot load native tree-sitter runtime'
+    );
     expect(selection.diagnostic).toContain('no native here');
   });
 
   it('runtimeDiagnosticVisible: verbose OR fallback, never silent otherwise', async () => {
-    const { runtimeDiagnosticVisible } = await import(
-      '../../../../src/plugins/shared/parser-runtime.js'
-    );
+    const { runtimeDiagnosticVisible } =
+      await import('../../../../src/plugins/shared/parser-runtime.js');
     expect(runtimeDiagnosticVisible(false, {})).toBe(false);
     expect(runtimeDiagnosticVisible(true, {})).toBe(true);
     expect(runtimeDiagnosticVisible(false, { fallbackReason: 'x' })).toBe(true);
@@ -598,8 +599,10 @@ describe('TASK-43: choice-source metadata, diagnostic format, deprecated-alias w
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'wasm' })).toBe('wasm');
     expect(readParserRuntimePolicy({ ARCHGUARD_PARSER_BACKEND: 'native' })).toBe('native');
-    const warnings = spy.mock.calls.filter((args) =>
-      String(args[0]).includes('ARCHGUARD_PARSER_BACKEND') && String(args[0]).includes('deprecated')
+    const warnings = spy.mock.calls.filter(
+      (args) =>
+        String(args[0]).includes('ARCHGUARD_PARSER_BACKEND') &&
+        String(args[0]).includes('deprecated')
     );
     expect(warnings).toHaveLength(1);
     expect(String(warnings[0][0])).toContain('ARCHGUARD_PARSER_RUNTIME');
@@ -608,7 +611,10 @@ describe('TASK-43: choice-source metadata, diagnostic format, deprecated-alias w
   it('does not warn about the alias when the canonical variable is set (canonical wins silently)', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(
-      readParserRuntimePolicy({ ARCHGUARD_PARSER_RUNTIME: 'wasm', ARCHGUARD_PARSER_BACKEND: 'native' })
+      readParserRuntimePolicy({
+        ARCHGUARD_PARSER_RUNTIME: 'wasm',
+        ARCHGUARD_PARSER_BACKEND: 'native',
+      })
     ).toBe('wasm');
     const warnings = spy.mock.calls.filter((args) => String(args[0]).includes('deprecated'));
     expect(warnings).toHaveLength(0);

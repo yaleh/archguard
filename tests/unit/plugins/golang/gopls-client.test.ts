@@ -131,8 +131,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
     resetGoplsPoison();
     spawned = [];
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
-      const proc =
-        args && args[0] === 'version' ? makeVersionProc() : makeServeProc();
+      const proc = args && args[0] === 'version' ? makeVersionProc() : makeServeProc();
       spawned.push({ args, proc });
       return proc;
     });
@@ -247,9 +246,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
     });
 
     it('programmatic value is superseded by env override', () => {
-      expect(
-        resolveGoplsTimeoutMs({ ARCHGUARD_GOPLS_TIMEOUT_MS: '150' }, 4000)
-      ).toBe(150);
+      expect(resolveGoplsTimeoutMs({ ARCHGUARD_GOPLS_TIMEOUT_MS: '150' }, 4000)).toBe(150);
     });
 
     it('falls back to default when programmatic value is invalid', () => {
@@ -327,15 +324,13 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       // The hung serve child was reaped (kill called).
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
       expect(serveEntry).toBeDefined();
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
     });
 
     it('bounds a hung version probe and reaps the probe child', async () => {
       spawnMock.mockImplementation((_cmd: string, args: string[]) => {
         const proc =
-          args && args[0] === 'version'
-            ? makeVersionProc({ hang: true })
-            : makeServeProc();
+          args && args[0] === 'version' ? makeVersionProc({ hang: true }) : makeServeProc();
         spawned.push({ args, proc });
         return proc;
       });
@@ -346,7 +341,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
 
       const versionEntry = spawned.find((s) => s.args[0] === 'version');
       expect(versionEntry).toBeDefined();
-      expect(versionEntry!.proc.kill).toHaveBeenCalled();
+      expect(versionEntry.proc.kill).toHaveBeenCalled();
     });
   });
 
@@ -392,7 +387,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       expect(serveEntry).toBeDefined();
 
       await client.dispose();
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
       expect(client.isInitialized()).toBe(false);
     });
 
@@ -440,7 +435,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       // Reaped by reapAll() in initialize's catch.
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
       expect(serveEntry).toBeDefined();
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
       expect(client.isInitialized()).toBe(false);
 
       // Non-timeout errors do NOT set the poison-pill.
@@ -462,10 +457,12 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       });
 
       const client = new GoplsClient('gopls', 30000, 5000);
-      await expect(client.initialize(WS)).rejects.toThrow(/gopls process not available|Failed to initialize gopls/);
+      await expect(client.initialize(WS)).rejects.toThrow(
+        /gopls process not available|Failed to initialize gopls/
+      );
 
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
       expect(isGoplsPoisoned()).toBe(false);
     });
 
@@ -482,12 +479,18 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
           write(chunk: Buffer, _encoding: string, callback: () => void) {
             inputBuffer += chunk.toString();
             const headerMatch = inputBuffer.match(/Content-Length: (\d+)\r\n\r\n/);
-            if (!headerMatch) { callback(); return; }
+            if (!headerMatch) {
+              callback();
+              return;
+            }
             const contentLength = parseInt(headerMatch[1], 10);
             const headerLen = headerMatch[0].length;
             const bodyStart = (headerMatch.index ?? 0) + headerLen;
             const bodyEnd = bodyStart + contentLength;
-            if (inputBuffer.length < bodyEnd) { callback(); return; }
+            if (inputBuffer.length < bodyEnd) {
+              callback();
+              return;
+            }
             const body = inputBuffer.substring(bodyStart, bodyEnd);
             inputBuffer = inputBuffer.substring(bodyEnd);
             try {
@@ -496,7 +499,9 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
                 // Crash immediately — simulates gopls crashing during workspace load.
                 setImmediate(() => proc.emit('exit', 1, 'SIGABRT'));
               }
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
             callback();
           },
         });
@@ -520,7 +525,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       await expect(client.initialize(WS)).rejects.toThrow(/Failed to initialize gopls/);
 
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
       expect(client.isInitialized()).toBe(false);
       expect(isGoplsPoisoned()).toBe(false);
     });
@@ -536,12 +541,18 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
           write(chunk: Buffer, _encoding: string, callback: () => void) {
             inputBuffer += chunk.toString();
             const headerMatch = inputBuffer.match(/Content-Length: (\d+)\r\n\r\n/);
-            if (!headerMatch) { callback(); return; }
+            if (!headerMatch) {
+              callback();
+              return;
+            }
             const contentLength = parseInt(headerMatch[1], 10);
             const headerLen = headerMatch[0].length;
             const bodyStart = (headerMatch.index ?? 0) + headerLen;
             const bodyEnd = bodyStart + contentLength;
-            if (inputBuffer.length < bodyEnd) { callback(); return; }
+            if (inputBuffer.length < bodyEnd) {
+              callback();
+              return;
+            }
             const body = inputBuffer.substring(bodyStart, bodyEnd);
             inputBuffer = inputBuffer.substring(bodyEnd);
             try {
@@ -557,7 +568,9 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
                   stdout.emit('data', Buffer.from(`Content-Length: ${len}\r\n\r\n${errBody}`))
                 );
               }
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
             callback();
           },
         });
@@ -581,7 +594,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       await expect(client.initialize(WS)).rejects.toThrow(/Failed to initialize gopls/);
 
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
       expect(client.isInitialized()).toBe(false);
       expect(isGoplsPoisoned()).toBe(false);
     });
@@ -613,7 +626,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       // Version probe was reaped by checkGoplsAvailable's error handler.
       const versionEntry = spawned.find((s) => s.args[0] === 'version');
       expect(versionEntry).toBeDefined();
-      expect(versionEntry!.proc.kill).toHaveBeenCalled();
+      expect(versionEntry.proc.kill).toHaveBeenCalled();
       expect(isGoplsPoisoned()).toBe(false);
     });
 
@@ -644,7 +657,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       // Process already exited — no kill needed (untrackProcess handles cleanup).
       const versionEntry = spawned.find((s) => s.args[0] === 'version');
       expect(versionEntry).toBeDefined();
-      expect(versionEntry!.proc.kill).not.toHaveBeenCalled();
+      expect(versionEntry.proc.kill).not.toHaveBeenCalled();
       // No orphan: initialize's catch → reapAll iterates empty liveChildren.
       expect(isGoplsPoisoned()).toBe(false);
     });
@@ -661,10 +674,10 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       const serveEntry = spawned.find((s) => s.args[0] !== 'version');
       expect(serveEntry).toBeDefined();
       // Reset kill spy to distinguish pre-init kills from dispose kills.
-      serveEntry!.proc.kill.mockClear();
+      serveEntry.proc.kill.mockClear();
 
       // Simulate gopls crashing after initialization.
-      serveEntry!.proc.emit('exit', 1, 'SIGABRT');
+      serveEntry.proc.emit('exit', 1, 'SIGABRT');
       // handleProcessExit runs: sets this.process=null, initialized=false.
       // Note: handleProcessExit does NOT call untrackProcess — the dead
       // reference stays in liveChildren. dispose/reapAll handles it safely.
@@ -675,7 +688,7 @@ describe('GoplsClient (TASK-44 reliability bounds)', () => {
       // Dispose still works — reapAll kills the stale reference + clears sets.
       await expect(client.dispose()).resolves.not.toThrow();
       // reapAll called kill on the dead reference (harmless, caught by try/catch).
-      expect(serveEntry!.proc.kill).toHaveBeenCalled();
+      expect(serveEntry.proc.kill).toHaveBeenCalled();
 
       // After dispose, a fresh client can initialize (no poison-pill for non-timeout).
       expect(isGoplsPoisoned()).toBe(false);

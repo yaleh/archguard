@@ -22,18 +22,20 @@ describe('MCP analyze stdout cleanliness (TASK-43)', () => {
   });
 
   it('routes runtime diagnostics to stderr and never into the MCP response payload', async () => {
-    runAnalysisMock.mockImplementation(async (options: { reporter: { info: (m: string) => void } }) => {
-      // The analyze path surfaces the effective-runtime summary via the reporter.
-      options.reporter.info(DIAGNOSTIC_LINE);
-      return {
-        config: { workDir: '/workspace/.archguard', outputDir: '/workspace/.archguard/output' },
-        diagrams: [],
-        results: [],
-        queryScopesPersisted: 1,
-        persistedScopeKeys: ['k'],
-        hasDiagramFailures: false,
-      };
-    });
+    runAnalysisMock.mockImplementation(
+      async (options: { reporter: { info: (m: string) => void } }) => {
+        // The analyze path surfaces the effective-runtime summary via the reporter.
+        options.reporter.info(DIAGNOSTIC_LINE);
+        return {
+          config: { workDir: '/workspace/.archguard', outputDir: '/workspace/.archguard/output' },
+          diagrams: [],
+          results: [],
+          queryScopesPersisted: 1,
+          persistedScopeKeys: ['k'],
+          hasDiagramFailures: false,
+        };
+      }
+    );
 
     const stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -41,7 +43,9 @@ describe('MCP analyze stdout cleanliness (TASK-43)', () => {
     const toolSpy = vi.spyOn(server, 'tool');
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, { defaultRoot: '/workspace' });
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
 
     const result = await callback({ lang: 'go' });
     const payload = result.content[0].text as string;
@@ -51,7 +55,9 @@ describe('MCP analyze stdout cleanliness (TASK-43)', () => {
     expect(payload).toContain('Analysis completed');
 
     // The diagnostic went to stderr via StderrReporter:
-    expect(stderrSpy.mock.calls.some((args) => String(args[0]).includes('[parser-runtime] go:'))).toBe(true);
+    expect(
+      stderrSpy.mock.calls.some((args) => String(args[0]).includes('[parser-runtime] go:'))
+    ).toBe(true);
 
     stderrSpy.mockRestore();
   });
@@ -59,7 +65,11 @@ describe('MCP analyze stdout cleanliness (TASK-43)', () => {
   it('keeps error payloads actionable without leaking diagnostic internals', async () => {
     const { ParserInitializationError } = await import('@/plugins/shared/parser-backend.js');
     runAnalysisMock.mockRejectedValue(
-      new ParserInitializationError('kotlin', 'native', new Error('probe failed; ARCHGUARD_PARSER_RUNTIME=wasm fixes it'))
+      new ParserInitializationError(
+        'kotlin',
+        'native',
+        new Error('probe failed; ARCHGUARD_PARSER_RUNTIME=wasm fixes it')
+      )
     );
 
     const stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -67,7 +77,9 @@ describe('MCP analyze stdout cleanliness (TASK-43)', () => {
     const toolSpy = vi.spyOn(server, 'tool');
     const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
     registerAnalyzeTool(server, { defaultRoot: '/workspace' });
-    const callback = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze')?.[3] as Function;
+    const callback = toolSpy.mock.calls.find(
+      ([name]) => name === 'archguard_analyze'
+    )?.[3] as Function;
 
     const result = await callback({ lang: 'kotlin' });
     const payload = result.content[0].text as string;

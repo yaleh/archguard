@@ -28,12 +28,18 @@ function resolveProxy(loss: LossName, vector: MetricVector): number | null {
 
 function compare(actual: number, op: GimLossRule['op'], threshold: number): boolean {
   switch (op) {
-    case '<': return actual < threshold;
-    case '<=': return actual <= threshold;
-    case '>': return actual > threshold;
-    case '>=': return actual >= threshold;
-    case '==': return actual === threshold;
-    case '!=': return actual !== threshold;
+    case '<':
+      return actual < threshold;
+    case '<=':
+      return actual <= threshold;
+    case '>':
+      return actual > threshold;
+    case '>=':
+      return actual >= threshold;
+    case '==':
+      return actual === threshold;
+    case '!=':
+      return actual !== threshold;
   }
 }
 

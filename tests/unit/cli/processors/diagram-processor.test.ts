@@ -501,8 +501,20 @@ describe('deriveSubModuleArchJSON – moduleGraph filter uses relSub when worksp
           version: '1.1',
           moduleGraph: {
             nodes: [
-              { id: 'core', name: 'core', type: 'internal' as const, fileCount: 1, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
-              { id: 'shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+              {
+                id: 'core',
+                name: 'core',
+                type: 'internal' as const,
+                fileCount: 1,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'shared',
+                name: 'shared',
+                type: 'internal' as const,
+                fileCount: 1,
+                stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 },
+              },
             ],
             edges: [{ from: 'core', to: 'shared', strength: 1, importedNames: [] }],
             cycles: [],
@@ -532,8 +544,20 @@ describe('deriveSubModuleArchJSON – moduleGraph filter uses relSub when worksp
           version: '1.1',
           moduleGraph: {
             nodes: [
-              { id: 'src/core', name: 'core', type: 'internal' as const, fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 } },
-              { id: 'src/shared', name: 'shared', type: 'internal' as const, fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 } },
+              {
+                id: 'src/core',
+                name: 'core',
+                type: 'internal' as const,
+                fileCount: 2,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'src/shared',
+                name: 'shared',
+                type: 'internal' as const,
+                fileCount: 1,
+                stats: { classes: 0, interfaces: 0, functions: 1, enums: 0 },
+              },
             ],
             edges: [],
             cycles: [],

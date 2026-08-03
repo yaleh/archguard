@@ -45,7 +45,7 @@ export class FunctionBuilder {
   ): RawKotlinFunction[] {
     const results: RawKotlinFunction[] = [];
 
-    for (const child of rootNode.namedChildren as SyntaxNodeLike[]) {
+    for (const child of rootNode.namedChildren) {
       if (child.type !== 'function_declaration') continue;
 
       const name = this.extractName(child);
@@ -80,9 +80,9 @@ export class FunctionBuilder {
 
   /** Extract function name from `identifier` direct child of the declaration. */
   private extractName(node: SyntaxNodeLike): string | undefined {
-    for (const child of node.namedChildren as SyntaxNodeLike[]) {
+    for (const child of node.namedChildren) {
       if (child.type === 'identifier' || child.type === 'simple_identifier') {
-        return child.text as string;
+        return child.text;
       }
     }
     return undefined;
@@ -104,7 +104,7 @@ export class FunctionBuilder {
     const modifiers = this.findDirectChild(fnNode, 'modifiers');
     if (!modifiers) return names;
 
-    for (const child of modifiers.namedChildren as SyntaxNodeLike[]) {
+    for (const child of modifiers.namedChildren) {
       if (child.type !== 'annotation') continue;
 
       const name = this.resolveAnnotationName(child);
@@ -119,7 +119,7 @@ export class FunctionBuilder {
    * Drills through optional `constructor_invocation` → `user_type`.
    */
   private resolveAnnotationName(annotationNode: SyntaxNodeLike): string | undefined {
-    for (const child of annotationNode.namedChildren as SyntaxNodeLike[]) {
+    for (const child of annotationNode.namedChildren) {
       if (child.type === 'user_type') {
         return this.extractUserTypeName(child);
       }
@@ -138,13 +138,13 @@ export class FunctionBuilder {
    */
   private extractUserTypeName(userTypeNode: SyntaxNodeLike): string | undefined {
     // Actual AST: user_type > identifier (not type_identifier or simple_identifier)
-    for (const child of userTypeNode.namedChildren as SyntaxNodeLike[]) {
+    for (const child of userTypeNode.namedChildren) {
       if (
         child.type === 'identifier' ||
         child.type === 'type_identifier' ||
         child.type === 'simple_identifier'
       ) {
-        return child.text as string;
+        return child.text;
       }
     }
     // Fallback: use the full text of the user_type node
@@ -161,9 +161,9 @@ export class FunctionBuilder {
     const modifiers = this.findDirectChild(fnNode, 'modifiers');
     if (!modifiers) return 'public';
 
-    for (const child of modifiers.namedChildren as SyntaxNodeLike[]) {
+    for (const child of modifiers.namedChildren) {
       if (child.type === 'visibility_modifier') {
-        const text = (child.text as string).trim().toLowerCase();
+        const text = child.text.trim().toLowerCase();
         if (text === 'private' || text === 'protected' || text === 'internal') {
           return text as KotlinVisibility;
         }
@@ -191,7 +191,7 @@ export class FunctionBuilder {
     if (!paramsNode) return types;
 
     // Actual AST: function_value_parameters → parameter (direct, no function_value_parameter wrapper)
-    for (const param of paramsNode.namedChildren as SyntaxNodeLike[]) {
+    for (const param of paramsNode.namedChildren) {
       if (param.type !== 'parameter') continue;
       const typeName = this.extractParamTypeName(param);
       if (typeName) types.push(typeName);
@@ -278,7 +278,7 @@ export class FunctionBuilder {
   private typeNodeToString(typeNode: SyntaxNodeLike): string | undefined {
     if (!typeNode) return undefined;
 
-    switch (typeNode.type as string) {
+    switch (typeNode.type) {
       case 'user_type': {
         return this.extractUserTypeName(typeNode);
       }
@@ -313,7 +313,7 @@ export class FunctionBuilder {
    * Return the first direct named child of `node` whose `.type` matches `type`.
    */
   private findDirectChild(node: SyntaxNodeLike, type: string): SyntaxNodeLike | undefined {
-    for (const child of node.namedChildren as SyntaxNodeLike[]) {
+    for (const child of node.namedChildren) {
       if (child.type === type) return child;
     }
     return undefined;

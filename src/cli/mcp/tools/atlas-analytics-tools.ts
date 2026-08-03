@@ -12,10 +12,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
-import {
-  computePackageFanMetrics,
-  enrichPackageNodes,
-} from '@/analysis/atlas-metrics-analysis.js';
+import { computePackageFanMetrics, enrichPackageNodes } from '@/analysis/atlas-metrics-analysis.js';
 import type { EnrichedPackageNode } from '@/analysis/atlas-metrics-analysis.js';
 
 // Re-export for backward compatibility with existing tests

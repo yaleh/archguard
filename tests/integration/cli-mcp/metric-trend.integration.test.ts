@@ -12,7 +12,10 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from '@/cli/mcp/mcp-server.js';
 import type { MetricsHistoryEntry, PackageMetricsSnapshot } from '@/cli/metrics-history-writer.js';
 
-function makeSnapshot(name: string, overrides?: Partial<PackageMetricsSnapshot>): PackageMetricsSnapshot {
+function makeSnapshot(
+  name: string,
+  overrides?: Partial<PackageMetricsSnapshot>
+): PackageMetricsSnapshot {
   return { name, fanIn: 2, fanOut: 3, cycleCount: 0, entityCount: 10, ...overrides };
 }
 
@@ -26,7 +29,10 @@ describe('archguard_get_metric_trend — integration', () => {
   let client: Client;
 
   beforeAll(async () => {
-    tmpRoot = path.join(os.tmpdir(), `archguard-metric-trend-test-${Math.floor(Math.random() * 1e9)}`);
+    tmpRoot = path.join(
+      os.tmpdir(),
+      `archguard-metric-trend-test-${Math.floor(Math.random() * 1e9)}`
+    );
     archguardDir = path.join(tmpRoot, '.archguard');
     await fs.mkdirp(archguardDir);
 
@@ -57,7 +63,10 @@ describe('archguard_get_metric_trend — integration', () => {
   });
 
   it('no JSONL file: returns empty snapshots array', async () => {
-    const emptyRoot = path.join(os.tmpdir(), `archguard-metric-trend-empty-${Math.floor(Math.random() * 1e9)}`);
+    const emptyRoot = path.join(
+      os.tmpdir(),
+      `archguard-metric-trend-empty-${Math.floor(Math.random() * 1e9)}`
+    );
     await fs.mkdirp(path.join(emptyRoot, '.archguard'));
 
     try {
@@ -123,7 +132,10 @@ describe('archguard_get_metric_trend — integration', () => {
   });
 
   it('malformed JSONL line: valid lines are still parsed', async () => {
-    const corruptRoot = path.join(os.tmpdir(), `archguard-metric-trend-corrupt-${Math.floor(Math.random() * 1e9)}`);
+    const corruptRoot = path.join(
+      os.tmpdir(),
+      `archguard-metric-trend-corrupt-${Math.floor(Math.random() * 1e9)}`
+    );
     const corruptArchDir = path.join(corruptRoot, '.archguard');
     await fs.mkdirp(corruptArchDir);
 

@@ -112,10 +112,7 @@ export class GoplsTimeoutError extends Error {
   readonly budgetExceeded: boolean;
   readonly stage?: string;
 
-  constructor(
-    message: string,
-    opts: { budgetExceeded?: boolean; stage?: string } = {}
-  ) {
+  constructor(message: string, opts: { budgetExceeded?: boolean; stage?: string } = {}) {
     super(message);
     this.name = 'GoplsTimeoutError';
     this.budgetExceeded = opts.budgetExceeded ?? false;

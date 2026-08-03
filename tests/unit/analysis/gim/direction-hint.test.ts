@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { computeDirectionHint } from '@/analysis/gim/direction-hint.js';
 import type { MetricSnapshot } from '@/analysis/snapshot-store.js';
 
-function makeSnapshot(overrides: Partial<MetricSnapshot['metricVector']> & { timestamp?: string }): MetricSnapshot {
+function makeSnapshot(
+  overrides: Partial<MetricSnapshot['metricVector']> & { timestamp?: string }
+): MetricSnapshot {
   const { timestamp = '2026-01-01T00:00:00Z', ...vectorOverrides } = overrides;
   return {
     schemaVersion: 1,
@@ -39,16 +41,36 @@ describe('computeDirectionHint', () => {
   });
 
   it('detects expansion when entities and relations grow significantly', () => {
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', totalEntities: 100, totalRelations: 200, packageCount: 10 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', totalEntities: 130, totalRelations: 250, packageCount: 12 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      totalEntities: 100,
+      totalRelations: 200,
+      packageCount: 10,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      totalEntities: 130,
+      totalRelations: 250,
+      packageCount: 12,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('expansion');
     expect(result.confidence).toBe('low');
   });
 
   it('detects contraction when entities and relations shrink', () => {
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', totalEntities: 200, totalRelations: 400, packageCount: 15 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', totalEntities: 180, totalRelations: 360, packageCount: 13 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      totalEntities: 200,
+      totalRelations: 400,
+      packageCount: 15,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      totalEntities: 180,
+      totalRelations: 360,
+      packageCount: 13,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('contraction');
   });
@@ -57,8 +79,22 @@ describe('computeDirectionHint', () => {
     // totalEntities +30% → expansion, totalRelations +25% → expansion
     // packageCount -10% → contraction, giniInDegree -10% → contraction
     // sccCount: 0→0 → neutral
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', totalEntities: 100, totalRelations: 200, packageCount: 10, giniInDegree: 0.5, sccCount: 0 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', totalEntities: 130, totalRelations: 250, packageCount: 9, giniInDegree: 0.45, sccCount: 0 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      totalEntities: 100,
+      totalRelations: 200,
+      packageCount: 10,
+      giniInDegree: 0.5,
+      sccCount: 0,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      totalEntities: 130,
+      totalRelations: 250,
+      packageCount: 9,
+      giniInDegree: 0.45,
+      sccCount: 0,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('stable');
   });
@@ -72,8 +108,22 @@ describe('computeDirectionHint', () => {
   });
 
   it('treats small deltas below 5% threshold as neutral', () => {
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', totalEntities: 100, totalRelations: 200, packageCount: 10, giniInDegree: 0.5, sccCount: 0 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', totalEntities: 102, totalRelations: 203, packageCount: 10, giniInDegree: 0.5, sccCount: 0 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      totalEntities: 100,
+      totalRelations: 200,
+      packageCount: 10,
+      giniInDegree: 0.5,
+      sccCount: 0,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      totalEntities: 102,
+      totalRelations: 203,
+      packageCount: 10,
+      giniInDegree: 0.5,
+      sccCount: 0,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('stable');
   });
@@ -90,8 +140,18 @@ describe('computeDirectionHint', () => {
   });
 
   it('recommendation matches direction type', () => {
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', totalEntities: 100, totalRelations: 200, packageCount: 10 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', totalEntities: 130, totalRelations: 250, packageCount: 12 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      totalEntities: 100,
+      totalRelations: 200,
+      packageCount: 10,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      totalEntities: 130,
+      totalRelations: 250,
+      packageCount: 12,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('expansion');
     expect(result.recommendation.toLowerCase()).toMatch(/contraction|refactor|stabiliz/);
@@ -109,11 +169,23 @@ describe('computeDirectionHint', () => {
   });
 
   it('rising sccCount contributes expansion signal', () => {
-    const older = makeSnapshot({ timestamp: '2026-01-01T00:00:00Z', sccCount: 0, giniInDegree: 0.5, totalEntities: 100, totalRelations: 200 });
-    const newer = makeSnapshot({ timestamp: '2026-01-02T00:00:00Z', sccCount: 3, giniInDegree: 0.65, totalEntities: 130, totalRelations: 250 });
+    const older = makeSnapshot({
+      timestamp: '2026-01-01T00:00:00Z',
+      sccCount: 0,
+      giniInDegree: 0.5,
+      totalEntities: 100,
+      totalRelations: 200,
+    });
+    const newer = makeSnapshot({
+      timestamp: '2026-01-02T00:00:00Z',
+      sccCount: 3,
+      giniInDegree: 0.65,
+      totalEntities: 130,
+      totalRelations: 250,
+    });
     const result = computeDirectionHint([newer, older]);
     expect(result.direction).toBe('expansion');
-    const sccSignal = result.signals.find(s => s.metric === 'sccCount');
+    const sccSignal = result.signals.find((s) => s.metric === 'sccCount');
     expect(sccSignal?.direction).toBe('expansion');
   });
 });

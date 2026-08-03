@@ -12,11 +12,7 @@ import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 // Minimal factory helpers
 // ---------------------------------------------------------------------------
 
-function makeEntity(
-  id: string,
-  name: string,
-  file = 'src/foo.ts'
-): Entity {
+function makeEntity(id: string, name: string, file = 'src/foo.ts'): Entity {
   return {
     id,
     name,
@@ -98,10 +94,7 @@ describe('buildArchIndex()', () => {
   });
 
   it('populates forward and reverse adjacency (dependencies / dependents)', () => {
-    const entities = [
-      makeEntity('id/A', 'A', 'src/a.ts'),
-      makeEntity('id/B', 'B', 'src/b.ts'),
-    ];
+    const entities = [makeEntity('id/A', 'A', 'src/a.ts'), makeEntity('id/B', 'B', 'src/b.ts')];
     // A → B (A depends on B)
     const relations = [makeRelation('r1', 'id/A', 'id/B')];
     const index = buildArchIndex(makeArchJson(entities, relations), HASH);
@@ -171,10 +164,7 @@ describe('buildArchIndex()', () => {
   });
 
   it('detects a simple two-node cycle and returns it in cycles[]', () => {
-    const entities = [
-      makeEntity('id/A', 'A', 'src/a.ts'),
-      makeEntity('id/B', 'B', 'src/b.ts'),
-    ];
+    const entities = [makeEntity('id/A', 'A', 'src/a.ts'), makeEntity('id/B', 'B', 'src/b.ts')];
     // A → B and B → A forms a cycle
     const relations = [
       makeRelation('r1', 'id/A', 'id/B', 'dependency'),

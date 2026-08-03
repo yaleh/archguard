@@ -23,7 +23,11 @@ export interface DependencyConstraintRule {
   message: string;
 }
 
-export type GimLossType = 'feasibility' | 'consistency' | 'description-length' | 'generation-alignment';
+export type GimLossType =
+  | 'feasibility'
+  | 'consistency'
+  | 'description-length'
+  | 'generation-alignment';
 
 export interface GimLossRule {
   type: 'gim-loss';

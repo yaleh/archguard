@@ -20,9 +20,7 @@ describe('extractPackageName', () => {
   });
 
   it('handles OO-style dot-separated IDs', () => {
-    expect(extractPackageName('com.example.service.UserService')).toBe(
-      'com.example.service'
-    );
+    expect(extractPackageName('com.example.service.UserService')).toBe('com.example.service');
   });
 
   it('handles a single-level OO package', () => {
@@ -114,8 +112,8 @@ describe('computeCycleMetrics', () => {
     const cycle = makeCycle(['pkgA.Foo', 'pkgB.Bar'], ['pkgA', 'pkgB']);
     const pkgs = new Set(['pkgA', 'pkgB']);
     const result = computeCycleMetrics([cycle], pkgs);
-    expect(result.get('pkgA')!.cycleCount).toBe(1);
-    expect(result.get('pkgB')!.cycleCount).toBe(1);
+    expect(result.get('pkgA').cycleCount).toBe(1);
+    expect(result.get('pkgB').cycleCount).toBe(1);
   });
 
   it('deduplicates cyclesWith entries across multiple cycles', () => {
@@ -125,9 +123,9 @@ describe('computeCycleMetrics', () => {
     const pkgs = new Set(['pkgA', 'pkgB']);
     const result = computeCycleMetrics([cycle1, cycle2], pkgs);
     // cycleCount should be 2 (appears in both cycles)
-    expect(result.get('pkgA')!.cycleCount).toBe(2);
+    expect(result.get('pkgA').cycleCount).toBe(2);
     // 'Shared' should appear only once despite being in two cycles
-    expect(result.get('pkgA')!.cyclesWith).toEqual(['Shared']);
+    expect(result.get('pkgA').cyclesWith).toEqual(['Shared']);
   });
 
   it('ignores cycles whose members do not belong to any known package', () => {

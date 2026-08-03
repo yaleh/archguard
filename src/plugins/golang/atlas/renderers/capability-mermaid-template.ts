@@ -78,7 +78,8 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   output += '    legend_interface{{"interface"}}:::interface\n';
   output += '    legend_concrete["concrete"]:::concrete\n';
   if (hasHotspotNode) output += '    legend_hotspot["hotspot (≥11m or fi>5)"]:::hotspot\n';
-  if (hasConcreteHeavyNode) output += '    legend_cheavy["concrete-heavy (full mode)"]:::concrete-heavy\n';
+  if (hasConcreteHeavyNode)
+    output += '    legend_cheavy["concrete-heavy (full mode)"]:::concrete-heavy\n';
   output += '    legend_impl["-.-> implements"]\n';
   output += '    legend_uses["--> uses"]\n';
   if (hasConcreteEdge) output += '    legend_conc["==> concrete usage"]\n';

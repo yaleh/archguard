@@ -164,9 +164,7 @@ describe('GoPlugin (TASK-44 end-to-end degradation)', () => {
     expect(names).toContain('Runner');
     // Name-based implementation relation survived the degradation.
     expect(
-      result.relations.some(
-        (r) => r.type === 'implementation' && r.source.endsWith('Service')
-      )
+      result.relations.some((r) => r.type === 'implementation' && r.source.endsWith('Service'))
     ).toBe(true);
 
     // A loud warning was emitted.

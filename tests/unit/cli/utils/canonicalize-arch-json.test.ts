@@ -136,7 +136,7 @@ describe('canonicalizeArchJson', () => {
       const mods: Module[] = [makeModule('ui'), makeModule('core'), makeModule('api')];
       const input = makeMinimalArchJson({ modules: mods });
       const result = canonicalizeArchJson(input);
-      const names = result.modules!.map((m) => m.name);
+      const names = result.modules.map((m) => m.name);
       expect(names).toEqual(['api', 'core', 'ui']);
     });
 
@@ -144,7 +144,7 @@ describe('canonicalizeArchJson', () => {
       const mod = makeModule('core', ['Zebra', 'Alpha', 'Mango']);
       const input = makeMinimalArchJson({ modules: [mod] });
       const result = canonicalizeArchJson(input);
-      expect(result.modules![0].entities).toEqual(['Alpha', 'Mango', 'Zebra']);
+      expect(result.modules[0].entities).toEqual(['Alpha', 'Mango', 'Zebra']);
     });
 
     it('sorts submodules recursively', () => {
@@ -153,7 +153,7 @@ describe('canonicalizeArchJson', () => {
       const parent = makeModule('core', [], [child1, child2]);
       const input = makeMinimalArchJson({ modules: [parent] });
       const result = canonicalizeArchJson(input);
-      const subNames = result.modules![0].submodules!.map((m) => m.name);
+      const subNames = result.modules[0].submodules.map((m) => m.name);
       expect(subNames).toEqual(['alpha', 'zeta']);
     });
 
@@ -169,7 +169,12 @@ describe('canonicalizeArchJson', () => {
       const entities = [makeEntity('pkg.B', 'B'), makeEntity('pkg.A', 'A')];
       const relations = [makeRelation('r2', 'b', 'c'), makeRelation('r1', 'a', 'b')];
       const mods = [makeModule('ui', ['Z', 'A']), makeModule('core', ['M', 'B'])];
-      const input = makeMinimalArchJson({ sourceFiles: ['z.ts', 'a.ts'], entities, relations, modules: mods });
+      const input = makeMinimalArchJson({
+        sourceFiles: ['z.ts', 'a.ts'],
+        entities,
+        relations,
+        modules: mods,
+      });
 
       const once = canonicalizeArchJson(input);
       const twice = canonicalizeArchJson(once);

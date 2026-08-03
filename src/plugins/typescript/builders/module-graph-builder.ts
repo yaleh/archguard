@@ -157,9 +157,7 @@ export class ModuleGraphBuilder {
     // Count entities by module prefix
     for (const entity of entities) {
       // entity.id format: "src/cli/index.ts.MyClass"
-      const rawDir = path
-        .dirname(entity.id.split('.').slice(0, -1).join('.'))
-        .replace(/\\/g, '/');
+      const rawDir = path.dirname(entity.id.split('.').slice(0, -1).join('.')).replace(/\\/g, '/');
       const entityDir = rawDir === '.' ? '' : rawDir;
       const stats = entityStatsMap.get(entityDir);
       if (stats) {

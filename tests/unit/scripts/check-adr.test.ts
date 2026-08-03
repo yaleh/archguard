@@ -438,18 +438,12 @@ server.tool(
 
 describe('ADR documents and settings.json contain expected content', () => {
   it('quay-adr/ADR-006.md contains ## Mechanical Check', () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), 'quay-adr', 'ADR-006.md'),
-      'utf-8'
-    );
+    const content = fs.readFileSync(path.join(process.cwd(), 'quay-adr', 'ADR-006.md'), 'utf-8');
     expect(content).toContain('## Mechanical Check');
   });
 
   it('quay-adr/ADR-007.md contains ## Mechanical Check', () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), 'quay-adr', 'ADR-007.md'),
-      'utf-8'
-    );
+    const content = fs.readFileSync(path.join(process.cwd(), 'quay-adr', 'ADR-007.md'), 'utf-8');
     expect(content).toContain('## Mechanical Check');
   });
 

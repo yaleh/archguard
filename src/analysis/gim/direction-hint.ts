@@ -20,11 +20,21 @@ export interface DirectionHint {
 }
 
 // Metrics where increase = expansion
-const EXPANSION_ON_INCREASE = new Set(['totalEntities', 'totalRelations', 'packageCount', 'sccCount', 'giniInDegree']);
+const EXPANSION_ON_INCREASE = new Set([
+  'totalEntities',
+  'totalRelations',
+  'packageCount',
+  'sccCount',
+  'giniInDegree',
+]);
 // Threshold: changes below this % are treated as neutral
 const THRESHOLD_PCT = 5;
 
-function signalDirection(metric: string, percentChange: number | null, delta: number | null): 'expansion' | 'contraction' | 'neutral' {
+function signalDirection(
+  metric: string,
+  percentChange: number | null,
+  delta: number | null
+): 'expansion' | 'contraction' | 'neutral' {
   if (delta === null) return 'neutral';
 
   // sccCount: any increase is expansion, any decrease is contraction (no threshold — even 0→1 matters)
@@ -43,14 +53,19 @@ function signalDirection(metric: string, percentChange: number | null, delta: nu
 }
 
 const RECOMMENDATION: Record<DirectionType, string> = {
-  expansion: 'System is in expansion phase. Consider scheduling contraction/refactor work to prevent structural debt from accumulating.',
-  contraction: 'System is in contraction phase. Good time to stabilize interfaces and consolidate responsibilities.',
-  stable: 'System is stable. Monitor key metrics (sccCount, giniInDegree) to catch early phase transitions.',
-  insufficient_data: 'Not enough snapshots to determine direction. Run archguard analyze to generate a second snapshot.',
+  expansion:
+    'System is in expansion phase. Consider scheduling contraction/refactor work to prevent structural debt from accumulating.',
+  contraction:
+    'System is in contraction phase. Good time to stabilize interfaces and consolidate responsibilities.',
+  stable:
+    'System is stable. Monitor key metrics (sccCount, giniInDegree) to catch early phase transitions.',
+  insufficient_data:
+    'Not enough snapshots to determine direction. Run archguard analyze to generate a second snapshot.',
 };
 
 export function computeDirectionHint(snapshots: MetricSnapshot[]): DirectionHint {
-  const CAVEAT = 'Based on 2-point comparison only. Direction may flip between consecutive snapshots. Treat as a weak signal, not a definitive trend.';
+  const CAVEAT =
+    'Based on 2-point comparison only. Direction may flip between consecutive snapshots. Treat as a weak signal, not a definitive trend.';
 
   if (snapshots.length < 2) {
     return {
@@ -67,12 +82,16 @@ export function computeDirectionHint(snapshots: MetricSnapshot[]): DirectionHint
   const older = snapshots[1];
   const diff = diffSnapshots(older, newer);
 
-  const trackedMetrics = ['totalEntities', 'totalRelations', 'packageCount', 'sccCount', 'giniInDegree'];
+  const trackedMetrics = [
+    'totalEntities',
+    'totalRelations',
+    'packageCount',
+    'sccCount',
+    'giniInDegree',
+  ];
   const signals: DirectionSignal[] = trackedMetrics.map((metric) => {
     const entry = diff.entries.find((e) => e.metric === metric);
-    const dir = entry
-      ? signalDirection(metric, entry.percentChange, entry.delta)
-      : 'neutral';
+    const dir = entry ? signalDirection(metric, entry.percentChange, entry.delta) : 'neutral';
     return {
       metric,
       direction: dir,

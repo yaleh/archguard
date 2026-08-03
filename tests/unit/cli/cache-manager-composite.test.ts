@@ -69,7 +69,7 @@ describe('CacheManager composite key', () => {
       expect(key1).toBe(key2);
     });
 
-    it('does not mutate the caller\'s files array', () => {
+    it("does not mutate the caller's files array", () => {
       const files = ['z.ts', 'a.ts', 'm.ts'];
       cache.getCompositeKey(files, 'config');
       expect(files[0]).toBe('z.ts');

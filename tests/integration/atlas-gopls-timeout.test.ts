@@ -51,10 +51,7 @@ describe.skipIf(!goplsAvailable)('atlas-gopls-timeout with real gopls', () => {
     resetGoplsPoison();
     savedEnv = process.env.ARCHGUARD_GOPLS_TIMEOUT_MS;
     tmpDir = await mkdtemp(path.join(tmpdir(), 'atlas-gopls-real-'));
-    await writeFile(
-      path.join(tmpDir, 'go.mod'),
-      'module github.com/example/timeout\n\ngo 1.21\n'
-    );
+    await writeFile(path.join(tmpDir, 'go.mod'), 'module github.com/example/timeout\n\ngo 1.21\n');
     await writeFile(
       path.join(tmpDir, 'main.go'),
       [
@@ -82,35 +79,30 @@ describe.skipIf(!goplsAvailable)('atlas-gopls-timeout with real gopls', () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  it(
-    'bounds a real gopls startup and completes degraded (no hang, no orphan)',
-    async () => {
-      const { GoPlugin } = await import('../../src/plugins/golang/index.js');
-      const { nativeParserBackend } = await import(
-        '../../src/plugins/shared/native-parser-backend.js'
-      );
+  it('bounds a real gopls startup and completes degraded (no hang, no orphan)', async () => {
+    const { GoPlugin } = await import('../../src/plugins/golang/index.js');
+    const { nativeParserBackend } =
+      await import('../../src/plugins/shared/native-parser-backend.js');
 
-      // A 1ms budget guarantees the real binary trips the bound immediately.
-      process.env.ARCHGUARD_GOPLS_TIMEOUT_MS = '1';
+    // A 1ms budget guarantees the real binary trips the bound immediately.
+    process.env.ARCHGUARD_GOPLS_TIMEOUT_MS = '1';
 
-      const plugin = new GoPlugin(nativeParserBackend);
-      const start = Date.now();
-      await plugin.initialize({ workspaceRoot: tmpDir });
-      const result = await plugin.parseProject(tmpDir, {
-        workspaceRoot: tmpDir,
-        excludePatterns: [],
-      });
-      const elapsed = Date.now() - start;
+    const plugin = new GoPlugin(nativeParserBackend);
+    const start = Date.now();
+    await plugin.initialize({ workspaceRoot: tmpDir });
+    const result = await plugin.parseProject(tmpDir, {
+      workspaceRoot: tmpDir,
+      excludePatterns: [],
+    });
+    const elapsed = Date.now() - start;
 
-      // Bounded completion — never approaches a CLI-scale timeout.
-      expect(elapsed).toBeLessThan(20000);
+    // Bounded completion — never approaches a CLI-scale timeout.
+    expect(elapsed).toBeLessThan(20000);
 
-      // Degraded marking present; tree-sitter results survive.
-      expect(result.metadata?.goGoplsDegraded).toBe(true);
-      expect(result.entities.map((e) => e.name)).toContain('Service');
+    // Degraded marking present; tree-sitter results survive.
+    expect(result.metadata?.goGoplsDegraded).toBe(true);
+    expect(result.entities.map((e) => e.name)).toContain('Service');
 
-      await plugin.dispose();
-    },
-    30000
-  );
+    await plugin.dispose();
+  }, 30000);
 });

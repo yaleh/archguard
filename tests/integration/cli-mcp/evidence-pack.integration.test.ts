@@ -10,7 +10,11 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from '@/cli/mcp/mcp-server.js';
-import type { GitHistoryManifest, PackageHistoryMetrics, FileHistoryMetrics } from '@/types/git-history.js';
+import type {
+  GitHistoryManifest,
+  PackageHistoryMetrics,
+  FileHistoryMetrics,
+} from '@/types/git-history.js';
 
 function makeManifest(): GitHistoryManifest {
   return {
@@ -77,21 +81,20 @@ describe('archguard_get_evidence_pack — integration', () => {
   let client: Client;
 
   beforeAll(async () => {
-    tmpRoot = path.join(os.tmpdir(), `archguard-evidence-pack-test-${Math.floor(Math.random() * 1e9)}`);
+    tmpRoot = path.join(
+      os.tmpdir(),
+      `archguard-evidence-pack-test-${Math.floor(Math.random() * 1e9)}`
+    );
     const historyDir = path.join(tmpRoot, '.archguard', 'query', 'git-history');
     await fs.mkdirp(historyDir);
 
     await fs.writeJson(path.join(historyDir, 'manifest.json'), makeManifest(), { spaces: 2 });
-    await fs.writeJson(
-      path.join(historyDir, 'package-metrics.json'),
-      [makePackageMetrics()],
-      { spaces: 2 }
-    );
-    await fs.writeJson(
-      path.join(historyDir, 'file-metrics.json'),
-      [makeFileMetrics()],
-      { spaces: 2 }
-    );
+    await fs.writeJson(path.join(historyDir, 'package-metrics.json'), [makePackageMetrics()], {
+      spaces: 2,
+    });
+    await fs.writeJson(path.join(historyDir, 'file-metrics.json'), [makeFileMetrics()], {
+      spaces: 2,
+    });
 
     const server = createMcpServer(tmpRoot);
     const [ct, st] = InMemoryTransport.createLinkedPair();
@@ -128,7 +131,7 @@ describe('archguard_get_evidence_pack — integration', () => {
     // Extract JSON block
     const jsonMatch = text.match(/```json\n([\s\S]+?)```/);
     expect(jsonMatch).not.toBeNull();
-    const pack = JSON.parse(jsonMatch![1]);
+    const pack = JSON.parse(jsonMatch[1]);
     expect(pack).toHaveProperty('results');
     expect(Array.isArray(pack.results)).toBe(true);
     if (pack.results.length > 0) {
@@ -164,7 +167,10 @@ describe('archguard_get_evidence_pack — integration', () => {
   });
 
   it('no git history data: response contains archguard_analyze_git prompt', async () => {
-    const emptyRoot = path.join(os.tmpdir(), `archguard-evidence-pack-empty-${Math.floor(Math.random() * 1e9)}`);
+    const emptyRoot = path.join(
+      os.tmpdir(),
+      `archguard-evidence-pack-empty-${Math.floor(Math.random() * 1e9)}`
+    );
     await fs.mkdirp(emptyRoot);
 
     try {

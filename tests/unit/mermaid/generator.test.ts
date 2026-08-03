@@ -1806,7 +1806,7 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     const diagA = result.find((r) => r.name === 'groupA');
     expect(diagA).toBeDefined();
 
-    const linesA = diagA!.content.split('\n');
+    const linesA = diagA.content.split('\n');
 
     // Collect all node IDs referenced in relation lines
     const relationNodeIds = new Set<string>();
@@ -1832,7 +1832,10 @@ describe('generateClassDiagrams — relation ID resolution', () => {
     // Every relation node ID must be declared somewhere in groupA's diagram
     // (either in the namespace block, or as an explicit stub — no undeclared ghost nodes)
     for (const id of relationNodeIds) {
-      expect(classDefs, `ghost node "${id}" appears in relation but is not declared in groupA's diagram`).toContain(id);
+      expect(
+        classDefs,
+        `ghost node "${id}" appears in relation but is not declared in groupA's diagram`
+      ).toContain(id);
     }
   });
 
