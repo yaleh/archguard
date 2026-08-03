@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 7 |
+| no-action | 8 |
 | unblock | 0 |
 | correct | 0 |
 | escalate | 0 |
@@ -31,4 +31,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 5 | 15:48Z | no-action | **TASK-51 已完成**（内层自驱动，全量 0 failed / 4507 passed / 475.78s）。补 frontmatter 修复 web dashboard 500。AC1 ✅。派发 TASK-52（lint 234→0）给内层。 | 内层 idle → 接收 TASK-52，开始执行 |
 | 6 | 16:14Z | no-action | **冷启动恢复（flash 继任者首个 tick）**。重挂两个监视器（inner-state + session-liveness，persistent，`session-liveness.sh --once` 自检 alive=1）；重建 cron（7,27,47）。判定内层空闲（4 次 md5sum 全同，16:03→16:13；claude 953609 无 subagent 子进程）。TASK-52 已 done 并已提交（3ee07ed + d72584b）→ **AC2 ✅ 独立核实**（零成本：内层 transcript 记 15:49 修复前 237 errors、15:52 修复后 `LINT_EXIT=0` 0 errors/4095 warnings；diff 与 Completion 段逐条吻合；未重跑全量 lint，因 quay 持有跨项目令牌跑 test.sh）。format:check 实测通过。建 TASK-53（AC4 CI 全绿）/54（warnings 清理）/55（stranded 分诊）→ **AC5 ✅ 3 ready**。派发 TASK-53 给内层 | 空闲（Churned 8m27s 后等指令，`← 1 agent` 为陈旧渲染）→ 接收 TASK-53 开始执行 |
 | 7 | 16:17Z | no-action | 内层在飞 TASK-53（AC4 CI 全绿）。独立核实（零成本）：两次 md5sum 不同（16:15:54 `610b…`→16:16:35 `31c9…`，间隔 41s）+ transcript 16:14-16:16 连续 gh 命令（gh auth / gh run list / gh run view 30602001992 / log-failed）→ 判定忙，未打断。git 无新 commit（内层仍在调查 CI 失败日志，未到提交点）。CI 实况仍是旧 3 次 failure（07-31 前）。监视器 alive=1。AC5 队列 3 ready 充足。 | 忙（Manifesting 2m2s，`◻ TASK-53: AC4 CI green lights`） |
+| 8 | 16:30Z | no-action | 内层在飞 TASK-53，已 push 首个 CI 修复 `a911166`（drop Node 20，matrix [22,24]，engines >=22.6；本地与 origin 同步 0/0）。CI 用该 commit 重跑仍 failure（Node 24：`Cannot find module 'tree-sitter'`，Node 22 cancelled）。**独立核实根因**：`npm ci` 后 tree-sitter（peerDep）缺失 → 恰好解释内层未提交的 package.json 改动（补 tree-sitter + 语法包进 devDependencies）——**内层方向正确**，无需纠偏。两次 md5sum 不同（16:29:04→16:29:39），忙，未打断。监视器 alive=1。 | 忙（Getting CI three green lights 15m12s，still thinking） |
 
