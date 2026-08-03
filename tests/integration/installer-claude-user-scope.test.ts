@@ -13,11 +13,10 @@
  *   that mirrors claude 2.1.220's command surface and --json shapes. What is
  *   simulated here is ONLY the claude CLI itself; the installer's own logic
  *   (planning, idempotency, verification, cleanup) is the real code.
- * - A boundary run against the REAL claude CLI in an isolated config dir:
- *   marketplace registration succeeds for real; plugin install stops at the
- *   unpublished-npm-package boundary (E404 on
- *   @yalehwang/archguard-claude-plugin, publishing forbidden). This is the
- *   documented limit of "claude mcp list reports connected" for TASK-35.
+ * - An end-to-end run against the REAL claude CLI in an isolated config dir:
+ *   marketplace registration succeeds for real and the published
+ *   @yalehwang/archguard-claude-plugin package installs at user scope, so the
+ *   full "claude mcp list reports connected" flow for TASK-35 now completes.
  *
  * The installer never touches the real user configuration: every run sets
  * HOME and CLAUDE_CONFIG_DIR to temp dirs.
@@ -649,9 +648,9 @@ describe('installer static invariants', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Real claude CLI boundary run (isolated config). Everything up to the npm
-// registry is real; the plugin install stops at E404 because
-// @yalehwang/archguard-claude-plugin is not published (publishing forbidden).
+// Real claude CLI end-to-end run (isolated config). Everything is real:
+// marketplace registration and install of the published
+// @yalehwang/archguard-claude-plugin package at user scope.
 // ---------------------------------------------------------------------------
 
 describe('real claude CLI boundary (isolated config)', () => {
@@ -665,7 +664,7 @@ describe('real claude CLI boundary (isolated config)', () => {
   })();
 
   it.skipIf(!realClaudeAvailable)(
-    'registers the marketplace for real, cleans residue, then stops specifically at the unpublished npm E404 boundary',
+    'registers the marketplace for real, cleans residue, and installs the published plugin at user scope (success path)',
     async () => {
       const root = makeTempDir('archguard-installer-real-');
       const home = path.join(root, 'home');
@@ -676,9 +675,9 @@ describe('real claude CLI boundary (isolated config)', () => {
       writeFileSync(npmUserConfig, 'registry=https://registry.npmjs.org/\nalways-auth=false\n');
 
       // Start with a deliberately minimal environment: retain only executable
-      // lookup/runtime essentials; scrub registry/auth credentials and npm
-      // configuration so the E404 proves the public unpublished boundary.
-      const boundaryEnv: NodeJS.ProcessEnv = {
+      // lookup/runtime essentials; scrub registry/auth credentials so the
+      // install proves the package resolves from the public registry.
+      const isolatedEnv: NodeJS.ProcessEnv = {
         PATH: process.env.PATH,
         HOME: home,
         CLAUDE_CONFIG_DIR: configDir,
@@ -688,7 +687,7 @@ describe('real claude CLI boundary (isolated config)', () => {
         NPM_CONFIG_TOKEN: '',
         NODE_AUTH_TOKEN: '',
       };
-      // Deprecated residue must be cleaned even though the install later fails.
+      // Deprecated residue is cleaned regardless; the install then succeeds.
       writeFileSync(
         path.join(configDir, 'mcp.json'),
         `${JSON.stringify({
@@ -707,7 +706,7 @@ describe('real claude CLI boundary (isolated config)', () => {
           process.execPath,
           [installerMjs, '--marketplace-source', repoRoot],
           {
-            env: boundaryEnv,
+            env: isolatedEnv,
             timeout: 180_000,
           }
         );
@@ -721,14 +720,16 @@ describe('real claude CLI boundary (isolated config)', () => {
       }
 
       const combined = `${stdout}\n${stderr}`;
-      // Boundary: the unpublished plugin package cannot come from the registry.
-      expect(code, `expected the npm boundary failure:\n${combined}`).toBe(1);
-      expect(combined).toContain(PLUGIN_PACKAGE);
-      expect(combined).toMatch(/npm error code E404/i);
-      expect(combined).toMatch(/404 Not Found.*registry\.npmjs\.org/i);
-      expect(combined).not.toMatch(/ENOTFOUND|ETIMEDOUT|ECONNREFUSED|E401|E403/i);
+      // Success path: the published package resolves and installs from the
+      // public registry, and the installer reports the enabled user-scope plugin.
+      expect(code, `expected a successful install:\n${combined}`).toBe(0);
+      expect(combined).toContain(PLUGIN_ID);
+      expect(combined).toContain('(enabled, user scope)');
+      expect(combined).toContain('done');
+      // Guard: a network/auth/npm failure must not be mistaken for success.
+      expect(combined).not.toMatch(/ENOTFOUND|ETIMEDOUT|ECONNREFUSED|E401|E403|E404/i);
 
-      // Everything before the boundary is real and succeeded:
+      // Everything in the real flow succeeded:
       const marketplacesJson = execFileSync('claude', ['plugin', 'marketplace', 'list', '--json'], {
         env: { ...process.env, HOME: home, CLAUDE_CONFIG_DIR: configDir },
         encoding: 'utf8',

@@ -40,9 +40,9 @@
 |---|---|
 | **判定命令** | `timeout 600 npm test; echo $?` |
 | **通过条件** | 退出码 0，且 `Test Files` 行 0 failed |
-| **当前实测** | ❌ 退出码 1，492s 墙钟，1 failed / 4506 passed / 13 skipped |
-| **失败归因** | `tests/integration/installer-claude-user-scope.test.ts` — E404 边界断言：测试期望 archguard npm 包未发布，但 v0.1.32 已发布，安装成功 |
-| **风险** | 修复该测试可能暴露更多隐藏失败（之前被 timeout 300 截断从未跑完） |
+| **当前实测** | ✅ 退出码 0，475.78s 墙钟，0 failed / 4507 passed / 13 skipped（TASK-51 done，2026-08-03 内层验证） |
+| **失败归因** | ~~`tests/integration/installer-claude-user-scope.test.ts` — E404 边界断言~~ 已修复：改为验证安装成功路径 |
+| **风险** | ~~修复该测试可能暴露更多隐藏失败~~ 全量已通过，无新增失败 |
 
 ### AC2: `npm run lint` 退出码为 0
 
@@ -132,13 +132,13 @@
 
 | AC | 状态 | 关键数据 |
 |---|---|---|
-| AC1 — npm test 绿 | ❌ | exit 1, 492s, 1 failed (E404 boundary) |
+| AC1 — npm test 绿 | ✅ | exit 0, 475.78s, 0 failed（TASK-51 done） |
 | AC2 — lint 绿 | ❌ | exit 1, 234 errors, 3853 warnings |
 | AC3 — type-check 绿 | ✅ | exit 0 |
 | AC4 — CI 全绿 | ❌ | 最近 5 次全 failure（自 2026-07-12） |
-| AC5 — 队列有货 | ❌ | 25/25 done, 0 ready |
-| AC6 — 状态工具可用 | ❌ | 四个取状态工具全不存在 |
-| AC7 — 资源闸存在 | ❌ | 文件不存在 |
+| AC5 — 队列有货 | ✅ | 2 tasks（TASK-51 done, TASK-52 todo） |
+| AC6 — 状态工具可用 | ✅ 文件存在 | 运行时验证待做 |
+| AC7 — 资源闸存在 | ✅ 文件存在 | 运行时验证待做 |
 
 ---
 
