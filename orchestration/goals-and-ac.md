@@ -26,6 +26,7 @@
 | **注意** | 不需要 GitHub push / release / `/plugin install`——本地 build 安装已足够冷。人裁定：基于本地 build 安装即可，不必直接复制源文件，那已足够冷 |
 | **为何不是待办** | 步骤 ① 在 quay 侧，不在我的授权范围内，写成待办会制造「我可以推进」的假象。步骤 ②–③ 才是 archguard 的活——届时本文件的所有 AC 以那次冷启动的实测数据为基线重新核定 |
 | **当前状态** | 本次冷启动是 **热拷贝**（`cp` 从 quay 开发目录复制 orchestrator-loop-tick.md 等文件），不是真正的从零冷装。热拷贝已验证机制**能在第二个项目上驱动开发**，但未验证**从 build 产物安装后能否工作** |
+| **① 之前还有一步（管理者 2026-08-03 实测补入）** | **必须先清掉热拷贝残留，再装。** archguard 身上仍有当初 `cp` 进来的 `orchestration/orchestrator-loop-tick.md`、`docs/analysis/fast-mode-loop-tick.md`、`scripts/heavy-op-token.sh`。而 `quay-init` 遇到内容不同的已存在文件走的是 `CONFLICT ... skip unless --force`（见其第 146–148 行）。**不先清，测到的就不是「装到干净项目」，而是「在已有副本上覆盖」**——证明不了可交付性，且会以「跳过 N 个文件」的形式**看起来成功**。清除是安全的：三个文件都在 git 历史里可回溯，不是丢失。 |
 
 ---
 
