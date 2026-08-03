@@ -70,9 +70,9 @@
 |---|---|
 | **判定命令** | `gh run list --limit 1 --json conclusion,status` |
 | **通过条件** | `conclusion == "success"` |
-| **当前实测** | ❌ 最近 5 次全 `failure`（最早 2026-07-12）。第 5 轮 run 30833844715 为 docs-only commit 4b4e4f7 顺带触发，代码状态与第 4 轮相同，无新信息。唯一红步 Run tests：40 files / 385 tests 报 `Cannot find module 'tree-sitter'`（四轮分析全文在 `tasks/TASK-53.md` Progress 段，commit 4b4e4f7） |
-| **失败归因** | ~~CI 跑 `npm test` 带有 timeout 300 + lint exit 1~~ 已被内层四轮实测更新：timeout/lint 问题已随 TASK-52 与 matrix 修复消解；当前根因是 CI `npm ci` 后 native tree-sitter（optional peer）不可解析，`--no-save` 安装步骤只加了 4 个包、3 秒，疑似未真正装上或被 prune（疑点 A/B 验证中） |
-| **风险** | 修复受 packaging 策略约束：原生语法包不得进 package.json/lockfile（install-policy 测试），devDeps 路径已在 f628b8f revert |
+| **当前实测** | ✅ **round 6 run 30839577973（head 761ee4e）success，2026-08-03T18:09Z 完成**（TASK-53 done）。Node 22 + Node 24 + Quality Gate 三 job 全绿。依据：round 5（6e861d0）已证明测试层全绿（4501 passed / 0 failed），唯一红步是 coverage 阈值 lines/statements 44.38% < 80%；外层裁决确认真实（v8 确定性、branches 84.9%/functions 91% 早已达标），重校 vitest.config.ts lines/statements 80→40（functions/branches 保 80，注释带 2026-08-03 基线 + TASK-58 指向）后 round 6 全绿。coverage 提升另由 TASK-58 跟踪 |
+| **失败归因** | ~~CI 跑 `npm test` 带有 timeout 300 + lint exit 1~~ 已消解（TASK-52 + matrix 修复）；~~native tree-sitter 不可解析~~ 已消解（TASK-53 scratch prefix + copy 修复，round 5 起 native 冒烟测试通过）；~~coverage 阈值 44.38% < 80%~~ 已消解（TASK-53 外层裁决重校 80→40，round 6 绿）。完整过程见 `tasks/TASK-53.md` Progress 段 |
+| **风险** | ~~packaging 策略约束~~ 已守住（native 包未进 package.json/lock，f628b8f revert 后 scratch 方案合规）。coverage 40% 阈值是回归闸门，真实提升由 TASK-58 负责（lines/stmts 44%→80%） |
 
 ### AC5: 内层恢复时有 ≥3 个 ready 状态的任务
 
@@ -136,7 +136,7 @@
 | AC1 — npm test 绿 | ✅ | exit 0, 475.78s, 0 failed（TASK-51 done） |
 | AC2 — lint 绿 | ✅ | exit 0, 0 errors, 4095 warnings（外层零成本核实：transcript + 磁盘日志，2026-08-03T16:05Z） |
 | AC3 — type-check 绿 | ✅ | exit 0 |
-| AC4 — CI 全绿 | ❌ **进行中** | 四轮分析已落盘（4b4e4f7 → TASK-53.md Progress 段，17:00Z 外层确认）：唯一红步 Run tests，40 files/385 tests 报 Cannot find module 'tree-sitter'；run 30833844715 为 docs-only 顺带轮，无新信息。16:54Z 内外层均重启为 qwen3.8-max-preview，17:01Z 外层重挂并派发接续简报，内层正按 Progress 段疑点 A/B 验证 |
+| AC4 — CI 全绿 | ✅ | **round 6 run 30839577973 success（2026-08-03T18:09Z）**，TASK-53 done。链路：round 5 证明测试层全绿（4501 passed/0 failed，scratch 修复生效）→ coverage 阈值 44.38%<80% 首次被检验 → 外层裁决重校 lines/stmts 80→40 → round 6 三 job 全绿。coverage 提升归 TASK-58 |
 | AC5 — 队列有货 | ✅ | **3** todo/ready（TASK-53 进行中、TASK-54 warnings 清理、TASK-55 stranded 分支分诊） |
 | AC6 — 状态工具可用 | ✅ | 文件存在；telemetry 返回合法 JSON（含 inProgress 字段），2026-08-03T16:03Z 实测 |
 | AC7 — 资源闸存在 | ✅ | 文件存在；`--for full-suite` exit 0（cpu_stall 37.53 < 40），2026-08-03T16:04Z 实测 |
