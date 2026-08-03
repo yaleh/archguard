@@ -21,10 +21,11 @@
 
 | 项 | 值 |
 |---|---|
-| **阻塞源** | **人工推送**——推送 GitHub、打 release、重建 dist-plugin 均须由人显式触发，我不执行其中任何一步 |
-| **阻塞链** | ① 人推送 quay 机制代码 → ② 人重建 quay dist-plugin → ③ `/plugin install` 装出真正的包 → ④ 用装出来的那份（非 `cp` 热拷贝）重做 archguard 冷启动 |
-| **为何不是待办** | 步骤 ①–③ 不在我的授权范围内（见 §3 授权边界），写成待办会制造「我可以推进」的假象。步骤 ④ 才是 archguard 的活——届时本文件的所有 AC 以那次冷启动的实测数据为基线重新核定 |
-| **当前状态** | 本次冷启动是 **热拷贝**（`cp` 从 quay 开发目录复制 orchestrator-loop-tick.md 等文件），不是真正的从零冷装。热拷贝已验证机制**能在第二个项目上驱动开发**，但未验证**从包安装后能否工作** |
+| **阻塞源** | **quay 未 build 出可安装的真产物**——quay 需先跑 `publish-dist-branch.sh`（不加 `--push`）在本地生成 dist artifact，然后 archguard 侧用该 artifact 安装（`npm install` 或等效的本地包引用），以安装出来的那份（非 `cp` 热拷贝）重做冷启动 |
+| **阻塞链** | ① quay 跑 `publish-dist-branch.sh`（不加 `--push`）生成 dist → ② archguard 侧用本地 build 产物安装 quay 机制 → ③ 用装出来的那份重做 archguard 冷启动 |
+| **注意** | 不需要 GitHub push / release / `/plugin install`——本地 build 安装已足够冷。人裁定：基于本地 build 安装即可，不必直接复制源文件，那已足够冷 |
+| **为何不是待办** | 步骤 ① 在 quay 侧，不在我的授权范围内，写成待办会制造「我可以推进」的假象。步骤 ②–③ 才是 archguard 的活——届时本文件的所有 AC 以那次冷启动的实测数据为基线重新核定 |
+| **当前状态** | 本次冷启动是 **热拷贝**（`cp` 从 quay 开发目录复制 orchestrator-loop-tick.md 等文件），不是真正的从零冷装。热拷贝已验证机制**能在第二个项目上驱动开发**，但未验证**从 build 产物安装后能否工作** |
 
 ---
 
