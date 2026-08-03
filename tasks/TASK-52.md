@@ -1,3 +1,15 @@
+---
+id: TASK-52
+title: "TASK-52: Reduce lint errors to 0"
+status: todo
+labels:
+  - defect
+  - lint
+parent: null
+extra:
+  schema: v1
+---
+
 # TASK-52: Reduce lint errors to 0
 
 status: todo
