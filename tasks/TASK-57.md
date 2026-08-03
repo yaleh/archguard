@@ -1,7 +1,7 @@
 ---
 id: TASK-57
 title: "TASK-57: 测试套件墙钟优化（基于 TASK-56 基线，改善必须超 σ）"
-status: todo
+status: done
 labels:
   - performance
 parent: null
@@ -10,7 +10,7 @@ extra:
 ---
 # TASK-57: 测试套件墙钟优化（基于 TASK-56 基线，改善必须超 σ）
 
-status: todo
+status: done
 
 ## Summary
 
@@ -61,6 +61,24 @@ timeout 600 npm test; echo $?
 bash -c 'TIMEFORMAT=%R; time npm test'   # 与 docs/analysis/test-suite-baseline.md 对比
 # 期望: 墙钟下降 > 基线 run-to-run 范围（否则记录「无改善」收工）
 ```
+
+## Progress（2026-08-03，内层执行 + 关闭）
+
+### 结论：**当前不值得优化**（合法结局，改善未超 σ=62s）
+
+**尝试的改动**（subagent，3 个 top-5 慢文件，均为 npm 装包走本地缓存）：
+- `tests/integration/plugin-install.test.ts`：npm install 加 `--prefer-offline`
+- `tests/integration/install-policy.test.ts`：npm install 加 `--prefer-offline`
+- `tests/integration/installer-claude-user-scope.test.ts`：env 加 `NPM_CONFIG_PREFER_OFFLINE: 'true'`
+
+**验收数据**（subagent 3 次全量，0 failed / 4507 passed / 13 skipped，墙钟从取令牌时刻起计）：
+- 第 3 次验收（20:33:27 起，run log `/tmp/wt57-after3.log`）：vitest Duration **481.27s**
+  （transform 12.38s + collect 40.65s + tests 430.36s）
+- 前两次中间结论：改善 ~13–17s
+- **对比基线**（TASK-56）：均值 ~475s，run-to-run 范围 62s（σ）
+- **481s vs 475s = 无净改善，完全落在 σ 噪声内**（438–500）。~13–17s 的「改善」是 run-to-run 方差，不是真实收益——正是 σ 纪律要拦的形态。
+
+**处置**：改动**未合并**（无超 σ 改善，合并=未证实的 churn + 多余 CI round）。改动已记录于此，`--prefer-offline` 是安全卫生项；若外层要单独采纳（不claim优化），可另行指示（3 文件 +15 行）。subagent 中途三次静默停止（等 Monitor 时），第 3 次验收由其启动的后台运行完成、我主会话收尾；令牌陈旧持有已重领并释放。
 
 ## Dispatch review
 
