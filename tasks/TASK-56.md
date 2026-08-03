@@ -1,7 +1,7 @@
 ---
 id: TASK-56
 title: "TASK-56: 测试套件基线度量（Σ/墙钟/并行度/σ）——只测不改"
-status: todo
+status: done
 labels:
   - measurement
   - performance
@@ -11,7 +11,7 @@ extra:
 ---
 # TASK-56: 测试套件基线度量（Σ/墙钟/并行度/σ）——只测不改
 
-status: todo
+status: done
 
 ## Summary
 
@@ -20,6 +20,19 @@ status: todo
 （才谈优化）。理由：本地绿 CI 红时套件说不出可信的话，不能优化一个结论不可信的过程；
 quay 曾拿两次非受控运行报「Σ 降 8.2%」，而 σ 实测 run-to-run 范围 297.6s——改善完全
 在噪声里。**本任务只度量，不做任何优化改动。**
+
+## 结果（2026-08-03 实测，详见 docs/analysis/test-suite-baseline.md）
+
+5 次全量全绿（292 passed | 2 skipped files，4507 passed | 13 skipped | 0 failed tests，均 exit 0）。
+墙钟（从取令牌时刻起计）: 498 / 500 / 477 / 451 / 438s → **范围 62s**（max−min）。
+Σ_true（每文件真实时长，含 hook，与 vitest 自报 `tests` 一致）: 445.81 / 423.90 / 402.07 / 389.74s，
+均值 ≈ 415s；**并行度 ≈ 0.89**（singleFork 串行套件，~11% 为 transform+collect+启动开销）。
+Σ_json（endTime−startTime，不含 hook）均值 ≈ 318s，并行度 ≈ 0.68。
+top-5 最慢（Σ_true 均值）: plugin-install 78.8s / installer-claude-user-scope 57.8s /
+parser-pool 49.7s / install-policy 40.5s / mermaid-e2e 21.6s —— 均为做真实外部操作的集成测试，
+任务候选的 5 个行数大文件（capability-graph-builder 等）实测均不在 top-5。
+异常: 首次 json-reporter 尝试瞬时崩溃（112s 仅跑 1 文件 exit 1），run2-5 未复现，无测试 flaky。
+参考基线 AC1 475.78s 落在实测范围 [438, 500] 内。
 
 ## 前置条件
 
