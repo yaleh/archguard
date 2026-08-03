@@ -124,6 +124,17 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
   - 注：wasm-parser-backend.ts 已有 TASK-38/39 测试（真实 WASM 解析、assets 缺失错误、缓存、
     cwd 无关）；syntax-tree.ts 为纯类型（C 类不测）。
 
+- **Module 3 — parser extractors**（已覆盖 94-100% stmts；补齐 call-edge-extractor 分支缺口）
+  - 现状：`src/parser/` 19 个测试文件 315 tests 全绿。extractor 们 stmts 94-100%、branch
+    71-100%（call-edge 71% 为最低）。`index.ts` 纯 re-export（C 类）、`parse-worker.ts` 仅 worker
+    线程内运行（内部 plumbing，worker-pool 测试已覆盖调用路径）、`parse.ts` 是 experiments fixture。
+  - `tests/unit/parser/call-edge-extractor.test.ts` +5 tests（9 total）
+    - 覆盖缺口分支：interface-typed receiver → callType='interface' confidence=0.6；abstract
+      （无 body）method 跳过；非 property-access 调用跳过；anonymous class 跳过。
+    - 注：`nameToEntityId.get(targetClass) ?? targetClass` 回退分支实际不可达（两 map 由同一
+      entities 数组构建，name 在 Set 必在 Map）——死代码，不硬测（与 capability fanIn>5 同理）。
+  - 选中集绿（9/9）；对抗自查：interface callType 破坏抓到 1 fail。
+
 ## Dispatch review
 
 | Field | Value |
