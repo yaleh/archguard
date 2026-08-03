@@ -68,6 +68,20 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
 # 最终：CI full suite 绿（阈值 40 回归闸门不因本任务变红）
 ```
 
+## Progress
+
+- **Module 1a — atlas builders / capability-graph-builder.ts**（393 行，原 0 测试）
+  - `tests/unit/plugins/golang/atlas/builders/capability-graph-builder.test.ts`（17 tests）
+  - 覆盖分支：空数据；interface/struct 节点构建 + exported fieldCount；precomputed
+    implementations → implements edge；last-path-segment resolveNodeId 回退；interface-centric
+    过滤（drop unreferenced struct）；uses edge（unqualified / import-map module-relative /
+    external skip / no-import qualifier fallback / pointer/slice/map/qualified normalize）；
+    edge 去重；full-mode hotspot（methodCount≥11 加 isHotspotAdded）；已引用高 fanIn 不重复
+    flag；complex-package hotspot pass（minPackageStructs 触发）；interface-mode 不跑 hotspot；
+    concrete usage risks（跨包收集 / 同包不报）。
+  - 选中集绿（17/17）；对抗自查 2 轮：改 `mc >= 11`→12 抓到 1 fail、改 filter 条件抓到 3 fail。
+  - 注：fi>5 分支对「已引用 struct」实际不可达（isHotspotAdded 只标记新加入节点），已按真实行为钉住。
+
 ## Dispatch review
 
 | Field | Value |
