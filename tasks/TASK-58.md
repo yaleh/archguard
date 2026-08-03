@@ -44,6 +44,12 @@ branches/functions 保持 80，注释注明基线 + 指向本任务）；**本�
 6. 若达到 80% 需改动面过大（超出本任务合理工作量），分阶段：先提到一个中间目标（如 60%），
    建后续任务继续，报外层。
 
+## Touches
+
+- `src/**`（补覆盖的对象，范围散布全仓——coverage 工作本质是宽接触）
+- `tests/**`（新增/扩展现有测试以覆盖 src；**与 TASK-57 的 `tests/integration/` 重叠风险高**，不得与 TASK-57 并行派发）
+- `vitest.config.ts`（达标后阈值 lines/statements 40→80 恢复）
+
 ## Contract
 
 | Key | Value |

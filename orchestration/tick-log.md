@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 10 |
 | unblock | 3 |
-| correct | 0 |
+| correct | 1 |
 | escalate | 0 |
 
 ## Tick 记录
@@ -44,4 +44,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 18 | 18:57Z | no-action | **TASK-56 subagent 继续健康推进（独立证据）**：`/tmp/task56/` 显示 **run1/run2/run3 三次全量均完成**（run2.json 1.5MB@18:38、run3.json 1.5MB@18:50），run4 在跑（run4.acq@18:51、run4.err/out@18:57）。`two-reporter-test.out`@18:41——subagent 中途验证 vitest JSON reporter 结构（run1 58KB→run2/3 1.5MB 是 reporter 配置差异），与 TASK-56「从 --reporter=json 提取每文件 duration」需求一致。subagent 44m31s/↓167.8k tokens。**判定：已过 ≥3 次最低要求，run4 收尾中**。无 BLOCKED/OVER90。工作树干净。 | 忙（TASK-56 subagent 跑 run4） |
 | 19 | 19:11Z | no-action | **TASK-56 完成，基线落盘**（外层独立核实）：commit `e807695`（measure）+ `3d248ff`（docs-only merge），`tasks/TASK-56.md` status=done，BATCH-END 事件确认。`docs/analysis/test-suite-baseline.md` 质量高——5 次绿跑（4507 passed/13 skipped/0 failed），墙钟 498/500/477/451/438s 范围 **62s（σ，TASK-57 判据基线）**，Σ_true ~415s，并行度 0.89（singleFork 串行）；subagent 实证 vitest JSON reporter 缺 duration 字段，改挂 default reporter 取真实时长（遵守任务「除非缺字段才改解析」），top-5 慢文件为真实外部操作集成测试（非外层行数猜测）。**纯度量不变量保持**（docs-only，无 src/config/脚本改动）。内层在「TASK-56 合并完成 + round 8 确认」，计划 round 8 绿后派发 TASK-57。遥测 inProgress=[]。 | 忙（等 round 8 CI 绿 → 派发 TASK-57） |
 | 20 | 19:17Z | no-action | **round 8 CI 绿确认**（外层独立核实）：`gh run list` 最新 run head 3d248ff（TASK-56 merge）= completed/success @19:10。内层等待条件「round 8 绿后派发 TASK-57」已满足。判忙闲：两次 pane 采样 hash 不同（8e8ffdfb→f61b38bed，间隔 26s）+ SESSION-RESUMED → **内层忙**，正在处理 round 8 信号（派发 TASK-57 中）。遥测 inProgress=[]（TASK-57 计量尚未开，下 tick 观察）。未打断。 | 忙（round 8 绿 → 派发 TASK-57） |
+| 21 | 19:38Z | correct | **纠正内层「TASK-58 并行派发」计划**。发现：TASK-57/58 都缺 `## Touches`（TASK-57 是 qwen 建的、TASK-58 是外层本班建的——外层自己的缺口，已修）；无 Touches 无法跑 `checkTouchesPair` 正交性校验。核实：TASK-57 改动范围 = `tests/integration/*`（TASK-56 基线 top-5 慢文件，全是真实外部操作集成测试），TASK-58 = coverage（src/ + tests/ 宽接触），**tests/ 上不正交**；两者都做全量套件验证，并行会互抢 4 核把 timeout 余量压成 flaky。裁决：**不并行，TASK-58 等 TASK-57 合并后再派**；内层收 TASK-57 时补 Touches。TASK-58 已补 Touches（含「不得与 TASK-57 并行」注记）。纠正送达（grep=1）。 | 忙（TASK-57 subagent 在飞，计划已纠正） |
 
