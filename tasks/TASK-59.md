@@ -107,6 +107,23 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
       （两包环 / 自环 / 无环）。
   - 选中集绿（20/20）；对抗自查 2 轮：环检测破坏抓到 2 fail、tests/ 分类破坏抓到 1 fail。
 
+- **Module 2 — plugin shared / wasm-parity**（原 0 测试的 native-parser-backend + plugin-factory + parser-backend env 分支）
+  - `tests/unit/plugins/shared/native-parser-backend.test.ts`（20 tests）
+    - 覆盖：nativeGrammarModule 映射；readNativeModuleRootEnv（unset/empty/configured）；
+      real Go/Python 解析走 ParserSession facade；重复 parse/dispose 幂等；dispose 后 parse
+      抛 disposed；loader 失败 → ParserInitializationError；grammar 失败 → error 且 parser.delete()
+      被调；tree.dispose → tree.delete()；session.dispose → parser.delete()（幂等）；
+      defaultNativeLoaders 可注入。
+  - `tests/unit/plugins/shared/plugin-factory.test.ts`（5 tests）
+    - 覆盖：createLanguagePlugin 各语言 switch（go/java/python/cpp/kotlin）构造正确 plugin
+      类 + selectParserBackendFor 调用透传（mock backend 注入，不依赖 native probe）。
+  - `tests/unit/plugins/shared/native-parser-backend.test.ts` 内 `resolveParserBackend`（legacy 全局 API）
+    分支补齐：默认 native；RUNTIME=native/wasm/auto(忽略)/invalid 抛错；BACKEND 别名仅当
+    RUNTIME unset 时生效；invalid BACKEND 抛错。
+  - 选中集绿（25/25）；对抗自查：dispose guard 破坏抓到 1 fail。
+  - 注：wasm-parser-backend.ts 已有 TASK-38/39 测试（真实 WASM 解析、assets 缺失错误、缓存、
+    cwd 无关）；syntax-tree.ts 为纯类型（C 类不测）。
+
 ## Dispatch review
 
 | Field | Value |
