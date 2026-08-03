@@ -202,6 +202,35 @@ scopedRequire，救不了测试的裸 import；改 46 个测试文件侵入太�
 不达标 `test:coverage` 自身退出非 0）。前四轮从未走到该步，本轮若 Run tests 转绿即
 首次接受阈值检验——本地先跑 `npm run test:coverage` 预验证（结果见下）。
 
+### 第 5 轮 — run `30838632184`，head `6e861d0`（scratch 修复首推，2026-08-03T17:51Z）
+
+**结果：failure（新红步：coverage 阈值，非 tree-sitter）**。
+
+- 修复即 5f39b8c（scratch prefix + copy + 6 包 native 冒烟测试）。native 冒烟测试步
+  **通过**（不再 Cannot find module 'tree-sitter'）。
+- Node 22 Run tests 完整跑完：**291 files passed / 3 skipped (294)；4501 tests passed /
+  19 skipped (4520)；0 failed、0 cancelled**。测试层全绿。
+- **唯一红步 = `npm run test:coverage` 的 vitest 内置阈值**（exit 1）：
+  `ERROR: Coverage for lines (44.38%) does not meet global threshold (80%)`；
+  statements 同 44.38%。这是 coverage 阈值**首次被真实检验**（前四轮从未走到该步，
+  如顺带发现所预告）。CI "Check coverage thresholds" 步因 json-summary 缺失仍静默 no-op。
+- Node 24 的 Run tests 被 cancelled（Node 22 失败后整 job 取消），无独立信息。
+- 覆盖表里大块 0% 文件：各 plugin/types.ts（纯类型，v8 下无 JS 行，0% 属正常）、
+  src/types/config-*、fitness-rules、git-history、metric-vector 等（无测试触达）；
+  高覆盖区（parser/mermaid/core 90%+）真实可读。44.38% 是否真实 vs CI artifact 待
+  **本地 `npm run test:coverage` 对比**（资源闸 GO 但 heavy-op 令牌被 quay 持有时不可跑）。
+
+### 外层裁决（2026-08-03 ~18:05Z，阻塞解除）
+
+44.38% **确认真实**（Node 22/24 双一致，v8 确定性；branches 84.9%/functions 91% 早已达标，
+仅 lines/statements 不过）。80% lines/stmts 是 CI 史上从未满足过的理想化闸门。裁决：
+1. **80% 提升超出 TASK-53 AC4 范围**，不塞进本任务（避免范围爆炸）；
+2. **重校 vitest.config.ts**：functions/branches 保持 80，lines/statements 降到 **40**
+   （实测 44.38 下方留余量、保留回归闸门），注释写明基线 2026-08-03 + 指向 TASK-58；
+3. **TASK-58 已由外层建好**（coverage 44→80%，含 Contract/验证），本任务不建。
+恢复后已 `--clear` 阻塞信号（等待 190.8s）。执行：改 vitest.config.ts → push → round 6 → watch；
+green → AC4 ✅ + 关闭本任务 + 派发 TASK-56；red → 定位新失败点写回本段报外层。
+
 ### 已确认事实（跨轮沉淀）
 
 - CI 全链路现在唯一红步是 **Run tests**（type-check/lint/format/build 均已绿）。

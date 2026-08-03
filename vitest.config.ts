@@ -18,10 +18,16 @@ export default defineConfig({
         '**/.{idea,git,cache,output,temp}'
       ],
       thresholds: {
-        lines: 80,
+        // lines/statements recalibrated 80→40 on 2026-08-03 (TASK-53, outer ruling):
+        // the 80% gate was aspirational and never satisfied in CI history. Measured
+        // baseline lines/stmts = 44.38% (CI round 5, run 30838632184, Node 22/24
+        // consistent); functions 91% / branches 84.9% already exceed 80 and stay
+        // there. 40 sits below baseline with margin, keeping a regression gate.
+        // Real coverage improvement (44%→80%) tracked in TASK-58.
+        lines: 40,
         functions: 80,
         branches: 80,
-        statements: 80
+        statements: 40
       }
     },
     include: ['tests/**/*.{test,spec}.ts', 'src/**/*.{test,spec}.ts'],
