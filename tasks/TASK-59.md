@@ -93,6 +93,20 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
     BFS followIndirectCalls（maxDepth/visited 去重）；空 handler → 空 calls；method handler 追踪。
   - 选中集绿（23/23）；对抗自查 2 轮：methodSuffix 破坏抓到负例 fail、stdlib noisy 破坏抓到 fail。
 
+- **Module 1c — atlas builders / goroutine-topology-builder.ts + package-graph-builder.ts**
+  （387/138 行，原 0 测试）
+  - `tests/unit/plugins/golang/atlas/builders/goroutine-topology-builder.test.ts`（13 tests）
+    - 覆盖：空图；main 节点注入；named/anonymous spawned 节点 + go-stmt/go-func 边；
+      method body 里的 goroutine；channel make 提取；make+recv channel edges；lifecycle
+      （anonymous→orphan、cross-package not-found→orphan、context.Context 参数 + ctx.Done
+      →mechanism=context、stop-channel receive→mechanism=channel、无检查→orphan、
+      body 未提取→cancellationCheckAvailable=false）。
+  - `tests/unit/plugins/golang/atlas/builders/package-graph-builder.test.ts`（7 tests）
+    - 覆盖：节点构建 + stats；package 类型分类（tests/examples/testutil/cmd/vendor/internal）；
+      边构建跳过 std + 重复 import 聚合 strength；外部依赖 edge 丢弃；DFS 环检测
+      （两包环 / 自环 / 无环）。
+  - 选中集绿（20/20）；对抗自查 2 轮：环检测破坏抓到 2 fail、tests/ 分类破坏抓到 1 fail。
+
 ## Dispatch review
 
 | Field | Value |
