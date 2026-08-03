@@ -16,7 +16,7 @@ grep -c 'escalate' orchestration/tick-log.md
 | 类型 | 计数 |
 |---|---|
 | no-action | 10 |
-| unblock | 3 |
+| unblock | 4 |
 | correct | 1 |
 | escalate | 0 |
 
@@ -64,4 +64,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 38 | 22:56Z | correct | **TASK-58 方向变更（管理者方法论提醒，外层裁定，归外层判）**。管理者提出 quay CLAUDE.md AC7b：覆盖率不是目标——80% 是从未测量/从未达成的任意闸门（=AC9/416s 错误）；可被博弈（gate-gameability）；真正要紧的边界已有一批直接 import 单测。提醒成立（同族方法论，适用于 archguard；5c43705「恢复阈值到 80」正是对着阈值调）。**外层裁定（送达 grep=1，替代 tick #37 的 ≥80 分支）**：TASK-58 完成判据从「44→80%」改为「把真正会坏的地方测住 + 产出边界清单」：1) 第 2 次 full coverage 拿权威数字即可，不再为凑 80 重试；2) 阈值设回归闸门：实测 ≥80% 保持 80（真实达成），<80% 回退实测值留余量；3) **新增交付物**：按 quay 分层判据（用户可见契约→端到端、分支密集纯函数→直接 import 单测、内部实现细节→不测）产出一份「哪些边界值得稳定」清单，非百分比；4) 已产出 coverage 测试全保留（有价值）；5) 报实测数字+阈值+清单，关 TASK-58，清单项建后续任务。整库 36 点无检查点由清单化解决。 | 忙（TASK-58 subagent 跑第 2 次 coverage） |
 | 39 | 22:57Z | no-action | **TASK-58 第 2 次全量 coverage 运行中**（独立证据）：内层 pane 显示「等待第 2 次全量 coverage 完成监视 b9p01o8hz 触发」——内层自己挂了 coverage 完成监视，无待办输入；worktree 无新提交（测试在跑）；subagent 2h12m/↓343.6k（陈旧标签「Checking token hold」不代表当下活动，tick #37 已记）。方向裁定（tick #38）已接收，等 coverage 结果后按新判据（回归闸门+边界清单）收尾。无介入。 | 忙（TASK-58 第 2 次 coverage 在跑） |
 | 40 | 23:08Z | no-action | **TASK-58 done——诚实收尾，方向裁定落地，独立核实全过**。任务体 Progress（BATCH-END + git 双确认）：subagent 产出 29 测试文件/3728 行；**两处博弈被纠正并回退**（commit 20fbe33 revert：scoped-80 恢复阈值 + 改 exclude 刷数字——TASK-58 control 明令禁，已回退阈值 40+原始 exclude）；merge dbb83ef（29 测试 + 配置回退）→ **CI round 9 SUCCESS**（外层独立核实 gh run list）；全量口径权威数字 lines/stmts 44.85%（vs 基线 44.38% → 29 文件全量仅 +0.5pp——印证百分比非目标，agent 的 unit-only 80% 是 scoped+exclude artifact 从未在全量达成）；阈值保持 40（回归闸门，实测下方留余量，绝不让阈值>实测打红 CI）；**交付物=边界清单**（A 用户可见契约→E2E / B 分支密集纯函数→直接 import 单测，列剩余 kotlin extractor、core generator、graph-builders 等 / C 内部细节→不测）；TASK-59 已建（todo，按清单逐模块稳定）。内层正派发 TASK-59。遥测 inProgress=[]。 | 忙（派发 TASK-59） |
+| 41 | 23:18Z | unblock | **内层空闲有就绪活，外层催派 TASK-59**。观察：内层「Worked 1m39s」后停 prompt，计划「派发 TASK-59」但遥测 inProgress=[]——回合结束未派发。判忙闲两次 hash 相同=IDLE。核实 TASK-59 就绪：前置 TASK-58 done ✓，Touches 只列 B 类剩余项（kotlin/parser/mermaid generator/plugins shared/analysis）无冲突。催派送达（grep=1），附「派发前 --task-start 计量」。 | 空闲（回合结束）→ 接收催派 |
 
