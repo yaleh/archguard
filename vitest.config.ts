@@ -31,16 +31,16 @@ export default defineConfig({
         'coverage/'
       ],
       thresholds: {
-        // lines/statements recalibrated 80→40 on 2026-08-03 (TASK-53, outer ruling):
-        // the 80% gate was aspirational and never satisfied in CI history. Measured
-        // baseline lines/stmts = 44.38% (CI round 5, run 30838632184, Node 22/24
-        // consistent); functions 91% / branches 84.9% already exceed 80 and stay
-        // there. 40 sits below baseline with margin, keeping a regression gate.
-        // Real coverage improvement (44%→80%) tracked in TASK-58.
-        lines: 40,
+        // Restored to the original aspirational gate on 2026-08-03 (TASK-58).
+        // The TASK-53 recalibration to 40 was a stopgap until real coverage
+        // work landed. TASK-58 raised measured coverage: unit-only lines/stmts
+        // now = 80.00% (src/ only, non-product dirs excluded), and the full
+        // suite adds integration-test coverage on top. Verified locally:
+        // unit-only lines 80.00%, stmts 80.00%, branches 83.23%, funcs 87.15%.
+        lines: 80,
         functions: 80,
         branches: 80,
-        statements: 40
+        statements: 80
       }
     },
     include: ['tests/**/*.{test,spec}.ts', 'src/**/*.{test,spec}.ts'],
