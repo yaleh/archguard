@@ -12,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        # Node 20 cannot build: the postbuild runtime-deps check uses
+        # `node --experimental-strip-types` (requires >=22.6). See package.json engines.
+        node-version: [22, 24]
 
     steps:
       - name: Checkout code

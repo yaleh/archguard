@@ -46,7 +46,7 @@
     "check:adr": "node --experimental-strip-types scripts/check-adr.ts"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.6.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
