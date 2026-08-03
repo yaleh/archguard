@@ -135,6 +135,16 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
       entities 数组构建，name 在 Set 必在 Map）——死代码，不硬测（与 capability fanIn>5 同理）。
   - 选中集绿（9/9）；对抗自查：interface callType 破坏抓到 1 fail。
 
+- **Module 4 — core generator 深层分支**（`src/mermaid/generator.ts`，683 行，已有 91% stmts / 84% branch 主测试）
+  - `tests/unit/mermaid/generator-deep-branches.test.ts`（9 tests）
+    - 覆盖主套件未覆盖的深层分支：visibleTitle 底部（默认，note 在 node annotations 后/末行）
+      与顶部（titlePosition=top，note 在 classDef 前）；enableComments=false 抑制注释块；
+      enableVisibleTitle 缺失不渲染；无 metadata no-op；layered package 未匹配层 → flat 渲染
+      （不被 subgraph 包裹）；跨层 relation edge + 去重；unmatched package → layered package 的
+      relation edge；无 sourceLocation.file 的 entity 跳过不抛。
+  - 选中集绿（9/9）；对抗自查 2 轮：titlePosition 分支破坏抓到 1 fail、unmatched-package
+    flat 分支破坏抓到 4 fail。
+
 ## Dispatch review
 
 | Field | Value |
