@@ -31,15 +31,55 @@ jobs:
 
       # Native tree-sitter grammars are optional peers (never packaged; see
       # install-policy tests + docs/user-guide/parser-runtime.md). The test
-      # suite exercises them, so install them into node_modules WITHOUT saving
-      # to package.json/lock. --legacy-peer-deps bypasses the kotlin grammar's
-      # stale tree-sitter@^0.22.4 peer range.
+      # suite exercises them, so materialize them into node_modules WITHOUT
+      # touching package.json/package-lock.json.
+      #
+      # Why not `npm install --no-save tree-sitter ...` here (round 4,
+      # f628b8f): npm merges CLI args with edges already declared in
+      # package.json — an optional peer declared in the manifest is reported
+      # "up to date" and never installed (verified on npm 10/11: all five
+      # peer packages missing afterwards, only the non-peer kotlin grammar
+      # landed). Each `--no-save` run also reconciles node_modules against
+      # the manifest, pruning anything installed outside it.
+      #
+      # Instead install into a scratch prefix whose package.json knows nothing
+      # about our peer declarations, then copy the installed trees into the
+      # project node_modules (all are additions — none of them nor their
+      # transitive deps exist in the lockfile). --legacy-peer-deps bypasses
+      # the grammar packages' stale tree-sitter peer ranges. Prebuilds are
+      # N-API (ABI-stable), so no compilation is needed on the runner.
       - name: Install native tree-sitter grammars (test-only)
         run: |
-          npm install --no-save --legacy-peer-deps \
-            tree-sitter@^0.25.0 tree-sitter-go@^0.25.0 tree-sitter-java@^0.23.5 \
-            tree-sitter-python@^0.25.0 tree-sitter-cpp@^0.23.4 \
-            @tree-sitter-grammars/tree-sitter-kotlin@^1.1.0
+          scratch="$(mktemp -d)"
+          (
+            cd "$scratch"
+            npm init -y >/dev/null
+            npm install --legacy-peer-deps \
+              tree-sitter@^0.25.0 tree-sitter-go@^0.25.0 tree-sitter-java@^0.23.5 \
+              tree-sitter-python@^0.25.0 tree-sitter-cpp@^0.23.4 \
+              @tree-sitter-grammars/tree-sitter-kotlin@^1.1.0
+          )
+          find "$scratch/node_modules" -maxdepth 1 -mindepth 1 ! -name '.*' \
+            -exec cp -r {} "$GITHUB_WORKSPACE/node_modules/" \;
+          rm -rf "$scratch"
+          # Fail fast here instead of as 385 cryptic test failures: load every
+          # binding and check the ABI via Parser.setLanguage.
+          node -e '
+            const Parser = require("tree-sitter");
+            const grammars = {
+              go: require("tree-sitter-go"),
+              java: require("tree-sitter-java"),
+              python: require("tree-sitter-python"),
+              cpp: require("tree-sitter-cpp"),
+              kotlin: require("@tree-sitter-grammars/tree-sitter-kotlin"),
+            };
+            for (const [lang, grammar] of Object.entries(grammars)) {
+              const parser = new Parser();
+              parser.setLanguage(grammar);
+              if (!parser.parse(" ").rootNode) throw new Error(lang + " parse failed");
+            }
+            console.log("native tree-sitter smoke test: all 6 packages load");
+          '
 
       - name: Type check
         run: npm run type-check

@@ -137,6 +137,71 @@ npm warn allow-scripts   @tree-sitter-grammars/tree-sitter-kotlin@1.1.0 (install
    或给硬依赖 native 的测试加「tree-sitter 缺失即 skip」防护（范围约 40 文件/385 tests，
    侵入大但尊重「native 可选」设计）。
 
+### 第 4 轮根因定位（2026-08-03T17:00Z–17:25Z，本地完整复现，未消耗 CI 轮次）
+
+**拉取 run 30833301070 完整日志**（`gh run view 30833301070 --log`）：install 步骤命令
+一次请求 6 个包，输出 `added 4 packages, and audited 632 packages`。Node 24 有
+`npm warn allow-scripts`（esbuild/sharp/kotlin grammar），Node 22 无。
+
+**本地复现**（fresh clone → `npm ci` → 同命令，node v26.5.0 / npm 11.17.0，与 CI
+Node 24 的 npm 11 同族）：结果与 CI 逐字一致（`added 4 packages, audited 632`）。
+清点 node_modules：
+
+- **MISSING：tree-sitter、tree-sitter-go、tree-sitter-java、tree-sitter-python、
+  tree-sitter-cpp** —— 全部 5 个根 package.json 已声明的 optional peer。
+- PRESENT：@tree-sitter-grammars/tree-sitter-kotlin（唯一不在 manifest 里的包）。
+  「4 packages」= kotlin + 3 个传递依赖。
+
+**根因（两个对照实验锁定）**：
+1. `npm install --no-save tree-sitter@^0.25.0` 单独跑 → 输出 **"up to date"**，
+   node_modules/tree-sitter 不存在。npm 把 CLI 实参与 manifest 里已声明的 optional
+   peer 边归并，判定「清单已涵盖、无需安装」——optional peer 永远不会被物化。
+   这就是疑点 B 的答案：不是 --legacy-peer-deps 的问题，是 npm 对
+   「manifest 已声明的包 + --no-save」组合的语义。
+2. 负控制 `npm install --no-save left-pad`（manifest 无关包）→ 正常安装（"added 1
+   package"），但同时 **prune 掉了先前 --no-save 装的 kotlin** —— npm 每次 --no-save
+   安装都按 manifest 全树对账。这也意味着「分多次各装一个」的方案不可行（后装的
+   会清掉先装的）。
+
+**疑点 A 排除**：fixture 包实验（postinstall 写标记文件）证明 npm 11.17 的
+allow-scripts 是 **Phase 1 advisory——脚本实际执行**，CI 里的 warning 无害。
+
+**修复方案（scratch prefix + copy，已本地端到端验证）**：
+npm 在对 manifest 不知情的前缀里装包，再把产物拷进项目 node_modules：
+
+```bash
+scratch=$(mktemp -d); cd $scratch; npm init -y
+npm install --legacy-peer-deps tree-sitter@^0.25.0 tree-sitter-go@^0.25.0 \
+  tree-sitter-java@^0.23.5 tree-sitter-python@^0.25.0 tree-sitter-cpp@^0.23.4 \
+  @tree-sitter-grammars/tree-sitter-kotlin@^1.1.0
+find node_modules -maxdepth 1 -mindepth 1 ! -name '.*' -exec cp -r {} <repo>/node_modules/ \;
+```
+
+**本地验证记录（/tmp/task53-repro，594550c）**：
+1. scratch 安装 → "added 10 packages"：6 包 + 4 传递依赖（node-addon-api、
+   node-gyp-build、tree-sitter-c、npm-check-updates）。四者均不在项目 lockfile
+   （逐个查过 lock.packages = absent）→ 拷贝零冲突，纯增量。
+2. `require()` 全 6 包 + Parser.setLanguage + 实际 parse：go/kotlin 均得
+   source_file。prebuilds 是 **N-API 单文件/平台**（非按 ABI 切分），跨 Node
+   22/24/26 通用——Node 版本无风险。
+3. CI 里失败的测试抽样 → 2 文件 33 tests 全过。
+4. **46 个 native 相关测试文件全跑：691 passed / 5 skipped（gopls 等环境 skip，
+   既有）/ 0 failed**（158s）。
+5. tests/unit/packaging/install-policy.test.ts 15/15 过（该测试只看
+   package.json/lockfile，不看 live node_modules——文件头注释明言）；
+   tests/integration/install-policy.test.ts 8/8 过（干净室 npm install 不受影响）。
+6. 复现树 git status 干净：manifest/lock 全程未被触碰，packaging 策略合规。
+
+**备选方案为何不走**：测试是 `import Parser from 'tree-sitter'` 直接导入（46 文件），
+`ARCHGUARD_NATIVE_MODULE_ROOT`（docs Option 2）只作用于产品 parser-runtime 的
+scopedRequire，救不了测试的裸 import；改 46 个测试文件侵入太大。
+
+**顺带发现（coverage 闸门）**：vitest.config.ts reporter 无 `json-summary` → CI 的
+`Check coverage thresholds` 步读的 `coverage/coverage-summary.json` 不存在，该步被
+`if [ -f ]` 保护成静默 no-op；真正生效的阈值是 vitest 自带 `thresholds`（四项 80%，
+不达标 `test:coverage` 自身退出非 0）。前四轮从未走到该步，本轮若 Run tests 转绿即
+首次接受阈值检验——本地先跑 `npm run test:coverage` 预验证（结果见下）。
+
 ### 已确认事实（跨轮沉淀）
 
 - CI 全链路现在唯一红步是 **Run tests**（type-check/lint/format/build 均已绿）。
@@ -146,6 +211,13 @@ npm warn allow-scripts   @tree-sitter-grammars/tree-sitter-kotlin@1.1.0 (install
   `scopedRequire(RUNTIME_MODULE)` 变量动态 require，故 native 即使不在 `dependencies` 也不报错
   ——这是「native 可选项」能通过构建检查的原因。
 - 环境：本地 node v26.5.0、npm 11.17.0；CI 用 setup-node@v3（Node 22→npm 10，Node 24→npm 11）。
+- **npm 语义**：`npm install --no-save <pkg>` 对 manifest 已声明（含 optional peer）的
+  包是 no-op（"up to date"）；每次 --no-save 安装还会按 manifest 全树对账、prune 清单外
+  包。→ native 包必须经 manifest 不知情的 scratch 前缀安装再拷入 node_modules。
+- native 包 prebuilds 为 N-API 单文件/平台（tree-sitter@0.25 的 linux-x64 只有一个
+  tree-sitter.node），跨 Node ABI 通用；allow-scripts 在 npm 11.17 仅 advisory 不阻断。
+- 主仓 node_modules 的 native 包已在 f628b8f 后的某次 npm ci 被清掉（本地 require 亦
+  MODULE_NOT_FOUND），CI 修复落地后用同一 scratch 手法补回，保持本地/CI 一致。
 
 ## Dispatch review
 
