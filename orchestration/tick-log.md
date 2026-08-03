@@ -16,7 +16,7 @@ grep -c 'escalate' orchestration/tick-log.md
 | 类型 | 计数 |
 |---|---|
 | no-action | 9 |
-| unblock | 0 |
+| unblock | 1 |
 | correct | 0 |
 | escalate | 0 |
 
@@ -33,4 +33,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 7 | 16:17Z | no-action | 内层在飞 TASK-53（AC4 CI 全绿）。独立核实（零成本）：两次 md5sum 不同（16:15:54 `610b…`→16:16:35 `31c9…`，间隔 41s）+ transcript 16:14-16:16 连续 gh 命令（gh auth / gh run list / gh run view 30602001992 / log-failed）→ 判定忙，未打断。git 无新 commit（内层仍在调查 CI 失败日志，未到提交点）。CI 实况仍是旧 3 次 failure（07-31 前）。监视器 alive=1。AC5 队列 3 ready 充足。 | 忙（Manifesting 2m2s，`◻ TASK-53: AC4 CI green lights`） |
 | 8 | 16:30Z | no-action | 内层在飞 TASK-53，已 push 首个 CI 修复 `a911166`（drop Node 20，matrix [22,24]，engines >=22.6；本地与 origin 同步 0/0）。CI 用该 commit 重跑仍 failure（Node 24：`Cannot find module 'tree-sitter'`，Node 22 cancelled）。**独立核实根因**：`npm ci` 后 tree-sitter（peerDep）缺失 → 恰好解释内层未提交的 package.json 改动（补 tree-sitter + 语法包进 devDependencies）——**内层方向正确**，无需纠偏。两次 md5sum 不同（16:29:04→16:29:39），忙，未打断。监视器 alive=1。 | 忙（Getting CI three green lights 15m12s，still thinking） |
 | 9 | 16:47Z | no-action | **换模型收尾（flash→qwen，双双重启）**。人裁定 archguard 内外层都改用 claude-aliyun qwen3.8-max-preview。确认工作树已干净（内层自行提交了 a911166/af4f85f/f628b8f，0/0 与 origin 同步）。改名交接文档为 `handover-for-successor.md`（不绑模型名），补 §10 内层 TASK-53 位置/续做路线、§11 flash 班踩过的坑（git add -A 误收内层改动、← 1 agent 是等后台任务、lint 也要令牌、内容寻址 hash 巧合、sleep 沙箱阻止、monitor-mount-check 缺失）、§12 给 qwen 的明文前提。内层第 4 轮 CI 仍 failure（Node 24），已发指令要求把前三轮分析写进 TASK-53.md Progress 段落盘；内层已响应正在写。更新 goals-and-ac §4 快照。 | 忙（Getting CI 33m，响应落盘指令，写 Progress 段中） |
+| 10 | 17:02Z | unblock | **冷启动恢复（qwen 继任者首个 tick，内外层均已换模型重启）**。读交接 v2（handover-for-successor.md）+ tick 文档；确认 TASK-53.md Progress 段四轮分析已落盘（commit 4b4e4f7，接手第一动作完成）。重挂两个监视器（inner-state + session-liveness，`--once` 自检 alive=1）+ 重建 cron（7,27,47，job 60a9924b）。两次 md5sum 相同判空闲：内层新会话在空 prompt 零上下文等待。发接续简报：四轮事实 + run 30833844715 是 docs commit 顺带触发的无效轮 + 下一步疑点 A/B + packaging 约束 + 落盘/推送纪律；送达确认（关键词命中 3/3 + pane hash 变化 + 内层开始处理）。独立核实：gh run list 5 连 failure（最新为 docs-only run）；AC5 队列 3 ready；drift-check 3 stranded 分支已有 TASK-55 覆盖。本地 ahead 1（0a282b0 docs commit，有意不推，避免再浪费一轮 CI）。 | 空闲（新会话空 prompt）→ 接收简报开工（esc to interrupt） |
 
