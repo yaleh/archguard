@@ -82,3 +82,4 @@ experiments/granularity/artifacts/embeddings/cache/
 /backlog/.monitor-task-id
 /.quay/gate-events.jsonl
 /docs/research/
+/.workflow-events/
