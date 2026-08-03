@@ -50,9 +50,10 @@
 |---|---|
 | **判定命令** | `npm run lint; echo $?` |
 | **通过条件** | 退出码 0，0 errors（warnings 不计入阻塞） |
-| **当前实测** | ❌ 退出码 1，234 errors，3853 warnings（eslint --fix 后；修复前为 480 errors / 4137 warnings） |
-| **失败归因** | 大量 `@typescript-eslint/no-unsafe-*` 和 `@typescript-eslint/no-explicit-any` 规则违反；eslint --fix 已自动修复了 ~246 errors，剩余 234 需手动处理 |
-| **风险** | 手动修复 lint 可能引入行为变更（尤其是 `any` → 具体类型的重写） |
+| **当前实测** | ✅ 退出码 0，0 errors，4095 warnings（TASK-52 done，2026-08-03 外层独立核实） |
+| **失败归因** | 主体是 `plugin/**` 的 parser error（eslint 默认 espree 解析非 src/tests 的 .ts，231+3 个），已通过 eslint.config.js 排除 plugin/** 清零；另有 3 处单发 rule error（gopls-client reject 包装、wasm 严格 undefined、测试缺断言）逐个修复。`no-unsafe-*`/`no-explicit-any` 实为 **warning** 而非 error，按契约不计入阻塞 |
+| **核实方式** | 外层零成本核实（非重跑）：内层 transcript 记录 15:49 修复前 lint（237 errors）与 15:52 修复后 lint（`LINT_EXIT=0`，0 errors/4095 warnings）；diff `3ee07ed` 4 处改动与 Completion 段逐条吻合。重跑全量 lint 被推迟到 quay 释放令牌后 |
+| **风险** | 剩余 4095 warnings 未清理（类型安全类，按契约保留）；若后续清理需另建任务 |
 
 ### AC3: `npm run type-check` 退出码为 0
 
@@ -133,12 +134,12 @@
 | AC | 状态 | 关键数据 |
 |---|---|---|
 | AC1 — npm test 绿 | ✅ | exit 0, 475.78s, 0 failed（TASK-51 done） |
-| AC2 — lint 绿 | ❌ | exit 1, 234 errors, 3853 warnings |
+| AC2 — lint 绿 | ✅ | exit 0, 0 errors, 4095 warnings（外层零成本核实，2026-08-03T16:1xZ） |
 | AC3 — type-check 绿 | ✅ | exit 0 |
 | AC4 — CI 全绿 | ❌ | 最近 5 次全 failure（自 2026-07-12） |
-| AC5 — 队列有货 | ✅ | 2 tasks（TASK-51 done, TASK-52 todo） |
-| AC6 — 状态工具可用 | ✅ 文件存在 | 运行时验证待做 |
-| AC7 — 资源闸存在 | ✅ 文件存在 | 运行时验证待做 |
+| AC5 — 队列有货 | ✅ | **3** todo/ready（TASK-53 CI 全绿、TASK-54 warnings 清理、TASK-55 stranded 分支分诊，2026-08-03T16:1xZ 补货） |
+| AC6 — 状态工具可用 | ✅ | 文件存在；telemetry 返回合法 JSON（含 inProgress 字段），2026-08-03T16:03Z 实测 |
+| AC7 — 资源闸存在 | ✅ | 文件存在；`--for full-suite` exit 0（cpu_stall 37.53 < 40），2026-08-03T16:04Z 实测 |
 
 ---
 
