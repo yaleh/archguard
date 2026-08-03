@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { PackageNode, CapabilityNode } from '@/plugins/golang/atlas/types.js';
+import type { CapabilityNode } from '@/plugins/golang/atlas/types.js';
 import {
   sanitizeId,
   createSubgraphId,
@@ -84,7 +84,14 @@ describe('renderPackageLegend', () => {
 
 describe('formatCapabilityLabel', () => {
   const node = (overrides: Partial<CapabilityNode> = {}): CapabilityNode =>
-    ({ id: 'n', name: 'Svc', type: 'interface', package: 'p', exported: true, ...overrides }) as CapabilityNode;
+    ({
+      id: 'n',
+      name: 'Svc',
+      type: 'interface',
+      package: 'p',
+      exported: true,
+      ...overrides,
+    }) as CapabilityNode;
   it('returns the bare name when no metrics', () => {
     expect(formatCapabilityLabel(node())).toBe('Svc');
   });
@@ -97,7 +104,14 @@ describe('formatCapabilityLabel', () => {
 
 describe('isHotspot', () => {
   const node = (overrides: Partial<CapabilityNode> = {}) =>
-    ({ id: 'n', name: 'Svc', type: 'interface', package: 'p', exported: true, ...overrides }) as CapabilityNode;
+    ({
+      id: 'n',
+      name: 'Svc',
+      type: 'interface',
+      package: 'p',
+      exported: true,
+      ...overrides,
+    }) as CapabilityNode;
   it('flags nodes with >10 methods or >5 fan-in', () => {
     expect(isHotspot(node({ methodCount: 11 }))).toBe(true);
     expect(isHotspot(node({ fanIn: 6 }))).toBe(true);
@@ -202,7 +216,16 @@ describe('getLifecycleTag', () => {
 describe('packageOfEntry', () => {
   it('returns the entry package or the location dirname', () => {
     const entry = (overrides: Partial<EntryPoint> = {}) =>
-      ({ id: 'e', protocol: 'http', framework: 'gin', path: '/', handler: 'h', middleware: [], location: { file: '/repo/pkg/main.go', line: 1 }, ...overrides }) as EntryPoint;
+      ({
+        id: 'e',
+        protocol: 'http',
+        framework: 'gin',
+        path: '/',
+        handler: 'h',
+        middleware: [],
+        location: { file: '/repo/pkg/main.go', line: 1 },
+        ...overrides,
+      }) as EntryPoint;
     expect(packageOfEntry(entry({ package: 'pkg/hub' }))).toBe('pkg/hub');
     expect(packageOfEntry(entry({ package: undefined }))).toBe('/repo/pkg');
   });

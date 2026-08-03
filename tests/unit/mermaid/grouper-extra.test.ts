@@ -8,7 +8,12 @@ import { describe, it, expect } from 'vitest';
 import { HeuristicGrouper } from '@/mermaid/grouper.js';
 import type { ArchJSON } from '@/types/index.js';
 
-function makeEntity(id: string, name: string, file: string, overrides: Record<string, unknown> = {}): any {
+function makeEntity(
+  id: string,
+  name: string,
+  file: string,
+  overrides: Record<string, unknown> = {}
+): any {
   return {
     id,
     name,
@@ -100,16 +105,23 @@ describe('HeuristicGrouper limits', () => {
     const result = grouper.group(makeArchJson(entities));
     expect(result.packages.length).toBe(2);
     // largest package first
-    expect(result.packages[0].entities.length).toBeGreaterThanOrEqual(result.packages[1].entities.length);
+    expect(result.packages[0].entities.length).toBeGreaterThanOrEqual(
+      result.packages[1].entities.length
+    );
   });
 });
 
 describe('HeuristicGrouper layout direction', () => {
   it('uses LR for few packages and TB for many', () => {
     const grouper = new HeuristicGrouper();
-    const few = makeArchJson([makeEntity('a', 'A', 'src/a/A.ts'), makeEntity('b', 'B', 'src/b/B.ts')]);
+    const few = makeArchJson([
+      makeEntity('a', 'A', 'src/a/A.ts'),
+      makeEntity('b', 'B', 'src/b/B.ts'),
+    ]);
     expect(grouper.group(few).layout.direction).toBe('LR');
-    const many = makeArchJson(Array.from({ length: 6 }, (_, i) => makeEntity(`e${i}`, `E${i}`, `src/p${i}/E${i}.ts`)));
+    const many = makeArchJson(
+      Array.from({ length: 6 }, (_, i) => makeEntity(`e${i}`, `E${i}`, `src/p${i}/E${i}.ts`))
+    );
     expect(grouper.group(many).layout.direction).toBe('TB');
   });
 });

@@ -7,7 +7,12 @@ import { QualityMetrics } from '@/core/query/arch-metrics-quality.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import type { ArchJSON, Entity } from '@/types/index.js';
 
-function makeEntity(id: string, name: string, file: string, overrides: Partial<Entity> = {}): Entity {
+function makeEntity(
+  id: string,
+  name: string,
+  file: string,
+  overrides: Partial<Entity> = {}
+): Entity {
   return {
     id,
     name,
@@ -51,7 +56,14 @@ describe('QualityMetrics.getPackageCoverage', () => {
         testAnalysis: {
           version: '1.0',
           testFiles: [
-            { id: 't1', testType: 'unit', testCaseCount: 2, assertionCount: 5, assertionDensity: 2.5, frameworks: ['junit5'] },
+            {
+              id: 't1',
+              testType: 'unit',
+              testCaseCount: 2,
+              assertionCount: 5,
+              assertionDensity: 2.5,
+              frameworks: ['junit5'],
+            },
           ],
           coverageMap: [
             { sourceEntityId: 'e1', coveredByTestIds: ['t1'], coverageScore: 1 },
@@ -63,8 +75,18 @@ describe('QualityMetrics.getPackageCoverage', () => {
     const result = makeQuality(archJson).getPackageCoverage();
     // src/com/example/a: 1/2 covered, src/com/example/b: 0/1 covered
     expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ package: 'src/com/example/b', totalEntities: 1, coveredEntities: 0, coverageRatio: 0 });
-    expect(result[1]).toMatchObject({ package: 'src/com/example/a', totalEntities: 2, coveredEntities: 1, coverageRatio: 0.5 });
+    expect(result[0]).toMatchObject({
+      package: 'src/com/example/b',
+      totalEntities: 1,
+      coveredEntities: 0,
+      coverageRatio: 0,
+    });
+    expect(result[1]).toMatchObject({
+      package: 'src/com/example/a',
+      totalEntities: 2,
+      coveredEntities: 1,
+      coverageRatio: 0.5,
+    });
     expect(result[1].testFileIds).toEqual(['t1']);
   });
 
@@ -104,11 +126,16 @@ describe('QualityMetrics.getEntityCoverage', () => {
         testAnalysis: {
           version: '1.0',
           testFiles: [
-            { id: 't1', testType: 'unit', testCaseCount: 3, assertionCount: 7, assertionDensity: 2.33, frameworks: ['vitest'] },
+            {
+              id: 't1',
+              testType: 'unit',
+              testCaseCount: 3,
+              assertionCount: 7,
+              assertionDensity: 2.33,
+              frameworks: ['vitest'],
+            },
           ],
-          coverageMap: [
-            { sourceEntityId: 'e1', coveredByTestIds: ['t1'], coverageScore: 0.8 },
-          ],
+          coverageMap: [{ sourceEntityId: 'e1', coveredByTestIds: ['t1'], coverageScore: 0.8 }],
         },
       },
     });
@@ -117,7 +144,11 @@ describe('QualityMetrics.getEntityCoverage', () => {
     expect(result.coverageScore).toBe(0.8);
     expect(result.coveredByTestIds).toEqual(['t1']);
     expect(result.testFileDetails).toHaveLength(1);
-    expect(result.testFileDetails[0]).toMatchObject({ id: 't1', testType: 'unit', frameworks: ['vitest'] });
+    expect(result.testFileDetails[0]).toMatchObject({
+      id: 't1',
+      testType: 'unit',
+      frameworks: ['vitest'],
+    });
   });
 
   it('returns empty detail when coveredByTestIds is empty', () => {

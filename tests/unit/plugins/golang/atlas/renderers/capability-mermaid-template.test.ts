@@ -25,10 +25,7 @@ describe('renderCapabilityGraph', () => {
 
   it('renders interface and concrete nodes with package subgraphs', () => {
     const graph = makeGraph({
-      nodes: [
-        node('svc.API', 'API'),
-        node('svc.Impl', 'Impl', { type: 'concrete' }),
-      ],
+      nodes: [node('svc.API', 'API'), node('svc.Impl', 'Impl', { type: 'concrete' })],
       edges: [{ source: 'svc.API', target: 'svc.Impl', type: 'implements' }],
     });
     const out = renderCapabilityGraph(graph);

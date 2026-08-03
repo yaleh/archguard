@@ -32,7 +32,11 @@ describe('DependencyExtractor', () => {
     );
     const deps = await extractor.extractDependencies(root);
     expect(deps).toEqual([
-      expect.objectContaining({ name: 'github.com/gin-gonic/gin', version: 'v1.9.0', isDirect: true }),
+      expect.objectContaining({
+        name: 'github.com/gin-gonic/gin',
+        version: 'v1.9.0',
+        isDirect: true,
+      }),
     ]);
   });
 

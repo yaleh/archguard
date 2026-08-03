@@ -23,10 +23,15 @@ describe('getHeadRef', () => {
   it('returns the trimmed HEAD sha', () => {
     mockExecSync.mockReturnValue('abc1234\n');
     expect(getHeadRef('/repo')).toBe('abc1234');
-    expect(mockExecSync).toHaveBeenCalledWith('git rev-parse --short HEAD', expect.objectContaining({ cwd: '/repo' }));
+    expect(mockExecSync).toHaveBeenCalledWith(
+      'git rev-parse --short HEAD',
+      expect.objectContaining({ cwd: '/repo' })
+    );
   });
   it('returns unknown on failure', () => {
-    mockExecSync.mockImplementation(() => { throw new Error('no repo'); });
+    mockExecSync.mockImplementation(() => {
+      throw new Error('no repo');
+    });
     expect(getHeadRef('/repo')).toBe('unknown');
   });
 });
@@ -41,7 +46,9 @@ describe('getCurrentBranch', () => {
     expect(getCurrentBranch('/repo')).toBe('HEAD');
   });
   it('returns HEAD on failure', () => {
-    mockExecSync.mockImplementation(() => { throw new Error('no repo'); });
+    mockExecSync.mockImplementation(() => {
+      throw new Error('no repo');
+    });
     expect(getCurrentBranch('/repo')).toBe('HEAD');
   });
 });
@@ -52,7 +59,9 @@ describe('isGitRepo', () => {
     expect(isGitRepo('/repo')).toBe(true);
   });
   it('returns false on failure', () => {
-    mockExecSync.mockImplementation(() => { throw new Error('not a repo'); });
+    mockExecSync.mockImplementation(() => {
+      throw new Error('not a repo');
+    });
     expect(isGitRepo('/repo')).toBe(false);
   });
 });
@@ -63,7 +72,9 @@ describe('getGitRoot', () => {
     expect(getGitRoot('/home/repo/src')).toBe('/home/repo');
   });
   it('returns null on failure', () => {
-    mockExecSync.mockImplementation(() => { throw new Error('not a repo'); });
+    mockExecSync.mockImplementation(() => {
+      throw new Error('not a repo');
+    });
     expect(getGitRoot('/nope')).toBeNull();
   });
 });
@@ -82,16 +93,23 @@ describe('readGitLog', () => {
 
   it('adds path filter when provided', () => {
     mockExecSync.mockReturnValue('');
-    readGitLog('/repo', { sinceDays: 7, maxCommits: 10, includeMerges: false, pathFilter: 'src/cli' });
+    readGitLog('/repo', {
+      sinceDays: 7,
+      maxCommits: 10,
+      includeMerges: false,
+      pathFilter: 'src/cli',
+    });
     const cmd = mockExecSync.mock.calls[0][0];
     expect(cmd).toContain('--no-merges');
     expect(cmd).toContain('-- src/cli');
   });
 
   it('throws a wrapped error when git fails', () => {
-    mockExecSync.mockImplementation(() => { throw new Error('boom'); });
-    expect(() => readGitLog('/repo', { sinceDays: 7, maxCommits: 10, includeMerges: false })).toThrow(
-      /git log failed in \/repo/
-    );
+    mockExecSync.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    expect(() =>
+      readGitLog('/repo', { sinceDays: 7, maxCommits: 10, includeMerges: false })
+    ).toThrow(/git log failed in \/repo/);
   });
 });

@@ -11,7 +11,11 @@ import path from 'path';
 import { PluginRegistry } from '@/core/plugin-registry.js';
 import type { ILanguagePlugin } from '@/core/interfaces/index.js';
 
-function makePlugin(name: string, version: string, extensions: string[] = [`.${name}`]): ILanguagePlugin {
+function makePlugin(
+  name: string,
+  version: string,
+  extensions: string[] = [`.${name}`]
+): ILanguagePlugin {
   return {
     metadata: {
       name,
@@ -20,7 +24,12 @@ function makePlugin(name: string, version: string, extensions: string[] = [`.${n
       fileExtensions: extensions,
       author: 'test',
       minCoreVersion: '1.0.0',
-      capabilities: { singleFileParsing: true, incrementalParsing: false, dependencyExtraction: false, typeInference: false },
+      capabilities: {
+        singleFileParsing: true,
+        incrementalParsing: false,
+        dependencyExtraction: false,
+        typeInference: false,
+      },
     },
     initialize: vi.fn().mockResolvedValue(undefined),
     canHandle: () => false,

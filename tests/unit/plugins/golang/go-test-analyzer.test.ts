@@ -15,8 +15,12 @@ describe('GoTestAnalyzer', () => {
 
     it('uses patternConfig.testFileGlobs when provided', () => {
       const analyzer = new GoTestAnalyzer();
-      expect(analyzer.isTestFile('pkg/integration/foo_test.go', { testFileGlobs: ['**/integration/**'] })).toBe(true);
-      expect(analyzer.isTestFile('pkg/unit/foo_test.go', { testFileGlobs: ['**/integration/**'] })).toBe(true); // still endsWith _test.go
+      expect(
+        analyzer.isTestFile('pkg/integration/foo_test.go', { testFileGlobs: ['**/integration/**'] })
+      ).toBe(true);
+      expect(
+        analyzer.isTestFile('pkg/unit/foo_test.go', { testFileGlobs: ['**/integration/**'] })
+      ).toBe(true); // still endsWith _test.go
     });
   });
 
@@ -45,12 +49,12 @@ describe('GoTestAnalyzer', () => {
       ].join('\n');
       const result = new GoTestAnalyzer().extractTestStructure('pkg/calc_test.go', code);
       expect(result).not.toBeNull();
-      expect(result!.frameworks).toContain('testify');
-      expect(result!.testTypeHint).toBe('unit');
-      expect(result!.testCases).toHaveLength(2);
+      expect(result.frameworks).toContain('testify');
+      expect(result.testTypeHint).toBe('unit');
+      expect(result.testCases).toHaveLength(2);
       // assertionCount is computed over the whole file (assert.Equal, assert.True, t.Error)
-      expect(result!.testCases[0].assertionCount).toBe(3);
-      expect(result!.testCases[1].assertionCount).toBe(3);
+      expect(result.testCases[0].assertionCount).toBe(3);
+      expect(result.testCases[1].assertionCount).toBe(3);
     });
 
     it('detects skipped tests', () => {
@@ -62,7 +66,7 @@ describe('GoTestAnalyzer', () => {
         '}',
       ].join('\n');
       const result = new GoTestAnalyzer().extractTestStructure('pkg/skip_test.go', code);
-      expect(result!.testCases[0].isSkipped).toBe(true);
+      expect(result.testCases[0].isSkipped).toBe(true);
     });
 
     it('detects benchmarks and zeroes their assertion count', () => {
@@ -74,8 +78,8 @@ describe('GoTestAnalyzer', () => {
         '}',
       ].join('\n');
       const result = new GoTestAnalyzer().extractTestStructure('pkg/bench_test.go', code);
-      expect(result!.testTypeHint).toBe('performance');
-      expect(result!.testCases[0].assertionCount).toBe(0);
+      expect(result.testTypeHint).toBe('performance');
+      expect(result.testCases[0].assertionCount).toBe(0);
     });
 
     it('returns null when there are no test functions', () => {
@@ -95,16 +99,12 @@ describe('GoTestAnalyzer', () => {
       ].join('\n');
       const analyzer = new GoTestAnalyzer('github.com/myorg/mymod');
       const result = analyzer.extractTestStructure('pkg/x_test.go', code);
-      expect(result!.importedSourceFiles).toContain('internal/calc');
+      expect(result.importedSourceFiles).toContain('internal/calc');
     });
 
     it('handles invalid custom assertion regexes gracefully', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const code = [
-        'package pkg',
-        'import "testing"',
-        'func TestX(t *testing.T) {}',
-      ].join('\n');
+      const code = ['package pkg', 'import "testing"', 'func TestX(t *testing.T) {}'].join('\n');
       const analyzer = new GoTestAnalyzer();
       const result = analyzer.extractTestStructure('pkg/x_test.go', code, {
         customAssertionRegexes: ['[invalid', '\\bassert\\b'],
@@ -128,7 +128,7 @@ describe('GoTestAnalyzer', () => {
         'func TestX(t *testing.T) {}',
       ].join('\n');
       const result = analyzer.extractTestStructure('pkg/x_test.go', code);
-      expect(result!.importedSourceFiles).toContain('foo');
+      expect(result.importedSourceFiles).toContain('foo');
     });
   });
 });

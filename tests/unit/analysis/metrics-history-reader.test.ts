@@ -58,7 +58,11 @@ describe('readHistoryEntries', () => {
 
   it('ignores blank lines', async () => {
     const file = path.join(dir, MetricsHistoryWriter.FILENAME);
-    await fs.writeFile(file, '\n\n' + JSON.stringify({ timestamp: '2026-01-05T00:00:00Z', packages: [] }) + '\n\n', 'utf-8');
+    await fs.writeFile(
+      file,
+      '\n\n' + JSON.stringify({ timestamp: '2026-01-05T00:00:00Z', packages: [] }) + '\n\n',
+      'utf-8'
+    );
     const entries = await readHistoryEntries(dir);
     expect(entries).toHaveLength(1);
   });

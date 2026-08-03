@@ -91,6 +91,8 @@ describe('OutputPathResolver', () => {
     const resolver = new OutputPathResolver({ outputDir: '/out', output: undefined });
     await resolver.ensureDirectory({ name: 'sub/dir' });
     // 'sub/dir' flattens to outputDir=/out/sub with baseName=dir
-    expect(mockMkdir).toHaveBeenCalledWith(path.resolve(path.join('/out', 'sub')), { recursive: true });
+    expect(mockMkdir).toHaveBeenCalledWith(path.resolve(path.join('/out', 'sub')), {
+      recursive: true,
+    });
   });
 });

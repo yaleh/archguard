@@ -41,21 +41,26 @@ describe('CppPlugin.extractTestStructure', () => {
     ].join('\n');
     const result = plugin.extractTestStructure('test-add.cpp', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('gtest');
-    expect(result!.testCases.length).toBeGreaterThan(0);
-    expect(result!.testCases[0].assertionCount).toBeGreaterThan(0);
+    expect(result.frameworks).toContain('gtest');
+    expect(result.testCases.length).toBeGreaterThan(0);
+    expect(result.testCases[0].assertionCount).toBeGreaterThan(0);
   });
 
   it('detects catch2 framework', () => {
-    const code = ['#include <catch2/catch_test_macros.hpp>', 'TEST_CASE("x") {', '  REQUIRE(1 == 1);', '}'].join('\n');
+    const code = [
+      '#include <catch2/catch_test_macros.hpp>',
+      'TEST_CASE("x") {',
+      '  REQUIRE(1 == 1);',
+      '}',
+    ].join('\n');
     const result = plugin.extractTestStructure('test-x.cpp', code);
-    expect(result!.frameworks).toContain('catch2');
+    expect(result.frameworks).toContain('catch2');
   });
 
   it('falls back to assert framework', () => {
     const code = ['void test_foo() {', '  assert(1 == 1);', '}'].join('\n');
     const result = plugin.extractTestStructure('test_foo.cpp', code);
-    expect(result!.frameworks).toContain('assert');
+    expect(result.frameworks).toContain('assert');
   });
 
   it('returns null for non-test files', () => {

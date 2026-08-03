@@ -20,8 +20,20 @@ describe('renderGoroutineTopology', () => {
   it('renders main and spawned goroutines with package groups', () => {
     const topology = makeTopology({
       nodes: [
-        { id: 'main', name: 'main.main', type: 'main', package: 'pkg/main', location: { file: 'main.go', line: 1 } },
-        { id: 'pkg/svc/handler.spawn-1', name: 'pkg/svc/handler', type: 'spawned', package: 'pkg/svc', location: { file: 'svc.go', line: 5 } },
+        {
+          id: 'main',
+          name: 'main.main',
+          type: 'main',
+          package: 'pkg/main',
+          location: { file: 'main.go', line: 1 },
+        },
+        {
+          id: 'pkg/svc/handler.spawn-1',
+          name: 'pkg/svc/handler',
+          type: 'spawned',
+          package: 'pkg/svc',
+          location: { file: 'svc.go', line: 5 },
+        },
       ],
       edges: [{ from: 'main', to: 'pkg/svc/handler.spawn-1' }],
       channels: [],
@@ -38,11 +50,31 @@ describe('renderGoroutineTopology', () => {
   it('renders channels and channel edges with a channels subgraph', () => {
     const topology = makeTopology({
       nodes: [
-        { id: 'main', name: 'main.main', type: 'main', package: 'pkg/main', location: { file: 'main.go', line: 1 } },
-        { id: 'worker', name: 'worker', type: 'spawned', package: 'pkg/main', location: { file: 'main.go', line: 2 } },
+        {
+          id: 'main',
+          name: 'main.main',
+          type: 'main',
+          package: 'pkg/main',
+          location: { file: 'main.go', line: 1 },
+        },
+        {
+          id: 'worker',
+          name: 'worker',
+          type: 'spawned',
+          package: 'pkg/main',
+          location: { file: 'main.go', line: 2 },
+        },
       ],
       edges: [],
-      channels: [{ id: 'chan-jobs', name: 'jobs', type: 'chan Job', direction: 'bidirectional', location: { file: 'main.go', line: 3 } }],
+      channels: [
+        {
+          id: 'chan-jobs',
+          name: 'jobs',
+          type: 'chan Job',
+          direction: 'bidirectional',
+          location: { file: 'main.go', line: 3 },
+        },
+      ],
       channelEdges: [{ from: 'main', to: 'chan-jobs', edgeType: 'send' }],
     });
     const out = renderGoroutineTopology(topology);
@@ -55,13 +87,27 @@ describe('renderGoroutineTopology', () => {
   it('marks spawned goroutines without an exit as noexit', () => {
     const topology = makeTopology({
       nodes: [
-        { id: 'main', name: 'main.main', type: 'main', package: 'p', location: { file: 'm.go', line: 1 } },
-        { id: 'orphan', name: 'orphan', type: 'spawned', package: 'p', location: { file: 'o.go', line: 2 } },
+        {
+          id: 'main',
+          name: 'main.main',
+          type: 'main',
+          package: 'p',
+          location: { file: 'm.go', line: 1 },
+        },
+        {
+          id: 'orphan',
+          name: 'orphan',
+          type: 'spawned',
+          package: 'p',
+          location: { file: 'o.go', line: 2 },
+        },
       ],
       edges: [{ from: 'main', to: 'orphan' }],
       channels: [],
       channelEdges: [],
-      lifecycle: [{ nodeId: 'orphan', receivesContext: false, hasCancellationCheck: false, orphan: true }],
+      lifecycle: [
+        { nodeId: 'orphan', receivesContext: false, hasCancellationCheck: false, orphan: true },
+      ],
     });
     const out = renderGoroutineTopology(topology);
     expect(out).toContain('no exit');

@@ -16,7 +16,6 @@ import {
   generateRelationLine,
   isNoisyTarget,
   generateClassDefinition,
-  ENTITY_CLASSDEF_STYLES,
 } from '@/mermaid/generator-formatting.js';
 
 describe('entityTypeToClassDef', () => {
@@ -120,13 +119,17 @@ describe('shouldIncludeMember', () => {
   const prot: Member = { name: 'r', type: 'property', visibility: 'protected' };
   const pub: Member = { name: 'u', type: 'property', visibility: 'public' };
   it('excludes private when includePrivate is false', () => {
-    expect(shouldIncludeMember(priv, { includePrivate: false, includeProtected: true })).toBe(false);
+    expect(shouldIncludeMember(priv, { includePrivate: false, includeProtected: true })).toBe(
+      false
+    );
   });
   it('includes private when includePrivate is true', () => {
     expect(shouldIncludeMember(priv, { includePrivate: true, includeProtected: false })).toBe(true);
   });
   it('excludes protected when includeProtected is false', () => {
-    expect(shouldIncludeMember(prot, { includePrivate: true, includeProtected: false })).toBe(false);
+    expect(shouldIncludeMember(prot, { includePrivate: true, includeProtected: false })).toBe(
+      false
+    );
   });
   it('includes protected when includeProtected is true', () => {
     expect(shouldIncludeMember(prot, { includePrivate: false, includeProtected: true })).toBe(true);
@@ -193,28 +196,61 @@ describe('generateMemberLine', () => {
 });
 
 describe('generateRelationLine', () => {
-  const map = new Map([['a', 'A'], ['b', 'B']]);
+  const map = new Map([
+    ['a', 'A'],
+    ['b', 'B'],
+  ]);
   it('returns null for call relations', () => {
     const r = { id: '1', type: 'call', source: 'a', target: 'b' } as Relation;
     expect(generateRelationLine(r, map)).toBeNull();
   });
   it('renders inheritance', () => {
-    expect(generateRelationLine({ id: '1', type: 'inheritance', source: 'a', target: 'b' } as Relation, map)).toBe('B <|-- A');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'inheritance', source: 'a', target: 'b' } as Relation,
+        map
+      )
+    ).toBe('B <|-- A');
   });
   it('renders implementation', () => {
-    expect(generateRelationLine({ id: '1', type: 'implementation', source: 'a', target: 'b' } as Relation, map)).toBe('B <|.. A');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'implementation', source: 'a', target: 'b' } as Relation,
+        map
+      )
+    ).toBe('B <|.. A');
   });
   it('renders composition', () => {
-    expect(generateRelationLine({ id: '1', type: 'composition', source: 'a', target: 'b' } as Relation, map)).toBe('A *-- B');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'composition', source: 'a', target: 'b' } as Relation,
+        map
+      )
+    ).toBe('A *-- B');
   });
   it('renders aggregation', () => {
-    expect(generateRelationLine({ id: '1', type: 'aggregation', source: 'a', target: 'b' } as Relation, map)).toBe('A o-- B');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'aggregation', source: 'a', target: 'b' } as Relation,
+        map
+      )
+    ).toBe('A o-- B');
   });
   it('renders dependency as default', () => {
-    expect(generateRelationLine({ id: '1', type: 'dependency', source: 'a', target: 'b' } as Relation, map)).toBe('A --> B');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'dependency', source: 'a', target: 'b' } as Relation,
+        map
+      )
+    ).toBe('A --> B');
   });
   it('falls back to the raw id when not in the name map', () => {
-    expect(generateRelationLine({ id: '1', type: 'dependency', source: 'x', target: 'y' } as Relation, map)).toBe('x --> y');
+    expect(
+      generateRelationLine(
+        { id: '1', type: 'dependency', source: 'x', target: 'y' } as Relation,
+        map
+      )
+    ).toBe('x --> y');
   });
 });
 
@@ -248,11 +284,17 @@ describe('generateClassDefinition', () => {
     sourceLocation: { file: 'foo.ts', startLine: 1, endLine: 10 },
   };
   it('renders a class block including only included members', () => {
-    const lines = generateClassDefinition(entity, 0, { includePrivate: false, includeProtected: false });
+    const lines = generateClassDefinition(entity, 0, {
+      includePrivate: false,
+      includeProtected: false,
+    });
     expect(lines).toEqual(['class Foo {', '  +a: number', '}']);
   });
   it('renders with indent and includes private when requested', () => {
-    const lines = generateClassDefinition(entity, 1, { includePrivate: true, includeProtected: true });
+    const lines = generateClassDefinition(entity, 1, {
+      includePrivate: true,
+      includeProtected: true,
+    });
     // each indent level is two spaces
     expect(lines).toEqual(['  class Foo {', '    +a: number', '    -b()', '  }']);
   });

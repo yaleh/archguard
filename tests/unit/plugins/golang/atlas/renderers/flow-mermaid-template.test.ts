@@ -18,10 +18,23 @@ describe('renderFlowGraph — sequence format', () => {
   it('renders a sequenceDiagram with notes and calls', () => {
     const graph = makeGraph({
       entryPoints: [
-        { id: 'ep1', protocol: 'http', method: 'GET', framework: 'gin', path: '/api/x', handler: 'handler.Run', middleware: [], location: { file: 'main.go', line: 1 } },
+        {
+          id: 'ep1',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'gin',
+          path: '/api/x',
+          handler: 'handler.Run',
+          middleware: [],
+          location: { file: 'main.go', line: 1 },
+        },
       ],
       callChains: [
-        { id: 'c1', entryPoint: 'ep1', calls: [{ from: 'handler.Run', to: 'svc.Process', type: 'direct', confidence: 1 }] },
+        {
+          id: 'c1',
+          entryPoint: 'ep1',
+          calls: [{ from: 'handler.Run', to: 'svc.Process', type: 'direct', confidence: 1 }],
+        },
       ],
     });
     const out = renderFlowGraph(graph, 'sequence');
@@ -45,10 +58,23 @@ describe('renderFlowGraph — flowchart format', () => {
   it('renders entry packages, handlers, and edges', () => {
     const graph = makeGraph({
       entryPoints: [
-        { id: 'ep1', protocol: 'http', method: 'GET', framework: 'gin', path: '/api/x', handler: 'handler.Run', middleware: [], location: { file: 'pkg/main.go', line: 1 } },
+        {
+          id: 'ep1',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'gin',
+          path: '/api/x',
+          handler: 'handler.Run',
+          middleware: [],
+          location: { file: 'pkg/main.go', line: 1 },
+        },
       ],
       callChains: [
-        { id: 'c1', entryPoint: 'ep1', calls: [{ from: 'handler.Run', to: 'svc.Process', type: 'direct', confidence: 1 }] },
+        {
+          id: 'c1',
+          entryPoint: 'ep1',
+          calls: [{ from: 'handler.Run', to: 'svc.Process', type: 'direct', confidence: 1 }],
+        },
       ],
     });
     const out = renderFlowGraph(graph, 'flowchart');
@@ -63,13 +89,26 @@ describe('renderFlowGraph — flowchart format', () => {
   it('renders interface and indirect edges with legend entries', () => {
     const graph = makeGraph({
       entryPoints: [
-        { id: 'ep1', protocol: 'http', method: 'GET', framework: 'gin', path: '/a', handler: 'h.Run', middleware: [], location: { file: 'pkg/main.go', line: 1 } },
+        {
+          id: 'ep1',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'gin',
+          path: '/a',
+          handler: 'h.Run',
+          middleware: [],
+          location: { file: 'pkg/main.go', line: 1 },
+        },
       ],
       callChains: [
-        { id: 'c1', entryPoint: 'ep1', calls: [
-          { from: 'h.Run', to: 'iface.Call', type: 'interface', confidence: 0.7 },
-          { from: 'h.Run', to: 'cb.Fire', type: 'indirect', confidence: 0.5 },
-        ] },
+        {
+          id: 'c1',
+          entryPoint: 'ep1',
+          calls: [
+            { from: 'h.Run', to: 'iface.Call', type: 'interface', confidence: 0.7 },
+            { from: 'h.Run', to: 'cb.Fire', type: 'indirect', confidence: 0.5 },
+          ],
+        },
       ],
     });
     const out = renderFlowGraph(graph, 'flowchart');
@@ -82,13 +121,26 @@ describe('renderFlowGraph — flowchart format', () => {
   it('deduplicates edges between the same nodes', () => {
     const graph = makeGraph({
       entryPoints: [
-        { id: 'ep1', protocol: 'http', method: 'GET', framework: 'gin', path: '/a', handler: 'h.Run', middleware: [], location: { file: 'pkg/main.go', line: 1 } },
+        {
+          id: 'ep1',
+          protocol: 'http',
+          method: 'GET',
+          framework: 'gin',
+          path: '/a',
+          handler: 'h.Run',
+          middleware: [],
+          location: { file: 'pkg/main.go', line: 1 },
+        },
       ],
       callChains: [
-        { id: 'c1', entryPoint: 'ep1', calls: [
-          { from: 'a.F', to: 'b.G', type: 'direct', confidence: 1 },
-          { from: 'a.F', to: 'b.G', type: 'direct', confidence: 1 },
-        ] },
+        {
+          id: 'c1',
+          entryPoint: 'ep1',
+          calls: [
+            { from: 'a.F', to: 'b.G', type: 'direct', confidence: 1 },
+            { from: 'a.F', to: 'b.G', type: 'direct', confidence: 1 },
+          ],
+        },
       ],
     });
     const out = renderFlowGraph(graph, 'flowchart');

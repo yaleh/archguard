@@ -21,7 +21,9 @@ describe('TypeScriptPlugin.isTestFile', () => {
     expect(plugin.isTestFile('src/foo.ts')).toBe(false);
   });
   it('honours custom testFileGlobs', () => {
-    expect(plugin.isTestFile('src/integration/foo.ts', { testFileGlobs: ['**/integration/**'] })).toBe(true);
+    expect(
+      plugin.isTestFile('src/integration/foo.ts', { testFileGlobs: ['**/integration/**'] })
+    ).toBe(true);
   });
 });
 
@@ -39,28 +41,28 @@ describe('TypeScriptPlugin.extractTestStructure', () => {
     ].join('\n');
     const result = plugin.extractTestStructure('src/add.test.ts', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('vitest');
-    expect(result!.testCases.length).toBeGreaterThan(0);
-    expect(result!.testTypeHint).toBe('unit');
+    expect(result.frameworks).toContain('vitest');
+    expect(result.testCases.length).toBeGreaterThan(0);
+    expect(result.testTypeHint).toBe('unit');
   });
 
   it('detects e2e testTypeHint from path', () => {
     const code = "import { test } from '@playwright/test';\ntest('works', async () => {});";
     const result = plugin.extractTestStructure('tests/e2e/flow.spec.ts', code);
-    expect(result!.testTypeHint).toBe('e2e');
-    expect(result!.frameworks).toContain('playwright');
+    expect(result.testTypeHint).toBe('e2e');
+    expect(result.frameworks).toContain('playwright');
   });
 
   it('detects integration testTypeHint', () => {
     const code = "import { it } from 'vitest';\nit('works', () => {});";
     const result = plugin.extractTestStructure('tests/integration/flow.test.ts', code);
-    expect(result!.testTypeHint).toBe('integration');
+    expect(result.testTypeHint).toBe('integration');
   });
 
   it('returns a result with zero test cases for files with no test declarations', () => {
     const result = plugin.extractTestStructure('src/foo.ts', 'export const x = 1');
     expect(result).not.toBeNull();
-    expect(result!.testCases).toHaveLength(0);
+    expect(result.testCases).toHaveLength(0);
   });
 
   it('counts it() and test() declarations as test cases', () => {
@@ -70,6 +72,6 @@ describe('TypeScriptPlugin.extractTestStructure', () => {
       "test('two', () => { expect(2).toBe(2); });",
     ].join('\n');
     const result = plugin.extractTestStructure('src/x.test.ts', code);
-    expect(result!.testCases).toHaveLength(2);
+    expect(result.testCases).toHaveLength(2);
   });
 });

@@ -85,7 +85,17 @@ describe('CognitiveMetrics.getSummary', () => {
               cycles: [],
             },
           },
-          metadata: { generatedAt: '', generationStrategy: { functionBodyStrategy: 'none' as const, detectedFrameworks: [], followIndirectCalls: false, goplsEnabled: false }, completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 }, performance: { fileCount: 1, parseTime: 1, totalTime: 1, memoryUsage: 1 } },
+          metadata: {
+            generatedAt: '',
+            generationStrategy: {
+              functionBodyStrategy: 'none' as const,
+              detectedFrameworks: [],
+              followIndirectCalls: false,
+              goplsEnabled: false,
+            },
+            completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 },
+            performance: { fileCount: 1, parseTime: 1, totalTime: 1, memoryUsage: 1 },
+          },
         },
       },
     });

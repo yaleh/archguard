@@ -40,14 +40,27 @@ describe('Java DependencyExtractor', () => {
     const deps = await extractor.extractDependencies(root);
     expect(deps).toHaveLength(2);
     const guava = deps.find((d) => d.name === 'guava');
-    expect(guava).toMatchObject({ version: '31.1-jre', type: 'maven', scope: 'runtime', source: 'pom.xml' });
+    expect(guava).toMatchObject({
+      version: '31.1-jre',
+      type: 'maven',
+      scope: 'runtime',
+      source: 'pom.xml',
+    });
     const junit = deps.find((d) => d.name === 'junit');
     expect(junit?.scope).toBe('development'); // test scope
   });
 
   it('prefers pom.xml over build.gradle', async () => {
-    await fs.writeFile(path.join(root, 'build.gradle'), "implementation 'org.slf4j:slf4j-api:2.0.0'\n", 'utf-8');
-    await fs.writeFile(path.join(root, 'pom.xml'), '<project><dependencies><dependency><groupId>g</groupId><artifactId>a</artifactId><version>1</version></dependency></dependencies></project>', 'utf-8');
+    await fs.writeFile(
+      path.join(root, 'build.gradle'),
+      "implementation 'org.slf4j:slf4j-api:2.0.0'\n",
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(root, 'pom.xml'),
+      '<project><dependencies><dependency><groupId>g</groupId><artifactId>a</artifactId><version>1</version></dependency></dependencies></project>',
+      'utf-8'
+    );
     const deps = await extractor.extractDependencies(root);
     expect(deps.some((d) => d.source === 'pom.xml')).toBe(true);
     expect(deps.some((d) => d.source === 'build.gradle')).toBe(false);

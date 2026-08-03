@@ -5,7 +5,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/java/archjson-mapper.js';
-import type { JavaRawPackage, JavaRawClass, JavaRawInterface, JavaRawEnum } from '@/plugins/java/types.js';
+import type {
+  JavaRawPackage,
+  JavaRawClass,
+  JavaRawInterface,
+  JavaRawEnum,
+} from '@/plugins/java/types.js';
 
 const mapper = new ArchJsonMapper();
 
@@ -18,7 +23,14 @@ function makeClass(overrides: Partial<JavaRawClass> = {}): JavaRawClass {
     interfaces: ['com.example.api.UserApi'],
     fields: [{ name: 'repo', type: 'UserRepo', modifiers: ['private'], annotations: [] }],
     methods: [
-      { name: 'find', returnType: 'User', parameters: [{ name: 'id', type: 'long' }], modifiers: ['public'], annotations: [], isAbstract: false },
+      {
+        name: 'find',
+        returnType: 'User',
+        parameters: [{ name: 'id', type: 'long' }],
+        modifiers: ['public'],
+        annotations: [],
+        isAbstract: false,
+      },
     ],
     constructors: [],
     annotations: [],
@@ -30,7 +42,10 @@ function makeClass(overrides: Partial<JavaRawClass> = {}): JavaRawClass {
   } as JavaRawClass;
 }
 
-function makePkg(classes: JavaRawClass[] = [makeClass()], overrides: Partial<JavaRawPackage> = {}): JavaRawPackage {
+function makePkg(
+  classes: JavaRawClass[] = [makeClass()],
+  overrides: Partial<JavaRawPackage> = {}
+): JavaRawPackage {
   return { name: 'com.example.service', classes, interfaces: [], enums: [], ...overrides };
 }
 
@@ -52,7 +67,16 @@ describe('Java ArchJsonMapper.mapEntities', () => {
       packageName: 'com.example.api',
       modifiers: ['public'],
       extends: [],
-      methods: [{ name: 'get', returnType: 'User', parameters: [], modifiers: ['public'], annotations: [], isAbstract: true }],
+      methods: [
+        {
+          name: 'get',
+          returnType: 'User',
+          parameters: [],
+          modifiers: ['public'],
+          annotations: [],
+          isAbstract: true,
+        },
+      ],
       annotations: [],
       filePath: 'src/com/example/api/UserApi.java',
       startLine: 1,
@@ -79,8 +103,18 @@ describe('Java ArchJsonMapper.mapEntities', () => {
 
 describe('Java ArchJsonMapper.mapRelations', () => {
   it('creates inheritance relations from superClass', () => {
-    const base = makeClass({ name: 'BaseService', packageName: 'com.example', superClass: undefined, interfaces: [] });
-    const pkg2: JavaRawPackage = { name: 'com.example', classes: [base], interfaces: [], enums: [] };
+    const base = makeClass({
+      name: 'BaseService',
+      packageName: 'com.example',
+      superClass: undefined,
+      interfaces: [],
+    });
+    const pkg2: JavaRawPackage = {
+      name: 'com.example',
+      classes: [base],
+      interfaces: [],
+      enums: [],
+    };
     const pkg = makePkg([makeClass()], { name: 'com.example.service' });
     const relations = mapper.mapRelations([pkg2, pkg]);
     expect(relations.some((r) => r.type === 'inheritance')).toBe(true);

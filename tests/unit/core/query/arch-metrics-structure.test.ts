@@ -49,7 +49,11 @@ describe('StructureMetrics.getPackageStats — Go Atlas', () => {
     const archJson = makeArchJson({
       language: 'go',
       entities: [
-        { ...makeEntity('pkg/a/Service', 'Service'), sourceLocation: { file: 'pkg/a/service.go', startLine: 1, endLine: 20 }, members: [makeMethod('Serve')] },
+        {
+          ...makeEntity('pkg/a/Service', 'Service'),
+          sourceLocation: { file: 'pkg/a/service.go', startLine: 1, endLine: 20 },
+          members: [makeMethod('Serve')],
+        },
       ],
       sourceFiles: ['pkg/a/service.go'],
       extensions: {
@@ -58,7 +62,13 @@ describe('StructureMetrics.getPackageStats — Go Atlas', () => {
           layers: {
             package: {
               nodes: [
-                { id: 'pkg/a', name: 'pkg/a', type: 'internal', fileCount: 3, stats: { structs: 2, interfaces: 1, functions: 5 } },
+                {
+                  id: 'pkg/a',
+                  name: 'pkg/a',
+                  type: 'internal',
+                  fileCount: 3,
+                  stats: { structs: 2, interfaces: 1, functions: 5 },
+                },
                 { id: 'pkg/cmd', name: 'pkg/cmd', type: 'cmd', fileCount: 1 },
                 { id: 'github.com/ext', name: 'github.com/ext', type: 'external', fileCount: 1 },
               ],
@@ -68,7 +78,12 @@ describe('StructureMetrics.getPackageStats — Go Atlas', () => {
           },
           metadata: {
             generatedAt: '2026-01-01T00:00:00Z',
-            generationStrategy: { functionBodyStrategy: 'none', detectedFrameworks: [], followIndirectCalls: false, goplsEnabled: false },
+            generationStrategy: {
+              functionBodyStrategy: 'none',
+              detectedFrameworks: [],
+              followIndirectCalls: false,
+              goplsEnabled: false,
+            },
             completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 },
             performance: { fileCount: 1, parseTime: 1, totalTime: 1, memoryUsage: 1 },
           },
@@ -79,7 +94,11 @@ describe('StructureMetrics.getPackageStats — Go Atlas', () => {
     const result = metrics.getPackageStats();
     expect(result.meta.dataPath).toBe('go-atlas');
     expect(result.packages).toHaveLength(2); // external excluded
-    expect(result.packages[0]).toMatchObject({ package: 'pkg/a', fileCount: 3, languageStats: { structs: 2, interfaces: 1, functions: 5 } });
+    expect(result.packages[0]).toMatchObject({
+      package: 'pkg/a',
+      fileCount: 3,
+      languageStats: { structs: 2, interfaces: 1, functions: 5 },
+    });
   });
 
   it('respects topN slicing', () => {
@@ -98,7 +117,17 @@ describe('StructureMetrics.getPackageStats — Go Atlas', () => {
               cycles: [],
             },
           },
-          metadata: { generatedAt: '', generationStrategy: { functionBodyStrategy: 'none' as const, detectedFrameworks: [], followIndirectCalls: false, goplsEnabled: false }, completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 }, performance: { fileCount: 1, parseTime: 1, totalTime: 1, memoryUsage: 1 } },
+          metadata: {
+            generatedAt: '',
+            generationStrategy: {
+              functionBodyStrategy: 'none' as const,
+              detectedFrameworks: [],
+              followIndirectCalls: false,
+              goplsEnabled: false,
+            },
+            completeness: { package: 1, capability: 1, goroutine: 1, flow: 1 },
+            performance: { fileCount: 1, parseTime: 1, totalTime: 1, memoryUsage: 1 },
+          },
         },
       },
     });
@@ -115,7 +144,11 @@ describe('StructureMetrics.getPackageStats — TypeScript module graph', () => {
     const archJson = makeArchJson({
       language: 'typescript',
       entities: [
-        { ...makeEntity('src/api/User', 'User'), sourceLocation: { file: 'src/api/user.ts', startLine: 1, endLine: 10 }, members: [makeMethod('get')] },
+        {
+          ...makeEntity('src/api/User', 'User'),
+          sourceLocation: { file: 'src/api/user.ts', startLine: 1, endLine: 10 },
+          members: [makeMethod('get')],
+        },
       ],
       sourceFiles: ['src/api/user.ts', 'src/api/user.test.ts'],
       extensions: {
@@ -123,8 +156,20 @@ describe('StructureMetrics.getPackageStats — TypeScript module graph', () => {
           version: '1.0',
           moduleGraph: {
             nodes: [
-              { id: 'src/api', name: 'src/api', type: 'internal', fileCount: 2, stats: { classes: 1, interfaces: 0, functions: 1, enums: 0 } },
-              { id: 'node_modules/x', name: 'x', type: 'external', fileCount: 1, stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 } },
+              {
+                id: 'src/api',
+                name: 'src/api',
+                type: 'internal',
+                fileCount: 2,
+                stats: { classes: 1, interfaces: 0, functions: 1, enums: 0 },
+              },
+              {
+                id: 'node_modules/x',
+                name: 'x',
+                type: 'external',
+                fileCount: 1,
+                stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+              },
             ],
             edges: [],
             cycles: [],
@@ -150,7 +195,11 @@ describe('StructureMetrics.getPackageStats — OO fallback', () => {
     const archJson = makeArchJson({
       language: 'java',
       entities: [
-        { ...makeEntity('com.example.a.A', 'A'), sourceLocation: { file: 'src/com/example/a/A.java', startLine: 1, endLine: 30 }, members: [makeMethod('run')] },
+        {
+          ...makeEntity('com.example.a.A', 'A'),
+          sourceLocation: { file: 'src/com/example/a/A.java', startLine: 1, endLine: 30 },
+          members: [makeMethod('run')],
+        },
       ],
       sourceFiles: ['src/com/example/a/A.java', 'src/com/example/a/ATest.java'],
     });
@@ -167,7 +216,10 @@ describe('StructureMetrics.getPackageStats — OO fallback', () => {
     const archJson = makeArchJson({
       language: 'java',
       entities: [
-        { ...makeEntity('com.example.a.b.c.d.e.F', 'F'), sourceLocation: { file: 'src/com/example/a/b/c/d/e/F.java', startLine: 1, endLine: 5 } },
+        {
+          ...makeEntity('com.example.a.b.c.d.e.F', 'F'),
+          sourceLocation: { file: 'src/com/example/a/b/c/d/e/F.java', startLine: 1, endLine: 5 },
+        },
       ],
       sourceFiles: ['src/com/example/a/b/c/d/e/F.java'],
     });
@@ -184,8 +236,16 @@ describe('StructureMetrics.getPackageStats — Kotlin', () => {
     const archJson = makeArchJson({
       language: 'kotlin',
       entities: [
-        { ...makeEntity('com.example.repo.UserRepo', 'UserRepo'), sourceLocation: { file: 'src/com/example/repo/UserRepo.kt', startLine: 1, endLine: 40 }, members: [makeMethod('save')] },
-        { ...makeEntity('com.example.repo.AdminRepo', 'AdminRepo'), sourceLocation: { file: 'src/com/example/repo/AdminRepo.kt', startLine: 1, endLine: 25 }, members: [] },
+        {
+          ...makeEntity('com.example.repo.UserRepo', 'UserRepo'),
+          sourceLocation: { file: 'src/com/example/repo/UserRepo.kt', startLine: 1, endLine: 40 },
+          members: [makeMethod('save')],
+        },
+        {
+          ...makeEntity('com.example.repo.AdminRepo', 'AdminRepo'),
+          sourceLocation: { file: 'src/com/example/repo/AdminRepo.kt', startLine: 1, endLine: 25 },
+          members: [],
+        },
       ],
       sourceFiles: ['src/com/example/repo/UserRepo.kt', 'src/com/example/repo/AdminRepo.kt'],
     });
@@ -243,14 +303,46 @@ describe('StructureMetrics structural queries', () => {
 
 describe('StructureMetrics.buildTestPattern', () => {
   it('returns language-appropriate test file patterns', () => {
-    expect(makeMetrics(makeArchJson({ language: 'typescript' })).buildTestPattern().test('a.test.ts')).toBe(true);
-    expect(makeMetrics(makeArchJson({ language: 'java' })).buildTestPattern().test('A.java')).toBe(false);
-    expect(makeMetrics(makeArchJson({ language: 'java' })).buildTestPattern().test('ATest.java')).toBe(true);
-    expect(makeMetrics(makeArchJson({ language: 'python' })).buildTestPattern().test('test_foo.py')).toBe(true);
-    expect(makeMetrics(makeArchJson({ language: 'cpp' })).buildTestPattern().test('test_foo.cpp')).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'typescript' }))
+        .buildTestPattern()
+        .test('a.test.ts')
+    ).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'java' }))
+        .buildTestPattern()
+        .test('A.java')
+    ).toBe(false);
+    expect(
+      makeMetrics(makeArchJson({ language: 'java' }))
+        .buildTestPattern()
+        .test('ATest.java')
+    ).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'python' }))
+        .buildTestPattern()
+        .test('test_foo.py')
+    ).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'cpp' }))
+        .buildTestPattern()
+        .test('test_foo.cpp')
+    ).toBe(true);
     // unknown languages fall back to the generic .test./.spec. pattern
-    expect(makeMetrics(makeArchJson({ language: 'go' })).buildTestPattern().test('a.go')).toBe(false);
-    expect(makeMetrics(makeArchJson({ language: 'go' })).buildTestPattern().test('a.test.ts')).toBe(true);
-    expect(makeMetrics(makeArchJson({ language: 'kotlin' })).buildTestPattern().test('FooTest.kt')).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'go' }))
+        .buildTestPattern()
+        .test('a.go')
+    ).toBe(false);
+    expect(
+      makeMetrics(makeArchJson({ language: 'go' }))
+        .buildTestPattern()
+        .test('a.test.ts')
+    ).toBe(true);
+    expect(
+      makeMetrics(makeArchJson({ language: 'kotlin' }))
+        .buildTestPattern()
+        .test('FooTest.kt')
+    ).toBe(true);
   });
 });

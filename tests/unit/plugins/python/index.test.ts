@@ -51,11 +51,11 @@ describe('PythonPlugin.extractTestStructure', () => {
     ].join('\n');
     const result = plugin.extractTestStructure('test_calc.py', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('pytest');
-    expect(result!.testTypeHint).toBe('unit');
-    expect(result!.testCases).toHaveLength(2);
-    expect(result!.testCases[0].name).toBe('test_add');
-    expect(result!.testCases[0].assertionCount).toBeGreaterThanOrEqual(2);
+    expect(result.frameworks).toContain('pytest');
+    expect(result.testTypeHint).toBe('unit');
+    expect(result.testCases).toHaveLength(2);
+    expect(result.testCases[0].name).toBe('test_add');
+    expect(result.testCases[0].assertionCount).toBeGreaterThanOrEqual(2);
   });
 
   it('marks skipped tests via decorators', () => {
@@ -67,8 +67,8 @@ describe('PythonPlugin.extractTestStructure', () => {
       '    assert True',
     ].join('\n');
     const result = plugin.extractTestStructure('test_slow.py', code);
-    expect(result!.frameworks).toContain('unittest');
-    expect(result!.testCases[0].isSkipped).toBe(true);
+    expect(result.frameworks).toContain('unittest');
+    expect(result.testCases[0].isSkipped).toBe(true);
   });
 
   it('returns null when no test functions are present', () => {
@@ -79,9 +79,9 @@ describe('PythonPlugin.extractTestStructure', () => {
   it('detects integration/e2e testTypeHint from path', () => {
     const code = 'import pytest\ndef test_flow():\n    assert True';
     const integration = plugin.extractTestStructure('tests/integration/test_flow.py', code);
-    expect(integration!.testTypeHint).toBe('integration');
+    expect(integration.testTypeHint).toBe('integration');
     const e2e = plugin.extractTestStructure('tests/e2e/test_flow.py', code);
-    expect(e2e!.testTypeHint).toBe('e2e');
+    expect(e2e.testTypeHint).toBe('e2e');
   });
 
   it('extracts absolute imports into relative file paths', () => {
@@ -94,10 +94,10 @@ describe('PythonPlugin.extractTestStructure', () => {
       '    assert True',
     ].join('\n');
     const result = plugin.extractTestStructure('test_x.py', code);
-    expect(result!.importedSourceFiles).toContain('mypkg/repo.py');
-    expect(result!.importedSourceFiles).toContain('mypkg/utils.py');
+    expect(result.importedSourceFiles).toContain('mypkg/repo.py');
+    expect(result.importedSourceFiles).toContain('mypkg/utils.py');
     // stdlib 'os' single-component is skipped
-    expect(result!.importedSourceFiles.some((f) => f === 'os')).toBe(false);
+    expect(result.importedSourceFiles.some((f) => f === 'os')).toBe(false);
   });
 });
 

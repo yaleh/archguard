@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { ArchJsonMapper } from '@/plugins/cpp/archjson-mapper.js';
 import type { MergedCppEntity, RawEnum, RawFunction } from '@/plugins/cpp/types.js';
-import type { Entity } from '@/types/index.js';
 
 const mapper = new ArchJsonMapper();
 
@@ -17,7 +16,18 @@ function makeClass(overrides: Partial<MergedCppEntity> = {}): MergedCppEntity {
     bases: [{ name: 'engine::Base', access: 'public' }],
     fields: [{ name: 'id_', fieldType: 'int', visibility: 'private', isStatic: false }],
     methods: [
-      { name: 'draw', returnType: 'void', parameters: [{ name: 'x', type: 'int' }], visibility: 'public', isVirtual: false, isStatic: false, isPure: false, isConst: false, sourceFile: 'renderer.cpp', startLine: 1 },
+      {
+        name: 'draw',
+        returnType: 'void',
+        parameters: [{ name: 'x', type: 'int' }],
+        visibility: 'public',
+        isVirtual: false,
+        isStatic: false,
+        isPure: false,
+        isConst: false,
+        sourceFile: 'renderer.cpp',
+        startLine: 1,
+      },
     ],
     sourceFile: 'renderer.hpp',
     startLine: 1,
@@ -89,7 +99,12 @@ describe('ArchJsonMapper.mapEntities', () => {
 
 describe('ArchJsonMapper.mapRelations', () => {
   it('creates inheritance relations between classes', () => {
-    const base = makeClass({ name: 'Base', qualifiedName: 'engine::Base', declarationFile: 'base.hpp', sourceFile: 'base.hpp' });
+    const base = makeClass({
+      name: 'Base',
+      qualifiedName: 'engine::Base',
+      declarationFile: 'base.hpp',
+      sourceFile: 'base.hpp',
+    });
     const derived = makeClass();
     const allEntities = mapper.mapEntities([base, derived], [], [], '/proj');
     const relations = mapper.mapRelations([base, derived], allEntities, '/proj');
@@ -101,7 +116,12 @@ describe('ArchJsonMapper.mapRelations', () => {
   it('creates dependency relations from method parameters', () => {
     const cls = makeClass();
     cls.methods[0].parameters = [{ name: 'c', type: 'engine::Canvas' }];
-    const canvas = makeClass({ name: 'Canvas', qualifiedName: 'engine::Canvas', declarationFile: 'canvas.hpp', sourceFile: 'canvas.hpp' });
+    const canvas = makeClass({
+      name: 'Canvas',
+      qualifiedName: 'engine::Canvas',
+      declarationFile: 'canvas.hpp',
+      sourceFile: 'canvas.hpp',
+    });
     const allEntities = mapper.mapEntities([cls, canvas], [], [], '/proj');
     const relations = mapper.mapRelations([cls, canvas], allEntities, '/proj');
     expect(relations.some((r) => r.type === 'dependency')).toBe(true);

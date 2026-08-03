@@ -24,7 +24,9 @@ describe('planGoAnalysisScope', () => {
   });
 
   it('throws when a source is not inside a Go module', async () => {
-    await expect(planGoAnalysisScope([path.join(root, 'nowhere')])).rejects.toThrow(/go.mod not found/);
+    await expect(planGoAnalysisScope([path.join(root, 'nowhere')])).rejects.toThrow(
+      /go.mod not found/
+    );
   });
 
   it('throws when sources span multiple Go modules', async () => {

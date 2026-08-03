@@ -3,10 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  computePackageFanMetrics,
-  enrichPackageNodes,
-} from '@/analysis/atlas-metrics-analysis.js';
+import { computePackageFanMetrics, enrichPackageNodes } from '@/analysis/atlas-metrics-analysis.js';
 import type { PackageGraph, PackageNode } from '@/types/extensions/go-atlas.js';
 
 function makeGraph(edges: Array<[string, string]>): PackageGraph {
@@ -77,7 +74,10 @@ describe('enrichPackageNodes', () => {
 
   it('enriches nodes with computed fan metrics', () => {
     const fanIn = new Map([['a', 3]]);
-    const fanOut = new Map([['a', 1], ['b', 2]]);
+    const fanOut = new Map([
+      ['a', 1],
+      ['b', 2],
+    ]);
     const result = enrichPackageNodes([node('a'), node('b')], fanIn, fanOut);
     expect(result[0]).toMatchObject({ id: 'a', fanIn: 3, fanOut: 1 });
     expect(result[1]).toMatchObject({ id: 'b', fanIn: 0, fanOut: 2 });
@@ -89,7 +89,11 @@ describe('enrichPackageNodes', () => {
   });
 
   it('preserves existing node fields', () => {
-    const n: PackageNode = { ...node('a'), fileCount: 7, stats: { structs: 1, interfaces: 2, functions: 3 } };
+    const n: PackageNode = {
+      ...node('a'),
+      fileCount: 7,
+      stats: { structs: 1, interfaces: 2, functions: 3 },
+    };
     const result = enrichPackageNodes([n], new Map(), new Map());
     expect(result[0].fileCount).toBe(7);
     expect(result[0].stats).toEqual({ structs: 1, interfaces: 2, functions: 3 });

@@ -54,10 +54,10 @@ describe('JavaPlugin.extractTestStructure', () => {
     ].join('\n');
     const result = plugin.extractTestStructure('CalcTest.java', code);
     expect(result).not.toBeNull();
-    expect(result!.frameworks).toContain('junit5');
-    expect(result!.testCases).toHaveLength(2);
-    expect(result!.testTypeHint).toBe('unit');
-    expect(result!.testCases[0].assertionCount).toBe(1);
+    expect(result.frameworks).toContain('junit5');
+    expect(result.testCases).toHaveLength(2);
+    expect(result.testTypeHint).toBe('unit');
+    expect(result.testCases[0].assertionCount).toBe(1);
   });
 
   it('detects skipped tests via @Disabled and TestNG frameworks', () => {
@@ -72,9 +72,9 @@ describe('JavaPlugin.extractTestStructure', () => {
       '}',
     ].join('\n');
     const result = plugin.extractTestStructure('SuiteTest.java', code);
-    expect(result!.frameworks).toContain('testng');
-    expect(result!.testCases).toHaveLength(2);
-    expect(result!.testCases[1].isSkipped).toBe(true);
+    expect(result.frameworks).toContain('testng');
+    expect(result.testCases).toHaveLength(2);
+    expect(result.testCases[1].isSkipped).toBe(true);
   });
 
   it('detects JMH benchmarks as performance tests', () => {
@@ -86,8 +86,8 @@ describe('JavaPlugin.extractTestStructure', () => {
       '}',
     ].join('\n');
     const result = plugin.extractTestStructure('Bench.java', code);
-    expect(result!.frameworks).toContain('jmh');
-    expect(result!.testTypeHint).toBe('performance');
+    expect(result.frameworks).toContain('jmh');
+    expect(result.testTypeHint).toBe('performance');
   });
 
   it('extracts project-internal imports and filters external packages', () => {
@@ -102,9 +102,9 @@ describe('JavaPlugin.extractTestStructure', () => {
       '}',
     ].join('\n');
     const result = plugin.extractTestStructure('FooTest.java', code);
-    expect(result!.importedSourceFiles).toContain('com/example/repo/UserRepo.java');
-    expect(result!.importedSourceFiles).toContain('com/example/util/Helper.java');
-    expect(result!.importedSourceFiles.some((f) => f.startsWith('java/'))).toBe(false);
+    expect(result.importedSourceFiles).toContain('com/example/repo/UserRepo.java');
+    expect(result.importedSourceFiles).toContain('com/example/util/Helper.java');
+    expect(result.importedSourceFiles.some((f) => f.startsWith('java/'))).toBe(false);
   });
 });
 
