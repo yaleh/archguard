@@ -16,7 +16,7 @@ grep -c 'escalate' orchestration/tick-log.md
 | 类型 | 计数 |
 |---|---|
 | no-action | 10 |
-| unblock | 1 |
+| unblock | 2 |
 | correct | 0 |
 | escalate | 0 |
 
@@ -35,4 +35,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 9 | 16:47Z | no-action | **换模型收尾（flash→qwen，双双重启）**。人裁定 archguard 内外层都改用 claude-aliyun qwen3.8-max-preview。确认工作树已干净（内层自行提交了 a911166/af4f85f/f628b8f，0/0 与 origin 同步）。改名交接文档为 `handover-for-successor.md`（不绑模型名），补 §10 内层 TASK-53 位置/续做路线、§11 flash 班踩过的坑（git add -A 误收内层改动、← 1 agent 是等后台任务、lint 也要令牌、内容寻址 hash 巧合、sleep 沙箱阻止、monitor-mount-check 缺失）、§12 给 qwen 的明文前提。内层第 4 轮 CI 仍 failure（Node 24），已发指令要求把前三轮分析写进 TASK-53.md Progress 段落盘；内层已响应正在写。更新 goals-and-ac §4 快照。 | 忙（Getting CI 33m，响应落盘指令，写 Progress 段中） |
 | 10 | 17:02Z | unblock | **冷启动恢复（qwen 继任者首个 tick，内外层均已换模型重启）**。读交接 v2（handover-for-successor.md）+ tick 文档；确认 TASK-53.md Progress 段四轮分析已落盘（commit 4b4e4f7，接手第一动作完成）。重挂两个监视器（inner-state + session-liveness，`--once` 自检 alive=1）+ 重建 cron（7,27,47，job 60a9924b）。两次 md5sum 相同判空闲：内层新会话在空 prompt 零上下文等待。发接续简报：四轮事实 + run 30833844715 是 docs commit 顺带触发的无效轮 + 下一步疑点 A/B + packaging 约束 + 落盘/推送纪律；送达确认（关键词命中 3/3 + pane hash 变化 + 内层开始处理）。独立核实：gh run list 5 连 failure（最新为 docs-only run）；AC5 队列 3 ready；drift-check 3 stranded 分支已有 TASK-55 覆盖。本地 ahead 1（0a282b0 docs commit，有意不推，避免再浪费一轮 CI）。 | 空闲（新会话空 prompt）→ 接收简报开工（esc to interrupt） |
 | 11 | 17:11Z | no-action | 内层在飞 TASK-53，方向与简报一致：正在 `/tmp/task53-repro` 复现疑点 B（`npm install --no-save tree-sitter@^0.25.0` 后 `npm explain` 查去向），深度思考 11+ 分钟，无待答问题。独立核实：两次 md5sum 不同（66f506dc→15399ff1，间隔 26s）+ SESSION-RESUMED 事件（session-liveness 挂载后首次发声，与忙/闲实测一致，非误报，三判据满足）+ 树干净无新 commit。遥测 inProgress=0（新会话尚未记 --task-start，下 tick 再观察）。自检教训：**inner-state.sh 不支持 --once**（无该参数处理，直接进入无限轮询），误跑产生孤儿后台实例已杀；--once 自检仅 session-liveness.sh 可用。 | 忙（复现疑点 B，Percolating 11m+） |
+| 12 | 17:51Z | unblock | **冷启动恢复（flash 二任首个 tick，今日第三次换模型）**。管理者 17:46Z 代为落地 qwen 因 429 配额耗尽未能提交的 4 项（`5f39b8c`：ci.yml scratch 修复 + TASK-53 进度落盘 + 新建 TASK-56/57）。重挂两个监视器（inner-state + session-liveness，persistent，`session-liveness.sh --once` 自检 alive=1 pid=2388387）；重建 cron（ff75f5bc，7,27,47）。确认 `.workflow-events` 不存在——内层从冷启动至今从未跑过 workflow，管理者的担忧成立，这是本 tick 引导内层的硬判据。写内层简报 `orchestration/briefing-inner-1750.md`：强制第一动作读 fast-mode-loop-tick.md 冷启动；外层硬判据是 `.workflow-events/` 真实记录（开工先 `--task-start` 计量），非口头确认；TASK-53 不重跑前四轮（Progress 段已落盘），修复已写进 ci.yml（5f39b8c）本地 ahead 4 未推，下一步 push → round 5 CI → gh run watch，green 则 AC4 收尾/派发 TASK-56。三次 send-keys 送达（grep=1，briefing-inner-1750 命中），内层开始处理（Thundering 3s）。 | 空闲（fresh flash 会话空 prompt）→ 接收简报开工 |
 
