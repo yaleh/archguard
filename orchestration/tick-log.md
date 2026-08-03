@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 8 |
+| no-action | 9 |
 | unblock | 0 |
 | correct | 0 |
 | escalate | 0 |
@@ -32,4 +32,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 6 | 16:14Z | no-action | **冷启动恢复（flash 继任者首个 tick）**。重挂两个监视器（inner-state + session-liveness，persistent，`session-liveness.sh --once` 自检 alive=1）；重建 cron（7,27,47）。判定内层空闲（4 次 md5sum 全同，16:03→16:13；claude 953609 无 subagent 子进程）。TASK-52 已 done 并已提交（3ee07ed + d72584b）→ **AC2 ✅ 独立核实**（零成本：内层 transcript 记 15:49 修复前 237 errors、15:52 修复后 `LINT_EXIT=0` 0 errors/4095 warnings；diff 与 Completion 段逐条吻合；未重跑全量 lint，因 quay 持有跨项目令牌跑 test.sh）。format:check 实测通过。建 TASK-53（AC4 CI 全绿）/54（warnings 清理）/55（stranded 分诊）→ **AC5 ✅ 3 ready**。派发 TASK-53 给内层 | 空闲（Churned 8m27s 后等指令，`← 1 agent` 为陈旧渲染）→ 接收 TASK-53 开始执行 |
 | 7 | 16:17Z | no-action | 内层在飞 TASK-53（AC4 CI 全绿）。独立核实（零成本）：两次 md5sum 不同（16:15:54 `610b…`→16:16:35 `31c9…`，间隔 41s）+ transcript 16:14-16:16 连续 gh 命令（gh auth / gh run list / gh run view 30602001992 / log-failed）→ 判定忙，未打断。git 无新 commit（内层仍在调查 CI 失败日志，未到提交点）。CI 实况仍是旧 3 次 failure（07-31 前）。监视器 alive=1。AC5 队列 3 ready 充足。 | 忙（Manifesting 2m2s，`◻ TASK-53: AC4 CI green lights`） |
 | 8 | 16:30Z | no-action | 内层在飞 TASK-53，已 push 首个 CI 修复 `a911166`（drop Node 20，matrix [22,24]，engines >=22.6；本地与 origin 同步 0/0）。CI 用该 commit 重跑仍 failure（Node 24：`Cannot find module 'tree-sitter'`，Node 22 cancelled）。**独立核实根因**：`npm ci` 后 tree-sitter（peerDep）缺失 → 恰好解释内层未提交的 package.json 改动（补 tree-sitter + 语法包进 devDependencies）——**内层方向正确**，无需纠偏。两次 md5sum 不同（16:29:04→16:29:39），忙，未打断。监视器 alive=1。 | 忙（Getting CI three green lights 15m12s，still thinking） |
+| 9 | 16:47Z | no-action | **换模型收尾（flash→qwen，双双重启）**。人裁定 archguard 内外层都改用 claude-aliyun qwen3.8-max-preview。确认工作树已干净（内层自行提交了 a911166/af4f85f/f628b8f，0/0 与 origin 同步）。改名交接文档为 `handover-for-successor.md`（不绑模型名），补 §10 内层 TASK-53 位置/续做路线、§11 flash 班踩过的坑（git add -A 误收内层改动、← 1 agent 是等后台任务、lint 也要令牌、内容寻址 hash 巧合、sleep 沙箱阻止、monitor-mount-check 缺失）、§12 给 qwen 的明文前提。内层第 4 轮 CI 仍 failure（Node 24），已发指令要求把前三轮分析写进 TASK-53.md Progress 段落盘；内层已响应正在写。更新 goals-and-ac §4 快照。 | 忙（Getting CI 33m，响应落盘指令，写 Progress 段中） |
 

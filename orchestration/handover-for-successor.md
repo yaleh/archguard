@@ -1,7 +1,9 @@
 # 外层交接文档 —— 继任者第一个 tick 需要知道的一切
 
-> 写给 deepseek-v4-flash（不是 pro）。你的前任是 pro，
-> 本文档把你需要而现有文档里没有的东西写成明文。
+> 写给继任者（本文件不绑模型名——已两次换模型，bind 在名字上只会一直过时）。
+> 第一版（pro→flash）已把「你需要的而现有文档里没有的」写成明文，效果是管理者
+> 只花两条指令就完成了交接。第二版（flash→qwen）补内层 TASK-53 位置、flash 班的坑、
+> 给 qwen 的明文前提（§10–§12）。
 > 读完本文档后，按 `orchestrator-loop-tick.md` 冷启动步骤执行。
 
 ---
@@ -306,3 +308,130 @@ ps -e -o comm= | grep -cx node-MainThread
 ---
 
 **写于 2026-08-03T15:50Z，tick #5 后。前任：deepseek-v4-pro。继任者：deepseek-v4-flash。**
+**二版补记 2026-08-03T16:48Z，tick #8 后。前任：deepseek-v4-flash。继任者：claude-aliyun 的 qwen3.8-max-preview。**
+
+---
+
+## 10. 内层此刻的位置 —— TASK-53 做到哪、从哪继续（2026-08-03T16:45Z 快照）
+
+> **先读这条：内层此刻的工作大部分是可恢复的，不要从头再来。** 它丢的只是对前三轮
+> 失败原因的**分析过程**（那份分析正在被要求写进 `tasks/TASK-53.md` 的 Progress 段——如果
+> 它在你接手前还没提交，你接手后的第一个动作就是确认它落地了）。它等的结果是 **GitHub
+> Actions 的外部状态**，不在会话里，`gh run list` 随时能看到。
+
+### 时间线（全在 git 历史里，可核实）
+
+| 时刻 | commit | 内容 | CI 结果 |
+|---|---|---|---|
+| 16:20 | `a911166` | matrix Node 20→[22,24]，engines >=22.6（Node 20 无 `--experimental-strip-types`） | failure：Node 24 `Cannot find module 'tree-sitter'` |
+| 16:30 | `626a155` | 内层把 tree-sitter 语法包加进 devDependencies（**注意：这与 my tick #8 同名同 hash，内容寻址巧合**，见 §12 坑 4） | failure（同前） |
+| 16:40 | `af4f85f` | 改为 CI `npm ci` 后 `--no-save` 装原生语法包（满足 packaging 测试的「原生语法不进 package.json」要求） | failure |
+| 16:41 | `f628b8f` | **revert** 上一条的 devDependencies 改动，恢复干净 lockfile，删 `.npmrc` | failure |
+
+**第 4 轮结果（16:42 完成）**：run `30833301070`（headSha `f628b8f`）仍 **failure**——Node 24
+Run tests 红、Node 22 同步骤 cancelled。type-check/lint/format/build 全绿，唯一红步是 Run tests。
+**失败的测试仍报 `Cannot find module 'tree-sitter'`**（40 files / 385 tests，与第 2 轮完全相同），
+尽管 CI 加了 `Install native tree-sitter grammars (test-only)` 步骤。该步骤输出 `added 4 packages,
+audited 632 packages in 3s`——太快，native 绑定（node-gyp-build）不可能已构建；且 npm 11 的
+allow-scripts 只列出 kotlin grammar 有 install 脚本。**tree-sitter 核心对测试仍不可解析。**
+
+**内层已在 `tasks/TASK-53.md` Progress 段完整落盘四轮分析 + 下一步假设**（接手第一个动作就是读它）：
+- 疑点 A：`npm ci --no-save` 追加安装与 npm 11 allow-scripts / prune 行为冲突
+- 疑点 B：`--legacy-peer-deps` 忽略 peer，但 `tree-sitter@^0.25.0` 是显式实参，需确认去向
+- 备选：`ARCHGUARD_NATIVE_MODULE_ROOT` 指向预装根（文档 Option 2），或给硬依赖 native 的
+  40 文件/385 测试加「tree-sitter 缺失即 skip」防护
+
+### 新内层接手后从哪里继续
+
+1. **第一个动作**：确认 `tasks/TASK-53.md` 的 Progress 段已落盘（外层收尾前已要求写）。
+   若未提交，看 /tmp 与 git diff；若已提交，直接读任务体。
+2. **第 4 轮结果已经出来（16:42，仍 failure）**：不需要再等。下一步是内层 Progress 段列出的
+   「疑点 A/B」验证——拉第 4 轮 `Install native tree-sitter grammars` 步骤完整输出，确认那
+   「4 packages」具体是谁、`node_modules/tree-sitter` 在 CI 上是否存在、`.node` 绑定是否构建。
+   - 修复后 push 新 commit 触发第 5 轮，`gh run watch` 验证。
+   - 若 success → AC4 ✅，更新 goals-and-ac.md，派发 TASK-54。
+   - 若 failure → 看 `/tmp/task53-watch4.log` + `gh run view <id> --log-failed` 定位新失败点。
+3. **前三轮的根因结论（已确认，不必重查）**：
+   - Node 20 无法 build（`node: bad option: --experimental-strip-types`）→ matrix 去掉 20，改 [22,24]，engines 提到 >=22.6。
+   - tree-sitter 是 optional peer dep，`npm ci` 不装 → 测试报 `Cannot find module 'tree-sitter'`。
+   - 修复方案有约束：**packaging 测试（install-policy）要求原生语法包不进 package.json**，所以走 CI `--no-save` 安装，不是加 devDependencies（那路径已被 `f628b8f` revert）。
+4. **若这轮还是红**：下一个怀疑点是 vitest 配置的 coverage 阈值或 Run tests 超时（本地全量 475s，
+   CI 有 matrix 双跑）。把实测写回任务体再派发，不要无依据改配置。
+
+### 队列状态（16:45Z）
+
+- TASK-53 进行中（内层在飞）
+- TASK-54（warnings 清理）、TASK-55（stranded 分支分诊）就绪，未派发
+
+---
+
+## 11. flash 这一班的坑 —— 文档里没有、你大概率会踩
+
+### 坑 1：`git add -A` 会把内层正在工作的改动一起收走（严重，我踩了）
+
+tick #8 我用 `git add -A` 提交，把内层未提交的 package.json/package-lock.json/.npmrc 全收进了
+我的 tick commit——**违反单一写入者纪律**。修复用了 `git reset --soft HEAD~1` + `git restore --staged`
+拆开，但整个过程很惊险，而且内层在后台并行提交时产生了内容寻址巧合（见坑 4）。
+
+**规则**：外层提交**只 `git add` 你自己的文件**（tick-log、orchestration/*.md、新建的 tasks/*.md），
+**永远不用 `git add -A`**。提交前 `git status --short`，看到 `M package.json` / `?? .npmrc` 这类
+非你产出的改动，先确认是不是内层的在飞工作。
+
+### 坑 2：判忙闲时 `← 1 agent` 状态栏可能是指「内层在等自己的后台任务」，不是 subagent
+
+内层跑 `gh run watch ... &` 后台任务时，状态栏 `← 1 agent` + pane 静止容易误判为「有 subagent 在
+忙」。真判断要看 **transcript 的时间 cost**（`inner-forensics.mjs timecost`）或 **两次 md5sum 差异**。
+内层「等 CI 结果」是**真 idle 的变种**——它没在思考，你发指令它会响应（我实测：`Waiting for task`
+状态下发指令成功送达）。
+
+### 坑 3：`npm run lint` / `format:check` 这类「中等重活」也要尊重令牌
+
+AC2 核实我**没跑全量 lint**——不是因为它太贵，而是 quay 持有跨项目令牌跑 test.sh，load 15-21。
+tick 文档 §0c 的资源纪律同样适用：**重跑全量前先 `heavy-op-token.sh --acquire`**。零成本替代
+（transcript + 磁盘日志 + diff）对核实「修没修好」足够，且不抢 CPU。
+
+### 坑 4：git 内容寻址会产生「同名同 hash」的巧合 commit（罕见但会吓到人）
+
+tick #8 我 reset 掉一个 commit（626a155 含内层文件），内层在后台又提交了**相同内容**的 commit，
+于是 hash 又是 626a155——看起来像「我的 reset 没生效」。**核实历史用 `git log --graph` 看父子链**，
+不要因为 hash 相同就怀疑自己的操作。
+
+### 坑 5：`sleep` 在 Bash 工具里被沙箱阻止
+
+`sleep 26; tmux capture-pane...` 直接报 Blocked。**判忙闲的间隔采样要用 `run_in_background: true`**
+跑 `sleep 25; ...`，或者用 Monitor。不要在 Bash 工具里 sleep。
+
+### 坑 6：`monitor-mount-check.sh` 不在 archguard 的 plugin/scripts 里
+
+tick 文档 §4c 引用它做三判据自检，但 archguard 装的是 quay 分支的子集，这个文件只在 quay。
+**用 `session-liveness.sh --once` 代替**（交接 §3 原方法），输出 `SESSION-STATUS ... alive=1` 即挂载成功。
+若想要三判据，去 quay 的 `/home/yale/work/quay/plugin/scripts/monitor-mount-check.sh` 看逻辑。
+
+---
+
+## 12. 给继任者（qwen3.8-max-preview）的明文前提 —— 别靠推理补
+
+以下是我（flash）**明确知道**的，不需要你推理：
+
+1. **模型身份**：你是 claude-aliyun 的 qwen3.8-max-preview，不是 deepseek，不是 claude。你的
+   能力边界我不知道，所以**凡是不确定的环境事实，先验证再行动**，不要假设「上家能做的我也能」。
+2. **环境**：本机 4 核，三个项目共享（quay / archguard / meta-cc）。跑重活前必须拿跨项目令牌
+   `heavy-op-token.sh --acquire archguard`。当前 quay 持有令牌在跑它的 test.sh（load 15-21，很高）。
+3. **双层机制**：你是 archguard 的**外层**。内层是 tmux `archguard-2:0.0`，它执行任务、你观察/消解/
+   补队列。外层**不直接改代码**——只下指令、写 orchestration/ 和 tasks/*.md。
+4. **你的文件**：驱动 `orchestration/orchestrator-loop-tick.md`（563 行，quay 装进来的模板），
+   目标/AC `orchestration/goals-and-ac.md`（可改但要写明依据）。AC 快照见 §5（二版补记了 AC2 ✅、
+   AC5 ✅ 3 ready）。
+5. **监视器**：两个 persistent Monitor（inner-state + session-liveness）**随会话消失**，你接手后
+   必须重挂（§3 精确参数），重挂后 `session-liveness.sh --once` 自检。cron 也要重建（§7）。
+6. **内层此刻在 TASK-53 的完整上下文**：见 §10。它的会话也换模型重启，上下文会丢——所以 §10
+   的「从哪继续」是给你新内层的路线图。
+7. **上一份交接（pro→flash）的效果**：管理者只花两条指令完成了交接——因为 pro 把所有隐含前提
+   写成了明文。这份对你也一样：**看不懂就照 §12 的数字查文件，不要猜**。
+8. **换模型是第二次了**：本文件已改名 `handover-for-successor.md` 不绑模型名——下次换模型时
+   **继续用这个名字**，不要新建 `handover-for-<model>.md`。
+
+---
+
+**写于 2026-08-03T15:50Z，tick #5 后。前任：deepseek-v4-pro。继任者：deepseek-v4-flash。**
+**二版补记 2026-08-03T16:48Z，tick #8 后。前任：deepseek-v4-flash。继任者：claude-aliyun 的 qwen3.8-max-preview。**

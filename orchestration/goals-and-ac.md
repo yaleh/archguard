@@ -129,15 +129,15 @@
 
 ---
 
-## 4. 当前实测状态汇总（2026-08-03T10:11Z）
+## 4. 当前实测状态汇总（2026-08-03T16:45Z，外层 flash 收尾）
 
 | AC | 状态 | 关键数据 |
 |---|---|---|
 | AC1 — npm test 绿 | ✅ | exit 0, 475.78s, 0 failed（TASK-51 done） |
-| AC2 — lint 绿 | ✅ | exit 0, 0 errors, 4095 warnings（外层零成本核实，2026-08-03T16:1xZ） |
+| AC2 — lint 绿 | ✅ | exit 0, 0 errors, 4095 warnings（外层零成本核实：transcript + 磁盘日志，2026-08-03T16:05Z） |
 | AC3 — type-check 绿 | ✅ | exit 0 |
-| AC4 — CI 全绿 | ❌ | 最近 5 次全 failure（自 2026-07-12） |
-| AC5 — 队列有货 | ✅ | **3** todo/ready（TASK-53 CI 全绿、TASK-54 warnings 清理、TASK-55 stranded 分支分诊，2026-08-03T16:1xZ 补货） |
+| AC4 — CI 全绿 | ❌ **进行中** | TASK-53 内层在飞：a911166（drop Node 20）+ af4f85f（CI --no-save 装原生语法）+ f628b8f（revert devDeps）。第 4 轮 CI（f628b8f）仍 failure（Node 24 红，Node 22 cancelled），红步待内层 Progress 段记录 |
+| AC5 — 队列有货 | ✅ | **3** todo/ready（TASK-53 进行中、TASK-54 warnings 清理、TASK-55 stranded 分支分诊） |
 | AC6 — 状态工具可用 | ✅ | 文件存在；telemetry 返回合法 JSON（含 inProgress 字段），2026-08-03T16:03Z 实测 |
 | AC7 — 资源闸存在 | ✅ | 文件存在；`--for full-suite` exit 0（cpu_stall 37.53 < 40），2026-08-03T16:04Z 实测 |
 

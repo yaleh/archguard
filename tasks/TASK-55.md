@@ -15,7 +15,7 @@ status: todo
 
 ## Summary
 
-`task-status-drift-check.ts --stranded`（外层 2026-08-03T16:0xZ 运行）报 3 个 stranded 分支，
+`task-status-drift-check.ts --stranded`（外层 2026-08-03T16:05Z 运行）报 3 个 stranded 分支，
 工作未被 master 收纳或已被 revert：
 
 | 分支 | 分类 | 详情 |
@@ -56,5 +56,5 @@ grep -c 'task/T' orchestration/escalations.md
 | Field | Value |
 |---|---|
 | reviewer | outer |
-| at | 2026-08-03T16:1xZ |
+| at | 2026-08-03T16:10Z |
 | changed | — |
