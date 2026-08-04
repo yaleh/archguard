@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { resolveParserBackend } from '@/plugins/shared/parser-backend.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ParseResult, ParseWorkerInitData, ParseWorkerJob } from './parse-worker-pool.js';
+import { errorMessage } from '@/utils/error-message.js';
 
 const initData = workerData as ParseWorkerInitData;
 
@@ -85,7 +86,7 @@ parentPort?.on('message', (job: ParseWorkerJob) => {
       parentPort?.postMessage({
         jobId: job.jobId,
         success: false,
-        error: `Parser initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: `Parser initialization failed: ${errorMessage(error)}`,
       } satisfies ParseResult);
     });
 });

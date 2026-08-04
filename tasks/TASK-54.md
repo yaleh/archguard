@@ -118,6 +118,13 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/mcp/tools/git-history-analyze-tool.ts`: `let commits;` → `CommitRecord[]` (+ type import). −5.
 - `tsc --noEmit` exit 0.
 
+### Batch 12 — error-message helper + no-base-to-string cleanup (commit 12)
+- New `src/utils/error-message.ts`: `errorMessage(error: unknown): string` — Error→message, string→as-is, else JSON.stringify (avoids `String(baseObject)` `[object Object]`).
+- Applied to flagged `no-base-to-string` sites: `atlas-analytics-tools.ts` (×3), `parser-runtime.ts`, `parser-backend.ts`, `parse-worker.ts`, `package-metrics-tools.ts`, `metric-trend-tools.ts`, `persistence.ts`. Also gave `textResponse` return type in atlas/package-metrics/metric-trend. −9 no-base-to-string + 3 explicit-return-type.
+- `src/analysis/shape-smells/persistence.ts`: `readJson` casts to typed manifest/smells. −3 unsafe-assignment.
+- `src/cli/commands/check.ts`: `rules as any[]` → `as unknown as FitnessRule[]`. −2.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).

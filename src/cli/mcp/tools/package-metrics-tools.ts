@@ -16,6 +16,7 @@ import {
   computeCycleMetrics,
 } from '@/analysis/package-metrics-analysis.js';
 import type { PackageMetricsEntry } from '@/analysis/package-metrics-analysis.js';
+import { errorMessage } from '@/utils/error-message.js';
 
 // Re-export for backward compatibility with existing tests
 export type { PackageMetricsEntry };
@@ -23,8 +24,8 @@ export { extractPackageName, computePackageFanMetricsFromRelations, computeCycle
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 // ── MCP tool registration ──────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ export function registerPackageMetricsTools(server: McpServer, defaultRoot: stri
 
         return textResponse(JSON.stringify({ packages }, null, 2));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
       }
     }

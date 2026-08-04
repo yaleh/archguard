@@ -13,9 +13,10 @@ import path from 'path';
 import type { PackageMetricsSnapshot } from '../../metrics-history-writer.js';
 import { resolveRoot } from '../mcp-server.js';
 import { readHistoryEntries } from '@/analysis/metrics-history-reader.js';
+import { errorMessage } from '@/utils/error-message.js';
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 export interface TrendSnapshot {
@@ -69,7 +70,7 @@ export function registerMetricTrendTools(server: McpServer, defaultRoot: string)
 
         return textResponse(JSON.stringify({ snapshots }, null, 2));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
       }
     }
