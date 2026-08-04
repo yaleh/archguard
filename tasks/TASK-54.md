@@ -53,3 +53,14 @@ npm run lint 2>&1 | tail -2
 | reviewer | outer |
 | at | 2026-08-03T16:10Z |
 | changed | — |
+
+## Progress
+
+Baseline (2026-08-04, worktree `task/TASK-54`): `npm run lint` → **4135 warnings** (0 errors).
+src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
+
+### Batch 1 — mermaid validation type chain (commit 1)
+- `src/mermaid/types.ts`: added `ValidationStage` discriminated union + `ValidationFullResult`; replaced `StructuralIssue.details?: any` with a typed optional record. (−1 warning)
+- `src/mermaid/validation-pipeline.ts`: `constructor(_config?: any)` → `unknown`; `validateFull` returns `ValidationFullResult` (stages typed, no `result: any`); `generateReport` takes `ValidationFullResult`. (−40 warnings)
+- `src/mermaid/diagram-generator.ts`: type guards `isParseStage`/`isQualityStage`; parse-error maps no longer `(e: any)`; quality block fully typed; `rendererOptions: any` → `Partial<MermaidRendererOptions>` (3 sites). (−48 warnings)
+- Batch W delta: −89 (4135 → ~4046). eslint on files: 0 problems; `tsc --noEmit` exit 0.

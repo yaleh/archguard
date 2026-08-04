@@ -4,7 +4,7 @@
  */
 
 import type { ArchJSON } from '../types/index.js';
-import type { ValidationPipelineResult } from './types.js';
+import type { ValidationPipelineResult, ValidationFullResult } from './types.js';
 import { MermaidParseValidator } from './validator-parse.js';
 import { StructuralValidator } from './validator-structural.js';
 import { RenderValidator } from './validator-render.js';
@@ -19,7 +19,7 @@ export class MermaidValidationPipeline {
   private renderValidator: RenderValidator;
   private qualityValidator: QualityValidator;
 
-  constructor(_config?: any) {
+  constructor(_config?: unknown) {
     this.parseValidator = new MermaidParseValidator();
     this.structuralValidator = new StructuralValidator();
     this.renderValidator = new RenderValidator();
@@ -96,16 +96,7 @@ export class MermaidValidationPipeline {
   /**
    * Run complete validation pipeline with detailed stage information
    */
-  async validateFull(
-    mermaidCode: string,
-    archJson: ArchJSON
-  ): Promise<{
-    overallValid: boolean;
-    stages: Array<{
-      name: string;
-      result: any;
-    }>;
-  }> {
+  async validateFull(mermaidCode: string, archJson: ArchJSON): Promise<ValidationFullResult> {
     // Step 1: Parse validation
     const parseResult = await this.parseValidator.validate(mermaidCode);
 
@@ -147,13 +138,7 @@ export class MermaidValidationPipeline {
   /**
    * Generate a human-readable validation report
    */
-  generateReport(result: {
-    overallValid: boolean;
-    stages: Array<{
-      name: string;
-      result: any;
-    }>;
-  }): string {
+  generateReport(result: ValidationFullResult): string {
     const lines: string[] = [];
 
     // Overall status

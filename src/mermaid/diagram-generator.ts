@@ -21,6 +21,15 @@ import { MermaidValidationPipeline } from './validation-pipeline.js';
 import { IsomorphicMermaidRenderer } from './renderer.js';
 import { MermaidAutoRepair } from './auto-repair.js';
 import { type IProgressReporter, NoopProgressReporter } from './progress.js';
+import type { MermaidRendererOptions, ValidationStage } from './types.js';
+
+/** Type guard: is this validation stage the `parse` stage? */
+const isParseStage = (s: ValidationStage): s is Extract<ValidationStage, { name: 'parse' }> =>
+  s.name === 'parse';
+
+/** Type guard: is this validation stage the `quality` stage? */
+const isQualityStage = (s: ValidationStage): s is Extract<ValidationStage, { name: 'quality' }> =>
+  s.name === 'quality';
 
 /**
  * Output options for Mermaid diagram generation
@@ -182,14 +191,12 @@ export class MermaidDiagramGenerator implements IRendererFacade {
 
         try {
           const errors =
-            report.stages
-              .find((s) => s.name === 'parse')
-              ?.result?.errors?.map((e: any) => ({
-                message: e.message,
-                line: e.line,
-                column: e.column,
-                severity: 'error' as const,
-              })) || [];
+            report.stages.find(isParseStage)?.result.errors.map((e) => ({
+              message: e.message,
+              line: e.line,
+              column: e.column,
+              severity: 'error' as const,
+            })) || [];
 
           mermaidCode = await autoRepair.repair(mermaidCode, errors);
 
@@ -204,8 +211,8 @@ export class MermaidDiagramGenerator implements IRendererFacade {
           progress.fail('❌ Auto-repair failed');
           const errorMessages =
             report.stages
-              .find((s) => s.name === 'parse')
-              ?.result?.errors?.map((e: any) => `- ${e.message}`)
+              .find(isParseStage)
+              ?.result.errors.map((e) => `- ${e.message}`)
               .join('\n') || 'Unknown errors';
 
           throw new Error(`Validation failed and cannot be repaired.\nErrors:\n${errorMessages}`);
@@ -215,23 +222,19 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       }
 
       // 4. Output Quality Report
-      const qualityStage = report.stages.find((s) => s.name === 'quality');
-      if (qualityStage && qualityStage.result) {
+      const qualityStage = report.stages.find(isQualityStage);
+      if (qualityStage) {
         const metrics = qualityStage.result;
         progress.info?.('\n📊 Quality Metrics:');
-        progress.info?.(`  Overall Score: ${metrics.score?.toFixed(1) || 'N/A'}/100`);
+        progress.info?.(`  Overall Score: ${metrics.score.toFixed(1) || 'N/A'}/100`);
 
-        if (metrics.metrics) {
-          progress.info?.(`  Readability: ${metrics.metrics.readability?.toFixed(1) || 'N/A'}/100`);
-          progress.info?.(
-            `  Completeness: ${metrics.metrics.completeness?.toFixed(1) || 'N/A'}/100`
-          );
-          progress.info?.(`  Consistency: ${metrics.metrics.consistency?.toFixed(1) || 'N/A'}/100`);
-          progress.info?.(`  Complexity: ${metrics.metrics.complexity?.toFixed(1) || 'N/A'}/100`);
-        }
+        progress.info?.(`  Readability: ${metrics.metrics.readability.toFixed(1) || 'N/A'}/100`);
+        progress.info?.(`  Completeness: ${metrics.metrics.completeness.toFixed(1) || 'N/A'}/100`);
+        progress.info?.(`  Consistency: ${metrics.metrics.consistency.toFixed(1) || 'N/A'}/100`);
+        progress.info?.(`  Complexity: ${metrics.metrics.complexity.toFixed(1) || 'N/A'}/100`);
 
         // Print suggestions if any
-        if (metrics.suggestions && metrics.suggestions.length > 0) {
+        if (metrics.suggestions.length > 0) {
           progress.info?.('\n⚠️  Quality Suggestions:');
           for (const suggestion of metrics.suggestions.slice(0, 3)) {
             progress.info?.(`  - [${suggestion.impact || 'medium'}] ${suggestion.message}`);
@@ -281,11 +284,12 @@ export class MermaidDiagramGenerator implements IRendererFacade {
         jobs,
         async (job) => {
           // Prepare renderer options from config
-          const rendererOptions: any = {};
-          // Note: For static method, we use default theme options
-          // In production, these would come from global config
-          rendererOptions.theme = { name: 'default' };
-          rendererOptions.backgroundColor = 'transparent';
+          const rendererOptions: Partial<MermaidRendererOptions> = {
+            // Note: For static method, we use default theme options
+            // In production, these would come from global config
+            theme: { name: 'default' },
+            backgroundColor: 'transparent',
+          };
 
           const renderer = new IsomorphicMermaidRenderer(rendererOptions);
           await renderer.renderAndSave(job.mermaidCode, job.outputPath);
@@ -328,7 +332,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       progress.start('🎨 Rendering diagram...');
 
       // Prepare renderer options from config
-      const rendererOptions: any = {};
+      const rendererOptions: Partial<MermaidRendererOptions> = {};
       if (this.config.mermaid) {
         if (this.config.mermaid.theme && typeof this.config.mermaid.theme === 'string') {
           rendererOptions.theme = { name: this.config.mermaid.theme };
@@ -382,7 +386,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
   private static async renderJobsInParallelWithConfig(
     jobs: RenderJob[],
     concurrency: number,
-    rendererOptions: any
+    rendererOptions: Partial<MermaidRendererOptions>
   ): Promise<void> {
     const pMap = (await import('p-map')).default;
 

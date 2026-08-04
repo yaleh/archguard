@@ -80,7 +80,14 @@ export interface StructuralIssue {
   type: 'missing-entity' | 'invalid-relation' | 'circular-dependency' | 'orphan-entity';
   message: string;
   entity?: string;
-  details?: any;
+  details?: {
+    id?: string;
+    type?: string;
+    relationId?: string;
+    relationType?: string;
+    sourceExists?: boolean;
+    targetExists?: boolean;
+  };
 }
 
 /**
@@ -144,6 +151,24 @@ export interface ValidationPipelineResult {
     canProceed: boolean;
     blockingIssues: string[];
   };
+}
+
+/**
+ * Individual stage result in the full validation pipeline.
+ * Discriminated by `name` so per-stage results are precisely typed.
+ */
+export type ValidationStage =
+  | { name: 'parse'; result: ParseValidationResult }
+  | { name: 'structural'; result: StructuralValidationResult }
+  | { name: 'render'; result: RenderValidationResult }
+  | { name: 'quality'; result: QualityValidationResult };
+
+/**
+ * Full validation pipeline result with per-stage details
+ */
+export interface ValidationFullResult {
+  overallValid: boolean;
+  stages: ValidationStage[];
 }
 
 /**
