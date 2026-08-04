@@ -252,10 +252,13 @@ export class PluginRegistry {
     const pluginUrl = pathToFileURL(pluginPath).href;
 
     // Dynamic import
-    const module = await import(pluginUrl);
+    const module = (await import(pluginUrl)) as {
+      default?: new () => ILanguagePlugin;
+      Plugin?: new () => ILanguagePlugin;
+    };
 
     // Extract default export or named export
-    const PluginClass = module.default || module.Plugin;
+    const PluginClass = module.default ?? module.Plugin;
 
     if (!PluginClass) {
       throw new Error(
@@ -266,7 +269,7 @@ export class PluginRegistry {
     // Instantiate plugin
     const plugin = new PluginClass();
 
-    return plugin as ILanguagePlugin;
+    return plugin;
   }
 
   /**

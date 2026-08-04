@@ -100,6 +100,12 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/query/query-artifacts.ts`: `existingManifest` `readJson().catch()` cast to `QueryManifest | null` (was unsafe `any`). −11 warnings.
 - `tsc --noEmit` exit 0.
 
+### Batch 9 — python/auto-repair/plugin-registry typing (commit 9)
+- `src/plugins/python/index.ts`: `const modules = []` → `PythonRawModule[]` (+ import); `scanDir` arrow gained `Promise<void>` return type. −9 (8 type-safety + 1 explicit-return-type).
+- `src/mermaid/auto-repair.ts`: `String.replace` callback capture params annotated `className: string, generics: string`. −5.
+- `src/core/plugin-registry.ts`: dynamic `import()` cast to `{default?; Plugin?: new () => ILanguagePlugin}`; `module.default || module.Plugin` → `??`; removed redundant `as ILanguagePlugin`. −6.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).

@@ -25,6 +25,7 @@ import { ArchJsonMapper } from './archjson-mapper.js';
 import { DependencyExtractor } from './dependency-extractor.js';
 import { PythonImportExtractor } from './import-extractor.js';
 import type { ImportRelation } from './import-extractor.js';
+import type { PythonRawModule } from './types.js';
 
 function compileCustomAssertionRegexes(patterns?: string[]): RegExp[] {
   return (patterns ?? []).flatMap((pattern) => {
@@ -173,7 +174,7 @@ export class PythonPlugin implements ILanguagePlugin {
   async parseFiles(filePaths: string[], workspaceRoot?: string): Promise<ArchJSON> {
     this.ensureInitialized();
 
-    const modules = [];
+    const modules: PythonRawModule[] = [];
 
     for (const filePath of filePaths) {
       try {
@@ -482,7 +483,7 @@ export class PythonPlugin implements ILanguagePlugin {
 
     // Simple implementation: recursively find .py files
     // In production, we'd use a proper glob library
-    const scanDir = async (dir: string) => {
+    const scanDir = async (dir: string): Promise<void> => {
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true });
 
