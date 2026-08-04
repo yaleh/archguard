@@ -18,8 +18,8 @@ import { buildSuggestedPatternConfig } from '@/analysis/test-pattern-advisor.js'
 const NOT_ANALYZED_MSG =
   'No test analysis data found. Run `archguard_analyze` with `includeTests: true` first.';
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 /**
@@ -33,7 +33,7 @@ async function buildZeroTestsDiagnosticResponse(
   let availableScopes = '';
   try {
     const manifest = await readManifest(archDir);
-    availableScopes = manifest.scopes?.map((s: any) => `${s.key} (${s.label})`).join(', ') ?? '';
+    availableScopes = manifest.scopes?.map((s) => `${s.key} (${s.label})`).join(', ') ?? '';
   } catch {
     // ignore — manifest may not exist yet
   }
@@ -105,7 +105,10 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
           try {
             const fs = await import('fs-extra');
             const pkgPath = path.join(root, 'package.json');
-            const pkg = JSON.parse(await fs.default.readFile(pkgPath, 'utf-8'));
+            const pkg = JSON.parse(await fs.default.readFile(pkgPath, 'utf-8')) as {
+              dependencies?: Record<string, string>;
+              devDependencies?: Record<string, string>;
+            };
             const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
             if (deps.vitest) frameworks.push('vitest');
             if (deps.jest) frameworks.push('jest');
@@ -160,8 +163,8 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
             2
           )
         );
-      } catch (e: any) {
-        return textResponse(`Error: ${e.message}`);
+      } catch (e) {
+        return textResponse(`Error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   );
@@ -200,8 +203,8 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
           ? analysis.issues.filter((i) => i.severity === severity)
           : analysis.issues;
         return textResponse(JSON.stringify(issues, null, 2));
-      } catch (e: any) {
-        return textResponse(`Error: ${e.message}`);
+      } catch (e) {
+        return textResponse(`Error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   );
@@ -246,8 +249,8 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
           result.packageCoverage = engine.getPackageCoverage();
         }
         return textResponse(JSON.stringify(result, null, 2));
-      } catch (e: any) {
-        return textResponse(`Error: ${e.message}`);
+      } catch (e) {
+        return textResponse(`Error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   );
@@ -276,8 +279,8 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         if (!extensionAccessor.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const result = engine.getEntityCoverage(entityId);
         return textResponse(JSON.stringify(result, null, 2));
-      } catch (e: any) {
-        return textResponse(`Error: ${e.message}`);
+      } catch (e) {
+        return textResponse(`Error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   );

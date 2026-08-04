@@ -78,3 +78,11 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
   - implementation call sites `sendRequest<Location | Location[]>`; hover `sendRequest<HoverResponse>` (new typed interface, behavior-preserving Array.isArray branch).
   - `openDocument`/`closeDocument` dropped redundant `async` (+ removed `await` at call sites → −2 require-await).
 - −21 warnings (19 type-safety + 2 require-await). `tsc --noEmit` exit 0.
+
+### Batch 4 — test-analysis-tools typing (commit 4)
+- `src/cli/mcp/tools/test-analysis-tools.ts`:
+  - `textResponse` gained explicit return type (explicit-function-return-type).
+  - `manifest.scopes?.map((s: any))` → inferred `QueryScopeEntry`.
+  - `JSON.parse(pkg)` cast to `{ dependencies?; devDependencies?: Record<string,string> }`.
+  - Four `catch (e: any)` → `catch (e)` + `e instanceof Error ? e.message : String(e)`.
+- −21 warnings (20 type-safety + 1 explicit-return-type). `tsc --noEmit` exit 0.
