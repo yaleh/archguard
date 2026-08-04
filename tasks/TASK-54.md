@@ -156,3 +156,11 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).
 - `tsc --noEmit` exit 0.
+
+### Final result (15 commits)
+- `npm run lint`: **4135 → 3810 warnings** (0 errors, exit 0). −325 warnings.
+- src/ warnings: 429 → 108. **All `no-unsafe-*` + `no-explicit-any` in src/ eliminated (429 → 0).**
+- Remaining src warnings (108) are non-type-safety: ~99 `no-console` (CLI stdout prints; changing console.log→warn/error alters stdout/stderr behavior — out of scope), 9 `require-await` (interface-mandated async methods), plus a few `explicit-function-return-type` on zod schema helpers.
+- `tsc --noEmit` exit 0 throughout; invariant held.
+- High-leverage helper fixes: `validateFull` stages discriminated union (killed 88 in mermaid chain), `sendRequest<T>` generic in gopls-client (killed 21), `errorMessage()` util (killed no-base-to-string).
+- Worktree `/tmp/quay-wt-task54` on branch `task/TASK-54`, 15 commits, working tree clean. Not merged/pushed.
