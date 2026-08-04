@@ -1,7 +1,7 @@
 ---
 id: TASK-59
 title: "TASK-59: 边界清单 B 类逐模块稳定覆盖（分支密集纯函数）"
-status: todo
+status: done
 labels:
   - test-coverage
 parent: null
@@ -10,7 +10,7 @@ extra:
 ---
 # TASK-59: 边界清单 B 类逐模块稳定覆盖（分支密集纯函数）
 
-status: todo
+status: done
 
 ## Summary
 
@@ -156,6 +156,14 @@ timeout 600 npm test; echo $?   # 0 failed, exit 0
   - 选中集绿（23/23）；对抗自查 2 轮：目录约定破坏抓到 2 fail、SHA 回退破坏抓到 4 fail。
   - 注：fitness rule-evaluator / dependency-checker / gim / gini / shape-smells / snapshot 等
     已 100% stmts，不重复加。git-history index.ts 为 barrel re-export（C 类）。
+
+### 完成（2026-08-04）
+
+- **merge → CI round 10（run 30864734666）success**：Node 22 + Node 24 + Quality Gate 三 job 全绿。
+  本地全量 `timeout 600 npm test` exit 124（parser-pool.test.ts 未触碰的既有慢测试，本机
+  gopls 缺失/负载）——CI 中该文件绿，证实为本地环境问题，与本次纯增量单测无关。
+- 10 个测试文件 / 3131 行 / 162 tests 已合入 master；选中集全绿、type-check exit 0、lint 0 errors。
+- 边界清单 B 类剩余项全部处置（覆盖或判定不值得测并写明理由）。
 
 ## Dispatch review
 
