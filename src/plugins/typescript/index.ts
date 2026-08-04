@@ -116,11 +116,11 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   private workspaceRoot?: string;
 
   readonly dependencyExtractor: IDependencyExtractor = {
-    extractDependencies: this.extractDeps.bind(this),
+    extractDependencies: (workspaceRoot: string) => this.extractDeps(workspaceRoot),
   };
 
   readonly validator: IValidator = {
-    validate: this.validateArchJson.bind(this),
+    validate: (archJson) => this.validateArchJson(archJson),
   };
 
   /**
@@ -280,7 +280,11 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       return [];
     }
 
-    const packageJson = await fs.readJson(packageJsonPath);
+    const packageJson = (await fs.readJson(packageJsonPath)) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
     const dependencies: Dependency[] = [];
 
     // Runtime dependencies
@@ -288,7 +292,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       for (const [name, version] of Object.entries(packageJson.dependencies)) {
         dependencies.push({
           name,
-          version: version as string,
+          version,
           type: 'npm',
           scope: 'runtime',
           source: 'package.json',
@@ -302,7 +306,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       for (const [name, version] of Object.entries(packageJson.devDependencies)) {
         dependencies.push({
           name,
-          version: version as string,
+          version,
           type: 'npm',
           scope: 'development',
           source: 'package.json',
@@ -316,7 +320,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       for (const [name, version] of Object.entries(packageJson.peerDependencies)) {
         dependencies.push({
           name,
-          version: version as string,
+          version,
           type: 'npm',
           scope: 'peer',
           source: 'package.json',

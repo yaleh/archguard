@@ -94,3 +94,8 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 ### Batch 6 — diff command options typing (commit 6)
 - `src/cli/commands/diff.ts`: typed `.action` options `{ from?: string; to?: string; outputDir?: string }`; `loadSnapshots(options.outputDir ?? '.archguard')`.
 - −10 type-safety warnings; 8 `no-console` remain (diff table printed to stdout intentionally — changing to warn/error alters stderr behavior, out of scope). `tsc --noEmit` exit 0.
+
+### Batch 7 — query loader + ts plugin package.json typing (commit 7)
+- `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
+- `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).
+- `tsc --noEmit` exit 0.
