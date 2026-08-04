@@ -114,6 +114,94 @@ describe('CallEdgeExtractor', () => {
     expect(callEdges).toHaveLength(1);
   });
 
+  it('classifies calls on interface-typed receivers as interface', () => {
+    project.createSourceFile(
+      '/workspace/types.ts',
+      `
+      export interface Repository {
+        find(): void;
+      }
+    `
+    );
+    project.createSourceFile(
+      '/workspace/service.ts',
+      `
+      export class Repo implements Repository {
+        find(): void {}
+      }
+    `
+    );
+    project.createSourceFile(
+      '/workspace/controller.ts',
+      `
+      import { Repository } from './types.js';
+      export class Controller {
+        constructor(private repo: Repository) {}
+        get(): void { this.repo.find(); }
+      }
+    `
+    );
+    const entities = [
+      { id: 'types.ts.Repository', name: 'Repository' } as any,
+      { id: 'service.ts.Repo', name: 'Repo' } as any,
+      { id: 'controller.ts.Controller', name: 'Controller' } as any,
+    ];
+    const extractor = new CallEdgeExtractor(project, entities, workspaceRoot);
+    const relations = extractor.extractAll();
+    const callEdge = relations.find((r) => r.type === 'call' && r.sourceMethod === 'get');
+    expect(callEdge).toBeDefined();
+    expect(callEdge.callType).toBe('interface');
+    expect(callEdge.confidence).toBe(0.6);
+  });
+
+  it('skips methods without a body (abstract/overload)', () => {
+    project.createSourceFile(
+      '/workspace/a.ts',
+      `
+      export abstract class Base {
+        abstract run(): void;
+      }
+    `
+    );
+    const entities = [{ id: 'a.ts.Base', name: 'Base' } as any];
+    const extractor = new CallEdgeExtractor(project, entities, workspaceRoot);
+    const relations = extractor.extractAll();
+    expect(relations.filter((r) => r.type === 'call')).toHaveLength(0);
+  });
+
+  it('skips call expressions that are not property access (plain function call)', () => {
+    project.createSourceFile(
+      '/workspace/a.ts',
+      `
+      export class A {
+        run(): void {
+          helper();
+        }
+      }
+    `
+    );
+    const entities = [{ id: 'a.ts.A', name: 'A' } as any];
+    const extractor = new CallEdgeExtractor(project, entities, workspaceRoot);
+    const relations = extractor.extractAll();
+    expect(relations.filter((r) => r.type === 'call')).toHaveLength(0);
+  });
+
+  it('skips anonymous classes (no name)', () => {
+    project.createSourceFile(
+      '/workspace/a.ts',
+      `
+      export const instance = class {
+        run(): void {
+          console.log('x');
+        }
+      };
+    `
+    );
+    const extractor = new CallEdgeExtractor(project, [], workspaceRoot);
+    const relations = extractor.extractAll();
+    expect(relations.filter((r) => r.type === 'call')).toHaveLength(0);
+  });
+
   it('sets source entity ID to relPath.ClassName format', () => {
     project.createSourceFile(
       '/workspace/src/service.ts',

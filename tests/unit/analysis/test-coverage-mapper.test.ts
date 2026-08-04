@@ -392,4 +392,87 @@ describe('TestCoverageMapper', () => {
     // ExampleInstrumentedTest → strips "Test" → "ExampleInstrumented" — should NOT match AppShell
     expect(link?.coverageScore ?? 0).toBe(0);
   });
+
+  it('creates a link for a covered entity not present in archJson entities', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('handler.test.ts', ['GhostEntity'])];
+    const archJson = makeArchJson([
+      {
+        id: 'RealEntity',
+        name: 'RealEntity',
+        type: 'class',
+        sourceLocation: { file: 'src/real.ts', startLine: 1, endLine: 5 },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    // GhostEntity is not in archJson → linkMap misses → created on the fly (import layer)
+    const ghost = result.find((l: CoverageLink) => l.sourceEntityId === 'GhostEntity');
+    expect(ghost).toBeDefined();
+    expect(ghost.coverageScore).toBeGreaterThan(0);
+    expect(ghost.coveredByTestIds).toContain('handler.test.ts');
+  });
+
+  it('applies the TypeScript directory convention linking test dir to entity src dir', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('tests/unit/analysis/fim/hint.test.ts', [])];
+    const archJson = makeArchJson([
+      {
+        id: 'Hint',
+        name: 'Hint',
+        type: 'class',
+        sourceLocation: { file: 'src/analysis/fim/hint.ts', startLine: 1, endLine: 10 },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'Hint');
+    // path-convention (0.6*0.5=0.3) + directory-convention (0.25*0.5=0.125) → 0.425
+    expect(link.coverageScore).toBeCloseTo(0.425, 5);
+    expect(link.coveredByTestIds).toContain('tests/unit/analysis/fim/hint.test.ts');
+  });
+
+  it('skips entities without sourceLocation.file in the directory-convention pass', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('tests/unit/analysis/fim/hint.test.ts', [])];
+    const archJson = makeArchJson([
+      {
+        id: 'NoLoc',
+        name: 'NoLoc',
+        type: 'class',
+        // no sourceLocation
+      },
+      {
+        id: 'WithLoc',
+        name: 'WithLoc',
+        type: 'class',
+        sourceLocation: { file: 'src/analysis/fim/with-loc.ts', startLine: 1, endLine: 10 },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const noLoc = result.find((l: CoverageLink) => l.sourceEntityId === 'NoLoc');
+    expect(noLoc.coverageScore).toBe(0);
+    const withLoc = result.find((l: CoverageLink) => l.sourceEntityId === 'WithLoc');
+    expect(withLoc.coverageScore).toBeGreaterThan(0);
+  });
+
+  it('Go directory-match layer requires same directory (does not cross dirs)', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('pkg/a/extra_test.go', [])];
+    const archJson = makeArchJson([
+      {
+        id: 'Query',
+        name: 'Query',
+        type: 'class',
+        sourceLocation: { file: 'pkg/b/query.go', startLine: 1, endLine: 10 },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'Query');
+    // extra_test.go → 'extra'; query.go → 'query': path-convention does NOT match,
+    // and the dir-match layer only fires when path.dirname(entity) === test dir.
+    expect(link.coverageScore).toBe(0);
+  });
 });
