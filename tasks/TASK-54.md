@@ -111,6 +111,13 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - LEFT: `outputScopeParam` `explicit-function-return-type` (1 warning) — zod v4 internal schema types (`$ZodDefault`) are not exported via public `z`; annotating breaks caller inference. Cost too high, not type-safety. Documented exclusion.
 - `tsc --noEmit` exit 0.
 
+### Batch 11 — run-analysis/init/kotlin/git-history typing (commit 11)
+- `src/cli/analyze/run-analysis.ts`: `config as any` → `as unknown as GlobalConfig` (2 sites); removed `(archJson as any).extensions`. −6.
+- `src/cli/commands/init.ts`: `.action` options typed `{ format?: 'json' | 'js' }`. −3 (3 `no-console` remain).
+- `src/plugins/kotlin/index.ts`: `bridge!`/`mapper!` → optional fields; `undefined as any` → `undefined`. −4.
+- `src/cli/mcp/tools/git-history-analyze-tool.ts`: `let commits;` → `CommitRecord[]` (+ type import). −5.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).

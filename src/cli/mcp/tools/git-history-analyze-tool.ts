@@ -20,6 +20,7 @@ import {
   getHeadRef,
   getCurrentBranch,
   isGitRepo,
+  type CommitRecord,
 } from '../../git-history/git-log-reader.js';
 import {
   aggregateFileMetrics,
@@ -99,7 +100,7 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
       }
 
       // Read git log
-      let commits;
+      let commits: CommitRecord[];
       try {
         commits = readGitLog(projectRoot, { sinceDays, maxCommits, includeMerges });
       } catch (err) {

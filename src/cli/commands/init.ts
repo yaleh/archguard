@@ -14,7 +14,7 @@ export function createInitCommand(): Command {
   return new Command('init')
     .description('Initialize archguard configuration file')
     .option('-f, --format <type>', 'Config file format (json|js)', 'json')
-    .action(async (options) => {
+    .action(async (options: { format?: 'json' | 'js' }) => {
       try {
         const loader = new ConfigLoader();
         await loader.init({ format: options.format });

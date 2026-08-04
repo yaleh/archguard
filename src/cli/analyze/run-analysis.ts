@@ -169,7 +169,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   });
   const processor = new DiagramProcessor({
     diagrams: selectedDiagrams,
-    globalConfig: config as any,
+    globalConfig: config as unknown as GlobalConfig,
     progress: reporter,
     parseCache,
     parseWorkerPool,
@@ -217,7 +217,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 
         // Attach result to archJson extensions
         if (!archJson.extensions) {
-          (archJson as any).extensions = {};
+          archJson.extensions = {};
         }
         archJson.extensions.testAnalysis = testAnalysis;
 
@@ -338,7 +338,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   if (results.length > 1) {
     try {
       reporter.start('Generating index...');
-      const indexGenerator = new DiagramIndexGenerator(config as any);
+      const indexGenerator = new DiagramIndexGenerator(config as unknown as GlobalConfig);
       await indexGenerator.generate(results);
       reporter.succeed('Index generated');
     } catch (err) {
