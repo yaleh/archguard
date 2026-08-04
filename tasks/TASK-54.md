@@ -95,6 +95,11 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/commands/diff.ts`: typed `.action` options `{ from?: string; to?: string; outputDir?: string }`; `loadSnapshots(options.outputDir ?? '.archguard')`.
 - −10 type-safety warnings; 8 `no-console` remain (diff table printed to stdout intentionally — changing to warn/error alters stderr behavior, out of scope). `tsc --noEmit` exit 0.
 
+### Batch 8 — test-analyzer + query-artifacts typing (commit 8)
+- `src/analysis/test-analyzer.ts`: `computeMetrics` params `coverageMap: any[]`/`issues: any[]` → `CoverageLink[]`/`TestIssue[]`; removed `(l: any)` annotations and `issueCount as any`. −13 warnings.
+- `src/cli/query/query-artifacts.ts`: `existingManifest` `readJson().catch()` cast to `QueryManifest | null` (was unsafe `any`). −11 warnings.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).
