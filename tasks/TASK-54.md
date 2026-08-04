@@ -69,3 +69,12 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/commands/query.ts`: `getAtlasLayer(opts.atlasLayer as any)` → `as keyof GoAtlasLayers` (+ type import). −2 warnings.
 - Remaining 49 warnings in query.ts are `no-console` (rule allows only warn/error). Out of type-safety scope; changing `console.log` → `console.error` alters stdout/stderr behavior — left untouched.
 - `tsc --noEmit` exit 0.
+
+### Batch 3 — gopls-client LSP typing (commit 3)
+- `src/plugins/golang/gopls-client.ts`:
+  - `sendRequest` made generic `<T>(method, params: unknown): Promise<T>`; `sendNotification` params `unknown`.
+  - `LSPMessage.params/result: any` → `unknown`; `pendingRequests.resolve` → `(value: unknown) => void`.
+  - `handleData`: `JSON.parse(...) as LSPMessage` (was unsafe-assignment).
+  - implementation call sites `sendRequest<Location | Location[]>`; hover `sendRequest<HoverResponse>` (new typed interface, behavior-preserving Array.isArray branch).
+  - `openDocument`/`closeDocument` dropped redundant `async` (+ removed `await` at call sites → −2 require-await).
+- −21 warnings (19 type-safety + 2 require-await). `tsc --noEmit` exit 0.
