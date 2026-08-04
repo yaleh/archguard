@@ -64,3 +64,8 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/mermaid/validation-pipeline.ts`: `constructor(_config?: any)` → `unknown`; `validateFull` returns `ValidationFullResult` (stages typed, no `result: any`); `generateReport` takes `ValidationFullResult`. (−40 warnings)
 - `src/mermaid/diagram-generator.ts`: type guards `isParseStage`/`isQualityStage`; parse-error maps no longer `(e: any)`; quality block fully typed; `rendererOptions: any` → `Partial<MermaidRendererOptions>` (3 sites). (−48 warnings)
 - Batch W delta: −89 (4135 → ~4046). eslint on files: 0 problems; `tsc --noEmit` exit 0.
+
+### Batch 2 — query.ts atlas layer cast (commit 2)
+- `src/cli/commands/query.ts`: `getAtlasLayer(opts.atlasLayer as any)` → `as keyof GoAtlasLayers` (+ type import). −2 warnings.
+- Remaining 49 warnings in query.ts are `no-console` (rule allows only warn/error). Out of type-safety scope; changing `console.log` → `console.error` alters stdout/stderr behavior — left untouched.
+- `tsc --noEmit` exit 0.
