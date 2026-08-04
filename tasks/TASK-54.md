@@ -135,6 +135,16 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/analysis/snapshot-store.ts`: `readJson` casts to `MetricSnapshot` (2 sites). −2.
 - `tsc --noEmit` exit 0.
 
+### Batch 14 — remaining src return-type + type-safety sites (commit 14)
+- `textResponse` return type: `git-history-tools.ts`, `git-history-evidence-pack-tool.ts`, `analyze-tool.ts`.
+- Return-type annotations: `generator.ts` (nodeIdForPackage), `cpp-package-flowchart-generator.ts` (sanitize), `gopls-interface-resolver.ts` (warn arrow), `mermaid-templates.ts` (buildGroupTree), `goroutine-topology-builder.ts` (scanBody), `python/archjson-mapper.ts` (mapParameter → `Parameter`), `ccb-assembler.ts` (settle), `arch-index-builder.ts` (dfs).
+- `parser/typescript-parser.ts`: replaced `Map.get()!` non-null assertion with a local + `!== undefined` guard. −1.
+- `parser/archjson-aggregator.ts`: `${level}` (never) → `${String(level)}`. −1.
+- `plugins/java/types.ts`: `Record<string, any>` → `Record<string, unknown>`. −1.
+- `plugins/golang/interface-matcher.ts`: `let implementations;` → `ImplementationResult[]` (exported the type from gopls-client). −1.
+- LEFT (interface-mandated `async` with no await, not type-safety): `java/index.ts dispose`, `cpp/index.ts dispose`, `native-parser-backend.ts createSession`.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).

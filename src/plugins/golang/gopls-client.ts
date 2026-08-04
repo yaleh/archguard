@@ -238,7 +238,7 @@ interface Location {
   };
 }
 
-interface ImplementationResult {
+export interface ImplementationResult {
   structName: string;
   filePath: string;
   line: number;

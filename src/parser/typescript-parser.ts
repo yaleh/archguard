@@ -250,8 +250,9 @@ export class TypeScriptParser {
 
         // Fix target: if imported, map to scoped ID; otherwise keep bare for diagnostics
         let resolvedTarget = rel.target;
-        if (importedNameToScopedId.has(rel.target)) {
-          resolvedTarget = importedNameToScopedId.get(rel.target)!;
+        const scopedTarget = importedNameToScopedId.get(rel.target);
+        if (scopedTarget !== undefined) {
+          resolvedTarget = scopedTarget;
         }
 
         return {

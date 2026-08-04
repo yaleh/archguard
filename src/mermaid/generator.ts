@@ -247,7 +247,7 @@ export class ValidatedMermaidGenerator {
       groupedPackages.get(layerMatch.label)?.push(packageName);
     }
 
-    const nodeIdForPackage = (packageName: string) => escapeId(`pkg_${packageName}`);
+    const nodeIdForPackage = (packageName: string): string => escapeId(`pkg_${packageName}`);
     for (const [label, layerPackages] of groupedPackages.entries()) {
       if (layerPackages.length === 0) continue;
       lines.push(`  subgraph ${escapeId(`layer_${label}`)}["${label}"]`);

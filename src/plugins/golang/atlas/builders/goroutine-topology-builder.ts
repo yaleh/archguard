@@ -156,7 +156,7 @@ export class GoroutineTopologyBuilder implements IAtlasBuilder<GoroutineTopology
     const scanBody = (
       body: NonNullable<(typeof rawData.packages)[0]['functions'][0]['body']>,
       pkg: GoRawPackage
-    ) => {
+    ): void => {
       for (const op of body.channelOps) {
         if (op.operation === 'make') {
           channels.push({

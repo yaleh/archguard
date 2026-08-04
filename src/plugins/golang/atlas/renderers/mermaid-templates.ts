@@ -10,6 +10,7 @@ import {
   formatGoroutineName,
   formatSpawnerLabel,
   sanitizeId,
+  type GroupNode,
 } from './template-shared.js';
 
 /**
@@ -36,7 +37,10 @@ export class MermaidTemplates {
     return computePackageEdgeTiers(strengths);
   }
 
-  private static buildGroupTree(nodes: Array<{ id: string; name: string }>) {
+  private static buildGroupTree(nodes: Array<{ id: string; name: string }>): {
+    roots: GroupNode[];
+    grouped: Set<string>;
+  } {
     return buildGroupTree(nodes);
   }
 
