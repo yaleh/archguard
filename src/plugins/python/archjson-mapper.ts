@@ -5,7 +5,15 @@
  */
 
 import path from 'path';
-import type { ArchJSON, Entity, Member, Relation, Decorator, Visibility } from '@/types/index.js';
+import type {
+  ArchJSON,
+  Entity,
+  Member,
+  Relation,
+  Decorator,
+  Visibility,
+  Parameter,
+} from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import type {
   PythonRawModule,
@@ -327,7 +335,7 @@ export class ArchJsonMapper extends BaseArchJsonMapper<PythonRawModule> {
   /**
    * Map Python parameter to Parameter
    */
-  private mapParameter(param: PythonRawParameter) {
+  private mapParameter(param: PythonRawParameter): Parameter {
     return this.mapParameters(
       [
         {

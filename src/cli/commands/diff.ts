@@ -66,8 +66,8 @@ export function createDiffCommand(): Command {
     .option('--from <sha>', 'Source snapshot (SHA prefix)')
     .option('--to <sha>', 'Target snapshot (SHA prefix)')
     .option('--output-dir <dir>', 'Snapshots directory', '.archguard')
-    .action(async (options) => {
-      const snapshots = await loadSnapshots(options.outputDir);
+    .action(async (options: { from?: string; to?: string; outputDir?: string }) => {
+      const snapshots = await loadSnapshots(options.outputDir ?? '.archguard');
 
       if (snapshots.length < 2) {
         console.error('Need at least 2 snapshots to compare.');

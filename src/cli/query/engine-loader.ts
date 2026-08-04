@@ -10,6 +10,8 @@ import path from 'path';
 import crypto from 'crypto';
 import type { QueryManifest, QueryScopeEntry } from './query-manifest.js';
 import type { ArchIndex } from './arch-index.js';
+import type { ArchJSON } from '@/types/index.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { atomicWriteFile } from './query-artifacts.js';
 import { QueryEngine } from './query-engine.js';
@@ -55,7 +57,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
   if (!(await fs.pathExists(manifestPath))) {
     throw new Error('No query data found. Run `archguard analyze` first.');
   }
-  const manifest: QueryManifest = await fs.readJson(manifestPath);
+  const manifest = (await fs.readJson(manifestPath)) as QueryManifest;
 
   if (manifest.scopes.length === 0) {
     throw new Error('No query scopes available. Run `archguard analyze` first.');
@@ -132,7 +134,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
   // Read arch.json as raw Buffer for hash comparison
   const archJsonBuf = await fs.readFile(archJsonPath);
   const archJsonHash = crypto.createHash('sha256').update(archJsonBuf).digest('hex');
-  const archJson = JSON.parse(archJsonBuf.toString());
+  const archJson = JSON.parse(archJsonBuf.toString()) as ArchJSON;
 
   // Try to load arch-index.json
   const indexPath = path.join(queryRoot, 'query', scopeEntry.key, 'arch-index.json');
@@ -140,7 +142,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
 
   if (await fs.pathExists(indexPath)) {
     try {
-      const indexData: ArchIndex = await fs.readJson(indexPath);
+      const indexData = (await fs.readJson(indexPath)) as ArchIndex;
       if (indexData.version === '1.0' && indexData.archJsonHash === archJsonHash) {
         archIndex = indexData;
       } else {
@@ -163,7 +165,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
   const testAnalysisPath = path.join(queryRoot, 'query', 'test-analysis.json');
   if (await fs.pathExists(testAnalysisPath)) {
     try {
-      const testAnalysis = await fs.readJson(testAnalysisPath);
+      const testAnalysis = (await fs.readJson(testAnalysisPath)) as TestAnalysis;
       if (!archJson.extensions) archJson.extensions = {};
       archJson.extensions.testAnalysis = testAnalysis;
     } catch {

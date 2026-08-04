@@ -40,7 +40,7 @@ export class GoplsInterfaceResolver {
   constructor(options: GoplsResolverOptions = {}) {
     this.matcher = new InterfaceMatcher();
     this.options = options;
-    this.warn = options.warn ?? ((message: string) => console.warn(message));
+    this.warn = options.warn ?? ((message: string): void => console.warn(message));
   }
 
   async initialize(workspaceRoot: string): Promise<void> {

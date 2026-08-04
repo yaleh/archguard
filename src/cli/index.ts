@@ -15,7 +15,7 @@ import { createRequire } from 'module';
 
 // Read package.json for version
 const require = createRequire(import.meta.url);
-const packageJson = require('../../package.json');
+const packageJson = require('../../package.json') as { version: string };
 
 /**
  * Create the main CLI program

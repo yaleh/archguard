@@ -19,6 +19,7 @@ import type {
   EdgeListOutput,
 } from '../query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
+import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
 import { HistoryQuery } from '../git-history/history-query.js';
 import {
@@ -367,7 +368,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
         console.error('Error: No Atlas data found. Run archguard analyze with --lang go first.');
         process.exit(1);
       }
-      const layerData = extensionAccessor.getAtlasLayer(opts.atlasLayer as any);
+      const layerData = extensionAccessor.getAtlasLayer(opts.atlasLayer as keyof GoAtlasLayers);
       if (layerData === undefined) {
         console.error(`Error: Atlas layer "${opts.atlasLayer}" is empty or not generated.`);
         process.exit(1);

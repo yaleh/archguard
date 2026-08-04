@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { ConfigLoader } from '@/cli/config-loader.js';
 import { loadSnapshots } from '@/analysis/snapshot-store.js';
 import { evaluateAllRules } from '@/analysis/fitness/rule-evaluator.js';
-import type { RuleResult } from '@/analysis/fitness/rule-types.js';
+import type { RuleResult, FitnessRule } from '@/analysis/fitness/rule-types.js';
 import type { Relation } from '@/types/index.js';
 
 /**
@@ -62,7 +62,7 @@ export function createCheckCommand(): Command {
       // 5. Evaluate rules
 
       const results = evaluateAllRules(
-        fitnessConfig.rules as any[],
+        fitnessConfig.rules as unknown as FitnessRule[],
         snapshot.metricVector,
         relations
       );

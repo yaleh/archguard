@@ -14,6 +14,7 @@ import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
 import { computePackageFanMetrics, enrichPackageNodes } from '@/analysis/atlas-metrics-analysis.js';
 import type { EnrichedPackageNode } from '@/analysis/atlas-metrics-analysis.js';
+import { errorMessage } from '@/utils/error-message.js';
 
 // Re-export for backward compatibility with existing tests
 export type { EnrichedPackageNode };
@@ -21,8 +22,8 @@ export { computePackageFanMetrics, enrichPackageNodes };
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 // ── MCP tool registration ─────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
 
         return textResponse(JSON.stringify({ packages: enriched }, null, 2));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
       }
     }
@@ -152,7 +153,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
 
         return textResponse(JSON.stringify({ packages: enriched }, null, 2));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
       }
     }
@@ -241,7 +242,7 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
 
         return textResponse(JSON.stringify({ godPackages }, null, 2));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
       }
     }

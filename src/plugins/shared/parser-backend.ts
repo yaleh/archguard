@@ -1,4 +1,5 @@
 import type { ParserRuntimeKind, ParserSession } from './syntax-tree.js';
+import { errorMessage } from '@/utils/error-message.js';
 
 export type ParserLanguage = 'go' | 'java' | 'python' | 'cpp' | 'kotlin';
 
@@ -14,9 +15,7 @@ export class ParserInitializationError extends Error {
     cause: unknown
   ) {
     super(
-      `Failed to initialize ${language} parser with ${backend} backend: ${
-        cause instanceof Error ? cause.message : String(cause)
-      }`,
+      `Failed to initialize ${language} parser with ${backend} backend: ${errorMessage(cause)}`,
       { cause }
     );
     this.name = 'ParserInitializationError';

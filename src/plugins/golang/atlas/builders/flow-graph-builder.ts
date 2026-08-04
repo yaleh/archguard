@@ -328,7 +328,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
       } catch {
         regex = /(?!)/; // invalid regex → never-match
       }
-      const scanCalls = (pkg: GoRawPackage, calls: GoCallExpr[]) => {
+      const scanCalls = (pkg: GoRawPackage, calls: GoCallExpr[]): void => {
         for (const call of calls) {
           if (regex.test(call.functionName)) {
             const rawHandler = call.args?.[1] ?? '';
@@ -364,7 +364,7 @@ export class FlowGraphBuilder implements IAtlasBuilder<FlowGraph> {
   private detectGenericToolRegistrations(rawData: GoRawData): EntryPoint[] {
     const GENERIC_SUFFIXES = ['AddTool', 'RegisterTool', 'AddCommand', 'HandleFunc'];
     const found: EntryPoint[] = [];
-    const scan = (pkg: GoRawPackage, calls: GoCallExpr[]) => {
+    const scan = (pkg: GoRawPackage, calls: GoCallExpr[]): void => {
       for (const call of calls) {
         const name = call.functionName;
         if (GENERIC_SUFFIXES.some((s) => name === s || name.endsWith(s))) {

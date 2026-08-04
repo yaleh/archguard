@@ -12,11 +12,6 @@ import type {
   IDependencyExtractor,
 } from '@/core/interfaces/dependency.js';
 
-/**
- * Java-specific dependency scopes
- */
-type JavaDependencyScope = 'compile' | 'test' | 'runtime' | 'provided';
-
 export class DependencyExtractor implements IDependencyExtractor {
   /**
    * Auto-detect and extract dependencies from Java project
@@ -55,7 +50,7 @@ export class DependencyExtractor implements IDependencyExtractor {
       const dependencyPattern =
         /<dependency>\s*<groupId>(.*?)<\/groupId>\s*<artifactId>(.*?)<\/artifactId>\s*<version>(.*?)<\/version>(?:\s*<scope>(.*?)<\/scope>)?/gs;
 
-      let match;
+      let match: RegExpExecArray | null;
       while ((match = dependencyPattern.exec(content)) !== null) {
         const [, _groupId, artifactId, version, scope] = match;
 
@@ -94,7 +89,7 @@ export class DependencyExtractor implements IDependencyExtractor {
       const dependencyPattern =
         /(implementation|testImplementation|runtimeOnly|compileOnly|api)\s+['"]([^:]+):([^:]+):([^'"]+)['"]/g;
 
-      let match;
+      let match: RegExpExecArray | null;
       while ((match = dependencyPattern.exec(content)) !== null) {
         const [, scope, _groupId, artifactId, version] = match;
 
@@ -118,7 +113,7 @@ export class DependencyExtractor implements IDependencyExtractor {
   /**
    * Map Maven scope to standard DependencyScope
    */
-  private mapMavenScope(scope: JavaDependencyScope): DependencyScope {
+  private mapMavenScope(scope: string): DependencyScope {
     switch (scope) {
       case 'compile':
         return 'runtime';

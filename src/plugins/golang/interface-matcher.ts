@@ -18,7 +18,7 @@ import type {
   MethodSet,
   MethodSignature,
 } from './types.js';
-import type { GoplsClient } from './gopls-client.js';
+import type { GoplsClient, ImplementationResult } from './gopls-client.js';
 import { isGoplsPoisoned } from './gopls-client.js';
 
 export class InterfaceMatcher {
@@ -49,7 +49,7 @@ export class InterfaceMatcher {
     // Query gopls for each interface. Each query is guarded so one bounded
     // timeout/failure degrades that interface only, never the entire run.
     for (const iface of interfaces) {
-      let implementations;
+      let implementations: ImplementationResult[];
       try {
         implementations = await goplsClient.getImplementations(
           iface.name,

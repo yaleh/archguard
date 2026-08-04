@@ -65,7 +65,7 @@ export class CacheManager {
 
     try {
       if (await fs.pathExists(cachePath)) {
-        const entry: CacheEntry<T> = await fs.readJson(cachePath);
+        const entry = (await fs.readJson(cachePath)) as CacheEntry<T>;
 
         // Check if entry is expired
         const now = Date.now();
@@ -171,7 +171,7 @@ export class CacheManager {
     }
 
     const files: string[] = [];
-    const walk = async (dir: string) => {
+    const walk = async (dir: string): Promise<void> => {
       const entries = await fs.readdir(dir, { withFileTypes: true });
 
       for (const entry of entries) {

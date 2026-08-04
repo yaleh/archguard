@@ -152,9 +152,9 @@ export async function persistQueryScopes(
 
   const existingManifest =
     options.merge !== false
-      ? await fs
+      ? ((await fs
           .readJson(path.join(queryDir, 'manifest.json'))
-          .catch(() => null as QueryManifest | null)
+          .catch(() => null)) as QueryManifest | null)
       : null;
 
   const mergedEntries = new Map<string, QueryScopeEntry>();

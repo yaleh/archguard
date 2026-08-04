@@ -50,8 +50,8 @@ export class KotlinPlugin implements ILanguagePlugin {
   /** Non-optional dependency extractor — follows CppPlugin/GoPlugin pattern */
   readonly dependencyExtractor: IDependencyExtractor;
 
-  private bridge!: TreeSitterBridge;
-  private mapper!: ArchJsonMapper;
+  private bridge?: TreeSitterBridge;
+  private mapper?: ArchJsonMapper;
   private initialized = false;
   private parserSession?: ParserSession;
 
@@ -147,8 +147,8 @@ export class KotlinPlugin implements ILanguagePlugin {
     this.parserSession?.dispose();
     this.parserSession = undefined;
     this.initialized = false;
-    this.bridge = undefined as any;
-    this.mapper = undefined as any;
+    this.bridge = undefined;
+    this.mapper = undefined;
   }
 
   /**

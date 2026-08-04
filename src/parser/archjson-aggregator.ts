@@ -41,7 +41,7 @@ export class ArchJSONAggregator {
         return this.aggregateToPackageLevel(archJSON);
 
       default:
-        throw new Error(`Unknown detail level: ${level}`);
+        throw new Error(`Unknown detail level: ${String(level)}`);
     }
   }
 

@@ -27,8 +27,8 @@ const NOT_ANALYZED_MSG =
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 function formatEvidencePack(pack: EvidencePackResult): string {

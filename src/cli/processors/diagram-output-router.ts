@@ -228,7 +228,7 @@ export class DiagramOutputRouter {
           this.globalConfig.mermaid?.transparentBackground ?? false
         );
       } else {
-        processedSvg = poolResult.svg!;
+        processedSvg = poolResult.svg ?? '';
       }
 
       await Promise.all([
@@ -318,7 +318,7 @@ export class DiagramOutputRouter {
             this.globalConfig.mermaid?.transparentBackground ?? false
           );
         } else {
-          processedSvg = poolResult.svg!;
+          processedSvg = poolResult.svg ?? '';
         }
 
         let pngFailed = false;
@@ -385,7 +385,7 @@ export class DiagramOutputRouter {
         this.globalConfig.mermaid?.transparentBackground ?? false
       );
     } else {
-      processedSvg = poolResult.svg!;
+      processedSvg = poolResult.svg ?? '';
     }
 
     await Promise.all([
@@ -440,7 +440,7 @@ export class DiagramOutputRouter {
         this.globalConfig.mermaid?.transparentBackground ?? false
       );
     } else {
-      processedSvg = poolResult.svg!;
+      processedSvg = poolResult.svg ?? '';
     }
 
     await Promise.all([

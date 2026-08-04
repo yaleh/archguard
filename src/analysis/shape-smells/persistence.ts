@@ -8,6 +8,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import type { ShapeSmellAnalysis, LiteralDispersionSmell } from './types.js';
+import { errorMessage } from '@/utils/error-message.js';
 
 const SHAPE_SMELLS_SUBDIR = 'query/shape-smells';
 const MANIFEST_FILE = 'manifest.json';
@@ -59,11 +60,11 @@ export async function loadResults(archDir: string): Promise<ShapeSmellAnalysis |
   }
 
   try {
-    const manifest = await fs.readJson(manifestPath);
+    const manifest = (await fs.readJson(manifestPath)) as ShapeSmellAnalysis['manifest'];
     let smells: LiteralDispersionSmell[] = [];
 
     if (await fs.pathExists(literalPath)) {
-      smells = await fs.readJson(literalPath);
+      smells = (await fs.readJson(literalPath)) as LiteralDispersionSmell[];
     }
 
     return {
@@ -76,7 +77,7 @@ export async function loadResults(archDir: string): Promise<ShapeSmellAnalysis |
       ],
     };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     throw new Error(`Failed to load shape-smell results from ${dir}: ${message}`);
   }
 }

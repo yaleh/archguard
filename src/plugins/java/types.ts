@@ -21,7 +21,7 @@ export interface JavaSourceLocation {
  */
 export interface JavaRawAnnotation {
   name: string;
-  arguments?: Record<string, any>;
+  arguments?: Record<string, unknown>;
 }
 
 /**

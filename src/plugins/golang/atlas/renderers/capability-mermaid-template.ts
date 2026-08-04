@@ -7,6 +7,7 @@ import {
   formatCapabilityLabel,
   isHotspot,
   sanitizeId,
+  type PkgTreeNode,
 } from './template-shared.js';
 
 export function renderCapabilityGraph(graph: CapabilityGraph): string {
@@ -27,11 +28,7 @@ export function renderCapabilityGraph(graph: CapabilityGraph): string {
   let hasHotspotNode = false;
   let hasConcreteHeavyNode = false;
 
-  const renderCapNode = (
-    treeNode: { pkg: string; isVirtual: boolean; children: any[] },
-    indent: string,
-    depth: number
-  ): void => {
+  const renderCapNode = (treeNode: PkgTreeNode, indent: string, depth: number): void => {
     const sgId = createSubgraphId(treeNode.pkg, usedSubgraphIds);
     capDepthMap.set(sgId, depth);
     output += `${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;

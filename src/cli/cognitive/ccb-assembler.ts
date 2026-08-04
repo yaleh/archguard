@@ -172,7 +172,7 @@ async function queryMetaCcDocSignals(
   const absPath = path.isAbsolute(filePath) ? filePath : path.resolve(workingDir, filePath);
   return new Promise((resolve) => {
     let settled = false;
-    const settle = (result: MetaCcDocSignals | null) => {
+    const settle = (result: MetaCcDocSignals | null): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);

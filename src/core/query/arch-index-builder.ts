@@ -131,7 +131,7 @@ function computeCycles(
     adj: Map<string, string[]>,
     vis: Set<string>,
     out: string[] | null
-  ) => {
+  ): void => {
     const stack: [string, number][] = [[start, 0]];
     vis.add(start);
     while (stack.length) {

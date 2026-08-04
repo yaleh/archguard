@@ -75,7 +75,7 @@ export class MermaidAutoRepair {
     // and convert to Map~K,V~ or List~T~ or Repository~Entity~
     const genericPattern = /(\w+)<([^>]+)>/g;
 
-    repaired = repaired.replace(genericPattern, (match, className, generics) => {
+    repaired = repaired.replace(genericPattern, (_match, className: string, generics: string) => {
       // Remove spaces from generics for cleaner Mermaid syntax
       const cleanGenerics = generics.replace(/\s*,\s*/g, ',').replace(/\s+/g, '');
       return `${className}~${cleanGenerics}~`;

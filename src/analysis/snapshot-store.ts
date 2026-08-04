@@ -45,8 +45,8 @@ export async function loadSnapshots(outputDir: string): Promise<MetricSnapshot[]
   const snapshots: MetricSnapshot[] = [];
   for (const file of jsonFiles) {
     try {
-      const data = await fs.readJson(path.join(dir, file));
-      snapshots.push(data as MetricSnapshot);
+      const data = (await fs.readJson(path.join(dir, file))) as MetricSnapshot;
+      snapshots.push(data);
     } catch {
       // Skip malformed files
     }
@@ -80,10 +80,10 @@ export async function pruneSnapshots(outputDir: string, maxCount: number): Promi
   const fileSnapshots: Array<{ file: string; timestamp: number }> = [];
   for (const file of jsonFiles) {
     try {
-      const data = await fs.readJson(path.join(dir, file));
+      const data = (await fs.readJson(path.join(dir, file))) as MetricSnapshot;
       fileSnapshots.push({
         file,
-        timestamp: new Date((data as MetricSnapshot).timestamp).getTime(),
+        timestamp: new Date(data.timestamp).getTime(),
       });
     } catch {
       // Include unparseable files as timestamp=0 so they get pruned first

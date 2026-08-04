@@ -101,7 +101,7 @@ export class ArchJsonProvider {
     this.parserRuntime = options.parserRuntime ?? 'native';
     this.projectFileCounter =
       options.projectFileCounter ??
-      (async (root, globs, exclude) =>
+      (async (root, globs, exclude): Promise<number> =>
         (await globby(globs, { cwd: root, absolute: true, ignore: exclude })).length);
     this.fileDiscovery = new FileDiscoveryService();
 
@@ -131,7 +131,7 @@ export class ArchJsonProvider {
       nativeModuleRoot: this.globalConfig.nativeModuleRoot,
       // TASK-43: propagate effective-runtime diagnostics to stderr (console.error)
       // when verbose or on any fallback event — MCP stdout is never touched.
-      onDiagnostic: (line, selection) => {
+      onDiagnostic: (line, selection): void => {
         if (runtimeDiagnosticVisible(this.globalConfig.verbose === true, selection)) {
           console.error(line);
         }
@@ -521,7 +521,7 @@ export class ArchJsonProvider {
     const registryPlugin = this.registry?.getByName('typescript');
     const plugin =
       registryPlugin ??
-      (await (async () => {
+      (await (async (): Promise<InstanceType<typeof TypeScriptPlugin>> => {
         const { TypeScriptPlugin } = await import('@/plugins/typescript/index.js');
         return new TypeScriptPlugin();
       })());

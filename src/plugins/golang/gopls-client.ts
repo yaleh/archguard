@@ -214,12 +214,20 @@ interface LSPMessage {
   jsonrpc: '2.0';
   id?: number;
   method?: string;
-  params?: any;
-  result?: any;
+  params?: unknown;
+  result?: unknown;
   error?: {
     code: number;
     message: string;
   };
+}
+
+/** LSP hover response (MarkupContent | MarkedString | MarkedString[]) */
+interface HoverResponse {
+  contents:
+    | string
+    | { value: string; language?: string; kind?: string }
+    | Array<string | { value: string; language?: string; kind?: string }>;
 }
 
 interface Location {
@@ -230,7 +238,7 @@ interface Location {
   };
 }
 
-interface ImplementationResult {
+export interface ImplementationResult {
   structName: string;
   filePath: string;
   line: number;
@@ -248,7 +256,7 @@ export class GoplsClient {
   private pendingRequests = new Map<
     number,
     {
-      resolve: (value: any) => void;
+      resolve: (value: unknown) => void;
       reject: (error: Error) => void;
       timer: NodeJS.Timeout;
     }
@@ -500,10 +508,10 @@ export class GoplsClient {
 
       // Open document
       const content = await fs.readFile(absolutePath, 'utf-8');
-      await this.openDocument(absolutePath, content);
+      this.openDocument(absolutePath, content);
 
       // First, try textDocument/implementation
-      let result = await this.sendRequest('textDocument/implementation', {
+      let result = await this.sendRequest<Location | Location[]>('textDocument/implementation', {
         textDocument: {
           uri: `file://${absolutePath}`,
         },
@@ -521,7 +529,7 @@ export class GoplsClient {
           const interfaceLine = lines[line - 1];
           const typeIndex = interfaceLine.indexOf(typeName);
           if (typeIndex !== -1) {
-            result = await this.sendRequest('textDocument/implementation', {
+            result = await this.sendRequest<Location | Location[]>('textDocument/implementation', {
               textDocument: {
                 uri: `file://${absolutePath}`,
               },
@@ -535,7 +543,7 @@ export class GoplsClient {
       }
 
       // Close document
-      await this.closeDocument(absolutePath);
+      this.closeDocument(absolutePath);
 
       // Parse results
       if (!result) {
@@ -590,10 +598,10 @@ export class GoplsClient {
 
       // Open document
       const content = await fs.readFile(absolutePath, 'utf-8');
-      await this.openDocument(absolutePath, content);
+      this.openDocument(absolutePath, content);
 
       // Request hover information (contains type info)
-      const result = await this.sendRequest('textDocument/hover', {
+      const result = await this.sendRequest<HoverResponse>('textDocument/hover', {
         textDocument: {
           uri: `file://${absolutePath}`,
         },
@@ -604,7 +612,7 @@ export class GoplsClient {
       });
 
       // Close document
-      await this.closeDocument(absolutePath);
+      this.closeDocument(absolutePath);
 
       if (!result || !result.contents) {
         return null;
@@ -612,7 +620,11 @@ export class GoplsClient {
 
       // Extract type info from hover contents
       const contents =
-        typeof result.contents === 'string' ? result.contents : result.contents.value || '';
+        typeof result.contents === 'string'
+          ? result.contents
+          : Array.isArray(result.contents)
+            ? ''
+            : result.contents.value || '';
 
       return {
         name: symbol,
@@ -666,7 +678,7 @@ export class GoplsClient {
   /**
    * Open a document in gopls
    */
-  private async openDocument(filePath: string, content: string): Promise<void> {
+  private openDocument(filePath: string, content: string): void {
     this.sendNotification('textDocument/didOpen', {
       textDocument: {
         uri: `file://${filePath}`,
@@ -680,7 +692,7 @@ export class GoplsClient {
   /**
    * Close a document in gopls
    */
-  private async closeDocument(filePath: string): Promise<void> {
+  private closeDocument(filePath: string): void {
     this.sendNotification('textDocument/didClose', {
       textDocument: {
         uri: `file://${filePath}`,
@@ -727,7 +739,7 @@ export class GoplsClient {
   /**
    * Send LSP request and wait for response
    */
-  private async sendRequest(method: string, params: any): Promise<any> {
+  private async sendRequest<T = unknown>(method: string, params: unknown): Promise<T> {
     if (!this.process || !this.process.stdin) {
       throw new Error('gopls process not available');
     }
@@ -741,7 +753,7 @@ export class GoplsClient {
       params,
     };
 
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       // Set timeout
       const timer = setTimeout(() => {
         this.pendingRequests.delete(id);
@@ -749,7 +761,11 @@ export class GoplsClient {
       }, this.timeout);
 
       // Store request
-      this.pendingRequests.set(id, { resolve, reject, timer });
+      this.pendingRequests.set(id, {
+        resolve: (value: unknown) => resolve(value as T),
+        reject,
+        timer,
+      });
 
       // Send message
       const messageStr = JSON.stringify(message);
@@ -763,7 +779,7 @@ export class GoplsClient {
   /**
    * Send LSP notification (no response expected)
    */
-  private sendNotification(method: string, params: any): void {
+  private sendNotification(method: string, params: unknown): void {
     if (!this.process || !this.process.stdin) {
       return;
     }
@@ -812,7 +828,7 @@ export class GoplsClient {
 
       // Parse and handle message
       try {
-        const message: LSPMessage = JSON.parse(messageStr);
+        const message = JSON.parse(messageStr) as LSPMessage;
         this.handleMessage(message);
       } catch (error) {
         console.error('Failed to parse LSP message:', error);

@@ -8,6 +8,8 @@ import type {
   TestFileInfo,
   TestPatternConfig,
   TestMetrics,
+  CoverageLink,
+  TestIssue,
 } from '@/types/extensions/test-analysis.js';
 import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
 import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
@@ -313,8 +315,8 @@ export class TestAnalyzer {
 
   private computeMetrics(
     testFiles: TestFileInfo[],
-    coverageMap: any[],
-    issues: any[],
+    coverageMap: CoverageLink[],
+    issues: TestIssue[],
     archJson: ArchJSON
   ): TestMetrics {
     const byType: Record<TestFileInfo['testType'], number> = {
@@ -337,7 +339,7 @@ export class TestAnalyzer {
     }
 
     const coveredEntities = new Set(
-      coverageMap.filter((l: any) => l.coverageScore > 0).map((l: any) => l.sourceEntityId)
+      coverageMap.filter((l) => l.coverageScore > 0).map((l) => l.sourceEntityId)
     );
     const totalEntities = archJson.entities.length;
 
@@ -357,7 +359,7 @@ export class TestAnalyzer {
       entityCoverageRatio: totalEntities > 0 ? coveredEntities.size / totalEntities : 0,
       assertionDensity: totalCases > 0 ? totalAssertions / totalCases : 0,
       skipRatio: totalCases > 0 ? totalSkips / totalCases : 0,
-      issueCount: issueCount as any,
+      issueCount,
     };
   }
 }
