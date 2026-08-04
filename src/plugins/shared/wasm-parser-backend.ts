@@ -122,12 +122,14 @@ export class WasmParserBackend implements ParserBackend {
   /** One-time web-tree-sitter runtime initialization, cached per backend. */
   private initializeRuntime(): Promise<WtsModule> {
     if (this.cache.modulePromise !== undefined) return this.cache.modulePromise;
-    const initialized = (async () => {
+    const initialized = (async (): Promise<WtsModule> => {
       const wts = (await import('web-tree-sitter')) as unknown as WtsModule;
       const runtimePath = path.join(this.assetsDir, RUNTIME_WASM_FILE);
       // Fall back to web-tree-sitter's own bundled runtime if our copy is not
       // installed (same pinned version, so the ABI matches either way).
-      const locateFile = existsSync(runtimePath) ? { locateFile: () => runtimePath } : undefined;
+      const locateFile = existsSync(runtimePath)
+        ? { locateFile: (): string => runtimePath }
+        : undefined;
       await wts.Parser.init(locateFile);
       return wts;
     })();
@@ -143,7 +145,7 @@ export class WasmParserBackend implements ParserBackend {
     if (this.cache.languagePromises.has(language)) {
       return this.cache.languagePromises.get(language);
     }
-    const loaded: Promise<WtsLanguage> = (async () => {
+    const loaded: Promise<WtsLanguage> = (async (): Promise<WtsLanguage> => {
       const grammarPath = path.join(this.assetsDir, GRAMMAR_WASM_FILES[language]);
       if (!existsSync(grammarPath)) {
         throw new Error(

@@ -9,6 +9,7 @@ import {
   formatSpawnerLabel,
   getLifecycleTag,
   sanitizeId,
+  type PkgTreeNode,
 } from './template-shared.js';
 
 export function renderGoroutineTopology(topology: GoroutineTopology): string {
@@ -18,7 +19,7 @@ export function renderGoroutineTopology(topology: GoroutineTopology): string {
   const packageGroups = new Map<string, NodeDecl[]>();
   const ungrouped: NodeDecl[] = [];
   const declaredIds = new Set<string>();
-  const addDecl = (pkg: string | undefined, decl: NodeDecl) => {
+  const addDecl = (pkg: string | undefined, decl: NodeDecl): void => {
     if (pkg) {
       if (!packageGroups.has(pkg)) packageGroups.set(pkg, []);
       packageGroups.get(pkg).push(decl);
@@ -70,11 +71,7 @@ export function renderGoroutineTopology(topology: GoroutineTopology): string {
 
   const usedSubgraphIds = new Set<string>();
   const depthMap = new Map<string, number>();
-  const renderTreeNode = (
-    treeNode: { pkg: string; isVirtual: boolean; children: any[] },
-    indent: string,
-    depth: number
-  ): void => {
+  const renderTreeNode = (treeNode: PkgTreeNode, indent: string, depth: number): void => {
     const sgId = createSubgraphId(treeNode.pkg, usedSubgraphIds);
     depthMap.set(sgId, depth);
     output += `\n${indent}subgraph ${sgId}["${treeNode.pkg}"]\n`;

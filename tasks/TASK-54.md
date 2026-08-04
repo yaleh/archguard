@@ -125,6 +125,16 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `src/cli/commands/check.ts`: `rules as any[]` → `as unknown as FitnessRule[]`. −2.
 - `tsc --noEmit` exit 0.
 
+### Batch 13 — atlas renderers + misc src typing (commit 13)
+- `src/plugins/golang/atlas/renderers/{goroutine,capability,flow}-mermaid-template.ts`: `children: any[]` → `PkgTreeNode[]` (existing shared type); added `: void` return types on render arrows. −3/2/2.
+- `src/plugins/golang/atlas/builders/flow-graph-builder.ts`: `: void` on `scanCalls`/`scan`. −2.
+- `src/core/query/arch-metrics-cognitive.ts`: `.reduce<number>` accumulator. −3.
+- `src/cli/index.ts`: `require('../../package.json') as { version: string }`. −3.
+- `src/plugins/shared/wasm-parser-backend.ts`: async IIFEs + locateFile arrow return types. −3.
+- `src/cli/cache/cache-manager.ts`: `readJson` cast to `CacheEntry<T>`; `walk` → `Promise<void>`. −2.
+- `src/analysis/snapshot-store.ts`: `readJson` casts to `MetricSnapshot` (2 sites). −2.
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).

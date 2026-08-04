@@ -8,6 +8,7 @@ import {
   formatEntryLabel,
   packageOfEntry,
   sanitizeId,
+  type PkgTreeNode,
 } from './template-shared.js';
 
 export function renderFlowGraph(
@@ -44,11 +45,7 @@ export function renderFlowGraph(
 
   const depthMap = new Map<string, number>();
   const usedSubgraphIds = new Set<string>();
-  const renderEntryPkg = (
-    node: { pkg: string; isVirtual: boolean; children: any[] },
-    indent: string,
-    depth: number
-  ): void => {
+  const renderEntryPkg = (node: PkgTreeNode, indent: string, depth: number): void => {
     const sgId = createSubgraphId(node.pkg, usedSubgraphIds);
     depthMap.set(sgId, depth);
     output += `${indent}subgraph ${sgId}["${node.pkg}"]\n`;

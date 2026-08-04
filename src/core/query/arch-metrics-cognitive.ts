@@ -32,7 +32,7 @@ export class CognitiveMetrics {
       .sort((a, b) => b.dependentCount - a.dependentCount)
       .slice(0, 10);
 
-    const atlasEdgeCount = Object.values(this.ext.getAtlasLayers() ?? {}).reduce(
+    const atlasEdgeCount = Object.values(this.ext.getAtlasLayers() ?? {}).reduce<number>(
       (sum, layer) => sum + ((layer as { edges?: unknown[] }).edges?.length ?? 0),
       0
     );
