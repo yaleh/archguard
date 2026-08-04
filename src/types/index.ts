@@ -114,12 +114,12 @@ export type KnownEntityType =
   | 'function';
 
 /**
- * Open entity type: the seven built-in kinds plus any custom string that a
- * language plugin registers. Widened from the closed KnownEntityType union so
- * that values like 'package', 'lock_domain', etc. are first-class citizens
- * without requiring `as any` casts.
+ * Open entity type: any string a language plugin registers. Values like
+ * 'package', 'lock_domain', etc. are first-class citizens without requiring
+ * `as any` casts. The seven built-in kinds (see KnownEntityType) are a subset
+ * of the accepted strings.
  */
-export type EntityType = KnownEntityType | string;
+export type EntityType = string;
 
 /**
  * Visibility modifiers

@@ -453,7 +453,7 @@ describe('OutputPathResolver', () => {
       const resolver = new OutputPathResolver(config);
 
       // Use 'name' instead of 'baseName' (new interface)
-      const result = resolver.resolve({ name: 'custom' } as any);
+      const result = resolver.resolve({ name: 'custom' });
 
       expect(result.baseName).toBe('custom');
       expect(result.paths.mmd).toContain('custom.mmd');

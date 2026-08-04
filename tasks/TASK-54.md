@@ -145,6 +145,13 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - LEFT (interface-mandated `async` with no await, not type-safety): `java/index.ts dispose`, `cpp/index.ts dispose`, `native-parser-backend.ts createSession`.
 - `tsc --noEmit` exit 0.
 
+### Batch 15 — last src type-safety stragglers (commit 15)
+- `src/types/index.ts`: `EntityType = KnownEntityType | string` → `string` (union collapses to string; semantically identical) + comment updated. −1 no-redundant-type-constituents.
+- `src/cli/processors/arch-json-provider.ts`: return types on `projectFileCounter` arrow (`Promise<number>`), `onDiagnostic` (`: void`), dynamic-import IIFE (`Promise<InstanceType<typeof TypeScriptPlugin>>`). −3 explicit-return-type (5 no-console remain).
+- `src/cli/utils/__tests__/output-path-resolver.test.ts`: removed redundant `as any` on `resolve({ name: 'custom' })`. −2.
+- `src/cli/mcp/mcp-server.ts`: `outputScopeParam` annotated `z.ZodType<OutputScope>` — earlier `z.ZodDefault<z.ZodEnum<...>>` broke zod v4 inference; `z.ZodType<OutputScope>` is the correct public type. −1 explicit-return-type (unblocked from batch 10's exclusion).
+- `tsc --noEmit` exit 0.
+
 ### Batch 7 — query loader + ts plugin package.json typing (commit 7)
 - `src/cli/query/engine-loader.ts`: `fs.readJson(...)`/`JSON.parse(...)` results cast to `QueryManifest`/`ArchJSON`/`ArchIndex`/`TestAnalysis` (were unsafe `any`); `archJson.extensions` now typed. −13 warnings.
 - `src/plugins/typescript/index.ts`: `packageJson` cast to typed `{dependencies?/devDependencies?/peerDependencies?: Record<string,string>}`; `.bind(this)` → arrow wrappers for `dependencyExtractor`/`validator` fields; removed now-unnecessary `as string`. −12 warnings (3 `require-await` on interface methods remain, not type-safety).
