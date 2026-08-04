@@ -86,3 +86,7 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
   - `JSON.parse(pkg)` cast to `{ dependencies?; devDependencies?: Record<string,string> }`.
   - Four `catch (e: any)` → `catch (e)` + `e instanceof Error ? e.message : String(e)`.
 - −21 warnings (20 type-safety + 1 explicit-return-type). `tsc --noEmit` exit 0.
+
+### Batch 5 — java dependency-extractor regex match typing (commit 5)
+- `src/plugins/java/dependency-extractor.ts`: `let match;` (evolving any) → `let match: RegExpExecArray | null` in both Maven/Gradle extractors; `mapMavenScope(scope: JavaDependencyScope)` → `scope: string` (regex can capture 'system'/'import'; switch default already handled them), removed now-unused `JavaDependencyScope` type alias.
+- −20 warnings (all type-safety). `tsc --noEmit` exit 0.
