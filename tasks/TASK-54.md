@@ -1,7 +1,7 @@
 ---
 id: TASK-54
 title: "TASK-54: 清理 4095 lint warnings（类型安全类）"
-status: todo
+status: done
 labels:
   - defect
   - lint
@@ -12,7 +12,7 @@ extra:
 ---
 # TASK-54: 清理 4095 lint warnings（类型安全类）
 
-status: todo
+status: done
 
 ## Summary
 
@@ -164,3 +164,10 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 - `tsc --noEmit` exit 0 throughout; invariant held.
 - High-leverage helper fixes: `validateFull` stages discriminated union (killed 88 in mermaid chain), `sendRequest<T>` generic in gopls-client (killed 21), `errorMessage()` util (killed no-base-to-string).
 - Worktree `/tmp/quay-wt-task54` on branch `task/TASK-54`, 15 commits, working tree clean. Not merged/pushed.
+
+### 完成（2026-08-04）
+
+- **merge → CI round 12（run 30869547398）success**：Node 22 + Node 24 + Quality Gate 三 job 全绿
+  ——类型安全改动（58 个 src 文件 / 394+/213−）通过全量套件验证。
+- lint **3810 warnings（−325）/ 0 errors**；src/ 类型安全类（no-unsafe-*/no-explicit-any）全消除。
+- 代价过高项（no-console ~99、require-await 9）已记录理由，留待后续任务。
