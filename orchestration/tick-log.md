@@ -16,7 +16,7 @@ grep -c 'escalate' orchestration/tick-log.md
 | 类型 | 计数 |
 |---|---|
 | no-action | 10 |
-| unblock | 4 |
+| unblock | 5 |
 | correct | 1 |
 | escalate | 0 |
 
@@ -69,4 +69,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 43 | 23:57Z | no-action | **TASK-59 B 类清单覆盖过半**（独立证据）：worktree 再增 2 提交（3e7e565 mermaid generator 深层分支 9 cases、e05cdf0 analysis test-coverage-mapper/history-aggregator）——parser/shared/atlas/mermaid/analysis 均已覆盖，B 类剩余 kotlin 待补。subagent 38m42s/↓230.9k，当前「Reconciling lint results in package.json」修 lint。健康，无 BLOCKED/OVER90。工作树干净。 | 忙（TASK-59 subagent 修 lint） |
 | 44 | 00:17Z | no-action | **TASK-59 done——B 类边界稳定闭环，CI 全绿**（独立核实）：merge `c6d5c9c`（TASK-59 boundary-list B-class stabilization，10 测试文件）→ **CI success**；`tasks/TASK-59.md` status=done；最近 3 个 CI run 全绿（c6d5c9c、ea4b384、dbb83ef）。B 类覆盖 parser（call-edge-extractor）、shared（native-parser-backend/plugin-factory）、atlas（goroutine-topology/package-graph）、mermaid（generator 深层分支 9 cases，对抗性变异测试）、analysis（test-coverage-mapper/history-aggregator）。subagent 51m40s/↓254.0k 仍在收尾统计（Collecting final test stats），内层将出报告。 | 忙（TASK-59 subagent 收尾统计） |
 | 45 | 00:18Z | no-action | **TASK-59 批次完整收尾**（独立证据）：close-doc `be56492` 已提交（docs-task-59 close），遥测 inProgress=[]（批次清空），工作树干净。内层在「确认 round 11 全绿后简报整个链条收口」——round 11（be56492 docs-close 触发）in_progress 待绿，然后内层做 TASK-53→59 整链收口简报。就绪队列：TASK-54（warnings 清理）、TASK-55（stranded 分诊）。收口简报后预计派发其一。 | 忙（等 round 11 绿 → 整链收口简报） |
+| 46 | 00:38Z | unblock | **内层 idle 且等待条件已满足，外层催续**。观察：内层 pane 冻结 ~20min（subagent 时间戳 51m40s/254.0k 不变），遥测 inProgress=[]。核实 round 11（be56492）=completed/success——内层「确认 round 11 全绿」的等待条件已满足。判忙闲两次 hash 相同=IDLE。催派送达（grep=2）：确认 round 11 绿 → 完成整链收口简报（TASK-53→59）→ 派发下一就绪任务（TASK-54 warnings 缺陷类优先 / TASK-55 stranded），附 --task-start 计量。SESSION-RESUMED 确认内层恢复。 | 空闲（等 round 11）→ 接收催续 |
 
