@@ -1,7 +1,7 @@
 ---
 id: TASK-55
 title: "TASK-55: 处理 3 个 stranded 工作树分支（task/T3、task/T50、task/T52）"
-status: todo
+status: done
 labels:
   - cleanup
   - investigation
@@ -11,7 +11,7 @@ extra:
 ---
 # TASK-55: 处理 3 个 stranded 工作树分支
 
-status: todo
+status: done
 
 ## Summary
 
@@ -58,3 +58,15 @@ grep -c 'task/T' orchestration/escalations.md
 | reviewer | outer |
 | at | 2026-08-03T16:10Z |
 | changed | — |
+
+## Progress
+
+2026-08-04T01:50Z — inner 层 TASK-55 执行完成（worktree `/tmp/quay-wt-task55`）：
+- 3 条分诊已追加至 `orchestration/escalations.md`（分支、现象、内容概要、建议 + 依据命令）。
+- 结论：task/T3、task/T50、task/T52 全部核实为**无内容丢失**，建议「可安全清理」。
+  - T3/T50（error 分类）：tip 同为 `af8985a`，`git rev-list --count master..<branch>` = 0，
+    内容经 T52 lineage 合入 master，loop.md/issue template/setup 脚本均存在且被后续演化。
+  - T52（merged-then-reverted 误报）：2 个「缺失」plan/proposal 文档被 `a1ea947`
+    纯 rename 到 `docs/archive/`（逐字节一致），其余 5 个 merge-added 文件在 master 均在。
+- 未做 merge、未删分支、未 `--clean-stale`，留待人工裁定。
+- 验证：`grep -c 'task/T' orchestration/escalations.md` → 3。
