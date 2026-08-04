@@ -90,3 +90,7 @@ src/ warnings = 429, tests/ warnings = 3707. Priority: src/.
 ### Batch 5 — java dependency-extractor regex match typing (commit 5)
 - `src/plugins/java/dependency-extractor.ts`: `let match;` (evolving any) → `let match: RegExpExecArray | null` in both Maven/Gradle extractors; `mapMavenScope(scope: JavaDependencyScope)` → `scope: string` (regex can capture 'system'/'import'; switch default already handled them), removed now-unused `JavaDependencyScope` type alias.
 - −20 warnings (all type-safety). `tsc --noEmit` exit 0.
+
+### Batch 6 — diff command options typing (commit 6)
+- `src/cli/commands/diff.ts`: typed `.action` options `{ from?: string; to?: string; outputDir?: string }`; `loadSnapshots(options.outputDir ?? '.archguard')`.
+- −10 type-safety warnings; 8 `no-console` remain (diff table printed to stdout intentionally — changing to warn/error alters stderr behavior, out of scope). `tsc --noEmit` exit 0.
