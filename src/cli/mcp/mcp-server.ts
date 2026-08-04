@@ -27,6 +27,7 @@ import type {
   PackageGraph,
   CapabilityGraph,
   GoroutineTopology,
+  GoAtlasLayers,
 } from '@/types/extensions/go-atlas.js';
 import { registerAnalyzeTool } from './analyze-tool.js';
 import { registerTestAnalysisTools } from './tools/test-analysis-tools.js';
@@ -55,8 +56,8 @@ const scopeParam = z
     'Query scope key, label fragment, or the synthetic alias "global". Omit to use manifest.globalScopeKey resolution.'
   );
 
-function textResponse(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
+function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
+  return { content: [{ type: 'text', text }] };
 }
 
 export function resolveRoot(projectRoot: string | undefined, defaultRoot: string): string {
@@ -97,7 +98,7 @@ export function createMcpServer(
     defaultRoot,
     parseWorkerPools,
   });
-  const originalClose = server.close.bind(server);
+  const originalClose = (): Promise<void> => server.close();
   server.close = async (): Promise<void> => {
     await parseWorkerPools.terminate();
     await originalClose();
@@ -121,7 +122,7 @@ export function wireParsePoolTeardown(
   transport: StdioServerTransport,
   parseWorkerPools: ProcessParseWorkerPools,
   input: Readable = process.stdin,
-  exit: (code: number) => never = process.exit,
+  exit: (code: number) => never = (code) => process.exit(code),
   signals: Pick<EventEmitter, 'once' | 'off'> = process
 ): () => void {
   let cleanup: Promise<void> | undefined;
@@ -578,7 +579,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           );
         }
 
-        const data = extensionAccessor.getAtlasLayer(layer as any);
+        const data = extensionAccessor.getAtlasLayer(layer as keyof GoAtlasLayers);
 
         if (data === undefined) {
           return textResponse(
