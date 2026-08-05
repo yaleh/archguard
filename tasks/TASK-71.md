@@ -1,7 +1,7 @@
 ---
 id: TASK-71
 title: "TASK-71: B 类剩余——kotlin 插件分支密集路径直接 import 单测"
-status: todo
+status: ready
 labels:
   - test-coverage
   - boundary-list

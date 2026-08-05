@@ -314,6 +314,17 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    与 check-adr 规则并列写入本队列状态源。
 4. **TASK-50 #4 / TASK-62 #8 / TASK-64 #11 的 lint DoD 项**：本指令修完 lint 后，外层可重勾。
 
+## 15:5xZ 更新（下一批派发：TASK-70/71）
+
+1. **外层 15:48Z 方向裁定**：lint 确认 0 errors（TASK-66 修复生效）；TASK-50/62/64 lint DoD
+   已由外层重勾。下一批：**TASK-70**（--prefer-offline 卫生项，TASK-57 遗留）+ **TASK-71**
+   （kotlin 插件分支密集路径直接 import 单测，TASK-59 边界清单剩余）。TASK-72（core generator）、
+   A 类 E2E 延后。
+2. **§3.6 补晋 + §4 派发**：TASK-70/71 资格全通过（self-touch OK、touches resolve、并发 disjoint
+   同批、lint gate 在 AC）→ todo→ready、§3.5 开括号（fm-TASK-70-… / fm-TASK-71-…）、§4 并发派发
+   （worktree task-70 / task-71）。派发 prompt 含 **lint gate**（新代码 lint-clean）。
+3. **在飞**：TASK-70、TASK-71（2 后台 subagent）。full-suite green（5090/0）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。

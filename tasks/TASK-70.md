@@ -1,7 +1,7 @@
 ---
 id: TASK-70
 title: "TASK-70: 采纳 --prefer-offline 卫生项（3 个 npm 安装集成测试走本地缓存）"
-status: todo
+status: ready
 labels:
   - hygiene
   - integration-test
