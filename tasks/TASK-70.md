@@ -33,10 +33,10 @@ TASK-57 实测 `--prefer-offline`（3 个 top-5 慢安装集成测试走本地�
 
 ## Acceptance Criteria
 
-- [ ] 3 个集成测试文件按 TASK-57 Evidence 落地 --prefer-offline / NPM_CONFIG_PREFER_OFFLINE
-- [ ] `npx vitest run tests/integration/plugin-install.test.ts tests/integration/install-policy.test.ts tests/integration/installer-claude-user-scope.test.ts` 全绿
-- [ ] 改动文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
-- [ ] 不 claim 性能优化（无改善声明，只是卫生采纳）
+- [x] 3 个集成测试文件按 TASK-57 Evidence 落地 --prefer-offline / NPM_CONFIG_PREFER_OFFLINE
+- [x] `npx vitest run tests/integration/plugin-install.test.ts tests/integration/install-policy.test.ts tests/integration/installer-claude-user-scope.test.ts` 全绿
+- [x] 改动文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
+- [x] 不 claim 性能优化（无改善声明，只是卫生采纳）
 
 ## Touches
 
@@ -55,6 +55,33 @@ TASK-57 实测 `--prefer-offline`（3 个 top-5 慢安装集成测试走本地�
 | invoke | `npx vitest run tests/integration/plugin-install.test.ts tests/integration/install-policy.test.ts tests/integration/installer-claude-user-scope.test.ts` |
 | control | 去掉 --prefer-offline → 测试仍绿（卫生项不改变行为） |
 | resume | 每文件落盘；被打断可从缺口续 |
+
+## Execution（2026-08-05，内层执行）
+
+**改动**（3 文件，TASK-57 Evidence 直接落地，只加 npm 安装参数/env，未改测试断言语义）：
+- `tests/integration/plugin-install.test.ts`：npm install 数组加 `--prefer-offline`
+- `tests/integration/install-policy.test.ts`：npm install 数组加 `--prefer-offline`
+- `tests/integration/installer-claude-user-scope.test.ts`：real-claude 边界测试 `isolatedEnv` 加 `NPM_CONFIG_PREFER_OFFLINE: 'true'`
+
+**invoke 实跑证据**（worktree `task/TASK-70`，先 `npm run build` 后跑）：
+```
+$ npx vitest run tests/integration/plugin-install.test.ts tests/integration/install-policy.test.ts tests/integration/installer-claude-user-scope.test.ts
+ ✓ tests/integration/plugin-install.test.ts (14 tests) 93840ms
+ ✓ tests/integration/installer-claude-user-scope.test.ts (33 tests) 80509ms
+ ✓ tests/integration/install-policy.test.ts (8 tests) 57829ms
+
+ Test Files  3 passed (3)
+      Tests  55 passed (55)
+   Start at  15:51:52
+   Duration  238.55s (transform 2.55s, setup 0ms, collect 5.24s, tests 232.18s, ...)
+
+VITEST EXIT: 0
+```
+注：install-policy 驱动跑会输出 gopls unavailable / Language.query deprecated 的 stderr 警告（既有现象，非失败）。
+
+**lint（scoped，治本规则）**：`npx eslint tests/integration/plugin-install.test.ts tests/integration/install-policy.test.ts tests/integration/installer-claude-user-scope.test.ts --ext .ts` → 0 errors（125 既有 warning，均不在改动行）。`npx prettier --check` 3 文件 → 全 clean。
+
+**卫生采纳声明**：本任务只采纳 `--prefer-offline` 卫生项（本地 npm 缓存优先，减少外部网络依赖脆弱性），**不 claim 任何性能优化**（TASK-57 已实测无净改善，落 σ 噪声内）。
 
 ## Definition of Done
 
