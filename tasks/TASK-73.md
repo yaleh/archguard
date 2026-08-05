@@ -31,11 +31,30 @@ TASK-58 边界清单 **A 类（用户可见契约 → 端到端）**：CLI 命�
 
 ## Acceptance Criteria
 
-- [ ] analyze/init/cache 三个命令的 E2E 契约断言完整（退出码 + 关键输出）
-- [ ] 每个新增/修改断言有具体契约依据（不是空转）
-- [ ] `npx vitest run tests/integration/cli/` 全绿
-- [ ] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
-- [ ] 不设全局 coverage 百分比目标
+- [x] analyze/init/cache 三个命令的 E2E 契约断言完整（退出码 + 关键输出）
+- [x] 每个新增/修改断言有具体契约依据（不是空转）
+- [x] `npx vitest run tests/integration/cli/` 全绿
+- [x] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
+- [x] 不设全局 coverage 百分比目标
+
+## Execute Evidence（执行代理落盘，2026-08-05）
+
+新文件：`tests/integration/cli/user-entry-contract.test.ts`（7 个 E2E 契约断言，覆盖 analyze/init/cache 三命令：退出码 + 输出存在性 + 关键输出内容）。CLI 实现未改动（`src/cli/commands/*` 只读审计）。
+
+**invoke 实跑**（Contract.invoke = `npx vitest run tests/integration/cli/`）：
+
+```
+Test Files  2 passed | 1 skipped (3)
+     Tests  17 passed | 2 skipped (19)
+   Duration  14.73s
+```
+
+新增用例明细（7 passed）：
+- analyze -f json：exit 0；stdout 含 "Analysis complete!" / "Output directory"；.archguard/output/index.md 存在；ArchJSON version=1.1、language=typescript、entities/relations 为数组、entities 含 fixture 的 App/Helper。
+- init：生成 archguard.config.json 且可被 ConfigLoader 回读（format=mermaid、workDir=./.archguard、diagrams=[]）；init -f js 生成 archguard.config.js（含 export default）；对已存在配置打印 "Configuration file already exists" 且 exit 0（handler 契约，非硬失败）。
+- cache stats：空缓存全 0（Hits: 0 / Misses: 0 / Hit Rate: 0.00% / Total Size: 0 Bytes）；有缓存条目时 Total Size 非 0；cache clear 删除缓存目录并打印 "Cache cleared successfully"，exit 0。
+
+**lint（scoped）**：`npx eslint tests/integration/cli/user-entry-contract.test.ts` → 0 errors / 0 warnings（exit 0）。
 
 ## Touches
 
