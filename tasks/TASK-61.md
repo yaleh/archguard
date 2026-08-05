@@ -1,7 +1,7 @@
 ---
 id: TASK-61
 title: "TASK-61: 恢复 types↔analysis 环的回归守卫测试到 master"
-status: ready
+status: done
 labels:
   - defect
   - test
@@ -64,9 +64,9 @@ resume    守卫落地且 scoped 绿即写盘进度；被打断可从「已 git 
 
 ## Definition of Done
 
-- [ ] `npx vitest run tests/types/no-analysis-imports.test.ts` 退出码 0
-- [ ] 负控制输出已贴入任务体（证明守卫抓得住回归）
-- [ ] 守卫文件已提交到 master（随任务 fan-in 合并）
+- [x] `npx vitest run tests/types/no-analysis-imports.test.ts` 退出码 0
+- [x] 负控制输出已贴入任务体（证明守卫抓得住回归）
+- [x] 守卫文件已提交到 master（随任务 fan-in 合并）
 
 ## Evidence
 

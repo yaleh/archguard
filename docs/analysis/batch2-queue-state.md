@@ -94,3 +94,12 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 - quay-init 备份：`.quay/quay-init-backups/1785910228/`（= HEAD 版本）
 - quay-tasks 对账：`docs/analysis/quay-tasks-reconciliation.md`
 - 目标与 AC：`orchestration/goals-and-ac.md`
+
+## 12:33Z 更新（外层 tick #60：TASK-60/61 收尾 + 机制地基裁定）
+
+1. **TASK-61 已收尾**（外层）：守卫测试独立核实（scoped 绿 2 passed + 负控制红已贴 + 已合并 53c6d95），翻 done + 关括号 fm-TASK-61。
+2. **TASK-60 已收尾**（外层）：裁定方案 a 后内层执行——机制地基提交 d9dbd75（16 文件 +2947 行，工作树机制 = quay canonical，md5 逐字节核实）+ TASK-60 合并 f3b955f（15 非脚本交付物 +982 行：TASK-62..66 搬入 + quay-tasks PARKED + 对账文档）。独立核实 DoD 4 项（对账落盘/PARKED/池>0/重复未搬）→ 翻 done + 关括号 fm-TASK-60。
+3. **master 从干净检出已修复**：三个函数（taskWorkLanded/checkTaskTouchesResolve/expandDeclaredTouches）已 committed。
+4. **内层发现真机制 bug**：ready-pool-check not-yet-flipped 检测对 Touches `(new)` 反引号格式失效（TASK-60 工作落地未被排除）。内层在修 TASK-60.md Touches 格式。
+5. **full-suite 推迟**：资源闸 WAIT（CPU some avg10≥40），且树刚稳定。待负载降 + 内层 Touches 修复落地后起。
+6. **下一步**：TASK-62..66 是 todo 新候选，内层按 §3.6 补晋后派发。
