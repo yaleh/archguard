@@ -27,7 +27,10 @@ import {
   enrichPackageNodes,
 } from '../mcp/tools/atlas-analytics-tools.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
+import { TREND_DELTA_THRESHOLD, DRIFT_THRESHOLDS } from '@/analysis/jl/types.js';
+import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../utils/drift-baseline.js';
+import { formatDriftReport } from '../utils/drift-reporter.js';
 
 interface QueryOptions {
   archDir?: string;
@@ -96,6 +99,9 @@ interface QueryOptions {
 
   // ADR-007 §4: arch health (mirrors archguard_get_intrinsic_dimension)
   intrinsicDimension?: true;
+
+  // ADR-007 §4: arch drift (mirrors archguard_get_architecture_drift)
+  architectureDrift?: true;
 }
 
 /**
@@ -229,6 +235,12 @@ export function createQueryCommand(): Command {
         'Show architecture intrinsic dimension (d_int) from .archguard/arch-health-history.json'
       )
 
+      // ADR-007 §4: arch drift (mirrors archguard_get_architecture_drift)
+      .option(
+        '--architecture-drift',
+        'Show per-entity L2 architecture drift between the two latest .archguard/arch-health-history.json snapshots'
+      )
+
       .action(queryHandler)
   );
 }
@@ -250,6 +262,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     // the archguard_get_intrinsic_dimension MCP tool — ADR-007 CLI/MCP parity)
     if (opts.intrinsicDimension) {
       await handleIntrinsicDimension(opts);
+      return;
+    }
+
+    // --architecture-drift: compute drift between the two latest snapshots (mirrors
+    // the archguard_get_architecture_drift MCP tool — ADR-007 CLI/MCP parity)
+    if (opts.architectureDrift) {
+      await handleArchitectureDrift(opts);
       return;
     }
 
@@ -684,6 +703,76 @@ function toDisplayEntities(raw: Entity[] | Partial<Entity>[] | EdgeListOutput): 
 // -- List scopes handler --
 
 /**
+ * --architecture-drift: compute per-entity L2 architecture drift between the two
+ * latest snapshots and print the report. Mirrors the archguard_get_architecture_drift
+ * MCP tool's read path (ADR-007 CLI/MCP parity) — reuses TASK-65's drift-baseline /
+ * drift-reporter / drift-calculator.
+ */
+async function handleArchitectureDrift(opts: QueryOptions): Promise<void> {
+  const archDir = resolveArchDir(opts.archDir);
+  const root = _path.dirname(archDir);
+  const history = await readHistoryFile(archDir);
+  const isJson = opts.format === 'json';
+
+  const noBaseline = () => {
+    const payload = {
+      report: null,
+      hasBreakingDrift: false,
+      breakingEntities: [],
+      message: 'no baseline available',
+    };
+    if (isJson) console.log(JSON.stringify(payload, null, 2));
+    else console.log('No baseline available: need at least two `analyze --arch-health` snapshots.');
+  };
+
+  if (history === null || history.snapshots.length < 2) {
+    noBaseline();
+    return;
+  }
+
+  const resolved = await resolveDriftSnapshots(
+    undefined,
+    undefined,
+    history,
+    root,
+    reanalyzeCommitSnapshot
+  );
+  if (resolved.kind === 'from-not-found') {
+    console.log(`Snapshot not found for commit: ${resolved.commit}`);
+    return;
+  }
+  if (resolved.kind === 'no-baseline') {
+    noBaseline();
+    return;
+  }
+
+  const report = DriftCalculator.compare(resolved.from, resolved.to, {
+    threshold: DRIFT_THRESHOLDS.critical,
+    topK: 10,
+    minLevel: 'stable',
+  });
+
+  if (isJson) {
+    console.log(
+      JSON.stringify(
+        {
+          report,
+          hasBreakingDrift: report.drifts.some((d) => d.level === 'critical'),
+          breakingEntities: report.drifts
+            .filter((d) => d.level === 'critical')
+            .map((d) => d.entityId),
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  console.log(formatDriftReport(report));
+}
+
+/**
  * --intrinsic-dimension: read the persisted arch-health history and print the
  * current snapshot + monotonic trend. Mirrors the archguard_get_intrinsic_dimension
  * MCP tool's read (ADR-007 CLI/MCP parity) — no engine load needed.
@@ -693,7 +782,13 @@ async function handleIntrinsicDimension(opts: QueryOptions): Promise<void> {
   const history = await readHistoryFile(archDir);
   const isJson = opts.format === 'json';
 
-  const shape = (s: { dInt: number; dIntNormalized: number; entityCount: number; mode: string; timestamp: string }) => ({
+  const shape = (s: {
+    dInt: number;
+    dIntNormalized: number;
+    entityCount: number;
+    mode: string;
+    timestamp: string;
+  }) => ({
     dInt: s.dInt,
     dIntNormalized: s.dIntNormalized,
     entityCount: s.entityCount,
@@ -721,7 +816,9 @@ async function handleIntrinsicDimension(opts: QueryOptions): Promise<void> {
   }
 
   if (isJson) {
-    console.log(JSON.stringify({ current: shape(current), history: sorted.map(shape), trend }, null, 2));
+    console.log(
+      JSON.stringify({ current: shape(current), history: sorted.map(shape), trend }, null, 2)
+    );
     return;
   }
 
