@@ -1,7 +1,7 @@
 ---
 id: TASK-76
 title: "TASK-76: A 类——插件注册表/外部插件加载 E2E 稳定化"
-status: todo
+status: ready
 labels:
   - test-coverage
   - boundary-list

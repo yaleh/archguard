@@ -405,6 +405,15 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 4. **池**：pool=1（TASK-75 done 待外层翻）；**无新候选**——任务库再次耗尽。A 类剩余：
    插件注册表（后续分批）。
 
+## 17:3xZ 更新（TASK-76 派发）
+
+1. **外层 17:29Z 方向**：TASK-75 已收尾（done + 关括号）；full-suite 验证中。下一批
+   **TASK-76**（A 类最后一批——插件注册表/外部插件加载 E2E 稳定化：内置插件枚举、外部路径加载、
+   非法报错，只读审计，含 lint gate）。**A 类分批（CLI/config/输出格式/插件注册表）至此全建。**
+2. **§3.6 补晋 + §4 派发**：TASK-76 资格通过（self-touch OK、resolve 多数解析、lint gate 在位）→
+   todo→ready、§3.5 开括号（fm-TASK-76-…）、§4 后台派发（worktree task-76）。
+3. **在飞**：TASK-76。TASK-62~75 全部已合并。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
