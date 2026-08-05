@@ -22,10 +22,6 @@ function rowFor(signature: number, dim: number): number[] {
   return oneHot(dim, signature);
 }
 
-function repeatRows(signature: number, dim: number, count: number): number[][] {
-  return Array.from({ length: count }, () => rowFor(signature, dim));
-}
-
 /** 3 packages × 20 entities, one distinct signature per package (well-aligned). */
 function alignedFixture(): { entities: string[]; matrix: number[][] } {
   const entities: string[] = [];
@@ -66,7 +62,7 @@ function fusionFixture(): { entities: string[]; matrix: number[][] } {
   const entities: string[] = [];
   const matrix: number[][] = [];
   const packages = ['aa.core', 'bb.core', 'cc.core'];
-  packages.forEach((pkg, p) => {
+  packages.forEach((pkg) => {
     for (let i = 0; i < 2; i++) {
       entities.push(`${pkg}.F${i}`);
       matrix.push(rowFor(0, 4)); // shared signature → fusion cluster
@@ -111,11 +107,9 @@ describe('BoundaryAlignmentScorer', () => {
   });
 
   it('purity = 1.0 / BAS = 1.0 when a package dominates its cluster', () => {
-    const scores = BoundaryAlignmentScorer.score(
-      ['a.core.X1', 'a.core.X2'],
-      [0, 0],
-      { minPackageSize: 1 }
-    );
+    const scores = BoundaryAlignmentScorer.score(['a.core.X1', 'a.core.X2'], [0, 0], {
+      minPackageSize: 1,
+    });
     expect(scores).toHaveLength(1);
     expect(scores[0].purity).toBe(1.0);
     expect(scores[0].coverage).toBe(1.0);
@@ -202,9 +196,9 @@ describe('ClusterBoundaryAnalyzer', () => {
     const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
     const split = report.splitPackages.find((s) => s.packageName === 'aa.core');
     expect(split).toBeDefined();
-    expect(split!.purity).toBeLessThan(0.5);
+    expect(split.purity).toBeLessThan(0.5);
     // clusterDistribution ratios sum to 1.0 (within float tolerance)
-    const sum = split!.clusterDistribution.reduce((acc, d) => acc + d.ratio, 0);
+    const sum = split.clusterDistribution.reduce((acc, d) => acc + d.ratio, 0);
     expect(sum).toBeCloseTo(1.0, 9);
     // bb.core / cc.core are pure → not flagged.
     expect(report.splitPackages.some((s) => s.packageName === 'bb.core')).toBe(false);
@@ -214,12 +208,7 @@ describe('ClusterBoundaryAnalyzer', () => {
   it('minPackageSize guard: a small split package is omitted from splitPackages', () => {
     // 2 entities of pkgA in different clusters → purity 0.5 but size 2 < 3.
     const entities = ['aa.core.S1', 'aa.core.S2', 'bb.core.A1', 'bb.core.B1'];
-    const matrix = [
-      rowFor(0, 2),
-      rowFor(1, 2),
-      rowFor(0, 2),
-      rowFor(1, 2),
-    ];
+    const matrix = [rowFor(0, 2), rowFor(1, 2), rowFor(0, 2), rowFor(1, 2)];
     const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, {
       seed: 42,
       minPackageSize: 3,
@@ -233,12 +222,12 @@ describe('ClusterBoundaryAnalyzer', () => {
     expect(report.crossDomainFusions.length).toBeGreaterThanOrEqual(1);
     const fusion = report.crossDomainFusions.find((f) => f.representativeEntities.length === 6);
     expect(fusion).toBeDefined();
-    expect(fusion!.involvedPackages.map((p) => p.packageName).sort()).toEqual([
+    expect(fusion.involvedPackages.map((p) => p.packageName).sort()).toEqual([
       'aa.core',
       'bb.core',
       'cc.core',
     ]);
-    for (const p of fusion!.involvedPackages) expect(p.ratio).toBeCloseTo(1 / 3, 3);
+    for (const p of fusion.involvedPackages) expect(p.ratio).toBeCloseTo(1 / 3, 3);
   });
 
   it('cross-domain fusion: 80% single-dominant cluster is NOT flagged', () => {

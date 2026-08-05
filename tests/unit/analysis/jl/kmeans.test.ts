@@ -9,8 +9,16 @@ import { KMeansClusterer, detectOrphans } from '@/analysis/jl/kmeans.js';
 import { mulberry32 } from '@/analysis/jl/jl-projector.js';
 
 const A_OFFSETS: Array<[number, number]> = [
-  [-0.5, -0.3], [0.2, -0.4], [-0.1, 0.5], [0.4, 0.1], [-0.3, 0.2],
-  [0.5, -0.2], [-0.4, -0.1], [0.1, 0.4], [-0.2, 0.3], [0.3, -0.5],
+  [-0.5, -0.3],
+  [0.2, -0.4],
+  [-0.1, 0.5],
+  [0.4, 0.1],
+  [-0.3, 0.2],
+  [0.5, -0.2],
+  [-0.4, -0.1],
+  [0.1, 0.4],
+  [-0.2, 0.3],
+  [0.3, -0.5],
 ];
 
 function clusterAround(center: [number, number], offsets: Array<[number, number]>): number[][] {
@@ -19,10 +27,7 @@ function clusterAround(center: [number, number], offsets: Array<[number, number]
 
 /** 10 points near (0,0) and 10 near (10,10) — two well-separated 2D clusters. */
 function twoSeparatedClusters(): number[][] {
-  return [
-    ...clusterAround([0, 0], A_OFFSETS),
-    ...clusterAround([10, 10], A_OFFSETS),
-  ];
+  return [...clusterAround([0, 0], A_OFFSETS), ...clusterAround([10, 10], A_OFFSETS)];
 }
 
 /**
@@ -124,7 +129,11 @@ describe('KMeansClusterer', () => {
 
   it('large-n (2500) sampled Silhouette is deterministic across two runs', () => {
     const centers: Array<[number, number]> = [
-      [0, 0], [20, 0], [0, 20], [20, 20], [10, -15],
+      [0, 0],
+      [20, 0],
+      [0, 20],
+      [20, 20],
+      [10, -15],
     ];
     const matrix: number[][] = [];
     for (const center of centers) {

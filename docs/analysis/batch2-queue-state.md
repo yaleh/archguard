@@ -298,6 +298,22 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 4. **full-suite**：待外层新全量验证（ADR-007 修复 daec6ea + TASK-66/68 合并）。
    TASK-62/63/64/65/66/67/68 全部已合并；无在飞、无 worktree。
 
+## 15:4xZ 更新（re-green 确认 + TASK-66 lint 14 errors 修复 + lint 治本规则）
+
+1. **re-green 确认**：full-suite green（351 文件 / 5090 passed / 0 failed，外层 15:36Z）——
+   ADR-007 #3（cluster-boundary）修复有效，stop-dispatch 撤。
+2. **TASK-66 lint 14 errors 修复（外层指令 1）**：`npm run lint` 复现 LINT_EXIT=1（14 errors）——
+   TASK-66 测试文件引入。修复：
+   - `cluster-boundary-analyzer.test.ts`：prettier 格式 + 删 unused `repeatRows` / unused forEach 参数
+     `p` + 去 4 处多余 `!` 断言（no-unnecessary-type-assertion + no-non-null-assertion）。
+   - `kmeans.test.ts`：prettier 格式。
+   - 验证：全量 `npm run lint` **0 errors / 3947 warnings**（exit 0）；两文件 scoped 测试 24 passed；
+     type-check 0。
+3. **lint 治本规则（外层指令 2，落档强制继承）**：**后续任何新增/修改代码的任务（不只 MCP tool），
+   AC 应含「`npm run lint` 0 errors」**——任务新代码必须 lint-clean，不再靠外层复验。
+   与 check-adr 规则并列写入本队列状态源。
+4. **TASK-50 #4 / TASK-62 #8 / TASK-64 #11 的 lint DoD 项**：本指令修完 lint 后，外层可重勾。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
