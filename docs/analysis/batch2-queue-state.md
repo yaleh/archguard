@@ -444,6 +444,21 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    不盲勾、只编辑指名的 5 个任务文件。
 3. **在飞**：TASK-77。
 
+## 18:2xZ 更新（TASK-77 fan-in 完成 + 真实缺陷发现）
+
+1. **TASK-77 fan-in（完成）**：AC 验证收尾任务——9 项旧任务 AC 真实环境逐项核：**6 项满足**
+   （DIR-001 环破/语义保留、DIR-002 nodeId 碰撞修复/碰撞测试/图重生成、TASK-31 安装器不写注册，
+   证据落盘）+ **3 项诚实写理由**（TASK-31/TASK-35 的 `claude mcp list` Connected、TASK-49 凭据
+   测试）。
+2. **真实缺陷发现（新任务方向）**：包已发布（@yalehwang/archguard-claude-plugin@0.1.32），真实
+   `claude plugin install` 成功，但 **`plugin/mcp-launcher.mjs` 依赖解析与 Claude Code 2.1.222
+   插件缓存布局不兼容**（deps 装进兄弟 `plugins/npm-cache/node_modules/`，launcher 的
+   `createRequire(import.meta.url)` 向上解析够不到，claude 不设 NODE_PATH）→ MCP 连接失败
+   （-32000 Connection closed）。NODE_PATH 实验证明诊断（设 NODE_PATH 即成功）。**需后续修复
+   launcher**——外层可立案。
+3. **drift-check**：干净（51 任务无 suspects）。
+4. **任务库**：TASK-77 后再次耗尽（收尾任务）。TASK-77 待外层翻 done。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
