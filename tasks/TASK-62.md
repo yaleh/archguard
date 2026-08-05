@@ -193,4 +193,4 @@ changed: 由 quay-tasks/TASK-11 搬入 tasks/（TASK-62）时写就；Contract �
 - [x] #5 npm test -- --run tests/unit/plugins/cpp/bridge-benchmark.test.ts
 - [x] #6 npm test
 - [x] #7 npm run type-check
-- [ ] #8 npm run lint
+- [x] #8 npm run lint

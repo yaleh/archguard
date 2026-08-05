@@ -139,7 +139,7 @@ Do NOT touch existing MCP tool registrations/schemas, or any
 - [x] #1 npm test -- --run tests/unit/analysis/shape-smells/
 - [x] #2 npm test -- --run tests/unit/cli/mcp/shape-smell-tools.test.ts
 - [x] #3 npm run type-check
-- [ ] #4 npm run lint
+- [x] #4 npm run lint
 - [x] #5 npm test
 
 ## Coordination
