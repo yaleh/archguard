@@ -44,3 +44,18 @@
   数字失真（quay 侧刚吃过「池里混 fixture 任务」的亏）。
 - TASK-11/16/17/18/19 是 6 月底–7 月初的 backlog，可能已被后续任务覆盖或方向取代；
   无 grep 证据 ≠ 无历史，需内层用 git 历史核实再搬。
+
+## 补充：非 todo 存量的重复核实（内层 2026-08-05 冷启动）
+
+外层对账只覆盖 6 个 todo。内层对 quay-tasks/ 其余非 done 存量（1 ready + 2 needs-human）
+做了 git 核实，**另发现 2 个已 done 任务的重复前身**：
+
+| quay-tasks 任务 | 状态 | 标题 | tasks/ 对应（done） | 核实依据 |
+|---|---|---|---|---|
+| PROBE-ITER9 | ready | TestCoverageRenderer.nodeId() collisions silently drop entities | **tasks/DIR-002**（同名标题） | `ea13e9f` 已修 nodeId 碰撞，`src/mermaid/test-coverage-renderer.ts` 现用 entityId 后缀，13 个测试绿 |
+| ARCH-INVERSION-001 | needs-human | Architectural inversion: src/types/config-global.ts imports | **tasks/DIR-001**（同主题） | `fd0733c` 已破环，`grep "@/analysis" src/types/` → 0；分支 `milestones/archguard/ARCH-INVERSION-001`（含 `e086e65` 备选方案）未合并、被替代 |
+| TASK-EXP-B-refute | needs-human | EXPERIMENT (DIR-048 refute-blocks-land) | 无对应 | 实验任务，非重复 |
+
+**处置建议**：PROBE-ITER9 / ARCH-INVERSION-001 与 TASK-14 同属「已在 tasks/ 完成」类 → 归档
+（标 `**PARKED` 或移 `tasks/archive/`），**不得搬入 pool**。否则晋级管线会把已 done 工作当新候选
+重复派发（与 TASK-60 的 AC-2「TASK-14 不得搬入」同一条防线）。

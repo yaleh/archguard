@@ -121,18 +121,18 @@ Do NOT touch existing MCP tool registrations/schemas, or any
 
 ## Acceptance Criteria
 
-- [ ] `LiteralDispersionDetector` extracts discriminator types (string
+- [x] `LiteralDispersionDetector` extracts discriminator types (string
       literal unions + enums) and computes per-value dispersion across files
       with configurable threshold (default 2) and info/warning severity.
-- [ ] Cross-module scope filter correctly identifies boundary-crossing
+- [x] Cross-module scope filter correctly identifies boundary-crossing
       smells using the first path segment under `src/`.
-- [ ] `archguard_detect_shape_smells` and `archguard_get_literal_dispersion`
+- [x] `archguard_detect_shape_smells` and `archguard_get_literal_dispersion`
       MCP tools registered in `mcp-server.ts`, following ADR-006 (business
       logic in `src/analysis/`, tool file is a thin adapter); Layer 2-3
       requests return empty + diagnostic, never throw.
-- [ ] Results persisted under `.archguard/query/shape-smells/` and
+- [x] Results persisted under `.archguard/query/shape-smells/` and
       round-trip via `loadResults`.
-- [ ] Full test suite green; `npm run type-check` and `npm run lint` clean.
+- [x] Full test suite green; `npm run type-check` and `npm run lint` clean.
 
 ## Definition of Done
 
@@ -146,3 +146,16 @@ Do NOT touch existing MCP tool registrations/schemas, or any
 
 Independent of TASK-46/47/48/49 (different subsystem: TypeScript analysis,
 not Go/gopls). No touches overlap.
+
+## Verification (2026-08-05, inner cold-start bookkeeping)
+
+Closed-without-work drift check re-verified. AC boxes now checked against master evidence:
+
+- Fix landed on master via `f1f4305` (feat: add shape-smell analysis for literal dispersion
+  detection) — all Touches present: `src/analysis/shape-smells/{types,literal-dispersion,
+  scope-filter,persistence,index}.ts`, `src/cli/mcp/tools/shape-smell-tools.ts`,
+  `mcp-server.ts` registration, 5 test files.
+- Tests on master: `npx vitest run tests/unit/analysis/shape-smells/ tests/unit/cli/mcp/
+  shape-smell-tools.test.ts` → **69 passed** (2026-08-05), covering AC1–AC4.
+- AC5 (full suite green / type-check / lint clean): historically green — CI round 6 success
+  (goals-and-ac.md AC4) and tick #50 "CI green" on master.
