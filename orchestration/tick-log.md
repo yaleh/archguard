@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 56 |
+| no-action | 57 |
 | unblock | 7 |
 | correct | 8 |
 | escalate | 0 |
@@ -96,4 +96,6 @@ grep -c 'escalate' orchestration/tick-log.md
 | 69 | 14:24Z | no-action | **TASK-65 在飞 + AC 审计续（TASK-46/50 DoD 勾选）**。内层已派 TASK-65（JL arch drift，worktree task-65 基于 ff6ed00），TASK-66 因与 TASK-65 共享文件重叠暂缓（内层裁定，合理）。套件绿。**AC 审计**：full-suite 绿验证 TASK-46 三项（golang 测试在 5019/0 套件 + type-check 独立跑 exit 0）勾；TASK-50 #1/#2/#5（shape-smells scoped + 全量在绿套件）+ #3（type-check exit 0）勾；#4 lint 后台跑中。旧任务 AC 欠账从 19 → 8 未勾（DIR-001 余 2、DIR-002 3、TASK-31 2、TASK-35 1、TASK-49 1、TASK-50 #4 1）。 | 忙（TASK-65 subagent 在飞）|
 | 70 | 14:47Z | no-action | **TASK-65 fan-in + 收尾，TASK-66/68 派发，新 full-suite 验证**。内层 fan-in TASK-65（JL architecture drift，a7b2652+efbb99f，101 scoped 绿）并派发 TASK-66/68（worktree 建，括号在飞）。**外层收尾 TASK-65**：关括号 fm-TASK-65 + 翻 done，verification-round #2。**新 full-suite 已起**（14:46）验证 TASK-65 merge。内层又发现 not-yet-flipped 误报（TASK-66 工作落地未排除，已在实测基础上放行派发，机制缺陷归 manager-inbox——与 TASK-60 同族）。TASK-68（lint hygiene，外层立案）已被内层晋级并派发。 | 等 2 个后台 agent（TASK-66/68）|
 | 71 | 15:00Z | correct | **ADR-007 复发分诊（TASK-65 drift tool 缺 query.ts flag）→ forward-fix 指令**。验证 TASK-65 的 full-suite：1 失败 / 5058 passed——唯一失败 check-adr（ADR-007）。独立核实（跑 check-adr.ts 直接定位）：`archguard_get_architecture_drift` 在 query.ts 无对应 flag（canonical architecture-drift），违规 arch-health-tools.ts:120。TASK-65 加了 drift MCP tool + `--drift-base`/`--drift-threshold`（analyze.ts 参数）但缺 ADR-007 要求的 canonical flag。**TASK-64 之后第二次同类违规**（TASK-64 的 --intrinsic-dimension 修复没覆盖后来的 tool）。裁定：query.ts 加 `--architecture-drift`（照 TASK-64 模式，复用 TASK-65 的 drift-baseline/drift-reporter），跑 check-adr 0 violations + scoped 绿。**系统性提示**：建 MCP tool 任务 AC 应加「check-adr 0 violations」条（已记 manager-inbox）。裁定送达（transcript 核实 1296 字符），内层修复中。 | 修 ADR-007（drift flag）|
+| 72 | 15:10Z | correct | **manager 吞吐率请求 → 自适应并发裁定 → 撤回（manager 更正）**。manager 转达：考虑提高吞吐率，建议自适应并发，裁定权在 archguard 外层。我裁定 GO→4/WAIT→2 并建 TASK-69 + 回复 manager。**随后 manager 更正撤回**：archguard 是 quay 机制消费者，不该自己发明并发逻辑（机制分叉 = 交付面漂移），并发调整由 quay 升级同步传导。**已删 TASK-69**、撤回回复、queue-state 记更正。教训：外层对「quay 基础设施层设计」的边界判断——消费者的定位是遵守 + 反馈，不是发明。 | 修 ADR-007 + TASK-68 收尾 |
+| 73 | 15:15Z | no-action | **ADR-007 修复 + TASK-68 合并落地，内层验证 lint**。内层完成：ADR-007 修复 439e5d3（query.ts 加 --architecture-drift）+ TASK-68（lint 0 errors，.eslintignore 排除 .quay/vendor + prettier）合并 14df78a，query.ts 双 flag 完整。TASK-66 在飞（worktree 有提交）。内层跑 TASK-68 scoped 验证（lint）。套件 red（ADR-007 红残留，待新 full-suite re-green）。资源闸 WAIT（内层 lint + TASK-66 负载），full-suite 待 GO。 | 跑 lint 验证；TASK-66 在飞 |
 
