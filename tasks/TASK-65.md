@@ -1,7 +1,7 @@
 ---
 id: TASK-65
 title: "TASK-65: JL architecture drift — per-entity L2 distance between snapshots + CI/CD gate (Phase 4)"
-status: todo
+status: ready
 labels:
   - analysis
   - metric

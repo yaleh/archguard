@@ -227,6 +227,17 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 4. **state=red 期间停新批派发**（裁定）——本 tick 无派发。等外层 re-green 后 TASK-65/66 可晋。
 5. TASK-62/64 保持 done，DoD（full-suite 绿）待本修复 + 外层新全量绿后勾。
 
+## 14:1xZ 更新（full-suite re-green 中；TASK-65 派发）
+
+1. **外层新 full-suite 已起（14:06Z，running）**——验证 forward-fix（52fa600）。TASK-64 已被外层翻
+   done ⇒ TASK-65/66 parent 解除、恢复 eligible（promotions 推荐）。
+2. **TASK-65/66 共享文件重叠**（都改 `src/analysis/jl/types.ts` / `arch-health-tools.ts` /
+   `server.ts`）——并发闸判 deferred。按 tick「重叠 → 不同批」：**本批只派 TASK-65**，
+   TASK-66 等 TASK-65 落地后派。
+3. **TASK-65 补晋 + 派发**：todo→ready、§3.5 开括号（fm-TASK-65-1785939218736）、§4 后台派发
+   （worktree task-65，分支 task/TASK-65）。TASK-66 保持 todo。
+4. **在飞**：TASK-65。full-suite running（照常派发，red 停止条件已解除）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
