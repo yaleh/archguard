@@ -144,12 +144,48 @@ DoD: `npm test -- --run tests/unit/cli/mcp/tools/arch-health-tools.test.ts`,
 
 ## Acceptance Criteria
 
-- [ ] Weighted adjacency matrix built from ArchJSON relations; per-column z-score normalization; plain `number[][]` output
-- [ ] Adaptive mode: DIRECT (n<1000) vs JL projection (n≥1000) with Achlioptas matrix + seeded determinism
+- [x] Weighted adjacency matrix built from ArchJSON relations; per-column z-score normalization; plain `number[][]` output
+- [x] Adaptive mode: DIRECT (n<1000) vs JL projection (n≥1000) with Achlioptas matrix + seeded determinism
 - [ ] Performance spike `docs/spikes/jl-performance-spike.mjs` passes all gated thresholds (300×300 <200ms, 1000×307 <500ms, 5000×378 <2s)
-- [ ] Snapshots persisted to `.archguard/arch-health-history.json` (max 500); CLI `--arch-health` prints mode/d_int/d_int_norm/trend
-- [ ] MCP tool `archguard_get_intrinsic_dimension` registered; `--arch-health` absent → zero behavior change
-- [ ] `adjacency-builder` / `jl-projector` return plain `number[][]` (downstream TASK-65/66 contract)
+  - **NOT verifiable in this environment**: spike implemented per spec and run; exit code 1 in the sandbox — 300×300=2664.8ms (gate 200), 1000×307=31834.7ms (gate 500), 5000×378=223594.6ms (gate 2000), 5000×5000 control capped >60s. ml-matrix full SVD is ~10–100× slower than the proposal's <50ms assumption on this heavily-loaded box (load avg >3.6, ~46M simple ops/sec). DoD #1 will need a faster machine or the proposal's truncated-SVD pivot. See invoke evidence below.
+- [x] Snapshots persisted to `.archguard/arch-health-history.json` (max 500); CLI `--arch-health` prints mode/d_int/d_int_norm/trend
+- [x] MCP tool `archguard_get_intrinsic_dimension` registered; `--arch-health` absent → zero behavior change
+- [x] `adjacency-builder` / `jl-projector` return plain `number[][]` (downstream TASK-65/66 contract)
+
+## Execute evidence (scoped, TASK-64 branch)
+
+All scoped unit tests, type-check, and lint are green (except the performance spike, see AC #3):
+
+```
+$ npx vitest run tests/unit/analysis/jl/ tests/unit/cli/commands/analyze-arch-health.test.ts tests/unit/cli/mcp/tools/arch-health-tools.test.ts
+ Test Files  6 passed (6)
+      Tests  61 passed (61)     # adjacency-builder 15, jl-projector 13, intrinsic-dimension 9,
+                                # history-writer 8, analyze-arch-health 6, arch-health-tools 10
+
+$ npm run type-check            # tsc --noEmit → exit 0
+$ npm run lint                  # eslint . --ext .ts → exit 0 (0 errors, 3848 pre-existing warnings)
+$ npm run build                 # tsc + tsc-alias + fix-imports + check:runtime-deps → BUILD EXIT: 0
+$ grep -q 'archguard_get_intrinsic_dimension' src/cli/mcp/mcp-server.ts && echo found
+found
+
+$ node docs/spikes/jl-performance-spike.mjs
+300x300 DIRECT: 2664.8ms | gate 200ms | FAIL
+1000x307 JL: 31834.7ms | gate 500ms | FAIL
+5000x378 JL: 223594.6ms | gate 2000ms | FAIL
+5000x5000 control: >60000ms (capped — control only) | control (not gated)
+Spike FAILED: one or more gated thresholds were exceeded.   # exit 1 (environment-limited)
+```
+
+Regression (touched-file adjacents): `tests/unit/cli/commands/analyze.test.ts` (50 passed),
+`tests/unit/cli/analyze/run-analysis.test.ts` (15 passed),
+`tests/unit/cli/mcp/mcp-server.test.ts` (61 passed), `tests/unit/cli/mcp/tools/gim-tools.test.ts` (7 passed).
+
+### Known deviations to flag
+
+1. **`computeK` returns 308/379, not the proposal's 307/378.** The formula `⌈4·ln(n)/ε²⌉` is authoritative: `⌈4·ln(1000)/0.09⌉ = ⌈307.011⌉ = 308`, `⌈4·ln(5000)/0.09⌉ = ⌈378.542⌉ = 379`. The proposal's example values rounded instead of ceiled. Implementation follows the formula; AC #2's "k=307" example value is off by one.
+2. **Task file references `src/cli/mcp/server.ts` (Touches + DoD #8) but the real file is `src/cli/mcp/mcp-server.ts`.** Registration landed in `mcp-server.ts` (contains the tool string). DoD #8's `grep src/cli/mcp/server.ts` path needs correcting to `mcp-server.ts`.
+3. **Enabling change beyond Touches:** `run-analysis.ts` was extended with an optional `lastArchJson` field on `RunAnalysisResult` (2 return sites + 1 interface field) so the analyze handler can feed ArchJSON to `runArchHealth` without re-parsing. No existing test constructs the result without it (optional field).
+4. **`call` relation type added to the weight table at 1.0** (a deviation from the proposal's 6-entry table). `call` is a first-class `RelationType` (method-level calls); the proposal table omitted it, which made every class-level `call` edge fall to the unknown-type branch and spam `console.warn` — the DoD #6 end-to-end run on ArchGuard itself produced 34 such warnings. Adding `call: 1.0` (the same weight it would get as "unknown") eliminates the noise. Genuinely unknown types still warn.
 
 ## Contract
 
