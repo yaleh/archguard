@@ -238,6 +238,15 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    （worktree task-65，分支 task/TASK-65）。TASK-66 保持 todo。
 4. **在飞**：TASK-65。full-suite running（照常派发，red 停止条件已解除）。
 
+## 14:2xZ 更新（full-suite green 确认 + TASK-65 agent 中断/resume）
+
+1. **外层 tick #68（ff6ed00）**：新 full-suite **green（5019/0，14:15Z）**——forward-fix（52fa600）
+   验证通过，TASK-62/64 DoD 已勾。红窗关闭。
+2. **TASK-65 agent 因 API 错误中断**（connection closed mid-response），截断在测试修改中途。
+   worktree 未提交工作完好（9 新文件 + 5 修改：drift-calculator / entity-aligner /
+   drift-reporter 等）。已按通知 **SendMessage resume** 续跑（agent 保留上下文续完测试 + 提交）。
+3. **在飞**：TASK-65（resumed）。TASK-66 等 TASK-65 落地后派（共享文件串行）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
