@@ -9,19 +9,66 @@
  * (nested or hoisted — createRequire resolves both). This launcher resolves
  * that CLI entry and execs it as the MCP stdio server.
  *
+ * Resolution order:
+ *   1. The plugin's own dependency tree (createRequire from this file's
+ *      location). Honors NODE_PATH when the caller sets it before startup.
+ *   2. Claude Code >= 2.1.222 installs plugin dependencies into a sibling
+ *      `npm-cache/node_modules` under the plugins root, outside the upward
+ *      walk from the plugin dir. When (1) misses, we discover that sibling
+ *      cache by walking up from the plugin root and resolve through it.
+ *
  * It deliberately does NOT rely on a global `archguard` install, repository
- * parent node_modules, vendored dist/, or NODE_PATH.
+ * parent node_modules, vendored dist/, or NODE_PATH being set by the caller
+ * — the npm-cache sibling is discovered, not assumed.
  */
 
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
+const ENTRY = '@yalehwang/archguard/dist/cli/index.js';
 
-let entry;
-try {
-  entry = require.resolve('@yalehwang/archguard/dist/cli/index.js');
-} catch {
+/**
+ * Resolve the ArchGuard CLI entry used as the MCP stdio server.
+ *
+ * 1. Primary — the plugin's own dependency tree (nested or hoisted).
+ * 2. Fallback — the Claude Code npm-cache sibling layout: walk up from the
+ *    plugin root and resolve through the first `npm-cache/node_modules`
+ *    that contains the package.
+ *
+ * @returns {string|null} absolute entry path, or null when unresolvable.
+ */
+function resolveArchguardEntry() {
+  try {
+    return require.resolve(ENTRY);
+  } catch {
+    // Not in the plugin's own tree — try the npm-cache sibling layout.
+  }
+
+  const pluginDir = dirname(fileURLToPath(import.meta.url));
+  let dir = pluginDir;
+  while (true) {
+    const cacheNodeModules = join(dir, 'npm-cache', 'node_modules');
+    if (existsSync(cacheNodeModules)) {
+      try {
+        return createRequire(join(cacheNodeModules, 'index.js')).resolve(ENTRY);
+      } catch {
+        // This npm-cache does not contain the package; keep walking up.
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return null;
+}
+
+const entry = resolveArchguardEntry();
+if (!entry) {
   console.error(
     '[archguard] Cannot resolve @yalehwang/archguard/dist/cli/index.js from the plugin dependency tree.'
   );
