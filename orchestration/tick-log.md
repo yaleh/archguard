@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 61 |
+| no-action | 62 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -103,4 +103,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 76 | 15:27Z | no-action | **ADR-007 #3 修复落地 + TASK-66/68 收尾 + re-green full-suite**。内层完成：cluster-boundary flag 修复 daec6ea + **治本规则落档** 99b4277（队列状态源：后续任何新增/修改 MCP tool 任务 AC 必须含 check-adr 0 violations——双保险：任务内可测 AC + 队列规则继承）。**外层收尾 TASK-66/68**：关括号 + 翻 done + verification-round #3。**re-green full-suite 已起**（15:25）验证 cluster-boundary 修复 + 全部合并。lint 验证后台跑（TASK-68 修复后确认 0 errors，用于重勾 TASK-50 #4/TASK-62 #8/TASK-64 #11）。 | 等 full-suite re-green |
 | 77 | 15:37Z | no-action | **re-green 确认（5090/0）+ TASK-66 lint 指令**。full-suite 绿：351 文件 / **5090 passed / 0 failed** / SUITE-GREEN 已发（15:36）——cluster-boundary 修复解决 ADR-007 #3，stop-dispatch 撤。**lint 复验发现**：TASK-68 修好旧错误（.quay/vendor/query.ts 单文件 0 errors），但 **TASK-66 测试文件引入 14 新 lint error**（cluster-boundary-analyzer 10 + kmeans 4：unused vars/prettier/多余断言）。**指令已发**：prettier + 清 unused + 去断言 → npm run lint 0 errors；**治本扩展**：新增/修改代码任务 AC 应含 lint gate（同 check-adr 族）。TASK-50 #4/TASK-62 #8/TASK-64 #11 lint DoD 待修后重勾。 | 修 TASK-66 lint + 扩展规则 |
 | 78 | 15:45Z | no-action | **任务库耗尽 → 下一批方向裁定 + 建 TASK-70/71**。内层修 TASK-66 lint（8de7fec）+ 治本规则落档，TASK-62~68 全 done（43 全 done），池空、无在飞、套件绿。内层请外层：重勾 lint DoD + 裁下一批。**方向裁定**：① **TASK-70**（--prefer-offline 卫生项，TASK-57 遗留，3 文件 +15 行，卫生采纳非优化 claim）；② **TASK-71**（B 类 kotlin 插件分支密集单测，TASK-59 边界清单剩余）。均含 lint gate（治本规则）。延后：TASK-72（core generator）、A 类 E2E。lint 验证后台跑（确认 0 errors 后重勾 TASK-50 #4/TASK-62 #8/TASK-64 #11）。 | idle 等方向（池空）|
+| 79 | 16:08Z | no-action | **TASK-70/71 fan-in + 收尾 + 新 full-suite + 建 TASK-72**。内层快速 fan-in：TASK-70（--prefer-offline 卫生，bfc2f65）+ TASK-71（kotlin 分支密集 6 测试文件 +51 测试，1079b65）。**外层收尾**：关括号 + 翻 done + verification-round #4。**新 full-suite 已起**（16:06）验证 TASK-70/71。**建 TASK-72**（B 类 core mermaid generator 深层分支，含 lint gate）。A 类 E2E 延后。lint DoD 已在 tick #78 后重勾（0 errors 确认）。 | idle 等 full-suite + 方向 |
 
