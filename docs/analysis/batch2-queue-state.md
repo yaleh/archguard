@@ -136,3 +136,11 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 2. **full-suite 已起**（外层后台，验证机制地基 + TASK-61/60）：资源闸 GO。**首次 `--test-concurrency=8` 被 vitest 3.2.4 拒绝**（CACError: Unknown option）——`--test-concurrency` 是文档虚构 flag（vitest 真 flag 是 `--maxWorkers`），无 wrapper 消费。误报红后改 `--maxWorkers=8` 重起，state=running（12:47），SUITE-RUNNING 已发。
 3. **发现/待查**：`--test-concurrency` 文档 bug（quay 交付的 fast-mode 文档指令不存在的 flag）——证据：vitest 3.2.4 报 CACError。归 quay 机制文档，报 manager。
 4. **红窗分诊记录**：12:46:33 的 SUITE-RED 是误报（我的命令 flag 错），非真测试失败；12:47:23 转 RUNNING 已撤信号。无真回归。
+
+## 12:59Z 更新（红窗分诊：runner 假阳性红 → 已纠正 + TASK-67 立案）
+
+1. **full-suite 完成（12:57）**：vitest 摘要 **4902 passed / 0 failed / 13 skipped / exit 0**——机制地基 + TASK-61/60 合并全绿。
+2. **假阳性红**：runner 因 `✖ Diagram test failed...`（来自**通过**的负控制测试 console 输出）触发 early-red，state=red 错误在位（stop-dispatch 信号）。
+3. **分诊**（外层，SUITE-RED 即触发）：核实 vitest 摘要（0 失败）→ 判为 runner 检测 bug 假阳性 → 手动纠正 state=green（12:58:49 SUITE-GREEN 已发，信号清除）。
+4. **TASK-67 已建**（todo）：修 `full-suite-runner.ts:68` 的 `/✖/` 判红——匹配到通过测试的 console 输出。选定机制：结构化判红（vitest 失败文件行/汇总行），保留 node:test/TAP 模式。四件套+Contract 齐全。
+5. **全量套件验证通过**：本轮合并（机制 + TASK-61/60）经 4902 测试验证，DoD 可勾（收尾 pass 后续执行）。
