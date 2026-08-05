@@ -57,16 +57,88 @@ resume    守卫落地且 scoped 绿即写盘进度；被打断可从「已 git 
 
 ## Acceptance Criteria
 
-- [ ] `tests/types/no-analysis-imports.test.ts` 存在于 master（scoped 测试绿）
-- [ ] 守卫断言「src/types 不 import src/analysis」，与 master 的 `fitness-rules.ts` 路径兼容
-- [ ] 负控制验证：故意引入 types→analysis import 时守卫变红（输出贴入任务体）
-- [ ] 不触碰 `src/types/fitness-rules.ts` 等实现文件（纯测试落地）
+- [x] `tests/types/no-analysis-imports.test.ts` 存在于 master（scoped 测试绿）
+- [x] 守卫断言「src/types 不 import src/analysis」，与 master 的 `fitness-rules.ts` 路径兼容
+- [x] 负控制验证：故意引入 types→analysis import 时守卫变红（输出贴入任务体）
+- [x] 不触碰 `src/types/fitness-rules.ts` 等实现文件（纯测试落地）
 
 ## Definition of Done
 
 - [ ] `npx vitest run tests/types/no-analysis-imports.test.ts` 退出码 0
 - [ ] 负控制输出已贴入任务体（证明守卫抓得住回归）
 - [ ] 守卫文件已提交到 master（随任务 fan-in 合并）
+
+## Evidence
+
+执行 2026-08-05（worktree `archguard-worktrees/task-61`，branch `task/TASK-61`）。
+
+**Scoped 测试绿（守卫存在且通过）：**
+
+```
+ RUN  v3.2.4 /home/yale/work/archguard-worktrees/task-61
+
+ ✓ tests/types/no-analysis-imports.test.ts (2 tests) 15ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  07:48:33
+   Duration  1.95s (transform 245ms, setup 0ms, collect 235ms, tests 15ms, environment 1ms, prepare 322ms)
+
+EXIT: 0
+```
+
+**负控制（回归证明，守卫必须红）：** 临时在 `src/types/index.ts` 末尾加
+`import type {} from "@/analysis/metric-vector-builder";` 桩，守卫立刻变红并精确报出违规行：
+
+```
+ RUN  v3.2.4 /home/yale/work/archguard-worktrees/task-61
+
+ ❯ tests/types/no-analysis-imports.test.ts (2 tests | 1 failed) 50ms
+   ✓ ARCH-INVERSION-001: src/types must not import from src/analysis > should have at least one .ts file in src/types 5ms
+   × ARCH-INVERSION-001: src/types must not import from src/analysis > should have no imports crossing into src/analysis from src/types 40ms
+     → expected [ Array(1) ] to deeply equal []
+
+AssertionError: expected [ Array(1) ] to deeply equal []
+- Expected
++ Received
+
+- []
++ [
++   "/home/yale/work/archguard-worktrees/task-61/src/types/index.ts:328: import type {} from \"@/analysis/metric-vector-builder\";",
++ ]
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+
+EXIT: 1
+```
+
+**撤销桩后守卫恢复绿：**
+
+```
+ RUN  v3.2.4 /home/yale/work/archguard-worktrees/task-61
+
+ ✓ tests/types/no-analysis-imports.test.ts (2 tests) 26ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  07:48:55
+   Duration  1.71s (transform 294ms, setup 0ms, collect 309ms, tests 26ms, environment 1ms, prepare 426ms)
+
+EXIT: 0
+```
+
+**守卫断言（相对 e086e65 原版的适配说明）：** 原版断言已是通用结构检查（不引用分支专用
+`src/types/fitness.ts`），与 master 的 `fitness-rules.ts` 方案天然兼容。按对抗评审加固了匹配正则，
+使其覆盖所有「import 进 src/analysis」的形式（同一断言、更完整，未新增脆断言）：
+
+- alias：`from '@/analysis/...'` 及裸 index 形式 `from '@/analysis'`
+- relative：任意深度的 `../analysis/...`
+- side-effect：`import '@/analysis/...'`
+- dynamic：`import('@/analysis/...')`
+
+同时保留非空守卫 `tsFiles.length > 0`（防空转），且对当前 `src/types` 全量扫描 0 误报
+（grep 验证 `src/types` 无任何 `@/analysis` import，环保持已破状态）。
 
 ## Touches
 
