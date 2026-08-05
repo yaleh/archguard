@@ -10,6 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'path';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
+import { TypeScriptParser } from '@/parser/typescript-parser.js';
 import type { PluginInitConfig } from '@/core/interfaces/language-plugin.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -54,5 +55,59 @@ describe('ArchJSON schema version integration', () => {
 
   it('language field is populated', () => {
     expect(archJson.language).toBe('typescript');
+  });
+
+  it('every entity carries the required schema fields', () => {
+    expect(archJson.entities.length).toBeGreaterThan(0);
+    for (const entity of archJson.entities) {
+      // Entity schema contract (src/types/index.ts:132-146): id/name/type are
+      // non-empty and sourceLocation pins the entity to a source file.
+      expect(entity.id).toBeTruthy();
+      expect(entity.name).toBeTruthy();
+      expect(typeof entity.type).toBe('string');
+      expect(entity.type.length).toBeGreaterThan(0);
+      expect(entity.sourceLocation).toBeDefined();
+      expect(entity.sourceLocation.file).toBeTruthy();
+      expect(Array.isArray(entity.members)).toBe(true);
+    }
+  });
+
+  it('every relation carries the required schema fields', () => {
+    // The typescript-plugin fixture (simple-class.ts) has no cross-entity edges,
+    // so parse a source with extends/implements to exercise the relation schema.
+    const parser = new TypeScriptParser();
+    const sourceCode = `
+      export class Parent {}
+      export class Child extends Parent {}
+      export interface Runnable { run(): void }
+      export class Impl implements Runnable { run(): void {} }
+    `;
+    const parsed = parser.parseCode(sourceCode, 'relations-fixture.ts');
+
+    const allowedRelationTypes = new Set([
+      'inheritance',
+      'implementation',
+      'composition',
+      'aggregation',
+      'dependency',
+      'association',
+      'call',
+    ]);
+    expect(parsed.relations.length).toBeGreaterThan(0);
+    for (const relation of parsed.relations) {
+      // Relation schema contract (src/types/index.ts:214-232): id/type/source/
+      // target are required, and type is one of the RelationType union.
+      expect(relation.id).toBeTruthy();
+      expect(relation.source).toBeTruthy();
+      expect(relation.target).toBeTruthy();
+      expect(allowedRelationTypes.has(relation.type)).toBe(true);
+    }
+  });
+
+  it('sourceFiles entries are non-empty strings', () => {
+    for (const sourceFile of archJson.sourceFiles) {
+      expect(typeof sourceFile).toBe('string');
+      expect(sourceFile.length).toBeGreaterThan(0);
+    }
   });
 });

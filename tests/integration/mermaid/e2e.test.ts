@@ -88,10 +88,28 @@ describe('MermaidDiagramGenerator E2E', () => {
     expect(mmdContent).toContain('classDiagram');
     expect(mmdContent.length).toBeGreaterThan(100);
 
-    // Verify SVG content
+    // Mermaid structure contract: class-level output carries the semantic classDef
+    // block (generator.ts:293-297) and renders entity names as class declarations
+    // (generator-formatting.ts:181-196).
+    expect(mmdContent).toContain('classDef classNode');
+    const renderableEntities = archJson.entities.filter((entity) => entity.type !== 'function');
+    expect(renderableEntities.some((entity) => mmdContent.includes(entity.name))).toBe(true);
+
+    // SVG rendering contract: rendered artifact is a well-formed Mermaid SVG with
+    // viewport geometry (viewBox) and the classDiagram root marker, and it embeds
+    // at least one entity as rendered text content (renderer.ts:38-71).
     const svgContent = await fs.readFile(path.join(testOutputDir, 'test-diagram.svg'), 'utf-8');
     expect(svgContent).toContain('<svg');
     expect(svgContent).toContain('</svg>');
+    expect(svgContent).toMatch(/<svg[^>]*viewBox="[^"]+"/);
+    expect(svgContent).toContain('class="classDiagram"');
+    expect(renderableEntities.some((entity) => svgContent.includes(entity.name))).toBe(true);
+
+    // PNG rendering contract: artifact exists and is a non-empty valid PNG
+    // (8-byte PNG signature 89 50 4E 47 0D 0A 1A 0A, renderer.ts:112-159).
+    const pngBuffer = await fs.readFile(path.join(testOutputDir, 'test-diagram.png'));
+    expect(pngBuffer.length).toBeGreaterThan(0);
+    expect(pngBuffer.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   }, 90000); // Renders SVG+PNG from 20 real files — needs extra time
 
   it('should handle validation errors and auto-repair', async () => {
@@ -363,5 +381,107 @@ describe('MermaidDiagramGenerator E2E', () => {
     // Check for relationship markers
     expect(mmdContent).toContain('<|--'); // Inheritance
     expect(mmdContent).toContain('<|..'); // Implementation
+  });
+
+  it('should emit mermaid class-level structure contract (classDef/members/visibility/relations)', async () => {
+    const contractJson: ArchJSON = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: new Date().toISOString(),
+      sourceFiles: ['test.ts'],
+      entities: [
+        {
+          id: 'Parent',
+          name: 'Parent',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: 'test.ts', startLine: 1, endLine: 3 },
+          members: [
+            {
+              name: 'publicMethod',
+              type: 'method',
+              visibility: 'public',
+              parameters: [{ name: 'id', type: 'string' }],
+              returnType: 'void',
+            },
+            { name: 'privateField', type: 'property', visibility: 'private', fieldType: 'number' },
+            { name: 'protectedHelper', type: 'method', visibility: 'protected' },
+          ],
+        },
+        {
+          id: 'Child',
+          name: 'Child',
+          type: 'class',
+          visibility: 'public',
+          sourceLocation: { file: 'test.ts', startLine: 5, endLine: 6 },
+          members: [{ name: 'run', type: 'method', visibility: 'public' }],
+        },
+        {
+          id: 'Service',
+          name: 'Service',
+          type: 'interface',
+          visibility: 'public',
+          sourceLocation: { file: 'test.ts', startLine: 8, endLine: 9 },
+          members: [{ name: 'execute', type: 'method', visibility: 'public' }],
+        },
+      ],
+      relations: [
+        { id: 'r1', source: 'Child', target: 'Parent', type: 'inheritance' },
+        { id: 'r2', source: 'Parent', target: 'Child', type: 'dependency' },
+        { id: 'r3', source: 'Parent', target: 'Child', type: 'composition' },
+        { id: 'r4', source: 'Parent', target: 'Child', type: 'aggregation' },
+        { id: 'r5', source: 'Service', target: 'Parent', type: 'implementation' },
+      ],
+    };
+
+    const generator = new MermaidDiagramGenerator({
+      mermaid: {
+        enableLLMGrouping: false,
+        renderer: 'isomorphic',
+      },
+    });
+
+    // generateOnly: no rendering, verify the generated mermaid code structure
+    const jobs = await generator.generateOnly(
+      contractJson,
+      {
+        outputDir: testOutputDir,
+        baseName: 'contract',
+        paths: {
+          mmd: path.join(testOutputDir, 'contract.mmd'),
+          svg: path.join(testOutputDir, 'contract.svg'),
+          png: path.join(testOutputDir, 'contract.png'),
+        },
+      },
+      'class'
+    );
+
+    expect(jobs.length).toBeGreaterThan(0);
+    const mmdContent = jobs[0].mermaidCode;
+
+    // Header contract: classDiagram must be the first line (generator.ts:291)
+    expect(mmdContent).toMatch(/^classDiagram/);
+
+    // Semantic classDef block (Plan 19, generator.ts:293-297)
+    expect(mmdContent).toContain('classDef classNode fill:#f6f8fa,stroke:#d0d7de,color:#24292f');
+
+    // Member rendering contract: visibility symbols + parameters + return types
+    // (generator-formatting.ts:101-142)
+    expect(mmdContent).toContain('+publicMethod(id: string): void');
+    expect(mmdContent).toContain('-privateField: number');
+    expect(mmdContent).toContain('#protectedHelper()');
+
+    // Node type annotations (Plan 19, generator.ts:371-381)
+    expect(mmdContent).toContain('%% Node type annotations');
+    expect(mmdContent).toContain('class Parent:::classNode');
+    expect(mmdContent).toContain('class Service:::interface');
+
+    // Relation line markers for every relation type
+    // (generator-formatting.ts:153-165)
+    expect(mmdContent).toContain('<|--'); // inheritance
+    expect(mmdContent).toContain('<|..'); // implementation
+    expect(mmdContent).toContain('*--'); // composition
+    expect(mmdContent).toContain('o--'); // aggregation
+    expect(mmdContent).toContain('-->'); // dependency
   });
 });
