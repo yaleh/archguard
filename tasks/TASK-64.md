@@ -219,4 +219,4 @@ changed: 由 quay-tasks/TASK-17 搬入 tasks/（TASK-64）时写就；Contract �
 - [x] #8 grep -q 'archguard_get_intrinsic_dimension' src/cli/mcp/server.ts
 - [x] #9 npm test
 - [x] #10 npm run type-check
-- [x] #11 npm run lint
+- [ ] #11 npm run lint

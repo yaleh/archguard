@@ -269,3 +269,11 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 ## 14:26Z 发现（lint 不通过：13 errors）
 
 AC 审计勾 TASK-50 #4（npm run lint）时发现：**lint 当前 13 errors / 3880 warnings**（`npm run lint` 不通过）。full-suite 是 vitest-only，不跑 lint——所以 5019/0 绿但 lint 有错误。来源待查（TASK-62/63/64 新代码 vs 既有）。已重跑 lint 全量输出（btex2ch9h 后台）定位错误文件。**TASK-50 #4 保持未勾**（lint 现不通过，勾不上）。若 13 errors 来自本轮 merge 新代码 → 建任务修 lint hygiene；若既有 → 另议。
+
+## 14:31Z lint 发现定位（TASK-68 已立案）
+
+13 errors 分解（lint 全量输出 /tmp/archguard-lint-full.log）：
+1. `.quay/` 备份目录 4 Parsing error（pre-task67-merge-untracked/ + quay-init-backups/ 的 experimental-syntax .ts）——无 .eslintignore，`eslint .` 扫了瞬态备份。
+2. `vendor/quay/dist/*.js` 7 rule-not-found（vendor 打包 JS 内联引用未加载的 @typescript-eslint 规则）——vendor 被 lint。
+3. `src/cli/commands/query.ts` 2 formatting（TASK-64 ADR-007 修复新代码，prettier 可修）。
+处置：**TASK-68 已建**（加 .eslintignore 排除 .quay/vendor + prettier 修 query.ts + 重跑 lint 0 errors）。TASK-62 DoD #8 / TASK-64 DoD #11（npm run lint）因实测不通过已**撤销勾选**（待 TASK-68 修好 lint 后重勾）。
