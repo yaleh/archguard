@@ -486,6 +486,18 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    已 **SendMessage resume** 续跑（保留上下文续完修复 + 构造布局实测 + 提交）。
 2. **在飞**：TASK-78（resumed）。
 
+## 19:4xZ 更新（TASK-78 fan-in 完成）
+
+1. **TASK-78 fan-in（完成）**：mcp-launcher MCP 连接缺陷修复——`resolveArchguardEntry()`：
+   ①插件自身树（createRequire）→ ②回退发现兄弟 `npm-cache/node_modules`。构造布局实测：
+   npm-cache 布局 exit 0 + MCP initialize OK；负控制（无缓存干净 exit 1）；回归（自身树 OK）；
+   NODE_PATH 注入 OK。lint 0 errors。merge 后 scoped **10 passed**（plugin-package）。
+2. **AC**：AC1-4 勾（npm-cache 布局/负控制/环境不可得理由/lint）；AC5（TASK-31/35 Connected）
+   未勾——真实 `claude mcp list` 不列出 archguard（settings.json `enabledPlugins` 未启用 archguard；
+   已装 0.1.32 仍带旧 launcher）。**TASK-31/35 的 Connected AC 需启用插件 + 发布带修复的新包 + 重装**
+   后才能勾——待外层处理。
+3. **任务库**：TASK-78 后再次耗尽。TASK-78 待外层翻 done。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
