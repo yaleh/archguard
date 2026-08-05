@@ -31,6 +31,9 @@ import { TREND_DELTA_THRESHOLD, DRIFT_THRESHOLDS } from '@/analysis/jl/types.js'
 import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
 import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../utils/drift-baseline.js';
 import { formatDriftReport } from '../utils/drift-reporter.js';
+import { loadArchJsonForCluster } from '../utils/cluster-archjson-loader.js';
+import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
+import { ClusterBoundaryAnalyzer } from '@/analysis/jl/cluster-boundary-analyzer.js';
 
 interface QueryOptions {
   archDir?: string;
@@ -102,6 +105,9 @@ interface QueryOptions {
 
   // ADR-007 §4: arch drift (mirrors archguard_get_architecture_drift)
   architectureDrift?: true;
+
+  // ADR-007 §4: cluster boundary (mirrors archguard_get_cluster_boundary)
+  clusterBoundary?: true;
 }
 
 /**
@@ -241,6 +247,12 @@ export function createQueryCommand(): Command {
         'Show per-entity L2 architecture drift between the two latest .archguard/arch-health-history.json snapshots'
       )
 
+      // ADR-007 §4: cluster boundary (mirrors archguard_get_cluster_boundary)
+      .option(
+        '--cluster-boundary',
+        'Cluster entities by structural position and compare to declared package boundaries (ClusterBoundaryReport)'
+      )
+
       .action(queryHandler)
   );
 }
@@ -269,6 +281,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     // the archguard_get_architecture_drift MCP tool — ADR-007 CLI/MCP parity)
     if (opts.architectureDrift) {
       await handleArchitectureDrift(opts);
+      return;
+    }
+
+    // --cluster-boundary: cluster entities and compare to package boundaries (mirrors
+    // the archguard_get_cluster_boundary MCP tool — ADR-007 CLI/MCP parity)
+    if (opts.clusterBoundary) {
+      await handleClusterBoundary(opts);
       return;
     }
 
@@ -701,6 +720,33 @@ function toDisplayEntities(raw: Entity[] | Partial<Entity>[] | EdgeListOutput): 
 }
 
 // -- List scopes handler --
+
+/**
+ * --cluster-boundary: cluster entities by their structural position (weighted
+ * adjacency rows / JL projection) and compare geometric clusters to declared
+ * package boundaries. Mirrors the archguard_get_cluster_boundary MCP tool's read
+ * path (ADR-007 CLI/MCP parity) — reuses TASK-66's cluster-boundary analyzer.
+ */
+async function handleClusterBoundary(opts: QueryOptions): Promise<void> {
+  const archDir = resolveArchDir(opts.archDir);
+  const root = _path.dirname(archDir);
+  const archJson = await loadArchJsonForCluster(root);
+
+  if (archJson === null) {
+    console.log(`No ArchJSON found at ${root}/.archguard/query. Run \`archguard analyze\` first.`);
+    return;
+  }
+  if (archJson.entities.length < 2) {
+    console.log('At least 2 entities are required for cluster boundary analysis.');
+    return;
+  }
+
+  const matrix = buildAdjacencyMatrix(archJson);
+  const entityNames = archJson.entities.map((e) => e.name);
+  const report = ClusterBoundaryAnalyzer.analyze(matrix, entityNames);
+
+  console.log(JSON.stringify(report, null, 2));
+}
 
 /**
  * --architecture-drift: compute per-entity L2 architecture drift between the two
