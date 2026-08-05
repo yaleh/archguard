@@ -537,3 +537,11 @@ AC 审计：19 未勾 → **9 剩余**。9 项均无法由外层独立验证（�
 - TASK-31（2）/TASK-35（1）：installer 相关（需真实 install/reload 环境 + `claude mcp list`）
 - TASK-49（1）：凭据条件（需环境有凭据）
 **处置**：留待内层在真实环境验证（或有相关任务时顺带核），不盲勾。若需，内层可建「验证 9 项旧 AC」任务。
+
+## 18:15Z AC 审计完成（TASK-77 真实环境验证）
+
+9 项旧 AC 由 TASK-77 在真实环境核完：
+- **6 项确认满足**（外层勾 DoD）：DIR-001 x2（环检测 []、语义保留 tsc 干净）、DIR-002 x3（nodeId 碰撞修复+测试+图）、TASK-31 deprecated installer（33/33 过）
+- **2 项被真实缺陷阻塞**：TASK-31/35 的 `claude mcp list Connected`——安装/升级机制成功但 **MCP 连接失败**（mcp-launcher createRequire 无法解析 npm-cache 布局里的核心包）。内层立案 **TASK-78**（修 plugin/mcp-launcher.mjs MCP 连接缺陷）。
+- **1 项缺凭据**：TASK-49（OPENAI_API_KEY 环境无，测试干净跳过 44|1）。
+**价值**：外层原判「9 项无法独立验证」——交给内层真实环境核后，揭示 2 项 AC 实际未满足（真实缺陷）+ 1 项环境阻塞。外层视角盲区被内层实测闭合。
