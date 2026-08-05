@@ -7,6 +7,9 @@ labels:
 parent: null
 children: []
 ---
+
+**PARKED** — archived 2026-08-05 by TASK-60 (已覆盖 by tasks/TASK-50 done + `src/analysis/shape-smells/`; NOT migrated).
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

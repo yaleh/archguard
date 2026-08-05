@@ -59,3 +59,40 @@
 **处置建议**：PROBE-ITER9 / ARCH-INVERSION-001 与 TASK-14 同属「已在 tasks/ 完成」类 → 归档
 （标 `**PARKED` 或移 `tasks/archive/`），**不得搬入 pool**。否则晋级管线会把已 done 工作当新候选
 重复派发（与 TASK-60 的 AC-2「TASK-14 不得搬入」同一条防线）。
+
+## TASK-60 执行对账（内层 2026-08-05，git 历史逐任务核实）
+
+对 `quay-tasks/` 6 个 todo + 1 ready 逐个用 git 历史核实后的终稿（真新/已覆盖/已过期 三选一 + 证据命令）：
+
+| quay-tasks 任务 | 分类 | 证据命令（结果） | 处置 |
+|---|---|---|---|
+| TASK-11 | **真新** | `ls src/plugins/shared/`（无 query-loader.ts/capture-mapper.ts）；`find src -name '*.scm'`（空）；`git log --all --oneline -S QueryLoader`（空） | 搬入 **tasks/TASK-62** |
+| TASK-14 | **已覆盖** | `tasks/TASK-50` status=done；`ls src/analysis/shape-smells/`（5 文件存在）；实现提交 `f1f4305` | 不搬，标 `**PARKED` |
+| TASK-16 | **真新** | `ls src/core/pack-registry/ src/plugins/packs/`（均不存在）；仅设计稿提交 `1b1cb37`（docs/proposals/proposal-language-knowledge-registry.md） | 搬入 **tasks/TASK-63** |
+| TASK-17 | **真新** | `ls src/analysis/jl/`（不存在）；`git log --all --oneline -- src/analysis/jl/`（空）；master 及全分支均无 jl 实现 | 搬入 **tasks/TASK-64** |
+| TASK-18 | **真新** | 同上（无 drift-calculator.ts）；`git log --all --oneline --grep drift` 仅 `5256b05`（创建 backlog 文件本身，非实现） | 搬入 **tasks/TASK-65**（parent=TASK-64） |
+| TASK-19 | **真新** | 同上（无 kmeans.ts）；`git log --all --oneline --grep cluster\|kmeans` 仅 `5256b05` | 搬入 **tasks/TASK-66**（parent=TASK-64） |
+
+**非 todo 存量终稿**：PROBE-ITER9=**已覆盖**（tasks/DIR-002 done，nodeId 碰撞已修）、
+ARCH-INVERSION-001=**已覆盖**（tasks/DIR-001 done，types↔analysis 环已破）、TASK-EXP-B-refute=
+**实验任务非重复**（维持 needs-human，按其 Human note 待人工删除）。
+
+**依赖裁定**：JL 三连保留拆分，但 TASK-65/66（drift / cluster-boundary）都依赖 TASK-64 的
+`src/analysis/jl/` 基础设施 → frontmatter `parent: TASK-64`，待 TASK-64 done 后才可晋级
+（ready-pool-check 的 depsReady 门）。
+
+**搬入清单**：`tasks/TASK-62..66.md`（Proposal/Plan/Acceptance Criteria/DoD 四件套 + Touches +
+Contract 齐全，frontmatter `extra.source: quay-tasks/<原id>` 溯源，status: todo 入候选池）。
+
+**原文件归档**：`quay-tasks/{TASK-11,14,16,17,18,19,PROBE-ITER9,ARCH-INVERSION-001}.md` 已标
+`**PARKED**`（TASK-EXP-B-refute 未动）。
+
+**配置结论（TASK-60 任务项 3，不自行改 config）**：`QUAY_NATIVE_TASKS_DIR: ./tasks` **维持不变**。
+搬入后两库合一——真新任务已进 `tasks/`，`quay-tasks/` 原文件全部归档，无需改候选源配置。
+
+**附带修复（deviation）**：`plugin/scripts/ready-pool-check.ts`（080c667 新建）imports 了三个
+从未定义的函数（`checkTaskTouchesResolve`、`expandDeclaredTouches`、`taskWorkLanded`），脚本此前
+无法加载。TASK-60 验证 AC 依赖该脚本输出，故补上这三个函数：
+`checkTaskTouchesResolve`（touches 解析合格性守卫）→ `touches-orthogonality-check.ts`；
+`expandDeclaredTouches`（具体路径无论是否存在都解析，通配符才打树）→ `concurrent-batch-scheduler.ts`；
+`taskWorkLanded`（复用 `hasAnyCodeRootTouch` 的落地证据）→ `task-status-drift-check.ts`。

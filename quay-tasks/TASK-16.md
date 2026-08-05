@@ -7,6 +7,9 @@ labels:
 parent: null
 children: []
 ---
+
+**PARKED** — archived 2026-08-05 by TASK-60 (migrated → tasks/TASK-63, verified 真新).
+
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->

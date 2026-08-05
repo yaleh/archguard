@@ -47,10 +47,55 @@ backlog 直接放 pool 会让 `dispatchable_disjoint` 失真（quay 侧吃过「
 
 ## Acceptance Criteria
 
-- [ ] `quay-tasks/` 6 个 todo 逐个有 git 核实结论（「真新/已覆盖/已过期」三选一，附证据命令）
-- [ ] 「真新」任务已复制到 `tasks/`（四件套 + Touches + Contract 齐全，带溯源标签），原文件标 `**PARKED**`
-- [ ] 搬入后 `node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json` 的 `pool` > 0 或 `dispatchable_disjoint ≥ cap`（晋级机制对搬入任务生效）
-- [ ] 对账终稿落盘 `docs/analysis/quay-tasks-reconciliation.md`
+- [x] `quay-tasks/` 6 个 todo 逐个有 git 核实结论（「真新/已覆盖/已过期」三选一，附证据命令）
+- [x] 「真新」任务已复制到 `tasks/`（四件套 + Touches + Contract 齐全，带溯源标签），原文件标 `**PARKED**`
+- [x] 搬入后 `node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json` 的 `pool` > 0 或 `dispatchable_disjoint ≥ cap`（晋级机制对搬入任务生效）
+- [x] 对账终稿落盘 `docs/analysis/quay-tasks-reconciliation.md`
+
+## Evidence (TASK-60 执行，2026-08-05)
+
+### 核实结论（6 个 todo，逐任务 git 历史）
+
+| quay-tasks | 分类 | 证据命令（结果） | 处置 |
+|---|---|---|---|
+| TASK-11 | 真新 | `ls src/plugins/shared/` 无 query-loader/capture-mapper；`find src -name '*.scm'` 空 | 搬入 TASK-62 |
+| TASK-14 | 已覆盖 | `tasks/TASK-50` status=done；`src/analysis/shape-smells/` 存在（实现 `f1f4305`） | 不搬，标 PARKED |
+| TASK-16 | 真新 | `ls src/core/pack-registry/ src/plugins/packs/` 均不存在；仅设计稿 `1b1cb37` | 搬入 TASK-63 |
+| TASK-17 | 真新 | `ls src/analysis/jl/` 不存在；master 及全分支无 jl 实现 | 搬入 TASK-64 |
+| TASK-18 | 真新 | 同上，无 drift-calculator.ts | 搬入 TASK-65（parent=TASK-64） |
+| TASK-19 | 真新 | 同上，无 kmeans.ts | 搬入 TASK-66（parent=TASK-64） |
+
+非 todo 存量：PROBE-ITER9=已覆盖（tasks/DIR-002）、ARCH-INVERSION-001=已覆盖（tasks/DIR-001）、
+TASK-EXP-B-refute=实验任务非重复（未动）。重复项确认未搬入。
+
+### 搬入清单
+
+`tasks/TASK-62..66.md`（Proposal/Plan/Acceptance Criteria/DoD 四件套 + Touches + Contract 齐全，
+frontmatter `extra.source: quay-tasks/<原id>` 溯源，status: todo）。
+
+### 归档
+
+`quay-tasks/{TASK-11,14,16,17,18,19,PROBE-ITER9,ARCH-INVERSION-001}.md` 已标 `**PARKED**`。
+
+### invoke 证据（AC-3）
+
+```
+node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json
+```
+
+→ `pool: 1`（>0，AC-3 判据成立）、`dispatchable_disjoint: 1`、`floor: 12`、`deficit: 11`、
+`candidates: [TASK-62, TASK-63, TASK-64, TASK-65, TASK-66]`、
+`promotions: [TASK-62, TASK-63, TASK-64]`（四件套 complete + touches resolve + deps ready；
+TASK-65/66 parent=TASK-64 未 done → 待依赖）。晋级机制对搬入任务生效。
+
+### deviation（附带修复，非任务 Touches 内文件）
+
+`plugin/scripts/ready-pool-check.ts`（080c667 新建）imports 了三个从未定义的函数，脚本此前无法
+加载（`SyntaxError`）——AC-3 的 invoke 命令被阻塞。已补齐：
+`checkTaskTouchesResolve`（→ `touches-orthogonality-check.ts`）、
+`expandDeclaredTouches`（→ `concurrent-batch-scheduler.ts`）、
+`taskWorkLanded`（→ `task-status-drift-check.ts`，复用 `hasAnyCodeRootTouch` 落地证据）。
+修复后 ready-pool-check 正常输出，task-contract-check 对 5 个搬入任务 0 violations。
 
 ## Touches
 
@@ -89,7 +134,8 @@ grep -L '\*\*PARKED' quay-tasks/TASK-1*.md  # 已归档的标了 PARKED
 
 ## Progress
 
-- （空——待内层执行）
+- 2026-08-05 内层执行：6 个 todo 核实完毕（5 真新 + 1 已覆盖），搬入 TASK-62..66，归档 8 个原文件，
+  对账终稿落盘，AC-1..4 全部满足（详见上方 Evidence）。
 
 ## Dispatch review
 
