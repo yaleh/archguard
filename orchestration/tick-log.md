@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 50 |
+| no-action | 51 |
 | unblock | 7 |
 | correct | 6 |
 | escalate | 0 |
@@ -88,4 +88,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 61 | 12:48Z | no-action | **full-suite 验证 gate 启动 + 内层等 TASK-62/63/64 subagent**。内层已派发 TASK-62/63/64（三 worktree task-62/63/64 + 三括号在飞，早期无提交），等后台 agent。外层：资源闸 GO → 起 full-suite 验证机制地基 + TASK-61/60。**首次 `--test-concurrency=8` 被 vitest 3.2.4 拒绝**（CACError: Unknown option --testConcurrency——`--test-concurrency` 是文档虚构 flag，真实是 `--maxWorkers`；无 wrapper 消费它）→ 误报红（runner 早检测 + 触发器 SUITE-RED 正常工作）→ 改 `--maxWorkers=8` 重起，state=running（12:47），SUITE-RUNNING 已发，正在跑。**`--test-concurrency` 是 quay 交付文档 bug**（fast-mode 文档指令不存在的 flag），记待查 + 报 manager。内层 pane 显示等 3 agent（良性空闲，等后台完成通知）。Monitor 三判据照常。 | 等 3 个后台 agent（TASK-62/63/64 早期阶段）|
 | 62 | 12:59Z | correct | **红窗分诊：runner 假阳性红 → 纠正 + TASK-67 立案**。full-suite 完成（12:57，611s）：vitest 摘要 **4902 passed / 0 failed / 13 skipped / exit 0**——机制地基 + TASK-61/60 全绿。但 runner 因一行 `✖ Diagram test failed...`（来自**通过**的负控制测试 console 输出）触发 early-red，state=red 错误在位（stop-dispatch 信号）。分诊：核实 vitest 摘要（0 失败）→ 判 runner 检测 bug 假阳性（`full-suite-runner.ts:68 /✖/` 匹配 console 输出）→ 手动纠正 state=green（12:58:49 SUITE-GREEN 已发，信号清除）。**建 TASK-67**（修 runner 结构化判红，四件套+Contract 齐全）。本轮合并（机制 + TASK-61/60）经 4902 测试验证通过，DoD 可勾。 | 等 3 个后台 agent（TASK-62/63/64）|
 | 63 | 13:05Z | no-action | **内层 subagent 深度推进 + AC 审计轻量 pass**。TASK-62/63/64 三个 subagent 已工作 29m+（高 token：tree-sitter-bridge 207k、TASK-64 evidence 221k——真实工作非轮询），等后台 agent（良性空闲）。套件 green（上轮 4902/0）。资源闸 WAIT（subagent 负载）。**AC 审计**：利用 full-suite 绿，勾 DIR-001 "Test suite green" + TASK-45 "One full vitest run green"（均被 4902/0 验证）；其余 6 任务需测试跑的 AC 项待低负载窗口。内层 heartbeat tick ba7f43f（无停止条件，pool 空）。 | 等 3 个后台 agent（TASK-62/63/64，29m+）|
+| 64 | 13:28Z | no-action | **TASK-62/63/64/67 收尾 + 新 full-suite 验证 4 合并**。内层完成本轮 4 任务 fan-in：TASK-62（tree-sitter query 外部化 QueryLoader/CaptureMapper/C++）、TASK-63（PackRegistry/RuleEngine 语言知识注册表）、TASK-64（JL 维度 SVD/arch-health）、TASK-67（runner 结构化判红——外层立案的假阳性红修复，内层快速执行落地，Evidence 含 18/18 判定矩阵 + fail-fast-check 通过）。全部 scoped 绿、AC 由执行 agent 勾选、DoD 留外层。**外层收尾**：关 4 括号 + 翻 4 done + 记 verification-round #1（closed 4，suiteGreen=true）。**新 full-suite 已起**（13:27，--maxWorkers=8，runner 已带 TASK-67 修复——预期不再假阳性红）。内层计划 TASK-65/66 派发（TASK-64 落地后可晋，66 已解析通过）。TASK-64 AC3（perf 环境受限）+ 4 任务 DoD 待新全量验证后勾。 | Cooked 51m，计划 TASK-65/66 派发 |
 

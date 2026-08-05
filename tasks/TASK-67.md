@@ -1,7 +1,7 @@
 ---
 id: TASK-67
 title: "TASK-67: 修 full-suite-runner 的 ✖ 假阳性红检测（匹配到通过测试的 console 输出）"
-status: ready
+status: done
 labels:
   - defect
   - mechanism

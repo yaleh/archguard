@@ -208,3 +208,12 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
    tracked（此前未跟踪）。但仍有 ~24 个机制脚本未跟踪（monitor-mount-check.sh、
    session-liveness-mount.sh、capability-catalog.sh、loop-driver-check.sh、read-probe-spec.ts、
    suite-state-trigger.ts 等）——归 manager-inbox 的机制归属问题，待外层统一裁（是否一并 commit）。
+
+## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
+
+1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
+2. **外层收尾**：关 4 括号（fm-TASK-62/63/64/67）+ 翻 4 done + verification-round #1 记录。inProgress 空。
+3. **新 full-suite 起跑**（13:27，--maxWorkers=8）：验证 4 合并 + 机制 + TASK-60/61。runner 已带 TASK-67 修复——此轮判红应真实（不再匹配裸 ✖）。
+4. **TASK-67 闭环**：外层 12:59 立案 → 内层 13:0x 起执行 → 13:1x 合并。快速闭环实证（外层立案 → 内层执行 → fan-in 全自主）。
+5. **下一步**：TASK-65/66 待派发（TASK-64 落地后可晋，66 已解析通过，65 解除 parent 阻塞）。内层计划中。
+6. **遗留 AC**：TASK-64 AC3（perf spike 环境受限）记理由；4 任务 DoD 待新全量绿后勾。
