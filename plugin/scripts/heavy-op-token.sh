@@ -27,7 +27,9 @@
 #   bash plugin/scripts/heavy-op-token.sh --status
 #   bash plugin/scripts/heavy-op-token.sh --acquire <project> [--timeout <s>]
 #   bash plugin/scripts/heavy-op-token.sh --release <project>
+#   bash plugin/scripts/heavy-op-token.sh --report            # waited_ms distribution (count/median/p90/max)
 #   bash plugin/scripts/heavy-op-token.sh --root <dir> ...   # test seam: override the state-dir root
+#   bash plugin/scripts/heavy-op-token.sh --events-file <p> ... # test seam: override the events file (default ${PWD}/.quay/heavy-op-token-events.jsonl)
 #
 # Contract (from the task's ## Contract block):
 #   measure  holder   = `--status` 的 holder 字段
@@ -46,8 +48,18 @@
 #     pid-alive check is what protects it); reclaiming on pid-death alone would not distinguish a
 #     crashed holder from pid reuse (the mtime guard is the other half).
 #   - no silent wait: `--timeout 0` (the default) fails IMMEDIATELY with the holder's identity and
-#     held duration — silent waiting is indistinguishable from a hang. `--timeout N` polls at most N
-#     seconds, printing a line each second so the caller can see it is waiting.
+#     held duration — silent waiting is indistinguishable from a hang. `--timeout N` is a REAL
+#     bounded poll, NOT a single decision: do_acquire re-checks the reclaim conditions once per
+#     second, re-attempting the atomic claim each iteration, for at most N seconds — so a dead
+#     holder becomes reclaimable mid-wait and the acquire SUCCEEDS. (gap-the-only-token-waiter-
+#     refuses-to-wait-at-all AC1 pins this: a --timeout that does not loop would make changing
+#     test.sh's bound a "exists but does not take effect" no-op.)
+#   - wait bound (gap-the-only-token-waiter-refuses-to-wait-at-all, AC4): the ONLY real waiter is
+#     scripts/test.sh, which uses HEAVY_OP_ACQUIRE_TIMEOUT_S (default 40): a full stale-timeout
+#     cycle (HEAVY_OP_STALE_TIMEOUT_S, default 30) plus margin for the write→reclaim race, yet FAR
+#     below one real heavy op (full suite ~8 min at concurrency 8) — the worst-case wait absorbs
+#     the ≤30s transient grace window and can NEVER serialize two heavy ops back-to-back
+#     (40/480 ≈ 8% of a full suite).
 #   - no fair queue / FIFO: starvation is observable first (waited_ms), the policy decision waits
 #     for cost data — setting policy before the cost structure is known is the 416s mistake.
 #
@@ -61,16 +73,55 @@ HEAVY_OP_DIR="${GLOBAL_DIR}/heavy-op"
 TOKEN_FILE="${HEAVY_OP_DIR}/token"
 RECLAIM_COUNTER="${HEAVY_OP_DIR}/stale_reclaims"
 STALE_TIMEOUT_S="${HEAVY_OP_STALE_TIMEOUT_S:-30}"
+# LAST_BLOCK — the reason the most recent try_acquire failed (holder alive / holder dead-not-stale
+# + reclaim delta). Set by try_acquire on each failed claim, surfaced by do_acquire's timeout
+# branch so the FINAL failure line names the holder's real state instead of a generic "held".
+LAST_BLOCK=""
+
+# ── events landing (gap-token-wait-times-are-printed-once-and-never-landed) ─────────────────────────────
+# Every acquire appends one JSONL record to the workspace's `.quay/` runtime-state file — the same
+# shape / location / gitignore treatment as gate-events.jsonl (baseline for the concurrency-relaxation
+# experiment's third number: the real distribution of waited_ms). The landing is OBSERVATION ONLY:
+# a failed write must NEVER change the acquire's exit code (AC4 — the observation mechanism is not a
+# new single point of failure for the global single-flight token). Default resolves from the caller's
+# CWD (scripts/test.sh and the inner dispatch run from the workspace root); HEAVY_OP_EVENTS_FILE or
+# --events-file override it (test seam).
+EVENTS_FILE="${HEAVY_OP_EVENTS_FILE:-${PWD}/.quay/heavy-op-token-events.jsonl}"
+# A distribution (median/p90/max) is only meaningful past this many samples; below it the report says
+# "样本 N 不足" instead of printing a pretty zero (gap-token-wait-times... AC6).
+MIN_EVENTS_FOR_DIST=10
+
+# jsonl_escape <value> — make a value safe inside a JSON string literal. This script only writes
+# short alphanumeric project tokens in practice; the escape still guards quotes/backslashes/newlines.
+jsonl_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n\r'
+}
+
+# land_event <project> <waited_ms> <acquired:yes|no> <outcome> <holder> — append one record,
+# swallowing every failure (observation must never block the acquire; AC4's negative control).
+land_event() {
+  local project="$1" waited_ms="$2" acquired="$3" outcome="$4" holder="$5"
+  { mkdir -p "$(dirname "${EVENTS_FILE}")" \
+      && printf '{"ts":%s,"project":"%s","waited_ms":%s,"acquired":"%s","holder":"%s","outcome":"%s"}\n' \
+         "$(now_ms)" "$(jsonl_escape "${project}")" "$waited_ms" "$acquired" \
+         "$(jsonl_escape "${holder}")" "$outcome" >> "${EVENTS_FILE}"; } 2>/dev/null || true
+}
 
 now_ms() {
-  # Epoch milliseconds. NOT `date +%s%3N`: some date builds do not truncate %N (this box emits
-  # full nanoseconds, and %N is not zero-padded), which makes held_ms garbage. Build it from
-  # seconds + the first 3 nanosecond digits, left-padded to 3.
-  local s n
-  s="$(date +%s 2>/dev/null || echo 0)"
-  n="$(date +%N 2>/dev/null || echo 000000000)"
+  # Epoch milliseconds from ONE date call. `date +%s%N` yields seconds+nanoseconds from a
+  # single clock read. Two separate `date +%s` / `date +%N` calls could straddle a second
+  # boundary (seconds from second X, nanos from X+1), synthesizing a timestamp up to ~999ms
+  # EARLY — a later reader could then compute an earlier time than an earlier writer, making
+  # held_ms negative (observed -559ms under load; constructive defect, not a load artifact).
+  # NOTE: `date +%s%3N` is avoided (some builds don't truncate %N and emit full nanoseconds);
+  # parsing the first 3 nanosecond digits here is equivalent and keeps that guarantee.
+  local out s n
+  out="$(date +%s%N 2>/dev/null || echo 0000000000000000000)"
+  case "$out" in ''|*[!0-9]*) out="0000000000000000000" ;; esac
+  s="${out:0:10}"
+  n="${out:10:9}"
   case "$n" in ''|*[!0-9]*) n="000000000" ;; esac
-  printf '%s%03d' "$s" "$(( 10#${n:0:3} ))"
+  printf '%s%03d' "${s:-0}" "$(( 10#${n:0:3} ))"
 }
 
 # ── argument parsing ─────────────────────────────────────────────────────────────────────────────────
@@ -87,6 +138,8 @@ while [ "$i" -lt "${#args[@]}" ]; do
     --status)  cmd="status" ;;
     --timeout) timeout="${args[$((i+1))]:-0}"; i=$((i+1)) ;;
     --root)    GLOBAL_DIR="${args[$((i+1))]:-}"; HEAVY_OP_DIR="${GLOBAL_DIR}/heavy-op"; TOKEN_FILE="${HEAVY_OP_DIR}/token"; RECLAIM_COUNTER="${HEAVY_OP_DIR}/stale_reclaims"; i=$((i+1)) ;;
+    --events-file) EVENTS_FILE="${args[$((i+1))]:-}"; i=$((i+1)) ;;
+    --report)  cmd="events-report" ;;
     -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) printf 'heavy-op-token: unknown argument: %s\n' "$a" >&2; exit 2 ;;
   esac
@@ -138,7 +191,15 @@ held_ms_of_token() {
   acq="$(read_field acquired_ms)"
   now="$(now_ms)"
   if [ -n "$acq" ] && [ "$acq" -ge 0 ] 2>/dev/null; then
-    printf '%s' "$(( now - acq ))"
+    local diff=$(( now - acq ))
+    if [ "$diff" -lt 0 ]; then
+      # Defensive clamp only. With the single-call now_ms() fix this should never fire; if it
+      # does, the clock is actually broken. Say so loudly on stderr instead of silently
+      # flattening — a silent clamp would make "held 0ms" a detector with no voice.
+      printf 'heavy-op-token: WARNING held_ms computed negative (%sms) — clock went backwards; clamped to 0\n' "$diff" >&2
+      diff=0
+    fi
+    printf '%s' "$diff"
   else
     printf '0'
   fi
@@ -187,6 +248,7 @@ try_acquire() {
     pid="$(read_holder_pid)"
     if [ -n "$pid" ] && pid_alive "$pid"; then
       held="$(held_ms_of_token)"
+      LAST_BLOCK="token held by ${holder:-unknown} (pid ${pid}, ALIVE, held ${held}ms)"
       printf 'heavy-op-token: HELD by %s (pid %s, held %sms) — %s did not acquire (no silent wait)\n' \
         "${holder:-unknown}" "$pid" "$held" "$project" >&2
       return 1
@@ -200,8 +262,12 @@ try_acquire() {
         "$(( now_s - mtime_s ))" "${pid:-?}" "$(read_reclaim_counter)" >&2
     else
       held="$(held_ms_of_token)"
-      printf 'heavy-op-token: HELD by %s (pid %s dead, mtime only %ss old) — NOT stale: reclaim needs BOTH mtime timeout AND dead pid — %s did not acquire\n' \
-        "${holder:-unknown}" "${pid:-?}" "$(( now_s - mtime_s ))" "$project" >&2
+      local age=$(( now_s - mtime_s ))
+      local reclaim_in=$(( STALE_TIMEOUT_S - age ))
+      if [ "$reclaim_in" -lt 0 ]; then reclaim_in=0; fi
+      LAST_BLOCK="token held by ${holder:-unknown} (pid ${pid:-?} DEAD, mtime only ${age}s old — reclaimable in ${reclaim_in}s)"
+      printf 'heavy-op-token: HELD by %s (pid %s dead, mtime only %ss old) — holder DEAD; reclaimable in %ss (reclaim needs BOTH mtime timeout AND dead pid) — %s did not acquire\n' \
+        "${holder:-unknown}" "${pid:-?}" "$age" "$reclaim_in" "$project" >&2
       return 1
     fi
   fi
@@ -235,19 +301,29 @@ do_status() {
 }
 
 do_acquire() {
-  local project="$1" timeout="$2" waited=0
+  local project="$1" timeout="$2" waited=0 holder_now
   if ! fail_open_or_prepare; then
     printf 'waited_ms=0 holder=<fail-open> acquired=no\n'
+    land_event "${project}" "0" "no" "fail-open" "<fail-open>"
     return 0
   fi
   while :; do
     if try_acquire "$project"; then
       printf 'waited_ms=%d holder=%s acquired=yes\n' "$(( waited * 1000 ))" "$project"
+      land_event "${project}" "$(( waited * 1000 ))" "yes" "acquired" "${project}"
       return 0
     fi
     if [ "$timeout" -eq 0 ] || [ "$waited" -ge "$timeout" ]; then
+      # AC5: the FINAL failure line must say what actually blocks (alive vs dead + reclaim delta),
+      # not a generic "held by another project". LAST_BLOCK carries the last try_acquire reason.
+      if [ -n "$LAST_BLOCK" ]; then
+        printf 'heavy-op-token: did not acquire within %ss wait window — %s — %s did not acquire\n' \
+          "$timeout" "$LAST_BLOCK" "$project" >&2
+      fi
       # waited_ms is a contract measure — emitted on failure too (how long THIS acquire waited).
       printf 'waited_ms=%d acquired=no\n' "$(( waited * 1000 ))"
+      holder_now="$(read_holder)"
+      land_event "${project}" "$(( waited * 1000 ))" "no" "timeout" "${holder_now:-unknown}"
       return 1
     fi
     waited=$((waited + 1))
@@ -277,8 +353,34 @@ do_release() {
   return 0
 }
 
+# ── events report (gap-token-wait-times-are-printed-once-and-never-landed AC6) ──────────────────────────
+do_events_report() {
+  local file="${EVENTS_FILE}" count=0 vals
+  if [ ! -f "${file}" ]; then
+    printf 'heavy-op-token-events: no events file at %s (count 0)\n' "${file}"
+    return 0
+  fi
+  count="$(grep -c '^{' "${file}" 2>/dev/null || echo 0)"
+  case "$count" in ''|*[!0-9]*) count=0 ;; esac
+  if [ "$count" -lt "${MIN_EVENTS_FOR_DIST}" ]; then
+    # Refusing a "pretty 0": a median/p90/max over too few samples is noise dressed as signal.
+    printf 'heavy-op-token-events: count=%s — 样本 %s 不足 (need >= %s for a distribution); no median/p90/max printed\n' \
+      "${count}" "${count}" "${MIN_EVENTS_FOR_DIST}"
+    return 0
+  fi
+  vals="$(grep -o '"waited_ms":[0-9]*' "${file}" | sed 's/^"waited_ms"://' | sort -n)"
+  printf '%s' "${vals}" | awk -v n="${count}" '
+    { a[NR] = $1 }
+    END {
+      med = (n % 2) ? a[int(n/2)+1] : int((a[n/2] + a[n/2+1]) / 2);
+      p90i = int(n * 0.9) + 1; if (p90i > n) p90i = n;
+      printf "heavy-op-token-events: count=%d median_ms=%d p90_ms=%d max_ms=%d\n", n, med, a[p90i], a[n];
+    }'
+}
+
 case "$cmd" in
   status)  do_status ;;
   acquire) do_acquire "$project" "$timeout" ;;
   release) do_release "$project" ;;
+  events-report) do_events_report ;;
 esac

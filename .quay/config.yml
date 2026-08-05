@@ -1,113 +1,30 @@
-# .quay/config.yml — unified per-workspace config (DIR-050).
-# Travels with the project; single source of truth for provider, gate, and loop config.
-#
-# Sections:
-#   providers: — which Provider is enabled, its path, env, and creation defaults
-#   gates:     — workspace-owned gates (it0, adr, fixed, testPass, coverageFloor, redGreen)
-#   loop:      — autonomous loop driver params (board, stop, policy, execution, audit, routines)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# PROVIDERS
-# ═══════════════════════════════════════════════════════════════════════════════
-# Each provider has:
-#   enabled:              true|false — the FIRST enabled provider is the default
-#   path:                 path to the Provider's code root (resolved relative to workspaceRoot)
-#   tasks_dir:            where task files are stored (resolved relative to workspaceRoot)
-#   mcp_entry:            [cmd, ...args] — MCP server launch command (resolved relative to provider.path)
-#   default_task_status:  (optional) creation default for new tasks; "todo" if absent
-#   default_task_schema:  (optional) creation default for extra.schema; unset if absent (DIR-101)
-#   env:                  environment variables passed to the provider process:
-#     QUAY_NATIVE_TASKS_DIR — task store path (required for native provider)
-#     QUAY_NATIVE_ADR_DIR   — ADR directory (default: <parent-of-tasksDir>/adr)
-#     QUAY_NATIVE_DOCS_DIR  — docs-managed directory (default: <repo-root>/docs-managed)
-
 providers:
   native:
     enabled: true
-    path: "."
-    mcp_entry: ["quay-native", "mcp"]
-    default_task_status: ready     # valid values: todo, ready, done, needs-human
-    # default_task_schema: "v1"     # uncomment to auto-set extra.schema on new tasks (DIR-101)
+    path: .
+    mcp_entry:
+    - quay-native
+    - mcp
+    default_task_status: ready
     env:
-      QUAY_NATIVE_TASKS_DIR: "./tasks"
-      QUAY_NATIVE_ADR_DIR: "./quay-adr"
-      # QUAY_NATIVE_DOCS_DIR: "./docs-managed"  # default: <repo-root>/docs-managed
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# GATES (DIR-050: unified; previously .quay/gates.yml)
-# ═══════════════════════════════════════════════════════════════════════════════
-# Six gate types. Every entry may carry optional per-gate cwd / timeoutMs overrides.
-#
-#   it0:           [{name, script, argsKey, cwd?, timeoutMs?}]
-#                  — wraps a fixed script, driven by task.extra[argsKey] positional args
-#   adr:           ["ADR-001", ...]
-#                  — auto-wires ADRs with enforcement: fields as adr-<id> gates
-#   fixed:         [{name, script, cwd?, timeoutMs?}]
-#                  — wraps a fixed script (no per-task args)
-#   testPass:      [{name, command, cwd?, timeoutMs?}]
-#                  — runs a command; PASS if exit 0
-#   coverageFloor: [{name, command, floor, pattern?, cwd?, timeoutMs?}]
-#                  — runs a command, extracts coverage %, fails if below floor
-#   redGreen:      [{name, red, green, cwd?, timeoutMs?}]
-#                  — runs red command (must fail), then green (must pass)
-
+      QUAY_NATIVE_TASKS_DIR: ./tasks
+      QUAY_NATIVE_ADR_DIR: ./quay-adr
 gates:
-  # ── ADR gates (auto-wired from ADR enforcement: fields in quay-adr/) ────────
-  # adr:
-  #   - "ADR-001"
-  #   - "ADR-007"
-
-  # ── testPass gates (command exit 0 = PASS) ─────────────────────────────────
   testPass:
-    - name: vitest
-      command: "npx vitest run"
-      timeoutMs: 300000
-
-    - name: typecheck
-      command: "npx tsc --noEmit"
-      timeoutMs: 120000
-
-    - name: build
-      command: "npm run build"
-      timeoutMs: 300000
-
-    - name: lint
-      command: "npx eslint src/ --max-warnings 0"
-      timeoutMs: 60000
-
-  # ── coverageFloor gates (command output parsed for coverage %) ─────────────
-  # coverageFloor:
-  #   - name: coverage
-  #     command: "npx vitest run --coverage 2>&1 | grep -Eo '[0-9.]+%' | tail -1 | tr -d '%'"
-  #     floor: 80
-  #     pattern: '\d+\.?\d*'
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# LOOP (DIR-050: unified; previously .quay/loop.yml)
-# ═══════════════════════════════════════════════════════════════════════════════
-#   board:       string            REQUIRED — provider name (e.g. "native")
-#   gates:       string|string[]   REQUIRED — gate name(s) or set labels
-#   stop:        string            default "once" — "once" | "until(.halt)" | "until(empty)" | "until(<condition>)"
-#   policy:      string            default "ready-first" — workspace-defined select-ranking label
-#   execution:   string            default "dispatched" — "dispatched" | "inline"
-#   audit:       string            default "adversarial" — "adversarial" | "none"
-#   concurrency: integer >=1       default 1 — max concurrent touches-disjoint builds
-#   routines:    array             default [] — standing routine track
-#     - name:      string   non-empty routine name
-#       trigger:   string   "every(N)" (N>=1) or "on(<event>)"
-#       probe:     string   probe spec name (DIR-056); at least one of probe or dispatch required
-#       dispatch:  string   (legacy) dispatch target name
-
+  - name: vitest
+    command: npx vitest run
+    timeoutMs: 300000
+  - name: typecheck
+    command: npx tsc --noEmit
+    timeoutMs: 120000
+  - name: build
+    command: npm run build
+    timeoutMs: 300000
+  - name: lint
+    command: npx eslint src/ --max-warnings 0
+    timeoutMs: 60000
 loop:
-  board: native
-  gates: [vitest]             # primary gate: run vitest test suite
-  stop: until(.halt)
-  policy: ready-first
-  execution: dispatched
-  audit: adversarial
-  concurrency: 4
-
-  # routines:
-  #   - name: architecture-analysis
-  #     trigger: every(10)
-  #     probe: architecture-analysis
+  repo_root: /home/yale/work/archguard
+  test_command: npx vitest run
+  tmux_session: archguard-4
+  worktree_root: /home/yale/work/archguard-worktrees

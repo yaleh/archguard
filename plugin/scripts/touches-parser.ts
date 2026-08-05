@@ -32,8 +32,16 @@ import { isDirectEntry } from "./gate-script-base.ts";
 // Trailing "(…)" annotation strip — a Touches entry commonly carries a trailing parenthetical
 // note (`(new)`, `(refactor Verify phase)`, `(extract from)`) that is NOT part of the path.
 // Repo paths never contain parentheses, so stripping a trailing "(…)" cannot corrupt a real path.
+// The FULL-WIDTH spelling `（…）` (the CJK convention used by many task Touches bullet lists in
+// this repo, e.g. `plugin/scripts/（触摸→…映射）`) is stripped too (gap-scoped-runs-pay-full-static-
+// check-overhead AC3: the touch-selection mechanism must resolve every annotation spelling the repo
+// actually uses, so a scoped run never silently skips a change-relevant check because of a
+// full-width annotation).
 export function stripTouchAnnotation(entry) {
-  return entry.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return entry
+    .replace(/\s*（[^）]*）\s*$/, "")   // full-width （…） first
+    .replace(/\s*\([^)]*\)\s*$/, "")  // then ASCII (…)
+    .trim();
 }
 
 // Parse a `## Touches` bullet list into bare path/glob strings (backticks/quotes removed,
@@ -51,6 +59,44 @@ export function parseTouchEntries(touchesSection) {
     .map((l) => l.replace(/^[`"'']+|[`"'']+$/g, "").trim()) // then any backtick the annotation masked
     .map((l) => l.replace(/^\.\//, "").trim())                  // then a leading "./"
     .filter(Boolean);
+}
+
+// Parse a `## Touches` bullet list into bare path/glob strings PLUS the trailing "(…)" annotation
+// when it is one of the structural markers the dispatch-eligibility resolve check understands:
+// `(new)` — a file this task will CREATE, so it need NOT exist yet; `(delete)` — a file this task
+// will DELETE, and a delete of an already-gone file is a no-op, so it need NOT exist either. Both
+// tags are EXEMPT from the existence check (the AC2 wording: "NOT tagged `(new)`/`(delete)`").
+// Returns [{path, tag}] where tag is 'new' | 'delete' | null.
+// The path extraction is BYTE-IDENTICAL to parseTouchEntries (same quote/backtick strip before the
+// annotation, same single annotation strip, same masked-backtick strip after, same leading "./");
+// the only difference is the tag is captured from the annotation before it is stripped. This is
+// the tag-aware read used by touches-orthogonality-check.ts's checkTouchesResolve
+// (gap-ready-queue-still-lists-eight-tasks-targeting-retired-pipeline-files): a `(new)` touch must
+// never be judged "missing from the tree", and the parity test asserts
+// parseTouchEntriesWithTags(s).map(e => e.path) === parseTouchEntries(s) for the fixture set.
+export function parseTouchEntriesWithTags(touchesSection) {
+  if (!touchesSection) return [];
+  const out = [];
+  for (const raw of String(touchesSection).split(/\r?\n/)) {
+    const line = raw.trim();
+    const m = line.match(/^[-*]\s+(.+)$/);
+    if (!m) continue;
+    let entry = m[1].trim();
+    entry = entry.replace(/^[`"'']+|[`"'']+$/g, "").trim(); // surrounding quotes/backticks first
+    let tag = null;
+    const ann = entry.match(/\s*\(([^)]*)\)\s*$/);
+    if (ann) {
+      const a = ann[1].trim().toLowerCase();
+      if (a === "new") tag = "new";
+      else if (a === "delete" || a === "deleted") tag = "delete";
+    }
+    const stripped = stripTouchAnnotation(entry); // the ONE annotation-strip implementation
+    const cleaned = stripped.replace(/^[`"'']+|[`"'']+$/g, "").trim(); // backtick the annotation masked
+    const path = cleaned.replace(/^\.\//, "").trim(); // leading "./"
+    if (!path) continue;
+    out.push({ path, tag });
+  }
+  return out;
 }
 
 // Locate the `## Touches` section of a full task/charter body. Returns { hasSection, section }.
