@@ -506,6 +506,15 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 2. **空闲性质**：任务库耗尽、方向候选表耗尽（A 类全齐 + B 类/卫生/缺陷全消费）——自然排空，非阻塞。
    等外层补建新任务/方向。
 
+## 20:3xZ 更新（TASK-79 派发）
+
+1. **外层 20:26Z 方向**：TASK-79（TASK-78 修复后验证 TASK-31/35 的 `claude mcp list` Connected
+   AC——本地 build + 安装 + `claude mcp list` 实测，**不要求公开发布**；若需外层启用插件/发布则
+   明确列出）。
+2. **§3.6 补晋 + §4 派发**：资格通过（self-touch OK、resolve 1/2 missing 多数解析、lint gate 在位）
+   → todo→ready、§3.5 开括号（fm-TASK-79-…）、§4 后台派发（worktree task-79）。
+3. **在飞**：TASK-79。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
