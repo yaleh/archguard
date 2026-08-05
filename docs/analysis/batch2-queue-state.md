@@ -129,3 +129,10 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
    下个 tick 处理。
 5. **遥测括号**：TASK-60/61 已由外层闭合（inProgress 空）；TASK-62/63/64 新开在飞。
 6. **full-suite 状态**：外层 12:33Z 记 resource-gate WAIT，全量推迟。
+
+## 12:48Z 更新（外层 tick #61：full-suite 启动）
+
+1. **内层已派发 TASK-62/63/64**：三 worktree（task-62/63/64，基于 ffdb6c4）+ 三遥测括号在飞，等后台 agent（良性空闲）。TASK-65/66 依赖 TASK-64 的文件，待其落地后可晋。
+2. **full-suite 已起**（外层后台，验证机制地基 + TASK-61/60）：资源闸 GO。**首次 `--test-concurrency=8` 被 vitest 3.2.4 拒绝**（CACError: Unknown option）——`--test-concurrency` 是文档虚构 flag（vitest 真 flag 是 `--maxWorkers`），无 wrapper 消费。误报红后改 `--maxWorkers=8` 重起，state=running（12:47），SUITE-RUNNING 已发。
+3. **发现/待查**：`--test-concurrency` 文档 bug（quay 交付的 fast-mode 文档指令不存在的 flag）——证据：vitest 3.2.4 报 CACError。归 quay 机制文档，报 manager。
+4. **红窗分诊记录**：12:46:33 的 SUITE-RED 是误报（我的命令 flag 错），非真测试失败；12:47:23 转 RUNNING 已撤信号。无真回归。
