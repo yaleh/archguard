@@ -498,6 +498,14 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    后才能勾——待外层处理。
 3. **任务库**：TASK-78 后再次耗尽。TASK-78 待外层翻 done。
 
+## 20:0xZ 更新（空闲心跳：状态无变化）
+
+1. **实况**：master @ 357e186（外层 tick #95：TASK-78 closed；**full-suite deferred，gate WAIT**）。
+   全任务 done、无在飞、无候选/promotions、`.halt` 无、无阻塞信号。最后全量 green（17:55Z 5188/0，
+   在 TASK-78 合并前）；TASK-78 合并待 gate GO 后新全量验证。
+2. **空闲性质**：任务库耗尽、方向候选表耗尽（A 类全齐 + B 类/卫生/缺陷全消费）——自然排空，非阻塞。
+   等外层补建新任务/方向。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
