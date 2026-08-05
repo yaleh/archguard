@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 83 |
+| no-action | 84 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -125,4 +125,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 98 | 20:28Z | no-action | **任务库全 done 后建 TASK-79（Connected AC 本地验证）并派发**。里程碑（任务库 52 全 done、AC 审计完成、套件绿）后，为保持管线建 TASK-79：本地 build+install 验证 TASK-31/35 的 claude mcp list Connected AC（不要求公开发布；需外层动作则列出）。指示内层 §3.6/4 派发。 | 忙（TASK-79 派发中）|
 | 99 | 20:50Z | no-action | **TASK-79 fan-in + 收尾——TASK-31/35 Connected AC 关闭**。内层 fan-in TASK-79（Connected AC 验证：真实构建 + Claude CLI 2.1.222 + 隔离 CLAUDE_CONFIG_DIR，连接腿成立）。**外层收尾**：关括号 + 翻 done + 勾 TASK-31/35 的 Connected AC（TASK-78 修复后满足）。**AC 审计基本全完成**（仅 TASK-49 凭据项环境依赖剩）。任务库再次耗尽。 | idle 等方向 |
 | 100 | 21:10Z | no-action | **完成点 idle（自主 8.5h 里程碑）**。任务库 52 全 done、无在飞、套件绿、AC 审计基本完成。无剩余可自主工作（TASK-49 凭据环境依赖）。本 tick 无推进——距外层停止条件（连续 3 idle）还有 2 tick。报告 #10（8.5h 完成综述）已写 manager-inbox（#8/#9 未读）。 | idle（完成点）|
+| 101 | 21:31Z | no-action | **完成点 idle（第 2 个连续）**。任务库仍空、无在飞、套件绿。manager 未读报告 #9/#10（可能不在线）。无新方向。距停止条件还有 1 tick——若 #102 仍无推进，按机制停止 loop 并报告完成态给人。非卡住（工作已完成，是完成点非停摆）。 | idle（等方向）|
 
