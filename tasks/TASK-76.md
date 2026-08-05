@@ -30,11 +30,11 @@ TASK-75 输出格式已落地）。
 
 ## Acceptance Criteria
 
-- [ ] 插件注册表/外部加载关键契约有 E2E 断言（内置枚举 / 外部加载 / 非法报错）
-- [ ] 每个新增/修改断言有具体契约依据
-- [ ] 插件相关 scoped 测试全绿
-- [ ] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
-- [ ] 不设全局 coverage 百分比目标
+- [x] 插件注册表/外部加载关键契约有 E2E 断言（内置枚举 / 外部加载 / 非法报错）
+- [x] 每个新增/修改断言有具体契约依据
+- [x] 插件相关 scoped 测试全绿
+- [x] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
+- [x] 不设全局 coverage 百分比目标
 
 ## Touches
 
@@ -58,3 +58,46 @@ TASK-75 输出格式已落地）。
 - [ ] 插件契约 E2E 断言补全 + scoped 全绿
 - [ ] 契约依据证据
 - [ ] lint 0 error（新文件 lint-clean）
+
+## Invoke Evidence (TASK-76, 2026-08-05)
+
+**改动（仅测试文件，src 只读审计）**：
+- `tests/integration/plugins/plugin-registry-e2e.test.ts`（新建，13 tests）
+  - 契约 1 内置枚举：注册全部内置插件（typescript/golang/java/python/cpp/kotlin），
+    `listAll()` 全量枚举、`getByName` 按语言名解析、`getByExtension` 扩展名映射、
+    `detectPluginForDirectory` 真实 marker 文件检测；`resolveForLanguage` 内置 pack
+    回退（java/python）+ 命令式插件优先。
+  - 契约 2 外部加载：`loadFromPath()` 动态导入 src/ 之外的插件模块
+    （tests/fixtures/mock-plugin），注册后 registry 可枚举 + initialize/parseProject 全链路。
+  - 契约 3 非法报错：`loadFromPath()` 对「存在但无 default/named Plugin 导出」模块抛
+    文档化错误（`must export a default class or named 'Plugin' export`）；对不存在路径抛错；
+    对 default 非构造器模块抛错。
+- `tests/fixtures/invalid-plugin/index.ts`（新建，非法插件 fixture）
+- `tests/fixtures/non-constructor-plugin/index.ts`（新建，default 非构造器 fixture）
+
+**Contract.invoke 实跑（`npx vitest run tests/integration/plugins/`）**：
+```
+ ✓ tests/integration/plugins/java-plugin.integration.test.ts (13 tests) 411ms
+ ✓ tests/integration/plugins/plugin-registry-e2e.test.ts (13 tests) 122ms
+ ✓ tests/integration/plugins/java/java-pack-parity.test.ts (1 test) 160ms
+ ✓ tests/integration/plugins/go-mcp-server.integration.test.ts (4 tests) 268ms
+ ✓ tests/integration/plugins/go-plugin.integration.test.ts (7 tests) 191ms
+ ✓ tests/integration/plugins/python/python-pack-parity.test.ts (1 test) 103ms
+ ✓ tests/integration/plugins/go-plugin-gopls.integration.test.ts (8 tests | 4 skipped) 73ms
+ ✓ tests/integration/plugins/python-plugin.integration.test.ts (11 tests) 63ms
+ Test Files  8 passed (8)
+      Tests  54 passed | 4 skipped (58)
+   Duration  9.02s (transform 2.41s, setup 0ms, collect 6.43s, tests 1.39s, environment 1ms, prepare 273ms)
+```
+
+**既有注册表 scoped 测试复核（未改动，全绿）**：
+```
+ ✓ tests/unit/core/rule-based-plugin.test.ts (8 tests)
+ ✓ tests/unit/core/plugin-registry-extra.test.ts (19 tests)
+ ✓ tests/core/plugin-registry.integration.test.ts (12 tests)
+ ✓ tests/core/plugin-registry.test.ts (30 tests)
+ Test Files  4 passed (4)  Tests  69 passed (69)
+```
+
+**lint（对触碰文件 scoped eslint）**：`npx eslint tests/integration/plugins/plugin-registry-e2e.test.ts tests/fixtures/invalid-plugin/index.ts tests/fixtures/non-constructor-plugin/index.ts` → 0 errors。
+**type-check**：`npx tsc --noEmit` → exit 0（无新增类型错误）。
