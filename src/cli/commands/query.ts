@@ -26,6 +26,8 @@ import {
   computePackageFanMetrics,
   enrichPackageNodes,
 } from '../mcp/tools/atlas-analytics-tools.js';
+import { readHistoryFile } from '@/analysis/jl/history-writer.js';
+import { TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
 
 interface QueryOptions {
   archDir?: string;
@@ -91,6 +93,9 @@ interface QueryOptions {
   cochange?: string;
   changeRisk?: string;
   ownership?: string;
+
+  // ADR-007 §4: arch health (mirrors archguard_get_intrinsic_dimension)
+  intrinsicDimension?: true;
 }
 
 /**
@@ -218,6 +223,12 @@ export function createQueryCommand(): Command {
       .option('--change-risk <path>', 'Show change risk score for a path')
       .option('--ownership <path>', 'Show maintainer ownership for a path')
 
+      // ADR-007 §4: arch health (mirrors archguard_get_intrinsic_dimension)
+      .option(
+        '--intrinsic-dimension',
+        'Show architecture intrinsic dimension (d_int) from .archguard/arch-health-history.json'
+      )
+
       .action(queryHandler)
   );
 }
@@ -232,6 +243,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     // --list-scopes: read manifest directly, no engine needed
     if (opts.listScopes) {
       await handleListScopes(opts);
+      return;
+    }
+
+    // --intrinsic-dimension: read persisted arch-health history directly (mirrors
+    // the archguard_get_intrinsic_dimension MCP tool — ADR-007 CLI/MCP parity)
+    if (opts.intrinsicDimension) {
+      await handleIntrinsicDimension(opts);
       return;
     }
 
@@ -664,6 +682,55 @@ function toDisplayEntities(raw: Entity[] | Partial<Entity>[] | EdgeListOutput): 
 }
 
 // -- List scopes handler --
+
+/**
+ * --intrinsic-dimension: read the persisted arch-health history and print the
+ * current snapshot + monotonic trend. Mirrors the archguard_get_intrinsic_dimension
+ * MCP tool's read (ADR-007 CLI/MCP parity) — no engine load needed.
+ */
+async function handleIntrinsicDimension(opts: QueryOptions): Promise<void> {
+  const archDir = resolveArchDir(opts.archDir);
+  const history = await readHistoryFile(archDir);
+  const isJson = opts.format === 'json';
+
+  const shape = (s: { dInt: number; dIntNormalized: number; entityCount: number; mode: string; timestamp: string }) => ({
+    dInt: s.dInt,
+    dIntNormalized: s.dIntNormalized,
+    entityCount: s.entityCount,
+    mode: s.mode,
+    timestamp: s.timestamp,
+  });
+
+  if (history === null || history.snapshots.length === 0) {
+    if (isJson) {
+      console.log(JSON.stringify({ current: null, history: [], trend: 'stable' }, null, 2));
+    } else {
+      console.log('No arch-health history found. Run `archguard analyze --arch-health` first.');
+    }
+    return;
+  }
+
+  const sorted = [...history.snapshots].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const current = sorted[sorted.length - 1];
+
+  let trend: 'rising' | 'decreasing' | 'stable' = 'stable';
+  if (sorted.length >= 2) {
+    const delta = current.dIntNormalized - sorted[sorted.length - 2].dIntNormalized;
+    if (delta > TREND_DELTA_THRESHOLD) trend = 'rising';
+    else if (delta < -TREND_DELTA_THRESHOLD) trend = 'decreasing';
+  }
+
+  if (isJson) {
+    console.log(JSON.stringify({ current: shape(current), history: sorted.map(shape), trend }, null, 2));
+    return;
+  }
+
+  console.log(`Mode: ${current.mode}`);
+  console.log(`d_int: ${current.dInt} / ${current.entityCount}`);
+  console.log(`d_int_norm: ${current.dIntNormalized}`);
+  console.log(`Timestamp: ${current.timestamp}`);
+  console.log(`Trend: ${trend}`);
+}
 
 async function handleListScopes(opts: QueryOptions): Promise<void> {
   const archDir = resolveArchDir(opts.archDir);

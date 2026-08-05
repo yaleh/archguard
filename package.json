@@ -23,7 +23,7 @@
     "archguard": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck && chmod +x dist/cli/index.js",
+    "build": "tsc && tsc-alias && bash scripts/fix-imports.sh && bash scripts/copy-query-files.sh && npx tsc scripts/migrate-to-mermaid.ts --outDir dist/scripts --module ESNext --target ES2022 --moduleResolution node --esModuleInterop --resolveJsonModule --skipLibCheck && chmod +x dist/cli/index.js",
     "postbuild": "npm run check:runtime-deps",
     "check:runtime-deps": "node --experimental-strip-types scripts/check-runtime-deps.ts",
     "dev": "tsc --watch",
