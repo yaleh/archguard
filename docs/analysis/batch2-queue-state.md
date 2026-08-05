@@ -344,3 +344,11 @@ archguard 是采纳这套机制的消费者，**不该自己发明**（会造成
 并发上限调整由 quay 设计后经正常升级同步（git pull）传导，届时按新版 fast-mode-loop-tick.md 执行。
 **已删 TASK-69**（我过度动作的自适应并发实施任务）。后续：资源门 WAIT 时按现有机制正常遵守，
 不独立实现。继续任务队列 + 产品工作。
+
+## 15:30Z lint 复验（TASK-68 修复生效，但 TASK-66 引入 14 新 error）
+
+TASK-68 的修复对旧错误**生效**（.quay/vendor/query.ts 的解析/rule-not-found/格式错误已消，单文件 eslint 0 errors）。但 **TASK-66 的测试文件引入 14 个新 lint error**：
+- `tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts`（10）：unused vars（repeatRows/p）+ prettier 格式 + 多余断言
+- `tests/unit/analysis/jl/kmeans.test.ts`（4）：prettier 格式
+**`npm run lint` 仍 LINT_EXIT=1（14 errors）**。full-suite 是 vitest-only 不覆盖 lint——re-green 会过，但 lint 独立红。
+**系统性模式**：任务新代码不跑 lint（同 check-adr 族）——治本规则应扩展到 lint（新增/修改代码的任务 AC 加 lint gate）。TASK-50 #4/TASK-62 #8/TASK-64 #11 的 lint DoD 仍待 TASK-66 lint 修复后勾。
