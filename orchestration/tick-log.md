@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 57 |
+| no-action | 58 |
 | unblock | 7 |
 | correct | 8 |
 | escalate | 0 |
@@ -98,4 +98,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 71 | 15:00Z | correct | **ADR-007 复发分诊（TASK-65 drift tool 缺 query.ts flag）→ forward-fix 指令**。验证 TASK-65 的 full-suite：1 失败 / 5058 passed——唯一失败 check-adr（ADR-007）。独立核实（跑 check-adr.ts 直接定位）：`archguard_get_architecture_drift` 在 query.ts 无对应 flag（canonical architecture-drift），违规 arch-health-tools.ts:120。TASK-65 加了 drift MCP tool + `--drift-base`/`--drift-threshold`（analyze.ts 参数）但缺 ADR-007 要求的 canonical flag。**TASK-64 之后第二次同类违规**（TASK-64 的 --intrinsic-dimension 修复没覆盖后来的 tool）。裁定：query.ts 加 `--architecture-drift`（照 TASK-64 模式，复用 TASK-65 的 drift-baseline/drift-reporter），跑 check-adr 0 violations + scoped 绿。**系统性提示**：建 MCP tool 任务 AC 应加「check-adr 0 violations」条（已记 manager-inbox）。裁定送达（transcript 核实 1296 字符），内层修复中。 | 修 ADR-007（drift flag）|
 | 72 | 15:10Z | correct | **manager 吞吐率请求 → 自适应并发裁定 → 撤回（manager 更正）**。manager 转达：考虑提高吞吐率，建议自适应并发，裁定权在 archguard 外层。我裁定 GO→4/WAIT→2 并建 TASK-69 + 回复 manager。**随后 manager 更正撤回**：archguard 是 quay 机制消费者，不该自己发明并发逻辑（机制分叉 = 交付面漂移），并发调整由 quay 升级同步传导。**已删 TASK-69**、撤回回复、queue-state 记更正。教训：外层对「quay 基础设施层设计」的边界判断——消费者的定位是遵守 + 反馈，不是发明。 | 修 ADR-007 + TASK-68 收尾 |
 | 73 | 15:15Z | no-action | **ADR-007 修复 + TASK-68 合并落地，内层验证 lint**。内层完成：ADR-007 修复 439e5d3（query.ts 加 --architecture-drift）+ TASK-68（lint 0 errors，.eslintignore 排除 .quay/vendor + prettier）合并 14df78a，query.ts 双 flag 完整。TASK-66 在飞（worktree 有提交）。内层跑 TASK-68 scoped 验证（lint）。套件 red（ADR-007 红残留，待新 full-suite re-green）。资源闸 WAIT（内层 lint + TASK-66 负载），full-suite 待 GO。 | 跑 lint 验证；TASK-66 在飞 |
+| 74 | 15:07Z | no-action | **full-suite 起跑 re-green（验证 ADR-007 + TASK-68 修复）**。资源闸 GO → 起 full-suite（15:06，--maxWorkers=8）验证 439e5d3（drift flag）+ c2f2119/14df78a（lint 修复）+ 之前 TASK-65。内层在跑 TASK-68 的 lint scoped 验证（慢，多次重试——lint 超 2 分钟 Bash 默认超时，内层改显式 timeout）。TASK-66 在飞。套件 red → running。若绿：re-green，内层恢复派发，关 TASK-68（合并已落地）。 | 跑 lint + TASK-66 在飞 |
 
