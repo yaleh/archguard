@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 58 |
 | unblock | 7 |
-| correct | 8 |
+| correct | 9 |
 | escalate | 0 |
 
 ## Tick 记录
@@ -99,4 +99,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 72 | 15:10Z | correct | **manager 吞吐率请求 → 自适应并发裁定 → 撤回（manager 更正）**。manager 转达：考虑提高吞吐率，建议自适应并发，裁定权在 archguard 外层。我裁定 GO→4/WAIT→2 并建 TASK-69 + 回复 manager。**随后 manager 更正撤回**：archguard 是 quay 机制消费者，不该自己发明并发逻辑（机制分叉 = 交付面漂移），并发调整由 quay 升级同步传导。**已删 TASK-69**、撤回回复、queue-state 记更正。教训：外层对「quay 基础设施层设计」的边界判断——消费者的定位是遵守 + 反馈，不是发明。 | 修 ADR-007 + TASK-68 收尾 |
 | 73 | 15:15Z | no-action | **ADR-007 修复 + TASK-68 合并落地，内层验证 lint**。内层完成：ADR-007 修复 439e5d3（query.ts 加 --architecture-drift）+ TASK-68（lint 0 errors，.eslintignore 排除 .quay/vendor + prettier）合并 14df78a，query.ts 双 flag 完整。TASK-66 在飞（worktree 有提交）。内层跑 TASK-68 scoped 验证（lint）。套件 red（ADR-007 红残留，待新 full-suite re-green）。资源闸 WAIT（内层 lint + TASK-66 负载），full-suite 待 GO。 | 跑 lint 验证；TASK-66 在飞 |
 | 74 | 15:07Z | no-action | **full-suite 起跑 re-green（验证 ADR-007 + TASK-68 修复）**。资源闸 GO → 起 full-suite（15:06，--maxWorkers=8）验证 439e5d3（drift flag）+ c2f2119/14df78a（lint 修复）+ 之前 TASK-65。内层在跑 TASK-68 的 lint scoped 验证（慢，多次重试——lint 超 2 分钟 Bash 默认超时，内层改显式 timeout）。TASK-66 在飞。套件 red → running。若绿：re-green，内层恢复派发，关 TASK-68（合并已落地）。 | 跑 lint + TASK-66 在飞 |
+| 75 | 15:16Z | correct | **ADR-007 第三次复发（TASK-66 cluster_boundary）→ 修本次 + 治本指令**。re-green 的 full-suite 又红：check-adr 1 failed。独立核实：`archguard_get_cluster_boundary` 缺 `--cluster-boundary` flag（arch-health-tools.ts:271）。**第三次同族违规**（TASK-64→65→66 每个新 MCP tool 都忘加 query.ts flag）。**裁定 1**：query.ts 加 --cluster-boundary（照前两次模式）。**裁定 2（治本）**：强制——后续所有新增 MCP tool 任务的 AC 加「check-adr 0 violations」条，已建未派的 MCP-tool 任务补 AC。三次实锤，机制必须把「新 tool 配 flag」变成任务内可测 AC。裁定送达（transcript 核实 1193 字符）。 | 修 cluster-boundary flag + AC 治本 |
 
