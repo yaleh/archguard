@@ -1,7 +1,7 @@
 ---
 id: TASK-77
 title: "TASK-77: 验证 9 项旧任务未勾 AC（真实环境，外层无法独立验证的项）"
-status: todo
+status: ready
 labels:
   - bookkeeping
   - verification

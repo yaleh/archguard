@@ -434,6 +434,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 3. **空闲性质**：就绪队列空是自然排空（任务库 + 方向候选表均耗尽），非等待裁定——不写阻塞信号。
    等外层补建新任务/新方向后恢复。
 
+## 18:1xZ 更新（TASK-77 派发）
+
+1. **外层 18:05Z 方向**：任务库此前耗尽，建收尾任务 **TASK-77**——验证 9 项旧任务未勾 AC
+   （DIR-001/002、TASK-31/35/49），真实环境逐项核：能勾则勾 + 贴证据，不能勾写理由（诚实，不盲勾；
+   install/reload/凭据项环境不可得则写理由）。
+2. **§3.6 补晋 + §4 派发**：TASK-77 资格通过（self-touch OK、resolve 多数解析）→ todo→ready、
+   §3.5 开括号（fm-TASK-77-…）、§4 后台派发（worktree task-77）。派发 prompt 强调诚实核实、
+   不盲勾、只编辑指名的 5 个任务文件。
+3. **在飞**：TASK-77。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
