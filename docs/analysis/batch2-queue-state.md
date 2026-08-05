@@ -281,6 +281,23 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 6. **机制备注**：TASK-68 任务文件建议的 `.eslintignore` 在 ESLint v9 flat config 下已废弃
    （实测 warning），agent 改用等效 `eslint.config.js ignores`——DoD 第 2 行未勾，交外层判断。
 
+## 15:2xZ 更新（ADR-007 第三次复发修复 + 治本规则落档）
+
+1. **ADR-007 复发 #3（外层 15:15Z 裁定，TASK-66 引入）**：`archguard_get_cluster_boundary`
+   缺 `--cluster-boundary` query flag。修复：query.ts 加 flag + handler（复用 TASK-66
+   cluster-boundary analyzer：buildAdjacencyMatrix + ClusterBoundaryAnalyzer，避免拖入 MCP SDK）。
+   **验证**：check-adr 0 violations + check-adr.test 28 green + type-check 0 + prettier。
+   提交 **daec6ea**。
+2. **治本（外层裁定 2 执行）**：扫描全部非 done 任务——**唯一 MCP-tool 任务是 TASK-66（已合并）**；
+   **无已建未派发的 MCP-tool 任务、无涉及 MCP tool 的池候选** ⇒「补 AC」无对象。
+   **规则落档（强制继承）**：**后续任何新增/修改 MCP tool 的任务，AC 必须含
+   「`node --experimental-strip-types scripts/check-adr.ts` 0 violations」**（ADR-007 CLI/MCP parity
+   闸，三次实锤）。本规则写在此队列状态源，冷启动/新会话会读到。也归 manager-inbox。
+3. **三次复发的机制教训**：MCP tool 与 CLI flag 的对齐靠 scoped 测不到、靠 full-suite 兜底太晚——
+   治本已转为「任务内可测 AC」+「队列状态源规则继承」双保险。
+4. **full-suite**：待外层新全量验证（ADR-007 修复 daec6ea + TASK-66/68 合并）。
+   TASK-62/63/64/65/66/67/68 全部已合并；无在飞、无 worktree。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
