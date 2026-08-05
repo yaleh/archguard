@@ -18,7 +18,7 @@ grep -c 'escalate' orchestration/tick-log.md
 | no-action | 84 |
 | unblock | 7 |
 | correct | 9 |
-| escalate | 0 |
+| escalate | 1 |
 
 ## Tick 记录
 
@@ -126,4 +126,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 99 | 20:50Z | no-action | **TASK-79 fan-in + 收尾——TASK-31/35 Connected AC 关闭**。内层 fan-in TASK-79（Connected AC 验证：真实构建 + Claude CLI 2.1.222 + 隔离 CLAUDE_CONFIG_DIR，连接腿成立）。**外层收尾**：关括号 + 翻 done + 勾 TASK-31/35 的 Connected AC（TASK-78 修复后满足）。**AC 审计基本全完成**（仅 TASK-49 凭据项环境依赖剩）。任务库再次耗尽。 | idle 等方向 |
 | 100 | 21:10Z | no-action | **完成点 idle（自主 8.5h 里程碑）**。任务库 52 全 done、无在飞、套件绿、AC 审计基本完成。无剩余可自主工作（TASK-49 凭据环境依赖）。本 tick 无推进——距外层停止条件（连续 3 idle）还有 2 tick。报告 #10（8.5h 完成综述）已写 manager-inbox（#8/#9 未读）。 | idle（完成点）|
 | 101 | 21:31Z | no-action | **完成点 idle（第 2 个连续）**。任务库仍空、无在飞、套件绿。manager 未读报告 #9/#10（可能不在线）。无新方向。距停止条件还有 1 tick——若 #102 仍无推进，按机制停止 loop 并报告完成态给人。非卡住（工作已完成，是完成点非停摆）。 | idle（等方向）|
+| 102 | 21:52Z | escalate | **外层停止条件触发（连续 3 idle 无任务推进）——停止 loop，叫人**。三次 tick 各自看到：#100 任务库 62 全 done/套件绿/AC 审计基本完成（仅 TASK-49 凭据项）；#101 仍空/无方向/manager 未读报告 #9/#10；#102 同上，内层写「outer winding down toward stop」。**这是完成点非卡住**——8.5h 自主运转（11:40→21:52），任务库清空、2 真实缺陷修复、3 治本规则落档、AC 审计闭环。停止 loop 报告给人：无剩余可自主工作，方向需人裁（新能力 roadmap / TASK-49 凭据环境 / TASK-31/35 发布）。报告 #10 已写（21:11）。 | 停止（完成点报告）|
 
