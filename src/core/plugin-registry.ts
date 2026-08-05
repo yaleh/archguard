@@ -8,6 +8,8 @@ import path from 'path';
 import { pathToFileURL } from 'node:url';
 import fs from 'fs-extra';
 import type { ILanguagePlugin } from './interfaces/index.js';
+import { PackRegistry } from './pack-registry/pack-registry.js';
+import { RuleBasedLanguagePlugin } from './rule-engine/rule-based-plugin.js';
 
 /**
  * Options for plugin registration
@@ -153,6 +155,33 @@ export class PluginRegistry {
     { file: 'CMakeLists.txt', plugin: 'cpp' },
     { file: 'Makefile', plugin: 'cpp' },
   ];
+
+  /**
+   * Resolve a plugin for a language (TASK-63).
+   *
+   * Imperative plugins registered under the language name take precedence.
+   * When none is registered, a built-in knowledge pack is resolved and a
+   * `RuleBasedLanguagePlugin` adapter is returned. Returns null when neither
+   * an imperative plugin nor a pack exists for the language.
+   *
+   * @param language - Language code, e.g. 'java', 'python'
+   * @param packRegistry - Optional PackRegistry override (test seam); defaults
+   *   to the built-in packs root.
+   */
+  async resolveForLanguage(
+    language: string,
+    packRegistry?: PackRegistry
+  ): Promise<ILanguagePlugin | null> {
+    const imperative = this.getByName(language);
+    if (imperative) {
+      return imperative;
+    }
+    const pack = await (packRegistry ?? new PackRegistry()).resolve(language);
+    if (!pack) {
+      return null;
+    }
+    return new RuleBasedLanguagePlugin(pack);
+  }
 
   /**
    * Detect plugin for a directory based on project markers

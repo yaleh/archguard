@@ -1,0 +1,7 @@
+# Python dependency-layer knowledge (TASK-63).
+package_files:
+  - pyproject.toml
+  - requirements.txt
+  - setup.py
+  - setup.cfg
+  - Pipfile

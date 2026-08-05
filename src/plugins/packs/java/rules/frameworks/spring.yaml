@@ -1,0 +1,42 @@
+# Spring Framework knowledge (TASK-63, Phase C).
+# `detect` stanzas activate the framework; `modules` map annotations to
+# architectural roles. The RuleEngine evaluates file-based detection; the
+# role annotations enrich entities during extraction.
+name: Spring
+detect:
+  - file_match: pom.xml
+    content_contains: spring-boot
+  - file_match: build.gradle
+    content_contains: spring-boot
+modules:
+  controller:
+    annotations:
+      - Controller
+      - RestController
+    diagram_level: class
+  service:
+    annotations:
+      - Service
+    diagram_level: class
+  repository:
+    annotations:
+      - Repository
+      - JpaRepository
+    diagram_level: class
+  component:
+    annotations:
+      - Component
+      - Bean
+    diagram_level: class
+entry_points:
+  - annotation: GetMapping
+    protocol: http
+    method: GET
+    path_arg: value
+  - annotation: PostMapping
+    protocol: http
+    method: POST
+    path_arg: value
+  - annotation: RequestMapping
+    protocol: http
+    path_arg: value

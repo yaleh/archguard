@@ -1,0 +1,8 @@
+{
+  "name": "python",
+  "version": "1.0.0",
+  "engine": ">=1.0.0",
+  "language": "python",
+  "extensions": [".py"],
+  "frameworks": ["django", "fastapi"]
+}

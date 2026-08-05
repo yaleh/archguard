@@ -1,0 +1,35 @@
+# Python module-layer knowledge (TASK-63).
+# Import patterns + entity-node rules interpreted by the RuleEngine.
+# Relation emission mirrors the imperative PythonPlugin surface: inheritance
+# and import dependencies are emitted; field/parameter dependencies are not.
+import_patterns:
+  - type: python_import
+    pattern: '^import ([a-zA-Z0-9_.]+)'
+    module_group: 1
+  - type: python_from
+    pattern: '^from ([a-zA-Z0-9_.]+) import'
+    module_group: 1
+
+entity_nodes:
+  - node_type: class_definition
+    entity_type: class
+    name_field: name
+    body_field: body
+    method_node: function_definition
+    base_class_field: superclasses
+  - node_type: function_definition
+    entity_type: function
+    name_field: name
+    body_field: body
+
+relations:
+  inheritance: true
+  implementation: false
+  field_dependency: false
+  parameter_dependency: false
+  import_dependency: true
+
+path_resolution:
+  root_relative: true
+  extensions: [".py"]
+  index_files: ["__init__.py"]
