@@ -13,8 +13,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { resolveRoot } from '../mcp-server.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
-import type { IntrinsicDimensionResult } from '@/analysis/jl/types.js';
+import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../../utils/drift-baseline.js';
+import { DRIFT_THRESHOLDS, TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
+import type { DriftLevel, DriftReport, IntrinsicDimensionResult } from '@/analysis/jl/types.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -108,4 +110,117 @@ export function registerArchHealthTools(server: McpServer, defaultRoot: string):
       }
     }
   );
+}
+
+/**
+ * Register the architecture-drift MCP tool (TASK-65 Phase D).
+ */
+export function registerArchHealthDriftTool(server: McpServer, defaultRoot: string): void {
+  server.tool(
+    'archguard_get_architecture_drift',
+    'Compute per-entity L2 architecture drift between two git snapshots in adjacency-matrix space. ' +
+      'Resolves fromCommit/toCommit from .archguard/arch-health-history.json, re-analyzes both ' +
+      'commits on demand, and returns { report, hasBreakingDrift, breakingEntities }. ' +
+      'Requires at least two prior `analyze --arch-health` runs.',
+    {
+      projectRoot: z
+        .string()
+        .optional()
+        .describe('Root directory of the target project. Defaults to MCP server startup cwd.'),
+      fromCommit: z
+        .string()
+        .optional()
+        .describe('Baseline commit sha. Defaults to the snapshot immediately before toCommit.'),
+      toCommit: z
+        .string()
+        .optional()
+        .describe('Comparison commit sha. Defaults to the latest snapshot.'),
+      topK: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe('Return the top-K highest-drift entities (default 10).'),
+      minLevel: z
+        .enum(['stable', 'moderate', 'significant', 'critical'])
+        .optional()
+        .describe('Lowest severity level included in report.drifts (default stable).'),
+    },
+    async ({ projectRoot, fromCommit, toCommit, topK, minLevel }) => {
+      try {
+        const root = resolveRoot(projectRoot, defaultRoot);
+        const archDir = path.join(root, '.archguard');
+        const history = await readHistoryFile(archDir);
+
+        if (history === null || history.snapshots.length < 2) {
+          return textResponse(
+            JSON.stringify(
+              {
+                report: null,
+                hasBreakingDrift: false,
+                breakingEntities: [],
+                message: 'no baseline available',
+              },
+              null,
+              2
+            )
+          );
+        }
+
+        const resolved = await resolveDriftSnapshots(
+          fromCommit,
+          toCommit,
+          history,
+          root,
+          reanalyzeCommitSnapshot
+        );
+        if (resolved.kind === 'from-not-found') {
+          return textResponse(
+            JSON.stringify({ error: `snapshot not found for commit: ${resolved.commit}` }, null, 2)
+          );
+        }
+        if (resolved.kind === 'no-baseline') {
+          return textResponse(
+            JSON.stringify(
+              {
+                report: null,
+                hasBreakingDrift: false,
+                breakingEntities: [],
+                message: 'no baseline available',
+              },
+              null,
+              2
+            )
+          );
+        }
+
+        const report = DriftCalculator.compare(resolved.from, resolved.to, {
+          threshold: DRIFT_THRESHOLDS.critical,
+          topK: topK ?? 10,
+          minLevel: (minLevel as DriftLevel | undefined) ?? 'stable',
+        });
+        return textResponse(JSON.stringify(buildDriftToolResult(report), null, 2));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return textResponse(`Error: ${message}`);
+      }
+    }
+  );
+}
+
+export interface DriftToolResult {
+  report: DriftReport;
+  hasBreakingDrift: boolean;
+  breakingEntities: string[];
+}
+
+/**
+ * Shape a DriftReport into the MCP tool payload. An entity is "breaking" when
+ * its drift level is critical (≥ 3.0) — the actionable class for CI review.
+ */
+export function buildDriftToolResult(report: DriftReport): DriftToolResult {
+  const breakingEntities = report.drifts
+    .filter((d) => d.level === 'critical')
+    .map((d) => d.entityId);
+  return { report, hasBreakingDrift: breakingEntities.length > 0, breakingEntities };
 }
