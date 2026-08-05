@@ -209,6 +209,24 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
    session-liveness-mount.sh、capability-catalog.sh、loop-driver-check.sh、read-probe-spec.ts、
    suite-state-trigger.ts 等）——归 manager-inbox 的机制归属问题，待外层统一裁（是否一并 commit）。
 
+## 13:4xZ 更新（红窗 forward-fix 执行 —— 外层 13:39Z 裁定）
+
+full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forward-fix 不回滚。内层执行：
+
+1. **cpp ArchJSON 分叉（5 失败）根因**：TASK-62 的 tree-sitter-bridge 用
+   `new URL('./queries/', import.meta.url)` 解析 `.scm`；**tsc 不复制 .scm 到 dist** ⇒
+   `npm pack` 出的 dist 无查询文件 ⇒ driver 路径加载空查询 → cpp 输出与直接 parseCode 分叉
+   （parser-runtime-packed / install-policy）。**修复**：新增 `scripts/copy-query-files.sh`
+   （build 时复制 `src/plugins/*/queries/*.scm` → `dist/plugins/*/queries/`），build 脚本接入。
+   **未改任何基线/期望值**。重建后 dist 含 5 个 .scm，两条路径均查询驱动、输出一致。
+2. **ADR-007 违规（1 失败）**：`archguard_get_intrinsic_dimension` MCP tool 无匹配 CLI flag
+   （canonical "intrinsic-dimension"）。**修复**：query.ts 加 `--intrinsic-dimension` flag +
+   handler（读持久化 arch-health 历史，镜像 MCP tool 读路径，无需 engine）。实测无历史时优雅提示。
+3. **重跑全绿**：`parser-runtime-packed`（3）+ `install-policy`（8）+ `check-adr`（28）；
+   query 命令 + arch-health scoped 回归（64）。type-check 0。提交 **52fa600**。
+4. **state=red 期间停新批派发**（裁定）——本 tick 无派发。等外层 re-green 后 TASK-65/66 可晋。
+5. TASK-62/64 保持 done，DoD（full-suite 绿）待本修复 + 外层新全量绿后勾。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
