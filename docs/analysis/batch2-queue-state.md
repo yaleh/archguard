@@ -191,3 +191,20 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
    `full-suite-runner.ts` / `SUITE-RED`，**全部是已存在的被修复目标** ⇒ 符号解析误判「已落地」。
    影响：在飞期间池将其计为已落地（不阻塞——在飞另有 --in-flight/遥测跟踪）；真正风险是若该任务
    工作未落地，排除会掩盖它需要派发。属 quay canonical 机制缺陷，归 manager-inbox，本仓不改。
+
+## 13:3xZ 更新（fan-in TASK-67 —— 全批完成；未跟踪机制文件阻挡合并的处理）
+
+1. **TASK-67 fan-in（完成）**：agent 完成（branch `task/TASK-67`，37db5e0）→ rebase 干净 →
+   **merge 被未跟踪文件阻挡**（`full-suite-runner.ts` + `suite-state-trigger.ts` 在 master 未跟踪，
+   分支将其提交）→ 处理：把 2 个未跟踪工作树副本移到 `.quay/pre-task67-merge-untracked/`
+   （可逆，非删除）→ merge 成功（runner/trigger 变为 master tracked）→ scoped 验证
+   `--fail-fast-check` OK（真失败→red→SUITE-RED→stopSignal，exit 0）→ worktree/分支清理。
+   - 合并后的 runner 修复在位：无裸 ✖ 判红（注释说明通过测试的 console 会打印 ✖），新增
+     vitest 结构化判红（`Test Files X failed` / `Tests Y failed`，X|Y>0），保留 node:test/TAP 判红。
+   - AC1/2/4 勾；AC3（全量）deferred（scoped-only 纪律，外层下一轮全量验证）。
+2. **TASK-62/63/64/67 全批已合并**（各 scoped 全绿）；**无在飞任务、无 worktree**。pool=0。
+3. **TASK-65/66 等 TASK-64 翻 done**（外层收尾）→ 之后可晋可派（66 的 touches 已解析通过）。
+4. **机制归属缺口（给外层）**：merge 使 `full-suite-runner.ts` + `suite-state-trigger.ts` 变为
+   tracked（此前未跟踪）。但仍有 ~24 个机制脚本未跟踪（monitor-mount-check.sh、
+   session-liveness-mount.sh、capability-catalog.sh、loop-driver-check.sh、read-probe-spec.ts、
+   suite-state-trigger.ts 等）——归 manager-inbox 的机制归属问题，待外层统一裁（是否一并 commit）。
