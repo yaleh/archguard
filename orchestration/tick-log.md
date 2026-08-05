@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 74 |
+| no-action | 75 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -116,4 +116,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 89 | 17:56Z | no-action | **full-suite 绿（5188/0）+ TASK-76 DoD——边界清单完整闭环**。full-suite：360 文件 / **5188 passed / 0 failed**——TASK-76 验证通过。TASK-76 DoD 3 项勾。**边界清单（B 类 + A 类）全部落地，任务库 49 全 done**。进入 AC 审计收尾阶段（8 旧任务 9 未勾）。 | idle 等方向（任务库空）|
 | 90 | 18:00Z | no-action | **AC 审计收尾结论（9 项无法外层验证）**。AC 欠账 19 → 9 剩余。9 项均验证重型（install/reload/凭据）或证据稀疏（DIR-002 nodeId 碰撞 grep 空、ea13e9f 是 renderer 非 nodeId）——**外层无法独立验证**，按「勾不上写理由」留待内层真实环境核。任务库空，内层 idle。方向候选：新能力 roadmap / 9 项 AC 内层验证任务 / 暂停点（已报 manager）。 | idle 等方向 |
 | 91 | 18:05Z | no-action | **建 TASK-77（9 项旧 AC 真实环境验证）并派发**。任务库耗尽后建收尾任务：TASK-77 逐项核 9 个未勾 AC（DIR-001/002、TASK-31/35/49），能勾则勾 + 证据、不能勾写理由。指示内层 §3.6/4 派发。保持自主运转（任务库空时不空转）。 | 忙（TASK-77 派发中）|
+| 92 | 18:16Z | no-action | **TASK-77 fan-in + AC 审计完成；发现 mcp-launcher 真实缺陷**。内层 fan-in TASK-77（9 项 AC 真实环境验证，b3ac8e0，只动 tasks/*.md）。**外层收尾**：关括号 + 翻 done + 勾 6 项确认 DoD（DIR-001 x2/DIR-002 x3/TASK-31 installer）。**关键发现**：2 项（TASK-31/35 的 mcp list Connected）**被真实缺陷阻塞**——安装成功但 MCP 连接失败（mcp-launcher createRequire 无法解析 npm-cache 布局核心包），内层立案 **TASK-78**。1 项（TASK-49）缺凭据。**外层盲区被内层实测闭合**（外层原判不可验证，实则有真实缺陷）。 | 忙（TASK-78 立案中）|
 
