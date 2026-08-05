@@ -1,7 +1,7 @@
 ---
 id: TASK-73
 title: "TASK-73: A 类——CLI 命令族 E2E 稳定化（analyze/init/cache 用户入口契约）"
-status: ready
+status: done
 labels:
   - test-coverage
   - boundary-list
