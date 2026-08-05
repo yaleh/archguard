@@ -1,7 +1,7 @@
 ---
 id: TASK-63
 title: "TASK-63: Language knowledge registry — PackRegistry + RuleEngine + Java/Python migration (Phases 1-2)"
-status: todo
+status: ready
 labels:
   - core
   - language-support

@@ -103,3 +103,29 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 4. **内层发现真机制 bug**：ready-pool-check not-yet-flipped 检测对 Touches `(new)` 反引号格式失效（TASK-60 工作落地未被排除）。内层在修 TASK-60.md Touches 格式。
 5. **full-suite 推迟**：资源闸 WAIT（CPU some avg10≥40），且树刚稳定。待负载降 + 内层 Touches 修复落地后起。
 6. **下一步**：TASK-62..66 是 todo 新候选，内层按 §3.6 补晋后派发。
+
+## 12:4xZ 更新（内层执行裁定 a + §3.6/4 派发 TASK-62/63/64）
+
+1. **裁定 a 执行（内层，承接外层 12:28Z 裁定）**：
+   - 机制地基提交 **d9dbd75**（16 文件：11 M 脚本 + 2 tick 文档 + config/state/env，+2947 行）。
+     提交后 master 从干净检出可用（三函数 committed，ready-pool-check 正常跑通）。
+   - rebase task/TASK-60 → 3 脚本冲突取 master canonical（丢弃分支 workaround 重造）→ merge
+     **f3b955f**（15 非脚本交付物 +982 行：TASK-62..66 + quay-tasks PARKED + 对账文档）。
+   - worktree `task-60` 未清理（TASK-60 翻 done 由外层完成；worktree 遗留待确认）。
+   - 阻塞信号 `merge-conflict` 已 `--clear`（等待 848s，裁定下达即恢复）。
+2. **Touches 解析器 bug 定位 + 修复**：`parseTouchEntries` 对 `- \`path\` \`(new)\`（散文）` 多重
+   反引号 bullet 解析出损坏路径（`"tasks/TASK-62.md\` \`(new)"`）→ `hasAnyLandedNewTouch` 失效 →
+   TASK-60 落地未被 not-yet-flipped 排除。已修 tasks/TASK-60.md 该 bullet 为标准格式
+   `- tasks/TASK-62.md (new)`（实测 taskWorkLanded false→true）。**解析器本体缺陷未修**（quay
+   canonical，属机制归属问题，已由外层记入 manager-inbox）——留待 quay 侧修，本仓以任务文件格式
+   规避。
+3. **§3.6 补晋 + §4 派发（TASK-62/63/64）**：补晋 todo→ready 后 pool=3、dispatchable_disjoint=3、
+   criterion_met ✓。§3.5 开括号（fm-TASK-62-1785933346103 / fm-TASK-63-1785933346498 /
+   fm-TASK-64-1785933346833）。§4 并发派发 3 后台 subagent（worktree
+   `/home/yale/work/archguard-worktrees/task-{62,63,64}`，分支 task/TASK-{62,63,64}），只提交不合并。
+4. **TASK-65/66 依赖 TASK-64，未派发（机制正确把关）**：TASK-65 `parent: TASK-64`（depsReady=false）；
+   TASK-66 Touches majority-missing（引用 TASK-64 将创建的 `src/analysis/jl/types.ts`、
+   `src/cli/mcp/tools/arch-health-tools.ts`）。**TASK-64 落地翻 done 后，TASK-65/66 恢复可晋**，
+   下个 tick 处理。
+5. **遥测括号**：TASK-60/61 已由外层闭合（inProgress 空）；TASK-62/63/64 新开在飞。
+6. **full-suite 状态**：外层 12:33Z 记 resource-gate WAIT，全量推迟。

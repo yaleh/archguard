@@ -1,7 +1,7 @@
 ---
 id: TASK-62
 title: "TASK-62: Tree-sitter query externalization — QueryLoader + CaptureMapper + C++ reference implementation"
-status: todo
+status: ready
 labels:
   - analysis
   - typescript

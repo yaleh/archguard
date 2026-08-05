@@ -1,7 +1,7 @@
 ---
 id: TASK-64
 title: "TASK-64: JL intrinsic dimension — adjacency matrix + SVD + arch-health-history (Phase 4)"
-status: todo
+status: ready
 labels:
   - analysis
   - metric
