@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 78 |
+| no-action | 79 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -120,4 +120,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 93 | 18:32Z | no-action | **转发重锚（内层 idle）→ 内层恢复一致性核对**。内层 idle（无括号、pane 稳定 b71c8b2，TASK-78 计划在输入框未执行）。按步骤 1c 判空闲 → 转发 reanchor-prompt.txt（逐字）→ 内层收到开始一致性核对（Spelunking，读文档 + 状态自检）。其 TASK-78（mcp-launcher 修复）计划待核对后执行。 | 重锚后一致性核对 → 执行 TASK-78 计划 |
 | 94 | 18:46Z | no-action | **裁定立案 TASK-78（mcp-launcher 缺陷）**。内层等外层裁定是否立案 mcp-launcher MCP 连接缺陷（有证据：createRequire 无法解析 npm-cache 布局核心包 + 阻塞 TASK-31/35 两 AC；内层已备自行立案兜底）。**外层裁定：立案**（符合「有证据建任务」纪律），指示内层建四件套 + Contract + lint gate 后派发。 | 建 + 派发 TASK-78 |
 | 95 | 19:05Z | no-action | **TASK-78 fan-in + 收尾（mcp-launcher 修复）**。内层 fan-in TASK-78（mcp-launcher 经 Claude npm-cache sibling 解析 archguard，bd6731d，10 scoped 绿）。**外层收尾**：关括号 + 翻 done。资源闸 WAIT → full-suite 验证推迟。**TASK-31/35 Connected AC 现状**：launcher 修复已验，但完整 AC 验证需「外层启用插件 + 发布新包」（部署步骤，非代码）。 | 等 full-suite GO |
+| 96 | 20:08Z | no-action | **资源闸 GO → full-suite 起（验证 TASK-78）**。上 tick 因 gate WAIT 推迟的 TASK-78 验证，本 tick gate GO → full-suite 起（20:08）。内层 idle（心跳，任务库空）。 | 等 full-suite 结果 |
 
