@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 51 |
+| no-action | 52 |
 | unblock | 7 |
 | correct | 7 |
 | escalate | 0 |
@@ -90,4 +90,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 63 | 13:05Z | no-action | **内层 subagent 深度推进 + AC 审计轻量 pass**。TASK-62/63/64 三个 subagent 已工作 29m+（高 token：tree-sitter-bridge 207k、TASK-64 evidence 221k——真实工作非轮询），等后台 agent（良性空闲）。套件 green（上轮 4902/0）。资源闸 WAIT（subagent 负载）。**AC 审计**：利用 full-suite 绿，勾 DIR-001 "Test suite green" + TASK-45 "One full vitest run green"（均被 4902/0 验证）；其余 6 任务需测试跑的 AC 项待低负载窗口。内层 heartbeat tick ba7f43f（无停止条件，pool 空）。 | 等 3 个后台 agent（TASK-62/63/64，29m+）|
 | 64 | 13:28Z | no-action | **TASK-62/63/64/67 收尾 + 新 full-suite 验证 4 合并**。内层完成本轮 4 任务 fan-in：TASK-62（tree-sitter query 外部化 QueryLoader/CaptureMapper/C++）、TASK-63（PackRegistry/RuleEngine 语言知识注册表）、TASK-64（JL 维度 SVD/arch-health）、TASK-67（runner 结构化判红——外层立案的假阳性红修复，内层快速执行落地，Evidence 含 18/18 判定矩阵 + fail-fast-check 通过）。全部 scoped 绿、AC 由执行 agent 勾选、DoD 留外层。**外层收尾**：关 4 括号 + 翻 4 done + 记 verification-round #1（closed 4，suiteGreen=true）。**新 full-suite 已起**（13:27，--maxWorkers=8，runner 已带 TASK-67 修复——预期不再假阳性红）。内层计划 TASK-65/66 派发（TASK-64 落地后可晋，66 已解析通过）。TASK-64 AC3（perf 环境受限）+ 4 任务 DoD 待新全量验证后勾。 | Cooked 51m，计划 TASK-65/66 派发 |
 | 65 | 13:40Z | correct | **红窗分诊：真红（TASK-62 cpp 分叉 + TASK-64 ADR-007）→ forward-fix 指令**。full-suite 完成：5013 passed / 6 failed / 3 文件（install-policy 3、parser-runtime-packed 2、check-adr 1）。runner 的 TASK-67 修复生效——结构化判红抓到真失败（非假阳性）。归因（独立核实）：① **cpp ArchJSON 分叉（5 失败）**——测试结构是 `expectedArchJson`（直接 parseCode）vs `runDriver()`（driver 路径）的内部一致性；TASK-62 重写 `tree-sitter-bridge.ts`（372 行）+ 外部化 queries/*.scm 后 driver 与直接路径分叉（上轮 4902/0 绿 = merge 引入）；② **ADR-007 违规（check-adr，1 失败）**——TASK-64 arch-health MCP 工具 + analyze-arch-health CLI flag 命名不匹配。**裁定 forward-fix 不回滚**（架构方向正确，修落地缺陷）：禁改基线/期望值（分叉 = 真不一致），查 driver↔parseCode 差异根因（首查 .scm 查询文件在两种上下文的路径解析），修 ADR-007，修完重跑 3 失败文件。裁定送达（transcript 核实 1454 字符），内层开工。TASK-62/64 保持 done，DoD 待修复 + 新全量绿。 | 开工修 cpp 分叉 + ADR-007 |
+| 66 | 13:52Z | no-action | **内层按裁定修 cpp 分叉 + ADR-007，验证中**。内层独立诊断与我的根因假设一致：`.scm` 查询文件**未复制进 dist**（build 缺 .scm 复制步骤），driver/packed 路径加载不到 → 与直接 parseCode 分叉。已修：ADR-007 通过（重建 + 验证），dist 现含 5 个 .scm 文件。正在重跑外层指定的 3 个失败文件（parser-runtime-packed/install-policy/check-adr，慢集成测试）。套件 state=red（TASK-65 起的 stop-dispatch 信号，修复期正常）。 | 跑 3 失败文件重跑验证 |
 
