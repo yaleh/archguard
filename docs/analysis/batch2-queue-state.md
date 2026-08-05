@@ -539,6 +539,13 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 2. **外层在收尾倒计时**（stop 在即）。内层保持兜底心跳；若外层 stop，则本 tick 文档停止条件
    （就绪队列空）继续成立，自然空转。
 
+## 21:5xZ 更新（外层 stop——完成点，内层兜底心跳继续）
+
+1. **外层 stop**（tick #102：outer stop condition triggered，3 consecutive idle；escalation
+   b72ed7d 记录 8.5h 自治完成点）。外层 loop 已停。
+2. **内层兜底心跳继续**（`.halt` 无、就绪队列空=自然空转）。任务库 + 方向候选均耗尽，全任务 done、
+   full-suite green。若外层/管理者 resume 或补建任务，内层按 §3.6/4 恢复。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
