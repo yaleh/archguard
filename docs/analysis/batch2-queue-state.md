@@ -424,6 +424,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 4. **池**：pool=1（TASK-76 done 待外层翻）；**无新候选**——任务库耗尽。下一批方向待外层裁
    （A 类 E2E 已完成，无剩余方向候选）。
 
+## 18:0xZ 更新（空闲心跳：管线自然排空，等外层方向）
+
+1. **实况**：master @ 9b4f9a5（外层 tick #89：full-suite green **5188/0**、TASK-76 DoD、
+   boundary list complete 里程碑）。**50 任务全 done**、drift-check 干净（无 stranded/closed-without-work/
+   reverse-drift）、无在飞、无 worktree、无候选/无 promotions、无阻塞信号。
+2. **计量改善**：tasksPerHour **0.477**（自 0.165 提升——本会话消费了 quay-tasks 搬入 + A 类
+   E2E 全批，管线产出显著）。
+3. **空闲性质**：就绪队列空是自然排空（任务库 + 方向候选表均耗尽），非等待裁定——不写阻塞信号。
+   等外层补建新任务/新方向后恢复。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
