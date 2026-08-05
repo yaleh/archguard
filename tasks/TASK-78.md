@@ -123,9 +123,9 @@ archguard 插件未列出——`~/.claude/settings.json` 的 `enabledPlugins` �
 
 ## Definition of Done
 
-- [ ] 修复提交 + 构造 npm-cache 布局实测通过（launcher 解析成功、服务可启动）
-- [ ] 负控制/回归验证（插件自身树布局不回归）
-- [ ] lint 0 errors
+- [x] 修复提交 + 构造 npm-cache 布局实测通过（launcher 解析成功、服务可启动）
+- [x] 负控制/回归验证（插件自身树布局不回归）
+- [x] lint 0 errors
 - [ ] TASK-31/35 的 `claude mcp list` Connected AC 状态更新（勾或理由）
 
 ## Dispatch review
