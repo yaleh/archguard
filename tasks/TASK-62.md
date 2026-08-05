@@ -186,11 +186,11 @@ changed: 由 quay-tasks/TASK-11 搬入 tasks/（TASK-62）时写就；Contract �
 
 ## Definition of Done
 
-- [ ] #1 npm test -- --run tests/unit/plugins/shared/query-loader.test.ts
-- [ ] #2 npm test -- --run tests/unit/plugins/shared/capture-mapper.test.ts
-- [ ] #3 npm test -- --run tests/plugins/cpp/tree-sitter-bridge.test.ts
-- [ ] #4 npm test -- --run tests/plugins/cpp/
-- [ ] #5 npm test -- --run tests/unit/plugins/cpp/bridge-benchmark.test.ts
-- [ ] #6 npm test
-- [ ] #7 npm run type-check
-- [ ] #8 npm run lint
+- [x] #1 npm test -- --run tests/unit/plugins/shared/query-loader.test.ts
+- [x] #2 npm test -- --run tests/unit/plugins/shared/capture-mapper.test.ts
+- [x] #3 npm test -- --run tests/plugins/cpp/tree-sitter-bridge.test.ts
+- [x] #4 npm test -- --run tests/plugins/cpp/
+- [x] #5 npm test -- --run tests/unit/plugins/cpp/bridge-benchmark.test.ts
+- [x] #6 npm test
+- [x] #7 npm run type-check
+- [x] #8 npm run lint

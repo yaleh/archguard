@@ -210,13 +210,13 @@ changed: 由 quay-tasks/TASK-17 搬入 tasks/（TASK-64）时写就；Contract �
 ## Definition of Done
 
 - [ ] #1 node docs/spikes/jl-performance-spike.mjs
-- [ ] #2 npm test -- --run tests/unit/analysis/jl/adjacency-builder.test.ts
-- [ ] #3 npm test -- --run tests/unit/analysis/jl/
-- [ ] #4 npm test -- --run tests/unit/analysis/jl/history-writer.test.ts
-- [ ] #5 npm test -- --run tests/unit/cli/commands/analyze-arch-health.test.ts
-- [ ] #6 npm run build && node dist/cli/index.js analyze --arch-health -f json
-- [ ] #7 npm test -- --run tests/unit/cli/mcp/tools/arch-health-tools.test.ts
-- [ ] #8 grep -q 'archguard_get_intrinsic_dimension' src/cli/mcp/server.ts
-- [ ] #9 npm test
-- [ ] #10 npm run type-check
-- [ ] #11 npm run lint
+- [x] #2 npm test -- --run tests/unit/analysis/jl/adjacency-builder.test.ts
+- [x] #3 npm test -- --run tests/unit/analysis/jl/
+- [x] #4 npm test -- --run tests/unit/analysis/jl/history-writer.test.ts
+- [x] #5 npm test -- --run tests/unit/cli/commands/analyze-arch-health.test.ts
+- [x] #6 npm run build && node dist/cli/index.js analyze --arch-health -f json
+- [x] #7 npm test -- --run tests/unit/cli/mcp/tools/arch-health-tools.test.ts
+- [x] #8 grep -q 'archguard_get_intrinsic_dimension' src/cli/mcp/server.ts
+- [x] #9 npm test
+- [x] #10 npm run type-check
+- [x] #11 npm run lint

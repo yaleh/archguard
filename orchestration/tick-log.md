@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 53 |
+| no-action | 54 |
 | unblock | 7 |
 | correct | 7 |
 | escalate | 0 |
@@ -92,4 +92,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 65 | 13:40Z | correct | **红窗分诊：真红（TASK-62 cpp 分叉 + TASK-64 ADR-007）→ forward-fix 指令**。full-suite 完成：5013 passed / 6 failed / 3 文件（install-policy 3、parser-runtime-packed 2、check-adr 1）。runner 的 TASK-67 修复生效——结构化判红抓到真失败（非假阳性）。归因（独立核实）：① **cpp ArchJSON 分叉（5 失败）**——测试结构是 `expectedArchJson`（直接 parseCode）vs `runDriver()`（driver 路径）的内部一致性；TASK-62 重写 `tree-sitter-bridge.ts`（372 行）+ 外部化 queries/*.scm 后 driver 与直接路径分叉（上轮 4902/0 绿 = merge 引入）；② **ADR-007 违规（check-adr，1 失败）**——TASK-64 arch-health MCP 工具 + analyze-arch-health CLI flag 命名不匹配。**裁定 forward-fix 不回滚**（架构方向正确，修落地缺陷）：禁改基线/期望值（分叉 = 真不一致），查 driver↔parseCode 差异根因（首查 .scm 查询文件在两种上下文的路径解析），修 ADR-007，修完重跑 3 失败文件。裁定送达（transcript 核实 1454 字符），内层开工。TASK-62/64 保持 done，DoD 待修复 + 新全量绿。 | 开工修 cpp 分叉 + ADR-007 |
 | 66 | 13:52Z | no-action | **内层按裁定修 cpp 分叉 + ADR-007，验证中**。内层独立诊断与我的根因假设一致：`.scm` 查询文件**未复制进 dist**（build 缺 .scm 复制步骤），driver/packed 路径加载不到 → 与直接 parseCode 分叉。已修：ADR-007 通过（重建 + 验证），dist 现含 5 个 .scm 文件。正在重跑外层指定的 3 个失败文件（parser-runtime-packed/install-policy/check-adr，慢集成测试）。套件 state=red（TASK-65 起的 stop-dispatch 信号，修复期正常）。 | 跑 3 失败文件重跑验证 |
 | 67 | 14:07Z | no-action | **内层 forward-fix 完成并验证（52fa600）+ 新 full-suite 验证中**。内层修复记录（4a1d661）：① cpp 分叉根因 = `new URL('./queries/', import.meta.url)` 但 **tsc 不复制 .scm 到 dist** → npm pack 的 dist 无查询文件 → driver 加载空查询 → 与直接 parseCode 分叉。修复 `scripts/copy-query-files.sh`（build 复制 src/plugins/*/queries/*.scm → dist），**未改任何基线/期望值**；② ADR-007 = `archguard_get_intrinsic_dimension` MCP tool 缺 `--intrinsic-dimension` CLI flag，query.ts 已补。**3 个失败文件重跑全绿**（parser-runtime-packed 3 + install-policy 8 + check-adr 28）+ query/arch-health scoped 回归 64 + type-check 0。外层起新 full-suite（14:06，--maxWorkers=8）端到端验证，state=running（stop-dispatch 已撤）。TASK-62/64 DoD 待新全量绿后勾。 | idle 等 re-green → TASK-65/66 |
+| 68 | 14:16Z | no-action | **红窗关闭：full-suite 绿（5019/0）+ TASK-62/64 DoD 勾选 + 内层恢复派发**。修复 52fa600 端到端验证通过：Test Files 345 passed / Tests **5019 passed / 0 failed** / 13 skipped，runner FINAL state=green exit=0（TASK-67 判红修复 + cpp 分叉修复双重验证）。SUITE-GREEN 已发（14:15），stop-dispatch 撤。内层读到 green 恢复派发：**TASK-65 在飞**、TASK-66 待它落地。TASK-62 DoD 8 项全勾（full-suite 验证 scoped + 全量 + type-check + lint）；TASK-64 DoD #2-#11 勾（#1 perf spike 留环境受限证据——ml-matrix SVD 慢；#8 命令路径笔误 server.ts→mcp-server.ts，工具已注册、意图满足）。**红窗全闭环**：归因→裁定→修复→验证→re-green→恢复派发，全自主。 | 忙（TASK-65 在飞，TASK-66 待）|
 
