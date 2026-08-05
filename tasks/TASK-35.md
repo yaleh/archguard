@@ -69,10 +69,18 @@ Core/plugin packaging (TASK-31, done) and Codex integration (TASK-36) are out of
       unrelated `mcpServers` entries and other keys survive byte-for-byte
       semantics.)
 - [ ] A clean install and an upgrade both end with `claude mcp list` reporting
-      ArchGuard connected. (UNCHECKED — stops at the environment boundary:
-      @yalehwang/archguard-claude-plugin / @yalehwang/archguard are not
-      published and publishing is forbidden, so Claude Code's npm fetch fails
-      with E404. See Evidence for the real-CLI boundary run.)
+      ArchGuard connected. **TASK-77 verified 2026-08-05: NOT satisfied — real
+      connection defect (same root cause as TASK-31's `claude mcp list` AC).**
+      The packages ARE published now (0.1.32), so the environment boundary is
+      lifted; a REAL clean install AND a re-run upgrade path (marketplace-update +
+      plugin-update) both exit 0 with plugin v0.1.32 enabled, but `claude mcp list`
+      reports the plugin MCP server `✘ Failed to connect — MCP error -32000:
+      Connection closed`. Root cause: `mcp-launcher.mjs` `createRequire` cannot
+      resolve `@yalehwang/archguard` from Claude Code's plugin-cache npm-cache
+      layout (deps live in a sibling `plugins/npm-cache/node_modules/`, no
+      NODE_PATH). Launching with NODE_PATH set starts the server — confirming the
+      diagnosis. The installer mechanics (idempotent clean + upgrade) are correct;
+      the MCP connection leg is broken.
 - [x] README matches the actual commands and package names.
 
 ## Definition of Done

@@ -66,6 +66,14 @@ config (~/.codex) outside isolated temp dirs.
       real and the captured tool-call evidence is appended here and in
       TASK-36's AC6 note. If absent: both task bodies state the exact
       boundary (401, no OPENAI_API_KEY) — NOT checked as satisfied.
+      **TASK-77 verified 2026-08-05: NOT satisfied — `OPENAI_API_KEY` is
+      unset in this environment (`printenv OPENAI_API_KEY` empty), so the
+      LLM-driven leg cannot execute.** The wired test exists and skips
+      cleanly: `npx vitest run
+      tests/integration/installer-codex-user-scope.test.ts` → 44 passed |
+      1 skipped (the skipped test is the real `codex exec` LLM-driven
+      tool-call boundary test, gated on `openAiCreds`). Boundary remains
+      exactly as documented: codex-cli present, no OpenAI credentials.
 - [x] Existing 44 installer tests unchanged and green; suite green.
 
 ## Definition of Done
