@@ -467,6 +467,17 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 2. **mcp-launcher 缺陷**：仍待外层立案（已记录于 18:2xZ 段 + 外层 tick #92）。若数 tick 后仍未
    立案，内层按「有证据建任务」自行创建（TASK-78）。
 
+## 19:3xZ 更新（TASK-78 立案 + 派发）
+
+1. **外层 19:25Z 立案裁定**：TASK-78（mcp-launcher MCP 连接缺陷）——真实证据（createRequire
+   无法解析 npm-cache 布局核心包，NODE_PATH 可复现）+ 阻塞 TASK-31/35 两个 AC。内层按
+   「有证据建任务」建四件套 + Contract + lint gate（`tasks/TASK-78.md`，证据：launcher:19
+   createRequire + 根因 + 复现闭环 + 修复方向）。
+2. **§3.6 补晋 + §4 派发**：资格通过（self-touch OK、resolve 0/2 missing）→ todo→ready、
+   §3.5 开括号（fm-TASK-78-…）、§4 后台派发（worktree task-78）。派发 prompt 强调构造 npm-cache
+   布局复现 + 保持不依赖全局 install 纪律。
+3. **在飞**：TASK-78。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
