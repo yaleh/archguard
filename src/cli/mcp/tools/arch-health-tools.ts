@@ -14,9 +14,19 @@ import path from 'path';
 import { resolveRoot } from '../mcp-server.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { ClusterBoundaryAnalyzer } from '@/analysis/jl/cluster-boundary-analyzer.js';
+import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
 import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../../utils/drift-baseline.js';
+import { loadArchJsonForCluster } from '../../utils/cluster-archjson-loader.js';
 import { DRIFT_THRESHOLDS, TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
-import type { DriftLevel, DriftReport, IntrinsicDimensionResult } from '@/analysis/jl/types.js';
+import type {
+  ClusterBoundaryOptions,
+  ClusterBoundaryReport,
+  DriftLevel,
+  DriftReport,
+  IntrinsicDimensionResult,
+} from '@/analysis/jl/types.js';
+import type { ArchJSON } from '@/types/index.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -223,4 +233,110 @@ export function buildDriftToolResult(report: DriftReport): DriftToolResult {
     .filter((d) => d.level === 'critical')
     .map((d) => d.entityId);
   return { report, hasBreakingDrift: breakingEntities.length > 0, breakingEntities };
+}
+
+// ---------------------------------------------------------------------------
+// TASK-66 — cluster boundary (K-Means + Boundary Alignment Score)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a `ClusterBoundaryReport` from ArchJSON in-memory (pure — no I/O).
+ *
+ * Builds the weighted adjacency matrix (TASK-64's `adjacency-builder`) and
+ * runs `ClusterBoundaryAnalyzer.analyze` over entity names.
+ *
+ * @param archJson - Parsed architecture JSON.
+ * @param options - ClusterBoundaryOptions (minPackageSize, splitThreshold, …).
+ */
+export function buildClusterBoundaryReport(
+  archJson: ArchJSON,
+  options: ClusterBoundaryOptions = {}
+): ClusterBoundaryReport {
+  const matrix = buildAdjacencyMatrix(archJson);
+  const entityNames = archJson.entities.map((e) => e.name);
+  return ClusterBoundaryAnalyzer.analyze(matrix, entityNames, options);
+}
+
+/**
+ * Register the cluster-boundary MCP tool (TASK-66 Phase D).
+ *
+ * `archguard_get_cluster_boundary` loads the project's global-scope ArchJSON,
+ * clusters entities by their structural position (adjacency rows / JL
+ * projection), and returns a `ClusterBoundaryReport` comparing geometric
+ * clusters to declared package boundaries. Single-snapshot only — nothing is
+ * persisted and no ArchJSON schema change.
+ */
+export function registerClusterBoundaryTool(server: McpServer, defaultRoot: string): void {
+  server.tool(
+    'archguard_get_cluster_boundary',
+    'Cluster entities by their structural position (weighted adjacency rows / JL projection) ' +
+      'and compare the geometric clusters to declared package boundaries. Returns a ' +
+      'ClusterBoundaryReport: globalBAS, silhouetteScore, per-package purity/coverage/BAS, ' +
+      'splitPackages (purity < splitThreshold), crossDomainFusions, orphanEntities and cluster ' +
+      'summaries. Requires a prior `analyze` run (query/arch.json).',
+    {
+      projectRoot: z
+        .string()
+        .optional()
+        .describe('Root directory of the target project. Defaults to MCP server startup cwd.'),
+      minPackageSize: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe('Ignore packages with fewer than this many entities (default 3).'),
+      splitThreshold: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe('Purity below this marks a package as split (default 0.5).'),
+      packageDepth: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('Dot-separated package-prefix depth (default 2).'),
+      includeOrphans: z
+        .boolean()
+        .optional()
+        .describe('Include orphanEntities (zero adjacency rows) in the report (default true).'),
+    },
+    async ({ projectRoot, minPackageSize, splitThreshold, packageDepth, includeOrphans }) => {
+      try {
+        const root = resolveRoot(projectRoot, defaultRoot);
+        const archJson = await loadArchJsonForCluster(root);
+        if (archJson === null) {
+          return textResponse(
+            JSON.stringify(
+              {
+                error: `no ArchJSON found at ${root}/.archguard/query. Run archguard_analyze({ projectRoot: "${root}" }) first.`,
+              },
+              null,
+              2
+            )
+          );
+        }
+        if (archJson.entities.length < 2) {
+          return textResponse(
+            JSON.stringify(
+              { error: 'at least 2 entities are required for cluster boundary analysis' },
+              null,
+              2
+            )
+          );
+        }
+        const report = buildClusterBoundaryReport(archJson, {
+          minPackageSize,
+          splitThreshold,
+          packageDepth,
+          includeOrphans,
+        });
+        return textResponse(JSON.stringify(report, null, 2));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return textResponse(`Error: ${message}`);
+      }
+    }
+  );
 }

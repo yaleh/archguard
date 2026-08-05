@@ -11,10 +11,18 @@ vi.mock('@/cli/mcp/mcp-server.js', () => ({
 vi.mock('@/analysis/jl/history-writer.js', () => ({
   readHistoryFile: vi.fn(),
 }));
+vi.mock('@/cli/utils/cluster-archjson-loader.js', () => ({
+  loadArchJsonForCluster: vi.fn(),
+}));
 
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { registerArchHealthTools } from '@/cli/mcp/tools/arch-health-tools.js';
+import {
+  registerArchHealthTools,
+  registerClusterBoundaryTool,
+} from '@/cli/mcp/tools/arch-health-tools.js';
+import { loadArchJsonForCluster } from '@/cli/utils/cluster-archjson-loader.js';
 import type { ArchHealthHistory, IntrinsicDimensionResult } from '@/analysis/jl/types.js';
+import type { ArchJSON } from '@/types/index.js';
 
 function makeSnapshot(
   dInt: number,
@@ -162,5 +170,132 @@ describe('registerArchHealthTools', () => {
   it('trend is stable with fewer than 2 snapshots', async () => {
     const data = await invokeTool({}, makeHistory([makeSnapshot(5, '2026-01-01T00:00:00Z')]));
     expect(data.trend).toBe('stable');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TASK-66 — archguard_get_cluster_boundary
+// ---------------------------------------------------------------------------
+
+function makeEntity(id: string, name: string) {
+  return {
+    id,
+    name,
+    type: 'class',
+    visibility: 'public' as const,
+    members: [],
+    sourceLocation: { file: 'x.ts', startLine: 1, endLine: 1 },
+  };
+}
+
+function makeRelation(id: string, source: string, target: string) {
+  return { id, type: 'dependency' as const, source, target };
+}
+
+/**
+ * 3 entities in `aa.core` with identical structural rows, 3 in `bb.core`, and
+ * one orphan (zero row). Packages are perfectly aligned after clustering.
+ */
+function makeClusterArchJson(): ArchJSON {
+  const entities = [
+    makeEntity('a1', 'aa.core.A1'),
+    makeEntity('a2', 'aa.core.A2'),
+    makeEntity('a3', 'aa.core.A3'),
+    makeEntity('b1', 'bb.core.B1'),
+    makeEntity('b2', 'bb.core.B2'),
+    makeEntity('b3', 'bb.core.B3'),
+    makeEntity('z1', 'zz.core.Orphan'),
+  ];
+  const relations = [
+    makeRelation('r1', 'a1', 'a1'),
+    makeRelation('r2', 'a2', 'a1'),
+    makeRelation('r3', 'a3', 'a1'),
+    makeRelation('r4', 'b1', 'b1'),
+    makeRelation('r5', 'b2', 'b1'),
+    makeRelation('r6', 'b3', 'b1'),
+  ];
+  return {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities,
+    relations,
+  };
+}
+
+async function invokeClusterTool(args: Record<string, unknown> = {}) {
+  const { server, getHandler } = buildMockServer();
+  registerClusterBoundaryTool(server, '/project');
+  const handler = getHandler();
+  const result = (await handler(args)) as { content: Array<{ type: string; text: string }> };
+  return JSON.parse(result.content[0].text);
+}
+
+describe('registerClusterBoundaryTool', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(loadArchJsonForCluster).mockResolvedValue(makeClusterArchJson());
+  });
+
+  it('registers archguard_get_cluster_boundary with the expected parameter schema', () => {
+    const { server } = buildMockServer();
+    registerClusterBoundaryTool(server, '/project');
+    const toolMock = vi.mocked(server.tool);
+    const name = toolMock.mock.calls[0][0];
+    expect(name).toBe('archguard_get_cluster_boundary');
+    const schema = toolMock.mock.calls[0][2] as Record<string, unknown>;
+    expect(schema).toHaveProperty('minPackageSize');
+    expect(schema).toHaveProperty('splitThreshold');
+    expect(schema).toHaveProperty('packageDepth');
+    expect(schema).toHaveProperty('includeOrphans');
+  });
+
+  it('returns a ClusterBoundaryReport-shaped object for a valid fixture', async () => {
+    const data = await invokeClusterTool();
+    expect(data).toHaveProperty('mode');
+    expect(data).toHaveProperty('globalBAS');
+    expect(data).toHaveProperty('silhouetteScore');
+    expect(data).toHaveProperty('clusterCount');
+    expect(data).toHaveProperty('packageScores');
+    expect(data).toHaveProperty('splitPackages');
+    expect(data).toHaveProperty('crossDomainFusions');
+    expect(data).toHaveProperty('orphanEntities');
+    expect(data).toHaveProperty('clusters');
+  });
+
+  it('globalBAS is in [0,1] for a non-trivial fixture', async () => {
+    const data = await invokeClusterTool();
+    expect(data.globalBAS).toBeGreaterThanOrEqual(0);
+    expect(data.globalBAS).toBeLessThanOrEqual(1);
+    // Perfectly aligned fixture → BAS 1.0.
+    expect(data.globalBAS).toBe(1.0);
+  });
+
+  it('errors when ArchJSON has fewer than 2 entities', async () => {
+    vi.mocked(loadArchJsonForCluster).mockResolvedValue({
+      ...makeClusterArchJson(),
+      entities: [makeEntity('a1', 'aa.core.A1')],
+      relations: [],
+    });
+    const data = await invokeClusterTool();
+    expect(data.error).toContain('at least 2 entities');
+  });
+
+  it('forwards minPackageSize (large value → packageScores empty)', async () => {
+    const data = await invokeClusterTool({ minPackageSize: 10 });
+    expect(data.packageScores).toEqual([]);
+  });
+
+  it('includeOrphans=false → empty orphanEntities (orphans still excluded from clustering)', async () => {
+    const data = await invokeClusterTool({ includeOrphans: false });
+    expect(data.orphanEntities).toEqual([]);
+    // The orphan is still removed from the clustering input.
+    expect(data.entityCount).toBe(6);
+  });
+
+  it('includeOrphans=true (default) → orphan listed', async () => {
+    const data = await invokeClusterTool();
+    expect(data.orphanEntities).toEqual(['zz.core.Orphan']);
   });
 });

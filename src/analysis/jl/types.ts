@@ -187,3 +187,134 @@ export interface AlignmentResult {
   /** E1 \ E2 — entities only in the earlier snapshot. */
   removed: string[];
 }
+
+// ---------------------------------------------------------------------------
+// TASK-66 — cluster boundary (K-Means + Boundary Alignment Score)
+// ---------------------------------------------------------------------------
+
+/** Options for `KMeansClusterer.cluster` (TASK-66 Phase A). */
+export interface KMeansOptions {
+  /**
+   * Base K for the Silhouette K-selection window
+   * `[max(2, kInit−2), kInit+3]`. Default 2.
+   */
+  kInit?: number;
+  /** Lloyd's-iteration cap. Default 100. */
+  maxIterations?: number;
+  /** Centroid-shift convergence threshold. Default 0.001. */
+  convergenceThreshold?: number;
+  /** PRNG seed for K-Means++ and silhouette sampling. Default 42. */
+  seed?: number;
+  /** Sample size for silhouette estimation on large inputs. Default 500. */
+  sampleSize?: number;
+  /** Above this many entities silhouette is estimated on a seeded sample. Default 2000. */
+  sampleThreshold?: number;
+}
+
+/** Result of `KMeansClusterer.cluster` (deterministic for a given seed). */
+export interface KMeansResult {
+  /** Selected cluster count (argmax silhouette over the K window). */
+  k: number;
+  /**
+   * Cluster id per clustered entity. Length = `matrix.length − orphanIndices.length`.
+   * `assignments[i]` corresponds to `matrix[entityIndices[i]]`.
+   */
+  assignments: number[];
+  /** Final centroids (k rows × d columns). */
+  centroids: number[][];
+  /** Mean Silhouette score of the selected clustering. */
+  silhouetteScore: number;
+  /** False when Lloyd's hit `maxIterations` before converging. */
+  converged: boolean;
+  /** Lloyd iterations used by the selected run. */
+  iterations: number;
+  /** Original row indices that were all-zero and excluded from clustering. */
+  orphanIndices: number[];
+  /** Original row indices that were clustered (orphans removed). */
+  entityIndices: number[];
+  /** Set to "no clear cluster structure detected" when silhouetteScore < 0.2. */
+  warning?: string;
+}
+
+/** Options for `ClusterBoundaryAnalyzer.analyze` / the MCP tool (TASK-66). */
+export interface ClusterBoundaryOptions {
+  /** Packages with fewer entities are omitted from `packageScores`. Default 3. */
+  minPackageSize?: number;
+  /** Purity below this marks a package as split. Default 0.5. */
+  splitThreshold?: number;
+  /** Dot-separated package-prefix depth. Default 2. */
+  packageDepth?: number;
+  /** Include `orphanEntities` in the report. Default true. */
+  includeOrphans?: boolean;
+  /**
+   * Cluster cross-package share above which a cluster is a fusion candidate.
+   * `crossPackageRatio = 1 − dominantPackageRatio`. Default 0.6.
+   */
+  crossPackageThreshold?: number;
+  /**
+   * Dominant-package share below which a fusion candidate is flagged
+   * (prevents "one dominant package + tiny stragglers" from being a fusion).
+   * Default 0.5.
+   */
+  dominantCoverageThreshold?: number;
+  /** Base K for the silhouette search. Default `max(2, distinct package count)`. */
+  kInit?: number;
+  /** PRNG seed for clustering. Default 42. */
+  seed?: number;
+}
+
+/** Per-package boundary-alignment score. */
+export interface PackageBASScore {
+  packageName: string;
+  entityCount: number;
+  purity: number;
+  coverage: number;
+  bas: number;
+  dominantCluster: number;
+}
+
+/** A package whose entities split across multiple geometric clusters. */
+export interface SplitPackageIssue {
+  packageName: string;
+  purity: number;
+  bas: number;
+  clusterDistribution: Array<{ clusterId: number; ratio: number }>;
+}
+
+/** A geometric cluster fused from multiple packages. */
+export interface CrossDomainFusion {
+  clusterId: number;
+  involvedPackages: Array<{ packageName: string; ratio: number }>;
+  representativeEntities: string[];
+}
+
+/** Cluster-level summary. */
+export interface ClusterSummary {
+  clusterId: number;
+  entityCount: number;
+  dominantPackage: string;
+  dominantPackageRatio: number;
+}
+
+/** The full cluster-boundary analysis report (the MCP tool payload). */
+export interface ClusterBoundaryReport {
+  /** Adaptive projection mode used for the feature matrix. */
+  mode: ProjectionMode;
+  /** Entity-count-weighted mean of per-package BAS. */
+  globalBAS: number;
+  /** Mean Silhouette score of the selected clustering. */
+  silhouetteScore: number;
+  /** Selected cluster count. */
+  clusterCount: number;
+  /** Number of clustered (non-orphan) entities. */
+  entityCount: number;
+  /** Distinct package count over clustered entities. */
+  packageCount: number;
+  packageScores: PackageBASScore[];
+  splitPackages: SplitPackageIssue[];
+  crossDomainFusions: CrossDomainFusion[];
+  orphanEntities: string[];
+  clusters: ClusterSummary[];
+  /** "no clear cluster structure detected" when silhouetteScore < 0.2. */
+  warning?: string;
+}

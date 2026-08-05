@@ -129,11 +129,66 @@ DoD: `npm test -- --run tests/unit/cli/mcp/tools/arch-health-tools.test.ts`, `np
 
 ## Acceptance Criteria
 
-- [ ] `KMeansClusterer` runs deterministic Lloyd's Algorithm with K-Means++ and Silhouette-based K selection; zero-rows → orphans
-- [ ] `BoundaryAlignmentScorer` computes per-package purity/coverage/BAS + entity-count-weighted globalBAS (all in [0,1])
-- [ ] SplitPackage / CrossDomainFusion / Orphan detectors emit the defined issue lists with the documented thresholds
-- [ ] MCP tool `archguard_get_cluster_boundary` returns a structured `ClusterBoundaryReport`; errors on <2 entities
-- [ ] Single-snapshot only — no history file written, no ArchJSON schema change, no CLI default behaviour change; depends on TASK-64 (`src/analysis/jl/` existing)
+- [x] `KMeansClusterer` runs deterministic Lloyd's Algorithm with K-Means++ and Silhouette-based K selection; zero-rows → orphans
+- [x] `BoundaryAlignmentScorer` computes per-package purity/coverage/BAS + entity-count-weighted globalBAS (all in [0,1])
+- [x] SplitPackage / CrossDomainFusion / Orphan detectors emit the defined issue lists with the documented thresholds
+- [x] MCP tool `archguard_get_cluster_boundary` returns a structured `ClusterBoundaryReport`; errors on <2 entities
+- [x] Single-snapshot only — no history file written, no ArchJSON schema change, no CLI default behaviour change; depends on TASK-64 (`src/analysis/jl/` existing)
+
+## Execution evidence (inner, 2026-08-05)
+
+Scoped DoD commands (worktree `task/TASK-66` @ branch, not merged):
+
+```
+$ npm test -- --run tests/unit/analysis/jl/kmeans.test.ts
+ ✓ tests/unit/analysis/jl/kmeans.test.ts (8 tests)
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+
+$ npm test -- --run tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts
+ ✓ tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts (15 tests)
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+
+$ npm test -- --run tests/unit/cli/mcp/tools/arch-health-tools.test.ts
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   (includes the new registerClusterBoundaryTool describe block)
+
+$ npm run type-check
+> tsc --noEmit          # exit 0
+```
+
+Contract invoke (exit 0; TASK-66 excluded as `not-yet-flipped` because its
+declared touches — `src/analysis/jl/kmeans.ts` etc. — resolve in this worktree):
+
+```
+$ node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json
+{
+  "pool": 1,
+  "floor": 12,
+  "cap": 3,
+  "floorMult": 4,
+  "deficit": 11,
+  "dispatchable_disjoint": 1,
+  "criterion_met": false,
+  "report": "pool 1/12 (floor = cap(3) × 4) · dispatchable_disjoint 1/3 — criterion NOT met (<cap mutually-disjoint candidates) · deficit 11",
+  "ready": ["TASK-68"],
+  "excluded": [
+    { "id": "TASK-65", "reasons": ["not-yet-flipped"] },
+    { "id": "TASK-66", "reasons": ["not-yet-flipped"] }
+  ],
+  "scanned": 43
+}
+```
+
+Note: the Plan Phase C example "50/30/20 cross-package cluster flagged" is
+loose shorthand. The documented thresholds (cross-package ratio > 60% AND
+dominant-package coverage < 0.5, per the Proposal) mean a strict 50/30/20
+(dominant = 0.5) is NOT a fusion; the fusion unit fixture uses a 2/2/2
+three-package cluster (dominant ≈ 0.333, cross ≈ 0.667) which is flagged, and
+an 80%-single-dominant cluster which is not. Status remains `ready` (fan-in
+flips to `done`; DoD untouched).
 
 ## Contract
 
