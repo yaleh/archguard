@@ -247,6 +247,22 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    drift-reporter 等）。已按通知 **SendMessage resume** 续跑（agent 保留上下文续完测试 + 提交）。
 3. **在飞**：TASK-65（resumed）。TASK-66 等 TASK-65 落地后派（共享文件串行）。
 
+## 14:3xZ 更新（TASK-65 fan-in + TASK-66/68 派发）
+
+1. **TASK-65 fan-in（完成）**：resume 后 agent 完成（branch d82a9f9）→ rebase master（干净）→ merge
+   → scoped **101 passed**（10 文件）→ worktree/分支清理。AC 5 项全勾。产出：JL 架构漂移
+   （entity-aligner / drift-calculator / drift-exit-code / drift-reporter / drift-baseline）+
+   `--drift-base`/`--drift-threshold` CLI + `archguard_get_architecture_drift` MCP tool。
+   注：`reanalyzeCommitSnapshot`（git worktree 重分析）仅 type-checked，端到端留外层 e2e。
+2. **TASK-66/68 补晋 + 派发**：TASK-66（JL cluster boundary）与 TASK-68（lint 13 errors 修复，
+   外层 AC 审计新建）均 eligible、disjoint 同批 → todo→ready、§3.5 开括号（fm-TASK-66-… /
+   fm-TASK-68-…）、§4 并发派发（worktree task-66 / task-68）。
+3. **机制误报复核（TASK-66）**：ready-pool-check 将 TASK-66 excluded 为 `not-yet-flipped`
+   （`taskWorkLanded=true`）——**已知符号信号误报**（同 TASK-67：TASK-65 落地后其 AC 引用的共享
+   符号已存在）。实测核实：TASK-66 的 4 个 `(new)` 文件（kmeans.ts / cluster-boundary-analyzer.ts
+   及测试）**均不存在**，工作未落地 → 按实测为准派发，标注外层。机制缺陷归 manager-inbox。
+4. **在飞**：TASK-66、TASK-68。full-suite green（5019/0）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
