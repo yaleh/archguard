@@ -4,6 +4,33 @@
 
 ## 当前积压
 
+### 会话存活监测缺位：单飞锁被 quay 持有且只盯 quay，archguard/meta-cc 会话无人盯（2026-08-05）
+
+**现象**：archguard 冷启动重挂 session-liveness Monitor（4b 步骤）时，挂载返回
+「已有活持有者（属主 quay，pid 2598198）——空操作 exit 0」。`monitor-mount-check.sh --json`
+三判据：`mounted=false`（本仓无 session-liveness 进程）、`delivered=true`（共享事件通道通）、
+`targets=[]`（本仓无目标）。共享事件文件 `.quay-global/session-liveness/events.jsonl` 只含
+quay 事件（`quay-inner` SESSION-IDLE / quay HEARTBEAT），**archguard 与 meta-cc 的会话
+存活事件从未产生**。
+
+**根因**：session-liveness 单飞锁（AC20）只有一个持有者——quay 的 pid 2598198，其
+`SESSION_TARGETS=quay-outer /home/yale/work/quay quay-0:outer` **只盯 quay 会话**。其余项目
+挂载一律空操作。而本仓 `orchestration/session-liveness.env` 配了 `SESSION_TMUX_SESSION=archguard-4`
+（quay-init 铺的默认目标），说明设计上 archguard 应有自己的观测——但锁被 quay 持有后，
+archguard 会话（含内层 76bbb31e）的 GONE/OVERDUE/IDLE 事件永远不产生。
+
+**外层已尝试**：挂载（空操作）、确认 quay 持有者目标范围、核对共享事件文件。
+
+**为什么超出授权**：涉及 session-liveness 单飞持有者的**目标范围**（quay 持有者应否同时
+盯 archguard/meta-cc，还是各项目自己的外层持有——manager 2026-08-03 曾裁「各项目外层持有
+其内层」，但 AC20 单飞锁与「多项目各自持有」冲突）。这是机制归属问题，不是 archguard 单方
+能解决的。
+
+**建议选项**：
+1. quay 持有者的 `SESSION_TARGETS` 扩为三项目全部会话（单一持有者看全部）；
+2. 按 manager 旧裁定「各项目外层持有其内层」，放弃全局单飞、改按项目持有（需改 AC20 文档）；
+3. 接受现状——archguard 会话存活靠外层 20 分钟 tick 轮询兜底（降级，非事件式）。
+
 ### TASK-55 分诊 — 3 个 stranded 分支（2026-08-04）
 
 漂移检查 `task-status-drift-check.ts --stranded` 报 3 个 stranded 分支。逐支 `git show`
