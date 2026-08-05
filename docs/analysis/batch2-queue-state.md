@@ -459,6 +459,14 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 3. **drift-check**：干净（51 任务无 suspects）。
 4. **任务库**：TASK-77 后再次耗尽（收尾任务）。TASK-77 待外层翻 done。
 
+## 19:1xZ 更新（空闲心跳：状态无变化，等外层）
+
+1. **实况**：master @ 9a52eb5（外层 tick #93 仅转发重锚）；状态与 18:0xZ 空闲检查一致——
+   全任务 done、无在飞、无候选/promotions、full-suite green（17:55Z 5188/0）、`.halt` 无、
+   无阻塞信号。**无新任务/无方向动作**。
+2. **mcp-launcher 缺陷**：仍待外层立案（已记录于 18:2xZ 段 + 外层 tick #92）。若数 tick 后仍未
+   立案，内层按「有证据建任务」自行创建（TASK-78）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
