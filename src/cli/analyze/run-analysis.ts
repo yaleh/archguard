@@ -35,6 +35,7 @@ import {
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
+import type { ArchJSON } from '@/types/index.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -88,6 +89,12 @@ export interface RunAnalysisResult {
   queryScopesPersisted: number;
   persistedScopeKeys: string[];
   hasDiagramFailures: boolean;
+  /**
+   * Last parsed ArchJSON from the processing run (primary scope preferred).
+   * Null when no diagram was parsed or all groups failed. Optional for
+   * backward compatibility with callers that construct partial results.
+   */
+  lastArchJson?: ArchJSON | null;
 }
 
 function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
@@ -124,6 +131,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       queryScopesPersisted: 0,
       persistedScopeKeys: [],
       hasDiagramFailures: false,
+      lastArchJson: null,
     };
   }
 
@@ -437,6 +445,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     queryScopesPersisted: persistedScopeKeys.length,
     persistedScopeKeys,
     hasDiagramFailures: hasArtifactFailures,
+    lastArchJson: processor.getLastArchJson(),
   };
 }
 

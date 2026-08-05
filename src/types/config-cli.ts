@@ -30,4 +30,5 @@ export interface CLIOptions {
   testsOnly?: boolean;
   includeGit?: boolean;
   gim?: boolean;
+  archHealth?: boolean;
 }
