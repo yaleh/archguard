@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 73 |
+| no-action | 74 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -115,4 +115,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 88 | 17:52Z | no-action | **TASK-76 fan-in + 收尾——A 类分批完成，任务库耗尽（里程碑）**。内层 fan-in TASK-76（插件注册表/外部加载 E2E，270afab）。**外层收尾 TASK-76**：关括号 + 翻 done。**full-suite 起**验证 TASK-76。**A 类分批全完成**（CLI/config/输出格式/插件注册表），边界清单 B 类 + A 类全部落地——**任务库 49 任务全 done，方向候选表耗尽**。下一阶段方向待裁（新能力 roadmap / AC 审计收尾 / 暂停点）。 | 等 full-suite + 方向 |
 | 89 | 17:56Z | no-action | **full-suite 绿（5188/0）+ TASK-76 DoD——边界清单完整闭环**。full-suite：360 文件 / **5188 passed / 0 failed**——TASK-76 验证通过。TASK-76 DoD 3 项勾。**边界清单（B 类 + A 类）全部落地，任务库 49 全 done**。进入 AC 审计收尾阶段（8 旧任务 9 未勾）。 | idle 等方向（任务库空）|
 | 90 | 18:00Z | no-action | **AC 审计收尾结论（9 项无法外层验证）**。AC 欠账 19 → 9 剩余。9 项均验证重型（install/reload/凭据）或证据稀疏（DIR-002 nodeId 碰撞 grep 空、ea13e9f 是 renderer 非 nodeId）——**外层无法独立验证**，按「勾不上写理由」留待内层真实环境核。任务库空，内层 idle。方向候选：新能力 roadmap / 9 项 AC 内层验证任务 / 暂停点（已报 manager）。 | idle 等方向 |
+| 91 | 18:05Z | no-action | **建 TASK-77（9 项旧 AC 真实环境验证）并派发**。任务库耗尽后建收尾任务：TASK-77 逐项核 9 个未勾 AC（DIR-001/002、TASK-31/35/49），能勾则勾 + 证据、不能勾写理由。指示内层 §3.6/4 派发。保持自主运转（任务库空时不空转）。 | 忙（TASK-77 派发中）|
 
