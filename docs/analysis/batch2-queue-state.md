@@ -425,3 +425,11 @@ TASK-68 的修复对旧错误**生效**（.quay/vendor/query.ts 的解析/rule-n
 2. **方向裁定**（外层）：① **TASK-70**（--prefer-offline 卫生项，TASK-57 遗留，3 文件 +15 行，卫生采纳非优化 claim）；② **TASK-71**（B 类 kotlin 插件分支密集单测，TASK-59 边界清单剩余）。均含 lint gate（治本规则）。延后：TASK-72（core generator）、A 类 E2E。
 3. **lint 验证**：后台跑（bp1yh4vn5），确认 0 errors 后重勾 TASK-50 #4/TASK-62 #8/TASK-64 #11 的 lint DoD。
 4. **下一批**：TASK-70/71 待内层 §3.6 晋级后派发。
+
+## 16:31Z 状态快照（context 100%——为 compact/重启保险）
+
+**当前态**：full-suite 验证 TASK-72（后台 byq3jpcp5，~16:26 起）。TASK-73（A 类 CLI E2E）已派发（内层晋级中）。套件 green（TASK-72 合并前状态）。
+**本会话成果**（11:40 起，~291 分钟自主）：TASK-53→73 全部 done（除在飞的 73），机制地基提交 d9dbd75，ADR-007 三连修复 + 治本规则，lint 修复 + 治本规则，runner 判红修复（TASK-67），--prefer-offline 卫生采纳（TASK-70）。
+**持久状态位置**：本文件（单一可信源）+ orchestration/tick-log.md（tick #1-81）+ manager-inbox 报告 #1-8。
+**待办**：TASK-73 收尾（full-suite 后）；A 类分批（config/输出格式/插件注册表）；8 旧任务 AC 未勾（DIR-001 2/DIR-002 3/TASK-31 2/TASK-35 1/TASK-49 1）；quay 侧 3 修 + 2 建议。
+**机制缺口**（已报 manager）：send-keys welcome/非空框不可用；--test-concurrency 文档虚构；runner 判红 canonical 待同步；ready-pool not-yet-flipped 误报 2 次。
