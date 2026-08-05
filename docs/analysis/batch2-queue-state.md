@@ -89,3 +89,21 @@
   ADR-021（`adr/ADR-021-adaptive-budget-self-regulating-methodology.md`）在冷启动时**均缺失**
   （tick 冷启动清单引用的四个文档中两个不存在；ADR 目录是 `docs/adr/` 且只有 001-008 占位符）。
   已用 `goals-and-ac.md` 替代 exp6 的职能定位。此缺失本身是文档维护项，记入待查。
+
+## 07:4xZ 更新（方向裁定 → 派发 → .halt 停机）
+
+1. **方向裁定（外层，管理者授权自裁）**：TASK-61（守卫，defect）先派；TASK-60（quay-tasks 核实，
+   gap）同批派发（concurrent-scheduler 确认 disjoint，batch=[TASK-60,TASK-61]）；A 类 E2E /
+   --prefer-offline 延后。
+2. **派发前置修复**（commit 080c667）：`ready-pool-check` PARKED 误报修复（负向后顾排除反引号引用的
+   `**PARKED`）+ TASK-60 补 `## Definition of Done`（contract 四件套完整）+ TASK-60/61 晋级
+   todo→ready。修复前 ready-pool 只认 TASK-61；修复后两任务均 candidates/promotions。
+3. **派发**（~07:46Z）：TASK-60 / TASK-61 各起后台 subagent，worktree 于
+   `/home/yale/work/archguard-worktrees/task-60` 与 `task-61`（分支 `task/TASK-60` / `task/TASK-61`，
+   基于 master @ 080c667），只提交不合并。计量括号已开（fm-TASK-60-… / fm-TASK-61-…）。
+4. **`.halt` 写入（07:45Z，管理者）**：资源优先——quay 全套件验证 M3 接管修复（PSI some
+   avg10≈92.73，resource-gate WAIT）。解除条件：quay 全套件一轮 green + resource-gate GO。
+   **本 tick 空转，不再派发新 agent**。已在飞的两 agent 让其自然完成（scoped 低资源、方向裁定授权）。
+5. **恢复后待办**：两 agent 返回后按 tick 步骤 2 fan-in（rebase master → 合并 task/<id> →
+   scoped 测试 → worktree 清理）。解除 `.halt` 需先跑 `restart-readiness-check.sh`（在飞任务未落地时
+   FAIL 是预期的）。
