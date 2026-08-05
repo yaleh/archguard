@@ -75,6 +75,6 @@ Test Files  2 passed | 1 skipped (3)
 
 ## Definition of Done
 
-- [ ] 三命令 E2E 契约断言补全 + scoped 全绿
-- [ ] 契约依据证据（每个断言对应的用户可见行为）
-- [ ] lint 0 error（新文件 lint-clean）
+- [x] 三命令 E2E 契约断言补全 + scoped 全绿
+- [x] 契约依据证据（每个断言对应的用户可见行为）
+- [x] lint 0 error（新文件 lint-clean）

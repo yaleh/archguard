@@ -94,6 +94,6 @@ $ npx eslint tests/integration/custom-config-path.test.ts           # lint gate
 
 ## Definition of Done
 
-- [ ] config 契约 E2E 断言补全 + scoped 全绿
-- [ ] 契约依据证据
-- [ ] lint 0 error（新文件 lint-clean）
+- [x] config 契约 E2E 断言补全 + scoped 全绿
+- [x] 契约依据证据
+- [x] lint 0 error（新文件 lint-clean）
