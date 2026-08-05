@@ -156,3 +156,24 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 3. **就绪池**：pool=0（62/63/64 在飞）；TASK-65/66 依赖 TASK-64 文件未落地，仍不可晋。
 4. **本 tick 无合并/派发**（agent 未完成）。等待 task-notification 后按 §2 fan-in；
    TASK-64 落地后 TASK-65/66 恢复可晋（§3.6/4）。
+
+## 13:1xZ 更新（fan-in TASK-64 + TASK-62，派发 TASK-67）
+
+1. **TASK-64 fan-in（完成）**：agent 完成（branch `task/TASK-64`，61c7e4a，18 文件 +1988）→ rebase
+   干净 → merge → scoped **61 passed**（jl/ 6 文件）→ worktree/分支清理。
+   - AC1/2/4/5/6 勾；**AC3 性能 spike 未勾**——环境受限（本机负载高，ml-matrix SVD 比 proposal
+     假设慢 10-100×；spike 文件本身按 spec 实现）。**需外层在收尾时裁**（真回归 vs 环境限制）。
+   - 发现：任务文件 Touches 写 `src/cli/mcp/server.ts` 但真实文件是 `mcp-server.ts`（registration
+     落在 mcp-server.ts，DoD #8 grep 路径需更正）；`run-analysis.ts` 加 `lastArchJson` 可选字段
+     （Touches 外的最小 enabling 改动）；computeK 用 ⌈⌉ 而非 proposal 的 round（308/379 vs 307/378）。
+2. **TASK-62 fan-in（完成）**：agent 完成（branch `task/TASK-62`，0d49105，2 commits）→ rebase
+   干净 → merge → scoped **158 passed**（9 文件）→ worktree/分支清理。AC 5 项全勾。
+   - 发现：`npm run build` 不复制 `src/plugins/*/queries/*.scm` 到 dist（打包产物缺查询文件——
+   需后续任务）；触及 Touches 外的共享文件（syntax-tree.ts / native/wasm-parser-backend.ts——
+   需暴露 ParserSession.query，其它语言 bridge 未迁移，ArchJsonMapper 未动）；顺手修了一个潜在
+   bug（collectNamespace 修 namespace 前缀）。
+3. **TASK-67 补晋 + 派发（完成）**：外层 12:59Z 建的 runner 判红 bug 缺陷任务——§3.6 补晋
+   todo→ready、§3.5 开括号（fm-TASK-67-1785935423711）、§4 后台派发（worktree task-67，分支
+   task/TASK-67）。与在飞 62/63 并发 disjoint 核实（batch=[62,63,67]）。
+4. **在飞**：TASK-63（未完成）、TASK-67。TASK-65/66 等 TASK-64 翻 done（外层收尾）后可晋。
+5. **full-suite**：green（4902 passed / 0 failed）。TASK-64/62 合并未经新全量（外层下一轮验证）。
