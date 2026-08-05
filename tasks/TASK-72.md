@@ -1,7 +1,7 @@
 ---
 id: TASK-72
 title: "TASK-72: B 类剩余——core mermaid generator 深层分支直接 import 单测"
-status: todo
+status: ready
 labels:
   - test-coverage
   - boundary-list

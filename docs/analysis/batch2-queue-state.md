@@ -335,6 +335,15 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 4. **full-suite**：green（5090/0）为 TASK-70/71 合并前状态；待外层下一轮全量验证。
 5. **池**：pool=2（TASK-70/71 done 待外层翻，不会重派）；无新候选。
 
+## 16:1xZ 更新（TASK-72 派发）
+
+1. **外层 16:10Z 方向**：TASK-70/71 已收尾（done + 关括号）；full-suite 验证中。下一批
+   **TASK-72**（core mermaid generator 深层分支直接 import 单测，TASK-59 边界清单剩余，含 lint gate）。
+   A 类 E2E 延后（TASK-72 落地后再裁是否分批）。
+2. **§3.6 补晋 + §4 派发**：TASK-72 资格通过（self-touch OK、touches resolve、lint gate 在位）→
+   todo→ready、§3.5 开括号（fm-TASK-72-…）、§4 后台派发（worktree task-72）。
+3. **在飞**：TASK-72。full-suite green（验证 70/71 中）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
