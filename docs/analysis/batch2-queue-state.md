@@ -344,6 +344,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    todo→ready、§3.5 开括号（fm-TASK-72-…）、§4 后台派发（worktree task-72）。
 3. **在飞**：TASK-72。full-suite green（验证 70/71 中）。
 
+## 16:2xZ 更新（TASK-72 fan-in 完成）
+
+1. **TASK-72 fan-in（完成）**：core mermaid generator 深层分支直接 import 单测（13 测试，纯测试
+   不改源码）。merge 后 scoped **13 passed**。负控制已验证（变异 same-package skip 条件 → 测试红）。
+   发现：`groupEntitiesByPackage` 私有函数（L516-532）确认死代码（未调用）；防御性/死分支
+   刻意不测（TASK-58/59 逐边界判断）。
+2. **TASK-62/63/64/65/66/67/68/70/71/72 全部已合并**（各 scoped 全绿）；**无在飞、无 worktree**。
+3. **full-suite**：green（5090/0）为 TASK-70/71 合并前状态；TASK-70/71/72 待外层全量验证。
+4. **池**：pool=1（TASK-72 done 待外层翻）；无新候选。**任务库耗尽**——剩 A 类 E2E 待裁。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
