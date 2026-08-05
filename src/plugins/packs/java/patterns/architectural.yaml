@@ -1,0 +1,10 @@
+# Common Java architectural idioms (TASK-63, Phase C).
+- name: dto
+  pattern: "@Data|@Value|@Builder"
+  description: Lombok data-transfer object idiom
+- name: repository
+  pattern: "interface .*Repository"
+  description: Spring Data repository interface
+- name: service
+  pattern: "@Service"
+  description: Spring service bean

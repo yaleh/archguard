@@ -1,0 +1,21 @@
+# Django framework knowledge (TASK-63, Phase D).
+name: Django
+detect:
+  - file_match: manage.py
+    content_contains: django
+  - file_match: settings.py
+    content_contains: django
+modules:
+  model:
+    annotations:
+      - models.Model
+    diagram_level: class
+  view:
+    annotations:
+      - views.View
+    diagram_level: class
+  admin:
+    annotations:
+      - admin.ModelAdmin
+    diagram_level: class
+entry_points: []

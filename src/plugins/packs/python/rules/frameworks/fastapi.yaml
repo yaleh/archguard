@@ -1,0 +1,24 @@
+# FastAPI framework knowledge (TASK-63, Phase D).
+name: FastAPI
+detect:
+  - file_match: pyproject.toml
+    content_contains: fastapi
+  - file_match: requirements.txt
+    content_contains: fastapi
+modules:
+  route:
+    annotations:
+      - app.get
+      - app.post
+      - app.put
+      - app.delete
+    diagram_level: class
+entry_points:
+  - annotation: app.get
+    protocol: http
+    method: GET
+    path_arg: path
+  - annotation: app.post
+    protocol: http
+    method: POST
+    path_arg: path

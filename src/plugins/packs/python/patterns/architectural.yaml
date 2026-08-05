@@ -1,0 +1,10 @@
+# Common Python architectural idioms (TASK-63, Phase D).
+- name: dataclass
+  pattern: "@dataclass"
+  description: Data transfer object idiom
+- name: pydantic_model
+  pattern: "BaseModel"
+  description: Pydantic schema model
+- name: fastapi_route
+  pattern: "@app.(get|post|put|delete)"
+  description: FastAPI HTTP route

@@ -1,0 +1,6 @@
+# Java dependency-layer knowledge (TASK-63).
+# Package metadata files the RuleEngine can probe for framework detection.
+package_files:
+  - pom.xml
+  - build.gradle
+  - build.gradle.kts
