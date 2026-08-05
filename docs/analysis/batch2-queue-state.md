@@ -265,3 +265,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 3. **裁定**：forward-fix 不回滚。禁改基线/期望值，查 driver↔parseCode 分叉根因（首查 .scm 路径解析），修 ADR-007，重跑 3 失败文件。裁定已送达内层（transcript 核实），内层开工。
 4. **TASK-62/64** 保持 done，DoD 待修复 + 新全量绿。TASK-65/66 派发暂缓（套件 red = stop-dispatch）。
 5. **verification-round #1** 的 suiteGreen 需回看：当时 recorded true（running），最终 red——本轮收尾的 4 任务待修复后新全量验证。
+
+## 14:26Z 发现（lint 不通过：13 errors）
+
+AC 审计勾 TASK-50 #4（npm run lint）时发现：**lint 当前 13 errors / 3880 warnings**（`npm run lint` 不通过）。full-suite 是 vitest-only，不跑 lint——所以 5019/0 绿但 lint 有错误。来源待查（TASK-62/63/64 新代码 vs 既有）。已重跑 lint 全量输出（btex2ch9h 后台）定位错误文件。**TASK-50 #4 保持未勾**（lint 现不通过，勾不上）。若 13 errors 来自本轮 merge 新代码 → 建任务修 lint hygiene；若既有 → 另议。
