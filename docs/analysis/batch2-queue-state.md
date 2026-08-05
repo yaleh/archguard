@@ -300,3 +300,12 @@ AC 审计勾 TASK-50 #4（npm run lint）时发现：**lint 当前 13 errors / 3
 2. **外层裁定**：**自适应并发**——GO（gate 退出 0）→ inner 并发上限 4；WAIT → 回落 2。固定高并发不可行（quay laneCount=8 三次 ABORT 实锤）。自校正：GO 派 4 → vitest 推高 PSI → 下派见 WAIT 回 2 → 回落再回 4。
 3. **TASK-69 已建**（实施）：fast-mode-loop-tick.md §4 并发上限改自适应 + inner 派发前查 gate + ready-pool-check cap/floor 联动评估。内层当前批次（ADR-007 + TASK-66/68）完成后执行。
 4. **已回复 manager**（archguard-20260805-150500Z.md）：裁定 + 数字 + 边界（两层不同时跑全量不变）。
+
+## 15:10Z 更正（manager 撤回吞吐率/自适应并发请求）
+
+manager 更正上一条：**撤回**「自适应并发档位归 archguard 判断」。正确形态 = 并发上限、资源门联动
+属 quay 两层循环基础设施（fast-mode-loop-tick.md 模板 + resource-gate.sh + concurrent-batch-scheduler.ts），
+archguard 是采纳这套机制的消费者，**不该自己发明**（会造成机制分叉 = 交付面漂移，今晚多次实测）。
+并发上限调整由 quay 设计后经正常升级同步（git pull）传导，届时按新版 fast-mode-loop-tick.md 执行。
+**已删 TASK-69**（我过度动作的自适应并发实施任务）。后续：资源门 WAIT 时按现有机制正常遵守，
+不独立实现。继续任务队列 + 产品工作。
