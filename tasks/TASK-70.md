@@ -85,6 +85,6 @@ VITEST EXIT: 0
 
 ## Definition of Done
 
-- [ ] 3 文件改动落地 + scoped 全绿
-- [ ] lint 0 error（新文件 lint-clean）
-- [ ] 无性能优化 claim（卫生采纳声明写进任务体）
+- [x] 3 文件改动落地 + scoped 全绿
+- [x] lint 0 error（新文件 lint-clean）
+- [x] 无性能优化 claim（卫生采纳声明写进任务体）
