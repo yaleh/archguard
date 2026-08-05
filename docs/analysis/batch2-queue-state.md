@@ -368,3 +368,10 @@ TASK-68 的修复对旧错误**生效**（.quay/vendor/query.ts 的解析/rule-n
 - `tests/unit/analysis/jl/kmeans.test.ts`（4）：prettier 格式
 **`npm run lint` 仍 LINT_EXIT=1（14 errors）**。full-suite 是 vitest-only 不覆盖 lint——re-green 会过，但 lint 独立红。
 **系统性模式**：任务新代码不跑 lint（同 check-adr 族）——治本规则应扩展到 lint（新增/修改代码的任务 AC 加 lint gate）。TASK-50 #4/TASK-62 #8/TASK-64 #11 的 lint DoD 仍待 TASK-66 lint 修复后勾。
+
+## 15:45Z 更新（外层 tick #78：任务库耗尽 → 下一批方向）
+
+1. **内层**：修 TASK-66 lint（8de7fec）+ 治本规则落档。TASK-62~68 全 done，**43 任务全 done，池空**，套件绿。
+2. **方向裁定**（外层）：① **TASK-70**（--prefer-offline 卫生项，TASK-57 遗留，3 文件 +15 行，卫生采纳非优化 claim）；② **TASK-71**（B 类 kotlin 插件分支密集单测，TASK-59 边界清单剩余）。均含 lint gate（治本规则）。延后：TASK-72（core generator）、A 类 E2E。
+3. **lint 验证**：后台跑（bp1yh4vn5），确认 0 errors 后重勾 TASK-50 #4/TASK-62 #8/TASK-64 #11 的 lint DoD。
+4. **下一批**：TASK-70/71 待内层 §3.6 晋级后派发。
