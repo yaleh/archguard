@@ -177,3 +177,17 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
    task/TASK-67）。与在飞 62/63 并发 disjoint 核实（batch=[62,63,67]）。
 4. **在飞**：TASK-63（未完成）、TASK-67。TASK-65/66 等 TASK-64 翻 done（外层收尾）后可晋。
 5. **full-suite**：green（4902 passed / 0 failed）。TASK-64/62 合并未经新全量（外层下一轮验证）。
+
+## 13:2xZ 更新（fan-in TASK-63 + 机制发现）
+
+1. **TASK-63 fan-in（完成）**：agent 完成（branch `task/TASK-63`，a3d335f）→ rebase 干净 → merge →
+   scoped **77 passed**（7 文件，pack-registry/rule-engine/packs + 回归）→ worktree/分支清理。
+   AC 5 项全勾。注意：新增 `js-yaml`/`@types/js-yaml` 依赖（package.json/lock 随 merge 落地）。
+2. **TASK-64/62/63 全部已合并**；TASK-67 在飞（唯一 worktree task-67）。pool=0。
+3. **TASK-65/66 仍不可晋**：均 `parent: TASK-64`，TASK-64 尚未被外层翻 done → depsReady false。
+   **TASK-64 翻 done 后两者可晋可派**（66 的 touches 已随 TASK-64 落地解析通过）。
+4. **机制发现（有证据）**：`taskWorkLanded` 符号信号对「修既有代码的任务」误报——
+   TASK-67（在飞）被 excluded 为 `not-yet-flipped`：其 AC 引用 `isFailureLine` /
+   `full-suite-runner.ts` / `SUITE-RED`，**全部是已存在的被修复目标** ⇒ 符号解析误判「已落地」。
+   影响：在飞期间池将其计为已落地（不阻塞——在飞另有 --in-flight/遥测跟踪）；真正风险是若该任务
+   工作未落地，排除会掩盖它需要派发。属 quay canonical 机制缺陷，归 manager-inbox，本仓不改。
