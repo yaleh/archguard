@@ -156,7 +156,15 @@ beforeAll(() => {
   try {
     stdout = execFileSync(
       'npm',
-      ['install', pluginTgz, '--omit=dev', '--no-audit', '--no-fund', '--foreground-scripts'],
+      [
+        'install',
+        pluginTgz,
+        '--omit=dev',
+        '--no-audit',
+        '--no-fund',
+        '--foreground-scripts',
+        '--prefer-offline',
+      ],
       { cwd: installDir, stdio: 'pipe', timeout: 480_000, maxBuffer: 64 * 1024 * 1024 }
     ).toString('utf8');
   } catch (error) {

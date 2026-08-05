@@ -684,6 +684,7 @@ describe('real claude CLI boundary (isolated config)', () => {
         NPM_CONFIG_USERCONFIG: npmUserConfig,
         NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/',
         NPM_CONFIG_ALWAYS_AUTH: 'false',
+        NPM_CONFIG_PREFER_OFFLINE: 'true',
         NPM_CONFIG_TOKEN: '',
         NODE_AUTH_TOKEN: '',
       };
