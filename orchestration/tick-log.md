@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 80 |
+| no-action | 81 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -122,4 +122,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 95 | 19:05Z | no-action | **TASK-78 fan-in + 收尾（mcp-launcher 修复）**。内层 fan-in TASK-78（mcp-launcher 经 Claude npm-cache sibling 解析 archguard，bd6731d，10 scoped 绿）。**外层收尾**：关括号 + 翻 done。资源闸 WAIT → full-suite 验证推迟。**TASK-31/35 Connected AC 现状**：launcher 修复已验，但完整 AC 验证需「外层启用插件 + 发布新包」（部署步骤，非代码）。 | 等 full-suite GO |
 | 96 | 20:08Z | no-action | **资源闸 GO → full-suite 起（验证 TASK-78）**。上 tick 因 gate WAIT 推迟的 TASK-78 验证，本 tick gate GO → full-suite 起（20:08）。内层 idle（心跳，任务库空）。 | 等 full-suite 结果 |
 | 97 | 20:15Z | no-action | **full-suite 绿（5188/0）+ TASK-78 DoD #1-3**。full-suite：360 文件 / **5188 passed / 0 failed**——TASK-78（mcp-launcher 修复）验证通过。DoD #1-3 勾（npm-cache 布局实测 + 负控制 + lint 0）；#4（TASK-31/35 Connected AC）待部署发布（理由已记）。**任务库全 done，AC 审计完成**——完整里程碑。 | idle 等方向 |
+| 98 | 20:28Z | no-action | **任务库全 done 后建 TASK-79（Connected AC 本地验证）并派发**。里程碑（任务库 52 全 done、AC 审计完成、套件绿）后，为保持管线建 TASK-79：本地 build+install 验证 TASK-31/35 的 claude mcp list Connected AC（不要求公开发布；需外层动作则列出）。指示内层 §3.6/4 派发。 | 忙（TASK-79 派发中）|
 
