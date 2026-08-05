@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 56 |
 | unblock | 7 |
-| correct | 7 |
+| correct | 8 |
 | escalate | 0 |
 
 ## Tick 记录
@@ -95,4 +95,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 68 | 14:16Z | no-action | **红窗关闭：full-suite 绿（5019/0）+ TASK-62/64 DoD 勾选 + 内层恢复派发**。修复 52fa600 端到端验证通过：Test Files 345 passed / Tests **5019 passed / 0 failed** / 13 skipped，runner FINAL state=green exit=0（TASK-67 判红修复 + cpp 分叉修复双重验证）。SUITE-GREEN 已发（14:15），stop-dispatch 撤。内层读到 green 恢复派发：**TASK-65 在飞**、TASK-66 待它落地。TASK-62 DoD 8 项全勾（full-suite 验证 scoped + 全量 + type-check + lint）；TASK-64 DoD #2-#11 勾（#1 perf spike 留环境受限证据——ml-matrix SVD 慢；#8 命令路径笔误 server.ts→mcp-server.ts，工具已注册、意图满足）。**红窗全闭环**：归因→裁定→修复→验证→re-green→恢复派发，全自主。 | 忙（TASK-65 在飞，TASK-66 待）|
 | 69 | 14:24Z | no-action | **TASK-65 在飞 + AC 审计续（TASK-46/50 DoD 勾选）**。内层已派 TASK-65（JL arch drift，worktree task-65 基于 ff6ed00），TASK-66 因与 TASK-65 共享文件重叠暂缓（内层裁定，合理）。套件绿。**AC 审计**：full-suite 绿验证 TASK-46 三项（golang 测试在 5019/0 套件 + type-check 独立跑 exit 0）勾；TASK-50 #1/#2/#5（shape-smells scoped + 全量在绿套件）+ #3（type-check exit 0）勾；#4 lint 后台跑中。旧任务 AC 欠账从 19 → 8 未勾（DIR-001 余 2、DIR-002 3、TASK-31 2、TASK-35 1、TASK-49 1、TASK-50 #4 1）。 | 忙（TASK-65 subagent 在飞）|
 | 70 | 14:47Z | no-action | **TASK-65 fan-in + 收尾，TASK-66/68 派发，新 full-suite 验证**。内层 fan-in TASK-65（JL architecture drift，a7b2652+efbb99f，101 scoped 绿）并派发 TASK-66/68（worktree 建，括号在飞）。**外层收尾 TASK-65**：关括号 fm-TASK-65 + 翻 done，verification-round #2。**新 full-suite 已起**（14:46）验证 TASK-65 merge。内层又发现 not-yet-flipped 误报（TASK-66 工作落地未排除，已在实测基础上放行派发，机制缺陷归 manager-inbox——与 TASK-60 同族）。TASK-68（lint hygiene，外层立案）已被内层晋级并派发。 | 等 2 个后台 agent（TASK-66/68）|
+| 71 | 15:00Z | correct | **ADR-007 复发分诊（TASK-65 drift tool 缺 query.ts flag）→ forward-fix 指令**。验证 TASK-65 的 full-suite：1 失败 / 5058 passed——唯一失败 check-adr（ADR-007）。独立核实（跑 check-adr.ts 直接定位）：`archguard_get_architecture_drift` 在 query.ts 无对应 flag（canonical architecture-drift），违规 arch-health-tools.ts:120。TASK-65 加了 drift MCP tool + `--drift-base`/`--drift-threshold`（analyze.ts 参数）但缺 ADR-007 要求的 canonical flag。**TASK-64 之后第二次同类违规**（TASK-64 的 --intrinsic-dimension 修复没覆盖后来的 tool）。裁定：query.ts 加 `--architecture-drift`（照 TASK-64 模式，复用 TASK-65 的 drift-baseline/drift-reporter），跑 check-adr 0 violations + scoped 绿。**系统性提示**：建 MCP tool 任务 AC 应加「check-adr 0 violations」条（已记 manager-inbox）。裁定送达（transcript 核实 1296 字符），内层修复中。 | 修 ADR-007（drift flag）|
 
