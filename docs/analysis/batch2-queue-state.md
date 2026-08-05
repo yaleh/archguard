@@ -375,6 +375,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    「第二批前提」。
 3. **在飞**：TASK-74。TASK-62~73 全部已合并。
 
+## 16:5xZ 更新（TASK-74 fan-in 完成）
+
+1. **TASK-74 fan-in（完成）**：A 类第二批（config 语义 E2E 稳定化）——只读审计 config-loader，
+   `custom-config-path.test.ts` 加 10 契约断言（默认值 / deepMerge 覆盖 / 非法报错格式）。
+   未改实现。merge 后 scoped **24 passed**（config 17 + cli 契约 7）。
+2. **TASK-62/63/64/65/66/67/68/70/71/72/73/74 全部已合并**（各 scoped 全绿）；**无在飞、无 worktree**。
+3. **full-suite**：green（5090/0）为 70/71/72 合并前状态；TASK-70~74 待外层全量验证。
+4. **池**：pool=1（TASK-74 done 待外层翻）；**无新候选**——任务库再次耗尽。剩余 A 类分批
+   （输出格式契约 / 插件注册表）待外层补建。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
