@@ -1,7 +1,7 @@
 ---
 id: TASK-78
 title: "TASK-78: mcp-launcher MCP 连接缺陷——依赖解析与 Claude Code 插件缓存布局不兼容"
-status: ready
+status: done
 labels:
   - defect
   - plugin
