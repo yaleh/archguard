@@ -1,0 +1,615 @@
+diff --git a/plugin/scripts/concurrent-batch-scheduler.ts b/plugin/scripts/concurrent-batch-scheduler.ts
+index 7a07598..728d395 100644
+--- a/plugin/scripts/concurrent-batch-scheduler.ts
++++ b/plugin/scripts/concurrent-batch-scheduler.ts
+@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
+ import {
+   parseTouches,
+   expandGlobs,
++  normalizePath,
+   matchGlob,
+   checkTouchesPair,
+   findRepoRoot,
+@@ -93,6 +94,38 @@ export function touchesSharedState(globs) {
+   return false;
+ }
+ 
++// ── expandDeclaredTouches ────────────────────────────────────────────────────────────────────────
++// The pre-dispatch expander for assembleBatch's injected `expand`. It answers "which files do these
++// tasks INTEND to touch?", NOT "which files exist right now?" — the dispatch-eligibility question is
++// about declared intent, and a task's `## Touches` routinely lists files it will CREATE.
++//
++// gap-dispatch-eligibility-blind-to-files-that-do-not-exist-yet: the previous expander was
++// expandGlobs against the live tree, so a task whose `## Touches` pointed ONLY at not-yet-created
++// files expanded to an EMPTY set and checkTouchesPair's conservative "matched nothing (likely a
++// typo)" branch fired — a false negative that silently serialized a perfectly disjoint pair, and —
++// worse — could not NAME the overlapping file when two tasks genuinely collided on a new file it
++// reported "your glob is probably a typo" (an instrument that says "matched nothing" while what
++// actually happened was "overlap"). The inner loop had already been hand-rolling a workaround
++// (normalize the declared path, never touch the filesystem); this function IS that workaround,
++// single-sourced in the production entry so the bypass disappears (AC5/AC6).
++//
++//   - a declared CONCRETE path resolves to itself (normalized) whether or not it exists on disk;
++//   - a declared WILDCARD (`*`/`?`) still needs the filesystem to find the concrete set it covers —
++//     expandGlobs stays for exactly that; a wildcard that matches nothing is genuinely "likely a
++//     typo" and the conservative branch below still fires (AC4 keeps wildcard support).
++// expandGlobs itself is UNTOUCHED (it is correct for its own callers, e.g. test selection).
++export function expandDeclaredTouches(globs, root) {
++  const set = new Set();
++  for (const g of globs) {
++    if (/[*?]/.test(g)) {
++      for (const f of expandGlobs([g], root)) set.add(f);
++    } else {
++      set.add(normalizePath(g));
++    }
++  }
++  return set;
++}
++
+ // ── assembleBatch ────────────────────────────────────────────────────────────────────────────────
+ // Greedy maximal disjoint batch over rank-ordered candidates. A candidate JOINS iff:
+ //   - type is a batchable execution type (NOT learning — learning is always serial), AND
+@@ -128,10 +161,15 @@ export function assembleBatch(candidates, { expand }) {
+     let blocked = null;
+     for (const inBatch of batch) {
+       const r = checkTouchesPair(c.touches, inBatch.touches, expand);
+-      if (!r.disjoint) { blocked = { peer: inBatch.id, reason: r.reason }; break; }
++      if (!r.disjoint) { blocked = { peer: inBatch.id, reason: r.reason, overlaps: r.overlaps }; break; }
+     }
+     if (blocked) {
+-      deferred.push({ id: c.id, reason: `not disjoint from ${blocked.peer}: ${blocked.reason}` });
++      // gap-dispatch-eligibility-blind-to-files-that-do-not-exist-yet AC2: NAME the overlapping
++      // file(s). The old reason stopped at "overlapping file-sets"; with declared-path expansion an
++      // overlap is often on a not-yet-created file (both tasks will create the same path) — a
++      // verdict that only says "not disjoint" makes a reader hunt for a typo that isn't there.
++      const overlapTail = blocked.overlaps?.length ? ` (overlap: ${blocked.overlaps.join(", ")})` : "";
++      deferred.push({ id: c.id, reason: `not disjoint from ${blocked.peer}: ${blocked.reason}${overlapTail}` });
+       continue;
+     }
+     // A lone anchor still must have a well-declared touches (else it is unsafe to reason about even
+@@ -233,6 +271,11 @@ function usage() {
+ export async function main(argv) {
+   const args = argv.slice(2);
+   let root = null;
++  // --json: emit { batch, deferred } as JSON instead of the human-readable lines. The batch /
++  // deferred fields are what the task contract's measures read (gap-dispatch-eligibility-blind-to-
++  // files-that-do-not-exist-yet: `node --experimental-strip-types plugin/scripts/concurrent-batch-
++  // scheduler.ts --json`).
++  let json = false;
+   // DIR-117 iteration-2 item 4: `--receipts id1=file1.json,id2=file2.json` — optional, maps a
+   // candidate id (charter basename, no .md) to a real milestone-preparation-check.ts receipt file.
+   // Omitted entirely → byte-for-behavior unchanged (golden replay for every pre-existing call).
+@@ -240,6 +283,7 @@ export async function main(argv) {
+   const files = [];
+   for (let i = 0; i < args.length; i++) {
+     if (args[i] === "--root") { root = args[++i]; continue; }
++    if (args[i] === "--json") { json = true; continue; }
+     if (args[i] === "--receipts") {
+       receiptsById = {};
+       for (const pair of args[++i].split(",")) {
+@@ -255,15 +299,23 @@ export async function main(argv) {
+     if (!fs.existsSync(f)) { process.stderr.write(`ERROR: charter not found: ${f}\n`); return 2; }
+   }
+   const expandRoot = root ? path.resolve(root) : findRepoRoot(path.resolve(path.dirname(files[0])));
+-  const expand = (globs) => expandGlobs(globs, expandRoot);
++  // gap-dispatch-eligibility-blind-to-files-that-do-not-exist-yet: eligibility compares DECLARED
++  // paths, not the filesystem — a task creating only NEW files must not be judged "matched nothing
++  // (likely a typo)". Concrete declared paths resolve to themselves (whether or not they exist yet);
++  // only wildcards are expanded against the tree (expandDeclaredTouches).
++  const expand = (globs) => expandDeclaredTouches(globs, expandRoot);
+   const parsedCandidates = files.map((f) => parseCandidate(path.basename(f, ".md"), fs.readFileSync(f, "utf8")));
+   const { candidates, expansions } = applyPreparationExpansion(parsedCandidates, receiptsById);
+   for (const e of expansions) {
+     process.stdout.write(`  re-evaluated (checked Plan expanded '## Touches'): ${e.id} — +${e.addedGlobs.length} path(s): ${e.addedGlobs.join(", ")}\n`);
+   }
+   const r = assembleBatch(candidates, { expand });
+-  process.stdout.write(`BATCH (${r.batch.length}-wide, concurrent): ${r.batch.join(", ") || "(none)"}\n`);
+-  for (const d of r.deferred) process.stdout.write(`  deferred: ${d.id} — ${d.reason}\n`);
++  if (json) {
++    process.stdout.write(JSON.stringify({ batch: r.batch, deferred: r.deferred }, null, 2) + "\n");
++  } else {
++    process.stdout.write(`BATCH (${r.batch.length}-wide, concurrent): ${r.batch.join(", ") || "(none)"}\n`);
++    for (const d of r.deferred) process.stdout.write(`  deferred: ${d.id} — ${d.reason}\n`);
++  }
+   // Exit 0 always (assembly succeeded); a caller inspects the batch. A 1-wide-or-empty batch is a
+   // valid outcome (fully serial), not an error.
+   return 0;
+diff --git a/plugin/scripts/task-status-drift-check.ts b/plugin/scripts/task-status-drift-check.ts
+index a8c19e4..b06c9a4 100644
+--- a/plugin/scripts/task-status-drift-check.ts
++++ b/plugin/scripts/task-status-drift-check.ts
+@@ -1,8 +1,17 @@
+-// task-status-drift-check.ts — reports tasks whose ## Acceptance Criteria symbols already resolve in
+-// the codebase while the task still carries status todo/ready. The closeout gap in direct execution
+-// (fast mode): execute-milestone's Land phase writes task status back; direct dispatch has no
+-// equivalent step, so landed code + stale `todo` status misreports the board — 7 real cases measured
+-// 2026-08-02 (gap-recursive-guard-only-covers-multi-mechanism … gap-prepare-milestone-no-worktree-isolation).
++// task-status-drift-check.ts — the status-drift detector for the task store. It scans the FULL set of
++// tasks (todo/ready AND done) for BOTH drift directions:
++//   status-drift-suspect (todo/ready): ## Acceptance Criteria symbols resolve in the codebase while
++//     the task still carries status todo/ready — the BENIGN direction ("should've been closed but
++//     wasn't"; at worst a bookkeeping lag). The closeout gap in direct execution (fast mode):
++//     execute-milestone's Land phase writes task status back; direct dispatch has no equivalent step,
++//     so landed code + stale `todo` status misreports the board — 7 real cases measured 2026-08-02
++//     (gap-recursive-guard-only-covers-multi-mechanism … gap-prepare-milestone-no-worktree-isolation).
++//   closed-without-work (done): status `done` but 0 AC checkboxes checked — the DANGEROUS direction
++//     ("closed without the work"; status written DIRECTLY, bypassing the gate). The scan surface used
++//     to be only todo/ready (the count line claimed so), so a done task could never be verified as
++//     having passed the gate. See tasks/gap-drift-check-only-looks-at-the-harmless-direction.
++//   reverse-drift-suspect (done): code never landed — AC symbols mostly unresolved AND no code-root
++//     Touches file exists (mirror image of the leak; see gap-reverse-drift-check-buries-true-positives-in-noise).
+ //
+ // A DETECTOR, not an enforcer: "is this task done?" is not mechanically decidable (done vs ready
+ // depends on whether an AC needs a real dispatch, which a script cannot judge), so this reports
+@@ -107,6 +116,20 @@ export function isDistinctiveName(id) {
+     || /[A-Z]{2,}/.test(id);   // SCREAMING_SNAKE constants
+ }
+ 
++// Count GFM checkbox boxes in an AC section (`- [ ]`, `- [x]`, `- [X]`, `- [~]`). The acceptance gate
++// reads `- [x]` boxes (only a checked box passes), so a `done` task with boxes but ZERO checked could
++// NOT have passed the gate as written — status was written directly (the DANGEROUS drift direction,
++// gap-drift-check-only-looks-at-the-harmless-direction). `[~]` (partial) counts as unchecked, matching
++// the gate semantics. This is the decisive closed-without-work signal: it uses the gate's own language
++// (checkboxes), not fragile symbol resolution.
++export function countAcCheckboxes(acSection) {
++  if (!acSection) return { total: 0, checked: 0, unchecked: 0 };
++  const boxes = acSection.match(/^\s*-\s+\[(.)\]/gm) ?? [];
++  let checked = 0;
++  for (const b of boxes) if (/\[[xX]\]/.test(b)) checked++;
++  return { total: boxes.length, checked, unchecked: boxes.length - checked };
++}
++
+ // Word-boundary symbol search across the code roots (grep -w; vendored/milestone/build trees are
+ // excluded). A symbol "resolves" only if it appears in a SMALL number of files (default ≤ 8) — a
+ // distinctive landing marker lives in few files, while infrastructure words (`runId`, `task_write`)
+@@ -182,6 +205,48 @@ export function hasAnyCodeRootTouch(touchesSection, repoRoot) {
+   return codeEntries.some((e) => entryExists(e, repoRoot));
+ }
+ 
++/** Does ANY `(new)`-marked Touches file exist on disk? A `(new)` touch declares a file the task
++ * will CREATE — its existence on master means the task created it ⇒ the work landed
++ * (gap-ready-pool-check-taskworklanded-overshoot-excludes-existing-file-tasks). Touches that
++ * modify EXISTING files are NOT landing evidence: the file exists whether or not this task's
++ * work landed, so only the task's own symbols (the other signal) can prove it. */
++function hasAnyLandedNewTouch(touchesSection, repoRoot) {
++  if (!touchesSection) return false;
++  return touchesSection
++    .split(/\r?\n/)
++    .map((l) => l.trim())
++    .filter((l) => /^[-*]\s+/.test(l))
++    .some((bullet) => {
++      if (!/(\(new\)|（新）)/i.test(bullet)) return false;
++      return parseTouchEntries(bullet).some((e) => entryExists(e, repoRoot));
++    });
++}
++
++// Reusable "the task's declared work has landed on master" predicate — exported for reuse by
++// ready-pool-check.ts's notYetFlipped (gap-ready-pool-check-counts-merged-not-flipped-tasks-in-the-pool,
++// AC6: reuse the drift-check signal, never a parallel copy). A task's work is judged landed when
++// EITHER of the drift-check's two landing-evidence signals fires:
++//   - symbol: its distinctive backticked AC identifiers resolve in the code roots (the forward
++//     status-drift signal — a landed implementation backticks its own identifiers in its ACs); or
++//   - touch: a task-CREATED file (`(new)`-marked Touches entry) now exists on disk — the task
++//     created it ⇒ landed (hasAnyLandedNewTouch).
++// Existing-file Touches entries are DELIBERATELY NOT landing evidence: a task that modifies a file
++// which already exists on master is indistinguishable from an un-landed task by file existence —
++// the file is there regardless — so only its own symbols can prove it landed (the overshoot fix,
++// gap-ready-pool-check-taskworklanded-overshoot-excludes-existing-file-tasks). OR-composed so a
++// merged-not-flipped task is caught by whichever signal it shows. Does NOT depend on AC checkbox
++// state — the fan-in merges without ticking boxes, so checkbox state is not the closeout signal.
++export function taskWorkLanded(rawTaskText, repoRoot, opts = {}) {
++  const ac = extractSection(rawTaskText, "Acceptance Criteria");
++  const candidates = extractSymbolCandidates(ac);
++  const matched = candidates.filter((c) => resolveSymbol(c, repoRoot, { roots: opts.roots }));
++  const ratio = candidates.length === 0 ? 0 : matched.length / candidates.length;
++  const symbolResolved = candidates.length > 0 && ratio >= (opts.ratioFloor ?? 0.6);
++  const touchesSection = extractSection(rawTaskText, "Touches");
++  const touchLanded = hasAnyLandedNewTouch(touchesSection, repoRoot);
++  return symbolResolved || touchLanded;
++}
++
+ // A done task whose `children:` are ALL `done` is a parent whose implementation IS the children's
+ // work (DIR-126 delegates its Touches to `[[DIR-126-A]]`…`[[DIR-126-E]]`). Reverse-drift asks "did
+ // the implementation land?" — for such a parent the answer is "in its children", so it is not a
+@@ -385,9 +450,10 @@ export function entriesInBranchDiff(repoRoot, entries, branch) {
+ export function scanTasks({ repoRoot, tasksDir = path.join(repoRoot, "tasks"), ratioFloor = 0.6, roots = CODE_ROOTS, strandedBranches: strandedList = [] }) {
+   const suspects = [];
+   const reverse = [];
++  const closedWithoutWork = [];
+   const strandedTasks = [];
+   let taskFiles;
+-  try { taskFiles = fs.readdirSync(tasksDir).filter((f) => f.endsWith(".md")); } catch { return { suspects, reverse, strandedTasks, scanned: 0 }; }
++  try { taskFiles = fs.readdirSync(tasksDir).filter((f) => f.endsWith(".md")); } catch { return { suspects, reverse, closedWithoutWork, strandedTasks, scanned: 0 }; }
+   for (const f of taskFiles) {
+     const raw = fs.readFileSync(path.join(tasksDir, f), "utf8");
+     const statusMatch = raw.match(/^status:\s*(\S+)/m);
+@@ -410,6 +476,34 @@ export function scanTasks({ repoRoot, tasksDir = path.join(repoRoot, "tasks"), r
+       const tAll = touchesAllExist(touchesSection, repoRoot);
+       const matched = candidates.filter((c) => resolveSymbol(c, repoRoot, { roots }));
+       const codeTouchExists = hasAnyCodeRootTouch(touchesSection, repoRoot);
++      // ── Closed-without-work — the DANGEROUS direction (gap-drift-check-only-looks-at-the-harmless-
++      // direction). The forward scan (todo/ready) only sees "code in the tree but status not closed" —
++      // the BENIGN half: at worst a bookkeeping lag. It can NEVER see a task marked `done` WITHOUT the
++      // work, because status is written DIRECTLY, bypassing the gate. The decisive signal is the AC
++      // checkbox count: a done task with AC boxes but 0 checked could NOT have passed the acceptance
++      // gate as written (the gate reads `- [x]` boxes), so `done` was bypassed — the "closed without
++      // work" shape. Live specimen: gap-no-e2e-proves-install-is-configuration-driven was once done
++      // with 8 ACs all unchecked and its Touches files only on an unmerged branch — the old scan (and
++      // the symbol-based reverse-drift bar) reported nothing for it. The evidence state (Touches in
++      // tree / branch merged) is reported for actionability (AC5), not required to flag: the unchecked-
++      // AC shape alone IS the bypass signal. Done-parents whose implementation IS the children's work
++      // (all children done) are skipped, matching reverse-drift.
++      const acBoxes = countAcCheckboxes(ac);
++      if (acBoxes.total > 0 && acBoxes.checked === 0 && !hasDoneChildren(raw, tasksDir)) {
++        const codeEntries = parseTouchEntries(touchesSection).filter((e) => isCodeTouchEntry(e));
++        const strandedHit = strandedList.find((sb) => entriesInBranchDiff(repoRoot, codeEntries, sb.branch));
++        closedWithoutWork.push({
++          taskId: f.replace(/\.md$/, ""),
++          status,
++          acChecked: acBoxes.checked,
++          acTotal: acBoxes.total,
++          acUnchecked: acBoxes.unchecked,
++          touchesAllExist: tAll,
++          codeTouchExists,
++          branch: strandedHit ? strandedHit.branch : null,
++          branchUnmerged: strandedHit != null,
++        });
++      }
+       const noCode = touchesSection != null
+         && !codeTouchExists
+         && !hasDoneChildren(raw, tasksDir)
+@@ -460,7 +554,7 @@ export function scanTasks({ repoRoot, tasksDir = path.join(repoRoot, "tasks"), r
+       });
+     }
+   }
+-  return { suspects, reverse, strandedTasks, scanned: taskFiles.length };
++  return { suspects, reverse, closedWithoutWork, strandedTasks, scanned: taskFiles.length };
+ }
+ 
+ // ── Report formatting (pure — unit-tested) ────────────────────────────────────────────────────────
+@@ -471,16 +565,49 @@ function _jsonStranded(s) {
+     detail: s.detail ?? null,
+   };
+ }
+-export function formatJsonReport(suspects, reverse, scanned, strandedTasks = [], stranded = []) {
++function _jsonClosed(s) {
++  return {
++    taskId: s.taskId,
++    acChecked: s.acChecked,
++    acTotal: s.acTotal,
++    acUnchecked: s.acUnchecked,
++    touchesAllExist: s.touchesAllExist,
++    codeTouchExists: s.codeTouchExists,
++    branch: s.branch,
++    branchUnmerged: s.branchUnmerged,
++  };
++}
++export function formatJsonReport(suspects, reverse, scanned, strandedTasks = [], stranded = [], closedWithoutWork = []) {
+   return JSON.stringify({
+     suspects: suspects.map((s) => ({ taskId: s.taskId, matchedSymbols: s.matchedSymbols, touchesAllExist: s.touchesAllExist })),
+     reverse: reverse.map((s) => ({ taskId: s.taskId, matchedSymbols: s.matchedSymbols, codeTouchExists: s.codeTouchExists, touchesAllExist: s.touchesAllExist })),
++    closedWithoutWork: closedWithoutWork.map(_jsonClosed),
+     strandedTasks: strandedTasks.map((s) => ({ taskId: s.taskId, matchedSymbols: s.matchedSymbols, branch: s.branch, branchClassification: s.branchClassification })),
+     stranded: stranded.map(_jsonStranded),
+     scanned,
+   }, null, 2) + "\n";
+ }
+ 
++// Human-readable closed-without-work report (the DANGEROUS direction). Pure — unit-tested. Each line
++// names the missing evidence (AC unchecked / Touches file not in tree / branch unmerged) so the human
++// knows what to act on, not just which task (AC5).
++export function formatClosedText(closed, opts = {}) {
++  const prefix = opts.prefix ?? "task-status-drift";
++  if (closed.length === 0) {
++    return `${prefix}: no CLOSED-without-work suspect(s) — every done task with ACs has ≥1 AC checked (the acceptance gate is the source of done)\n`;
++  }
++  let out = `${prefix}: ${closed.length} CLOSED-without-work suspect(s) — status done but 0 ACs checked (the acceptance gate could NOT have passed as written; status was written directly, bypassing the gate)\n`;
++  for (const s of closed) {
++    const missing = [];
++    if (s.acUnchecked > 0) missing.push(`AC unchecked (${s.acChecked}/${s.acTotal} checked)`);
++    if (!s.touchesAllExist) missing.push("Touches file(s) not in tree");
++    if (s.branchUnmerged) missing.push(`branch not merged (${s.branch})`);
++    out += `  closed-without-work: ${s.taskId} (status ${s.status}, missing: ${missing.join(", ") || "none"})\n`;
++  }
++  out += "  → human review: re-open the task and finish+verify the ACs, or confirm the work landed and check the boxes\n";
++  return out;
++}
++
+ // Human-readable stranded-branch report. Pure — unit-tested. Used both by --stranded (branch-only
+ // fast path) and the full report.
+ export function formatStrandedText(stranded, opts = {}) {
+@@ -512,6 +639,7 @@ export function main(argv) {
+   const args = argv.slice(2);
+   const json = args.includes("--json");
+   const strandedOnly = args.includes("--stranded");
++  const closedOnly = args.includes("--closed-direction");
+   let repoRoot;
+   try { repoRoot = findRepoRoot(process.cwd()); } catch (e) {
+     process.stderr.write(`ERROR: ${e.message}\n`);
+@@ -526,20 +654,41 @@ export function main(argv) {
+       : formatStrandedText(stranded));
+     return 0;
+   }
+-  const { suspects, reverse, strandedTasks, scanned } = scanTasks({ repoRoot, strandedBranches: stranded });
++  const { suspects, reverse, closedWithoutWork, strandedTasks, scanned } = scanTasks({ repoRoot, strandedBranches: stranded });
+   if (json) {
+-    process.stdout.write(formatJsonReport(suspects, reverse, scanned, strandedTasks, stranded));
++    if (closedOnly) {
++      // `--closed-direction --json` emits a bare ARRAY of closed-without-work entries so
++      // `| jq length` counts them directly (Contract's closed_without_work measure).
++      process.stdout.write(JSON.stringify(closedWithoutWork.map(_jsonClosed), null, 2) + "\n");
++      return 0;
++    }
++    process.stdout.write(formatJsonReport(suspects, reverse, scanned, strandedTasks, stranded, closedWithoutWork));
+   } else {
+-    if (suspects.length === 0 && reverse.length === 0 && strandedTasks.length === 0 && stranded.length === 0) {
+-      process.stdout.write(`task-status-drift: no suspects among ${scanned} tasks (todo/ready drift + done-reverse-drift + stranded-branch all clean)\n`);
++    if (closedOnly) {
++      process.stdout.write(formatClosedText(closedWithoutWork));
++      return 0;
++    }
++    if (suspects.length === 0 && reverse.length === 0 && closedWithoutWork.length === 0 && strandedTasks.length === 0 && stranded.length === 0) {
++      process.stdout.write(`task-status-drift: no suspects among ${scanned} tasks (todo/ready drift + done closed-without-work + done-reverse-drift + stranded-branch all clean)\n`);
+     } else {
+       if (suspects.length > 0) {
+-        process.stdout.write(`task-status-drift: ${suspects.length} SUSPECT task(s) with code already in the tree but status not closed (${scanned} todo/ready scanned)\n`);
++        process.stdout.write(`task-status-drift: ${suspects.length} SUSPECT task(s) with code already in the tree but status not closed (${scanned} tasks scanned, incl. done)\n`);
+         for (const s of suspects) {
+           process.stdout.write(`  status-drift-suspect: ${s.taskId} (status ${s.status}, ${s.matchedSymbols.length}/${s.totalSymbols} symbols resolved, touchesAllExist=${s.touchesAllExist})\n`);
+         }
+         process.stdout.write("  → human review: set status to done (all ACs test-proven) or ready (an AC requires a real dispatch)\n");
+       }
++      if (closedWithoutWork.length > 0) {
++        process.stdout.write(`task-status-drift: ${closedWithoutWork.length} CLOSED-without-work suspect(s) — status done but 0 ACs checked (the acceptance gate could NOT have passed as written; status was written directly, bypassing the gate)\n`);
++        for (const s of closedWithoutWork) {
++          const missing = [];
++          if (s.acUnchecked > 0) missing.push(`AC unchecked (${s.acChecked}/${s.acTotal} checked)`);
++          if (!s.touchesAllExist) missing.push("Touches file(s) not in tree");
++          if (s.branchUnmerged) missing.push(`branch not merged (${s.branch})`);
++          process.stdout.write(`  closed-without-work: ${s.taskId} (status ${s.status}, missing: ${missing.join(", ") || "none"})\n`);
++        }
++        process.stdout.write("  → human review: re-open the task and finish+verify the ACs, or confirm the work landed and check the boxes\n");
++      }
+       if (reverse.length > 0) {
+         process.stdout.write(`task-status-drift: ${reverse.length} REVERSE-drift suspect(s) — status done but the implementation never landed (no code-root Touches file exists, AC symbols mostly unresolved)\n`);
+         for (const s of reverse) {
+diff --git a/plugin/scripts/touches-orthogonality-check.ts b/plugin/scripts/touches-orthogonality-check.ts
+index 610acd0..aba2e1c 100644
+--- a/plugin/scripts/touches-orthogonality-check.ts
++++ b/plugin/scripts/touches-orthogonality-check.ts
+@@ -17,7 +17,7 @@ import fs from "node:fs";
+ import path from "node:path";
+ import { isDirectEntry } from "./gate-script-base.ts";
+ // SINGLE-SOURCE (gap-task-body-has-n-parsers-and-no-authority): the ONE Touches bullet parser.
+-import { parseTouchEntries, extractTouchesSection } from "./touches-parser.ts";
++import { parseTouchEntries, parseTouchEntriesWithTags, extractTouchesSection } from "./touches-parser.ts";
+ 
+ // Kept for reference / callers; the authoritative test is isOverbroadDeclaration (semantic, below).
+ export const OVERBROAD = new Set(["**", "*", "**/*", "./**", "**/**"]);
+@@ -195,6 +195,127 @@ export function checkTouchesPair(parsedA, parsedB, expand) {
+   return { disjoint, overlaps, reason: disjoint ? "disjoint file-sets" : "overlapping file-sets" };
+ }
+ 
++// ── touchExists / checkTouchesResolve ────────────────────────────────────────────────────────────
++// gap-ready-queue-still-lists-eight-tasks-targeting-retired-pipeline-files: a dispatch-eligibility
++// resolve check COMPLEMENTING checkTouchesPair. checkTouchesPair answers "do these two tasks'
++// declared file-sets overlap?"; it does NOT answer "do the declared files even exist?" — so 8 of 9
++// `status: ready` tasks pointing at files ADR-022 physically deleted sailed through eligibility.
++// touchExists answers that for ONE entry. The task's AC2 wording ("verify every entry in
++// `## Touches` that is NOT tagged `(new)`/`(delete)` actually exists") exempts BOTH structural tags
++// from the existence requirement:
++//   - `(new)`   — the task will CREATE this file; it need not exist yet → never "missing".
++//   - `(delete)`— the task will DELETE this file; if it is already gone the delete is a no-op, so a
++//                 nonexistent target cannot make the task undispatchable → never "missing" either.
++// A path with a wildcard (`*`/`?`) or a trailing `/` is resolved as a GLOB (a trailing `/` is a
++// directory glob → `**` appended, matching parseTouches's DIR-106 Fix 3). A glob that matches
++// nothing resolves to "missing". An exact path resolves via fs.existsSync.
++export function touchExists(p, root) {
++  const hasWildcard = /[*?]/.test(p);
++  const glob = p.endsWith("/") && !hasWildcard ? `${p}**` : p;
++  if (hasWildcard || glob !== p) {
++    return expandGlobs([glob], root).size > 0;
++  }
++  return fs.existsSync(path.join(root, glob));
++}
++
++// Given parsed [{path, tag}] entries and a repo root, resolve each against the real tree. Returns:
++//   results:        [{path, tag, exists}] — exists is null for `(new)`/`(delete)` (skipped), true/false otherwise
++//   mustExist:      count of entries that must resolve (no tag, i.e. not `(new)`/`(delete)`)
++//   missing:        count of those that did NOT resolve
++//   majorityMissing:true iff more than half of the must-exist entries are missing → the task's
++//                   Touches majority-resolve to nonexistent files and it must not be dispatched.
++// A task with no must-exist entries (all `(new)`/`(delete)`, or empty) is never majorityMissing.
++export function checkTouchesResolve(entries, root) {
++  const results = [];
++  let mustExist = 0;
++  let missing = 0;
++  for (const e of entries) {
++    if (e.tag === "new" || e.tag === "delete") {
++      results.push({ path: e.path, tag: e.tag, exists: null });
++      continue;
++    }
++    mustExist++;
++    const ok = touchExists(e.path, root);
++    results.push({ path: e.path, tag: e.tag, exists: ok });
++    if (!ok) missing++;
++  }
++  const majorityMissing = mustExist > 0 && missing > mustExist / 2;
++  return { results, mustExist, missing, majorityMissing };
++}
++
++// Convenience: run checkTouchesResolve over a full task/charter BODY (extracts its `## Touches`
++// section via the single-source extractTouchesSection, then tag-parses via parseTouchEntriesWithTags).
++export function checkTaskTouchesResolve(taskBody, root) {
++  const { hasSection, section } = extractTouchesSection(taskBody);
++  const entries = hasSection ? parseTouchEntriesWithTags(section) : [];
++  return { hasSection, ...checkTouchesResolve(entries, root) };
++}
++
++// ── self-touch check (gap-closure-could-not-run-in-task-grant-self-touches-for-ac-and-invoke-evidence) ──
++// (c) block of the three-block batch elimination: every task's `## Touches` MUST include its own
++// task file `tasks/<id>.md` — WITHOUT the `(new)` annotation. The self-file grants the executing
++// agent permission to edit its own task file at completion (tick AC checkboxes + paste its invoke
++// real-run evidence) — the AC/evidence delegation that shrinks outer closure to one DoD line per
++// task. The `(new)` ban is load-bearing: `hasAnyLandedNewTouch` fires on a `(new)`-marked entry
++// whose file exists, so a `(new)` self-file would misjudge every task as "work already landed",
++// emptying the ready pool (gap-ready-pool-check-taskworklanded-overshoot-excludes-existing-file-tasks).
++// checkTouchesPair is UNAFFECTED: the self-file is unique per task (tasks/A.md ≠ tasks/B.md), so two
++// tasks touching only their own files stay disjoint (filesDisjoint: overlaps.length === 0).
++export function selfTouchEntry(taskBody, taskId) {
++  const { hasSection, section } = extractTouchesSection(taskBody);
++  if (!hasSection) return null;
++  const expected = `tasks/${taskId}.md`;
++  return parseTouchEntriesWithTags(section).find((e) => e.path === expected) ?? null;
++}
++
++/** { ok, expected, entry } — ok: true iff the task's Touches contains `tasks/<id>.md` and that
++ *  entry carries no `(new)` tag (a `(delete)` self-file is likewise not a grant). */
++export function selfTouchCheck(taskBody, taskId) {
++  const expected = `tasks/${taskId}.md`;
++  const entry = selfTouchEntry(taskBody, taskId);
++  const ok = entry !== null && entry.tag !== "new";
++  return { ok, expected, entry };
++}
++
++// True when the task frontmatter declares the `fixture` label (block list `labels:\n  - fixture` or
++// flow list `labels: [..., fixture]`). Fixtures are gate demo tasks — never real work, never
++// dispatchable — so the ready-pool scan skips them (matching ready-pool-check.ts's isFixture).
++export function isFixtureTask(raw) {
++  const fm = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
++  if (!fm) return false;
++  const flow = fm[1].match(/^labels:\s*\[([^\]]*)\]\s*$/m);
++  if (flow) return flow[1].split(",").some((v) => v.trim().replace(/^["']|["']$/g, "") === "fixture");
++  const lines = fm[1].split(/\r?\n/);
++  const idx = lines.findIndex((l) => /^labels:\s*$/.test(l));
++  if (idx < 0) return false;
++  for (let i = idx + 1; i < lines.length; i++) {
++    const m = lines[i].match(/^\s+-\s+(.+?)\s*$/);
++    if (m) {
++      if (m[1].replace(/^["']|["']$/g, "") === "fixture") return true;
++    } else if (/^\S/.test(lines[i])) break; // next top-level key ends the list
++  }
++  return false;
++}
++
++// Scan a tasks directory for `status: ready` tasks and return each one's self-touch status. This is
++// the AC1 static check over the READY pool: a ready task whose Touches lacks its own file is not
++// dispatchable (the dispatch gate's `--self-touch` per-candidate check blocks it). Fixture tasks are
++// skipped (not dispatchable by definition — ready-pool-check.ts excludes them as `fixture`).
++export function scanReadyTasksSelfTouch(tasksDir) {
++  const out = [];
++  if (!fs.existsSync(tasksDir)) return out;
++  for (const f of fs.readdirSync(tasksDir).filter((f) => f.endsWith(".md"))) {
++    const id = f.replace(/\.md$/, "");
++    const raw = fs.readFileSync(path.join(tasksDir, f), "utf8");
++    if (!/^status:\s*["']?ready["']?\s*$/m.test(raw)) continue;
++    if (isFixtureTask(raw)) continue;
++    const { ok, expected, entry } = selfTouchCheck(raw, id);
++    out.push({ id, ok, expected, entry });
++  }
++  out.sort((a, b) => a.id.localeCompare(b.id));
++  return out;
++}
++
+ // ── CLI ──────────────────────────────────────────────────────────────────────────────────────────
+ export function findRepoRoot(start) {
+   let dir = start;
+@@ -208,10 +329,98 @@ export function findRepoRoot(start) {
+ 
+ function usage() {
+   process.stderr.write("Usage: touches-orthogonality-check.mjs [--root <dir>] <charterA.md> <charterB.md>\n");
++  process.stderr.write("       touches-orthogonality-check.mjs --resolve [--root <dir>] <task.md>\n");
++  process.stderr.write("       touches-orthogonality-check.mjs --self-touch [--root <dir>] <task.md>\n");
++  process.stderr.write("       touches-orthogonality-check.mjs --self-touch-scan [--root <dir>]\n");
++}
++
++// --resolve mode: run the dispatch-eligibility resolve check over ONE task/charter file. Prints a
++// per-entry resolution table and exits 1 iff the task's Touches are MAJORITY-missing (not eligible
++// to dispatch). This is the mechanical hook fast-mode-loop-tick.md step 4 invokes before dispatching
++// a `status:ready` candidate (gap-ready-queue-still-lists-eight-tasks-targeting-retired-pipeline-files).
++function mainResolve(args) {
++  let root = null;
++  const files = [];
++  for (let i = 0; i < args.length; i++) {
++    if (args[i] === "--resolve") continue;
++    if (args[i] === "--root") { root = args[++i]; continue; }
++    files.push(args[i]);
++  }
++  if (files.length !== 1) { usage(); return 2; }
++  const file = files[0];
++  if (!fs.existsSync(file)) { process.stderr.write(`ERROR: task not found: ${file}\n`); return 2; }
++  const rootDir = root ? path.resolve(root) : findRepoRoot(path.resolve(path.dirname(file)));
++  const r = checkTaskTouchesResolve(fs.readFileSync(file, "utf8"), rootDir);
++  if (!r.hasSection) {
++    process.stdout.write(`RESOLVE ${file}: no ## Touches section — no existence claims to verify\n`);
++    return 0;
++  }
++  for (const res of r.results) {
++    if (res.exists === null) process.stdout.write(`  skip (${res.tag}): ${res.path}\n`);
++    else if (res.exists) process.stdout.write(`  ok:          ${res.path}\n`);
++    else process.stdout.write(`  MISSING:     ${res.path}\n`);
++  }
++  process.stdout.write(
++    `RESOLVE ${file}: ${r.missing}/${r.mustExist} non-tagged touches missing — ` +
++    (r.majorityMissing ? "MAJORITY-MISSING (NOT dispatchable)" : "resolves (dispatchable)") + "\n",
++  );
++  return r.majorityMissing ? 1 : 0;
++}
++
++// --self-touch mode: verify ONE task's `## Touches` includes its own `tasks/<id>.md` WITHOUT the
++// `(new)` annotation. This is the dispatch-gate eligibility check (fast-mode-loop-tick.md step 4,
++// AC1 of gap-closure-could-not-run-in-task-grant-self-touches-for-ac-and-invoke-evidence): a ready
++// candidate whose Touches does not grant its own file is NOT dispatchable — the executing agent has
++// no authorization to tick its AC boxes / paste its invoke evidence at completion.
++function mainSelfTouch(args) {
++  let root = null;
++  const files = [];
++  for (let i = 0; i < args.length; i++) {
++    if (args[i] === "--self-touch") continue;
++    if (args[i] === "--root") { root = args[++i]; continue; }
++    files.push(args[i]);
++  }
++  if (files.length !== 1) { usage(); return 2; }
++  const file = files[0];
++  if (!fs.existsSync(file)) { process.stderr.write(`ERROR: task not found: ${file}\n`); return 2; }
++  const body = fs.readFileSync(file, "utf8");
++  const id = path.basename(file, ".md");
++  const { ok, expected } = selfTouchCheck(body, id);
++  if (ok) {
++    process.stdout.write(`SELF-TOUCH ${file}: ok (Touches includes ${expected} without (new))\n`);
++    return 0;
++  }
++  process.stdout.write(`SELF-TOUCH ${file}: MISSING ${expected} (without (new)) in ## Touches — not dispatchable\n`);
++  return 1;
++}
++
++// --self-touch-scan mode: the AC1 static check over the READY pool — every `status: ready` task in
++// `<root>/tasks/` must have its own file in Touches. Exits 1 when any ready task is missing it.
++function mainSelfTouchScan(args) {
++  let root = null;
++  for (let i = 0; i < args.length; i++) {
++    if (args[i] === "--self-touch-scan") continue;
++    if (args[i] === "--root") { root = args[++i]; continue; }
++  }
++  const rootDir = root ? path.resolve(root) : findRepoRoot(process.cwd());
++  const rows = scanReadyTasksSelfTouch(path.join(rootDir, "tasks"));
++  const missing = rows.filter((r) => !r.ok);
++  for (const r of rows) {
++    if (r.ok) process.stdout.write(`  ok:      ${r.id} (touches ${r.expected})\n`);
++    else process.stdout.write(`  MISSING: ${r.id} (expected ${r.expected} in ## Touches without (new))\n`);
++  }
++  process.stdout.write(
++    `SELF-TOUCH-SCAN: ${rows.length} ready task(s), ${missing.length} missing self-file entry — ` +
++    (missing.length === 0 ? "all dispatchable" : "NOT all dispatchable (add tasks/<id>.md to each ## Touches)") + "\n",
++  );
++  return missing.length === 0 ? 0 : 1;
+ }
+ 
+ export async function main(argv) {
+   const args = argv.slice(2);
++  if (args.includes("--self-touch-scan")) return mainSelfTouchScan(args);
++  if (args.includes("--self-touch")) return mainSelfTouch(args);
++  if (args.includes("--resolve")) return mainResolve(args);
+   let root = null;
+   const files = [];
+   for (let i = 0; i < args.length; i++) {
