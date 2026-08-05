@@ -548,7 +548,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 ## 22:2xZ 更新（空闲心跳：状态不变）
 
-master @ 71d9cfe（外层 tick #103「stopped state，awaiting human direction」）。全任务 done、
+master @ d3ef882（外层 tick #105「stopped state，awaiting human direction，3rd」）。全任务 done、
 无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者 resume 或补建任务。
 
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
