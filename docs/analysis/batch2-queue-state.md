@@ -144,3 +144,15 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 3. **分诊**（外层，SUITE-RED 即触发）：核实 vitest 摘要（0 失败）→ 判为 runner 检测 bug 假阳性 → 手动纠正 state=green（12:58:49 SUITE-GREEN 已发，信号清除）。
 4. **TASK-67 已建**（todo）：修 `full-suite-runner.ts:68` 的 `/✖/` 判红——匹配到通过测试的 console 输出。选定机制：结构化判红（vitest 失败文件行/汇总行），保留 node:test/TAP 模式。四件套+Contract 齐全。
 5. **全量套件验证通过**：本轮合并（机制 + TASK-61/60）经 4902 测试验证，DoD 可勾（收尾 pass 后续执行）。
+
+## 13:0xZ 更新（内层兜底心跳：TASK-62/63/64 在飞，无停止条件）
+
+1. **TASK-62/63/64 均仍在飞（健康）**：三个 worktree 均有实际进展（未提交）——
+   task-62（src/plugins/cpp/shared 实现 + 测试）、task-63（pack-registry/rule-engine + fixtures）、
+   task-64（src/analysis/jl + mcp arch-health-tools）。worktree HEAD 均停在基址 ffdb6c4（未 commit）。
+   4 个 claude agent 进程在跑。遥测三括号在飞（外层待闭合）。
+2. **停止条件**：detect-stop 无命中、无阻塞；full-suite green（4902 passed/0 failed/exit 0）；
+   `.halt` 无。Monitor 仍 mounted:false（既有跨项目 gap，delivered:true）。
+3. **就绪池**：pool=0（62/63/64 在飞）；TASK-65/66 依赖 TASK-64 文件未落地，仍不可晋。
+4. **本 tick 无合并/派发**（agent 未完成）。等待 task-notification 后按 §2 fan-in；
+   TASK-64 落地后 TASK-65/66 恢复可晋（§3.6/4）。
