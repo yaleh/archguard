@@ -39,6 +39,37 @@ export class ClassBuilder {
     return { fields, methods };
   }
 
+  /**
+   * Extract only the methods of a class/struct body, honoring access-specifier
+   * visibility. Fields are extracted separately by the query-based
+   * CppFieldMapper (TASK-62).
+   */
+  extractMethods(
+    bodyNode: SyntaxNodeLike,
+    sourceFile: string,
+    defaultVisibility: Visibility = 'private'
+  ): RawMethod[] {
+    const methods: RawMethod[] = [];
+    let currentVisibility: Visibility = defaultVisibility;
+
+    for (const child of bodyNode.namedChildren) {
+      if (child.type === 'access_specifier') {
+        const text = child.text.replace(':', '').trim().toLowerCase();
+        if (text === 'public' || text === 'private' || text === 'protected') {
+          currentVisibility = text as Visibility;
+        }
+        continue;
+      }
+
+      if (child.type === 'function_definition' || child.type === 'declaration') {
+        const method = this.tryExtractMethod(child, sourceFile, currentVisibility);
+        if (method) methods.push(method);
+      }
+    }
+
+    return methods;
+  }
+
   private tryExtractMethod(
     node: SyntaxNodeLike,
     sourceFile: string,

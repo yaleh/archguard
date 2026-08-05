@@ -1,33 +1,63 @@
 /**
- * Tree-sitter bridge for C++ language parsing
+ * Tree-sitter bridge for C++ language parsing (query-based, TASK-62).
+ *
+ * Extraction is driven by `.scm` query files (see ./queries/) compiled once via
+ * QueryLoader; each concern has a concrete CaptureMapper. The trivial
+ * top-level-namespace walk stays imperative, and extractFromErrorNodes()
+ * remains as a documented supplement for the tree-sitter-cpp `extern "C"`
+ * grammar limitation (ERROR nodes wrapping otherwise-parseable content).
  */
+import { fileURLToPath } from 'node:url';
 import type { ParserSession, SyntaxNodeLike } from '../shared/syntax-tree.js';
+import { QueryLoader } from '../shared/query-loader.js';
 import { ClassBuilder } from './builders/class-builder.js';
-import type { RawCppFile, RawClass, RawEnum, RawFunction } from './types.js';
+import { CppClassMapper } from './mappers/class-capture-mapper.js';
+import { CppEnumMapper } from './mappers/enum-capture-mapper.js';
+import { CppFieldMapper } from './mappers/field-capture-mapper.js';
+import { CppFuncMapper } from './mappers/function-capture-mapper.js';
+import { CppIncludeMapper } from './mappers/include-capture-mapper.js';
+import type { RawClass, RawCppFile, RawEnum, RawFunction } from './types.js';
+
+interface ErrorSupplement {
+  classes: RawClass[];
+  enums: RawEnum[];
+  functions: RawFunction[];
+}
 
 export class TreeSitterBridge {
   private readonly parser: ParserSession;
-  private classBuilder: ClassBuilder;
+  private readonly classMapper: CppClassMapper;
+  private readonly enumMapper: CppEnumMapper;
+  private readonly funcMapper: CppFuncMapper;
+  private readonly includeMapper: CppIncludeMapper;
 
   constructor(parser: ParserSession) {
     this.parser = parser;
-    this.classBuilder = new ClassBuilder();
+    const queriesDir = fileURLToPath(new URL('./queries/', import.meta.url));
+    const loader = new QueryLoader(queriesDir, parser);
+    this.classMapper = new CppClassMapper(
+      loader.load('classes'),
+      new ClassBuilder(),
+      new CppFieldMapper(loader.load('fields'))
+    );
+    this.enumMapper = new CppEnumMapper(loader.load('enums'));
+    this.funcMapper = new CppFuncMapper(loader.load('functions'));
+    this.includeMapper = new CppIncludeMapper(loader.load('includes'));
   }
 
   parseCode(code: string, filePath: string): RawCppFile {
     const tree = this.parser.parse(code);
     try {
       const root = tree.rootNode;
-
       const namespace = this.extractTopLevelNamespace(root);
-
+      const supplement = this.extractFromErrorNodes(root, filePath);
       return {
         filePath,
         namespace,
-        classes: this.extractClasses(root, filePath, namespace),
-        enums: this.extractEnums(root, filePath, namespace),
-        functions: this.extractTopLevelFunctions(root, filePath, namespace),
-        includes: this.extractIncludes(root),
+        classes: mergeUnique(this.classMapper.runQuery(root, filePath), supplement.classes),
+        enums: mergeUnique(this.enumMapper.runQuery(root, filePath), supplement.enums),
+        functions: mergeUnique(this.funcMapper.runQuery(root, filePath), supplement.functions),
+        includes: this.includeMapper.runQuery(root, filePath),
       };
     } finally {
       tree.dispose();
@@ -37,302 +67,54 @@ export class TreeSitterBridge {
   private extractTopLevelNamespace(root: SyntaxNodeLike): string {
     for (const child of root.namedChildren) {
       if (child.type === 'namespace_definition') {
-        const nameNode = child.childForFieldName('name');
-        return nameNode?.text ?? '';
+        return child.childForFieldName('name')?.text ?? '';
       }
     }
     return '';
   }
 
-  private extractClasses(
-    root: SyntaxNodeLike,
-    filePath: string,
-    fileNamespace: string
-  ): RawClass[] {
+  /**
+   * Supplement for the tree-sitter-cpp `extern "C"` grammar limitation: when
+   * braces are split across #ifdef __cplusplus blocks tree-sitter may wrap the
+   * outer block in an ERROR node. Query matching already descends into ERROR
+   * subtrees on tree-sitter >=0.20, so this re-runs the mappers over each ERROR
+   * subtree as a defensive fallback; parseCode() merges the results and dedupes
+   * by (name, startLine).
+   */
+  private extractFromErrorNodes(root: SyntaxNodeLike, filePath: string): ErrorSupplement {
     const classes: RawClass[] = [];
-    this.visitForClasses(root, filePath, fileNamespace, '', classes);
-    return classes;
-  }
-
-  private visitForClasses(
-    node: SyntaxNodeLike,
-    filePath: string,
-    fileNamespace: string,
-    currentNs: string,
-    out: RawClass[]
-  ): void {
-    for (const child of node.namedChildren) {
-      if (child.type === 'namespace_definition') {
-        const nameNode = child.childForFieldName('name');
-        const nsName = nameNode?.text ?? '';
-        const newNs = currentNs ? `${currentNs}::${nsName}` : nsName;
-        const body = child.childForFieldName('body');
-        if (body) this.visitForClasses(body, filePath, fileNamespace, newNs, out);
-        continue;
-      }
-
-      // Recurse into preprocessor conditionals and ERROR nodes.
-      // ERROR nodes arise when extern "C" { } braces are split across #ifdef __cplusplus
-      // blocks — tree-sitter cannot balance them and wraps the outer block in ERROR,
-      // but the subtree (including namespace/class nodes) is still correctly parsed.
-      if (
-        child.type === 'preproc_ifdef' ||
-        child.type === 'preproc_if' ||
-        child.type === 'preproc_else' ||
-        child.type === 'preproc_elif' ||
-        child.type === 'ERROR'
-      ) {
-        this.visitForClasses(child, filePath, fileNamespace, currentNs, out);
-        continue;
-      }
-
-      if (child.type === 'template_declaration') {
-        const templateParams = this.extractTemplateParams(child);
-        const innerClass = child.namedChildren.find(
-          (n) => n.type === 'class_specifier' || n.type === 'struct_specifier'
-        );
-        if (innerClass) {
-          const innerNameNode = innerClass.childForFieldName('name');
-          // Skip template specializations (name is template_type, e.g. Foo<int>)
-          if (innerNameNode?.type === 'template_type') continue;
-          const cls = this.extractOneClass(innerClass, filePath, currentNs);
-          if (cls) {
-            cls.templateParams = templateParams;
-            cls.name = `${cls.name}<${templateParams.join(', ')}>`;
-            out.push(cls);
-          }
-        }
-        continue;
-      }
-
-      if (child.type === 'class_specifier' || child.type === 'struct_specifier') {
-        const cls = this.extractOneClass(child, filePath, currentNs);
-        if (cls) out.push(cls);
-        continue;
-      }
-    }
-  }
-
-  private extractOneClass(
-    node: SyntaxNodeLike,
-    filePath: string,
-    currentNs: string
-  ): RawClass | null {
-    const nameNode = node.childForFieldName('name');
-    if (!nameNode) return null;
-    const name = nameNode.text;
-    const kind: 'class' | 'struct' = node.type === 'struct_specifier' ? 'struct' : 'class';
-    const qualifiedName = currentNs ? `${currentNs}::${name}` : name;
-
-    const bodyNode = node.childForFieldName('body');
-    // Skip forward declarations (no body): struct ggml_tensor; is not the canonical definition
-    if (!bodyNode) return null;
-
-    const bases = this.extractBases(node);
-    const defaultVis: 'public' | 'private' = kind === 'struct' ? 'public' : 'private';
-    const { fields, methods } = this.classBuilder.extractMembers(bodyNode, filePath, defaultVis);
-
-    return {
-      name,
-      qualifiedName,
-      kind,
-      bases,
-      fields,
-      methods,
-      sourceFile: filePath,
-      startLine: node.startPosition.row + 1,
-      endLine: node.endPosition.row + 1,
-    };
-  }
-
-  private extractBases(classNode: SyntaxNodeLike): RawClass['bases'] {
-    const bases: RawClass['bases'] = [];
-    const baseClause = classNode.namedChildren.find((n) => n.type === 'base_class_clause');
-    if (!baseClause) return bases;
-
-    // Walk all children (including anonymous tokens like access specifier keywords)
-    let currentAccess: 'public' | 'private' | 'protected' = 'private';
-    for (const child of baseClause.children) {
-      const text = child.text.toLowerCase();
-      if (text === 'public' || text === 'private' || text === 'protected') {
-        currentAccess = text;
-      } else if (
-        child.type === 'type_identifier' ||
-        child.type === 'qualified_identifier' ||
-        child.type === 'template_type'
-      ) {
-        bases.push({ name: child.text, access: currentAccess });
-        // Reset to default for next base (class default is private)
-        currentAccess = 'private';
-      }
-    }
-
-    return bases;
-  }
-
-  private extractEnums(root: SyntaxNodeLike, filePath: string, namespace: string): RawEnum[] {
     const enums: RawEnum[] = [];
-    this.visitForEnums(root, filePath, namespace, enums);
-    return enums;
-  }
-
-  private visitForEnums(
-    node: SyntaxNodeLike,
-    filePath: string,
-    namespace: string,
-    out: RawEnum[]
-  ): void {
-    for (const child of node.namedChildren) {
-      if (child.type === 'namespace_definition') {
-        const nsName = child.childForFieldName('name')?.text ?? '';
-        const newNs = namespace ? `${namespace}::${nsName}` : nsName;
-        const body = child.childForFieldName('body');
-        if (body) this.visitForEnums(body, filePath, newNs, out);
-        continue;
+    const functions: RawFunction[] = [];
+    const visit = (node: SyntaxNodeLike): void => {
+      if (node.type === 'ERROR') {
+        // runQuery over the ERROR subtree already descends into nested ERROR
+        // nodes, so process each ERROR once at its outermost level only.
+        classes.push(...this.classMapper.runQuery(node, filePath));
+        enums.push(...this.enumMapper.runQuery(node, filePath));
+        functions.push(...this.funcMapper.runQuery(node, filePath));
+        return;
       }
-
-      // Recurse into preprocessor conditionals and ERROR nodes (same reason as visitForClasses)
-      if (
-        child.type === 'preproc_ifdef' ||
-        child.type === 'preproc_if' ||
-        child.type === 'preproc_else' ||
-        child.type === 'preproc_elif' ||
-        child.type === 'ERROR'
-      ) {
-        this.visitForEnums(child, filePath, namespace, out);
-        continue;
-      }
-
-      if (child.type === 'enum_specifier') {
-        const nameNode = child.childForFieldName('name');
-        if (!nameNode) continue;
-        const name = nameNode.text;
-        const qualifiedName = namespace ? `${namespace}::${name}` : name;
-
-        // Check for scoped enum: look for 'class' or 'struct' keyword token among children
-        const isScoped = child.children.some(
-          (n) => !n.isNamed && (n.text === 'class' || n.text === 'struct')
-        );
-
-        const bodyNode = child.childForFieldName('body');
-        const members = bodyNode
-          ? bodyNode.namedChildren
-              .filter((n) => n.type === 'enumerator')
-              .map((n) => n.childForFieldName('name')?.text ?? n.text)
-          : [];
-
-        out.push({
-          name,
-          qualifiedName,
-          isScoped,
-          members,
-          sourceFile: filePath,
-          startLine: child.startPosition.row + 1,
-          endLine: child.endPosition.row + 1,
-        });
-      }
-    }
-  }
-
-  private extractTopLevelFunctions(
-    root: SyntaxNodeLike,
-    filePath: string,
-    namespace: string
-  ): RawFunction[] {
-    const fns: RawFunction[] = [];
-    for (const child of root.namedChildren) {
-      if (child.type === 'namespace_definition') {
-        const nsName = child.childForFieldName('name')?.text ?? '';
-        const body = child.childForFieldName('body');
-        const newNs = namespace ? `${namespace}::${nsName}` : nsName;
-        if (body) fns.push(...this.extractTopLevelFunctions(body, filePath, newNs));
-        continue;
-      }
-      // Recurse into preprocessor conditionals and ERROR nodes (same reason as visitForClasses)
-      if (
-        child.type === 'preproc_ifdef' ||
-        child.type === 'preproc_if' ||
-        child.type === 'preproc_else' ||
-        child.type === 'preproc_elif' ||
-        child.type === 'ERROR'
-      ) {
-        fns.push(...this.extractTopLevelFunctions(child, filePath, namespace));
-        continue;
-      }
-      if (child.type === 'function_definition') {
-        const fn = this.extractFunction(child, filePath, namespace);
-        if (fn) fns.push(fn);
-      }
-    }
-    return fns;
-  }
-
-  private extractFunction(
-    node: SyntaxNodeLike,
-    filePath: string,
-    namespace: string
-  ): RawFunction | null {
-    const declarator = this.findDescendant(node, 'function_declarator');
-    if (!declarator) return null;
-
-    const nameNode = declarator.childForFieldName('declarator');
-    if (!nameNode) return null;
-    const name = nameNode.text;
-
-    // Skip qualified names (class methods defined outside class body)
-    if (name.includes('::')) return null;
-
-    const returnTypeNode = node.childForFieldName('type');
-    const returnType = returnTypeNode?.text ?? 'void';
-    const qualifiedName = namespace ? `${namespace}::${name}` : name;
-
-    return {
-      name,
-      qualifiedName,
-      returnType,
-      parameters: [],
-      isStatic: node.text.startsWith('static'),
-      sourceFile: filePath,
-      startLine: node.startPosition.row + 1,
-      endLine: node.endPosition.row + 1,
+      for (const child of node.namedChildren) visit(child);
     };
+    visit(root);
+    return { classes, enums, functions };
   }
+}
 
-  private extractIncludes(root: SyntaxNodeLike): string[] {
-    const includes: string[] = [];
-    for (const child of root.children) {
-      if (child.type === 'preproc_include') {
-        // path node is a named child (string_literal or system_lib_string)
-        const pathNode = child.namedChildren.find(
-          (n) => n.type === 'string_literal' || n.type === 'system_lib_string'
-        );
-        if (pathNode) {
-          // Strip surrounding " " or < >
-          const raw = pathNode.text.replace(/^["<]|[">]$/g, '');
-          includes.push(raw);
-        }
-      }
+/** Merge query results with the ERROR-node supplement, deduping by name+startLine. */
+function mergeUnique<T extends { name: string; startLine: number }>(
+  primary: T[],
+  supplement: T[]
+): T[] {
+  if (supplement.length === 0) return primary;
+  const seen = new Set(primary.map((e) => `${e.name}:${e.startLine}`));
+  const additions: T[] = [];
+  for (const entity of supplement) {
+    const key = `${entity.name}:${entity.startLine}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      additions.push(entity);
     }
-    return includes;
   }
-
-  private extractTemplateParams(templateNode: SyntaxNodeLike): string[] {
-    const paramList = templateNode.namedChildren.find((n) => n.type === 'template_parameter_list');
-    if (!paramList) return [];
-    return paramList.namedChildren
-      .filter((n) => n.type === 'type_parameter_declaration')
-      .map((n) => {
-        const nameNode = n.namedChildren.find((c) => c.type === 'type_identifier');
-        return nameNode?.text ?? 'T';
-      });
-  }
-
-  private findDescendant(node: SyntaxNodeLike, type: string): SyntaxNodeLike | null {
-    if (node.type === type) return node;
-    for (const child of node.namedChildren) {
-      const found = this.findDescendant(child, type);
-      if (found) return found;
-    }
-    return null;
-  }
+  return [...primary, ...additions];
 }

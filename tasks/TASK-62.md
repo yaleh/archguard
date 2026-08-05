@@ -129,11 +129,42 @@ DoD: `npm test -- --run tests/unit/plugins/cpp/bridge-benchmark.test.ts`, `npm r
 
 ## Acceptance Criteria
 
-- [ ] `QueryLoader` loads and compiles `.scm` query files once, throws `ParseError` on malformed syntax, and caches compiled queries
-- [ ] `CaptureMapper<TRaw>` base class converts capture groups to raw types; `runQuery()` iterates matches, skips null mappings, groups captures
-- [ ] C++ bridge is refactored to query-based extraction (five `.scm` files + five mappers) with all pre-existing C++ tests still green
-- [ ] Performance benchmark proves query-based extraction ≤ 2x direct traversal on the 50-class fixture (or ≤500ms absolute)
-- [ ] Other language bridges (Python/Java/Go/Kotlin) are NOT migrated; `ArchJsonMapper` unchanged; Go gopls stays imperative
+- [x] `QueryLoader` loads and compiles `.scm` query files once, throws `ParseError` on malformed syntax, and caches compiled queries
+- [x] `CaptureMapper<TRaw>` base class converts capture groups to raw types; `runQuery()` iterates matches, skips null mappings, groups captures
+- [x] C++ bridge is refactored to query-based extraction (five `.scm` files + five mappers) with all pre-existing C++ tests still green
+- [x] Performance benchmark proves query-based extraction ≤ 2x direct traversal on the 50-class fixture (or ≤500ms absolute)
+- [x] Other language bridges (Python/Java/Go/Kotlin) are NOT migrated; `ArchJsonMapper` unchanged; Go gopls stays imperative
+
+## Execution evidence (inner, TASK-62, 2026-08-05)
+
+AC 1–5 checked by the implementing agent after running the scoped suites below; status flip to done is the outer loop's job; DoD rows (full-suite green) are intentionally left unchecked because DoD is not knowable under a scoped run.
+
+Scoped test output (contract measures query-loader / capture-mapper / cpp-bridge / cpp-benchmark):
+
+```
+$ npx vitest run tests/unit/plugins/shared/query-loader.test.ts tests/unit/plugins/shared/capture-mapper.test.ts tests/plugins/cpp/ tests/unit/plugins/cpp/bridge-benchmark.test.ts
+ Test Files  9 passed (9)
+      Tests  158 passed (158)
+```
+
+Per-file evidence:
+- tests/unit/plugins/shared/query-loader.test.ts — 6 passed (load compiles, caching same-reference, loadAll keyed Map, ParseError w/ file path, empty dir → empty Map)
+- tests/unit/plugins/shared/capture-mapper.test.ts — 5 passed (runQuery iterates matches, skips null, CaptureGroup keyed by capture name, collectNamespace)
+- tests/plugins/cpp/ — 144 passed (all pre-existing bridge/plugin/mapper/header/parser-runtime tests green; bridge refactored to query-based)
+- tests/unit/plugins/cpp/bridge-benchmark.test.ts — 2 passed (50 classes / 200 methods / 100 fields; query ≤ 2x direct traversal baseline)
+
+`npm run type-check` — exit 0. `eslint` on all touched files — exit 0 (0 errors; 26 pre-existing style warnings).
+
+Contract invoke:
+```
+$ node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json
+# TASK-62 candidate: touchesResolve=true, depsReady=true, fourArtifacts=true, missingArtifacts=[], eligible=true
+```
+
+Notable implementation points / residual risk:
+- Extending `ParserSession` (syntax-tree.ts + native/wasm backends) with `query(source)` was required so QueryLoader compiles `.scm` against the SAME grammar the session parses with; this is shared infra, not a migration of any other bridge.
+- `extractFromErrorNodes()` retained as a documented supplement for the tree-sitter-cpp `extern "C"` grammar limitation; parseCode merges query results + supplement, deduping by (name, startLine).
+- RESIDUAL RISK (not in Touches): the `npm run build` tsc step does not copy `src/plugins/*/queries/*.scm` into `dist/`, so a packaged `dist/plugins/cpp/queries/` would be missing. Tests/type-check all run from src; a follow-up build change (copy .scm into dist, or resolve queries from a package-root dir) is needed for the shipped artifact.
 
 ## Contract
 

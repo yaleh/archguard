@@ -47,6 +47,22 @@ describe('TreeSitterBridge', () => {
       expect(result.classes[0].qualifiedName).toBe('Foo');
     });
 
+    it('extracts fields from a struct body (query-based field mapper)', () => {
+      const result = bridge.parseCode('struct Bar { int x; };', 'test.hpp');
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].fields).toHaveLength(1);
+      expect(result.classes[0].fields[0].name).toBe('x');
+    });
+
+    it('extracts pointer/reference/array fields via the field query', () => {
+      const result = bridge.parseCode('struct S { Foo *p; double &r; int arr[10]; };', 's.hpp');
+      expect(result.classes[0].fields.map((f) => `${f.name}:${f.fieldType}`)).toEqual([
+        'p:Foo *',
+        'r:double &',
+        'arr:int',
+      ]);
+    });
+
     it('skips forward declarations (no body) — resolves to canonical definition', () => {
       // Forward declaration only — should not produce an entity
       const fwdOnly = bridge.parseCode('struct ggml_tensor;', 'ggml-metal.h');
@@ -71,6 +87,12 @@ describe('TreeSitterBridge', () => {
     it('extracts a scoped enum class', () => {
       const result = bridge.parseCode('enum class Direction { Up, Down };', 'test.hpp');
       expect(result.enums[0].isScoped).toBe(true);
+    });
+
+    it('collects enum members (query-based enum mapper)', () => {
+      const result = bridge.parseCode('enum class Status { A, B };', 'test.hpp');
+      expect(result.enums).toHaveLength(1);
+      expect(result.enums[0].members).toEqual(['A', 'B']);
     });
 
     it('stores filePath (not AST dump) as sourceFile', () => {
@@ -175,6 +197,27 @@ struct PlatformB {};
 #endif`;
       const result = bridge.parseCode(code, 'platform.h');
       expect(result.classes).toHaveLength(2);
+    });
+  });
+
+  describe('query-based extraction path', () => {
+    it('constructs without throwing when queries/ is present', () => {
+      expect(bridge).toBeInstanceOf(TreeSitterBridge);
+      expect(bridge.parseCode('class Foo {};', 'test.hpp').classes).toHaveLength(1);
+    });
+
+    it('extracts functions inside an extern "C" block (ERROR/linkage node)', () => {
+      const code = 'extern "C" {\nvoid doThing(int x) {}\n}\n';
+      const result = bridge.parseCode(code, 'ext.cpp');
+      expect(result.functions).toHaveLength(1);
+      expect(result.functions[0].name).toBe('doThing');
+    });
+
+    it('extracts a class inside an extern "C" block', () => {
+      const code = 'extern "C" {\nstruct ExternStruct { int y; };\n}\n';
+      const result = bridge.parseCode(code, 'ext.cpp');
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].name).toBe('ExternStruct');
     });
   });
 });
