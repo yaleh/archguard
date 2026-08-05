@@ -150,7 +150,7 @@ $ npx vitest run tests/unit/plugins/shared/query-loader.test.ts tests/unit/plugi
 Per-file evidence:
 - tests/unit/plugins/shared/query-loader.test.ts — 6 passed (load compiles, caching same-reference, loadAll keyed Map, ParseError w/ file path, empty dir → empty Map)
 - tests/unit/plugins/shared/capture-mapper.test.ts — 5 passed (runQuery iterates matches, skips null, CaptureGroup keyed by capture name, collectNamespace)
-- tests/plugins/cpp/ — 144 passed (all pre-existing bridge/plugin/mapper/header/parser-runtime tests green; bridge refactored to query-based)
+- tests/plugins/cpp/ — 145 passed (all pre-existing bridge/plugin/mapper/header/parser-runtime tests green; bridge refactored to query-based)
 - tests/unit/plugins/cpp/bridge-benchmark.test.ts — 2 passed (50 classes / 200 methods / 100 fields; query ≤ 2x direct traversal baseline)
 
 `npm run type-check` — exit 0. `eslint` on all touched files — exit 0 (0 errors; 26 pre-existing style warnings).
