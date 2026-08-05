@@ -129,11 +129,37 @@ DoD: `npm test -- --run tests/unit/cli/mcp/tools/arch-health-drift-tool.test.ts`
 
 ## Acceptance Criteria
 
-- [ ] `EntityAligner` computes union/shared/added/removed entity sets and zero-pads aligned rows to |E_union|
-- [ ] `DriftCalculator` computes per-entity L2 drift with the four severity classes (0.5/1.5/3.0), deltaFanIn/deltaFanOut, deterministic JL
-- [ ] CLI `--drift-base`/`--drift-threshold` enforce the CI/CD gate (exit 1 on threshold breach, 2 on invalid commit, 0 with message on no baseline)
-- [ ] MCP tool `archguard_get_architecture_drift` returns `{report, hasBreakingDrift, breakingEntities}`
-- [ ] `adjacencyRows` never persisted to `arch-health-history.json` (only `entityIndex: string[]`); depends on TASK-64 (`src/analysis/jl/` existing)
+- [x] `EntityAligner` computes union/shared/added/removed entity sets and zero-pads aligned rows to |E_union|
+- [x] `DriftCalculator` computes per-entity L2 drift with the four severity classes (0.5/1.5/3.0), deltaFanIn/deltaFanOut, deterministic JL
+- [x] CLI `--drift-base`/`--drift-threshold` enforce the CI/CD gate (exit 1 on threshold breach, 2 on invalid commit, 0 with message on no baseline)
+- [x] MCP tool `archguard_get_architecture_drift` returns `{report, hasBreakingDrift, breakingEntities}`
+- [x] `adjacencyRows` never persisted to `arch-health-history.json` (only `entityIndex: string[]`); depends on TASK-64 (`src/analysis/jl/` existing)
+
+## Execution evidence (TASK-65)
+
+Invoke (Contract): `node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json`
+→ exit 0; TASK-65 excluded as `not-yet-flipped` (touch files landed; awaiting fan-in flip to done):
+```json
+{ "pool": 0, "dispatchable_disjoint": 0, "floor": 12,
+  "excluded": [ { "id": "TASK-65", "reasons": ["not-yet-flipped"] } ] }
+```
+
+Scoped tests (all green):
+```
+Test Files  10 passed (10)
+     Tests  101 passed (101)
+```
+- entity-aligner.test.ts: 8 passed
+- drift-calculator.test.ts: 11 passed (incl. boundary 0.5/1.5/3.0 via DRIFT_THRESHOLDS, DIRECT@999 vs JL@1000, k=308, JL determinism, deltaFanIn/Out, sorted desc)
+- analyze-drift.test.ts: 12 passed (parseDriftOptions; determineDriftExitCode 0/1/2; no-baseline → exit 0; invalid commit → exit 2)
+- arch-health-drift-tool.test.ts: 9 passed (tool name; no baseline; from-not-found → structured error; hasBreakingDrift at critical; breakingEntities ≥ threshold; topK/minLevel defaults & forwarding)
+- regression: tests/unit/analysis/jl/ (45), analyze-arch-health.test.ts (6), arch-health-tools.test.ts (10) all passed
+
+`npm run type-check` → exit 0.
+
+AC5 invariant: `IntrinsicDimensionResult` gained optional `entityIndex?: string[]` (persisted by `runArchHealth`);
+`adjacencyRows` are never written to history — drift recomputes them on demand (src/cli/utils/drift-baseline.ts).
+Thresholds 0.5/1.5/3.0 live in `DRIFT_THRESHOLDS` constants; tests import the constants, never hard-code.
 
 ## Contract
 

@@ -31,4 +31,6 @@ export interface CLIOptions {
   includeGit?: boolean;
   gim?: boolean;
   archHealth?: boolean;
+  driftBase?: string;
+  driftThreshold?: string;
 }

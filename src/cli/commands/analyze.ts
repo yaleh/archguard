@@ -21,14 +21,30 @@ import type { Config } from '../config-loader.js';
 import type { CLIOptions } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
-import { loadSnapshots } from '@/analysis/snapshot-store.js';
+import { loadSnapshots, resolveCommitSha } from '@/analysis/snapshot-store.js';
 import { computeDirectionHint } from '@/analysis/gim/direction-hint.js';
 import { buildAdjacencyMatrix, normalizeColumns } from '@/analysis/jl/adjacency-builder.js';
 import { computeMode, computeK, buildAchlioptas, project } from '@/analysis/jl/jl-projector.js';
 import { computeIntrinsicDimension } from '@/analysis/jl/intrinsic-dimension.js';
-import { appendSnapshot } from '@/analysis/jl/history-writer.js';
-import { DEFAULT_JL_CONFIG, FEATURE_VERSION, TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
-import type { IntrinsicDimensionResult, JLConfig } from '@/analysis/jl/types.js';
+import { appendSnapshot, readHistoryFile } from '@/analysis/jl/history-writer.js';
+import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { determineDriftExitCode } from '@/analysis/jl/drift-exit-code.js';
+import { resolveBaselineSnapshot, snapshotFromArchJson } from '../utils/drift-baseline.js';
+import type { BaselineResolution } from '../utils/drift-baseline.js';
+import { formatDriftReport } from '../utils/drift-reporter.js';
+import {
+  DEFAULT_JL_CONFIG,
+  DRIFT_THRESHOLDS,
+  FEATURE_VERSION,
+  TREND_DELTA_THRESHOLD,
+} from '@/analysis/jl/types.js';
+import type {
+  ArchHealthHistory,
+  DriftOptions,
+  DriftSnapshot,
+  IntrinsicDimensionResult,
+  JLConfig,
+} from '@/analysis/jl/types.js';
 import type { ArchJSON } from '@/types/index.js';
 
 /**
@@ -184,6 +200,17 @@ export function createAnalyzeCommand(): Command {
         'Compute and persist architecture intrinsic dimension (d_int) to .archguard/arch-health-history.json',
         false
       )
+      .option(
+        '--drift-base <commit>',
+        'Compare architecture drift against this baseline commit (resolved from arch-health-history.json). ' +
+          'Exit 1 when any entity drift meets/exceeds --drift-threshold, 2 on an invalid commit, 0 with a ' +
+          'message when no baseline snapshot exists.'
+      )
+      .option(
+        '--drift-threshold <n>',
+        'Drift CI/CD gate threshold (default 3.0); exit 1 when any entity drift meets/exceeds it',
+        '3.0'
+      )
 
       .action(analyzeCommandHandler)
   );
@@ -213,12 +240,28 @@ export async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<voi
       await writeGimOutput(result.config.outputDir);
     }
 
+    let driftExitCode: 0 | 1 | 2 | undefined;
+
     if (cliOptions.archHealth) {
       try {
         const archJson = result.lastArchJson ?? null;
         if (archJson) {
           const archguardDir = result.config.workDir ?? '.archguard';
           await runArchHealth(archJson, archguardDir);
+
+          if (cliOptions.driftBase !== undefined) {
+            const driftOptions = parseDriftOptions(cliOptions);
+            const commitSha = (await resolveCommitSha()) ?? undefined;
+            const currentSnapshot = snapshotFromArchJson(
+              archJson,
+              new Date().toISOString(),
+              commitSha
+            );
+            const driftCheck = await runDriftCheck(archguardDir, driftOptions, currentSnapshot);
+            // eslint-disable-next-line no-console
+            console.log(`\n${driftCheck.message}`);
+            driftExitCode = driftCheck.exitCode;
+          }
         } else {
           progress.warn('--arch-health: no ArchJSON available to analyze');
         }
@@ -228,6 +271,9 @@ export async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<voi
       }
     }
 
+    if (driftExitCode !== undefined && driftExitCode !== 0) {
+      process.exit(driftExitCode);
+    }
     process.exit(result.hasDiagramFailures ? 1 : 0);
   } catch (error) {
     progress.fail('Analysis failed');
@@ -277,14 +323,19 @@ export async function runArchHealth(
     data = normalized;
   }
 
-  const result = computeIntrinsicDimension({
-    matrix: data,
-    entityCount,
-    mode,
-    k,
-    epsilon,
-    featureVersion: FEATURE_VERSION,
-  });
+  const result: IntrinsicDimensionResult = {
+    ...computeIntrinsicDimension({
+      matrix: data,
+      entityCount,
+      mode,
+      k,
+      epsilon,
+      featureVersion: FEATURE_VERSION,
+    }),
+    // Persist entity IDs (O(n)) for cross-snapshot drift alignment (TASK-65).
+    // adjacencyRows are never persisted (AC5).
+    entityIndex: archJson.entities.map((e) => e.id),
+  };
 
   const append = await appendSnapshot(archguardDir, archJson.language, result);
   if (!append.ok) {
@@ -333,6 +384,95 @@ function printArchHealth(
     // eslint-disable-next-line no-console
     console.log('  Trend:      STABLE');
   }
+}
+
+// ---------------------------------------------------------------------------
+// Architecture drift gate (--drift-base / --drift-threshold)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse the CLI drift options into a `DriftOptions` value.
+ *
+ * With no flags, the gate is off (`base` undefined) and the threshold defaults
+ * to 3.0 (DRIFT_THRESHOLDS.critical). An unparseable `--drift-threshold` falls
+ * back to the default rather than crashing the gate.
+ *
+ * @param opts - Raw CLI options.
+ */
+export function parseDriftOptions(opts: CLIOptions): DriftOptions {
+  const rawThreshold = opts.driftThreshold;
+  const threshold =
+    rawThreshold === undefined ? DRIFT_THRESHOLDS.critical : Number(rawThreshold);
+  return {
+    base: opts.driftBase,
+    threshold: Number.isFinite(threshold) ? threshold : DRIFT_THRESHOLDS.critical,
+  };
+}
+
+export interface DriftCheckResult {
+  exitCode: 0 | 1 | 2;
+  message: string;
+}
+
+export interface DriftCheckDeps {
+  /** Override the history reader (default: readHistoryFile). */
+  readHistory?: (archDir: string) => Promise<ArchHealthHistory | null>;
+  /** Override baseline resolution (default: resolveBaselineSnapshot). */
+  resolveBaseline?: (
+    base: string | undefined,
+    history: ArchHealthHistory | null,
+    root: string
+  ) => Promise<BaselineResolution>;
+  /** Git repository root (default: parent of the .archguard dir). */
+  root?: string;
+}
+
+/**
+ * Run the drift CI/CD gate.
+ *
+ * Resolves the baseline snapshot for `--drift-base`, compares it against the
+ * current snapshot, and returns the gate verdict:
+ *
+ *   0 — no baseline available (explanatory message) or threshold not breached.
+ *   1 — at least one entity drift ≥ threshold.
+ *   2 — `--drift-base` commit not found in history.
+ *
+ * @param archguardDir - The `.archguard` work directory.
+ * @param options - Parsed drift options.
+ * @param currentSnapshot - Snapshot for the commit being analyzed.
+ * @param deps - Injectable dependencies (tests override the baseline resolver).
+ */
+export async function runDriftCheck(
+  archguardDir: string,
+  options: DriftOptions,
+  currentSnapshot: DriftSnapshot,
+  deps: DriftCheckDeps = {}
+): Promise<DriftCheckResult> {
+  const readHistory = deps.readHistory ?? readHistoryFile;
+  const resolveBaseline =
+    deps.resolveBaseline ??
+    ((base: string | undefined, history: ArchHealthHistory | null, root: string) =>
+      resolveBaselineSnapshot(base, history, root));
+  const root = deps.root ?? path.dirname(archguardDir);
+
+  const history = await readHistory(archguardDir);
+  if (history === null || history.snapshots.length === 0) {
+    return { exitCode: 0, message: 'no baseline available' };
+  }
+
+  const resolution = await resolveBaseline(options.base, history, root);
+  if (resolution.kind === 'no-baseline') {
+    return { exitCode: 0, message: 'no baseline available' };
+  }
+  if (resolution.kind === 'invalid-commit') {
+    return { exitCode: 2, message: `invalid drift-base commit: ${resolution.commit}` };
+  }
+
+  const report = DriftCalculator.compare(resolution.snapshot, currentSnapshot, {
+    threshold: options.threshold,
+  });
+  const exitCode = determineDriftExitCode(report, options.threshold);
+  return { exitCode, message: formatDriftReport(report) };
 }
 
 async function writeGimOutput(outputDir: string): Promise<void> {
