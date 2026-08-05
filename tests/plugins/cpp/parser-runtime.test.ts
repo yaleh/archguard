@@ -59,6 +59,8 @@ describe('parser runtime facade', () => {
       language: 'cpp',
       runtime: 'native',
       parse: () => ({ rootNode, dispose }),
+      // Query-based bridge compiles queries in the constructor (TASK-62).
+      query: () => ({ matches: () => [] }),
       dispose: vi.fn(),
     } satisfies ParserSession;
 

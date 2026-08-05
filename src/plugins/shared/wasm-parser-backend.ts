@@ -3,7 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParserBackend, ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
-import type { ParserSession, SyntaxNodeLike, SyntaxTreeLike } from './syntax-tree.js';
+import type {
+  ParserQueryLike,
+  ParserSession,
+  SyntaxNodeLike,
+  SyntaxTreeLike,
+} from './syntax-tree.js';
 
 /**
  * Portable parser backend built on web-tree-sitter with grammar WASM assets
@@ -45,6 +50,7 @@ interface WtsTree {
 }
 
 interface WtsLanguage {
+  query(source: string): ParserQueryLike;
   delete(): void;
 }
 
@@ -111,7 +117,7 @@ export class WasmParserBackend implements ParserBackend {
       const loadedLanguage = await this.loadLanguage(wts, language);
       parser = new wts.Parser();
       parser.setLanguage(loadedLanguage);
-      return new WasmParserSession(language, parser);
+      return new WasmParserSession(language, parser, loadedLanguage);
     } catch (error) {
       if (error instanceof ParserInitializationError) throw error;
       parser?.delete();
@@ -168,8 +174,14 @@ class WasmParserSession implements ParserSession {
 
   constructor(
     readonly language: ParserLanguage,
-    private readonly parser: WtsParser
+    private readonly parser: WtsParser,
+    private readonly grammar: WtsLanguage
   ) {}
+
+  query(source: string): ParserQueryLike {
+    if (this.disposed) throw new Error(`${this.language} parser session has been disposed`);
+    return this.grammar.query(source);
+  }
 
   parse(code: string): SyntaxTreeLike {
     if (this.disposed) throw new Error(`${this.language} parser session has been disposed`);

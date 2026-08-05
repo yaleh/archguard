@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { ParserBackend, ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
-import type { ParserSession, SyntaxTreeLike } from './syntax-tree.js';
+import type { ParserQueryLike, ParserSession, SyntaxTreeLike } from './syntax-tree.js';
 
 const require = createRequire(import.meta.url);
 
@@ -32,6 +32,8 @@ export interface NativeParserLike {
 
 export interface NativeParserConstructorLike {
   new (): NativeParserLike;
+  /** tree-sitter ≥0.24 exposes the Query constructor on the Parser class. */
+  Query?: new (language: unknown, source: string) => ParserQueryLike;
 }
 
 /**
@@ -89,6 +91,7 @@ interface NativeParser {
 
 interface ParserConstructor {
   new (): NativeParser;
+  Query?: NativeQueryConstructor;
 }
 
 export interface NativeParserBackendOptions {
@@ -112,14 +115,19 @@ export class NativeParserBackend implements ParserBackend {
     let parser: NativeParser | undefined;
     try {
       const Parser = this.loaders.loadRuntime() as unknown as ParserConstructor;
+      const grammar = this.loaders.loadGrammar(language);
       parser = new Parser();
-      parser.setLanguage(this.loaders.loadGrammar(language));
-      return new NativeParserSession(language, parser);
+      parser.setLanguage(grammar);
+      return new NativeParserSession(language, parser, grammar, Parser.Query);
     } catch (error) {
       parser?.delete?.();
       throw new ParserInitializationError(language, this.runtime, error);
     }
   }
+}
+
+interface NativeQueryConstructor {
+  new (language: unknown, source: string): ParserQueryLike;
 }
 
 class NativeParserSession implements ParserSession {
@@ -128,8 +136,22 @@ class NativeParserSession implements ParserSession {
 
   constructor(
     readonly language: ParserLanguage,
-    private readonly parser: NativeParser
+    private readonly parser: NativeParser,
+    private readonly grammar: unknown,
+    private readonly QueryCtor?: NativeQueryConstructor
   ) {}
+
+  query(source: string): ParserQueryLike {
+    if (!this.QueryCtor) {
+      throw new Error(
+        `tree-sitter query support unavailable for ${this.language} ` +
+          '(Parser.Query constructor missing from the native runtime binding)'
+      );
+    }
+    // The grammar module may be the new-style { name, language, nodeTypeInfo }
+    // object or the raw Language; the Query constructor accepts either.
+    return new this.QueryCtor(this.grammar, source);
+  }
 
   parse(code: string): SyntaxTreeLike {
     if (this.disposed) throw new Error(`${this.language} parser session has been disposed`);
