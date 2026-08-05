@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 64 |
+| no-action | 65 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -106,4 +106,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 79 | 16:08Z | no-action | **TASK-70/71 fan-in + 收尾 + 新 full-suite + 建 TASK-72**。内层快速 fan-in：TASK-70（--prefer-offline 卫生，bfc2f65）+ TASK-71（kotlin 分支密集 6 测试文件 +51 测试，1079b65）。**外层收尾**：关括号 + 翻 done + verification-round #4。**新 full-suite 已起**（16:06）验证 TASK-70/71。**建 TASK-72**（B 类 core mermaid generator 深层分支，含 lint gate）。A 类 E2E 延后。lint DoD 已在 tick #78 后重勾（0 errors 确认）。 | idle 等 full-suite + 方向 |
 | 80 | 16:18Z | no-action | **full-suite 绿（5141/0）+ TASK-70/71 DoD 勾选**。full-suite：357 文件 / **5141 passed / 0 failed** / SUITE-GREEN 已发——TASK-70/71 合并验证通过。**DoD 勾选**：TASK-70（3 文件 + scoped 绿 + lint 0 + 卫生采纳声明）、TASK-71（kotlin 测试 + scoped 绿 + 负控制变异证据 + lint 0）——证据独立核实（负控制：变异分支 → 4 用例红 → 回滚绿）。TASK-72 在飞（内层已派）。 | 忙（TASK-72 subagent 在飞）|
 | 81 | 16:28Z | no-action | **TASK-72 fan-in + 收尾 + A 类 E2E 分批裁定（建 TASK-73）**。内层 fan-in TASK-72（core mermaid generator 深层分支，13 测试绿，a77c5c1）。**外层收尾**：关括号 + 翻 done + verification-round #5。**full-suite 已起**（16:26）验证 TASK-72。**A 类 E2E 分批裁定**：建 TASK-73（CLI 命令族 analyze/init/cache E2E 稳定化，A 类第一批，含 lint gate）。后续 A 类分批（config 语义、输出格式、插件注册表）待 TASK-73 落地。 | idle 等 full-suite + TASK-73 派发 |
+| 82 | 16:37Z | no-action | **full-suite 绿（5154/0）+ TASK-72 DoD + 建 TASK-74**。full-suite：358 文件 / **5154 passed / 0 failed**——TASK-72 验证通过，SUITE-GREEN 已发。TASK-72 DoD 勾（负控制：变异同包跳过条件 → 红）。**TASK-74 已建**（A 类第二批 config 语义 E2E，manager 纠正 context 措辞后继续分批）。TASK-73 在飞。context 100%：快照已落盘（7ef3d32），靠 auto-compact 接续。 | 忙（TASK-73 subagent 在飞）|
 

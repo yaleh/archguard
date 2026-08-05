@@ -94,6 +94,6 @@ AssertionError: expected 'flowchart LR\n  subgraph layer_Domain…' not to conta
 
 ## Definition of Done
 
-- [ ] core generator 分支密集边界单测落地 + scoped 全绿
-- [ ] 负控制证据（变异分支 → 测试红）
-- [ ] lint 0 error（新文件 lint-clean）
+- [x] core generator 分支密集边界单测落地 + scoped 全绿
+- [x] 负控制证据（变异分支 → 测试红）
+- [x] lint 0 error（新文件 lint-clean）
