@@ -4,7 +4,7 @@
 
 ## 当前积压
 
-### 会话存活监测缺位：单飞锁被 quay 持有且只盯 quay，archguard/meta-cc 会话无人盯（2026-08-05）
+### ~~会话存活监测缺位：单飞锁被 quay 持有且只盯 quay~~【已裁决：维持现状，等 quay 出绿后 manager 重挂 6 目标】（2026-08-05）
 
 **现象**：archguard 冷启动重挂 session-liveness Monitor（4b 步骤）时，挂载返回
 「已有活持有者（属主 quay，pid 2598198）——空操作 exit 0」。`monitor-mount-check.sh --json`
@@ -30,6 +30,13 @@ archguard 会话（含内层 76bbb31e）的 GONE/OVERDUE/IDLE 事件永远不产
 1. quay 持有者的 `SESSION_TARGETS` 扩为三项目全部会话（单一持有者看全部）；
 2. 按 manager 旧裁定「各项目外层持有其内层」，放弃全局单飞、改按项目持有（需改 AC20 文档）；
 3. 接受现状——archguard 会话存活靠外层 20 分钟 tick 轮询兜底（降级，非事件式）。
+
+**manager 裁决（2026-08-05 07:3xZ）**：选「暂不动」，理由比选项更硬——quay 内层 07:18 落地
+M3 接管修复（takeover count race），但验证它的全量在 07:26 被 quay 外层为资源安全杀掉（load
+31.74），接管路径「改过但从未绿证」。重挂需 kill 当前持有者 + 依赖接管路径顶替；在未验证状态
+下做 = 三项目同时失去存活观察。**等 quay 出一轮绿全量后 manager 重挂 6 目标**
+（quay/meta-cc/archguard × outer/inner）。在此之前 archguard 存活由 manager 侧盯（每 17 分钟
+查提交 + pane）。**本条不再升级**。
 
 ### TASK-55 分诊 — 3 个 stranded 分支（2026-08-04）
 
