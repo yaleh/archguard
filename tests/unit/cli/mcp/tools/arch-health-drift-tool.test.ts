@@ -25,7 +25,11 @@ vi.mock('@/cli/utils/drift-baseline.js', async (importOriginal) => {
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { reanalyzeCommitSnapshot } from '@/cli/utils/drift-baseline.js';
 import { registerArchHealthDriftTool } from '@/cli/mcp/tools/arch-health-tools.js';
-import type { ArchHealthHistory, DriftSnapshot, IntrinsicDimensionResult } from '@/analysis/jl/types.js';
+import type {
+  ArchHealthHistory,
+  DriftSnapshot,
+  IntrinsicDimensionResult,
+} from '@/analysis/jl/types.js';
 
 function makeSnapshot(commitSha: string, timestamp: string): IntrinsicDimensionResult {
   return {
@@ -114,7 +118,10 @@ describe('archguard_get_architecture_drift', () => {
   });
 
   it('fewer than two snapshots → "no baseline available"', async () => {
-    const data = await invokeDriftTool({}, makeHistory([makeSnapshot('aaa', '2026-01-01T00:00:00Z')]));
+    const data = await invokeDriftTool(
+      {},
+      makeHistory([makeSnapshot('aaa', '2026-01-01T00:00:00Z')])
+    );
     expect(data.message).toBe('no baseline available');
   });
 
@@ -203,7 +210,10 @@ describe('archguard_get_architecture_drift', () => {
       entityIndex: Array.from({ length: n }, (_, i) => `E${i}`),
       adjacencyRows: toRows,
     };
-    const data = await invokeDriftTool({ topK: 3, minLevel: 'moderate' }, HISTORY_TWO, { from, to });
+    const data = await invokeDriftTool({ topK: 3, minLevel: 'moderate' }, HISTORY_TWO, {
+      from,
+      to,
+    });
     expect(data.report.drifts).toHaveLength(3);
     for (const d of data.report.drifts) {
       expect(['moderate', 'significant', 'critical']).toContain(d.level);

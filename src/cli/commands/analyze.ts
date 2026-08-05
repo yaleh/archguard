@@ -401,8 +401,7 @@ function printArchHealth(
  */
 export function parseDriftOptions(opts: CLIOptions): DriftOptions {
   const rawThreshold = opts.driftThreshold;
-  const threshold =
-    rawThreshold === undefined ? DRIFT_THRESHOLDS.critical : Number(rawThreshold);
+  const threshold = rawThreshold === undefined ? DRIFT_THRESHOLDS.critical : Number(rawThreshold);
   return {
     base: opts.driftBase,
     threshold: Number.isFinite(threshold) ? threshold : DRIFT_THRESHOLDS.critical,

@@ -71,7 +71,10 @@ export async function resolveCommitShaOrNull(root: string, ref: string): Promise
  * @param root - Git repository root.
  * @param commitSha - The commit to analyze.
  */
-export async function reanalyzeCommitSnapshot(root: string, commitSha: string): Promise<DriftSnapshot> {
+export async function reanalyzeCommitSnapshot(
+  root: string,
+  commitSha: string
+): Promise<DriftSnapshot> {
   const resolved = await resolveCommitShaOrNull(root, commitSha);
   if (resolved === null) {
     throw new Error(`invalid commit reference: ${commitSha}`);
@@ -172,8 +175,7 @@ export async function resolveDriftSnapshots(
 ): Promise<DriftSnapshotsResolution> {
   const sorted = [...history.snapshots].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
-  const toIndex =
-    toCommit !== undefined ? sorted.findIndex((s) => s.commitSha === toCommit) : -1;
+  const toIndex = toCommit !== undefined ? sorted.findIndex((s) => s.commitSha === toCommit) : -1;
   const effectiveToIndex = toIndex >= 0 ? toIndex : sorted.length - 1;
   const toSnapshot = sorted[effectiveToIndex];
   if (toSnapshot === undefined || toSnapshot.commitSha === undefined) {

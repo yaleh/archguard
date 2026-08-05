@@ -54,13 +54,15 @@ export function formatDriftReport(report: DriftReport): string {
     lines.push('');
     lines.push(`  New entities (${report.addedEntities.length}):`);
     for (const id of report.addedEntities.slice(0, 10)) lines.push(`    ${id}`);
-    if (report.addedEntities.length > 10) lines.push(`    … +${report.addedEntities.length - 10} more`);
+    if (report.addedEntities.length > 10)
+      lines.push(`    … +${report.addedEntities.length - 10} more`);
   }
   if (report.removedEntities.length > 0) {
     lines.push('');
     lines.push(`  Removed entities (${report.removedEntities.length}):`);
     for (const id of report.removedEntities.slice(0, 10)) lines.push(`    ${id}`);
-    if (report.removedEntities.length > 10) lines.push(`    … +${report.removedEntities.length - 10} more`);
+    if (report.removedEntities.length > 10)
+      lines.push(`    … +${report.removedEntities.length - 10} more`);
   }
 
   const s = report.summary;

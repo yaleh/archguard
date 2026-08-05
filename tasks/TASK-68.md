@@ -41,10 +41,40 @@ extra:
 
 ## Acceptance Criteria
 
-- [ ] `npm run lint` 退出 0（errors = 0）
-- [ ] `.quay/` 和 `vendor/` 不再被 eslint 扫描（Parsing error / rule-not-found 消失）
-- [ ] `src/cli/commands/query.ts` prettier 格式通过（无 formatting error）
-- [ ] 不引入新 warnings（对比修复前后 warnings 数不增）
+- [x] `npm run lint` 退出 0（errors = 0）
+- [x] `.quay/` 和 `vendor/` 不再被 eslint 扫描（Parsing error / rule-not-found 消失）
+- [x] `src/cli/commands/query.ts` prettier 格式通过（无 formatting error）
+- [x] 不引入新 warnings（对比修复前后 warnings 数不增）
+
+### Lint 实跑证据（TASK-68 执行，worktree @ 380c079）
+
+**修复前（baseline，worktree 380c079）**：
+```
+✖ 3945 problems (23 errors, 3922 warnings)
+  23 errors and 0 warnings potentially fixable with the `--fix` option.
+LINT_EXIT=1
+```
+23 errors 分解：8 个文件 prettier 格式错误（`drift-calculator.ts`、`analyze.ts`、
+`query.ts`、`drift-baseline.ts`、`drift-reporter.ts`、`drift-calculator.test.ts`、
+`analyze-drift.test.ts`、`arch-health-drift-tool.test.ts`）+ 6 个
+`no-unnecessary-type-assertion`（`drift-calculator.ts` 111/112/113、
+`drift-calculator.test.ts` 90/92/128）。主仓库另有 `.quay/` 3 个 .ts（Parsing error）与
+`vendor/quay/dist/quay.js` + `vendor/quay-native/dist/quay-native.js`（rule-not-found，
+inline eslint-disable 引用未加载规则）；worktree 不含这些 untracked 文件故未计入。
+注：任务立案时录得 13 errors / 3880 warnings（/tmp/archguard-lint-full.log），
+TASK-65 fan-in 新增 JL drift 文件后当前基线为 23 errors / 3922 warnings。
+
+**修复后**：
+```
+✖ 3919 problems (0 errors, 3919 warnings)
+EXIT=0
+```
+warnings 3922 → 3919（净 -3，来自移除 3 个 non-null assertion warning，不增）。
+
+**ignore 机制实证**：ESLint v9 为 flat config（`eslint.config.js`），`.eslintignore`
+已不再支持（实测触发 `ESLintIgnoreWarning`），故排除 `.quay/`/`vendor/` 通过
+`eslint.config.js` `ignores` 数组新增 `'.quay/**'` + `'vendor/**'` 实现；用合成
+`import.meta` .ts 与 inline-disable .js 验证二者不再被扫描。
 
 ## Touches
 

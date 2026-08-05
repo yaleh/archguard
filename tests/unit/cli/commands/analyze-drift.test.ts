@@ -88,9 +88,7 @@ describe('parseDriftOptions', () => {
   });
 
   it('unparseable threshold falls back to the default', () => {
-    expect(parseDriftOptions({ driftThreshold: 'nope' }).threshold).toBe(
-      DRIFT_THRESHOLDS.critical
-    );
+    expect(parseDriftOptions({ driftThreshold: 'nope' }).threshold).toBe(DRIFT_THRESHOLDS.critical);
   });
 });
 

@@ -79,6 +79,11 @@ export default [
       '**/*.config.js',
       '**/*.config.mjs',
       '.eslintrc.js',
+      // Runtime/transient state dirs: .quay loop artifacts (incl. untracked
+      // experimental-syntax .ts backups) and vendored bundles (their inline
+      // eslint-disable comments reference rules not loaded in this project).
+      '.quay/**',
+      'vendor/**',
     ],
   },
   // Apply TypeScript linting only to src/ and tests/
