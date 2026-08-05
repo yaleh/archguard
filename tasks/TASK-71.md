@@ -27,11 +27,36 @@ parser/shared/atlas/mermaid/analysis，**剩余项包含 kotlin 插件**：
 
 ## Acceptance Criteria
 
-- [ ] kotlin 插件值得稳定的分支密集路径有直接 import 单测（`tests/unit/plugins/kotlin/`）
-- [ ] 每个新增测试文件有负控制或覆盖具体分支的证据（不是空转）
-- [ ] `npx vitest run tests/unit/plugins/kotlin/` 全绿
-- [ ] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
-- [ ] 不设全局 coverage 百分比目标（按模块判断）
+- [x] kotlin 插件值得稳定的分支密集路径有直接 import 单测（`tests/unit/plugins/kotlin/`）
+- [x] 每个新增测试文件有负控制或覆盖具体分支的证据（不是空转）
+- [x] `npx vitest run tests/unit/plugins/kotlin/` 全绿
+- [x] 新增/修改文件 lint-clean（`npm run lint` 不引入新 error——治本规则）
+- [x] 不设全局 coverage 百分比目标（按模块判断）
+
+## Execution Evidence (TASK-71, 2026-08-05)
+
+**新增测试文件（6 个，tests/unit/plugins/kotlin/）：**
+- `kotlin-type-extractor-extra.test.ts`（9 tests）——空串/空白/裸 `?` 早退、非 primitive 外层泛型保留、嵌套泛型深度
+- `dependency-extractor-extra.test.ts`（10 tests）——无版本坐标、单段坐标跳过、非 test scope→runtime、前导空白
+- `archjson-mapper-extra.test.ts`（10 tests）——`abstract_class`→`isAbstract`、member 无类型分支、全限定 superType 解析
+- `function-builder-extra.test.ts`（7 tests）——可空返回/参数、lambda 返回类型、protected 可见性
+- `class-builder-extra.test.ts`（6 tests）——object superTypes、可空/泛型字段类型、带参注解、命名 companion
+- `index-extra.test.ts`（9 tests）——`@Ignore`/`@Disabled` 跳过、import 过滤、断言均分余数、custom regex、`@RepeatedTest`、e2e hint、glob 优先级
+
+**invoke 实跑（AC3）：**
+```
+$ npx vitest run tests/unit/plugins/kotlin/
+ Test Files  15 passed (15)
+      Tests  186 passed (186)   # 基线 135 + 新增 51
+```
+
+**负控制（Contract control，DoD 证据在 outer 收尾时使用）：**
+变异 `src/plugins/kotlin/kotlin-type-extractor.ts` L81 `if (!KOTLIN_PRIMITIVE_TYPES.has(outerName))` → `if (true)` 后，
+`kotlin-type-extractor-extra.test.ts` 2 个用例红 + `kotlin-type-extractor.test.ts` 2 个用例红
+（`expected [ 'Map', 'Order' ] to deeply equal [ 'Order' ]` 等）；回滚后全绿。测试真抓分支。
+
+**lint（AC4）：** `npx eslint` scoped 6 个新文件 → `0 errors`（12 warnings 均为既有测试文件同款
+`as any`/`explicit-function-return-type` 模式）。
 
 ## Touches
 
