@@ -414,6 +414,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    todo→ready、§3.5 开括号（fm-TASK-76-…）、§4 后台派发（worktree task-76）。
 3. **在飞**：TASK-76。TASK-62~75 全部已合并。
 
+## 17:4xZ 更新（TASK-76 fan-in 完成 —— A 类全齐）
+
+1. **TASK-76 fan-in（完成）**：A 类最后一批（插件注册表/外部插件加载 E2E 稳定化）——13 新测试
+   （内置枚举 / 外部路径加载 / 非法报错），**零实现改动**。merge 后 scoped **13 passed**。
+2. **TASK-62/63/64/65/66/67/68/70/71/72/73/74/75/76 全部已合并**（各 scoped 全绿）；
+   **无在飞、无 worktree**。**A 类分批（CLI/config/输出格式/插件注册表）全部落地。**
+3. **full-suite**：green（5090/0）为 70/71/72 合并前状态；TASK-70~76 待外层全量验证。
+4. **池**：pool=1（TASK-76 done 待外层翻）；**无新候选**——任务库耗尽。下一批方向待外层裁
+   （A 类 E2E 已完成，无剩余方向候选）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
