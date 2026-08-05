@@ -1,7 +1,7 @@
 ---
 id: TASK-79
 title: "TASK-79: TASK-78 修复后验证 TASK-31/35 的 claude mcp list Connected AC"
-status: ready
+status: done
 labels:
   - verification
   - deployment

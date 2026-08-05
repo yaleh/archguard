@@ -68,8 +68,8 @@ Core/plugin packaging (TASK-31, done) and Codex integration (TASK-36) are out of
       entries. (REAL: fixture tests + real-claude boundary run both assert
       unrelated `mcpServers` entries and other keys survive byte-for-byte
       semantics.)
-- [ ] A clean install and an upgrade both end with `claude mcp list` reporting
-      ArchGuard connected. **TASK-77 verified 2026-08-05: NOT satisfied — real
+- [x] A clean install and an upgrade both end with `claude mcp list` reporting
+      ArchGuard connected. **TASK-79 verified 2026-08-05: satisfied after TASK-78 fix — real
       connection defect (same root cause as TASK-31's `claude mcp list` AC).**
       The packages ARE published now (0.1.32), so the environment boundary is
       lifted; a REAL clean install AND a re-run upgrade path (marketplace-update +

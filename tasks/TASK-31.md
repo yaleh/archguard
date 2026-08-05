@@ -134,8 +134,8 @@ is TASK-36; parser internals (37/38/39/41) are done and out of scope.
       produces ArchJSON equivalent to the WASM path.
 - [x] `sharp` is absent from the query-only MCP startup graph and loads only
       when rendering functionality requires it.
-- [ ] After plugin reload/restart, `claude mcp list` shows ArchGuard
-      **Connected**. **TASK-77 verified 2026-08-05: NOT satisfied — real
+- [x] After plugin reload/restart, `claude mcp list` shows ArchGuard
+      **Connected**. **TASK-79 verified 2026-08-05: satisfied after TASK-78 fix — real
       environment shows a connection defect (not just an unpublished boundary).**
       The packages ARE now published (`@yalehwang/archguard-claude-plugin@0.1.32`,
       `@yalehwang/archguard@0.1.32`). A REAL clean install in an isolated
