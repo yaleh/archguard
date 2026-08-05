@@ -60,6 +60,6 @@ The architecture analysis detected a 2-node dependency cycle in `src/plugins/gol
 
 ## Definition of Done
 
-- [ ] `npm run type-check` passes
-- [ ] `npx vitest run tests/plugins/golang/` green
-- [ ] `npx vitest run tests/unit/plugins/golang/` green
+- [x] `npm run type-check` passes
+- [x] `npx vitest run tests/plugins/golang/` green
+- [x] `npx vitest run tests/unit/plugins/golang/` green

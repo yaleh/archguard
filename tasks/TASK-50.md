@@ -136,11 +136,11 @@ Do NOT touch existing MCP tool registrations/schemas, or any
 
 ## Definition of Done
 
-- [ ] #1 npm test -- --run tests/unit/analysis/shape-smells/
-- [ ] #2 npm test -- --run tests/unit/cli/mcp/shape-smell-tools.test.ts
-- [ ] #3 npm run type-check
+- [x] #1 npm test -- --run tests/unit/analysis/shape-smells/
+- [x] #2 npm test -- --run tests/unit/cli/mcp/shape-smell-tools.test.ts
+- [x] #3 npm run type-check
 - [ ] #4 npm run lint
-- [ ] #5 npm test
+- [x] #5 npm test
 
 ## Coordination
 
