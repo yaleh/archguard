@@ -67,7 +67,7 @@ one needs-human).
       consecutive standalone runs (outputs appended).
 - [x] The memory assertion still protects against unbounded growth; what it
       detects is documented in a code comment.
-- [ ] One full `npx vitest run` on clean master on this machine is green
+- [x] One full `npx vitest run` on clean master on this machine is green
       (real output appended; if machine contention makes a full green
       impossible even after the fix, leave that box unchecked with the
       evidence of why, rather than faking it).

@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 49 |
+| no-action | 50 |
 | unblock | 7 |
 | correct | 6 |
 | escalate | 0 |
@@ -87,4 +87,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 60 | 12:33Z | correct | **TASK-60/61 收尾 + TASK-60 fan-in 裁定（机制地基提交）**。内层冷启动完成：TASK-61 fan-in 落地（53c6d95，守卫测试 +65 行）；TASK-60 fan-in 被 merge-conflict 阻塞（工作树未提交机制改动拒绝合并 + master 从干净检出断）。独立核实：11 个 M 机制脚本与 quay 规范**逐字节一致** = canonical 机制（非手写）；080c667 只提交 ready-pool-check.ts（依赖三个未提交函数）制造 broken committed 态。**裁定方案 a**：提交工作树机制地基（d9dbd75，16 文件 +2947 行）+ 只取 TASK-60 非脚本交付物（f3b955f，15 文件 +982 行：TASK-62..66 + quay-tasks PARKED + 对账文档），丢弃分支重造（taskWorkLanded 简化版回归 overshoot 修复）。内层执行精确（3 脚本取 master canonical + 15 非脚本交付物）。**收尾**：TASK-61 独立核实（scoped 绿 2 passed、负控制红已贴、守卫已合并）翻 done + 关括号 fm-TASK-61；TASK-60 独立核实（对账文档落盘 / PARKED 标记 / pool>0 / 重复未搬）翻 done + 关括号 fm-TASK-60。inProgress 空。内层发现真机制 bug：ready-pool-check 的 not-yet-flipped 检测对 Touches `(new)` 反引号格式失效（TASK-60 工作落地未被排除，有重派发风险），正在修 Touches 格式。full-suite 推迟（资源闸 WAIT，CPU some avg10≥40；且树刚稳定）。机制归属问题（archguard git 里机制由谁版本管理）报 manager。 | 忙（ready-pool-check 调查 + TASK-60.md Touches 格式修复）|
 | 61 | 12:48Z | no-action | **full-suite 验证 gate 启动 + 内层等 TASK-62/63/64 subagent**。内层已派发 TASK-62/63/64（三 worktree task-62/63/64 + 三括号在飞，早期无提交），等后台 agent。外层：资源闸 GO → 起 full-suite 验证机制地基 + TASK-61/60。**首次 `--test-concurrency=8` 被 vitest 3.2.4 拒绝**（CACError: Unknown option --testConcurrency——`--test-concurrency` 是文档虚构 flag，真实是 `--maxWorkers`；无 wrapper 消费它）→ 误报红（runner 早检测 + 触发器 SUITE-RED 正常工作）→ 改 `--maxWorkers=8` 重起，state=running（12:47），SUITE-RUNNING 已发，正在跑。**`--test-concurrency` 是 quay 交付文档 bug**（fast-mode 文档指令不存在的 flag），记待查 + 报 manager。内层 pane 显示等 3 agent（良性空闲，等后台完成通知）。Monitor 三判据照常。 | 等 3 个后台 agent（TASK-62/63/64 早期阶段）|
 | 62 | 12:59Z | correct | **红窗分诊：runner 假阳性红 → 纠正 + TASK-67 立案**。full-suite 完成（12:57，611s）：vitest 摘要 **4902 passed / 0 failed / 13 skipped / exit 0**——机制地基 + TASK-61/60 全绿。但 runner 因一行 `✖ Diagram test failed...`（来自**通过**的负控制测试 console 输出）触发 early-red，state=red 错误在位（stop-dispatch 信号）。分诊：核实 vitest 摘要（0 失败）→ 判 runner 检测 bug 假阳性（`full-suite-runner.ts:68 /✖/` 匹配 console 输出）→ 手动纠正 state=green（12:58:49 SUITE-GREEN 已发，信号清除）。**建 TASK-67**（修 runner 结构化判红，四件套+Contract 齐全）。本轮合并（机制 + TASK-61/60）经 4902 测试验证通过，DoD 可勾。 | 等 3 个后台 agent（TASK-62/63/64）|
+| 63 | 13:05Z | no-action | **内层 subagent 深度推进 + AC 审计轻量 pass**。TASK-62/63/64 三个 subagent 已工作 29m+（高 token：tree-sitter-bridge 207k、TASK-64 evidence 221k——真实工作非轮询），等后台 agent（良性空闲）。套件 green（上轮 4902/0）。资源闸 WAIT（subagent 负载）。**AC 审计**：利用 full-suite 绿，勾 DIR-001 "Test suite green" + TASK-45 "One full vitest run green"（均被 4902/0 验证）；其余 6 任务需测试跑的 AC 项待低负载窗口。内层 heartbeat tick ba7f43f（无停止条件，pool 空）。 | 等 3 个后台 agent（TASK-62/63/64，29m+）|
 
