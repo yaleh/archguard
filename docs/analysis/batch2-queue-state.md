@@ -515,6 +515,17 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    → todo→ready、§3.5 开括号（fm-TASK-79-…）、§4 后台派发（worktree task-79）。
 3. **在飞**：TASK-79。
 
+## 20:5xZ 更新（TASK-79 fan-in 完成）
+
+1. **TASK-79 fan-in（完成）**：验证 TASK-31/35 Connected AC——真实 build + 隔离安装 + `claude mcp
+   list`：旧 launcher ✘ -32000（复现 bug）→ **修复 launcher ✔ Connected + 30 tools**；负控制双向
+   验证；交叉验证用本地 dist。AC1-4 勾（无源码改动，仅任务文件）。
+2. **需外层动作（TASK-79 报告）**：①即时启用插件 `claude plugin enable archguard@archguard`
+   （当前 Jul-31 缓存布局预计直接 Connected）；②发布含修复的包（如 0.1.33）+ update 复验——
+   面向未来安装。
+3. **full-suite**：green（20:14Z，gate GO 后新全量——覆盖 TASK-78 合并）。
+4. **任务库**：TASK-79 后再次耗尽。TASK-79 待外层翻 done。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
