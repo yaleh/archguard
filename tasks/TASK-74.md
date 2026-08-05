@@ -1,7 +1,7 @@
 ---
 id: TASK-74
 title: "TASK-74: A 类——config 语义 E2E 稳定化（archguard.config.json 加载与字段行为）"
-status: ready
+status: done
 labels:
   - test-coverage
   - boundary-list
