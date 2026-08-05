@@ -325,6 +325,16 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    （worktree task-70 / task-71）。派发 prompt 含 **lint gate**（新代码 lint-clean）。
 3. **在飞**：TASK-70、TASK-71（2 后台 subagent）。full-suite green（5090/0）。
 
+## 16:0xZ 更新（TASK-70/71 fan-in 完成）
+
+1. **TASK-70 fan-in（完成）**：--prefer-offline 卫生项（3 集成测试文件加 npm install 参数/env，
+   无测试语义改动、无性能 claim）。merge 后 scoped **55 passed**（3 集成文件，~3min）。
+2. **TASK-71 fan-in（完成）**：kotlin 插件分支密集路径直接 import 单测（6 新文件 +51 测试，
+   基线 135→186）。merge 后 scoped **186 passed**（15 文件）。负控制已验证新测试真抓分支。
+3. **TASK-62/63/64/65/66/67/68/70/71 全部已合并**（各 scoped 全绿）；**无在飞、无 worktree**。
+4. **full-suite**：green（5090/0）为 TASK-70/71 合并前状态；待外层下一轮全量验证。
+5. **池**：pool=2（TASK-70/71 done 待外层翻，不会重派）；无新候选。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
