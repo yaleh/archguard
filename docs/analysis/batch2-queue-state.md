@@ -107,3 +107,18 @@
 5. **恢复后待办**：两 agent 返回后按 tick 步骤 2 fan-in（rebase master → 合并 task/<id> →
    scoped 测试 → worktree 清理）。解除 `.halt` 需先跑 `restart-readiness-check.sh`（在飞任务未落地时
    FAIL 是预期的）。
+
+## 12:10Z 更新（外层冷启动恢复，tick #59）
+
+1. **外层恢复**：会话全灭后被 watchdog 11:40 拉起（驱动失败），自驱冷启动完成。cron 锚点重建
+   （8e053e10，loop-driver LIVE）。**无人干预实验从本时刻计时**。
+2. **TASK-60 / TASK-61 分支已完成待 fan-in**：`task/TASK-60`@3909e77（+1051 行，quay-tasks 对账接入）、
+   `task/TASK-61`@574d00a（+141 行，types↔analysis 守卫）。均基于 080c667，master 现为 cbed51b。
+   status 均 ready。**已驱动内层 fan-in**（内层冷启动中，发现 ready-pool-check 依赖 TASK-60 分支
+   才解析的三个文件——fan-in 顺序应 TASK-60 先）。
+3. **遗留账裁定**：3 个 stranded 分支（task/T3、T50、T52）已核实 0-ahead 并删除；8 个 done 任务
+   （DIR-001/002、TASK-31/35/45/46/49/50）有未勾 AC，记入外层收尾 pass 逐项核实。
+4. **Monitor 状态**：suite-state-trigger（archguard 实例）已挂（pid 2315031）；session-liveness
+   挂载空操作（quay 持有单飞锁，manager 已裁暂不动，archguard 存活靠 20 分钟 tick + manager 侧观察兜底）。
+5. **机制缺口已报**：send-keys-reliable.sh（NBSP 修复版）在 fresh welcome 屏仍失败（ghost 占位符
+   清不掉），已写 manager-inbox（archguard-20260805-121002Z.md）。

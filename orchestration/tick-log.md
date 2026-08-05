@@ -15,9 +15,9 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 10 |
-| unblock | 5 |
-| correct | 1 |
+| no-action | 48 |
+| unblock | 7 |
+| correct | 4 |
 | escalate | 0 |
 
 ## Tick 记录
@@ -83,4 +83,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 56 | 08:21Z | no-action | **空转（.halt 暂停中，第 2 个）**。.halt 仍在（07:50 版本）。manager-inbox 无新指令（07:49 汇报已读清空，无新文件）。内层 IDLE（输入框仍留「解除 .halt 后 fan-in」备忘，暂停期无害）。git 无新提交。**本 tick 空转**。连续空转 #55/#56 是 .halt 哨兵的预期行为，非故障，不触发外层停止条件（步骤 7 的「3 tick 无推进」在 .halt 下不算卡住——暂停是 manager 主动裁定）。 | IDLE（等 .halt 解除）|
 | 57 | 08:41Z | no-action | **空转（.halt 暂停中，第 3 个）**。.halt 仍在（07:50 版本）。manager-inbox 空（无新指令）。内层 IDLE（输入框备忘更新为「移除 .halt 恢复，fan-in 两个分支」——内层在等解除后 fan-in TASK-60/TASK-61 的 worktree 分支）。git 无新提交。**本 tick 空转**。连续 3 个空转 tick（#55/#56/#57）均因 .halt——暂停是 manager 主动裁定，空转是哨兵预期行为，不触发外层停止条件。 | IDLE（等 .halt 解除）|
 | 58 | 09:01Z | no-action | **空转（.halt 暂停中，第 4 个）**。.halt 仍在（07:50 版本）。manager-inbox 空。内层 IDLE（输入框备忘已清空，纯等待）。git 无新提交。**本 tick 空转**。暂停已持续 ~1h11m（07:50→09:01），空转 tick 连续 4 个（#55–#58）均因 .halt 哨兵，预期行为。 | IDLE（等 .halt 解除）|
+| 59 | 12:10Z | unblock | **冷启动恢复（watchdog 拉起后自驱，无人干预实验起点）**。外层会话全灭后 watchdog 11:40 拉起但驱动失败（send-keys NBSP 未修版），11:40-12:00 空转 20 分钟，自驱恢复：重建 cron（8e053e10，loop-driver LIVE）、挂 archguard suite-state-trigger（pid 2315031）、session-liveness 挂载空操作（quay 持有单飞锁，manager 已裁暂不动）。核实 39 处未提交改动（quay-init 铺层机制文件）。裁定遗留账：删 3 个 stranded 分支（task/T3、T50、T52，0-ahead 安全清理）；8 个 done 任务 AC 未勾记入后续收尾 pass。TASK-60/61 分支已完成待 fan-in（3909e77/574d00a，status ready）。**驱动内层**：send-keys-reliable.sh（NBSP 修复版）在 fresh welcome 屏仍失败（ghost 占位符清不掉，第六种送达模式未覆盖），转手动序列成功，送达经内层自身 transcript f6783052 核实（非 pane 哈希/非 heartbeat）。写 manager-inbox 报告 archguard-20260805-121002Z.md（机件缺口清单：send-keys welcome 场景、exp6/ADR-021 缺失、suite-state-trigger node 前缀、monitor-check 只覆盖 session-liveness）。 | IDLE（fresh welcome 11:32 起）→ 已驱动，冷启动+fan-in 准备中（发现 ready-pool-check 依赖 TASK-60 分支）|
 
