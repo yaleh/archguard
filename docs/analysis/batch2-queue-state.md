@@ -263,6 +263,24 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    及测试）**均不存在**，工作未落地 → 按实测为准派发，标注外层。机制缺陷归 manager-inbox。
 4. **在飞**：TASK-66、TASK-68。full-suite green（5019/0）。
 
+## 15:0xZ 更新（ADR-007 复发修复 + TASK-66/68 fan-in 完成）
+
+1. **ADR-007 复发修复（外层 14:57Z 裁定，TASK-65 引入）**：`archguard_get_architecture_drift`
+   MCP tool 缺 `--architecture-drift` query flag。修复：query.ts 加 `--architecture-drift` flag +
+   handler（复用 TASK-65 drift-baseline/drift-reporter/drift-calculator，镜像 MCP tool 读路径）。
+   **验证**：check-adr 0 violations + check-adr.test 28 green + type-check 0 + prettier 已格式化。
+   提交 **439e5d3**。这是 ADR-007 第二次同类复发——外层已记 manager-inbox（建议建 MCP tool 的
+   任务 AC 加 check-adr 0 项）。
+2. **TASK-68 fan-in（完成）**：lint 修复（eslint.config.js ignores 排除 `.quay/**`/`vendor/**` +
+   prettier + 去除 6 处断言）。merge 后 lint **0 errors / 3925 warnings**（AC 通过）。与 ADR-007 的
+   query.ts 改动 rebase 自动合并无冲突。
+3. **TASK-66 fan-in（完成）**：JL cluster boundary（kmeans + cluster-boundary-analyzer）。
+   merge 后 scoped **111 passed**（5 文件）。
+4. **TASK-62/63/64/65/66/67/68 全部已合并**（各 scoped 全绿）；**无在飞、无 worktree**。
+5. **full-suite**：green（5019/0）为 ADR-007 修复前状态；ADR-007 修复 + 66/68 合并待外层新全量验证。
+6. **机制备注**：TASK-68 任务文件建议的 `.eslintignore` 在 ESLint v9 flat config 下已废弃
+   （实测 warning），agent 改用等效 `eslint.config.js ignores`——DoD 第 2 行未勾，交外层判断。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
