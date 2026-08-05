@@ -217,3 +217,13 @@ TASK-60 裁定下达前：本 tick 已停派发（§2 冲突即停）。
 4. **TASK-67 闭环**：外层 12:59 立案 → 内层 13:0x 起执行 → 13:1x 合并。快速闭环实证（外层立案 → 内层执行 → fan-in 全自主）。
 5. **下一步**：TASK-65/66 待派发（TASK-64 落地后可晋，66 已解析通过，65 解除 parent 阻塞）。内层计划中。
 6. **遗留 AC**：TASK-64 AC3（perf spike 环境受限）记理由；4 任务 DoD 待新全量绿后勾。
+
+## 13:40Z 更新（红窗分诊：真红 → forward-fix 指令已发）
+
+1. **full-suite 真红**（5013 passed / 6 failed / 3 文件）：install-policy 3、parser-runtime-packed 2、check-adr 1。runner 的 TASK-67 修复生效（结构化判红，真失败）。
+2. **归因**：
+   - cpp ArchJSON 分叉（5 失败）：TASK-62 重写 tree-sitter-bridge + 外部化 .scm 后，`expectedArchJson`（直接 parseCode）与 `runDriver()`（driver 路径）不一致。上轮 4902/0 绿 = merge 引入。
+   - ADR-007 违规（1 失败）：TASK-64 arch-health 工具/CLI flag 命名不匹配。
+3. **裁定**：forward-fix 不回滚。禁改基线/期望值，查 driver↔parseCode 分叉根因（首查 .scm 路径解析），修 ADR-007，重跑 3 失败文件。裁定已送达内层（transcript 核实），内层开工。
+4. **TASK-62/64** 保持 done，DoD 待修复 + 新全量绿。TASK-65/66 派发暂缓（套件 red = stop-dispatch）。
+5. **verification-round #1** 的 suiteGreen 需回看：当时 recorded true（running），最终 red——本轮收尾的 4 任务待修复后新全量验证。
