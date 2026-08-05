@@ -364,6 +364,17 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    gate 在位）→ todo→ready、§3.5 开括号（fm-TASK-73-…）、§4 后台派发（worktree task-73）。
 3. **在飞**：TASK-73。full-suite green（验证 70/71/72 中）。
 
+## 16:4xZ 更新（TASK-73 fan-in + TASK-74 派发）
+
+1. **TASK-73 fan-in（完成）**：A 类 E2E 第一批（CLI analyze/init/cache 用户入口契约）。新
+   `tests/integration/cli/user-entry-contract.test.ts`（7 测试，exit code + 关键输出契约）。
+   未改 CLI 实现。merge 后 scoped **7 passed**。
+2. **TASK-74 补晋 + 派发**：A 类第二批（config 语义 E2E 稳定化，外层已建，只读审计
+   config-loader）——资格通过（self-touch OK、resolve 1/3 missing 多数解析、lint gate 在位）→
+   todo→ready、§3.5 开括号（fm-TASK-74-…）、§4 后台派发（worktree task-74）。TASK-73 落地满足
+   「第二批前提」。
+3. **在飞**：TASK-74。TASK-62~73 全部已合并。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
