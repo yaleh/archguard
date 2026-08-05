@@ -478,6 +478,14 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
    布局复现 + 保持不依赖全局 install 纪律。
 3. **在飞**：TASK-78。
 
+## 19:5xZ 更新（TASK-78 agent 中断/resume）
+
+1. **TASK-78 agent 因 API 错误中断**（connection closed mid-response），截断在调查 archguard 插件
+   enablement 状态中途。worktree 未提交工作完好：`plugin/mcp-launcher.mjs` 已改动（解析改为
+   ①插件自身树 → ②回退发现兄弟 `npm-cache/node_modules`——正是任务修复方向，未完成/未提交）。
+   已 **SendMessage resume** 续跑（保留上下文续完修复 + 构造布局实测 + 提交）。
+2. **在飞**：TASK-78（resumed）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
