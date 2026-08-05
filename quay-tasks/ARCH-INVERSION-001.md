@@ -6,6 +6,8 @@ status: needs-human
 labels: []
 ---
 
+**PARKED** — archived 2026-08-05 by TASK-60 (已覆盖 by tasks/DIR-001 done — types↔analysis cycle broken; NOT migrated).
+
 ## Finding
 
 `src/types/config-global.ts` line 4 imports `FitnessConfig` from `../analysis/fitness/rule-types.js`, creating a `types ↔ analysis` bidirectional package dependency. The `src/types` package is a foundational contract layer that every other module (analysis, cli, core, parser, plugins) depends on. Importing back from `src/analysis` creates a circular dependency cycle that violates the project's layering invariant and prevents types from being compiled or tested in isolation.

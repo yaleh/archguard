@@ -5,6 +5,8 @@ status: ready
 labels: []
 ---
 
+**PARKED** — archived 2026-08-05 by TASK-60 (已覆盖 by tasks/DIR-002 done — nodeId collision fixed; NOT migrated).
+
 ## Finding
 
 `src/mermaid/test-coverage-renderer.ts:92` — `nodeId(label)` strips all non-alphanumeric characters to `_`, producing colliding Mermaid node IDs for distinct entities. Two collision paths exist:
