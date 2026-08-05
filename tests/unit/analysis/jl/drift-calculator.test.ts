@@ -74,11 +74,7 @@ describe('DriftCalculator.compare', () => {
   });
 
   it('entity gaining 5 dependency edges → drift ≈ √5 ≈ 2.236', () => {
-    const from = makeSnapshot(
-      ['A', 'B', 'C', 'D', 'E', 'F'],
-      zeroMatrix(6),
-      't1'
-    );
+    const from = makeSnapshot(['A', 'B', 'C', 'D', 'E', 'F'], zeroMatrix(6), 't1');
     // A now depends on B, C, D, E, F (5 weight-1.0 edges).
     const toRows = zeroMatrix(6);
     toRows[0] = [0, 1, 1, 1, 1, 1];
@@ -87,9 +83,9 @@ describe('DriftCalculator.compare', () => {
     const report = DriftCalculator.compare(from, to);
     const a = report.drifts.find((d) => d.entityId === 'A');
     expect(a).toBeDefined();
-    expect(a!.drift).toBeCloseTo(Math.sqrt(5), 3);
+    expect(a.drift).toBeCloseTo(Math.sqrt(5), 3);
     // A's outgoing edges grew by 5.
-    expect(a!.deltaFanOut).toBe(5);
+    expect(a.deltaFanOut).toBe(5);
   });
 
   it('added/removed entities are excluded from drifts but reported', () => {
@@ -125,7 +121,7 @@ describe('DriftCalculator.compare', () => {
       't2'
     );
     const report = DriftCalculator.compare(from, to);
-    const a = report.drifts.find((d) => d.entityId === 'A')!;
+    const a = report.drifts.find((d) => d.entityId === 'A');
     // A's own row is unchanged → drift 0.
     expect(a.drift).toBe(0);
     // A gained an incoming edge → deltaFanIn +1; row sum unchanged → deltaFanOut 0.
@@ -209,6 +205,11 @@ describe('DriftCalculator.compare', () => {
     const report = DriftCalculator.compare(from, to, { topK: 3 });
     // drifts sliced to 3, but summary reflects all 12 shared entities.
     expect(report.drifts).toHaveLength(3);
-    expect(report.summary.critical + report.summary.significant + report.summary.moderate + report.summary.stable).toBe(12);
+    expect(
+      report.summary.critical +
+        report.summary.significant +
+        report.summary.moderate +
+        report.summary.stable
+    ).toBe(12);
   });
 });

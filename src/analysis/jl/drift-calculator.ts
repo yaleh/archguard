@@ -17,18 +17,8 @@
 
 import { EntityAligner } from './entity-aligner.js';
 import { computeMode, computeK, buildAchlioptas, project } from './jl-projector.js';
-import {
-  DEFAULT_DRIFT_OPTIONS,
-  DEFAULT_JL_CONFIG,
-  DRIFT_THRESHOLDS,
-} from './types.js';
-import type {
-  DriftLevel,
-  DriftOptions,
-  DriftReport,
-  DriftSnapshot,
-  EntityDrift,
-} from './types.js';
+import { DEFAULT_DRIFT_OPTIONS, DEFAULT_JL_CONFIG, DRIFT_THRESHOLDS } from './types.js';
+import type { DriftLevel, DriftOptions, DriftReport, DriftSnapshot, EntityDrift } from './types.js';
 
 const LEVEL_RANK: Record<DriftLevel, number> = {
   stable: 0,
@@ -97,10 +87,18 @@ export class DriftCalculator {
 
     // Express both snapshots' rows in the union coordinate system.
     const alignedFrom = from.entityIndex.map((_, i) =>
-      EntityAligner.buildAlignedRow(from.adjacencyRows[i] ?? [], from.entityIndex, alignment.entityIndex)
+      EntityAligner.buildAlignedRow(
+        from.adjacencyRows[i] ?? [],
+        from.entityIndex,
+        alignment.entityIndex
+      )
     );
     const alignedTo = to.entityIndex.map((_, i) =>
-      EntityAligner.buildAlignedRow(to.adjacencyRows[i] ?? [], to.entityIndex, alignment.entityIndex)
+      EntityAligner.buildAlignedRow(
+        to.adjacencyRows[i] ?? [],
+        to.entityIndex,
+        alignment.entityIndex
+      )
     );
 
     let dataFrom = alignedFrom;
@@ -108,9 +106,9 @@ export class DriftCalculator {
     if (mode === 'jl') {
       // Drift-specific Achlioptas matrix: dimension depends on N_union, fixed
       // seed for determinism (never reuses jl-state.json's matrix).
-      const achlioptas = buildAchlioptas(k as number, nUnion, DEFAULT_JL_CONFIG.seed);
-      dataFrom = project(alignedFrom, achlioptas, k as number);
-      dataTo = project(alignedTo, achlioptas, k as number);
+      const achlioptas = buildAchlioptas(k, nUnion, DEFAULT_JL_CONFIG.seed);
+      dataFrom = project(alignedFrom, achlioptas, k);
+      dataTo = project(alignedTo, achlioptas, k);
     }
 
     const fromIndex = new Map<string, number>();
