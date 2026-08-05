@@ -53,12 +53,57 @@ Connected AC。
 
 ## Acceptance Criteria
 
-- [ ] `plugin/mcp-launcher.mjs` 在 Claude Code npm-cache 插件布局下能解析 `@yalehwang/archguard`
+- [x] `plugin/mcp-launcher.mjs` 在 Claude Code npm-cache 插件布局下能解析 `@yalehwang/archguard`
       （构造该布局实测：launcher exit 0、MCP stdio 服务启动）
-- [ ] 回退逻辑有负控制：`createRequire` 正常路径（插件自身依赖树）仍工作，不依赖全局 install
-- [ ] 真实 `claude mcp list`（环境可得时）显示 Connected；环境不可得则写明理由 + 构造布局实测证据
-- [ ] `npm run lint` 0 errors（lint gate——改动的 plugin 文件 lint-clean）
+- [x] 回退逻辑有负控制：`createRequire` 正常路径（插件自身依赖树）仍工作，不依赖全局 install
+- [x] 真实 `claude mcp list`（环境可得时）显示 Connected；环境不可得则写明理由 + 构造布局实测证据
+- [x] `npm run lint` 0 errors（lint gate——改动的 plugin 文件 lint-clean）
 - [ ] TASK-31/TASK-35 的 `claude mcp list` Connected AC 状态更新（可勾则勾+证据，不可则理由）
+
+## Execute record (TASK-78 inner, 2026-08-05)
+
+**根因**：`createRequire(import.meta.url)` 只从插件目录向上解析；Claude Code 2.1.222 把插件依赖装进
+兄弟目录 `plugins/npm-cache/node_modules`，向上爬取够不到 → `MODULE_NOT_FOUND`。NODE_PATH 注入可绕过
+（诊断成立）。修复：主路径（插件自身依赖树，含 NODE_PATH）失败后，从插件根向上探测
+`<ancestor>/npm-cache/node_modules` 并直接解析通过它；不依赖全局 install / 仓库父 node_modules /
+vendored dist。
+
+**构造布局实测**（`/tmp/task78-repro`：`plugin/` 无 node_modules，`npm-cache/node_modules/` 为
+Claude 真实 npm-cache 完整拷备）：
+
+```
+# 修复前（构造 npm-cache 兄弟布局，plugin 无 node_modules）
+$ node plugin/mcp-launcher.mjs --help
+[archguard] Cannot resolve @yalehwang/archguard/dist/cli/index.js from the plugin dependency tree.
+[archguard] The plugin is installed via npm; reinstall it so its dependencies are present.
+EXIT CODE: 1
+
+# 修复后（同一布局）
+$ node plugin/mcp-launcher.mjs --help
+Usage: archguard [options] [command] ...   # exit 0
+
+# 修复后（MCP stdio 服务启动 + initialize 握手）
+$ node plugin/mcp-launcher.mjs mcp   # 注入 initialize → 收到
+{"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},
+ "serverInfo":{"name":"archguard","version":"1.0.0"}},"jsonrpc":"2.0","id":1}
+# stderr: ArchGuard MCP server running on stdio
+```
+
+**负控制**（移除 npm-cache 兄弟，plugin 亦无 node_modules）：仍干净失败，exit 1，同修复前报错。
+**回归**（插件自身依赖树布局，TASK-31 契约）：`mcp` 服务启动 + initialize 握手成功（exit 0）。
+**NODE_PATH 注入**（无任何 node_modules，仅外部 NODE_PATH）：`--help` exit 0。
+
+**lint gate**：根 eslint 配置显式 ignore `plugin/**`（自包含子包，`eslint.config.js` ignores 段）；
+`npm run lint` 0 errors（仓库 lint 面）；改动文件独立 gate 全过——`node --check` 通过、
+`npx prettier --check plugin/mcp-launcher.mjs` 通过、`npx eslint plugin/mcp-launcher.mjs --no-ignore`
+exit 0。scoped 单测 `tests/unit/packaging/plugin-package.test.ts` 10/10 通过（launcher 契约：
+含 `@yalehwang/archguard/dist/cli/index.js` + `createRequire`，`.mcp.json` 不含 NODE_PATH）。
+
+**TASK-31/TASK-35 的 `claude mcp list` Connected 结论**（不可勾，理由）：真实 `claude mcp list` 中
+archguard 插件未列出——`~/.claude/settings.json` 的 `enabledPlugins` 仅含 `meta-cc@meta-cc-marketplace`
+与 `quay@quay`，`archguard@archguard` 已安装但未启用，其 MCP server 未并入列表；且真实缓存里装的是
+修复前的 launcher（0.1.32，自带 node_modules）。故真实环境 Connected 需外层收尾：启用插件 +
+发布并重装含本修复的插件包。本任务以构造布局实测作为修复证据。
 
 ## Touches
 
