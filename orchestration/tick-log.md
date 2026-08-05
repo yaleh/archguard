@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 58 |
+| no-action | 59 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -100,4 +100,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 73 | 15:15Z | no-action | **ADR-007 修复 + TASK-68 合并落地，内层验证 lint**。内层完成：ADR-007 修复 439e5d3（query.ts 加 --architecture-drift）+ TASK-68（lint 0 errors，.eslintignore 排除 .quay/vendor + prettier）合并 14df78a，query.ts 双 flag 完整。TASK-66 在飞（worktree 有提交）。内层跑 TASK-68 scoped 验证（lint）。套件 red（ADR-007 红残留，待新 full-suite re-green）。资源闸 WAIT（内层 lint + TASK-66 负载），full-suite 待 GO。 | 跑 lint 验证；TASK-66 在飞 |
 | 74 | 15:07Z | no-action | **full-suite 起跑 re-green（验证 ADR-007 + TASK-68 修复）**。资源闸 GO → 起 full-suite（15:06，--maxWorkers=8）验证 439e5d3（drift flag）+ c2f2119/14df78a（lint 修复）+ 之前 TASK-65。内层在跑 TASK-68 的 lint scoped 验证（慢，多次重试——lint 超 2 分钟 Bash 默认超时，内层改显式 timeout）。TASK-66 在飞。套件 red → running。若绿：re-green，内层恢复派发，关 TASK-68（合并已落地）。 | 跑 lint + TASK-66 在飞 |
 | 75 | 15:16Z | correct | **ADR-007 第三次复发（TASK-66 cluster_boundary）→ 修本次 + 治本指令**。re-green 的 full-suite 又红：check-adr 1 failed。独立核实：`archguard_get_cluster_boundary` 缺 `--cluster-boundary` flag（arch-health-tools.ts:271）。**第三次同族违规**（TASK-64→65→66 每个新 MCP tool 都忘加 query.ts flag）。**裁定 1**：query.ts 加 --cluster-boundary（照前两次模式）。**裁定 2（治本）**：强制——后续所有新增 MCP tool 任务的 AC 加「check-adr 0 violations」条，已建未派的 MCP-tool 任务补 AC。三次实锤，机制必须把「新 tool 配 flag」变成任务内可测 AC。裁定送达（transcript 核实 1193 字符）。 | 修 cluster-boundary flag + AC 治本 |
+| 76 | 15:27Z | no-action | **ADR-007 #3 修复落地 + TASK-66/68 收尾 + re-green full-suite**。内层完成：cluster-boundary flag 修复 daec6ea + **治本规则落档** 99b4277（队列状态源：后续任何新增/修改 MCP tool 任务 AC 必须含 check-adr 0 violations——双保险：任务内可测 AC + 队列规则继承）。**外层收尾 TASK-66/68**：关括号 + 翻 done + verification-round #3。**re-green full-suite 已起**（15:25）验证 cluster-boundary 修复 + 全部合并。lint 验证后台跑（TASK-68 修复后确认 0 errors，用于重勾 TASK-50 #4/TASK-62 #8/TASK-64 #11）。 | 等 full-suite re-green |
 

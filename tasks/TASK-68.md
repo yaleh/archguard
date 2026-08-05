@@ -1,7 +1,7 @@
 ---
 id: TASK-68
 title: "TASK-68: npm run lint 不通过（13 errors）——.quay/vendor 被 lint + query.ts 格式"
-status: ready
+status: done
 labels:
   - defect
   - hygiene

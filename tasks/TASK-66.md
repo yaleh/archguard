@@ -1,7 +1,7 @@
 ---
 id: TASK-66
 title: "TASK-66: JL cluster boundary — K-Means clustering + Boundary Alignment Score (Phase 4)"
-status: ready
+status: done
 labels:
   - analysis
   - metric
