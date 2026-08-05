@@ -503,3 +503,12 @@ TASK-68 的修复对旧错误**生效**（.quay/vendor/query.ts 的解析/rule-n
 **持久状态位置**：本文件（单一可信源）+ orchestration/tick-log.md（tick #1-81）+ manager-inbox 报告 #1-8。
 **待办**：TASK-73 收尾（full-suite 后）；A 类分批（config/输出格式/插件注册表）；8 旧任务 AC 未勾（DIR-001 2/DIR-002 3/TASK-31 2/TASK-35 1/TASK-49 1）；quay 侧 3 修 + 2 建议。
 **机制缺口**（已报 manager）：send-keys welcome/非空框不可用；--test-concurrency 文档虚构；runner 判红 canonical 待同步；ready-pool not-yet-flipped 误报 2 次。
+
+## 17:59Z AC 审计收尾结论
+
+AC 审计：19 未勾 → **9 剩余**。9 项均无法由外层独立验证（勾不上写理由）：
+- DIR-001（2）：Cycle broken（需 archguard 自身环检测工具验证）、Semantic info preserved（判断题）
+- DIR-002（3）：nodeId collision fixed/test added（grep 无证据，ea13e9f 是 renderer 非 nodeId）、diagrams regenerated（需 quay 侧图）
+- TASK-31（2）/TASK-35（1）：installer 相关（需真实 install/reload 环境 + `claude mcp list`）
+- TASK-49（1）：凭据条件（需环境有凭据）
+**处置**：留待内层在真实环境验证（或有相关任务时顺带核），不盲勾。若需，内层可建「验证 9 项旧 AC」任务。
