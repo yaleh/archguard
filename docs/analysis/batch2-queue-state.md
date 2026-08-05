@@ -293,3 +293,10 @@ AC 审计勾 TASK-50 #4（npm run lint）时发现：**lint 当前 13 errors / 3
 2. `vendor/quay/dist/*.js` 7 rule-not-found（vendor 打包 JS 内联引用未加载的 @typescript-eslint 规则）——vendor 被 lint。
 3. `src/cli/commands/query.ts` 2 formatting（TASK-64 ADR-007 修复新代码，prettier 可修）。
 处置：**TASK-68 已建**（加 .eslintignore 排除 .quay/vendor + prettier 修 query.ts + 重跑 lint 0 errors）。TASK-62 DoD #8 / TASK-64 DoD #11（npm run lint）因实测不通过已**撤销勾选**（待 TASK-68 修好 lint 后重勾）。
+
+## 15:05Z 更新（manager 转达吞吐率请求 → 自适应并发裁定 + TASK-69）
+
+1. **manager 请求**：机器大部分空闲，考虑提高吞吐率（含调高 inner 并发 subagent 数）。建议自适应（GO 高并发 / WAIT 回落），裁定权在外层。实测：archguard 2 worktree 并发 = 75.8% CPU → PSI 66（门槛 40）→ WAIT，因与 quay 共享机。
+2. **外层裁定**：**自适应并发**——GO（gate 退出 0）→ inner 并发上限 4；WAIT → 回落 2。固定高并发不可行（quay laneCount=8 三次 ABORT 实锤）。自校正：GO 派 4 → vitest 推高 PSI → 下派见 WAIT 回 2 → 回落再回 4。
+3. **TASK-69 已建**（实施）：fast-mode-loop-tick.md §4 并发上限改自适应 + inner 派发前查 gate + ready-pool-check cap/floor 联动评估。内层当前批次（ADR-007 + TASK-66/68）完成后执行。
+4. **已回复 manager**（archguard-20260805-150500Z.md）：裁定 + 数字 + 边界（两层不同时跑全量不变）。
