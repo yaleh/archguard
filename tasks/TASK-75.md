@@ -1,7 +1,7 @@
 ---
 id: TASK-75
 title: "TASK-75: A 类——输出格式契约 E2E 稳定化（ArchJSON/mermaid/SVG 渲染）"
-status: todo
+status: ready
 labels:
   - test-coverage
   - boundary-list
