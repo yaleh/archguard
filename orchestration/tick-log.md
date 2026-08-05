@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 76 |
+| no-action | 77 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -118,4 +118,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 91 | 18:05Z | no-action | **建 TASK-77（9 项旧 AC 真实环境验证）并派发**。任务库耗尽后建收尾任务：TASK-77 逐项核 9 个未勾 AC（DIR-001/002、TASK-31/35/49），能勾则勾 + 证据、不能勾写理由。指示内层 §3.6/4 派发。保持自主运转（任务库空时不空转）。 | 忙（TASK-77 派发中）|
 | 92 | 18:16Z | no-action | **TASK-77 fan-in + AC 审计完成；发现 mcp-launcher 真实缺陷**。内层 fan-in TASK-77（9 项 AC 真实环境验证，b3ac8e0，只动 tasks/*.md）。**外层收尾**：关括号 + 翻 done + 勾 6 项确认 DoD（DIR-001 x2/DIR-002 x3/TASK-31 installer）。**关键发现**：2 项（TASK-31/35 的 mcp list Connected）**被真实缺陷阻塞**——安装成功但 MCP 连接失败（mcp-launcher createRequire 无法解析 npm-cache 布局核心包），内层立案 **TASK-78**。1 项（TASK-49）缺凭据。**外层盲区被内层实测闭合**（外层原判不可验证，实则有真实缺陷）。 | 忙（TASK-78 立案中）|
 | 93 | 18:32Z | no-action | **转发重锚（内层 idle）→ 内层恢复一致性核对**。内层 idle（无括号、pane 稳定 b71c8b2，TASK-78 计划在输入框未执行）。按步骤 1c 判空闲 → 转发 reanchor-prompt.txt（逐字）→ 内层收到开始一致性核对（Spelunking，读文档 + 状态自检）。其 TASK-78（mcp-launcher 修复）计划待核对后执行。 | 重锚后一致性核对 → 执行 TASK-78 计划 |
+| 94 | 18:46Z | no-action | **裁定立案 TASK-78（mcp-launcher 缺陷）**。内层等外层裁定是否立案 mcp-launcher MCP 连接缺陷（有证据：createRequire 无法解析 npm-cache 布局核心包 + 阻塞 TASK-31/35 两 AC；内层已备自行立案兜底）。**外层裁定：立案**（符合「有证据建任务」纪律），指示内层建四件套 + Contract + lint gate 后派发。 | 建 + 派发 TASK-78 |
 
