@@ -1,7 +1,7 @@
 ---
 id: TASK-61
 title: "TASK-61: 恢复 types↔analysis 环的回归守卫测试到 master"
-status: todo
+status: ready
 labels:
   - defect
   - test

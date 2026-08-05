@@ -1,7 +1,7 @@
 ---
 id: TASK-60
 title: "TASK-60: quay-tasks 存量核实并接入晋级管线（候选源配置切断）"
-status: todo
+status: ready
 labels:
   - gap
   - promotion
@@ -54,7 +54,7 @@ backlog 直接放 pool 会让 `dispatchable_disjoint` 失真（quay 侧吃过「
 
 ## Touches
 
-- `tasks/TASK-61.md` `(new)`（第一个搬入任务；后续搬入任务逐个加）
+- `tasks/TASK-62.md` `(new)`（第一个搬入任务；后续搬入任务逐个加，编号从 62 起——TASK-61 已被内层用于 types↔analysis 守卫，不占用）
 - `tasks/TASK-60.md`（自身文件）
 - `docs/analysis/quay-tasks-reconciliation.md`
 
@@ -76,6 +76,16 @@ node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd
 # 期望 pool > 0（真新已搬入）且无 TASK-14 重复
 grep -L '\*\*PARKED' quay-tasks/TASK-1*.md  # 已归档的标了 PARKED
 ```
+
+## Definition of Done
+
+- [ ] `quay-tasks/` 6 个 todo 逐个核实完毕，结论落盘 `docs/analysis/quay-tasks-reconciliation.md`
+      （真新/已覆盖/已过期三选一，附证据命令）
+- [ ] 「真新」任务已复制到 `tasks/`（编号 ≥ TASK-62，四件套 + Touches + Contract 齐全，
+      带 `source:quay-tasks/<原id>` 溯源标签），原文件已归档（标停泊标记）
+- [ ] `node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$(pwd)" --json`
+      显示 `pool` > 0 或 `dispatchable_disjoint ≥ cap`（晋级机制对搬入任务生效）
+- [ ] 重复项（TASK-14 / PROBE-ITER9 / ARCH-INVERSION-001）确认未搬入
 
 ## Progress
 
