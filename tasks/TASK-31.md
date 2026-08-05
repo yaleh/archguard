@@ -107,10 +107,16 @@ is TASK-36; parser internals (37/38/39/41) are done and out of scope.
 
 - [x] `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
       `.mcp.json` exist and pass `claude plugin validate`.
-- [ ] The deprecated installer no longer writes new registrations to
-      `~/.claude/mcp.json`. **UNCHECKED 2026-07-30 per adversarial-audit
-      refutation**: the installer still writes the registration (with a
-      `_deprecated` marker); removal is TASK-35 scope. See Land Evidence.
+- [x] The deprecated installer no longer writes new registrations to
+      `~/.claude/mcp.json`. **TASK-77 verified 2026-08-05 (real environment)**:
+      TASK-35 (28ef2c9) replaced the installer; the current
+      `scripts/install-claude-user-scope.mjs` never writes a new registration —
+      the ONLY mcp.json mutation is `cleanupDeprecatedMcpJson` residue REMOVAL
+      (delete file if now-empty, else strip the legacy `mcpServers.archguard`
+      entry preserving unrelated keys). REAL isolated install (Claude Code
+      2.1.222, published packages) logged `no deprecated mcp.json residue` and
+      the file was never created. Tests (33/33) assert "the .sh wrapper never
+      touches mcp.json" and "deprecated mcp.json is never created".
 - [x] Native dependency audit records the Tree-sitter and `sharp` import paths
       and distinguishes startup-time from analyze-time loading.
 - [x] The published plugin package contains its manifests, MCP config, skills,
@@ -129,7 +135,24 @@ is TASK-36; parser internals (37/38/39/41) are done and out of scope.
 - [x] `sharp` is absent from the query-only MCP startup graph and loads only
       when rendering functionality requires it.
 - [ ] After plugin reload/restart, `claude mcp list` shows ArchGuard
-      **Connected**.
+      **Connected**. **TASK-77 verified 2026-08-05: NOT satisfied — real
+      environment shows a connection defect (not just an unpublished boundary).**
+      The packages ARE now published (`@yalehwang/archguard-claude-plugin@0.1.32`,
+      `@yalehwang/archguard@0.1.32`). A REAL clean install in an isolated
+      CLAUDE_CONFIG_DIR succeeds and enables plugin v0.1.32, but `claude mcp list`
+      (fresh process = reload/restart) reports:
+      `plugin:archguard:archguard: … - ✘ Failed to connect — MCP error -32000:
+      Connection closed`. Root cause: `plugin/mcp-launcher.mjs` resolves the core
+      CLI via `createRequire(import.meta.url)`, which cannot see
+      `@yalehwang/archguard/dist/cli/index.js` in Claude Code 2.1.222's plugin-cache
+      layout — deps are installed to a SIBLING `plugins/npm-cache/node_modules/`
+      (not an ancestor of the plugin dir) and claude does not set NODE_PATH.
+      Verified: `require.resolve('@yalehwang/archguard/dist/cli/index.js')` from the
+      launcher dir fails MODULE_NOT_FOUND; launching with
+      `NODE_PATH=<npm-cache>/node_modules` starts the MCP server successfully. This
+      is a real integration defect surfaced now that the package is installable;
+      follow-up fix required (launcher must resolve from the npm-cache layout or
+      claude must set NODE_PATH).
 
 ## Definition of Done
 
