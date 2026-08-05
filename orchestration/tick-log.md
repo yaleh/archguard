@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 71 |
+| no-action | 72 |
 | unblock | 7 |
 | correct | 9 |
 | escalate | 0 |
@@ -113,4 +113,5 @@ grep -c 'escalate' orchestration/tick-log.md
 | 86 | 17:28Z | no-action | **TASK-75 fan-in + 收尾 + full-suite 验证 + 建 TASK-76**。内层 fan-in TASK-75（输出格式契约 E2E：ArchJSON/mermaid/SVG，06d1d13，14 scoped 绿）。**外层收尾 TASK-75**：关括号 + 翻 done。**full-suite 起**（17:26）验证 TASK-75。**建 TASK-76**（A 类最后一批插件注册表/外部加载 E2E）。A 类分批（CLI/config/输出格式/插件注册表）至此全建。 | 等 full-suite + TASK-76 派发 |
 | 87 | 17:37Z | no-action | **full-suite 绿（5175/0）+ TASK-75 DoD 勾选**。full-suite：359 文件 / **5175 passed / 0 failed**——TASK-75 验证通过，SUITE-GREEN 已发。TASK-75 DoD 3 项勾（输出格式契约 + 契约证据 + lint 0）。TASK-76 在飞（插件注册表 E2E）。 | 忙（TASK-76 subagent 在飞）|
 | 88 | 17:52Z | no-action | **TASK-76 fan-in + 收尾——A 类分批完成，任务库耗尽（里程碑）**。内层 fan-in TASK-76（插件注册表/外部加载 E2E，270afab）。**外层收尾 TASK-76**：关括号 + 翻 done。**full-suite 起**验证 TASK-76。**A 类分批全完成**（CLI/config/输出格式/插件注册表），边界清单 B 类 + A 类全部落地——**任务库 49 任务全 done，方向候选表耗尽**。下一阶段方向待裁（新能力 roadmap / AC 审计收尾 / 暂停点）。 | 等 full-suite + 方向 |
+| 89 | 17:56Z | no-action | **full-suite 绿（5188/0）+ TASK-76 DoD——边界清单完整闭环**。full-suite：360 文件 / **5188 passed / 0 failed**——TASK-76 验证通过。TASK-76 DoD 3 项勾。**边界清单（B 类 + A 类）全部落地，任务库 49 全 done**。进入 AC 审计收尾阶段（8 旧任务 9 未勾）。 | idle 等方向（任务库空）|
 
