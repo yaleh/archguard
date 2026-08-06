@@ -561,6 +561,20 @@ resume、re-lay 或补建任务。（21 个连续空闲心跳）
    todo→ready、§3.5 开括号（fm-TASK-80-…）、§4 后台派发（worktree task-80）。
 3. **在飞**：TASK-80。
 
+## 07:0xZ 更新（TASK-80 fan-in 完成——6 盲区实证）
+
+1. **TASK-80 fan-in（完成）**：quay 新机制实证验证矩阵（只读直跑 quay 脚本，未安装/re-lay）。
+   **6 盲区逐项**：①verify-delivery-surface **misjudges**（0/6 消费方布局假阴性）；②self-report-vocab
+   **misjudges**（idle 稀疏自报 → NOT-CONVERGED 假）；③slot-refill **compatible**；④**taskWorkLanded
+   第 3 信号 misjudges（实证确认）**——派发提交（subject 含 taskId + 改非 bookkeeping touch）触发
+   git-history 信号 ⇒ 未落地即报 true；⑤laydown-set-check **misjudges**（quay 专属派生源 → 0 测试
+   fail-closed）；⑥dead-loop-check 观察（alive=会话存活非工作推进）。汇总 **4/6 misjudges + 1 观察
+   + 1 compatible**。claim-task 不适用（无共享裸仓）。
+2. **关键机制缺陷（实证，报 quay）**：taskWorkLanded git-history 信号在派发提交即误触发——与
+   TASK-67/66 已记录的符号信号误报同族。ready-pool-check 的 not-yet-flipped 排除会被它破坏
+   （在飞任务被误判已落地）。归 quay 侧修。
+3. **任务库**：TASK-80 后再次耗尽。TASK-80 待外层翻 done。
+
 ## 06:41Z 更新（TASK-80 实证验证矩阵——6 盲区逐项结论落盘）
 
 1. **执行方式**：升级通道仍阻塞（quay config 冲突已立案 config-preserving 修复，未达下游），
