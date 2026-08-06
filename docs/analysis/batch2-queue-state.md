@@ -550,7 +550,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 master @ 95b9b7b（外层 tick #121 后无新提交——升级通道 Q3 分析暂停，等管理者）。
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
-resume、re-lay 或补建任务。（19 个连续空闲心跳）
+resume、re-lay 或补建任务。（20 个连续空闲心跳）
 
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
