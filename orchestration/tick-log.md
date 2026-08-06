@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 94 |
+| no-action | 95 |
 | unblock | 7 |
 | correct | 12 |
 | escalate | 1 |
@@ -140,3 +140,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 112 | 01:12Z | no-action | **停止态（第 10 个，等方向）**。/quay:cold-start 校验完成（六键五真一假，MONITORS-MOUNTED 是已知 quay 持锁缺口）。无变化。 |
 | 113 | 01:16Z | correct | **机制升级通道验证（manager 新方向）**。三问：①拉过来了吗=没有（archguard quay-init 停 0.3.13，6 新机制 + 多源心跳修复 + taskWorkLanded 第三信号全不在下游）；②能跑吗=待拉取后逐项验（vitest 生态位差异确认）；③判据会错吗=既有证据会（旧 taskWorkLanded 已 2 次 not-yet-flipped 误报 TASK-60/66）。**关键盲区**：升级通道无自动推送/拉取，消费方不主动重铺则机制最新版永远不到下游——与 watchdog systemd node 解析失败同型（亲代假设下游不成立）。报告 #11 已写，倾向跑 quay-init 重铺（不加 --force）待确认。 |
 | 114 | 01:31Z | correct | **升级通道实证：config 冲突是硬缺口**。跑 `quay init --loop`（无 --force）→ 停在 `.quay/config.yml already exists`（archguard config 含 loop 值 ≠ 模板），**不铺任何新机制**（6 文件实测仍缺）；有 --force 会覆盖 config 丢 loop 值（quay 队列 gap-quay-init-rewrites-an-executable 的形状）。**通道级缺口**：对已有 loop 配置的下游消费者「要么停、要么毁 config」——机制最新版无法经该通道到达。config 实测完好（run 停在冲突前）。报告 #11 已追加实证 + 建议（保留 config 的增量升级入口）。 |
+| 115 | 01:52Z | no-action | **验证完成待回应**。升级通道验证已闭环（报告 #11：三问 + config 冲突实证），manager 未读。通道修复是 quay 侧。循环停止态。 |
