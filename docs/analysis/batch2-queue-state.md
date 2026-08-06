@@ -548,7 +548,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 ## 22:2xZ 更新（空闲心跳：状态不变）
 
-master @ 00c60b5（外层 tick #117「stopped state，verification awaiting manager」）。
+master @ b2e4ef4（外层 tick #119「stopped state，verification awaiting manager」）。
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
 resume、re-lay 或补建任务。
 
