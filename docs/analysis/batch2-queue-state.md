@@ -548,10 +548,9 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 ## 22:2xZ 更新（空闲心跳：状态不变）
 
-master @ b025435（外层 tick #112 停摆核对 5/6；tick #113 **机制升级通道核实**：quay-init 0.3.13
-未交付新机制，建议 re-lay 待管理者确认——机制维护，非任务派发）。全任务 done、无在飞、无候选、
-full-suite green、`.halt` 无。工作树有外层未提交的 TASK-77 done-flip（外层收尾书账，内层不碰）。
-内层兜底心跳继续，等外层/管理者 resume 或补建任务。
+master @ 892368b（外层 tick #114 升级通道被 config conflict 实际阻塞 / #115 验证完成等管理者响应）。
+全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
+resume、re-lay 或补建任务。
 
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
