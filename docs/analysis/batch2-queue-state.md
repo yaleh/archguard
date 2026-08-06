@@ -694,3 +694,19 @@ AC 审计：19 未勾 → **9 剩余**。9 项均无法由外层独立验证（�
 - **2 项被真实缺陷阻塞**：TASK-31/35 的 `claude mcp list Connected`——安装/升级机制成功但 **MCP 连接失败**（mcp-launcher createRequire 无法解析 npm-cache 布局里的核心包）。内层立案 **TASK-78**（修 plugin/mcp-launcher.mjs MCP 连接缺陷）。
 - **1 项缺凭据**：TASK-49（OPENAI_API_KEY 环境无，测试干净跳过 44|1）。
 **价值**：外层原判「9 项无法独立验证」——交给内层真实环境核后，揭示 2 项 AC 实际未满足（真实缺陷）+ 1 项环境阻塞。外层视角盲区被内层实测闭合。
+
+## 13:2xZ 管理者跨项目观测处置（TASK-60 交付核实）
+
+1. **管理者观测**：TASK-60 标 done 但 quay-tasks 6 条 todo 似乎未搬入；TASK-60 正文 line 16 留
+   `status: todo`（frontmatter done——字段/正文漂移）；空池 idling 192 分钟打 AC12b。
+2. **内层独立核实（证伪命令）**：**TASK-60 交付物已落地**——TASK-62..66 带 `source:
+   quay-tasks/TASK-11/16/17/18/19` 标签（5 真新搬入并全部执行合并）；TASK-14 判已覆盖（= TASK-50）
+   按 AC 排除；6 个 originals 全标 `**PARKED`（归档）。对账文档三分类齐全。空池真因：搬入工作 +
+   后续任务（至 TASK-80）全部消费 done、方向候选耗尽——自然排空，非交付缺失。quay-tasks 从未
+   接入管线（`QUAY_NATIVE_TASKS_DIR: ./tasks`），其 6 todo 是源归档（PARKED），非未处理。
+3. **真实问题处置**：①TASK-60 正文漂移——**已修**（commit 32af830，body 对齐 done；核实无其它
+   任务有此漂移）；②originals `status: todo` 未闭合（PARKED 归档但 status 未翻，产品读误读为
+   「未处理」）——建议外层/管理者翻 done（归档）或立小任务做闭合 + 机械检查；③机械检查建议采纳：
+   声称「搬入/接入 N 条」的任务标 done 时必须验证目标 store 真出现对应 source-tagged 条目。
+4. **.halt 说明**：管理者观察到输入框未发送文本「创建 .halt 停止循环」——**内层未创建 .halt、
+   不打算创建**；空闲兜底心跳是文档机制，继续运行。停止由管理者/外层决定（建 .halt 或结束会话）。
