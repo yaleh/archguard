@@ -577,7 +577,7 @@ resume、re-lay 或补建任务。（21 个连续空闲心跳）
 
 ## 07:1xZ 更新（空闲心跳）
 
-master @ 27f292a（外层 tick #132：TASK-80 closed，确认经验矩阵 + taskWorkLanded 更深发现）。
+master @ 27f292a（外层 tick #132 后无新提交——TASK-80 closed）。
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
 补建任务或方向。
 
