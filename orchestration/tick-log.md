@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 101 |
 | unblock | 7 |
-| correct | 15 |
+| correct | 16 |
 | escalate | 1 |
 
 ## Tick 记录
@@ -150,3 +150,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 130 | 04:14Z | correct | **打破空转：实证 2 个判据盲区 + 建 TASK-80**。manager 提醒用既有机制（补建任务）。真跑 quay 机制对 archguard：①verify-delivery-surface 报 0/6 假阴性（查 quay 自家布局，不认消费方布局）；②self-report-vocab 把停止态自报判非收敛（假警报，工厂语义假设活跃循环）。建 TASK-80（升级落地后的 6 盲区实证矩阵），队列有候选。 |
 | 131 | 04:36Z | correct | **实证矩阵完成（6 机制 × archguard）**。真跑 quay 机制对 archguard：verify-delivery-surface 0/6（消费方布局假阴性）、self-report-vocab 停止态假警报、laydown-set-check red（0 derived test 假阴性）、dead-loop-check alive（语义观察）、slot-refill 兼容（空队列 no-refill 正确）。**4/6 有消费方实证盲区**。报告 #12 追加完整矩阵，TASK-80 更新。 |
 | 132 | 06:52Z | no-action | **TASK-80 收尾（内层完成实证矩阵 + 更深发现）**。内层 fan-in TASK-80：6 机制实证矩阵（4fc83d7，只动 docs）。**内层更深的发现**：taskWorkLanded 3rd 信号 git-history 提前触发（派发提交 ff663db 含 TASK-80 + 改 declared touch batch2-queue-state.md → taskWorkLanded=true 而工作未落地）——时序超报实证。外层收尾：关括号 + 翻 done（merge 只动 docs 无需 full-suite）。内层「停掉 loop，会话收尾」。 |
+| 133 | 07:25Z | correct | **消费方独立验证：verify-delivery-surface 不在铺设集（0/6 另一半根因确认）**。查 archguard 实际铺设集：旧版 0.3.13 机制在，verify-delivery-surface.ts 不在——消费方拿不到那个声称该有的检查，跑不了它（之前跑 quay 副本）。quay-init-state laidFiles 只记 2 tick 文档（记录不完整=另条小盲区）。报告 #12 追加消费方确认。 |
