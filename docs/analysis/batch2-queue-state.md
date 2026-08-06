@@ -561,6 +561,33 @@ resume、re-lay 或补建任务。（21 个连续空闲心跳）
    todo→ready、§3.5 开括号（fm-TASK-80-…）、§4 后台派发（worktree task-80）。
 3. **在飞**：TASK-80。
 
+## 06:41Z 更新（TASK-80 实证验证矩阵——6 盲区逐项结论落盘）
+
+1. **执行方式**：升级通道仍阻塞（quay config 冲突已立案 config-preserving 修复，未达下游），
+   TASK-80 按 Contract 以**只读验证**执行——直接跑 quay 仓库（/home/yale/work/quay）机制脚本对
+   archguard 根（`--root /home/yale/work/archguard`），**未安装/re-lay 任何 quay 新机制**。每条
+   盲区一个可证伪跑，结论 `compatible|misjudges|观察` + 证据。
+
+2. **6 盲区逐项结论**（measure=6，band=每条有证据）：
+
+| # | 机制 | 结论 | 证据（实跑输出摘要） |
+|---|------|------|------|
+| 1 | verify-delivery-surface | **misjudges** | `node --experimental-strip-types plugin/scripts/verify-delivery-surface.ts --surface --root <archguard>` → `surface_categories_covered=0/6`, exit=1。MANIFEST 钉死 quay 工厂布局（plugin/scripts/quay-init.sh、plugin/loop/*.md、.claude/launch.settings.json、quay-topology.sh、os-anchor-install.sh、verify-delivery-surface.ts）。archguard 六类均有自家布局交付（loop-docs=orchestration/orchestrator-loop-tick.md+docs/analysis/fast-mode-loop-tick.md；launch-config=.claude/settings.json；session-topology=pane-state-classify.ts+session-liveness.sh；periodic-anchor=session-liveness-mount.sh+monitor-mount-check.sh+session-liveness.env；observation=*.ts+*-check.ts；mechanism=plugin/scripts/*.ts）→ 0/6 是**消费方布局假阴性**，非真实缺口。 |
+| 2 | self-report-vocab | **misjudges** | 喂停止态 idle heartbeat（window 3）：全量 18 条 → `CONVERGED`（词表干净且量足）；**稀疏 1 条 → `NOT-CONVERGED`（`reports_total 1 < window 3`，0 命中 batch 仍非收敛）**；2 条 → 同 NOT-CONVERGED。对照活跃态工厂词表（rolling dispatch/verification-round ×3）→ `CONVERGED`。判据的 fail-closed 收敛规则按**自报量**（>= window）而非仅词表净度判定——停止/安静的循环自报稀疏（< window）时被误判非收敛（**假警报**，工厂语义假设活跃派发循环）。 |
+| 3 | slot-refill | **compatible** | `node --experimental-strip-types plugin/scripts/slot-refill.ts --root <archguard> --cap 3` → `slots_free:3, pool:0, floor:12, dispatchable_disjoint:0, criterion_met:false, should_refill:false, no_refill_reason:"no dispatchable candidate passes step-4 checks"`。空队列 → no-refill 正确；--cap 3 生效。 |
+| 4 | taskWorkLanded 第三信号 | **misjudges**（时序超报，实证确认） | `taskWorkLanded(TASK-80.md)` = **true**，而 TASK-80 工作**尚未落地**（执行中）。git-history 信号在派发提交 ff663db（subject 含 "TASK-80" 且改过 declared 非-bookkeeping touch `docs/analysis/batch2-queue-state.md`）即触发。机制无法区分「任务交付物落地」与「提到任务 id 的派发/meta 提交动了 declared 路径」。Touches 含 docs/analysis/ 或 orchestration/ 的任务，任何提及任务 id 的提交都提前触发第三信号。 |
+| 5 | laydown-set-check | **misjudges** | `bash plugin/scripts/laydown-set-check.sh --root <archguard>` → `laydown_set_green: red`，reason "0 test files resolved from the derived laydown set (0 scripts) — fail-closed"，exit=1。派生源是 quay 专属（plugin/skills/*/SKILL.md + plugin/loop/*.md），archguard（消费方）无 → 0 脚本 → 0 测试 → fail-closed red。archguard 机制测试存在（tests/unit、tests/integration）但派生不到。 |
+| 6 | dead-loop-check | **观察** | `bash plugin/scripts/dead-loop-check.sh --root <archguard> --window 30` → `loop_alive=alive, has_transcript_user_msg=1, has_git_commit=1`。archguard 当前**停止**（idle heartbeat 提交，无派发）仍报 alive。判「会话存活」（transcript user msg + git 提交窗）非「工作推进」，无法区分「活着但没干活」与「正在干活」。 |
+
+3. **claim-task**（第 7 项，非 6 盲区之一）：**不适用**。archguard 唯一 remote 是普通 GitHub 远端
+   （https://github.com/yaleh/archguard.git），无共享裸仓、无第二台机器 push `task/*` 分支 →
+   双机 claiming 协议前提不成立（单机工作树互斥由本地 ready-pool/disjoint 承担）。
+4. **判据盲区清单更新**：本次新增实证——**taskWorkLanded 第三信号时序超报**（原静态判）已实证确认
+   misjudges；verify-delivery-surface 布局假阴性、self-report-vocab 停止态假警报、laydown-set-check
+   fail-closed 假阴性均为消费方布局/状态盲区（判据不认消费方生态，4/6 misjudges + 1 观察 + 1 compatible）。
+5. **升级通道修复状态**：未达下游（archguard 侧 `quay init --loop` 无 --force 停在 `.quay/config.yml
+   already exists`，config 冲突已立案）。本任务以只读直跑 quay 脚本绕过，不视为通道修复。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。

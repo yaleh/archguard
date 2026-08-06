@@ -39,10 +39,27 @@ config-preserving 修复）。**升级通道修复后**，需对新机制做**�
 
 ## Acceptance Criteria
 
-- [ ] 6 盲区逐项实证（compatible / misjudges + 证据）
-- [ ] verify-delivery-surface 对 archguard 的正确结果（非 0/6 假阴性）——若判据不认消费方布局则报 misjudges
-- [ ] 内层自报词汇在活跃态 vs 停止态的 audit 行为记录
-- [ ] 涉及改动的文件 lint-clean（若改动——治本规则）
+- [x] 6 盲区逐项实证（compatible / misjudges + 证据）—— 6/6 结论落盘 `docs/analysis/batch2-queue-state.md`（见下「实证结果」）
+- [x] verify-delivery-surface 对 archguard 的正确结果（非 0/6 假阴性）——若判据不认消费方布局则报 misjudges —— 实跑 = 0/6，判据 MANIFEST 钉死 quay 工厂布局、不认消费方布局 → **misjudges**（archguard 六类均有自家布局交付）
+- [x] 内层自报词汇在活跃态 vs 停止态的 audit 行为记录 —— 活跃态工厂词表（rolling dispatch/verification-round ×3）→ CONVERGED；停止态 idle heartbeat：全量 18 条 → CONVERGED，稀疏 1/2 条（< window 3）→ NOT-CONVERGED（0 命中 batch 仍非收敛，fail-closed 按自报量假警报）
+- [x] 涉及改动的文件 lint-clean（若改动——治本规则）—— 改动仅 `.md`（batch2-queue-state.md + 本文件），无 .ts/.sh 改动，scoped eslint 0 errors 不适用
+
+## 实证结果（2026-08-06 06:41Z）
+
+执行方式：升级通道仍阻塞（quay config 冲突已立案），按 Contract 只读验证——直接跑 quay 仓库
+（`/home/yale/work/quay`）机制脚本对 archguard 根（`--root /home/yale/work/archguard`），未安装/re-lay
+任何 quay 新机制。完整矩阵落盘 `docs/analysis/batch2-queue-state.md`（06:41Z 更新节）。
+
+| # | 机制 | 结论 | invoke 实跑证据 |
+|---|------|------|------|
+| 1 | verify-delivery-surface | **misjudges** | `node --experimental-strip-types plugin/scripts/verify-delivery-surface.ts --surface --root <archguard>` → `surface_categories_covered=0/6`, FAIL, exit=1 |
+| 2 | self-report-vocab | **misjudges** | 停止态 idle heartbeat（window 3）：全量 18 条 → CONVERGED；稀疏 1/2 条 → `inner_self_report_vocab=0 · NOT-CONVERGED (reports_total < 3)`（fail-closed 按自报量假警报）；活跃态工厂词表 ×3 → CONVERGED |
+| 3 | slot-refill | **compatible** | `node --experimental-strip-types plugin/scripts/slot-refill.ts --root <archguard> --cap 3` → `slots_free:3, pool:0, should_refill:false, no_refill_reason:"no dispatchable candidate passes step-4 checks"` |
+| 4 | taskWorkLanded 第三信号 | **misjudges**（时序超报） | `taskWorkLanded(TASK-80.md)` = **true** 而工作未落地——派发提交 ff663db（subject 含 TASK-80 + 改 declared touch `docs/analysis/batch2-queue-state.md`）提前触发 git-history 信号 |
+| 5 | laydown-set-check | **misjudges** | `bash plugin/scripts/laydown-set-check.sh --root <archguard>` → `laydown_set_green: red`, "0 test files resolved… fail-closed", exit=1 |
+| 6 | dead-loop-check | **观察** | `bash plugin/scripts/dead-loop-check.sh --root <archguard> --window 30` → `loop_alive=alive, has_transcript_user_msg=1, has_git_commit=1`（停止态仍 alive = 判会话存活非工作推进） |
+
+附：**claim-task** 不适用（单机无共享裸仓，remote = 普通 GitHub 远端）。升级通道修复状态：未达下游。
 
 ## Touches
 
