@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 100 |
 | unblock | 7 |
-| correct | 12 |
+| correct | 13 |
 | escalate | 1 |
 
 ## Tick 记录
@@ -146,3 +146,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 118 | 02:52Z | no-action | **停止态（验证待回应）**。无变化。 |
 | 119 | 03:12Z | no-action | **停止态（验证待回应）**。无变化。 |
 | 120 | 03:32Z | no-action | **停止态（验证待回应）**。无变化。 |
+| 121 | 03:33Z | correct | **新机制静态判据分析（第 3 问）**。8 个新机制无法经升级通道安装（config 冲突），改做静态判据分析。矩阵结论：dead-loop-check/laydown-set/多源心跳兼容；**4 个有具体盲区**——claim-task（单机无共享仓不适用）、slot-refill（并发 cap 3 vs quay 阈值不匹配）、self-report-vocab（新工厂语义 vs 旧文档版本）、taskWorkLanded 第三信号 checkbox（内外层分工勾选，not-yet-flipped 误判风险）。报告 #12 已写。自主 backlog 真正清空，如实报告完成点。 |
