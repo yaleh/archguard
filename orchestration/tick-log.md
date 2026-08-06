@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 100 |
 | unblock | 7 |
-| correct | 14 |
+| correct | 15 |
 | escalate | 1 |
 
 ## Tick 记录
@@ -148,3 +148,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 120 | 03:32Z | no-action | **停止态（验证待回应）**。无变化。 |
 | 121 | 03:33Z | correct | **新机制静态判据分析（第 3 问）**。8 个新机制无法经升级通道安装（config 冲突），改做静态判据分析。矩阵结论：dead-loop-check/laydown-set/多源心跳兼容；**4 个有具体盲区**——claim-task（单机无共享仓不适用）、slot-refill（并发 cap 3 vs quay 阈值不匹配）、self-report-vocab（新工厂语义 vs 旧文档版本）、taskWorkLanded 第三信号 checkbox（内外层分工勾选，not-yet-flipped 误判风险）。报告 #12 已写。自主 backlog 真正清空，如实报告完成点。 |
 | 130 | 04:14Z | correct | **打破空转：实证 2 个判据盲区 + 建 TASK-80**。manager 提醒用既有机制（补建任务）。真跑 quay 机制对 archguard：①verify-delivery-surface 报 0/6 假阴性（查 quay 自家布局，不认消费方布局）；②self-report-vocab 把停止态自报判非收敛（假警报，工厂语义假设活跃循环）。建 TASK-80（升级落地后的 6 盲区实证矩阵），队列有候选。 |
+| 131 | 04:36Z | correct | **实证矩阵完成（6 机制 × archguard）**。真跑 quay 机制对 archguard：verify-delivery-surface 0/6（消费方布局假阴性）、self-report-vocab 停止态假警报、laydown-set-check red（0 derived test 假阴性）、dead-loop-check alive（语义观察）、slot-refill 兼容（空队列 no-refill 正确）。**4/6 有消费方实证盲区**。报告 #12 追加完整矩阵，TASK-80 更新。 |

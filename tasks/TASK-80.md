@@ -19,15 +19,18 @@ quay 今晚 15 个机制合并无法经升级通道到达 archguard（config 冲
 config-preserving 修复）。**升级通道修复后**，需对新机制做**实证验证**（非静态分析）——对照
 已发现的盲区逐项测。本任务在升级落地后执行。
 
-**已知盲区（静态分析 + 本次实证）**：
+**已知盲区（静态分析 + 实证 2026-08-06）**：
 1. **verify-delivery-surface 报 0/6 假阴性**（实证：跑 quay 脚本对 archguard 根 = 0/6，因查
-   quay 自家布局 plugin/loop/ 等，非消费方布局 orchestration/+docs/analysis/）。
-2. **self-report-vocab 假警报**（实证：停止态内层自报 idle heartbeat 会被判非收敛——工厂语义
-   假设活跃派发循环）。
-3. **claim-task 不适用**（单机无共享裸仓）。
-4. **slot-refill 阈值不匹配**（cap 3 vs quay）。
-5. **taskWorkLanded 第三信号收尾时序超报**（内外层分工勾选）。
-6. **laydown-set-check / dead-loop-check / 多源心跳** 静态判兼容，需实证确认。
+   quay 自家布局 plugin/loop/ 等，非消费方布局 orchestration/+docs/analysis/）——**misjudges**。
+2. **self-report-vocab 假警报**（实证：停止态内层自报 idle heartbeat 被判非收敛——工厂语义假设
+   活跃派发循环）——**misjudges**。
+3. **claim-task 不适用**（单机无共享裸仓）——**不适用**。
+4. **slot-refill 兼容**（实证：空队列 → no-refill 正确，--cap 3 生效）——**compatible**。
+5. **taskWorkLanded 第三信号收尾时序超报**（内外层分工勾选——静态判，待安装后实证）。
+6. **laydown-set-check 报 red 假阴性**（实证：0 derived test files，fail-closed——archguard 机制
+   测试存在但派生不到）——**misjudges**。
+7. **dead-loop-check 语义观察**（实证：停止但存活的 archguard 报 alive——判「会话存活」非「工作
+   推进」，无法区分活着但没干活）——**观察**。
 
 ### 选定机制
 
