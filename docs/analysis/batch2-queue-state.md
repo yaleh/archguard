@@ -552,6 +552,15 @@ master @ 95b9b7b（外层 tick #121 后无新提交——升级通道 Q3 分析�
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
 resume、re-lay 或补建任务。（21 个连续空闲心跳）
 
+## 06:4xZ 更新（TASK-80 派发——打破空转）
+
+1. **外层 tick #131（cafddd1）**：6 mechanisms × archguard 经验矩阵完成；经管理者提醒用既有机制
+   打破空转，**新建 TASK-80**（quay 新机制实证验证矩阵，含已知 6 盲区——用 archguard 已落地机制
+   逐项验证 quay 新机制判据，结果落盘 queue-state；不安装/re-lay quay 新机制）。
+2. **§3.6 补晋 + §4 派发**：TASK-80 资格通过（self-touch OK、resolve 0/3、lint gate 在位）→
+   todo→ready、§3.5 开括号（fm-TASK-80-…）、§4 后台派发（worktree task-80）。
+3. **在飞**：TASK-80。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。

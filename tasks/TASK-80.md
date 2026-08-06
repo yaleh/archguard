@@ -1,7 +1,7 @@
 ---
 id: TASK-80
 title: "TASK-80: quay 新机制落地后的实证验证矩阵（含已知 6 盲区）"
-status: todo
+status: ready
 labels:
   - verification
   - mechanism
