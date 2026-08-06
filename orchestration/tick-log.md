@@ -17,7 +17,7 @@ grep -c 'escalate' orchestration/tick-log.md
 |---|---|
 | no-action | 94 |
 | unblock | 7 |
-| correct | 10 |
+| correct | 11 |
 | escalate | 1 |
 
 ## Tick 记录
@@ -138,3 +138,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 110 | 00:32Z | no-action | **停止态（第 8 个，等方向）**。无变化。循环停止待人类方向。 |
 | 111 | 00:52Z | no-action | **停止态（第 9 个，等方向）**。无变化。循环停止待人类方向。 |
 | 112 | 01:12Z | no-action | **停止态（第 10 个，等方向）**。/quay:cold-start 校验完成（六键五真一假，MONITORS-MOUNTED 是已知 quay 持锁缺口）。无变化。 |
+| 113 | 01:16Z | correct | **机制升级通道验证（manager 新方向）**。三问：①拉过来了吗=没有（archguard quay-init 停 0.3.13，6 新机制 + 多源心跳修复 + taskWorkLanded 第三信号全不在下游）；②能跑吗=待拉取后逐项验（vitest 生态位差异确认）；③判据会错吗=既有证据会（旧 taskWorkLanded 已 2 次 not-yet-flipped 误报 TASK-60/66）。**关键盲区**：升级通道无自动推送/拉取，消费方不主动重铺则机制最新版永远不到下游——与 watchdog systemd node 解析失败同型（亲代假设下游不成立）。报告 #11 已写，倾向跑 quay-init 重铺（不加 --force）待确认。 |
