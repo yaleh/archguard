@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 101 |
+| no-action | 102 |
 | unblock | 7 |
 | correct | 17 |
 | escalate | 1 |
@@ -152,3 +152,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 132 | 06:52Z | no-action | **TASK-80 收尾（内层完成实证矩阵 + 更深发现）**。内层 fan-in TASK-80：6 机制实证矩阵（4fc83d7，只动 docs）。**内层更深的发现**：taskWorkLanded 3rd 信号 git-history 提前触发（派发提交 ff663db 含 TASK-80 + 改 declared touch batch2-queue-state.md → taskWorkLanded=true 而工作未落地）——时序超报实证。外层收尾：关括号 + 翻 done（merge 只动 docs 无需 full-suite）。内层「停掉 loop，会话收尾」。 |
 | 133 | 07:25Z | correct | **消费方独立验证：verify-delivery-surface 不在铺设集（0/6 另一半根因确认）**。查 archguard 实际铺设集：旧版 0.3.13 机制在，verify-delivery-surface.ts 不在——消费方拿不到那个声称该有的检查，跑不了它（之前跑 quay 副本）。quay-init-state laidFiles 只记 2 tick 文档（记录不完整=另条小盲区）。报告 #12 追加消费方确认。 |
 | 134 | 10:16Z | correct | **v0.4.0 release 产物验证：plugin 包不在产物里**。消费方下载 quay-sea-0.4.0-linux-x64.tar.gz 真验：tarball 只有 quay/quay-native 二进制 + tasks + config 模板，**无 plugin 包**（6 新机制名 strings 全未找到，SEA 未内嵌）。config-preserving 修复不在 v0.4.0（无 --force 仍停 config 冲突）。**AC16 在产物层面未达成**（source package.json files 含 plugin ≠ release 产物含 plugin）——消费方装 v0.4.0 仍拿不到机制。报告 #13 已写；archguard 暂不装（装了也拿不到机制），继续旧版 0.3.13。 |
+| 145 | 11:30Z | no-action | **内层处置 manager 跨项目观察（TASK-60 交付物验证）+ 外层关 PARKED 原文件**。内层验证 TASK-60 交付物落地（TASK-62..66 带 source 标签、TASK-14 正确排除、原文件 PARKED），修 body/frontmatter drift（32af830）。遗留：6 个 PARKED 原文件 status:todo 未关（内层建议 outer/manager 关）——**外层已关**（status→done，PARKED 标记在）。 |

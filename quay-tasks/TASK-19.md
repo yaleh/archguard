@@ -1,7 +1,7 @@
 ---
 id: TASK-19
 title: "JL cluster boundary: K-Means clustering + Boundary Alignment Score (Phase 4)"
-status: todo
+status: done
 labels:
   - source:backlog-TASK-19
 parent: null

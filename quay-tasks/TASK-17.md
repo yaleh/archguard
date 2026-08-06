@@ -1,7 +1,7 @@
 ---
 id: TASK-17
 title: "JL intrinsic dimension: adjacency matrix + SVD + arch-health-history (Phase 4)"
-status: todo
+status: done
 labels:
   - source:backlog-TASK-17
 parent: null

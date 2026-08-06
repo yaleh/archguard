@@ -1,7 +1,7 @@
 ---
 id: TASK-14
 title: "Information shape smell detection: Layer 1 literal dispersion detector for TypeScript"
-status: todo
+status: done
 labels:
   - source:backlog-TASK-14
 parent: null

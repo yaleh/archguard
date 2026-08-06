@@ -1,7 +1,7 @@
 ---
 id: TASK-11
 title: "Tree-sitter query externalization: QueryLoader + CaptureMapper + C++ reference implementation"
-status: todo
+status: done
 labels:
   - source:backlog-TASK-11
 parent: null

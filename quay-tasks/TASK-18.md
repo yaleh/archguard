@@ -1,7 +1,7 @@
 ---
 id: TASK-18
 title: "JL architecture drift: per-entity L2 distance between snapshots + CI/CD gate (Phase 4)"
-status: todo
+status: done
 labels:
   - source:backlog-TASK-18
 parent: null
