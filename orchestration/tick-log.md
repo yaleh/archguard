@@ -15,7 +15,7 @@ grep -c 'escalate' orchestration/tick-log.md
 
 | 类型 | 计数 |
 |---|---|
-| no-action | 96 |
+| no-action | 97 |
 | unblock | 7 |
 | correct | 12 |
 | escalate | 1 |
@@ -142,3 +142,4 @@ grep -c 'escalate' orchestration/tick-log.md
 | 114 | 01:31Z | correct | **升级通道实证：config 冲突是硬缺口**。跑 `quay init --loop`（无 --force）→ 停在 `.quay/config.yml already exists`（archguard config 含 loop 值 ≠ 模板），**不铺任何新机制**（6 文件实测仍缺）；有 --force 会覆盖 config 丢 loop 值（quay 队列 gap-quay-init-rewrites-an-executable 的形状）。**通道级缺口**：对已有 loop 配置的下游消费者「要么停、要么毁 config」——机制最新版无法经该通道到达。config 实测完好（run 停在冲突前）。报告 #11 已追加实证 + 建议（保留 config 的增量升级入口）。 |
 | 115 | 01:52Z | no-action | **验证完成待回应**。升级通道验证已闭环（报告 #11：三问 + config 冲突实证），manager 未读。通道修复是 quay 侧。循环停止态。 |
 | 116 | 02:12Z | no-action | **停止态（验证待回应）**。无变化，报告 #11 未读。 |
+| 117 | 02:32Z | no-action | **停止态（验证待回应）**。无变化。 |
