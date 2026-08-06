@@ -548,7 +548,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 ## 22:2xZ 更新（空闲心跳：状态不变）
 
-master @ 95b9b7b（外层 tick #120 停摆 / #121 对 8 个新机制静态判据分析 Q3——升级通道核实）。
+master @ 95b9b7b（外层 tick #121 后无新提交——升级通道 Q3 分析进行中）。
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
 resume、re-lay 或补建任务。
 
