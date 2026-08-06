@@ -548,7 +548,7 @@ full-suite **真红**（3 文件 6 失败，5013 passed）→ 外层裁定 forwa
 
 ## 22:2xZ 更新（空闲心跳：状态不变）
 
-master @ 892368b（外层 tick #114 升级通道被 config conflict 实际阻塞 / #115 验证完成等管理者响应）。
+master @ 823a5b8（外层 tick #116「stopped state，verification awaiting manager」）。
 全任务 done、无在飞、无候选、full-suite green、`.halt` 无。内层兜底心跳继续，等外层/管理者
 resume、re-lay 或补建任务。
 
