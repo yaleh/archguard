@@ -13,7 +13,7 @@ extra:
 ---
 # TASK-60: quay-tasks 存量核实并接入晋级管线（候选源配置切断）
 
-status: todo
+status: done
 
 ## Proposal
 
