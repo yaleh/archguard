@@ -608,6 +608,33 @@ master @ 27f292a（外层 tick #132 后无新提交——TASK-80 closed）。
 5. **升级通道修复状态**：未达下游（archguard 侧 `quay init --loop` 无 --force 停在 `.quay/config.yml
    already exists`，config 冲突已立案）。本任务以只读直跑 quay 脚本绕过，不视为通道修复。
 
+## 19:0xZ 更新（TASK-86 v0.4.0 机制升级后 6 盲区矩阵重跑——消费方布局复核）
+
+commit `441960d8` 已把 archguard 升级到 v0.4.0（`.quay/quay-init-state.json` pluginVersion=0.4.0，
+78/78 铺设集绿）。TASK-86 只读重跑 TASK-80 6 盲区矩阵（对照 before），**不改任何机制脚本**。
+
+**铺设集确认**：`plugin/scripts/dist/` 含 verify-delivery-surface.js / self-report-vocab-audit.js /
+self-report-vocab-check.js / slot-refill.js；laydown-set-check.sh / dead-loop-check.sh 在位。这些是
+quay-init 铺设的 gitignored 机制产物（主仓在位，worktree fork 不携带）——验证在主仓根直跑。
+
+**6 盲区重跑矩阵（before=TASK-80 v0.3.13，after=v0.4.0）**：
+
+| # | 盲区 | before (v0.3.13) | after (v0.4.0 实测) | 判定 |
+|---|---|---|---|---|
+| 1 | verify-delivery-surface | misjudges 0/6 | `surface_categories_covered=5/6`（5 类 COVERED；1 MISSING=observation-and-verification，自引用 .ts 源缺失），exit 1（band 6 未满） | **已修（部分）** 0/6→5/6 |
+| 2 | self-report-vocab | misjudges（稀疏→NOT-CONVERGED 假警报） | check count=0 → `OK` **exit 0**；audit NOT-CONVERGED 也 **exit 0**（非阻塞） | **已修** 假警报不阻塞 |
+| 3 | slot-refill | compatible | ready-pool-check pool=1<floor 12 → no-refill 正确；但 `slot-refill.sh --cap 3` → `ERROR: charter not found: --cap` exit 2（wrapper 透传坏） | **compatible（语义）** + **新增缺陷** |
+| 4 | taskWorkLanded 第3信号 | misjudges（派发提交误触发） | TASK-86 在 ready 且 `excluded: []`（未落地正确检出） | **已修** |
+| 5 | laydown-set-check | misjudges（0 derived fail-closed） | 仍 `laydown_set_green: red`（empty set，exit 1） | **仍存** |
+| 6 | dead-loop-check | 观察（alive≠工作） | alive + `liveness_independent_of_backlog=1` + next_step 分类（不报「已完成」） | **已改进** |
+
+**汇总**：misjudges 4/6（v0.3.13）→ **1/6 仍存**（laydown-set-check）+ 3 已修 + 1 已改进 +
+1 compatible（语义）。**新增盲区**：slot-refill wrapper 的 `--cap` 参数坏（v0.4.0 铺设缺陷，
+透传给不吃 cap 的内层；slot-refill.js 的 --cap/--help 也 charter not found）。
+
+**盲区清单 delta**：已修（verify-delivery-surface / self-report-vocab / taskWorkLanded）、
+已改进（dead-loop-check）、仍存（laydown-set-check 消费方假阴性）、新增（slot-refill wrapper --cap）。
+
 ## 13:28Z 更新（外层 tick #64：TASK-62/63/64/67 收尾）
 
 1. **本轮 4 任务已 fan-in 合并**：TASK-62（QueryLoader/CaptureMapper/C++，5c03e2d+bbec226）、TASK-63（PackRegistry/RuleEngine，b10586a+c70e754）、TASK-64（JL SVD/arch-health，7e8174b+37198b5）、TASK-67（runner 结构化判红修复，1c02f46+765566b）。
@@ -920,3 +947,28 @@ TASK-85 交付物：超限大图降级而非裸 exit 1（`.mmd` 保留 + 明确�
 **TASK-81→85 管线里程碑**：TASK-81（自分析种子）→ 82（原生缺口 397→0）→ 83（`.archguard/output/`
 布局契约对齐）→ 84（池 size 机器依赖 1→0）→ 85（500-edge 硬失败降级）= 冷启动五连，本地 full-suite
 与自验证路径全部闭合。任务库：59 done、TASK-86 ready、无在飞。
+
+## 19:0xZ 更新（外层滚动派发：TASK-86 v0.4.0 6 盲区矩阵重跑执行到 done）
+
+**实况（2026-08-11）**：master @ 14a0b85f（TASK-85 收尾后）→ 执行后 @ <merge>。任务板 59 done、
+仅 TASK-86 ready（role=primitive）。三项目无 `.halt`。本任务为**只读验证**——重跑 TASK-80 6 盲区
+矩阵（v0.4.0 机制升级后），不改任何机制脚本。
+
+**执行**：worktree `task-86`（ext4 磁盘）分叉 + task 文件复制。验证在主仓根直跑（机制脚本
+`plugin/scripts/dist/*.js` / `*.sh` 为 quay-init 铺设的 gitignored 产物，worktree fork 不携带——
+只读验证不依赖 worktree node_modules）。
+
+**6 盲区重跑结论（对照 TASK-80 v0.3.13）**：见上文「19:0xZ 更新」delta 节。汇总：
+- **已修 (3)**：verify-delivery-surface（0/6→**5/6** COVERED）、self-report-vocab（NOT-CONVERGED
+  非阻塞 exit 0）、taskWorkLanded（TASK-86 在 ready、`excluded: []`——未落地正确检出）。
+- **已改进 (1)**：dead-loop-check（`liveness_independent_of_backlog=1` + next_step 分类）。
+- **仍存 (1)**：laydown-set-check（消费方 0 derived 仍 fail-closed red，派生源 quay 专属）。
+- **compatible（语义）(1)**：slot-refill（pool=1<floor 12 → no-refill 正确）。
+- **新增缺陷 (1)**：slot-refill wrapper `--cap` 参数坏（透传给不吃 cap 的内层，exit 2）——归 quay 侧。
+
+**DoD/AC**：5 AC + 3 DoD 全勾 + 矩阵落盘（任务体 + batch2-queue-state delta 节）；`quay task check`
+`ok:true / terminal`。**ready → done**（CAS 通过）。任务板 **60 done**。
+
+**TASK-86 交付物**：v0.4.0 升级后 6 盲区矩阵重跑——misjudges 4/6 → 1/6 仍存 + 3 已修 + 1 已改进 +
+1 compatible + 1 新增缺陷（slot-refill wrapper --cap）。机制升级显著改善了消费方布局认知。
+任务库：60 done、无在飞、无 ready——等外层补建下一批方向。
