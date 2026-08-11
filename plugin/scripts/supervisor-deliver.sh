@@ -45,7 +45,7 @@ set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RELIABLE="$SELF_DIR/send-keys-reliable.sh"
-CHECKER="$SELF_DIR/transcript-delivery-check.ts"
+CHECKER="$SELF_DIR/dist/transcript-delivery-check.js"
 
 TARGET="${1:-}"
 PAYLOAD="${2:-}"
