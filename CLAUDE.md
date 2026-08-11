@@ -124,7 +124,7 @@ Analyze TypeScript project and generate architecture diagrams.
 
 **Global Config Overrides**:
 - `-f, --format <type>` - Output format: `mermaid`|`json` (default: `mermaid`)
-- `--output-dir <dir>` - Output directory for diagrams (default: `./.archguard`)
+- `--output-dir <dir>` - Output directory for diagrams (default: `./.archguard/output`; files written directly at `<dir>` when set)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
 - `--mermaid-theme <theme>` - Mermaid theme: `default`|`forest`|`dark`|`neutral`
@@ -159,8 +159,12 @@ node dist/cli/index.js cache stats
 ### Output Formats
 
 **Mermaid** (default):
-- For TypeScript: generates 3-tier diagram set in `.archguard/` (overview/package, class/all-classes, method/* per module) + `index.md`
-- For Go (Atlas): generates 4-layer set (package, capability, goroutine, flow) in `.archguard/`
+- For TypeScript: generates 3-tier diagram set in `.archguard/output/<project>/` (overview/package, class/all-classes, method/* per module) + `index.md` at `.archguard/output/index.md`
+- For Go (Atlas): generates 4-layer set (package, capability, goroutine, flow) in `.archguard/output/<project>/`
+- Default output dir is `.archguard/output` (config `outputDir` default). Each analyzed source gets a
+  `<source>`-namespaced subdirectory (project basename for auto-detect, diagram `name` for config-driven
+  multi-source, source basename for `-s`). Override with `--output-dir <dir>` to write files directly at
+  `<dir>` (no `output/` nesting).
 - No external dependencies required
 - Supports local rendering with isomorphic-mermaid
 
