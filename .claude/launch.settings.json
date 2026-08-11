@@ -1,0 +1,32 @@
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "false",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "917000"
+  },
+  "_launchSpec": {
+    "promptSuggestions": false,
+    "excludeDynamicSystemPromptSections": false,
+    "roles": {
+      "outer": {
+        "launcher": "claude-deepseek",
+        "name": "outer",
+        "model": "deepseek-v4-flash",
+        "env": {}
+      },
+      "inner": {
+        "launcher": "claude-deepseek",
+        "name": "inner",
+        "model": "deepseek-v4-flash",
+        "env": {}
+      },
+      "manager": {
+        "launcher": "claude",
+        "name": "manager",
+        "model": null,
+        "env": {
+          "CLAUDE_CODE_MAX_CONTEXT_TOKENS": ""
+        }
+      }
+    }
+  }
+}
