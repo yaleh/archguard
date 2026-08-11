@@ -4,16 +4,7 @@
     "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "917000"
   },
   "permissions": {
-    "defaultMode": "acceptEdits",
-    "allow": [
-      "Bash(plugin/scripts/)",
-      "Bash(node plugin/scripts/)",
-      "Bash(git)",
-      "Bash(npm run)",
-      "Bash(npx vitest run)",
-      "Bash(tmux)",
-      "Read"
-    ]
+    "defaultMode": "bypassPermissions"
   },
   "_launchSpec": {
     "promptSuggestions": false,
