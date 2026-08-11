@@ -140,6 +140,45 @@ export class DiagramOutputRouter {
   }
 
   /**
+   * Render a Mermaid string to SVG, degrading gracefully instead of throwing.
+   *
+   * TASK-85: mermaid enforces a built-in `maxEdges` render limit (default 500).
+   * Diagrams that exceed it fail the whole `analyze` run (exit 1) even though
+   * the `.mmd` source was already written. Render failures for large/over-limit
+   * graphs are now downgraded to a warning: the `.mmd` stays, SVG/PNG are
+   * skipped, and the diagram is reported as degraded rather than failed.
+   *
+   * @returns the processed SVG string, or `null` when rendering was skipped.
+   */
+  private async renderSvgOrDegrade(
+    mermaidCode: string,
+    pool: MermaidRenderWorkerPool,
+    label: string,
+    mermaidRenderer: InstanceType<
+      (typeof import('@/mermaid/renderer.js'))['IsomorphicMermaidRenderer']
+    >
+  ): Promise<string | null> {
+    const poolResult = await pool.render({ mermaidCode });
+    if (poolResult.success && poolResult.svg) {
+      // The worker already applied postProcessSVG (see render-worker.ts), so the
+      // pool result is written as-is.
+      return poolResult.svg;
+    }
+
+    // Worker render failed — try the main thread once. renderSVGRaw returns the
+    // raw SVG, so post-process it here (matching the pre-TASK-85 fallback).
+    console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
+    try {
+      const rawSvg = await mermaidRenderer.renderSVGRaw(mermaidCode);
+      return postProcessSVG(rawSvg, this.globalConfig.mermaid?.transparentBackground ?? false);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`  ${label} SVG skipped (${msg}) — MMD saved, no SVG/PNG`);
+      return null;
+    }
+  }
+
+  /**
    * Resolve a moduleGraph node ID to a package entity ID.
    * Examples:
    *   '@/parser/foo' → 'parser'
@@ -217,27 +256,24 @@ export class DiagramOutputRouter {
         continue; // Cache hit — skip rendering
       }
 
-      // Render SVG: use worker pool, fall back to main thread on failure
-      const poolResult = await pool.render({ mermaidCode: job.mermaidCode });
-      let processedSvg: string;
-      if (!poolResult.success) {
-        console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
-        const rawSvg = await mermaidRenderer.renderSVGRaw(job.mermaidCode);
-        processedSvg = postProcessSVG(
-          rawSvg,
-          this.globalConfig.mermaid?.transparentBackground ?? false
-        );
-      } else {
-        processedSvg = poolResult.svg ?? '';
-      }
+      // Render SVG: use worker pool, fall back to main thread, then degrade to
+      // a warning (keep .mmd) if the graph exceeds mermaid's render limits.
+      const processedSvg = await this.renderSvgOrDegrade(
+        job.mermaidCode,
+        pool,
+        job.name,
+        mermaidRenderer
+      );
 
-      await Promise.all([
-        fs.writeFile(job.outputPath.svg, processedSvg, 'utf-8'),
-        mermaidRenderer.convertSVGToPNG(processedSvg, job.outputPath.png).catch((err) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`  ${job.name} PNG skipped (${msg}) — MMD + SVG saved`);
-        }),
-      ]);
+      if (processedSvg !== null) {
+        await Promise.all([
+          fs.writeFile(job.outputPath.svg, processedSvg, 'utf-8'),
+          mermaidRenderer.convertSVGToPNG(processedSvg, job.outputPath.png).catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`  ${job.name} PNG skipped (${msg}) — MMD + SVG saved`);
+          }),
+        ]);
+      }
 
       await this.renderCache.writeHash(job.outputPath.mmd, job.mermaidCode, renderOptions);
     }
@@ -307,29 +343,26 @@ export class DiagramOutputRouter {
           return; // Cache hit — skip rendering this layer
         }
 
-        // Render SVG: use worker pool, fall back to main thread on failure
-        const poolResult = await pool.render({ mermaidCode: result.content });
-        let processedSvg: string;
-        if (!poolResult.success) {
-          console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
-          const rawSvg = await mermaidRenderer.renderSVGRaw(result.content);
-          processedSvg = postProcessSVG(
-            rawSvg,
-            this.globalConfig.mermaid?.transparentBackground ?? false
-          );
-        } else {
-          processedSvg = poolResult.svg ?? '';
-        }
+        // Render SVG: use worker pool, fall back to main thread, then degrade to
+        // a warning (keep .mmd) if the graph exceeds mermaid's render limits.
+        const processedSvg = await this.renderSvgOrDegrade(
+          result.content,
+          pool,
+          layer,
+          mermaidRenderer
+        );
 
         let pngFailed = false;
-        await Promise.all([
-          fs.writeFile(layerPaths.svg, processedSvg, 'utf-8'),
-          mermaidRenderer.convertSVGToPNG(processedSvg, layerPaths.png).catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.warn(`  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
-            pngFailed = true;
-          }),
-        ]);
+        if (processedSvg !== null) {
+          await Promise.all([
+            fs.writeFile(layerPaths.svg, processedSvg, 'utf-8'),
+            mermaidRenderer.convertSVGToPNG(processedSvg, layerPaths.png).catch((err) => {
+              const msg = err instanceof Error ? err.message : String(err);
+              console.warn(`  ${layer} PNG skipped (${msg}) — MMD + SVG saved`);
+              pngFailed = true;
+            }),
+          ]);
+        }
         await this.renderCache.writeHash(layerPaths.mmd, result.content, renderOptions);
         console.error(`  ${layer}: ${layerPaths.mmd}${pngFailed ? ' (no PNG)' : ''}`);
       })
@@ -374,27 +407,24 @@ export class DiagramOutputRouter {
       return; // Cache hit
     }
 
-    // Render SVG: use worker pool, fall back to main thread on failure
-    const poolResult = await pool.render({ mermaidCode: mmdContent });
-    let processedSvg: string;
-    if (!poolResult.success) {
-      console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
-      const rawSvg = await mermaidRenderer.renderSVGRaw(mmdContent);
-      processedSvg = postProcessSVG(
-        rawSvg,
-        this.globalConfig.mermaid?.transparentBackground ?? false
-      );
-    } else {
-      processedSvg = poolResult.svg ?? '';
-    }
+    // Render SVG: use worker pool, fall back to main thread, then degrade to
+    // a warning (keep .mmd) if the graph exceeds mermaid's render limits.
+    const processedSvg = await this.renderSvgOrDegrade(
+      mmdContent,
+      pool,
+      'TS module graph',
+      mermaidRenderer
+    );
 
-    await Promise.all([
-      fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
-      mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
-      }),
-    ]);
+    if (processedSvg !== null) {
+      await Promise.all([
+        fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
+        mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`  TS module graph PNG skipped (${msg}) — MMD + SVG saved`);
+        }),
+      ]);
+    }
 
     await this.renderCache.writeHash(paths.paths.mmd, mmdContent, renderOptions);
   }
@@ -429,27 +459,24 @@ export class DiagramOutputRouter {
       return; // Cache hit
     }
 
-    // Render SVG: use worker pool, fall back to main thread on failure
-    const poolResult = await pool.render({ mermaidCode: mmdContent });
-    let processedSvg: string;
-    if (!poolResult.success) {
-      console.warn(`  Worker render failed: ${poolResult.error} — falling back to main thread`);
-      const rawSvg = await mermaidRenderer.renderSVGRaw(mmdContent);
-      processedSvg = postProcessSVG(
-        rawSvg,
-        this.globalConfig.mermaid?.transparentBackground ?? false
-      );
-    } else {
-      processedSvg = poolResult.svg ?? '';
-    }
+    // Render SVG: use worker pool, fall back to main thread, then degrade to
+    // a warning (keep .mmd) if the graph exceeds mermaid's render limits.
+    const processedSvg = await this.renderSvgOrDegrade(
+      mmdContent,
+      pool,
+      'C++ package graph',
+      mermaidRenderer
+    );
 
-    await Promise.all([
-      fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
-      mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`  C++ package graph PNG skipped (${msg}) — MMD + SVG saved`);
-      }),
-    ]);
+    if (processedSvg !== null) {
+      await Promise.all([
+        fs.writeFile(paths.paths.svg, processedSvg, 'utf-8'),
+        mermaidRenderer.convertSVGToPNG(processedSvg, paths.paths.png).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`  C++ package graph PNG skipped (${msg}) — MMD + SVG saved`);
+        }),
+      ]);
+    }
 
     await this.renderCache.writeHash(paths.paths.mmd, mmdContent, renderOptions);
   }
