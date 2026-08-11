@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { tmpdir, cpus } from 'node:os';
 import path from 'node:path';
 import { ParallelParser, PARSE_WORKER_THRESHOLD } from '@/parser/parallel-parser.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
@@ -55,7 +55,17 @@ describe('parse worker pool integration', () => {
     });
     expect(result.results.some((entry) => entry.success)).toBe(true);
     expect(pools.dispatchCount).toBeGreaterThan(0);
-    const pool = pools.get({ language: 'typescript', runtime: 'native', workspaceRoot: root });
+    // The pool key is language:runtime:root:size, where size derives from
+    // concurrency (clamped to [1,4]). runAnalysis passes config.concurrency
+    // (default os.cpus().length), so look up with the same concurrency to hit
+    // the pool runAnalysis actually dispatched to (TASK-84: previously omitted,
+    // defaulting to size 4 — a machine-dependent mismatch on 2-core hosts).
+    const pool = pools.get({
+      language: 'typescript',
+      runtime: 'native',
+      workspaceRoot: root,
+      concurrency: cpus().length,
+    });
     expect(pool.dispatchCount).toBeGreaterThan(0);
     await pools.terminate();
 
