@@ -841,3 +841,41 @@ TASK-85 执行时应**先复现**（确认当前 master 是否真 521>500）再�
 
 **TASK-83 交付物**：CLAUDE.md 与实测 `.archguard/output/` 布局契约对齐（四路径逐项），判定理由落盘
 （意图，非回归）。任务库：57 done、TASK-84/85 ready（外层已建）、无在飞。
+
+## 18:1xZ 更新（外层滚动派发：TASK-84 parser-pool 池大小机器相关断言修复执行到 done）
+
+**实况（2026-08-11）**：master @ 654848e6（TASK-83 收尾后）→ 执行后 @ 570d2c96。任务板 57 done、
+TASK-84/85 ready。三项目无 `.halt`。
+
+**TASK-84 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`task-84`（ext4 磁盘），`npm ci` + `npm run build` 干净。任务文件 fork 时未跟踪，
+   复制进 worktree 后随 merge 成为 tracked。
+2. **定位精确断言（AC1）**：实文件在 `tests/integration/parser-pool.test.ts:59`（**非**任务 Touches
+   猜测的 `tests/unit/parser/`——按实况修 integration 文件；`process-parse-worker-pools.test.ts:36`
+   用显式 concurrency:9 钳到 4，机器无关，无需改）。池大小推导：`process-parse-worker-pools.ts:19`
+   `size = clamp(concurrency ?? 4, 1, 4)`。
+3. **根因**：池 key = `language:runtime:root:size`。`runAnalysis` 传 `config.concurrency`（默认
+   `os.cpus().length`=2）→ 派发到 size-2 池；测试 `pools.get({runtime:'native',workspaceRoot})`
+   **省略 concurrency** → 默认 size 4 → 查到不同 key 的池（dispatchCount 0）→ line 59 失败。
+4. **修复（AC2，机器自适应）**：line 58 查找池时显式传 `concurrency: cpus().length`——与
+   run-analysis 的 config.concurrency 默认一致，命中实际派发的池。**仅改测试断言，产品代码零改动**
+   （AC3 不变性满足：product 默认并发语义未动）。
+5. **验证**：单测 6/6（fix 后全文件；此前 full-file 5 failed 为并发跑 load 敏感，isolated 各过）；
+   负控制（AC5）`git stash` 撤改 → 复现 `expected 0 to be greater than 0`（line 59）→ 恢复 → 过；
+   lint 0 errors / type-check 0。
+6. **full suite（after，DoD 核心）**：`npx vitest run` = **359 files passed / 3 skipped (362)**；
+   **5183 passed / 18 skipped (5201)**；**0 failed**；**exit 0**。before = 1 failed / 5182 passed。
+   **本机本地 full-suite 首次全绿**——TASK-82 修复原生缺口后最后一处本地失败闭合。
+7. **fan-in**：merge 被主仓未跟踪 `tasks/TASK-84.md` 阻挡 → 移 `.quay/pre-task84-merge-untracked/`
+   （可逆）→ merge `570d2c96`（'ort'，测试 +12/-2 + 任务文件）→ worktree/分支清理。
+8. **DoD/AC**：5 项 AC + 3 项 DoD 全勾 + Evidence 落盘；`quay task check` `ok:true / terminal`。
+   **ready → done**（CAS 通过）。任务板 **58 done**。
+
+**状态**：TASK-85 ready（外层已据 TASK-83 更正前提——当前默认 analyze exit 0 非回归，500-edge 硬失败
+为潜在缺陷）。本地 full-suite 全绿里程碑：TASK-41（WASM 基线）→ TASK-82（原生缺口）→ TASK-84
+（池 size 机器依赖）= 三重本地测试基础设施闭合。
+
+**TASK-84 交付物**：`tests/integration/parser-pool.test.ts` line 58 池查找机器自适应（`cpus().length`
+显式传入），产品代码零改动；本机 `npx vitest run` 全绿（5183 passed / 0 failed / exit 0）。
+任务库：58 done、TASK-85 ready、无在飞。

@@ -1,7 +1,7 @@
 ---
 id: TASK-84
 title: "TASK-84: parser-pool 池大小机器相关断言修复——full-suite 最后一处本地失败"
-status: ready
+status: done
 labels:
   - defect
   - test
