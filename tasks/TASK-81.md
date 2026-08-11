@@ -28,10 +28,10 @@ a commit of the generated diagrams.
 
 ## Acceptance Criteria
 
-- [ ] `npm run build` exits 0 (tsc + tsc-alias + import-fix clean)
-- [ ] `node dist/cli/index.js analyze -v` exits 0
-- [ ] `.archguard/index.md` and the overview/package diagram are generated
-- [ ] Analysis is read-only: no `src/` file was modified; any touched file is lint-clean
+- [x] `npm run build` exits 0 (tsc + tsc-alias + import-fix clean)
+- [x] `node dist/cli/index.js analyze -v` exits 0
+- [x] `.archguard/index.md` and the overview/package diagram are generated (current tool layout: `.archguard/output/index.md` + `.archguard/output/task-81/overview/package.*` — see Evidence)
+- [x] Analysis is read-only: no `src/` file was modified; any touched file is lint-clean
 
 ## Touches
 
@@ -51,7 +51,19 @@ a commit of the generated diagrams.
 
 ## Definition of Done
 
-- [ ] `npm run build` exits 0
-- [ ] `node dist/cli/index.js analyze -v` exits 0
-- [ ] `.archguard/index.md` present and lists the generated diagram set
-- [ ] overview/package diagram generated (package level)
+- [x] `npm run build` exits 0
+- [x] `node dist/cli/index.js analyze -v` exits 0
+- [x] `.archguard/index.md` present and lists the generated diagram set (generated as `.archguard/output/index.md` in the current tool layout)
+- [x] overview/package diagram generated (package level)
+
+## Evidence (2026-08-11, outer dispatch tick)
+
+- Build: `npm run build` exit 0 in worktree `task-81` (tsc + tsc-alias + import-fix + runtime-deps all clean).
+- Self-analysis: `node dist/cli/index.js analyze -v` exit 0. Generated 11 diagrams, 11/11 successful, 0 failed.
+- Index: `.archguard/output/index.md` present, lists the full diagram set (Total Diagrams 11 / Successful 11 / Failed 0).
+- Package-level diagram: `.archguard/output/task-81/overview/package.mmd` + `.png` + `.svg` generated (Entities 96, Relations 298). Class-level `task-81/class/all-classes` (772 entities) also generated.
+- Read-only: worktree `git status --short` empty after analysis — `src/` byte-identical to master HEAD, `.archguard/` fully gitignored (gitignore:58 `/.archguard/`).
+- Lint: `npx eslint src/ --max-warnings 0` → 0 errors, 130 pre-existing warnings, all in `src/` files untouched by this task (baseline condition on master).
+- Typecheck: `npx tsc --noEmit` exit 0.
+- Tests: full `npx vitest run` = 397 failed / 4625 passed / 150 skipped (5172). All 397 failures are the same family — missing optional native `tree-sitter`/`node-gyp-build` (native-parser backend) — a deliberate environmental condition: TASK-41 (0b1c7122) removed native grammars from the bare install closure ("deterministic WASM baseline"; CI installs them `--no-save` separately). `src/` untouched ⇒ master fails identically; **not a regression from this task**. Task Touches contain no test files, so the tick's scoped `--for-task` gate resolves empty.
+- Path note: DoD/AC literally read `.archguard/index.md`, but the current tool emits the index at `.archguard/output/index.md` (output nested under `output/`). The substantive DoD — an index.md listing the generated diagram set plus a package-level diagram — is fully met at the current canonical layout.
