@@ -802,3 +802,42 @@ grammar），master 同失败=非回归；本仓根无 node_modules（worktree �
 **TASK-82 交付物**：本地 full-suite 从「bare npm ci 必红 397」变为「任何 vitest 调用即绿（0 原生失败）」，
 WASM 基线（TASK-41）不回归、原生 grammar 可选不强制。已知 1 非绿（parser-pool 机器相关池 size 假设）
 已机械文档化。任务库再次耗尽（56 done、无在飞、无 ready）——等外层补建下一批方向。
+
+## 17:4xZ 更新（外层滚动派发：TASK-83 `.archguard` 输出布局契约对齐执行到 done）
+
+**实况（2026-08-11）**：master @ 93ada62a（TASK-82 收尾后）→ 执行后 @ da0563c2。任务板 56 done、
+仅 TASK-83 ready（role=primitive）。三项目无 `.halt`。
+
+**TASK-83 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`task-83`（ext4 磁盘），`npm ci` + `npm run build` 干净。任务文件 fork 时未跟踪，
+   复制进 worktree 后随 merge 成为 tracked。
+2. **四路径实跑（AC1）**：
+   - 单源自动检测 → `.archguard/output/index.md` + `.archguard/output/<basename>/overview/package.*`
+     （项目 basename + 多语言 scope 名字空间：task-83 / python-python / java-java / go-go / task-83-cpp /
+     task-83-kotlin）
+   - 多源 config → `.archguard/output/<config-diagram-name>/...`（config `name` = 名字空间）
+   - `-s` 外部项目（CWD 外）→ `<project>/.archguard/output/...`（项目自有 .archguard；单图平铺 output 根）
+   - `--output-dir <dir>` → `<dir>/index.md` + `<dir>/<basename>/...`（**无 output/ 嵌套**，文件平铺）
+3. **判定：意图（intent），非回归（AC2）**：`outputDir` 默认 `'./.archguard/output'`（config-loader.ts:144）、
+   `run-analysis.ts:139`；自管线首提交 3f4da52a 即存在；名字空间服务多源/多语言区分；
+   `--output-dir` 是 flat 逃生口（文档 flat 布局作为用户可选项仍存在）。
+4. **对齐（AC3，意图 ⇒ 改文档）**：更新 CLAUDE.md（Output Formats 节 + `--output-dir` 默认值）。
+   仅文档改动——AC「改文档无测试需求」，lint 0 errors / type-check 0。
+5. **TASK-81 证据核对（AC5）**：gitignore `/.archguard/` 约定未动；`.archguard/output/` 布局与
+   TASK-81 产物对齐。**关键修正**：默认 analyze 在还原仓库自有 `archguard.config.json` 后 **exit 0**
+   （package 图 303 edges < 500）——执行期一度 521-edge render 失败，**已核实为测试期误删 tracked
+   `archguard.config.json`（exclude experiments/scripts/dist）所致，还原后消失，非仓库回归**。
+6. **fan-in**：merge 被主仓未跟踪 `tasks/TASK-83.md` 阻挡 → 移 `.quay/pre-task83-merge-untracked/`
+   （可逆）→ merge `da0563c2`（'ort'，CLAUDE.md 10 + TASK-83.md 80 行）→ worktree/分支清理。
+7. **DoD/AC**：6 项全勾 + Evidence 落盘；`quay task check` `ok:true / terminal`。**ready → done**
+   （CAS 通过）。任务板 **57 done**。
+
+**给外层/后续任务的关键更正**：外层已建 TASK-85（「master 默认 analyze -v 因 500-edge 上限 exit 1」）
+——其前提**部分过时**：TASK-83 实测在**还原仓库自有 `archguard.config.json`** 后默认 analyze **exit 0**
+（303 edges < 500）。521-edge 失败仅出现在该 config 缺失时（exclude experiments/scripts/dist 失效）。
+TASK-85 执行时应**先复现**（确认当前 master 是否真 521>500）再决定是否修渲染上限——若 config 在位则
+非缺陷，TASK-85 可闭（或改为验证 config 完整性）。TASK-84（parser-pool 池 size 机器相关断言）前提有效。
+
+**TASK-83 交付物**：CLAUDE.md 与实测 `.archguard/output/` 布局契约对齐（四路径逐项），判定理由落盘
+（意图，非回归）。任务库：57 done、TASK-84/85 ready（外层已建）、无在飞。

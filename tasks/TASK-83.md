@@ -1,7 +1,7 @@
 ---
 id: TASK-83
 title: "TASK-83: `.archguard` 输出布局契约对齐——CLAUDE.md flat 记载 vs 实测 output/ 嵌套"
-status: ready
+status: done
 labels:
   - defect
   - docs
