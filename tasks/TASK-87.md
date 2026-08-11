@@ -1,7 +1,7 @@
 ---
 id: TASK-87
 title: "TASK-87: TASK-31/35 发布准备——TASK-78 mcp-launcher 修复的发布包验证（不发布）"
-status: ready
+status: done
 labels:
   - release
   - plugin

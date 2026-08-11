@@ -972,3 +972,37 @@ TASK-85 交付物：超限大图降级而非裸 exit 1（`.mmd` 保留 + 明确�
 **TASK-86 交付物**：v0.4.0 升级后 6 盲区矩阵重跑——misjudges 4/6 → 1/6 仍存 + 3 已修 + 1 已改进 +
 1 compatible + 1 新增缺陷（slot-refill wrapper --cap）。机制升级显著改善了消费方布局认知。
 任务库：60 done、无在飞、无 ready——等外层补建下一批方向。
+
+## 19:5xZ 更新（外层滚动派发：TASK-87 发布准备执行到 done——TASK-78 修复包验证，不发布）
+
+**实况（2026-08-11）**：master @ 27a8b371（TASK-86 收尾后）→ 执行后 @ 3dc23783。任务板 60 done、
+仅 TASK-87 ready（role=primitive）。三项目无 `.halt`。**边界：不 npm publish、不 git tag、不改真实
+~/.claude**——发布/启用是人的单独决策（escalations.md 已记）。
+
+**TASK-87 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`task-87`（ext4 磁盘），task 文件复制。npm ci 补齐 worktree node_modules
+   （首轮缺失 @eslint/eslintrc，重跑 npm ci 后完整）。
+2. **AC1 launcher 修复在位**：`plugin/mcp-launcher.mjs` `resolveArchguardEntry()` 两段解析
+   （① 自身依赖树 createRequire → ② npm-cache 兄弟目录回退），TASK-78 提交 bd6731d8。**只读核验未改**。
+3. **AC2 pack 验证**：`plugin/package.json` version **0.1.32→0.1.33**；`npm pack --dry-run` 产物
+   7 文件（.claude-plugin/plugin.json、.mcp.json、mcp-launcher.mjs 3.8kB、package.json、
+   skills/feature-developer、skills/project-semantics-discovery + references）。
+4. **AC3 解包复核**：实际 pack + 解包，打包版 launcher 含 **7 处 npm-cache 引用** + resolveArchguardEntry
+   （修复在产物中）；version 0.1.33、依赖 `@yalehwang/archguard: 0.1.32`（发布运行时，launcher 解析它，
+   无需 bump）；`.mcp.json` + `.claude-plugin/` + skills/ 在位。
+5. **AC4 发布清单落盘**（任务体）：`cd plugin && npm publish` → `claude plugin enable archguard@archguard`
+   → `claude mcp list` Connected 复验（TASK-79 隔离证据：修复 launcher → ✔ Connected + 30 tools）。
+6. **AC5 边界**：未发布/未 tag/未改 ~/.claude；lint 0 errors / type-check 0。
+7. **fan-in**：merge 被主仓未跟踪 `tasks/TASK-87.md` 阻挡 → 移 `.quay/pre-task87-merge-untracked/`
+   → merge `3dc23783`（'ort'，plugin/package.json 2 + task 98 行）→ worktree/分支清理。
+8. **DoD/AC**：5 AC + 3 DoD 全勾 + 证据落盘；`quay task check` `ok:true / terminal`。
+   **ready → done**（CAS 通过）。任务板 **61 done**。
+
+**发现（供发布决策，如实记录）**：`.claude-plugin/plugin.json` 的 `"version": "0.1.32"` 为显示元数据
+字段，与 package.json 0.1.33 不一致——Touches 仅列 plugin/package.json，故按边界只 bump package.json；
+plugin.json version 字段留待发布决策时同步（一行改动）。
+
+**给外层/人的发布动作（决策权在人）**：`cd plugin && npm publish`（产出 0.1.33，含 TASK-78 修复
+launcher）→ `claude plugin enable archguard@archguard` → `claude mcp list` 复验 Connected。
+任务库：61 done、无在飞、无 ready——等外层补建下一批方向。
