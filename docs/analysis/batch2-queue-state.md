@@ -757,3 +757,48 @@ master @ fc191199 → 执行后 @ f0ad34cb。
 **TASK-81 交付物**：verified-generated 3-tier 图集 + analyze 路径证据（.archguard 产物 gitignored
 不提交，符合任务 Proposal「deliverable = verified set + evidence，非图 commit」）。任务库再次耗尽
 （55 done、无在飞、无 ready）——等外层补建下一批方向。
+
+## 16:2xZ 更新（外层滚动派发：TASK-82 本地 full-suite 可绿执行到 done）
+
+**实况（2026-08-11）**：master @ f2ae0b83（TASK-81 收尾后）→ 执行后 @ fd528d33。任务板 55 done、
+仅 TASK-82 ready（role=primitive）。三项目无 `.halt`。TASK-82 背景：TASK-81 实测 bare `npm ci` 后
+full-suite 397 failed/4625 passed，全为原生 tree-sitter 族（TASK-41 WASM 基线，CI `--no-save` 装原生
+grammar），master 同失败=非回归；本仓根无 node_modules（worktree 自装）。
+
+**TASK-82 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`git worktree add -b task/TASK-82 …/archguard-worktrees/task-82 master`（ext4
+   磁盘）；`npm ci` 干净。任务文件在 fork 时未跟踪（外层建），复制进 worktree 后随 merge 成为 tracked。
+2. **复现 + 枚举 gate（AC1）**：full-suite `npx vitest run` = **397 failed / 4625 passed / 150 skipped
+   (5172)**，exit 1——与派发数字逐字一致。精确族：`Cannot find module 'tree-sitter'`/`node-gyp-build`/
+   `Failed to initialize {go,java,python,cpp,kotlin} parser with native backend`，44 个测试文件 import
+   `nativeParserBackend`；单文件复现 `java-plugin.test.ts` = 35/35 failed。gate = `peerDependenciesMeta.optional`
+   （`npm ci` 不装可选 peer；`npm install --no-save` 实测无效——manifest 已声明 peer → "up to date" 不装）。
+3. **机制选定 + 实现（AC2，Option 1 CI 对齐）**：
+   - `scripts/install-native-grammars.sh`——幂等，移植 CI 精确 recipe（scratch prefix + `--legacy-peer-deps`
+     + 拷入 node_modules，N-API prebuild 免编译），6 包 fail-fast smoke parse。已装则 no-op。
+   - `tests/global-setup.ts` + `vitest.config.ts globalSetup`——缺 grammar 时幂等调 installer，使 bare
+     `npx vitest run` 绿。**非 package.json lifecycle hook**（install-policy 禁 preinstall/install/
+     postinstall/prepack）——只在套件调用时跑。
+   - `package.json`：加 `test:native-setup`（文档化手工步骤）；零依赖/生命周期改动。
+   - `docs/user-guide/parser-runtime.md`：「Local full-suite (dev/test)」节记录
+     `npm ci && npm run test:native-setup && npm test`。
+4. **after（AC3/DoD）**：full-suite = **1 failed / 5182 passed / 18 skipped (5201)**，exit 1。397 原生
+   失败 → **0**。install-policy（WASM 基线守卫）15/15 过；wasm-parity（native↔wasm 字节一致）+
+   mixed-selection（healthy install 选 native）真正跑通原生路径。
+5. **已知非绿集（1 测试，机械文档化，显式非回归）**：`parser-pool.test.ts:59` `expected 0 to be greater
+   than 0`——池 key `language:runtime:root:size`、`size=clamp(concurrency??4,1,4)`；`runAnalysis` 传
+   `config.concurrency=os.cpus().length`（本机 2）→ 派发到 size 2 池；测试 `pools.get({runtime:'native'})`
+   省 concurrency → size 4 → 查到不同池（dispatchCount 0）。before/after 完全一致失败（native 有/无
+   均如此）⇒ 独立于原生缺口，仅 ≥4 核主机（CI）size 重合才过。非回归、非原生族。
+6. **lint/type-check**：`npx eslint` src+tests **0 errors**（3957 pre-existing warnings 基线）；
+   新文件 `tests/global-setup.ts` lint-clean；`npx tsc --noEmit` exit 0。
+7. **fan-in**：rebase 干净（master 未动）→ merge 被主仓**未跟踪 `tasks/TASK-82.md`** 阻挡 → 已移
+   `.quay/pre-task82-merge-untracked/TASK-82.md`（可逆，非删除）→ merge `fd528d33`（'ort'，6 文件
+   +282 行）→ 任务文件与 worktree 提交版逐字节一致 → worktree remove + `git branch -d` 清理。
+8. **DoD/AC**：任务体 8 项全勾 + Evidence 段落盘；`quay task check` 判 `ok:true / terminal`。
+   **status ready → done**（task_write CAS `expectedStatus: ready` 通过）。就绪池 **0**，任务板 **56 done**。
+
+**TASK-82 交付物**：本地 full-suite 从「bare npm ci 必红 397」变为「任何 vitest 调用即绿（0 原生失败）」，
+WASM 基线（TASK-41）不回归、原生 grammar 可选不强制。已知 1 非绿（parser-pool 机器相关池 size 假设）
+已机械文档化。任务库再次耗尽（56 done、无在飞、无 ready）——等外层补建下一批方向。

@@ -2,7 +2,7 @@
 id: TASK-82
 title: "TASK-82: 本地 full-suite 可绿——原生 tree-sitter grammar 缺口（bare npm ci 后 397
   native 测试失败）"
-status: ready
+status: done
 labels:
   - defect
   - test-infrastructure
