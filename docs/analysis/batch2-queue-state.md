@@ -717,3 +717,43 @@ AC 审计：19 未勾 → **9 剩余**。9 项均无法由外层独立验证（�
 观测的三个处置点全部落地：①TASK-60 交付核实（已落地，带 source 标签）；②TASK-60 正文漂移已修
 （32af830）；③originals 状态闭合（tick #145）。机械检查建议已入队列状态源任务建规。
 当前全任务 done、无在飞、任务库耗尽，兜底心跳继续。
+
+## 16:1xZ 更新（外层滚动派发：TASK-81 冷启动种子任务执行到 done）
+
+**实况（2026-08-11）**：三项目（archguard / chatgpt-web / kcp-shadowsocks-server）均无 `.halt`；
+遥测 inProgress 空（陈旧 TASK-81 括号已由外层 reconcile 为 `abandoned`/
+`worktree-gone-and-no-process`）；任务板 54 done、仅 TASK-81 ready（role=primitive，非 compound）。
+master @ fc191199 → 执行后 @ f0ad34cb。
+
+**TASK-81 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`git worktree add -b task/TASK-81 …/archguard-worktrees/task-81 master`——建在
+   磁盘 ext4（`worktree_root`），非 /tmp tmpfs（C4）。`npm ci` 干净（lockfile，exit 0）。
+2. **build**：`npm run build` exit 0（tsc + tsc-alias + import-fix + check:runtime-deps 全过）。
+3. **self-analysis**：`node dist/cli/index.js analyze -v` exit 0——11 图 / 11 成功 / 0 失败
+   （task-81 overview/package 96 实体 298 关系 + class/all-classes 772 实体 + method/* 分层图 +
+   多语言投影集）。
+4. **产物验证**：`.archguard/output/index.md` 存在并列出全套图；`.archguard/output/task-81/overview/package.mmd/png/svg`
+   生成。**路径注记**：任务 DoD/AC 字面 `.archguard/index.md`，当前工具实际布局为
+   `.archguard/output/index.md`（output 子目录嵌套）——实质 DoD（index.md 列全套 + package 图）在
+   现行 canonical 布局下完全满足，已在任务体证据中如实标注。
+5. **只读不变性**：分析后 worktree `git status --short` 空——`src/` 与 master HEAD 逐字节一致、
+   `.archguard/` 全程 gitignore（`.gitignore:58`）。type-check `npx tsc --noEmit` exit 0。
+6. **lint**：`npx eslint src/ --max-warnings 0` → **0 errors / 130 pre-existing warnings**，全部在
+   本任务未触碰的 src/ 文件（master 基线条件，非本任务引入）。任务 Touches（`.archguard/` +
+   `tasks/TASK-81.md`）均 lint-clean。
+7. **tests**：`npx vitest run` = **397 failed / 4625 passed / 150 skipped (5172)**。397 个失败同族
+   ——缺可选原生 `tree-sitter`/`node-gyp-build`（native-parser 后端）。**已核为环境条件**：TASK-41
+   （0b1c7122）刻意把原生语法树从裸安装闭包移除（「deterministic WASM baseline」，CI 另行
+   `--no-save` 安装）；`src/` 未触碰 ⇒ master 同样失败，非本任务回归。任务 Touches 无测试文件，
+   tick 的 scoped `--for-task` 闸解析为空。
+8. **fan-in**：worktree rebase master（干净，1/1）→ `git merge --no-ff task/TASK-81` → **f0ad34cb**
+   （'ort'，仅 tasks/TASK-81.md 28 行改动）。worktree remove + `git branch -d` 清理完成。主仓既有
+   未提交改动（orchestration/tick-log.md、.quay/*、milestones/ 等）未受影响。
+9. **DoD/AC**：任务体 8 项全部勾选（含只读/路径注记）+ Evidence 段落盘；`quay task check` 判
+   `gate:none / ok:true / reason:terminal`。**status ready → done**（task_write CAS `expectedStatus:
+   ready` 通过）。就绪池 **0**，任务板 **55 done**。
+
+**TASK-81 交付物**：verified-generated 3-tier 图集 + analyze 路径证据（.archguard 产物 gitignored
+不提交，符合任务 Proposal「deliverable = verified set + evidence，非图 commit」）。任务库再次耗尽
+（55 done、无在飞、无 ready）——等外层补建下一批方向。

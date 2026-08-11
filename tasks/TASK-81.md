@@ -2,7 +2,7 @@
 id: TASK-81
 title: "TASK-81: Run ArchGuard self-analysis and regenerate the architecture
   diagram set"
-status: ready
+status: done
 labels:
   - milestone-candidate
   - self-validation
