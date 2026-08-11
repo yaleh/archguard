@@ -83,3 +83,6 @@ experiments/granularity/artifacts/embeddings/cache/
 /.quay/gate-events.jsonl
 /docs/research/
 /.workflow-events/
+# quay runtime (install-generated, not source — gap-the-runtime-has-nowhere-safe-to-land)
+.quay/runtime/
+.quay/quay-init-backups/

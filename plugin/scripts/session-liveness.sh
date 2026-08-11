@@ -10,9 +10,11 @@
 #
 # 事件与它们的信号源（AC7，规格 AC14）——每个事件到底在看什么，哪些是会话面、哪些不是：
 #   SESSION-GONE / SESSION-BACK      tmux pane 里 claude 进程的存在性        —— 会话面
-#   SESSION-IDLE / SESSION-RESUMED   相邻两轮 pane 哈希相同=空闲；转换后一轮内报 —— 会话面
-#                                    （但哈希输入含 chrome 等易变区，见姊妹任务
-#                                    gap-session-liveness-hashes-the-token-counter-as-if-it-were-work）
+#   SESSION-IDLE / SESSION-RESUMED   相邻两轮 pane 的【形状】从空闲转忙/忙转闲；
+#                                    忙闲判据 = classifyPaneState（底部区域形状分类，
+#                                    ADR-016 Amendment / 裁定 D）——不是整屏哈希
+#                                    （姊妹任务 gap-session-liveness-hashes-the-token-counter-
+#                                    as-if-it-were-work 把假阳性源从哈希输入里去掉）
 #   REPO-STALL                       仓库 ≥STALL_MIN 分钟无新提交              —— 仓库信号，不是会话面
 #   SESSION-OVERDUE                  心跳源 mtime ≥OVERDUE_MIN 未动             —— 会话面（心跳源=transcript）
 #   SESSION-STATUS                   --once 接缝：每目标一行（名字/活/pid）
@@ -49,6 +51,15 @@
 # `$REPO_ROOT/orchestration/tick-log.md`（外层 tick 日志）。内层用 transcript（见上）。
 # `stat -c %Y` 对文件与目录都成立；transcript 心跳还并上 subagents 目录的最大 mtime。
 #
+# 心跳源多源化（gap-outer-heartbeat-source-inverts-under-incident-handling，2026-08-05）：
+# SESSION-OVERDUE 的【默认外层心跳】从 tick-log 单源改为【多源 max mtime】——红窗处置期间外层
+# 写 queue-state / 分析记录 + 提交，但不写 tick-log；单源会把「越认真处理事故」读成「心跳越旧」
+# （实测 71 分钟陈旧而 5 个提交 + 分诊记录已产出，同一信号一真阳一假阳、不可分）。多源集合 =
+# max(HEAD commit 时间, queue-state mtime, tick-log mtime, docs/analysis 最新记录 mtime,
+# verification-round.jsonl mtime)——任一在阈值内 ⇒ 外层 alive；全部陈旧 ⇒ SESSION-OVERDUE 仍报
+# （真阳性保留）。与 D 分类器同源：单一代理信号不足以判定状态（see outer-rulings A-F）。
+# 显式覆盖（SESSION_HEARTBEATS / SESSION_TRANSCRIPTS）保持单源语义——调用方已选定特定源。
+#
 # 产品化要点（AC1/AC2/AC3/AC9）：
 #   - 本项目根自定位（同 inner-state.sh 的 BASH_SOURCE 惯例），不硬编码任何绝对仓库路径；
 #     SESSION_ROOT 是测试接缝（同 INNER_STATE_WORK_ROOT），生产调用方不设它。
@@ -67,8 +78,9 @@
 #     显式设置的环境变量 SESSION_TARGETS 优先于该文件；generic 项目没有该文件 → 零配置默认。
 #   - 阈值（INTERVAL/STALL_MIN/LOOP_MIN/OVERDUE_MIN）含义与默认值见随包的两份 tick 文档（AC5）。
 #
-# 用法：  plugin/scripts/session-liveness.sh [--once] [--mask] [--api-errors <t>] [--last-input <t>]
+# 用法：  plugin/scripts/session-liveness.sh [--once] [--selfcheck] [--mask] [--api-errors <t>] [--last-input <t>]
 #   --once   跑一轮，打印每个目标的 SESSION-STATUS 行，退出（冷启动/安装后自检接缝，AC7）。
+#   --selfcheck  诊断接缝：验证外层多源心跳判据（红窗处置保持新鲜 / 零产出报 OVERDUE），自包含，退出 0/1。
 #   --mask   测试接缝：从 stdin 读 pane 文本，打印屏蔽易变区后的内容（AC1 单测直接调用）。
 #   --api-errors <t>  测试接缝：打印 transcript <t> 最近 API_ERROR_WINDOW 条记录里
 #                     isApiErrorMessage 结构字段计数（AC9 单测）。
@@ -80,11 +92,22 @@
 # 屏幕语义标志 + 屏蔽易变区 + 交叉正控制 + payload + 每类阈值。承接前任务未完成的
 # AC9-AC14（阶段一 = 信号源 + 基线，见上）。各 AC 的实现点：
 #   AC1（原AC10/规格AC18）主信号改语义标志：`esc to interrupt` 按【存在性】判忙，
-#       不按计数（实测管理者 4 次/内层 1 次——计数无意义）。屏蔽转圈耗时行（✽）、
-#       token 计数行（`/clear to save …`）、提示语行；`✻ …` 残留不得作为忙的判据。
-#       判忙 = esc 标志存在 或 屏蔽易变区后的内容区有变化——后者保住非 TUI 探针 /
-#       subagent 输出这类真活动（TUI 之外还有内容在变）。屏蔽规则集中在 mask_pane()，
-#       逐条附「为什么它不是活动信号」（见函数注释）。
+#       不按计数（实测管理者 4 次/内层 1 次——计数无意义）。
+#       【2026-08-06 裁定 D 改判】忙闲判据不再用「mask 后整屏 md5」——那被判成
+#       ADR-016 Amendment 禁止的整屏哈希，且正是 token 计数假阳性的来源。改用
+#       `classifyPaneState`（plugin/scripts/dist/pane-state-classify.js，纯函数）：只读
+#       底部区域（输入框 + 状态行）的【形状】，枚举五态（waiting-input /
+#       permission-prompt / busy / error-banner / unknown）。busy / error-banner ⇒ 忙；
+#       waiting-input ⇒ 闲；unknown ⇒ 闲（transcript 融合兜底）。
+#       【2026-08-09 改判（gap-permission-prompt-merged-into-busy）】permission-prompt 不再并进
+#       busy：它是「需要人/上层介入」的信号（busy=0 intervention=1），与「在干活」相反——卡权限框
+#       与在干活在忙闲读数里必须可区分（同 ADR-033 读数无法表达关键区别源）。
+#       转圈耗时行（✽）、token 计数行（`/clear to save …`）、`✻ …` 残留天然进不了
+#       判据——形状分类读的是「有没有 esc/❯/权限框」这种结构，不是逐字节比较，
+#       所以 chrome 的抖动永远不会被判成活动（本任务假阳性源在此吸收）。
+#       屏蔽规则仍集中记录在 mask_pane()（AC1 的 chrome 行集合，--mask 接缝可测），
+#       但忙闲判据不再依赖它。AC5（防过滤）：pane 捕获为空/区域为空 ⇒ 不判空闲，
+#       显式告警（会话若在忙不会被静默漏掉）。
 #   AC2（原AC11/规格AC18正控制）标志失效必须可发现：屏幕与 transcript 交叉正控制——
 #       transcript 刚写过（会话确定在动）而屏幕判空闲 ⇒ 报 SESSION-MARKER-STALE。
 #       只对「心跳源是 transcript」的目标成立（tick 日志是 loop 写的，不是会话活动的证据）。
@@ -96,8 +119,10 @@
 #       宁可误报、可自愈类（IDLE/RESUMED）从严。当前默认曾调反（IDLE 60s 即报、
 #       OVERDUE 等 45min）；改后 OVERDUE_MIN 默认 45→30（不可自愈，早报 15min；阶段一
 #       实测 transcript 长任务最大间隙 20.5min，30min 仍留 ≥9min 余量）；IDLE 从严 =
-#       默认 LOOP_MIN=20 的噪声闸门（刚动过=正常收尾→持有者 stdout 静默；心跳陈旧/未知才报）。
-#       AC21：静默只发生在持有者自己的 stdout，共享 events.jsonl 仍记全量（含 hmin）。
+#       默认 LOOP_MIN=20 的噪声闸门（刚动过=正常收尾→观察者 stdout 静默；心跳陈旧/未知才报）。
+#       2026-08-06 人裁定：阈值只作用于观察者自己的 stdout（自己的流），每个观察者各管各的——
+#       manager 观 outer 的观察者可 LOOP_MIN=0 知悉全部，outer 观 inner 的观察者可 LOOP_MIN=20
+#       抑噪，互不影响。AC21 的根因（共享文件 + 持有者阈值决定一切）已随共享文件移除。
 #       逐事件类别与阈值理由见下节。
 #   AC6（原AC14/损失函数结论二）SESSION-RESUMED 带成因 payload（哪个标志/哪个区变了）：
 #       判据是「收到事件后无需再采样即可判真假」——原来外层每次 3-4 次调用，改后 1 次。
@@ -114,10 +139,28 @@
 #       无该标记的空闲仍走常规 SESSION-IDLE。
 #
 # 两种信号（AC4/规格AC17）：各自的盲区与同时用时以谁为准
-#   - 屏幕（tmux capture-pane）：语义清晰、即时、是「人真正看的那几个标志」；但依赖 tmux，
-#     且 TUI 布局/文案一改标志就失效——失效形态是【静默】（找不到 esc to interrupt 就永远
-#     判空闲）。易变区（转圈耗时/token 计数/提示语/✻ 残留）必须屏蔽，否则把 chrome 的抖动
-#     读成活动（姊妹任务确认的假阳性源）。
+#   - 屏幕（tmux capture-pane）：语义清晰、即时、是「人真正看的那几个标志」。判据 =
+#     classifyPaneState 的底部区域【形状分类】（ADR-016 Amendment / 裁定 D）——不是整屏哈希：
+#     枚举五态（waiting-input / permission-prompt / busy / error-banner / unknown），
+#     busy/error-banner 判忙、waiting-input 判闲、unknown 判闲（transcript 融合兜底）。
+#     permission-prompt 单列非忙（busy=0 intervention=1，gap-permission-prompt-merged-into-busy
+#     2026-08-09：需要人/上层介入的信号，与「在干活」相反）。chrome（转圈耗时/token 计数/提示语/
+#     ✻ 残留）天然进不了判据——形状分类读结构不读字节，chrome 的抖动不会再被判成活动（姊妹任务
+#     确认的假阳性源在此吸收）。
+#     仍依赖 tmux，且 TUI 布局/文案一改标志就失效——失效形态是【静默】；AC5 兜住
+#     「捕获为空/区域为空」不让它静默判闲。
+#     边界说明（gap-session-liveness-busy-mask-idle-with-subagents，2026-08-08 真根因 2c1d0c7c）：
+#     【pane-only 配置 + 默认心跳（tick-log）不适合观测一个被上层驱动的目标】。pane-only
+#     （无 SESSION_HEARTBEATS / SESSION_TRANSCRIPTS）时 heartbeat_for 回落默认外层心跳
+#     = <root>/orchestration/tick-log.md（heartbeat_for:841，多源 max mtime）。tick-log 被
+#     【每一个 outer/inner tick】追加 ⇒ mtime 恒新鲜 ⇒ hmin≈0-2min < LOOP_MIN ⇒ SESSION-IDLE
+#     噪声闸门（:1131-1137）把停摆静默吞掉。实测（outer 2c1d0c7c）：pane-only + LOOP_MIN=1 →
+#     IDLE_CONSEC 单调 1→7、IDLE_REPORTED 0→1（闸通过）但 SESSION-IDLE 零条；同配置 LOOP_MIN=0
+#     → SESSION-IDLE 正常发出。忙闲分类（classifyPaneState）与 D5 报告门均无缺陷——「bypass 模式
+#     常驻 esc to interrupt」假说也已被证伪（32c85b20：60 样本只前 9 busy 后 51 waiting-input）。
+#     ⇒ pane-only 观测要么配显式心跳源（SESSION_HEARTBEATS / SESSION_TRANSCRIPTS，让心跳反映
+#     目标会话自身活动），要么设 LOOP_MIN=0（管理者对 pane-only 观测的既有做法）。启动审计
+#     （_sl_audit_pane_only_gate）对 pane-only + 默认心跳 + LOOP_MIN>0 的目标 WARN 一次。
 #   - transcript（~/.claude/projects/<slug>/<id>.jsonl）：不依赖 tmux、不受重绘影响、stat 便宜；
 #     但只在【工具调用】时写（读代码/纯思考/等 subagent 时主 transcript 不写——subagent 写
 #     在 <id>/subagents/，heartbeat_mtime 并上），且 pid→文件映射受 /clear 与 --resume 解耦，
@@ -142,28 +185,68 @@
 #   * 去抖（AC2）：候选闲（fused idle）要求【连续 2 轮】都为闲才报 SESSION-IDLE（IDLE_CONSEC
 #     计数，2 轮 = 2×INTERVAL，默认 120s）。单轮转换不报——只延迟 ≤1 轮询周期（真空闲下一轮
 #     还是闲，不造成漏报），远在 20 分钟 cron 兜底之内。pane 哈希从「唯一判据」降级为「去抖的
-#     候选闲辅助」（AC7）；忙→闲后须见过忙轮（SEEN_BUSY）才报，避免监视器启动时把一直闲着的
-#     会话误报成「转入空闲」。
+#     候选闲辅助」（AC7）。
+#
+# 阶段三 D5 锐化（gap-session-liveness-busy-mask-idle-with-subagents，2026-08-08）：
+# 带后台任务的停摆结构性失明的根因 = 旧报告门 `-eq N && SEEN_BUSY==1`：
+#   * -eq 而非 -ge ⇒ 每段停摆只有【一次】触发机会（IDLE_CONSEC 恰好等于 2 的那一轮）。若那一轮
+#     SEEN_BUSY 恰为 0（刚启动、或上一轮 alive=0 分支清掉），这次机会被消耗且永不重来（计数器
+#     涨到 3、4…14 都不再匹配 -eq 2）——不是延迟上报，是【永久销毁该段停摆的上报权】。随后转忙
+#     ⇒ SEEN_BUSY=1、IDLE_CONSEC=0、RESUMED 照常发 ⇒ 「N 条 RESUMED / 0 条 IDLE」不对称。
+#   * SEEN_BUSY==1 门（「未见过忙就永不报」的防启动误报）把【挂载时已在进行的停摆】整类静默掉——
+#     挂载即停在提示符的会话（inner 16 窗口 100% 漏报的形态）永远等不到第一个忙轮。
+#   修法（人裁定 2026-08-08 13:2x，D5 锐化形式）：
+#     1. -eq → -ge：计数器到达阈值后继续匹配（不再只匹配等于 N 的那一轮）。
+#     2. per-spell 已报标志（IDLE_REPORTED）做边沿：每段空闲只报一次；忙轮清掉 → 新段可再报。
+#        -ge 不再需要「每轮重报」的代价——边沿由 IDLE_REPORTED 承担。
+#     3. SEEN_BUSY 的「防启动误报」意图改为「启动首轮不报」（ROUNDS 计数）而非「未见过忙就永不
+#        报」——前者只丢一轮，后者丢整段。挂载时已在进行的停摆也必须可报（AC6）。
+#     4. 首轮不报：监视器第 1 轮不报 IDLE/RESUMED（预热）；后续轮正常。SEEN_BUSY 保留为「已见过
+#        忙段」的状态记录（busy 侧/外部诊断可查），不再进报告门。
+#
+# 阶段四（gap-session-liveness-cannot-see-context-saturation-alive-but-cannot-take-input，2026-08-07）：
+# 上下文饱和度——「活着但收不进新指令」的判据。前三个阶段回答「会话还动不动」；本阶段补上
+# 「它还收不收得进东西」这一维。判据是复合形态（饱和且随后指令未被响应），不是一见高比率就告警：
+#   * 结构化源（AC3，不重引 chrome 噪声）：transcript 里最近 assistant 消息的 usage.cache_read_input_tokens
+#     （缓存前缀大小 = 上下文实际用量）。它与文件头里有意排除的「屏幕 token 计数行」无涉——那条排除
+#     （token 计数行 /clear to save，见 mask_pane 注释）是为了不让 TUI chrome 抖动读成活动；本判据读
+#     transcript 的 usage 结构字段，不是屏幕文本，不会把当初消灭的 chrome 噪声引回主判据。
+#   * 复合判据（AC4/任务约束 2）：saturated = cache_read_input_tokens ≥ SATURATION_TOKENS 且最后一条
+#     消息是未获回应的 user 输入（收到新指令但尚未应答 = 收不进）。饱和本身不是故障——auto-compact 是
+#     正常机制；只有「饱和且随后指令未被响应」的形态才报 SESSION-SATURATED（区别于普通「忙」）。
+#   * 事件：SESSION-SATURATED（会话面，边沿触发，见下节）。只在配置了 transcript（SESSION_TRANSCRIPTS）
+#     的目标上适用——tick 日志是 loop 写的，不是会话证据（同 AC9 的 CANT-SEND 适用面）。
+#   * 已知盲区：cache_read_input_tokens 只在 assistant API 响应里出现（工具回执/纯元数据记录没有）；
+#     取不到时饱和度判据静默（unknown），不猜。transcript 不携带模型上下文窗口大小，阈值
+#     SATURATION_TOKENS 是对 fleet 实测标定的默认（45 万：外层 62.5 万仍在应答=未饱和、内层 31 万=
+#     未饱和、48.3 万且未应答=饱和），跨机可用——机制随 quay-init 铺下，阈值可按机型调。
 #
 # 逐事件类别与阈值理由（AC5）：
 #   SESSION-GONE              不可自愈（无界）→ 无阈值，立即报（宁可误报）
 #   SESSION-IDLE              可自愈（上界=外层 20min tick）→ 从严：默认 LOOP_MIN=20
 #                             噪声闸门，心跳陈旧/未知才报；LOOP_MIN=0（管理者显式配置）
 #                             = 知悉全部（其明确选择，见 orchestration/session-liveness.env）。
-#                             AC21（gap-a-log-already-filtered-by-one-consumers-threshold-cannot-
-#                             serve-a-second）：噪声闸门只作用于持有者自己的 stdout——共享
-#                             events.jsonl 无条件记全量（含 hmin 原始量），订阅方自己决定报不报。
+#                             2026-08-06 人裁定：噪声闸门只作用于观察者自己的 stdout（自己的流）——
+#                             谁挂的谁拥有，每个观察者的阈值只服务它自己的消费者。共享事件文件
+#                             已移除（AC21 的根因随之消失），无需「记全量供订阅方自判」。
 #   SESSION-RESUMED           可自愈但唯一正向信号 → 立即报、保留（便宜，且是唯一能确认
 #                             会话还在按期活动的正向信号）
 #   SESSION-OVERDUE           不可自愈（无界）→ 宁可误报：默认 OVERDUE_MIN=30（原 45），
 #                             阶段一实测 transcript 最大间隙 20.5min，30min 早报 15min 且留余量
 #   SESSION-IDLE-CANT-SEND    不可自愈（发不出请求不会自愈）→ 宁可误报：见即报（AC9）
 #   SESSION-MARKER-STALE      检测类（标志失效）→ 无阈值、见即报，随事件流观察不一致率
+#   SESSION-SATURATED         检测类（上下文饱和，复合判据）→ 边沿触发；仅配置了 transcript 的目标适用
 #   REPO-STALL                仓库信号（非会话面，AC8 裁定承载）→ STALL_MIN=45 保持
-# 环境：  INTERVAL / STALL_MIN / LOOP_MIN / OVERDUE_MIN（阈值）
+# 环境：  INTERVAL / STALL_MIN / LOOP_MIN / OVERDUE_MIN / SATURATION_TOKENS（阈值）
 #         SESSION_TARGETS / SESSION_HEARTBEATS / SESSION_TRANSCRIPTS（多目标覆盖；每行 "<名字> <值>"）
 #         SESSION_ROOT（测试接缝：覆盖自定位的项目根）
 
+# ── 统一 --help（gap-scripts-sprawl：用法在前、退出 0、无业务副作用）────────────────────
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  _gap_help_lib="$(dirname "${BASH_SOURCE[0]}")/gate-script-lib.sh"
+  if [ -f "$_gap_help_lib" ]; then . "$_gap_help_lib"; tool_help "$0"; else echo "用法: bash $(basename "$0") [参数…]"; fi
+  exit 0
+fi
 set -uo pipefail
 INTERVAL=${INTERVAL:-60}
 STALL_MIN=${STALL_MIN:-45}          # 未暂停的项目超过这么久没有新提交 = 停滞（REPO-STALL）
@@ -179,11 +262,34 @@ API_ERROR_MIN=${API_ERROR_MIN:-1}          # AC9：窗口内 ≥ 此条即判「
 # 阶段三（2026-08-05）：候选闲去抖轮数。SESSION-IDLE 要求连续 IDLE_DEBOUNCE_ROUNDS 轮 fused-idle
 # 才报（AC2——2 轮 × INTERVAL 60s = 120s 结构下界）；单轮转换不报，只延迟 ≤1 轮询周期。
 IDLE_DEBOUNCE_ROUNDS=${IDLE_DEBOUNCE_ROUNDS:-2}
+# 阶段四新增阈值（2026-08-07）：上下文饱和度。SATURATION_TOKENS = 上下文用量代理（最近 assistant 消息
+# 的 usage.cache_read_input_tokens）≥ 此值即视为「上下文接近/已满」——结构化源，非屏幕百分比（AC3）。
+# 默认 45 万是对 fleet 实测的标定：外层 62.5 万仍在应答=未饱和、内层 31 万=未饱和、48.3 万且未应答输入=
+# 饱和（正控制）。SATURATION_TOKENS 可在环境变量/配置文件里按机型调（跨机可用，AC5）。
+SATURATION_TOKENS=${SATURATION_TOKENS:-450000}
+# 候选 B（gap-permission-prompt-vs-dismissable-prompt-classifier AC4，2026-08-08）：
+# permission-prompt 持续 ≥PERM_PROMPT_WARN_ROUNDS 轮且 transcript 最近 PERM_PROMPT_TX_WINDOW 秒未写入
+# ⇒ 报一次 WARN（不无限静默）。兜底判据：分类器候选 A 只排除已知可忽略提示（问卷带 (optional)/Dismiss）；
+# 若出现新的可忽略提示变体漏网，假的 permission-prompt 会永久钉住 busy=1 ⇒ SESSION-IDLE 永不触发
+# （D5 同族沉默）。WARN 只去观察者自己的 stderr，绝不改动忙闲判据（真权限框保持忙）。
+PERM_PROMPT_WARN_ROUNDS=${PERM_PROMPT_WARN_ROUNDS:-3}   # 连续几轮 permission-prompt 才 WARN
+PERM_PROMPT_TX_WINDOW=${PERM_PROMPT_TX_WINDOW:-60}       # transcript 最近写入窗口（秒）；窗口内有写=会话确实在动
 # 文案常数（LOOP_MIN 含义拆分，2026-08-03）：OVERDUE 消息里的「预期周期」是固定描述，不是运行时
 # 阈值——LOOP_MIN 可以被设成 0（管理者配置），而「预期周期 0 分钟」是文案 bug。两个含义拆开。
 EXPECTED_CYCLE_MIN=20
-declare -A PREV_ALIVE PREV_STALL PREV_OVERDUE PREV_HASH PREV_IDLE PREV_HALTED UNHALT_TS \
-  PREV_BUSY_SEM PREV_API_BLOCKED PREV_MARKER_STALE IDLE_CONSEC SEEN_BUSY
+declare -A PREV_ALIVE PREV_STALL PREV_OVERDUE PREV_STATE PREV_IDLE PREV_HALTED UNHALT_TS \
+  PREV_BUSY_SEM PREV_API_BLOCKED PREV_MARKER_STALE PREV_PANE_EMPTY IDLE_CONSEC SEEN_BUSY \
+  PREV_SATURATED IDLE_REPORTED ROUNDS PERM_CONSEC PREV_PERM_WARNED \
+  BUSY_CONSEC RESUME_PENDING RESUME_CAUSE RESUME_LASTIN PREV_INTERVENTION
+
+# ── classifyPaneState 消费者（ADR-016 Amendment 2026-08-04 / 裁定 D）───────────────────────────
+# 忙闲判据读 pane 的【底部区域形状】（纯函数 pane-state-classify.ts），不是整屏哈希。SL_CLASSIFY /
+# SL_NODE 是测试接缝（分别覆盖分类器路径与 node 命令）；生产用 BASH_SOURCE 自定位到同目录的
+# pane-state-classify.ts，不硬编码绝对路径。放在文件前部（L0/函数/接缝之前），因为 --pane-state
+# 接缝与 _sl_pane_verdict 都要用到。
+_sl_pane_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd 2>/dev/null || echo .)"
+SL_CLASSIFY="${SL_CLASSIFY:-$_sl_pane_dir/pane-state-classify.ts}"
+SL_NODE="${SL_NODE:-node}"
 
 # ── L0（gap-tmux-isolation-cannot-depend-on-caller-remembering-to-unset-TMUX，AC3）──
 # 本监视器必须读【真实默认服务端】上的会话，所以不走 tmux-isolated.sh（那会指向一个没有真实
@@ -213,17 +319,20 @@ printf 'session-liveness: starting pid=%s file=%s md5=%s\n' \
 
 # ── 阶段二新增的纯函数（在 case 之前定义，供测试接缝直接调用）────────────────────────────
 
-# mask_pane —— 屏蔽「不是会话内容」的易变区（AC1/规格 AC18）。每条屏蔽规则附「为什么它不是
-# 活动信号」：
-#   * `/clear to save …`（token 计数行）：停泊会话唯一会变的东西——姊妹任务确认的假阳性源
+# mask_pane —— chrome 行集合的【记录 + --mask 诊断接缝】（AC1：每条附「为什么它不是活动信号」）。
+# 【2026-08-06 裁定 D 改判】忙闲判据不再消费 mask_pane 的输出（它不再流向 md5sum——ADR-016
+# Amendment 禁止 capture-pane→md5 一族）。判据改由 classifyPaneState 的底部区域形状分类承担：
+# chrome 天然进不了判据（形状分类读结构不读字节）。本函数保留为 AC1 的 chrome 行集合文档与
+# --mask 可测接缝（`bash session-liveness.sh --mask < pane.txt` 打印剥离后的内容区）：
+#   * `/clear to save …`（token 计数行）：停泊会话唯一会变的东西——本任务确认的假阳性源
 #     （archguard 停泊 pane 只有 150.2k→151.2k 变，被判成一堆事件）。这是提示语行的 chrome。
 #   * 含 ✽ 的行（转圈耗时行）：活跃 spinner，每秒跳——「人不看的部分」。
 #   * 含 ✻ 的行（`✻ Baked for …` 残留）：上一次动作留在屏上的字，五个会话全部存在（含空闲的），
 #     不能当忙的判据（外层实测：两个停泊 pane 各 2/1，而它们 esc=0）。
 # 注意：不按关键词 `tokens` 一刀切——subagent 任务行 `◯ general-purpose … ↓ 57.3k tokens`
 # 是真内容，随真实工作而变，必须保留（滤掉它=把假阳性换成假阴性，后者静默、更糟）。
-# 输出保留真内容；剥离后内容区为空时主循环的 busy_sem（esc 标志）仍能独立判忙，
-# 不会静默判空闲（AC1 的「剥离后内容区不得为空」防过滤保障）。
+# 防过滤（AC5）由主循环承担：pane 捕获为空 / 分类器区域为空 ⇒ 不判空闲、显式 WARN，
+# 不依赖 mask_pane 输出是否为空。
 mask_pane() {
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
@@ -235,17 +344,94 @@ mask_pane() {
   done
 }
 
-# transcript_api_error_count —— 最近 API_ERROR_WINDOW 条记录里「结构性」isApiErrorMessage 字段
-# 的计数（AC9）。结构字段 = 顶层 JSON 键 `"isApiErrorMessage":true`（只有 API 被拒记录才有，
-# 实测 archguard 被 429 拒绝会话最近 200 条为 6、健康/陈旧会话为 0）。
-# 不用 429 文案（绑死供应商文案，换端点即失效）；不用「transcript 是否增长」（429 也会被写进
-# transcript，增长分不开两种空闲——被拒会话实测仍在增长，而记录的类型可以）。
+# _sl_pane_verdict —— classifyPaneStateOrthogonal + AC5 防过滤守卫的【共享实现】（主循环与
+# --pane-state 接缝共用，避免两处逻辑漂移）。入参：$1 = pane 原始文本。结果写到五个全局：
+# _sl_pane_state / _sl_pane_busy / _sl_pane_intervention / _sl_pane_work_in_flight / _sl_pane_region。
+# 判据（gap-pane-classify-needs-two-orthogonal-dimensions）：读分类器的新两正交字段——input_state
+# （主线程能否收输入）与 work_in_flight（后台 agent 是否在跑）。state 取 input_state：
+#   input_state ∈ busy|error-banner ⇒ busy=1（真在干活 / 报错，忙闲轴上的忙）；
+#   permission-prompt ⇒ busy=0 + intervention=1（需要人/上层介入——不再并进 busy，
+#     gap-permission-prompt-merged-into-busy 的修复：卡权限框与在干活必须可区分）；
+#   waiting-input/unknown ⇒ busy=0 + intervention=0；
+#   work_in_flight 独立存到 _sl_pane_work_in_flight（MARKER-STALE 抑制用：transcript 动 + input
+#     空闲 + agents>0 是自洽组合，非异常——本任务根因）；
+#   空捕获（$1 为空）或分类器区域为空 ⇒ busy=1（AC5：无内容可判不得静默判空闲）。
+_sl_pane_verdict() {
+  local raw=$1 cls
+  _sl_pane_state="unknown"; _sl_pane_busy=0; _sl_pane_intervention=0; _sl_pane_work_in_flight=0; _sl_pane_region=""
+  if [ -z "$raw" ]; then
+    _sl_pane_busy=1
+    return 0
+  fi
+  # --classify --orthogonal prints "input_state\nwork_in_flight(0|1)\nregion"（纯文本，见
+  # pane-state-classify.ts 接缝注释）。用 bash 字符串切分（${var%%$'\n'*} / ${var#*$'\n'}）而不是再开
+  # 几个 $(...) 子 shell——每轮只多一个 node 子进程，压住 mount-count 测试的瞬态进程竞争（M3 注释
+  # 记录过同类竞争）。
+  cls=$(printf '%s\n' "$raw" | "$SL_NODE" --no-warnings --experimental-strip-types "$SL_CLASSIFY" --classify --orthogonal 2>/dev/null || printf 'unknown\n0\n')
+  _sl_pane_state=${cls%%$'\n'*}
+  _sl_pane_region=${cls#*$'\n'}
+  # line 2 = work_in_flight（0|1）；line 3+ = 区域。
+  _sl_pane_work_in_flight=${_sl_pane_region%%$'\n'*}
+  _sl_pane_region=${_sl_pane_region#*$'\n'}
+  [ -z "$_sl_pane_state" ] && _sl_pane_state="unknown"
+  [ "$_sl_pane_work_in_flight" != "1" ] && _sl_pane_work_in_flight=0
+  case "$_sl_pane_state" in
+    busy|error-banner) _sl_pane_busy=1; _sl_pane_intervention=0 ;;
+    permission-prompt) _sl_pane_busy=0; _sl_pane_intervention=1 ;;
+    *) _sl_pane_busy=0; _sl_pane_intervention=0 ;;   # waiting-input / unknown → 闲；unknown 的歧义由 transcript 融合兜底
+  esac
+  [ -z "$_sl_pane_region" ] && _sl_pane_busy=1
+}
+
+# _sl_perm_prompt_warn_verdict —— 候选 B 的【纯判据】（gap-permission-prompt-vs-dismissable-prompt-
+# classifier AC4）：permission-prompt 持续 N 轮且 transcript 未写入 ⇒ 报 WARN（不无限静默）。
+# 入参：$1 = 连续 permission-prompt 轮数（≥1）；$2 = transcript 最近写入距今秒数；-1 = 无 transcript。
+# 输出：warn（N ≥ PERM_PROMPT_WARN_ROUNDS 且 transcript 陈旧/不可用）| ok（否则）。
+#   交叉正控制：transcript 最近写入 ≤ PERM_PROMPT_TX_WINDOW ⇒ 会话确定在动，不 WARN（真忙）。
+#   无 transcript 配置 ⇒ 交叉控制无从确认，不 WARN（pane-only 观察者已有 D5 pane-only 审计 WARN）。
+_sl_perm_prompt_warn_verdict() {
+  local rounds=$1 tx_age=$2
+  if [ "$rounds" -ge "${PERM_PROMPT_WARN_ROUNDS:-3}" ] 2>/dev/null; then
+    if [ "$tx_age" -lt 0 ]; then
+      echo "ok"   # 无 transcript 可交叉核对——不报（条件未确认，绝不因「无法确认」而报）
+    elif [ "$tx_age" -gt "${PERM_PROMPT_TX_WINDOW:-60}" ]; then
+      echo "warn"
+    else
+      echo "ok"   # transcript 刚写过——会话确实在动，不是卡死的假 permission-prompt
+    fi
+  else
+    echo "ok"
+  fi
+}
+
+# transcript_api_error_count —— 「当前被 429 卡住」的计数（AC9 结构性字段 + AC7/D4 时效）。
+# 结构字段 = 顶层 JSON 键 `"isApiErrorMessage":true`（只有 API 被拒记录才有，实测 archguard
+# 被 429 拒绝会话最近 200 条为 6、健康/陈旧会话为 0）。不用 429 文案（绑死供应商文案，换端点
+# 即失效）；不用「transcript 是否增长」（429 也会被写进 transcript，增长分不开两种空闲）。
+#
+# AC7/D4 时效（gap-session-liveness-busy-mask-idle-with-subagents）：**只数【尾随】的错误记录**
+# ——从尾向前扫最近 API_ERROR_WINDOW 条，数连续的 isApiErrorMessage 记录，遇到第一条非错误
+# 消息（最近一次成功应答）即停。一次瞬时 429 被后续正常应答覆盖后就不再计数：D4 复现（manager
+# 三次实测）13:04:47 错误 → 13:08:47 正常应答，但记录仍在 200 条窗口内（12:43→13:09=26min），
+# 旧判据「最近 200 条含 ≥1」让 13:06/13:09/13:11 连报三条 CANT-SEND——一次瞬时网络错误把此后
+# 26 分钟的每次空闲都升级成叫人告警。尾随计数让「已恢复」的空闲回到普通 SESSION-IDLE。
 # grep 模式 `"isApiErrorMessage":…true` 只命中顶层键：content 里文字提及该字段的形式是
 # `isApiErrorMessage: true` 或转义键 `\"isApiErrorMessage\":…`，前导不是裸 `"`，不会误命中。
+# 元数据行（非 assistant/user 消息）跳过、不作为「成功应答」边界（与 transcript_last_message_type
+# 同源；真实 transcript 尾部常有 mode/summary 等元数据）。
 transcript_api_error_count() {
-  local t=$1 n
-  n=$(tail -n "$API_ERROR_WINDOW" "$t" 2>/dev/null | grep -c '"isApiErrorMessage"[[:space:]]*:[[:space:]]*true' 2>/dev/null || true)
-  [ -z "$n" ] && n=0
+  local t=$1 n=0 line
+  while IFS= read -r line; do
+    case "$line" in
+      *'"type":"assistant"'*|*'"type":"user"'*)
+        if printf '%s' "$line" | grep -q '"isApiErrorMessage"[[:space:]]*:[[:space:]]*true'; then
+          n=$(( n + 1 ))
+        else
+          break
+        fi
+        ;;
+    esac
+  done < <(tail -n "$API_ERROR_WINDOW" "$t" 2>/dev/null | tac 2>/dev/null)
   printf '%s\n' "$n"
 }
 
@@ -290,67 +476,366 @@ last_user_input_epoch() {
   date -d "$ts" +%s 2>/dev/null || return 1
 }
 
-# ── 共享事件文件与心跳（AC20c/AC7，2026-08-03）──────────────────────────────────────────────
-# AC20c：事件写进共享文件（$QUAY_GLOBAL_DIR/session-liveness/events.jsonl），订阅与挂载分离——
-# 要看事件的人不必自己挂一个。AC7：共享事件文件带心跳/时间戳，订阅方能据此判定「看门的已经不在了」，
-# 且该判定不依赖任何人恰好去尝试挂载。持有者每轮往 events.jsonl 追加一条 HEARTBEAT 事件，订阅方
-# 取最后一条的 ts（或文件 mtime）与当前时间比对，超过阈值即判定持有者已死——即使没有任何人去试挂。
-# 状态目录（含锁、事件、心跳）在 $QUAY_GLOBAL_DIR 之外每个仓库共享，删任何仓库都不能删掉别的状态。
-sl_now_ms() {
-  local out s n
-  out="$(date +%s%N 2>/dev/null || echo 0000000000000000000)"
-  case "$out" in ''|*[!0-9]*) out="0000000000000000000" ;; esac
-  s="${out:0:10}"
-  n="${out:10:9}"
-  case "$n" in ''|*[!0-9]*) n="000000000" ;; esac
-  printf '%s%03d' "${s:-0}" "$(( 10#${n:0:3} ))"
+# ── 阶段四：上下文饱和度（gap-session-liveness-cannot-see-context-saturation-...，2026-08-07）──
+# 三个纯函数，全部读 transcript 的结构字段，不碰屏幕百分比文本（AC3）。
+
+# transcript_cache_read_tokens —— 最近 assistant API 响应的 usage.cache_read_input_tokens（缓存前缀
+# 大小 = 上下文实际用量）。结构化源：该字段只在 assistant 响应的 usage 对象里出现，工具回执/元数据
+# 记录没有。tail 界 1000 行提速（最近一次 usage 距文件尾很近）；无匹配再全扫兜底。返回 "unknown" =
+# 取不到（无 transcript / 无 usage 记录）。
+transcript_cache_read_tokens() {
+  local t=$1 line n
+  [ -e "$t" ] && [ -r "$t" ] || { echo "unknown"; return 1; }
+  line=$(tail -n 1000 "$t" 2>/dev/null | grep -oE '"cache_read_input_tokens":[0-9]+' | tail -1)
+  [ -n "$line" ] || line=$(grep -oE '"cache_read_input_tokens":[0-9]+' "$t" 2>/dev/null | tail -1)
+  [ -n "$line" ] || { echo "unknown"; return 1; }
+  n=${line##*:}
+  printf '%s\n' "$n"
 }
 
-# sl_json_append —— 把一行事件追加进共享 events.jsonl（JSON 行；事件行不换行，python3 负责转义）。
-sl_json_append() {
-  local line="$1" event name ts line_json
-  event="${line%% *}"
-  name="${line#* }"; name="${name%% *}"
-  ts=$(sl_now_ms)
-  line_json=$(printf '%s' "$line" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))' 2>/dev/null \
-    || { printf '%s' "$line" | sed 's/\\/\\\\/g; s/"/\\"/g'; })
-  printf '{"ts":%s,"event":%s,"name":%s,"msg":%s}\n' \
-    "$ts" "$(printf '"%s"' "$event")" "$(printf '"%s"' "$name")" "$line_json" \
-    >> "${SL_EVENTS_FILE:-/dev/null}" 2>/dev/null || true
+# last_message_is_unanswered_input —— 最后一条【消息】是否未获回应的 user 输入（收到新指令但模型尚未
+# 应答）。复用 transcript_last_message_type 的消息定位（跳过 system/mode 等元数据）：最后一条是 user =
+# yes（收进了但没答出来）；最后一条是 assistant = no（还在应答/已应答）。
+last_message_is_unanswered_input() {
+  local t=$1 mtype
+  mtype=$(transcript_last_message_type "$t")
+  [ "$mtype" = "user-input" ] && echo "yes" || echo "no"
 }
 
-# sl_emit_shared —— 只写共享 events.jsonl（订阅方读取），不走 stdout。AC21（gap-a-log-already-
-# filtered-by-one-consumers-threshold-cannot-serve-a-second）：共享文件记全量，阈值只作用于持有者
-# 自己的 stdout——被持有者阈值静默的事件（如 hmin < LOOP_MIN 的健康空闲）仍须进入共享文件，让订阅方
-# 自己决定报不报。写共享文件失败（目录不可写）只回落到无操作，绝不 crash（与令牌 fail-open 同源：
-# 调度角色不是安全检查）。
-sl_emit_shared() {
-  [ -n "${SL_EVENTS_FILE:-}" ] || return 0
-  [ -d "${SL_GLOBAL_DIR:-}" ] && [ -w "$SL_GLOBAL_DIR" ] || return 0
-  sl_json_append "$*"
+# transcript_context_saturation —— 上下文饱和度的复合判据（AC4/任务约束 2：饱和≠故障，见即报的是
+# 「饱和且随后指令未被响应」）：
+#   saturated   cache_read_input_tokens ≥ SATURATION_TOKENS 且最后一条是未应答 user 输入
+#   unsaturated 其它（上下文低，或上下文高但仍在应答——auto-compact 是正常机制，不报）
+#   unknown     取不到 transcript / 无 usage 记录（静默，不猜）
+transcript_context_saturation() {
+  local t=$1 cache last
+  cache=$(transcript_cache_read_tokens "$t")
+  [ "$cache" = "unknown" ] && { echo "unknown"; return 1; }
+  if [ "$cache" -ge "$SATURATION_TOKENS" ] 2>/dev/null; then
+    last=$(last_message_is_unanswered_input "$t")
+    if [ "$last" = "yes" ]; then echo "saturated"; else echo "unsaturated"; fi
+  else
+    echo "unsaturated"
+  fi
 }
 
-# sl_emit —— 事件同时走 stdout（Monitor 事件流）与共享 events.jsonl（订阅方读取）。stdout 是持有者
-# 自己的通知流，受持有者阈值门控；共享文件由 sl_emit_shared 无条件记全量（AC21：记录与判断分开）。
+# transcript_saturation_report —— --saturation 接缝（AC1：一条命令报出目标会话的上下文饱和度）。
+# 打印判据 + 原始代理值，供观察者/测试直接读。
+transcript_saturation_report() {
+  local t=$1 cache sat
+  [ -e "$t" ] && [ -r "$t" ] || { echo "unknown (no readable transcript)"; return 1; }
+  cache=$(transcript_cache_read_tokens "$t")
+  sat=$(transcript_context_saturation "$t")
+  case "$sat" in
+    saturated)   echo "saturated cache_read_input_tokens=${cache} (context ≥ ${SATURATION_TOKENS} + last message unanswered user input)" ;;
+    unsaturated) echo "unsaturated cache_read_input_tokens=${cache}" ;;
+    *)           echo "unknown (no assistant usage record)" ;;
+  esac
+}
+
+# ── 外层多源心跳（gap-outer-heartbeat-source-inverts-under-incident-handling，2026-08-05）────────────
+# outer_heartbeat_mtime —— 默认外层心跳 = 多源 max mtime。红窗处置期间外层写 queue-state / 分析记录
+# + 提交但不写 tick-log；单源 tick-log 会把「越认真处理事故」读成「心跳越旧」（实测 71min 陈旧而 5 个
+# 提交已产出，真阳/假阳不可分）。多源集合 = max(HEAD commit 时间, queue-state mtime, tick-log mtime,
+# docs/analysis 最新记录 mtime, verification-round.jsonl mtime)。任一在阈值内 ⇒ alive；全部陈旧 ⇒
+# SESSION-OVERDUE 仍报（真阳性保留）。与 D 分类器同源：单一代理信号不足以判定状态。
+# 返回 epoch；0 = 所有源都不存在/不可读。
+outer_heartbeat_mtime() {
+  local root=$1 max=0 ts f src
+  # 1. HEAD commit 时间（提交 = 产出；git log 失败 = 非 git 仓库 = 0）
+  ts=$(git -C "$root" log -1 --format=%ct 2>/dev/null || echo 0)
+  [ -n "$ts" ] && [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+  # 2. queue-state / 3. tick-log / 5. verification-round（文件 mtime）
+  for src in \
+    "$root/docs/analysis/batch2-queue-state.md" \
+    "$root/orchestration/tick-log.md" \
+    "$root/.quay/verification-round.jsonl"
+  do
+    if [ -e "$src" ]; then
+      ts=$(stat -c %Y "$src" 2>/dev/null || echo 0)
+      [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+    fi
+  done
+  # 4. 分诊/分析记录：docs/analysis/ 下最新的 .md（红窗分诊记录落在这里，见 ROUND 2 RED triage record）
+  for f in "$root"/docs/analysis/*.md; do
+    [ -e "$f" ] || continue
+    ts=$(stat -c %Y "$f" 2>/dev/null || echo 0)
+    [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+  done
+  echo "$max"
+}
+
+
+# ── 事件发出（2026-08-06 人裁定：观测是树，每观察者自己的流）──────────────────────────────
+# 观测拓扑是树（manager→N 个 outer、outer_i→inner_i），每条边是独立的 (观察者,目标) 对：只读、
+# 无交集。事件只走观察者自己的 stdout（谁挂的谁拥有）——挂载方（Monitor 工具）的事件流就是这条边
+# 的事件流。不再有共享事件文件（那是把 N 条独立流合并成一条、再让每个消费者过滤回自己要的——
+# 严格劣于 N 条独立流，零收益）；不再有互斥锁（观测对目标纯只读，只读天然不排他，重复挂载无害）。
+# AC21（gap-a-log-already-filtered-by-one-consumers-threshold-cannot-serve-a-second）的根因
+# （共享文件 + 持有者阈值决定一切）随之消失：每个观察者的阈值（LOOP_MIN/STALL_MIN/OVERDUE_MIN）
+# 只作用于它自己的 stdout、只服务它自己的消费者——manager 观 outer 的观察者可以 LOOP_MIN=0 知悉
+# 全部，outer 观 inner 的观察者可以 LOOP_MIN=20 抑噪，互不影响、互不知情。
 sl_emit() {
   echo "$*"
-  sl_emit_shared "$*"
 }
 
-# sl_heartbeat —— 持有者每轮追加一条 HEARTBEAT（只进共享文件，不污染 stdout/Monitor 事件流）。
-# 订阅方取最后一条 ts 判「看门的不在了」——这是 AC7 的判据，不依赖任何人去试挂。
-sl_heartbeat() {
-  [ -n "${SL_EVENTS_FILE:-}" ] || return 0
-  [ -d "${SL_GLOBAL_DIR:-}" ] && [ -w "$SL_GLOBAL_DIR" ] || return 0
-  printf '{"ts":%s,"event":"HEARTBEAT","name":%s,"msg":"holder alive"}\n' \
-    "$(sl_now_ms)" "$(printf '"%s"' "${SL_OWNER:-unknown}")" \
-    >> "$SL_EVENTS_FILE" 2>/dev/null || true
+# ── 外层多源心跳（gap-outer-heartbeat-source-inverts-under-incident-handling，2026-08-06）──────
+# SESSION-OVERDUE 的原判据 = 单个心跳路径的 mtime（默认 orchestration/tick-log.md）。红窗处置时
+# 外层写 docs/analysis/batch2-queue-state.md + 提交、不写 tick-log ⇒ 越认真处置心跳越旧（实测：
+# 2026-08-05 心跳 71 分钟未更新，期间 5 次提交 + 分诊记录全在做，假阳性）。修法：外层心跳 =
+# 多源 max mtime：
+#   max(HEAD 提交时间, queue-state mtime, tick-log mtime, docs/analysis/*.md max mtime,
+#       .quay/verification-round.jsonl mtime)
+# 任一源在阈值内 ⇒ alive（红窗处置写 queue-state+提交 ⇒ 心跳仍新鲜，反向失效消除）。
+# 真阳性保留：所有源都 ≥OVERDUE_MIN 未动 ⇒ 仍报 SESSION-OVERDUE（「红着没人碰」必须被抓）。
+# 与 D 分类器同源（tasks/gap-pane-state-is-hashed-not-classified-so-needs-input-is-unobservable）：
+# 单一代理信号不足，多源融合。只在【默认外层心跳】（无 SESSION_HEARTBEATS / SESSION_TRANSCRIPTS
+# 覆盖）时启用——显式配置的心跳仍是用户指认的单源，不悄悄改成多源。
+_outer_heartbeat_max_mtime() {
+  local root=$1 max=0 ts=0 f
+  # 1. HEAD 提交时间（git，红窗处置的最强产出信号）
+  ts=$(git -C "$root" log -1 --format=%ct 2>/dev/null || echo 0)
+  [ "${ts:-0}" -gt "$max" ] 2>/dev/null && max=$ts
+  # 2. queue-state（红窗分诊的主产出）
+  for f in "$root/docs/analysis/batch2-queue-state.md" "$root/docs/analysis/batch-queue-state.md"; do
+    [ -e "$f" ] || continue
+    ts=$(stat -c %Y "$f" 2>/dev/null || echo 0)
+    [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+  done
+  # 3. tick-log（原单源）
+  f="$root/orchestration/tick-log.md"
+  if [ -e "$f" ]; then
+    ts=$(stat -c %Y "$f" 2>/dev/null || echo 0)
+    [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+  fi
+  # 4. 分诊/分析记录（docs/analysis/*.md：红窗分诊记录、热修说明；任一最近 mtime 即算产出）
+  if [ -d "$root/docs/analysis" ]; then
+    while IFS= read -r f; do
+      [ -e "$f" ] || continue
+      ts=$(stat -c %Y "$f" 2>/dev/null || echo 0)
+      [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+    done < <(find "$root/docs/analysis" -maxdepth 1 -name '*.md' 2>/dev/null)
+  fi
+  # 5. verification-round.jsonl（外层异步收尾轮次记录；gitignored 运行时态，存在才用）
+  f="$root/.quay/verification-round.jsonl"
+  if [ -e "$f" ]; then
+    ts=$(stat -c %Y "$f" 2>/dev/null || echo 0)
+    [ "$ts" -gt "$max" ] 2>/dev/null && max=$ts
+  fi
+  echo "$max"
+}
+
+# heartbeat_is_outer_default —— 该心跳路径是否就是【默认外层心跳】（未被 SESSION_HEARTBEATS /
+# SESSION_TRANSCRIPTS 覆盖）。覆盖了 ⇒ 单源 heartbeat_mtime；默认 ⇒ 多源 _outer_heartbeat_max_mtime。
+heartbeat_is_outer_default() {
+  local name=$1 root=$2 hb=$3 n v
+  [ "$hb" = "$root/orchestration/tick-log.md" ] || return 1
+  if [ -n "${SESSION_HEARTBEATS:-}" ]; then
+    while read -r n v; do
+      [ -n "${n:-}" ] || continue
+      [ "$n" = "$name" ] && return 1
+    done <<< "$SESSION_HEARTBEATS"
+  fi
+  if [ -n "${SESSION_TRANSCRIPTS:-}" ]; then
+    while read -r n v; do
+      [ -n "${n:-}" ] || continue
+      [ "$n" = "$name" ] && return 1
+    done <<< "$SESSION_TRANSCRIPTS"
+  fi
+  return 0
+}
+
+# effective_heartbeat_mtime —— 判 SESSION-OVERDUE / SESSION-IDLE 噪声闸门用的心跳陈旧度。
+# 默认外层心跳 = 多源 max mtime；显式配置的心跳 = 单源 heartbeat_mtime。
+effective_heartbeat_mtime() {
+  local name=$1 root=$2 hb=$3
+  if heartbeat_is_outer_default "$name" "$root" "$hb"; then
+    _outer_heartbeat_max_mtime "$root"
+  else
+    heartbeat_mtime "$hb"
+  fi
+}
+
+# --selfcheck（本任务 ## Contract 的 invoke）—— 诊断接缝，验证外层多源心跳判据 + 上下文饱和度判据，
+# 自包含（临时目录，不碰真实仓库/会话）：
+#   1. 红窗处置（最近提交 + 新 queue-state + 旧 tick-log）⇒ 心跳新鲜（不报 OVERDUE，AC2）；
+#   2. 30 分钟零产出（旧提交 + 旧 tick-log + 无 queue-state）⇒ 心跳陈旧（真阳性保留，AC3）；
+#   3. 上下文饱和度复合判据（阶段四）：高 cache_read + 未应答输入 ⇒ saturated；同上下文但已应答 ⇒
+#      unsaturated（负控制：auto-compact 是正常机制）；低上下文 + 未应答 ⇒ unsaturated（负控制）。
+# --json 变体（$1=1）：只打一行 JSON（含 saturation 字段），供 Contract measure
+# `--selfcheck --json 2>&1 | grep -c 'saturated'` 读取。
+selfcheck() {
+  local tmp ws now fresh stale fmin smin rc=1 json=${1:-0} sat_dir sat_green sat_answering sat_healthy sat_ok=1 _now_iso
+  tmp=$(mktemp -d 2>/dev/null) || { echo "session-liveness selfcheck: FAIL 无法创建临时目录" >&2; return 1; }
+  # 控制 1（反向失效消除）：红窗处置 = 最近提交 + 新 queue-state + 旧 tick-log ⇒ 心跳新鲜
+  ws="$tmp/fresh"
+  mkdir -p "$ws/orchestration" "$ws/docs/analysis" "$ws/.quay"
+  git -C "$ws" init -q -b master >/dev/null 2>&1
+  git -C "$ws" config user.email t@t >/dev/null 2>&1
+  git -C "$ws" config user.name t >/dev/null 2>&1
+  echo x > "$ws/a.txt"
+  git -C "$ws" add -A >/dev/null 2>&1
+  git -C "$ws" commit -qm "red-window triage commit" >/dev/null 2>&1
+  echo "# queue-state" > "$ws/docs/analysis/batch2-queue-state.md"
+  echo "# tick" > "$ws/orchestration/tick-log.md"
+  touch -d "3 hours ago" "$ws/orchestration/tick-log.md"   # tick-log 不动
+  fresh=$(_outer_heartbeat_max_mtime "$ws")
+  # 控制 2（真阳性保留）：30 分钟零产出 ⇒ 全源旧 ⇒ 心跳陈旧
+  ws="$tmp/stale"
+  mkdir -p "$ws/orchestration" "$ws/docs/analysis" "$ws/.quay"
+  git -C "$ws" init -q -b master >/dev/null 2>&1
+  git -C "$ws" config user.email t@t >/dev/null 2>&1
+  git -C "$ws" config user.name t >/dev/null 2>&1
+  echo x > "$ws/a.txt"
+  git -C "$ws" add -A >/dev/null 2>&1
+  GIT_AUTHOR_DATE="2000-01-01T00:00:00Z" GIT_COMMITTER_DATE="2000-01-01T00:00:00Z" \
+    git -C "$ws" commit -qm "old" >/dev/null 2>&1
+  echo "# tick" > "$ws/orchestration/tick-log.md"
+  touch -d "3 hours ago" "$ws/orchestration/tick-log.md"
+  stale=$(_outer_heartbeat_max_mtime "$ws")
+  now=$(date +%s)
+  fmin=$(( (now - fresh) / 60 ))
+  smin=$(( (now - stale) / 60 ))
+  # 控制 3（阶段四，AC2/AC4）：饱和复合判据三 fixture（饱和正控制 / 同上下文已应答负控制 / 健康负控制）
+  sat_dir="$tmp/sat"
+  mkdir -p "$sat_dir"
+  _now_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  printf '%s\n%s\n' \
+    "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]},\"usage\":{\"input_tokens\":89,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":600000,\"output_tokens\":111},\"timestamp\":\"$_now_iso\"}" \
+    "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"new instruction\"},\"timestamp\":\"$_now_iso\"}" \
+    > "$sat_dir/saturated.jsonl"
+  printf '%s\n%s\n' \
+    "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"hi\"},\"timestamp\":\"$_now_iso\"}" \
+    "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]},\"usage\":{\"input_tokens\":89,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":600000,\"output_tokens\":111},\"timestamp\":\"$_now_iso\"}" \
+    > "$sat_dir/answering.jsonl"
+  printf '%s\n%s\n' \
+    "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]},\"usage\":{\"input_tokens\":89,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":50000,\"output_tokens\":111},\"timestamp\":\"$_now_iso\"}" \
+    "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"new instruction\"},\"timestamp\":\"$_now_iso\"}" \
+    > "$sat_dir/healthy.jsonl"
+  sat_green=$(transcript_context_saturation "$sat_dir/saturated.jsonl")
+  sat_answering=$(transcript_context_saturation "$sat_dir/answering.jsonl")
+  sat_healthy=$(transcript_context_saturation "$sat_dir/healthy.jsonl")
+  [ "$sat_green" = "saturated" ] || sat_ok=0
+  [ "$sat_answering" = "unsaturated" ] || sat_ok=0
+  [ "$sat_healthy" = "unsaturated" ] || sat_ok=0
+
+  if [ "$json" = "1" ]; then
+    printf '{"red-window-heartbeat_min":%s,"zero-output-heartbeat_min":%s,"OVERDUE_MIN":%s,"saturation":"%s","saturation_ok":%s}\n' \
+      "$fmin" "$smin" "$OVERDUE_MIN" "$sat_green" "$sat_ok"
+    rm -rf "$tmp"
+    [ "$fmin" -lt "$OVERDUE_MIN" ] && [ "$smin" -ge "$OVERDUE_MIN" ] && [ "$sat_ok" = "1" ]
+    return $?
+  fi
+
+  echo "session-liveness selfcheck: red-window-heartbeat_min=${fmin} zero-output-heartbeat_min=${smin} OVERDUE_MIN=${OVERDUE_MIN}"
+  if [ "$fmin" -lt "$OVERDUE_MIN" ] && [ "$smin" -ge "$OVERDUE_MIN" ]; then
+    echo "session-liveness selfcheck: PASS — 红窗处置（queue-state+提交）保持心跳新鲜；零产出触发 OVERDUE（真阳性保留）"
+    rc=0
+  else
+    echo "session-liveness selfcheck: FAIL — fresh_min=${fmin} (<${OVERDUE_MIN} 应为真) stale_min=${smin} (≥${OVERDUE_MIN} 应为真)" >&2
+    rc=1
+  fi
+  if [ "$sat_ok" = "1" ]; then
+    echo "session-liveness selfcheck: saturation composite PASS — saturated=${sat_green} answering=${sat_answering} healthy=${sat_healthy}（饱和判据与普通忙/健康可区分）"
+  else
+    echo "session-liveness selfcheck: saturation FAIL — saturated=${sat_green} answering=${sat_answering} healthy=${sat_healthy}" >&2
+    rc=1
+  fi
+  rm -rf "$tmp"
+  return $rc
+}
+
+# intervention_selfcheck —— --check 接缝（gap-permission-prompt-merged-into-busy ## Contract 的
+# measure/invoke：`bash plugin/scripts/session-liveness.sh --check`）。自包含（纯字符串 fixture，
+# 无 tmux / 无文件）验证三条契约带：
+#   1. permission_prompt_class：构造 permission-prompt pane ⇒ 分类为 intervention-required
+#      （raw state=permission-prompt，busy=0 intervention=1）——非 busy，与「在干活」可区分（AC2）；
+#   2. intervention_triggered：permission-prompt ⇒ 上层动作触发（SESSION-INTERVENTION-REQUIRED 事件
+#      立即发出，非等 3 次 busy）（AC3）；
+#   3. busy_true_work_not_flagged：构造真忙 pane（esc to interrupt）⇒ busy=1 intervention=0，
+#      不触发 intervention（负控制，AC4）。
+# 输出逐键 key=value 行（外层可 grep），退出 0 = 全部契约带成立；1 = 任一违反。
+intervention_selfcheck() {
+  local perm busy idle perm_state perm_busy perm_int busy_state busy_busy busy_int rc=0
+  perm="Quick safety check: Is this a project you created or one you trust?\n❯ 1. Yes, I trust this folder ✔\n  2. No, exit\nEnter to confirm · Esc to cancel"
+  busy="───────────────────────────────\n❯ \n───────────────────────────────\n  ⏵⏵ bypass permissions on · 1 monitor · esc to interrupt · ← 1 agent · ↓ to manage"
+  idle="───────────────────────────────\n❯ \n───────────────────────────────\n  ⏵⏵ bypass permissions on · 1 monitor · ← 1 agent · ↓ to manage"
+  _sl_pane_verdict "$(printf '%b\n' "$perm")"
+  perm_state="$_sl_pane_state"; perm_busy="$_sl_pane_busy"; perm_int="$_sl_pane_intervention"
+  _sl_pane_verdict "$(printf '%b\n' "$busy")"
+  busy_state="$_sl_pane_state"; busy_busy="$_sl_pane_busy"; busy_int="$_sl_pane_intervention"
+  _sl_pane_verdict "$(printf '%b\n' "$idle")"
+  # 契约带 1/2：permission-prompt ⇒ 非 busy + intervention（新状态，可区分于在干活）
+  if [ "$perm_state" = "permission-prompt" ] && [ "$perm_busy" = "0" ] && [ "$perm_int" = "1" ]; then
+    echo "permission_prompt_class=intervention-required (raw ${perm_state}; busy=${perm_busy} intervention=${perm_int})"
+    echo "intervention_triggered=1 (permission-prompt ⇒ SESSION-INTERVENTION-REQUIRED 事件立即发出，非等 3 次 busy)"
+  else
+    echo "permission_prompt_class=FAIL (raw ${perm_state}; busy=${perm_busy} intervention=${perm_int}——permission-prompt 必须非 busy 且标 intervention)" >&2
+    echo "intervention_triggered=0" >&2
+    rc=1
+  fi
+  # 契约带 3（负控制）：真忙 ⇒ busy=1 intervention=0，不触发 intervention
+  if [ "$busy_state" = "busy" ] && [ "$busy_busy" = "1" ] && [ "$busy_int" = "0" ]; then
+    echo "busy_true_work_not_flagged=1 (busy ⇒ busy=${busy_busy} intervention=${busy_int}——正常忙碌不误报)"
+  else
+    echo "busy_true_work_not_flagged=0 (raw ${busy_state}; busy=${busy_busy} intervention=${busy_int})" >&2
+    rc=1
+  fi
+  # 附带正控制：waiting-input ⇒ 闲 + 不干预（分类器未回归）
+  if [ "$_sl_pane_state" = "waiting-input" ] && [ "$_sl_pane_busy" = "0" ] && [ "$_sl_pane_intervention" = "0" ]; then
+    : # 正常闲：契约带之外的正控制，静默通过
+  else
+    echo "waiting_input_class=FAIL (raw ${_sl_pane_state}; busy=${_sl_pane_busy} intervention=${_sl_pane_intervention})" >&2
+    rc=1
+  fi
+  [ "$rc" = "0" ] && echo "session-liveness --check: PASS — permission-prompt 单列非 busy + 触发 intervention；正常忙仍 busy"
+  return $rc
 }
 
 ONE_SHOT=false
 case "${1:-}" in
   --once) ONE_SHOT=true ;;
+  --selfcheck)
+    # Contract measure `--selfcheck --json 2>&1 | grep -c 'saturated'`（阶段四）：--json 变体只打一行
+    # JSON（含 saturation 字段）；无 --json = 原人类可读自检。
+    if [ "${2:-}" = "--json" ]; then selfcheck 1; exit $?; fi
+    selfcheck; exit $? ;;
+  --states)
+    # 状态词汇表（阶段四 Contract measure `--states | grep -c 'saturated'`）：含 saturated。
+    echo "SESSION-GONE / SESSION-BACK — 会话进程消失 / 恢复"
+    echo "SESSION-IDLE / SESSION-RESUMED — 转入空闲 / 恢复活动"
+    echo "SESSION-OVERDUE — 心跳逾期（会话可能已死）"
+    echo "SESSION-MARKER-STALE — 屏幕标志可能失效"
+    echo "SESSION-IDLE-CANT-SEND — 空闲且发不出请求"
+    echo "REPO-STALL — 仓库信号（非会话面）"
+    echo "SESSION-STATUS — --once 接缝状态行"
+    echo "SESSION-SATURATED — 上下文已饱和（saturated: alive but cannot take input）"
+    echo "SESSION-INTERVENTION-REQUIRED — 需要人/上层介入（permission-prompt 卡权限框，非 busy，单列可检测）"
+    exit 0 ;;
+  --saturation)
+    [ -n "${2:-}" ] || { echo "用法: $0 --saturation <transcript>" >&2; exit 2; }
+    transcript_saturation_report "$2"; exit 0 ;;
   --mask) mask_pane; exit 0 ;;
+  --pane-state)
+    # 诊断接缝（AC4/AC5 单测直接调用）：从 stdin 读 pane 文本，跑与主循环相同的
+    # _sl_pane_verdict（classifyPaneStateOrthogonal + AC5 守卫），打印
+    # "state=<s> busy=<0|1> intervention=<0|1> work_in_flight=<0|1>"。busy 字段保持向后兼容；
+    # intervention 是 gap-permission-prompt-merged-into-busy 新增的独立标志（permission-prompt ⇒
+    # intervention=1）；work_in_flight 是 gap-pane-classify-needs-two-orthogonal-dimensions 的两正交
+    # 字段之二（后台 agent 是否在跑——独立于 input_state，非 busy）。
+    _sl_pane_verdict "$(cat)"
+    echo "state=$_sl_pane_state busy=$_sl_pane_busy intervention=$_sl_pane_intervention work_in_flight=$_sl_pane_work_in_flight"
+    exit 0 ;;
+  --check)
+    # ## Contract measure/invoke 接缝（gap-permission-prompt-merged-into-busy）：自包含自检。
+    # 构造 permission-prompt / busy / waiting-input 三种 pane，验证三条契约带（见
+    # intervention_selfcheck）。退出 0 = 全部通过。
+    intervention_selfcheck; exit $? ;;
+  --perm-warn-verdict)
+    # 候选 B 纯判据接缝（gap-permission-prompt-vs-dismissable-prompt-classifier AC4 单测直接调用）：
+    # 打印 _sl_perm_prompt_warn_verdict 的输出（warn|ok）。入参 <连续轮数> <transcript 陈旧秒数|-1>。
+    [ $# -ge 3 ] || { echo "用法: $0 --perm-warn-verdict <rounds> <tx_age_secs|-1>" >&2; exit 2; }
+    _sl_perm_prompt_warn_verdict "$2" "$3"; exit 0 ;;
   --api-errors)
     [ -n "${2:-}" ] || { echo "用法: $0 --api-errors <transcript>" >&2; exit 2; }
     transcript_api_error_count "$2"; exit 0 ;;
@@ -361,7 +846,7 @@ case "${1:-}" in
   --last-message-type)
     [ -n "${2:-}" ] || { echo "用法: $0 --last-message-type <transcript>" >&2; exit 2; }
     transcript_last_message_type "$2"; exit 0 ;;
-  -h|--help) echo "用法: $0 [--once] [--mask] [--api-errors <t>] [--last-input <t>] [--last-message-type <t>]"; exit 0 ;;
+  -h|--help) echo "用法: $0 [--once] [--selfcheck [--json]] [--states] [--saturation <t>] [--mask] [--pane-state] [--check] [--api-errors <t>] [--last-input <t>] [--last-message-type <t>] [--perm-warn-verdict <rounds> <tx_age>]"; exit 0 ;;
 esac
 
 # ── 本项目根：自定位（同 inner-state.sh）。SESSION_ROOT 是测试接缝，生产不设。 ──────────────
@@ -372,7 +857,16 @@ if [ -z "$REPO_ROOT" ]; then
 fi
 
 # ── 管理者的多目标配置（AC9）：orchestration/session-liveness.env 存在则 source。
-#    shell KEY=VALUE，不是 YAML。显式环境变量 SESSION_TARGETS 优先。 ───────────────────────
+#    shell KEY=VALUE，不是 YAML。显式环境变量优先——SESSION_TARGETS 经 source 守卫、
+#    SESSION_TMUX_SESSION / SESSION_TRANSCRIPTS / SESSION_HEARTBEATS 经先钉后回。
+#    gap-session-liveness-ignores-unknown-transcript-names：管理者挂载时显式传
+#    SESSION_TRANSCRIPTS="outer <outer transcript>" 但未设 SESSION_TARGETS，env 文件的
+#    SESSION_TRANSCRIPTS（"quay …"）会把「outer」静默覆盖 ⇒ 配置接线审计
+#    （_sl_audit_config_wiring）看不到调用方的名字 ⇒ 名字不匹配目标表零告警、盯错对象
+#    （outer 216s 无人观测）。先钉后回让调用方显式值存活，审计才能对「不在目标表的名字」告警。 ──
+_sl_transcripts_env="${SESSION_TRANSCRIPTS:-}"
+_sl_heartbeats_env="${SESSION_HEARTBEATS:-}"
+_sl_session_env="${SESSION_TMUX_SESSION:-}"
 if [ -z "${SESSION_TARGETS:-}" ] && [ -f "$REPO_ROOT/orchestration/session-liveness.env" ]; then
   set -a
   # shellcheck disable=SC1090
@@ -387,16 +881,18 @@ fi
 # 字面比较。2026-08-03 起脚本不再被 quay-init 改写（可执行文件原样复制、只生成配置），这两个坑
 # 随之失去存在前提——会话名一律经 env / orchestration/session-liveness.env / 默认值解析。
 # 环境变量显式设置优先（先钉住，避免被配置文件 source 覆盖）：env > 配置 > 默认值。
-_sl_session_env="${SESSION_TMUX_SESSION:-}"
-if [ -z "${SESSION_TARGETS:-}" ] && [ -f "$REPO_ROOT/orchestration/session-liveness.env" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$REPO_ROOT/orchestration/session-liveness.env" \
-    || echo "session-liveness: WARN 无法解析 $REPO_ROOT/orchestration/session-liveness.env，回落到默认" >&2
-  set +a
-fi
+# 钉住动作在第一个 source 块前完成（上面的 _sl_*_env）；这里做回写。
 if [ -n "$_sl_session_env" ]; then
   SESSION_TMUX_SESSION="$_sl_session_env"
+fi
+# 先钉后回（与 SESSION_TMUX_SESSION 同模式）：调用方显式设的 SESSION_TRANSCRIPTS /
+# SESSION_HEARTBEATS 在 env 文件 source 后回写——显式值存活，_sl_audit_config_wiring 才能对
+# 不在目标表的名字告警（gap-session-liveness-ignores-unknown-transcript-names）。
+if [ -n "$_sl_transcripts_env" ]; then
+  SESSION_TRANSCRIPTS="$_sl_transcripts_env"
+fi
+if [ -n "$_sl_heartbeats_env" ]; then
+  SESSION_HEARTBEATS="$_sl_heartbeats_env"
 fi
 _sl_session="${SESSION_TMUX_SESSION:-}"
 if [ -z "$_sl_session" ]; then
@@ -416,7 +912,21 @@ if [ -z "$_sl_session" ]; then
 else
   _sl_session_base="${_sl_session%%:*}"
 fi
-DEFAULT_TARGET="${_sl_session_base}:outer"
+# 按角色解析目标窗口（AC2/AC3/AC4，gap-session-liveness-session-pid-blind-to-claude-as-pane-process）：
+#   SESSION_TMUX_SESSION 带【命名窗口】后缀（<会话>:inner / <会话>:outer）⇒ 直接用该窗口作为目标——
+#     外层监视器盯 inner、管理者盯 outer；会话名 env 值（<会话>）本就该配上角色窗口。
+#   带【数字 pane】后缀（quay-init 写的 ol-cold:0.0 是 pane 引用、指明会话）⇒ 剥到会话基名，
+#     走零配置默认的 <base>:outer（本项目自己的外层）。
+#   无后缀（quay-0）⇒ <base>:outer（零配置默认）。
+case "$_sl_session" in
+  *:*)
+    case "${_sl_session#*:}" in
+      *[!0-9.]*) DEFAULT_TARGET="$_sl_session" ;;      # 命名窗口后缀 → 直接作为目标
+      *) DEFAULT_TARGET="${_sl_session_base}:outer" ;; # 数字 pane 引用 → base:outer
+    esac
+    ;;
+  *) DEFAULT_TARGET="${_sl_session_base}:outer" ;;
+esac
 
 # 可被 SESSION_TARGETS 覆盖——存在的理由是【可测】（handoff rule 2：不能靠「干跑没有输出」
 # 证明监视器会报，那与「它永远不报」同形）。用测试控制的探针 pane 做正控制，才是证据。
@@ -469,7 +979,10 @@ heartbeat_for() {
     done <<< "$SESSION_HEARTBEATS"
     return 1
   fi
-  echo "$REPO_ROOT/orchestration/tick-log.md"
+  # 默认外层心跳 = <目标根>/orchestration/tick-log.md。用 $root 而非 $REPO_ROOT：生产零配置下
+  # 两者相等（targets() 的零配置默认 root=REPO_ROOT），但用 $root 让多目标配置与测试能控制它，
+  # 且多源融合（_outer_heartbeat_max_mtime）正是以 $root 为根的。
+  echo "$root/orchestration/tick-log.md"
 }
 
 # heartbeat_mtime —— 心跳源的 mtime（epoch）。对 transcript（*.jsonl）还并上
@@ -496,138 +1009,149 @@ heartbeat_mtime() {
   echo "$max"
 }
 
-session_pid() {  # 按窗口名寻址；pane 索引会漂。找 pane shell 的第一个 claude 子进程。
-  local t=$1 ppid cpid
-  ppid=$("${_sl_tmux[@]}" list-panes -t "$t" -F '#{pane_pid}' 2>/dev/null | head -1) || true
-  [ -n "${ppid:-}" ] || { echo ""; return; }
-  cpid=$(pgrep -P "$ppid" 2>/dev/null | head -1) || true
-  # 只认 claude 进程，避免把 shell 当成会话本体
-  if [ -n "${cpid:-}" ] && tr '\0' ' ' < "/proc/$cpid/cmdline" 2>/dev/null | grep -q claude; then
-    echo "$cpid"
-  else
-    echo ""
+# heartbeat_mtime_for —— 按目标选心跳源并算 mtime（gap-outer-heartbeat-source-inverts-...，2026-08-05）。
+# 三种情形（与 heartbeat_for 同序）：
+#   1. SESSION_TRANSCRIPTS 给了该名字 → 单源 transcript（+ subagents，heartbeat_mtime 处理）；
+#   2. SESSION_HEARTBEATS 给了该名字 → 单源显式路径（调用方已选定特定源，保持单源语义）；
+#   3. 默认外层心跳（tick-log）→ 多源 max mtime（outer_heartbeat_mtime）——红窗处置不反向失效。
+# 返回 epoch；0 = 无源/不可读。
+heartbeat_mtime_for() {
+  local name=$1 root=$2 t p
+  if t=$(transcript_for "$name" "$root"); then
+    heartbeat_mtime "$t"; return 0
   fi
+  if [ -n "${SESSION_HEARTBEATS:-}" ]; then
+    while read -r n p; do
+      [ -n "${n:-}" ] || continue
+      if [ "$n" = "$name" ]; then heartbeat_mtime "$p"; return 0; fi
+    done <<< "$SESSION_HEARTBEATS"
+    echo 0; return 0
+  fi
+  outer_heartbeat_mtime "$root"
 }
 
-# ── 单飞挂载门（AC20a/b/d/AC5/AC6，管理者 AC20 判据逐字照搬，不改写）──────────────────────────
-# 「谁需要谁自己起一个」对单飞资源是错的默认；正确的默认是「谁需要谁去订阅」，挂载是一个有主的、
-# 可接管的角色。这与令牌同理，区别只在于令牌天然排他、监视器看起来不排他——看起来不是，所以
-# 没人给它加锁。这里补上那把锁：
-#   AC20a 单飞锁：挂载前取锁，**复用 heavy-op-token.sh 已验证的那套**（wx 原子创建 + mtime 陈旧
-#         AND pid 不存活才回收，绝不裸覆盖、绝不永久锁死）。不新写一套——那套锁今天已在真实死
-#         持有者上回收了 17 次，是本仓唯一被实战验证过的锁。复用点：对同一把锁文件调用
-#         `heavy-op-token.sh --acquire <owner> --root <dir> [--timeout N]`。
-#   AC20b 第二个挂载是空操作：检测到活持有者 ⇒ 打印属主与 pid，**退出 0**。报错会让人去 kill，
-#         而 kill 正是这一整摊事的来源。
-#   AC20d 接管负控制：持有者被 kill -9 后，下一次挂载必须接管（陈旧回收），否则单飞就变单点故障。
-#   AC5  反向负控制：持有者活着时再挂 ⇒ 绝不接管、不 kill 任何进程。把「重复挂载」换成「互相抢夺」
-#        是更坏的交易。
-# 状态目录：${QUAY_GLOBAL_DIR:-$HOME/.quay-global}/session-liveness/（测试接缝 SESSION_LIVENESS_GLOBAL_DIR）。
-SL_GLOBAL_DIR="${SESSION_LIVENESS_GLOBAL_DIR:-${QUAY_GLOBAL_DIR:-${HOME:-/tmp}/.quay-global}/session-liveness}"
-SL_EVENTS_FILE="${SL_GLOBAL_DIR}/events.jsonl"
-# 属主 = 挂载这个监视器的会话身份（管理者的多目标配置里 SESSION_LIVENESS_OWNER 可显式给出）。
-SL_OWNER="${SESSION_LIVENESS_OWNER:-$(basename "$REPO_ROOT")}"
-SL_MOUNT_STALE_S="${SESSION_LIVENESS_MOUNT_STALE_S:-3}"   # 死持有者多久可回收（pid 活着永不回收，只影响接管速度）
-SL_MOUNT_WAIT_S=$(( SL_MOUNT_STALE_S + 3 ))               # 接管的有界等待上限（覆盖陈旧窗口 + 余量）
-_sl_lock_holder=0
-
-_sl_release_mount_lock() {
-  [ "$_sl_lock_holder" = "1" ] || return 0
-  local hot="$REPO_ROOT/plugin/scripts/heavy-op-token.sh"
-  if [ -x "$hot" ]; then
-    HEAVY_OP_STALE_TIMEOUT_S="$SL_MOUNT_STALE_S" bash "$hot" --release "$SL_OWNER" --root "$SL_GLOBAL_DIR" >/dev/null 2>&1 || true
-  fi
-  _sl_lock_holder=0
-}
-
-# _sl_acquire_or_noop —— 单飞门的一次性判定。返回：
-#   0 = 已取得锁（本进程成为持有者，继续跑监视器）；1 = 有活持有者（空操作，调用方退出 0）；
-#   2 = fail-open（状态目录不可写，无锁继续——调度角色不是安全检查，与令牌同源）。
-_sl_acquire_or_noop() {
-  local hot="$REPO_ROOT/plugin/scripts/heavy-op-token.sh"
-  local lock_token="$SL_GLOBAL_DIR/heavy-op/token"
-  local start_ms holder_pid acq_out err_file rc took out_file howner
-  if [ ! -x "$hot" ]; then
-    echo "session-liveness: WARN 找不到 $hot，跳过单飞锁（fail-open）" >&2
-    return 2
-  fi
-  local preexisting=0; [ -e "$lock_token" ] && preexisting=1
-  start_ms=$(sl_now_ms)
-  # 关键：必须把 heavy-op-token 的 stdout 重定向到文件再读，不能用命令替换 `$(...)`——命令替换会
-  # 引入一个瞬态子 shell 作为 heavy-op-token 的父进程，而 heavy-op-token 记录的是 $PPID，于是锁会
-  # 记下子 shell 的 pid（随即退出）而非监视器自身的 pid；下一个挂载看到「死 pid」就会误回收活持有者
-  # （实测踩中：锁 pid 是命令替换子 shell，不是监视器进程）。
-  out_file=$(mktemp 2>/dev/null) || out_file="/tmp/sl-mount-out-$$"
-  err_file=$(mktemp 2>/dev/null) || err_file="/tmp/sl-mount-err-$$"
-  HEAVY_OP_STALE_TIMEOUT_S="$SL_MOUNT_STALE_S" bash "$hot" \
-    --acquire "$SL_OWNER" --root "$SL_GLOBAL_DIR" --timeout 0 >"$out_file" 2>"$err_file"
-  rc=$?
-  acq_out=$(cat "$out_file")
-  if [ "$rc" = "0" ]; then
-    case "$acq_out" in
-      *acquired=yes*)
-        rm -f "$out_file" "$err_file"
-        if [ "$preexisting" = "1" ]; then
-          took=$(( $(sl_now_ms) - start_ms ))
-          echo "session-liveness-mount: 接管成功 takeover_ms=${took}（陈旧锁被回收，前一持有者已死）"
-        else
-          echo "session-liveness-mount: 成为挂载持有者（属主 ${SL_OWNER}，pid $$）"
-        fi
-        _sl_lock_holder=1
-        trap _sl_release_mount_lock EXIT
-        return 0 ;;
-      *acquired=no*)   # fail-open：状态目录不可写/不可达，无锁继续
-        echo "session-liveness: WARN 单飞锁 fail-open（$(cat "$err_file" 2>/dev/null || true)），无锁继续运行监视器" >&2
-        rm -f "$out_file" "$err_file"
-        return 2 ;;
-      *) echo "session-liveness: WARN 单飞锁返回异常（$acq_out），无锁继续" >&2
-        rm -f "$out_file" "$err_file"
-        return 2 ;;
-    esac
-  fi
-  # 未取得：区分「活持有者」与「死持有者待接管」。
-  holder_pid=$(awk -F= '$1=="pid"{print $2; exit}' "$lock_token" 2>/dev/null || true)
-  if [ -n "$holder_pid" ] && kill -0 "$holder_pid" 2>/dev/null; then
-    # AC20b：第二个挂载是空操作，退出 0——报错会让人去 kill，而 kill 正是这一整摊事的来源。
-    howner=$(awk -F= '$1=="holder"{print $2; exit}' "$lock_token" 2>/dev/null || echo unknown)
-    echo "session-liveness-mount: 已有活持有者（属主 ${howner}，pid ${holder_pid}）——第二个挂载是空操作（exit 0），不新增进程"
-    rm -f "$out_file" "$err_file"
-    return 1
-  fi
-  # 死持有者（kill -9 后）→ 有界等待接管（AC20d 负控制）。`--timeout N` 会每秒重查回收条件，
-  # 一旦 mtime 越过陈旧阈值就回收并取得——这本身就是接管，takeover_ms 从第一次尝试起算。
-  HEAVY_OP_STALE_TIMEOUT_S="$SL_MOUNT_STALE_S" bash "$hot" \
-    --acquire "$SL_OWNER" --root "$SL_GLOBAL_DIR" --timeout "$SL_MOUNT_WAIT_S" >"$out_file" 2>"$err_file"
-  rc=$?
-  acq_out=$(cat "$out_file")
-  rm -f "$out_file" "$err_file"
-  if [ "$rc" = "0" ] && [[ "$acq_out" == *acquired=yes* ]]; then
-    took=$(( $(sl_now_ms) - start_ms ))
-    echo "session-liveness-mount: 接管成功 takeover_ms=${took}（前一持有者已死，锁被回收）"
-    _sl_lock_holder=1
-    trap _sl_release_mount_lock EXIT
-    return 0
-  fi
-  echo "session-liveness-mount: 无法接管单飞锁（$acq_out）——空操作（exit 0）" >&2
+_is_claude_pid() {
+  local pid=$1 comm argv0 base
+  comm=$(cat "/proc/$pid/comm" 2>/dev/null || true)
+  case "$comm" in claude*) return 0 ;; esac
+  argv0=$(tr '\0' '\n' < "/proc/$pid/cmdline" 2>/dev/null | head -1)
+  [ -n "$argv0" ] || return 1
+  base="${argv0##*/}"
+  case "$base" in *claude*) return 0 ;; esac
   return 1
 }
 
-# 单飞门只在长跑模式生效（--once / --mask / --api-errors / --last-input 是诊断接缝，不取锁）。
-# 关键：必须【直接调用】_sl_acquire_or_noop，不能用 `case "$( _sl_acquire_or_noop )" in` 的命令替换——
-# 命令替换会把函数放进一个瞬态子 shell，heavy-op-token 记录的 $PPID 就变成子 shell 的 pid（随即退出），
-# 且子 shell 的 EXIT trap 会在函数返回时立刻释放锁——锁被取到后瞬间释放，单飞直接失效（实测踩中）。
-if [ "$ONE_SHOT" != true ]; then
-  _sl_acquire_or_noop
-  _sl_gate_rc=$?
-  if [ "$_sl_gate_rc" = "1" ]; then
-    exit 0   # 有活持有者：空操作（exit 0，不是失败）
+session_pid() {  # 按窗口名寻址；pane 索引会漂。找 pane 本体或其任一子进程里的 claude 进程。
+  local t=$1 ppid cpid
+  ppid=$("${_sl_tmux[@]}" list-panes -t "$t" -F '#{pane_pid}' 2>/dev/null | head -1) || true
+  [ -n "${ppid:-}" ] || { echo ""; return; }
+  # pane_pid 自身就是 claude（claude-as-pane-process：3 窗格拓扑里 pane 前台进程就是 claude）——
+  # 旧实现只查子进程，inner/outer 恒 alive=0（SESSION-GONE 永不触发，监视器永久沉默）。
+  if _is_claude_pid "$ppid"; then echo "$ppid"; return; fi
+  # 后代遍历（与 inner-session-check.sh 的 has_claude_child 同遍历）：找第一个 claude 后代。
+  for cpid in $(pgrep -P "$ppid" 2>/dev/null); do
+    if _is_claude_pid "$cpid"; then echo "$cpid"; return; fi
+  done
+  echo ""
+}
+
+# ── 无挂载门（2026-08-06 人裁定：彻底去掉互斥锁）──────────────────────────────────────────
+# 观测对目标【纯只读】（只有 tmux capture-pane / git log / stat，零写入）——只读天然不排他，
+# 两个观察者盯同一 pane 的代价只是每周期多一次 capture-pane，互不影响也不需要互相知情。互斥锁
+# 存在的唯一理由 = 保护那个共享事件文件；共享文件不该存在（见 sl_emit 上方注释），锁就没有
+# 存在理由。挂载不再取任何锁、不再区分「第一个/第二个挂载」：谁挂谁拥有自己的 stdout 事件流，
+# 多观察者并行挂载天然无冲突。谁先启动无关——每个观察者的状态完全是进程内的（PREV_* 关联数组），
+# 观察者之间互不知情、不共享任何写点。
+
+# ── 配置接线审计（gap-session-liveness-monitor-watches-self-not-inner，2026-08-08）────────────
+# 失败形态：SESSION_TRANSCRIPTS / SESSION_HEARTBEATS 的名字与 SESSION_TARGETS 的目标名不一致 ⇒
+# transcript_for 按名匹配不到 ⇒ tr_path 静默为空 ⇒ 该目标的心跳回落默认外层多源心跳——以为配了
+# transcript 实际没有，transcript 相关判据（MARKER-STALE / CANT-SEND / SATURATED /
+# OVERDUE-on-transcript）全部不生效：监视器「看内层进程、按外层心跳判」的静默半盲。这就是
+# 12:2x 版本把 SESSION_TRANSCRIPTS 写成 "inner"（目标名却是 "quay"）时发生的事。启动时对每个
+# 配置的 transcript/heartbeat 名字，若不属于任一 SESSION_TARGETS 目标名，WARN 一次（每名字一次，
+# stderr）——宁可启动时响一声，不要运行期静默半盲。
+_sl_audit_config_wiring() {
+  [ -n "${SESSION_TRANSCRIPTS:-${SESSION_HEARTBEATS:-}}" ] || return 0
+  local -A target_names=()
+  local name root target n v src
+  while read -r name root target; do
+    [ -n "${name:-}" ] || continue
+    target_names["$name"]=1
+  done < <(targets)
+  for src in SESSION_TRANSCRIPTS SESSION_HEARTBEATS; do
+    [ -n "${!src:-}" ] || continue
+    while read -r n v; do
+      [ -n "${n:-}" ] || continue
+      [ "${target_names[$n]:-0}" = "1" ] || \
+        echo "session-liveness: WARN ${src} 的名字「${n}」不匹配任何 SESSION_TARGETS 目标名（targets: ${!target_names[*]}）——transcript_for 按名匹配会找不到它，该目标的心跳不会用这个源；名字必须与 SESSION_TARGETS 的目标名一致" >&2
+    done <<< "${!src}"
+  done
+}
+_sl_audit_config_wiring
+
+# ── pane-only 默认心跳闸门审计（gap-session-liveness-busy-mask-idle-with-subagents，2026-08-08）──
+# 真根因（outer 2c1d0c7c）：pane-only 目标（无显式 SESSION_HEARTBEATS / SESSION_TRANSCRIPTS）的
+# 心跳回落默认外层多源（tick-log 等），而 tick-log 被【每一个 outer/inner tick】追加 ⇒ mtime 恒
+# 新鲜 ⇒ hmin < LOOP_MIN ⇒ SESSION-IDLE 噪声闸门把停摆静默吞掉（实测：pane-only + LOOP_MIN=1 →
+# IDLE_CONSEC 单调但 IDLE 零条；LOOP_MIN=0 → IDLE 正常发出）。忙闲分类与 D5 报告门均无缺陷——
+# 缺的是边界认识 + 显式心跳源/LOOP_MIN 调整。启动时对每个「pane-only + 默认心跳 + LOOP_MIN>0」
+# 的目标 WARN 一次（stderr）——宁可启动时响一声，不要运行期静默半盲（同 _sl_audit_config_wiring
+# 的同一原则）。pane-only 观测要么配显式心跳源，要么设 LOOP_MIN=0。
+_sl_audit_pane_only_gate() {
+  [ "${LOOP_MIN:-0}" -gt 0 ] 2>/dev/null || return 0
+  local name root target hb
+  while read -r name root target; do
+    [ -n "${name:-}" ] || continue
+    hb=$(heartbeat_for "$name" "$root")
+    [ -n "$hb" ] || continue
+    if heartbeat_is_outer_default "$name" "$root" "$hb"; then
+      echo "session-liveness: WARN 目标「${name}」是 pane-only（无显式 SESSION_HEARTBEATS / SESSION_TRANSCRIPTS），心跳回落默认外层多源（tick-log 等）。默认心跳由【主循环 tick】刷新、不反映该目标会话自身活动——若该目标正被上层驱动，LOOP_MIN=${LOOP_MIN} 的噪声闸门会把 SESSION-IDLE 静默吞掉（停摆失明）。pane-only 观测请设 LOOP_MIN=0 或配显式心跳/transcript。" >&2
+    fi
+  done < <(targets)
+}
+_sl_audit_pane_only_gate
+# ── 观测者自注册（gap-sweeptmp-pkill-kills-live-observers-two-layer-blind 候选 D / AC5）─────────
+# 「观测者被杀」要有观测者：常驻监视器启动时在 $REPO_ROOT/.quay/ 写一个 pid 注册文件、退出时移除
+# （trap），让外层/manager 能发现「本该在跑的实例没了」——不靠「Monitor 报 failed」这种被动、且会
+# 随会话一起死的通道。文件按 pid 唯一（.quay/session-liveness.<pid>.json），多实例互不冲突；
+# 检查器（plugin/scripts/observer-registry-check.sh）读注册表 + 对照 /proc，发现已注册但进程已
+# 消失的实例。SIGKILL 无法 trap ⇒ 被杀时注册文件留下 = 死亡可被检测（这正是事故要的可观测性）。
+# SL_NO_REGISTER=1 关闭（测试接缝：spawnMonitor 默认关，防测试污染真实 .quay）。
+if [ "${SL_NO_REGISTER:-0}" != "1" ]; then
+  _sl_reg_dir="$REPO_ROOT/.quay"
+  mkdir -p "$_sl_reg_dir" 2>/dev/null || true
+  _sl_reg_file="$_sl_reg_dir/session-liveness.$BASHPID.json"
+  if [ -w "$_sl_reg_dir" ] || [ -w "$REPO_ROOT" ]; then
+    printf '{"pid":%d,"started":"%s","root":"%s","targets":"%s"}\n' \
+      "$BASHPID" "$(date -Is 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)" \
+      "$REPO_ROOT" "${SESSION_TARGETS:-${SESSION_TMUX_SESSION:-}}" \
+      > "$_sl_reg_file" 2>/dev/null || true
+    _sl_unregister() { rm -f "$_sl_reg_file" 2>/dev/null || true; }
+    trap _sl_unregister EXIT INT TERM
   fi
-  # 0=持有 / 2=fail-open：继续跑监视器。
 fi
 
 while true; do
   while read -r name root target; do
     [ -n "${name:-}" ] || continue
+    # 首轮预热（D5 锐化，2026-08-08）：该目标被观察的轮数。启动第 1 轮不报 IDLE/RESUMED
+    # （原 SEEN_BUSY「未见过忙就永不报」的防启动误报意图改由它承担——前者只丢一轮，后者丢
+    # 整段）。alive=0 分支把它清 0，会话恢复后重新预热一轮。
+    ROUNDS[$name]=$(( ${ROUNDS[$name]:-0} + 1 ))
+    # observer-registry (gap-observer-registry-target-decommission-and-criterion-invalidation):
+    # a target registered OFFLINE is deliberately decommissioned — its criteria ("is the session
+    # alive? / is it stalled? / is it being watched?") are INVALID. Report "decommissioned" and
+    # evaluate NO events for it (no SESSION-GONE / REPO-STALL / SESSION-OVERDUE / SESSION-IDLE).
+    # This is the class-level fix for consumers #2/#3 (git-staleness kept reporting REPO-STALL and
+    # session-liveness-coverage kept reporting NOT-WATCHED for decommissioned targets).
+    _sl_reg="${_sl_pane_dir}/observer-registry.sh"
+    if [ -x "$_sl_reg" ] && "$_sl_reg" --is-offline "$name" >/dev/null 2>&1; then
+      if [ "$ONE_SHOT" = true ]; then
+        echo "SESSION-STATUS $name decommissioned (offline per observer-registry)"
+      fi
+      continue
+    fi
     pid=$(session_pid "$target")
     alive=$([ -n "$pid" ] && echo 1 || echo 0)
     halted=$([ -f "$root/.halt" ] && echo 1 || echo 0)
@@ -689,22 +1213,37 @@ while true; do
     # 人 2026-08-03 指出：「我可以接受让 outer 等待，但应当是你及时知道发生了什么并决定让它等待。」
     # 原来的事件集只有滞后指标：会话跑完一次操作转入空闲时，进程活着、刚提交过，全部静默。
     #
-    # 判据（阶段二，AC1/规格 AC18）：屏幕信号改为【语义标志 + 屏蔽易变区】，不是整屏哈希。
-    #   忙 = `esc to interrupt` 存在（按【存在性】判，不按计数——实测管理者 4 次/内层 1 次，
-    #   计数无意义）或 屏蔽易变区后的内容区有变化（保住非 TUI 探针 / subagent 输出这类真活动）。
-    #   闲 = 两样都没有。易变区（转圈耗时 ✽ / token 计数 /clear to save / ✻ 残留）被 mask_pane
-    #   剥离，所以「停泊会话只有 token 计数器在变」不会判忙（姊妹任务的假阳性源在此吸收）。
-    # 不用 /proc CPU 增量：空闲的 Claude Code TUI 本身也在烧 CPU（实测 10 vs 132 jiffies，分离度太弱）。
+    # 判据（裁定 D / ADR-016 Amendment 2026-08-04）：屏幕信号 = classifyPaneState 的
+    #   底部区域【形状分类】——不是整屏哈希（md5(capture-pane) 一族已被 ADR 禁止，无论是否
+    #   先 mask）。忙 = 形状是 busy（esc to interrupt 在状态区）/ error-banner；闲 =
+    #   waiting-input / unknown（unknown 由 transcript 融合兜底，AC5 只兜「捕获为空/区域为空」
+    #   不静默判闲）。permission-prompt 单列：非忙 + intervention（gap-permission-prompt-merged-
+    #   into-busy 2026-08-09——需要人/上层介入的信号，与「在干活」相反，触发
+    #   SESSION-INTERVENTION-REQUIRED）。chrome（转圈耗时 ✽ / token 计数 /clear to save /
+    #   ✻ 残留）天然进不了判据——形状分类读结构不读字节，所以「停泊会话只有 token 计数器
+    #   在变」不会判忙（本任务假阳性源在此吸收）。不用 /proc CPU 增量：空闲的 Claude Code
+    #   TUI 本身也在烧 CPU（实测 10 vs 132 jiffies，分离度太弱）。
     if [ "$alive" = "1" ]; then
       raw=$("${_sl_tmux[@]}" capture-pane -p -t "$target" 2>/dev/null)
-      busy_esc=$(printf '%s\n' "$raw" | grep -c 'esc to interrupt' 2>/dev/null || true)
-      [ -z "$busy_esc" ] && busy_esc=0
-      busy_sem=$([ "$busy_esc" -ge 1 ] 2>/dev/null && echo 1 || echo 0)
-      masked=$(printf '%s\n' "$raw" | mask_pane)
-      h=$(printf '%s' "$masked" | md5sum | cut -c1-16)
-      if [ -n "${PREV_HASH[$name]:-}" ]; then
-        content_changed=$([ "$h" = "${PREV_HASH[$name]}" ] && echo 0 || echo 1)
-        pane_busy=$(( busy_sem || content_changed ))
+      _sl_pane_verdict "$raw"
+      pane_state="$_sl_pane_state"; busy_sem="$_sl_pane_busy"; region="$_sl_pane_region"
+      # AC0 观测（先观测再修）：SL_PANE_STATE_LOG=1 时每轮每目标打一行 `pane_state=<state>`
+      # 到 stdout，让「抖动形状」可观测（契约 measure pane_state_logged：运行 ≥15min 后日志
+      # 出现每轮 pane_state=<state> 行 ≥1）。默认不打印，事件流干净（同 SL_ROUND_MARKER 接缝）。
+      [ "${SL_PANE_STATE_LOG:-0}" = "1" ] && echo "pane_state=$pane_state round=${ROUNDS[$name]:-0}"
+      if [ -z "${raw:-}" ] || [ -z "$region" ]; then
+        # AC5（防过滤）：pane 捕获为空（tmux 失败 / pane 不可读）或分类器区域为空 ⇒ 不判空闲
+        # ——忙会话若读到空屏会被永远报成空闲（静默）。显式 WARN 一次 + 判非闲（_sl_pane_verdict
+        # 已把 busy 置 1）。
+        if [ "${PREV_PANE_EMPTY[$name]:-0}" = "0" ]; then
+          echo "session-liveness: WARN $name 的 pane 内容为空/区域为空——不判空闲（AC5 防过滤）" >&2
+          PREV_PANE_EMPTY[$name]=1
+        fi
+      else
+        PREV_PANE_EMPTY[$name]=0
+      fi
+      if [ -n "${PREV_STATE[$name]:-}" ]; then
+        pane_busy=$busy_sem
         pane_idle=$(( 1 - pane_busy ))
         # 阶段三（AC1）：transcript 最后一条消息类型接入忙闲判据。transcript 侧优先级更高——
         # pending-tool-use / user-input ⇒ 确定忙，无论 pane 如何（AC5 忙判据零漏报）。
@@ -718,48 +1257,87 @@ while true; do
         fi
         fused_busy=$(( pane_busy || transcript_busy ))
         idle=$(( 1 - fused_busy ))
-        # AC2 去抖：连续 fused-idle 轮数计数；忙轮清零。pane 哈希降级为候选闲辅助（AC7）。
+        # AC2 去抖：连续 fused-idle 轮数计数；忙轮清零。pane 形状分类是候选闲的辅助
+        # （AC7）——transcript 最后一条消息类型是忙闲的结构信号。
+        # AC2/D3 同阶去抖（gap-session-liveness-busy-mask-idle-with-subagents）：RESUMED 与 IDLE
+        # 用同一去抖深度。IDLE 要连续 ≥IDLE_DEBOUNCE_ROUNDS 轮才报（下面 counter 分支）；RESUMED
+        # 原先单轮沿即报（不对称硬事实）。BUSY_CONSEC 计数连续忙轮，RESUMED 也要求忙态被确认
+        # ≥IDLE_DEBOUNCE_ROUNDS 轮才报（事件对语义成立：一段空闲的确认深度与一段忙的确认深度
+        # 相同，1 轮忙 blip 不产生无配对 IDLE 的孤立 RESUMED）。
         if [ "$idle" = "1" ]; then
           IDLE_CONSEC[$name]=$(( ${IDLE_CONSEC[$name]:-0} + 1 ))
+          BUSY_CONSEC[$name]=0
+          RESUME_PENDING[$name]=0
         else
           IDLE_CONSEC[$name]=0
+          BUSY_CONSEC[$name]=$(( ${BUSY_CONSEC[$name]:-0} + 1 ))
           SEEN_BUSY[$name]=1
+          # per-spell 边沿（D5 锐化）：忙轮开启新段 → 该段空闲尚未报过，允许再报一次。
+          IDLE_REPORTED[$name]=0
         fi
-        if [ "${PREV_IDLE[$name]:-unset}" != "unset" ] && [ "${PREV_IDLE[$name]}" != "$idle" ]; then
+        # 首轮预热（D5 锐化）：第 1 轮不报 RESUMED（PREV_IDLE 未置位已兜底；ROUNDS 门显式化）。
+        if [ "${ROUNDS[$name]:-0}" -gt 1 ] && [ "${PREV_IDLE[$name]:-unset}" != "unset" ] && [ "${PREV_IDLE[$name]}" != "$idle" ]; then
           if [ "$idle" = "1" ]; then
             # 忙→闲【单轮转换不报】——去抖（AC2）持有：只延迟 ≤1 轮询周期（真空闲下一轮还是闲，
             # 不造成漏报），远在 20 分钟 cron 兜底之内。真正的 SESSION-IDLE 由下面 counter 分支报。
             :
           else
-            resumed=1
+            # idle→busy 转换：捕获成因并挂起，待忙态被确认 ≥IDLE_DEBOUNCE_ROUNDS 轮再报
+            # （AC2/D3 同阶去抖）。RESUME_PENDING 在空闲轮清 0——1 轮忙 blip 不报 RESUMED。
+            RESUME_PENDING[$name]=1
             # AC6/AC7：SESSION-RESUMED 带成因 payload（哪个标志/哪个区变了）+ 上次收到输入时刻。
             # 判据：收到事件后无需再采样即可判真假（原外层 3-4 次调用，改后 1 次）。
             cause_parts=()
-            [ "$busy_sem" = "1" ] && [ "${PREV_BUSY_SEM[$name]:-0}" = "0" ] && cause_parts+=("esc to interrupt 标志出现")
-            [ "$content_changed" = "1" ] && cause_parts+=("屏蔽易变区后的屏幕内容区变化")
-            cause=""
+            if [ "$busy_sem" = "1" ] && [ "${PREV_BUSY_SEM[$name]:-0}" = "0" ]; then
+              case "$pane_state" in
+                busy) cause_parts+=("esc to interrupt 标志出现（底部区域分类器判忙）") ;;
+                permission-prompt) cause_parts+=("权限确认框出现") ;;
+                error-banner) cause_parts+=("错误横幅出现") ;;
+                *) cause_parts+=("屏幕形状判忙（$pane_state）") ;;
+              esac
+            fi
+            RESUME_CAUSE[$name]=""
             for part in "${cause_parts[@]:-}"; do
               [ -n "$part" ] || continue
-              [ -n "$cause" ] && cause="$cause + $part" || cause="$part"
+              [ -n "${RESUME_CAUSE[$name]}" ] && RESUME_CAUSE[$name]="${RESUME_CAUSE[$name]} + $part" || RESUME_CAUSE[$name]="$part"
             done
-            [ -n "$cause" ] && cause="$cause" || cause="状态变化"
-            lastin="取不到"
+            [ -n "${RESUME_CAUSE[$name]}" ] || RESUME_CAUSE[$name]="状态变化"
+            RESUME_LASTIN[$name]="取不到"
             if [ -n "$tr_path" ] && [ -r "$tr_path" ]; then
               if lep=$(last_user_input_epoch "$tr_path") && [ -n "$lep" ]; then
                 lmin=$(( ( $(date +%s) - lep ) / 60 ))
                 [ "$lmin" -lt 0 ] && lmin=0
-                lastin="${lmin} 分钟前"
+                RESUME_LASTIN[$name]="${lmin} 分钟前"
               fi
             fi
-            sl_emit "SESSION-RESUMED $name 的会话恢复活动（此前空闲；成因：${cause}；上次收到输入：${lastin}）"
           fi
         fi
         PREV_IDLE[$name]=$idle
-        # 去抖后的 SESSION-IDLE 报告（AC2）：连续 IDLE_DEBOUNCE_ROUNDS 轮 fused-idle 且此前见过
-        # 忙轮（SEEN_BUSY，防启动误报）才报。单轮转换不报（上面）；counter==N 精确触发一次。
-        if [ "$idle" = "1" ] && [ "${IDLE_CONSEC[$name]:-0}" -eq "$IDLE_DEBOUNCE_ROUNDS" ] && [ "${SEEN_BUSY[$name]:-0}" = "1" ]; then
+        # AC2/D3 同阶去抖的 RESUMED 报告：忙态确认 ≥IDLE_DEBOUNCE_ROUNDS 轮（与 IDLE 同深度）
+        # 且本段未报过（RESUME_PENDING 边沿）且非启动首轮（ROUNDS 预热）才报。
+        if [ "${RESUME_PENDING[$name]:-0}" = "1" ] \
+           && [ "${BUSY_CONSEC[$name]:-0}" -ge "$IDLE_DEBOUNCE_ROUNDS" ] \
+           && [ "${ROUNDS[$name]:-0}" -gt 1 ]; then
+          RESUME_PENDING[$name]=0
+          resumed=1
+          sl_emit "SESSION-RESUMED $name 的会话恢复活动（此前空闲；成因：${RESUME_CAUSE[$name]:-状态变化}；上次收到输入：${RESUME_LASTIN[$name]:-取不到}）"
+        fi
+        # 去抖后的 SESSION-IDLE 报告（AC2 + D5 锐化，2026-08-08）：连续 ≥IDLE_DEBOUNCE_ROUNDS
+        # 轮 fused-idle 且本段未报过（IDLE_REPORTED 边沿）且非启动首轮（ROUNDS 预热）才报。
+        #   * -ge 而非 -eq：计数器越过阈值后继续匹配——每段停摆不再只有「等于 2 的那一轮」一次
+        #     触发机会（-eq 会把 SEEN_BUSY=0 那一轮的失配变成永久销毁，见文件头 D5 注释）。
+        #   * IDLE_REPORTED：-ge 的边沿由它承担，每段空闲只报一次；忙轮清掉 → 新段可再报。
+        #   * ROUNDS>1：原 SEEN_BUSY「防启动误报」意图（启动首轮不报），挂载时已在进行的停摆
+        #     不再被「未见过忙就永不报」静默掉（AC6）。
+        if [ "$idle" = "1" ] \
+           && [ "${IDLE_CONSEC[$name]:-0}" -ge "$IDLE_DEBOUNCE_ROUNDS" ] \
+           && [ "${IDLE_REPORTED[$name]:-0}" = "0" ] \
+           && [ "${ROUNDS[$name]:-0}" -gt 1 ]; then
+          IDLE_REPORTED[$name]=1
+          hmin="?"
+          hmod=$(heartbeat_mtime_for "$name" "$root")
           hb=$(heartbeat_for "$name" "$root"); hmin="?"
-          hmod=$(heartbeat_mtime "${hb:-/nonexistent}")
+          hmod=$(effective_heartbeat_mtime "$name" "$root" "${hb:-/nonexistent}")
           [ "$hmod" != "0" ] && hmin=$(( ( $(date +%s) - hmod ) / 60 ))
           halt_msg=$([ "$halted" = "1" ] && echo "（该项目已暂停，空闲是预期状态）" || echo "")
           # AC9（盲点13）：空闲且发不出请求（最近 transcript 记录带结构性 isApiErrorMessage）。
@@ -772,27 +1350,31 @@ while true; do
           fi
           PREV_API_BLOCKED[$name]=$api_blocked
           if [ "$api_blocked" = "1" ]; then
-            sl_emit "SESSION-IDLE-CANT-SEND $name 的会话空闲且发不出请求（最近 ${API_ERROR_WINDOW} 条 transcript 记录含 ${api_n} 条 isApiErrorMessage 结构字段）——不可自愈类，立即升级给人"
+            sl_emit "SESSION-IDLE-CANT-SEND $name 的会话空闲且发不出请求（transcript 尾部连续 ${api_n} 条 isApiErrorMessage 结构字段，未被后续应答覆盖——AC7/D4 时效）——不可自愈类，立即升级给人"
           elif [ "$hmin" = "?" ] || [ "$hmin" -ge "$LOOP_MIN" ]; then
             # 噪声标定（管理者 3 个完整周期实测，2026-08-03）：健康循环是「刚动过（写了心跳）才转
             # 空闲」（心跳时距 ~1 分钟），每 20 分钟一对事件、三项目满载 18 次/小时，全是「一切正常」。
-            # hmin < LOOP_MIN 的空闲 = 正常收尾 → 持有者 stdout 静默；hmin ≥ LOOP_MIN 或未知
-            # （无心跳文件）=「空闲了但没动」，会话可能跑一半就停 / 已死 → 持有者 stdout 报。
+            # hmin < LOOP_MIN 的空闲 = 正常收尾 → 观察者 stdout 静默；hmin ≥ LOOP_MIN 或未知
+            # （无心跳文件）=「空闲了但没动」，会话可能跑一半就停 / 已死 → 观察者 stdout 报。
             # SESSION-RESUMED 保留不静默（它便宜，且是唯一能确认会话还在按期活动的正向信号）。
             sl_emit "SESSION-IDLE $name 的会话转入空闲等输入；心跳 ${hmin} 分钟前更新${halt_msg}"
           else
-            # AC21（gap-a-log-already-filtered-by-one-consumers-threshold-cannot-serve-a-second）：
-            # hmin < LOOP_MIN（正常收尾）——持有者自己的 stdout 静默（噪声闸门），但共享 events.jsonl
-            # 照记全量（含 hmin 原始量），让订阅方（管理者）自己决定报不报。这就是 AC21c 的负控制：
-            # 持有者 LOOP_MIN=20 时，共享文件里仍须出现 hmin < 20 的 IDLE 记录——出现即通过。
-            sl_emit_shared "SESSION-IDLE $name 的会话转入空闲等输入；心跳 ${hmin} 分钟前更新${halt_msg}"
+            # hmin < LOOP_MIN（正常收尾）——观察者自己的 stdout 静默（噪声闸门，服务它自己的消费者）。
+            # 2026-08-06 人裁定：不再有共享事件文件「记全量供订阅方自判」——每个观察者的阈值只
+            # 作用于自己的流。想要知悉健康空闲的消费者（如 manager 观 outer）挂 LOOP_MIN=0 的观察者
+            # 即可，AC21 的根因（共享文件 + 持有者阈值决定一切）已随共享文件移除。
+            :
           fi
         fi
         # AC2（交叉正控制）：transcript 刚写过（会话确定在动）而【屏幕】判空闲 ⇒ 屏幕标志可能失效。
         # 只对「心跳是 transcript」的目标成立——tick 日志是 loop 写的，不是会话活动的证据。
         # 假→真沿报一次；不一致率基线由观察者从事件流里数（全忙会话同时报 = TUI 文案变了）。
         # 判据用 pane_idle（屏幕判定）——transcript 侧确定忙时不该报「屏幕判空闲」。
-        if [ "$pane_idle" = "1" ] && [ "$halted" = "0" ] && [ -n "$tr_path" ] && [ -e "$tr_path" ]; then
+        # work_in_flight 抑制（gap-pane-classify-needs-two-orthogonal-dimensions 根因）：屏幕空闲 +
+        # 后台 agent 在跑 + transcript 在动是【自洽组合】（输入空闲 ≠ 会话死了，agent 还在跑）——
+        # 这正是单枚举装不下的 {input空闲+agents在跑} 形态；有 work_in_flight 时 MARKER-STALE 是
+        # 误报，不发出。
+        if [ "$pane_idle" = "1" ] && [ "$halted" = "0" ] && [ "${_sl_pane_work_in_flight:-0}" != "1" ] && [ -n "$tr_path" ] && [ -e "$tr_path" ]; then
           hmod2=$(heartbeat_mtime "$tr_path")
           if [ "$hmod2" != "0" ]; then
             age=$(( $(date +%s) - hmod2 ))
@@ -811,27 +1393,96 @@ while true; do
           api_n2=$(transcript_api_error_count "$tr_path")
           api_blocked2=$([ "$api_n2" -ge "$API_ERROR_MIN" ] 2>/dev/null && echo 1 || echo 0)
           if [ "$api_blocked2" = "1" ] && [ "${PREV_API_BLOCKED[$name]:-0}" = "0" ]; then
-            sl_emit "SESSION-IDLE-CANT-SEND $name 的会话空闲且发不出请求（最近 ${API_ERROR_WINDOW} 条 transcript 记录含 ${api_n2} 条 isApiErrorMessage 结构字段）——不可自愈类，立即升级给人"
+            sl_emit "SESSION-IDLE-CANT-SEND $name 的会话空闲且发不出请求（transcript 尾部连续 ${api_n2} 条 isApiErrorMessage 结构字段，未被后续应答覆盖——AC7/D4 时效）——不可自愈类，立即升级给人"
           fi
           PREV_API_BLOCKED[$name]=$api_blocked2
         else
           PREV_API_BLOCKED[$name]=0
         fi
       fi
-      PREV_HASH[$name]=$h
+      PREV_STATE[$name]=$pane_state
       PREV_BUSY_SEM[$name]=$busy_sem
+
+      # 事件 5b：SESSION-INTERVENTION-REQUIRED（gap-permission-prompt-merged-into-busy）——
+      # permission-prompt 单列后的上层动作触发（AC3）。permission-prompt = 需要人/上层裁决或授权，
+      # 与「在干活」相反（busy=0 intervention=1）。出现即触发 escalate/报告——边沿触发（每段介入只报
+      # 一次，PREV_INTERVENTION 承担边沿；离开 permission-prompt 清 0 → 新段可再报），不是等 3 次 busy，
+      # 也不依赖 transcript 陈旧度（permission-prompt 本身就是要介入的信号）。启动首轮也报：一个
+      # 挂载时就卡在权限框的会话此刻就要介入，不是预热噪声。
+      if [ "$_sl_pane_intervention" = "1" ]; then
+        if [ "${PREV_INTERVENTION[$name]:-0}" = "0" ]; then
+          sl_emit "SESSION-INTERVENTION-REQUIRED $name 的会话需要人/上层介入：pane 显示权限确认框（permission-prompt，busy=0 intervention=1）——卡权限框 ≠ 在干活；上层应立即 escalate/报告，而不是当作忙碌推进"
+        fi
+        PREV_INTERVENTION[$name]=1
+      else
+        PREV_INTERVENTION[$name]=0
+      fi
+
+      # 候选 B（gap-permission-prompt-vs-dismissable-prompt-classifier AC4）：permission-prompt 持续
+      # ≥PERM_PROMPT_WARN_ROUNDS 轮且 transcript 最近 PERM_PROMPT_TX_WINDOW 秒未写入 ⇒ 报一次 WARN
+      # （不无限静默）。兜底：分类器候选 A 只排除已知可忽略提示（问卷带 (optional)/Dismiss）；新变体
+      # 漏网时，假的 permission-prompt 会反复触发 SESSION-INTERVENTION-REQUIRED（噪声，而非阻断
+      # SESSION-IDLE——permission-prompt 已单列非忙，gap-permission-prompt-merged-into-busy）。WARN 只去
+      # stderr、每段一次（PREV_PERM_WARNED 边沿），绝不改动忙闲判据。
+      if [ "$pane_state" = "permission-prompt" ]; then
+        PERM_CONSEC[$name]=$(( ${PERM_CONSEC[$name]:-0} + 1 ))
+      else
+        PERM_CONSEC[$name]=0
+        PREV_PERM_WARNED[$name]=0
+      fi
+      if [ "${PERM_CONSEC[$name]:-0}" -ge "$PERM_PROMPT_WARN_ROUNDS" ] \
+         && [ "${PREV_PERM_WARNED[$name]:-0}" = "0" ]; then
+        perm_tx_age=-1
+        if [ -n "$tr_path" ] && [ -e "$tr_path" ]; then
+          perm_hmt=$(heartbeat_mtime "$tr_path")
+          [ "$perm_hmt" != "0" ] && perm_tx_age=$(( $(date +%s) - perm_hmt ))
+        fi
+        if [ "$(_sl_perm_prompt_warn_verdict "${PERM_CONSEC[$name]}" "$perm_tx_age")" = "warn" ]; then
+          echo "session-liveness: WARN $name 的 pane 连续 ${PERM_CONSEC[$name]} 轮 permission-prompt 且 transcript 最近 ${perm_tx_age}s 未写入（窗口 ${PERM_PROMPT_TX_WINDOW}s）——可能是可忽略提示（问卷）被误判，反复触发 SESSION-INTERVENTION-REQUIRED 属噪声；若属实应让分类器识别为可忽略（AC4 兜底，不无限静默）" >&2
+          PREV_PERM_WARNED[$name]=1
+        fi
+      fi
+
+      # 事件 6：SESSION-SATURATED（阶段四，gap-session-liveness-cannot-see-context-saturation-...）——
+      # 上下文饱和度。复合判据（结构化源，非屏幕百分比，AC3）：最近 assistant 消息的
+      # usage.cache_read_input_tokens（缓存前缀 = 上下文用量）≥ SATURATION_TOKENS 且最后一条消息是
+      # 未获回应的 user 输入（收到新指令但未应答 = 收不进）。与文件头有意排除的屏幕 token 计数行无涉；
+      # 饱和不是故障（auto-compact 是正常机制），只有「饱和且随后指令未被响应」的复合形态才报（AC4）。
+      # 区别于普通「忙」（AC2）：busy 会话若还在应答（最后一条是 assistant）不报 saturated。仅配置了
+      # transcript（SESSION_TRANSCRIPTS）的目标适用——tick 日志不是会话证据。边沿触发。
+      if [ -n "$tr_path" ] && [ -r "$tr_path" ]; then
+        sat=$(transcript_context_saturation "$tr_path")
+        if [ "$sat" = "saturated" ]; then
+          if [ "${PREV_SATURATED[$name]:-0}" = "0" ]; then
+            sl_emit "SESSION-SATURATED $name 的会话上下文已饱和（cache_read_input_tokens ≥ ${SATURATION_TOKENS} 且最后一条是未应答的用户输入）——活着但可能收不进新指令；区别于普通「忙」（AC2）"
+          fi
+          PREV_SATURATED[$name]=1
+        else
+          PREV_SATURATED[$name]=0
+        fi
+      else
+        PREV_SATURATED[$name]=0
+      fi
     else
-      PREV_HASH[$name]=""; PREV_IDLE[$name]="unset"; PREV_API_BLOCKED[$name]=0; PREV_MARKER_STALE[$name]=0
-      IDLE_CONSEC[$name]=0; SEEN_BUSY[$name]=0
+      PREV_STATE[$name]=""; PREV_IDLE[$name]="unset"; PREV_API_BLOCKED[$name]=0; PREV_MARKER_STALE[$name]=0
+      PREV_PANE_EMPTY[$name]=0
+      IDLE_CONSEC[$name]=0; SEEN_BUSY[$name]=0; PREV_SATURATED[$name]=0
+      IDLE_REPORTED[$name]=0; ROUNDS[$name]=0
+      PERM_CONSEC[$name]=0; PREV_PERM_WARNED[$name]=0
+      PREV_INTERVENTION[$name]=0
     fi
 
     # 事件 4：心跳逾期——会话活着、项目未暂停，但心跳源超过 OVERDUE_MIN 未被更新。
-    # 心跳源默认是 tick 日志；内层是 transcript（AC1/AC16，见文件头）。用文件 mtime 而不是解析
+    # 心跳源默认是外层多源 max mtime（提交/queue-state/tick-log/分诊记录/verification-round，见
+    # outer_heartbeat_mtime）；内层是 transcript（AC1/AC16，见文件头）。用文件 mtime 而不是解析
     # 表内时刻：本仓的 tick 时刻本身就写成 "12:0xZ" 这类模糊值，解析不可靠。陈旧度 =
     # now - max(心跳 mtime, 解除停机时刻)——停泊期间累积的陈旧在解除停机那一刻清零（协调方样本）。
+    # 默认外层心跳 = 多源 max mtime（effective_heartbeat_mtime：git 提交 / queue-state /
+    # tick-log / 分诊记录 / verification-round.jsonl 任一最新即活）——红窗处置写 queue-state+提交
+    # 不写 tick-log 仍保持心跳新鲜（gap-outer-heartbeat-source-inverts-under-incident-handling）。
     hb=$(heartbeat_for "$name" "$root")
-    if [ "$alive" = "1" ] && [ "$halted" = "0" ] && [ -e "${hb:-/nonexistent}" ]; then
-      hmod=$(heartbeat_mtime "$hb")
+    if [ "$alive" = "1" ] && [ "$halted" = "0" ] && [ -n "${hb:-}" ]; then
+      hmod=$(effective_heartbeat_mtime "$name" "$root" "$hb")
       if [ "$hmod" != "0" ]; then
         eff=$hmod; [ "$base_ts" -gt "$eff" ] && eff=$base_ts
         omin=$(( ( $(date +%s) - eff ) / 60 ))
@@ -839,7 +1490,13 @@ while true; do
         # 同一轮已报 RESUMED ⇒ 会话可证明在动（pane 哈希变了），OVERDUE 是自相矛盾
         # （协调方样本：RESUMED 与 OVERDUE 不得同轮同目标同发）。直接证据优先，压制 OVERDUE。
         if [ "$overdue" = "1" ] && [ "${PREV_OVERDUE[$name]:-0}" = "0" ] && [ "$resumed" = "0" ]; then
-          sl_emit "SESSION-OVERDUE $name 的会话活着，但心跳 ${omin} 分钟未更新（阈值 ${OVERDUE_MIN} 分钟，预期周期 ${EXPECTED_CYCLE_MIN} 分钟）——会话可能已死，它会静默地永远空闲"
+          if heartbeat_is_outer_default "$name" "$root" "$hb"; then
+            # AC4（信号可区分）：默认外层心跳的 OVERDUE 自带多源说明——假阳性（有产出但 tick-log 旧）
+            # 不会报 OVERDUE，能报出来就说明所有产出源都 ≥OVERDUE_MIN 没动，无需手工查提交历史。
+            sl_emit "SESSION-OVERDUE $name 的会话活着，但多源心跳（git提交/queue-state/tick-log/分诊记录/verification-round 任一）${omin} 分钟未更新（阈值 ${OVERDUE_MIN} 分钟，预期周期 ${EXPECTED_CYCLE_MIN} 分钟）——会话可能已死，它会静默地永远空闲"
+          else
+            sl_emit "SESSION-OVERDUE $name 的会话活着，但心跳 ${omin} 分钟未更新（阈值 ${OVERDUE_MIN} 分钟，预期周期 ${EXPECTED_CYCLE_MIN} 分钟）——会话可能已死，它会静默地永远空闲"
+          fi
         fi
         PREV_OVERDUE[$name]=$overdue
       fi
@@ -847,10 +1504,9 @@ while true; do
       PREV_OVERDUE[$name]=0
     fi
   done < <(targets)
-  # AC7 心跳：每轮追加一条 HEARTBEAT（只进共享 events.jsonl）。订阅方据此判定「看门的不在了」，
-  # 不依赖任何人恰好去尝试挂载。持有者一死，心跳线停止增长 → 订阅方看最后一条 ts 即知。
-  # --once 不是持有者（不取锁），不写心跳——诊断接缝不冒充长跑持有者。
   [ "$ONE_SHOT" = true ] && break
-  sl_heartbeat
+  # 测试接缝 SL_ROUND_MARKER：每轮打一行 `# ROUND` 到 stdout，作为轮次刻度（替代旧的共享文件
+  # HEARTBEAT 行——那是「看门的心跳」的载体，已随共享文件移除）。生产不设 → 不打印，事件流干净。
+  [ "${SL_ROUND_MARKER:-0}" = "1" ] && echo "# ROUND"
   sleep "$INTERVAL"
 done

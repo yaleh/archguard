@@ -75,6 +75,13 @@ export const VALID_OUTCOMES = Object.freeze([
   // without a completion commit (start emitted, --task-end never reached with a terminal
   // outcome). Purely additive — SCHEMA_VERSION is NOT bumped.
   "abandoned",
+  // gap-over90-clock-measures-queue-time-not-work-time: a task whose open bracket was closed on a
+  // touches-overlap DEFER (the queue-time exclusion). NOT a terminal outcome — the task will be
+  // re-`--task-start`ed when work actually begins. aggregate() routes deferred pairs to a separate
+  // `deferred[]` array (never `tasks[]`), so a defer-close can never pollute throughput and never
+  // leaves a bracket in inProgress (OVER90's clock therefore excludes the queue segment). Purely
+  // additive — SCHEMA_VERSION is NOT bumped.
+  "deferred",
 ]);
 
 /** Valid wait-reason values. */
@@ -114,7 +121,7 @@ export const REQUIRED_FIELDS = Object.freeze([
   "recordedAtMs",
 ]);
 
-/** @typedef {"done"|"needs-human"|"revision-needed"|"skipped"|"error"|"abandoned"|null} Outcome */
+/** @typedef {"done"|"needs-human"|"revision-needed"|"skipped"|"error"|"abandoned"|"deferred"|null} Outcome */
 /** @typedef {"admission-contention"|"cache-hit"|"prepared-blocked"|null} WaitReason */
 /** @typedef {"worktree"|null} IsolationMode */
 /** @typedef {"serial"|"concurrent"|null} DispatchMode */
@@ -792,12 +799,12 @@ async function main(argv) {
 function isDirectEntry(argv1) {
   const entry = argv1 || process.argv[1];
   if (!entry) return false;
-  try {
-    return fs.realpathSync(path.resolve(entry)) === fileURLToPath(import.meta.url);
-  } catch (_) {
-    // Fallback: simple basename match
-    return entry.endsWith("workflow-event-schema.mjs");
-  }
+  // Bundler-friendly (gap-shipped-ts-files-are-not-bundled-80-raw-typescript-in-the-artifact):
+  // when this module is BUNDLED into another tool (fast-mode-telemetry, inner-blocked-signal),
+  // the inlined module shares the bundle's import.meta.url, so URL equality would falsely fire its
+  // CLI block. Basename match distinguishes running workflow-event-schema.mjs itself from being
+  // inlined into another entry.
+  return path.basename(entry) === "workflow-event-schema.mjs";
 }
 
 // Run CLI if invoked directly

@@ -1,5 +1,16 @@
 # 外层编排 loop tick 指令
 
+> ## ⇒ 先读执行核：[`orchestration/orchestrator-tick-core.md`](orchestrator-tick-core.md)（79 行）
+>
+> **本文件是理由档案(1095 行),不是执行清单。** 每轮实际要跑的动作、必产出、硬约束、边界
+> 都在执行核里;本文件提供每一条的实测与代价。
+>
+> **这一行本身就是一条判据的产物**(`ADR-009` 第二次修订 + `AC30(b)` 三层统一架构 SPEC,
+> 2026-08-09):**凡是必须跨压缩存活的东西,必须落在锚所指向的文件里。** 执行核建于 05:5xZ,
+> 但直到 06:5xZ 之前它**不在锚的可达范围内**——只靠「我记得它存在」维持,而那种存在形式的
+> 寿命上界是下一次压缩(实证:workflow 实践死在 08-08 07:49:05 的压缩边界上,同一次压缩里
+> cron 照常触发,差别只在于 cron 是锚指向文件)。**加这一行,是把执行核从记忆搬进锚的可达范围。**
+
 > **模板参数（gap-install-rewrites-files-so-upgrade-cannot-tell-who-changed-them）**：本文件是随
 > quay 插件包分发的外层 tick 文档（模板在 `plugin/loop/orchestrator-loop-tick.md`，内层模板是
 > `plugin/loop/fast-mode-loop-tick.md`）。
@@ -9,9 +20,23 @@
 > `orchestration/orchestrator-loop-tick.md`（外层）/ `docs/analysis/fast-mode-loop-tick.md`（内层）。
 > 模板正文本体不含任何具体仓库路径、测试命令或 tmux 会话字面量。
 >
-> **目标项目值引用约定**：`REPO_ROOT` / `TEST_COMMAND` / `TMUX_SESSION` 三个名字在本文件中
-> 指 `.quay/config.yml` `loop:` 节的对应值（`repo_root` / `test_command` / `tmux_session`）。
+> **目标项目值引用约定**：`REPO_ROOT` / `TEST_COMMAND` / `TMUX_SESSION` / `FORK_BASELINE` /
+> `MERGE_TARGET` 五个名字在本文件中指 `.quay/config.yml` `loop:` 节的对应值
+> （`repo_root` / `test_command` / `tmux_session` / `fork_baseline` / `merge_target`）。
 > 执行含这些名字的命令前，先读该文件把值代入——不要凭记忆。
+>
+> **工作分支模型（gap-two-layer-loop-tick-docs-hardcode-master-not-wired-to-existing-branch-model）**：
+> 工作分支名是**策略**（各项目自身 branch 模型现状），不是机制——本文件是下游项目经升级通道消费的
+> 共享模板。`FORK_BASELINE`（已验证基线）与 `MERGE_TARGET`（待验证汇入点）**默认都是 `master`**
+> （单线：从 master 分叉、合回 master——未做 branch cutover 的下游行为不变）。quay 自身在
+> `.quay/config.yml` 覆盖成 `fork_baseline: develop` / `merge_target: integration`（两线，本文件
+> 步骤 3b 的批量合即 `$MERGE_TARGET`→`$FORK_BASELINE`）。含分支操作的命令先读这两个值代入，不要字面写死。
+>
+> **切分声明（AC38，2026-08-10）**：本文件是**产品行为正本**（随 `quay-init --loop` 原样铺到目标项目
+> `orchestration/orchestrator-loop-tick.md`）。quay 自身网络的**本层状态**（工作分支两线、integration
+> 作 checkout、项目列表、tmux 布局）在 quay 仓库的 `orchestration/orchestrator-loop-tick.md` 副本。
+> **产品行为进 plugin / 本层状态留 orchestration**——与 manager 层已按同判据切分（产品模板 322 行 vs
+> quay 状态 1505 行；本对 1309/1164 同构）。冷启动 skill 与 tick 核引用同一批行为文件（AC3）。
 
 **启动方式**（在编排会话，即本会话或 `/clear` 后的新会话）：按下方「冷启动」步骤操作——**循环驱动
 只有一个**：步骤 4 的 `CronCreate`（20 分钟 cron）。Monitor 是事件监测，不是驱动。两个都做完再进
@@ -36,36 +61,105 @@ cd "$REPO_ROOT"    # REPO_ROOT 见 .quay/config.yml loop.repo_root（或 git rev
 | `orchestration/exp6-phase1-sustained-unattended-operation.md` | 目标、20 条 AC、DoD、四项已定决策 |
 | `orchestration/tick-log.md` | **历史 tick 与动作类型累计分布**——退化判据的唯一来源 |
 | `orchestration/escalations.md` | 已攒给人、尚未处理的非常规项 |
-| `docs/analysis/batch2-queue-state.md` | 内层自报的队列状态（**可能是旧快照，以 git 为准**） |
+| `docs/analysis/batch2-queue-state.md`（文件名历史引用——batch2 是旧批次名） | 内层自报的队列状态（**可能是旧快照，以 git 为准**） |
+| `docs/analysis/batch2-queue-state.md` | 内层自报的队列状态（**可能是旧快照，以 git 为准**）。**「batch2」是历史名**（旧批模型的队列快照，保留不改名以免破坏引用） |
 | `adr/ADR-021-adaptive-budget-self-regulating-methodology.md` | 四项原则 |
 
 **2. 建立实况**（以实测为准，不以上面任何文件的自述为准）
 
 ```bash
 git log --oneline -10 && git status --short
-node --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts --report --json
-node --experimental-strip-types plugin/scripts/task-status-drift-check.ts
+node plugin/scripts/dist/fast-mode-telemetry.js --report --json
+node plugin/scripts/dist/task-status-drift-check.js
 ```
 
-**3. 找到内层会话**
+**3. 自检内层会话（三态处理，gap-outer-self-checks-and-creates-inner-session）——不是「找到」，是「确保」**
+
+内层不再是「找到就行」——冷启动第 3 步改为**自检**：inner 窗口在不在、claude 进程活不活、
+transcript 有没有真实 user 消息（被驱动过）。三态判定与处理（判据用可信的：窗口按名寻址、
+进程看 `/proc` cmdline、user 消息看 transcript——不用 pane 哈希假阳、不用 heartbeat 冻结假警）：
+
+| 状态 | 判定 | 处理 |
+|---|---|---|
+| **健康** | inner 窗口存在 **且** claude 进程存在 **且** transcript 有真实 user 消息 | **什么都不做**（权限边界——已存在的 inner 可能是 manager 建的，外层无权判断/重建/改参数），直接进入正常驱动流程 |
+| **空壳** | inner 窗口存在 **且** claude 进程存在 **但** transcript 无真实 user 消息（被拉起但未驱动，11:40 watchdog 形态） | **驱动而非重建**——不丢可能已有的上下文，接手 manager 预建的会话 |
+| **缺失** | inner 窗口不存在 **或** 无 claude 进程 | 调 `quay-topology.sh` 创建**两窗口**拓扑（outer+inner，manager 跨项目不属于项目拓扑）+ 起 inner claude（checked-in launch 命令），然后驱动 inner |
+| **退化** | inner 窗口+进程存在，但 transcript 仅由发现启发式解析（`transcriptSource=discovery`，旧启发式会认错 transcript） | **报警 + 不信任**——state=degraded（fail-closed），**绝不按 healthy 放行**；先用结构方式解析 inner transcript（`--transcript` / `SESSION_TRANSCRIPTS`）重试，仍无法结构确认 ⇒ 升级（step 5） |
 
 ```bash
-tmux list-sessions && tmux list-panes -a -F "#{session_name}:#{window_index}.#{pane_index} #{pane_current_path}"
+bash plugin/scripts/inner-session-check.sh --json   # 四态自检：{state: healthy|empty-shell|missing|degraded, window, process, transcript, transcriptSource, transcriptFresh}
 ```
 
-内层是 `cwd` 为 `$REPO_ROOT` 且**不是你自己**的那个 pane（tmux 会话是 `$TMUX_SESSION`，均见
-`.quay/config.yml` `loop:` 节；用 `tmux capture-pane -p -t <target> | tail -20` 确认它在跑开发任务
-而非编排）。找不到就升级给人。
+按 `state` 分派：
+
+- **`healthy`** ⇒ 什么都不做——不重建、不重启、不改启动参数（权限边界，负控制：健康 inner 不被动）。
+  继续步骤 4（重建 cron）。
+- **`empty-shell`** ⇒ **驱动** inner（send-keys-reliable，transcript 验证送达，不假设成功）：
+  ```bash
+  bash plugin/scripts/send-keys-reliable.sh "$TMUX_SESSION:inner" "执行 $REPO_ROOT/docs/analysis/fast-mode-loop-tick.md 中的 tick 指令" <inner-transcript>
+  ```
+- **`missing`** ⇒ 调**两窗口**工厂创建拓扑，验证在位，然后同样驱动 inner：
+  ```bash
+  bash plugin/scripts/quay-topology.sh --session "$TMUX_SESSION"          # 两窗口工厂（outer+inner，幂等；manager 跨项目，不建）
+  bash plugin/scripts/topology-check.sh --session "$TMUX_SESSION" --json   # 验证：ok:true = 两窗口各有 claude 进程
+  ```
+  创建后 **INNER-DRIVEN 验证送达**：transcript 出现真实 user 消息（send-keys-reliable 的
+  `transcript-delivery-check.ts` 判据），不假设成功。**工厂失败/验证不过 ⇒ 升级给人**（step 5），
+  不静默继续——建不出来就进不了正常驱动流程。
+- **`degraded`** ⇒ **报警（不自认 healthy）**——inner 窗口/进程存在但 transcript 只由发现启发式解析
+  （`transcriptSource=discovery`，旧启发式在 3 会话拓扑下会认错 transcript；「对结论错证据」静默 healthy
+  正是 gap-inner-session-check-discovery-fallback-silent 消灭的形态）。**本步是 --json 消费者，必须读
+  `transcriptSource`**：`==discovery` ⇒ 报警 + 按 degraded 处理，**不得**按 healthy 放行。先加
+  `--transcript <path>` 或用 `SESSION_TRANSCRIPTS` 结构解析 inner transcript 后重试自检；仍无法结构
+  确认 ⇒ 升级给人（step 5），不静默继续。
+
+**transcript 路径解析**（inner-session-check.sh）：`--transcript` 显式 > `SESSION_TRANSCRIPTS` 配置
+> `orchestration/session-liveness.env` > 发现（`$HOME/.claude/projects/<root-slug>/` 里最晚修改、
+且不是外层自己的 jsonl，标 `source=discovery`）。找不到 transcript = fresh = 空壳判据（驱动不重建）。
+**发现路径是 KNOWN-BROKEN 的退化路径（不静默）**（gap-inner-session-check-discovery-reads-wrong-transcript
+→ gap-inner-session-check-discovery-fallback-silent）：旧启发式在 3 会话拓扑下会认错 transcript，所以
+`transcriptSource=discovery` 时脚本本身 stderr 报警且 state=**degraded**（fail-closed，绝不静默报 healthy）。
+**本步（--json 消费者）必须读 `transcriptSource`**：`==discovery` ⇒ 报警 + 按 degraded 处理（结构解析
+重试 / 升级），**不得**按 healthy 放行——「对结论错证据」的无声回归正是这条要消灭的形态。
 
 **4. 重建 cron —— 唯一的循环驱动，这一步最容易漏**
 
 **整个冷启动只有这一个循环驱动机制**：tick 靠它每 20 分钟触发一次。`CronCreate` 的任务是
-**会话内的**，会话一结束就没了。新会话必须重建，否则外层再也不会自动触发：
+**会话内的**——但**「会话内」指的是【进程】，不是【上下文】**（2026-08-08 13:3xZ 实测更正，见下）。
+**因此这一步是「先列、再决定」，不是「无条件重建」**：
 
 ```
+CronList     # ← 必须先列。/clear 之后旧 cron 仍在，直接建就是双触发（§4a 明令禁止的那个）
+# 恰好一个本层 tick 的 cron  ⇒ 什么都不做
+# 多于一个                  ⇒ CronDelete 到只剩一个（哨兵清扫：按 prompt 内容找，绝不靠记住的 ID）
+# 一个都没有                ⇒ 才建：
 CronCreate(cron="*/20 * * * *", prompt="执行 orchestrator-loop-tick.md 中的 tick 指令", recurring=true)
-CronList   # 确认它已被列出——没列出的 cron 不是报警，是静默空转
+CronList   # 建完再列一次确认——没列出的 cron 不是报警，是静默空转
+mkdir -p <root>/.quay
+printf '%s\n' '{"mechanism":"cron","interval":"*/20 * * * *","source":"cold-start"}' >> <root>/.quay/loop-driver.jsonl
+mkdir -p "$REPO_ROOT/.quay"
+# 写驱动注册表（与 cold-start skill 逐字同源）——loop-driver-check.sh 数的是这一行：
+# 只建 cron 不写注册表 = 检查器看不见这个驱动，照文档冷启动会误报 STALLED
+printf '%s\n' '{"mechanism":"cron","interval":"*/20 * * * *","source":"cold-start"}' >> "$REPO_ROOT/.quay/loop-driver.jsonl"
 ```
+
+> **⚠️ 2026-08-08 13:3xZ 实测更正：原文「会话一结束就没了。新会话必须重建」是错的，
+> 且它与本文件 §4a 自相矛盾。** 本节标题覆盖的正是 `/clear`，而**实测对一个外层会话连发两次
+> `/clear` 后 `CronList` 仍返回 `c0ac1607 — Every 20 minutes (recurring)`** ⇒ **`/clear` 清上下文、
+> 换 transcript session id，但不杀 cron（进程没退）。** 照原文无条件 `CronCreate`，造出的正是
+> §4a 禁止的双触发。**真正杀掉 cron 的是进程退出**（崩溃 / OOM / 关窗），那时 `CronList` 返回空
+> ——**所以判据只有一个：先列，按结果决定建不建。**
+>
+> **同次实测暴露的第二个、更阴的失效**：`/clear` **保留驱动、更换 transcript session id**
+> ⇒ **循环照跑，观测瞎掉**——任何把 transcript 路径写死的监视器从此静默读空。
+> **「进程死了」有 `SESSION-GONE`，「id 换了」什么都不报。**
+> ⇒ 监视器按 `customTitle`（如 `"quay-outer"`）解析当前 transcript，**不写死 session id**。
+
+**最后一行是写驱动注册表**：`CronCreate` 建的 cron 是**会话内的**，对 `loop-driver-check.sh` 本身
+不可见——检查器数的是**注册表** `.quay/loop-driver.jsonl`，一行 = 一个驱动。**建好却没写注册表的
+cron，对检查器等于不存在**（这正是「照文档冷启动必然报 STALLED」的根因：检查器没错，是注册动作
+不在文档里）。这一行与冷启动 skill（`plugin/skills/cold-start/SKILL.md` 步骤 5）**逐字同源**，
+两处必须保持同一条命令。
 
 **为什么选它（判据：无人值守时最不容易静默停摆）**：
 
@@ -95,14 +189,42 @@ CronList   # 确认它已被列出——没列出的 cron 不是报警，是静�
 5 行上下文，而它当时没有运行中的循环，恢复全靠外层手工简报。缺的是步骤 4 没做——cron 没重建——不是
 缺第二个驱动。
 
-**确认恰好一个触发源**：冷启动后跑
+**确认恰好一个触发源**：照上面建好 cron 并**写完注册表**之后跑
 
 ```bash
 bash plugin/scripts/loop-driver-check.sh
 ```
 
+必须报 `LIVE`（退出码 0，打印 `loop-driver: LIVE (1) …`）。报 `DOUBLE-TRIGGER`（退出码 4）=
+注册表 ≥2 行——有人多装了一个驱动（多半是照旧文档多起了一个 loop）——停下来处理，**不要再加装**。
+
+报 `STALLED`（退出码 3）= 注册表一行都没有——**先查注册表是否写过，再谈重建 cron**：
+
+**查注册表**（`ls <root>/.quay/loop-driver.jsonl`）。不存在或为空 ⇒ **注册动作没做**——不是
+「没装 cron」，是「装了但没写注册表」：回步骤 4，**把 `printf … loop-driver.jsonl` 那一行也做掉**，
+再跑 check。
+
+**注意：陈旧注册报的是 LIVE，不是 STALLED。** 上一会话写过注册表、但那个 cron 已随会话而死——
+注册表还躺着一行，check 报 LIVE（exit 0）。这是自述注册表的结构性极限（判据换成可观测来源是
+第二层的事，见任务 `gap-the-loop-driver-check-...` 的 AC3 处置）。重冷启动时若 pre-check 报 LIVE、
+但你知道那是上一会话的陈旧注册，先 `rm -f <root>/.quay/loop-driver.jsonl` 清掉再建——与冷启动 skill
+步骤 5 的处置逐字同源；不清就再建一个 cron = 制造出本检查要抓的双触发。
+
+**绝不要看到 `STALLED` 就只是再建一个 cron**：老文档这句话正是双触发生产机——重建一次多一个 cron、
+注册表还是空、check 还是 STALLED、于是再建一个……本检查存在的全部价值就是抓这种「从外面看装得好好的，
+实际不会 tick」。查注册表这一步把「没注册」（STALLED，补写注册表）和「注册了但死了」（LIVE-陈旧，
+清掉再建）分开，两个分支的补救不同。
 必须报 `LIVE`。报 `DOUBLE-TRIGGER` = 有人多装了一个驱动（多半是照旧文档多起了一个 loop）——停下来
-处理；报 `STALLED` = 一个都没有——循环不会 tick，回步骤 4 重建 cron。
+处理；报 `STALLED` = 一个都没有——循环不会 tick。**先查注册表是否写过，再谈重建 cron**：
+
+1. `ls "$REPO_ROOT/.quay/loop-driver.jsonl"` 且 `wc -l` 有行——**注册表写过吗？**
+2. **注册表从没写过**（文件不存在或为空）→ 说明步骤 4 的**写注册表**那一步漏做了——不是缺 cron，
+   是缺记录。回步骤 4 补上 `printf … >> loop-driver.jsonl` 那一行，再跑检查必须转 `LIVE`。
+3. **注册表确实写过**仍报 `STALLED`（例如上次会话把注册表 `rm -f` 清掉了）→ `rm -f <root>/.quay/loop-driver.jsonl` 清掉陈旧注册，再回步骤 4 补写。
+
+**直接重建 cron 而不先查注册表，会在每次冷启动都多加一行注册——正是本检查要抓的双触发**。
+（注：注册表是自述的，它只能数「装过几次」，不能证明那个 cron 现在还活着——这归
+`gap-the-loop-driver-check-reads-a-self-declared-registry-nobody-writes` 的第二层。）
 
 **4b. 重挂 Monitor —— 和 cron 一样是会话内的**
 
@@ -125,7 +247,7 @@ Monitor({command: "$REPO_ROOT/plugin/scripts/session-liveness-mount.sh",   # REP
 「cron 才检查状态」改成「状态变化即触发」：
 
 ```
-Monitor({command: "$REPO_ROOT/plugin/scripts/suite-state-trigger.ts --monitor",   # REPO_ROOT 见 .quay/config.yml loop.repo_root
+Monitor({command: "node --no-warnings $REPO_ROOT/plugin/scripts/dist/suite-state-trigger.js --monitor",   # REPO_ROOT 见 .quay/config.yml loop.repo_root
          description: "套件状态自动触发（SUITE-RED → 立即 RED 处置；SUITE-RUNNING → 乐观派发执行者）",
          persistent: true, timeout_ms: 3600000})
 ```
@@ -138,7 +260,31 @@ session-liveness：退回纯 20 分钟轮询（正是本轮事故形态）——
 （`pgrep -af 'suite-state-trigger.ts --monitor'`，有 node 活进程即可；按步骤 0 的自匹配纪律
 排除 pgrep 自己那一行——发起查询的命令行里含同样字符串）。
 
-**4c. 重挂后立即验证挂上了 —— 三判据自检**
+**4b3. 重挂空槽触发器（空槽事件执行者，`gap-slot-free-not-an-event-slots-stay-empty-missed-without-trace`）——空槽即事件，不等 tick**
+
+空槽不是事件：`in_flight < cap ∧ dispatchable > 0`（空槽 + 有可派）之前只靠三层 20-25 分钟 tick 轮询到
+那一格才处置；tick 醒来时手上总有更急的事（红套件 / fan-in / needs-human），回填空槽永远排最后且漏了
+不留痕（C17）。本条给它补**事件执行者层**——`slot-free-trigger.ts`（照 `suite-state-trigger.ts` 形态，
+**触发者是执行者，不是新决策者/新调度源**——它只做「空槽条件 → 事件」的翻译，派谁/怎么派仍是内层
+`slot-refill.ts` + 步骤 4 的既有规则，节奏仍唯一）Monitor 轮询（~5s）读 `fast-mode-telemetry --slots`
+（`slotsRemaining`，reconcile 感知在飞）+ `ready-pool-check`（`dispatchable_disjoint`，仅在有空槽时跑），
+`in_flight<cap ∧ dispatchable>0` ⇒ 发 `SLOT-FREE` 事件 + 追加 `.quay/slot-free-events.jsonl`（append-only）：
+
+```
+Monitor({command: "node --no-warnings $REPO_ROOT/plugin/scripts/dist/slot-free-trigger.js --monitor",   # REPO_ROOT 见 .quay/config.yml loop.repo_root
+         description: "空槽自动触发（SLOT-FREE → 立即驱动 inner 回填，不等 20-min tick）",
+         persistent: true, timeout_ms: 3600000})
+```
+
+事件流里出现 `SLOT-FREE` ⇒ **立即**驱动 inner 回填（不等下一次 cron）：按步骤 4 从 `slot-refill.ts` 的
+`recommended` 取 1-2 条派给 inner——**同一 B9 空槽强制链**，事件只是把它的触发从「20 分钟 tick」提前到
+「空槽出现的那一刻」。**漏回填在事件日志可追责**：`.quay/slot-free-events.jsonl` 记录每次 SLOT-FREE 的
+`at` 时间戳；事件已发而未回填 ⇒ 下一 tick 的 A18/B9 强制链（`should_refill=true` 而未派发 ⇒ `no-action`
+不合法）仍兜底，且事件日志让「漏了」从看不见变成可查。挂载遗漏的代价同 suite-state-trigger：退回纯
+20 分钟轮询——所以 4c 的验证纪律对三者同样成立（`pgrep -af 'slot-free-trigger.ts --monitor'`，排除
+pgrep 自己那一行）。
+
+**4c. 重挂后立即验证挂上了 —— 两判据自检**
 
 重挂 Monitor 后立刻跑一次检查器，不靠「看起来挂上了」：
 
@@ -146,12 +292,12 @@ session-liveness：退回纯 20 分钟轮询（正是本轮事故形态）——
 bash plugin/scripts/monitor-mount-check.sh --json
 ```
 
-三判据缺一不可：`mounted=true`（挂上了）、`targetRoot` 等于本仓根（挂对了，`targetOk=true`）、
-`delivered=true`（AC9 起取代 `ownedByThisSession`——判据是「事件是否真的送达」共享事件文件，不是
-「是不是本会话挂的」；别的会话挂的、投递正常必须照样 PASS）。
+两判据缺一不可：`mounted=true`（挂上了）、`targetRoot` 等于本仓根（挂对了，`targetOk=true`）。
+2026-08-06 起 `delivered`（AC9 的共享事件文件判据）随共享 events.jsonl 移除——事件送达由挂载方
+自己的 Monitor 事件流承担（谁挂的谁拥有），不是检查器能读的跨观察者文件。
 任何一条不满足都按冷启动失败处理，不要直接进 tick。
-`gap-nothing-checks-whether-the-monitor-is-mounted-or-aimed-right`：挂没挂/挂哪个仓库/事件有没有送达
-三条判据是**一条不是一条**——只查第一条会漏掉「进程活着、目标错」那次（管理者 18 小时挂错目标）。
+`gap-nothing-checks-whether-the-monitor-is-mounted-or-aimed-right`：挂没挂/挂哪个仓库
+两条判据是**一条不是一条**——只查第一条会漏掉「进程活着、目标错」那次（管理者 18 小时挂错目标）。
 
 **5. 核对前置条件**
 
@@ -164,6 +310,107 @@ bash plugin/scripts/monitor-mount-check.sh --json
 在 `tick-log.md` 记一行，注明「冷启动恢复」。
 
 **7. 进入正常 tick 步骤**
+
+## 冷启动 skill 背景档案（AC41 判据 2 — 背景从 plugin/skills/cold-start/SKILL.md 搬入）
+
+`plugin/skills/cold-start/SKILL.md` 只留动作(Steps)与可判定清单；本段是被它引用的背景/判据正文。
+冷启动 skill 引用本文件(外层 tick)与 `plugin/loop/fast-mode-loop-tick.md`(内层 tick 产品模板)作为
+**同一批行为文件**。tick 执行核同样引用这一批，各自指向同层 loop-tick 文档：外层
+`plugin/loop/orchestrator-loop-tick.md`、内层 `plugin/loop/fast-mode-loop-tick.md`、管理者
+`orchestration/manager-loop-tick.md`。
+
+> 铺到目标项目后的 laid-down 位置（quay-init 字节原样铺出）：外层 `orchestration/orchestrator-loop-tick.md`、
+> 内层 `docs/analysis/fast-mode-loop-tick.md`。
+
+### nohup 为什么不行（Monitor tool 判据）
+
+A `nohup bash …session-liveness.sh > log &` process and a Monitor-tool process look **identical in
+`ps`** (same argv). The difference is where stdout goes: the nohup process writes to a file and
+**nobody is notified**; a Monitor-tool process has every stdout line turned into a **session
+notification**. The criterion for "the loop is up" is therefore **"an event was delivered to this
+session"**, not "a process is running". A cold start whose monitor is nohup'd looks installed but is
+silently dead — worse than not installed, because it looks installed. **⇒ Never use nohup.** If you
+find yourself writing `nohup` or `&` to background a monitor, **STOP — that is the anti-pattern the
+cold-start skill exists to prevent.**
+
+### 铺什么验什么（gate 判据 — 冷启动门是 DERIVED laydown set 绿，不是全量套件绿）
+
+**What gates a cold start.** The gate is: **all scripts in the DERIVED laydown set are green** — NOT
+"the whole quay suite is green" (`$TEST_COMMAND` full-suite / 全量). A cold start only lays down the
+derived laydown set (the `plugin/scripts/*` the shipped skill + loop docs reference), so a suite
+failure UNRELATED to that set must NOT block it (与铺设集无关的失败不再无限期阻塞冷启动); a failure
+INSIDE the set MUST block (铺什么验什么). The 2026-08-05 wait was correct: `session-liveness.sh` +
+`session-liveness-mount.sh` are both derived members, so laying then would have shipped the M3
+busy/idle regression into the target project.
+
+**Mechanical derivation (no new mechanism).** The set is derived by grepping the shipped docs — the
+same derivation quay-init.sh's `derive_loop_scripts()` step (a) uses. Never hand-edit the set; re-run
+the grep:
+
+```bash
+grep -ohE 'plugin/scripts/[a-zA-Z0-9._-]+' <root>/plugin/skills/*/SKILL.md <root>/plugin/loop/*.md
+```
+
+**Run the gate:**
+
+```bash
+bash <root>/plugin/scripts/laydown-set-check.sh   # → `laydown_set_green: green|red`
+```
+
+`red` (a missing / non-parsing member, or a member's OWN test failing — the M3 class of logic
+regression a syntax check cannot see) blocks the cold start; `green` means the exact scripts this cold
+start will lay down are verifiably working. This is the full-suite gate's SCOPED-ED down cousin: it
+runs exactly the laid-down set's tests, nothing else — an unrelated red in the whole suite does not
+hold up the cold start. The check **never falls back to the whole suite**: if 0 test files resolve
+from the derived set it fails closed (red) — a silent "nothing checked" green is not an acceptable gate.
+
+### bare-metal 会话引导背景
+
+**From bare metal to a session is ONE command (`gap-no-formalized-bare-metal-session-bootstrap`).**
+The cold-start skill runs inside an already-existing outer session — the step BEFORE that (bare
+metal → a tmux window layout with a Claude Code process live in each pane) is the formalized product
+`plugin/scripts/session-bootstrap.sh <root> <layout>`:
+
+```bash
+bash <root>/plugin/scripts/session-bootstrap.sh <root> inner/outer        # project topology
+bash <root>/plugin/scripts/session-bootstrap.sh <root> manager/inner/outer # full quay-0-shaped layout
+```
+
+It creates each named window (idempotent — re-runs leave live windows alone), launches each role's
+Claude Code process via the checked-in launcher `quay-launch.sh` (the skill's internal
+implementation, never a user-facing invocation), verifies each process is actually alive (the same
+`/proc` process-detection `session-liveness.sh` uses), and exits non-zero naming the failing window
+if any window cannot be confirmed live (fail-closed). After it returns, the cold-start skill's
+"inner session reachable" precondition is already satisfied — the same command a cold start used to
+follow ("hand-build the session, then one command") is now truly one command.
+
+### launch config 与 ghost-suggestion 背景
+
+**Launch config is checked-in, not remembered.** The correct per-role launch command lives in
+`<root>/.claude/launch.settings.json` (settings-schema keys + `_launchSpec` for flag-only params) and
+is materialized by the skill-internal launcher `quay-launch.sh`. If a session must be (re)started
+during the cold-start skill, the skill handles the launch itself — the user/agent never names the
+launcher script and never hand-types a shell one-liner from memory
+(`gap-crystallize-launch-config-into-checked-in-settings-file`; `quay-launch.sh` is the skill's inner
+implementation, not a user-facing deliverable). To verify the materialized command without starting
+anything, the skill runs the launcher in dry-run mode (`--dry-run`); the `--bare` flag produces a
+minimal one-shot verification session (not long-lived).
+
+**Ghost-suggestion elimination is REQUIRED, not optional** (`gap-ghost-suggestion-eliminated-at-source-
+prompt-suggestions-false`, 人 2026-08-05 裁定): the launch config MUST carry `--prompt-suggestions false`
+(as `_launchSpec.promptSuggestions=false`, translated by `quay-launch.sh`) AND
+`CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` (as the `env` key) — both routes, for every role. A fresh
+session launched without it shows gray ghost-suggestion text in the input box that the reliable-send /
+pane classifier can misread as a submitted action (fault 6/7). The cold-start skill MUST confirm the
+materialized command contains the flag (the launcher's `--dry-run` output must include
+`--prompt-suggestions false`).
+
+### non-goals
+
+- **Not a one-keypress button.** The command count is install (1–2) + init (1) + this skill (1);
+  the inner start is INSIDE the cold-start skill, not a separate human step.
+- **Not a shell script.** The monitor is mounted through the Monitor tool so its events reach a
+  session; a script that backgrounds processes delivers to nobody.
 
 ## 定位
 
@@ -196,6 +443,35 @@ bash plugin/scripts/monitor-mount-check.sh --json
 
 人在，但不需要被打扰：**常规自行处理，非常规攒起来**等人有空看。
 
+**C3 运行时约束（`gap-c3-has-no-runtime-constraint`）——本层对 manager 的观测/检查动作必须为零。**
+文档层检查（`no-manager-tick-doc-check.ts`）只证明「tick 文档没写越界步骤」，**不证明运行时没做
+越界动作**——「文档里没写 ≠ 运行时没做」。本步补的是**运行时约束**：每 tick 扫描本层会话 transcript，
+机械检出本层实际对 manager 的观测/检查动作（`manager-observation-runtime-check.ts`；四类判据——
+PANE=读 manager 窗口 pane、TICKLOG=读/动 manager tick-log、TRANSCRIPT=读 manager transcript、
+ANALYZE=task_write 分析 manager 行为——逐类判据见该任务的 AC1 设计说明）。**每 tick 必跑一次本层
+自审**，扫**自上次审计时刻起**的新窗口（`--since`；历史窗口的存量违规是审计面，不是每 tick 的面）：
+
+```bash
+node --no-warnings plugin/scripts/dist/manager-observation-runtime-check.js \
+  --transcript "$HOME/.claude/projects/<root-slug>/<本层会话id>.jsonl" \
+  --since <上次审计的 ISO 时刻> --json
+```
+
+- **会话目标显式，不猜**（`--self` 只作多会话并存时的回退，打印被选会话、须人工核对；找不到/不唯一
+  就显式传 `--transcript` 本层会话 jsonl——**绝不猜**）。manager 的会话 id 用 `--config`/环境变量
+  `MANAGER_SESSION_ID` 给出，否则 `--self` 可能把 manager 当外层。
+- **违规报出（AC2）**：任何 PANE/TICKLOG/TRANSCRIPT/ANALYZE 命中 ⇒ 退出码 1、打印违规行；本 tick
+  停止后续动作，按「授权边界」升级给人（step 5）。**违反即停**——运行时约束不是建议。
+- **负控制（AC3，不误报）**：指向 inner 的 capture-pane（`-t "$TMUX_SESSION"` / `quay-0:inner`）
+  不计数；**manager→outer 的发布不计数**（`supervisor-bus-identity.sh inbox-summary`、读 manager 的
+  inbox/bus——那是 manager 向本层交付，不属于 C3 的 outer→manager 方向）；基于转述的指控（本层
+  transcript 里散文提到 manager）不被当作证据——**只数真实 tool 调用**。
+- **独立审计（方向合法）**：manager 对本层跑同一检查器（manager→outer 观测是合法方向，不受 C3
+  约束）——`node --no-warnings <repo>/plugin/scripts/dist/manager-observation-runtime-check.js --root <repo> --session <本层会话id> --json`。
+- **交叉标注（AC4）**：本步是 `gap-manager-productization-five-constraints` AC4 文档层检查的**补充，
+  不是替换**——文档层管「tick 文档不得含创建/驱动/检查 manager 的步骤」，运行时约束管「运行时实际
+  观测/检查动作为零」，两条正交、都要。
+
 ## Tick 步骤
 
 ### 0. 三个已经害过我们的失败模式
@@ -215,12 +491,19 @@ bash plugin/scripts/monitor-mount-check.sh --json
   **`C-u` → 文本 → `Enter` 三次分开调用**（合并会丢 Enter）。发完 `capture-pane` 确认出现了新的
   `⏺` 输出——未确认送达的指令等于没发。
 
-**b) 判断内层是否停摆要看「屏幕是否在变」，不是看最后一行。**
+**b) 判断内层是否停摆要看「底部区域状态行」，不是看最后一行。**
 
 ```bash
-tmux capture-pane -p -t "$TMUX_SESSION" | md5sum; sleep 25
-tmux capture-pane -p -t "$TMUX_SESSION" | md5sum      # 两次相同 = 空闲
+tmux capture-pane -p -t "$TMUX_SESSION" | tail -3 | grep -q 'esc to interrupt' && echo busy || echo idle
 ```
+
+> ⚠️ **2026-08-08 更正（gap-adr016-md5-ban-violated-in-shipped-md-and-checker-scope-gap）**：
+> 上一版这里是整屏哈希 `md5(capture-pane)` 两次相同 = 空闲——正是 ADR-016
+> `## Amendment 2026-08-04` 明令禁止、`adr016-screen-use-check.ts` 机械拦截的
+> `md5(capture-pane)` 形态，且它是【指令】不是散文，外层照做即违规。**正确形态**只取
+> pane 底部 3 行、只判 busy/idle 两个枚举态（底部区域 + 枚举态，Amendment 允许）。注意别写成
+> `-S -3`——`-S` 是【起始行】不是行数，负值进历史缓冲，取的是「历史往前 3 行 → 屏幕底部」
+> 一大段，取不到状态行。
 
 **c) 外层的独立核实会和内层抢 CPU——这是机制不是散文。** 步骤 1 写着「只读」，但跑一次全量套件是
 **数分钟的满载**，足以把内层 `select-preflight` 那种 timeout 余量只有 8% 的测试压成 flaky。
@@ -245,9 +528,9 @@ monitor，从外面看一模一样。**
 bash plugin/scripts/monitor-mount-check.sh --json
 ```
 
-三判据：`mounted`（挂没挂）/ `targetRoot` 是否等于本仓根（挂的哪个仓库副本）/
-`delivered`（事件有没有送达共享事件文件；AC9 起取代 `ownedByThisSession`——判据是「事件是否真的
-送达」，不是「是不是本会话挂的」）。挂载判据是 argv 前两 token 精确等于 `bash <绝对路径>`，
+两判据：`mounted`（挂没挂）/ `targetRoot` 是否等于本仓根（挂的哪个仓库副本，`targetOk`）。
+2026-08-06 起 `delivered` 随共享 events.jsonl 移除——事件送达由挂载方自己的 Monitor 流承担。
+挂载判据是 argv 前两 token 精确等于 `bash <绝对路径>`，
 **不是子串**——`pgrep -f` 会匹配到发起查询的命令自己（本节上文记的就是这个坑，检查器已绕开）。
 
 ### 0b. 事件式监测（Monitor）——补 tick 之间的盲区
@@ -256,7 +539,8 @@ bash plugin/scripts/monitor-mount-check.sh --json
 （SPEC-one-observer-two-surfaces.md，gap-retire-inner-state-one-observer-targets-by-parameter）。
 `inner-state.sh` 已退役——它不观测会话（`tmux` 命中 0），它的招牌信号 `.quay/inner-blocked.json`
 在三个项目里从未产生，包括我们撞上过的唯一一次真实事故（那 68 分钟也没有它）。挂成
-`persistent` Monitor，事件经共享事件文件送达（详细事件表见 0b2）：
+`persistent` Monitor，事件经观察者自己的 stdout 流送达挂载方（2026-08-06 起共享事件文件已移除；
+详细事件表见 0b2）：
 
 | 事件 | 含义 |
 |---|---|
@@ -280,7 +564,7 @@ bash plugin/scripts/monitor-mount-check.sh --json
 | 有始无终 | **start without end** | 进 `inProgress[]`；**只在 90 分钟后以 `OVER90` 露头**，且与「一个真的很慢的任务」同形——信号上不可区分 |
 
 **崩溃遗留（幽灵）**：执行者被杀死后，`--task-end` 永远不会来，任务永久停在 `inProgress`。先用
-`node --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts --reconcile --json` 关闭
+`node plugin/scripts/dist/fast-mode-telemetry.js --reconcile --json` 关闭
 「执行者确实不存在」的记录（判据是可观测的：分支已合并 / worktree 不存在 / 进程不存在，**不是时龄**），
 关闭后它才离开 `inProgress`、不再触发 `OVER90`。
 
@@ -293,7 +577,7 @@ bash plugin/scripts/monitor-mount-check.sh --json
 | `STALLED` | 遥测 `inProgress` 是否为空 | **正在运行的 `node --test` 进程数** |
 | 全量套件分类 | 命令文本里提到 `test.sh` | `test.sh` 出现在命令位置（剥离引号内容后） |
 | `--clean-stale` 安全性 | 提交数为 0 | 提交数 0 **且**两点 diff 为空 **且** worktree 无未提交改动 |
-| 滞留分支告警（步骤 1 的 `--stranded`） | 没有任何检查 → 靠人偶然 `git worktree list` | 三闸（reclaim 已验证）：`merge-base --is-ancestor` → merge-added 文件是否仍在 master → 分支领先计数；`has-commits`/`merged-then-reverted` 报出，`merged-clean` 不报 |
+| 滞留分支告警（步骤 1 的 `--stranded`） | 没有任何检查 → 靠人偶然 `git worktree list` | 三闸（reclaim 已验证）：`merge-base --is-ancestor` → merge-added 文件是否仍在 `$FORK_BASELINE` → 分支领先计数；`has-commits`/`merged-then-reverted` 报出，`merged-clean` 不报 |
 | `START` | 首次轮询就当作转变 | 首次标 `INIT`，只有真转变才 `START` |
 
 `STALLED` 那条的具体教训：**合并与验证跑不在任务括号内**，遥测 `inProgress` 为空，于是两级判据
@@ -403,7 +687,7 @@ OVERDUE/REPO-STALL（协调方 2026-08-03 样本）。
 `resume`；`n/a: <理由>` 合法、留白不是），并跑消费者检查器：
 
 ```bash
-node --experimental-strip-types plugin/scripts/task-contract-check.ts --root <repo> --json
+node plugin/scripts/dist/task-contract-check.js --root <repo> --json
 ```
 
 - 五条消费者判定（AC 阈值→measure/band 引用、measure 命令+字段、invoke 反引号命令+done 证据逐字、
@@ -447,13 +731,22 @@ rm <repo>/.halt
 所以在飞任务会算完但不落地，直到解除。**人已裁定接受这一点。**
 缓解只有一条纪律：**暂停不是终点，解除条件必须写在 `.halt` 内容里**。
 
+**抢占（`gap-supervisor-preemption`，2026-08-06）：`.halt` 现在是任意点生效，不只等下一 tick 边界。**
+机械挂载点三处（代码强制，`supervisor-preempt.sh` 基座层实现）：
+`bash plugin/scripts/supervisor-preempt.sh halt-check --root <根>`（读哨兵，fail-closed）、
+`preempt <target>`（对在飞层发停止信号：TUI 形态 tmux C-c；`-p` 迁移后 `kill <pid>`）、
+`preempt-all --root <根> --target <层>[,<层>] --pid <pid>[,<pid>]`（halt 时对全部在飞层发信号）。
+内层派发推荐（`slot-refill.ts`）在 `.halt` 存在时 `should_refill=false`——新派发被代码挡住。
+
 **外层每个 tick 必须报三个项目的 `.halt` 状态**——这是「暂停后忘了」的唯一防线：
 
 ```bash
 # 每个目标项目的根见各自 .quay/config.yml loop.repo_root（quay 自己的清单：quay/archguard/meta-cc）
+# `.halt` 是控制面不是传感器：没有 `.halt` 只回答「下一个边界不停」，不回答「项目在不在跑」——
+# 一个没有循环在跑的项目同样打印这一行。措辞因此是「未暂停」而不是「运行中」。
 for d in <目标项目根清单>; do
   printf "%-12s %s\n" "$(basename $d)" \
-    "$([ -f "$d/.halt" ] && echo "暂停: $(head -c 80 $d/.halt)" || echo 运行中)"
+    "$([ -f "$d/.halt" ] && echo "暂停: $(head -c 80 $d/.halt)" || echo 未暂停)"
 done
 ```
 
@@ -468,19 +761,34 @@ tmux capture-pane -p -t "$TMUX_SESSION" > .quay/last-pane.txt   # 内层在做�
 tmux capture-pane -p -t "$TMUX_SESSION" | tail -20              # 人读：底部 20 行
 git -C "$REPO_ROOT" log --oneline -10               # 落地了什么
 git -C "$REPO_ROOT" status --short                  # 树是否干净
-node --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts --report --json
-node --experimental-strip-types plugin/scripts/task-status-drift-check.ts
-node --experimental-strip-types plugin/scripts/task-status-drift-check.ts --stranded   # stranded worktree branches (gap-stranded-...: silent fail-closed alarm)
-cat docs/analysis/batch2-queue-state.md             # 内层自报的队列状态
+node plugin/scripts/dist/fast-mode-telemetry.js --report --json
+node plugin/scripts/dist/task-status-drift-check.js
+node plugin/scripts/dist/task-status-drift-check.js --stranded   # stranded worktree branches (gap-stranded-...: silent fail-closed alarm)
+cat docs/analysis/batch2-queue-state.md             # 内层自报的队列状态（文件名历史引用——batch2 是旧批次名）
+cat docs/analysis/batch2-queue-state.md             # 内层自报的队列状态（历史名「batch2」，见 1a 冷启动表注）
+bash plugin/scripts/supervisor-bus-identity.sh inbox-summary   # 收件箱机械挂载点（gap-supervisor-message-bus-with-identity AC4）：unread 逐条进决策，delivered≠consumed
 ```
 
 **`ruling-required` 屏幕观察者（外层是主轮询方，`gap-ruling-required-trigger-is-dead-code-never-wired-into-any-tick`）**：
 `--transcript` 从未进过任何生产调用，是死代码；现在 `ruling-required` 的主判据是**屏幕形状分类**。
-外层按分钟（60s）轮询内层 pane，把捕获喂给 `--detect-stop --pane`：
+外层按分钟（60s）轮询内层 pane，把捕获喂给 `--detect-stop --pane`。**通用化观测原语
+（`gap-ruling-required-only-covers-outer-to-inner-not-manager-to-outer`）**：盯谁（`--target`）、
+几个连续采样（`--samples`）、检测到后做什么（`--action` / `--action-command`）都由调用方配置——
+内层/外层/管理者各是**一次调用**，不新写代码。`--target inner` 保持旧路径 `.quay/inner-blocked.json`；
+其它 target 写 `.quay/blocked-signals/<target>.json`。
+
+外层盯内层（主路径，显式 `--target inner`）：
 
 ```bash
 tmux capture-pane -p -t "$TMUX_SESSION" > .quay/last-pane.txt && \
-node --no-warnings --experimental-strip-types plugin/scripts/inner-blocked-signal.ts --detect-stop --pane .quay/last-pane.txt
+node --no-warnings plugin/scripts/dist/inner-blocked-signal.js --detect-stop --target inner --pane .quay/last-pane.txt
+```
+
+管理者盯外层（AC5，一次配置调用——外层等裁定 ⇒ 报出，busy ⇒ 不报）：
+
+```bash
+tmux capture-pane -p -t "$OUTER_SESSION" > .quay/last-outer-pane.txt && \
+node --no-warnings plugin/scripts/dist/inner-blocked-signal.js --detect-stop --target outer --pane .quay/last-outer-pane.txt
 ```
 
 `classifyPaneState` 只读**底部区域**（ADR-016 修订 boundary b——不做整屏哈希），连续 3 次
@@ -518,10 +826,43 @@ node plugin/scripts/inner-forensics.mjs timecost --since <外层 loop 起点或�
 请求窗口早于它首条记录时，工具会打印 `⚠ … 个更早的会话未被包含`，并给出 `--session <id>`。
 **看到那条警告就说明本次输出不是完整窗口**——跨 `/clear` 的分析要逐个会话跑再合并。
 
-### 1b. 异步收尾例程（verification-round closure pass，强制）
+### 1a. Routine 检查（监督探针 standing track 不 dead——`gap-probe-mechanism-dead-15-days-rewire-to-two-layer`）
 
+**探针机制死过 15 天无人报警**（`routine-scheduler.ts` 存在但无生产调用；trigger 按迭代计数触发，
+两层模式没有迭代号）。外层是监督方，**每 tick 机械核实探针没死**——DUE 判定走与内层同一个
+`routine-scheduler.ts` 与 `.quay/routine-last-run.json`（任一先触发即写回，同窗口不 double-fire）：
+
+```bash
+node plugin/scripts/dist/routine-scheduler.js \
+  --now "$(($(date +%s) * 1000))" \
+  --last-run "$REPO_ROOT/.quay/routine-last-run.json" \
+  --plugin-root "$CLAUDE_PLUGIN_ROOT" \
+  /tmp/routines-outer-<tick>.json
+# exit 0 + DUE: 行 ⇒ 有 due；exit 3 = 无 due
+```
+
+- **有 DUE** ⇒ 内层 fast-mode 步骤 4b 应正在派发；核实内层在跑（遥测有在飞 / 最近有提交），若内层
+  idle/stuck，外层经 run-routines skill 派发或驱动内层派发。
+- **STALE 检测（dead-mechanism 报警）**：对每个 routine，`now - lastRun[name] > 2 × interval` 即
+  **探针 dead**——升格（步骤 5），不再「没人报警」。这正是 15 天静默的机械反例。
+
+### 1b. 异步收尾例程（`verification-round-N`，强制）
+
+**词汇规范（与外层文档同词，`gap-split-batch-vocabulary-dispatch-rolling-vs-verification-round`）**：
+本步骤就是全量验证 + 收尾节奏 **`verification-round-N`**——它**只关于验证/收尾，不是分派门控**；
+分派永远是滚动的（`fast-mode-loop-tick.md` 步骤 4），验证轮不约束、不命名、不门控任何一次派发。
+tick-log 与 commit message 沿用同一词汇：派发写「滚动派发」，本步骤的轮次写 `verification-round-N`。
+
+**词汇规范（同步 `gap-split-batch-vocabulary-dispatch-rolling-vs-verification-round` AC5）**：
+**分派是滚动的，不叫批号**；全量验证/收尾节奏叫 `verification-round-N`——**关于验证/收尾，不是分派门控**。
+本步的 closure pass 就是这个节奏的载体。
+
+**批次边界的真源是记账同步，不是措辞**（`gap-closure-sync-is-the-true-batch-boundary-move-bookkeeping-to-outer-async`，
+人 2026-08-05 设计裁定，决定不是建议）：**历史引用**——「Close batch」类收尾动作在 inner 派发历史里
+出现三次、每次收尾后必跟 3 连发、收尾期间零新派发 ⇒ 记账曾是调度的同步点。**inner 只执行 + 派发 +
 **批次边界的真源是记账同步，不是措辞**（`gap-closure-sync-is-the-true-batch-boundary-move-
-bookkeeping-to-outer-async`，人 2026-08-05 设计裁定，决定不是建议）：「Close batch-N」三次在 inner
+bookkeeping-to-outer-async`，人 2026-08-05 设计裁定，决定不是建议）：旧的 inner 收尾日志
+「Close batch-…」（**历史引用**，指过去以批为单位的收尾，已随机制根删除）三次在 inner
 派发历史里、每次收尾后必跟 3 连发、收尾期间零新派发 ⇒ 记账曾是调度的同步点。**inner 只执行 + 派发 +
 合并，永远不因记账停顿、也不知道收尾存在；收尾是本层（外层 20-min cron）的异步活。** 本步骤每个
 tick 做一次收尾 pass。
@@ -531,19 +872,24 @@ tick 做一次收尾 pass。
 `status: done` 字段——所以 inner 的就绪池计算不受收尾异步化影响，外层延迟翻 done 不会导致任务被重复
 派发。
 
+**1b 不随红窗停（AC4，`gap-closure-pass-has-no-lag-signal`）**：收尾 pass **不受套件状态门控**——
+`state: red` / `reason: failed` 停的是派发与合并推进（见步骤 3/3b），**不停收尾**。红窗期间照常跑
+收尾例程（探测 not-yet-flipped → 翻 done → 写轮次记录 → 写 closure-pass 留痕）；「dirty-tree 顾虑」
+不构成延后收尾的理由（本层只写 `tasks/` + `.quay/`，不碰代码树）。
+
 **每 tick 执行：**
 
 1. **探测落地未翻任务**：
    ```bash
-   node --experimental-strip-types plugin/scripts/ready-pool-check.ts --root "$REPO_ROOT" --json
+   node plugin/scripts/dist/ready-pool-check.js --root "$REPO_ROOT" --json
    ```
    读 stdout 的 `excluded[]`：`reasons` 含 `not-yet-flipped` 的条目 = 工作已落地（`taskWorkLanded`
    为真）但 `status` 仍 `ready` 的任务——正是 inner 合并完成、等待收尾的任务集。**复用现有实现，
    不新建探测脚本。**
 2. **逐个收尾**，对每个 `not-yet-flipped` 任务：
-   - **关遥测括号**：先 `node --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts
+   - **关遥测括号**：先 `node plugin/scripts/dist/fast-mode-telemetry.js
      --report --json` 拿 `inProgress[]` 里该 `taskId` 的 `runId`，再
-     `node --no-warnings --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts --task-end
+     `node --no-warnings plugin/scripts/dist/fast-mode-telemetry.js --task-end
      --taskId <id> --runId <r> --outcome done`。若 `inProgress[]` 里找不到该任务的 runId（无对应
      `--task-start`），跳过 `--task-end`，只翻 done。
    - **翻 done**：核对 AC/DoD 是否真实满足（与旧 inner fan-in 同一纪律：勾得上就勾、勾不上写理由
@@ -551,21 +897,160 @@ tick 做一次收尾 pass。
    - 记进本轮 `closed` 清单。
    - `needs-human` 任务不在 `not-yet-flipped` 里（工作没落地）；其遥测括号由 `--reconcile`（执行者
      已消失）或本层手动 `--task-end --outcome needs-human` 闭合，别让它滞留 `inProgress` 触发 OVER90。
+   - **括号对账（`gap-telemetry-brackets-vs-subagents-no-slot-visibility`）**：收尾批次后跑
+     `node plugin/scripts/dist/fast-mode-telemetry.js --slot-status --cap "${effective_cap:-3}" --root "$REPO_ROOT" --json`
+     对账——`brackets_reflect_subagents: false` 且 `stale_brackets > 0` ⇒ 还有 `--task-end` 没调齐的
+     陈旧括号，跑 `--reconcile` 闭合（`--task-end` 是收尾路径的活；`--reconcile` 兜底执行者已消失的）。
+     `--slot-status` 是纯读，观测轮询不会弄脏工作树。**反向维度（`gap-closed-bracket-leaves-live-agent-
+     consuming-slots`：括号关 ≠ 进程退）**：`closed_but_live_agents > 0` ⇒ 有已关括号的 agent 进程仍
+     存在（worktree 未清 / 进程未退）——这些槽不是真空闲，收尾时不把它们当空槽。
+   - **关红窗遗留括号（AC4/AC8，`gap-telemetry-brackets-vs-subagents-no-slot-visibility`）**：每次收尾
+     pass 无条件跑一次 `--reconcile`，用可观测证据（分支已 merge / worktree 已消失 / 进程已死）关掉
+     executor 已消失的未闭合括号——让遥测 `inProgress` 反映**真实在飞**而非红窗遗留：
+     ```bash
+     node plugin/scripts/dist/fast-mode-telemetry.js --reconcile --json
+     ```
+   - **阻塞信号超时自动升级（AC9，同上任务）**：没人消费的阻塞信号不无限冻结 inner——对超龄（默认
+     30 分钟）的 block 自动归档（记遥测等待时长 + 写 `.quay/blocked-escalations.jsonl` + 移除 block
+     文件；底层条件若仍成立，下一 tick `--detect-stop` 会写新 block 重新验证）：
+     ```bash
+     node plugin/scripts/dist/inner-blocked-signal.js --escalate-stale
+     ```
+   - **空槽信号（AC2/AC5）**：读 `--slots --cap <effective_cap>` 的 real-in-flight / slots-remaining——
+     「还剩几个并发槽」机械可见，不靠内层手写叙事 markdown；`dispatchable_disjoint − realInFlight`
+     = 槽位级闲置。
+   - **留痕（AC3，`gap-closure-pass-has-no-lag-signal`）**：本轮收尾 pass 结束（含零收尾）后跑
+     ```bash
+     bash plugin/scripts/closure-lag-check.sh --record --flipped <N>
+     ```
+     `<N>` = 本轮翻转 done 的任务数（零收尾写 0）——每次执行把**时间戳 + 翻转数**写进
+     `.quay/closure-pass-last-run.json`（gitignored 运行时态）。这是 Contract invariant
+     `closure_pass_leaves_trace`：消费方（下面这条 lag 检查 / monitor）据它对比间隔——closure-pass
+     每次执行都留痕，「执行可验证」不靠外层叙事。
+   - **closure-lag 信号（AC2，`gap-closure-pass-has-no-lag-signal`）**：每个 tick 跑
+     ```bash
+     bash plugin/scripts/closure-lag-check.sh
+     ```
+     退出非 0（not-yet-flipped 超阈值 **或** closure-pass 超时未跑）⇒ 本 tick **报 WARN/事件**（写进
+     tick-log + 本轮报告），不静默；退出 0 ⇒ 静默。信号是**报告不是门控**——不阻塞派发、不阻塞
+     tick。「强制步骤静默停跑 8.5h 无机械信号」正是它要消灭的缺陷类（AC23 只验 tick 心跳、不验 tick
+     内步骤）。
 3. **全量 suite = 外层后台异步验证 gate（非 inner 同步点、非本 tick 阻塞点）**：
-   - **后台跑**：全量 suite 由本层起 `plugin/scripts/full-suite-runner.ts`（后台 subagent /
+   - **后台跑**：全量 suite 由本层起 `plugin/scripts/dist/full-suite-runner.js`（后台 subagent /
      `run_in_background:true`，不阻塞本 tick、不堵 inner），runner 写 `.quay/full-suite-state.json`
-     （`{state: running|green|red, runner: outer|inner, startedAt, finishedAt, durationMs,
-     laneCount}`）并把套件输出 tee 到 `.quay/full-suite.log`。**起跑条件**：本轮收尾了 ≥1 个任务
-     （或自上次完成的全量 suite 起有新的 merge 落地）且当前没有在跑的 suite（`state != running`）
-     且资源闸放行（`bash plugin/scripts/resource-gate.sh --for full-suite`，退出非 0 = WAIT，下一
-     tick 再起）。
+     （`{state: running|green|red, reason?, runner: outer|inner, startedAt, finishedAt, durationMs,
+     laneCount}`）并把套件输出 tee 到 `.quay/full-suite.log`。`reason` 只在 red 时出现：
+     `failed`（真实失败——stop-dispatch 信号）或 `aborted`（套件未完成、无正确性结论——**不触发
+     停派**，`gap-full-suite-runner-concurrency-default-and-gate` AC5）。**起跑条件**：本轮收尾了 ≥1
+     个任务（或自上次完成的全量 suite 起有新的 merge 落地）且当前没有在跑的 suite（`state !=
+     running`）且资源闸放行（`bash plugin/scripts/resource-gate.sh --for full-suite`，退出非 0 =
+     WAIT，下一 tick 再起）。
+   - **单文件耗时趋势落历史（`gap-single-file-test-duration-trend-unwatched` AC1/AC2）**：runner
+     套件跑完自动把**每文件 `{file, duration_ms}`** 追加到 `.quay/measure-history.jsonl`
+     （append-only，复用 measure-suite-reporter 已 tee 进 `.quay/full-suite.log` 的 `__PERFILE__`
+     行，不新造测量器）并对比上一轮——单文件耗时增长超基线（相对 ≥2× 或绝对 >+30s，外层裁定阈值；
+     Contract control「翻倍 ⇒ 报出」把书面 ">2×" 收窄为 "≥2×"）
+     以 `measure-trend growth <file> <prev> -> <curr> ms (+<增幅>, <ratio>x)` 报出（**报告不阻断**，
+     套件墙钟噪声 ±17–63s，单次观测是信息不是判定）。手动重跑对比：
+     `node plugin/scripts/dist/measure-trend-check.js --history .quay/measure-history.jsonl --json`。
    - **早期 RED（AC2）**：runner **一检测到失败立即把 state 标成 red**（非等全套跑完）——缩「变红到
-     发现」窗口。判红模式 = `not ok` / `✖` / `# fail [1-9]` / `# cancelled [1-9]` /
-     `FULL-SUITE-EXIT` 非 0 / 退出码非 0。`state: red` 即 AC4 的 **stop-dispatch 信号**（inner 读它
-     停派发 + 暂缓 fan-in，见下「红窗分诊」）。
+     发现」窗口。判红模式 = 结构化失败形态，**不匹配裸字形**（`gap-full-suite-runner-red-pattern-
+     matches-bare-x-vitest-false-red`，archguard TASK-67 实证裸 `✖` 误伤 vitest 假红）：
+     node:test/TAP 的 `not ok` / `# fail [1-9]` / `# cancelled [1-9]`、vitest 结构化行
+     `❯ <file> (N tests | M failed)` / `Test Files <N> failed`、`FULL-SUITE-EXIT` 非 0，
+     以及兜底退出码非 0。`state: red` + `reason: failed` 即 AC4 的 **stop-dispatch
+     信号**（inner 读它停派发 + 暂缓 fan-in，见下「红窗分诊」）；`reason: aborted`（被信号杀/spawn
+     失败）**不是** stop-dispatch 信号——inner 照常派发，本层按 aborted 语义处置（记录 + 重跑）。
+   - **并发旋钮分叉（同一份文档服务两种测试框架）**：runner 的 `--lane-count` 拼接只对
+     node:test/test.sh 项目生效（`--test-concurrency=N`，test.sh 的派生默认）；**vitest 项目
+     真实文件级并行 flag 是 `--maxWorkers`**（archguard 用 `--maxWorkers=8` 跑通全量 4902 passed），
+     **不是** `--test-concurrency`——文档/命令里指导 vitest 项目用 `--test-concurrency` 的地方一律
+     改用 `--maxWorkers`（`.quay/config.yml` 的 `loop.test_command` 由各项目自己定，runner 对非
+     test.sh 命令不拼接）。
    - **本轮的 suiteGreen**：读 `.quay/full-suite-state.json` 的 `state`——`green` ⇒ true；`running`
      ⇒ true（RUNNING 还没失败，proceed，这正是消除同步点的关键）；`red` ⇒ false；**缺文件 ⇒ true**
      （外层还没跑第一轮，不阻塞）。
+   - **批量合的新鲜度（`gap-batch-merge-gate-reads-stale-green`，与 fast-mode-loop-tick.md 同源防漂移）**：
+     上面的 suiteGreen 是**派发/合并推进**的读法（running 不等套件、缺文件不阻塞）；**批量合（步骤 3b）
+     另加新鲜度维度**——批量合只在一个**有效新绿**下进行：`state == green` 且 `finishedAt` 距今 ≤ 窗口
+     （默认 3600s）且 suite 开始晚于最近一次 integration fan-in。机械判定 = `integration-batch-merge.sh`
+     自带的 **freshness gate**（默认开启，非自判——文档说机械、执行就是机械）；缺 state / 非 green /
+     旧绿 ⇒ 「无有效绿」，不批量合（7b1ac3a1：3 小时前绿 + 期间新 fan-in ⇒ 被拦）。
+3b. **批量合 `$MERGE_TARGET`→`$FORK_BASELINE`（两线模型 AC3，`gap-branch-model-integration-branch-splits-fork-baseline-from-merge-point`）**：
+   **suiteGreen 为 true 时**，跑 `plugin/scripts/integration-batch-merge.sh --root "$REPO_ROOT" --develop "$FORK_BASELINE" --integration "$MERGE_TARGET" --sync --reconcile` 把
+   已验证的 `$MERGE_TARGET` 批量快进合回 `$FORK_BASELINE`——**`$MERGE_TARGET` 永远是 `$FORK_BASELINE`
+   后代 ⇒ fast-forward 无冲突**（`$FORK_BASELINE` 只被外层批量合推进，inner 任务只合 `$MERGE_TARGET`，
+   见 `fast-mode-loop-tick.md` 步骤 2「两线分支模型」；单线下两者同为 master ⇒ 无操作）。
+   **`--sync`（事件驱动跨机推送，`gap-cross-machine-sync-has-no-mechanism-only-manual-pushes`）**：land
+   收口快进 `$FORK_BASELINE` 后**同一轮内**立即把它推到 `origin/$FORK_BASELINE`（`integration-batch-merge.sh`
+   成功 FF 后调 `sync-lag-check.sh --push`）——不等下一 tick。push 失败（非快进 = 真分歧）只报告、不回滚
+   已推进的 ref，由步骤 3c 的心跳兜底重试。`integration-batch-merge.sh` 自带：
+   - **pre-check**：`git merge-base --is-ancestor <$FORK_BASELINE> <$MERGE_TARGET>` 非 0（真分歧）⇒ 退出非 0、
+     不移动任何 ref、needs-human——**绝不 blind --ours/--theirs**；
+   - **measure**：`git merge-base --is-ancestor <$MERGE_TARGET> <$FORK_BASELINE>` 退出码（band = 0 =
+     `$MERGE_TARGET` 的提交已全部并入 `$FORK_BASELINE`）；
+   - **invoke**：`git log --oneline $FORK_BASELINE..$MERGE_TARGET`（红窗期不空——`$MERGE_TARGET` 照常接收，
+     直到本轮 suiteGreen 才批量合）。
+   - **对象闸门（`integration-batch-merge.sh` 自带，`gap-batch-merge-gate-validates-tip-not-merge-result`）**：
+     批量合前校验**合并结果**，不是只验 tip——套件测的是 `$MERGE_TARGET` tip，批量合放行的是
+     `$MERGE_TARGET` ⊕ `$FORK_BASELINE` 的合并结果，两者只在 `$FORK_BASELINE` 侧无新提交时才等价。
+     three-dot 判定（`git diff --name-only <merge-base> <$FORK_BASELINE>` 即 `$FORK_BASELINE` 侧自分歧点
+     起的变更）：含代码文件（.ts/.js/.mjs/.sh）⇒ **fail-closed 不移动任何 ref、报出文件清单**——该代码
+     从未进过被测树，合并结果会带上未测代码；纯 .md/tasks 文件放行（2026-08-08 报告那 5 个文件）。与
+     stale-green 不同轴：那是时间轴（绿旧/树旧），这是对象轴（被测对象 ≠ 被放行对象）。`$FORK_BASELINE`
+     侧有代码提交需先 fan-in 到 `$MERGE_TARGET` 补测再批量合。
+   - **新鲜度闸门（`integration-batch-merge.sh` 自带，`gap-batch-merge-gate-reads-stale-green`）**：
+     批量合前校验绿是**新鲜绿**，不是只读 `state==green`——7b1ac3a1（2026-08-08 06:07:22）在前后零次
+     suite 的情况下拿 02:50→03:02 的三小时前旧绿当通行证，测的是完全不同的一批提交。两维都要求：
+     **age**（`finishedAt` 距今 ≤ `--freshness-window`，默认 3600s）且 **coverage**（suite 开始时间 ≥
+     最近一次 integration fan-in 的 commit time——fan-in 在 suite 之后落地说明绿没测过当前待合 tip）。
+     任一违反 / state 非 green / 缺 state 文件 ⇒ **fail-closed 不移动任何 ref**（「无有效绿」）。
+     与对象闸门不同轴：本闸门是**时间轴**（绿旧/树旧），对象闸门是**对象轴**（被测对象 ≠ 被放行对象）。
+   - **`integration-batch-merge.sh --reconcile`（主检出对账步骤由脚本提供，`gap-batch-merge-reconcile-destroys-uncommitted-work`）**：批量合是
+     REF-LEVEL（update-ref CAS，「主检出从不被脚本触碰」）——当主检出正检出的分支就是被推进的
+     `$FORK_BASELINE` 时，ref 被从底下换掉后 HEAD/index 变陈旧。**对账步骤由脚本自己提供，调用方不得各自发明**
+     （inner 曾发明 `git reset --hard HEAD`，2026-08-08 08:08:24 销毁了 manager 未提交编辑，真实数据丢失一次）：
+     ref 移动前先断言 `git status --porcelain` 为空，非空即失败退出并报出属主（不静默毁数据）；合后
+     `git reset --mixed <新 tip>` 刷新 index，**绝不用 --hard**（`--mixed` 默认即刷新 index 不碰工作区；
+     `--hard` 额外覆盖工作区 = 唯一有害那件，对账不需要它）。**Land 锁边界**：锁防交错不防销毁——
+     「拿到锁≠能动工作区」；共享主检出对账不得覆盖共存会话的未提交内容。
+   suiteGreen 为 false（red/aborted/缺 state）**或绿不新鲜（stale-green，见上 freshness gate）** ⇒ **不跑批量合**——
+   红窗期 `$MERGE_TARGET` 照常接收任务合并，只是 `$FORK_BASELINE` 不推进（结构性消除「红窗必须停派发」；
+   `$FORK_BASELINE` 永不从未验证树推进）。旧绿（7b1ac3a1 场景：3 小时前）同样不是有效绿——不批量合。
+   **`--dry-run` 先跑**核对 pre-check 与 pending 面，再实跑。
+3c. **跨机同步心跳（`sync-lag-check.sh`，兜底必跑——`gap-cross-machine-sync-has-no-mechanism-only-manual-pushes`）**：
+   每个 tick（含轻触）**无条件**跑一次 `bash plugin/scripts/sync-lag-check.sh --push --branch "$FORK_BASELINE" --root "$REPO_ROOT"`——
+   它问「本地 `$FORK_BASELINE` 是否领先 `origin/$FORK_BASELINE`」，领先即 push（复用非强推/幂等的
+   `periodic-push-backup.sh` 本体），**不依赖任何完成事件**。这是兜底触发源：3b 的事件驱动路径负责「land
+   收口同一轮内推送」的加速，本步负责「万一事件驱动漏了 / 跨机各自主检出悄悄积累」的必跑保底。
+   **同步落后量机械可读（AC3）**：`bash plugin/scripts/sync-lag-check.sh --json --branch "$FORK_BASELINE" --root "$REPO_ROOT"`
+   输出 `unpushed` / `behind` / `leads` 字段——「本地领先 origin 几笔」从此有测量，不再靠人 `git log`。
+   心跳读 `--json` 的 `leads` 或直接跑 `--push` 均等价（`--push` = 测 + 领先即推）。push 失败（非快进 =
+   真分歧）只报告、不覆写、下一 tick 重试——正是 fail-closed 兜底。
+3d. **观测者注册表心跳（`observer-registry.sh --audit`，兜底必跑——`gap-observer-registry-target-decommission-and-criterion-invalidation`）**：
+   每个 tick（含轻触）**无条件**跑一次 `bash plugin/scripts/observer-registry.sh --audit --json`——
+   它问「有没有被登记下线的目标，且所有观测者是否都正确报『已下线』」。被下线的目标写一次在
+   `orchestration/observer-registry.conf`（人/管理者显式 `--register-offline`，观测者从不自行猜），
+   所有观测者（os-anchor-watchdog / session-liveness 的 git-staleness、coverage 读面 / topology-check）
+   从同一处读。`--audit` 是 AC3 负控制：对每个 offline 目标重建 4 个消费者读面，任一仍报旧状态
+   （REPO-STALL / NOT-WATCHED / GONE / 陈旧拓扑 / watchdog 复活）即 `stale`、退出 1；
+   **`stale_observer_reports` 必须恒为 0（band）**。无新系统 crontab：观测者保留各自既有触发，
+   本表只是每次读取时先查；`--audit` 与 `sync-lag-check` 同款双触发源（tick 心跳 + land 后事件驱动）。
+3.5 **批量合回 develop（两线模型的合并机制，`gap-branch-model-integration-branch-splits-fork-baseline-from-merge-point` AC3）**：
+    integration 只从 develop 长出、只往 develop 合回 ⇒ 永远是 develop 后代 ⇒ **fast-forward 无冲突**
+    （`orchestration/SPEC-branching-model-integration-branch-2026-08-05.md`）。`suiteGreen` 为 true 时，
+    把 integration 快进合到 develop（本层共享检出保持在 integration 上，develop 不是检出分支）：
+    ```bash
+    # ff 安全判据：develop 是 integration 的祖先（integration 是 develop 后代）
+    git merge-base --is-ancestor develop integration && git branch -f develop integration
+    # 等价机械判据（helper CLI）：--is-ancestor develop integration 输出 ancestor（exit 0）
+    ```
+    - **`--is-ancestor develop integration` 是硬前置**：develop 不是 integration 祖先（两线不变量被
+      破坏）⇒ `git branch -f` 不执行，标 needs-human、按「红窗分诊」处置，**绝不自动合**。
+    - **红窗期（`state: red`）不做批量合回**——integration 照常接收 inner 的任务合并（结构性消除
+      停派，`fast-mode-loop-tick.md` 步骤 2），develop 保持冻结，直到下一轮 verification-round 绿。
+    - **pending 窗口**：`git log --oneline develop..integration` 在红窗期应**非空**（Contract
+      invoke）——那些正是下一轮批量 fast-forward 的待验证合并。
 4. **写轮次记录**：追加一行到 `.quay/verification-round.jsonl`：
    ```json
    {"round": <N>, "at": "<ISO 来自 date -u>", "suiteGreen": <bool>, "closed": ["<id>", ...]}
@@ -576,9 +1061,30 @@ tick 做一次收尾 pass。
    - 缺 suite-state ⇒ inner 不阻塞（外层还没跑第一轮）；
    - `state: red` ⇒ inner 停止派发 + 暂缓 fan-in，本层按「红窗分诊」处置（bisect 定位新引入还是既有；
      定位到本轮 merge 引入就回退该 merge + 回退对应翻 done）。
-5. **落盘聚合**：本轮收尾后跑一次
-   `node --no-warnings --experimental-strip-types plugin/scripts/fast-mode-telemetry.ts --snapshot`，
-   否则被 git 跟踪的聚合文件不反映本批结果。
+5. **真实下游安装/升级/冷启动验证（real-target verification，`gap-install-upgrade-verification-targets-real-downstream-workspaces`）**：
+   安装/升级/冷启动验证不再只跑 mkdtemp 合成夹具（`install-config-driven-e2e.test.mjs` 是 **synthetic** 线）——
+   每个验证轮对**真实下游**（archguard / meta-cc，见 §1 的 `<目标项目根清单>`）跑一次**只读**升级检查，报结论：
+   ```bash
+   for t in /home/yale/work/archguard /home/yale/work/meta-cc; do
+     bash plugin/scripts/real-target-verify.sh --target "$t"
+   done
+   ```
+   - **只读（AC1）**：脚本对真实工作区跑 `quay init --loop --dry-run`（同一升级面，写全为 `would-*`），
+     报 `real_target_verified: verified|conflict|fail`；**synthetic 绿不再当作真实下游也绿的证据**（AC3——
+     archguard 真实 config-conflict 撞墙而合成 A3 绿正是混线后果）。结论行前缀 `[real-target]`，与
+     synthetic 线分开标注；真实目标清单是各工作区自己的策略（`QUAY_REAL_TARGETS`），机制是通用的。
+   - **频率（AC2）**：每个验证轮都跑（不再是「只在里程碑边界」）。**AC12b 已达成、archguard 干净区间
+     约束解除**（`gap-send-keys-reliable-welcome-screen-ghost-drive-fails` AC12b 是两层无人干预区间的唯一
+     硬阻塞，已修）——真实目标验证可定期触发，不再等重装窗口。
+   - **落盘**：每条结论追加一行到 `.quay/real-target-verification.jsonl`：
+     ```json
+     {"at": "<ISO 来自 date -u>", "target": "<路径>", "real_target_verified": "verified|conflict|fail", "would_copy": <N>}
+     ```
+   - **结论不是闸门**：真实目标验证是**有机状态探测器**（抓合成夹具造不出的演化分歧），结果进轮次记录
+     与 tick 报告，不阻断派发/合并——它报警（conflict/fail）时不静默，升给外层处置。
+6. **落盘聚合**：本轮收尾后跑一次
+   `node --no-warnings plugin/scripts/dist/fast-mode-telemetry.js --snapshot`，
+   否则被 git 跟踪的聚合文件不反映本轮结果。
 
 **每 tick 必报**补一条：本轮收尾几条、`.quay/full-suite-state.json` 最新 `state`（green/red/running）
 与 `durationMs`、本轮全量 suite 是否在跑/绿/红。
@@ -592,21 +1098,49 @@ tick 做一次收尾 pass。
 
 | 状态变化 | 事件 | 本层动作（全部是既有逻辑的执行，不是新决策） |
 |---|---|---|
-| → `red` | `SUITE-RED`（`stopSignal:true`，即确认 stop-dispatch 信号在位） | **立即**进下面的「红窗分诊」（不等下一次 cron；信号 = state=red 本身，(a) 块 AC4） |
+| → `red` + `reason: failed`（或缺失） | `SUITE-RED`（`stopSignal:true` 确认 stop-dispatch 信号在位；**携带失败位置** `failureLocation` = `state.failures` 的分类：共享闸门 vs 具体测试文件） | **立即**进下面的「红窗分诊」（不等下一次 cron；信号 = state=red + failed；**派发停/续按失败位置条件化**——共享闸门（`run_static_checks`）⇒ 停；具体测试文件且与新任务触摸集无关 ⇒ 续，(a) 块 AC4 / AC5 + `gap-red-window-dispatch-stop-should-be-shared-gate-conditional`） |
+| → `red` + `reason: aborted` | `SUITE-RED`（`stopSignal:false`——套件未完成、无正确性结论，**不触发停派**） | **记录 + 等重跑**：aborted-red 不是失败结论，外层按 `gap-full-suite-runner-concurrency-default-and-gate` AC5 语义处置（不挡 inner 派发；re-tick 时按起跑条件重起） |
 | → `running` | `SUITE-RUNNING` | 「RUNNING 乐观派发执行者」：池有 `dispatchable_disjoint ≥ cap` 就按步骤 4 驱动 inner 照常派发（不待轮——(a) 块 AC4 的乐观行为被实际动用，AC3） |
 | → `green` | `SUITE-GREEN` | 平静基线，无处置 |
 
-**触发者是执行者，不是新调度源（AC2/AC4）**：它只做「状态变化 → 事件」的翻译与通知，不做任何分诊/
-派发决策；分诊 = 本文件下方既有「红窗分诊」，派发 = inner 出厂文档既有 §4 规则。节奏仍唯一（步骤 4
-的 `*/20` cron）；Monitor 是事件监测（同 session-liveness），不驱动任何 tick。事件日志只记事实，
-处置逻辑在文档/既有实现里——触发者不引入第二条决策链。冷启动即红（外层 `/clear` 后套件仍红）也触发
-`SUITE-RED`（第一眼即红），正是本轮「红着无人处置」形态的兜底。**触发链自检**（Contract invoke）：
-`node --no-warnings --experimental-strip-types plugin/scripts/full-suite-runner.ts --fail-fast-check`
-（构造失败 suite ⇒ state=red ⇒ SUITE-RED 事件 ⇒ stopSignal 在位，退出 0 = 链完好）。
+**空槽状态自动触发者（空槽事件执行者层，`gap-slot-free-not-an-event-slots-stay-empty-missed-without-trace`——
+把「in_flight<cap ∧ dispatchable>0」从「tick 轮询到那一格才处置」变成「空槽即事件」）**：
 
-**红窗分诊（外层独占，AC4——只停派发不停在飞合并会让红树继续累积，故 RED 时 fan-in 一并暂缓）**：
-`.quay/full-suite-state.json` 的 `state: red` 即 **stop-dispatch 信号**（runner 一检测失败即写，AC2；
-套件触发者发 `SUITE-RED` 时确认它在位）。state 为 red 时：
+`slot-free-trigger.ts`（Monitor，冷启动 4b3 挂上）在 `in_flight < cap ∧ dispatchable > 0` **成立时**立即发
+事件（5 秒轮询，≪ cron 的 20 分钟窗口）并记 `.quay/slot-free-events.jsonl`（append-only；`SLOT-FREE.at`
+就是「事件 → 驱动」的起点，Contract band `event_to_drive_under_5min`）：
+
+| 条件 | 事件 | 本层动作（全部是既有逻辑的执行，不是新决策） |
+|---|---|---|
+| `in_flight < cap ∧ dispatchable > 0`（`fast-mode-telemetry --slots` 的 `slotsRemaining > 0` 且 `ready-pool-check` 的 `dispatchable_disjoint ≥ 1`） | `SLOT-FREE`（携带 `slots_free` / `dispatchable_disjoint` / `in_flight_count` / `at`） | **立即**驱动 inner 回填（不等下一次 cron）：按步骤 4 从 `slot-refill.ts` 的 `recommended` 取 1-2 条派给 inner——同一 B9 空槽强制链，事件把触发从「20 分钟 tick」提前到「空槽出现的那一刻」；**漏回填在 `.quay/slot-free-events.jsonl` 可追责**（事件已发而未回填 ⇒ 下一 tick A18/B9 强制链仍兜底，且日志让「漏了」从看不见变成可查） |
+| 非 `in_flight<cap ∧ dispatchable>0` | 无 | 平静基线，无事件（负控制；`.halt` 在场同样不发——外层无法处置的空槽是噪音） |
+
+**触发者是执行者，不是新调度源（AC2/AC4）**：它只做「状态变化 → 事件」的翻译与通知，不做任何分诊/
+派发决策；分诊 = 本文件下方既有「红窗分诊」，派发 = inner 出厂文档既有 §4 规则。**失败位置也是翻译不是
+决策**：`SUITE-RED` 携带的 `failureLocation` 只是把 `state.failures`（runner 记下的失败行 + 文件上下文）
+分类成「共享闸门 vs 具体测试文件」——停/续的**判定**由内层按共享闸门条件化规则做
+（`shouldDispatchOnRed(state, touches)`，`gap-red-window-dispatch-stop-should-be-shared-gate-conditional`）。
+节奏仍唯一（步骤 4 的 `*/20` cron）；Monitor 是事件监测（同 session-liveness），不驱动任何 tick。事件日志
+只记事实，处置逻辑在文档/既有实现里——触发者不引入第二条决策链。冷启动即红（外层 `/clear` 后套件仍红）也触发
+`SUITE-RED`（第一眼即红），正是本轮「红着无人处置」形态的兜底。**触发链自检**（Contract invoke）：
+`node --no-warnings plugin/scripts/dist/full-suite-runner.js --fail-fast-check`
+（构造失败 suite ⇒ state=red ⇒ SUITE-RED 事件 ⇒ stopSignal 在位 + failureLocation 携带，退出 0 = 链完好）。
+
+**红窗分诊（外层独占，AC4——只停派发不停在飞合并会让红树继续累积，故 RED 失败时 fan-in 一律暂缓）**：
+`.quay/full-suite-state.json` 的 `state: red` + `reason: failed`（或缺失）即 **stop-dispatch 信号在位**
+（runner 一检测失败即写 `reason: failed`，AC2/AC5；套件触发者发 `SUITE-RED` 时确认它在位，并携带失败
+位置 `failureLocation`）。**派发停/续按失败位置条件化**（共享闸门规则，
+`gap-red-window-dispatch-stop-should-be-shared-gate-conditional`——与 `fast-mode-loop-tick.md` 步骤 3
+同一份规则，不是两份）：
+- 失败落在**共享闸门（`run_static_checks`——每次 scoped 运行都跑的静态检查）** ⇒ **停新派发**
+  （所有新任务都被同一个红污染）；
+- 失败落在**具体测试文件**且与新任务触摸集**无关** ⇒ **派发继续**（新任务 worktree 独立跑自己 scoped
+  测试，与别处的红无关）；
+- 失败文件与新任务触摸集**相交** ⇒ 该任务停派。
+判定信息现成：`state.failures`（早期 RED 失败行 + 文件上下文）→ 共享闸门 vs 具体测试 → 与新任务 touches
+相交性（`suite-state-trigger.ts` 的 `shouldDispatchOnRed(state, touches)`）；无法判定 ⇒ 保守停派发
+（fail-closed）。**fan-in 一律暂缓**（真正保护——红树不混入新 failures，不随失败位置变化）。`reason:
+aborted`（套件未完成、无正确性结论）**不触发停派**——记录 + 按起跑条件重跑，不挡 inner。state 为 red 时：
 1. **本层独占分诊**，不把红树丢给 inner：对 red window 内新合并的 merge 二分定位（`git bisect` 或按
    merge 顺序回滚、逐个重跑 `--for-task` 选中集判断肇事者）。
 2. **回滚/修复**：定位到某次 merge 引入 → 回退该 merge（+ 回退对应翻 done）；判定为既有失败 →
@@ -633,6 +1167,8 @@ tick 做一次收尾 pass。
 drift，管理者实测 + 裁定）：inner 的 Cron 调用数 = 0、整晚 59 次驱动全来自外层 send-keys 散文，而
 外层自己每 20 分钟被 cron 强制重读出厂文档——**锚点不对称是 inner 行为漂移的结构根**。R2（驱动散文
 只带数据不带行为）管散文别越权；本步管「散文之外还有周期锚」。
+**重锚机制的有效性以语义收敛度量（步骤 6），不只「重锚发生了」**（
+`gap-reanchor-must-converge-inner-self-reported-vocabulary`）——锚点通道存在 ≠ inner 自述词汇收敛。
 
 **机制 = 用本层已有 cron 转发一条固定重锚 prompt，不是给 inner 另建 cron、不是每次现写散文：**
 
@@ -653,10 +1189,44 @@ drift，管理者实测 + 裁定）：inner 的 Cron 调用数 = 0、整晚 59 �
    ——inner 核对发现需补队/派发时，照 `fast-mode-loop-tick.md` 步骤 3.6/4 自己的规则执行，不是重锚
    prompt 给的新指令。
 5. **每个 tick 必报**：本轮是否转发重锚、转发时 inner 的空闲判据（哪条观察判据成立）。
+6. **重锚有效性 = 语义收敛（自述措辞审计，`gap-reanchor-must-converge-inner-self-reported-vocabulary`）**：
+   重锚的有效性以**语义收敛**度量（`reanchor_effectiveness_is_convergence = 1`），不是「重锚发生了」
+   ——锚点通道存在 ≠ 词汇收敛（inner 会把历史批措辞内化成自己的组织方式，doc 侧改不到）。每次重锚后
+   对 inner 最近自述（commit subject / fan-in 注记 / 收尾汇报）跑
+   `node plugin/scripts/dist/self-report-vocab-audit.js --git-log 15
+   --exclude-prefix outer: --window 3 --json`，读 stdout 的 `inner_self_report_vocab` 字段（连续 3 轮
+   无 batch 式自述 = 收敛）与 `converged`。「Batch of N fully merged」式门控汇报 = 漂移（被审计标记）；
+   verification-round-N / 滚动派发语义 = 合规。**每个 tick 必报**本轮 `inner_self_report_vocab` 与
+   收敛状态。
+6. **自述措辞审计 + 语义收敛判据**（inner 侧，`gap-reanchor-must-converge-inner-self-reported-
+   vocabulary`）：重锚转发的同一 tick 审计 inner 最近**自述措辞**（commit / fan-in 注记）——不是
+   「重锚发生了」算有效，是 **inner 自述向出厂语义收敛**才算（AC2，invariant
+   `reanchor_effectiveness_is_convergence`）：
+   ```bash
+   node --no-warnings plugin/scripts/dist/self-report-vocab-check.js --root "$REPO_ROOT" --json
+   ```
+   读 stdout 的 `count` 与 `converged`：
+   - **门控语义漂移**（`count > 0`）：inner 自述出现「Batch of N fully merged」/「batch N/M all
+     landed」/批次编号式汇报（如 batch-4）/「按批」= **门控语义漂移**——应报 `verification-round-N` /
+     滚动派发语义；记入本轮 tick，并驱动 inner 按出厂词汇（`fast-mode-loop-tick.md` 的词汇规范节）修正
+     其自述措辞。
+   - **合规**（`count === 0`）：自述无 batch 式汇报。
+   - **收敛判据**（AC2）：有效性以**语义收敛**度量——`converged: true`（连续
+     `--convergence-rounds`，默认 3 轮，自述无 batch 式汇报）才算收敛；`count > 0` 的任一轮把计数
+     清零（收敛非单调）。状态存 `.quay/self-report-vocab-state.json`（gitignored 运行时态），跨 tick
+     持久。
+   - **与锚点机制的关系**：锚点机制（`gap-inner-has-no-periodic-anchor-prose-only-drives-drift`，
+     done）提供「周期性拉回出厂语义」的通道；本步是该通道的**有效性判据**——通道存在 ≠ 词汇收敛。
+   - **与措辞任务两条一起**（AC3）：`gap-split-batch-vocabulary-dispatch-rolling-vs-verification-round`
+     （doc 侧：散文无门控语义，done）+ 本判据（inner 侧：自述向出厂语义收敛）——**单独做任一条都解决不了**：
+     改出厂文档改不到 inner 已内化的措辞，改自述收敛判据也清不掉 doc 散文的歧义。
+   - **每 tick 必报**：自述审计 `count` 与 `converged`（重锚收敛判据）。
 
 **为什么「空闲才转发」**：重锚是「给 inner 一个周期读出厂文档的机会」，不是催活。inner 忙时
 （在飞 agent / 有 bracket）读文档的机会会打断工作；空闲时转发才是在它回合结束时给下一次行为对齐
 锚点。**与驱动散文的关系**：驱动散文带任务数据（R2 约束），重锚零数据、只指向文档——两者互补。
+**步骤 6 是重锚的观测端**：转发让 inner 有周期读文档的机会，审计验证这个机会**真的让 inner 的自述
+词汇收敛**了——机制与判据成对。
 
 ### 2. 分类本 tick 的动作
 
@@ -682,9 +1252,9 @@ drift，管理者实测 + 裁定）：inner 的 Cron 调用数 = 0、整晚 59 �
 - **决定性的那一步都很便宜**。最大的一次纠偏（负控制也在失败 ⇒ 是 runner 单点故障，不是 14 个
   陈旧 fixture）只需要单独跑一个测试文件、读一遍测试名。**不是难的推理，是没人在赶工时会做的推理**
 
-**因此不要把外层当成「更强的模型来兜底」。** 外层同期也犯了同一类错误：只查 master 工作树就断定
-A2/A5「从未落地」（实际在分支上）、分类器漏掉多行 import、`-E` 模式下写 `\|`。**更强的模型减少
-不了这类错误，换个视角才能。**
+**因此不要把外层当成「更强的模型来兜底」。** 外层同期也犯了同一类错误：只查 `$FORK_BASELINE`
+工作树就断定 A2/A5「从未落地」（实际在分支上）、分类器漏掉多行 import、`-E` 模式下写 `\|`。**更强
+的模型减少不了这类错误，换个视角才能。**
 
 **这条直接决定了两件事**：（a）`correct` 占比升高时该修内层的判据（上面那条），而不是给外层加
 算力；（b）阶段 2 产品化时，双层机制的卖点应写成**独立视角 + 无沉没成本**，而不是「用更大的模型
@@ -699,21 +1269,28 @@ A2/A5「从未落地」（实际在分支上）、分类器漏掉多行 import�
 | 审查 2 轮仍 REFUTED | 读审查发现，判断是否真实。真实 → 指示缩小范围重做；不实 → 指示记录理由后推进 |
 | 任务超 90 分钟 | 判断是任务过大（指示拆分）还是卡住（指示放弃并建任务记录） |
 | needs-human 积压 ≥3 | 分诊：真阻塞的攒给人，可继续的指示内层继续 |
-| 就绪队列为空 | 从任务库补一批（见步骤 4） |
+| 就绪队列为空 | 从任务库补一组（见步骤 4） |
 
 ### 4. 队列补充
 
-队列空时，从 `tasks/` 取下一批。**复用已有机制，不新建**：
+队列空时，从 `tasks/` 取下一组。**复用已有机制，不新建**：
 
 - 候选：`status: todo` 或 `ready` 且带 `milestone-candidate` 标签
 - 依赖就绪：父任务 done、无未满足前置（`it0-split-or-commit-check.ts` 的 PARENT-DONE-IFF-CHILDREN）
-- 并发资格：`checkTouchesPair`（`plugin/scripts/touches-orthogonality-check.ts`）对**所有在飞任务
-  和彼此**两两检查，重叠则不同批
+- 并发资格：`checkTouchesPair`（`plugin/scripts/dist/touches-orthogonality-check.js`）对**所有在飞任务
+  和彼此**两两检查，重叠则不同时派发（**分派是滚动的，不是攒批门控**）
+  和彼此**两两检查，重叠则不可并发
 - 优先级：阻塞其它任务的优先；`gap-*` 缺陷类优先于 `DIR-*` 新能力
+- **跨机在飞（两机协作，`gap-two-machine-collaboration-git-branch-claiming`）**：两机协作时
+  （`QUAY_CLAIM_REMOTE` 指向共享裸仓库），**另一台机器的在飞任务 = 共享仓库上存在的 `task/*` 分支**
+  ——本层 telemetry 的 `inProgress` 只覆盖本机内层。候选与跨机在飞任务触摸相交（用内层同源
+  `plugin/scripts/dist/claim-task.js` / `checkTouchesPair`）或已被对方认领 ⇒ **不补进队列**（候选的认领状态
+  由内层派发前 `claim-task.sh` 机械判定；本层只需在**筛选候选**时把跨机在飞算进「所有在飞任务」）。
+  单机（未设置 `QUAY_CLAIM_REMOTE`）⇒ 本条为 no-op，行为不变。
 
 **就绪池维持（todo→ready 晋级）不再靠外层自愿 AC-queue**（`gap-promotion-cadence-is-role-volition-
 not-product-mechanism`，2026-08-04 人方向裁定）：晋级节奏与优先级是**产品机制**，由内层 tick
-`fast-mode-loop-tick.md` 步骤 3.6「就绪池维护」承载——内层跑 `plugin/scripts/ready-pool-check.ts`
+`fast-mode-loop-tick.md` 步骤 3.6「就绪池维护」承载——内层跑 `plugin/scripts/dist/ready-pool-check.js`
 （读 stdout `pool` 字段；`pool < floor`（=cap×4，默认 12）按脚本推荐的顺序补晋；**判据是
 `dispatchable_disjoint ≥ cap`**，floor 只是手段）。**外层只引用它，不独立维护候选集构造规则**
 （旧 `outer-phase-goal.md` AC-queue 已降级为引用）。本步骤的 `gap-*` 优先顺序与内层 checker 的定义
@@ -748,17 +1325,35 @@ not-product-mechanism`，2026-08-04 人方向裁定）：晋级节奏与优先�
 
 ### 4b. 「在飞」词汇拆分 + 输入框纪律（AC7/AC8 — gap-drive-text-carries-data-not-behavior-outer-inner-handoff）
 
-**「在飞」拆为两种含义，报告/队列状态里分别标注**（AC7，2026-08-04 第三次实锤后加）——混用会让并发
+**「在飞」拆为三种含义，报告/队列状态里分别标注**（AC7，2026-08-04 第三次实锤后加；
+`gap-telemetry-brackets-vs-subagents-no-slot-visibility` 起再拆出「真实在飞」）——混用会让并发
 指令看起来已满足：
 
 | 词 | 含义 | 用什么核实 |
 |---|---|---|
 | **遥测括号在飞** | `--task-start` 已写、`--task-end` 未写 | 遥测 `inProgress[]` / START 事件——START **只证括号在飞，不证 subagent 在飞** |
+| **真实在飞** | 括号里 executor **仍可观测存在**（进程/打开 worktree/分支未 merge）——扣掉红窗遗留 | 遥测 `--report --json` 的 `realInFlight` / `--slots` 的 real-in-flight（reconcile 感知） |
 | **subagent 在飞** | 内层真的起了后台 `Agent(run_in_background)` | **读原始 Agent 工具调用的 `input.run_in_background` 字段**（meta-cc transcript 查询）——唯一可靠判据 |
 
 **外层核实并发必须读原始字段，不得用 START 事件或 pane UI 文字。** 实例（本 tick）：内层唯一 Agent 调用
 `run_in_background` 缺失，而 START 事件显示 A|D 双在飞——用错仪器导致静默满足，正是本条目要消灭的形态。
-报告/队列状态里分别写「括号在飞 N」「subagent 在飞 M」，不合并成一个「在飞」。
+报告/队列状态里分别写「括号在飞 N」「真实在飞 M」「subagent 在飞 K」，不合并成一个「在飞」。
+**状态自检①（inner `fast-mode-loop-tick.md`）判并发上限必须读「真实在飞」（`realInFlight`），不是原始
+括号数**——5 个红窗遗留括号 ≠ 1 个真实 subagent，用括号会让 ≤cap 恒真（装饰非判据，AC3）。
+
+**槽位视角（`gap-telemetry-brackets-vs-subagents-no-slot-visibility`，AC2）：** 外层不再依赖内层手写
+叙事 markdown 才知道「还剩几个并发槽」——纯读命令直接给：
+
+```bash
+node plugin/scripts/dist/fast-mode-telemetry.js --slot-status --cap "${effective_cap:-3}" --root "$REPO_ROOT" --json
+# real_in_flight / stale_brackets / slots_free（= max(0, cap − real_in_flight)）；brackets_reflect_subagents
+```
+
+- **`slots_free` = 空槽数**——「11 槽位闲置」这类判读变成机械输出（AC5 回归形态：5 红窗遗留括号 + 1 真实
+  agent ⇒ `real_in_flight 1`、`slots_free 2`，不是「满负荷」也不是「空」）。
+- **`stale_brackets > 0` ⇒ 收尾没关括号**——本轮步骤 1b 的 `--task-end` 没调齐，跑
+  `--reconcile` 闭合（别让红窗遗留污染后续判定 / 触发假 over-90m）。
+- **`brackets_reflect_subagents: false` ⇒ `--task-start`/`--task-end` 对没调齐**——AC4 的可机械判据。
 
 **输入框是待提交缓冲区，不是笔记本（AC8）**：
 
@@ -768,6 +1363,24 @@ not-product-mechanism`，2026-08-04 人方向裁定）：晋级节奏与优先�
 - **每个驱动回合结束由外部观察者（或下次驱动前 `capture-pane` 核对）确认框空**，并接受「框内残留可能
   来自入站回显而非自写备忘」这一事实——**问责对象是「框里有文本」这一状态，不是「谁写的」**（自清/自证
   不可靠：框会被动接收文本，唯一可靠观察者是外部会话）。
+
+### 4c. 外部自食例行观察（external-dogfooding routine，常驻发现通道）
+
+**这是外层对 DIR-043 常驻外部自食例行的观察位**——例行本身（调度 / 派发 / 闸门 / FILE-ONLY）由内层
+`fast-mode-loop-tick.md` §3.7 承载；外层只确认契约没烂、发现还在流动。该例行是 loop 对外部真实目标
+（archguard）的 pre-friction 发现通道（`L_T` 再照明）；机制已结晶并 real-fire 证明过（DIR-051 驱动
+archguard，ADR-016 tmux remote-drive）。
+
+- **契约观察**（机械，fail-closed）：
+  `node plugin/scripts/dist/external-dogfooding-check.js --selftest`
+  自检 + 契约四项（cadence / 外部目标可驱动 / remote-drive 表面 / 发现形状），目标与 registry 用
+  `--target <外部工作区> --registry experiments/quay-perpetual-stream/drivable-workspaces.yml`。
+  契约不满足 = 例行退化 → 按本步必报上报并进升级路径，不静默跳过。
+- **发现观察**：例行 DUE 时内层 §3.7 派发（`every(N)` / `on(checkpoint)`）。外层看
+  `routine-file-gate` 是否放行了新 `label:directive` 发现（队列里多出来的新任务文件）：有 = 通道在流动；
+  长期零发现且契约绿 = 通道可能空转，按发现观察记录。
+- **单驱动纪律（ADR-016）**：外部工作区一次只有一个驱动者——外层若要亲手碰 archguard，先确认没有在飞
+  例行在驱动它；否则只观察不驱动。
 
 ### 5. 升级（攒起来，不打扰）
 
@@ -827,6 +1440,8 @@ tick 或 `/clear` 后的会话会重犯。
 ## 每个 tick 必报
 
 - 动作类型（`no-action` / `unblock` / `correct` / `escalate`）
+- Routine 检查（步骤 1a）：DUE 名单 / 无 due；各 routine 距上次运行分针数
+  （`.quay/routine-last-run.json`）；是否有 STALE（> 2×interval）——探针 dead 报警
 - 独立核实了内层的哪一项声称，结果如何
 - 内层在飞任务数与各自已运行时长
 - 遥测当前：任务数、均耗时、`tasksPerHour`（吞吐 = 收尾数/墙钟窗口小时，带 `windowStart/End/Hours`；
@@ -836,9 +1451,16 @@ tick 或 `/clear` 后的会话会重犯。
 - 套件状态触发者（4b2/步骤 1b）：Monitor 是否挂上（`pgrep -af 'suite-state-trigger.ts --monitor'`，
   排除 pgrep 自己那一行）、最近一次 `SUITE-*` 事件（`.quay/suite-state-events.jsonl` 尾部）与时刻
 - 累计动作类型分布（退化判据）
+- Monitor 两判据（`bash plugin/scripts/monitor-mount-check.sh --json` 的 `mounted` /
+  `targetRoot` 是否等于本仓根 / `targetOk`）——挂没挂、挂的哪个仓库
+  （2026-08-06 起 `delivered` 随共享 events.jsonl 移除；事件送达由挂载方自己的 Monitor 流承担）
+- 自述措辞审计（步骤 1c 第 6 条）：本轮 inner 自述 `count`（batch 式汇报数）与 `converged`（重锚收敛
+  判据，连续 N 轮无 batch 式自述）
 - Monitor 三判据（`bash plugin/scripts/monitor-mount-check.sh --json` 的 `mounted` /
   `targetRoot` 是否等于本仓根 / `delivered`）——挂没挂、挂的哪个仓库、事件有没有送达，三条一条都不能少
   （AC9 起 `delivered` 取代 `ownedByThisSession`）
+- `external-dogfooding` 例行（4c）：契约四项是否绿（`external-dogfooding-check.ts`）、是否 DUE、本窗口
+  是否产了新 `label:directive` 发现
 
 不要只说「内层在跑」——没有这些，分层是否有效无法判定。
 
@@ -848,12 +1470,14 @@ tick 或 `/clear` 后的会话会重犯。
 |---|---|
 | `orchestration/exp6-phase1-sustained-unattended-operation.md` | 目标、AC、DoD |
 | `fast-mode-loop-tick.md` | 内层 tick 指令 |
-| `docs/analysis/batch2-queue-state.md` | 队列状态（内层写，外层读+补） |
+| `docs/analysis/batch2-queue-state.md`（文件名历史引用——batch2 是旧批次名） | 队列状态（内层写，外层读+补） |
+| `docs/analysis/batch2-queue-state.md` | 队列状态（内层写，外层读+补）。**历史名「batch2」**（旧批模型队列快照，保留不改名） |
 | `orchestration/escalations.md` | 攒给人的非常规项 |
 | `orchestration/tick-log.md` | 每 tick 记录 |
-| `.quay/full-suite-state.json` | 外层后台全量 suite 的状态（`{state, runner, startedAt, finishedAt, durationMs, laneCount}`；**inner 停止条件读它**——`red` 即 stop-dispatch 信号；gitignored 运行时态，步骤 1b 由 full-suite-runner 写） |
-| `.quay/suite-state-events.jsonl` | 套件状态转变事件日志（append-only；`SUITE-RED/RUNNING/GREEN` + `at` + `stopSignal`；gitignored 运行时态，`suite-state-trigger.ts` 写） |
+| `.quay/full-suite-state.json` | 外层后台全量 suite 的状态（`{state, reason?, failures?, runner, startedAt, finishedAt, durationMs, laneCount}`；**inner 停止条件读它**——`red` + `reason: failed` 即 stop-dispatch 信号，`reason: aborted` 不触发停派，`failures` = 失败位置（失败行 + 文件上下文，供共享闸门 vs 具体测试的派发条件化判定）；**`finishedAt` = epoch 秒**（`gap-batch-merge-gate-reads-stale-green`：批量合新鲜度闸门的 Contract measure `int(time.time()-finishedAt)` 需要 epoch；`startedAt` 仍 ISO）；gitignored 运行时态，步骤 1b 由 full-suite-runner 写） |
+| `.quay/suite-state-events.jsonl` | 套件状态转变事件日志（append-only；`SUITE-RED/RUNNING/GREEN` + `at` + `stopSignal` + `failureLocation`（SUITE-RED 携带，供派发决策）；gitignored 运行时态，`suite-state-trigger.ts` 写） |
 | `.quay/suite-state-last.json` | 套件状态触发者的记忆文件（上次观测的 state；gitignored 运行时态，`suite-state-trigger.ts` 写——跨重启保持转变检测，冷启动即红也能触发） |
 | `.quay/verification-round.jsonl` | 外层异步收尾的轮次记录（`closed` 清单 + `suiteGreen`；gitignored 运行时态，步骤 1b 写） |
+| `.quay/self-report-vocab-state.json` | inner 自述措辞审计的收敛状态（`roundsClean` + `converged`；gitignored 运行时态，`self-report-vocab-check.ts` 写，步骤 1c 第 6 条读） |
 | `adr/ADR-021-*.md` | 四项原则 |
 | `docs/proposals/exp6-queue-driven-concurrent-executor.md` §0 | 两阶段交付范围 |
