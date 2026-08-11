@@ -17,7 +17,7 @@
 
 ---
 
-## 1b. 前置条件：用安装出来的版本重做冷启动 【被阻塞】
+## 1b. 前置条件：用安装出来的版本重做冷启动 【已解阻 2026-08-11】
 
 | 项 | 值 |
 |---|---|
@@ -26,6 +26,7 @@
 | **注意** | 不需要 GitHub push / release / `/plugin install`——本地 build 安装已足够冷。人裁定：基于本地 build 安装即可，不必直接复制源文件，那已足够冷 |
 | **为何不是待办** | 步骤 ① 在 quay 侧，不在我的授权范围内，写成待办会制造「我可以推进」的假象。步骤 ②–③ 才是 archguard 的活——届时本文件的所有 AC 以那次冷启动的实测数据为基线重新核定 |
 | **当前状态** | 本次冷启动是 **热拷贝**（`cp` 从 quay 开发目录复制 orchestrator-loop-tick.md 等文件），不是真正的从零冷装。热拷贝已验证机制**能在第二个项目上驱动开发**，但未验证**从 build 产物安装后能否工作** |
+| **解阻状态（2026-08-11）** | **已解阻并完成**：quay 已产出 v0.4.0 并安装到 archguard（commit `441960d8`，config-preserving，78/78 铺设集绿）；2026-08-11 冷启动**在已安装的 v0.4.0 机制上**完成（种子弧 TASK-81→87 全落地，full-suite 5183/0 全绿）。「用安装出来的版本重做冷启动」的步骤 ②–③ 已由本次会话实际完成，AC 以本次实测数据重基线（见 §4b） |
 | **① 之前还有一步（管理者 2026-08-03 实测补入）** | **必须先清掉热拷贝残留，再装。** archguard 身上仍有当初 `cp` 进来的 `orchestration/orchestrator-loop-tick.md`、`docs/analysis/fast-mode-loop-tick.md`、`scripts/heavy-op-token.sh`。而 `quay-init` 遇到内容不同的已存在文件走的是 `CONFLICT ... skip unless --force`（见其第 146–148 行）。**不先清，测到的就不是「装到干净项目」，而是「在已有副本上覆盖」**——证明不了可交付性，且会以「跳过 N 个文件」的形式**看起来成功**。清除是安全的：三个文件都在 git 历史里可回溯，不是丢失。 |
 
 ---
@@ -141,9 +142,23 @@
 | AC6 — 状态工具可用 | ✅ | 文件存在；telemetry 返回合法 JSON（含 inProgress 字段），2026-08-03T16:03Z 实测 |
 | AC7 — 资源闸存在 | ✅ | 文件存在；`--for full-suite` exit 0（cpu_stall 37.53 < 40），2026-08-03T16:04Z 实测 |
 
----
+### 4b. v0.4.0 冷启动重基线（2026-08-11，安装的 v0.4.0 机制上）
 
-## 5. 复核节奏
+**依据**：2026-08-11 冷启动在已安装 v0.4.0（commit `441960d8`，78/78 铺设集绿）上完成；种子弧
+TASK-81→87 全落地；B3 full-suite 首跑 green（5183 passed / 0 failed，294s）。本节以实测重基线
+08-03 的 AC 表。
+
+| AC | 状态 | 关键数据（2026-08-11 实测） |
+|---|---|---|
+| AC1 — npm test 绿 | ✅ | B3 full-suite green：5183 passed / 0 failed，duration 294s（< 600s）；内层各任务也多次全绿（TASK-82/84/85） |
+| AC2 — lint 绿 | ✅ | inner 各任务 `eslint 0 errors`（3957 warnings 为既有基线，按契约不阻塞） |
+| AC3 — type-check 绿 | ✅ | inner `tsc --noEmit exit 0`（TASK-81/82/83 均核验） |
+| AC4 — CI 全绿 | ⚠️ 最近 3 run success（最后 2026-08-06 head `4a1ffd5f`）；种子弧新提交未触发新 CI run——CI 绿于最后实测 head，新 merge 未 CI 复核 |
+| AC5 — 队列有货（≥3 ready） | ❌ **0**——种子弧完成后池空（升级完成点已记 escalations.md） |
+| AC6 — 状态工具可用 | ✅ | `fast-mode-telemetry --report --json` 返回合法 JSON 含 `inProgress`（实测） |
+| AC7 — 资源闸存在 | ✅ | `resource-gate.sh --for full-suite` exit 0（GO，实测） |
+
+**重基线结论**：AC1-3/6/7 在 v0.4.0 上全部成立；AC4 绿于最后实测 head（新提交未 CI）；**AC5 是本轮唯一不成立的 AC**——池空，需外层/人补任务（建 todo 即满足，不要求开工）。
 
 - **每个 tick 复核一次**（按 orchestrator-loop-tick.md §1 的观察步骤）。
 - AC 状态变化时更新本文件对应条目。

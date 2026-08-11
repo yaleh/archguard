@@ -91,3 +91,33 @@ M3 接管修复（takeover count race），但验证它的全量在 07:26 被 qu
 **本会话成果**：11:40→21:52 自主运转 511 分钟；TASK-53→79 全 done；2 真实缺陷修复（ADR-007 三连、mcp-launcher）；3 治本规则落档；AC 审计闭环（仅 TASK-49 凭据项）。
 **超授权/需人裁定**：新能力 roadmap 方向；TASK-49 凭据环境；TASK-31/35 公开发布决策。
 **建议选项**：① 提供新方向（新能力/验证项）继续管线；② 接受完成点，循环待新指令；③ TASK-31/35 发布 + TASK-49 凭据环境后收尾。
+
+### 冷启动种子弧完成点（2026-08-11 19:2xZ）——TASK-81→86 六连闭合，就绪池空待方向
+
+**现象**：本轮冷启动（manager 重启 outer 会话，修复 bypassPermissions / env / excludeDynamic）的种子弧完成：
+TASK-81（自分析种子）→82（原生 grammar 缺口 397→0）→83（布局契约对齐，output/ 嵌套=意图）→
+84（池 size 机器依赖 1→0，**本地 full-suite 首次全绿 5183/0**）→85（500-edge 渲染上限降级，产品硬化）
+→86（v0.4.0 6 盲区矩阵重跑）。就绪池空，无自产新任务方向。
+
+**本会话成果**：6 任务全落地 master；本地 `npx vitest run` 首次全绿（5183 passed / 0 failed / exit 0）；
+2 真实修复（原生 grammar 缺口、500-edge 硬失败→降级）；v0.4.0 机制复核 misjudges **4/6→1/6**
+（verify-delivery-surface 0/6→5/6 COVERED 等）。root node_modules 已由外层 npm ci 恢复（B3 full-suite 首次可跑）。
+
+**超授权/需人裁定**（08-05 同项仍未决）：新能力 roadmap 方向；TASK-49 凭据环境；TASK-31/35 公开发布
+决策（mcp-launcher TASK-78 修复已就绪待发布 + 插件启用）。
+
+**quay 侧新增发现（需 manager/quay 路由，非 archguard 能改）**：
+1. **`slot-refill.sh --cap 3` 报 `charter not found: --cap`**（exit 2）——wrapper 参数解析损坏；与
+   archguard 安装的 `ready-pool-check` dist / `slot-free-trigger` dist 同形（旧版 charter 解析器
+   regress）。archguard 运行侧已绕（用 .ts 源 / 不传 --cap）。
+2. **`laydown-set-check` 消费方 0-derived fail-closed 假阴性仍未改**（TASK-80 盲区 #6 仍存）。
+
+**建议选项**：① 提供新方向（新能力/验证项）继续管线；② 接受完成点，循环待新指令（cron `0df88682` /
+两 Monitor 保持存活）；③ 执行 TASK-31/35 发布（发布含 TASK-78 修复的包 + 启用插件复验 Connected）
++ 路由两条 quay 侧缺陷到 quay 台账。
+
+**更新（2026-08-11 20:0xZ）**：TASK-87 已完成发布准备——`@yalehwang/archguard-claude-plugin@0.1.33`
+打包验证毕（TASK-78 修复在产物、依赖匹配、未发布/未启用/未改 ~/.claude），发布检查清单已落盘。
+**发布决策现在是一键可执行**：`cd plugin && npm publish`（产出 0.1.33）→ 启用插件 →
+`claude mcp list` 复验 Connected。附带小项：`.claude-plugin/plugin.json` 的 version 显示字段仍 0.1.32，
+发布时可同步这一行。
