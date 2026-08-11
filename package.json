@@ -28,6 +28,7 @@
     "check:runtime-deps": "node --experimental-strip-types scripts/check-runtime-deps.ts",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:native-setup": "bash scripts/install-native-grammars.sh",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",

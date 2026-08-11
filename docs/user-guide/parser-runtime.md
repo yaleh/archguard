@@ -99,6 +99,27 @@ npm install tree-sitter tree-sitter-go   # plus the grammars you need
 ARCHGUARD_NATIVE_MODULE_ROOT=/opt/archguard-native archguard analyze -s ./src --lang go
 ```
 
+### Local full-suite (dev/test)
+
+`npm ci` installs only the WASM baseline — the optional native grammars are
+never installed by it, so the native-parser tests fail with `MODULE_NOT_FOUND`
+(≈397 tests). To run the full suite green locally, materialize the native
+grammars **once** per `npm ci`:
+
+```bash
+npm ci
+npm run test:native-setup   # idempotent — no-op if already present
+npm test
+```
+
+This is handled automatically by a vitest `globalSetup` (`tests/global-setup.ts`)
+when the grammars are missing, so a bare `npx vitest run` after `npm ci` is also
+green. The setup is an explicit, opt-in **test-only** step — it is not a
+package.json lifecycle hook (the install-policy tests forbid those) and does
+not touch `package.json` / `package-lock.json`. It installs the grammars into a
+scratch prefix and copies them into `node_modules`, the same recipe the CI
+workflow uses.
+
 The optional-peer metadata covers `tree-sitter` and the Go/Java/Python/C++
 grammars. The Kotlin grammar (`@tree-sitter-grammars/tree-sitter-kotlin`) is
 deliberately **not** declared as a peer: its current release peer-depends on

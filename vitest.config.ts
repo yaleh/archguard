@@ -40,6 +40,11 @@ export default defineConfig({
     ],
     testTimeout: 30000,   // Fix 2: increase from 10s to 30s (handles resource contention)
     hookTimeout: 30000,   // Fix 3: increase hook timeout too
+    // TASK-82: materialize the optional native tree-sitter grammars (idempotent)
+    // before any run, so bare `npx vitest run` after `npm ci` is green. Not a
+    // package.json lifecycle hook — install-policy forbids those; this runs only
+    // when the suite is invoked. No-op when the packages are already present.
+    globalSetup: ['tests/global-setup.ts'],
     pool: 'forks',        // Native modules (tree-sitter, sharp) require process isolation
     poolOptions: {
       forks: {
