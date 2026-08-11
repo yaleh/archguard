@@ -1,14 +1,18 @@
 {
   "env": {
-    "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "false",
-    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "917000"
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "917000",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "917000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80",
+    "CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN": "1",
+    "CLAUDE_CODE_DISABLE_MOUSE": "1",
+    "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "false"
   },
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
   "_launchSpec": {
     "promptSuggestions": false,
-    "excludeDynamicSystemPromptSections": false,
+    "excludeDynamicSystemPromptSections": true,
     "roles": {
       "outer": {
         "launcher": "claude-deepseek",
