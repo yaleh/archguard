@@ -1,0 +1,1 @@
+{"mechanism":"cron","interval":"*/20 * * * *","source":"cold-start"}
