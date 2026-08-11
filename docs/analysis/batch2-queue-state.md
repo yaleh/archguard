@@ -879,3 +879,44 @@ TASK-84/85 ready。三项目无 `.halt`。
 **TASK-84 交付物**：`tests/integration/parser-pool.test.ts` line 58 池查找机器自适应（`cpus().length`
 显式传入），产品代码零改动；本机 `npx vitest run` 全绿（5183 passed / 0 failed / exit 0）。
 任务库：58 done、TASK-85 ready、无在飞。
+
+## 18:5xZ 更新（外层滚动派发：TASK-85 mermaid 500-edge 硬失败降级修复执行到 done）
+
+**实况（2026-08-11）**：master @ 40984c95（TASK-84 收尾后）→ 执行后 @ 170df5d6。任务板 58 done、
+仅 TASK-85 ready（role=primitive）。三项目无 `.halt`。本任务为**潜在缺陷加固**（前提已由 TASK-83
+更正：默认 analyze exit 0、303<500，非当前失败）。
+
+**TASK-85 执行（外层派发 tick，滚动单线 fork_baseline=master / merge_target=master）**：
+
+1. **worktree 分叉**：`task-85`（ext4 磁盘），`npm ci` + `npm run build` 干净。任务文件 fork 时未跟踪，
+   复制进 worktree 后随 merge 成为 tracked。
+2. **前提确认（AC1）**：默认 `analyze -v`（还原 `archguard.config.json`）**exit 0**、package 图
+   303 edges < 500——非当前失败，与 TASK-83 更正一致。超限复现：`--exclude "**/*.test.ts" "**/*.spec.ts"
+   "**/node_modules/**"`（不 exclude experiments/scripts）→ **525 edges** > 500 →
+   `Worker render failed: Edge limit exceeded` → **exit 1**（`.mmd` 已写、SVG/PNG 缺失、index.md 标 Error）。
+3. **两处上限厘清（AC2）**：**500** = mermaid 内建 `maxEdges` 默认（`render-worker.ts`/`renderer.ts`
+   `mermaid.initialize` 未设置 → schema 默认 500），硬失败源；**200** = `validator-render.ts`
+   `maxEdges = 200`，只发 **warning**（非 error）不阻塞。两处独立：validator 200 事前软提示、
+   render 500 事后硬失败。
+4. **机制选定（AC3，Option 3 渲染失败非致命）**：`DiagramOutputRouter` 新增私有 `renderSvgOrDegrade()`——
+   worker pool 渲染失败 → main-thread `renderSVGRaw` 回退 → 仍失败（超限）→ **降级为警告**
+   （`.mmd` 已写保留、SVG/PNG 跳过、不抛错）。四个渲染块（default / Atlas / TS module graph /
+   C++ package）统一改用它。未提升 500 上限（机制 1 不解决任意大图）、未分块（机制 2 改动面大）——
+   机制 3 通用且与既有 PNG 降级模式一致。**产品代码 1 文件改动**（+108/-81）。
+5. **验证**：超限 after **exit 0** + 明确降级警告（`.mmd` 在、index.md 无 Error）；默认 after **exit 0**
+   + SVG/PNG 正常产出（不回归）；负控制（AC5）stash src + rebuild → 超限 **exit 1** 复现 → 恢复 +
+   rebuild → exit 0；`diagram-output-router.test.ts` 39/39（含原 pool 回退/成功契约）；
+   mermaid + processors **814 passed**；lint 0 / type-check 0。
+6. **full suite（after，DoD）**：`npx vitest run` = **359 files / 5183 passed / 18 skipped / 0 failed /
+   exit 0**（与 TASK-84 全绿基线一致，router 改动无回归）。
+7. **fan-in**：merge 被主仓未跟踪 `tasks/TASK-85.md` 阻挡 → 移 `.quay/pre-task85-merge-untracked/`
+   （可逆）→ merge `170df5d6`（'ort'，router +189 + 任务文件）→ worktree/分支清理。
+8. **DoD/AC**：5 AC + 3 DoD 全勾 + Evidence 落盘；`quay task check` `ok:true / terminal`。
+   **ready → done**（CAS 通过）。任务板 **59 done**。
+
+**状态**：TASK-86 ready（外层已建——v0.4.0 机制升级后的 TASK-80 6 盲区矩阵重跑，纯只读验证）。
+TASK-85 交付物：超限大图降级而非裸 exit 1（`.mmd` 保留 + 明确警告），默认路径不回归。
+
+**TASK-81→85 管线里程碑**：TASK-81（自分析种子）→ 82（原生缺口 397→0）→ 83（`.archguard/output/`
+布局契约对齐）→ 84（池 size 机器依赖 1→0）→ 85（500-edge 硬失败降级）= 冷启动五连，本地 full-suite
+与自验证路径全部闭合。任务库：59 done、TASK-86 ready、无在飞。

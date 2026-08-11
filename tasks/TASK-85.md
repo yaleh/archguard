@@ -1,7 +1,7 @@
 ---
 id: TASK-85
 title: "TASK-85: analyze 大 package 图渲染上限 500-edge 硬失败——降级/缩放而非 exit 1（默认 303<500 不触发）"
-status: ready
+status: done
 labels:
   - defect
   - self-validation
