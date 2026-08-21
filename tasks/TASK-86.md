@@ -1,7 +1,7 @@
 ---
 id: TASK-86
 title: "TASK-86: v0.4.0 机制升级后的实证复核——TASK-80 6 盲区矩阵重跑（消费方布局）"
-status: ready
+status: done
 labels:
   - verification
   - mechanism
