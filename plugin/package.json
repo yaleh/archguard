@@ -10,7 +10,7 @@
     "skills/"
   ],
   "dependencies": {
-    "@yalehwang/archguard": "0.1.32"
+    "@yalehwang/archguard": "0.1.33"
   },
   "engines": {
     "node": ">=18.0.0"
