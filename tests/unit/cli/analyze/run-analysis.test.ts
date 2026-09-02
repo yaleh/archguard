@@ -536,7 +536,7 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
     } as any;
   }
 
-  it('passes archJson.workspaceRoot to TestAnalyzer for Java (not sessionRoot)', async () => {
+  it('uses sessionRoot as test-discovery root for Java multi-module (not archJson.workspaceRoot)', async () => {
     const externalRoot = '/some/external/java/project';
     const javaArchJson = makeArchJsonForLanguage('java', externalRoot);
     getLastArchJsonMock.mockReturnValue(javaArchJson);
@@ -557,16 +557,17 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
       reporter: silentReporter(),
     });
 
+    // Test discovery must scan the project root (sessionRoot), NOT the first module
+    // source (archJson.workspaceRoot) — otherwise other modules' src/test are missed.
     expect(testAnalyzerAnalyzeMock).toHaveBeenCalledWith(
       javaArchJson,
       expect.anything(),
-      expect.objectContaining({ workspaceRoot: externalRoot })
+      expect.objectContaining({ workspaceRoot: '/home/archguard' })
     );
-    // Must NOT use sessionRoot
     expect(testAnalyzerAnalyzeMock).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ workspaceRoot: '/home/archguard' })
+      expect.objectContaining({ workspaceRoot: externalRoot })
     );
   });
 

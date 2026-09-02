@@ -198,7 +198,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       try {
         reporter.start('Running test analysis...');
         const language = archJson.language ?? 'typescript';
-        const workspaceRoot = archJson.workspaceRoot ?? sessionRoot;
+        // Use the session root (project root) as the test-discovery root, not
+        // archJson.workspaceRoot which is the first module source (e.g.
+        // app/src/main/java) in multi-module Java projects — that narrows the
+        // scan and misses other modules' src/test trees. discoverTestFiles is
+        // designed for whole-workspace scanning (Maven multi-module).
+        const workspaceRoot = sessionRoot;
         // parserRuntime/nativeModuleRoot are optional GlobalConfig extensions
         // (src/types/config-global.ts); the zod file schema does not strip
         // them when a Config object is constructed programmatically.
