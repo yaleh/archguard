@@ -225,6 +225,33 @@ export class TestAnalyzer {
         raw.filePath
       );
 
+      // Same-package inference: a test that never imports the class under test
+      // (Java FooTest → com.x.Foo) still covers it when the entity exists.
+      if (raw.samePackageTargets?.length) {
+        const archIds = new Set(archJson.entities.map((e) => e.id));
+        for (const cand of raw.samePackageTargets) {
+          // Exact match (FooTest → com.x.Foo).
+          if (archIds.has(cand)) {
+            if (!coveredEntityIds.includes(cand)) coveredEntityIds.push(cand);
+            continue;
+          }
+          // Variant-descriptor match (test classes that name the tested class as a
+          // prefix plus a variant suffix, e.g. SprayHomeHeadViewPureTest →
+          // SprayHomeHeadView, WorkControlManagerDeepTest → WorkControlManager).
+          // Only strip within the class segment, never across the package boundary.
+          const lastDot = cand.lastIndexOf('.');
+          const pkg = cand.slice(0, lastDot + 1);
+          const cls = cand.slice(lastDot + 1);
+          for (let len = cls.length - 1; len >= 1; len--) {
+            const prefixFqn = pkg + cls.slice(0, len);
+            if (archIds.has(prefixFqn)) {
+              if (!coveredEntityIds.includes(prefixFqn)) coveredEntityIds.push(prefixFqn);
+              break;
+            }
+          }
+        }
+      }
+
       return {
         id: path.relative(workspaceRoot, raw.filePath),
         filePath: raw.filePath,
@@ -341,7 +368,9 @@ export class TestAnalyzer {
     const coveredEntities = new Set(
       coverageMap.filter((l) => l.coverageScore > 0).map((l) => l.sourceEntityId)
     );
-    const totalEntities = archJson.entities.length;
+    // Denominator = unique entity ids (archJson.entities can carry duplicate ids when a
+    // class appears in multiple source sets), so the ratio reflects distinct entities.
+    const totalEntities = new Set(archJson.entities.map((e) => e.id)).size;
 
     const issueCount: Record<string, number> = {
       zero_assertion: 0,
