@@ -6,7 +6,7 @@
  * reaching into archJson.extensions directly.
  */
 
-import type { ArchJSON, Relation } from '@/types/index.js';
+import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
@@ -41,6 +41,11 @@ export class ExtensionAccessor {
   /** Return all relations from the ArchJSON. */
   getRelations(): readonly Relation[] {
     return this.archJson.relations;
+  }
+
+  /** Return all entities from the ArchJSON (full detail incl. members). */
+  getEntities(): readonly Entity[] {
+    return this.archJson.entities;
   }
 
   /** Return all entity IDs from the ArchJSON. */

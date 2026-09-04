@@ -202,6 +202,10 @@ export class ArchJSONAggregator {
     workspaceRoot?: string,
     language?: ArchJSON['language']
   ): string {
+    if (language === 'dart') {
+      const lastDot = entity.id.lastIndexOf('.');
+      return lastDot > 0 ? entity.id.slice(0, lastDot) : '';
+    }
     if (language === 'kotlin') {
       const lastDot = entity.id.lastIndexOf('.');
       return lastDot > 0 ? entity.id.slice(0, lastDot) : '';

@@ -30,5 +30,9 @@ export async function createLanguagePlugin(
       const { KotlinPlugin } = await import('@/plugins/kotlin/index.js');
       return new KotlinPlugin(backend);
     }
+    case 'dart': {
+      const { DartPlugin } = await import('@/plugins/dart/index.js');
+      return new DartPlugin(backend);
+    }
   }
 }

@@ -54,16 +54,24 @@ export async function planDefaultDiagrams(
 export function createProjectRootLanguageDiagrams(
   projectRoot: string,
   language: DetectedLanguage,
-  options?: DiagramOptions & { label?: string; role?: QueryRole; source?: string }
+  options?: DiagramOptions & {
+    label?: string;
+    role?: QueryRole;
+    /** Single source (legacy); superseded by `sources` when both are given. */
+    source?: string;
+    /** Complete source list — every source is forwarded to the diagram scope. */
+    sources?: string[];
+  }
 ): DiagramConfig[] {
   const label = options?.label ?? path.basename(projectRoot);
   const source = options?.source ?? '.';
+  const sources = options?.sources ?? [source];
   return createScopeDiagrams(
     {
       language,
       label,
       role: options?.role,
-      sources: [source],
+      sources,
     },
     options
   );

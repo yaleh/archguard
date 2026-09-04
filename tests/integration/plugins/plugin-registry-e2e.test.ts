@@ -39,6 +39,7 @@ import { JavaPlugin } from '@/plugins/java/index.js';
 import { PythonPlugin } from '@/plugins/python/index.js';
 import { CppPlugin } from '@/plugins/cpp/index.js';
 import { KotlinPlugin } from '@/plugins/kotlin/index.js';
+import { DartPlugin } from '@/plugins/dart/index.js';
 import type { ILanguagePlugin } from '@/core/interfaces/language-plugin.js';
 
 const DETECTION_FIXTURES = path.resolve(process.cwd(), 'tests', 'fixtures', 'detection');
@@ -76,6 +77,7 @@ function buildBuiltInPlugins(): ILanguagePlugin[] {
     new PythonPlugin(nativeParserBackend),
     new CppPlugin(nativeParserBackend),
     new KotlinPlugin(nativeParserBackend),
+    new DartPlugin(nativeParserBackend),
   ];
 }
 
@@ -92,11 +94,11 @@ describe('Plugin registry E2E — built-in plugin enumeration', () => {
   it('listAll() enumerates every shipped built-in plugin', () => {
     const all = registry.listAll();
     const names = all.map((p) => p.metadata.name).sort();
-    expect(names).toEqual(['cpp', 'golang', 'java', 'kotlin', 'python', 'typescript']);
+    expect(names).toEqual(['cpp', 'dart', 'golang', 'java', 'kotlin', 'python', 'typescript']);
   });
 
   it('getByName() resolves each built-in plugin by its language name', () => {
-    for (const name of ['typescript', 'golang', 'java', 'python', 'cpp', 'kotlin']) {
+    for (const name of ['typescript', 'golang', 'java', 'python', 'cpp', 'kotlin', 'dart']) {
       const plugin = registry.getByName(name);
       expect(plugin, `getByName('${name}') should resolve a built-in`).not.toBeNull();
       expect(plugin?.metadata.name).toBe(name);
@@ -112,6 +114,7 @@ describe('Plugin registry E2E — built-in plugin enumeration', () => {
       ['.py', 'python'],
       ['.cpp', 'cpp'],
       ['.kt', 'kotlin'],
+      ['.dart', 'dart'],
     ];
     for (const [extension, expectedName] of expectations) {
       const plugin = registry.getByExtension(extension);

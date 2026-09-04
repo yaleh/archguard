@@ -89,6 +89,7 @@ vi.mock('@/cli/utils/project-language-detector.js', () => ({
       roots: ['/project/root'],
     },
   ]),
+  detectPrimaryLanguage: vi.fn().mockResolvedValue(null),
 }));
 
 import { detectProjectStructure } from '@/cli/utils/project-structure-detector.js';

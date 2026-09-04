@@ -192,3 +192,40 @@ selection.source;          // 'default' | 'env' | 'config' | 'explicit' — wher
 Language plugins accept the selected backend via constructor injection, e.g.
 `new JavaPlugin(selection.backend)`; `loadPluginForLanguage()` in
 `src/cli/analyze/run-analysis.ts` wires this for CLI analysis.
+
+## Maintaining grammar WASM assets
+
+The vendored grammar assets under `assets/grammars/` are updated by three
+commands, each with a distinct **write boundary**. A boundary of "nothing" means
+the command never mutates the checked-in assets; "all-or-nothing" means it
+replaces the whole asset tree transactionally (staging → validate → directory
+swap → rollback on failure), so an interrupted run never leaves a mixed
+new/old directory.
+
+| Command | What it does | Write boundary |
+|---------|--------------|----------------|
+| `node scripts/fetch-grammar-wasms.mjs` | Verify every WASM asset matches `checksums.json` | nothing |
+| `node scripts/fetch-grammar-wasms.mjs --update` | Download the npm-shipped assets, regenerate `checksums.json` + `provenance.json` | all-or-nothing |
+| `node scripts/fetch-grammar-wasms.mjs --update --rebuild-git` | Rebuild the Dart grammar from its pinned git commit first, then regenerate | all-or-nothing |
+| `node scripts/build-dart-grammar-wasm.mjs` (default) | Rebuild Dart into a temp dir and compare against the recorded digest | nothing |
+| `node scripts/build-dart-grammar-wasm.mjs --update` | Rebuild Dart and accept the new digest | all-or-nothing |
+
+The five npm grammars + the web-tree-sitter runtime ship a prebuilt WASM inside
+their tarball and are verified against the npm integrity hashes pinned in the
+script. The Dart grammar is rebuilt from a pinned git commit (`scripts/dart-grammar-source.mjs`),
+which is the single source of truth for the repository, commit, source-archive
+SHA, tree-sitter CLI version, and Emscripten image digest.
+
+**Dart trust chain.** A plain `fetch --update` (or `build-dart-grammar-wasm` in
+verify mode) never blesses a new Dart digest. It recomputes the on-disk blob's
+checksum and requires it to still match the previously trusted
+`checksums.json` value; a drift fails with zero writes. Only the explicit,
+auditable rebuild paths — `--rebuild-git` or `build-dart-grammar-wasm --update`
+— may accept a new digest, and they do so from the pinned source commit, not
+from whatever happens to be on disk. This prevents a corrupted or replaced Dart
+WASM from being re-blessed by a routine metadata refresh.
+
+**Concurrency.** `build-dart-grammar-wasm` builds into a `mkdtemp()`-created,
+process-unique directory (never the fixed `.tmp-dart-grammar`), so two
+concurrent verify/update processes get independent work dirs and only ever
+clean up their own.

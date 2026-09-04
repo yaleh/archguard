@@ -1,7 +1,7 @@
 import type { ParserRuntimeKind, ParserSession } from './syntax-tree.js';
 import { errorMessage } from '@/utils/error-message.js';
 
-export type ParserLanguage = 'go' | 'java' | 'python' | 'cpp' | 'kotlin';
+export type ParserLanguage = 'go' | 'java' | 'python' | 'cpp' | 'kotlin' | 'dart';
 
 export interface ParserBackend {
   readonly runtime: ParserRuntimeKind;

@@ -28,6 +28,7 @@ describe('nativeGrammarModule', () => {
     expect(nativeGrammarModule('python')).toBe('tree-sitter-python');
     expect(nativeGrammarModule('cpp')).toBe('tree-sitter-cpp');
     expect(nativeGrammarModule('kotlin')).toBe('@tree-sitter-grammars/tree-sitter-kotlin');
+    expect(nativeGrammarModule('dart')).toBe('tree-sitter-dart');
   });
 });
 

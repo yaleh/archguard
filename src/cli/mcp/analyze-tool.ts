@@ -22,7 +22,15 @@ export const PARADIGM_BLOCK_GO = `Paradigm: package (Go Atlas)
 
 Next step: call archguard_summary or archguard_get_atlas_layer.`;
 
-const supportedAnalyzeLanguages = ['typescript', 'go', 'java', 'python', 'cpp', 'kotlin'] as const;
+const supportedAnalyzeLanguages = [
+  'typescript',
+  'go',
+  'java',
+  'python',
+  'cpp',
+  'kotlin',
+  'dart',
+] as const;
 const analyzeLocks = new Set<string>();
 
 const analyzeSchema = {
@@ -40,7 +48,7 @@ const analyzeSchema = {
     .enum(supportedAnalyzeLanguages)
     .optional()
     .describe(
-      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp, kotlin. This is not a natural-language locale.'
+      'Source code language plugin to use. Supported values: typescript, go, java, python, cpp, kotlin, dart. This is not a natural-language locale.'
     ),
   diagrams: z
     .array(z.enum(['package', 'class', 'method']))
@@ -179,9 +187,19 @@ function formatAnalyzeResponse(
     lines.push('', 'Diagrams:');
     for (const diagram of result.results) {
       if (diagram.success) {
+        const degradedNote =
+          diagram.diagnostics && diagram.diagnostics.length > 0
+            ? `  ⚠ ${diagram.diagnostics.length} file(s) with parse errors (partial result)`
+            : '';
         lines.push(
-          `  - ${diagram.name}  ok  ${diagram.stats?.entities ?? 0} entities  ${diagram.stats?.relations ?? 0} relations  ${((diagram.stats?.parseTime ?? 0) / 1000).toFixed(1)}s`
+          `  - ${diagram.name}  ${degradedNote ? 'degraded' : 'ok'}  ${diagram.stats?.entities ?? 0} entities  ${diagram.stats?.relations ?? 0} relations  ${((diagram.stats?.parseTime ?? 0) / 1000).toFixed(1)}s`
         );
+        if (degradedNote) {
+          lines.push(degradedNote);
+          for (const diagnostic of diagram.diagnostics ?? []) {
+            lines.push(`    - ${diagnostic.filePath} [${diagnostic.kind}]: ${diagnostic.message}`);
+          }
+        }
       } else {
         lines.push(`  - ${diagram.name}  failed  ${diagram.error ?? 'unknown error'}`);
       }
@@ -189,7 +207,7 @@ function formatAnalyzeResponse(
   }
   if (result.hasDiagramFailures) {
     lines.push('', 'Warnings:');
-    lines.push('  - One or more diagrams failed, but query data was refreshed.');
+    lines.push('  - One or more diagrams failed or were degraded, but query data was refreshed.');
   }
   const language = result.diagrams.find((d) => d.language)?.language;
   if (language === 'go') {

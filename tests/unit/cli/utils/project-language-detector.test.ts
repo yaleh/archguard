@@ -110,4 +110,17 @@ describe('project-language-detector', () => {
     expect(kotlinCandidate).toBeDefined();
     expect(kotlinCandidate.score).toBeGreaterThan(javaCandidate?.score ?? 0);
   });
+
+  it('detects dart for a project with a pubspec.yaml marker and .dart sources', async () => {
+    const root = await makeProject({
+      'pubspec.yaml': 'name: my_app\nenvironment:\n  sdk: ^3.0.0',
+      'lib/main.dart': 'void main() {}',
+      'lib/src/model.dart': 'class Model {}',
+      'lib/src/repository.dart': 'class Repository {}',
+    });
+
+    const primary = await detectPrimaryLanguage(root);
+
+    expect(primary?.language).toBe('dart');
+  });
 });

@@ -236,6 +236,9 @@ export class DiagramPipelineRunner {
               : aggregatedJSON.relations.length,
           parseTime,
         },
+        ...(aggregatedJSON.diagnostics && aggregatedJSON.diagnostics.length > 0
+          ? { diagnostics: aggregatedJSON.diagnostics }
+          : {}),
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

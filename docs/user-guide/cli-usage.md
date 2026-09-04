@@ -46,7 +46,7 @@ archguard analyze [options]
 |--------|------|---------|-------------|
 | `-s, --sources <paths...>` | string[] | - | Source directory/directories; triggers auto-detection → multi-diagram output |
 | `--diagrams <levels...>` | string[] | all | Filter by level: `package`\|`class`\|`method` (TypeScript); `package`\|`capability`\|`goroutine`\|`flow` (Go Atlas) |
-| `--lang <language>` | string | auto | Language plugin: `typescript`\|`go`\|`java`\|`python`\|`cpp`\|`kotlin` |
+| `--lang <language>` | string | auto | Language plugin: `typescript`\|`go`\|`java`\|`python`\|`cpp`\|`kotlin`\|`dart` (Dart uses the WASM grammar) |
 | `--config <path>` | string | archguard.config.json | Config file path |
 | `-f, --format <type>` | string | mermaid | Output format: `mermaid`\|`json` |
 | `--output-dir <dir>` | string | `./.archguard` | Output directory (auto-set to `<project>/.archguard` for external paths) |

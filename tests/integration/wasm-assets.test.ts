@@ -19,6 +19,7 @@ const GRAMMAR_ASSETS = [
   'tree-sitter-python.wasm',
   'tree-sitter-cpp.wasm',
   'tree-sitter-kotlin.wasm',
+  'tree-sitter-dart.wasm',
 ];
 const ALL_ASSETS = ['tree-sitter.wasm', ...GRAMMAR_ASSETS];
 
@@ -38,11 +39,30 @@ describe('WASM asset integrity and provenance', () => {
     expect(provenance.sources).toHaveLength(ALL_ASSETS.length);
     for (const source of provenance.sources) {
       expect(ALL_ASSETS).toContain(source.asset);
-      expect(source.package).toBeTruthy();
-      expect(source.version).toBeTruthy();
       expect(source.license).toBe('MIT');
-      expect(source.tarball).toMatch(/^https:\/\/registry\.npmjs\.org\//);
-      expect(source.tarballIntegrity).toMatch(/^sha512-/);
+      if (source.source === 'git') {
+        // Git-built grammars (Dart) carry a pinned commit + reproducible build
+        // record instead of an npm tarball reference.
+        expect(source.repository).toBe('https://github.com/UserNobody14/tree-sitter-dart');
+        expect(source.commit).toMatch(/^[0-9a-f]{40}$/);
+        expect(source.sourceArchiveUrl).toContain(`/archive/${source.commit}.tar.gz`);
+        expect(source.sourceArchiveFormat).toBe('tar.gz');
+        expect(source.sourceArchiveSha256).toMatch(/^[0-9a-f]{64}$/);
+        expect(source.buildTool).toBe('tree-sitter-cli');
+        expect(source.buildToolVersion).toBeTruthy();
+        // P0-1 (B): built on the host — no docker image claim; record the real
+        // toolchain instead, so the trust record matches the actual artifact.
+        expect(source.buildImage).toBeUndefined();
+        expect(source.buildImageDigest).toBeUndefined();
+        expect(source.hostToolchain).toMatchObject({ treeSitterCli: '0.25.10' });
+        expect(source.buildScript).toBe('scripts/build-dart-grammar-wasm.mjs');
+        expect(source.licenseNote).toBeTruthy();
+      } else {
+        expect(source.package).toBeTruthy();
+        expect(source.version).toBeTruthy();
+        expect(source.tarball).toMatch(/^https:\/\/registry\.npmjs\.org\//);
+        expect(source.tarballIntegrity).toMatch(/^sha512-/);
+      }
       const licensePath = path.join(assetsDir, source.licenseFile);
       expect(existsSync(licensePath), `${source.licenseFile} missing`).toBe(true);
     }
@@ -72,7 +92,7 @@ describe('WASM asset integrity and provenance', () => {
 });
 
 describe('packed-install asset loading (cwd-independent)', () => {
-  it('parses all five languages from a simulated installed-package layout', async () => {
+  it('parses all six languages from a simulated installed-package layout', async () => {
     // Simulate <pkg>/assets/grammars as produced by npm install of the packed
     // artifact, then load it with a foreign process.cwd().
     const scratch = mkdtempSync(path.join(tmpdir(), 'archguard-wasm-packed-'));
@@ -91,6 +111,7 @@ describe('packed-install asset loading (cwd-independent)', () => {
           python: ['def f():\n    pass\n', 'module'],
           cpp: ['int main() { return 0; }\n', 'translation_unit'],
           kotlin: ['fun main() {}\n', 'source_file'],
+          dart: ['class A {}\n', 'program'],
         };
         for (const [language, [code, rootType]] of Object.entries(snippets)) {
           const session = await backend.createSession(language as never);

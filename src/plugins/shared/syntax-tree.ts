@@ -20,6 +20,8 @@ export interface SyntaxNodeLike {
   readonly children: SyntaxNodeLike[];
   readonly namedChildren: SyntaxNodeLike[];
   readonly namedChildCount: number;
+  /** True when this subtree contains a tree-sitter ERROR node (native + web-tree-sitter). */
+  readonly hasError?: boolean;
   namedChild(index: number): SyntaxNodeLike | null;
   childForFieldName(name: string): SyntaxNodeLike | null;
   descendantsOfType(type: string | string[]): SyntaxNodeLike[];

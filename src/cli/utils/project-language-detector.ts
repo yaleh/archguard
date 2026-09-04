@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 
-export type DetectedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'cpp' | 'kotlin';
+export type DetectedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'cpp' | 'kotlin' | 'dart';
 
 export interface LanguageCandidate {
   language: DetectedLanguage;
@@ -36,6 +36,7 @@ const MARKERS: Record<DetectedLanguage, string[]> = {
   kotlin: ['build.gradle.kts', 'settings.gradle.kts'],
   python: ['pyproject.toml', 'requirements.txt', 'setup.py', 'setup.cfg', 'Pipfile'],
   typescript: ['package.json', 'tsconfig.json'],
+  dart: ['pubspec.yaml'],
 };
 
 const EXTENSIONS: Record<DetectedLanguage, string[]> = {
@@ -45,6 +46,7 @@ const EXTENSIONS: Record<DetectedLanguage, string[]> = {
   kotlin: ['.kt', '.kts'],
   python: ['.py'],
   typescript: ['.ts', '.tsx'],
+  dart: ['.dart'],
 };
 
 interface LanguageStats {
@@ -63,6 +65,7 @@ function createStats(): Record<DetectedLanguage, LanguageStats> {
     kotlin: emptyStats(),
     python: emptyStats(),
     typescript: emptyStats(),
+    dart: emptyStats(),
   };
 }
 
@@ -179,7 +182,13 @@ function chooseSourceRoot(
   language: DetectedLanguage,
   depth: number
 ): string {
-  if (language === 'cpp' || language === 'go' || language === 'python' || language === 'kotlin') {
+  if (
+    language === 'cpp' ||
+    language === 'go' ||
+    language === 'python' ||
+    language === 'kotlin' ||
+    language === 'dart'
+  ) {
     return projectRoot;
   }
 

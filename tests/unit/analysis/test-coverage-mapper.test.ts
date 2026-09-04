@@ -393,6 +393,51 @@ describe('TestCoverageMapper', () => {
     expect(link?.coverageScore ?? 0).toBe(0);
   });
 
+  // Dart path-convention: foo_test.dart → foo.dart
+  it('Dart: user_repository_test.dart matches user_repository.dart entity', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('packages/foo/test/user_repository_test.dart', [])];
+    const archJson = makeArchJson([
+      {
+        id: 'foo.UserRepository',
+        name: 'UserRepository',
+        type: 'class',
+        sourceLocation: {
+          file: 'packages/foo/lib/user_repository.dart',
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'foo.UserRepository');
+    expect(link).toBeDefined();
+    expect(link.coveredByTestIds).toContain('packages/foo/test/user_repository_test.dart');
+    expect(link.coverageScore).toBeGreaterThan(0);
+  });
+
+  it('Dart: unrelated_test.dart does not falsely link a differently-named entity', async () => {
+    const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
+    const mapper = new TestCoverageMapper();
+    const testFiles = [makeTestFile('packages/foo/test/unrelated_test.dart', [])];
+    const archJson = makeArchJson([
+      {
+        id: 'foo.UserRepository',
+        name: 'UserRepository',
+        type: 'class',
+        sourceLocation: {
+          file: 'packages/foo/lib/user_repository.dart',
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+    const result = mapper.buildCoverageMap(testFiles, archJson, '/workspace');
+    const link = result.find((l: CoverageLink) => l.sourceEntityId === 'foo.UserRepository');
+    expect(link?.coverageScore ?? 0).toBe(0);
+  });
+
   it('creates a link for a covered entity not present in archJson entities', async () => {
     const { TestCoverageMapper } = await import('@/analysis/test-coverage-mapper.js');
     const mapper = new TestCoverageMapper();

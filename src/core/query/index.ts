@@ -22,3 +22,6 @@ export type {
 export * from './arch-metrics.js';
 
 export { RelationQueryService } from './relation-query-service.js';
+
+export { detectGodClasses } from './god-class-detector.js';
+export type { GodClassEntry, GodClassThresholds } from './god-class-detector.js';

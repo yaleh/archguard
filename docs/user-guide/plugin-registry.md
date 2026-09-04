@@ -304,6 +304,7 @@ detectPluginForDirectory(directoryPath: string): ILanguagePlugin | null {
 | Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `Pipfile` |
 | C++ | `CMakeLists.txt`, `Makefile` |
 | Kotlin/Android | `build.gradle.kts`, `settings.gradle.kts` |
+| Dart | `pubspec.yaml` |
 | Rust | `Cargo.toml` |
 | C# | `.csproj`, `.sln` |
 

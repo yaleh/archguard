@@ -370,6 +370,8 @@ export class StructureMetrics {
         return /(^|[\\/])test_[^\\/]+\.py$|_test\.py$/;
       case 'cpp':
         return /\.(test|spec)\.(cpp|cc|cxx)$|([\\/]|^)test[_-]/i;
+      case 'dart':
+        return /_test\.dart$|([\\/]test[\\/])/;
       default:
         return /\.(test|spec)\./;
     }

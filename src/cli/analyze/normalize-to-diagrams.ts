@@ -8,9 +8,30 @@ import {
   createProjectRootLanguageDiagrams,
   planDefaultDiagrams,
 } from '../utils/default-scope-planner.js';
-import { detectProjectLanguages } from '../utils/project-language-detector.js';
+import {
+  detectPrimaryLanguage,
+  detectProjectLanguages,
+} from '../utils/project-language-detector.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '../../types/config.js';
+import type { DetectedLanguage } from '../utils/project-language-detector.js';
+
+/** Single-file extension → language, for sources that are files (not dirs). */
+const FILE_EXTENSION_LANGUAGE: Record<string, DetectedLanguage> = {
+  '.ts': 'typescript',
+  '.tsx': 'typescript',
+  '.go': 'go',
+  '.java': 'java',
+  '.py': 'python',
+  '.cpp': 'cpp',
+  '.cxx': 'cpp',
+  '.cc': 'cpp',
+  '.hpp': 'cpp',
+  '.h': 'cpp',
+  '.kt': 'kotlin',
+  '.kts': 'kotlin',
+  '.dart': 'dart',
+};
 
 /** Common options passed to every structure detector. */
 interface DetectorOptions {
@@ -68,7 +89,7 @@ export const LANGUAGE_STRUCTURE_DETECTORS: Record<string, StructureDetector> = {
  * path (instead of a dedicated structure detector).
  * cpp is also in this set because its no-sources path uses the generic fallback.
  */
-const GENERIC_FALLBACK_LANGS = new Set(['typescript', 'python', 'cpp']);
+const GENERIC_FALLBACK_LANGS = new Set(['typescript', 'python', 'cpp', 'dart']);
 
 /**
  * Normalize CLI options to DiagramConfig[]
@@ -85,7 +106,23 @@ export async function normalizeToDiagrams(
   }
 
   if (cliOptions.sources && cliOptions.sources.length > 0) {
-    const language = cliOptions.lang;
+    const sourcePath = path.resolve(cliOptions.sources[0]);
+
+    // Resolve the effective language. An explicit --lang always wins. When it
+    // is absent, auto-detect from the source root so non-TypeScript projects
+    // (go/java/python/cpp/kotlin/dart) are routed correctly instead of being
+    // silently treated as TypeScript. TypeScript — or an undetectable project —
+    // keeps the legacy structure detector, which emits richer per-module method
+    // diagrams for TS.
+    let language = cliOptions.lang;
+    if (!language) {
+      const detected = await detectSourceLanguage(cliOptions.sources, resolvedRoot);
+      if (!detected || detected === 'typescript') {
+        const diagrams = await detectProjectStructure(resolvedRoot, sourcePath);
+        return filterByLevels(diagrams, cliOptions.diagrams);
+      }
+      language = detected;
+    }
 
     // Go: special Atlas diagram — not a structure-detector language
     if (language === 'go') {
@@ -112,13 +149,12 @@ export async function normalizeToDiagrams(
       return [diagram];
     }
 
-    // TypeScript / Python: generic fallback (label comes from the source path)
-    if (language === 'python' || language === 'typescript') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
+    // TypeScript / Python / Dart: generic fallback (label comes from the source path)
+    if (language === 'python' || language === 'typescript' || language === 'dart') {
       return filterByLevels(
         createProjectRootLanguageDiagrams(resolvedRoot, language, {
           label: path.basename(sourcePath),
-          source: cliOptions.sources[0],
+          sources: cliOptions.sources,
           format: cliOptions.format,
           exclude: cliOptions.exclude,
         }),
@@ -129,7 +165,6 @@ export async function normalizeToDiagrams(
     // Registry lookup (kotlin / cpp / java + future languages)
     const detector = LANGUAGE_STRUCTURE_DETECTORS[language ?? ''];
     if (detector) {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
       return filterByLevels(
         await detector(sourcePath, {
           label: path.basename(sourcePath),
@@ -141,9 +176,8 @@ export async function normalizeToDiagrams(
       );
     }
 
-    // Unknown language: auto-detect project structure
-    const externalSourceRoot = path.resolve(cliOptions.sources[0]);
-    const diagrams = await detectProjectStructure(resolvedRoot, externalSourceRoot);
+    // Unknown language: fall back to the TypeScript structure detector.
+    const diagrams = await detectProjectStructure(resolvedRoot, sourcePath);
     return filterByLevels(diagrams, cliOptions.diagrams);
   }
 
@@ -191,10 +225,14 @@ export async function normalizeToDiagrams(
   // TypeScript / Python / cpp (no-sources): generic fallback
   if (GENERIC_FALLBACK_LANGS.has(lang)) {
     return filterByLevels(
-      createProjectRootLanguageDiagrams(resolvedRoot, lang as 'typescript' | 'python' | 'cpp', {
-        format: cliOptions.format,
-        exclude: cliOptions.exclude,
-      }),
+      createProjectRootLanguageDiagrams(
+        resolvedRoot,
+        lang as 'typescript' | 'python' | 'cpp' | 'dart',
+        {
+          format: cliOptions.format,
+          exclude: cliOptions.exclude,
+        }
+      ),
       cliOptions.diagrams
     );
   }
@@ -223,6 +261,50 @@ export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): Di
   }
 
   return diagrams.filter((d) => levels.includes(d.level ?? 'class'));
+}
+
+/**
+ * Detect the single language for a list of `--sources` (no `--lang`).
+ *
+ * Each source is detected independently: directories via `detectPrimaryLanguage`,
+ * individual files via their extension. Returns the common language, or throws
+ * when sources span multiple distinct languages (so the caller can't silently
+ * parse every source with the first source's plugin — this would misparse the
+ * others and drop them from the scope). Returns `undefined` when nothing is
+ * detectable — the caller falls back to the legacy TypeScript structure
+ * detector.
+ */
+async function detectSourceLanguage(
+  sources: string[],
+  resolvedRoot: string
+): Promise<DetectedLanguage | undefined> {
+  const resolvedSources = sources.map((s) => path.resolve(resolvedRoot, s));
+  const detected = new Set<DetectedLanguage>();
+
+  for (const source of resolvedSources) {
+    const ext = path.extname(source).toLowerCase();
+    if (ext && FILE_EXTENSION_LANGUAGE[ext]) {
+      detected.add(FILE_EXTENSION_LANGUAGE[ext]);
+      continue;
+    }
+    // Directory (or extension-less path): full directory scan. Only a *real*
+    // detection (score > 0) pins a language — the `score: 0` fallback candidate
+    // signals "undetectable" and must not force a parser choice.
+    const primary = await detectPrimaryLanguage(source);
+    if (primary && primary.score > 0) {
+      detected.add(primary.language);
+    }
+  }
+
+  // A single language (including TypeScript) is the only valid routing result.
+  // Two distinct languages (e.g. TS + Dart, or Dart + Python) mean the caller
+  // would parse every source with one plugin, so reject and require --lang.
+  if (detected.size === 0) return undefined;
+  if (detected.size === 1) return [...detected][0];
+  throw new Error(
+    `Mixed source languages detected (${[...detected].sort().join(', ')}). ` +
+      'Pass --lang to select the parser explicitly.'
+  );
 }
 
 /**

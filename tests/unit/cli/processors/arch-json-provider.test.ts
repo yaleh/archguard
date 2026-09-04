@@ -10,6 +10,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import path from 'node:path';
+import os from 'node:os';
+import fs from 'fs-extra';
 import { ArchJsonProvider } from '@/cli/processors/arch-json-provider.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -588,5 +591,121 @@ describe('ArchJsonProvider', () => {
     expect(kind).toBe('derived');
     // parseFiles still called only once (for the parent)
     expect(mockParseFiles).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---- Dart --sources (P1-1): single file and multi-directory all count -------
+
+describe('Dart --sources (P1-1)', () => {
+  const FIXTURE = path.resolve(__dirname, '../../../fixtures/dart');
+
+  it('parses a single-file source and yields its entities', async () => {
+    const provider = new ArchJsonProvider({
+      globalConfig: makeGlobalConfig(),
+      parserRuntime: 'wasm',
+    });
+    const file = path.join(FIXTURE, 'sample.dart');
+    const { archJson } = await provider.get(makeDiagram({ sources: [file], language: 'dart' }), {
+      needsModuleGraph: false,
+    });
+    const names = archJson.entities.map((e) => e.name);
+    expect(names).toContain('Animal');
+    expect(names).toContain('Dog');
+  });
+
+  it('merges entities from every source directory (no silent drop)', async () => {
+    const provider = new ArchJsonProvider({
+      globalConfig: makeGlobalConfig(),
+      parserRuntime: 'wasm',
+    });
+    const { archJson } = await provider.get(makeDiagram({ sources: [FIXTURE], language: 'dart' }), {
+      needsModuleGraph: false,
+    });
+    const names = archJson.entities.map((e) => e.name);
+    // From sample.dart
+    expect(names).toContain('Animal');
+    // From sample_adjacent.dart — proves the second source is not dropped.
+    expect(names).toContain('AdjacentHelper');
+  });
+
+  it('excludes generated/vendored files by default (P1-1)', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-prov-dart-ignore-'));
+    try {
+      await fs.ensureDir(path.join(root, 'lib', 'generated'));
+      await fs.ensureDir(path.join(root, 'lib', 'pull_to_refresh_flutter'));
+      await fs.writeFile(path.join(root, 'lib', 'service.dart'), 'class RealService {}\n');
+      await fs.writeFile(path.join(root, 'lib', 'service.g.dart'), 'class Generated {}\n');
+      await fs.writeFile(path.join(root, 'lib', 'generated', 'l10n.dart'), 'class L10n {}\n');
+      await fs.writeFile(
+        path.join(root, 'lib', 'pull_to_refresh_flutter', 'x.dart'),
+        'class Vendored {}\n'
+      );
+
+      const provider = new ArchJsonProvider({
+        globalConfig: makeGlobalConfig(),
+        parserRuntime: 'wasm',
+      });
+      const { archJson } = await provider.get(makeDiagram({ sources: [root], language: 'dart' }), {
+        needsModuleGraph: false,
+      });
+
+      const names = archJson.entities.map((e) => e.name);
+      expect(names).toContain('RealService');
+      expect(names).not.toContain('Generated');
+      expect(names).not.toContain('L10n');
+      expect(names).not.toContain('Vendored');
+      expect(archJson.sourceFiles).toHaveLength(1);
+      expect(archJson.sourceFiles[0]).toContain('service.dart');
+    } finally {
+      await fs.remove(root);
+    }
+  });
+
+  it('resolves the correct workspace root and package IDs (P1-2)', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-prov-wsroot-'));
+    try {
+      await fs.ensureDir(path.join(root, 'lib'));
+      await fs.writeFile(path.join(root, 'pubspec.yaml'), 'name: myproj\n');
+      await fs.writeFile(path.join(root, 'lib', 'foo.dart'), 'class Foo {}\n');
+
+      const provider = new ArchJsonProvider({
+        globalConfig: makeGlobalConfig(),
+        parserRuntime: 'wasm',
+      });
+      const { archJson } = await provider.get(makeDiagram({ sources: [root], language: 'dart' }), {
+        needsModuleGraph: false,
+      });
+
+      expect(archJson.workspaceRoot).toBe(root);
+      // Entity ID uses the Dart package name from pubspec.yaml.
+      const foo = archJson.entities.find((e) => e.name === 'Foo');
+      expect(foo?.id).toBe('myproj.Foo');
+    } finally {
+      await fs.remove(root);
+    }
+  });
+
+  it('resolves a melos sub-package root from a single file (P1-2)', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'archguard-prov-melos-'));
+    try {
+      await fs.ensureDir(path.join(root, 'packages', 'foo', 'lib'));
+      await fs.writeFile(path.join(root, 'packages', 'foo', 'pubspec.yaml'), 'name: foo\n');
+      const file = path.join(root, 'packages', 'foo', 'lib', 'a.dart');
+      await fs.writeFile(file, 'class A {}\n');
+
+      const provider = new ArchJsonProvider({
+        globalConfig: makeGlobalConfig(),
+        parserRuntime: 'wasm',
+      });
+      const { archJson } = await provider.get(makeDiagram({ sources: [file], language: 'dart' }), {
+        needsModuleGraph: false,
+      });
+
+      expect(archJson.workspaceRoot).toBe(path.join(root, 'packages', 'foo'));
+      const a = archJson.entities.find((e) => e.name === 'A');
+      expect(a?.id).toBe('foo.A');
+    } finally {
+      await fs.remove(root);
+    }
   });
 });
