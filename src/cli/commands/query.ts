@@ -22,6 +22,7 @@ import type { Entity, CycleInfo } from '@/types/index.js';
 import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
 import { HistoryQuery } from '../git-history/history-query.js';
+import { DEFAULT_GOD_CLASS_THRESHOLDS } from '@/core/query/god-class-detector.js';
 import {
   computePackageFanMetrics,
   enrichPackageNodes,
@@ -92,6 +93,13 @@ interface QueryOptions {
   packageFanin?: true;
   packageFanout?: true;
   godPackages?: true;
+
+  // ADR-007 §4: Dart class-level god-class detector (mirrors archguard_detect_god_classes)
+  godClasses?: true;
+  minMethods?: string;
+  minFields?: string;
+  minLoc?: string;
+  minFanIn?: string;
 
   // ADR-007 §4: Git history (shared --target-type flag)
   targetType?: string;
@@ -224,6 +232,23 @@ export function createQueryCommand(): Command {
       .option('--package-fanin', 'List Atlas packages ranked by fan-in (most-depended-on first)')
       .option('--package-fanout', 'List Atlas packages ranked by fan-out (most-dependent-on first)')
       .option('--god-packages', 'Detect Atlas packages that violate single-responsibility')
+      .option('--god-classes', 'Detect Dart classes that violate single-responsibility (Dart-only)')
+      .option(
+        '--min-methods <n>',
+        `God-class method-count threshold (default: ${DEFAULT_GOD_CLASS_THRESHOLDS.minMethods}; 0 disables)`
+      )
+      .option(
+        '--min-fields <n>',
+        `God-class field-count threshold (default: ${DEFAULT_GOD_CLASS_THRESHOLDS.minFields}; 0 disables)`
+      )
+      .option(
+        '--min-loc <n>',
+        `God-class LOC threshold (default: ${DEFAULT_GOD_CLASS_THRESHOLDS.minLoc}; 0 disables)`
+      )
+      .option(
+        '--min-fan-in <n>',
+        `God-class fan-in threshold (default: ${DEFAULT_GOD_CLASS_THRESHOLDS.minFanIn}; 0 disables)`
+      )
 
       // ADR-007 §4: Git history (mirrors archguard_get_change_* / get_ownership)
       .option(
@@ -534,6 +559,26 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
         .filter((n) => n.reasons.length > 0);
       result = { godPackages };
       if (!isJson) console.log(JSON.stringify(result, null, 2));
+    } else if (opts.godClasses) {
+      if (scopeEntry.language !== 'dart') {
+        console.error(
+          `Error: --god-classes is Dart-only. The analyzed scope is "${scopeEntry.language}". ` +
+            'Run archguard analyze with --lang dart first.'
+        );
+        process.exit(1);
+      }
+      const godClasses = engine.detectGodClasses({
+        minMethods: parseGodClassThreshold(opts.minMethods, '--min-methods'),
+        minFields: parseGodClassThreshold(opts.minFields, '--min-fields'),
+        minLoc: parseGodClassThreshold(opts.minLoc, '--min-loc'),
+        minFanIn: parseGodClassThreshold(opts.minFanIn, '--min-fan-in'),
+      });
+      result = {
+        language: 'dart',
+        totalEntities: extensionAccessor.getEntities().length,
+        godClasses,
+      };
+      if (!isJson) console.log(JSON.stringify(result, null, 2));
     } else if (opts.changeContext || opts.cochange || opts.changeRisk || opts.ownership) {
       const target = opts.changeContext ?? opts.cochange ?? opts.changeRisk ?? opts.ownership;
       const targetType = (opts.targetType ?? 'file') as 'file' | 'package';
@@ -643,6 +688,7 @@ export function validateQueryOptions(opts: QueryOptions): void {
     opts.packageFanin,
     opts.packageFanout,
     opts.godPackages,
+    opts.godClasses,
     opts.changeContext,
     opts.cochange,
     opts.changeRisk,
@@ -688,6 +734,23 @@ function parseBoundedInt(value: string, flagName: string, min: number, max?: num
     throw new Error(`Invalid ${flagName}: "${value}". Expected an integer${range}.`);
   }
   return parsed;
+}
+
+/**
+ * Parse an optional god-class threshold CLI flag. Returns undefined when the
+ * flag is absent (the QueryEngine then applies its default); throws on any
+ * invalid value. Accepts only a non-negative decimal integer: an empty or
+ * whitespace-only string, a negative, a decimal, a boolean, `null`, `NaN`,
+ * `Infinity`, non-numeric text, and unsafe integers are all rejected — the same
+ * semantic value domain the MCP tool enforces (ADR-007 CLI/MCP parity).
+ */
+function parseGodClassThreshold(raw: string | undefined, flag: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed) || !Number.isSafeInteger(Number(trimmed))) {
+    throw new Error(`Invalid ${flag}: "${raw}". Expected a non-negative integer.`);
+  }
+  return Number(trimmed);
 }
 
 function projectEntitiesForOutput(

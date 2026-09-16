@@ -5,6 +5,7 @@ import { JavaPlugin } from '@/plugins/java/index.js';
 import { PythonPlugin } from '@/plugins/python/index.js';
 import { CppPlugin } from '@/plugins/cpp/index.js';
 import { KotlinPlugin } from '@/plugins/kotlin/index.js';
+import { DartPlugin } from '@/plugins/dart/index.js';
 
 describe('createLanguagePlugin', () => {
   it.each([
@@ -13,6 +14,7 @@ describe('createLanguagePlugin', () => {
     ['python', PythonPlugin],
     ['cpp', CppPlugin],
     ['kotlin', KotlinPlugin],
+    ['dart', DartPlugin],
   ] as const)(
     'constructs the %s plugin through resolver-selected WASM',
     async (language, PluginClass) => {
@@ -21,7 +23,7 @@ describe('createLanguagePlugin', () => {
     }
   );
 
-  it.each([GoPlugin, JavaPlugin, PythonPlugin, CppPlugin, KotlinPlugin])(
+  it.each([GoPlugin, JavaPlugin, PythonPlugin, CppPlugin, KotlinPlugin, DartPlugin])(
     'rejects omitted backends at runtime for %s',
     (PluginClass) => {
       expect(() => Reflect.construct(PluginClass, [])).toThrow(

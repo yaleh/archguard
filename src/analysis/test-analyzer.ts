@@ -15,6 +15,7 @@ import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
 import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
 import { TestCoverageMapper } from './test-coverage-mapper.js';
 import { TestIssueDetector } from './test-issue-detector.js';
+import { DART_SCAN_IGNORE } from '@/plugins/dart/ignore-patterns.js';
 
 export interface TestAnalyzerOptions {
   workspaceRoot: string;
@@ -132,6 +133,26 @@ export class TestAnalyzer {
         ]);
       }
       return uniqueStrings([...allJavaFiles, ...extraMatches]);
+    }
+
+    // Dart: scan the whole workspace (melos monorepo) but exclude build output,
+    // the .dart_tool cache, coverage reports, generated sources, and vendored
+    // libraries — a bare `**/*_test.dart` glob otherwise sweeps in
+    // build_runner/.g.dart artifacts. The ignore list is shared with the Dart
+    // plugin so the two never drift apart.
+    if (plugin.metadata.fileExtensions.includes('.dart')) {
+      const allDartFiles = await globby(`${workspaceRoot}/**/*.dart`, {
+        onlyFiles: true,
+        absolute: true,
+        ignore: DART_SCAN_IGNORE,
+      });
+      if (plugin.isTestFile) {
+        return uniqueStrings([
+          ...allDartFiles.filter((f) => plugin.isTestFile(f, patternConfig)),
+          ...extraMatches,
+        ]);
+      }
+      return uniqueStrings([...allDartFiles, ...extraMatches]);
     }
 
     // Default: walk candidate dirs and filter with plugin.isTestFile

@@ -145,6 +145,7 @@ export class PluginRegistry {
     { file: 'go.mod', plugin: 'golang' },
     { file: 'package.json', plugin: 'typescript' },
     { file: 'tsconfig.json', plugin: 'typescript' },
+    { file: 'pubspec.yaml', plugin: 'dart' },
     { file: 'build.gradle.kts', plugin: 'kotlin' },
     { file: 'settings.gradle.kts', plugin: 'kotlin' },
     { file: 'pom.xml', plugin: 'java' },

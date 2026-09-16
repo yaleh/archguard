@@ -56,6 +56,10 @@ export class TestCoverageMapper {
           .replace(/Tests?$/, '')
           .replace(/^Test(?=[A-Z])/, '');
       }
+      // Dart convention: foo_test.dart → foo
+      if (testNameWithoutExt === testBasename && testBasename.endsWith('_test.dart')) {
+        testNameWithoutExt = testBasename.replace(/_test\.dart$/, '');
+      }
 
       // TypeScript/JS directory convention (confidence weight 0.25):
       // A test file in tests/unit/analysis/fim/ is linked to ALL entities in src/analysis/fim/.

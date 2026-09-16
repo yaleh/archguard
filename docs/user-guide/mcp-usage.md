@@ -812,6 +812,28 @@ The tool caps `topDependents` and `topDependencies` at 5 entries each to ensure 
 
 ---
 
+## God-class thresholds (CLI / MCP shared semantics)
+
+`archguard_detect_god_classes` and `query --god-classes` are two entry points
+into the same core computation and must accept the **same semantic value
+domain** for the `minMethods` / `minFields` / `minLoc` / `minFanIn` thresholds
+(ADR-007 CLI/MCP parity). The transport types differ — MCP takes JSON numbers,
+the CLI takes strings — but the accepted values are identical:
+
+| Input | Accepted? |
+|-------|-----------|
+| omitted (defaults apply) | yes |
+| `0` (disables the dimension) | yes |
+| positive integer ≤ `Number.MAX_SAFE_INTEGER` | yes |
+| negative, decimal, empty/whitespace, boolean, `null`, `NaN`, `Infinity`, non-numeric string, unsafe integer | **rejected** |
+
+The MCP tool enforces this with a strict `z.number().int().min(0).max(MAX_SAFE_INTEGER)`
+schema (no string coercion), and the CLI trims the raw string then accepts only
+a non-negative decimal integer that is a safe integer. Keep the two in lockstep
+when adding or changing thresholds.
+
+---
+
 ## Related
 
 - [Architecture Checking Scenarios](./architecture-checking-scenarios.md)

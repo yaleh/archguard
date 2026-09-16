@@ -58,7 +58,8 @@ export async function loadPluginForLanguage(
     language === 'java' ||
     language === 'python' ||
     language === 'cpp' ||
-    language === 'kotlin'
+    language === 'kotlin' ||
+    language === 'dart'
   ) {
     plugin = await createLanguagePlugin(language, parserRuntime);
   } else {
@@ -271,7 +272,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   }
 
   let persistedScopeKeys: string[] = [];
-  let hasArtifactFailures = results.some((r) => !r.success);
+  // Parser diagnostics produce usable but incomplete output. Keep the result
+  // visible, while making the CLI/CI status non-zero for a degraded analysis.
+  let hasArtifactFailures = results.some((r) => !r.success || (r.diagnostics?.length ?? 0) > 0);
   const queryScopes = processor.getQuerySourceGroups();
   if (queryScopes.length > 0) {
     try {

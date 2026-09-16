@@ -10,6 +10,7 @@ const {
   mockCreateProjectRoot,
   mockPlanDefault,
   mockDetectProjectLanguages,
+  mockDetectPrimaryLanguage,
 } = vi.hoisted(() => ({
   mockDetectKotlin: vi
     .fn()
@@ -38,6 +39,7 @@ const {
     .fn()
     .mockResolvedValue([{ name: 'default/overview/package', sources: ['/src'], level: 'package' }]),
   mockDetectProjectLanguages: vi.fn().mockResolvedValue([{ language: 'typescript', score: 1 }]),
+  mockDetectPrimaryLanguage: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/cli/utils/kotlin-project-structure-detector.js', () => ({
@@ -58,6 +60,7 @@ vi.mock('@/cli/utils/default-scope-planner.js', () => ({
 }));
 vi.mock('@/cli/utils/project-language-detector.js', () => ({
   detectProjectLanguages: mockDetectProjectLanguages,
+  detectPrimaryLanguage: mockDetectPrimaryLanguage,
 }));
 
 import {
@@ -136,6 +139,7 @@ describe('normalizeToDiagrams — with sources', () => {
     mockCreateProjectRoot.mockReturnValue([
       { name: 'root/overview/package', sources: ['/src'], level: 'package' },
     ]);
+    mockDetectPrimaryLanguage.mockResolvedValue(null);
   });
 
   it('routes kotlin → detectKotlinProjectStructure', async () => {
@@ -178,6 +182,22 @@ describe('normalizeToDiagrams — with sources', () => {
     expect(result.length).toBeGreaterThan(0);
   });
 
+  it('auto-detected non-typescript language routes without --lang (dart)', async () => {
+    mockDetectPrimaryLanguage.mockResolvedValue({
+      language: 'dart',
+      score: 3,
+      evidence: ['markers: pubspec.yaml'],
+      roots: ['/src'],
+    });
+    await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/src'], lang: undefined }),
+      root
+    );
+    expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
+    expect(mockDetectProject).not.toHaveBeenCalled();
+  });
+
   it('typescript routes to createProjectRootLanguageDiagrams (not the registry)', async () => {
     await normalizeToDiagrams(
       makeConfig(),
@@ -209,6 +229,74 @@ describe('normalizeToDiagrams — with sources', () => {
     expect(result).toHaveLength(1);
     expect(result[0].languageSpecific?.atlas).toBeDefined();
     expect(mockDetectKotlin).not.toHaveBeenCalled();
+  });
+});
+
+// ── multi-source language routing (regression) ──────────────────────────────
+
+describe('normalizeToDiagrams — multi-source routing', () => {
+  const root = '/project';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCreateProjectRoot.mockReturnValue([
+      { name: 'root/overview/package', sources: ['/src'], level: 'package' },
+    ]);
+    mockDetectProject.mockResolvedValue([
+      { name: 'ts/overview/package', sources: ['/src'], level: 'package', language: 'typescript' },
+    ]);
+  });
+
+  it('forwards the complete sources array (not just sources[0])', async () => {
+    mockDetectPrimaryLanguage.mockResolvedValue({
+      language: 'dart',
+      score: 3,
+      evidence: ['markers: pubspec.yaml'],
+      roots: ['/src'],
+    });
+    await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/src', '/lib'], lang: undefined }),
+      root
+    );
+    expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
+    const [projectRootArg, langArg, optsArg] = mockCreateProjectRoot.mock.calls[0];
+    expect(projectRootArg).toBe(root);
+    expect(langArg).toBe('dart');
+    expect(optsArg.sources).toEqual(['/src', '/lib']);
+  });
+
+  it('rejects mixed TS + Dart sources instead of silently picking Dart', async () => {
+    // A .ts file and a .dart file: two distinct languages must throw.
+    await expect(
+      normalizeToDiagrams(
+        makeConfig(),
+        makeOptions({ sources: ['/src/a.ts', '/src/b.dart'], lang: undefined }),
+        root
+      )
+    ).rejects.toThrow(/Mixed source languages detected/);
+    expect(mockCreateProjectRoot).not.toHaveBeenCalled();
+  });
+
+  it('rejects two distinct non-TS languages', async () => {
+    await expect(
+      normalizeToDiagrams(
+        makeConfig(),
+        makeOptions({ sources: ['/src/a.dart', '/src/b.py'], lang: undefined }),
+        root
+      )
+    ).rejects.toThrow(/Mixed source languages detected/);
+  });
+
+  it('routes repeated same-language sources without error', async () => {
+    // Two .dart files: single language → no throw, sources forwarded.
+    await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/src/a.dart', '/src/b.dart'], lang: undefined }),
+      root
+    );
+    expect(mockCreateProjectRoot).toHaveBeenCalledOnce();
+    expect(mockCreateProjectRoot.mock.calls[0][2].sources).toEqual(['/src/a.dart', '/src/b.dart']);
   });
 });
 

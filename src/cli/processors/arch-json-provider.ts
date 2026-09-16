@@ -30,6 +30,7 @@ import {
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
 import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { discoverDartSourceFiles, resolveDartWorkspaceRoot } from './dart-source-discovery.js';
 import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import path from 'path';
@@ -209,7 +210,8 @@ export class ArchJsonProvider {
     if (
       diagram.language === 'python' ||
       diagram.language === 'java' ||
-      diagram.language === 'kotlin'
+      diagram.language === 'kotlin' ||
+      diagram.language === 'dart'
     ) {
       const archJson = await this.registerDeferred(
         diagram.sources,
@@ -406,7 +408,7 @@ export class ArchJsonProvider {
   }
 
   private async parseProjectWithPool(
-    language: 'go' | 'java' | 'python' | 'cpp' | 'kotlin',
+    language: 'go' | 'java' | 'python' | 'cpp' | 'kotlin' | 'dart',
     workspaceRoot: string,
     config: import('@/core/interfaces/parser.js').ParseConfig,
     fileGlobs: string[]
@@ -542,9 +544,46 @@ export class ArchJsonProvider {
       workspaceRoot,
       excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
     };
-    if (pluginName === 'python' || pluginName === 'java' || pluginName === 'kotlin') {
+
+    // Dart: --sources may be a single file or several directories. Collect every
+    // .dart file (default ignore rules merged) and resolve the REAL workspace
+    // root (nearest pubspec.yaml), so pubspec/package resolution and entity IDs
+    // are not skewed by deriving the root from the first file.
+    if (pluginName === 'dart') {
+      const files = await discoverDartSourceFiles(diagram.sources, {
+        exclude: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      });
+      if (files.length === 0) {
+        throw new Error(`No Dart files found in sources: ${diagram.sources.join(', ')}`);
+      }
+      const workspaceRoot = resolveDartWorkspaceRoot(diagram.sources);
+      const registryPlugin = this.registry?.getByName('dart');
+      const plugin =
+        registryPlugin ?? (await createLanguagePlugin('dart', this.parserRuntimeOptions()));
+
+      await plugin.initialize({ workspaceRoot });
+      if (plugin.metadata?.customEntityTypes) {
+        for (const decl of plugin.metadata.customEntityTypes) {
+          globalEntityTypeRegistry.register(decl);
+        }
+      }
+      return plugin.parseFiles(files, workspaceRoot);
+    }
+
+    if (
+      pluginName === 'python' ||
+      pluginName === 'java' ||
+      pluginName === 'kotlin' ||
+      pluginName === 'dart'
+    ) {
       const glob =
-        pluginName === 'python' ? ['**/*.py'] : pluginName === 'java' ? ['**/*.java'] : ['**/*.kt'];
+        pluginName === 'python'
+          ? ['**/*.py']
+          : pluginName === 'java'
+            ? ['**/*.java']
+            : pluginName === 'dart'
+              ? ['**/*.dart']
+              : ['**/*.kt'];
       const pooled = await this.parseProjectWithPool(pluginName, workspaceRoot, config, glob);
       if (pooled) return pooled;
     }

@@ -20,6 +20,7 @@ const SNIPPETS: Record<ParserLanguage, { code: string; rootType: string }> = {
   python: { code: 'def f():\n    pass\n', rootType: 'module' },
   cpp: { code: 'int main() { return 0; }\n', rootType: 'translation_unit' },
   kotlin: { code: 'fun main() {}\n', rootType: 'source_file' },
+  dart: { code: 'class A {}\n', rootType: 'program' },
 };
 
 const ALL_LANGUAGES = Object.keys(SNIPPETS) as ParserLanguage[];

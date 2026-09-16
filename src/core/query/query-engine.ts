@@ -18,6 +18,8 @@ import { ArchMetrics } from './arch-metrics.js';
 import { ExtensionAccessor } from './extension-accessor.js';
 import { EntityQueryService } from './entity-query-service.js';
 import { RelationQueryService } from './relation-query-service.js';
+import { detectGodClasses, DEFAULT_GOD_CLASS_THRESHOLDS } from './god-class-detector.js';
+import type { GodClassEntry, GodClassThresholds } from './god-class-detector.js';
 export type { PackageStatEntry, PackageStatMeta, PackageStatsResult } from './arch-metrics.js';
 
 export interface EntitySummary {
@@ -271,6 +273,22 @@ export class QueryEngine {
     topN?: number
   ): import('./arch-metrics.js').PackageStatsResult {
     return this.metrics.getPackageStats(depth, topN);
+  }
+
+  /**
+   * Detect god classes across the scope's entities by composing the pure,
+   * language-agnostic detector with default thresholds resolved here (the
+   * single place defaults live). Callers may override individual thresholds;
+   * unset/undefined dimensions keep their defaults.
+   */
+  detectGodClasses(thresholds?: Partial<GodClassThresholds>): GodClassEntry[] {
+    const t = thresholds ?? {};
+    return detectGodClasses(this.archJson.entities, this.archJson.relations, {
+      minMethods: t.minMethods ?? DEFAULT_GOD_CLASS_THRESHOLDS.minMethods,
+      minFields: t.minFields ?? DEFAULT_GOD_CLASS_THRESHOLDS.minFields,
+      minLoc: t.minLoc ?? DEFAULT_GOD_CLASS_THRESHOLDS.minLoc,
+      minFanIn: t.minFanIn ?? DEFAULT_GOD_CLASS_THRESHOLDS.minFanIn,
+    });
   }
 
   /** Project a full Entity to a compact EntitySummary (no members array). */

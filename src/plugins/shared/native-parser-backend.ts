@@ -14,6 +14,11 @@ const GRAMMAR_MODULES: Record<ParserLanguage, string> = {
   python: 'tree-sitter-python',
   cpp: 'tree-sitter-cpp',
   kotlin: '@tree-sitter-grammars/tree-sitter-kotlin',
+  // Dart is WASM-only: the legacy `tree-sitter-dart` native binding is ABI 13
+  // (nan + node-gyp) and is rejected by tree-sitter 0.25. It is registered here
+  // only so a forced-native policy surfaces an actionable error instead of an
+  // opaque `undefined` module resolution.
+  dart: 'tree-sitter-dart',
 };
 
 /** Package specifier of the native grammar module for a language (test/probe reuse). */

@@ -55,7 +55,15 @@ export {
 /**
  * Supported programming languages
  */
-export type SupportedLanguage = 'typescript' | 'go' | 'java' | 'python' | 'rust' | 'cpp' | 'kotlin';
+export type SupportedLanguage =
+  | 'typescript'
+  | 'go'
+  | 'java'
+  | 'python'
+  | 'rust'
+  | 'cpp'
+  | 'kotlin'
+  | 'dart';
 
 /**
  * Module structure for organizing entities
@@ -80,6 +88,13 @@ export interface ArchJSON {
   metadata?: Record<string, unknown>;
   readonly workspaceRoot?: string;
 
+  /**
+   * Per-file parse degradation (Dart, and any language that surfaces extractor
+   * or syntax failures). Present only when at least one file degraded; lets CLI/
+   * MCP consumers distinguish "analysed cleanly" from "partial result".
+   */
+  readonly diagnostics?: readonly FileParseDiagnostic[];
+
   // Type-safe extensions (ADR-002)
   extensions?: import('./extensions/index.js').ArchJSONExtensions;
 
@@ -98,6 +113,14 @@ export interface ArchJSON {
 
 /** Current ArchJSON schema version. Increment minor on non-breaking field additions. */
 export const ARCHJSON_SCHEMA_VERSION = '1.1' as const;
+
+/** A per-file parse degradation record surfaced on ArchJSON.diagnostics. */
+export interface FileParseDiagnostic {
+  readonly filePath: string;
+  /** `syntax_error` (tree-sitter ERROR node) or `extract_error` (extractor threw). */
+  readonly kind: 'syntax_error' | 'extract_error';
+  readonly message: string;
+}
 
 /**
  * Known (built-in) entity types in the architecture.

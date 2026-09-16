@@ -1,6 +1,6 @@
 # ArchGuard
 
-ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), Python (beta), C++ (beta), and Kotlin/Android (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
+ArchGuard analyzes source code to extract architectural insights and generates **Mermaid diagrams** at multiple levels of detail. It supports TypeScript (stable), Go (stable), Java (beta), Python (beta), C++ (beta), Kotlin/Android (beta), and Dart (beta) through a plugin system, and exposes query and MCP workflows for architecture inspection.
 
 ## Screenshots
 
@@ -16,7 +16,7 @@ ArchGuard analyzes source code to extract architectural insights and generates *
 ## Features
 
 - **AI-Native MCP Interface**: Query architecture in natural language from Claude Code or Codex — analyze projects, trace dependencies, find implementers, detect cycles
-- **Multi-Language Support**: TypeScript, Go, Java, Python, C++, Kotlin/Android via plugin system
+- **Multi-Language Support**: TypeScript, Go, Java, Python, C++, Kotlin/Android, Dart via plugin system
 - **Multi-Level Diagrams**: Package (high-level), Class (default), Method (low-level)
 - **Go Architecture Atlas**: 4-layer visualization — package graph, capability graph, goroutine topology, flow graph
 - **Kotlin/Android Support**: Auto-detect Kotlin projects, parse `build.gradle.kts` / `settings.gradle.kts`, and plan multi-module diagrams
@@ -234,7 +234,7 @@ archguard analyze [options]
 
 - `-s, --sources <paths...>` - Source directories; triggers auto-detection and multi-diagram generation
 - `--diagrams <levels...>` - Filter by level: `package` | `class` | `method` (language-dependent)
-- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` | `cpp` | `kotlin` (auto-detected)
+- `--lang <language>` - Language: `typescript` | `go` | `java` | `python` | `cpp` | `kotlin` | `dart` (auto-detected)
 - `--config <path>` - Config file path (default: `archguard.config.json`)
 
 **Output:**
@@ -423,6 +423,7 @@ archguard cache path    # Show cache directory
 | Python         | Beta   | tree-sitter               | Classes, functions, pip/Poetry deps                 |
 | C++            | Beta   | tree-sitter               | Structs, classes, inheritance, CMake deps           |
 | Kotlin/Android | Beta   | tree-sitter               | Classes, interfaces, top-level functions, `build.gradle.kts` deps, `settings.gradle.kts` multi-module planning, static test analysis |
+| Dart           | Beta   | tree-sitter (WASM)        | Classes, abstract classes, enums, extensions, mixins, inheritance/implementation/composition relations, static test analysis, `pubspec.yaml` detection |
 
 ### Go Architecture Atlas
 
@@ -659,7 +660,8 @@ archguard/
 │   │   ├── java/            # Beta
 │   │   ├── python/          # Beta
 │   │   ├── cpp/             # Beta (tree-sitter + CMake)
-│   │   └── kotlin/          # Beta (tree-sitter + build.gradle.kts)
+│   │   ├── kotlin/          # Beta (tree-sitter + build.gradle.kts)
+│   │   └── dart/            # Beta (tree-sitter WASM + pubspec.yaml)
 │   └── types/               # Core types (config, ArchJSON, extensions)
 ├── tests/
 │   ├── unit/                # Unit tests

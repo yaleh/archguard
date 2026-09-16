@@ -28,6 +28,7 @@ const GRAMMAR_WASM_FILES: Record<ParserLanguage, string> = {
   python: 'tree-sitter-python.wasm',
   cpp: 'tree-sitter-cpp.wasm',
   kotlin: 'tree-sitter-kotlin.wasm',
+  dart: 'tree-sitter-dart.wasm',
 };
 
 const RUNTIME_WASM_FILE = 'tree-sitter.wasm';

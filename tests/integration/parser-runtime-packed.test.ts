@@ -41,6 +41,7 @@ import { JavaPlugin } from '@/plugins/java/index.js';
 import { PythonPlugin } from '@/plugins/python/index.js';
 import { CppPlugin } from '@/plugins/cpp/index.js';
 import { KotlinPlugin } from '@/plugins/kotlin/index.js';
+import { DartPlugin } from '@/plugins/dart/index.js';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const FIXTURES = path.join(repoRoot, 'tests', 'fixtures');
@@ -52,7 +53,11 @@ const CASES: Array<{ language: ParserLanguage; filePath: string }> = [
   { language: 'python', filePath: path.join(FIXTURES, 'python/simple-class.py') },
   { language: 'cpp', filePath: path.join(WASM_PARITY_FIXTURES, 'sample.cpp') },
   { language: 'kotlin', filePath: path.join(WASM_PARITY_FIXTURES, 'sample.kt') },
+  { language: 'dart', filePath: path.join(FIXTURES, 'dart/sample.dart') },
 ];
+
+/** Dart is WASM-only, so the native-injection parity check excludes it. */
+const NATIVE_CASES = CASES.filter((c) => c.language !== 'dart');
 
 const NATIVE_PACKAGES = [
   'tree-sitter',
@@ -76,6 +81,7 @@ const cases = [
   { language: 'python', filePath: path.join(fixturesRoot, 'python/simple-class.py') },
   { language: 'cpp', filePath: path.join(wasmFixtures, 'sample.cpp') },
   { language: 'kotlin', filePath: path.join(wasmFixtures, 'sample.kt') },
+  { language: 'dart', filePath: path.join(fixturesRoot, 'dart/sample.dart') },
 ];
 const pluginModules = {
   go: ['dist/plugins/golang/index.js', 'GoPlugin'],
@@ -83,6 +89,7 @@ const pluginModules = {
   python: ['dist/plugins/python/index.js', 'PythonPlugin'],
   cpp: ['dist/plugins/cpp/index.js', 'CppPlugin'],
   kotlin: ['dist/plugins/kotlin/index.js', 'KotlinPlugin'],
+  dart: ['dist/plugins/dart/index.js', 'DartPlugin'],
 };
 
 const results = {};
@@ -130,13 +137,18 @@ function pluginFor(language: ParserLanguage, backend: ParserBackend) {
       return new CppPlugin(backend);
     case 'kotlin':
       return new KotlinPlugin(backend);
+    case 'dart':
+      return new DartPlugin(backend);
   }
 }
 
 /** Expected ArchJSON computed in-process with the given backend. */
-async function expectedArchJson(backend: ParserBackend): Promise<Record<ParserLanguage, string>> {
+async function expectedArchJson(
+  backend: ParserBackend,
+  cases = CASES
+): Promise<Record<ParserLanguage, string>> {
   const result = {} as Record<ParserLanguage, string>;
-  for (const { language, filePath } of CASES) {
+  for (const { language, filePath } of cases) {
     const plugin = pluginFor(language, backend);
     await plugin.initialize({ workspaceRoot: path.dirname(filePath) } as never);
     try {
@@ -255,9 +267,9 @@ describe('packed WASM-only install', () => {
 
 describe('packed install with trusted native module root', () => {
   it('selects native per language in auto mode and passes all language parses', async () => {
-    const expected = await expectedArchJson(nativeParserBackend);
+    const expected = await expectedArchJson(nativeParserBackend, NATIVE_CASES);
     const results = runDriver(trustedRoot);
-    for (const { language } of CASES) {
+    for (const { language } of NATIVE_CASES) {
       const result = results[language];
       expect(result, `${language} result missing`).toBeDefined();
       expect(result.runtime, `${language} runtime`).toBe('native');

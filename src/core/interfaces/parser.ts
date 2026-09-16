@@ -79,8 +79,12 @@ export interface IParser {
    * Allows targeted analysis of specific files without full project scan.
    *
    * @param filePaths - Array of absolute file paths to parse
+   * @param workspaceRoot - Optional explicit analysis root (defaults to the
+   *   first file's directory when omitted). Callers that know the real project
+   *   root (e.g. the CLI/MCP provider) MUST pass it so pubspec/package
+   *   resolution and entity IDs are not skewed.
    * @returns Promise resolving to ArchJSON representation of the files
    * @throws {ParseError} When parsing fails
    */
-  parseFiles?(filePaths: string[]): Promise<ArchJSON>;
+  parseFiles?(filePaths: string[], workspaceRoot?: string): Promise<ArchJSON>;
 }

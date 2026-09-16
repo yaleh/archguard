@@ -82,6 +82,14 @@ function displayResults(results: DiagramResult[], config: Config): void {
       if (result.stats) {
         console.log(`    Entities: ${result.stats.entities}, Relations: ${result.stats.relations}`);
       }
+      if (result.diagnostics && result.diagnostics.length > 0) {
+        console.warn(`    Status: degraded (${result.diagnostics.length} parse diagnostic(s))`);
+        for (const diagnostic of result.diagnostics) {
+          console.warn(
+            `      - ${diagnostic.filePath} [${diagnostic.kind}]: ${diagnostic.message}`
+          );
+        }
+      }
       if (result.paths?.png) {
         console.log(`    PNG: ${result.paths.png}`);
       } else if (result.paths?.json) {
@@ -115,7 +123,7 @@ export function createAnalyzeCommand(): Command {
   return (
     new Command('analyze')
       .description(
-        'Analyze source code and generate architecture diagrams (TypeScript, Go, Java, Python, C++, Kotlin)'
+        'Analyze source code and generate architecture diagrams (TypeScript, Go, Java, Python, C++, Kotlin, Dart)'
       )
 
       // ========== Configuration File ==========
@@ -132,7 +140,7 @@ export function createAnalyzeCommand(): Command {
       )
       .option(
         '--lang <language>',
-        'Language plugin: typescript|go|java|python|cpp|kotlin (default: auto-detect)'
+        'Language plugin: typescript|go|java|python|cpp|kotlin|dart (default: auto-detect)'
       )
 
       // ========== Global Config Overrides ==========

@@ -53,6 +53,7 @@ const PROBE_FIXTURES: Record<ParserLanguage, { code: string; rootType: string }>
   python: { code: 'x = 1\n', rootType: 'module' },
   cpp: { code: 'int main() { return 0; }\n', rootType: 'translation_unit' },
   kotlin: { code: 'fun main() {}\n', rootType: 'source_file' },
+  dart: { code: 'class A {}\n', rootType: 'program' },
 };
 
 function errorMessage(error: unknown): string {
@@ -257,6 +258,41 @@ async function computeSelection(
     const { wasmParserBackend } = await import('./wasm-parser-backend.js');
     return finishSelection(
       { language, policy, runtime: 'wasm', backend: wasmParserBackend },
+      source,
+      options
+    );
+  }
+
+  // Dart is WASM-only: the legacy `tree-sitter-dart` native binding is ABI 13
+  // and incompatible with tree-sitter 0.25. `auto` must select WASM without a
+  // doomed native probe; `native` must fail immediately with an honest message
+  // (instead of advising the user to install a package that cannot work).
+  if (language === 'dart') {
+    if (policy === 'native') {
+      throw new ParserInitializationError(
+        language,
+        'native',
+        new Error(
+          'Dart has no native parser backend: the tree-sitter-dart grammar is ' +
+            'ABI 13 and incompatible with tree-sitter 0.25. Use ' +
+            'ARCHGUARD_PARSER_RUNTIME=auto|wasm for Dart (WASM is always used).'
+        )
+      );
+    }
+    const { wasmParserBackend } = await import('./wasm-parser-backend.js');
+    // Auto mode downgraded Dart to WASM; record the reason so the diagnostic
+    // contract ("fallbackReason set on any auto→WASM fallback") holds for Dart
+    // too — the cause differs from a probe failure but the signal is the same.
+    return finishSelection(
+      {
+        language,
+        policy,
+        runtime: 'wasm',
+        backend: wasmParserBackend,
+        fallbackReason:
+          'Dart has no native parser backend (tree-sitter-dart is ABI 13, ' +
+          'incompatible with tree-sitter 0.25); WASM is always used',
+      },
       source,
       options
     );

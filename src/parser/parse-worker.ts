@@ -29,7 +29,9 @@ async function createParser(): Promise<WorkerParser> {
           ? await import('@/plugins/python/index.js')
           : initData.language === 'cpp'
             ? await import('@/plugins/cpp/index.js')
-            : await import('@/plugins/kotlin/index.js');
+            : initData.language === 'dart'
+              ? await import('@/plugins/dart/index.js')
+              : await import('@/plugins/kotlin/index.js');
   const Plugin =
     'GoAtlasPlugin' in module
       ? module.GoAtlasPlugin
@@ -39,7 +41,9 @@ async function createParser(): Promise<WorkerParser> {
           ? module.PythonPlugin
           : 'CppPlugin' in module
             ? module.CppPlugin
-            : module.KotlinPlugin;
+            : 'DartPlugin' in module
+              ? module.DartPlugin
+              : module.KotlinPlugin;
   const plugin = new Plugin(backend);
   await plugin.initialize({ workspaceRoot: initData.workspaceRoot ?? process.cwd() });
   return plugin;

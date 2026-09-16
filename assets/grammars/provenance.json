@@ -61,6 +61,27 @@
       "licenseFile": "licenses/tree-sitter-kotlin.LICENSE",
       "tarball": "https://registry.npmjs.org/@tree-sitter-grammars/tree-sitter-kotlin/-/tree-sitter-kotlin-1.1.0.tgz",
       "tarballIntegrity": "sha512-vlVXaxEE8t2kpJgfZpa8XVvxcnKw9AYtRTgy7KWjsDmAsadk06RxAT80IXOgGQnmM9i/orQn1nD84gPNUHu6DQ=="
+    },
+    {
+      "asset": "tree-sitter-dart.wasm",
+      "role": "grammar",
+      "source": "git",
+      "repository": "https://github.com/UserNobody14/tree-sitter-dart",
+      "commit": "be07cf7118d3dba06236a3f19541685a68209934",
+      "commitDate": "2026-07-06T22:03:01-06:00",
+      "sourceArchiveUrl": "https://github.com/UserNobody14/tree-sitter-dart/archive/be07cf7118d3dba06236a3f19541685a68209934.tar.gz",
+      "sourceArchiveFormat": "tar.gz",
+      "sourceArchiveSha256": "b126efb8dfeeba8b71f0c6ae1f0cd09cf8b205560786b31d44cc16b283e782f2",
+      "license": "MIT",
+      "licenseFile": "licenses/tree-sitter-dart.LICENSE",
+      "licenseNote": "Rebuilt from git (not the npm tarball): tree-sitter-dart@1.0.0 predates enhanced-enum support (Dart 2.17+). The npm package also declares a stale ISC license while the repo is MIT.",
+      "buildTool": "tree-sitter-cli",
+      "buildToolVersion": "0.25.10",
+      "hostToolchain": {
+        "treeSitterCli": "0.25.10",
+        "node": "v24.18.0"
+      },
+      "buildScript": "scripts/build-dart-grammar-wasm.mjs"
     }
   ]
 }

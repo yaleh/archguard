@@ -108,6 +108,8 @@ export interface DiagramResult {
     relations: number;
     parseTime: number;
   };
+  /** Per-file parse degradation (Dart extract/syntax failures), when present. */
+  diagnostics?: readonly import('@/types/index.js').FileParseDiagnostic[];
   /** Error message (if failed) */
   error?: string;
   /**

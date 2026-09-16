@@ -90,6 +90,7 @@ node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard Go pars
 node dist/cli/index.js analyze -s ./src --lang java
 node dist/cli/index.js analyze -s ./src --lang python
 node dist/cli/index.js analyze -s ./src --lang kotlin
+node dist/cli/index.js analyze -s ./src --lang dart
 ```
 
 #### Multiple Diagram Generation via Config File
@@ -113,7 +114,7 @@ node dist/cli/index.js analyze --diagrams class method
 ### Available Commands
 
 #### analyze
-Analyze TypeScript project and generate architecture diagrams.
+Analyze source code and generate architecture diagrams (multi-language).
 
 **Configuration File**:
 - `--config <path>` - Config file path (default: `archguard.config.json`)
@@ -124,17 +125,39 @@ Analyze TypeScript project and generate architecture diagrams.
 
 **Global Config Overrides**:
 - `-f, --format <type>` - Output format: `mermaid`|`json` (default: `mermaid`)
+- `--work-dir <dir>` - ArchGuard work directory (default: `./.archguard`)
+- `--cache-dir <dir>` - Cache directory (default: `<work-dir>/cache`)
 - `--output-dir <dir>` - Output directory for diagrams (default: `./.archguard/output`; files written directly at `<dir>` when set)
 - `-e, --exclude <patterns...>` - Exclude patterns
 - `--no-cache` - Disable cache
 - `--mermaid-theme <theme>` - Mermaid theme: `default`|`forest`|`dark`|`neutral`
+- `--mermaid-renderer <renderer>` - Mermaid renderer: `isomorphic`|`cli`
 - `-c, --concurrency <num>` - Parallel parsing concurrency (default: CPU cores)
 - `-v, --verbose` - Verbose output
-- `--lang <language>` - Language plugin: `typescript`|`go`|`java`|`python`|`cpp`|`kotlin`
+- `--lang <language>` - Language plugin: `typescript`|`go`|`java`|`python`|`cpp`|`kotlin`|`dart`
 
 **Claude CLI Configuration**:
 - `--cli-command <command>` - Claude CLI command to use (default: `claude`)
 - `--cli-args <args>` - Additional CLI arguments (space-separated)
+
+**Test Analysis**:
+- `--include-tests` - Include test-system analysis (enables `query --test-*` / MCP test tools)
+- `--tests-only` - Only run test analysis (uses cached ArchJSON, skips diagram generation)
+- `--include-git` - Also analyze git history (writes artifacts to `<work-dir>/query/git-history/`)
+
+**Go Architecture Atlas** (only with `--lang go`):
+- `--atlas-layers <layers>` - Comma-separated: `package,capability,goroutine,flow` (default: all)
+- `--atlas-strategy <strategy>` - `none`|`selective`|`full`
+- `--atlas-protocols <protocols>` - Flow protocols: `http,grpc,cli,message,scheduler`
+- `--atlas-entry-pattern <pattern>` - Regex for custom entry-point detection
+- `--atlas-capability-mode <mode>` - `interface` (default) | `full`
+- `--atlas-no-tests` / `--atlas-include-tests` - Test-package inclusion override
+- `--gim` - Write GIM direction hint to `.archguard/gim/direction.json`
+
+**Architecture Health**:
+- `--arch-health` - Compute + persist intrinsic dimension (d_int) to `.archguard/arch-health-history.json`
+- `--drift-base <commit>` - Drift baseline commit; CI gate exit codes (0=ok, 1=drift≥threshold, 2=invalid commit)
+- `--drift-threshold <n>` - Drift gate threshold (default: `3.0`)
 
 #### init
 Initialize configuration file.
@@ -154,6 +177,55 @@ node dist/cli/index.js cache clear
 
 # Show cache statistics
 node dist/cli/index.js cache stats
+```
+
+#### query
+Query entities/relations from a previously-analyzed `.archguard`. One primary option
+per invocation — parity with the MCP tools (ADR-007).
+
+```bash
+# Entity / relation discovery
+node dist/cli/index.js query --entity com.acme.Foo
+node dist/cli/index.js query --deps-of com.acme.Foo --depth 2
+node dist/cli/index.js query --used-by com.acme.Foo
+node dist/cli/index.js query --callers com.acme.Foo --callers-depth 2
+node dist/cli/index.js query --cycles --summary
+
+# Structural discovery / attributes
+node dist/cli/index.js query --type class --high-coupling --threshold 10
+node dist/cli/index.js query --orphans
+node dist/cli/index.js query --attr "level=public"
+node dist/cli/index.js query --package-stats --package-stats-sort-by loc
+node dist/cli/index.js query --list-scopes
+
+# Language / analysis-specific (mirror MCP tools)
+node dist/cli/index.js query --atlas-layer package       # Go Atlas (--lang go)
+node dist/cli/index.js query --god-classes                # Dart only (--lang dart)
+node dist/cli/index.js query --test-patterns              # requires --include-tests
+node dist/cli/index.js query --intrinsic-dimension        # requires --arch-health
+node dist/cli/index.js query --architecture-drift
+node dist/cli/index.js query --cluster-boundary
+node dist/cli/index.js query --change-risk src/main.go    # requires --include-git
+```
+
+#### diff
+Compare two metric snapshots (from `.archguard`):
+```bash
+node dist/cli/index.js diff                                # latest vs previous
+node dist/cli/index.js diff --from <sha-prefix> --to <sha-prefix>
+```
+
+#### check
+Evaluate configured `fitness` rules against the most recent snapshot:
+```bash
+node dist/cli/index.js check
+```
+Exits 1 on violation when `fitness.failOnViolation: true` is set in the config.
+
+#### mcp
+Start the MCP server over stdio (consumed by Claude Code / Codex):
+```bash
+node dist/cli/index.js mcp
 ```
 
 ### Output Formats
@@ -185,6 +257,12 @@ node dist/cli/index.js cache stats
 
 **For Mermaid format**: No external dependencies required (uses built-in isomorphic-mermaid).
 
+**Parser runtime**: Non-TypeScript languages pick a tree-sitter backend per language
+(`src/plugins/shared/`). Default `auto` = native-first with WASM fallback. Force with
+`ARCHGUARD_PARSER_RUNTIME=auto|native|wasm` (legacy alias `ARCHGUARD_PARSER_BACKEND`).
+Native backends need the optional `tree-sitter-*` peer deps; WASM grammars ship in
+`assets/grammars/`.
+
 ## Language Support
 
 ArchGuard supports multiple programming languages through its plugin system:
@@ -197,6 +275,7 @@ ArchGuard supports multiple programming languages through its plugin system:
 | Python | Beta | Tree-sitter, pip/Poetry deps |
 | C++ | Beta | Tree-sitter, CMake deps |
 | Kotlin/Android | Beta | Tree-sitter, build.gradle.kts deps |
+| Dart | Beta | Tree-sitter (WASM), pubspec/melos import resolution |
 
 ### Adding Language Support
 
@@ -215,30 +294,52 @@ node dist/cli/index.js analyze -s ./src --lang go --no-atlas  # Standard mode op
 node dist/cli/index.js analyze -s ./src --lang java
 node dist/cli/index.js analyze -s ./src --lang python
 node dist/cli/index.js analyze -s ./src --lang kotlin
+node dist/cli/index.js analyze -s ./src --lang dart
 ```
 
 ### Plugin Registry
 
 ArchGuard uses a plugin registry to manage language support. Plugins can be:
-- **Built-in**: TypeScript, Go, Java, Python, C++, Kotlin plugins included
+- **Built-in**: TypeScript, Go, Java, Python, C++, Kotlin, Dart plugins included
 - **External**: Load third-party plugins via configuration
 
 See [Plugin Registry Documentation](docs/user-guide/plugin-registry.md) for details.
 
 ## Architecture Overview
 
-Three-layer architecture:
-1. **Parser** (`src/parser/`) - TypeScriptParser → Extractors → ArchJSON
-2. **Mermaid** (`src/mermaid/`) - MermaidGenerator → Renderer → SVG/PNG
-3. **CLI** (`src/cli/`) - Commands (analyze, init, cache) with ErrorHandler
+ArchGuard is a **plugin-based multi-language analyzer**. A single pipeline produces
+ArchJSON; two independent consumers (the `query` CLI + MCP server, and Mermaid
+rendering) read it.
 
-**Data Flow**: `TypeScript → AST → ArchJSON → Mermaid/SVG/PNG`
+**Data Flow**: `source → language plugin → ArchJSON → query engine / Mermaid → diagrams`
 
-**Key Components**:
-- ParallelParser: Concurrent file processing
-- MermaidGenerator: Local Mermaid generation with validation
-- RenderWorkerPool: Parallel diagram rendering via Worker Threads
-- ErrorHandler: Unified error formatting
+**Core subsystems**:
+1. **Language plugins** (`src/plugins/<lang>/`) — one per language, implement
+   `ILanguagePlugin`, registered via `PluginRegistry` (`src/core/plugin-registry.ts`).
+   Languages: typescript, go, java, python, cpp, kotlin, dart.
+   - Non-TypeScript languages share a backend in `src/plugins/shared/`.
+     `resolveParserBackend()` picks a **WASM** grammar (bundled in `assets/grammars/`) or
+     a **native** `tree-sitter-*` peer dep. `ARCHGUARD_PARSER_RUNTIME=auto|native|wasm`
+     forces it (legacy alias: `ARCHGUARD_PARSER_BACKEND`).
+   - **Go Atlas mode** (`--lang go`): 4 layers — package/capability/goroutine/flow.
+     Opt out with `--no-atlas`.
+2. **Parser** (`src/parser/`) — parallel parse workers → ArchJSON (`src/types`).
+3. **Query engine** (`src/core/query/`) — `QueryEngine`, entity/relation query
+   services, `ArchIndex`; loaded from `.archguard` by `src/cli/query/engine-loader.ts`.
+   Shared by the `query` CLI command AND the MCP server (ADR-007: CLI/MCP parity).
+4. **Mermaid** (`src/mermaid/`) — MermaidGenerator → Renderer → SVG/PNG
+   (isomorphic-mermaid, no external deps).
+5. **CLI** (`src/cli/`) — 7 commands (analyze, init, cache, query, mcp, diff, check),
+   the MCP server (`src/cli/mcp/`), and `ErrorHandler` (`src/cli/errors`).
+6. **Analysis layers** (`src/analysis/`) — optional cross-cutting analyses on top of
+   ArchJSON: `fitness/` (rule checks → `check`), `git-history/` (churn/ownership/risk),
+   `jl/` (intrinsic dimension, cluster-boundary, drift), `gim/` (direction hints),
+   `shape-smells/` (god-class, literal dispersion), `test-analysis/` (coverage),
+   `snapshot-store.ts`+`snapshot-diff.ts` (metric snapshots → `diff`).
+
+**Cross-cutting components**: `ParallelParser` (concurrent file processing),
+`RenderWorkerPool` (parallel rendering via Worker Threads), `ErrorHandler`
+(unified error formatting).
 
 ## Configuration
 
@@ -282,12 +383,12 @@ When importing, use these aliases instead of relative paths:
 ## Development Workflow
 
 1. **Make changes** to source code
-2. **Run tests**: `npm test` (ensure 1936+ tests pass)
+2. **Run tests**: `npm test` (ensure the full suite passes)
 3. **Type check**: `npm run type-check`
 4. **Lint**: `npm run lint` and `npm run lint:fix`
 5. **Build**: `npm run build`
 6. **Self-validate**: `node dist/cli/index.js analyze -v`
-7. **After rebuilding with new MCP tools**: Run `/mcp` → Reconnect in Claude Code to reload MCP tool definitions in the current session.
+7. **After adding or changing MCP tools**: rebuild, then in Claude Code run `/mcp` → Reconnect to reload the tool definitions in the current session. New MCP tools are registered in `src/cli/mcp/mcp-server.ts` — each `tools/*.ts` exports a `register*()` function wired into `registerTools()`.
 
 ## Project-Specific Patterns
 

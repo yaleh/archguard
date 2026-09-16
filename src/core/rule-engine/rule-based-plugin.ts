@@ -32,6 +32,7 @@ const SUPPORTED_PARSER_LANGUAGES: ReadonlySet<string> = new Set([
   'python',
   'cpp',
   'kotlin',
+  'dart',
 ]);
 
 export class RuleBasedLanguagePlugin implements ILanguagePlugin {

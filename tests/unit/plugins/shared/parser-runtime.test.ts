@@ -34,6 +34,7 @@ const ROOT_TYPES: Record<ParserLanguage, string> = {
   python: 'module',
   cpp: 'translation_unit',
   kotlin: 'source_file',
+  dart: 'program',
 };
 
 interface LoaderSpy {

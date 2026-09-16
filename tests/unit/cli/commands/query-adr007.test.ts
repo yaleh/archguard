@@ -436,6 +436,128 @@ describe('query --god-packages', () => {
   });
 });
 
+// ── --god-classes ──────────────────────────────────────────────────────────────
+
+const dartScope: QueryScopeEntry = {
+  key: 'dart-scope',
+  label: 'lib (dart)',
+  language: 'dart',
+  kind: 'parsed',
+  sources: ['/project/lib'],
+  entityCount: 1,
+  relationCount: 0,
+  hasAtlasExtension: false,
+};
+
+function makeGodClassEntity(methodCount: number, fieldCount: number, loc: number): Entity {
+  const members: Entity['members'] = [];
+  for (let i = 0; i < methodCount; i++) {
+    members.push({ name: `m${i}`, type: 'method', visibility: 'public' });
+  }
+  for (let i = 0; i < fieldCount; i++) {
+    members.push({ name: `f${i}`, type: 'field', visibility: 'public', fieldType: 'int' });
+  }
+  return {
+    id: 'a.Big',
+    name: 'Big',
+    type: 'class',
+    visibility: 'public',
+    members,
+    sourceLocation: { file: 'lib/a.dart', startLine: 1, endLine: loc },
+  };
+}
+
+function createDartEngine(entities: Entity[]): { engine: QueryEngine; archJson: ArchJSON } {
+  const archJson = makeArchJson({ language: 'dart', entities });
+  const archIndex = buildArchIndex(archJson, 'darthash');
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry: dartScope });
+  return { engine, archJson };
+}
+
+function wrapDartEngine(ctx: { engine: QueryEngine; archJson: ArchJSON }) {
+  return {
+    engine: ctx.engine,
+    extensionAccessor: new ExtensionAccessor(ctx.archJson),
+    scopeEntry: dartScope,
+  };
+}
+
+describe('query --god-classes', () => {
+  it('returns god classes with default thresholds', async () => {
+    const ctx = createDartEngine([makeGodClassEntity(50, 5, 100), makeGodClassEntity(5, 2, 20)]);
+    vi.mocked(loadEngine).mockResolvedValue(wrapDartEngine(ctx));
+    await runQuery('--god-classes', '--format', 'json');
+    expect(process.exit).not.toHaveBeenCalledWith(1);
+    const json = JSON.parse(consoleOutput.join('\n'));
+    expect(json.language).toBe('dart');
+    expect(json.godClasses).toHaveLength(1);
+    expect(json.godClasses[0].name).toBe('Big');
+  });
+
+  it('honors custom thresholds', async () => {
+    const ctx = createDartEngine([makeGodClassEntity(10, 5, 50)]);
+    vi.mocked(loadEngine).mockResolvedValue(wrapDartEngine(ctx));
+    await runQuery(
+      '--god-classes',
+      '--min-methods',
+      '10',
+      '--min-fields',
+      '0',
+      '--min-loc',
+      '0',
+      '--min-fan-in',
+      '0',
+      '--format',
+      'json'
+    );
+    expect(process.exit).not.toHaveBeenCalledWith(1);
+    const json = JSON.parse(consoleOutput.join('\n'));
+    expect(json.godClasses).toHaveLength(1);
+    expect(json.godClasses[0].name).toBe('Big');
+  });
+
+  it('exits 1 for a non-dart scope', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
+    await runQuery('--god-classes');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toMatch(/Dart-only/);
+  });
+
+  it('exits 1 with a clear error for an invalid threshold', async () => {
+    const ctx = createDartEngine([makeGodClassEntity(50, 5, 100)]);
+    vi.mocked(loadEngine).mockResolvedValue(wrapDartEngine(ctx));
+    await runQuery('--god-classes', '--min-methods', '-1');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toMatch(/Invalid --min-methods/);
+  });
+
+  it.each([
+    ['empty string', ''],
+    ['whitespace', '   '],
+    ['decimal', '1.5'],
+    ['boolean', 'true'],
+    ['null', 'null'],
+    ['NaN', 'NaN'],
+    ['Infinity', 'Infinity'],
+    ['scientific notation', '1e5'],
+    ['non-numeric', 'abc'],
+    ['huge unsafe integer', '999999999999999999999999'],
+  ])('exits 1 for invalid threshold "%s"', async (_label, value) => {
+    const ctx = createDartEngine([makeGodClassEntity(50, 5, 100)]);
+    vi.mocked(loadEngine).mockResolvedValue(wrapDartEngine(ctx));
+    await runQuery('--god-classes', '--min-methods', value);
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toMatch(/Invalid --min-methods/);
+  });
+
+  it('exits 1 when analysis data is missing', async () => {
+    vi.mocked(loadEngine).mockRejectedValue(new Error('arch.json missing'));
+    await runQuery('--god-classes');
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(consoleErrorOutput.join('\n')).toMatch(/arch.json missing/);
+  });
+});
+
 // ── --change-context ──────────────────────────────────────────────────────────
 
 describe('query --change-context', () => {
