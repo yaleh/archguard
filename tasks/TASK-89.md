@@ -26,12 +26,12 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/analyze/normalize-to-diagrams.test.ts` exit 0，且新增用例断言：TS 传 2 个不同 source 时返回的 diagrams 覆盖两个 source（sources 集合相等）；两个 source basename 相同时 diagram name 互不相同
-- [ ] 同一测试文件新增用例：`config.diagrams` 存在且传了 sources 时产生 warning（断言 warning 文案包含 "sources"）
-- [ ] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例断言响应含逐 scope 表，且表行数等于 `queryScopesPersisted`
-- [ ] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例断言 `RunAnalysisResult` 携带 scope 条目
-- [ ] 实操：`npm run build` 后对两个不同目录的 fixture 执行 `node dist/cli/index.js analyze -s <dirA> <dirB> --output-dir <tmp>`，读 `<work-dir>/query/manifest.json`，`scopes` 至少含两个 key 且各自 `sources` 指向对应目录
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/analyze/normalize-to-diagrams.test.ts` exit 0，且新增用例断言：TS 传 2 个不同 source 时返回的 diagrams 覆盖两个 source（sources 集合相等）；两个 source basename 相同时 diagram name 互不相同
+- [x] 同一测试文件新增用例：`config.diagrams` 存在且传了 sources 时产生 warning（断言 warning 文案包含 "sources"）
+- [x] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例断言响应含逐 scope 表，且表行数等于 `queryScopesPersisted`
+- [x] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例断言 `RunAnalysisResult` 携带 scope 条目
+- [x] 实操：`npm run build` 后对两个不同目录的 fixture 执行 `node dist/cli/index.js analyze -s <dirA> <dirB> --output-dir <tmp>`，读 `<work-dir>/query/manifest.json`，`scopes` 至少含两个 key 且各自 `sources` 指向对应目录
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
