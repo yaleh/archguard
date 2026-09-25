@@ -216,10 +216,11 @@ describe('archguard_analyze_git — summary: active vs deleted files', () => {
 });
 
 describe('archguard_analyze_git — history window visibility', () => {
-  async function run(params: Record<string, unknown>) {
+  async function run(params: Record<string, unknown>): Promise<string> {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
-    const cb = collectTools(server).get('archguard_analyze_git') as Function;
-    return (await cb({ projectRoot: '/workspace', ...params })).content[0].text as string;
+    const cb = collectTools(server).get('archguard_analyze_git');
+    const result = await cb({ projectRoot: '/workspace', ...params });
+    return result.content[0].text;
   }
 
   it('writes windowStart/windowEnd/truncated into the manifest', async () => {
