@@ -138,4 +138,45 @@ describe('MetricsHistoryWriter', () => {
     const expectedPath = path.join(tmpDir, 'metrics-history.jsonl');
     expect(await fs.pathExists(expectedPath)).toBe(true);
   });
+
+  it('records scopeKey and sources on the entry when provided', async () => {
+    const writer = new MetricsHistoryWriter();
+    const wrote = await writer.append([makePackageSnapshot('pkgA')], tmpDir, {
+      scopeKey: 'abcd1234',
+      sources: ['/tmp/project/src'],
+    });
+
+    expect(wrote).toBe(true);
+    const content = await fs.readFile(path.join(tmpDir, 'metrics-history.jsonl'), 'utf-8');
+    const entry = JSON.parse(content.trim());
+    expect(entry.scopeKey).toBe('abcd1234');
+    expect(entry.sources).toEqual(['/tmp/project/src']);
+  });
+
+  it('omits scopeKey and sources when no scope is given', async () => {
+    const writer = new MetricsHistoryWriter();
+    await writer.append([makePackageSnapshot('pkgA')], tmpDir);
+
+    const content = await fs.readFile(path.join(tmpDir, 'metrics-history.jsonl'), 'utf-8');
+    const entry = JSON.parse(content.trim());
+    expect(entry).not.toHaveProperty('scopeKey');
+    expect(entry).not.toHaveProperty('sources');
+  });
+
+  it('does not write anything when packages is empty', async () => {
+    const writer = new MetricsHistoryWriter();
+    const wrote = await writer.append([], tmpDir, { scopeKey: 'abcd1234' });
+
+    expect(wrote).toBe(false);
+    expect(await fs.pathExists(path.join(tmpDir, 'metrics-history.jsonl'))).toBe(false);
+  });
+
+  it('does not add a line to an existing file when packages is empty', async () => {
+    const writer = new MetricsHistoryWriter();
+    await writer.append([makePackageSnapshot('pkgA')], tmpDir);
+    await writer.append([], tmpDir);
+
+    const content = await fs.readFile(path.join(tmpDir, 'metrics-history.jsonl'), 'utf-8');
+    expect(content.trim().split('\n').filter(Boolean)).toHaveLength(1);
+  });
 });

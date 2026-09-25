@@ -23,6 +23,7 @@ const readGitLogMock = vi.fn();
 const isGitRepoMock = vi.fn();
 const getGitRootMock = vi.fn();
 const loadProjectSemanticsSidecarMock = vi.fn();
+const metricsAppendMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
   ConfigLoader: class {
@@ -41,6 +42,12 @@ vi.mock('@/cli/cache/diagram-manifest.js', () => ({
   readManifest: readManifestMock,
   cleanStaleDiagrams: cleanStaleDiagramsMock,
   writeManifest: writeManifestMock,
+}));
+
+vi.mock('@/cli/metrics-history-writer.js', () => ({
+  MetricsHistoryWriter: class {
+    append = metricsAppendMock;
+  },
 }));
 
 vi.mock('@/cli/query/query-artifacts.js', () => ({
@@ -161,6 +168,8 @@ describe('runAnalysis', () => {
     isGitRepoMock.mockReset();
     getGitRootMock.mockReset();
     loadProjectSemanticsSidecarMock.mockReset();
+    metricsAppendMock.mockReset();
+    metricsAppendMock.mockResolvedValue(true);
 
     baseConfig.projectSemantics = undefined;
     loadMock.mockResolvedValue({
@@ -515,6 +524,76 @@ describe('runAnalysis', () => {
         reporter: silentReporter(),
       })
     ).rejects.toThrow(/project-semantics\.json/);
+  });
+
+  describe('runAnalysis — metrics history snapshot', () => {
+    function cyclicArchJson(): ArchJSON {
+      const entity = (id: string, name: string) => ({
+        id,
+        name,
+        type: 'class',
+        visibility: 'public',
+        members: [],
+        sourceLocation: { file: `${id}.ts`, startLine: 1, endLine: 2 },
+      });
+      return {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '2026-03-13T00:00:00Z',
+        sourceFiles: [],
+        entities: [entity('pkgA.A', 'A'), entity('pkgB.B', 'B'), entity('pkgC.C', 'C')],
+        relations: [
+          { id: 'r1', type: 'dependency', source: 'pkgA.A', target: 'pkgB.B' },
+          { id: 'r2', type: 'dependency', source: 'pkgB.B', target: 'pkgA.A' },
+          { id: 'r3', type: 'dependency', source: 'pkgC.C', target: 'pkgA.A' },
+        ],
+      } as any;
+    }
+
+    async function run(): Promise<void> {
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+      await runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: {},
+        reporter: silentReporter(),
+      });
+    }
+
+    it('records a positive cycleCount for packages in an A<->B cycle', async () => {
+      const archJson = cyclicArchJson();
+      getLastArchJsonMock.mockReturnValue(archJson);
+
+      await run();
+
+      expect(metricsAppendMock).toHaveBeenCalledTimes(1);
+      const [packages] = metricsAppendMock.mock.calls[0];
+      const byName = new Map(packages.map((p: any) => [p.name, p]));
+      expect((byName.get('pkgA') as any).cycleCount).toBeGreaterThan(0);
+      expect((byName.get('pkgB') as any).cycleCount).toBeGreaterThan(0);
+      expect((byName.get('pkgC') as any).cycleCount).toBe(0);
+    });
+
+    it('records the scope key and sources of the scope that produced the ArchJSON', async () => {
+      const archJson = cyclicArchJson();
+      getLastArchJsonMock.mockReturnValue(archJson);
+      getQuerySourceGroupsMock.mockReturnValue([
+        {
+          key: 'other',
+          sources: ['/tmp/project/other'],
+          kind: 'parsed',
+          archJson: { ...archJson },
+        },
+        { key: 'mainKey', sources: ['/tmp/project/src'], kind: 'parsed', archJson },
+      ]);
+
+      await run();
+
+      expect(metricsAppendMock.mock.calls[0][2]).toEqual({
+        scopeKey: 'mainKey',
+        sources: ['/tmp/project/src'],
+      });
+    });
   });
 });
 

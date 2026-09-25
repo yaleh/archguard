@@ -1,7 +1,7 @@
 ---
 id: TASK-93
 title: "TASK-93: 「无法评估」与「合格」同形——intrinsic_dimension / evidence_pack 缺数据时返回看似有效的结果"
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -40,4 +40,5 @@ extra: {}
 - `src/analysis/git-history/history-query.ts`
 - `tests/unit/cli/mcp/tools/arch-health-tools.test.ts`
 - `tests/unit/cli/mcp/tools/git-history-evidence-pack.test.ts`
+- `tests/integration/cli-mcp/evidence-pack.integration.test.ts`
 - `tasks/TASK-93.md`

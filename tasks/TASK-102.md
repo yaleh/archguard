@@ -1,7 +1,7 @@
 ---
 id: TASK-102
 title: "TASK-102: 函数体重复检测（v1：归一化结构哈希，独立按需扫描，不扩大 Entity 模型）"
-status: ready
+status: done
 labels:
   - gap
   - feature
