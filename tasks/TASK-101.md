@@ -32,11 +32,11 @@ depends_on:
 
 ## AC
 
-- [ ] `npx vitest run tests/integration/detector-positive-controls.test.ts` exit 0，5 组植入均含正对照与负对照用例，其中字面量分散组含单引号与双引号两种 fixture
-- [ ] 手工回退验证：临时还原 TASK-96 的修复（或在测试里把 `packageOf` 置空）后，对应用例变红，恢复后变绿；结果记入本文件 `## Evidence`
-- [ ] `npm run test:integration` exit 0（不因新增用例拖垮既有集成测试）
-- [ ] 测试不依赖网络与 Claude CLI，临时目录在 `finally` 中清理（`grep -n "finally" tests/integration/detector-positive-controls.test.ts` 有结果）
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/integration/detector-positive-controls.test.ts` exit 0，5 组植入均含正对照与负对照用例，其中字面量分散组含单引号与双引号两种 fixture
+- [x] 手工回退验证：临时还原 TASK-96 的修复（或在测试里把 `packageOf` 置空）后，对应用例变红，恢复后变绿；结果记入本文件 `## Evidence`
+- [x] `npm run test:integration` exit 0（不因新增用例拖垮既有集成测试）
+- [x] 测试不依赖网络与 Claude CLI，临时目录在 `finally` 中清理（`grep -n "finally" tests/integration/detector-positive-controls.test.ts` 有结果）
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
@@ -46,3 +46,20 @@ depends_on:
 
 - `tests/integration/detector-positive-controls.test.ts`
 - `tasks/TASK-101.md`
+
+## Evidence
+
+实现提交 `fccdfa3e`。`npx vitest run tests/integration/detector-positive-controls.test.ts` → `Tests 10 passed (10)`（5 组 × 正/负对照）。
+`npm run test:integration` → `Test Files 35 passed | 3 skipped`、`Tests 280 passed | 14 skipped`（新增文件前后无既有用例回归）。
+`npm run type-check` exit 0；`npm run lint` exit 0；`grep -n finally tests/integration/detector-positive-controls.test.ts` → `34:  } finally {`。
+
+### 回退验证（临时改源码 → 跑同一测试文件 → `git checkout` 还原 → 复跑变绿）
+
+- 回退 TASK-96：在 `derivePackageOf`（`src/cli/mcp/tools/arch-health-tools.ts`）函数首行加 `return undefined;`
+  `npx vitest run tests/integration/detector-positive-controls.test.ts` → `Tests 2 failed | 8 passed (10)`：
+  `TS package boundaries > reports packageCount 3 …` → `expected 6 to be 3`；负对照 `expected 6 to be 1`（每个实体自成一包）。
+- 回退 TASK-92：`realpathOrSelf`（`src/cli/processors/arch-json-utils.ts`）首行加 `return p;`
+  → `Tests 1 failed | 9 passed (10)`：`symlinked source root > collapses a symlink and its target into a single manifest scope` → `expected [...] to have a length of 1 but got 2`。
+- 回退 TASK-103：`literal-dispersion.ts` 联合类型正则去掉单引号分支
+  → `Tests 1 failed | 9 passed (10)`：`literal dispersion > reports single-quoted and double-quoted literals …` → `single-quoted literal must be detected: expected undefined to be defined`。
+- 三次回退后均 `git checkout <file>` 还原，源码 `git status` 干净，测试复跑 `10 passed`。TASK-89（多 source）的回退未做，该组由正/负对照（2 source→2 个 parsed scope，1 source→1 个 scope）覆盖。
