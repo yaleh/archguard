@@ -15,6 +15,7 @@ import {
   hasSuppression,
   filterViolations,
   extractMcpToolNames,
+  collectTsFiles,
   extractCliFlags,
   toCanonical,
   type Violation,
@@ -318,6 +319,59 @@ server.tool(
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+
+  it('reads tool declarations that have a comment between `server.tool(` and the name', () => {
+    const tmpDir = makeTempDir();
+    try {
+      writeFile(
+        tmpDir,
+        'server.ts',
+        `
+server.tool(
+  // adr-ok: ADR-007 — MCP-only tool
+  'archguard_line_comment',
+  'Return x',
+  {},
+  async () => {}
+);
+server.tool(
+  /* block comment */
+  "archguard_block_comment",
+  'Return y',
+  {},
+  async () => {}
+);
+// server.tool('archguard_not_a_tool', ...) in a comment is not a declaration
+`
+      );
+      const tools = extractMcpToolNames(tmpDir);
+      expect(tools).toEqual(['archguard_line_comment', 'archguard_block_comment']);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('includes real declarations preceded by an adr-ok comment (regression: invisible tools)', () => {
+    const realMcpDir = path.join(process.cwd(), 'src', 'cli', 'mcp');
+    const tools = extractMcpToolNames(realMcpDir);
+    expect(tools).toContain('archguard_get_package_metrics');
+    expect(tools).toContain('archguard_get_evidence_pack');
+    expect(tools).toContain('archguard_get_metric_trend');
+  });
+
+  it('candidate set equals the set of all quoted archguard_* tool names in src/cli/mcp', () => {
+    const realMcpDir = path.join(process.cwd(), 'src', 'cli', 'mcp');
+    const declared = new Set<string>();
+    for (const file of collectTsFiles(realMcpDir)) {
+      const re = /^\s*['"](archguard_\w+)['"],?\s*$/gm;
+      const content = fs.readFileSync(file, 'utf-8');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(content)) !== null) declared.add(m[1]);
+    }
+    const seen = new Set(extractMcpToolNames(realMcpDir));
+    expect([...declared].filter((t) => !seen.has(t))).toEqual([]);
+    expect([...seen].filter((t) => !declared.has(t))).toEqual([]);
   });
 });
 

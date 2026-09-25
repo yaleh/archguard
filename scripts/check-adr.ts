@@ -263,8 +263,11 @@ export function extractMcpToolNames(mcpDir?: string): string[] {
 
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf-8');
-    // Match server.tool( followed by the tool name
-    const re = /server\.tool\(\s*['"](\w+)['"]/g;
+    // Match server.tool( followed by the tool name. Line/block comments between the
+    // opening paren and the name (e.g. `// adr-ok: ADR-007 — ...`) must be skipped,
+    // otherwise suppressed tools silently drop out of the candidate set. Anchored to
+    // line start so a commented-out `server.tool('x'` is not read as a declaration.
+    const re = /^[ \t]*server\.tool\(\s*(?:(?:\/\/[^\n]*|\/\*[\s\S]*?\*\/)\s*)*['"](\w+)['"]/gm;
     let m: RegExpExecArray | null;
     while ((m = re.exec(content)) !== null) {
       tools.push(m[1]);
