@@ -1,7 +1,7 @@
 ---
 id: TASK-103
 title: "TASK-103: literal dispersion 的正则只匹配双引号，单引号代码（含本仓库）全部漏检"
-status: ready
+status: done
 labels:
   - gap
   - defect
