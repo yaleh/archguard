@@ -10,7 +10,6 @@ import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
 import { ParseCache } from '@/parser/parse-cache.js';
 import { persistQueryScopes } from '../query/query-artifacts.js';
 import type { QueryScopeEntry } from '../query/query-manifest.js';
-import { formatScopeTable } from '../query/scope-table.js';
 import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
@@ -82,6 +81,14 @@ export interface RunAnalysisOptions {
   cliOptions: Partial<CLIOptions>;
   reporter: ProgressReporterLike;
   parseWorkerPools?: ProcessParseWorkerPools;
+}
+
+/** One line per persisted scope: key, kind/role, entity count, sources. */
+export function formatScopeTable(entries: QueryScopeEntry[]): string[] {
+  return entries.map((entry) => {
+    const kind = entry.role ? `${entry.kind}/${entry.role}` : entry.kind;
+    return `${entry.key}  ${kind}  ${entry.entityCount} entities  ${entry.sources.join(', ')}`;
+  });
 }
 
 export interface RunAnalysisResult {

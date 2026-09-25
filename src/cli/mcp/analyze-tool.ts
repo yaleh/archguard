@@ -1,8 +1,7 @@
 import path from 'path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { runAnalysis } from '../analyze/run-analysis.js';
-import { formatScopeTable } from '../query/scope-table.js';
+import { runAnalysis, formatScopeTable } from '../analyze/run-analysis.js';
 import { StderrReporter } from '../progress/index.js';
 import { ParserInitializationError } from '@/plugins/shared/parser-backend.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
