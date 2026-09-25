@@ -264,3 +264,67 @@ describe('ClusterBoundaryAnalyzer', () => {
     expect(() => ClusterBoundaryAnalyzer.analyze(matrix, entities)).toThrow(/length mismatch/);
   });
 });
+
+describe('ClusterBoundaryAnalyzer — packageOf (TASK-96)', () => {
+  /** 3 directories × 6 undotted entities, one structural signature per directory. */
+  function undottedFixture(): { entities: string[]; matrix: number[][]; packageOf: string[] } {
+    const entities: string[] = [];
+    const matrix: number[][] = [];
+    const packageOf: string[] = [];
+    ['parser', 'cli', 'mermaid'].forEach((dir, p) => {
+      for (let i = 0; i < 6; i++) {
+        entities.push(`${dir}Fn${i}`);
+        matrix.push(rowFor(p, 3));
+        packageOf.push(dir);
+      }
+    });
+    return { entities, matrix, packageOf };
+  }
+
+  it('groups by packageOf: packageCount = distinct directories, not entity count', () => {
+    const { entities, matrix, packageOf } = undottedFixture();
+    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, packageOf);
+    expect(report.entityCount).toBe(18);
+    expect(report.packageCount).toBe(3);
+    expect(report.globalBAS).toBe(1.0);
+    expect(report.packageScores.map((s) => s.packageName)).toEqual(['cli', 'mermaid', 'parser']);
+    for (const c of report.clusters)
+      expect(['cli', 'mermaid', 'parser']).toContain(c.dominantPackage);
+  });
+
+  it('without packageOf, undotted names each become their own package (pre-fix behaviour)', () => {
+    const { entities, matrix } = undottedFixture();
+    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    expect(report.packageCount).toBe(entities.length);
+    expect(report.globalBAS).toBe(0);
+  });
+
+  it('omitting packageOf is identical to the name-prefix split (regression)', () => {
+    const { entities, matrix } = alignedFixture();
+    const implicit = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const explicit = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, undefined);
+    expect(explicit).toEqual(implicit);
+    const named = entities.map((n) => BoundaryAlignmentScorer.extractPackage(n, 2));
+    expect(ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, named)).toEqual(
+      implicit
+    );
+  });
+
+  it('packageOf stays aligned with entities after orphan removal', () => {
+    const { entities, matrix, packageOf } = undottedFixture();
+    entities.unshift('lonelyFn');
+    packageOf.unshift('orphanDir');
+    matrix.unshift([0, 0, 0]);
+    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, packageOf);
+    expect(report.orphanEntities).toEqual(['lonelyFn']);
+    expect(report.packageCount).toBe(3);
+    expect(report.globalBAS).toBe(1.0);
+  });
+
+  it('errors when packageOf length does not match entityNames', () => {
+    const { entities, matrix } = undottedFixture();
+    expect(() => ClusterBoundaryAnalyzer.analyze(matrix, entities, {}, ['only-one'])).toThrow(
+      /length mismatch/
+    );
+  });
+});

@@ -30,15 +30,55 @@ extra: {}
 <!-- dedup-ref -->
 与 TASK-96 无关：那里是既有工具对 TS 失效，这里是新增能力。TASK-101 的正对照测试文件届时追加重复函数的正对照。
 
+## Evidence
+
+### 函数形态统计（本仓库 `src/`，293 个非测试 `.ts` 文件，排除 `.d.ts`/`dist`/测试）
+
+同一批文件上，用 ts-morph 遍历全部带函数体的函数类节点（与 `query --duplicates` 的 `scannedFunctions=2286` 一致），按 形态 | 嵌套 | 导出 分类：
+
+| 形态 | 顶层/嵌套 | 导出 | 数量 |
+|---|---|---|---|
+| function 声明 | 顶层 | 导出 | 237 |
+| function 声明 | 顶层 | 未导出 | 182 |
+| function 声明 | 嵌套 | 未导出 | 1 |
+| 箭头函数 | 顶层 const | 未导出 | 13 |
+| 箭头函数 | 嵌套（回调等） | 未导出 | 900 |
+| 函数表达式 | 嵌套 | 未导出 | 1 |
+| 类方法 | 顶层类 | 导出类 | 853 |
+| 类方法 | 顶层类 | 未导出类 | 6 |
+| 构造函数 | 顶层类 | 导出类 / 未导出类 | 76 / 2 |
+| get/set 访问器 | 顶层类 | 导出类 | 13 |
+| 对象字面量方法 | 嵌套 | 未导出 | 2 |
+| **合计** | | | **2286** |
+
+`FunctionExtractor.extract()` 在这批文件上产出 **237** 个实体，恰等于「导出的顶层 function 声明」一行：本仓库没有导出的箭头 const，所以 extractor 只看到 237 / 2286 ≈ 10.4%。
+
+### 与 3525 / 15359 的差距解释
+
+差距不来自箭头函数语法：extractor 支持导出的箭头/函数表达式 const，只是它们只占很小一部分。缺口由四类**结构性不可见**的函数构成，在本仓库上按占比：类方法+构造函数+访问器 942（41.2%）——作为类实体的 member 存在而非独立实体；嵌套箭头/回调 900（39.4%）；未导出的顶层 function 182 + 箭头 13（8.5%）；其余嵌套 function/表达式/对象字面量方法 4。用户那次 3525 vs 15359（23%）的比例与此同量级：可见集合只是「导出的顶层函数」，缺口主要是类方法、嵌套回调与未导出函数，与 Finding 的推断一致。
+
+### 实体数不变的证明（DoD）
+
+`git diff develop -- src/parser/function-extractor.ts` 为空。用 develop 构建的 dist 与本任务构建的 dist，分别对同一目录（本 worktree 的 `src/`）跑 `analyze -s <src> -f json --no-cache`：两边 `class/all-classes.json` 均为 779 实体 / 2186 关系（function 237、interface 391、class 151），逐行 diff 只有 `timestamp` 一行不同。
+
+### 自检：本仓库上的重复组（DoD）
+
+`node dist/cli/index.js query --duplicates`（scannedFiles=293，scannedFunctions=2286，totalGroups=9）。按可省行数最高的若干组，人工对读源码后确认为真重复：
+
+- `src/mermaid/validator-quality.ts:286` `calculateNestingDepth` ≡ `src/mermaid/validator-render.ts:142` `calculateNestingDepth`（15 行，逐字符相同：按 `{`/`}` 计数求最大嵌套深度）。**核对结论：确为重复。**
+- `src/parser/parallel-parser.ts:378` `deduplicateRelations` ≡ `src/parser/typescript-parser.ts:393` `deduplicateRelations`（14 行，按 `type:source:target` 去重）。**核对结论：确为重复。**
+
+另有 `resolveAbsoluteImport`/`resolveToKnown`（python 插件）、`compare`（fitness/gim）等，属于「变量名/被调用名不同但结构相同」的 Type-2 组，未逐一核对。
+
 ## AC
 
-- [ ] 本文件 `## Evidence` 小节记录同一批文件上各函数形态（导出/未导出、顶层/嵌套、方法、对象字面量方法）的数量，并解释与 3525 / 15359 的差距（`grep -n "^## Evidence" tasks/TASK-102.md` 有结果）
-- [ ] `npx vitest run tests/unit/parser/function-fingerprint.test.ts` exit 0：标识符不同、结构相同的两个函数得到相同哈希；结构不同（含不同的被调用函数名）得到不同哈希；覆盖嵌套函数与方法
-- [ ] `npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0：植入 2 份相同函数体的 fixture 报出 1 个重复组；低于 `minStatements` / `minTokens` 的不报；测试文件默认排除，`includeTests:true` 时纳入；组按可省行数降序
-- [ ] `npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0：MCP 工具返回结构与参数生效；scope 不存在时返回明确错误而不是空结果
-- [ ] `node dist/cli/index.js query --duplicates` 在本仓库上 exit 0（先 `npm run build`），输出为合法 JSON
-- [ ] `npm run check:adr` exit 0
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] 本文件 `## Evidence` 小节记录同一批文件上各函数形态（导出/未导出、顶层/嵌套、方法、对象字面量方法）的数量，并解释与 3525 / 15359 的差距（`grep -n "^## Evidence" tasks/TASK-102.md` 有结果）
+- [x] `npx vitest run tests/unit/parser/function-fingerprint.test.ts` exit 0：标识符不同、结构相同的两个函数得到相同哈希；结构不同（含不同的被调用函数名）得到不同哈希；覆盖嵌套函数与方法
+- [x] `npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0：植入 2 份相同函数体的 fixture 报出 1 个重复组；低于 `minStatements` / `minTokens` 的不报；测试文件默认排除，`includeTests:true` 时纳入；组按可省行数降序
+- [x] `npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0：MCP 工具返回结构与参数生效；scope 不存在时返回明确错误而不是空结果
+- [x] `node dist/cli/index.js query --duplicates` 在本仓库上 exit 0（先 `npm run build`），输出为合法 JSON
+- [x] `npm run check:adr` exit 0
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
