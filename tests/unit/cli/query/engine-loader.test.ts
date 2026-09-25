@@ -263,3 +263,35 @@ describe('loadEngine', () => {
     expect(engine.findEntity('Alpha')).toHaveLength(1);
   });
 });
+
+describe('loadEngine scope metadata', () => {
+  it('returns key, sources and generatedAt of the resolved scope', async () => {
+    await writeManifest([scope1, scope2]);
+    await writeScopeArchJson('scope-2', makeArchJson());
+
+    const ctx = await loadEngine(tmpDir, 'scope-2');
+
+    const manifest = (await fs.readJson(
+      path.join(tmpDir, 'query', 'manifest.json')
+    )) as QueryManifest;
+    expect(ctx.scopeInfo).toEqual({
+      key: 'scope-2',
+      label: 'lib',
+      sources: ['./lib'],
+      generatedAt: manifest.generatedAt,
+    });
+  });
+
+  it('lists every manifest scope with its entity count', async () => {
+    await writeManifest([scope1, scope2]);
+    await writeScopeArchJson('scope-1', makeArchJson());
+
+    const ctx = await loadEngine(tmpDir);
+
+    expect(ctx.scopeInfo.key).toBe('scope-1');
+    expect(ctx.availableScopes).toEqual([
+      { key: 'scope-1', label: 'src', entityCount: 100 },
+      { key: 'scope-2', label: 'lib', entityCount: 30 },
+    ]);
+  });
+});
