@@ -18,12 +18,17 @@ import { filterCrossModule } from './scope-filter.js';
 // Regex patterns
 // ---------------------------------------------------------------------------
 
-/** Matches `type Name = "v1" | "v2" | ...` (with optional trailing semicolon). */
+/**
+ * Matches `type Name = "v1" | 'v2' | ...` (with optional trailing semicolon).
+ * Each member is single- or double-quoted with its own quote pairing, so a
+ * union may mix quote styles. Template literals are a known boundary: they
+ * are not matched.
+ */
 const STRING_LITERAL_UNION_RE =
-  /(?:export\s+)?type\s+(\w+)\s*=\s*((?:"[^"]*"\s*\|\s*)*"[^"]*")\s*;?/g;
+  /(?:export\s+)?type\s+(\w+)\s*=\s*((?:(?:"[^"]*"|'[^']*')\s*\|\s*)*(?:"[^"]*"|'[^']*'))\s*;?/g;
 
-/** Matches individual string literals within a union. */
-const STRING_LITERAL_RE = /"([^"]*)"/g;
+/** Matches individual string literals within a union; group 2 is the value. */
+const STRING_LITERAL_RE = /(["'])((?:(?!\1).)*)\1/g;
 
 /**
  * Matches enum declarations (both string-valued and bare members):
@@ -36,8 +41,15 @@ const ENUM_RE = /(?:export\s+)?enum\s+(\w+)\s*\{([^}]*)\}/gs;
 /** Matches a single enum member, extracting the member name and optional value. */
 const ENUM_MEMBER_RE = /(\w+)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|(\d+)))?\s*(?:,|$)/g;
 
-/** Matches string literal in a case clause: case "v": */
-const CASE_LITERAL_RE = /case\s+"([^"]+)":/g;
+/** Matches string literal in a case clause: case "v": or case 'v': (group 2 is the value). */
+const CASE_LITERAL_RE = /case\s+(["'])((?:(?!\1).)+)\1\s*:/g;
+
+/**
+ * Matches a literal compared with `==`/`===` on either side: `=== "v"` or
+ * `"v" ===`, single- or double-quoted. The value is group 2 (right-hand
+ * literal) or group 4 (left-hand literal).
+ */
+const EQ_LITERAL_RE = /===?\s*(["'])((?:(?!\1).)+)\1|(["'])((?:(?!\3).)+)\3\s*===?/g;
 
 /** Matches qualified enum member reference in a case clause: case X.V: */
 const CASE_ENUM_MEMBER_RE = /case\s+\w+\.(\w+)\s*:/g;
@@ -71,7 +83,7 @@ export function extractDiscriminatorTypes(source: string, filePath: string): Dis
     // Extract individual string literals from the union body
     const values: string[] = [];
     for (const litMatch of unionBody.matchAll(STRING_LITERAL_RE)) {
-      values.push(litMatch[1]);
+      values.push(litMatch[2]);
     }
 
     if (values.length > 0) {
@@ -133,7 +145,7 @@ export function extractDiscriminatorTypes(source: string, filePath: string): Dis
 
 /**
  * Scan a file's source for literal comparisons (=== "v", "v" ===, case "v":,
- * case X.V:). Returns locations with file path and line numbers.
+ * case X.V:), single- or double-quoted. Returns locations with file path and line numbers.
  */
 export function scanFileForComparisons(source: string, filePath: string): SourceLocation[] {
   const locations: SourceLocation[] = [];
@@ -141,25 +153,13 @@ export function scanFileForComparisons(source: string, filePath: string): Source
 
   for (const { text, num } of lines) {
     // Check for === "v" or "v" === (excluding case: which is handled separately)
-    // We use a simpler pattern for line-level matching
-    const eqMatch = text.match(/(?:===?\s*"([^"]+)")|(?:"([^"]+)"\s*===?)/g);
-    if (eqMatch) {
-      for (const m of eqMatch) {
-        // Extract the literal value
-        const valMatch = m.match(/"([^"]+)"/);
-        if (valMatch) {
-          locations.push({ file: filePath, line: num });
-        }
-      }
+    for (const _em of text.matchAll(EQ_LITERAL_RE)) {
+      locations.push({ file: filePath, line: num });
     }
 
     // Check for case "v":
-    if (CASE_LITERAL_RE.test(text)) {
-      // Reset lastIndex since we're reusing the regex
-      CASE_LITERAL_RE.lastIndex = 0;
-      for (const _cm of text.matchAll(CASE_LITERAL_RE)) {
-        locations.push({ file: filePath, line: num });
-      }
+    for (const _cm of text.matchAll(CASE_LITERAL_RE)) {
+      locations.push({ file: filePath, line: num });
     }
 
     // Check for case X.V:
@@ -275,16 +275,15 @@ export function detectDispersion(
  */
 function extractComparedValue(line: string, typeDef: DiscriminatorType): string | null {
   // === "v" or "v" ===
-  const eqDirect = line.match(/(?:===?\s*"([^"]+)")|(?:"([^"]+)"\s*===?)/);
+  const eqDirect = line.matchAll(EQ_LITERAL_RE).next().value;
   if (eqDirect) {
-    const val = eqDirect[1] ?? eqDirect[2];
-    return val;
+    return eqDirect[2] ?? eqDirect[4];
   }
 
   // case "v":
-  const caseLit = line.match(/case\s+"([^"]+)":/);
+  const caseLit = line.matchAll(CASE_LITERAL_RE).next().value;
   if (caseLit) {
-    return caseLit[1];
+    return caseLit[2];
   }
 
   // case X.V: — check if it references our enum type
