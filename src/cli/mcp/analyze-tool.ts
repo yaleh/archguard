@@ -61,6 +61,12 @@ const analyzeSchema = {
     .describe(
       'Run test analysis after parsing. Required before calling test analysis tools (get_test_metrics, get_test_coverage, get_test_issues).'
     ),
+  testSources: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Test directories relative to the target project root (e.g. ["plugin/test"]). Use with includeTests when tests live outside the analyzed sources; omit to infer tests/, test/, spec/, src/ under the source root.'
+    ),
   testsOnly: z
     .boolean()
     .optional()
@@ -87,6 +93,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       format,
       noCache,
       includeTests,
+      testSources,
       testsOnly,
       includeGit,
     }) => {
@@ -106,6 +113,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               format,
               cache: noCache ? false : undefined,
               includeTests,
+              testSources: testSources?.map((source) => path.resolve(root, source)),
               testsOnly,
               includeGit,
             },

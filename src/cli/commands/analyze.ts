@@ -156,6 +156,10 @@ export function createAnalyzeCommand(): Command {
       // ========== Test Analysis ==========
       .option('--include-tests', 'Include test system analysis in output')
       .option(
+        '--test-sources <paths...>',
+        'Test directories to analyze when tests live outside the source root (used with --include-tests)'
+      )
+      .option(
         '--tests-only',
         'Run only test analysis (uses cached ArchJSON if available, skips diagram generation)'
       )

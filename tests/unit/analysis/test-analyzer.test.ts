@@ -824,3 +824,59 @@ describe('TestAnalyzer - Kotlin entity-ID import matching', () => {
     expect(covered).toContain('com.example.usb.AndroidUsbSerialManager');
   });
 });
+
+describe('TestAnalyzer - testSources (tests outside the analyzed source root)', () => {
+  let tmpDir: string;
+  let scriptsDir: string;
+  let testDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'archguard-testsources-'));
+    scriptsDir = path.join(tmpDir, 'plugin/scripts');
+    testDir = path.join(tmpDir, 'plugin/test');
+    await mkdir(scriptsDir, { recursive: true });
+    await mkdir(testDir, { recursive: true });
+    await writeFile(path.join(testDir, 'foo.test.ts'), 'it("x", () => {});');
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('finds sibling-directory tests when testSources is given', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const plugin = makePlugin();
+    vi.mocked(plugin.extractTestStructure).mockImplementation((filePath: string) =>
+      makeRawTestFile(filePath)
+    );
+
+    const result = await new TestAnalyzer().analyze(makeArchJson(), plugin, {
+      workspaceRoot: scriptsDir,
+      testSources: [testDir],
+    });
+
+    expect(result.metrics.totalTestFiles).toBe(1);
+    expect(result.testFiles[0].filePath).toBe(path.join(testDir, 'foo.test.ts'));
+    expect(result.discovery).toMatchObject({
+      workspaceRoot: scriptsDir,
+      testSources: [testDir],
+      roots: [testDir],
+    });
+  });
+
+  it('finds nothing without testSources and records the scanned roots', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const plugin = makePlugin();
+    vi.mocked(plugin.extractTestStructure).mockImplementation((filePath: string) =>
+      makeRawTestFile(filePath)
+    );
+
+    const result = await new TestAnalyzer().analyze(makeArchJson(), plugin, {
+      workspaceRoot: scriptsDir,
+    });
+
+    expect(result.metrics.totalTestFiles).toBe(0);
+    expect(result.discovery?.testSources).toBeUndefined();
+    expect(result.discovery?.roots).toEqual([scriptsDir]);
+  });
+});

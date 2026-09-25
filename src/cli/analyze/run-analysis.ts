@@ -220,6 +220,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, {
           workspaceRoot,
+          testSources: cliOptions.testSources?.map((source) => path.resolve(sessionRoot, source)),
           projectSemantics: mergedProjectSemantics,
         });
 

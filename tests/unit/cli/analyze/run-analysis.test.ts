@@ -598,6 +598,61 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
   });
 });
 
+describe('runAnalysis — testSources (tests outside the analyzed source root)', () => {
+  beforeEach(() => {
+    loadProjectSemanticsSidecarMock.mockReset();
+    loadProjectSemanticsSidecarMock.mockResolvedValue(undefined);
+    testAnalyzerAnalyzeMock.mockReset();
+    testAnalyzerAnalyzeMock.mockResolvedValue({ metrics: { totalTestFiles: 3 } });
+  });
+
+  const archJson = {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-03-13T00:00:00Z',
+    sourceFiles: [],
+    entities: [],
+    relations: [],
+    workspaceRoot: '/repo/plugin/scripts',
+  } as any;
+
+  it('hands a sibling test directory to the test analyzer as an absolute testSource', async () => {
+    getLastArchJsonMock.mockReturnValue(archJson);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/repo',
+      workDir: '/repo/.archguard',
+      cliOptions: { includeTests: true, testSources: ['plugin/test', '/elsewhere/tests'] },
+      reporter: silentReporter(),
+    });
+
+    expect(testAnalyzerAnalyzeMock).toHaveBeenCalledWith(
+      archJson,
+      expect.anything(),
+      expect.objectContaining({
+        workspaceRoot: '/repo/plugin/scripts',
+        testSources: ['/repo/plugin/test', '/elsewhere/tests'],
+      })
+    );
+  });
+
+  it('passes no testSources by default (inference unchanged)', async () => {
+    getLastArchJsonMock.mockReturnValue(archJson);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/repo',
+      workDir: '/repo/.archguard',
+      cliOptions: { includeTests: true },
+      reporter: silentReporter(),
+    });
+
+    const options = testAnalyzerAnalyzeMock.mock.calls[0][2];
+    expect(options.testSources).toBeUndefined();
+  });
+});
+
 function silentReporter() {
   return {
     start: vi.fn(),
