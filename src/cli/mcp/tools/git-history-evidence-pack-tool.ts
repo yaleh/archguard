@@ -15,6 +15,7 @@ import { resolveRoot } from '../mcp-server.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '../../git-history/history-loader.js';
 import { HistoryQuery } from '../../git-history/history-query.js';
 import type { EvidencePackResult } from '../../git-history/history-query.js';
+import type { LoadedHistoryData } from '../../git-history/history-loader.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -31,25 +32,62 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text', text }] };
 }
 
+const KEY_SAMPLE_SIZE = 3;
+
+/**
+ * Sample real keys from the git history data, preferring keys that share a
+ * basename with a requested target (the usual cause of a miss is a path that
+ * is not relative to the analyzed source root).
+ */
+function sampleKeys(
+  data: LoadedHistoryData,
+  notFound: EvidencePackResult['notFound']
+): { file: string[]; package: string[] } {
+  const pick = (keys: string[], type: 'file' | 'package'): string[] => {
+    const basenames = notFound
+      .filter((nf) => nf.targetType === type)
+      .map((nf) => nf.target.split('/').filter(Boolean).pop() ?? nf.target);
+    const similar = keys.filter((k) => basenames.some((b) => k.endsWith(b)));
+    return [...new Set([...similar, ...keys])].slice(0, KEY_SAMPLE_SIZE);
+  };
+  return {
+    file: pick([...data.fileMetrics.keys()], 'file'),
+    package: pick([...data.packageMetrics.keys()], 'package'),
+  };
+}
+
+function formatNotEvaluated(pack: EvidencePackResult, data: LoadedHistoryData): string {
+  const sample = sampleKeys(data, pack.notFound);
+  const fmt = (keys: string[]): string => (keys.length > 0 ? keys.join(', ') : '(none)');
+  return JSON.stringify(
+    {
+      evaluated: false,
+      reason: 'all_targets_not_found',
+      hint:
+        'None of the requested targets exist in the git history data; this is NOT "no history risk". ' +
+        'Keys are relative to the analyzed source root. ' +
+        `Example file keys: ${fmt(sample.file)}. Example package keys: ${fmt(sample.package)}.`,
+      notFound: pack.notFound,
+    },
+    null,
+    2
+  );
+}
+
 function formatEvidencePack(pack: EvidencePackResult): string {
   const lines: string[] = [];
 
   lines.push('## Evidence Pack');
   lines.push('');
 
-  if (pack.results.length === 0 && pack.notFound.length > 0) {
-    lines.push('No targets were found in git history data.');
-    lines.push('');
-  } else {
-    lines.push('| target | type | riskScore | riskLevel | topFactor |');
-    lines.push('|--------|------|-----------|-----------|-----------|');
-    for (const entry of pack.results) {
-      lines.push(
-        `| ${entry.target} | ${entry.targetType} | ${entry.riskScore.toFixed(3)} | ${entry.riskLevel} | ${entry.topFactor} |`
-      );
-    }
-    lines.push('');
+  lines.push('| target | type | riskScore | riskLevel | topFactor |');
+  lines.push('|--------|------|-----------|-----------|-----------|');
+  for (const entry of pack.results) {
+    lines.push(
+      `| ${entry.target} | ${entry.targetType} | ${entry.riskScore.toFixed(3)} | ${entry.riskLevel} | ${entry.topFactor} |`
+    );
   }
+  lines.push('');
 
   lines.push('## Hotspots');
   lines.push('');
@@ -120,6 +158,9 @@ export function registerEvidencePackTool(server: McpServer, defaultRoot: string)
         const data = await loadHistoryData(archguardDir);
         const query = new HistoryQuery(data);
         const pack = query.getEvidencePack(params.targets);
+        if (pack.results.length === 0 && pack.notFound.length > 0) {
+          return textResponse(formatNotEvaluated(pack, data));
+        }
         return textResponse(formatEvidencePack(pack));
       } catch (err) {
         if (err instanceof GitHistoryNotFoundError) {

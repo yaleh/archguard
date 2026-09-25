@@ -32,6 +32,16 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text' as const, text }] };
 }
 
+/**
+ * Unified "could not evaluate" shape: absence of data must not look like a
+ * passing result (e.g. `trend: "stable"`).
+ */
+export interface NotEvaluated {
+  evaluated: false;
+  reason: string;
+  hint: string;
+}
+
 export type TrendLabel = 'rising' | 'decreasing' | 'stable';
 
 /**
@@ -92,9 +102,12 @@ export function registerArchHealthTools(server: McpServer, defaultRoot: string):
         const history = await readHistoryFile(archDir);
 
         if (history === null || history.snapshots.length === 0) {
-          return textResponse(
-            JSON.stringify({ current: null, history: [], trend: 'stable' }, null, 2)
-          );
+          const notEvaluated: NotEvaluated = {
+            evaluated: false,
+            reason: history === null ? 'no_arch_health_history' : 'arch_health_history_empty',
+            hint: `No snapshots in ${path.join(archDir, 'arch-health-history.json')}. Run \`archguard analyze --arch-health\` (at least once; twice for a trend) to record them.`,
+          };
+          return textResponse(JSON.stringify(notEvaluated, null, 2));
         }
 
         const sorted = [...history.snapshots].sort((a, b) =>
