@@ -74,6 +74,7 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
     entityCount: archJson.entities.length,
     relationCount: archJson.relations.length,
     hasAtlasExtension: new ExtensionAccessor(archJson).hasAtlasExtension(),
+    generatedAt: new Date().toISOString(),
     ...(scope.role ? { role: scope.role } : {}),
   };
 }
@@ -88,6 +89,9 @@ function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
     if (current.entityCount !== best.entityCount) {
       return current.entityCount > best.entityCount ? current : best;
     }
+    // Equal width: prefer a scope previously marked primary, then fall back to key order.
+    const currentPrimary = current.role === 'primary';
+    if (currentPrimary !== (best.role === 'primary')) return currentPrimary ? current : best;
     return current.key.localeCompare(best.key) < 0 ? current : best;
   }).key;
 }
@@ -166,17 +170,17 @@ export async function persistQueryScopes(
   }
 
   const mergedList = Array.from(mergedEntries.values()).sort((a, b) => a.key.localeCompare(b.key));
-  const preferredGlobalScopeKey =
+  // Without a primary scope in this run, re-select over the merged list (widest parsed scope)
+  // instead of carrying over the previous key, which would otherwise go stale forever.
+  const globalScopeKey =
     options.preferredGlobalScopeKey && mergedEntries.has(options.preferredGlobalScopeKey)
       ? options.preferredGlobalScopeKey
-      : existingManifest?.globalScopeKey && mergedEntries.has(existingManifest.globalScopeKey)
-        ? existingManifest.globalScopeKey
-        : selectGlobalScopeKey(mergedList);
+      : selectGlobalScopeKey(mergedList);
 
   const manifest: QueryManifest = {
     version: '1.0',
     generatedAt: new Date().toISOString(),
-    globalScopeKey: preferredGlobalScopeKey,
+    globalScopeKey,
     scopes: mergedList,
   };
 

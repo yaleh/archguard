@@ -1,7 +1,7 @@
 ---
 id: TASK-90
 title: "TASK-90: 全局 scope key 选取——没有 primary scope 的运行沿用旧 globalScopeKey，查询读到过期数据"
-status: ready
+status: done
 labels:
   - gap
   - defect

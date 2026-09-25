@@ -54,6 +54,9 @@ export interface QueryScopeEntry {
   /** Whether Go Atlas extensions are present. */
   hasAtlasExtension: boolean;
 
+  /** ISO-8601 timestamp of when this scope was last written. Absent in manifests from older versions. */
+  generatedAt?: string;
+
   /** Optional role hint used to identify primary vs secondary scopes. */
   role?: 'primary' | 'secondary';
 }
