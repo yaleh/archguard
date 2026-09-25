@@ -11,6 +11,7 @@
  */
 
 import { hashSources } from './arch-json-provider.js';
+import { realpathOrSelf } from './arch-json-utils.js';
 import type { InternalQueryScope } from './diagram-processor.js';
 import type { ArchJSON } from '@/types/index.js';
 import path from 'path';
@@ -42,7 +43,7 @@ export class QueryScopeCollector {
     if (!hasQueryableContent(archJson)) return;
     const key = hashSources(sources, archJson.language);
     if (this.queryScopes.has(key)) return;
-    const normalizedSources = sources.map((s) => path.resolve(s));
+    const normalizedSources = sources.map((s) => realpathOrSelf(path.resolve(s)));
     this.queryScopes.set(key, {
       key,
       sources: normalizedSources,
