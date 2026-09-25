@@ -2,7 +2,7 @@
 id: TASK-97
 title: "TASK-97: MCP archguard_analyze 无法触发 arch-health，intrinsic_dimension 在
   MCP 侧永远无数据"
-status: ready
+status: done
 labels:
   - gap
   - mcp
