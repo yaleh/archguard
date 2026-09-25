@@ -9,6 +9,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { loadHistoryData, GitHistoryNotFoundError } from '@/cli/git-history/history-loader.js';
+import { HistoryQuery } from '@/analysis/git-history/history-query.js';
 import type {
   GitHistoryManifest,
   FileHistoryMetrics,
@@ -194,5 +195,48 @@ describe('loadHistoryData', () => {
     }
     expect(err).toBeDefined();
     expect(err?.message).toContain(archguardDir);
+  });
+
+  describe('keyRoot (TASK-95)', () => {
+    it('loads a legacy manifest without keyRoot; queries are identity and misses are legacy-manifest', async () => {
+      const archguardDir = path.join(tmpDir, '.archguard');
+      await writeArtifacts(archguardDir, {
+        manifest: makeManifest(),
+        fileMetrics: [makeFileMetric('src/utils/foo.ts')],
+      });
+
+      const data = await loadHistoryData(archguardDir);
+      expect(data.manifest.keyRoot).toBeUndefined();
+      expect(data.manifest.pathFilters).toBeUndefined();
+
+      const q = new HistoryQuery(data);
+      // identity: the literal key is found and echoed back
+      expect(q.getChangeContext('file', 'src/utils/foo.ts').resolvedTarget).toBe(
+        'src/utils/foo.ts'
+      );
+      // a miss cannot be attributed
+      let code: string | undefined;
+      try {
+        q.getChangeContext('file', 'plugin/x.ts');
+      } catch (e) {
+        code = (e as { code?: string }).code;
+      }
+      expect(code).toBe('legacy-manifest');
+    });
+
+    it('round-trips keyRoot and pathFilters from a new manifest', async () => {
+      const archguardDir = path.join(tmpDir, '.archguard');
+      await writeArtifacts(archguardDir, {
+        manifest: makeManifest({ keyRoot: '', pathFilters: ['packages', 'plugin'] }),
+        fileMetrics: [makeFileMetric('plugin/a.ts')],
+      });
+
+      const data = await loadHistoryData(archguardDir);
+      expect(data.manifest.keyRoot).toBe('');
+      expect(data.manifest.pathFilters).toEqual(['packages', 'plugin']);
+      expect(new HistoryQuery(data).getChangeContext('file', 'plugin/a.ts').resolvedTarget).toBe(
+        'plugin/a.ts'
+      );
+    });
   });
 });

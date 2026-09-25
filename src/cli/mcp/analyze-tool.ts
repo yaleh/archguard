@@ -78,6 +78,21 @@ const analyzeSchema = {
       'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/). ' +
         'Required before calling git history tools (get_change_context, get_cochange, get_change_risk, get_ownership).'
     ),
+  gitSinceDays: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('With includeGit: how many days of git history to include (default: 90).'),
+  gitMaxCommits: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'With includeGit: maximum number of commits to read, newest first (default: 500). ' +
+        'When the cap cuts history short of gitSinceDays, git tool responses report truncated:true.'
+    ),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -96,6 +111,8 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       testSources,
       testsOnly,
       includeGit,
+      gitSinceDays,
+      gitMaxCommits,
     }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
@@ -116,6 +133,8 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               testSources: testSources?.map((source) => path.resolve(root, source)),
               testsOnly,
               includeGit,
+              gitSinceDays,
+              gitMaxCommits,
             },
             reporter: new StderrReporter(),
             parseWorkerPools: ctx.parseWorkerPools,

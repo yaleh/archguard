@@ -40,7 +40,11 @@ extra: {}
 - `src/cli/mcp/analyze-tool.ts`
 - `src/cli/mcp/tools/test-analysis-tools.ts`
 - `src/types/config-cli.ts`
+- `src/analysis/test-analyzer.ts`
+- `src/cli/commands/analyze.ts`
+- `src/types/extensions/test-analysis.ts`
 - `tests/unit/cli/mcp/test-analysis-scope.test.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
+- `tests/unit/analysis/test-analyzer.test.ts`
 - `tasks/TASK-98.md`

@@ -167,6 +167,16 @@ export function createAnalyzeCommand(): Command {
         '--include-git',
         'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/)'
       )
+      .option(
+        '--git-since-days <days>',
+        'With --include-git: days of git history to include (default: 90)',
+        (v: string) => parseInt(v, 10)
+      )
+      .option(
+        '--git-max-commits <n>',
+        'With --include-git: maximum commits to read, newest first (default: 500)',
+        (v: string) => parseInt(v, 10)
+      )
       // ========== Go Architecture Atlas ==========
       .option(
         '--atlas-layers <layers>',

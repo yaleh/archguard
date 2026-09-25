@@ -95,14 +95,26 @@ describe('registerArchHealthTools', () => {
     expect(registeredName).toBe('archguard_get_intrinsic_dimension');
   });
 
-  it('empty history → { current: null, history: [], trend: "stable" }', async () => {
+  it('empty history → evaluated:false with a reason, never trend "stable"', async () => {
     const data = await invokeTool({}, makeHistory([]));
-    expect(data).toEqual({ current: null, history: [], trend: 'stable' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('arch_health_history_empty');
+    expect(data.hint).toEqual(expect.stringContaining('--arch-health'));
+    expect(data).not.toHaveProperty('trend');
+    expect(data).not.toHaveProperty('current');
   });
 
-  it('missing history file → same empty shape', async () => {
+  it('missing history file → evaluated:false with a reason, never trend "stable"', async () => {
     const data = await invokeTool({}, null);
-    expect(data).toEqual({ current: null, history: [], trend: 'stable' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('no_arch_health_history');
+    expect(data.hint.length).toBeGreaterThan(0);
+    expect(JSON.stringify(data)).not.toContain('"stable"');
+  });
+
+  it('with history the response shape is unchanged (no evaluated key)', async () => {
+    const data = await invokeTool({}, makeHistory([makeSnapshot(1, '2026-01-01T00:00:00Z')]));
+    expect(Object.keys(data).sort()).toEqual(['current', 'history', 'trend']);
   });
 
   it('current is the newest snapshot (chronological)', async () => {

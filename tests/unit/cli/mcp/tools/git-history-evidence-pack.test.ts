@@ -247,3 +247,37 @@ describe('archguard_get_evidence_pack', () => {
     expect(parsed).toHaveProperty('notFound');
   });
 });
+
+describe('archguard_get_evidence_pack — not evaluated (TASK-93)', () => {
+  async function call(targets: Array<{ targetType: 'file' | 'package'; target: string }>) {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_get_evidence_pack');
+    const result = await cb({ targets });
+    return result.content[0].text as string;
+  }
+
+  it('all targets notFound → evaluated:false with a real key sample in hint', async () => {
+    loadHistoryDataMock.mockResolvedValue(makeMockData([{ path: 'scripts/driver-runtime.ts' }]));
+    const parsed = JSON.parse(
+      await call([{ targetType: 'file', target: 'plugin/scripts/driver-runtime.ts' }])
+    );
+    expect(parsed.evaluated).toBe(false);
+    expect(parsed.reason).toBe('all_targets_not_found');
+    expect(parsed.hint).toContain('scripts/driver-runtime.ts');
+    expect(parsed.notFound).toHaveLength(1);
+    expect(parsed).not.toHaveProperty('results');
+  });
+
+  it('partial hit → still returns the matched entries (no evaluated:false)', async () => {
+    loadHistoryDataMock.mockResolvedValue(makeMockData([{ path: 'src/a.ts' }]));
+    const text = await call([
+      { targetType: 'file', target: 'src/a.ts' },
+      { targetType: 'file', target: 'src/missing.ts' },
+    ]);
+    expect(text).toContain('## Evidence Pack');
+    expect(text).not.toContain('"evaluated"');
+    const parsed = JSON.parse(text.match(/```json\n([\s\S]+?)\n```/)[1]);
+    expect(parsed.results).toHaveLength(1);
+    expect(parsed.notFound).toHaveLength(1);
+  });
+});

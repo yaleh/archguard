@@ -104,6 +104,17 @@ describe('readGitLog', () => {
     expect(cmd).toContain('-- src/cli');
   });
 
+  it('adds every pathspec of a list after --', () => {
+    mockExecSync.mockReturnValue('');
+    readGitLog('/repo', {
+      sinceDays: 7,
+      maxCommits: 10,
+      includeMerges: false,
+      pathFilter: ['plugin', 'packages'],
+    });
+    expect(mockExecSync.mock.calls[0][0]).toContain('-- plugin packages');
+  });
+
   it('throws a wrapped error when git fails', () => {
     mockExecSync.mockImplementation(() => {
       throw new Error('boom');

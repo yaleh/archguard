@@ -31,6 +31,8 @@ export interface CLIOptions {
   /** Test directories to analyze (default: inferred under the analyzed source root). */
   testSources?: string[];
   includeGit?: boolean;
+  gitSinceDays?: number;
+  gitMaxCommits?: number;
   gim?: boolean;
   archHealth?: boolean;
   driftBase?: string;
