@@ -1,7 +1,7 @@
 ---
 id: TASK-101
 title: "TASK-101: 检测器「植入已知缺陷」正对照测试——环、字面量分散、符号链接根、多 source、TS 包边界"
-status: todo
+status: ready
 labels:
   - gap
   - test
