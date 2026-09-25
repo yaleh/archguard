@@ -1,7 +1,7 @@
 ---
 id: TASK-89
 title: "TASK-89: analyze 传多个 sources 只处理第一个、其余静默丢弃，且响应不列出 scope"
-status: ready
+status: done
 labels:
   - gap
   - defect
