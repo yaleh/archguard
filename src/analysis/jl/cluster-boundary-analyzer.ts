@@ -3,7 +3,8 @@
  * (TASK-66 Phases B & C).
  *
  * Compares geometric clusters (from `KMeansClusterer`) with declared package
- * boundaries (dot-prefix of entity names). Per package it computes purity
+ * boundaries (dot-prefix of entity names, or a caller-supplied `packageOf`
+ * key per entity — TASK-96). Per package it computes purity
  * (are the package's entities in one cluster?) and coverage (does the package
  * dominate that cluster?), combines them into BAS, and flags structural
  * splits / cross-domain fusions / orphans.
@@ -59,12 +60,14 @@ export class BoundaryAlignmentScorer {
    *
    * `entities[i]` is the name of the entity whose cluster is `assignments[i]`
    * (already the clustered, orphan-free subset). Packages with fewer than
-   * `minPackageSize` entities are omitted.
+   * `minPackageSize` entities are omitted. When `packages` is given
+   * (`packages[i]` ↔ `entities[i]`) it replaces the name-prefix split.
    */
   static score(
     entities: string[],
     assignments: number[],
-    options: ClusterBoundaryOptions = {}
+    options: ClusterBoundaryOptions = {},
+    packages?: string[]
   ): PackageBASScore[] {
     const depth = options.packageDepth ?? DEFAULT_PACKAGE_DEPTH;
     const minSize = options.minPackageSize ?? DEFAULT_MIN_PACKAGE_SIZE;
@@ -75,7 +78,7 @@ export class BoundaryAlignmentScorer {
 
     const pkgToEntities = new Map<string, number[]>();
     for (let i = 0; i < entities.length; i++) {
-      const pkg = this.extractPackage(entities[i], depth);
+      const pkg = packages?.[i] ?? this.extractPackage(entities[i], depth);
       const list = pkgToEntities.get(pkg) ?? [];
       list.push(i);
       pkgToEntities.set(pkg, list);
@@ -137,12 +140,16 @@ export class ClusterBoundaryAnalyzer {
    * @param matrix - Row-major weighted adjacency matrix (row i ↔ entityNames[i]).
    * @param entityNames - Entity names aligned with matrix rows.
    * @param options - ClusterBoundaryOptions.
+   * @param packageOf - Optional package key per entity (aligned with
+   *   `entityNames`), e.g. the entity's source directory. When omitted the
+   *   package is the dotted-name prefix of `entityNames[i]` (Java/Go convention).
    * @returns ClusterBoundaryReport (single snapshot, nothing persisted).
    */
   static analyze(
     matrix: number[][],
     entityNames: string[],
-    options: ClusterBoundaryOptions = {}
+    options: ClusterBoundaryOptions = {},
+    packageOf?: string[]
   ): ClusterBoundaryReport {
     const includeOrphans = options.includeOrphans ?? DEFAULT_INCLUDE_ORPHANS;
     const depth = options.packageDepth ?? DEFAULT_PACKAGE_DEPTH;
@@ -158,15 +165,25 @@ export class ClusterBoundaryAnalyzer {
       );
     }
 
+    if (packageOf !== undefined && packageOf.length !== entityNames.length) {
+      throw new Error(
+        `entity/package length mismatch: ${entityNames.length} names vs ${packageOf.length} packageOf`
+      );
+    }
+
     // 1. Orphans (zero rows) are removed BEFORE clustering.
     const orphans = detectOrphans(matrix);
     const orphanSet = new Set(orphans);
     const cleanMatrix: number[][] = [];
     const cleanNames: string[] = [];
+    const cleanPackages: string[] = [];
     for (let i = 0; i < matrix.length; i++) {
       if (!orphanSet.has(i)) {
         cleanMatrix.push(matrix[i]);
         cleanNames.push(entityNames[i]);
+        cleanPackages.push(
+          packageOf?.[i] ?? BoundaryAlignmentScorer.extractPackage(entityNames[i], depth)
+        );
       }
     }
     const orphanEntities = orphans.map((i) => entityNames[i] ?? `#${i}`);
@@ -186,9 +203,7 @@ export class ClusterBoundaryAnalyzer {
     }
 
     // 3. K-init from the distinct package count (silhouette searches around it).
-    const distinctPackages = new Set(
-      cleanNames.map((n) => BoundaryAlignmentScorer.extractPackage(n, depth))
-    );
+    const distinctPackages = new Set(cleanPackages);
     const kInit = Math.max(2, options.kInit ?? distinctPackages.size);
 
     // 4. Cluster. Orphans were already removed, so the clusterer finds none and
@@ -197,7 +212,12 @@ export class ClusterBoundaryAnalyzer {
     const assignments = km.assignments;
 
     // 5. Per-package scores + system-level BAS.
-    const packageScores = BoundaryAlignmentScorer.score(cleanNames, assignments, options);
+    const packageScores = BoundaryAlignmentScorer.score(
+      cleanNames,
+      assignments,
+      options,
+      cleanPackages
+    );
     const globalBAS = BoundaryAlignmentScorer.globalBAS(packageScores);
 
     const report: ClusterBoundaryReport = {
@@ -211,19 +231,18 @@ export class ClusterBoundaryAnalyzer {
       splitPackages: this.detectSplitPackages(
         packageScores,
         assignments,
-        cleanNames,
-        depth,
+        cleanPackages,
         splitThreshold
       ),
       crossDomainFusions: this.detectCrossDomainFusions(
         assignments,
         cleanNames,
-        depth,
+        cleanPackages,
         crossPackageThreshold,
         dominantCoverageThreshold
       ),
       orphanEntities: includeOrphans ? orphanEntities : [],
-      clusters: this.buildClusterSummaries(assignments, cleanNames, depth),
+      clusters: this.buildClusterSummaries(assignments, cleanPackages),
     };
     if (km.warning !== undefined) report.warning = km.warning;
     return report;
@@ -233,8 +252,7 @@ export class ClusterBoundaryAnalyzer {
   private static detectSplitPackages(
     scores: PackageBASScore[],
     assignments: number[],
-    entityNames: string[],
-    depth: number,
+    packages: string[],
     splitThreshold: number
   ): SplitPackageIssue[] {
     const issues: SplitPackageIssue[] = [];
@@ -243,10 +261,8 @@ export class ClusterBoundaryAnalyzer {
 
       const clusterCounts = new Map<number, number>();
       let total = 0;
-      for (let i = 0; i < entityNames.length; i++) {
-        if (BoundaryAlignmentScorer.extractPackage(entityNames[i], depth) !== s.packageName) {
-          continue;
-        }
+      for (let i = 0; i < packages.length; i++) {
+        if (packages[i] !== s.packageName) continue;
         const c = assignments[i];
         clusterCounts.set(c, (clusterCounts.get(c) ?? 0) + 1);
         total++;
@@ -274,7 +290,7 @@ export class ClusterBoundaryAnalyzer {
   private static detectCrossDomainFusions(
     assignments: number[],
     entityNames: string[],
-    depth: number,
+    packages: string[],
     crossPackageThreshold: number,
     dominantCoverageThreshold: number
   ): CrossDomainFusion[] {
@@ -290,7 +306,7 @@ export class ClusterBoundaryAnalyzer {
 
       const pkgCounts = new Map<string, number>();
       for (const i of memberIndices) {
-        const pkg = BoundaryAlignmentScorer.extractPackage(entityNames[i], depth);
+        const pkg = packages[i];
         pkgCounts.set(pkg, (pkgCounts.get(pkg) ?? 0) + 1);
       }
 
@@ -320,8 +336,7 @@ export class ClusterBoundaryAnalyzer {
   /** Per-cluster summary: size, dominant package, dominant share. */
   private static buildClusterSummaries(
     assignments: number[],
-    entityNames: string[],
-    depth: number
+    packages: string[]
   ): ClusterSummary[] {
     const clusterCount = assignments.length > 0 ? Math.max(...assignments) + 1 : 0;
     const summaries: ClusterSummary[] = [];
@@ -335,7 +350,7 @@ export class ClusterBoundaryAnalyzer {
 
       const pkgCounts = new Map<string, number>();
       for (const i of memberIndices) {
-        const pkg = BoundaryAlignmentScorer.extractPackage(entityNames[i], depth);
+        const pkg = packages[i];
         pkgCounts.set(pkg, (pkgCounts.get(pkg) ?? 0) + 1);
       }
 

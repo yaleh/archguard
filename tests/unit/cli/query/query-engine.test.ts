@@ -1781,3 +1781,45 @@ describe('QueryEngine', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// TASK-99: outputScope on getDependents results
+// ---------------------------------------------------------------------------
+
+describe('applyOutputOptions on getDependents results (TASK-99 outputScope regression)', () => {
+  const withMember = makeEntity('A', 'Alpha', {
+    members: [
+      { name: 'run', type: 'method', visibility: 'public' },
+      { name: 'count', type: 'property', visibility: 'private' },
+    ],
+  });
+  const archJson = makeArchJson({
+    entities: [withMember, makeEntity('B', 'Beta')],
+    relations: [{ id: 'r1', type: 'dependency', source: 'A', target: 'B' }],
+  });
+
+  function dependentsOfBeta(outputScope: 'package' | 'class' | 'method') {
+    const engine = createEngine(archJson);
+    const raw = engine.relationQueryService.getDependents('Beta', 1);
+    return engine.applyOutputOptions(raw, { outputScope }) as Partial<Entity>[];
+  }
+
+  it('outputScope=package keeps only identity + file (no members, no visibility)', () => {
+    const [dep] = dependentsOfBeta('package');
+    expect(dep.id).toBe('A');
+    expect(dep.sourceLocation).toEqual({ file: 'src/alpha.ts', startLine: 0, endLine: 0 });
+    expect('members' in dep).toBe(false);
+    expect('visibility' in dep).toBe(false);
+  });
+
+  it('outputScope=class strips members but keeps entity fields', () => {
+    const [dep] = dependentsOfBeta('class');
+    expect('members' in dep).toBe(false);
+    expect(dep.visibility).toBe('public');
+  });
+
+  it('outputScope=method keeps members with method signatures', () => {
+    const [dep] = dependentsOfBeta('method');
+    expect(dep.members?.map((m) => m.name)).toEqual(['run', 'count']);
+  });
+});
