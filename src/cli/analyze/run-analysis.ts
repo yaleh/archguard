@@ -36,6 +36,8 @@ import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 import type { ArchJSON } from '@/types/index.js';
+import { computeArchHealth } from './arch-health.js';
+import type { ArchHealthOutcome } from './arch-health.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -95,6 +97,11 @@ export interface RunAnalysisResult {
    * backward compatibility with callers that construct partial results.
    */
   lastArchJson?: ArchJSON | null;
+  /**
+   * Arch-health snapshot computed by this run. Present only when
+   * `cliOptions.archHealth` was set and an ArchJSON was available.
+   */
+  archHealth?: ArchHealthOutcome;
 }
 
 function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
@@ -438,6 +445,30 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     }
   }
 
+  const lastArchJson = processor.getLastArchJson();
+  let archHealth: ArchHealthOutcome | undefined;
+  if (cliOptions.archHealth && lastArchJson) {
+    try {
+      const scope =
+        queryScopes.find((candidate) => candidate.archJson === lastArchJson) ??
+        queryScopes.find((candidate) => candidate.role === 'primary');
+      archHealth = await computeArchHealth(
+        lastArchJson,
+        config.workDir || workDir,
+        undefined,
+        scope ? { scopeKey: scope.key, sources: scope.sources } : {}
+      );
+      if (!archHealth.persisted) {
+        reporter.warn(
+          `[arch-health] snapshot not persisted: ${archHealth.reason ?? 'unknown reason'}`
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      reporter.warn(`[arch-health] Failed: ${msg}`);
+    }
+  }
+
   return {
     config,
     diagrams: selectedDiagrams,
@@ -445,7 +476,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     queryScopesPersisted: persistedScopeKeys.length,
     persistedScopeKeys,
     hasDiagramFailures: hasArtifactFailures,
-    lastArchJson: processor.getLastArchJson(),
+    lastArchJson,
+    archHealth,
   };
 }
 

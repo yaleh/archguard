@@ -370,6 +370,65 @@ describe('registerAnalyzeTool', () => {
     });
   });
 
+  describe('archHealth forwarding (TASK-97)', () => {
+    const baseResult = {
+      config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: ['abc'],
+      hasDiagramFailures: false,
+    };
+
+    async function getTool() {
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+      return toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze') as unknown as [
+        string,
+        string,
+        Record<string, { safeParse: (value: unknown) => { success: boolean } }>,
+        Function,
+      ];
+    }
+
+    it('passes archHealth: true to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+      const tool = await getTool();
+      await tool[3]({ projectRoot: '/project', archHealth: true });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({ archHealth: true }),
+        })
+      );
+    });
+
+    it('schema accepts archHealth as an optional boolean', async () => {
+      const tool = await getTool();
+      expect(tool[2].archHealth.safeParse(true).success).toBe(true);
+      expect(tool[2].archHealth.safeParse(undefined).success).toBe(true);
+      expect(tool[2].archHealth.safeParse('yes').success).toBe(false);
+    });
+
+    it('reports the computed snapshot in the response', async () => {
+      runAnalysisMock.mockResolvedValue({
+        ...baseResult,
+        archHealth: {
+          result: { dInt: 2, entityCount: 3, dIntNormalized: 0.5 },
+          previous: null,
+          persisted: true,
+          threshold: 2000,
+        },
+      });
+      const tool = await getTool();
+      const response = await tool[3]({ projectRoot: '/project', archHealth: true });
+
+      expect(response.content[0].text).toContain('Arch health:  d_int 2 / 3 entities');
+    });
+  });
+
   describe('formatAnalyzeResponse Paradigm block', () => {
     it('Go project → output contains Paradigm block', async () => {
       runAnalysisMock.mockResolvedValue({

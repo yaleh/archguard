@@ -72,6 +72,13 @@ const analyzeSchema = {
       'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/). ' +
         'Required before calling git history tools (get_change_context, get_cochange, get_change_risk, get_ownership).'
     ),
+  archHealth: z
+    .boolean()
+    .optional()
+    .describe(
+      'Compute and persist an architecture intrinsic-dimension snapshot to <work-dir>/arch-health-history.json. ' +
+        'Required before calling archguard_get_intrinsic_dimension / archguard_get_architecture_drift.'
+    ),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -89,6 +96,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       includeTests,
       testsOnly,
       includeGit,
+      archHealth,
     }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
@@ -108,6 +116,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               includeTests,
               testsOnly,
               includeGit,
+              archHealth,
             },
             reporter: new StderrReporter(),
             parseWorkerPools: ctx.parseWorkerPools,
@@ -190,6 +199,13 @@ function formatAnalyzeResponse(
   if (result.hasDiagramFailures) {
     lines.push('', 'Warnings:');
     lines.push('  - One or more diagrams failed, but query data was refreshed.');
+  }
+  if (result.archHealth) {
+    const { result: snapshot, persisted } = result.archHealth;
+    lines.push(
+      '',
+      `Arch health:  d_int ${snapshot.dInt} / ${snapshot.entityCount} entities (d_int_norm ${snapshot.dIntNormalized.toFixed(4)})${persisted ? '' : '  [snapshot not persisted]'}`
+    );
   }
   const language = result.diagrams.find((d) => d.language)?.language;
   if (language === 'go') {

@@ -4,6 +4,9 @@ import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSON } from '@/types/index.js';
 
+// In-memory fs-extra subset so arch-health-history.json writes can be observed.
+const memFiles = vi.hoisted(() => new Map<string, unknown>());
+
 const loadMock = vi.fn();
 const normalizeToDiagramsMock = vi.fn();
 const readManifestMock = vi.fn();
@@ -87,6 +90,16 @@ vi.mock('@/analysis/project-semantics-loader.js', () => ({
 vi.mock('fs-extra', () => ({
   default: {
     outputJson: vi.fn().mockResolvedValue(undefined),
+    pathExists: vi.fn(async (p: string) => memFiles.has(p)),
+    readJson: vi.fn(async (p: string) => memFiles.get(p)),
+    writeJson: vi.fn(async (p: string, data: unknown) => {
+      memFiles.set(p, JSON.parse(JSON.stringify(data)));
+    }),
+    rename: vi.fn(async (from: string, to: string) => {
+      memFiles.set(to, memFiles.get(from));
+      memFiles.delete(from);
+    }),
+    ensureDir: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -142,6 +155,7 @@ const persistedPythonEntry: QueryScopeEntry = {
 describe('runAnalysis', () => {
   beforeEach(() => {
     vi.resetModules();
+    memFiles.clear();
     loadMock.mockReset();
     normalizeToDiagramsMock.mockReset();
     readManifestMock.mockReset();
@@ -595,6 +609,96 @@ describe('runAnalysis — test analysis workspaceRoot (Fix 1: Java workspaceRoot
       expect.anything(),
       expect.objectContaining({ workspaceRoot: '/home/archguard' })
     );
+  });
+
+  describe('arch-health (TASK-97)', () => {
+    const HISTORY_PATH = '/tmp/project/.archguard/arch-health-history.json';
+    const healthArchJson: ArchJSON = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '2026-03-07T00:00:00Z',
+      sourceFiles: [],
+      entities: ['A', 'B', 'C'].map((id) => ({
+        id,
+        name: id,
+        type: 'class' as const,
+        visibility: 'public' as const,
+        members: [],
+        sourceLocation: { file: `${id}.ts`, startLine: 1, endLine: 1 },
+      })),
+      relations: [
+        { id: 'r1', type: 'dependency' as const, source: 'A', target: 'B' },
+        { id: 'r2', type: 'dependency' as const, source: 'B', target: 'C' },
+      ],
+    };
+
+    beforeEach(() => {
+      memFiles.clear();
+      getLastArchJsonMock.mockReturnValue(healthArchJson);
+      getQuerySourceGroupsMock.mockReturnValue([
+        {
+          key: 'abcd1234',
+          sources: ['/tmp/project/src'],
+          kind: 'parsed',
+          role: 'primary',
+          archJson: healthArchJson,
+        },
+      ]);
+    });
+
+    it('archHealth=true writes one scope-tagged snapshot to arch-health-history.json', async () => {
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+
+      const result = await runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: { sources: ['./src'], archHealth: true },
+        reporter: silentReporter(),
+      });
+
+      const history = memFiles.get(HISTORY_PATH) as {
+        schemaVersion: number;
+        snapshots: Array<Record<string, unknown>>;
+      };
+      expect(history.schemaVersion).toBe(1);
+      expect(history.snapshots).toHaveLength(1);
+      expect(history.snapshots[0]).toMatchObject({
+        entityCount: 3,
+        entityIndex: ['A', 'B', 'C'],
+        scopeKey: 'abcd1234',
+        sources: ['/tmp/project/src'],
+      });
+      expect(result.archHealth?.persisted).toBe(true);
+    });
+
+    it('archHealth unset → no history file is written', async () => {
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+
+      const result = await runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: { sources: ['./src'] },
+        reporter: silentReporter(),
+      });
+
+      expect(memFiles.has(HISTORY_PATH)).toBe(false);
+      expect(result.archHealth).toBeUndefined();
+    });
+
+    it('archHealth=true without ArchJSON → nothing written, no throw', async () => {
+      getLastArchJsonMock.mockReturnValue(null);
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+
+      const result = await runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: { sources: ['./src'], archHealth: true },
+        reporter: silentReporter(),
+      });
+
+      expect(memFiles.has(HISTORY_PATH)).toBe(false);
+      expect(result.archHealth).toBeUndefined();
+    });
   });
 });
 

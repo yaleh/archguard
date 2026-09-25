@@ -67,6 +67,13 @@ export interface IntrinsicDimensionResult {
    * persisted here — they are recomputed on demand.
    */
   entityIndex?: string[];
+  /**
+   * Scope the snapshot was computed for (TASK-97; same field names as
+   * metrics-history, TASK-100). Optional: snapshots written without scope
+   * identity remain readable.
+   */
+  scopeKey?: string;
+  sources?: string[];
 }
 
 /**
