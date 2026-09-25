@@ -21,12 +21,12 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/query/query-artifacts.test.ts` exit 0，新增用例：先写入大 scope（primary），再以无 primary 的运行写入小 scope，globalScopeKey 仍指向较宽的 scope；再写入更宽的无 primary scope，globalScopeKey 切换到它
-- [ ] 同一测试文件新增用例：旧 globalScopeKey 对应的 scope 在合并列表中已比新 scope 窄时，不再被沿用
-- [ ] 同一测试文件新增用例：有 primary 时仍以 primary 为准（回归）
-- [ ] `npx vitest run tests/unit/cli/query/query-manifest.test.ts` exit 0，`QueryScopeEntry` 含 `generatedAt`，旧 manifest（无该字段）仍可读
-- [ ] `npx vitest run tests/unit/cli/query/engine-loader.test.ts` exit 0（回归）
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/query/query-artifacts.test.ts` exit 0，新增用例：先写入大 scope（primary），再以无 primary 的运行写入小 scope，globalScopeKey 仍指向较宽的 scope；再写入更宽的无 primary scope，globalScopeKey 切换到它
+- [x] 同一测试文件新增用例：旧 globalScopeKey 对应的 scope 在合并列表中已比新 scope 窄时，不再被沿用
+- [x] 同一测试文件新增用例：有 primary 时仍以 primary 为准（回归）
+- [x] `npx vitest run tests/unit/cli/query/query-manifest.test.ts` exit 0，`QueryScopeEntry` 含 `generatedAt`，旧 manifest（无该字段）仍可读
+- [x] `npx vitest run tests/unit/cli/query/engine-loader.test.ts` exit 0（回归）
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
