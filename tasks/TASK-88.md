@@ -1,7 +1,7 @@
 ---
 id: TASK-88
 title: ADR-007 检查器漏检：部分 MCP 工具声明不进候选集，检查器照样报 OK
-status: ready
+status: done
 labels: []
 parent: null
 children: []
