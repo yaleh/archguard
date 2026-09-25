@@ -21,10 +21,10 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/processors/query-scope-collector.test.ts` exit 0，新增用例：在临时目录里建一个指向同一目录的符号链接，两条路径 `register` 后只得到 1 个 scope
-- [ ] `npx vitest run tests/unit/cli/processors/arch-json-provider.test.ts` exit 0，新增用例：`hashSources` 对符号链接路径与真实路径返回相同 key；不存在的路径不抛错
-- [ ] 既有用例全绿：`npx vitest run tests/unit/cli/processors` exit 0
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/processors/query-scope-collector.test.ts` exit 0，新增用例：在临时目录里建一个指向同一目录的符号链接，两条路径 `register` 后只得到 1 个 scope
+- [x] `npx vitest run tests/unit/cli/processors/arch-json-provider.test.ts` exit 0，新增用例：`hashSources` 对符号链接路径与真实路径返回相同 key；不存在的路径不抛错
+- [x] 既有用例全绿：`npx vitest run tests/unit/cli/processors` exit 0
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
