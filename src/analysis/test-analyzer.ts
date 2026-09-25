@@ -7,6 +7,7 @@ import type {
   TestAnalysis,
   TestFileInfo,
   TestPatternConfig,
+  TestDiscoveryInfo,
   TestMetrics,
   CoverageLink,
   TestIssue,
@@ -18,6 +19,11 @@ import { TestIssueDetector } from './test-issue-detector.js';
 
 export interface TestAnalyzerOptions {
   workspaceRoot: string;
+  /**
+   * Absolute test directories to scan instead of inferring them under
+   * workspaceRoot. Lets tests live outside the analyzed source root.
+   */
+  testSources?: string[];
   patternConfig?: TestPatternConfig;
   projectSemantics?: Partial<ProjectSemantics>;
 }
@@ -70,6 +76,7 @@ export class TestAnalyzer {
     options: TestAnalyzerOptions
   ): Promise<TestAnalysis> {
     const { workspaceRoot, patternConfig, projectSemantics } = options;
+    const testSources = options.testSources?.length ? options.testSources : undefined;
     const effectivePatternConfig = mergeProjectSemanticsIntoPatternConfig(
       patternConfig,
       projectSemantics
@@ -77,8 +84,10 @@ export class TestAnalyzer {
     const testFilePaths = await this.discoverTestFiles(
       workspaceRoot,
       plugin,
-      effectivePatternConfig
+      effectivePatternConfig,
+      testSources
     );
+    const roots = await this.resolveDiscoveryRoots(workspaceRoot, plugin, testSources);
     const rawFiles = await this.collectRawTestFiles(testFilePaths, plugin, effectivePatternConfig);
     const testFiles = this.buildTestFileInfos(rawFiles, archJson, workspaceRoot);
     const coverageMap = this.mapper.buildCoverageMap(testFiles, archJson, workspaceRoot);
@@ -88,6 +97,14 @@ export class TestAnalyzer {
     return {
       version: TEST_ANALYSIS_VERSION,
       patternConfigSource: patternConfig ? 'user' : 'auto',
+      discovery: {
+        workspaceRoot,
+        ...(testSources ? { testSources } : {}),
+        roots,
+        ...(effectivePatternConfig?.testFileGlobs?.length
+          ? { globs: effectivePatternConfig.testFileGlobs }
+          : {}),
+      } satisfies TestDiscoveryInfo,
       testFiles,
       coverageMap,
       issues,
@@ -98,7 +115,8 @@ export class TestAnalyzer {
   private async discoverTestFiles(
     workspaceRoot: string,
     plugin: ILanguagePlugin,
-    patternConfig?: TestPatternConfig
+    patternConfig?: TestPatternConfig,
+    testSources?: string[]
   ): Promise<string[]> {
     const extraMatches =
       patternConfig?.testFileGlobs && patternConfig.testFileGlobs.length > 0
@@ -110,21 +128,26 @@ export class TestAnalyzer {
 
     // Go: scan entire workspace since _test.go files live beside source
     if (plugin.metadata.fileExtensions.includes('.go')) {
-      const defaultMatches = await globby(`${workspaceRoot}/**/*_test.go`, {
-        onlyFiles: true,
-        absolute: true,
-      });
+      const roots = testSources ?? [workspaceRoot];
+      const defaultMatches = await globby(
+        roots.map((root) => `${root}/**/*_test.go`),
+        { onlyFiles: true, absolute: true }
+      );
       return uniqueStrings([...defaultMatches, ...extraMatches]);
     }
 
     // Java: scan entire workspace tree to handle Maven multi-module projects
     // This mirrors the Go special case and avoids inferTestDirs scoping to a single module
     if (plugin.metadata.fileExtensions.includes('.java')) {
-      const allJavaFiles = await globby(`${workspaceRoot}/**/*.java`, {
-        onlyFiles: true,
-        absolute: true,
-        ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
-      });
+      const roots = testSources ?? [workspaceRoot];
+      const allJavaFiles = await globby(
+        roots.map((root) => `${root}/**/*.java`),
+        {
+          onlyFiles: true,
+          absolute: true,
+          ignore: ['**/target/**', '**/build/**', '**/node_modules/**'],
+        }
+      );
       if (plugin.isTestFile) {
         return uniqueStrings([
           ...allJavaFiles.filter((f) => plugin.isTestFile(f, patternConfig)),
@@ -135,7 +158,7 @@ export class TestAnalyzer {
     }
 
     // Default: walk candidate dirs and filter with plugin.isTestFile
-    const candidateDirs = await this.inferTestDirs(workspaceRoot);
+    const candidateDirs = testSources ?? (await this.inferTestDirs(workspaceRoot));
     const allFiles: string[] = [];
     for (const dir of candidateDirs) {
       const files = await globby(`${dir}/**/*`, {
@@ -157,6 +180,19 @@ export class TestAnalyzer {
       ),
       ...extraMatches,
     ]);
+  }
+
+  /** Directories test discovery scans; mirrors the per-language branches above. */
+  private async resolveDiscoveryRoots(
+    workspaceRoot: string,
+    plugin: ILanguagePlugin,
+    testSources?: string[]
+  ): Promise<string[]> {
+    if (testSources) return testSources;
+    const wholeWorkspace =
+      plugin.metadata.fileExtensions.includes('.go') ||
+      plugin.metadata.fileExtensions.includes('.java');
+    return wholeWorkspace ? [workspaceRoot] : this.inferTestDirs(workspaceRoot);
   }
 
   private async inferTestDirs(workspaceRoot: string): Promise<string[]> {

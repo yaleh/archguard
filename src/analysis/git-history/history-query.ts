@@ -20,11 +20,27 @@ import type { LoadedHistoryData } from '@/cli/git-history/history-loader.js';
 // Result types
 // ---------------------------------------------------------------------------
 
+export interface AnalyzedWindow {
+  sinceDays: number;
+  totalCommits: number;
+  generatedAt: string;
+  /** Earliest commit date actually read (absent in manifests written before TASK-94). */
+  windowStart?: string;
+  /** Latest commit date actually read (absent in manifests written before TASK-94). */
+  windowEnd?: string;
+  /** True when maxCommits cut the window short of sinceDays. */
+  truncated?: boolean;
+  /** Present when truncated is true: explains the window is shorter than sinceDays. */
+  note?: string;
+}
+
 export interface CochangeResult {
   target: string;
+  /** The key actually looked up (repo-relative targets are converted to key-relative). */
+  resolvedTarget: string;
   targetType: 'package' | 'file';
   neighbors: CochangeEdge[];
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
   limitation: string;
 }
 
@@ -36,17 +52,21 @@ export interface OwnershipContributor {
 
 export interface OwnershipResult {
   target: string;
+  /** The key actually looked up (repo-relative targets are converted to key-relative). */
+  resolvedTarget: string;
   targetType: 'package' | 'file';
   contributors: OwnershipContributor[];
   primaryOwner: string;
   primaryOwnerShare: number;
   activeMaintainers: number;
   busFactor: number;
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
 }
 
 export interface ChangeRiskResult {
   target: string;
+  /** The key actually looked up (repo-relative targets are converted to key-relative). */
+  resolvedTarget: string;
   targetType: 'package' | 'file';
   riskScore: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -64,6 +84,7 @@ export interface ChangeRiskResult {
 
 export interface EvidencePackEntry {
   target: string;
+  resolvedTarget: string;
   targetType: 'package' | 'file';
   riskScore: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -74,6 +95,7 @@ export interface EvidencePackNotFound {
   target: string;
   targetType: 'package' | 'file';
   reason: string;
+  code: HistoryNotFoundCode;
 }
 
 export interface EvidencePackResult {
@@ -84,6 +106,8 @@ export interface EvidencePackResult {
 
 export interface ChangeContextResult {
   target: string;
+  /** The key actually looked up (repo-relative targets are converted to key-relative). */
+  resolvedTarget: string;
   targetType: 'package' | 'file';
   summary: {
     commitCount: number;
@@ -95,9 +119,45 @@ export interface ChangeContextResult {
   ownerConcentration: { primaryOwner: string; primaryOwnerShare: number };
   topCochangeNeighbors: CochangeEdge[];
   risk: { riskScore: number; riskLevel: string; topFactor: string };
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
   stalePathWarning?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Not-found classification
+// ---------------------------------------------------------------------------
+
+/**
+ * Machine-readable reason a target has no git history data:
+ *   - outside-analyzed-paths: target is not under any collected directory (`pathFilters`)
+ *   - no-commits-in-window:   target is under a collected directory but had no commits in the window
+ *   - legacy-manifest:        manifest has no `keyRoot`, so the cause cannot be told apart —
+ *                             re-run archguard_analyze_git
+ */
+export type HistoryNotFoundCode =
+  | 'outside-analyzed-paths'
+  | 'no-commits-in-window'
+  | 'legacy-manifest';
+
+export class HistoryTargetNotFoundError extends Error {
+  constructor(
+    public readonly code: HistoryNotFoundCode,
+    public readonly target: string,
+    public readonly targetType: 'package' | 'file',
+    public readonly resolvedTarget: string,
+    detail: string,
+    public readonly analyzedPaths?: string[],
+    public readonly window?: { windowStart?: string; windowEnd?: string; sinceDays: number }
+  ) {
+    super(
+      `Target "${target}" (type: ${targetType}) not found in git history data [${code}]. ${detail}`
+    );
+    this.name = 'HistoryTargetNotFoundError';
+  }
+}
+
+const isUnder = (p: string, dir: string): boolean =>
+  dir === '' || p === dir || p.startsWith(dir + '/');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -152,29 +212,106 @@ export class HistoryQuery {
   // Private helpers
   // -------------------------------------------------------------------------
 
+  /**
+   * Resolve a target written either repo-relative or key-relative to the key used in the
+   * metrics maps. A target starting with `keyRoot/` has that prefix stripped; if the
+   * stripped key is absent but the literal target exists, the literal wins.
+   */
+  private resolveKey(targetType: 'package' | 'file', target: string): string {
+    const keyRoot = this.data.manifest.keyRoot ?? '';
+    const map = targetType === 'file' ? this.data.fileMetrics : this.data.packageMetrics;
+    if (keyRoot !== '' && target.startsWith(keyRoot + '/')) {
+      const stripped = target.slice(keyRoot.length + 1);
+      if (map.has(stripped) || !map.has(target)) return stripped;
+    }
+    return target;
+  }
+
+  private notFoundError(
+    targetType: 'package' | 'file',
+    target: string,
+    resolved: string
+  ): HistoryTargetNotFoundError {
+    const m = this.data.manifest;
+    if (m.keyRoot === undefined) {
+      return new HistoryTargetNotFoundError(
+        'legacy-manifest',
+        target,
+        targetType,
+        resolved,
+        'This git history was generated by an older ArchGuard (manifest has no keyRoot), so a miss cannot be attributed. Re-run archguard_analyze_git.'
+      );
+    }
+    const keyRoot = m.keyRoot;
+    const pathFilters = m.pathFilters ?? [keyRoot];
+    // The target may be written repo-relative or key-relative; a miss is "outside" only when
+    // neither reading falls under a collected directory.
+    const candidates = [target, keyRoot ? `${keyRoot}/${resolved}` : resolved];
+    const covered = candidates.some((c) => pathFilters.some((f) => isUnder(c, f) || isUnder(f, c)));
+    if (!covered) {
+      return new HistoryTargetNotFoundError(
+        'outside-analyzed-paths',
+        target,
+        targetType,
+        resolved,
+        `"${target}" is not under any analyzed directory. Collected directories (relative to git root): ${pathFilters.map((f) => f || '.').join(', ')}.`,
+        pathFilters
+      );
+    }
+    const window = {
+      ...(m.windowStart !== undefined ? { windowStart: m.windowStart } : {}),
+      ...(m.windowEnd !== undefined ? { windowEnd: m.windowEnd } : {}),
+      sinceDays: m.sinceDays,
+    };
+    const span =
+      m.windowStart && m.windowEnd
+        ? `${m.windowStart} to ${m.windowEnd}`
+        : `the last ${m.sinceDays} days`;
+    return new HistoryTargetNotFoundError(
+      'no-commits-in-window',
+      target,
+      targetType,
+      resolved,
+      `The path is within an analyzed directory but has no commits in the analyzed window (${span}).`,
+      pathFilters,
+      window
+    );
+  }
+
   private getMetrics(
     targetType: 'package' | 'file',
     target: string
-  ): FileHistoryMetrics | PackageHistoryMetrics {
+  ): { metrics: FileHistoryMetrics | PackageHistoryMetrics; resolvedTarget: string } {
+    const resolvedTarget = this.resolveKey(targetType, target);
     const metrics =
       targetType === 'file'
-        ? this.data.fileMetrics.get(target)
-        : this.data.packageMetrics.get(target);
+        ? this.data.fileMetrics.get(resolvedTarget)
+        : this.data.packageMetrics.get(resolvedTarget);
 
     if (!metrics) {
-      throw new Error(
-        `Target "${target}" (type: ${targetType}) not found in git history data. Check the target path matches analyzed data.`
-      );
+      throw this.notFoundError(targetType, target, resolvedTarget);
     }
-    return metrics;
+    return { metrics, resolvedTarget };
   }
 
-  private analyzedWindow(): { sinceDays: number; totalCommits: number; generatedAt: string } {
-    return {
-      sinceDays: this.data.manifest.sinceDays,
-      totalCommits: this.data.manifest.totalCommits,
-      generatedAt: this.data.manifest.generatedAt,
+  private analyzedWindow(): AnalyzedWindow {
+    const m = this.data.manifest;
+    const window: AnalyzedWindow = {
+      sinceDays: m.sinceDays,
+      totalCommits: m.totalCommits,
+      generatedAt: m.generatedAt,
     };
+    // Optional fields: manifests written before TASK-94 do not carry them.
+    if (m.windowStart !== undefined) window.windowStart = m.windowStart;
+    if (m.windowEnd !== undefined) window.windowEnd = m.windowEnd;
+    if (m.truncated !== undefined) window.truncated = m.truncated;
+    if (m.truncated === true) {
+      window.note =
+        `History was truncated at maxCommits=${m.maxCommits}: the analyzed window` +
+        (m.windowStart && m.windowEnd ? ` (${m.windowStart} to ${m.windowEnd})` : '') +
+        ` is shorter than sinceDays=${m.sinceDays}. Re-run analysis with a larger gitMaxCommits to cover the full range.`;
+    }
+    return window;
   }
 
   // -------------------------------------------------------------------------
@@ -182,7 +319,7 @@ export class HistoryQuery {
   // -------------------------------------------------------------------------
 
   getCochange(targetType: 'package' | 'file', target: string, topN: number = 10): CochangeResult {
-    const m = this.getMetrics(targetType, target);
+    const { metrics: m, resolvedTarget } = this.getMetrics(targetType, target);
 
     // Sort by strength desc and slice to topN
     const neighbors = [...m.topCochangeNeighbors]
@@ -191,6 +328,7 @@ export class HistoryQuery {
 
     return {
       target,
+      resolvedTarget,
       targetType,
       neighbors,
       analyzedWindow: this.analyzedWindow(),
@@ -204,7 +342,7 @@ export class HistoryQuery {
   // -------------------------------------------------------------------------
 
   getOwnership(targetType: 'package' | 'file', target: string): OwnershipResult {
-    const m = this.getMetrics(targetType, target);
+    const { metrics: m, resolvedTarget } = this.getMetrics(targetType, target);
     const { commitCount, primaryOwner, primaryOwnerShare } = m;
 
     let contributors: OwnershipContributor[];
@@ -249,6 +387,7 @@ export class HistoryQuery {
 
     return {
       target,
+      resolvedTarget,
       targetType,
       contributors,
       primaryOwner,
@@ -264,7 +403,7 @@ export class HistoryQuery {
   // -------------------------------------------------------------------------
 
   getChangeRisk(targetType: 'package' | 'file', target: string): ChangeRiskResult {
-    const m = this.getMetrics(targetType, target);
+    const { metrics: m, resolvedTarget } = this.getMetrics(targetType, target);
     const rf = m.riskFactors;
 
     const riskScore = computeRiskScore(rf);
@@ -278,6 +417,7 @@ export class HistoryQuery {
 
     return {
       target,
+      resolvedTarget,
       targetType,
       riskScore,
       riskLevel,
@@ -310,18 +450,15 @@ export class HistoryQuery {
 
     for (const { targetType, target } of targets) {
       try {
-        const m = this.getMetrics(targetType, target);
+        const { metrics: m, resolvedTarget } = this.getMetrics(targetType, target);
         const rf = m.riskFactors;
         const riskScore = computeRiskScore(rf);
         const riskLevel = classifyRiskLevel(riskScore);
         const topFactor = topRiskFactor(rf);
-        results.push({ target, targetType, riskScore, riskLevel, topFactor });
-      } catch {
-        notFound.push({
-          target,
-          targetType,
-          reason: `Target "${target}" (type: ${targetType}) not found in git history data.`,
-        });
+        results.push({ target, resolvedTarget, targetType, riskScore, riskLevel, topFactor });
+      } catch (err) {
+        if (!(err instanceof HistoryTargetNotFoundError)) throw err;
+        notFound.push({ target, targetType, reason: err.message, code: err.code });
       }
     }
 
@@ -332,7 +469,7 @@ export class HistoryQuery {
   }
 
   getChangeContext(targetType: 'package' | 'file', target: string): ChangeContextResult {
-    const m = this.getMetrics(targetType, target);
+    const { metrics: m, resolvedTarget } = this.getMetrics(targetType, target);
     const rf = m.riskFactors;
     const riskScore = computeRiskScore(rf);
     const riskLevel = classifyRiskLevel(riskScore);
@@ -346,6 +483,7 @@ export class HistoryQuery {
 
     return {
       target,
+      resolvedTarget,
       targetType,
       summary: {
         commitCount: m.commitCount,

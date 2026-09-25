@@ -31,9 +31,23 @@ export interface DetectedTestPatterns {
   notes: string[];
 }
 
+/** Where test discovery looked, recorded so a 0-test result can be explained. */
+export interface TestDiscoveryInfo {
+  /** Root used for relative ids and for `testFileGlobs`. */
+  workspaceRoot: string;
+  /** Explicit test directories requested via `testSources` (absolute), if any. */
+  testSources?: string[];
+  /** Directories actually scanned for test files (absolute). */
+  roots: string[];
+  /** Extra `testFileGlobs` (relative to workspaceRoot) that were applied. */
+  globs?: string[];
+}
+
 export interface TestAnalysis {
   version: string;
   patternConfigSource: 'auto' | 'user';
+  /** Absent in analyses produced before test discovery was recorded. */
+  discovery?: TestDiscoveryInfo;
   testFiles: TestFileInfo[];
   coverageMap: CoverageLink[];
   issues: TestIssue[];

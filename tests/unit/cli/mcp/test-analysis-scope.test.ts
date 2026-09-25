@@ -202,7 +202,7 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
     expect(parsed.error).toBeDefined();
     expect(parsed.error).toContain('No test files');
     expect(Array.isArray(parsed.diagnosis)).toBe(true);
-    expect(parsed.diagnosis.some((d: string) => d.includes('src/'))).toBe(true);
+    expect(parsed.diagnosis.some((d: string) => d.includes('testSources'))).toBe(true);
   });
 
   it('archguard_detect_test_patterns diagnostic includes available scopes', async () => {
@@ -238,14 +238,77 @@ describe('38D — diagnostic when totalTestFiles is 0', () => {
     expect(Array.isArray(parsed.diagnosis)).toBe(true);
   });
 
-  it('diagnostic mentions --include-tests flag', async () => {
+  it('does not tell the caller to add includeTests / --include-tests once analysis ran', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server);
     const cb = tools.get('archguard_get_test_metrics');
     const result = await cb({});
     const parsed = JSON.parse(result.content[0].text);
     const diagText = parsed.diagnosis.join(' ');
-    expect(diagText).toContain('--include-tests');
+    expect(diagText).not.toContain('--include-tests');
+    expect(diagText).not.toMatch(/Re-run archguard_analyze with --?include/i);
+    expect(diagText).toContain('already run');
+  });
+
+  it('lists the scanned test roots and testSources usage when discovery was recorded', async () => {
+    const analysis = createEngineWithZeroTestFiles();
+    analysis.archJson.extensions.testAnalysis.discovery = {
+      workspaceRoot: '/project/plugin/scripts',
+      roots: ['/project/plugin/scripts/tests', '/project/plugin/scripts/src'],
+    };
+    loadEngineMock.mockResolvedValue(wrapEngine(analysis));
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_test_metrics');
+    const result = await cb({});
+    const parsed = JSON.parse(result.content[0].text);
+    const diagText = parsed.diagnosis.join('\n');
+    expect(diagText).toContain('/project/plugin/scripts/tests');
+    expect(diagText).toContain('/project/plugin/scripts/src');
+    expect(diagText).toContain('workspaceRoot: /project/plugin/scripts');
+    expect(diagText).toContain('not under the analyzed source root');
+    expect(diagText).toContain('testSources: ["plugin/test"]');
+    expect(parsed.discovery.roots).toHaveLength(2);
+  });
+
+  it('reports testSources that matched nothing instead of suggesting to add them', async () => {
+    const analysis = createEngineWithZeroTestFiles();
+    analysis.archJson.extensions.testAnalysis.discovery = {
+      workspaceRoot: '/project/src',
+      testSources: ['/project/nope'],
+      roots: ['/project/nope'],
+    };
+    loadEngineMock.mockResolvedValue(wrapEngine(analysis));
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const result = await tools.get('archguard_get_test_metrics')({});
+    const diagText = JSON.parse(result.content[0].text).diagnosis.join('\n');
+    expect(diagText).toContain('testSources was given (/project/nope)');
+    expect(diagText).not.toContain('No testSources was given');
+  });
+
+  it('echoes the scope key and generatedAt that were read', async () => {
+    const ctx = wrapEngine(createEngineWithZeroTestFiles());
+    loadEngineMock.mockResolvedValue({
+      ...ctx,
+      scopeInfo: {
+        key: 'global-scope',
+        label: 'global (typescript)',
+        sources: ['/project'],
+        generatedAt: '2026-02-02T02:02:02.000Z',
+      },
+    } as any);
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const result = await tools.get('archguard_get_test_metrics')({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.scope).toEqual({ key: 'global-scope', generatedAt: '2026-02-02T02:02:02.000Z' });
+    const diagText = parsed.diagnosis.join('\n');
+    expect(diagText).toContain('Scope read: global-scope');
+    expect(diagText).toContain('generatedAt: 2026-02-02T02:02:02.000Z');
   });
 });
 

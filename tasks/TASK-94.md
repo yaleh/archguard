@@ -1,7 +1,7 @@
 ---
 id: TASK-94
 title: "TASK-94: git 历史窗口被静默截断——manifest 写 sinceDays:90 实际只覆盖 3 天，无 truncated 标志"
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -25,11 +25,11 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/analysis/git-history/git-log-reader.test.ts` exit 0，新增用例：读到的提交数达到 `maxCommits` 且仓库还有更早提交时 `truncated` 为 true；提交数不足上限时为 false；`windowStart/windowEnd` 与提交时间一致
-- [ ] `npx vitest run tests/unit/analysis/git-history/history-query.test.ts` exit 0，新增用例：`analyzedWindow` 含 `windowStart/windowEnd/truncated`，旧 manifest（无这些字段）读取不抛错
-- [ ] `npx vitest run tests/unit/cli/git-history/history-writer.test.ts` exit 0（回归）
-- [ ] `npx vitest run tests/unit/cli/mcp/git-history-analyze-tool.test.ts tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，含 `gitSinceDays/gitMaxCommits` 参数透传的用例
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/analysis/git-history/git-log-reader.test.ts` exit 0，新增用例：读到的提交数达到 `maxCommits` 且仓库还有更早提交时 `truncated` 为 true；提交数不足上限时为 false；`windowStart/windowEnd` 与提交时间一致
+- [x] `npx vitest run tests/unit/analysis/git-history/history-query.test.ts` exit 0，新增用例：`analyzedWindow` 含 `windowStart/windowEnd/truncated`，旧 manifest（无这些字段）读取不抛错
+- [x] `npx vitest run tests/unit/cli/git-history/history-writer.test.ts` exit 0（回归）
+- [x] `npx vitest run tests/unit/cli/mcp/git-history-analyze-tool.test.ts tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，含 `gitSinceDays/gitMaxCommits` 参数透传的用例
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
@@ -38,12 +38,16 @@ extra: {}
 ## Touches
 
 - `src/cli/analyze/run-analysis.ts`
+- `src/cli/commands/analyze.ts`
 - `src/cli/mcp/analyze-tool.ts`
 - `src/cli/mcp/tools/git-history-analyze-tool.ts`
 - `src/analysis/git-history/git-log-reader.ts`
 - `src/analysis/git-history/history-query.ts`
 - `src/types/git-history.ts`
+- `src/types/config-cli.ts`
 - `tests/unit/analysis/git-history/git-log-reader.test.ts`
 - `tests/unit/analysis/git-history/history-query.test.ts`
+- `tests/unit/cli/analyze/run-analysis.test.ts`
+- `tests/unit/cli/mcp/analyze-tool.test.ts`
 - `tests/unit/cli/mcp/git-history-analyze-tool.test.ts`
 - `tasks/TASK-94.md`

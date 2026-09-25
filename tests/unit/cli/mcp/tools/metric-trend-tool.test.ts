@@ -204,4 +204,51 @@ describe('archguard_get_metric_trend', () => {
     const tools = collectTools(server, tmpDir);
     expect(tools.has('archguard_get_metric_trend')).toBe(true);
   });
+
+  describe('scope filter', () => {
+    const pkg = [{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }];
+
+    async function callTrend(args: Record<string, unknown>): Promise<any> {
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const handler = collectTools(server, tmpDir).get('archguard_get_metric_trend');
+      const result = await handler({ projectRoot: tmpDir, ...args });
+      return JSON.parse(result.content[0].text);
+    }
+
+    beforeEach(async () => {
+      await writeHistory(tmpDir, [
+        { ...makeEntry(pkg, '2026-01-01T00:00:00Z') },
+        { ...makeEntry(pkg, '2026-01-02T00:00:00Z'), scopeKey: 'scopeA' },
+        { ...makeEntry(pkg, '2026-01-03T00:00:00Z'), scopeKey: 'scopeB' },
+        { ...makeEntry(pkg, '2026-01-04T00:00:00Z'), scopeKey: 'scopeA' },
+      ]);
+    });
+
+    it('returns only the series of the requested scope', async () => {
+      const payload = await callTrend({ scope: 'scopeA' });
+      expect(payload.snapshots.map((s: any) => s.timestamp)).toEqual([
+        '2026-01-02T00:00:00Z',
+        '2026-01-04T00:00:00Z',
+      ]);
+      expect(payload.snapshots.every((s: any) => s.scopeKey === 'scopeA')).toBe(true);
+    });
+
+    it('returns legacy snapshots (no scopeKey) for scope "unknown"', async () => {
+      const payload = await callTrend({ scope: 'unknown' });
+      expect(payload.snapshots).toHaveLength(1);
+      expect(payload.snapshots[0].timestamp).toBe('2026-01-01T00:00:00Z');
+      expect(payload.snapshots[0].scopeKey).toBe('unknown');
+    });
+
+    it('returns all scopes when scope is omitted', async () => {
+      const payload = await callTrend({});
+      expect(payload.snapshots).toHaveLength(4);
+    });
+
+    it('combines scope with packageName', async () => {
+      const payload = await callTrend({ scope: 'scopeB', packageName: 'pkgA' });
+      expect(payload.snapshots).toHaveLength(1);
+      expect(payload.snapshots[0].scopeKey).toBe('scopeB');
+    });
+  });
 });

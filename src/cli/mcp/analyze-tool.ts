@@ -61,6 +61,12 @@ const analyzeSchema = {
     .describe(
       'Run test analysis after parsing. Required before calling test analysis tools (get_test_metrics, get_test_coverage, get_test_issues).'
     ),
+  testSources: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Test directories relative to the target project root (e.g. ["plugin/test"]). Use with includeTests when tests live outside the analyzed sources; omit to infer tests/, test/, spec/, src/ under the source root.'
+    ),
   testsOnly: z
     .boolean()
     .optional()
@@ -79,6 +85,21 @@ const analyzeSchema = {
       'Compute and persist an architecture intrinsic-dimension snapshot to <work-dir>/arch-health-history.json. ' +
         'Required before calling archguard_get_intrinsic_dimension / archguard_get_architecture_drift.'
     ),
+  gitSinceDays: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('With includeGit: how many days of git history to include (default: 90).'),
+  gitMaxCommits: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'With includeGit: maximum number of commits to read, newest first (default: 500). ' +
+        'When the cap cuts history short of gitSinceDays, git tool responses report truncated:true.'
+    ),
 };
 
 export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext): void {
@@ -94,9 +115,12 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       format,
       noCache,
       includeTests,
+      testSources,
       testsOnly,
       includeGit,
       archHealth,
+      gitSinceDays,
+      gitMaxCommits,
     }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
@@ -114,9 +138,12 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               format,
               cache: noCache ? false : undefined,
               includeTests,
+              testSources: testSources?.map((source) => path.resolve(root, source)),
               testsOnly,
               includeGit,
               archHealth,
+              gitSinceDays,
+              gitMaxCommits,
             },
             reporter: new StderrReporter(),
             parseWorkerPools: ctx.parseWorkerPools,

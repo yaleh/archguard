@@ -300,6 +300,52 @@ describe('registerAnalyzeTool', () => {
       );
     });
 
+    it('resolves testSources against projectRoot and forwards them to runAnalysis', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({
+        projectRoot: '/project',
+        includeTests: true,
+        testSources: ['plugin/test', '/abs/tests'],
+      });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({
+            includeTests: true,
+            testSources: ['/project/plugin/test', '/abs/tests'],
+          }),
+        })
+      );
+    });
+
+    it('leaves testSources undefined when not provided', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({ projectRoot: '/project', includeTests: true });
+
+      const call = runAnalysisMock.mock.calls[runAnalysisMock.mock.calls.length - 1][0];
+      expect(call.cliOptions.testSources).toBeUndefined();
+    });
+
     it('passes testsOnly: true to runAnalysis cliOptions', async () => {
       runAnalysisMock.mockResolvedValue(baseResult);
 
@@ -351,6 +397,55 @@ describe('registerAnalyzeTool', () => {
           cliOptions: expect.objectContaining({ includeGit: true }),
         })
       );
+    });
+
+    it('forwards gitSinceDays/gitMaxCommits to runAnalysis cliOptions', async () => {
+      runAnalysisMock.mockResolvedValue(baseResult);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      await callback({
+        projectRoot: '/project',
+        includeGit: true,
+        gitSinceDays: 365,
+        gitMaxCommits: 20000,
+      });
+
+      expect(runAnalysisMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cliOptions: expect.objectContaining({
+            includeGit: true,
+            gitSinceDays: 365,
+            gitMaxCommits: 20000,
+          }),
+        })
+      );
+    });
+
+    it('schema exposes gitSinceDays/gitMaxCommits as optional positive integers', async () => {
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+      const schema = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[2] as Record<string, { safeParse: (value: unknown) => { success: boolean } }>;
+
+      for (const key of ['gitSinceDays', 'gitMaxCommits']) {
+        expect(schema[key].safeParse(undefined).success).toBe(true);
+        expect(schema[key].safeParse(100).success).toBe(true);
+        expect(schema[key].safeParse(0).success).toBe(false);
+        expect(schema[key].safeParse(1.5).success).toBe(false);
+      }
     });
 
     it('schema describes includeGit and does not expose explore', async () => {
