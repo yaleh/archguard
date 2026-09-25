@@ -29,6 +29,8 @@ export interface CLIOptions {
   includeTests?: boolean;
   testsOnly?: boolean;
   includeGit?: boolean;
+  gitSinceDays?: number;
+  gitMaxCommits?: number;
   gim?: boolean;
   archHealth?: boolean;
   driftBase?: string;

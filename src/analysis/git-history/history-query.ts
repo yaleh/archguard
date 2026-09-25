@@ -20,11 +20,25 @@ import type { LoadedHistoryData } from '@/cli/git-history/history-loader.js';
 // Result types
 // ---------------------------------------------------------------------------
 
+export interface AnalyzedWindow {
+  sinceDays: number;
+  totalCommits: number;
+  generatedAt: string;
+  /** Earliest commit date actually read (absent in manifests written before TASK-94). */
+  windowStart?: string;
+  /** Latest commit date actually read (absent in manifests written before TASK-94). */
+  windowEnd?: string;
+  /** True when maxCommits cut the window short of sinceDays. */
+  truncated?: boolean;
+  /** Present when truncated is true: explains the window is shorter than sinceDays. */
+  note?: string;
+}
+
 export interface CochangeResult {
   target: string;
   targetType: 'package' | 'file';
   neighbors: CochangeEdge[];
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
   limitation: string;
 }
 
@@ -42,7 +56,7 @@ export interface OwnershipResult {
   primaryOwnerShare: number;
   activeMaintainers: number;
   busFactor: number;
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
 }
 
 export interface ChangeRiskResult {
@@ -95,7 +109,7 @@ export interface ChangeContextResult {
   ownerConcentration: { primaryOwner: string; primaryOwnerShare: number };
   topCochangeNeighbors: CochangeEdge[];
   risk: { riskScore: number; riskLevel: string; topFactor: string };
-  analyzedWindow: { sinceDays: number; totalCommits: number; generatedAt: string };
+  analyzedWindow: AnalyzedWindow;
   stalePathWarning?: string;
 }
 
@@ -169,12 +183,24 @@ export class HistoryQuery {
     return metrics;
   }
 
-  private analyzedWindow(): { sinceDays: number; totalCommits: number; generatedAt: string } {
-    return {
-      sinceDays: this.data.manifest.sinceDays,
-      totalCommits: this.data.manifest.totalCommits,
-      generatedAt: this.data.manifest.generatedAt,
+  private analyzedWindow(): AnalyzedWindow {
+    const m = this.data.manifest;
+    const window: AnalyzedWindow = {
+      sinceDays: m.sinceDays,
+      totalCommits: m.totalCommits,
+      generatedAt: m.generatedAt,
     };
+    // Optional fields: manifests written before TASK-94 do not carry them.
+    if (m.windowStart !== undefined) window.windowStart = m.windowStart;
+    if (m.windowEnd !== undefined) window.windowEnd = m.windowEnd;
+    if (m.truncated !== undefined) window.truncated = m.truncated;
+    if (m.truncated === true) {
+      window.note =
+        `History was truncated at maxCommits=${m.maxCommits}: the analyzed window` +
+        (m.windowStart && m.windowEnd ? ` (${m.windowStart} to ${m.windowEnd})` : '') +
+        ` is shorter than sinceDays=${m.sinceDays}. Re-run analysis with a larger gitMaxCommits to cover the full range.`;
+    }
+    return window;
   }
 
   // -------------------------------------------------------------------------

@@ -4,8 +4,12 @@
  * Tests parseGitLogOutput and getGitRoot with synthetic input — no actual git required.
  */
 
-import { describe, it, expect } from 'vitest';
-import { parseGitLogOutput } from '@/analysis/git-history/git-log-reader.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { execSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { parseGitLogOutput, readGitLogWindow } from '@/analysis/git-history/git-log-reader.js';
 
 // ---------------------------------------------------------------------------
 // parseGitLogOutput
@@ -159,5 +163,76 @@ describe('getGitRoot', () => {
       expect(result.length).toBeGreaterThan(0);
     }
     // If null, the test passes (may be running outside git repo)
+  });
+});
+
+// ---------------------------------------------------------------------------
+// readGitLogWindow — real temporary repository
+// ---------------------------------------------------------------------------
+
+describe('readGitLogWindow', () => {
+  let repo: string;
+  const opts = { sinceDays: 90, includeMerges: false };
+
+  function git(cmd: string, date?: string): void {
+    execSync(`git ${cmd}`, {
+      cwd: repo,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 't',
+        GIT_AUTHOR_EMAIL: 't@example.com',
+        GIT_COMMITTER_NAME: 't',
+        GIT_COMMITTER_EMAIL: 't@example.com',
+        ...(date ? { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : {}),
+      },
+    });
+  }
+
+  function daysAgo(n: number): string {
+    return new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+  }
+
+  beforeAll(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-gitwindow-'));
+    git('init -q');
+    // 5 commits, oldest 10 days ago, newest 2 days ago
+    [10, 8, 6, 4, 2].forEach((n, i) => {
+      fs.writeFileSync(path.join(repo, `f${i}.txt`), `${i}\n`);
+      git('add -A');
+      git(`commit -q -m c${i}`, `${daysAgo(n)}T12:00:00`);
+    });
+  });
+
+  afterAll(() => {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  it('is truncated when maxCommits is reached and older commits remain', () => {
+    const w = readGitLogWindow(repo, { ...opts, maxCommits: 3 });
+    expect(w.commits).toHaveLength(3);
+    expect(w.truncated).toBe(true);
+    // The 3 newest commits: 2, 4, 6 days ago — the older two are not read
+    expect(w.windowStart).toBe(daysAgo(6));
+    expect(w.windowEnd).toBe(daysAgo(2));
+  });
+
+  it('is not truncated when fewer commits than maxCommits exist', () => {
+    const w = readGitLogWindow(repo, { ...opts, maxCommits: 50 });
+    expect(w.commits).toHaveLength(5);
+    expect(w.truncated).toBe(false);
+    expect(w.windowStart).toBe(daysAgo(10));
+    expect(w.windowEnd).toBe(daysAgo(2));
+  });
+
+  it('is not truncated when the commit count equals maxCommits exactly', () => {
+    const w = readGitLogWindow(repo, { ...opts, maxCommits: 5 });
+    expect(w.commits).toHaveLength(5);
+    expect(w.truncated).toBe(false);
+  });
+
+  it('reports a null window when no commits are in range', () => {
+    const w = readGitLogWindow(repo, { sinceDays: 1, maxCommits: 5, includeMerges: false });
+    expect(w).toEqual({ commits: [], windowStart: null, windowEnd: null, truncated: false });
   });
 });

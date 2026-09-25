@@ -376,7 +376,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     try {
       reporter.start('Analyzing git history...');
       const {
-        readGitLog,
+        readGitLogWindow,
         getHeadRef,
         getCurrentBranch,
         isGitRepo,
@@ -391,8 +391,10 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       if (!isGitRepo(projectRoot)) {
         reporter.warn('[git-history] Not a git repository — skipping git history analysis');
       } else {
-        const sinceDays = 90;
-        const maxCommits = 500;
+        const positiveInt = (v: number | undefined, fallback: number): number =>
+          v !== undefined && Number.isInteger(v) && v > 0 ? v : fallback;
+        const sinceDays = positiveInt(cliOptions.gitSinceDays, 90);
+        const maxCommits = positiveInt(cliOptions.gitMaxCommits, 500);
         const includeMerges = false;
         const granularities: ('package' | 'file')[] = ['package', 'file'];
 
@@ -401,7 +403,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           gitRepoRoot !== projectRoot
             ? path.relative(gitRepoRoot, projectRoot).replace(/\\/g, '/')
             : undefined;
-        const rawCommits = readGitLog(gitRepoRoot, {
+        const {
+          commits: rawCommits,
+          windowStart,
+          windowEnd,
+          truncated,
+        } = readGitLogWindow(gitRepoRoot, {
           sinceDays,
           maxCommits,
           includeMerges,
@@ -432,6 +439,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
             sinceDays,
             maxCommits,
             totalCommits: commits.length,
+            ...(windowStart && windowEnd ? { windowStart, windowEnd } : {}),
+            truncated,
             includeMerges,
             granularities,
           };
@@ -445,6 +454,11 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           reporter.succeed(
             `Git history analysis complete: ${commits.length} commits, ${fileMetrics.length} files, ${packageMetrics.length} packages`
           );
+          if (truncated) {
+            reporter.warn(
+              `[git-history] History truncated at maxCommits=${maxCommits}: analyzed window ${windowStart} to ${windowEnd} is shorter than sinceDays=${sinceDays}. Increase --git-max-commits to cover more.`
+            );
+          }
         }
       }
     } catch (err) {

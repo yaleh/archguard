@@ -19,7 +19,9 @@ const {
   mockGetHeadRef,
   mockGetBranch,
   mockWriteArtifacts,
+  windowState,
 } = vi.hoisted(() => ({
+  windowState: { truncated: false },
   mockPathExists: vi.fn(),
   mockReadGitLog: vi.fn(),
   mockIsGitRepo: vi.fn().mockReturnValue(true),
@@ -29,7 +31,17 @@ const {
 }));
 
 vi.mock('@/cli/git-history/git-log-reader.js', () => ({
-  readGitLog: mockReadGitLog,
+  // Adapt the commit-array mock into the window-aware reader the tool calls.
+  readGitLogWindow: (...args: unknown[]) => {
+    const commits = mockReadGitLog(...args) as CommitRecord[];
+    const dates = commits.map((c) => c.date).sort();
+    return {
+      commits,
+      windowStart: dates[0] ?? null,
+      windowEnd: dates[dates.length - 1] ?? null,
+      truncated: windowState.truncated,
+    };
+  },
   isGitRepo: mockIsGitRepo,
   getHeadRef: mockGetHeadRef,
   getCurrentBranch: mockGetBranch,
@@ -115,6 +127,7 @@ function collectTools(server: McpServer, defaultRoot = '/workspace'): Map<string
 
 beforeEach(() => {
   vi.clearAllMocks();
+  windowState.truncated = false;
   mockIsGitRepo.mockReturnValue(true);
   mockGetHeadRef.mockReturnValue('abc1234');
   mockGetBranch.mockReturnValue('master');
@@ -199,5 +212,52 @@ describe('archguard_analyze_git — summary: active vs deleted files', () => {
 
     // e.g. "Files:     N changed (1 deleted)"
     expect(text).toMatch(/\d+ deleted/);
+  });
+});
+
+describe('archguard_analyze_git — history window visibility', () => {
+  async function run(params: Record<string, unknown>) {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_analyze_git') as Function;
+    return (await cb({ projectRoot: '/workspace', ...params })).content[0].text as string;
+  }
+
+  it('writes windowStart/windowEnd/truncated into the manifest', async () => {
+    windowState.truncated = true;
+    mockReadGitLog.mockReturnValue(makeCommits('src/a.ts', 3, 'src/b.ts', 3));
+    mockPathExists.mockResolvedValue(true);
+
+    const text = await run({ maxCommits: 3 });
+
+    const artifacts = mockWriteArtifacts.mock.calls[0][1];
+    expect(artifacts.manifest).toMatchObject({
+      windowStart: '2026-06-13',
+      windowEnd: '2026-06-13',
+      truncated: true,
+      maxCommits: 3,
+    });
+    expect(text).toContain('truncated at maxCommits=3');
+  });
+
+  it('reports truncated:false and no warning when the cap was not reached', async () => {
+    mockReadGitLog.mockReturnValue(makeCommits('src/a.ts', 2, 'src/b.ts', 2));
+    mockPathExists.mockResolvedValue(true);
+
+    const text = await run({});
+
+    expect(mockWriteArtifacts.mock.calls[0][1].manifest.truncated).toBe(false);
+    expect(text).not.toContain('truncated');
+  });
+
+  it('passes sinceDays/maxCommits through to the reader', async () => {
+    mockReadGitLog.mockReturnValue(makeCommits('src/a.ts', 1, 'src/b.ts', 1));
+    mockPathExists.mockResolvedValue(true);
+
+    await run({ sinceDays: 30, maxCommits: 2000 });
+
+    expect(mockReadGitLog).toHaveBeenCalledWith(
+      '/workspace',
+      expect.objectContaining({ sinceDays: 30, maxCommits: 2000 })
+    );
   });
 });

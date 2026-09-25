@@ -183,6 +183,56 @@ describe('HistoryQuery.getCochange', () => {
     expect(result.analyzedWindow.generatedAt).toBe('2025-06-01T00:00:00.000Z');
   });
 
+  it('echoes windowStart/windowEnd/truncated and explains truncation', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], [], {
+      sinceDays: 90,
+      maxCommits: 500,
+      totalCommits: 500,
+      windowStart: '2026-09-23',
+      windowEnd: '2026-09-25',
+      truncated: true,
+    });
+    const q = new HistoryQuery(data);
+
+    for (const w of [
+      q.getCochange('file', 'src/a.ts').analyzedWindow,
+      q.getOwnership('file', 'src/a.ts').analyzedWindow,
+      q.getChangeContext('file', 'src/a.ts').analyzedWindow,
+    ]) {
+      expect(w.windowStart).toBe('2026-09-23');
+      expect(w.windowEnd).toBe('2026-09-25');
+      expect(w.truncated).toBe(true);
+      expect(w.note).toContain('shorter than sinceDays=90');
+    }
+  });
+
+  it('reports truncated:false without a note', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], [], {
+      windowStart: '2026-07-01',
+      windowEnd: '2026-09-25',
+      truncated: false,
+    });
+    const w = new HistoryQuery(data).getChangeContext('file', 'src/a.ts').analyzedWindow;
+    expect(w.truncated).toBe(false);
+    expect(w.note).toBeUndefined();
+  });
+
+  it('reads legacy manifests without window fields without throwing', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], []); // makeManifest carries no window fields
+    const q = new HistoryQuery(data);
+
+    const w = q.getChangeContext('file', 'src/a.ts').analyzedWindow;
+    expect(w.sinceDays).toBe(90);
+    expect(w.windowStart).toBeUndefined();
+    expect(w.windowEnd).toBeUndefined();
+    expect(w.truncated).toBeUndefined();
+    expect(w.note).toBeUndefined();
+    expect(() => q.getCochange('file', 'src/a.ts')).not.toThrow();
+  });
+
   it('works for package type', () => {
     const neighbors = [makeCochange('tests', 0.8)];
     const pkg = makePackageMetric('src', { topCochangeNeighbors: neighbors });

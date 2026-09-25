@@ -16,11 +16,11 @@ import fs from 'fs-extra';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRoot } from '../mcp-server.js';
 import {
-  readGitLog,
+  readGitLogWindow,
   getHeadRef,
   getCurrentBranch,
   isGitRepo,
-  type CommitRecord,
+  type GitLogWindow,
 } from '../../git-history/git-log-reader.js';
 import {
   aggregateFileMetrics,
@@ -100,9 +100,9 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
       }
 
       // Read git log
-      let commits: CommitRecord[];
+      let logWindow: GitLogWindow;
       try {
-        commits = readGitLog(projectRoot, { sinceDays, maxCommits, includeMerges });
+        logWindow = readGitLogWindow(projectRoot, { sinceDays, maxCommits, includeMerges });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
@@ -114,6 +114,8 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
           ],
         };
       }
+
+      const { commits, windowStart, windowEnd, truncated } = logWindow;
 
       if (commits.length === 0) {
         return {
@@ -149,6 +151,8 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         sinceDays,
         maxCommits,
         totalCommits: commits.length,
+        ...(windowStart && windowEnd ? { windowStart, windowEnd } : {}),
+        truncated,
         includeMerges,
         granularities,
         packageDepth,
@@ -210,6 +214,12 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         `  Branch:    ${analyzedBranch} @ ${headRef}`,
         `  Period:    last ${sinceDays} days`,
         `  Commits:   ${commits.length} processed`,
+        `  Window:    ${windowStart} to ${windowEnd}`,
+        ...(truncated
+          ? [
+              `  Warning:   truncated at maxCommits=${maxCommits} — the analyzed window is shorter than sinceDays=${sinceDays}. Increase maxCommits to cover the full range.`,
+            ]
+          : []),
         `  Files:     ${fileMetrics.length} changed (${deletedFiles.length} deleted)`,
         `  Packages:  ${packageMetrics.length} packages`,
         '',

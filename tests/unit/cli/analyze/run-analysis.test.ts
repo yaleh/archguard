@@ -80,7 +80,7 @@ vi.mock('@/cli/utils/test-output-writer.js', () => ({
 }));
 
 vi.mock('@/cli/git-history/git-log-reader.js', () => ({
-  readGitLog: readGitLogMock,
+  readGitLogWindow: readGitLogMock,
   isGitRepo: isGitRepoMock,
   getGitRoot: getGitRootMock,
   getHeadRef: vi.fn(),
@@ -190,9 +190,12 @@ describe('runAnalysis', () => {
       })
     );
     testOutputWriterWriteMock.mockResolvedValue(undefined);
-    readGitLogMock.mockReturnValue([
-      { sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] },
-    ]);
+    readGitLogMock.mockReturnValue({
+      commits: [{ sha: 'abc', authorEmail: 'dev@example.com', date: '2026-03-30', files: [] }],
+      windowStart: '2026-03-30',
+      windowEnd: '2026-03-30',
+      truncated: false,
+    });
     isGitRepoMock.mockReturnValue(true);
     getGitRootMock.mockReturnValue('/tmp/project');
     loadProjectSemanticsSidecarMock.mockResolvedValue(undefined);

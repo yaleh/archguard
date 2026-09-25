@@ -40,17 +40,22 @@ export interface ReadGitLogOptions {
 // ---------------------------------------------------------------------------
 
 /**
- * Read git log for the given repo root and return parsed commit records.
+ * Result of a window-aware git log read.
  *
- * Uses --numstat to get per-file line change counts.
- * Format: %H (full sha), %ae (author email), %cd (commit date).
- *
- * @param repoRoot  Absolute path to the git repository root.
- * @param options   Filtering options.
- * @returns Array of CommitRecord, newest-first (git default).
+ * windowStart/windowEnd are the earliest/latest commit dates actually read
+ * (YYYY-MM-DD; null when no commits were read). `truncated` is true when the
+ * `maxCommits` cap cut the history short — i.e. older commits inside the
+ * `sinceDays` window exist that were not read.
  */
-export function readGitLog(repoRoot: string, options: ReadGitLogOptions): CommitRecord[] {
-  const { sinceDays, maxCommits, includeMerges, pathFilter } = options;
+export interface GitLogWindow {
+  commits: CommitRecord[];
+  windowStart: string | null;
+  windowEnd: string | null;
+  truncated: boolean;
+}
+
+function execGitLog(repoRoot: string, options: ReadGitLogOptions, limit: number): CommitRecord[] {
+  const { sinceDays, includeMerges, pathFilter } = options;
 
   const mergeFlag = includeMerges ? '--merges' : '--no-merges';
   // Use a unique separator prefix so commit boundaries are unambiguous regardless of numstat layout.
@@ -62,7 +67,7 @@ export function readGitLog(repoRoot: string, options: ReadGitLogOptions): Commit
     `--format=COMMIT_START%n%H%n%ae%n%cd`,
     '--date=short',
     `--since=${sinceDays}.days.ago`,
-    `--max-count=${maxCommits}`,
+    `--max-count=${limit}`,
   ];
   if (pathFilter) {
     parts.push('--', pathFilter);
@@ -83,6 +88,39 @@ export function readGitLog(repoRoot: string, options: ReadGitLogOptions): Commit
   }
 
   return parseGitLogOutput(rawOutput);
+}
+
+/**
+ * Read git log for the given repo root and return parsed commit records.
+ *
+ * Uses --numstat to get per-file line change counts.
+ * Format: %H (full sha), %ae (author email), %cd (commit date).
+ *
+ * @param repoRoot  Absolute path to the git repository root.
+ * @param options   Filtering options.
+ * @returns Array of CommitRecord, newest-first (git default).
+ */
+export function readGitLog(repoRoot: string, options: ReadGitLogOptions): CommitRecord[] {
+  return execGitLog(repoRoot, options, options.maxCommits);
+}
+
+/**
+ * Like {@link readGitLog}, but also reports the window actually covered and
+ * whether `maxCommits` truncated it. Reads one extra commit to detect that
+ * older commits remain; the extra commit is not included in the result.
+ */
+export function readGitLogWindow(repoRoot: string, options: ReadGitLogOptions): GitLogWindow {
+  const all = execGitLog(repoRoot, options, options.maxCommits + 1);
+  const truncated = all.length > options.maxCommits;
+  const commits = truncated ? all.slice(0, options.maxCommits) : all;
+
+  let windowStart: string | null = null;
+  let windowEnd: string | null = null;
+  for (const c of commits) {
+    if (windowStart === null || c.date < windowStart) windowStart = c.date;
+    if (windowEnd === null || c.date > windowEnd) windowEnd = c.date;
+  }
+  return { commits, windowStart, windowEnd, truncated };
 }
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,9 @@ export interface GitHistoryManifest {
   sinceDays: number;
   maxCommits: number;
   totalCommits: number; // actual commits processed
+  windowStart?: string; // earliest commit date actually read (YYYY-MM-DD)
+  windowEnd?: string; // latest commit date actually read (YYYY-MM-DD)
+  truncated?: boolean; // true when maxCommits cut the window short of sinceDays
   includeMerges: boolean;
   granularities: ('package' | 'file')[];
   packageDepth?: number; // sub-package depth (1 = first segment, 2 = two segments, etc.)
