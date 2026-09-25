@@ -2,7 +2,7 @@
 id: TASK-99
 title: "TASK-99: 查询工具的适用性与输出体量——不适用语言无显式标记、package_metrics 无 topN、get_dependents
   的 outputScope 待核实"
-status: ready
+status: done
 labels:
   - gap
   - mcp

@@ -28,6 +28,8 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text', text }] };
 }
 
+const PACKAGE_SORT_KEYS = ['name', 'fanIn', 'fanOut', 'entityCount'] as const;
+
 // ── MCP tool registration ──────────────────────────────────────────────────────
 
 export function registerPackageMetricsTools(server: McpServer, defaultRoot: string): void {
@@ -39,7 +41,8 @@ export function registerPackageMetricsTools(server: McpServer, defaultRoot: stri
       'fan-out = number of outgoing cross-package relations; ' +
       'cycleCount = number of SCCs the package participates in; ' +
       'cyclesWith = entity names from co-cycling SCCs. ' +
-      'Works for all languages (TypeScript, Go, Java, Python, C++, Kotlin).',
+      'Works for all languages (TypeScript, Go, Java, Python, C++, Kotlin). ' +
+      'Default output lists every package sorted by name; use sortBy + topN to get a ranked, bounded list.',
     {
       projectRoot: z
         .string()
@@ -55,8 +58,23 @@ export function registerPackageMetricsTools(server: McpServer, defaultRoot: stri
         .describe(
           'Filter results to a single package name. Omit to return metrics for all packages.'
         ),
+      topN: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe(
+          'Return only the first N packages after sorting. Omit to return all packages (default).'
+        ),
+      sortBy: z
+        .enum(PACKAGE_SORT_KEYS)
+        .default('name')
+        .describe(
+          'Sort key: "name" (ascending, default), or "fanIn" / "fanOut" / "entityCount" (descending, ties by name).'
+        ),
     },
-    async ({ projectRoot, scope, packageName }) => {
+    async ({ projectRoot, scope, packageName, topN, sortBy: sortByArg }) => {
+      const sortBy = sortByArg ?? 'name'; // direct handler calls bypass the zod default
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
@@ -91,10 +109,36 @@ export function registerPackageMetricsTools(server: McpServer, defaultRoot: stri
           packages = packages.filter((p) => p.packageName === packageName);
         }
 
-        // Sort by packageName for deterministic output
-        packages.sort((a, b) => a.packageName.localeCompare(b.packageName));
+        // Sort: name ascending by default (deterministic); ranking keys descending, ties by name
+        const entityCounts = new Map<string, number>();
+        if (sortBy === 'entityCount') {
+          for (const id of entityIds) {
+            const pkg = extractPackageName(id);
+            entityCounts.set(pkg, (entityCounts.get(pkg) ?? 0) + 1);
+          }
+        }
+        const rank = (p: PackageMetricsEntry): number =>
+          sortBy === 'fanIn'
+            ? p.fanIn
+            : sortBy === 'fanOut'
+              ? p.fanOut
+              : (entityCounts.get(p.packageName) ?? 0);
+        packages.sort((a, b) =>
+          sortBy === 'name'
+            ? a.packageName.localeCompare(b.packageName)
+            : rank(b) - rank(a) || a.packageName.localeCompare(b.packageName)
+        );
 
-        return textResponse(JSON.stringify({ packages }, null, 2));
+        if (topN === undefined || topN >= packages.length) {
+          return textResponse(JSON.stringify({ packages }, null, 2));
+        }
+        return textResponse(
+          JSON.stringify(
+            { packages: packages.slice(0, topN), totalPackages: packages.length },
+            null,
+            2
+          )
+        );
       } catch (e: unknown) {
         const msg = errorMessage(e);
         return textResponse(`Error: ${msg}`);
