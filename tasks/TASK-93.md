@@ -23,11 +23,11 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0，新增用例：无历史文件时响应含 `evaluated:false` 与非空 `reason`，且不含 `trend:"stable"`；有历史时响应形状与修复前一致（回归）
-- [ ] `npx vitest run tests/unit/cli/mcp/tools/git-history-evidence-pack.test.ts` exit 0，新增用例：请求路径全部 notFound 时响应含 `evaluated:false`，`hint` 含 git 数据里存在的一个真实 key 样例；部分命中时仍返回命中项
-- [ ] `npx vitest run tests/unit/analysis/git-history/history-query-evidence-pack.test.ts` exit 0（回归）
-- [ ] `grep -rn "trend: 'stable'" src/cli/mcp/tools/arch-health-tools.ts` 只剩 `computeTrend` 内基于两份快照得出的分支
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0，新增用例：无历史文件时响应含 `evaluated:false` 与非空 `reason`，且不含 `trend:"stable"`；有历史时响应形状与修复前一致（回归）
+- [x] `npx vitest run tests/unit/cli/mcp/tools/git-history-evidence-pack.test.ts` exit 0，新增用例：请求路径全部 notFound 时响应含 `evaluated:false`，`hint` 含 git 数据里存在的一个真实 key 样例；部分命中时仍返回命中项
+- [x] `npx vitest run tests/unit/analysis/git-history/history-query-evidence-pack.test.ts` exit 0（回归）
+- [x] `grep -rn "trend: 'stable'" src/cli/mcp/tools/arch-health-tools.ts` 只剩 `computeTrend` 内基于两份快照得出的分支
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
