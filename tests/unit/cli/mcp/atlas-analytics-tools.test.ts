@@ -571,3 +571,62 @@ describe('archguard_detect_god_packages — handler', () => {
     expect(flagged).toHaveProperty('fileCount');
   });
 });
+
+// ── Applicability marker for non-Atlas scopes ────────────────────────────────
+
+describe('Atlas analytics tools — applicability on non-Atlas scopes', () => {
+  const tsScopeEntry: QueryScopeEntry = {
+    key: 'ts-scope',
+    label: 'src (typescript)',
+    language: 'typescript',
+    kind: 'parsed',
+    sources: ['/project/src'],
+    entityCount: 0,
+    relationCount: 0,
+    hasAtlasExtension: false,
+  };
+
+  function mockTypeScriptScope(): void {
+    const { engine, archJson } = makeNoAtlasEngine();
+    loadEngineMock.mockResolvedValueOnce({
+      engine,
+      extensionAccessor: new ExtensionAccessor(archJson),
+      scopeEntry: tsScopeEntry,
+    } as unknown as Awaited<ReturnType<typeof loadEngine>>);
+  }
+
+  async function call(toolName: string): Promise<{ text: string }> {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
+    const result = await tools.get(toolName)({});
+    return { text: result.content[0].text as string };
+  }
+
+  it.each([
+    'archguard_detect_god_packages',
+    'archguard_get_package_fanin',
+    'archguard_get_package_fanout',
+  ])('%s returns applicable:false with reason and alternative on a TS scope', async (toolName) => {
+    mockTypeScriptScope();
+    const payload = JSON.parse((await call(toolName)).text);
+    expect(payload.applicable).toBe(false);
+    expect(payload.reason).toMatch(/No Atlas data/);
+    expect(payload.reason).toContain('typescript');
+    expect(payload.alternative).toContain('archguard_get_package_metrics');
+  });
+
+  it('Go Atlas scope behaviour is unchanged (no applicable marker)', async () => {
+    const godText = (await call('archguard_detect_god_packages')).text;
+    const god = JSON.parse(godText);
+    expect(god).not.toHaveProperty('applicable');
+    expect(god).toHaveProperty('godPackages');
+
+    const fanin = JSON.parse((await call('archguard_get_package_fanin')).text);
+    expect(fanin).not.toHaveProperty('applicable');
+    expect(Array.isArray(fanin.packages)).toBe(true);
+
+    const fanout = JSON.parse((await call('archguard_get_package_fanout')).text);
+    expect(fanout).not.toHaveProperty('applicable');
+    expect(Array.isArray(fanout.packages)).toBe(true);
+  });
+});
