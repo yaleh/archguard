@@ -119,7 +119,7 @@ describe('archguard_detect_duplicates', () => {
     expect(bad.isError).toBe(true);
     expect(bad.content[0].text).toContain('not found');
     const ok = await handler({ scope: 'k1', minStatements: 6, minTokens: 50, topN: 20 });
-    expect(JSON.parse(ok.content[0].text) as DuplicateAnalysis.groups).toHaveLength(1);
+    expect((JSON.parse(ok.content[0].text) as DuplicateAnalysis).groups).toHaveLength(1);
   });
 
   it('errors when the scope sources point at a missing directory', async () => {
