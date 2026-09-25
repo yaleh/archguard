@@ -9,7 +9,7 @@ parent: null
 children: []
 extra:
   schema: execution
-  goal_ac: AC-005
+goal_ac: AC-005
 ---
 ## Proposal
 
