@@ -1,7 +1,7 @@
 ---
 id: TASK-89
 title: "TASK-89: analyze 传多个 sources 只处理第一个、其余静默丢弃，且响应不列出 scope"
-status: needs-human
+status: ready
 labels:
   - gap
   - defect
@@ -45,6 +45,8 @@ extra: {}
 - `tests/unit/cli/analyze/normalize-to-diagrams.test.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
+- `tests/integration/mcp-runtime-diagnostics.test.ts`
+- `tests/unit/cli/mcp/mcp-stdout-safety.test.ts`
 - `tasks/TASK-89.md`
 
 ## Needs-Human
