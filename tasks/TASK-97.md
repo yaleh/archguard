@@ -22,11 +22,11 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：`cliOptions.archHealth=true` 时 `arch-health-history.json` 被写入一个快照；未设置时不写
-- [ ] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例：`archHealth:true` 透传到 `runAnalysis`
-- [ ] `npx vitest run tests/unit/cli/analyze-command.test.ts` exit 0（CLI `--arch-health` 回归）
-- [ ] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0（回归）
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：`cliOptions.archHealth=true` 时 `arch-health-history.json` 被写入一个快照；未设置时不写
+- [x] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例：`archHealth:true` 透传到 `runAnalysis`
+- [x] `npx vitest run tests/unit/cli/analyze-command.test.ts` exit 0（CLI `--arch-health` 回归）
+- [x] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0（回归）
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
