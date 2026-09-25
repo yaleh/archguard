@@ -1,7 +1,7 @@
 ---
 id: TASK-94
 title: "TASK-94: git 历史窗口被静默截断——manifest 写 sinceDays:90 实际只覆盖 3 天，无 truncated 标志"
-status: todo
+status: ready
 labels:
   - gap
   - defect
