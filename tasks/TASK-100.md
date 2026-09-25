@@ -1,7 +1,7 @@
 ---
 id: TASK-100
 title: "TASK-100: metrics-history 快照无 scope 标识、cycleCount 恒为 0、疑有空快照"
-status: ready
+status: done
 labels:
   - gap
   - defect
