@@ -2,7 +2,7 @@
 id: TASK-96
 title: "TASK-96: cluster_boundary 用实体名按「.」切包，对 TS
   每个实体自成一包（packageCount≈entityCount，globalBAS=0）"
-status: todo
+status: ready
 labels:
   - gap
   - defect
