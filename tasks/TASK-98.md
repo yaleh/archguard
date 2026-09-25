@@ -1,7 +1,7 @@
 ---
 id: TASK-98
 title: "TASK-98: 测试分析只看最大 scope 的 workspaceRoot，且零测试诊断文案写死、与实际原因不符"
-status: ready
+status: done
 labels:
   - gap
   - defect
