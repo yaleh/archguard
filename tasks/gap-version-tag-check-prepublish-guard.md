@@ -26,11 +26,11 @@ GOAL-001 / AC-002 要求：package.json 的 version 一定有一个同名 `v<ver
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0，其中用例覆盖：临时仓库 version 有同名 tag 时脚本 exit 0；无 tag 时 exit 1 且 stderr 含 `CAUSE=published-version-without-a-tag`；package.json 缺失时 exit 1 且 stderr 含 `CAUSE=package-version-unreadable`
-- [ ] `node -e "const s=require('./package.json').scripts.prepublishOnly; if(!s.includes('scripts/check-version-has-tag.sh')) process.exit(1)"` exit 0（守卫已接入 prepublishOnly）
-- [ ] `bash -n scripts/check-version-has-tag.sh` exit 0（语法合法）
-- [ ] `bash scripts/test.sh tests/unit/scripts/version-tag-check.test.ts` exit 0（走 quay fan-in 的同一入口）
-- [ ] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `.github/workflows/release.yml`，且本任务提交中无 `git tag` / `git push` / `npm publish` 的执行记录（loop 不触碰 tag 与发布）
+- [x] `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0，其中用例覆盖：临时仓库 version 有同名 tag 时脚本 exit 0；无 tag 时 exit 1 且 stderr 含 `CAUSE=published-version-without-a-tag`；package.json 缺失时 exit 1 且 stderr 含 `CAUSE=package-version-unreadable`
+- [x] `node -e "const s=require('./package.json').scripts.prepublishOnly; if(!s.includes('scripts/check-version-has-tag.sh')) process.exit(1)"` exit 0（守卫已接入 prepublishOnly）
+- [x] `bash -n scripts/check-version-has-tag.sh` exit 0（语法合法）
+- [x] `bash scripts/test.sh tests/unit/scripts/version-tag-check.test.ts` exit 0（走 quay fan-in 的同一入口）
+- [x] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `.github/workflows/release.yml`，且本任务提交中无 `git tag` / `git push` / `npm publish` 的执行记录（loop 不触碰 tag 与发布）
 
 ## DoD
 
