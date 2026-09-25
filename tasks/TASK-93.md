@@ -40,4 +40,5 @@ extra: {}
 - `src/analysis/git-history/history-query.ts`
 - `tests/unit/cli/mcp/tools/arch-health-tools.test.ts`
 - `tests/unit/cli/mcp/tools/git-history-evidence-pack.test.ts`
+- `tests/integration/cli-mcp/evidence-pack.integration.test.ts`
 - `tasks/TASK-93.md`
