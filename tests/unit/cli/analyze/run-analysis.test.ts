@@ -233,7 +233,8 @@ describe('runAnalysis', () => {
         workDir: '/tmp/project/.archguard',
       }),
       { sources: ['./src'] },
-      '/tmp/project'
+      '/tmp/project',
+      expect.any(Function)
     );
     expect(persistQueryScopesMock).toHaveBeenCalledWith(
       '/tmp/project/.archguard',
@@ -241,6 +242,39 @@ describe('runAnalysis', () => {
       expect.objectContaining({ preferredGlobalScopeKey: undefined })
     );
     expect(result.persistedScopeKeys).toEqual(['abcd1234']);
+  });
+
+  it('carries the persisted scope entries on RunAnalysisResult', async () => {
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+
+    const result = await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { sources: ['./src'] },
+      reporter: silentReporter(),
+    });
+
+    expect(result.persistedScopes).toEqual([persistedEntry]);
+    expect(result.persistedScopes?.map((e) => e.key)).toEqual(result.persistedScopeKeys);
+  });
+
+  it('surfaces normalize warnings on the result and through the reporter', async () => {
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    normalizeToDiagramsMock.mockImplementation(async (_c, _o, _r, onWarning) => {
+      onWarning?.('sources ignored because config.diagrams is set');
+      return [{ name: 'class/all-classes', sources: ['/tmp/project/src'], level: 'class' }];
+    });
+    const reporter = silentReporter();
+
+    const result = await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { sources: ['./src'] },
+      reporter,
+    });
+
+    expect(result.warnings).toEqual(['sources ignored because config.diagrams is set']);
+    expect(reporter.warn).toHaveBeenCalledWith('sources ignored because config.diagrams is set');
   });
 
   it('passes preferredGlobalScopeKey when normalized diagrams mark a primary scope', async () => {

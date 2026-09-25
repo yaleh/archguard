@@ -9,6 +9,8 @@ import { DiagramProcessor } from '../processors/diagram-processor.js';
 import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
 import { ParseCache } from '@/parser/parse-cache.js';
 import { persistQueryScopes } from '../query/query-artifacts.js';
+import type { QueryScopeEntry } from '../query/query-manifest.js';
+import { formatScopeTable } from '../query/scope-table.js';
 import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
@@ -88,6 +90,13 @@ export interface RunAnalysisResult {
   results: DiagramResult[];
   queryScopesPersisted: number;
   persistedScopeKeys: string[];
+  /**
+   * Manifest entries returned by `persistQueryScopes` (key, sources, entityCount,
+   * kind, role). Optional for backward compatibility with partial results.
+   */
+  persistedScopes?: QueryScopeEntry[];
+  /** Non-fatal input problems (e.g. sources ignored because config.diagrams is set). */
+  warnings?: string[];
   hasDiagramFailures: boolean;
   /**
    * Last parsed ArchJSON from the processing run (primary scope preferred).
@@ -115,8 +124,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   config.projectSemantics = mergedProjectSemantics;
   reporter.succeed('Configuration loaded');
 
+  const warnings: string[] = [];
   const selectedDiagrams = (
-    await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot)
+    await normalizeToDiagrams(config, cliOptions as CLIOptions, sessionRoot, (message) => {
+      warnings.push(message);
+      reporter.warn(message);
+    })
   ).map((diagram) => ({
     ...diagram,
     sources: diagram.sources.map((source) => path.resolve(sessionRoot, source)),
@@ -130,6 +143,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       results: [],
       queryScopesPersisted: 0,
       persistedScopeKeys: [],
+      persistedScopes: [],
+      warnings,
       hasDiagramFailures: false,
       lastArchJson: null,
     };
@@ -271,6 +286,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
   }
 
   let persistedScopeKeys: string[] = [];
+  let persistedScopes: QueryScopeEntry[] = [];
   let hasArtifactFailures = results.some((r) => !r.success);
   const queryScopes = processor.getQuerySourceGroups();
   if (queryScopes.length > 0) {
@@ -279,11 +295,13 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
       const entries = await persistQueryScopes(config.workDir || workDir, queryScopes, {
         preferredGlobalScopeKey,
       });
+      persistedScopes = entries;
       persistedScopeKeys = entries.map((entry) => entry.key);
       if (config.verbose) {
         reporter.info(
           `Persisted ${entries.length} query scope(s) to ${config.workDir || workDir}/query/`
         );
+        for (const line of formatScopeTable(entries)) reporter.info(line);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -444,6 +462,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     results,
     queryScopesPersisted: persistedScopeKeys.length,
     persistedScopeKeys,
+    persistedScopes,
+    warnings,
     hasDiagramFailures: hasArtifactFailures,
     lastArchJson: processor.getLastArchJson(),
   };

@@ -340,3 +340,100 @@ describe('normalizeToDiagrams — atlasEntryPattern wiring', () => {
     expect(result[0].languageSpecific?.atlas?.entryPointPattern).toBeUndefined();
   });
 });
+
+// ── TASK-89: multiple sources are all processed, never silently dropped ───────
+
+describe('normalizeToDiagrams — multiple sources', () => {
+  const root = '/project';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCreateProjectRoot.mockImplementation((_root, _lang, opts) => [
+      { name: `${opts.label}/overview/package`, sources: [opts.source], level: 'package' },
+      { name: `${opts.label}/class/all-classes`, sources: [opts.source], level: 'class' },
+    ]);
+    mockDetectProject.mockResolvedValue([
+      { name: 'overview/package', sources: ['/x'], level: 'package' },
+    ]);
+  });
+
+  it('typescript with two distinct sources covers both sources', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/a/core', '/b/web'], lang: 'typescript' }),
+      root
+    );
+    expect(mockCreateProjectRoot).toHaveBeenCalledTimes(2);
+    expect(new Set(result.flatMap((d) => d.sources))).toEqual(new Set(['/a/core', '/b/web']));
+    expect(new Set(result.map((d) => d.name)).size).toBe(result.length);
+  });
+
+  it('gives diagrams distinct names when two sources share a basename', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/a/src', '/b/src'], lang: 'typescript' }),
+      root
+    );
+    expect(new Set(result.flatMap((d) => d.sources))).toEqual(new Set(['/a/src', '/b/src']));
+    expect(result).toHaveLength(4);
+    expect(new Set(result.map((d) => d.name)).size).toBe(4);
+  });
+
+  it('un-namespaced detector names from different sources do not collide (unknown lang)', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/a/core', '/b/web'] }),
+      root
+    );
+    expect(mockDetectProject).toHaveBeenCalledTimes(2);
+    expect(result.map((d) => d.name)).toEqual(['overview/package', 'web/overview/package']);
+  });
+
+  it('processes each source once when the same path is passed twice', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/a/core', '/a/core'], lang: 'typescript' }),
+      root
+    );
+    expect(mockCreateProjectRoot).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(2);
+  });
+
+  it('applies the --diagrams level filter to the merged result', async () => {
+    const result = await normalizeToDiagrams(
+      makeConfig(),
+      makeOptions({ sources: ['/a/core', '/b/web'], lang: 'typescript', diagrams: ['package'] }),
+      root
+    );
+    expect(result.map((d) => d.level)).toEqual(['package', 'package']);
+  });
+});
+
+describe('normalizeToDiagrams — config.diagrams with sources', () => {
+  const configDiagrams = [{ name: 'cfg/overview', sources: ['./src'], level: 'package' }];
+
+  it('warns that sources are ignored when config.diagrams is defined', async () => {
+    const onWarning = vi.fn();
+    const result = await normalizeToDiagrams(
+      makeConfig({ diagrams: configDiagrams } as Partial<Config>),
+      makeOptions({ sources: ['/a', '/b'] }),
+      '/project',
+      onWarning
+    );
+    expect(result).toHaveLength(1);
+    expect(onWarning).toHaveBeenCalledOnce();
+    expect(onWarning.mock.calls[0][0]).toContain('sources');
+    expect(onWarning.mock.calls[0][0]).toContain('/a');
+  });
+
+  it('does not warn when no sources were requested', async () => {
+    const onWarning = vi.fn();
+    await normalizeToDiagrams(
+      makeConfig({ diagrams: configDiagrams } as Partial<Config>),
+      makeOptions(),
+      '/project',
+      onWarning
+    );
+    expect(onWarning).not.toHaveBeenCalled();
+  });
+});

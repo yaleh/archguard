@@ -370,6 +370,65 @@ describe('registerAnalyzeTool', () => {
     });
   });
 
+  describe('formatAnalyzeResponse scope table', () => {
+    it('prints one row per persisted scope and surfaces run warnings', async () => {
+      const persistedScopes = [
+        {
+          key: 'aaaa1111',
+          label: 'core',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: ['/project/core'],
+          entityCount: 12,
+          relationCount: 3,
+          hasAtlasExtension: false,
+          role: 'primary',
+        },
+        {
+          key: 'bbbb2222',
+          label: 'web',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: ['/project/web'],
+          entityCount: 7,
+          relationCount: 1,
+          hasAtlasExtension: false,
+        },
+      ];
+      runAnalysisMock.mockResolvedValue({
+        config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+        diagrams: [],
+        results: [],
+        queryScopesPersisted: 2,
+        persistedScopeKeys: ['aaaa1111', 'bbbb2222'],
+        persistedScopes,
+        warnings: ['sources are ignored because config.diagrams is set'],
+        hasDiagramFailures: false,
+      });
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const toolSpy = vi.spyOn(server, 'tool');
+      const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+      registerAnalyzeTool(server, { defaultRoot: '/project' });
+      const callback = toolSpy.mock.calls.find(
+        ([name]) => name === 'archguard_analyze'
+      )?.[3] as Function;
+      const result = await callback({ projectRoot: '/project', sources: ['core', 'web'] });
+      const text: string = result.content[0].text;
+
+      const rows = text.split('\n').filter((line) => /^ {2}- [0-9a-f]{8} /.test(line));
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toContain('aaaa1111');
+      expect(rows[0]).toContain('parsed/primary');
+      expect(rows[0]).toContain('12 entities');
+      expect(rows[0]).toContain('/project/core');
+      expect(rows[1]).toContain('bbbb2222');
+      expect(rows[1]).toContain('7 entities');
+      expect(text).toContain('Warnings:');
+      expect(text).toContain('sources are ignored because config.diagrams is set');
+    });
+  });
+
   describe('formatAnalyzeResponse Paradigm block', () => {
     it('Go project → output contains Paradigm block', async () => {
       runAnalysisMock.mockResolvedValue({

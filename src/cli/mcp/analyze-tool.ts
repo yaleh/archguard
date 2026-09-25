@@ -2,6 +2,7 @@ import path from 'path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
+import { formatScopeTable } from '../query/scope-table.js';
 import { StderrReporter } from '../progress/index.js';
 import { ParserInitializationError } from '@/plugins/shared/parser-backend.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
@@ -175,6 +176,11 @@ function formatAnalyzeResponse(
   lines.push(`Work dir:     ${result.config.workDir}`);
   lines.push(`Output:       ${result.config.outputDir}`);
   lines.push(`Query:        ${result.queryScopesPersisted} scopes written`);
+  const scopeRows = formatScopeTable(result.persistedScopes ?? []);
+  if (scopeRows.length > 0) {
+    lines.push('', 'Scopes (key  kind/role  entities  sources):');
+    for (const row of scopeRows) lines.push(`  - ${row}`);
+  }
   if (result.results.length > 0) {
     lines.push('', 'Diagrams:');
     for (const diagram of result.results) {
@@ -187,9 +193,15 @@ function formatAnalyzeResponse(
       }
     }
   }
-  if (result.hasDiagramFailures) {
+  const warnings = [
+    ...(result.warnings ?? []),
+    ...(result.hasDiagramFailures
+      ? ['One or more diagrams failed, but query data was refreshed.']
+      : []),
+  ];
+  if (warnings.length > 0) {
     lines.push('', 'Warnings:');
-    lines.push('  - One or more diagrams failed, but query data was refreshed.');
+    for (const warning of warnings) lines.push(`  - ${warning}`);
   }
   const language = result.diagrams.find((d) => d.language)?.language;
   if (language === 'go') {

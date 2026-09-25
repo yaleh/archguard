@@ -76,11 +76,18 @@ const GENERIC_FALLBACK_LANGS = new Set(['typescript', 'python', 'cpp']);
 export async function normalizeToDiagrams(
   config: Config,
   cliOptions: CLIOptions,
-  rootDir?: string
+  rootDir?: string,
+  onWarning?: (message: string) => void
 ): Promise<DiagramConfig[]> {
   const resolvedRoot = rootDir ?? process.cwd();
 
   if (config.diagrams && config.diagrams.length > 0) {
+    if (cliOptions.sources && cliOptions.sources.length > 0) {
+      onWarning?.(
+        `config.diagrams is defined, so the requested sources (${cliOptions.sources.join(', ')}) are ignored; ` +
+          'remove config.diagrams or edit its sources to change what is analyzed.'
+      );
+    }
     return filterByLevels(config.diagrams as DiagramConfig[], cliOptions.diagrams);
   }
 
@@ -112,39 +119,17 @@ export async function normalizeToDiagrams(
       return [diagram];
     }
 
-    // TypeScript / Python: generic fallback (label comes from the source path)
-    if (language === 'python' || language === 'typescript') {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      return filterByLevels(
-        createProjectRootLanguageDiagrams(resolvedRoot, language, {
-          label: path.basename(sourcePath),
-          source: cliOptions.sources[0],
-          format: cliOptions.format,
-          exclude: cliOptions.exclude,
-        }),
-        cliOptions.diagrams
-      );
+    // Non-Go: run the single-source logic once per (deduplicated) source and
+    // merge the resulting diagrams. Sources are never silently dropped.
+    const uniqueSources = dedupeSources(cliOptions.sources);
+    const perSource: Array<{ source: string; diagrams: DiagramConfig[] }> = [];
+    for (const source of uniqueSources) {
+      perSource.push({
+        source,
+        diagrams: await normalizeSingleSource(source, language, cliOptions, resolvedRoot),
+      });
     }
-
-    // Registry lookup (kotlin / cpp / java + future languages)
-    const detector = LANGUAGE_STRUCTURE_DETECTORS[language ?? ''];
-    if (detector) {
-      const sourcePath = path.resolve(cliOptions.sources[0]);
-      return filterByLevels(
-        await detector(sourcePath, {
-          label: path.basename(sourcePath),
-          moduleName: path.basename(sourcePath),
-          format: cliOptions.format,
-          exclude: cliOptions.exclude,
-        }),
-        cliOptions.diagrams
-      );
-    }
-
-    // Unknown language: auto-detect project structure
-    const externalSourceRoot = path.resolve(cliOptions.sources[0]);
-    const diagrams = await detectProjectStructure(resolvedRoot, externalSourceRoot);
-    return filterByLevels(diagrams, cliOptions.diagrams);
+    return filterByLevels(mergeSourceDiagrams(perSource), cliOptions.diagrams);
   }
 
   // ── No --sources path ─────────────────────────────────────────────────────
@@ -215,6 +200,79 @@ export async function normalizeToDiagrams(
     exclude: cliOptions.exclude,
   });
   return filterByLevels(diagrams, cliOptions.diagrams);
+}
+
+/** Drop repeated sources (compared by resolved path), keeping first-seen order. */
+function dedupeSources(sources: string[]): string[] {
+  const seen = new Set<string>();
+  return sources.filter((source) => {
+    const key = path.resolve(source);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Existing single-source dispatch for non-Go languages (TS/Python, detector registry, auto-detect). */
+async function normalizeSingleSource(
+  source: string,
+  language: string | undefined,
+  cliOptions: CLIOptions,
+  resolvedRoot: string
+): Promise<DiagramConfig[]> {
+  const sourcePath = path.resolve(source);
+
+  // TypeScript / Python: generic fallback (label comes from the source path)
+  if (language === 'python' || language === 'typescript') {
+    return createProjectRootLanguageDiagrams(resolvedRoot, language, {
+      label: path.basename(sourcePath),
+      source,
+      format: cliOptions.format,
+      exclude: cliOptions.exclude,
+    });
+  }
+
+  // Registry lookup (kotlin / cpp / java + future languages)
+  const detector = LANGUAGE_STRUCTURE_DETECTORS[language ?? ''];
+  if (detector) {
+    return detector(sourcePath, {
+      label: path.basename(sourcePath),
+      moduleName: path.basename(sourcePath),
+      format: cliOptions.format,
+      exclude: cliOptions.exclude,
+    });
+  }
+
+  // Unknown language: auto-detect project structure
+  return detectProjectStructure(resolvedRoot, sourcePath);
+}
+
+/**
+ * Merge per-source diagram lists. When two sources yield the same diagram
+ * name (same basename label, or detectors that emit un-namespaced names like
+ * `overview/package`) later ones are renamed so outputs never overwrite each other.
+ */
+function mergeSourceDiagrams(
+  perSource: Array<{ source: string; diagrams: DiagramConfig[] }>
+): DiagramConfig[] {
+  const used = new Set<string>();
+  const merged: DiagramConfig[] = [];
+  for (const { source, diagrams } of perSource) {
+    const label = path.basename(path.resolve(source));
+    for (const diagram of diagrams) {
+      let name = diagram.name;
+      if (used.has(name) && !name.startsWith(`${label}/`)) {
+        name = `${label}/${name}`;
+      }
+      for (let n = 2; used.has(name); n++) {
+        const [head, ...rest] = diagram.name.split('/');
+        name = [`${head}-${n}`, ...rest].join('/');
+      }
+      used.add(name);
+      merged.push(name === diagram.name ? diagram : { ...diagram, name });
+    }
+  }
+  return merged;
 }
 
 export function filterByLevels(diagrams: DiagramConfig[], levels?: string[]): DiagramConfig[] {
