@@ -1,7 +1,7 @@
 ---
 id: TASK-89
 title: "TASK-89: analyze 传多个 sources 只处理第一个、其余静默丢弃，且响应不列出 scope"
-status: ready
+status: needs-human
 labels:
   - gap
   - defect
@@ -46,3 +46,13 @@ extra: {}
 - `tests/unit/cli/analyze/run-analysis.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
 - `tasks/TASK-89.md`
+
+## Needs-Human
+
+**执行 2026-09-25T09:53:28.700Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: ANTI-DRIFT HARD FAIL: task TASK-89 — 2 violation(s)
+- run_id：wk-prod-anchor
+- session_id：ff8c49f4-f10c-4b70-aa19-0dca1fdd21ce
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-TASK-89-wk-prod-anchor.log
