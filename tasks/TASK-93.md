@@ -1,7 +1,7 @@
 ---
 id: TASK-93
 title: "TASK-93: 「无法评估」与「合格」同形——intrinsic_dimension / evidence_pack 缺数据时返回看似有效的结果"
-status: todo
+status: ready
 labels:
   - gap
   - defect
