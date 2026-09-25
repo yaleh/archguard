@@ -297,3 +297,66 @@ describe('detectDispersion', () => {
     expect(result).toHaveLength(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Single-quote support (TASK-103)
+// ---------------------------------------------------------------------------
+
+describe('single-quoted literals', () => {
+  it('extracts single-quoted unions with the same values as double-quoted', () => {
+    const single = extractDiscriminatorTypes("export type Mode = 'direct' | 'jl';", 'a.ts');
+    const double = extractDiscriminatorTypes('export type Mode = "direct" | "jl";', 'a.ts');
+    expect(single).toHaveLength(1);
+    expect(single[0].values).toEqual(['direct', 'jl']);
+    expect(single).toEqual(double);
+  });
+
+  it('extracts mixed-quote unions completely', () => {
+    const result = extractDiscriminatorTypes(`type M = 'a' | "b" | 'c';`, 'm.ts');
+    expect(result).toHaveLength(1);
+    expect(result[0].values).toEqual(['a', 'b', 'c']);
+  });
+
+  it('keeps an apostrophe inside a double-quoted member intact', () => {
+    const result = extractDiscriminatorTypes(`type M = "don't" | 'x';`, 'm.ts');
+    expect(result[0].values).toEqual(["don't", 'x']);
+  });
+
+  it("finds === 'v', 'v' === and case 'v': with correct line numbers", () => {
+    const source = [
+      "if (kind === 'web') a();",
+      "if ('mobile' === kind) b();",
+      'switch (kind) {',
+      "case 'desktop':",
+      '  break;',
+      '}',
+    ].join('\n');
+    const result = scanFileForComparisons(source, 'test.ts');
+    expect(result.map((r) => r.line)).toEqual([1, 2, 4]);
+  });
+
+  it('does not treat a mismatched quote pair as a literal', () => {
+    expect(scanFileForComparisons(`if (kind === 'web") a();`, 'test.ts')).toEqual([]);
+  });
+
+  it('reports the same smell for the same value across 3 files in either quote style', () => {
+    const run = (q: string) => {
+      const types = extractDiscriminatorTypes(
+        `type Mode = ${q}read${q} | ${q}write${q};`,
+        'modes.ts'
+      );
+      const fileContents = new Map([
+        ['modes.ts', `type Mode = ${q}read${q} | ${q}write${q};`],
+        ['a.ts', `if (mode === ${q}read${q}) return;`],
+        ['b.ts', `switch (mode) {\ncase ${q}read${q}:\n  break;\n}`],
+      ]);
+      return detectDispersion(types, fileContents);
+    };
+
+    const double = run('"');
+    const single = run("'");
+    expect(double).toHaveLength(1);
+    expect(double[0]).toMatchObject({ value: 'read', dispersion: 3, severity: 'warning' });
+    expect(single).toEqual(double);
+  });
+});

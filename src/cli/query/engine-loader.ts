@@ -18,11 +18,31 @@ import { QueryEngine } from './query-engine.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import { RelationQueryService } from '@/core/query/relation-query-service.js';
 
+/** Metadata about the scope a query was resolved against. */
+export interface ResolvedScopeInfo {
+  key: string;
+  label: string;
+  sources: string[];
+  /** ISO-8601 timestamp of the manifest (analysis) that produced this scope. */
+  generatedAt: string;
+}
+
+/** Compact description of a scope available in the manifest. */
+export interface AvailableScope {
+  key: string;
+  label: string;
+  entityCount: number;
+}
+
 export interface QueryContext {
   engine: QueryEngine;
   extensionAccessor: ExtensionAccessor;
   scopeEntry: QueryScopeEntry;
   relationQueryService: RelationQueryService;
+  /** Resolved scope metadata (key, sources, generatedAt). */
+  scopeInfo: ResolvedScopeInfo;
+  /** All scopes present in the manifest. */
+  availableScopes: AvailableScope[];
 }
 
 /**
@@ -53,6 +73,13 @@ export async function readManifest(archDir: string): Promise<QueryManifest> {
  * - Throws descriptive errors when data is missing or scope is not found.
  */
 export async function resolveScope(queryRoot: string, scopeKey?: string): Promise<QueryScopeEntry> {
+  return (await resolveScopeWithManifest(queryRoot, scopeKey)).scopeEntry;
+}
+
+async function resolveScopeWithManifest(
+  queryRoot: string,
+  scopeKey?: string
+): Promise<{ scopeEntry: QueryScopeEntry; manifest: QueryManifest }> {
   const manifestPath = path.join(queryRoot, 'query', 'manifest.json');
   if (!(await fs.pathExists(manifestPath))) {
     throw new Error('No query data found. Run `archguard analyze` first.');
@@ -76,7 +103,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
         `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`
       );
     }
-    return globalScope;
+    return { scopeEntry: globalScope, manifest };
   }
 
   // Explicit scope: match by key or label
@@ -89,11 +116,11 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
       const scopeList = manifest.scopes.map((s) => `  ${s.key}  ${s.label}`).join('\n');
       throw new Error(`Scope "${scopeKey}" not found. Available scopes:\n${scopeList}`);
     }
-    return found;
+    return { scopeEntry: found, manifest };
   }
 
   if (manifest.scopes.length === 1) {
-    return manifest.scopes[0];
+    return { scopeEntry: manifest.scopes[0], manifest };
   }
 
   if (!manifest.globalScopeKey) {
@@ -109,7 +136,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
     );
   }
 
-  return globalScope;
+  return { scopeEntry: globalScope, manifest };
 }
 
 /**
@@ -122,7 +149,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
  */
 export async function loadEngine(archDir: string, scopeKey?: string): Promise<QueryContext> {
   const queryRoot = archDir;
-  const scopeEntry = await resolveScope(queryRoot, scopeKey);
+  const { scopeEntry, manifest } = await resolveScopeWithManifest(queryRoot, scopeKey);
 
   const archJsonPath = path.join(queryRoot, 'query', scopeEntry.key, 'arch.json');
   if (!(await fs.pathExists(archJsonPath))) {
@@ -176,5 +203,23 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
   const extensionAccessor = new ExtensionAccessor(archJson);
   const relationQueryService = engine.relationQueryService;
-  return { engine, extensionAccessor, scopeEntry, relationQueryService };
+  const scopeInfo: ResolvedScopeInfo = {
+    key: scopeEntry.key,
+    label: scopeEntry.label,
+    sources: scopeEntry.sources,
+    generatedAt: manifest.generatedAt,
+  };
+  const availableScopes: AvailableScope[] = manifest.scopes.map((s) => ({
+    key: s.key,
+    label: s.label,
+    entityCount: s.entityCount,
+  }));
+  return {
+    engine,
+    extensionAccessor,
+    scopeEntry,
+    relationQueryService,
+    scopeInfo,
+    availableScopes,
+  };
 }

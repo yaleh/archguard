@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { HistoryQuery } from '@/analysis/git-history/history-query.js';
+import { HistoryQuery, HistoryTargetNotFoundError } from '@/analysis/git-history/history-query.js';
 import type { LoadedHistoryData } from '@/cli/git-history/history-loader.js';
 import type {
   GitHistoryManifest,
@@ -181,6 +181,56 @@ describe('HistoryQuery.getCochange', () => {
     expect(result.analyzedWindow.sinceDays).toBe(60);
     expect(result.analyzedWindow.totalCommits).toBe(200);
     expect(result.analyzedWindow.generatedAt).toBe('2025-06-01T00:00:00.000Z');
+  });
+
+  it('echoes windowStart/windowEnd/truncated and explains truncation', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], [], {
+      sinceDays: 90,
+      maxCommits: 500,
+      totalCommits: 500,
+      windowStart: '2026-09-23',
+      windowEnd: '2026-09-25',
+      truncated: true,
+    });
+    const q = new HistoryQuery(data);
+
+    for (const w of [
+      q.getCochange('file', 'src/a.ts').analyzedWindow,
+      q.getOwnership('file', 'src/a.ts').analyzedWindow,
+      q.getChangeContext('file', 'src/a.ts').analyzedWindow,
+    ]) {
+      expect(w.windowStart).toBe('2026-09-23');
+      expect(w.windowEnd).toBe('2026-09-25');
+      expect(w.truncated).toBe(true);
+      expect(w.note).toContain('shorter than sinceDays=90');
+    }
+  });
+
+  it('reports truncated:false without a note', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], [], {
+      windowStart: '2026-07-01',
+      windowEnd: '2026-09-25',
+      truncated: false,
+    });
+    const w = new HistoryQuery(data).getChangeContext('file', 'src/a.ts').analyzedWindow;
+    expect(w.truncated).toBe(false);
+    expect(w.note).toBeUndefined();
+  });
+
+  it('reads legacy manifests without window fields without throwing', () => {
+    const file = makeFileMetric('src/a.ts');
+    const data = makeData([file], []); // makeManifest carries no window fields
+    const q = new HistoryQuery(data);
+
+    const w = q.getChangeContext('file', 'src/a.ts').analyzedWindow;
+    expect(w.sinceDays).toBe(90);
+    expect(w.windowStart).toBeUndefined();
+    expect(w.windowEnd).toBeUndefined();
+    expect(w.truncated).toBeUndefined();
+    expect(w.note).toBeUndefined();
+    expect(() => q.getCochange('file', 'src/a.ts')).not.toThrow();
   });
 
   it('works for package type', () => {
@@ -703,5 +753,127 @@ describe('HistoryQuery.getChangeContext', () => {
     const result = q.getChangeContext('file', 'src/a.ts');
     expect(result.stalePathWarning).toBeDefined();
     expect(result.stalePathWarning).toContain('no longer exists');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// keyRoot resolution + notFound codes (TASK-95)
+// ---------------------------------------------------------------------------
+
+describe('HistoryQuery keyRoot resolution', () => {
+  const keyed = () =>
+    new HistoryQuery(
+      makeData([makeFileMetric('cli/foo.ts')], [makePackageMetric('cli')], {
+        keyRoot: 'src',
+        pathFilters: ['src'],
+        windowStart: '2025-04-01',
+        windowEnd: '2025-05-30',
+      })
+    );
+
+  it('repo-relative and key-relative targets resolve to the same file', () => {
+    const q = keyed();
+    const byKey = q.getChangeContext('file', 'cli/foo.ts');
+    const byRepo = q.getChangeContext('file', 'src/cli/foo.ts');
+    expect(byKey.resolvedTarget).toBe('cli/foo.ts');
+    expect(byRepo.resolvedTarget).toBe('cli/foo.ts');
+    expect(byRepo.summary).toEqual(byKey.summary);
+    expect(byRepo.risk).toEqual(byKey.risk);
+    // the target as written is echoed unchanged
+    expect(byRepo.target).toBe('src/cli/foo.ts');
+  });
+
+  it('resolves repo-relative package targets and echoes resolvedTarget on every query', () => {
+    const q = keyed();
+    expect(q.getChangeContext('package', 'src/cli').resolvedTarget).toBe('cli');
+    expect(q.getCochange('file', 'src/cli/foo.ts').resolvedTarget).toBe('cli/foo.ts');
+    expect(q.getOwnership('file', 'src/cli/foo.ts').resolvedTarget).toBe('cli/foo.ts');
+    expect(q.getChangeRisk('file', 'src/cli/foo.ts').resolvedTarget).toBe('cli/foo.ts');
+  });
+
+  it('prefers the literal key when the stripped key does not exist', () => {
+    // key 'src/x.ts' (repo path src/src/x.ts) is a legitimate key under keyRoot 'src'
+    const q = new HistoryQuery(
+      makeData([makeFileMetric('src/x.ts')], [], { keyRoot: 'src', pathFilters: ['src'] })
+    );
+    expect(q.getChangeContext('file', 'src/x.ts').resolvedTarget).toBe('src/x.ts');
+  });
+
+  it('with keyRoot "" (monorepo) keys are repo-relative and unchanged', () => {
+    const q = new HistoryQuery(
+      makeData([makeFileMetric('plugin/scripts/driver.ts')], [makePackageMetric('plugin')], {
+        keyRoot: '',
+        pathFilters: ['packages', 'plugin'],
+      })
+    );
+    const r = q.getChangeContext('file', 'plugin/scripts/driver.ts');
+    expect(r.resolvedTarget).toBe('plugin/scripts/driver.ts');
+    expect(q.getChangeContext('package', 'plugin').resolvedTarget).toBe('plugin');
+  });
+
+  it('getEvidencePack echoes resolvedTarget', () => {
+    const pack = keyed().getEvidencePack([{ targetType: 'file', target: 'src/cli/foo.ts' }]);
+    expect(pack.results[0].resolvedTarget).toBe('cli/foo.ts');
+  });
+});
+
+describe('HistoryQuery notFound codes', () => {
+  function notFoundOf(fn: () => unknown): HistoryTargetNotFoundError {
+    try {
+      fn();
+    } catch (err) {
+      expect(err).toBeInstanceOf(HistoryTargetNotFoundError);
+      return err as HistoryTargetNotFoundError;
+    }
+    throw new Error('expected a not-found error');
+  }
+
+  const monorepo = () =>
+    new HistoryQuery(
+      makeData([makeFileMetric('plugin/a.ts')], [makePackageMetric('plugin')], {
+        keyRoot: '',
+        pathFilters: ['packages', 'plugin'],
+        windowStart: '2025-04-01',
+        windowEnd: '2025-05-30',
+      })
+    );
+
+  it('outside-analyzed-paths lists the directories actually collected', () => {
+    const err = notFoundOf(() => monorepo().getChangeContext('file', 'docs/readme.md'));
+    expect(err.code).toBe('outside-analyzed-paths');
+    expect(err.analyzedPaths).toEqual(['packages', 'plugin']);
+    expect(err.message).toContain('packages, plugin');
+    expect(err.message).toContain('not found in git history data');
+  });
+
+  it('no-commits-in-window carries the window bounds', () => {
+    const err = notFoundOf(() => monorepo().getChangeContext('file', 'plugin/untouched.ts'));
+    expect(err.code).toBe('no-commits-in-window');
+    expect(err.window).toEqual({
+      windowStart: '2025-04-01',
+      windowEnd: '2025-05-30',
+      sinceDays: 90,
+    });
+    expect(err.message).toContain('2025-04-01 to 2025-05-30');
+  });
+
+  it('legacy-manifest (no keyRoot) hints to re-run archguard_analyze_git', () => {
+    const q = new HistoryQuery(makeData([makeFileMetric('src/a.ts')], []));
+    const err = notFoundOf(() => q.getChangeRisk('file', 'nope.ts'));
+    expect(err.code).toBe('legacy-manifest');
+    expect(err.message).toContain('archguard_analyze_git');
+  });
+
+  it('getEvidencePack surfaces the code per not-found target', () => {
+    const pack = monorepo().getEvidencePack([
+      { targetType: 'file', target: 'docs/readme.md' },
+      { targetType: 'file', target: 'plugin/untouched.ts' },
+      { targetType: 'file', target: 'plugin/a.ts' },
+    ]);
+    expect(pack.results).toHaveLength(1);
+    expect(pack.notFound.map((n) => n.code)).toEqual([
+      'outside-analyzed-paths',
+      'no-commits-in-window',
+    ]);
   });
 });

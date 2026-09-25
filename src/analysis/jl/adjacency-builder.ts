@@ -48,32 +48,61 @@ export function weightForRelationType(type: string): {
   return { weight: UNKNOWN_WEIGHT, known: false };
 }
 
+/** Options for `buildAdjacencyMatrix`. */
+export interface AdjacencyOptions {
+  /**
+   * Resolve relation endpoints that are not entity IDs by entity *name*
+   * (TASK-96). The TS parser emits many relations whose target is a bare name
+   * (e.g. `PackageGraph`) while entity IDs are `<file>.<name>`; the query layer
+   * (`ArchIndex.nameToIds`) resolves those by name, so `get_dependents` sees the
+   * edge but an ID-only matrix does not. A name shared by several entities links
+   * to each of them (same as `ArchIndex`). Default false — the drift /
+   * intrinsic-dimension paths keep their existing ID-only matrix.
+   */
+  resolveByName?: boolean;
+}
+
 /**
  * Build an n×n weighted adjacency matrix (plain number[][]) from ArchJSON.
  *
  * - Entity i ↔ row/column i, ordered by `archJson.entities`.
  * - Repeated relations accumulate weight on the same cell.
- * - Relations whose source/target is not a known entity ID are skipped.
+ * - Relations whose source/target is not a known entity ID are skipped
+ *   (unless `options.resolveByName` resolves them by entity name).
  * - Unknown relation types use weight 1.0 and emit a console.warn.
  *
  * @param archJson - ArchJSON (only `entities` and `relations` are read).
+ * @param options - AdjacencyOptions.
  * @returns Row-major n×n matrix. A zero-entity ArchJSON yields a 0×0 matrix.
  */
 export function buildAdjacencyMatrix(
-  archJson: Pick<ArchJSON, 'entities' | 'relations'>
+  archJson: Pick<ArchJSON, 'entities' | 'relations'>,
+  options: AdjacencyOptions = {}
 ): number[][] {
   const n = archJson.entities.length;
   const matrix: number[][] = Array.from({ length: n }, () => Array<number>(n).fill(0));
 
   const indexById = new Map<string, number>();
+  const indicesByName = new Map<string, number[]>();
   archJson.entities.forEach((entity, index) => {
     indexById.set(entity.id, index);
+    if (options.resolveByName) {
+      const list = indicesByName.get(entity.name) ?? [];
+      list.push(index);
+      indicesByName.set(entity.name, list);
+    }
   });
 
+  const resolve = (endpoint: string): number[] => {
+    const byId = indexById.get(endpoint);
+    if (byId !== undefined) return [byId];
+    return indicesByName.get(endpoint) ?? [];
+  };
+
   for (const relation of archJson.relations) {
-    const sourceIndex = indexById.get(relation.source);
-    const targetIndex = indexById.get(relation.target);
-    if (sourceIndex === undefined || targetIndex === undefined) {
+    const sources = resolve(relation.source);
+    const targets = resolve(relation.target);
+    if (sources.length === 0 || targets.length === 0) {
       // External dependency — skip, never fail.
       continue;
     }
@@ -83,7 +112,9 @@ export function buildAdjacencyMatrix(
         `[jl] unknown relation type "${String(relation.type)}" → weight ${UNKNOWN_WEIGHT}`
       );
     }
-    matrix[sourceIndex][targetIndex] += weight;
+    for (const sourceIndex of sources) {
+      for (const targetIndex of targets) matrix[sourceIndex][targetIndex] += weight;
+    }
   }
 
   return matrix;

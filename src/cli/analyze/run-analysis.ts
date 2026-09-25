@@ -22,6 +22,7 @@ import {
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
 import { MetricsHistoryWriter } from '../metrics-history-writer.js';
+import { buildArchIndex } from '@/core/query/arch-index-builder.js';
 import {
   computePackageFanMetricsFromRelations,
   computeCycleMetrics,
@@ -37,6 +38,8 @@ import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 import type { ArchJSON } from '@/types/index.js';
+import { computeArchHealth } from './arch-health.js';
+import type { ArchHealthOutcome } from './arch-health.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -111,6 +114,26 @@ export interface RunAnalysisResult {
    * backward compatibility with callers that construct partial results.
    */
   lastArchJson?: ArchJSON | null;
+  /**
+   * Arch-health snapshot computed by this run. Present only when
+   * `cliOptions.archHealth` was set and an ArchJSON was available.
+   */
+  archHealth?: ArchHealthOutcome;
+}
+
+/**
+ * Nearest common ancestor directory of absolute paths. A single path is its own ancestor.
+ */
+function commonAncestorDir(dirs: string[]): string {
+  const split = dirs.map((d) => path.resolve(d).split(path.sep));
+  const first = split[0];
+  let len = first.length;
+  for (const parts of split.slice(1)) {
+    let i = 0;
+    while (i < len && i < parts.length && parts[i] === first[i]) i++;
+    len = i;
+  }
+  return first.slice(0, len).join(path.sep) || path.sep;
 }
 
 function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
@@ -242,6 +265,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         const analyzer = new TestAnalyzer();
         const testAnalysis = await analyzer.analyze(archJson, plugin, {
           workspaceRoot,
+          testSources: cliOptions.testSources?.map((source) => path.resolve(sessionRoot, source)),
           projectSemantics: mergedProjectSemantics,
         });
 
@@ -329,7 +353,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           allPackageNames
         );
 
-        const cycleMetrics = computeCycleMetrics([], allPackageNames);
+        // Same SCC source as archguard_detect_cycles / archguard_get_package_metrics
+        const cycles = buildArchIndex(metricsArchJson, '').cycles;
+        const cycleMetrics = computeCycleMetrics(cycles, allPackageNames);
 
         // Count entities per package
         const entityCountByPackage = new Map<string, number>();
@@ -356,10 +382,22 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 
         const metricsOutputDir = config.workDir || workDir;
         const metricsWriter = new MetricsHistoryWriter();
-        await metricsWriter.append(packages, metricsOutputDir);
+        // getLastArchJson() is the primary scope's ArchJSON; record that scope's identity.
+        const metricsScope =
+          queryScopes.find((scope) => scope.archJson === metricsArchJson) ??
+          queryScopes.find((scope) => scope.role === 'primary') ??
+          queryScopes[0];
+        const appended = await metricsWriter.append(packages, metricsOutputDir, {
+          scopeKey: metricsScope?.key,
+          sources: metricsScope?.sources,
+        });
 
         if (config.verbose) {
-          reporter.info(`[metrics-history] Appended snapshot for ${packages.length} packages`);
+          reporter.info(
+            appended
+              ? `[metrics-history] Appended snapshot for ${packages.length} packages`
+              : '[metrics-history] Skipped empty snapshot'
+          );
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -386,7 +424,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     try {
       reporter.start('Analyzing git history...');
       const {
-        readGitLog,
+        readGitLogWindow,
         getHeadRef,
         getCurrentBranch,
         isGitRepo,
@@ -396,37 +434,48 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         await import('../git-history/history-aggregator.js');
       const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
 
-      const gitArchJson = processor.getLastArchJson();
-      const projectRoot = gitArchJson?.workspaceRoot ?? sessionRoot;
+      // keyRoot: nearest common ancestor of ALL analyzed source dirs — deterministic, unlike
+      // the "last ArchJSON" workspaceRoot, which varies with per-scope entity counts.
+      const sourceDirs = [...new Set(selectedDiagrams.flatMap((d) => d.sources))];
+      const projectRoot = commonAncestorDir(sourceDirs.length > 0 ? sourceDirs : [sessionRoot]);
       if (!isGitRepo(projectRoot)) {
         reporter.warn('[git-history] Not a git repository — skipping git history analysis');
       } else {
-        const sinceDays = 90;
-        const maxCommits = 500;
+        const positiveInt = (v: number | undefined, fallback: number): number =>
+          v !== undefined && Number.isInteger(v) && v > 0 ? v : fallback;
+        const sinceDays = positiveInt(cliOptions.gitSinceDays, 90);
+        const maxCommits = positiveInt(cliOptions.gitMaxCommits, 500);
         const includeMerges = false;
         const granularities: ('package' | 'file')[] = ['package', 'file'];
 
         const gitRepoRoot = getGitRootFn(projectRoot) ?? projectRoot;
-        const gitSubDir =
-          gitRepoRoot !== projectRoot
-            ? path.relative(gitRepoRoot, projectRoot).replace(/\\/g, '/')
-            : undefined;
-        const rawCommits = readGitLog(gitRepoRoot, {
+        const relToGit = (abs: string): string =>
+          path.relative(gitRepoRoot, abs).replace(/\\/g, '/');
+        const keyRoot = relToGit(projectRoot);
+        // Every analyzed source dir is its own pathspec, so each source's history is collected
+        // (not just one subtree) and nothing else under keyRoot is.
+        const pathFilters = [...new Set(sourceDirs.map(relToGit))].sort();
+        const {
+          commits: rawCommits,
+          windowStart,
+          windowEnd,
+          truncated,
+        } = readGitLogWindow(gitRepoRoot, {
           sinceDays,
           maxCommits,
           includeMerges,
-          pathFilter: gitSubDir,
+          pathFilter: pathFilters.includes('') ? undefined : pathFilters,
         });
-        // Strip the subdirectory prefix from file paths so metrics are relative to projectRoot
-        const subDirPrefix = gitSubDir ? gitSubDir + '/' : '';
-        const commits = subDirPrefix
-          ? rawCommits.map((c) => ({
-              ...c,
-              files: c.files
-                .filter((f) => f.path.startsWith(subDirPrefix))
-                .map((f) => ({ ...f, path: f.path.slice(subDirPrefix.length) })),
-            }))
-          : rawCommits;
+        // Keep only files under a collected dir, then make paths relative to keyRoot.
+        const underFilter = (p: string): boolean =>
+          pathFilters.some((f) => f === '' || p === f || p.startsWith(f + '/'));
+        const keyPrefix = keyRoot ? keyRoot + '/' : '';
+        const commits = rawCommits.map((c) => ({
+          ...c,
+          files: c.files
+            .filter((f) => underFilter(f.path))
+            .map((f) => ({ ...f, path: f.path.slice(keyPrefix.length) })),
+        }));
         if (commits.length === 0) {
           reporter.warn(`[git-history] No commits found in the last ${sinceDays} days`);
         } else {
@@ -442,8 +491,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
             sinceDays,
             maxCommits,
             totalCommits: commits.length,
+            ...(windowStart && windowEnd ? { windowStart, windowEnd } : {}),
+            truncated,
             includeMerges,
             granularities,
+            keyRoot,
+            pathFilters,
           };
           const artifacts = {
             manifest,
@@ -455,11 +508,40 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           reporter.succeed(
             `Git history analysis complete: ${commits.length} commits, ${fileMetrics.length} files, ${packageMetrics.length} packages`
           );
+          if (truncated) {
+            reporter.warn(
+              `[git-history] History truncated at maxCommits=${maxCommits}: analyzed window ${windowStart} to ${windowEnd} is shorter than sinceDays=${sinceDays}. Increase --git-max-commits to cover more.`
+            );
+          }
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       reporter.warn(`[git-history] Failed: ${msg}`);
+    }
+  }
+
+  const lastArchJson = processor.getLastArchJson();
+  let archHealth: ArchHealthOutcome | undefined;
+  if (cliOptions.archHealth && lastArchJson) {
+    try {
+      const scope =
+        queryScopes.find((candidate) => candidate.archJson === lastArchJson) ??
+        queryScopes.find((candidate) => candidate.role === 'primary');
+      archHealth = await computeArchHealth(
+        lastArchJson,
+        config.workDir || workDir,
+        undefined,
+        scope ? { scopeKey: scope.key, sources: scope.sources } : {}
+      );
+      if (!archHealth.persisted) {
+        reporter.warn(
+          `[arch-health] snapshot not persisted: ${archHealth.reason ?? 'unknown reason'}`
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      reporter.warn(`[arch-health] Failed: ${msg}`);
     }
   }
 
@@ -472,7 +554,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     persistedScopes,
     warnings,
     hasDiagramFailures: hasArtifactFailures,
-    lastArchJson: processor.getLastArchJson(),
+    lastArchJson,
+    archHealth,
   };
 }
 

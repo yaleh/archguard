@@ -32,6 +32,16 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text' as const, text }] };
 }
 
+/**
+ * Unified "could not evaluate" shape: absence of data must not look like a
+ * passing result (e.g. `trend: "stable"`).
+ */
+export interface NotEvaluated {
+  evaluated: false;
+  reason: string;
+  hint: string;
+}
+
 export type TrendLabel = 'rising' | 'decreasing' | 'stable';
 
 /**
@@ -92,9 +102,12 @@ export function registerArchHealthTools(server: McpServer, defaultRoot: string):
         const history = await readHistoryFile(archDir);
 
         if (history === null || history.snapshots.length === 0) {
-          return textResponse(
-            JSON.stringify({ current: null, history: [], trend: 'stable' }, null, 2)
-          );
+          const notEvaluated: NotEvaluated = {
+            evaluated: false,
+            reason: history === null ? 'no_arch_health_history' : 'arch_health_history_empty',
+            hint: `No snapshots in ${path.join(archDir, 'arch-health-history.json')}. Run \`archguard analyze --arch-health\` (at least once; twice for a trend) to record them.`,
+          };
+          return textResponse(JSON.stringify(notEvaluated, null, 2));
         }
 
         const sorted = [...history.snapshots].sort((a, b) =>
@@ -239,11 +252,50 @@ export function buildDriftToolResult(report: DriftReport): DriftToolResult {
 // TASK-66 — cluster boundary (K-Means + Boundary Alignment Score)
 // ---------------------------------------------------------------------------
 
+/** Directory of an entity's source file (posix separators). */
+function entityDirectory(entity: ArchJSON['entities'][number]): string {
+  const file = entity.sourceLocation?.file ?? '';
+  const normalized = file.replace(/\\/g, '/');
+  const slash = normalized.lastIndexOf('/');
+  return slash >= 0 ? normalized.slice(0, slash) : '';
+}
+
+/**
+ * Package key per entity for the cluster-boundary analysis (TASK-96).
+ *
+ * Dotted entity names (Java `com.foo.Bar`, Go) already carry their package, so
+ * `undefined` is returned and the analyzer keeps its name-prefix split. Names
+ * without dots (TypeScript: `escapeHtml`) carry no package — every entity would
+ * be its own package — so the package is the entity's source directory, made
+ * relative to the deepest directory shared by all entities (the source root).
+ */
+export function derivePackageOf(archJson: ArchJSON): string[] | undefined {
+  const entities = archJson.entities;
+  const dotted = entities.filter((e) => e.name.includes('.')).length;
+  if (dotted * 2 >= entities.length) return undefined;
+
+  const dirs = entities.map(entityDirectory);
+  const common = dirs
+    .map((d) => d.split('/'))
+    .reduce((acc, parts) => {
+      let i = 0;
+      while (i < acc.length && i < parts.length && acc[i] === parts[i]) i++;
+      return acc.slice(0, i);
+    });
+  const prefixLength = common.length;
+  return dirs.map((d) => {
+    const rel = d.split('/').slice(prefixLength).join('/');
+    return rel.length > 0 ? rel : '.';
+  });
+}
+
 /**
  * Build a `ClusterBoundaryReport` from ArchJSON in-memory (pure — no I/O).
  *
- * Builds the weighted adjacency matrix (TASK-64's `adjacency-builder`) and
- * runs `ClusterBoundaryAnalyzer.analyze` over entity names.
+ * Builds the weighted adjacency matrix (TASK-64's `adjacency-builder`, with
+ * name-resolved endpoints so it agrees with `get_dependents`) and runs
+ * `ClusterBoundaryAnalyzer.analyze` over entity names, grouping by source
+ * directory when names carry no package prefix (see `derivePackageOf`).
  *
  * @param archJson - Parsed architecture JSON.
  * @param options - ClusterBoundaryOptions (minPackageSize, splitThreshold, …).
@@ -252,9 +304,9 @@ export function buildClusterBoundaryReport(
   archJson: ArchJSON,
   options: ClusterBoundaryOptions = {}
 ): ClusterBoundaryReport {
-  const matrix = buildAdjacencyMatrix(archJson);
+  const matrix = buildAdjacencyMatrix(archJson, { resolveByName: true });
   const entityNames = archJson.entities.map((e) => e.name);
-  return ClusterBoundaryAnalyzer.analyze(matrix, entityNames, options);
+  return ClusterBoundaryAnalyzer.analyze(matrix, entityNames, options, derivePackageOf(archJson));
 }
 
 /**
@@ -296,7 +348,10 @@ export function registerClusterBoundaryTool(server: McpServer, defaultRoot: stri
         .int()
         .min(1)
         .optional()
-        .describe('Dot-separated package-prefix depth (default 2).'),
+        .describe(
+          'Dot-separated package-prefix depth (default 2). Ignored when entity names have no dots ' +
+            "(e.g. TypeScript): packages are then the entities' source directories."
+        ),
       includeOrphans: z
         .boolean()
         .optional()

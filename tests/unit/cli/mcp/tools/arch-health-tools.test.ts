@@ -17,6 +17,8 @@ vi.mock('@/cli/utils/cluster-archjson-loader.js', () => ({
 
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import {
+  buildClusterBoundaryReport,
+  derivePackageOf,
   registerArchHealthTools,
   registerClusterBoundaryTool,
 } from '@/cli/mcp/tools/arch-health-tools.js';
@@ -93,14 +95,26 @@ describe('registerArchHealthTools', () => {
     expect(registeredName).toBe('archguard_get_intrinsic_dimension');
   });
 
-  it('empty history → { current: null, history: [], trend: "stable" }', async () => {
+  it('empty history → evaluated:false with a reason, never trend "stable"', async () => {
     const data = await invokeTool({}, makeHistory([]));
-    expect(data).toEqual({ current: null, history: [], trend: 'stable' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('arch_health_history_empty');
+    expect(data.hint).toEqual(expect.stringContaining('--arch-health'));
+    expect(data).not.toHaveProperty('trend');
+    expect(data).not.toHaveProperty('current');
   });
 
-  it('missing history file → same empty shape', async () => {
+  it('missing history file → evaluated:false with a reason, never trend "stable"', async () => {
     const data = await invokeTool({}, null);
-    expect(data).toEqual({ current: null, history: [], trend: 'stable' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('no_arch_health_history');
+    expect(data.hint.length).toBeGreaterThan(0);
+    expect(JSON.stringify(data)).not.toContain('"stable"');
+  });
+
+  it('with history the response shape is unchanged (no evaluated key)', async () => {
+    const data = await invokeTool({}, makeHistory([makeSnapshot(1, '2026-01-01T00:00:00Z')]));
+    expect(Object.keys(data).sort()).toEqual(['current', 'history', 'trend']);
   });
 
   it('current is the newest snapshot (chronological)', async () => {
@@ -177,14 +191,14 @@ describe('registerArchHealthTools', () => {
 // TASK-66 — archguard_get_cluster_boundary
 // ---------------------------------------------------------------------------
 
-function makeEntity(id: string, name: string) {
+function makeEntity(id: string, name: string, file = 'x.ts') {
   return {
     id,
     name,
     type: 'class',
     visibility: 'public' as const,
     members: [],
-    sourceLocation: { file: 'x.ts', startLine: 1, endLine: 1 },
+    sourceLocation: { file, startLine: 1, endLine: 1 },
   };
 }
 
@@ -297,5 +311,64 @@ describe('registerClusterBoundaryTool', () => {
   it('includeOrphans=true (default) → orphan listed', async () => {
     const data = await invokeClusterTool();
     expect(data.orphanEntities).toEqual(['zz.core.Orphan']);
+  });
+});
+
+/**
+ * TS-style ArchJSON: dot-free entity names spread over 3 directories. Entity IDs
+ * are `<file>.<name>`; relation targets are bare names (as the TS parser emits).
+ */
+function makeTsStyleArchJson(): ArchJSON {
+  const entities: ReturnType<typeof makeEntity>[] = [];
+  const relations: ReturnType<typeof makeRelation>[] = [];
+  const dirs = ['/repo/src/parser', '/repo/src/cli', '/repo/src/mermaid'];
+  dirs.forEach((dir, d) => {
+    const hub = `hub${d}`;
+    entities.push(makeEntity(`${dir}/hub.ts.${hub}`, hub, `${dir}/hub.ts`));
+    for (let i = 0; i < 4; i++) {
+      const name = `fn${d}x${i}`;
+      entities.push(makeEntity(`${dir}/f${i}.ts.${name}`, name, `${dir}/f${i}.ts`));
+      relations.push(makeRelation(`r${d}${i}`, `${dir}/f${i}.ts.${name}`, hub));
+    }
+  });
+  return {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: [],
+    entities,
+    relations,
+  };
+}
+
+describe('cluster boundary — TS-style entities (TASK-96)', () => {
+  it('derivePackageOf: directory relative to the shared source root', () => {
+    expect(derivePackageOf(makeTsStyleArchJson())).toEqual(
+      [...Array(15)].map((_, i) => ['parser', 'cli', 'mermaid'][Math.floor(i / 5)])
+    );
+  });
+
+  it('derivePackageOf: dotted names keep the name-prefix split (undefined)', () => {
+    expect(derivePackageOf(makeClusterArchJson())).toBeUndefined();
+  });
+
+  it('packageCount is the number of directories (3), not the entity count', () => {
+    const report = buildClusterBoundaryReport(makeTsStyleArchJson(), { minPackageSize: 1 });
+    // Hubs only receive edges (zero adjacency row) → orphans, excluded from clustering.
+    expect(report.entityCount).toBe(12);
+    expect(report.packageCount).toBe(3);
+    expect(report.globalBAS).toBeGreaterThan(0);
+  });
+
+  it('bare-name relation targets count as edges (callers are not orphans)', () => {
+    const report = buildClusterBoundaryReport(makeTsStyleArchJson(), { minPackageSize: 1 });
+    // Without name resolution every edge would be dropped and all 15 would be orphans.
+    expect(report.orphanEntities).toEqual(['hub0', 'hub1', 'hub2']);
+  });
+
+  it('the MCP tool reports packageCount 3 for TS-style entities', async () => {
+    vi.mocked(loadArchJsonForCluster).mockResolvedValue(makeTsStyleArchJson());
+    const data = await invokeClusterTool({ minPackageSize: 1 });
+    expect(data.packageCount).toBe(3);
   });
 });

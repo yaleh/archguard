@@ -318,3 +318,104 @@ describe('archguard_get_package_metrics — cycle detection', () => {
     expect(pkgX.cyclesWith.length).toBeGreaterThan(0);
   });
 });
+
+// ── topN / sortBy ──────────────────────────────────────────────────────────────
+
+/**
+ * Seven packages pkg0..pkg6; pkgJ → pkgK for every J < K.
+ * fanIn(pkgK) = K, fanOut(pkgJ) = 6 - J, so fanIn-desc order is the reverse of name order.
+ * pkg6 holds two entities so entityCount ranks it first; everything else has one.
+ */
+function buildRankedArchJson(): ArchJSON {
+  const entities = [0, 1, 2, 3, 4, 5, 6].map((k) =>
+    makeEntity(`pkg${k}.C${k}`, `C${k}`, `src/pkg${k}/c${k}.ts`)
+  );
+  entities.push(makeEntity('pkg6.Extra', 'Extra', 'src/pkg6/extra.ts'));
+  const relations: Relation[] = [];
+  for (let j = 0; j < 7; j++) {
+    for (let k = j + 1; k < 7; k++) relations.push(makeRelation(`pkg${j}.C${j}`, `pkg${k}.C${k}`));
+  }
+  return {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: entities.map((e) => e.sourceLocation.file),
+    entities,
+    relations,
+  };
+}
+
+describe('archguard_get_package_metrics — topN / sortBy', () => {
+  type Payload = {
+    packages: Array<{ packageName: string; fanIn: number; fanOut: number }>;
+    totalPackages?: number;
+  };
+
+  async function call(args: Record<string, unknown>): Promise<Payload> {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_get_package_metrics');
+    const result = await handler({ projectRoot: '/workspace', ...args });
+    return JSON.parse(result.content[0].text) as Payload;
+  }
+
+  beforeEach(() => {
+    const archJson = buildRankedArchJson();
+    loadEngineMock.mockReset();
+    loadEngineMock.mockResolvedValue(wrapEngine(createEngine(archJson), archJson));
+  });
+
+  it('topN=5,sortBy=fanIn returns 5 packages ordered by fanIn descending', async () => {
+    const payload = await call({ topN: 5, sortBy: 'fanIn' });
+    expect(payload.packages).toHaveLength(5);
+    expect(payload.packages.map((p) => p.packageName)).toEqual([
+      'pkg6',
+      'pkg5',
+      'pkg4',
+      'pkg3',
+      'pkg2',
+    ]);
+    const fanIns = payload.packages.map((p) => p.fanIn);
+    expect(fanIns).toEqual([...fanIns].sort((a, b) => b - a));
+    expect(payload.totalPackages).toBe(7);
+  });
+
+  it('sortBy=fanOut ranks by outgoing relations descending', async () => {
+    const payload = await call({ topN: 2, sortBy: 'fanOut' });
+    expect(payload.packages.map((p) => p.packageName)).toEqual(['pkg0', 'pkg1']);
+  });
+
+  it('sortBy=entityCount ranks by entity count descending, ties by name', async () => {
+    const payload = await call({ topN: 3, sortBy: 'entityCount' });
+    expect(payload.packages.map((p) => p.packageName)).toEqual(['pkg6', 'pkg0', 'pkg1']);
+  });
+
+  it('without topN/sortBy output is name-sorted, complete and unchanged in shape', async () => {
+    const payload = await call({});
+    expect(payload.packages.map((p) => p.packageName)).toEqual([
+      'pkg0',
+      'pkg1',
+      'pkg2',
+      'pkg3',
+      'pkg4',
+      'pkg5',
+      'pkg6',
+    ]);
+    expect(payload.totalPackages).toBeUndefined();
+    for (const pkg of payload.packages) {
+      expect(Object.keys(pkg)).toEqual([
+        'packageName',
+        'fanIn',
+        'fanOut',
+        'cycleCount',
+        'cyclesWith',
+      ]);
+    }
+    expect(await call({ sortBy: 'name' })).toEqual(payload);
+  });
+
+  it('topN larger than the package count returns everything without totalPackages', async () => {
+    const payload = await call({ topN: 50, sortBy: 'fanIn' });
+    expect(payload.packages).toHaveLength(7);
+    expect(payload.totalPackages).toBeUndefined();
+  });
+});

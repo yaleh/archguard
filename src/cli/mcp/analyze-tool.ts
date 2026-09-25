@@ -61,6 +61,12 @@ const analyzeSchema = {
     .describe(
       'Run test analysis after parsing. Required before calling test analysis tools (get_test_metrics, get_test_coverage, get_test_issues).'
     ),
+  testSources: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Test directories relative to the target project root (e.g. ["plugin/test"]). Use with includeTests when tests live outside the analyzed sources; omit to infer tests/, test/, spec/, src/ under the source root.'
+    ),
   testsOnly: z
     .boolean()
     .optional()
@@ -71,6 +77,28 @@ const analyzeSchema = {
     .describe(
       'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/). ' +
         'Required before calling git history tools (get_change_context, get_cochange, get_change_risk, get_ownership).'
+    ),
+  archHealth: z
+    .boolean()
+    .optional()
+    .describe(
+      'Compute and persist an architecture intrinsic-dimension snapshot to <work-dir>/arch-health-history.json. ' +
+        'Required before calling archguard_get_intrinsic_dimension / archguard_get_architecture_drift.'
+    ),
+  gitSinceDays: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('With includeGit: how many days of git history to include (default: 90).'),
+  gitMaxCommits: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'With includeGit: maximum number of commits to read, newest first (default: 500). ' +
+        'When the cap cuts history short of gitSinceDays, git tool responses report truncated:true.'
     ),
 };
 
@@ -87,8 +115,12 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       format,
       noCache,
       includeTests,
+      testSources,
       testsOnly,
       includeGit,
+      archHealth,
+      gitSinceDays,
+      gitMaxCommits,
     }) => {
       const root = resolveRoot(projectRoot, ctx.defaultRoot);
       const startedAt = Date.now();
@@ -106,8 +138,12 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               format,
               cache: noCache ? false : undefined,
               includeTests,
+              testSources: testSources?.map((source) => path.resolve(root, source)),
               testsOnly,
               includeGit,
+              archHealth,
+              gitSinceDays,
+              gitMaxCommits,
             },
             reporter: new StderrReporter(),
             parseWorkerPools: ctx.parseWorkerPools,
@@ -201,6 +237,13 @@ function formatAnalyzeResponse(
   if (warnings.length > 0) {
     lines.push('', 'Warnings:');
     for (const warning of warnings) lines.push(`  - ${warning}`);
+  }
+  if (result.archHealth) {
+    const { result: snapshot, persisted } = result.archHealth;
+    lines.push(
+      '',
+      `Arch health:  d_int ${snapshot.dInt} / ${snapshot.entityCount} entities (d_int_norm ${snapshot.dIntNormalized.toFixed(4)})${persisted ? '' : '  [snapshot not persisted]'}`
+    );
   }
   const language = result.diagrams.find((d) => d.language)?.language;
   if (language === 'go') {

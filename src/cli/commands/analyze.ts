@@ -21,31 +21,17 @@ import type { Config } from '../config-loader.js';
 import type { CLIOptions } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
+import { runArchHealth, printArchHealth } from '../analyze/arch-health.js';
 import { loadSnapshots, resolveCommitSha } from '@/analysis/snapshot-store.js';
 import { computeDirectionHint } from '@/analysis/gim/direction-hint.js';
-import { buildAdjacencyMatrix, normalizeColumns } from '@/analysis/jl/adjacency-builder.js';
-import { computeMode, computeK, buildAchlioptas, project } from '@/analysis/jl/jl-projector.js';
-import { computeIntrinsicDimension } from '@/analysis/jl/intrinsic-dimension.js';
-import { appendSnapshot, readHistoryFile } from '@/analysis/jl/history-writer.js';
+import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
 import { determineDriftExitCode } from '@/analysis/jl/drift-exit-code.js';
 import { resolveBaselineSnapshot, snapshotFromArchJson } from '../utils/drift-baseline.js';
 import type { BaselineResolution } from '../utils/drift-baseline.js';
 import { formatDriftReport } from '../utils/drift-reporter.js';
-import {
-  DEFAULT_JL_CONFIG,
-  DRIFT_THRESHOLDS,
-  FEATURE_VERSION,
-  TREND_DELTA_THRESHOLD,
-} from '@/analysis/jl/types.js';
-import type {
-  ArchHealthHistory,
-  DriftOptions,
-  DriftSnapshot,
-  IntrinsicDimensionResult,
-  JLConfig,
-} from '@/analysis/jl/types.js';
-import type { ArchJSON } from '@/types/index.js';
+import { DRIFT_THRESHOLDS } from '@/analysis/jl/types.js';
+import type { ArchHealthHistory, DriftOptions, DriftSnapshot } from '@/analysis/jl/types.js';
 
 /**
  * Normalize CLI options to DiagramConfig[]
@@ -156,12 +142,26 @@ export function createAnalyzeCommand(): Command {
       // ========== Test Analysis ==========
       .option('--include-tests', 'Include test system analysis in output')
       .option(
+        '--test-sources <paths...>',
+        'Test directories to analyze when tests live outside the source root (used with --include-tests)'
+      )
+      .option(
         '--tests-only',
         'Run only test analysis (uses cached ArchJSON if available, skips diagram generation)'
       )
       .option(
         '--include-git',
         'Also analyze git commit history (writes artifacts to <work-dir>/query/git-history/)'
+      )
+      .option(
+        '--git-since-days <days>',
+        'With --include-git: days of git history to include (default: 90)',
+        (v: string) => parseInt(v, 10)
+      )
+      .option(
+        '--git-max-commits <n>',
+        'With --include-git: maximum commits to read, newest first (default: 500)',
+        (v: string) => parseInt(v, 10)
       )
       // ========== Go Architecture Atlas ==========
       .option(
@@ -247,7 +247,12 @@ export async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<voi
         const archJson = result.lastArchJson ?? null;
         if (archJson) {
           const archguardDir = result.config.workDir ?? '.archguard';
-          await runArchHealth(archJson, archguardDir);
+          // runAnalysis already computed + persisted the snapshot; only print it here.
+          if (result.archHealth) {
+            printArchHealth(result.archHealth);
+          } else {
+            await runArchHealth(archJson, archguardDir);
+          }
 
           if (cliOptions.driftBase !== undefined) {
             const driftOptions = parseDriftOptions(cliOptions);
@@ -286,105 +291,10 @@ export async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<voi
 // ---------------------------------------------------------------------------
 // Architecture intrinsic dimension (--arch-health)
 // ---------------------------------------------------------------------------
+// Computation + persistence live in ../analyze/arch-health.ts so that
+// runAnalysis (CLI and MCP) shares one path; re-exported here for callers/tests.
 
-/**
- * Orchestrate the JL intrinsic-dimension pipeline:
- *
- *   AdjacencyBuilder → JLProjector (adaptive) → computeIntrinsicDimension
- *     → appendSnapshot → print
- *
- * Writes `.archguard/arch-health-history.json` and prints mode / d_int /
- * d_int_norm / previous snapshot / trend. Exported for scoped testing.
- *
- * @param archJson - Parsed ArchJSON for the analyzed scope.
- * @param archguardDir - The `.archguard` work directory for the project.
- * @param config - JL configuration (defaults applied when omitted).
- */
-export async function runArchHealth(
-  archJson: ArchJSON,
-  archguardDir: string,
-  config: JLConfig = DEFAULT_JL_CONFIG
-): Promise<void> {
-  const matrix = buildAdjacencyMatrix(archJson);
-  const normalized = normalizeColumns(matrix);
-  const entityCount = archJson.entities.length;
-  const mode = computeMode(entityCount, config);
-
-  let data: number[][];
-  let k: number | null = null;
-  let epsilon: number | null = null;
-
-  if (mode === 'jl') {
-    epsilon = config.epsilon;
-    k = computeK(entityCount, config.epsilon);
-    const achlioptas = buildAchlioptas(k, entityCount, config.seed);
-    data = project(normalized, achlioptas, k);
-  } else {
-    data = normalized;
-  }
-
-  const result: IntrinsicDimensionResult = {
-    ...computeIntrinsicDimension({
-      matrix: data,
-      entityCount,
-      mode,
-      k,
-      epsilon,
-      featureVersion: FEATURE_VERSION,
-    }),
-    // Persist entity IDs (O(n)) for cross-snapshot drift alignment (TASK-65).
-    // adjacencyRows are never persisted (AC5).
-    entityIndex: archJson.entities.map((e) => e.id),
-  };
-
-  const append = await appendSnapshot(archguardDir, archJson.language, result);
-  if (!append.ok) {
-    console.warn(`[arch-health] snapshot not persisted: ${append.reason ?? 'unknown reason'}`);
-  }
-
-  printArchHealth(result, append.previous, config.directModeThreshold);
-}
-
-function printArchHealth(
-  result: IntrinsicDimensionResult,
-  previous: IntrinsicDimensionResult | null,
-  threshold: number
-): void {
-  // eslint-disable-next-line no-console
-  console.log('\nArchitecture Intrinsic Dimension');
-  // eslint-disable-next-line no-console
-  console.log(
-    `  Mode:       ${result.mode.toUpperCase()} (n=${result.entityCount}, threshold=${threshold})`
-  );
-  // eslint-disable-next-line no-console
-  console.log(`  d_int:      ${result.dInt} / ${result.entityCount} entities`);
-  // eslint-disable-next-line no-console
-  console.log(`  d_int_norm: ${result.dIntNormalized.toFixed(4)}`);
-
-  if (previous) {
-    const delta = result.dIntNormalized - previous.dIntNormalized;
-    const trend =
-      delta > TREND_DELTA_THRESHOLD
-        ? 'RISING'
-        : delta < -TREND_DELTA_THRESHOLD
-          ? 'DECREASING'
-          : 'STABLE';
-    // eslint-disable-next-line no-console
-    console.log(
-      `  Previous:   ${previous.dInt} / ${previous.entityCount} entities  ` +
-        `(d_int_norm: ${previous.dIntNormalized.toFixed(4)}, ${previous.timestamp})`
-    );
-    // eslint-disable-next-line no-console
-    console.log(
-      `  Trend:      ${trend} (Δd_int_norm = ${delta >= 0 ? '+' : ''}${delta.toFixed(4)})`
-    );
-  } else {
-    // eslint-disable-next-line no-console
-    console.log('  Previous:   none');
-    // eslint-disable-next-line no-console
-    console.log('  Trend:      STABLE');
-  }
-}
+export { runArchHealth };
 
 // ---------------------------------------------------------------------------
 // Architecture drift gate (--drift-base / --drift-threshold)

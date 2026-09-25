@@ -154,7 +154,7 @@ describe('archguard_get_evidence_pack — integration', () => {
     expect(text).toContain('## Hotspots');
   });
 
-  it('unknown target: response contains ## Not Found section', async () => {
+  it('unknown target: response is evaluated:false with a key sample hint', async () => {
     const result = await client.callTool({
       name: 'archguard_get_evidence_pack',
       arguments: {
@@ -163,7 +163,11 @@ describe('archguard_get_evidence_pack — integration', () => {
       },
     });
     const text = result.content[0].text as string;
-    expect(text).toContain('## Not Found');
+    const parsed = JSON.parse(text);
+    expect(parsed.evaluated).toBe(false);
+    expect(parsed.reason).toBe('all_targets_not_found');
+    expect(parsed.hint).toContain('Example file keys');
+    expect(parsed.notFound).toHaveLength(1);
   });
 
   it('no git history data: response contains archguard_analyze_git prompt', async () => {

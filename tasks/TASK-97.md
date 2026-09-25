@@ -2,7 +2,7 @@
 id: TASK-97
 title: "TASK-97: MCP archguard_analyze 无法触发 arch-health，intrinsic_dimension 在
   MCP 侧永远无数据"
-status: ready
+status: done
 labels:
   - gap
   - mcp
@@ -22,11 +22,11 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：`cliOptions.archHealth=true` 时 `arch-health-history.json` 被写入一个快照；未设置时不写
-- [ ] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例：`archHealth:true` 透传到 `runAnalysis`
-- [ ] `npx vitest run tests/unit/cli/analyze-command.test.ts` exit 0（CLI `--arch-health` 回归）
-- [ ] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0（回归）
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：`cliOptions.archHealth=true` 时 `arch-health-history.json` 被写入一个快照；未设置时不写
+- [x] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，新增用例：`archHealth:true` 透传到 `runAnalysis`
+- [x] `npx vitest run tests/unit/cli/analyze-command.test.ts` exit 0（CLI `--arch-health` 回归）
+- [x] `npx vitest run tests/unit/cli/mcp/tools/arch-health-tools.test.ts` exit 0（回归）
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
@@ -36,8 +36,11 @@ extra: {}
 
 - `src/cli/commands/analyze.ts`
 - `src/cli/analyze/run-analysis.ts`
+- `src/cli/analyze/arch-health.ts`
 - `src/cli/mcp/analyze-tool.ts`
+- `src/analysis/jl/types.ts`
 - `src/types/config-cli.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
+- `tests/unit/cli/analyze/arch-health.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
 - `tasks/TASK-97.md`

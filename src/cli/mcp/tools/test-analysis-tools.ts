@@ -11,9 +11,10 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
-import { loadEngine, readManifest } from '../../query/engine-loader.js';
+import { loadEngine, readManifest, type ResolvedScopeInfo } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
 import { buildSuggestedPatternConfig } from '@/analysis/test-pattern-advisor.js';
+import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 const NOT_ANALYZED_MSG =
   'No test analysis data found. Run `archguard_analyze` with `includeTests: true` first.';
@@ -23,32 +24,75 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
 }
 
 /**
- * Build an actionable diagnostic response when no test files are found in the
- * current scope. This typically happens when the default scope covers only
- * source files (e.g. src/) and excludes tests/.
+ * Build an actionable diagnostic response when a test analysis ran but found no
+ * test files. The caller only reaches this after `hasTestAnalysis()`, so
+ * `includeTests` was already applied — the usual cause is that tests live
+ * outside the analyzed source root and `testSources` was not given.
  */
 async function buildZeroTestsDiagnosticResponse(
-  archDir: string
+  archDir: string,
+  analysis: TestAnalysis,
+  scope?: Partial<ResolvedScopeInfo>
 ): Promise<ReturnType<typeof textResponse>> {
   let availableScopes = '';
+  let manifestGeneratedAt: string | undefined;
   try {
     const manifest = await readManifest(archDir);
     availableScopes = manifest.scopes?.map((s) => `${s.key} (${s.label})`).join(', ') ?? '';
+    manifestGeneratedAt = manifest.generatedAt;
   } catch {
     // ignore — manifest may not exist yet
   }
+
+  const generatedAt = scope?.generatedAt ?? manifestGeneratedAt;
+  const discovery = analysis.discovery;
+  const diagnosis: string[] = [
+    'Test analysis has already run (includeTests was applied) but discovered 0 test files.',
+  ];
+  if (discovery) {
+    diagnosis.push(
+      `Test discovery workspaceRoot: ${discovery.workspaceRoot}`,
+      `Test discovery scanned: ${discovery.roots.length > 0 ? discovery.roots.join(', ') : '(no directories)'}`
+    );
+    if (discovery.globs?.length) {
+      diagnosis.push(
+        `Extra testFileGlobs (relative to workspaceRoot): ${discovery.globs.join(', ')}`
+      );
+    }
+    if (discovery.testSources?.length) {
+      diagnosis.push(
+        `testSources was given (${discovery.testSources.join(', ')}) but no test files matched there. ` +
+          'Check the directories exist and contain test files for the analyzed language.'
+      );
+    } else {
+      diagnosis.push(
+        'No testSources was given, so tests are probably not under the analyzed source root. ' +
+          'Fix: re-run archguard_analyze with includeTests: true and testSources set to the test ' +
+          'directories relative to projectRoot (e.g. testSources: ["plugin/test"]).'
+      );
+    }
+  } else {
+    diagnosis.push(
+      'The scanned directories were not recorded (analysis produced by an older version). ' +
+        'Re-run archguard_analyze with includeTests: true, adding testSources (test directories ' +
+        'relative to projectRoot, e.g. ["tests"]) if tests are outside the analyzed sources.'
+    );
+  }
+  diagnosis.push(
+    `Scope read: ${scope?.key ? `${scope.key} (${scope.label ?? 'unlabeled'})` : 'unknown'}; ` +
+      `generatedAt: ${generatedAt ?? 'unknown'}`,
+    availableScopes
+      ? `Available scopes: ${availableScopes}`
+      : 'Run archguard_analyze first to generate analysis data.'
+  );
 
   return textResponse(
     JSON.stringify(
       {
         error: 'No test files found in the analyzed scope.',
-        diagnosis: [
-          'The current ArchJSON scope covers only source files (e.g. src/) and excludes tests/.',
-          'Fix: Re-run archguard_analyze with --include-tests flag.',
-          availableScopes
-            ? `Available scopes: ${availableScopes}`
-            : 'Run archguard_analyze first to generate analysis data.',
-        ],
+        scope: { key: scope?.key, generatedAt },
+        ...(discovery ? { discovery } : {}),
+        diagnosis,
       },
       null,
       2
@@ -93,8 +137,15 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
         let _engine: Awaited<ReturnType<typeof loadEngine>>['engine'] | null = null;
         let extensionAccessor: Awaited<ReturnType<typeof loadEngine>>['extensionAccessor'] | null =
           null;
+        let scopeEntry: Awaited<ReturnType<typeof loadEngine>>['scopeEntry'] | undefined;
+        let scopeInfo: ResolvedScopeInfo | undefined;
         try {
-          ({ engine: _engine, extensionAccessor } = await loadEngine(archDir, scope));
+          ({
+            engine: _engine,
+            extensionAccessor,
+            scopeEntry,
+            scopeInfo,
+          } = await loadEngine(archDir, scope));
         } catch {
           // No prior analysis — fall back to package.json detection
         }
@@ -141,7 +192,7 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
         // Scope mismatch guard: engine loaded but no test files found
         if (analysis.metrics.totalTestFiles === 0) {
-          return buildZeroTestsDiagnosticResponse(archDir);
+          return buildZeroTestsDiagnosticResponse(archDir, analysis, scopeInfo ?? scopeEntry);
         }
 
         const frameworks = [...new Set(analysis.testFiles.flatMap((f) => f.frameworks))];
@@ -193,11 +244,16 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { engine: _engine, extensionAccessor } = await loadEngine(archDir, scope);
+        const {
+          engine: _engine,
+          extensionAccessor,
+          scopeEntry,
+          scopeInfo,
+        } = await loadEngine(archDir, scope);
         if (!extensionAccessor.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = extensionAccessor.getTestAnalysis();
         if (analysis.metrics.totalTestFiles === 0) {
-          return buildZeroTestsDiagnosticResponse(archDir);
+          return buildZeroTestsDiagnosticResponse(archDir, analysis, scopeInfo ?? scopeEntry);
         }
         const issues = severity
           ? analysis.issues.filter((i) => i.severity === severity)
@@ -238,11 +294,14 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { engine, extensionAccessor } = await loadEngine(archDir, scope);
+        const { engine, extensionAccessor, scopeEntry, scopeInfo } = await loadEngine(
+          archDir,
+          scope
+        );
         if (!extensionAccessor.hasTestAnalysis()) return textResponse(NOT_ANALYZED_MSG);
         const analysis = extensionAccessor.getTestAnalysis();
         if (analysis.metrics.totalTestFiles === 0) {
-          return buildZeroTestsDiagnosticResponse(archDir);
+          return buildZeroTestsDiagnosticResponse(archDir, analysis, scopeInfo ?? scopeEntry);
         }
         const result: Record<string, unknown> = { ...analysis.metrics };
         if (includePackageBreakdown) {

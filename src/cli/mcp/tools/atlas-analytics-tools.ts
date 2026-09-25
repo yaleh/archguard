@@ -26,6 +26,36 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text', text }] };
 }
 
+/**
+ * Explicit "not applicable" payload for scopes without Atlas data (any non-Go
+ * language, or Go analyzed with --no-atlas), so callers can branch on
+ * `applicable` instead of parsing prose.
+ */
+function notApplicableResponse(
+  root: string,
+  language: string | undefined
+): { content: Array<{ type: 'text'; text: string }> } {
+  const lang = language ?? 'unknown';
+  const alternative =
+    lang === 'go'
+      ? `Re-run archguard_analyze({ projectRoot: "${root}", lang: "go" }) with Atlas mode enabled (default; omit --no-atlas).`
+      : 'Use archguard_get_package_metrics (all languages) for per-package fan-in/fan-out/cycles, ' +
+        'or archguard_get_package_stats for package volume.';
+  return textResponse(
+    JSON.stringify(
+      {
+        applicable: false,
+        reason:
+          `No Atlas data found in this scope (language: ${lang}). ` +
+          'This tool requires a Go project analyzed with Atlas mode.',
+        alternative,
+      },
+      null,
+      2
+    )
+  );
+}
+
 // ── MCP tool registration ─────────────────────────────────────────────────────
 
 export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: string): void {
@@ -33,7 +63,8 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   server.tool(
     'archguard_get_package_fanin',
     'List Go Atlas packages ranked by fan-in (number of packages that depend on them). ' +
-      'High fan-in packages are critical hub packages. Requires an Atlas-mode Go project.',
+      'High fan-in packages are critical hub packages. Requires an Atlas-mode Go project; ' +
+      'on other scopes returns { applicable: false, reason, alternative }.',
     {
       projectRoot: z
         .string()
@@ -61,13 +92,10 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { extensionAccessor } = await loadEngine(archDir, scope);
+        const { extensionAccessor, scopeEntry } = await loadEngine(archDir, scope);
 
         if (!extensionAccessor.hasAtlasExtension()) {
-          return textResponse(
-            'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
-              `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
-          );
+          return notApplicableResponse(root, scopeEntry?.language);
         }
 
         const graph = extensionAccessor.getAtlasLayer('package');
@@ -98,7 +126,8 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   server.tool(
     'archguard_get_package_fanout',
     'List Go Atlas packages ranked by fan-out (number of packages they depend on). ' +
-      'High fan-out packages have many dependencies and may be fragile. Requires an Atlas-mode Go project.',
+      'High fan-out packages have many dependencies and may be fragile. Requires an Atlas-mode Go project; ' +
+      'on other scopes returns { applicable: false, reason, alternative }.',
     {
       projectRoot: z
         .string()
@@ -126,13 +155,10 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { extensionAccessor } = await loadEngine(archDir, scope);
+        const { extensionAccessor, scopeEntry } = await loadEngine(archDir, scope);
 
         if (!extensionAccessor.hasAtlasExtension()) {
-          return textResponse(
-            'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
-              `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
-          );
+          return notApplicableResponse(root, scopeEntry?.language);
         }
 
         const graph = extensionAccessor.getAtlasLayer('package');
@@ -163,7 +189,8 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   server.tool(
     'archguard_detect_god_packages',
     'Detect "god packages" — packages that violate single-responsibility by exceeding size or coupling thresholds. ' +
-      'Each flagged package includes a list of violated thresholds (reasons). Requires an Atlas-mode Go project.',
+      'Each flagged package includes a list of violated thresholds (reasons). Requires an Atlas-mode Go project; ' +
+      'on other scopes returns { applicable: false, reason, alternative }.',
     {
       projectRoot: z
         .string()
@@ -202,13 +229,10 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { extensionAccessor } = await loadEngine(archDir, scope);
+        const { extensionAccessor, scopeEntry } = await loadEngine(archDir, scope);
 
         if (!extensionAccessor.hasAtlasExtension()) {
-          return textResponse(
-            'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
-              `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
-          );
+          return notApplicableResponse(root, scopeEntry?.language);
         }
 
         const graph = extensionAccessor.getAtlasLayer('package');

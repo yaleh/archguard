@@ -98,6 +98,15 @@ function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJ
     extensionAccessor: new ExtensionAccessor(archJson),
     scopeEntry,
     relationQueryService: engine.relationQueryService,
+    scopeInfo: {
+      key: scopeEntry.key,
+      label: scopeEntry.label,
+      sources: scopeEntry.sources,
+      generatedAt: '2026-01-01T00:00:00.000Z',
+    },
+    availableScopes: [
+      { key: scopeEntry.key, label: scopeEntry.label, entityCount: scopeEntry.entityCount },
+    ],
   };
 }
 
@@ -456,6 +465,92 @@ describe('archguard_summary', () => {
     expect(parsed.relationCount).toBe(4);
     expect(parsed.language).toBe('typescript');
     expect(parsed.kind).toBe('parsed');
+  });
+});
+
+describe('scopeInfo in query responses', () => {
+  const twoScopes = [
+    { key: 'test123', label: 'src (typescript)', entityCount: 810 },
+    { key: 'other456', label: 'src/cli (typescript)', entityCount: 446 },
+  ];
+
+  function withScopes(available: typeof twoScopes) {
+    return {
+      ...wrapEngine(createTestEngine()),
+      availableScopes: available,
+    };
+  }
+
+  it('summary response includes scopeInfo (key, sources, generatedAt)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const result = await tools.get('archguard_summary')({});
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.entityCount).toBe(5);
+    expect(parsed.scopeInfo).toEqual({
+      key: 'test123',
+      label: 'src (typescript)',
+      sources: ['/project/src'],
+      generatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    expect(parsed.scopeInfo.warning).toBeUndefined();
+  });
+
+  it('find_entity keeps content[0] unchanged and adds scopeInfo as a second block', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const result = await tools.get('archguard_find_entity')({ name: 'CacheManager' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].name).toBe('CacheManager');
+    const second = JSON.parse(result.content[1].text);
+    expect(second.scopeInfo.key).toBe('test123');
+    expect(second.scopeInfo.sources).toEqual(['/project/src']);
+    expect(second.scopeInfo.generatedAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('warns with candidate scopes when 2 scopes exist and scope is omitted', async () => {
+    loadEngineMock.mockResolvedValue(withScopes(twoScopes));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
+    expect(summary.scopeInfo.warning).toContain('test123');
+    expect(summary.scopeInfo.warning).toContain('other456');
+    expect(summary.scopeInfo.warning).toContain('810');
+    expect(summary.scopeInfo.warning).toContain('446');
+
+    const found = await tools.get('archguard_find_entity')({ name: 'CacheManager' });
+    expect(JSON.parse(found.content[1].text).scopeInfo.warning).toContain('other456');
+  });
+
+  it('omits warning when scope is passed explicitly', async () => {
+    loadEngineMock.mockResolvedValue(withScopes(twoScopes));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse(
+      (await tools.get('archguard_summary')({ scope: 'test123' })).content[0].text
+    );
+    expect(summary.scopeInfo.key).toBe('test123');
+    expect(summary.scopeInfo.warning).toBeUndefined();
+    expect(summary.scopeInfo.availableScopes).toBeUndefined();
+
+    const found = await tools.get('archguard_find_entity')({
+      name: 'CacheManager',
+      scope: 'test123',
+    });
+    expect(JSON.parse(found.content[1].text).scopeInfo.warning).toBeUndefined();
+  });
+
+  it('does not warn when the manifest has a single scope', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
+    expect(summary.scopeInfo.warning).toBeUndefined();
   });
 });
 
