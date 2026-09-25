@@ -12,7 +12,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import type { PackageMetricsSnapshot } from '../../metrics-history-writer.js';
 import { resolveRoot } from '../mcp-server.js';
-import { readHistoryEntries } from '@/analysis/metrics-history-reader.js';
+import { readHistoryEntries, UNKNOWN_SCOPE } from '@/analysis/metrics-history-reader.js';
 import { errorMessage } from '@/utils/error-message.js';
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
@@ -21,6 +21,7 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
 
 export interface TrendSnapshot {
   timestamp: string;
+  scopeKey: string;
   packages: PackageMetricsSnapshot[];
 }
 
@@ -31,7 +32,8 @@ export function registerMetricTrendTools(server: McpServer, defaultRoot: string)
     'Return the historical time series of package-level structural metrics ' +
       '(fan-in, fan-out, cycle count, entity count) recorded by each analyze run. ' +
       'Each snapshot corresponds to one analyze invocation. ' +
-      'Use packageName to focus on a single package trend. ' +
+      'Use packageName to focus on a single package trend, and scope (a query scope key, ' +
+      'or "unknown" for legacy snapshots recorded before scope tracking) to restrict to one scope. ' +
       'Data is pure numeric — no semantic annotations or LLM-generated content.',
     {
       projectRoot: z
@@ -44,12 +46,19 @@ export function registerMetricTrendTools(server: McpServer, defaultRoot: string)
         .describe(
           'Filter to a single package name. Omit to return all packages for each snapshot.'
         ),
+      scope: z
+        .string()
+        .optional()
+        .describe(
+          'Only return snapshots recorded for this scope key. Legacy snapshots without a scope ' +
+            'key match "unknown". Omit to return snapshots of all scopes.'
+        ),
     },
-    async ({ projectRoot, packageName }) => {
+    async ({ projectRoot, packageName, scope }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const outputDir = path.join(root, '.archguard');
-        const allEntries = await readHistoryEntries(outputDir);
+        const allEntries = await readHistoryEntries(outputDir, { scope });
 
         let snapshots: TrendSnapshot[];
 
@@ -58,12 +67,14 @@ export function registerMetricTrendTools(server: McpServer, defaultRoot: string)
           snapshots = allEntries
             .map((entry) => ({
               timestamp: entry.timestamp,
+              scopeKey: entry.scopeKey ?? UNKNOWN_SCOPE,
               packages: entry.packages.filter((p) => p.name === packageName),
             }))
             .filter((s) => s.packages.length > 0);
         } else {
           snapshots = allEntries.map((entry) => ({
             timestamp: entry.timestamp,
+            scopeKey: entry.scopeKey ?? UNKNOWN_SCOPE,
             packages: entry.packages,
           }));
         }

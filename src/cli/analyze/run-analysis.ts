@@ -21,6 +21,7 @@ import {
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
 import { MetricsHistoryWriter } from '../metrics-history-writer.js';
+import { buildArchIndex } from '@/core/query/arch-index-builder.js';
 import {
   computePackageFanMetricsFromRelations,
   computeCycleMetrics,
@@ -304,7 +305,9 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           allPackageNames
         );
 
-        const cycleMetrics = computeCycleMetrics([], allPackageNames);
+        // Same SCC source as archguard_detect_cycles / archguard_get_package_metrics
+        const cycles = buildArchIndex(metricsArchJson, '').cycles;
+        const cycleMetrics = computeCycleMetrics(cycles, allPackageNames);
 
         // Count entities per package
         const entityCountByPackage = new Map<string, number>();
@@ -331,10 +334,22 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 
         const metricsOutputDir = config.workDir || workDir;
         const metricsWriter = new MetricsHistoryWriter();
-        await metricsWriter.append(packages, metricsOutputDir);
+        // getLastArchJson() is the primary scope's ArchJSON; record that scope's identity.
+        const metricsScope =
+          queryScopes.find((scope) => scope.archJson === metricsArchJson) ??
+          queryScopes.find((scope) => scope.role === 'primary') ??
+          queryScopes[0];
+        const appended = await metricsWriter.append(packages, metricsOutputDir, {
+          scopeKey: metricsScope?.key,
+          sources: metricsScope?.sources,
+        });
 
         if (config.verbose) {
-          reporter.info(`[metrics-history] Appended snapshot for ${packages.length} packages`);
+          reporter.info(
+            appended
+              ? `[metrics-history] Appended snapshot for ${packages.length} packages`
+              : '[metrics-history] Skipped empty snapshot'
+          );
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

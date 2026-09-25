@@ -10,11 +10,25 @@ import type { MetricsHistoryEntry } from '@/cli/metrics-history-writer.js';
 
 export type { MetricsHistoryEntry };
 
+/** Scope label assigned to legacy entries that carry no `scopeKey`. */
+export const UNKNOWN_SCOPE = 'unknown';
+
+export interface ReadHistoryOptions {
+  /**
+   * Only return entries of this scope. Entries without a `scopeKey` (legacy)
+   * belong to the {@link UNKNOWN_SCOPE} scope rather than being dropped.
+   */
+  scope?: string;
+}
+
 /**
  * Read all JSONL lines from the metrics-history file.
  * Returns an empty array if the file does not exist.
  */
-export async function readHistoryEntries(outputDir: string): Promise<MetricsHistoryEntry[]> {
+export async function readHistoryEntries(
+  outputDir: string,
+  options: ReadHistoryOptions = {}
+): Promise<MetricsHistoryEntry[]> {
   const filePath = path.join(outputDir, MetricsHistoryWriter.FILENAME);
   if (!(await fs.pathExists(filePath))) {
     return [];
@@ -34,5 +48,6 @@ export async function readHistoryEntries(outputDir: string): Promise<MetricsHist
       // Skip malformed lines
     }
   }
-  return entries;
+  if (options.scope === undefined) return entries;
+  return entries.filter((e) => (e.scopeKey ?? UNKNOWN_SCOPE) === options.scope);
 }
