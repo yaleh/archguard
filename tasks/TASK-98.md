@@ -24,11 +24,11 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/mcp/test-analysis-scope.test.ts` exit 0，新增用例：已做测试分析但发现 0 个测试时，诊断不再建议「加 includeTests」，而是列出实际的测试发现根目录与 `testSources` 用法
-- [ ] `npx vitest run tests/unit/cli/mcp/test-analysis-mcp.test.ts` exit 0（回归）
-- [ ] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：传 `testSources` 指向源根之外的目录时，测试分析发现该目录下的测试文件
-- [ ] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，`testSources` 透传用例
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/mcp/test-analysis-scope.test.ts` exit 0，新增用例：已做测试分析但发现 0 个测试时，诊断不再建议「加 includeTests」，而是列出实际的测试发现根目录与 `testSources` 用法
+- [x] `npx vitest run tests/unit/cli/mcp/test-analysis-mcp.test.ts` exit 0（回归）
+- [x] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：传 `testSources` 指向源根之外的目录时，测试分析发现该目录下的测试文件
+- [x] `npx vitest run tests/unit/cli/mcp/analyze-tool.test.ts` exit 0，`testSources` 透传用例
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
