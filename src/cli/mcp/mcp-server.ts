@@ -42,6 +42,7 @@ import { registerMetricTrendTools } from './tools/metric-trend-tools.js';
 import { registerEvidencePackTool } from './tools/git-history-evidence-pack-tool.js';
 import { registerGIMTools } from './tools/gim-tools.js';
 import { registerShapeSmellTools } from './tools/shape-smell-tools.js';
+import { registerDuplicateTools } from './tools/duplicate-tools.js';
 import {
   registerArchHealthTools,
   registerArchHealthDriftTool,
@@ -179,6 +180,7 @@ export function createMcpServer(
   registerEvidencePackTool(server, defaultRoot); // registers: archguard_get_evidence_pack
   registerGIMTools(server, defaultRoot); // registers: archguard_get_gim_context
   registerShapeSmellTools(server, defaultRoot); // registers: archguard_detect_shape_smells, archguard_get_literal_dispersion
+  registerDuplicateTools(server, defaultRoot); // registers: archguard_detect_duplicates
   registerArchHealthTools(server, defaultRoot); // registers: archguard_get_intrinsic_dimension
   registerArchHealthDriftTool(server, defaultRoot); // registers: archguard_get_architecture_drift
   registerClusterBoundaryTool(server, defaultRoot); // registers: archguard_get_cluster_boundary

@@ -34,6 +34,7 @@ import { formatDriftReport } from '../utils/drift-reporter.js';
 import { loadArchJsonForCluster } from '../utils/cluster-archjson-loader.js';
 import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
 import { ClusterBoundaryAnalyzer } from '@/analysis/jl/cluster-boundary-analyzer.js';
+import { runDuplicateDetection } from '../mcp/tools/duplicate-tools.js';
 
 interface QueryOptions {
   archDir?: string;
@@ -108,6 +109,13 @@ interface QueryOptions {
 
   // ADR-007 §4: cluster boundary (mirrors archguard_get_cluster_boundary)
   clusterBoundary?: true;
+
+  // ADR-007 §4: duplicate function bodies (mirrors archguard_detect_duplicates)
+  duplicates?: true;
+  minStatements?: string;
+  minTokens?: string;
+  top?: string;
+  includeTests?: true;
 }
 
 /**
@@ -253,6 +261,16 @@ export function createQueryCommand(): Command {
         'Cluster entities by structural position and compare to declared package boundaries (ClusterBoundaryReport)'
       )
 
+      // ADR-007 §4: duplicate function bodies (mirrors archguard_detect_duplicates)
+      .option(
+        '--duplicates',
+        'Detect duplicated function bodies (exact structural clones) in the scope sources; prints JSON'
+      )
+      .option('--min-statements <n>', 'Minimum statements per function for --duplicates', '6')
+      .option('--min-tokens <n>', 'Minimum normalized tokens per function for --duplicates', '50')
+      .option('--top <n>', 'Keep only the N duplicate groups with the most savable lines', '20')
+      .option('--include-tests', 'Include test files in --duplicates')
+
       .action(queryHandler)
   );
 }
@@ -288,6 +306,13 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     // the archguard_get_cluster_boundary MCP tool — ADR-007 CLI/MCP parity)
     if (opts.clusterBoundary) {
       await handleClusterBoundary(opts);
+      return;
+    }
+
+    // --duplicates: independent function-body scan over the scope sources (mirrors the
+    // archguard_detect_duplicates MCP tool — ADR-007 CLI/MCP parity)
+    if (opts.duplicates) {
+      await handleDuplicates(opts);
       return;
     }
 
@@ -647,6 +672,7 @@ export function validateQueryOptions(opts: QueryOptions): void {
     opts.cochange,
     opts.changeRisk,
     opts.ownership,
+    opts.duplicates,
   ].filter(Boolean);
 
   if (primaryOptions.length > 1) {
@@ -746,6 +772,22 @@ async function handleClusterBoundary(opts: QueryOptions): Promise<void> {
   const report = ClusterBoundaryAnalyzer.analyze(matrix, entityNames);
 
   console.log(JSON.stringify(report, null, 2));
+}
+
+/**
+ * --duplicates: scan the scope's sources for duplicated function bodies (exact structural
+ * clones) and print the ranked groups as JSON. Mirrors the archguard_detect_duplicates MCP tool.
+ */
+async function handleDuplicates(opts: QueryOptions): Promise<void> {
+  const archDir = resolveArchDir(opts.archDir);
+  const root = _path.dirname(archDir);
+  const analysis = await runDuplicateDetection(root, opts.scope, {
+    minStatements: parseBoundedInt(opts.minStatements ?? '6', '--min-statements', 1),
+    minTokens: parseBoundedInt(opts.minTokens ?? '50', '--min-tokens', 1),
+    topN: parseBoundedInt(opts.top ?? '20', '--top', 1),
+    includeTests: opts.includeTests === true,
+  });
+  console.log(JSON.stringify(analysis, null, 2));
 }
 
 /**
