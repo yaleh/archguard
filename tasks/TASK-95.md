@@ -1,7 +1,7 @@
 ---
 id: TASK-95
 title: "TASK-95: git 工具的文件 key 相对源根而非仓库根——需先决定解析规则再实现"
-status: ready
+status: todo
 labels:
   - gap
   - mcp
