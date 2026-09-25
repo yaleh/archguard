@@ -23,6 +23,7 @@ const readGitLogMock = vi.fn();
 const isGitRepoMock = vi.fn();
 const getGitRootMock = vi.fn();
 const loadProjectSemanticsSidecarMock = vi.fn();
+const writeHistoryArtifactsMock = vi.fn();
 const metricsAppendMock = vi.fn();
 
 vi.mock('@/cli/config-loader.js', () => ({
@@ -85,6 +86,10 @@ vi.mock('@/cli/git-history/git-log-reader.js', () => ({
   getGitRoot: getGitRootMock,
   getHeadRef: vi.fn(),
   getCurrentBranch: vi.fn(),
+}));
+
+vi.mock('@/cli/git-history/history-writer.js', () => ({
+  writeHistoryArtifacts: writeHistoryArtifactsMock,
 }));
 
 vi.mock('@/analysis/project-semantics-loader.js', () => ({
@@ -167,6 +172,8 @@ describe('runAnalysis', () => {
     readGitLogMock.mockReset();
     isGitRepoMock.mockReset();
     getGitRootMock.mockReset();
+    writeHistoryArtifactsMock.mockReset();
+    writeHistoryArtifactsMock.mockResolvedValue(undefined);
     loadProjectSemanticsSidecarMock.mockReset();
     metricsAppendMock.mockReset();
     metricsAppendMock.mockResolvedValue(true);
@@ -596,6 +603,128 @@ describe('runAnalysis', () => {
         scopeKey: 'mainKey',
         sources: ['/tmp/project/src'],
       });
+    });
+  });
+
+  describe('git history keyRoot / pathFilters (TASK-95)', () => {
+    const commit = (files: string[]) => ({
+      sha: 'abcdef1234',
+      authorEmail: 'dev@example.com',
+      date: '2026-03-30',
+      files: files.map((path) => ({ path, added: 1, deleted: 0 })),
+    });
+
+    async function runGit(sources: string[][]) {
+      normalizeToDiagramsMock.mockResolvedValue(
+        sources.map((s, i) => ({ name: `d${i}`, sources: s, level: 'class' }))
+      );
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+      await runAnalysis({
+        sessionRoot: '/tmp/project',
+        workDir: '/tmp/project/.archguard',
+        cliOptions: { includeGit: true },
+        reporter: silentReporter(),
+      });
+      expect(writeHistoryArtifactsMock).toHaveBeenCalledTimes(1);
+      return writeHistoryArtifactsMock.mock.calls[0][1] as {
+        manifest: { keyRoot: string; pathFilters: string[] };
+        fileMetrics: Array<{ path: string; packagePath: string }>;
+      };
+    }
+
+    function archJsonWithRoot(workspaceRoot: string): ArchJSON {
+      return {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '2026-03-07T00:00:00Z',
+        sourceFiles: [],
+        entities: [],
+        relations: [],
+        workspaceRoot,
+      } as ArchJSON;
+    }
+
+    it('single source: keyRoot is the source path relative to the git root', async () => {
+      readGitLogMock.mockReturnValue({
+        commits: [commit(['src/a.ts'])],
+        windowStart: '2026-03-30',
+        windowEnd: '2026-03-30',
+        truncated: false,
+      });
+      const artifacts = await runGit([['/tmp/project/src']]);
+
+      expect(artifacts.manifest.keyRoot).toBe('src');
+      expect(artifacts.manifest.pathFilters).toEqual(['src']);
+      expect(readGitLogMock).toHaveBeenCalledWith(
+        '/tmp/project',
+        expect.objectContaining({ pathFilter: ['src'] })
+      );
+      expect(artifacts.fileMetrics.map((f) => f.path)).toEqual(['a.ts']);
+    });
+
+    it('multiple sources: keyRoot is their nearest common ancestor, independent of the last ArchJSON', async () => {
+      readGitLogMock.mockReturnValue({
+        commits: [commit(['pkgs/a/x.ts', 'pkgs/b/y.ts'])],
+        windowStart: '2026-03-30',
+        windowEnd: '2026-03-30',
+        truncated: false,
+      });
+      const sources = [['/tmp/project/pkgs/a'], ['/tmp/project/pkgs/b']];
+
+      // whichever scope "wins" as last ArchJSON must not change keyRoot
+      getLastArchJsonMock.mockReturnValue(archJsonWithRoot('/tmp/project/pkgs/a'));
+      const first = await runGit(sources);
+      writeHistoryArtifactsMock.mockClear();
+      getLastArchJsonMock.mockReturnValue(archJsonWithRoot('/tmp/project/pkgs/b'));
+      const second = await runGit(sources);
+
+      for (const a of [first, second]) {
+        expect(a.manifest.keyRoot).toBe('pkgs');
+        expect(a.manifest.pathFilters).toEqual(['pkgs/a', 'pkgs/b']);
+        expect(a.fileMetrics.map((f) => f.path).sort()).toEqual(['a/x.ts', 'b/y.ts']);
+      }
+      expect(readGitLogMock).toHaveBeenCalledWith(
+        '/tmp/project',
+        expect.objectContaining({ pathFilter: ['pkgs/a', 'pkgs/b'] })
+      );
+    });
+
+    it('monorepo sources plugin/ + packages/: keyRoot is the repo root and keys are repo-relative', async () => {
+      readGitLogMock.mockReturnValue({
+        commits: [commit(['plugin/scripts/driver-runtime.ts', 'packages/core/index.ts'])],
+        windowStart: '2026-03-30',
+        windowEnd: '2026-03-30',
+        truncated: false,
+      });
+      const artifacts = await runGit([['/tmp/project/plugin'], ['/tmp/project/packages']]);
+
+      expect(artifacts.manifest.keyRoot).toBe('');
+      expect(artifacts.manifest.pathFilters).toEqual(['packages', 'plugin']);
+      expect(artifacts.fileMetrics.map((f) => f.path).sort()).toEqual([
+        'packages/core/index.ts',
+        'plugin/scripts/driver-runtime.ts',
+      ]);
+      expect(artifacts.fileMetrics.map((f) => f.packagePath).sort()).toEqual([
+        'packages',
+        'plugin',
+      ]);
+    });
+
+    it('source at the git root collects everything (no pathspec)', async () => {
+      readGitLogMock.mockReturnValue({
+        commits: [commit(['a.ts'])],
+        windowStart: '2026-03-30',
+        windowEnd: '2026-03-30',
+        truncated: false,
+      });
+      const artifacts = await runGit([['/tmp/project']]);
+
+      expect(artifacts.manifest.keyRoot).toBe('');
+      expect(artifacts.manifest.pathFilters).toEqual(['']);
+      expect(readGitLogMock).toHaveBeenCalledWith(
+        '/tmp/project',
+        expect.objectContaining({ pathFilter: undefined })
+      );
     });
   });
 });

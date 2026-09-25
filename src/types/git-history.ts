@@ -23,6 +23,17 @@ export interface GitHistoryManifest {
   includeMerges: boolean;
   granularities: ('package' | 'file')[];
   packageDepth?: number; // sub-package depth (1 = first segment, 2 = two segments, etc.)
+  /**
+   * Directory (relative to the git root, '' = repo root) that every file/package key is
+   * relative to: the nearest common ancestor of all analyzed source directories.
+   * Absent in manifests written before TASK-95 — treated as identity ('').
+   */
+  keyRoot?: string;
+  /**
+   * Directories (relative to the git root, '' = repo root) whose history was collected
+   * (the `git log -- <pathspec…>` list). Absent in manifests written before TASK-95.
+   */
+  pathFilters?: string[];
 }
 
 // ---------------------------------------------------------------------------

@@ -31,8 +31,12 @@ export interface ReadGitLogOptions {
   sinceDays: number;
   maxCommits: number;
   includeMerges: boolean;
-  /** Optional path filter — limits git log to commits touching this subdirectory (relative to git root) */
-  pathFilter?: string;
+  /**
+   * Optional pathspec(s) — limits git log to commits touching these directories
+   * (relative to git root). A list is passed as `git log -- p1 p2 …`, and git only
+   * reports file changes that fall under those paths.
+   */
+  pathFilter?: string | readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +58,11 @@ export interface GitLogWindow {
   truncated: boolean;
 }
 
+/** Quote an argument for the shell only when it contains characters that need it. */
+function quoteShellArg(arg: string): string {
+  return /^[A-Za-z0-9_./@+=:,-]+$/.test(arg) ? arg : `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
 function execGitLog(repoRoot: string, options: ReadGitLogOptions, limit: number): CommitRecord[] {
   const { sinceDays, includeMerges, pathFilter } = options;
 
@@ -69,8 +78,11 @@ function execGitLog(repoRoot: string, options: ReadGitLogOptions, limit: number)
     `--since=${sinceDays}.days.ago`,
     `--max-count=${limit}`,
   ];
-  if (pathFilter) {
-    parts.push('--', pathFilter);
+  const pathspecs = (typeof pathFilter === 'string' ? [pathFilter] : (pathFilter ?? [])).filter(
+    (p) => p.length > 0
+  );
+  if (pathspecs.length > 0) {
+    parts.push('--', ...pathspecs.map(quoteShellArg));
   }
   const cmd = parts.join(' ');
 

@@ -9,7 +9,11 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { parseGitLogOutput, readGitLogWindow } from '@/analysis/git-history/git-log-reader.js';
+import {
+  parseGitLogOutput,
+  readGitLog,
+  readGitLogWindow,
+} from '@/analysis/git-history/git-log-reader.js';
 
 // ---------------------------------------------------------------------------
 // parseGitLogOutput
@@ -234,5 +238,70 @@ describe('readGitLogWindow', () => {
   it('reports a null window when no commits are in range', () => {
     const w = readGitLogWindow(repo, { sinceDays: 1, maxCommits: 5, includeMerges: false });
     expect(w).toEqual({ commits: [], windowStart: null, windowEnd: null, truncated: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// readGitLog — pathspec list (TASK-95)
+// ---------------------------------------------------------------------------
+
+describe('readGitLog with a pathspec list', () => {
+  let repo: string;
+  const opts = { sinceDays: 90, maxCommits: 50, includeMerges: false };
+
+  function commit(files: string[], msg: string): void {
+    for (const f of files) {
+      const abs = path.join(repo, f);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.appendFileSync(abs, `${msg}\n`);
+    }
+    const env = {
+      ...process.env,
+      GIT_AUTHOR_NAME: 't',
+      GIT_AUTHOR_EMAIL: 't@example.com',
+      GIT_COMMITTER_NAME: 't',
+      GIT_COMMITTER_EMAIL: 't@example.com',
+    };
+    execSync('git add -A', { cwd: repo, stdio: 'pipe', env });
+    execSync(`git commit -q -m ${msg}`, { cwd: repo, stdio: 'pipe', env });
+  }
+
+  beforeAll(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-gitpathspec-'));
+    execSync('git init -q', { cwd: repo, stdio: 'pipe' });
+    commit(['plugin/a.ts'], 'c0');
+    commit(['packages/b.ts'], 'c1');
+    commit(['docs/readme.md'], 'c2');
+    commit(['plugin/a.ts', 'docs/readme.md'], 'c3');
+    commit(['dir with space/x.ts'], 'c4');
+  });
+
+  afterAll(() => {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  it('only returns file changes under the listed directories', () => {
+    const commits = readGitLog(repo, { ...opts, pathFilter: ['plugin', 'packages'] });
+    const files = commits.flatMap((c) => c.files.map((f) => f.path)).sort();
+    expect(files).toEqual(['packages/b.ts', 'plugin/a.ts', 'plugin/a.ts']);
+    // c2 (docs only) and c4 are not touched by any pathspec
+    expect(commits).toHaveLength(3);
+  });
+
+  it('a single string pathFilter behaves as a one-element list', () => {
+    const commits = readGitLog(repo, { ...opts, pathFilter: 'plugin' });
+    expect(commits.flatMap((c) => c.files.map((f) => f.path))).toEqual([
+      'plugin/a.ts',
+      'plugin/a.ts',
+    ]);
+  });
+
+  it('quotes pathspecs that contain spaces', () => {
+    const commits = readGitLog(repo, { ...opts, pathFilter: ['dir with space'] });
+    expect(commits.flatMap((c) => c.files.map((f) => f.path))).toEqual(['dir with space/x.ts']);
+  });
+
+  it('an empty list applies no filter', () => {
+    expect(readGitLog(repo, { ...opts, pathFilter: [] })).toHaveLength(5);
   });
 });

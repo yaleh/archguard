@@ -98,6 +98,21 @@ export interface RunAnalysisResult {
   lastArchJson?: ArchJSON | null;
 }
 
+/**
+ * Nearest common ancestor directory of absolute paths. A single path is its own ancestor.
+ */
+function commonAncestorDir(dirs: string[]): string {
+  const split = dirs.map((d) => path.resolve(d).split(path.sep));
+  const first = split[0];
+  let len = first.length;
+  for (const parts of split.slice(1)) {
+    let i = 0;
+    while (i < len && i < parts.length && parts[i] === first[i]) i++;
+    len = i;
+  }
+  return first.slice(0, len).join(path.sep) || path.sep;
+}
+
 function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
   const hasLevelFilter = Array.isArray(cliOptions.diagrams) && cliOptions.diagrams.length > 0;
   const hasSourceOverride = Array.isArray(cliOptions.sources) && cliOptions.sources.length > 0;
@@ -386,8 +401,10 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         await import('../git-history/history-aggregator.js');
       const { writeHistoryArtifacts } = await import('../git-history/history-writer.js');
 
-      const gitArchJson = processor.getLastArchJson();
-      const projectRoot = gitArchJson?.workspaceRoot ?? sessionRoot;
+      // keyRoot: nearest common ancestor of ALL analyzed source dirs — deterministic, unlike
+      // the "last ArchJSON" workspaceRoot, which varies with per-scope entity counts.
+      const sourceDirs = [...new Set(selectedDiagrams.flatMap((d) => d.sources))];
+      const projectRoot = commonAncestorDir(sourceDirs.length > 0 ? sourceDirs : [sessionRoot]);
       if (!isGitRepo(projectRoot)) {
         reporter.warn('[git-history] Not a git repository — skipping git history analysis');
       } else {
@@ -399,10 +416,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         const granularities: ('package' | 'file')[] = ['package', 'file'];
 
         const gitRepoRoot = getGitRootFn(projectRoot) ?? projectRoot;
-        const gitSubDir =
-          gitRepoRoot !== projectRoot
-            ? path.relative(gitRepoRoot, projectRoot).replace(/\\/g, '/')
-            : undefined;
+        const relToGit = (abs: string): string =>
+          path.relative(gitRepoRoot, abs).replace(/\\/g, '/');
+        const keyRoot = relToGit(projectRoot);
+        // Every analyzed source dir is its own pathspec, so each source's history is collected
+        // (not just one subtree) and nothing else under keyRoot is.
+        const pathFilters = [...new Set(sourceDirs.map(relToGit))].sort();
         const {
           commits: rawCommits,
           windowStart,
@@ -412,18 +431,18 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
           sinceDays,
           maxCommits,
           includeMerges,
-          pathFilter: gitSubDir,
+          pathFilter: pathFilters.includes('') ? undefined : pathFilters,
         });
-        // Strip the subdirectory prefix from file paths so metrics are relative to projectRoot
-        const subDirPrefix = gitSubDir ? gitSubDir + '/' : '';
-        const commits = subDirPrefix
-          ? rawCommits.map((c) => ({
-              ...c,
-              files: c.files
-                .filter((f) => f.path.startsWith(subDirPrefix))
-                .map((f) => ({ ...f, path: f.path.slice(subDirPrefix.length) })),
-            }))
-          : rawCommits;
+        // Keep only files under a collected dir, then make paths relative to keyRoot.
+        const underFilter = (p: string): boolean =>
+          pathFilters.some((f) => f === '' || p === f || p.startsWith(f + '/'));
+        const keyPrefix = keyRoot ? keyRoot + '/' : '';
+        const commits = rawCommits.map((c) => ({
+          ...c,
+          files: c.files
+            .filter((f) => underFilter(f.path))
+            .map((f) => ({ ...f, path: f.path.slice(keyPrefix.length) })),
+        }));
         if (commits.length === 0) {
           reporter.warn(`[git-history] No commits found in the last ${sinceDays} days`);
         } else {
@@ -443,6 +462,8 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
             truncated,
             includeMerges,
             granularities,
+            keyRoot,
+            pathFilters,
           };
           const artifacts = {
             manifest,
