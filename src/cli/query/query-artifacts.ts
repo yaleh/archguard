@@ -89,6 +89,9 @@ function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
     if (current.entityCount !== best.entityCount) {
       return current.entityCount > best.entityCount ? current : best;
     }
+    // Equal width: prefer a scope previously marked primary, then fall back to key order.
+    const currentPrimary = current.role === 'primary';
+    if (currentPrimary !== (best.role === 'primary')) return currentPrimary ? current : best;
     return current.key.localeCompare(best.key) < 0 ? current : best;
   }).key;
 }

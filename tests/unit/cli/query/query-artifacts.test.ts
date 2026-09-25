@@ -339,6 +339,18 @@ describe('persistQueryScopes', () => {
       expect((await readManifest(dir)).globalScopeKey).toBe('narrow-primary');
     });
 
+    it('breaks an entityCount tie in favor of a previously primary scope', async () => {
+      const dir = makeTmpDir();
+      tmpDirs.push(dir);
+
+      // 'zzz' sorts after 'aaa', so only the primary role can keep it global on a tie.
+      await persistQueryScopes(dir, [scope('zzz', 4, 'primary')], {
+        preferredGlobalScopeKey: 'zzz',
+      });
+      await persistQueryScopes(dir, [scope('aaa', 4)]);
+      expect((await readManifest(dir)).globalScopeKey).toBe('zzz');
+    });
+
     it('stamps generatedAt on each written scope entry', async () => {
       const dir = makeTmpDir();
       tmpDirs.push(dir);
