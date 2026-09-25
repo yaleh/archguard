@@ -36,8 +36,11 @@ extra: {}
 
 - `src/cli/commands/analyze.ts`
 - `src/cli/analyze/run-analysis.ts`
+- `src/cli/analyze/arch-health.ts`
 - `src/cli/mcp/analyze-tool.ts`
+- `src/analysis/jl/types.ts`
 - `src/types/config-cli.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
+- `tests/unit/cli/analyze/arch-health.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
 - `tasks/TASK-97.md`
