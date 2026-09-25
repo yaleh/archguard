@@ -37,12 +37,12 @@ depends_on:
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/analysis/git-history/git-log-reader.test.ts` exit 0，新增用例：`readGitLog` 接受 pathspec 列表，只返回落在这些目录下的文件变更
-- [ ] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：两个 source 位于不同子目录时 manifest 的 `keyRoot` 为它们的最近公共祖先，且不随各 scope 实体数变化；单 source 时 `keyRoot` 等于该 source 相对 git 根的路径
-- [ ] `npx vitest run tests/unit/analysis/git-history/history-query.test.ts` exit 0，新增用例：仓库相对与 key 相对两种写法查同一文件得到同一结果并回显 `resolvedTarget`；三种 notFound `code` 各有用例
-- [ ] `npx vitest run tests/unit/cli/git-history/history-loader.test.ts` exit 0，新增用例：无 `keyRoot` 的旧 manifest 仍可加载，查询按恒等处理，notFound 时 `code` 为 `legacy-manifest`
-- [ ] `npx vitest run tests/unit/analysis/git-history/history-aggregator.test.ts` exit 0（回归，包路径含义不变）
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/analysis/git-history/git-log-reader.test.ts` exit 0，新增用例：`readGitLog` 接受 pathspec 列表，只返回落在这些目录下的文件变更
+- [x] `npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例：两个 source 位于不同子目录时 manifest 的 `keyRoot` 为它们的最近公共祖先，且不随各 scope 实体数变化；单 source 时 `keyRoot` 等于该 source 相对 git 根的路径
+- [x] `npx vitest run tests/unit/analysis/git-history/history-query.test.ts` exit 0，新增用例：仓库相对与 key 相对两种写法查同一文件得到同一结果并回显 `resolvedTarget`；三种 notFound `code` 各有用例
+- [x] `npx vitest run tests/unit/cli/git-history/history-loader.test.ts` exit 0，新增用例：无 `keyRoot` 的旧 manifest 仍可加载，查询按恒等处理，notFound 时 `code` 为 `legacy-manifest`
+- [x] `npx vitest run tests/unit/analysis/git-history/history-aggregator.test.ts` exit 0（回归，包路径含义不变）
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
