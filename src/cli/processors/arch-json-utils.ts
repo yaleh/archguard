@@ -1,13 +1,28 @@
 import type { ArchJSON } from '@/types/index.js';
 import { createHash } from 'crypto';
+import fs from 'fs';
+
+/**
+ * Resolve symlinks in a source path so that different routes to the same
+ * directory yield the same identity. Falls back to the original value when the
+ * path does not exist (or cannot be resolved).
+ */
+export function realpathOrSelf(p: string): string {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return p;
+  }
+}
 
 /**
  * Generate a short hash key from an array of source paths.
  * Exported so processors can use the same hashing logic for grouping.
+ * Paths are realpath-resolved first so symlinked routes share one key.
  */
 export function hashSources(sources: string[], language?: string): string {
   const normalized = sources
-    .map((s) => s.replace(/\\/g, '/'))
+    .map((s) => realpathOrSelf(s).replace(/\\/g, '/'))
     .sort()
     .join('|');
   const identity = `${language ?? 'typescript'}::${normalized}`;

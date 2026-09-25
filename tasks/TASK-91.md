@@ -21,10 +21,10 @@ extra: {}
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/cli/query/engine-loader.test.ts` exit 0，新增用例：`loadEngine` 返回的元信息含 key、sources、generatedAt
-- [ ] `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` exit 0，新增用例：summary 与 find_entity 的响应含 `scopeInfo`；manifest 有 2 个 scope 且未传 `scope` 时含 `warning`，传了 `scope` 时不含
-- [ ] 既有 mcp 测试全绿：`npx vitest run tests/unit/cli/mcp` exit 0
-- [ ] `npm run type-check && npm run lint` exit 0
+- [x] `npx vitest run tests/unit/cli/query/engine-loader.test.ts` exit 0，新增用例：`loadEngine` 返回的元信息含 key、sources、generatedAt
+- [x] `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` exit 0，新增用例：summary 与 find_entity 的响应含 `scopeInfo`；manifest 有 2 个 scope 且未传 `scope` 时含 `warning`，传了 `scope` 时不含
+- [x] 既有 mcp 测试全绿：`npx vitest run tests/unit/cli/mcp` exit 0
+- [x] `npm run type-check && npm run lint` exit 0
 
 ## DoD
 
