@@ -2,7 +2,7 @@
 id: gap-version-tag-check-prepublish-guard
 title: 发布前校验 package.json version 有同名 v* tag：check 脚本 + prepublishOnly
   接线（GOAL-001 / AC-002）
-status: todo
+status: ready
 labels:
   - gap
 parent: null
