@@ -282,6 +282,75 @@ describe('persistQueryScopes', () => {
     expect(manifest.globalScopeKey).toBe('cpp-core');
   });
 
+  describe('global scope selection without a primary scope', () => {
+    const entity = (id: string) => ({
+      ...makeArchJson().entities[0],
+      id,
+      name: id,
+    });
+    const archWith = (n: number) =>
+      makeArchJson({
+        entities: Array.from({ length: n }, (_, i) => entity(`E${i}`)),
+        relations: [],
+      });
+    const scope = (key: string, n: number, role?: 'primary' | 'secondary'): QueryScopeInput => ({
+      key,
+      sources: [`/project/${key}`],
+      archJson: archWith(n),
+      kind: 'parsed',
+      ...(role ? { role } : {}),
+    });
+    const readManifest = async (dir: string) =>
+      fs.readJson(path.join(dir, 'query', 'manifest.json'));
+
+    it('keeps the wider scope, then switches when a wider non-primary scope arrives', async () => {
+      const dir = makeTmpDir();
+      tmpDirs.push(dir);
+
+      await persistQueryScopes(dir, [scope('big', 10, 'primary')], {
+        preferredGlobalScopeKey: 'big',
+      });
+      await persistQueryScopes(dir, [scope('small', 3)]);
+      expect((await readManifest(dir)).globalScopeKey).toBe('big');
+
+      await persistQueryScopes(dir, [scope('wider', 20)]);
+      expect((await readManifest(dir)).globalScopeKey).toBe('wider');
+    });
+
+    it('does not carry over an old global key that is now narrower than the new scope', async () => {
+      const dir = makeTmpDir();
+      tmpDirs.push(dir);
+
+      await persistQueryScopes(dir, [scope('old', 5)]);
+      expect((await readManifest(dir)).globalScopeKey).toBe('old');
+
+      await persistQueryScopes(dir, [scope('new', 8)]);
+      expect((await readManifest(dir)).globalScopeKey).toBe('new');
+    });
+
+    it('still honors the primary scope when one is provided', async () => {
+      const dir = makeTmpDir();
+      tmpDirs.push(dir);
+
+      await persistQueryScopes(dir, [scope('wide', 20)]);
+      await persistQueryScopes(dir, [scope('narrow-primary', 2, 'primary')], {
+        preferredGlobalScopeKey: 'narrow-primary',
+      });
+      expect((await readManifest(dir)).globalScopeKey).toBe('narrow-primary');
+    });
+
+    it('stamps generatedAt on each written scope entry', async () => {
+      const dir = makeTmpDir();
+      tmpDirs.push(dir);
+
+      await persistQueryScopes(dir, [scope('a', 1)]);
+      const manifest = await readManifest(dir);
+      expect(new Date(manifest.scopes[0].generatedAt).toISOString()).toBe(
+        manifest.scopes[0].generatedAt
+      );
+    });
+  });
+
   it('creates <key>/arch.json for each scope', async () => {
     const dir = makeTmpDir();
     tmpDirs.push(dir);

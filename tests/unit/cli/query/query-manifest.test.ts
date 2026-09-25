@@ -1,4 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs-extra';
+import path from 'path';
+import os from 'os';
+import { persistQueryScopes } from '@/cli/query/query-artifacts.js';
 import type {
   QueryManifest,
   QueryScopeEntry,
@@ -66,6 +70,59 @@ describe('QueryManifest types', () => {
 
     expect(scope.hasAtlasExtension).toBe(true);
     expect(scope.language).toBe('go');
+  });
+});
+
+const makeArch = (): ArchJSON => ({
+  version: '1.1',
+  language: 'typescript',
+  timestamp: '2026-09-25T00:00:00.000Z',
+  sourceFiles: [],
+  entities: [],
+  relations: [],
+});
+
+describe('QueryScopeEntry generatedAt', () => {
+  const base: QueryScopeEntry = {
+    key: 'abcd1234',
+    label: 'src (typescript)',
+    language: 'typescript',
+    kind: 'parsed',
+    sources: ['src'],
+    entityCount: 1,
+    relationCount: 0,
+    hasAtlasExtension: false,
+  };
+
+  it('accepts an entry with generatedAt', () => {
+    const entry: QueryScopeEntry = { ...base, generatedAt: '2026-09-25T00:00:00.000Z' };
+    expect(entry.generatedAt).toBe('2026-09-25T00:00:00.000Z');
+  });
+
+  it('keeps old manifests (no generatedAt on entries) readable', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-manifest-'));
+    try {
+      const legacy: QueryManifest = {
+        version: '1.0',
+        generatedAt: '2026-09-06T00:00:00.000Z',
+        globalScopeKey: base.key,
+        scopes: [base],
+      };
+      await fs.outputJson(path.join(dir, 'query', 'manifest.json'), legacy);
+
+      const loaded = (await fs.readJson(path.join(dir, 'query', 'manifest.json'))) as QueryManifest;
+      expect(loaded.scopes[0].generatedAt).toBeUndefined();
+
+      // Merging a new scope into a legacy manifest must work
+      await persistQueryScopes(dir, [
+        { key: 'new', sources: ['/p/new'], archJson: makeArch(), kind: 'parsed' },
+      ]);
+      const merged = (await fs.readJson(path.join(dir, 'query', 'manifest.json'))) as QueryManifest;
+      expect(merged.scopes.map((s) => s.key)).toEqual(['abcd1234', 'new']);
+      expect(merged.scopes.find((s) => s.key === 'new')?.generatedAt).toBeDefined();
+    } finally {
+      await fs.remove(dir);
+    }
   });
 });
 
