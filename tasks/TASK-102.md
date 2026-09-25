@@ -1,7 +1,7 @@
 ---
 id: TASK-102
 title: "TASK-102: 函数体重复检测，并把 const 箭头函数纳入实体（P2 新功能，需先出方案）"
-status: todo
+status: ready
 labels:
   - gap
   - feature
