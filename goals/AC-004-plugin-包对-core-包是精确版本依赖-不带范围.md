@@ -1,7 +1,7 @@
 ---
 id: AC-004
 title: plugin 包对 core 包是精确版本依赖，不带范围
-status: active
+status: achieved
 kind: criterion
 goal: GOAL-001
 criterion: >-
@@ -33,5 +33,11 @@ origin: README 记录的渠道契约：Claude Code 从 npm source 安装 plugin 
   同为负控制。已有执行面：tests/unit/packaging/plugin-package.test.ts 已机械钉住本条（『depends on
   the exact matching @yalehwang/archguard version (no range)』）。
 activatedAt: 2026-09-25T14:32:20.451Z
+statusLog:
+  - at: 2026-09-25T14:37:06.248Z
+    from: active
+    to: achieved
+    actor: goal-driver
+    reason: "I2: criterion pass"
 long-term: true
 ---
