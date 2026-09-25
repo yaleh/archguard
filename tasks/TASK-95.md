@@ -56,6 +56,7 @@ depends_on:
 - `src/cli/analyze/run-analysis.ts`
 - `src/types/git-history.ts`
 - `tests/unit/analysis/git-history/git-log-reader.test.ts`
+- `tests/unit/analysis/git-history/git-log-reader-exec.test.ts`
 - `tests/unit/analysis/git-history/history-query.test.ts`
 - `tests/unit/cli/git-history/history-loader.test.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
