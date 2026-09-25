@@ -6,7 +6,10 @@
  * without going through DiagramProcessor.processAll().
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { QueryScopeCollector } from '@/cli/processors/query-scope-collector.js';
 import type { ArchJSON } from '@/types/index.js';
 
@@ -100,6 +103,43 @@ describe('QueryScopeCollector', () => {
       for (const source of scope.sources) {
         expect(source).toMatch(/^\//);
       }
+    });
+
+    describe('symlinked source paths', () => {
+      let tmp: string | undefined;
+      afterEach(() => {
+        if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
+        tmp = undefined;
+      });
+
+      it('registers a symlink path and its real path as a single scope', () => {
+        tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-symlink-')));
+        const real = path.join(tmp, 'real');
+        const link = path.join(tmp, 'link');
+        fs.mkdirSync(real);
+        fs.symlinkSync(real, link, 'dir');
+
+        const collector = new QueryScopeCollector();
+        collector.register([real], makeArchJson(1), 'parsed');
+        collector.register([link], makeArchJson(2), 'parsed');
+
+        const scopes = collector.getQuerySourceGroups();
+        expect(scopes).toHaveLength(1);
+        expect(scopes[0].sources).toEqual([real]);
+      });
+
+      it('stores the resolved path in scope sources when registered via a symlink', () => {
+        tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-symlink-')));
+        const real = path.join(tmp, 'real');
+        const link = path.join(tmp, 'link');
+        fs.mkdirSync(real);
+        fs.symlinkSync(real, link, 'dir');
+
+        const collector = new QueryScopeCollector();
+        collector.register([link], makeArchJson(1), 'parsed');
+
+        expect(collector.getQuerySourceGroups()[0].sources).toEqual([real]);
+      });
     });
 
     it('stores the provided archJson in the scope', () => {

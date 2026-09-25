@@ -11,7 +11,7 @@ import path from 'path';
 import type { Readable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 import { z } from 'zod';
-import { loadEngine } from '../query/engine-loader.js';
+import { loadEngine, type QueryContext } from '../query/engine-loader.js';
 import type {
   QueryEngine,
   EntitySummary,
@@ -63,6 +63,65 @@ const scopeParam = z
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text', text }] };
+}
+
+interface ScopeInfoPayload {
+  key: string;
+  label: string;
+  sources: string[];
+  generatedAt: string;
+  warning?: string;
+  availableScopes?: Array<{ key: string; label: string; entityCount: number }>;
+}
+
+/** Scope-related slice of QueryContext; the new fields stay optional for older loaders/mocks. */
+type ScopedContext = Pick<QueryContext, 'scopeEntry'> &
+  Partial<Pick<QueryContext, 'scopeInfo' | 'availableScopes'>>;
+
+/**
+ * Describe the scope a query was answered from. When the manifest holds several
+ * scopes and the caller did not pass `scope`, attach a warning listing the
+ * alternatives so a global-scope result is not mistaken for "the whole project".
+ */
+function buildScopeInfo(ctx: ScopedContext, requestedScope: string | undefined): ScopeInfoPayload {
+  const { key, label, sources, generatedAt } = ctx.scopeInfo ?? {
+    ...ctx.scopeEntry,
+    generatedAt: '',
+  };
+  const availableScopes = ctx.availableScopes ?? [];
+  const info: ScopeInfoPayload = { key, label, sources, generatedAt };
+  if (!requestedScope && availableScopes.length > 1) {
+    const list = availableScopes
+      .map((s) => `${s.key} (${s.label}, ${s.entityCount} entities)`)
+      .join('; ');
+    info.warning =
+      `Multiple scopes available and no "scope" parameter was passed; this result used scope ` +
+      `"${key}" only. Pass scope to choose one of: ${list}.`;
+    info.availableScopes = availableScopes;
+  }
+  return info;
+}
+
+/**
+ * JSON response carrying `scopeInfo`. Object payloads get a `scopeInfo` field added;
+ * array payloads cannot take a field without changing their shape, so `scopeInfo` is
+ * sent as a second text content block and content[0] stays byte-identical.
+ */
+function scopedJsonResponse(
+  ctx: ScopedContext,
+  requestedScope: string | undefined,
+  payload: unknown
+): { content: Array<{ type: 'text'; text: string }> } {
+  const scopeInfo = buildScopeInfo(ctx, requestedScope);
+  if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+    return textResponse(serializeResult({ ...payload, scopeInfo }));
+  }
+  return {
+    content: [
+      { type: 'text', text: serializeResult(payload) },
+      { type: 'text', text: serializeResult({ scopeInfo }) },
+    ],
+  };
 }
 
 export function resolveRoot(projectRoot: string | undefined, defaultRoot: string): string {
@@ -304,7 +363,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = ctx;
 
         // Phase 1: look up with structured format so the result is always Entity[]
         // and safe for .filter(). Edge-list serialization is applied in Phase 2.
@@ -350,7 +410,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         };
         const result = engine.applyOutputOptions(rawEntities, finalOptions);
         const payload = applyView(engine, result, verbose);
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -370,10 +430,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(
-          path.join(root, '.archguard'),
-          scope
-        );
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = ctx;
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
@@ -386,7 +444,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           ),
           verbose
         );
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -406,10 +464,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(
-          path.join(root, '.archguard'),
-          scope
-        );
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = ctx;
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
@@ -419,7 +475,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           engine.applyOutputOptions(relationQueryService.getDependents(name, depth), queryOptions),
           verbose
         );
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -438,10 +494,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(
-          path.join(root, '.archguard'),
-          scope
-        );
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = ctx;
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
@@ -451,7 +505,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           engine.applyOutputOptions(relationQueryService.findImplementers(name), queryOptions),
           verbose
         );
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -470,10 +524,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, name, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine, relationQueryService } = await loadEngine(
-          path.join(root, '.archguard'),
-          scope
-        );
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine, relationQueryService } = ctx;
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
@@ -483,7 +535,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           engine.applyOutputOptions(relationQueryService.findSubclasses(name), queryOptions),
           verbose
         );
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -503,13 +555,14 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, filePath, verbose, outputScope, queryFormat }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { engine } = ctx;
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
         };
         const payload = applyView(engine, engine.getFileEntities(filePath, queryOptions), verbose);
-        return textResponse(serializeResult(payload));
+        return scopedJsonResponse(ctx, scope, payload);
       });
     }
   );
@@ -526,8 +579,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
-        return textResponse(JSON.stringify(engine.getCycles(), null, 2));
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        return scopedJsonResponse(ctx, scope, ctx.engine.getCycles());
       });
     }
   );
@@ -544,8 +597,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
-        return textResponse(JSON.stringify(engine.getSummary(), null, 2));
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        return scopedJsonResponse(ctx, scope, ctx.engine.getSummary());
       });
     }
   );
@@ -572,7 +625,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, layer, format }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { extensionAccessor } = await loadEngine(path.join(root, '.archguard'), scope);
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const { extensionAccessor } = ctx;
 
         if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
@@ -600,10 +654,10 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
             layer as 'package' | 'capability' | 'goroutine',
             data as PackageGraph | CapabilityGraph | GoroutineTopology
           );
-          return textResponse(JSON.stringify(edges, null, 2));
+          return scopedJsonResponse(ctx, scope, edges);
         }
 
-        return textResponse(JSON.stringify(data, null, 2));
+        return scopedJsonResponse(ctx, scope, data);
       });
     }
   );
@@ -654,8 +708,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
     async ({ projectRoot, scope, depth, sortBy, minFileCount, minLoc, topN }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
-        const { engine } = await loadEngine(path.join(root, '.archguard'), scope);
-        const result: PackageStatsResult = engine.getPackageStats(depth);
+        const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        const result: PackageStatsResult = ctx.engine.getPackageStats(depth);
 
         let packages = result.packages;
 
@@ -686,7 +740,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           return textResponse('No package statistics available for this scope.');
         }
 
-        return textResponse(JSON.stringify({ meta: result.meta, packages }, null, 2));
+        return scopedJsonResponse(ctx, scope, { meta: result.meta, packages });
       });
     }
   );

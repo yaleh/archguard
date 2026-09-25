@@ -9,8 +9,11 @@
  * - files.length === 0 error path
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ArchJsonProvider } from '@/cli/processors/arch-json-provider.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ArchJsonProvider, hashSources } from '@/cli/processors/arch-json-provider.js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
 import type { ArchJSON } from '@/types/index.js';
 
@@ -588,5 +591,31 @@ describe('ArchJsonProvider', () => {
     expect(kind).toBe('derived');
     // parseFiles still called only once (for the parent)
     expect(mockParseFiles).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('hashSources realpath normalization', () => {
+  let tmp: string | undefined;
+
+  afterEach(() => {
+    if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
+    tmp = undefined;
+  });
+
+  it('returns the same key for a symlink path and its real path', () => {
+    tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'hash-symlink-')));
+    const real = path.join(tmp, 'real');
+    const link = path.join(tmp, 'link');
+    fs.mkdirSync(real);
+    fs.symlinkSync(real, link, 'dir');
+
+    expect(hashSources([link], 'typescript')).toBe(hashSources([real], 'typescript'));
+  });
+
+  it('does not throw for non-existent paths and keys them by the original string', () => {
+    const missing = '/nonexistent/archguard-task-92/src';
+    expect(() => hashSources([missing])).not.toThrow();
+    expect(hashSources([missing])).toBe(hashSources([missing]));
+    expect(hashSources([missing])).not.toBe(hashSources(['/nonexistent/archguard-task-92/other']));
   });
 });
