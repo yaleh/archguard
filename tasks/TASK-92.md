@@ -1,7 +1,7 @@
 ---
 id: TASK-92
 title: "TASK-92: scope key 哈希前未 realpath，符号链接路径产生重复 scope"
-status: todo
+status: ready
 labels:
   - gap
   - defect
