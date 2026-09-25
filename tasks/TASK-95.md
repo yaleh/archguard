@@ -1,7 +1,7 @@
 ---
 id: TASK-95
 title: "TASK-95: git 历史的文件 key 相对根不确定、且只采集了单个子树——统一为确定的 keyRoot 与多 pathspec"
-status: ready
+status: done
 labels:
   - gap
   - mcp
