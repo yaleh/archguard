@@ -1,7 +1,7 @@
 ---
 id: TASK-91
 title: "TASK-91: 查询响应回显所用 scope（key/sources/generatedAt），多 scope 且未指定时给出警告"
-status: ready
+status: done
 labels:
   - gap
   - mcp
