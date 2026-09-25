@@ -8,7 +8,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 const runAnalysisMock = vi.fn();
 
-vi.mock('@/cli/analyze/run-analysis.js', () => ({
+vi.mock('@/cli/analyze/run-analysis.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/cli/analyze/run-analysis.js')>()),
   runAnalysis: runAnalysisMock,
 }));
 
