@@ -45,6 +45,8 @@ extra: {}
 - `tests/unit/cli/analyze/normalize-to-diagrams.test.ts`
 - `tests/unit/cli/analyze/run-analysis.test.ts`
 - `tests/unit/cli/mcp/analyze-tool.test.ts`
+- `tests/integration/mcp-runtime-diagnostics.test.ts`
+- `tests/unit/cli/mcp/mcp-stdout-safety.test.ts`
 - `tasks/TASK-89.md`
 
 ## Needs-Human
