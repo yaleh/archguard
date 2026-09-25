@@ -38,12 +38,16 @@ extra: {}
 ## Touches
 
 - `src/cli/analyze/run-analysis.ts`
+- `src/cli/commands/analyze.ts`
 - `src/cli/mcp/analyze-tool.ts`
 - `src/cli/mcp/tools/git-history-analyze-tool.ts`
 - `src/analysis/git-history/git-log-reader.ts`
 - `src/analysis/git-history/history-query.ts`
 - `src/types/git-history.ts`
+- `src/types/config-cli.ts`
 - `tests/unit/analysis/git-history/git-log-reader.test.ts`
 - `tests/unit/analysis/git-history/history-query.test.ts`
+- `tests/unit/cli/analyze/run-analysis.test.ts`
+- `tests/unit/cli/mcp/analyze-tool.test.ts`
 - `tests/unit/cli/mcp/git-history-analyze-tool.test.ts`
 - `tasks/TASK-94.md`
