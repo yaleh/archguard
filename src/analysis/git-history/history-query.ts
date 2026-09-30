@@ -159,6 +159,19 @@ export class HistoryTargetNotFoundError extends Error {
 const isUnder = (p: string, dir: string): boolean =>
   dir === '' || p === dir || p.startsWith(dir + '/');
 
+/**
+ * Normalize a caller-supplied target path so it matches the plain repo-relative
+ * keys stored in the metrics maps (which come from `git log`, and never carry a
+ * leading "./" or backslashes): strip repeated leading "./" segments, convert
+ * backslashes to forward slashes, and drop a trailing slash.
+ */
+function normalizeTargetPath(target: string): string {
+  let p = target.replace(/\\/g, '/');
+  while (p.startsWith('./')) p = p.slice(2);
+  if (p.endsWith('/') && p.length > 1) p = p.slice(0, -1);
+  return p;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -280,8 +293,9 @@ export class HistoryQuery {
 
   private getMetrics(
     targetType: 'package' | 'file',
-    target: string
+    rawTarget: string
   ): { metrics: FileHistoryMetrics | PackageHistoryMetrics; resolvedTarget: string } {
+    const target = normalizeTargetPath(rawTarget);
     const resolvedTarget = this.resolveKey(targetType, target);
     const metrics =
       targetType === 'file'
@@ -309,7 +323,8 @@ export class HistoryQuery {
       window.note =
         `History was truncated at maxCommits=${m.maxCommits}: the analyzed window` +
         (m.windowStart && m.windowEnd ? ` (${m.windowStart} to ${m.windowEnd})` : '') +
-        ` is shorter than sinceDays=${m.sinceDays}. Re-run analysis with a larger gitMaxCommits to cover the full range.`;
+        ` is shorter than sinceDays=${m.sinceDays}. Re-run with a larger max-commits value ` +
+        `(gitMaxCommits for archguard_analyze, maxCommits for archguard_analyze_git) to cover the full range.`;
     }
     return window;
   }

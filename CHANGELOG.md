@@ -5,6 +5,65 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.35] - 2026-09-30
+
+### Fixed
+- `archguard_detect_shape_smells`: fix a dynamic `import('fs-extra')` that resolved
+  `fs.readFile` to `undefined` (CJS/ESM named-export interop), silently skipping every
+  source file and always reporting `totalSmells: 0` regardless of input
+- `archguard_detect_shape_smells`: expand directory entries in `sources` to their
+  `.ts`/`.tsx` files instead of passing them straight to `readFile` (`EISDIR`, silently
+  swallowed by the same catch as above)
+- Literal-dispersion `srcRoot` cross-module filter: a flat `src/*.ts` layout (no
+  subdirectories) used to be treated as "confirmed single module" and had every smell
+  dropped; it's now treated as "can't confirm same-module" and smells are kept
+- `archguard_analyze_git`: write `keyRoot`/`pathFilters` into the manifest like
+  `archguard_analyze --includeGit` does. Running `archguard_analyze_git` standalone
+  after an `--includeGit` run was silently overwriting the manifest with one lacking
+  `keyRoot`, which made every non-exact-match git-history lookup fall back to
+  `legacy-manifest` instead of a real `outside-analyzed-paths`/`no-commits-in-window`
+  reason — including telling you to "Re-run archguard_analyze_git", which is exactly
+  what caused the regression
+- Git history target lookups: normalize a leading `./` (and backslashes / trailing `/`)
+  in `target` paths before matching, matching the plain repo-relative keys `git log`
+  produces
+- `archguard_get_metric_trend` with `packageName`: guard against metrics-history
+  entries recorded before per-package tracking existed, which lack a `packages` field
+  entirely and crashed `.filter()`/silently dropped from the unfiltered response with
+  `TypeError: Cannot read properties of undefined (reading 'filter')`
+- `archguard_get_intrinsic_dimension`: add `evaluated: true` to the success response so
+  `if (!result.evaluated)` can't misfire on a real result (only the failure path had
+  `evaluated: false` before; the success path had no `evaluated` key at all)
+- `archguard_get_architecture_drift`: snapshots from `analyze --arch-health` never
+  carried a `commitSha`, and the tool looks snapshots up by `commitSha` — every real
+  invocation returned "no baseline available". Snapshots now record `commitSha` (HEAD
+  at analysis time)
+- `archguard_get_architecture_drift` / `--drift-base`: the baseline/drift snapshot
+  resolvers called `reanalyzeCommitSnapshot(commitSha, root)`, but that function's real
+  parameter order is `(root, commitSha)` — every call had a commit sha where a repo path
+  was expected and vice versa, failing with "invalid commit reference: `<repo path>`"
+  even after the `commitSha` gap above is fixed. Found by re-running the tool
+  end-to-end after fixing the gap above, not by reading the code.
+
+## [0.1.34] - 2026-09-30
+
+### Fixed
+- `analyze`/`archguard_analyze`: process every `--sources`/`sources` entry instead of silently
+  dropping all but the first; list persisted scopes in the response (TASK-89)
+- Query scope keys: realpath-resolve source paths before hashing so symlinked paths no longer
+  produce duplicate scopes (TASK-92)
+- Git history query tools (`get_change_context`, `get_cochange`, `get_change_risk`,
+  `get_ownership`): accept both repo-relative and key-relative target paths (TASK-95)
+- Global scope selection: re-select when a run has no primary scope, and prefer the
+  previously-primary scope on an entity-count tie (TASK-90)
+
+### Added
+- `archguard_analyze`: `testSources` parameter for pointing test analysis at directories outside
+  the analyzed source root
+- Git history analysis: expose analyzed window (`windowStart`/`windowEnd`) and `truncated` flag
+  when `gitMaxCommits` cuts the window short of `gitSinceDays`; `gitSinceDays`/`gitMaxCommits`
+  are now tunable (TASK-94)
+
 ## [2.0.0] - 2026-02-21
 
 ### Added

@@ -1,7 +1,7 @@
 ---
 id: AC-002
 title: 每个已发布版本都留下可核对的 tag
-status: active
+status: achieved
 kind: criterion
 goal: GOAL-001
 criterion: >-
@@ -22,5 +22,11 @@ origin: 人 2026-09-25 裁定「渠道保留 npm + Claude Code plugin 形态」�
   v0.1.31（2026-07-21）——0.1.32 / 0.1.33 两次发布没有任何 tag，GitHub Release 也停在
   v0.1.30（2026-07-12）。⇒ 同一个版本号在四个面上有四个不同的读数，而没有任何机件因此变红。
 activatedAt: 2026-09-25T14:32:20.020Z
+statusLog:
+  - at: 2026-09-30T11:33:26.759Z
+    from: active
+    to: achieved
+    actor: goal-driver
+    reason: "I2: criterion pass"
 long-term: true
 ---

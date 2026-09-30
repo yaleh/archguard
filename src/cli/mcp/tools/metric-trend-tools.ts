@@ -63,19 +63,20 @@ export function registerMetricTrendTools(server: McpServer, defaultRoot: string)
         let snapshots: TrendSnapshot[];
 
         if (packageName !== undefined) {
-          // Filter each entry to only the specified package; omit entries where package is absent
+          // Filter each entry to only the specified package; omit entries where package is absent.
+          // Legacy entries recorded before packages tracking existed may lack `packages` entirely.
           snapshots = allEntries
             .map((entry) => ({
               timestamp: entry.timestamp,
               scopeKey: entry.scopeKey ?? UNKNOWN_SCOPE,
-              packages: entry.packages.filter((p) => p.name === packageName),
+              packages: (entry.packages ?? []).filter((p) => p.name === packageName),
             }))
             .filter((s) => s.packages.length > 0);
         } else {
           snapshots = allEntries.map((entry) => ({
             timestamp: entry.timestamp,
             scopeKey: entry.scopeKey ?? UNKNOWN_SCOPE,
-            packages: entry.packages,
+            packages: entry.packages ?? [],
           }));
         }
 
