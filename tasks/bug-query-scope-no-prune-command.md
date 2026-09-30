@@ -32,11 +32,11 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 
 ## AC
 
-- [ ] 新命令(如 `archguard cache prune-scopes --key <scope-key>`)能删除指定 scope:执行后 `manifest.json` 里不再含该 key 的条目,`.archguard/query/<key>/` 目录被移除
-- [ ] 新命令支持按天数阈值批量清理(如 `--older-than-days <N>`),并有 `--dry-run` 只打印将被删除的 scope 列表、不执行
-- [ ] 负对照:执行 prune 之后,未被选中删除的 scope 仍然可以正常查询(`archguard_summary --scope <未删除的key>` 等价调用能正常返回,不受影响)
-- [ ] `archguard_summary`/`archguard analyze` 响应里的 scope 列表能看到每个 scope 的 `generatedAt`(部分工具可能已经有这个字段,需要确认并在展示层暴露出来,而不是新增)
-- [ ] `npm test` 全量通过
+- [x] 新命令(如 `archguard cache prune-scopes --key <scope-key>`)能删除指定 scope:执行后 `manifest.json` 里不再含该 key 的条目,`.archguard/query/<key>/` 目录被移除
+- [x] 新命令支持按天数阈值批量清理(如 `--older-than-days <N>`),并有 `--dry-run` 只打印将被删除的 scope 列表、不执行
+- [x] 负对照:执行 prune 之后,未被选中删除的 scope 仍然可以正常查询(`archguard_summary --scope <未删除的key>` 等价调用能正常返回,不受影响)
+- [x] `archguard_summary`/`archguard analyze` 响应里的 scope 列表能看到每个 scope 的 `generatedAt`(部分工具可能已经有这个字段,需要确认并在展示层暴露出来,而不是新增)
+- [x] `npm test` 全量通过
 
 ## DoD
 
