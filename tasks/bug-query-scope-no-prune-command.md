@@ -44,6 +44,7 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 
 ## Touches
 
-- src/cli/commands/cache.ts(或新增独立命令文件)
-- src/cli/query/query-artifacts.ts / query-manifest.ts(manifest 读写与 scope 条目结构)
-- 可能涉及 archguard_summary 等 MCP 工具的 scope 展示逻辑
+- tasks/bug-query-scope-no-prune-command.md
+- src/cli/commands/cache.ts
+- src/cli/query/query-artifacts.ts
+- src/cli/query/query-manifest.ts
