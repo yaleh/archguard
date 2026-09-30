@@ -2,7 +2,7 @@
 id: gap-release-workflow-advance-master-ff-only
 title: release.yml 的 advance-master job：全绿后才把 master ff 到 vX.Y.Z tag（GOAL-001 /
   AC-001）
-status: needs-human
+status: ready
 labels:
   - gap
 parent: null
