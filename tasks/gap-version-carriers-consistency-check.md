@@ -24,11 +24,11 @@ GOAL-001 / AC-003 要求：package.json、package-lock.json（顶层 version 与
 
 ## AC
 
-- [ ] `bash -n scripts/check-version-carriers.sh` exit 0（语法合法）
-- [ ] `bash scripts/check-version-carriers.sh` 在仓库根目录 exit 0 且 stdout 含 `all carriers == 0.1.33`（当前六处一致，正例）
-- [ ] `npx vitest run tests/unit/scripts/version-carriers-check.test.ts` exit 0，其中用例覆盖：临时目录六处一致时 exit 0；六处中每一处单独改为 9.9.9 时脚本 exit 1 且 stderr 含 `CAUSE=version-carriers-disagree`；载体文件缺失时 exit 1 且 stderr 含 `CAUSE=version-carrier-unreadable`；仓库根真实运行 exit 0
-- [ ] `bash scripts/test.sh tests/unit/scripts/version-carriers-check.test.ts` exit 0（走 quay fan-in 的同一入口）
-- [ ] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `package.json`、`package-lock.json`、`plugin/package.json`、`.claude-plugin/marketplace.json`、`plugin/.claude-plugin/plugin.json`（本任务只加守卫，不改任何载体的版本值），且无 `git tag` / `git push` / `npm publish` 的执行记录
+- [x] `bash -n scripts/check-version-carriers.sh` exit 0（语法合法）
+- [x] `bash scripts/check-version-carriers.sh` 在仓库根目录 exit 0 且 stdout 含 `all carriers == 0.1.33`（当前六处一致，正例）
+- [x] `npx vitest run tests/unit/scripts/version-carriers-check.test.ts` exit 0，其中用例覆盖：临时目录六处一致时 exit 0；六处中每一处单独改为 9.9.9 时脚本 exit 1 且 stderr 含 `CAUSE=version-carriers-disagree`；载体文件缺失时 exit 1 且 stderr 含 `CAUSE=version-carrier-unreadable`；仓库根真实运行 exit 0
+- [x] `bash scripts/test.sh tests/unit/scripts/version-carriers-check.test.ts` exit 0（走 quay fan-in 的同一入口）
+- [x] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `package.json`、`package-lock.json`、`plugin/package.json`、`.claude-plugin/marketplace.json`、`plugin/.claude-plugin/plugin.json`（本任务只加守卫，不改任何载体的版本值），且无 `git tag` / `git push` / `npm publish` 的执行记录
 
 ## DoD
 
