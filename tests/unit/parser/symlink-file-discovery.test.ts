@@ -4,6 +4,7 @@ import os from 'os';
 import path from 'path';
 import { TypeScriptPlugin } from '@/plugins/typescript/index.js';
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service.js';
+import { detectDuplicates } from '@/analysis/duplicates/group.js';
 
 describe('symlink-aware file discovery', () => {
   let root: string;
@@ -47,5 +48,26 @@ describe('symlink-aware file discovery', () => {
     expect(names).not.toContain('Skipped');
     expect(names.filter((n) => n === 'one')).toHaveLength(1);
     expect(names.filter((n) => n === 'Inner')).toHaveLength(1);
+  });
+
+  it('detectDuplicates still finds the real pair but not its symlinks', async () => {
+    const analysis = await detectDuplicates(root, [root], {
+      minStatements: 1,
+      minTokens: 1,
+    });
+    const allMembers = analysis.groups.flatMap((g) => g.members.map((m) => m.file));
+
+    // (a) the two genuine copies are still detected as a duplicate group.
+    const pair = analysis.groups.find(
+      (g) =>
+        g.members.some((m) => m.file.endsWith('a/one.ts')) &&
+        g.members.some((m) => m.file.endsWith('b/two.ts'))
+    );
+    expect(pair).toBeDefined();
+
+    // (b) the file-level symlink must not appear as a third member,
+    // (c) nor may the symlinked directory be traversed into.
+    expect(allMembers.some((f) => f.endsWith('b/link.ts'))).toBe(false);
+    expect(allMembers.some((f) => f.includes('linkdir'))).toBe(false);
   });
 });
