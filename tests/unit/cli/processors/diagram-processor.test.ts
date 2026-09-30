@@ -678,6 +678,8 @@ describe('DiagramProcessor', () => {
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -737,6 +739,8 @@ describe('DiagramProcessor', () => {
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -810,6 +814,8 @@ describe('DiagramProcessor', () => {
       });
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -875,6 +881,8 @@ describe('DiagramProcessor', () => {
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -935,6 +943,8 @@ describe('DiagramProcessor', () => {
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -998,6 +1008,8 @@ describe('DiagramProcessor', () => {
       const mockDiscoverFiles = vi.fn().mockResolvedValue(['/src/test.ts']);
       FileDiscoveryService.mockImplementation(() => ({
         discoverFiles: mockDiscoverFiles,
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // Mock ParallelParser
@@ -1191,6 +1203,8 @@ describe('DiagramProcessor', () => {
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       // A standard class-level TypeScript diagram (no language field, no package level)
@@ -1231,6 +1245,8 @@ describe('DiagramProcessor', () => {
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       const { ParallelParser } = await import('@/parser/parallel-parser.js');
@@ -1609,6 +1625,8 @@ describe('DiagramProcessor', () => {
       const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
       (FileDiscoveryService as any).mockImplementation(() => ({
         discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+        discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+        formatExcludeReport: vi.fn().mockReturnValue([]),
       }));
 
       const { ParallelParser } = await import('@/parser/parallel-parser.js');
@@ -1932,6 +1950,8 @@ describe('Atlas layer parallel rendering', () => {
     const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
     (FileDiscoveryService as any).mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+      formatExcludeReport: vi.fn().mockReturnValue([]),
     }));
 
     const { ParallelParser } = await import('@/parser/parallel-parser.js');
@@ -1992,6 +2012,8 @@ describe('Atlas layer parallel rendering', () => {
     const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
     (FileDiscoveryService as any).mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+      formatExcludeReport: vi.fn().mockReturnValue([]),
     }));
 
     const { ParallelParser } = await import('@/parser/parallel-parser.js');
@@ -2045,6 +2067,8 @@ describe('Atlas layer parallel rendering', () => {
     const { FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js');
     (FileDiscoveryService as any).mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+      formatExcludeReport: vi.fn().mockReturnValue([]),
     }));
 
     const { ParallelParser } = await import('@/parser/parallel-parser.js');

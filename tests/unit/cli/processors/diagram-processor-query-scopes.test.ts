@@ -190,6 +190,8 @@ describe('DiagramProcessor query scope collection', () => {
   function setupMocks(archJson: ArchJSON = createTestArchJSON()) {
     FileDiscoveryService.mockImplementation(() => ({
       discoverFiles: vi.fn().mockResolvedValue(['/src/test.ts']),
+      discoverIgnoredFiles: vi.fn().mockResolvedValue([]),
+      formatExcludeReport: vi.fn().mockReturnValue([]),
     }));
     ParallelParser.mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue(archJson),

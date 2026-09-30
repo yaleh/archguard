@@ -93,6 +93,13 @@ export class ArchJsonProvider {
     { promise: Promise<ArchJSON>; sources: string[]; language: string }
   >();
 
+  private logExcludeReport(): void {
+    if (!this.globalConfig.verbose) return;
+    for (const line of this.fileDiscovery.formatExcludeReport()) {
+      console.log(`🚫 Exclude rules — ${line}`);
+    }
+  }
+
   constructor(options: ArchJsonProviderOptions) {
     this.globalConfig = options.globalConfig;
     this.parseCache = options.parseCache;
@@ -228,6 +235,7 @@ export class ArchJsonProvider {
         exclude: diagram.exclude || this.globalConfig.exclude,
         skipMissing: false,
       });
+      this.logExcludeReport();
       const diskCacheEnabled = this.globalConfig.cache?.enabled !== false;
       const diskKey =
         diskCacheEnabled && tsFiles.length > 0
@@ -287,6 +295,7 @@ export class ArchJsonProvider {
         exclude: diagram.exclude || this.globalConfig.exclude,
         skipMissing: false,
       });
+      this.logExcludeReport();
 
       // files.length === 0 check AFTER parent coverage (semantic improvement: sub-dirs with 0 files
       // can still be derived when parent coverage exists)
@@ -497,9 +506,14 @@ export class ArchJsonProvider {
    */
   private async parseTsPlugin(diagram: DiagramConfig): Promise<ArchJSON> {
     const workspaceRoot = path.resolve(diagram.sources[0]);
+    const callerExcludes = diagram.exclude ?? this.globalConfig.exclude ?? [];
+    const ignoredFiles = (
+      await Promise.all(diagram.sources.map((s) => this.fileDiscovery.discoverIgnoredFiles(s)))
+    ).flat();
+    this.logExcludeReport();
     const config = {
       workspaceRoot,
-      excludePatterns: diagram.exclude ?? this.globalConfig.exclude ?? [],
+      excludePatterns: [...callerExcludes, ...ignoredFiles.map((f) => `!${f}`)],
     };
     if (this.parseWorkerPool) {
       const fileCount = await this.projectFileCounter(
