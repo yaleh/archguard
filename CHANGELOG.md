@@ -5,6 +5,25 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.34] - 2026-09-30
+
+### Fixed
+- `analyze`/`archguard_analyze`: process every `--sources`/`sources` entry instead of silently
+  dropping all but the first; list persisted scopes in the response (TASK-89)
+- Query scope keys: realpath-resolve source paths before hashing so symlinked paths no longer
+  produce duplicate scopes (TASK-92)
+- Git history query tools (`get_change_context`, `get_cochange`, `get_change_risk`,
+  `get_ownership`): accept both repo-relative and key-relative target paths (TASK-95)
+- Global scope selection: re-select when a run has no primary scope, and prefer the
+  previously-primary scope on an entity-count tie (TASK-90)
+
+### Added
+- `archguard_analyze`: `testSources` parameter for pointing test analysis at directories outside
+  the analyzed source root
+- Git history analysis: expose analyzed window (`windowStart`/`windowEnd`) and `truncated` flag
+  when `gitMaxCommits` cuts the window short of `gitSinceDays`; `gitSinceDays`/`gitMaxCommits`
+  are now tunable (TASK-94)
+
 ## [2.0.0] - 2026-02-21
 
 ### Added
