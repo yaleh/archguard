@@ -51,11 +51,38 @@ quay 仓库的 `archive/` 目录是反例的反例——它**是** git 跟踪的
 
 不是"引入了 ignore 解析库、单元测试里 mock 了一个 .gitignore 就算完成",而是要在两个真实场景各跑一次完整的 `analyze`:一个是合成夹具(证明 3a 这条纯 gitignore 场景确实生效),一个是真实的 `/data/home/yale/work/quay` 仓库(证明 3b 这条"手动声明排除已跟踪目录"确实能让 `archive/` 从产物里消失,而且是用 quay 复测方给出的具体检查手段——查 `archguard_summary` 的包列表——验证过的,不是理论上应该消失)。
 
+## Evidence
+
+补跑轮(2026-09-30,基线修复后)。前一轮 4 个 commit 的实现在**根级 diagram 上并不生效**,本轮定位并修复后重新逐条实测。
+
+**发现的实现缺陷(fast-glob 静默丢弃绝对路径 negation)**:`parseTsPlugin` 把 ignore 命中文件编成 `!<绝对路径>` 追加进 `excludePatterns`。实测 fast-glob 对绝对路径的 negation 一律不生效:
+```
+!<root>/gen/generated.ts  -> 不排除   !<root>/gen/**  -> 不排除   !<root>/**/gen/**  -> 排除
+```
+所以凡走 TypeScript plugin 路径的图(含 repo 根图,即 `summary` 读的那个)ignore 全部落空。改为新增 `ParseConfig.ignorePaths`,走 globby 的 `ignore` 选项(实测可正确匹配绝对路径)。
+
+**AC1 / AC2(合成夹具,真实 analyze)**:夹具根 `.gitignore` 写 `gen/`,`gen/generated.ts` 含 `GeneratedEntity`。
+- 修复前:`class/all-classes.json` 的 `sourceFiles` 同时含 `gen/generated.ts` 与 `src/keep.ts`,实体 `[GeneratedEntity, KeepMe]` —— AC1 不成立。
+- 修复后:实体 `[KeepMe]`,`sourceFiles` 仅 `src/keep.ts`,且 verbose 输出含 `🚫 Exclude rules — .gitignore: 1 rule(s) [gen/], excluded 1 file(s)`。
+
+**AC3(真实 quay,含对照组)**:注意 `archive/2026-09-07-zero-call-scripts/plugin/scripts/*.ts` 会被**既有默认排除** `**/scripts/**` 命中(实测:archive 在默认排除下 18→0 文件),所以"不出现"在默认排除生效时是既有行为、与本特性无关。为了把本特性隔离出来,用 `-e '**/docs/**'` 替换默认排除(传 `-e` 会整体替换默认 exclude 列表)后做 A/B:
+- E0(无 `.archguardignore`):`archive` 18 个文件,其中 `2026-09-07-zero-call-scripts/plugin/scripts` **17 个**;同时 experiments 26 / orchestration 1 / packages 129 / plugin 292 / scripts 7。
+- E(`.archguardignore` 写 `archive/`):该 17 个 → **0**,`archive` 整体消失,其余模块计数完全不变。
+与 AC 判据一致(约 17-18 个文件)。AC3 成立,但结论依赖上面这个对照组,不能只看默认排除下的空结果。
+
+**AC4(两条排除路径叠加)**:quay 上 `.archguardignore` = `orchestration/` 且 `-e '**/docs/**'`,verbose 同时报出 `.archguardignore: 1 rule(s)` 与 `config exclude: 1 rule(s)`,产物中 orchestration 与 docs 均消失、其余模块不变;单元测试另覆盖 `.archguardignore` + `.gitignore` + config exclude 三源并集。
+
+**AC5**:`scripts/test.sh --for-task <id>`(scoped gate)4 个测试文件 68 tests 通过;`tsc --noEmit` 通过;全量 `npm test` 由 fan-in 执行。
+
+**已清理**:验证用的 `quay/.archguardignore` 已删除,quay 无 tracked 文件改动(仅其 `.gitignore` 已忽略的 `.archguard/` 缓存被刷新)。
+
 ## Touches
 
 - tasks/bug-default-exclude-gitignore-archguardignore.md
 - package.json
 - package-lock.json
+- src/core/interfaces/parser.ts
+- src/plugins/typescript/index.ts
 - src/cli/utils/file-discovery-service.ts
 - src/cli/utils/ignore-file-loader.ts
 - src/cli/processors/arch-json-provider.ts
