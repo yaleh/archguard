@@ -54,10 +54,15 @@ quay 仓库的 `archive/` 目录是反例的反例——它**是** git 跟踪的
 ## Touches
 
 - tasks/bug-default-exclude-gitignore-archguardignore.md
+- package.json
+- package-lock.json
 - src/cli/utils/file-discovery-service.ts
-- 新增:`.archguardignore` 解析逻辑(建议独立模块,如 src/cli/utils/ignore-file-loader.ts)
-- src/cli/config-loader.ts(如需支持 config 里声明 ignore 文件路径)
-- CLI/MCP 的 analyze 输出格式化逻辑(用于展示生效的排除规则)
+- src/cli/utils/ignore-file-loader.ts
+- src/cli/processors/arch-json-provider.ts
+- tests/unit/cli/utils/file-discovery-ignore.test.ts
+- tests/unit/cli/processors/arch-json-provider.test.ts
+- tests/unit/cli/processors/diagram-processor.test.ts
+- tests/unit/cli/processors/diagram-processor-query-scopes.test.ts
 
 ## Needs-Human
 
