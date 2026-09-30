@@ -1,7 +1,7 @@
 ---
 id: gap-version-carriers-consistency-check
 title: 六处版本载体逐字一致校验：check 脚本 + 随 npm test 常驻的回归用例（GOAL-001 / AC-003）
-status: needs-human
+status: ready
 labels:
   - gap
 parent: null
