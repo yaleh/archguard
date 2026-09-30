@@ -276,8 +276,8 @@ describe('FileDiscoveryService', () => {
       expect(files).toEqual([]);
     });
 
-    it('should return empty array when source is a .js file', async () => {
-      const jsFile = path.join(testDir, 'script.js');
+    it('should return empty array when source is an unsupported .mjs file', async () => {
+      const jsFile = path.join(testDir, 'script.mjs');
       await fs.writeFile(jsFile, 'console.log("test");');
 
       const files = await service.discoverFiles({

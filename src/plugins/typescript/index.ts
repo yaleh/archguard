@@ -26,6 +26,7 @@ import type {
 import { Project } from 'ts-morph';
 import { TypeScriptParser } from '@/parser/typescript-parser.js';
 import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
+import { globbySync } from 'globby';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { TypeScriptAnalyzer } from './typescript-analyzer.js';
 
@@ -186,25 +187,29 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const tsConfigFilePath = findTsConfigPath(workspaceRoot);
     const pathAliases = tsConfigFilePath ? loadPathAliases(tsConfigFilePath) : undefined;
     const project = pathAliases
-      ? new Project({ compilerOptions: { target: 99 /* ESNext */, ...pathAliases } })
-      : new Project({ compilerOptions: { target: 99 /* ESNext */ } });
+      ? new Project({ compilerOptions: { target: 99 /* ESNext */, allowJs: true, ...pathAliases } })
+      : new Project({ compilerOptions: { target: 99 /* ESNext */, allowJs: true } });
     const builtinExcludes = [
       `!${workspaceRoot}/**/*.test.ts`,
       `!${workspaceRoot}/**/*.spec.ts`,
       `!${workspaceRoot}/**/*.test.tsx`,
       `!${workspaceRoot}/**/*.spec.tsx`,
       `!${workspaceRoot}/**/*.test.jsx`,
+      `!${workspaceRoot}/**/*.test.js`,
+      `!${workspaceRoot}/**/*.spec.js`,
       `!${workspaceRoot}/**/*.spec.jsx`,
       `!${workspaceRoot}/**/node_modules/**`,
     ];
     const callerExcludes = (excludePatterns ?? []).map((p) =>
       p.startsWith('!') || path.isAbsolute(p) ? p : `!${workspaceRoot}/${p}`
     );
-    project.addSourceFilesAtPaths([
-      `${workspaceRoot}/${pattern}`,
-      ...builtinExcludes,
-      ...callerExcludes,
-    ]);
+    // Enumerate files ourselves (never following symlinks) and hand ts-morph an
+    // explicit list — its own glob follows symlinks and would re-introduce them.
+    const files = globbySync(
+      [`${workspaceRoot}/${pattern}`, ...builtinExcludes, ...callerExcludes],
+      { absolute: true, onlyFiles: true, followSymbolicLinks: false }
+    );
+    project.addSourceFilesAtPaths(files);
     return project;
   }
 
@@ -225,7 +230,7 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       continueOnError: true,
     });
 
-    const pattern = config.filePattern ?? '**/*.{ts,tsx}';
+    const pattern = config.filePattern ?? '**/*.{ts,tsx,js,jsx}';
 
     // Create a single shared ts-morph Project to avoid parsing twice
     const tsProject = this.initTsProject(workspaceRoot, pattern, config.excludePatterns);

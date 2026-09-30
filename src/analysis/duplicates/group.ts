@@ -7,7 +7,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { globSync } from 'glob';
+import { globbySync } from 'globby';
 import { fingerprintSourceText, type FunctionFingerprint } from '@/parser/function-fingerprint.js';
 import {
   DEFAULT_DUPLICATE_OPTIONS,
@@ -134,7 +134,15 @@ export function collectSourceFiles(
       files.add(abs);
       continue;
     }
-    for (const f of globSync(extGlob, { cwd: abs, absolute: true, ignore: ALWAYS_IGNORED })) {
+    // `glob` has no way to exclude symlinked *files*, so a symlink was scanned as a second
+    // copy of its target and fabricated duplicate groups (real file + its link). globby can
+    // be told not to follow them — same guarantee FileDiscoveryService relies on.
+    for (const f of globbySync(extGlob, {
+      cwd: abs,
+      absolute: true,
+      ignore: ALWAYS_IGNORED,
+      followSymbolicLinks: false,
+    })) {
       files.add(f);
     }
   }
