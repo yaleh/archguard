@@ -2,7 +2,7 @@
 id: bug-default-exclude-gitignore-archguardignore
 title: 无 .gitignore 感知与 .archguardignore 支持,已跟踪但想排除的目录(如 archive/)只能靠手动
   --exclude(quay 项目复测发现)
-status: todo
+status: ready
 labels:
   - defect
   - mcp
