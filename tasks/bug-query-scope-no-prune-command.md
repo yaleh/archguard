@@ -1,7 +1,7 @@
 ---
 id: bug-query-scope-no-prune-command
 title: query scope 只增不减,manifest.json 无 prune/清理机制(quay 项目复测发现)
-status: todo
+status: ready
 labels:
   - defect
   - query
