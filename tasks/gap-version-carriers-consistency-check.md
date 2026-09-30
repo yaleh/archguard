@@ -44,9 +44,11 @@ GOAL-001 / AC-003 要求：package.json、package-lock.json（顶层 version 与
 
 **2026-09-30 本轮（worktree /data/home/yale/work/archguard-wt/gap-version-carriers-consistency-check）**
 
-上一轮 exit-not-landed 的原因已定位并消失：日志里的三条 FAIL（`check-adr.test.ts` 的 `.claude/settings.json contains a Stop hook referencing check:adr`、`ccb-tool.test.ts` 与 `cognitive-analysis-skill.test.ts` 的 SKILL.md 存在性）指向的是**当时陈旧的 worktree**——那些文件在工作树里由后来的 develop 合并带回。本轮开工即实测这 3 个文件：44 tests passed，与本任务改动无关，无需处理。
+### 上轮 exit-not-landed 的原因：陈旧 worktree，与本任务改动无关
 
-逐条 AC 实测（全部在本工作树内真实执行）：
+日志里三条 FAIL（`check-adr.test.ts` 的 `.claude/settings.json contains a Stop hook referencing check:adr`、`ccb-tool.test.ts` 与 `cognitive-analysis-skill.test.ts` 的 SKILL.md 存在性）指向的是**当时陈旧的 worktree**——那些文件由后来的 develop 合并带回。本轮开工即实测这 3 个文件：**44 tests passed**；合并 develop 后复测仍 44 passed。
+
+### 逐条 AC 实测（全部在本工作树内真实执行）
 
 | AC | 命令 | 结果 |
 |----|------|------|
@@ -54,11 +56,12 @@ GOAL-001 / AC-003 要求：package.json、package-lock.json（顶层 version 与
 | AC-2 | `bash scripts/check-version-carriers.sh` | stdout `all carriers == 0.1.35`，exit 0 |
 | AC-3 | `npx vitest run tests/unit/scripts/version-carriers-check.test.ts` | 16 tests passed，exit 0 |
 | AC-4 | `bash scripts/test.sh tests/unit/scripts/version-carriers-check.test.ts` | 16 tests passed，exit 0 |
-| AC-5 | `git diff --name-only $(git merge-base HEAD develop)..HEAD` | 仅 `scripts/check-version-carriers.sh`、`tests/unit/scripts/version-carriers-check.test.ts` |
+| AC-5 | `git diff --name-only $(git merge-base HEAD develop)..HEAD` | 仅 `scripts/check-version-carriers.sh`、`tests/unit/scripts/version-carriers-check.test.ts`；五个载体文件均未被触碰 |
 
 AC-2 的判据文本已改为版本无关：任务撰写时六处为 0.1.33，本轮实测为 **0.1.35**（develop 期间上移；`git merge-base HEAD develop` 处的 package.json 已是 0.1.35，与本分支改动无关）。写死 0.1.33 会让该 AC 因外部漂移变假，故断言改为「等于 package.json 的 version」。六处实测值：package.json / package-lock.json 顶层 / package-lock.json `packages[""]` / marketplace.json source pin / plugin/package.json / plugin/.claude-plugin/plugin.json **全为 0.1.35**。
 
-DoD 的真实对象负例演示（在真实树的临时拷贝上，非仅靠单测）：
+### DoD 的真实对象负例演示（真实树的临时拷贝，非仅靠单测）
+
 - 未改动的拷贝：`all carriers == 0.1.35`，exit 0
 - 把 `.claude-plugin/marketplace.json` 的 source pin 改成 `9.9.9`：exit 1，stderr
   `CAUSE=version-carriers-disagree — 期望全部等于 0.1.35，实际不符：{'.claude-plugin/marketplace.json (source pin)': '9.9.9'}`——点名了被改的那一处
@@ -66,9 +69,18 @@ DoD 的真实对象负例演示（在真实树的临时拷贝上，非仅靠单�
 
 证明判据能区分「一致」与「已错位」，不是一律绿。
 
-合并与门：`git merge --no-edit develop` 干净合入（仅带入 `tasks/*.md`，无冲突、无 unmerged paths）。合并后复跑 scoped 门与上述 3 个旧红文件、`npm run type-check`（exit 0）均绿。注意 `scripts/test.sh` 不消费 `--for-task`（未知 flag 按 shift 1 丢弃，其值会掉进 positional 并触发 `error: test file not found`），故 scoped 门按受支持的 positional 形式执行：`bash scripts/test.sh tests/unit/scripts/version-carriers-check.test.ts`。
+### 合并 / 门 / 一个中途纠正
 
-范围守约：未改任何载体版本值、未改 package.json 的 scripts、无 `git tag` / `git push` / `npm publish` 执行记录；分支相对 merge-base 的 delta 仅上述两个新文件。
+- `git merge --no-edit develop` **干净合入，无冲突、无 unmerged paths**。合并带入 develop 的 `1b86335d fix(loop): honour quay's --for-task scoped-gate contract in scripts/test.sh`。
+- **中途纠正（记录以免误导后人）**：本轮开工时 develop 的 `scripts/test.sh` 仍是旧版（`--for-task` 未列入 shift-2，其值会掉进 positional），我据此判定驱动自带的 scoped 门命令必红，故曾 cherry-pick 仓库里另一个任务分支上的 `6a71a545`（同类修复）。随后 develop 合入 `1b86335d`——一个**更完整**的修复（消费 `--for-task`，并按其 `## Touches` 选取测试文件，空集走 `--allow-thin` 薄跑）。我的 cherry-pick 因此变为多余且重复，已 `git reset --hard` **丢弃**，改取 develop 的版本。**故本任务不修改 `scripts/test.sh`，`## Touches` 也不含它**（否则会被 anti-drift 记 out-of-declared）。
+- **驱动自带的 scoped 门命令本轮实测为绿且是确定性的**：`bash scripts/test.sh --for-task gap-version-carriers-consistency-check --allow-thin` → 由 develop 的新 test.sh 依本任务 `## Touches` 精确选中 `tests/unit/scripts/version-carriers-check.test.ts`，**16 tests passed，exit 0**。不再依赖任何缓存命中。
+- **scoped-gate 缓存是不可依赖的单槽文件**（供后人参考）：`writeScopedGateCache` 直接覆盖成单个 `{key,ok,ts}` 对象，`readScopedGateCache` 要求 `entry.key` 精确等于 `<task>\t<develop-sha>`。并发 worker 互相覆写——本轮我写入后即被 `bug-symlink-file-discovery-mismatch` 的写入清掉。缓存未命中只是让 fan-in 自己再跑一次门；因 develop 的 `1b86335d` 已把那条命令修好，未命中**无害**，落地不再靠抢缓存。
+- 全量套件实测：`bash scripts/test.sh` → **366 files passed | 3 skipped，5366 tests passed | 18 skipped，exit 0，109.65s**。注意 `--static-checks-doc` 未被 test.sh 消费，故 doc-check 这一步跑的是全量套件；109.65s 远在 driver 的 300s 预算内，上轮 doc-check 的红不是超时。
+- `npm run type-check` → exit 0。
+
+### 范围守约
+
+未改任何载体版本值、未改 package.json 的 scripts、未改 `scripts/test.sh`、无 `git tag` / `git push` / `npm publish` 执行记录；分支相对 merge-base 的 delta 仅本任务的两个新文件。
 
 ## Needs-Human
 
