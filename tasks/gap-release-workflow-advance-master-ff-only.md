@@ -2,7 +2,7 @@
 id: gap-release-workflow-advance-master-ff-only
 title: release.yml 的 advance-master job：全绿后才把 master ff 到 vX.Y.Z tag（GOAL-001 /
   AC-001）
-status: ready
+status: needs-human
 labels:
   - gap
 parent: null
@@ -48,3 +48,9 @@ GOAL-001 / AC-001 要求 master 的值域唯一：master 正好停在某个 `vX.
 **执行 2026-09-25T14:41:23.741Z — 连续修满重试上限仍不合格（标 needs-human）**
 
 - 阻碍原因：连续修满 3 次仍不合格（闸在重验证后仍判不合格）
+
+## Needs-Human
+
+**执行 2026-09-30T11:39:36.334Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary
