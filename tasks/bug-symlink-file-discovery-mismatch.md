@@ -1,7 +1,7 @@
 ---
 id: bug-symlink-file-discovery-mismatch
 title: 符号链接被 ts-morph 独立 glob 重新引入且扩展名覆盖与插件声明不一致(quay 项目复测发现)
-status: ready
+status: needs-human
 labels:
   - defect
   - parser
@@ -87,6 +87,18 @@ extra:
 **执行 2026-09-30T10:22:13.429Z — 连续修满重试上限仍不合格（标 needs-human）**
 
 - 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (d959e8db) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
+  The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-symlink-file-discovery-mismatch's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
+  Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
+- run_id：wk-prod-anchor
+- session_id：a9f7e065-2f05-4069-936f-46ba291c1f12
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-symlink-file-discovery-mismatch-wk-prod-anchor.log
+
+## Needs-Human
+
+**执行 2026-09-30T11:37:12.422Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary
 - 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (d959e8db) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
   The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-symlink-file-discovery-mismatch's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
   Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
