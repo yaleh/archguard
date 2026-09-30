@@ -113,7 +113,10 @@ function formatEvidencePack(pack: EvidencePackResult): string {
   }
 
   lines.push('```json');
-  lines.push(JSON.stringify(pack, null, 2));
+  // evaluated:true mirrors formatNotEvaluated's evaluated:false so `if
+  // (!result.evaluated)` can't misfire on a real result (same gap as
+  // arch-health-tools.ts's get_intrinsic_dimension, fixed in 0.1.35).
+  lines.push(JSON.stringify({ evaluated: true, ...pack }, null, 2));
   lines.push('```');
 
   return lines.join('\n');
