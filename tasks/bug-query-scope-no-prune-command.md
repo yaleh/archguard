@@ -45,6 +45,7 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 ## Touches
 
 - tasks/bug-query-scope-no-prune-command.md
+- scripts/test.sh
 - src/cli/commands/cache.ts
 - src/cli/mcp/mcp-server.ts
 - src/cli/query/engine-loader.ts
