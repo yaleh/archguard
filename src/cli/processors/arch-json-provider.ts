@@ -228,6 +228,17 @@ export class ArchJsonProvider {
         exclude: diagram.exclude || this.globalConfig.exclude,
         skipMissing: false,
       });
+      if (this.globalConfig.verbose === true) {
+        const skipped = await this.fileDiscovery.countSkippedByExtension(
+          diagram.sources,
+          diagram.exclude || this.globalConfig.exclude
+        );
+        if (skipped > 0) {
+          console.info(
+            `ℹ ${skipped} files skipped by extension (.mjs/.cjs/.mts/.cts not supported)`
+          );
+        }
+      }
       const diskCacheEnabled = this.globalConfig.cache?.enabled !== false;
       const diskKey =
         diskCacheEnabled && tsFiles.length > 0
@@ -504,7 +515,7 @@ export class ArchJsonProvider {
     if (this.parseWorkerPool) {
       const fileCount = await this.projectFileCounter(
         workspaceRoot,
-        ['**/*.{ts,tsx}'],
+        ['**/*.{ts,tsx,js,jsx}'],
         config.excludePatterns
       );
       if (fileCount >= PARSE_WORKER_THRESHOLD) {
