@@ -2,8 +2,9 @@
 # Test entrypoint for quay's mechanical fan-in (loop.test_command).
 #
 # quay appends its own value-taking flags to this script:
-#   --buckets <task-id> --root <worktree> --state-dir <dir> --runner <name>
-#   --log-file <path> --run-id <id> --test-concurrency=<N>
+#   --for-task <task-id> --buckets <task-id> --root <worktree> --state-dir <dir>
+#   --runner <name> --log-file <path> --run-id <id> --test-concurrency=<N>
+#   --allow-thin (boolean: a thin selection is acceptable to the caller)
 # Contract (see quay init skill, "loop.test_command contract"):
 #   1. consume a value-taking flag TOGETHER with its value (shift 2);
 #   2. never read a flag's value as a positional test file;
@@ -32,7 +33,16 @@ while [ $# -gt 0 ]; do
     # quay's scoped gate: run the test files the named task declares in its ## Touches section.
     --for-task) SCOPED_TASK="${2:-}"; shift 2 ;;
     # quay fan-in value-taking flags: drop flag AND value.
-    --buckets|--root|--state-dir|--runner|--log-file|--run-id) shift 2 ;;
+    # --for-task <task-id> is what the driver's scoped gate passes (worker-driver
+    # resolveScopedGateCommand). Leaving it out of this list made the task id fall
+    # through to the positional arm below, where it was read as a test-file path —
+    # the exact failure the contract above forbids ("error: test file not found:
+    # <task-id>"), which reds the scoped gate for every task.
+    --for-task|--buckets|--root|--state-dir|--runner|--log-file|--run-id) shift 2 ;;
+    # --allow-thin is boolean (no value): the caller permits a thin selection. This
+    # script's selection is never thin — with no positional files it runs the full
+    # suite, which is strictly more signal than the caller asked to allow.
+    --allow-thin) shift ;;
     # vitest runs with pool=forks/singleFork (vitest.config.ts); concurrency is not tunable here.
     --test-concurrency=*) shift ;;
     --allow-thin) shift ;;  # the scoped set may legitimately be smaller than the suite

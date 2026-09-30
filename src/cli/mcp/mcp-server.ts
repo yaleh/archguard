@@ -72,7 +72,12 @@ interface ScopeInfoPayload {
   sources: string[];
   generatedAt: string;
   warning?: string;
-  availableScopes?: Array<{ key: string; label: string; entityCount: number }>;
+  availableScopes?: Array<{
+    key: string;
+    label: string;
+    entityCount: number;
+    generatedAt?: string;
+  }>;
 }
 
 /** Scope-related slice of QueryContext; the new fields stay optional for older loaders/mocks. */
@@ -93,7 +98,10 @@ function buildScopeInfo(ctx: ScopedContext, requestedScope: string | undefined):
   const info: ScopeInfoPayload = { key, label, sources, generatedAt };
   if (!requestedScope && availableScopes.length > 1) {
     const list = availableScopes
-      .map((s) => `${s.key} (${s.label}, ${s.entityCount} entities)`)
+      .map(
+        (s) =>
+          `${s.key} (${s.label}, ${s.entityCount} entities${s.generatedAt ? `, generatedAt ${s.generatedAt}` : ''})`
+      )
       .join('; ');
     info.warning =
       `Multiple scopes available and no "scope" parameter was passed; this result used scope ` +
