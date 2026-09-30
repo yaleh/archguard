@@ -1,7 +1,7 @@
 ---
 id: AC-001
 title: master 的值域唯一：master 正好停在某个 vX.Y.Z tag 上
-status: active
+status: achieved
 kind: criterion
 goal: GOAL-001
 criterion: >-
@@ -25,5 +25,11 @@ origin: 人 2026-09-25 裁定「默认分支保 master」。依据 quay
   rev-parse master = a90c17b3d35a8eec9f64f0cb8bef8a609e784673，git tag
   --points-at 为空；master 落后 develop 154 个提交（git merge-base --is-ancestor 判定可 ff）。
 activatedAt: 2026-09-25T14:32:09.393Z
+statusLog:
+  - at: 2026-09-30T02:34:37.788Z
+    from: active
+    to: achieved
+    actor: goal-driver
+    reason: "I2: criterion pass"
 long-term: true
 ---
