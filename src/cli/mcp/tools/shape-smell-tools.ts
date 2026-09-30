@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
+import fs from 'fs-extra';
 import { resolveRoot } from '../mcp-server.js';
 import {
   extractDiscriminatorTypes,
@@ -116,15 +117,16 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
             srcRoot,
           };
 
-          // Discover source files
-          const sourceFiles = sources ?? (await discoverSources(root));
+          // Discover source files. Explicit `sources` entries may be files or
+          // directories (per the tool's own parameter description); expand any
+          // directory entries to the .ts/.tsx files under them.
+          const sourceFiles = sources ? await expandSourceEntries(sources) : await discoverSources(root);
           if (!sourceFiles || sourceFiles.length === 0) {
             results.push({ layer: 'literal-dispersion', smells: [] });
             continue;
           }
 
           // Read file contents and extract types
-          const fs = await import('fs-extra');
           const fileContents = new Map<string, string>();
           const allTypes: import('@/analysis/shape-smells/types.js').DiscriminatorType[] = [];
 
@@ -242,13 +244,40 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
 }
 
 /**
+ * Expand explicit `sources` entries to a flat file list: a file entry passes
+ * through as-is; a directory entry is expanded to the .ts/.tsx files under it
+ * (same glob/ignore rules as auto-discovery).
+ */
+async function expandSourceEntries(entries: string[]): Promise<string[]> {
+  const glob = await import('glob');
+  const expanded: string[] = [];
+  for (const entry of entries) {
+    let isDir = false;
+    try {
+      isDir = (await fs.stat(entry)).isDirectory();
+    } catch {
+      // Missing entry: keep as-is so the caller sees a normal "unreadable" skip.
+    }
+    if (!isDir) {
+      expanded.push(entry);
+      continue;
+    }
+    const pattern = path.join(entry, '**', '*.{ts,tsx}').replace(/\\/g, '/');
+    const files = glob.globSync(pattern, {
+      ignore: ['**/node_modules/**', '**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
+    });
+    expanded.push(...files);
+  }
+  return expanded;
+}
+
+/**
  * Auto-discover TypeScript source files in the project.
  * Uses a simple glob for .ts/.tsx files under src/ by default.
  */
 async function discoverSources(root: string): Promise<string[]> {
   const glob = await import('glob');
   const srcDir = path.join(root, 'src');
-  const fs = await import('fs-extra');
 
   if (!(await fs.pathExists(srcDir))) {
     return [];

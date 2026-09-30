@@ -51,11 +51,11 @@ describe('computeModuleSpan', () => {
     expect(result.crossesBoundary).toBe(true);
   });
 
-  it('returns empty modules when no files are under a module dir', () => {
+  it('returns crossesBoundary=true when no files are under a module dir (flat src/ layout: nothing confirms a single module, so smells must not be silently suppressed)', () => {
     const files = ['src/main.ts', 'src/app.ts'];
     const result = computeModuleSpan(files, 'src');
     expect(result.modules).toEqual([]);
-    expect(result.crossesBoundary).toBe(false);
+    expect(result.crossesBoundary).toBe(true);
   });
 });
 
@@ -107,6 +107,20 @@ describe('filterCrossModule', () => {
     const result = filterCrossModule(smells, 'src');
     // main.ts is root-level, only capture module counted → not crossing
     expect(result).toEqual([]);
+  });
+
+  it('keeps flat-layout smells with no subdirectories at all under srcRoot (regression: used to be silently dropped)', () => {
+    const smells = [
+      makeSmell({
+        files: ['src/main.ts', 'src/app.ts'],
+        locations: [
+          { file: 'src/main.ts', line: 1 },
+          { file: 'src/app.ts', line: 1 },
+        ],
+      }),
+    ];
+    const result = filterCrossModule(smells, 'src');
+    expect(result).toHaveLength(1);
   });
 
   it('handles mixed smells, keeping only those that cross', () => {

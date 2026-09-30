@@ -43,7 +43,14 @@ export function computeModuleSpan(
   }
 
   const modulesArr = [...modules].sort();
-  return { modules: modulesArr, crossesBoundary: modulesArr.length >= 2 };
+  // Zero modules means every file in this smell's set is root-level under
+  // srcRoot (e.g. a flat `src/*.ts` layout with no subdirectories) — there is
+  // no directory structure to judge "same module" from, so this must not be
+  // treated the same as "confirmed single module" (which would silently drop
+  // every smell in a flat-layout project). Only a *confirmed* single module
+  // (exactly one distinct subdirectory) suppresses the smell.
+  const crossesBoundary = modulesArr.length !== 1;
+  return { modules: modulesArr, crossesBoundary };
 }
 
 /**
