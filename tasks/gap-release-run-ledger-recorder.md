@@ -27,12 +27,12 @@ GOAL-001 / AC-005 要求本地存在 `.quay/release-runs.jsonl`，且其最后�
 
 ## AC
 
-- [ ] `npx vitest run tests/unit/scripts/release-run-ledger.test.ts` exit 0，其中用例覆盖：record 脚本合法参数追加恰好一行且含 tag / cli-publish / plugin-publish / install-verify / ts 五个字段，二次调用追加第二行且首行字节不变；非法 status、非法 tag、缺参数均 exit 1 且 stderr 含 `CAUSE=invalid-release-run-args` 且台账文件未被创建
-- [ ] 同一测试文件覆盖 `bash scripts/check-release-ledger.sh <ledger>`：文件不存在 exit 1 且 stderr 含 `CAUSE=carrier-absent`；空文件 exit 1 且含 `CAUSE=carrier-empty`；最后一行 install-verify=failure exit 1 且含 `CAUSE=release-run-incomplete`；最后一行三项均 success（前一行为 failure）exit 0
-- [ ] 同一测试文件覆盖 `bash scripts/verify-release-install.sh 1.2.3 --dry-run` exit 0，`bash scripts/verify-release-install.sh not-a-version --dry-run` exit 1
-- [ ] `bash -n scripts/verify-release-install.sh && bash -n scripts/check-release-ledger.sh && node --check scripts/record-release-run.mjs` exit 0（语法合法）
-- [ ] `bash scripts/test.sh tests/unit/scripts/release-run-ledger.test.ts` exit 0（走 quay fan-in 的同一入口）
-- [ ] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `.github/workflows/release.yml` 与 `package.json`，且本任务提交中无 `git tag` / `git push` / `npm publish` 的执行记录，也不含对 `.quay/release-runs.jsonl` 的写入（loop 不触碰发布与真实台账）
+- [x] `npx vitest run tests/unit/scripts/release-run-ledger.test.ts` exit 0，其中用例覆盖：record 脚本合法参数追加恰好一行且含 tag / cli-publish / plugin-publish / install-verify / ts 五个字段，二次调用追加第二行且首行字节不变；非法 status、非法 tag、缺参数均 exit 1 且 stderr 含 `CAUSE=invalid-release-run-args` 且台账文件未被创建
+- [x] 同一测试文件覆盖 `bash scripts/check-release-ledger.sh <ledger>`：文件不存在 exit 1 且 stderr 含 `CAUSE=carrier-absent`；空文件 exit 1 且含 `CAUSE=carrier-empty`；最后一行 install-verify=failure exit 1 且含 `CAUSE=release-run-incomplete`；最后一行三项均 success（前一行为 failure）exit 0
+- [x] 同一测试文件覆盖 `bash scripts/verify-release-install.sh 1.2.3 --dry-run` exit 0，`bash scripts/verify-release-install.sh not-a-version --dry-run` exit 1
+- [x] `bash -n scripts/verify-release-install.sh && bash -n scripts/check-release-ledger.sh && node --check scripts/record-release-run.mjs` exit 0（语法合法）
+- [x] `bash scripts/test.sh tests/unit/scripts/release-run-ledger.test.ts` exit 0（走 quay fan-in 的同一入口）
+- [x] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 不含 `.github/workflows/release.yml` 与 `package.json`，且本任务提交中无 `git tag` / `git push` / `npm publish` 的执行记录，也不含对 `.quay/release-runs.jsonl` 的写入（loop 不触碰发布与真实台账）
 
 ## DoD
 
@@ -44,7 +44,27 @@ GOAL-001 / AC-005 要求本地存在 `.quay/release-runs.jsonl`，且其最后�
 - scripts/verify-release-install.sh (new)
 - scripts/check-release-ledger.sh (new)
 - tests/unit/scripts/release-run-ledger.test.ts (new)
+- scripts/test.sh (modified — 见下「偏差」)
 - tasks/gap-release-run-ledger-recorder.md
+
+## Evidence (2026-09-30, worker 会话实测)
+
+真实运行记录（判据是「脚本被真实跑过」，不是「文件存在」）：
+
+- **DoD(1) 判据能识别现状**：`bash scripts/check-release-ledger.sh`（仓库根，台账确实不存在）→ exit 1，stderr `CAUSE=carrier-absent: no release-run ledger at .quay/release-runs.jsonl`。
+- **DoD(2) 写入格式与判据吻合**：`node scripts/record-release-run.mjs --ledger <tmp>/release-runs.jsonl --tag v9.9.9 --cli-publish success --plugin-publish success --install-verify success` → 追加恰好一行 `{"tag":"v9.9.9","cli-publish":"success","plugin-publish":"success","install-verify":"success","ts":"2026-09-30T12:02:42.178Z"}`；`bash scripts/check-release-ledger.sh <该临时台账>` → exit 0；临时台账随后删除。仓库内 `.quay/release-runs.jsonl` 全程未被创建。
+- **DoD(3) 真实联网安装验证**：`bash scripts/verify-release-install.sh 0.1.33` → 真实安装两个包（npm stderr `added 362 packages in 7s`），stdout 末行 `install-verify=success`，exit 0。反例：`bash scripts/verify-release-install.sh 99.99.99` → stdout `install-verify=failure`、stderr `CAUSE=install-verify-failed: npm install ... failed`，exit 1；临时 prefix 由 EXIT trap 清理（复核 `/tmp` 无本次残留）。
+- **AC-1/2/3 覆盖**：`npx vitest run tests/unit/scripts/release-run-ledger.test.ts` → 21 passed（verbose 逐条：五字段/二次追加首行字节不变/非法 status·tag·缺参 exit 1 且文件未创建；carrier-absent / carrier-empty / release-run-incomplete / 末行三项 success 而前一行 failure 仍 exit 0；`1.2.3 --dry-run` exit 0、`not-a-version --dry-run` exit 1）。
+- **AC-4**：`bash -n scripts/verify-release-install.sh && bash -n scripts/check-release-ledger.sh && node --check scripts/record-release-run.mjs` → exit 0。
+- **AC-5**：`bash scripts/test.sh tests/unit/scripts/release-run-ledger.test.ts` → exit 0。
+- **AC-6**：`git diff --name-only $(git merge-base HEAD develop)..HEAD` = `scripts/check-release-ledger.sh`、`scripts/record-release-run.mjs`、`scripts/test.sh`、`scripts/verify-release-install.sh`、`tests/unit/scripts/release-run-ledger.test.ts` — 不含 `.github/workflows/release.yml` 与 `package.json`；本任务全程未执行 `git tag` / `git push` / `npm publish`；未写入 `.quay/release-runs.jsonl`。
+- 质量门：`eslint`（含 `--fix` 后）0 problem、`prettier --check` 通过、`tsc --noEmit` exit 0。
+
+### 偏差：Touches 新增 `scripts/test.sh`（为什么必须修）
+
+`scripts/test.sh`（今日 `01fa1473` 才被跟踪）没有消费 quay scoped 门的 `--for-task <task-id>` / `--allow-thin`：任务 id 落进位置参数分支被读成测试文件路径，于是 fan-in 的 scoped 门**每次都机械红**——本 worktree 实测复现 `error: test file not found: gap-release-run-ledger-recorder`（这正是 quay init skill「loop.test_command contract」第 1/2 条警告的失效模式）。第二处：driver 以**主检出**为 cwd spawn `bash <worktree>/scripts/test.sh`，脚本不自定位就会对着错误的树跑测试。
+
+该文件是 AC-5 与 driver scoped 门共用的同一入口，不修则本任务无法过门，故按 contract 补上：`--for-task` 从 `tasks/<id>.md` 的 `## Touches` 选出测试文件，空选集即 `--allow-thin` 允许的 thin run（TASK-81 的 Evidence 已记录该仓库此前正是这个语义：「the tick's scoped `--for-task` gate resolves empty」），并 `cd` 到自己所属的仓库根。修后从主检出 cwd 实测：`bash <wt>/scripts/test.sh --for-task gap-release-run-ledger-recorder --allow-thin` → exit 0，且 vitest 报告的根目录确实是本 worktree。
 
 ## Needs-Human
 
