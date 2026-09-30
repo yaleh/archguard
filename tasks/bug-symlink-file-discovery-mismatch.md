@@ -101,6 +101,8 @@ extra:
 - src/parser/parse-worker-pool.ts
 - src/parser/parse-worker.ts
 - tests/unit/parser/symlink-file-discovery.test.ts
+- tests/unit/cli/utils/file-discovery-service.test.ts
+- tests/unit/plugins/typescript/typescript-plugin-tsx.test.ts
 - tasks/bug-symlink-file-discovery-mismatch.md
 
 ## Needs-Human
