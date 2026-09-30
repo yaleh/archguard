@@ -19,6 +19,16 @@ export interface ParseConfig {
   excludePatterns: string[];
 
   /**
+   * Absolute file paths to exclude from parsing.
+   *
+   * Unlike `excludePatterns`, these are matched by globby's `ignore` option
+   * rather than as `!`-negation globs. fast-glob silently drops a negation
+   * pattern that is a literal absolute path, so explicit file lists (e.g. the
+   * files matched by `.gitignore`/`.archguardignore`) must travel here.
+   */
+  ignorePaths?: string[];
+
+  /**
    * Patterns to include in parsing (glob patterns)
    * If not specified, all files matching the plugin's file extensions are included
    */

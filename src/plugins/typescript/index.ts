@@ -178,7 +178,8 @@ export class TypeScriptPlugin implements ILanguagePlugin {
   private initTsProject(
     workspaceRoot: string,
     pattern: string,
-    excludePatterns?: string[]
+    excludePatterns?: string[],
+    ignorePaths?: string[]
   ): Project {
     // Inject only baseUrl + paths from the nearest tsconfig.json so that path
     // aliases (e.g. @/*) are resolved by the TypeChecker. Other compiler options
@@ -205,9 +206,16 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     );
     // Enumerate files ourselves (never following symlinks) and hand ts-morph an
     // explicit list — its own glob follows symlinks and would re-introduce them.
+    // Explicit `ignorePaths` go through globby's `ignore` option: a `!`-negation
+    // pattern holding a literal absolute path is silently dropped by fast-glob.
     const files = globbySync(
       [`${workspaceRoot}/${pattern}`, ...builtinExcludes, ...callerExcludes],
-      { absolute: true, onlyFiles: true, followSymbolicLinks: false }
+      {
+        absolute: true,
+        onlyFiles: true,
+        followSymbolicLinks: false,
+        ignore: ignorePaths ?? [],
+      }
     );
     project.addSourceFilesAtPaths(files);
     return project;
@@ -233,7 +241,12 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const pattern = config.filePattern ?? '**/*.{ts,tsx,js,jsx}';
 
     // Create a single shared ts-morph Project to avoid parsing twice
-    const tsProject = this.initTsProject(workspaceRoot, pattern, config.excludePatterns);
+    const tsProject = this.initTsProject(
+      workspaceRoot,
+      pattern,
+      config.excludePatterns,
+      config.ignorePaths
+    );
 
     // Parse ArchJSON using the shared Project
     const archJson = this.parser.parseProject(workspaceRoot, pattern, tsProject);

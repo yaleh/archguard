@@ -72,7 +72,8 @@ export class ArchJsonProvider {
   private readonly projectFileCounter: (
     workspaceRoot: string,
     globs: string[],
-    exclude: string[]
+    exclude: string[],
+    ignorePaths?: string[]
   ) => Promise<number>;
   private readonly fileDiscovery: FileDiscoveryService;
   private readonly archJsonDiskCache: ArchJsonDiskCache;
@@ -108,8 +109,14 @@ export class ArchJsonProvider {
     this.parserRuntime = options.parserRuntime ?? 'native';
     this.projectFileCounter =
       options.projectFileCounter ??
-      (async (root, globs, exclude): Promise<number> =>
-        (await globby(globs, { cwd: root, absolute: true, ignore: exclude })).length);
+      (async (root, globs, exclude, ignorePaths): Promise<number> =>
+        (
+          await globby(globs, {
+            cwd: root,
+            absolute: true,
+            ignore: [...exclude, ...(ignorePaths ?? [])],
+          })
+        ).length);
     this.fileDiscovery = new FileDiscoveryService();
 
     const diskCacheRoot = this.globalConfig.cache?.dir ?? path.join('.archguard', 'cache');
@@ -435,7 +442,8 @@ export class ArchJsonProvider {
     const fileCount = await this.projectFileCounter(
       workspaceRoot,
       fileGlobs,
-      config.excludePatterns ?? []
+      config.excludePatterns ?? [],
+      config.ignorePaths
     );
     if (fileCount < PARSE_WORKER_THRESHOLD) return undefined;
     const result = await this.parseWorkerPool.parseProject({
@@ -524,13 +532,18 @@ export class ArchJsonProvider {
     this.logExcludeReport();
     const config = {
       workspaceRoot,
-      excludePatterns: [...callerExcludes, ...ignoredFiles.map((f) => `!${f}`)],
+      excludePatterns: callerExcludes,
+      // Absolute paths of files matched by .gitignore/.archguardignore. These must be
+      // handed over as an explicit ignore list: fast-glob silently drops a `!`-negation
+      // pattern whose path is absolute, so encoding them as `!${f}` had no effect.
+      ignorePaths: ignoredFiles,
     };
     if (this.parseWorkerPool) {
       const fileCount = await this.projectFileCounter(
         workspaceRoot,
         ['**/*.{ts,tsx,js,jsx}'],
-        config.excludePatterns
+        config.excludePatterns,
+        config.ignorePaths
       );
       if (fileCount >= PARSE_WORKER_THRESHOLD) {
         const result = await this.parseWorkerPool.parseProject({
