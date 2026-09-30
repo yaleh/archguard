@@ -2,7 +2,7 @@
 id: gap-release-run-ledger-recorder
 title: 发布台账 .quay/release-runs.jsonl 的写入与校验脚本：记录 cli-publish / plugin-publish /
   install-verify 三项结论（GOAL-001 / AC-005）
-status: ready
+status: done
 labels:
   - gap
 parent: null
