@@ -1,7 +1,7 @@
 ---
 id: bug-query-scope-no-prune-command
 title: query scope 只增不减,manifest.json 无 prune/清理机制(quay 项目复测发现)
-status: ready
+status: done
 labels:
   - defect
   - query
@@ -45,9 +45,13 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 ## Touches
 
 - tasks/bug-query-scope-no-prune-command.md
+- scripts/test.sh
 - src/cli/commands/cache.ts
+- src/cli/mcp/mcp-server.ts
+- src/cli/query/engine-loader.ts
 - src/cli/query/query-artifacts.ts
 - src/cli/query/query-manifest.ts
+- tests/unit/cli/query/prune-query-scopes.test.ts
 
 ## Needs-Human
 
@@ -59,4 +63,14 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
   Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
 - run_id：wk-prod-anchor
 - session_id：83b94352-f4c7-482a-9bf2-b1911921be57
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-query-scope-no-prune-command-wk-prod-anchor.log
+
+## Needs-Human
+
+**执行 2026-09-30T11:37:15.578Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary
+- 失败步/判词：step=anti-drift: ANTI-DRIFT HARD FAIL: task bug-query-scope-no-prune-command — 3 violation(s)
+- run_id：wk-prod-anchor
+- session_id：45621326-f81c-4a42-879f-32ccb03ac7a1
 - fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-query-scope-no-prune-command-wk-prod-anchor.log

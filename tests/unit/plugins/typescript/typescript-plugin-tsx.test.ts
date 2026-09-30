@@ -66,7 +66,7 @@ describe('isTestFile — tsx/jsx test file detection', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseProject default pattern includes .tsx files', () => {
-  it('default filePattern is **/*.{ts,tsx} (not **/*.ts)', async () => {
+  it('default filePattern is **/*.{ts,tsx,js,jsx} (not **/*.ts)', async () => {
     // We test this indirectly: spy on parser.parseProject to capture the pattern arg
     const { TypeScriptParser } = await import('@/parser/typescript-parser.js');
 
@@ -91,7 +91,7 @@ describe('parseProject default pattern includes .tsx files', () => {
     }
 
     // The key assertion: default pattern must include tsx
-    expect(capturedPattern).toBe('**/*.{ts,tsx}');
+    expect(capturedPattern).toBe('**/*.{ts,tsx,js,jsx}');
   });
 
   it('explicit filePattern is passed through unchanged', async () => {
@@ -146,44 +146,29 @@ describe('initTsProject built-in excludes cover tsx/jsx test files', () => {
   });
 
   it('built-in exclude list contains *.test.tsx pattern', async () => {
-    // Test the pattern array by inspecting the constructed ts-morph project's glob patterns
-    // We verify this via the Project.addSourceFilesAtPaths spy approach
-    const { Project } = await import('ts-morph');
-    const addSpy = vi.fn().mockReturnValue([]);
-    const fakeProject = { addSourceFilesAtPaths: addSpy, getSourceFiles: () => [] };
-    vi.spyOn({ Project }, 'Project').mockReturnValue(fakeProject);
-
-    // We can't directly spy on `new Project()` easily, so verify by running initTsProject
-    // and checking that the Project captures the right patterns via a monkey-patch
-    const capturedPatterns: string[][] = [];
-    const origAddSourceFilesAtPaths = Project.prototype.addSourceFilesAtPaths;
-    Project.prototype.addSourceFilesAtPaths = function (patterns: string[]) {
-      capturedPatterns.push([...patterns]);
-      return [];
-    };
-
+    const os = await import('os');
+    const fsx = await import('fs-extra');
+    const pathm = await import('path');
+    const dir = await fsx.default.mkdtemp(pathm.default.join(os.default.tmpdir(), 'tsx-excl-'));
     try {
+      for (const f of ['a.tsx', 'a.test.tsx', 'a.spec.tsx', 'b.jsx', 'b.test.jsx', 'b.spec.jsx']) {
+        await fsx.default.outputFile(pathm.default.join(dir, f), 'export const x = 1;\n');
+      }
       const pluginAny = plugin as unknown as {
-        initTsProject: (root: string, pattern: string, excludes?: string[]) => unknown;
+        initTsProject: (
+          root: string,
+          pattern: string,
+          excludes?: string[]
+        ) => { getSourceFiles: () => { getBaseName: () => string }[] };
       };
-      pluginAny.initTsProject('/workspace', '**/*.{ts,tsx}');
+      const names = pluginAny
+        .initTsProject(dir, '**/*.{ts,tsx,js,jsx}')
+        .getSourceFiles()
+        .map((f) => f.getBaseName())
+        .sort();
+      expect(names).toEqual(['a.tsx', 'b.jsx']);
     } finally {
-      Project.prototype.addSourceFilesAtPaths = origAddSourceFilesAtPaths;
+      await fsx.default.remove(dir);
     }
-
-    expect(capturedPatterns).toHaveLength(1);
-    const patterns = capturedPatterns[0];
-
-    // Should include the positive glob
-    expect(patterns).toContain('/workspace/**/*.{ts,tsx}');
-
-    // Should exclude .test.tsx
-    expect(patterns.some((p) => p.includes('*.test.tsx'))).toBe(true);
-    // Should exclude .spec.tsx
-    expect(patterns.some((p) => p.includes('*.spec.tsx'))).toBe(true);
-    // Should exclude .test.jsx
-    expect(patterns.some((p) => p.includes('*.test.jsx'))).toBe(true);
-    // Should exclude .spec.jsx
-    expect(patterns.some((p) => p.includes('*.spec.jsx'))).toBe(true);
   });
 });

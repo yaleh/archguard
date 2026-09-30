@@ -1,0 +1,76 @@
+name: Release
+
+# GOAL-001 / AC-001. master's permitted forward event is exactly one: this
+# workflow's `advance-master` job, after every other job in this file is green,
+# fast-forwards master to the released tag's commit. Nothing else moves master —
+# not the loop, not a person's local checkout.
+#
+# The trigger is a version tag pushed by a human in a Claude Code session.
+# quay SPEC-release-and-hotfix-branching-2026-09-15 §3.1 / §6.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Verify the tagged commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  advance-master:
+    name: Advance master to the released tag (fast-forward only)
+    runs-on: ubuntu-latest
+    # `needs` must cover every other job in this file, not just `verify`: a job
+    # added below and left out of this list would let master advance while that
+    # job is still red. Adding a job here means adding it to this list too.
+    needs: [verify]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full history: the fast-forward check below needs a common ancestor
+          # between master and the tagged commit, which a shallow clone lacks.
+          fetch-depth: 0
+
+      - name: Fast-forward master to the tagged commit
+        run: |
+          set -euo pipefail
+
+          # The tagged commit is what the human pushed; GITHUB_SHA is it.
+          git fetch --no-tags origin master
+
+          # Fast-forward is legal only when master is an ancestor of the tag.
+          # Otherwise advancing would require a merge commit (which this
+          # workflow must never create) or rewriting master (which it must
+          # never do) — so refuse, loudly, with a cause.
+          if ! git merge-base --is-ancestor origin/master "$GITHUB_SHA"; then
+            echo "CAUSE=master-not-ancestor-of-tag: origin/master is not an ancestor of $GITHUB_SHA; refusing to advance master (fast-forward only, no merge commit, no rewriting history)" >&2
+            exit 1
+          fi
+
+          # Plain push: no force flag of any kind, so the remote rejects this if
+          # master has moved in the meantime and the fast-forward no longer holds.
+          git push origin "$GITHUB_SHA":refs/heads/master

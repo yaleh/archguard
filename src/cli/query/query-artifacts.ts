@@ -188,3 +188,80 @@ export async function persistQueryScopes(
   await atomicWriteFile(manifestPath, JSON.stringify(manifest, null, 2));
   return writtenEntries;
 }
+
+// ---------------------------------------------------------------------------
+// Prune query scopes
+// ---------------------------------------------------------------------------
+
+export interface PruneQueryScopesOptions {
+  /** Exact scope keys to remove. */
+  keys?: string[];
+  /** Remove scopes whose generatedAt is older than this many days. */
+  olderThanDays?: number;
+  /** Report what would be removed without touching disk. */
+  dryRun?: boolean;
+  /** Clock override for tests. */
+  now?: Date;
+}
+
+export interface PruneQueryScopesResult {
+  removed: QueryScopeEntry[];
+  remaining: QueryScopeEntry[];
+  missingKeys: string[];
+}
+
+/**
+ * Remove scopes from `<workDir>/query/manifest.json` and delete their
+ * `query/<key>/` directories. Scopes without generatedAt are never removed by
+ * age (only by explicit key).
+ */
+export async function pruneQueryScopes(
+  workDir: string,
+  options: PruneQueryScopesOptions
+): Promise<PruneQueryScopesResult> {
+  const queryDir = path.join(workDir || path.join(process.cwd(), '.archguard'), 'query');
+  const manifestPath = path.join(queryDir, 'manifest.json');
+  const manifest = (await fs.readJson(manifestPath).catch(() => null)) as QueryManifest | null;
+  if (!manifest) {
+    throw new Error(`No query manifest found at ${manifestPath}`);
+  }
+
+  const keys = new Set(options.keys ?? []);
+  const cutoff =
+    options.olderThanDays !== undefined
+      ? (options.now ?? new Date()).getTime() - options.olderThanDays * 86_400_000
+      : undefined;
+  if (keys.size === 0 && cutoff === undefined) {
+    throw new Error('Specify at least one scope key or an age threshold');
+  }
+
+  const existingKeys = new Set(manifest.scopes.map((s) => s.key));
+  const missingKeys = [...keys].filter((k) => !existingKeys.has(k));
+
+  const shouldRemove = (s: QueryScopeEntry): boolean => {
+    if (keys.has(s.key)) return true;
+    if (cutoff !== undefined && s.generatedAt) {
+      const t = Date.parse(s.generatedAt);
+      return !Number.isNaN(t) && t < cutoff;
+    }
+    return false;
+  };
+  const removed = manifest.scopes.filter(shouldRemove);
+  const remaining = manifest.scopes.filter((s) => !shouldRemove(s));
+
+  if (!options.dryRun && removed.length > 0) {
+    const globalScopeKey = remaining.some((s) => s.key === manifest.globalScopeKey)
+      ? manifest.globalScopeKey
+      : selectGlobalScopeKey(remaining);
+    // Manifest first: a crash mid-way leaves orphan dirs, never dangling entries.
+    await atomicWriteFile(
+      manifestPath,
+      JSON.stringify({ ...manifest, globalScopeKey, scopes: remaining }, null, 2)
+    );
+    for (const s of removed) {
+      await fs.remove(path.join(queryDir, s.key));
+    }
+  }
+
+  return { removed, remaining, missingKeys };
+}

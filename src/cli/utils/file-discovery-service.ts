@@ -34,12 +34,33 @@ export interface FileDiscoveryOptions {
    * Default: false
    */
   skipMissing?: boolean;
+
+  /**
+   * File extensions (with leading dot) to enumerate.
+   * Default: TS_DISCOVERY_EXTENSIONS
+   */
+  extensions?: string[];
 }
 
 /**
  * Default exclude patterns
  */
-const DEFAULT_EXCLUDES = ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**'];
+const DEFAULT_EXCLUDES = ['**/*.{test,spec}.{ts,tsx,js,jsx}', '**/node_modules/**'];
+
+/**
+ * Extensions enumerated by default — mirrors TypeScriptPlugin.metadata.fileExtensions.
+ */
+export const TS_DISCOVERY_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
+
+/**
+ * Extensions that look like JS/TS but are not enumerated; reported as skipped.
+ */
+export const TS_SKIPPED_EXTENSIONS = ['.mjs', '.cjs', '.mts', '.cts'];
+
+function extGlob(exts: string[]): string {
+  const names = exts.map((e) => e.replace(/^\./, ''));
+  return names.length === 1 ? names[0] : `{${names.join(',')}}`;
+}
 
 /**
  * FileDiscoveryService - Discovers TypeScript files from multiple sources
@@ -112,7 +133,12 @@ export class FileDiscoveryService {
    * Discover TypeScript files from configured sources
    */
   async discoverFiles(options: FileDiscoveryOptions = {}): Promise<string[]> {
-    const { sources = ['./src'], exclude = [], skipMissing = false } = options;
+    const {
+      sources = ['./src'],
+      exclude = [],
+      skipMissing = false,
+      extensions = TS_DISCOVERY_EXTENSIONS,
+    } = options;
 
     this.report = new Map();
     if (exclude.length > 0) {
@@ -136,6 +162,7 @@ export class FileDiscoveryService {
         source,
         exclude,
         skipMissing,
+        extensions,
       });
       allFiles.push(...files);
     }
@@ -153,8 +180,9 @@ export class FileDiscoveryService {
     source: string;
     exclude: string[];
     skipMissing: boolean;
+    extensions: string[];
   }): Promise<string[]> {
-    const { source, exclude, skipMissing } = options;
+    const { source, exclude, skipMissing, extensions } = options;
 
     // Resolve source path
     const sourcePath = path.isAbsolute(source) ? source : path.resolve(process.cwd(), source);
@@ -171,8 +199,8 @@ export class FileDiscoveryService {
     // Check if source is a file (not a directory)
     const stat = await fs.stat(sourcePath);
     if (stat.isFile()) {
-      // If it's a TypeScript file, return it directly
-      if (sourcePath.endsWith('.ts')) {
+      // If it's a supported source file, return it directly
+      if (extensions.some((e) => sourcePath.endsWith(e))) {
         return [sourcePath];
       }
       // If it's not a TypeScript file, return empty
@@ -180,7 +208,7 @@ export class FileDiscoveryService {
     }
 
     // Build glob pattern for TypeScript files
-    const globPattern = `${sourcePath}/**/*.ts`;
+    const globPattern = `${sourcePath}/**/*.${extGlob(extensions)}`;
 
     // Combine default and custom excludes
     const allExcludes = [...DEFAULT_EXCLUDES, ...exclude];
@@ -223,5 +251,29 @@ export class FileDiscoveryService {
       this.report.get(hit.source)!.excludedFiles! += 1;
       return false;
     });
+  }
+
+  /**
+   * Count files under the given sources whose extension looks like JS/TS but is
+   * not enumerated (.mjs/.cjs/.mts/.cts), so callers can report them instead of
+   * dropping them silently.
+   */
+  async countSkippedByExtension(sources: string[], exclude: string[] = []): Promise<number> {
+    let count = 0;
+    for (const source of sources) {
+      const sourcePath = path.isAbsolute(source) ? source : path.resolve(process.cwd(), source);
+      if (!(await fs.pathExists(sourcePath)) || !(await fs.stat(sourcePath)).isDirectory()) {
+        continue;
+      }
+      const ignore = [...DEFAULT_EXCLUDES, ...exclude].map((p) =>
+        p.startsWith('!') || path.isAbsolute(p) ? p : `!${p}`
+      );
+      const files = await globby(
+        [`${sourcePath}/**/*.${extGlob(TS_SKIPPED_EXTENSIONS)}`, ...ignore],
+        { absolute: true, onlyFiles: true, followSymbolicLinks: false }
+      );
+      count += files.length;
+    }
+    return count;
   }
 }
