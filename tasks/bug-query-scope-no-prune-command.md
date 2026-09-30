@@ -46,8 +46,11 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 
 - tasks/bug-query-scope-no-prune-command.md
 - src/cli/commands/cache.ts
+- src/cli/mcp/mcp-server.ts
+- src/cli/query/engine-loader.ts
 - src/cli/query/query-artifacts.ts
 - src/cli/query/query-manifest.ts
+- tests/unit/cli/query/prune-query-scopes.test.ts
 
 ## Needs-Human
 
