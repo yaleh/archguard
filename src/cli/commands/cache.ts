@@ -8,6 +8,7 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { ErrorHandler } from '../errors/index.js';
 import { ConfigLoader } from '../config-loader.js';
 import { clearRenderHashes } from '../cache/diagram-manifest.js';
+import { pruneQueryScopes } from '../query/query-artifacts.js';
 import chalk from 'chalk';
 
 /**
@@ -66,6 +67,53 @@ export function createCacheCommand(): Command {
         process.exit(1);
       }
     });
+
+  // cache prune-scopes
+  cacheCmd
+    .command('prune-scopes')
+    .description('Remove query scopes from .archguard/query/manifest.json')
+    .option('--key <keys...>', 'Scope key(s) to remove')
+    .option('--older-than-days <n>', 'Remove scopes whose generatedAt is older than N days')
+    .option('--dry-run', 'Only list scopes that would be removed')
+    .option('--work-dir <dir>', 'Work directory containing query/ (default: .archguard)')
+    .action(
+      async (opts: {
+        key?: string[];
+        olderThanDays?: string;
+        dryRun?: boolean;
+        workDir?: string;
+      }) => {
+        try {
+          const days = opts.olderThanDays !== undefined ? Number(opts.olderThanDays) : undefined;
+          if (days !== undefined && (!Number.isFinite(days) || days < 0)) {
+            throw new Error('--older-than-days must be a non-negative number');
+          }
+          const workDir = path.resolve(opts.workDir ?? '.archguard');
+          const result = await pruneQueryScopes(workDir, {
+            keys: opts.key,
+            olderThanDays: days,
+            dryRun: opts.dryRun,
+          });
+          for (const k of result.missingKeys) {
+            console.log(chalk.yellow(`! Scope not found: ${k}`));
+          }
+          const verb = opts.dryRun ? 'Would remove' : 'Removed';
+          for (const s of result.removed) {
+            console.log(`${verb} ${s.key} (${s.label}, generatedAt ${s.generatedAt ?? 'unknown'})`);
+          }
+          console.log(
+            chalk.green(
+              `✓ ${verb} ${result.removed.length} scope(s); ${result.remaining.length} remaining`
+            )
+          );
+        } catch (error) {
+          const errorHandler = new ErrorHandler();
+          console.error(chalk.red('✗ Failed to prune scopes:'));
+          console.error(errorHandler.format(error));
+          process.exit(1);
+        }
+      }
+    );
 
   return cacheCmd;
 }

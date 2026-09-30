@@ -32,6 +32,8 @@ export interface AvailableScope {
   key: string;
   label: string;
   entityCount: number;
+  /** ISO-8601 timestamp of when this scope was last written (absent in older manifests). */
+  generatedAt?: string;
 }
 
 export interface QueryContext {
@@ -213,6 +215,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
     key: s.key,
     label: s.label,
     entityCount: s.entityCount,
+    generatedAt: s.generatedAt,
   }));
   return {
     engine,
