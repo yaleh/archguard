@@ -7,6 +7,8 @@
  * @module cli/analyze/arch-health
  */
 
+import path from 'path';
+import { execa } from 'execa';
 import { buildAdjacencyMatrix, normalizeColumns } from '@/analysis/jl/adjacency-builder.js';
 import { computeMode, computeK, buildAchlioptas, project } from '@/analysis/jl/jl-projector.js';
 import { computeIntrinsicDimension } from '@/analysis/jl/intrinsic-dimension.js';
@@ -14,6 +16,22 @@ import { appendSnapshot } from '@/analysis/jl/history-writer.js';
 import { DEFAULT_JL_CONFIG, FEATURE_VERSION, TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
 import type { IntrinsicDimensionResult, JLConfig } from '@/analysis/jl/types.js';
 import type { ArchJSON } from '@/types/index.js';
+
+/**
+ * Resolve HEAD's full commit sha from `root`, or null when unavailable
+ * (not a git repo, no commits yet, git missing). Duplicated from
+ * `cli/utils/drift-baseline.ts` rather than imported from it: that module
+ * imports `runAnalysis`, which imports `computeArchHealth` from this file —
+ * importing back would create a require cycle.
+ */
+async function resolveHeadCommitSha(root: string): Promise<string | null> {
+  try {
+    const { stdout } = await execa('git', ['-C', root, 'rev-parse', '--verify', 'HEAD^{commit}']);
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+}
 
 /** Scope identity stamped on a snapshot (same field names as metrics-history, TASK-100). */
 export interface ArchHealthScope {
@@ -71,6 +89,11 @@ export async function computeArchHealth(
     data = normalized;
   }
 
+  // get_architecture_drift looks snapshots up by commitSha; without it every
+  // snapshot from this (the only) production path was unreachable.
+  const gitCwd = archJson.workspaceRoot ?? path.dirname(archguardDir);
+  const commitSha = (await resolveHeadCommitSha(gitCwd)) ?? undefined;
+
   const result: IntrinsicDimensionResult = {
     ...computeIntrinsicDimension({
       matrix: data,
@@ -83,6 +106,7 @@ export async function computeArchHealth(
     // Persist entity IDs (O(n)) for cross-snapshot drift alignment (TASK-65).
     // adjacencyRows are never persisted (AC5).
     entityIndex: archJson.entities.map((e) => e.id),
+    ...(commitSha !== undefined ? { commitSha } : {}),
     ...(scope.scopeKey !== undefined ? { scopeKey: scope.scopeKey } : {}),
     ...(scope.sources !== undefined ? { sources: scope.sources } : {}),
   };

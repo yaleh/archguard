@@ -48,3 +48,15 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 - src/cli/commands/cache.ts
 - src/cli/query/query-artifacts.ts
 - src/cli/query/query-manifest.ts
+
+## Needs-Human
+
+**执行 2026-09-30T10:02:56.043Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (39324cb7) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
+  The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-query-scope-no-prune-command's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
+  Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
+- run_id：wk-prod-anchor
+- session_id：83b94352-f4c7-482a-9bf2-b1911921be57
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-query-scope-no-prune-command-wk-prod-anchor.log

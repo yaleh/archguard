@@ -41,11 +41,11 @@ quay 仓库的 `archive/` 目录是反例的反例——它**是** git 跟踪的
 
 ## AC
 
-- [ ] 合成夹具:项目根有 `.gitignore` 写入 `gen/`,`gen/`(非点目录)下放一个含可提取实体的 `.ts` 文件;缺省 `analyze` 后该文件不出现在 `sourceFiles`/`summary` 里
-- [ ] 同一夹具:`analyze` 的输出中能看到"因 .gitignore 排除了 gen/"或等价的、可读的排除规则说明,不是纯粹的"结果里没有"
-- [ ] 在 `/data/home/yale/work/quay` 上,用 `.archguardignore` 或 config `exclude` 排除 `archive/` 后,复跑 `analyze`,`archguard_summary` 的包列表里不再出现 `archive/2026-09-07-zero-call-scripts/plugin/scripts` 这个包(quay 复测方给出的具体判据,约 17-18 个文件、89-94 个实体应消失)
-- [ ] 同时验证 `.archguardignore` 与显式 `--exclude`/config `exclude` 可以叠加使用(各自排除不同目录,互不冲突、取并集)
-- [ ] `npm test` 全量通过
+- [x] 合成夹具:项目根有 `.gitignore` 写入 `gen/`,`gen/`(非点目录)下放一个含可提取实体的 `.ts` 文件;缺省 `analyze` 后该文件不出现在 `sourceFiles`/`summary` 里
+- [x] 同一夹具:`analyze` 的输出中能看到"因 .gitignore 排除了 gen/"或等价的、可读的排除规则说明,不是纯粹的"结果里没有"
+- [x] 在 `/data/home/yale/work/quay` 上,用 `.archguardignore` 或 config `exclude` 排除 `archive/` 后,复跑 `analyze`,`archguard_summary` 的包列表里不再出现 `archive/2026-09-07-zero-call-scripts/plugin/scripts` 这个包(quay 复测方给出的具体判据,约 17-18 个文件、89-94 个实体应消失)
+- [x] 同时验证 `.archguardignore` 与显式 `--exclude`/config `exclude` 可以叠加使用(各自排除不同目录,互不冲突、取并集)
+- [x] `npm test` 全量通过
 
 ## DoD
 
@@ -58,3 +58,15 @@ quay 仓库的 `archive/` 目录是反例的反例——它**是** git 跟踪的
 - 新增:`.archguardignore` 解析逻辑(建议独立模块,如 src/cli/utils/ignore-file-loader.ts)
 - src/cli/config-loader.ts(如需支持 config 里声明 ignore 文件路径)
 - CLI/MCP 的 analyze 输出格式化逻辑(用于展示生效的排除规则)
+
+## Needs-Human
+
+**执行 2026-09-30T10:14:01.718Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (b801c769) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
+  The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-default-exclude-gitignore-archguardignore's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
+  Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
+- run_id：wk-prod-anchor
+- session_id：48b5aa70-5247-4d35-b9fe-68ba00c0fc59
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-default-exclude-gitignore-archguardignore-wk-prod-anchor.log
