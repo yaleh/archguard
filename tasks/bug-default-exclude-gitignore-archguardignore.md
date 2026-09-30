@@ -2,7 +2,7 @@
 id: bug-default-exclude-gitignore-archguardignore
 title: 无 .gitignore 感知与 .archguardignore 支持,已跟踪但想排除的目录(如 archive/)只能靠手动
   --exclude(quay 项目复测发现)
-status: ready
+status: needs-human
 labels:
   - defect
   - mcp
@@ -64,6 +64,18 @@ quay 仓库的 `archive/` 目录是反例的反例——它**是** git 跟踪的
 **执行 2026-09-30T10:14:01.718Z — 连续修满重试上限仍不合格（标 needs-human）**
 
 - 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (b801c769) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
+  The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-default-exclude-gitignore-archguardignore's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
+  Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
+- run_id：wk-prod-anchor
+- session_id：48b5aa70-5247-4d35-b9fe-68ba00c0fc59
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-default-exclude-gitignore-archguardignore-wk-prod-anchor.log
+
+## Needs-Human
+
+**执行 2026-09-30T11:37:20.064Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary
 - 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (b801c769) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
   The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-default-exclude-gitignore-archguardignore's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
   Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
