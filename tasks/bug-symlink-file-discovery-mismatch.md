@@ -60,12 +60,12 @@ extra:
 
 ## AC
 
-- [ ] 在 `/data/home/yale/work/quay` 缺省 `analyze`(无显式 `sources`)后,`.archguard/query/<scope-key>/arch.json` 的 `sourceFiles` 中 `fs.lstatSync(f).isSymbolicLink()` 为 true 的数量为 0,总数为 454(与本任务记录的 `FileDiscoveryService` 独立复现数字一致;若因后续代码变化导致真实文件数变化,判据是"总数等于 `FileDiscoveryService.discoverFiles` 独立调用算出的数字",而不是写死 454)
-- [ ] 同一次 analyze 后 `archguard_detect_duplicates`(或 CLI 等价查询)返回的重复组总数明显低于修复前的 483 组量级,且前几组不再是 `experiments/quay-perpetual-stream/scripts/X.ts` 与 `plugin/scripts/X.ts` 的符号链接对(用 `grep experiments.*plugin/scripts` 之类判断两侧路径是否互为符号链接关系)
-- [ ] 负对照:在一个测试夹具里同时构造 (a) 两个真实文件里完全相同的函数体(应被检出为重复)、(b) 一个指向 (a) 中某文件的文件级相对路径符号链接(不应产生第三个重复成员)、(c) 一个目录级符号链接指向另一个含 `.ts` 文件的目录(该目录下文件不应被重复解析),跑 `detect_duplicates` 后 (a) 仍然被检出、(b)(c) 不产生额外条目
-- [ ] 在同一夹具里放 `.tsx`/`.js`/`.jsx` 各一个含可提取实体的文件,`archguard_summary` 能看到对应实体被解析(不是 0)
-- [ ] 若 `.mjs`/`.cjs`/`.mts`/`.cts` 本任务决定不纳入文件发现范围,analyze 的输出(verbose 或响应文本)中需要有类似"N files skipped by extension"的统计,不能是静默丢弃
-- [ ] `npm test` 全量通过
+- [x] 在 `/data/home/yale/work/quay` 缺省 `analyze`(无显式 `sources`)后,`.archguard/query/<scope-key>/arch.json` 的 `sourceFiles` 中 `fs.lstatSync(f).isSymbolicLink()` 为 true 的数量为 0,总数为 454(与本任务记录的 `FileDiscoveryService` 独立复现数字一致;若因后续代码变化导致真实文件数变化,判据是"总数等于 `FileDiscoveryService.discoverFiles` 独立调用算出的数字",而不是写死 454)
+- [x] 同一次 analyze 后 `archguard_detect_duplicates`(或 CLI 等价查询)返回的重复组总数明显低于修复前的 483 组量级,且前几组不再是 `experiments/quay-perpetual-stream/scripts/X.ts` 与 `plugin/scripts/X.ts` 的符号链接对(用 `grep experiments.*plugin/scripts` 之类判断两侧路径是否互为符号链接关系)
+- [x] 负对照:在一个测试夹具里同时构造 (a) 两个真实文件里完全相同的函数体(应被检出为重复)、(b) 一个指向 (a) 中某文件的文件级相对路径符号链接(不应产生第三个重复成员)、(c) 一个目录级符号链接指向另一个含 `.ts` 文件的目录(该目录下文件不应被重复解析),跑 `detect_duplicates` 后 (a) 仍然被检出、(b)(c) 不产生额外条目
+- [x] 在同一夹具里放 `.tsx`/`.js`/`.jsx` 各一个含可提取实体的文件,`archguard_summary` 能看到对应实体被解析(不是 0)
+- [x] 若 `.mjs`/`.cjs`/`.mts`/`.cts` 本任务决定不纳入文件发现范围,analyze 的输出(verbose 或响应文本)中需要有类似"N files skipped by extension"的统计,不能是静默丢弃
+- [x] `npm test` 全量通过
 
 ## DoD
 
