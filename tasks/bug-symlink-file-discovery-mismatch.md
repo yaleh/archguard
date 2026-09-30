@@ -1,7 +1,7 @@
 ---
 id: bug-symlink-file-discovery-mismatch
 title: 符号链接被 ts-morph 独立 glob 重新引入且扩展名覆盖与插件声明不一致(quay 项目复测发现)
-status: todo
+status: ready
 labels:
   - defect
   - parser
@@ -80,3 +80,4 @@ extra:
 - src/parser/parse-worker-pool.ts
 - src/parser/parse-worker.ts
 - tests/unit/parser/symlink-file-discovery.test.ts
+- tasks/bug-symlink-file-discovery-mismatch.md

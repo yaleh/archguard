@@ -1,7 +1,7 @@
 ---
 id: bug-query-scope-no-prune-command
 title: query scope 只增不减,manifest.json 无 prune/清理机制(quay 项目复测发现)
-status: ready
+status: needs-human
 labels:
   - defect
   - query
@@ -32,11 +32,11 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 
 ## AC
 
-- [ ] 新命令(如 `archguard cache prune-scopes --key <scope-key>`)能删除指定 scope:执行后 `manifest.json` 里不再含该 key 的条目,`.archguard/query/<key>/` 目录被移除
-- [ ] 新命令支持按天数阈值批量清理(如 `--older-than-days <N>`),并有 `--dry-run` 只打印将被删除的 scope 列表、不执行
-- [ ] 负对照:执行 prune 之后,未被选中删除的 scope 仍然可以正常查询(`archguard_summary --scope <未删除的key>` 等价调用能正常返回,不受影响)
-- [ ] `archguard_summary`/`archguard analyze` 响应里的 scope 列表能看到每个 scope 的 `generatedAt`(部分工具可能已经有这个字段,需要确认并在展示层暴露出来,而不是新增)
-- [ ] `npm test` 全量通过
+- [x] 新命令(如 `archguard cache prune-scopes --key <scope-key>`)能删除指定 scope:执行后 `manifest.json` 里不再含该 key 的条目,`.archguard/query/<key>/` 目录被移除
+- [x] 新命令支持按天数阈值批量清理(如 `--older-than-days <N>`),并有 `--dry-run` 只打印将被删除的 scope 列表、不执行
+- [x] 负对照:执行 prune 之后,未被选中删除的 scope 仍然可以正常查询(`archguard_summary --scope <未删除的key>` 等价调用能正常返回,不受影响)
+- [x] `archguard_summary`/`archguard analyze` 响应里的 scope 列表能看到每个 scope 的 `generatedAt`(部分工具可能已经有这个字段,需要确认并在展示层暴露出来,而不是新增)
+- [x] `npm test` 全量通过
 
 ## DoD
 
@@ -48,3 +48,15 @@ $ grep -n "\.command(" src/cli/commands/cache.ts
 - src/cli/commands/cache.ts
 - src/cli/query/query-artifacts.ts
 - src/cli/query/query-manifest.ts
+
+## Needs-Human
+
+**执行 2026-09-30T10:02:56.043Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 exited-not-landed 未落地（重试上限）
+- 失败步/判词：step=anti-drift: BASELINE-MISMATCH: merge target 'develop' is not a continuation of the project's default branch 'master' — 'develop' (39324cb7) is NOT a continuation of the project's default branch 'master' (dd1a3d47) — it is 4 commit(s) behind and shares only an old merge base, so a task diff against it is meaningless.
+  The develop...HEAD diff is therefore the mainline's divergence, NOT task bug-query-scope-no-prune-command's own work; no declaration of ## Touches can satisfy it. This is a BASELINE defect, not an out-of-declared write by the task.
+  Remedy: `quay init --force --adopt-branch-model` (preserves the old tip as 'develop-pre-quay-init-<sha>' and re-points 'develop' at 'master'), then re-dispatch the task.
+- run_id：wk-prod-anchor
+- session_id：83b94352-f4c7-482a-9bf2-b1911921be57
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-bug-query-scope-no-prune-command-wk-prod-anchor.log
