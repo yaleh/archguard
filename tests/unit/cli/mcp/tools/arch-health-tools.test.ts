@@ -112,9 +112,10 @@ describe('registerArchHealthTools', () => {
     expect(JSON.stringify(data)).not.toContain('"stable"');
   });
 
-  it('with history the response shape is unchanged (no evaluated key)', async () => {
+  it('with history the response includes evaluated:true alongside current/history/trend', async () => {
     const data = await invokeTool({}, makeHistory([makeSnapshot(1, '2026-01-01T00:00:00Z')]));
-    expect(Object.keys(data).sort()).toEqual(['current', 'history', 'trend']);
+    expect(Object.keys(data).sort()).toEqual(['current', 'evaluated', 'history', 'trend']);
+    expect(data.evaluated).toBe(true);
   });
 
   it('current is the newest snapshot (chronological)', async () => {
