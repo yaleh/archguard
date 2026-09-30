@@ -126,6 +126,27 @@ describe('check-master-at-tag.sh', () => {
     expect(r.stdout).toContain('v1.2.3');
   });
 
+  it('exits 0 when the release tag is annotated', () => {
+    // Releases are normally annotated (`git tag -a`); the criterion is about the
+    // commit master points at, so an annotated tag must count exactly as a
+    // lightweight one does.
+    commit();
+    git(dir, 'tag', '-a', 'v1.2.3', '-m', 'release 1.2.3');
+    const r = runCheck(dir);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('v1.2.3');
+  });
+
+  it('exits 1 with CAUSE=master-not-at-a-version-tag on a pre-release suffix', () => {
+    // The criterion's shape is exactly ^v[0-9]+\.[0-9]+\.[0-9]+$: `v1.2.3-rc1` is
+    // not a released version, so master parked on it is still drift.
+    commit();
+    git(dir, 'tag', 'v1.2.3-rc1');
+    const r = runCheck(dir);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('CAUSE=master-not-at-a-version-tag');
+  });
+
   it('exits 1 with CAUSE=master-not-at-a-version-tag when master has no tag', () => {
     commit();
     const r = runCheck(dir);
