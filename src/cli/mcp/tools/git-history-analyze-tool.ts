@@ -36,7 +36,7 @@ import type { GitHistoryManifest, GitHistoryArtifacts } from '@/types/git-histor
 export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_analyze_git',
-    'Analyze git commit history for a project and generate file/package churn metrics, co-change coupling, and risk scores. Results are written to .archguard/query/git-history/ and can be queried with archguard_get_git_history.',
+    'Analyze git commit history for a project and generate file/package churn metrics, co-change coupling, and risk scores. Results are written to .archguard/query/git-history/ and can be queried with archguard_get_change_context, archguard_get_cochange, archguard_get_change_risk, archguard_get_ownership, or archguard_get_evidence_pack.',
     {
       projectRoot: z
         .string()
@@ -156,6 +156,14 @@ export function registerGitHistoryAnalyzeTool(server: McpServer, defaultRoot: st
         includeMerges,
         granularities,
         packageDepth,
+        // This tool applies no pathspec filter — readGitLogWindow reads the whole
+        // repo — so file/package metrics keys are always plain git-root-relative
+        // paths, never prefix-stripped. keyRoot must therefore be '' regardless of
+        // what projectRoot subdirectory was passed; declaring it (vs. omitting it)
+        // is what lets history-query.ts tell "outside analyzed paths" apart from
+        // "no commits in window" instead of falling back to legacy-manifest.
+        keyRoot: '',
+        pathFilters: [''],
       };
 
       const artifacts: GitHistoryArtifacts = {

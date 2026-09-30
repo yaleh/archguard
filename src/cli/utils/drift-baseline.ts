@@ -132,7 +132,7 @@ export async function resolveBaselineSnapshot(
   base: string | undefined,
   history: ArchHealthHistory | null,
   root: string,
-  reanalyze: (commitSha: string, root: string) => Promise<DriftSnapshot> = reanalyzeCommitSnapshot
+  reanalyze: (root: string, commitSha: string) => Promise<DriftSnapshot> = reanalyzeCommitSnapshot
 ): Promise<BaselineResolution> {
   if (history === null || history.snapshots.length === 0) return { kind: 'no-baseline' };
   if (base === undefined) return { kind: 'no-baseline' };
@@ -142,7 +142,13 @@ export async function resolveBaselineSnapshot(
     return { kind: 'invalid-commit', commit: base };
   }
 
-  const snapshot = await reanalyze(match.commitSha, root);
+  // reanalyzeCommitSnapshot's real signature is (root, commitSha) — this used
+  // to be called as (commitSha, root), so the "root" a fresh detached
+  // worktree was created from was actually a commit sha string, and the
+  // "commitSha" resolved against was actually the repo path. Both silently
+  // fail as "invalid commit reference" once you get past the (also missing,
+  // separately fixed) commitSha-on-snapshot gap.
+  const snapshot = await reanalyze(root, match.commitSha);
   return { kind: 'snapshot', snapshot };
 }
 
@@ -171,7 +177,7 @@ export async function resolveDriftSnapshots(
   toCommit: string | undefined,
   history: ArchHealthHistory,
   root: string,
-  reanalyze: (commitSha: string, root: string) => Promise<DriftSnapshot> = reanalyzeCommitSnapshot
+  reanalyze: (root: string, commitSha: string) => Promise<DriftSnapshot> = reanalyzeCommitSnapshot
 ): Promise<DriftSnapshotsResolution> {
   const sorted = [...history.snapshots].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
@@ -196,7 +202,7 @@ export async function resolveDriftSnapshots(
 
   // Sequential (not Promise.all): git worktree add contends on the repo's
   // worktrees lock when two add/remove pairs run concurrently.
-  const from = await reanalyze(fromSnapshot.commitSha, root);
-  const to = await reanalyze(toSnapshot.commitSha, root);
+  const from = await reanalyze(root, fromSnapshot.commitSha);
+  const to = await reanalyze(root, toSnapshot.commitSha);
   return { kind: 'snapshots', from, to };
 }

@@ -2,7 +2,7 @@
 id: gap-release-run-ledger-recorder
 title: 发布台账 .quay/release-runs.jsonl 的写入与校验脚本：记录 cli-publish / plugin-publish /
   install-verify 三项结论（GOAL-001 / AC-005）
-status: needs-human
+status: ready
 labels:
   - gap
 parent: null
@@ -51,3 +51,9 @@ GOAL-001 / AC-005 要求本地存在 `.quay/release-runs.jsonl`，且其最后�
 **执行 2026-09-25T14:42:16.782Z — 连续修满重试上限仍不合格（标 needs-human）**
 
 - 阻碍原因：连续修满 3 次仍不合格（闸在重验证后仍判不合格）
+
+## Needs-Human
+
+**执行 2026-09-30T11:39:29.928Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary

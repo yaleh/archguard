@@ -1,7 +1,7 @@
 ---
 id: gap-version-carriers-consistency-check
 title: 六处版本载体逐字一致校验：check 脚本 + 随 npm test 常驻的回归用例（GOAL-001 / AC-003）
-status: needs-human
+status: ready
 labels:
   - gap
 parent: null
@@ -45,3 +45,9 @@ GOAL-001 / AC-003 要求：package.json、package-lock.json（顶层 version 与
 **执行 2026-09-25T14:41:23.821Z — 连续修满重试上限仍不合格（标 needs-human）**
 
 - 阻碍原因：连续修满 3 次仍不合格（闸在重验证后仍判不合格）
+
+## Needs-Human
+
+**执行 2026-09-30T11:39:33.122Z — 连续修满重试上限仍不合格（标 needs-human）**
+
+- 阻碍原因：worker-driver 连续 3 次 <60000ms 快速死亡（退避上限）；快速死亡分类：ordinary

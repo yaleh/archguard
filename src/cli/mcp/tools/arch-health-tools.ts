@@ -119,6 +119,7 @@ export function registerArchHealthTools(server: McpServer, defaultRoot: string):
         return textResponse(
           JSON.stringify(
             {
+              evaluated: true,
               current: toCurrentShape(current),
               history: historySlice.map(toCurrentShape),
               trend: computeTrend(sorted),
