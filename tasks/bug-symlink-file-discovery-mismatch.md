@@ -76,6 +76,7 @@ extra:
 - src/parser/typescript-parser.ts
 - src/cli/processors/arch-json-provider.ts
 - src/cli/utils/file-discovery-service.ts
-- src/plugins/typescript/index.ts(如需读取 `fileExtensions` 元数据)
-- 可能涉及并行解析的 worker pool 路径(需要先确认是否有独立的第三套文件发现逻辑)
-- 新增测试夹具(建议放在 tests/fixtures/ 或 tests/unit/parser/ 下的专用目录)
+- src/plugins/typescript/index.ts
+- src/parser/parse-worker-pool.ts
+- src/parser/parse-worker.ts
+- tests/unit/parser/symlink-file-discovery.test.ts
