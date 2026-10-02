@@ -2,7 +2,7 @@
 id: gap-ts-package-json-relations-metrics-inconsistent
 title: TS package 层 overview JSON 自相矛盾：relations 折叠成顶层包名、metrics 与 metricVector
   基于另一套数据
-status: ready
+status: done
 labels:
   - gap
   - defect
