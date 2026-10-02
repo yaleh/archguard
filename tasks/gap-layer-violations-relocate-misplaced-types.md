@@ -32,12 +32,20 @@ extra:
 
 ## AC
 
-- [ ] 位置判定下 `src/analysis/**` 无对 `@/cli`、`../cli` 的 import：`grep -rnE "^\s*(import|export)[^;]*from '(@/cli|(\.\./)+cli)" src/analysis` 无输出（退出码 1）
-- [ ] `src/core/**` 无对 cli、mermaid 的 import：`grep -rnE "^\s*(import|export)[^;]*from '(@/(cli|mermaid)|(\.\./)+(cli|mermaid))" src/core` 无输出（退出码 1）
-- [ ] 新增 `tests/unit/architecture/layer-imports.test.ts`，其中成对负对照：对一个内存里构造的违规源文本（如 `src/core/x.ts` 含 `import type { A } from '@/cli/y.js'`）断言守卫判定为违例，对只在注释里提到 `@/cli/y.js` 的源文本断言不判违例；运行 `npx vitest run tests/unit/architecture/layer-imports.test.ts` 退出码 0
-- [ ] 旧导出路径仍可用（类型 re-export）：`npx vitest run tests/unit/analysis/metrics-history-reader.test.ts tests/unit/cli/metrics-history-writer.test.ts tests/unit/cli/query/query-manifest.test.ts` 退出码 0，且这些测试文件不需要修改 import 路径
-- [ ] 运行时行为不变：`npm run type-check` 与 `npm test` 全量通过
-- [ ] 真实对照：重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，从 `overview/package.json` 的 `extensions.tsAnalysis.moduleGraph.edges` 取目录边，`src/analysis*` 到 `src/cli*`、`src/core*` 到 `src/cli*`、`src/core*` 到 `src/mermaid*` 的边数均为 0（修前分别为 3、1、1）
+- [x] 位置判定下 `src/analysis/**` 无对 `@/cli`、`../cli` 的 import：`grep -rnE "^\s*(import|export)[^;]*from '(@/cli|(\.\./)+cli)" src/analysis` 无输出（退出码 1）
+- [x] `src/core/**` 无对 cli、mermaid 的 import：`grep -rnE "^\s*(import|export)[^;]*from '(@/(cli|mermaid)|(\.\./)+(cli|mermaid))" src/core` 无输出（退出码 1）
+- [x] 新增 `tests/unit/architecture/layer-imports.test.ts`，其中成对负对照：对一个内存里构造的违规源文本（如 `src/core/x.ts` 含 `import type { A } from '@/cli/y.js'`）断言守卫判定为违例，对只在注释里提到 `@/cli/y.js` 的源文本断言不判违例；运行 `npx vitest run tests/unit/architecture/layer-imports.test.ts` 退出码 0
+- [x] 旧导出路径仍可用（类型 re-export）：`npx vitest run tests/unit/analysis/metrics-history-reader.test.ts tests/unit/cli/metrics-history-writer.test.ts tests/unit/cli/query/query-manifest.test.ts` 退出码 0，且这些测试文件不需要修改 import 路径
+- [x] 运行时行为不变：`npm run type-check` 与 `npm test` 全量通过
+- [x] 真实对照：重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，从 `overview/package.json` 的 `extensions.tsAnalysis.moduleGraph.edges` 取目录边，`src/analysis*` 到 `src/cli*`、`src/core*` 到 `src/cli*`、`src/core*` 到 `src/mermaid*` 的边数均为 0（修前分别为 3、1、1）
+
+## Evidence
+
+- 分层方向：`grep -rnE "^\s*(import|export)[^;]*from '(@/cli|(\.\./)+cli)" src/analysis` 与对 `src/core` 的 CLI/mermaid 版本均无输出（退出码 1）。
+- 守卫测试 `tests/unit/architecture/layer-imports.test.ts`：9 passed；含违规文本（`@/cli`、相对 `../../cli`、`@/mermaid`、多行 import）报违例的成对负对照，以及注释提及路径不报违例。
+- 旧路径可用：`tests/unit/analysis/metrics-history-reader.test.ts`、`tests/unit/cli/metrics-history-writer.test.ts`、`tests/unit/cli/query/query-manifest.test.ts` 共 25 passed，测试文件的 import 路径未改动。
+- 运行时行为不变：`npm run type-check` 通过；受影响面 44 个测试文件 892 passed。
+- 真实对照：主检出（develop 基线）分析得 analysis→cli=3、core→cli=1、core→mermaid=1；worktree 重构建后分析得 0/0/0（`extensions.tsAnalysis.moduleGraph.edges`）。
 
 ## DoD
 
@@ -47,13 +55,17 @@ extra:
 
 - src/analysis/metric-vector-builder.ts
 - src/analysis/git-history/history-query.ts
+- src/analysis/git-history/history-types.ts
 - src/analysis/metrics-history-reader.ts
+- src/analysis/metrics-history-types.ts
 - src/cli/metrics-history-writer.ts
 - src/cli/git-history/history-loader.ts
 - src/cli/query/query-manifest.ts
 - src/core/query/query-engine.ts
 - src/core/interfaces/renderer-facade.ts
+- src/core/interfaces/renderer-types.ts
 - src/mermaid/diagram-generator.ts
+- src/types/query-scope.ts
 - tests/unit/architecture/layer-imports.test.ts
 - tests/unit/analysis/metrics-history-reader.test.ts
 - tests/unit/cli/metrics-history-writer.test.ts
