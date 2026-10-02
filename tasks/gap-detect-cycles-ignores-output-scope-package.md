@@ -32,11 +32,11 @@ extra:
 
 ## AC
 
-- [ ] `tests/unit/cli/mcp/mcp-server.test.ts` 新增用例：构造含目录级互指（如 a→a/b、a/b→a）的 TS ArchJSON 夹具，`archguard_detect_cycles` 以 `outputScope=package` 调用，返回 `evaluated === true` 且 `cycles` 非空；去掉互指后 `evaluated === true` 且 `cycles` 为 `[]`（成对负对照）；运行 `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` 退出码 0
-- [ ] 同一测试文件新增用例：夹具缺少目录级边（如非 TS 或无 moduleGraph）时，`outputScope=package` 返回 `evaluated === false` 且带非空 `reason`，与"已评估无环"不同形
-- [ ] 默认（`outputScope` 缺省或 `class`）调用返回值仍是数组，且 `npx vitest run tests/unit/core/query/cli-mcp-parity.test.ts` 退出码 0
-- [ ] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -v` 后，`archguard_detect_cycles(outputScope=package)` 返回的 `cycles` 非空且包含 `src/cli` 与 `src/core`（修前同参数为 `[]`）
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/cli/mcp/mcp-server.test.ts` 新增用例：构造含目录级互指（如 a→a/b、a/b→a）的 TS ArchJSON 夹具，`archguard_detect_cycles` 以 `outputScope=package` 调用，返回 `evaluated === true` 且 `cycles` 非空；去掉互指后 `evaluated === true` 且 `cycles` 为 `[]`（成对负对照）；运行 `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` 退出码 0
+- [x] 同一测试文件新增用例：夹具缺少目录级边（如非 TS 或无 moduleGraph）时，`outputScope=package` 返回 `evaluated === false` 且带非空 `reason`，与"已评估无环"不同形
+- [x] 默认（`outputScope` 缺省或 `class`）调用返回值仍是数组，且 `npx vitest run tests/unit/core/query/cli-mcp-parity.test.ts` 退出码 0
+- [x] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -v` 后，`archguard_detect_cycles(outputScope=package)` 返回的 `cycles` 非空且包含 `src/cli` 与 `src/core`（修前同参数为 `[]`）
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
