@@ -2,7 +2,7 @@
 id: gap-ts-package-stats-root-prefix-and-count-semantics
 title: TS package stats 根目录 entityCount 恒为 0，且 entityCount 按子树累计而
   fileCount/languageStats 只算目录自身
-status: ready
+status: done
 labels:
   - gap
   - defect
