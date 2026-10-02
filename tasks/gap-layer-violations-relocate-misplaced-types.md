@@ -56,6 +56,7 @@ extra:
 - src/analysis/metric-vector-builder.ts
 - src/analysis/git-history/history-query.ts
 - src/analysis/git-history/history-types.ts
+- src/analysis/git-history/index.ts
 - src/analysis/metrics-history-reader.ts
 - src/analysis/metrics-history-types.ts
 - src/cli/metrics-history-writer.ts
