@@ -1,7 +1,7 @@
 ---
 id: gap-ts-package-graph-capability-undeclared
 title: TS 上 packageGraph 恒 false 且 package fanin/fanout/atlas 工具无明确不可用声明与替代路径
-status: ready
+status: done
 labels:
   - gap
   - mcp
