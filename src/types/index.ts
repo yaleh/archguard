@@ -253,10 +253,15 @@ export interface ArchJSONMetrics {
   relationTypeBreakdown: Partial<Record<RelationType, number>>;
 
   /**
-   * Number of strongly connected components (Kosaraju algorithm) in the directed dependency graph.
+   * Number of strongly connected components (Kosaraju algorithm) in the directed
+   * dependency graph, counting ALL components including singletons.
    * - Equals entityCount → no cyclic dependencies
    * - Less than entityCount → cyclic dependencies exist
    * - Equals 0 → entities array is empty
+   *
+   * NOTE: this is NOT the number of cycles. A cyclic component is one of size > 1;
+   * that count is `cycles.length` (and, at TS package level,
+   * `metricVector.sccCount === extensions.tsAnalysis.moduleGraph.cycles.length`).
    */
   stronglyConnectedComponents: number;
 
@@ -276,6 +281,10 @@ export interface ArchJSONMetrics {
   /**
    * Non-trivial SCCs (size > 1), sorted by size DESC.
    * Empty array = no size > 1 cycles. Self-loops (size = 1) are excluded.
+   *
+   * Undefined for Go Atlas mode and for package level EXCEPT TS package output,
+   * where entities/relations come from tsAnalysis.moduleGraph and this list
+   * mirrors moduleGraph.cycles.
    */
   cycles?: CycleInfo[];
 }

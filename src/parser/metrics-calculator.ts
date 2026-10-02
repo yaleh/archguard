@@ -16,12 +16,25 @@ export class MetricsCalculator {
     const isAtlas = new ExtensionAccessor(archJSON).hasAtlasExtension();
 
     // Always compute SCC count — preserves existing behaviour for all levels (including package).
+    // `stronglyConnectedComponents` counts ALL components (including singletons);
+    // the `cycles` list below counts only non-trivial components (size > 1). They
+    // are intentionally different quantities and must not be conflated.
     const { sccCount, nonTrivialSCCs } = this.computeSCCGroups(archJSON);
 
-    // cycles and fileStats only make sense for class/method, non-Atlas.
-    const computeDetails = !isAtlas && level !== 'package';
-    const cycles = computeDetails ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
-    const fileStats = computeDetails ? this.computeFileStats(archJSON, nonTrivialSCCs) : undefined;
+    // cycles are meaningful for class/method. At the TS package level the
+    // entities/relations are derived from tsAnalysis.moduleGraph, so the
+    // non-trivial SCCs of that graph are the authoritative cycle list and MUST
+    // match moduleGraph.cycles. Other package-level graphs (Java/Python/C++/…)
+    // keep cycles undefined, as before.
+    const isTsPackageGraph =
+      level === 'package' && !isAtlas && !!archJSON.extensions?.tsAnalysis?.moduleGraph;
+    const computeCycles = !isAtlas && (level !== 'package' || isTsPackageGraph);
+    const cycles = computeCycles ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
+
+    // fileStats stay class/method-only: package entities carry no source file.
+    const fileStats = !isAtlas && level !== 'package'
+      ? this.computeFileStats(archJSON, nonTrivialSCCs)
+      : undefined;
 
     return {
       level,
