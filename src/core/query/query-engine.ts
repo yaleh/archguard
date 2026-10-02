@@ -241,6 +241,15 @@ export class QueryEngine {
       classHierarchy: boolean;
       interfaceImplementation: boolean;
       packageGraph: boolean;
+      /**
+       * Which kind of package graph backs `packageGraph`: `'go-atlas'` when a
+       * Go Atlas package graph is present, `'none'` otherwise (e.g. TypeScript,
+       * where only directory-level edges exist but are not exposed as a package
+       * graph). Callers can branch on this without probing the Atlas-only tools.
+       */
+      packageGraphKind: 'go-atlas' | 'none';
+      /** Human-readable explanation of `packageGraph` / `packageGraphKind`. */
+      packageGraphReason: string;
       cycleDetection: boolean;
     };
     topPackages: import('./arch-metrics.js').PackageStatEntry[];
@@ -256,6 +265,14 @@ export class QueryEngine {
       classHierarchy: this.archJson.language !== 'go',
       interfaceImplementation: hasImplementation,
       packageGraph: hasAtlas,
+      packageGraphKind: hasAtlas ? ('go-atlas' as const) : ('none' as const),
+      packageGraphReason: hasAtlas
+        ? 'Go Atlas package graph is available for this scope; ' +
+          'archguard_get_package_fanin, archguard_get_package_fanout and archguard_get_atlas_layer are usable.'
+        : 'Package-graph tools (archguard_get_package_fanin, archguard_get_package_fanout, ' +
+          'archguard_get_atlas_layer) require a Go project analyzed with Atlas mode; this scope has none. ' +
+          'Use archguard_get_package_stats or archguard_summary(outputScope=package) instead, ' +
+          'and archguard_detect_cycles(outputScope=package) for directory-level cycles on TypeScript.',
       cycleDetection: this.archJson.language !== 'go',
     };
 
