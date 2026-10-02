@@ -12,6 +12,7 @@ import type { Entity, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSONExtensions } from '@/types/extensions/index.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -108,6 +109,44 @@ function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJ
       { key: scopeEntry.key, label: scopeEntry.label, entityCount: scopeEntry.entityCount },
     ],
   };
+}
+
+/** Build a TS module graph (directory-level) node/edge set. */
+function makeTsModuleGraph(
+  nodeIds: string[],
+  edges: Array<{ from: string; to: string }>
+): TsModuleGraph {
+  return {
+    nodes: nodeIds.map((id) => ({
+      id,
+      name: id,
+      type: 'internal' as const,
+      fileCount: 1,
+      stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+    })),
+    edges: edges.map((e) => ({ ...e, strength: 1, importedNames: [] })),
+    cycles: [],
+  };
+}
+
+/** ArchJSON carrying (or deliberately missing) a tsAnalysis.moduleGraph. */
+function makeArchJsonWithModuleGraph(
+  moduleGraph: TsModuleGraph | undefined,
+  language: string = 'typescript'
+): ArchJSON {
+  const base = makeArchJson();
+  return {
+    ...base,
+    language,
+    extensions: moduleGraph ? { tsAnalysis: { version: '1.0', moduleGraph } } : {},
+  };
+}
+
+/** Wrap an arbitrary ArchJSON into the QueryContext shape loadEngine resolves to. */
+function wrapArchJson(archJson: ArchJSON) {
+  const archIndex = buildArchIndex(archJson, 'pkg-cycles-test-hash');
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return wrapEngine({ engine, archJson });
 }
 
 // -- Helper to call tools via McpServer --
@@ -450,6 +489,81 @@ describe('archguard_detect_cycles', () => {
     const memberNames = parsed[0].memberNames;
     expect(memberNames).toContain('CacheManager');
     expect(memberNames).toContain('DiagramProcessor');
+  });
+
+  it('default outputScope still returns a bare array (backward compatible)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const cb = tools.get('archguard_detect_cycles');
+    const result = await cb({ outputScope: 'class' });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+  });
+});
+
+describe('archguard_detect_cycles — outputScope=package', () => {
+  it('reports directory-level mutual imports as evaluated with non-empty cycles', async () => {
+    // a → a/b and a/b → a: a directory-level 2-cycle.
+    const moduleGraph = makeTsModuleGraph(
+      ['src/a', 'src/a/b'],
+      [
+        { from: 'src/a', to: 'src/a/b' },
+        { from: 'src/a/b', to: 'src/a' },
+      ]
+    );
+    loadEngineMock.mockResolvedValue(
+      wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph))
+    );
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_detect_cycles');
+    const result = await cb({ outputScope: 'package' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.granularity).toBe('package');
+    expect(parsed.evaluated).toBe(true);
+    expect(parsed.cycles.length).toBeGreaterThan(0);
+    const modules = parsed.cycles.flatMap((c: { modules: string[] }) => c.modules);
+    expect(modules).toContain('src/a');
+    expect(modules).toContain('src/a/b');
+  });
+
+  it('negative control: dropping the mutual edge yields evaluated=true with cycles []', async () => {
+    // Only a → a/b remains: no cycle at the directory granularity.
+    const moduleGraph = makeTsModuleGraph(['src/a', 'src/a/b'], [
+      { from: 'src/a', to: 'src/a/b' },
+    ]);
+    loadEngineMock.mockResolvedValue(
+      wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph))
+    );
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_detect_cycles');
+    const result = await cb({ outputScope: 'package' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.evaluated).toBe(true);
+    expect(parsed.cycles).toEqual([]);
+  });
+
+  it('no directory-level edges (no moduleGraph) yields evaluated=false with a non-empty reason', async () => {
+    // e.g. a Go scope — no tsAnalysis.moduleGraph at all.
+    loadEngineMock.mockResolvedValue(
+      wrapArchJson(makeArchJsonWithModuleGraph(undefined, 'go'))
+    );
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_detect_cycles');
+    const result = await cb({ outputScope: 'package' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    // "not evaluated" must be a distinct value from "evaluated, no cycles".
+    expect(parsed.granularity).toBe('package');
+    expect(parsed.evaluated).toBe(false);
+    expect(typeof parsed.reason).toBe('string');
+    expect(parsed.reason.length).toBeGreaterThan(0);
+    expect(parsed.cycles).toEqual([]);
   });
 });
 
