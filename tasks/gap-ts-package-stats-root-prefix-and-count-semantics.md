@@ -42,7 +42,7 @@ quay 的 plugin/scripts（276 个 .ts 平铺）：`totalPackageCount=1`，`(root
 - [x] 同一测试文件新增用例（口径）：同一夹具里父目录 `p`（自身 1 个类）与子目录 `p/c`（2 个类），断言 `p.entityCount === 1`（不含子树），且所有包的 `entityCount` 之和等于夹具总实体数
 - [x] 平铺目录用例：夹具全部文件在根目录时，`totalPackageCount === 1` 且该包 `entityCount` 等于总实体数（非 0），且与 `languageStats` 同向非零
 - [x] 对 Go 夹具与 OO（Java/Python）夹具的现有 `getPackageStats` 用例不改动仍然通过
-- [x] 真实对照：对 archguard 自身重新分析后，`archguard_get_package_stats` 返回的 `(root)` 的 `entityCount` 大于 0（修前为 0），`src` 的 `entityCount` 不再是 794（修前 794），且全部包 `entityCount` 之和等于 `archguard_summary` 的 `entityCount`
+- [x] 真实对照（2026-10-02 实测；同一份 arch.json 分别用修前/修后 dist 跑 `query --package-stats`）：archguard 自身**根目录没有源文件、没有实体**（`sourceFiles` 中无根级文件，根级实体数 0），故其 `(root)` 修前修后均为 0 —— 这不是回归，而是该包确实无实体；根前缀修复改在**真实平铺项目**上对照验证：quay `plugin/scripts`（276 个 .ts，path B `ts-module-graph`）的 `(root)` `entityCount` 由 **0（修前）→ 3621（修后，等于总实体数）**，修前 `(root)` 的 `languageStats.functions=2755` 与 `entityCount=0` 自相矛盾的现象消失；archguard 的 `src` 由 **804（修前，子树累计）→ 0（修后，仅目录自身）**，全部包 `entityCount` 之和由 **2152（修前，重复计数）→ 820（修后，等于 `archguard_summary` 的 `entityCount=820`）**
 - [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
@@ -53,5 +53,35 @@ quay 的 plugin/scripts（276 个 .ts 平铺）：`totalPackageCount=1`，`(root
 
 - src/core/query/arch-metrics-structure.ts
 - src/analysis/metric-vector-builder.ts
+- src/cli/mcp/mcp-server.ts
 - tests/unit/core/query/arch-metrics-structure.test.ts
 - tasks/gap-ts-package-stats-root-prefix-and-count-semantics.md
+
+## Evidence
+
+实现（branch `task/gap-ts-package-stats-root-prefix-and-count-semantics`，`git diff develop`）：
+- `src/core/query/arch-metrics-structure.ts`：`aggregateEntityMetrics` 改为 direct 口径 —— 用 `file.lastIndexOf('/')` 求文件自身目录并与 `packagePrefix` 精确比较（根前缀 `''` 因此正确匹配根级文件）；`packagePrefix === ''` 且无 `workspaceRoot` 的绝对路径跳过而非误归桶；`PackageStatEntry.entityCount` 加注释写明"直接声明、不含子树、sum 等于总数"。
+- `src/cli/mcp/mcp-server.ts`：`archguard_get_package_stats` 工具描述补充口径说明（Touches 已声明，修 anti-drift）。
+- `tests/unit/core/query/arch-metrics-structure.test.ts`：新增 3 个用例（根目录计入、direct 口径求和、平铺目录）。
+
+验证 1 —— 夹具单测：`npx vitest run tests/unit/core/query/arch-metrics-structure.test.ts` → 13 passed（含新增 3 例）。
+
+验证 2 —— 真实对照，同一 arch.json、同一 scope，只换 dist（修前 = 主检出 dist，含 `sep = packagePrefix`；修后 = 本 worktree 构建）：
+- archguard 自身（scope `8f71319d`，820 实体，319 源文件，`dataPath=ts-module-graph`）：
+
+  | | packages | (root).entityCount | src.entityCount | Σ entityCount | summary.entityCount |
+  |---|---|---|---|---|---|
+  | 修前 | 60 | 0 | 804 | 2152 | 820 |
+  | 修后 | 60 | 0（根目录确无实体） | 0 | **820** | 820 |
+
+  `topPackages` 由 `src:804` 支配变为真实的 `src/mermaid:62, src/plugins/golang:51, …`。
+- 真实平铺项目 quay `plugin/scripts`（276 个 .ts + 1 子目录，3621 实体，`dataPath=ts-module-graph`）：
+
+  | | packages | (root).entityCount | (root).languageStats.functions | Σ entityCount |
+  |---|---|---|---|---|
+  | 修前 | 1 | **0**（与 functions=2755 自相矛盾） | 2755 | 0 |
+  | 修后 | 1 | **3621** | 2755 | 3621 |
+
+验证 3 —— `npm run type-check` 退出码 0；`npm test` → 371 files / 5426 passed, 18 skipped, 0 failed。
+
+说明：原 AC #5 文字断言 archguard `(root)` 由 0 变大于 0；实测 archguard 分析源为 `src`，根目录无源文件、根级实体数为 0（其 `(root)` 的 `fileCount=3` 来自不含实体的模块），该断言在本仓不可满足。已按 DoD 的"平铺目录样本"条款，改在真实平铺项目 quay `plugin/scripts` 上完成 0 → 3621 的对照，并保留 archguard 上 `src` 804 → 0、Σ 2152 → 820 的真实对照。缺陷主张（根前缀恒 0、父目录累计子树）均已在真实数据上验证修复。
