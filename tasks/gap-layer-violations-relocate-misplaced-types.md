@@ -1,7 +1,7 @@
 ---
 id: gap-layer-violations-relocate-misplaced-types
 title: 消除 3 条分层违例 analysis→cli、core→mermaid、core→cli：把放错层的类型和常量下移，并加方向守卫测试
-status: ready
+status: done
 labels:
   - gap
   - refactor
