@@ -38,12 +38,12 @@ quay 的 plugin/scripts（276 个 .ts 平铺）：`totalPackageCount=1`，`(root
 
 ## AC
 
-- [ ] `tests/unit/core/query/arch-metrics-structure.test.ts` 新增用例：TS 夹具含根目录文件（`a.ts` 含 1 个类）和子目录文件（`sub/b.ts` 含 2 个类），`getPackageStats()` 返回 `(root)` 的 `entityCount === 1`（修前为 0），`sub` 的 `entityCount === 2`；运行 `npx vitest run tests/unit/core/query/arch-metrics-structure.test.ts` 退出码 0
-- [ ] 同一测试文件新增用例（口径）：同一夹具里父目录 `p`（自身 1 个类）与子目录 `p/c`（2 个类），断言 `p.entityCount === 1`（不含子树），且所有包的 `entityCount` 之和等于夹具总实体数
-- [ ] 平铺目录用例：夹具全部文件在根目录时，`totalPackageCount === 1` 且该包 `entityCount` 等于总实体数（非 0），且与 `languageStats` 同向非零
-- [ ] 对 Go 夹具与 OO（Java/Python）夹具的现有 `getPackageStats` 用例不改动仍然通过
-- [ ] 真实对照：对 archguard 自身重新分析后，`archguard_get_package_stats` 返回的 `(root)` 的 `entityCount` 大于 0（修前为 0），`src` 的 `entityCount` 不再是 794（修前 794），且全部包 `entityCount` 之和等于 `archguard_summary` 的 `entityCount`
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/core/query/arch-metrics-structure.test.ts` 新增用例：TS 夹具含根目录文件（`a.ts` 含 1 个类）和子目录文件（`sub/b.ts` 含 2 个类），`getPackageStats()` 返回 `(root)` 的 `entityCount === 1`（修前为 0），`sub` 的 `entityCount === 2`；运行 `npx vitest run tests/unit/core/query/arch-metrics-structure.test.ts` 退出码 0
+- [x] 同一测试文件新增用例（口径）：同一夹具里父目录 `p`（自身 1 个类）与子目录 `p/c`（2 个类），断言 `p.entityCount === 1`（不含子树），且所有包的 `entityCount` 之和等于夹具总实体数
+- [x] 平铺目录用例：夹具全部文件在根目录时，`totalPackageCount === 1` 且该包 `entityCount` 等于总实体数（非 0），且与 `languageStats` 同向非零
+- [x] 对 Go 夹具与 OO（Java/Python）夹具的现有 `getPackageStats` 用例不改动仍然通过
+- [x] 真实对照：对 archguard 自身重新分析后，`archguard_get_package_stats` 返回的 `(root)` 的 `entityCount` 大于 0（修前为 0），`src` 的 `entityCount` 不再是 794（修前 794），且全部包 `entityCount` 之和等于 `archguard_summary` 的 `entityCount`
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
