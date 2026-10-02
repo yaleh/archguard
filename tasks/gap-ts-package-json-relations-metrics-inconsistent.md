@@ -44,13 +44,13 @@ archguard 自身的实测（2026-10-02，`.archguard/output/archguard/overview/p
 
 ## AC
 
-- [ ] `tests/unit/cli/processors/diagram-output-router.test.ts` 与 `diagram-pipeline-runner.test.ts` 新增用例：用含 moduleGraph（3 个 internal 目录节点含 1 个互指环、1 条指向外部包的边）的 TS 夹具以 `level=package`、`format=json` 输出，断言每条 `relation.source`/`target` 都等于某个 `entities[].id`，不含折叠后的顶层名，也不含外部包名；运行 `npx vitest run tests/unit/cli/processors` 退出码 0
-- [ ] 同一夹具断言自洽性：`metrics.entityCount === entities.length`、`metrics.relationCount === relations.length`、`metricVector.totalEntities === entities.length`、`metricVector.totalRelations === relations.length`、`metricVector.sccCount === moduleGraph.cycles.length`
-- [ ] 同一夹具断言 `relation.id` 仍匹配 `<from>_dependency_<to>`（向后兼容）；并有一条对照用例证明去掉互指后 `sccCount === 0`（成对负对照）
-- [ ] `npx vitest run tests/unit/cli/processors/diagram-output-router.test.ts` 中原有的非 TS、非 package 层 JSON 输出用例不改动仍然通过（其它语言和 class/method 层输出不变）
-- [ ] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json -v` 后，用脚本读取 `overview/package.json`，断言上述自洽性全部成立，且 `metrics.entityCount` 等于 internal 目录节点数（修前为 9，修后约 60）、`metricVector.sccCount === 3`（修前为 0）
-- [ ] 对 quay 仓库（`/data/home/yale/work/quay`）做同样的真实对照，`relations` 的 `source`/`target` 不再出现 `packages` 这类折叠名
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/cli/processors/diagram-output-router.test.ts` 与 `diagram-pipeline-runner.test.ts` 新增用例：用含 moduleGraph（3 个 internal 目录节点含 1 个互指环、1 条指向外部包的边）的 TS 夹具以 `level=package`、`format=json` 输出，断言每条 `relation.source`/`target` 都等于某个 `entities[].id`，不含折叠后的顶层名，也不含外部包名；运行 `npx vitest run tests/unit/cli/processors` 退出码 0
+- [x] 同一夹具断言自洽性：`metrics.entityCount === entities.length`、`metrics.relationCount === relations.length`、`metricVector.totalEntities === entities.length`、`metricVector.totalRelations === relations.length`、`metricVector.sccCount === moduleGraph.cycles.length`
+- [x] 同一夹具断言 `relation.id` 仍匹配 `<from>_dependency_<to>`（向后兼容）；并有一条对照用例证明去掉互指后 `sccCount === 0`（成对负对照）
+- [x] `npx vitest run tests/unit/cli/processors/diagram-output-router.test.ts` 中原有的非 TS、非 package 层 JSON 输出用例不改动仍然通过（其它语言和 class/method 层输出不变）
+- [x] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json -v` 后，用脚本读取 `overview/package.json`，断言上述自洽性全部成立，且 `metrics.entityCount` 等于 internal 目录节点数（修前为 9，修后约 60）、`metricVector.sccCount === 3`（修前为 0）
+- [x] 对 quay 仓库（`/data/home/yale/work/quay`）做同样的真实对照，`relations` 的 `source`/`target` 不再出现 `packages` 这类折叠名
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
@@ -62,6 +62,8 @@ archguard 自身的实测（2026-10-02，`.archguard/output/archguard/overview/p
 - src/cli/processors/diagram-output-router.ts
 - src/parser/metrics-calculator.ts
 - src/analysis/metric-vector-builder.ts
+- src/types/index.ts
+- docs/dev-guide/archjson-levels.md
 - tests/unit/cli/processors/diagram-output-router.test.ts
 - tests/unit/cli/processors/diagram-pipeline-runner.test.ts
 - tasks/gap-ts-package-json-relations-metrics-inconsistent.md

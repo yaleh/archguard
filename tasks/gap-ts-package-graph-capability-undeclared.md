@@ -27,10 +27,10 @@ extra:
 
 ## AC
 
-- [ ] `tests/unit/cli/mcp/mcp-server.test.ts` 新增用例：对 TS（非 Atlas）夹具调用 `archguard_summary`，返回的 capabilities 中 `packageGraph === false` 且带非空的原因/种类字段；对 Go Atlas 夹具该字段表明可用；运行 `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` 退出码 0
-- [ ] 同一测试文件新增用例：TS 夹具调用 `archguard_get_package_fanin` 返回 `applicable === false`，其 `alternative` 非空且包含 `archguard_get_package_stats`
-- [ ] 三个工具（fanin、fanout、get_atlas_layer）的注册描述首句包含"Go Atlas"限定语：`grep -c "Go Atlas" src/cli/mcp/mcp-server.ts` 不少于修前计数加 3 或等价断言
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/cli/mcp/mcp-server.test.ts` 新增用例：对 TS（非 Atlas）夹具调用 `archguard_summary`，返回的 capabilities 中 `packageGraph === false` 且带非空的原因/种类字段；对 Go Atlas 夹具该字段表明可用；运行 `npx vitest run tests/unit/cli/mcp/mcp-server.test.ts` 退出码 0
+- [x] 同一测试文件新增用例：TS 夹具调用 `archguard_get_package_fanin` 返回 `applicable === false`，其 `alternative` 非空且包含 `archguard_get_package_stats`
+- [x] 三个工具（fanin、fanout、get_atlas_layer）的注册描述首句包含"Go Atlas"限定语：`grep -c "Go Atlas" src/cli/mcp/mcp-server.ts` 不少于修前计数加 3 或等价断言
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
