@@ -4,4 +4,5 @@
 
 export * from './git-log-reader.js';
 export * from './history-aggregator.js';
+export * from './history-types.js';
 export * from './history-query.js';

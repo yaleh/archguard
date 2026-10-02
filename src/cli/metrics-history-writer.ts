@@ -9,39 +9,20 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import { METRICS_HISTORY_FILENAME } from '@/analysis/metrics-history-types.js';
+import type {
+  MetricsHistoryEntry,
+  MetricsHistoryScopeInfo,
+  PackageMetricsSnapshot,
+} from '@/analysis/metrics-history-types.js';
 
-export interface PackageMetricsSnapshot {
-  /** Package name (e.g. "src/parser" or "com.example.service") */
-  name: string;
-  /** Number of cross-package incoming relations */
-  fanIn: number;
-  /** Number of cross-package outgoing relations */
-  fanOut: number;
-  /** Number of SCCs (strongly-connected components) this package participates in */
-  cycleCount: number;
-  /** Number of entities in this package */
-  entityCount: number;
-}
-
-export interface MetricsHistoryEntry {
-  /** ISO-8601 UTC timestamp of the analyze run */
-  timestamp: string;
-  /** Per-package metrics snapshot */
-  packages: PackageMetricsSnapshot[];
-  /** Query scope key of the analyzed scope. Absent on legacy entries (read as "unknown"). */
-  scopeKey?: string;
-  /** Source paths of the analyzed scope. Absent on legacy entries. */
-  sources?: string[];
-}
-
-export interface MetricsHistoryScopeInfo {
-  scopeKey?: string;
-  sources?: string[];
-}
+// Re-exported so existing importers of this module keep their paths
+// (tests/unit/cli/metrics-history-writer.test.ts, cli/mcp/tools/metric-trend-tools.ts).
+export type { MetricsHistoryEntry, MetricsHistoryScopeInfo, PackageMetricsSnapshot };
 
 export class MetricsHistoryWriter {
   /** Path within outputDir where the JSONL file is written. */
-  static readonly FILENAME = 'metrics-history.jsonl';
+  static readonly FILENAME = METRICS_HISTORY_FILENAME;
 
   /**
    * Append a snapshot of current package metrics to the history file.

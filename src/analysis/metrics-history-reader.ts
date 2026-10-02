@@ -5,8 +5,8 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { MetricsHistoryWriter } from '@/cli/metrics-history-writer.js';
-import type { MetricsHistoryEntry } from '@/cli/metrics-history-writer.js';
+import { METRICS_HISTORY_FILENAME } from './metrics-history-types.js';
+import type { MetricsHistoryEntry } from './metrics-history-types.js';
 
 export type { MetricsHistoryEntry };
 
@@ -29,7 +29,7 @@ export async function readHistoryEntries(
   outputDir: string,
   options: ReadHistoryOptions = {}
 ): Promise<MetricsHistoryEntry[]> {
-  const filePath = path.join(outputDir, MetricsHistoryWriter.FILENAME);
+  const filePath = path.join(outputDir, METRICS_HISTORY_FILENAME);
   if (!(await fs.pathExists(filePath))) {
     return [];
   }

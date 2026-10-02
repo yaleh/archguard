@@ -1,6 +1,6 @@
 import type { ArchJSON } from '@/types/index.js';
 import type { DiagramConfig } from '@/types/config.js';
-import type { MermaidOutputOptions, RenderJob } from '@/mermaid/diagram-generator.js';
+import type { MermaidOutputOptions, RenderJob } from './renderer-types.js';
 
 export type { MermaidOutputOptions, RenderJob };
 

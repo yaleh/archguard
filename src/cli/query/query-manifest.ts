@@ -7,6 +7,11 @@
  */
 
 import type { ArchJSON } from '@/types/index.js';
+import type { QueryScopeEntry } from '@/types/query-scope.js';
+
+// Re-exported so existing importers of this module keep their paths
+// (cli/query/*, core/query/query-engine.ts, and the query tests).
+export type { QueryScopeEntry };
 
 // ---------------------------------------------------------------------------
 // QueryManifest — persisted to .archguard/query-manifest.json
@@ -27,38 +32,6 @@ export interface QueryManifest {
 
   /** Available query scopes. */
   scopes: QueryScopeEntry[];
-}
-
-export interface QueryScopeEntry {
-  /** Normalized-sources hash, 8 hex chars. */
-  key: string;
-
-  /** Human-readable display name (e.g. "src/cli"). */
-  label: string;
-
-  /** Programming language of the parsed source. */
-  language: string;
-
-  /** Whether this scope was directly parsed or derived from a parent scope. */
-  kind: 'parsed' | 'derived';
-
-  /** Stable source-root relative paths. */
-  sources: string[];
-
-  /** Number of entities in the ArchJSON for this scope. */
-  entityCount: number;
-
-  /** Number of relations in the ArchJSON for this scope. */
-  relationCount: number;
-
-  /** Whether Go Atlas extensions are present. */
-  hasAtlasExtension: boolean;
-
-  /** ISO-8601 timestamp of when this scope was last written. Absent in manifests from older versions. */
-  generatedAt?: string;
-
-  /** Optional role hint used to identify primary vs secondary scopes. */
-  role?: 'primary' | 'secondary';
 }
 
 // ---------------------------------------------------------------------------

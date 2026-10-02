@@ -15,6 +15,10 @@ import os from 'os';
 import type { ArchJSON } from '../types/index.js';
 import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
 import type { IRendererFacade } from '@/core/interfaces/renderer-facade.js';
+import type {
+  MermaidOutputOptions,
+  RenderJob,
+} from '@/core/interfaces/renderer-types.js';
 import { HeuristicGrouper } from './grouper.js';
 import { ValidatedMermaidGenerator } from './generator.js';
 import { MermaidValidationPipeline } from './validation-pipeline.js';
@@ -31,40 +35,9 @@ const isParseStage = (s: ValidationStage): s is Extract<ValidationStage, { name:
 const isQualityStage = (s: ValidationStage): s is Extract<ValidationStage, { name: 'quality' }> =>
   s.name === 'quality';
 
-/**
- * Output options for Mermaid diagram generation
- */
-export interface MermaidOutputOptions {
-  /** Output directory for generated files */
-  outputDir: string;
-  /** Base name for output files (without extension) */
-  baseName: string;
-  /** Full paths to output files */
-  paths: {
-    mmd: string;
-    svg: string;
-    png: string;
-  };
-}
-
-/**
- * Render job for two-stage rendering
- *
- * Stage 1 (generateOnly) produces RenderJob[]
- * Stage 2 (renderJobsInParallel) consumes RenderJob[]
- */
-export interface RenderJob {
-  /** Diagram name */
-  name: string;
-  /** Generated Mermaid code */
-  mermaidCode: string;
-  /** Output file paths */
-  outputPath: {
-    mmd: string;
-    svg: string;
-    png: string;
-  };
-}
+// Re-exported so existing importers of this module keep their paths
+// (rules rendered by the mermaid layer and tests/integration/render-separation.test.ts).
+export type { MermaidOutputOptions, RenderJob };
 
 /**
  * Main generator for Mermaid diagrams

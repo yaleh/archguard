@@ -1,6 +1,6 @@
 import { giniCoefficient } from './gini.js';
 import type { ArchJSON } from '@/types/index.js';
-import type { PackageStatEntry } from '@/cli/query/query-engine.js';
+import type { PackageStatEntry } from '@/core/query/arch-metrics.js';
 import type { MetricVector } from '@/types/metric-vector.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 

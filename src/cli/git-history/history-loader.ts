@@ -12,6 +12,11 @@ import type {
   FileHistoryMetrics,
   PackageHistoryMetrics,
 } from '@/types/git-history.js';
+import type { LoadedHistoryData } from '@/analysis/git-history/history-types.js';
+
+// Re-exported so existing importers of this module keep their paths
+// (cli/mcp/tools/git-history-evidence-pack-tool.ts and the history-query tests).
+export type { LoadedHistoryData };
 
 // ---------------------------------------------------------------------------
 // Error
@@ -24,18 +29,6 @@ export class GitHistoryNotFoundError extends Error {
     );
     this.name = 'GitHistoryNotFoundError';
   }
-}
-
-// ---------------------------------------------------------------------------
-// Result type
-// ---------------------------------------------------------------------------
-
-export interface LoadedHistoryData {
-  manifest: GitHistoryManifest;
-  /** Keyed by PackageHistoryMetrics.path */
-  packageMetrics: Map<string, PackageHistoryMetrics>;
-  /** Keyed by FileHistoryMetrics.path */
-  fileMetrics: Map<string, FileHistoryMetrics>;
 }
 
 // ---------------------------------------------------------------------------

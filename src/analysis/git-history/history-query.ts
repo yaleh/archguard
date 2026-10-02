@@ -14,7 +14,7 @@ import type {
   PackageHistoryMetrics,
   RiskFactors,
 } from '@/types/git-history.js';
-import type { LoadedHistoryData } from '@/cli/git-history/history-loader.js';
+import type { LoadedHistoryData } from './history-types.js';
 
 // ---------------------------------------------------------------------------
 // Result types

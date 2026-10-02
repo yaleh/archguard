@@ -10,7 +10,7 @@
 
 import type { ArchJSON, Entity, RelationType, CycleInfo } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
-import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
+import type { QueryScopeEntry } from '@/types/query-scope.js';
 import type { PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
 import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 import { narrowEntities, filterRelationsForScope } from './output-scope-filter.js';
