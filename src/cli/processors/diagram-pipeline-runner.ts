@@ -16,7 +16,7 @@
 import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
 import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
-import { DiagramOutputRouter } from './diagram-output-router.js';
+import { DiagramOutputRouter, buildTsPackageGraphArchJson } from './diagram-output-router.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
@@ -93,6 +93,16 @@ export class DiagramPipelineRunner {
       }
       const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
 
+      // 1b. For TS package-level output, replace the aggregator's shallow
+      // top-level packages with the module graph's directory-level entities and
+      // relations BEFORE metrics are computed. This keeps entities, relations,
+      // metrics and metricVector describing one and the same graph instead of
+      // patching relations in after the fact.
+      const levelJSON =
+        diagram.level === 'package'
+          ? buildTsPackageGraphArchJson(aggregatedJSON)
+          : aggregatedJSON;
+
       // 2. Resolve output paths
       if (progress) {
         progress.update(diagram.name, 60, 'Preparing output');
@@ -115,11 +125,11 @@ export class DiagramPipelineRunner {
       // (consumers like DiagramIndexGenerator need them regardless of output format).
       // Always embed metrics so json format gets them; mermaid renderers ignore the field.
       const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(
-        aggregatedJSON,
+        levelJSON,
         diagram.level
       );
       const outputJSON: ArchJSON = {
-        ...aggregatedJSON,
+        ...levelJSON,
         metrics: computedMetrics,
         extensions: {
           ...(aggregatedJSON.extensions ?? {}),

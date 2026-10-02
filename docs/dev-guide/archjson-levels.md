@@ -178,6 +178,32 @@ Relations (2):                                ⬇️ 4 relations → 2 relations
 - Best for: Executive summaries, architecture decisions
 - Diagram size: Small (concise)
 
+### TypeScript: package entities/relations come from the module graph
+
+For TypeScript, `-f json` package-level output (`overview/package.json`) does not
+use the generic class→package aggregation above. Instead, both `entities` and
+`relations` are derived from `extensions.tsAnalysis.moduleGraph` so that the two
+arrays are at the same granularity and mutually consistent:
+
+- **`entities`** — one entry per `internal` module node, i.e. one per
+  project-relative directory (`src/analysis`, `src/cli`, …), with
+  `type: 'package'`. The project-root module keeps the stable id `(root)`.
+- **`relations`** — only module-graph edges whose **both** endpoints are internal
+  nodes, with `source`/`target` left as directory ids (never collapsed to a
+  top-level package name). `relation.id` keeps the existing
+  `<from>_dependency_<to>` form.
+- **External targets are not relations.** Edges pointing at node_modules,
+  `node:` builtins, or unresolved `@/` aliases are omitted from `relations`
+  because their target is not an entity (emitting them would create dangling
+  references). They remain available solely via
+  `extensions.tsAnalysis.moduleGraph.edges`.
+- **Metrics are computed on the same graph.** `metrics.entityCount`,
+  `metrics.relationCount`, `metricVector.totalEntities`,
+  `metricVector.totalRelations` equal the written array lengths, and
+  `metricVector.sccCount` equals `moduleGraph.cycles.length`
+  (`sccCount` counts non-trivial cycles; `metrics.stronglyConnectedComponents`
+  counts all components, including singletons — the two are not the same).
+
 ---
 
 ## Comparison Table

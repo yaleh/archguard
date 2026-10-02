@@ -262,176 +262,208 @@ describe('DiagramOutputRouter', () => {
   });
 
   // --------------------------------------------------------------------------
-  // Package JSON relation injection (Phase A fix)
+  // Package-level TS module graph → directory-level entities/relations
   // --------------------------------------------------------------------------
 
-  describe('JSON format — package-level module graph relation injection', () => {
-    const moduleGraphArchJSON = {
-      version: '1.1',
-      language: 'typescript',
-      timestamp: '',
-      sourceFiles: [],
-      entities: [],
-      relations: [], // empty class-level relations
-      extensions: {
-        tsAnalysis: {
-          version: '1.1',
-          moduleGraph: {
-            nodes: [
-              {
-                id: 'src/cli',
-                name: 'src/cli',
-                type: 'internal',
-                fileCount: 3,
-                stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
-              },
-              {
-                id: 'src/parser',
-                name: 'src/parser',
-                type: 'internal',
-                fileCount: 5,
-                stats: { classes: 3, interfaces: 0, functions: 0, enums: 0 },
-              },
-            ],
-            edges: [{ from: 'src/cli', to: 'src/parser', strength: 2, importedNames: [] }],
-            cycles: [],
+  describe('JSON format — package-level TS module graph', () => {
+    const INTERNAL_IDS = ['src/cli', 'src/parser', 'src/utils'];
+
+    function makeModuleGraphArchJSON(): ArchJSON {
+      return {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '',
+        sourceFiles: [],
+        // Class-level entities that must be replaced at package level.
+        entities: [
+          {
+            id: 'TopLevel',
+            name: 'TopLevel',
+            type: 'package',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: '', startLine: 0, endLine: 0 },
           },
-        },
-      },
-    } as unknown as ArchJSON;
-
-    it('injects module graph edges as relations when level=package and moduleGraph present', async () => {
-      const fsMock = await getFsMock();
-
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        moduleGraphArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
-
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('cli');
-      expect(written.relations[0]?.target).toBe('parser');
-      expect(written.relations[0]?.type).toBe('dependency');
-    });
-
-    it('does not inject module graph relations when level=class', async () => {
-      const fsMock = await getFsMock();
-
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        moduleGraphArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'class', format: 'json' }),
-        makePool()
-      );
-
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(0); // original empty array preserved
-    });
-
-    it('does not inject when moduleGraph absent', async () => {
-      const fsMock = await getFsMock();
-
-      const archJsonNoGraph = makeArchJSON({ extensions: {} as unknown as ArchJSON['extensions'] });
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        archJsonNoGraph,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
-
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(0);
-    });
-
-    it('generates correct relation id for each edge', async () => {
-      const fsMock = await getFsMock();
-
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        moduleGraphArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
-
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations[0]?.id).toBe('src/cli_dependency_src/parser');
-    });
-
-    it('does not mutate the original archJSON relations array', async () => {
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      const originalRelations = moduleGraphArchJSON.relations;
-
-      await router.route(
-        moduleGraphArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
-
-      // Original archJSON.relations should remain untouched (shallow copy used)
-      expect(moduleGraphArchJSON.relations).toBe(originalRelations);
-      expect(moduleGraphArchJSON.relations).toHaveLength(0);
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // @/ alias resolution in module graph relations (Phase C fix)
-  // --------------------------------------------------------------------------
-
-  describe('JSON format — @/ alias resolution in module graph relations', () => {
-    it('resolves @/parser edge source to "parser" package entity ID', async () => {
-      const fsMock = await getFsMock();
-
-      const aliasArchJSON = makeArchJSON({
+        ],
+        relations: [],
         extensions: {
           tsAnalysis: {
             version: '1.1',
             moduleGraph: {
-              nodes: [],
-              edges: [{ from: '@/parser', to: '@/mermaid', strength: 1, importedNames: [] }],
+              nodes: [
+                {
+                  id: 'src/cli',
+                  name: 'src/cli',
+                  type: 'internal',
+                  fileCount: 3,
+                  stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'src/parser',
+                  name: 'src/parser',
+                  type: 'internal',
+                  fileCount: 5,
+                  stats: { classes: 3, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'src/utils',
+                  name: 'src/utils',
+                  type: 'internal',
+                  fileCount: 2,
+                  stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'vitest',
+                  name: 'vitest',
+                  type: 'node_modules',
+                  fileCount: 0,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
+              ],
+              edges: [
+                { from: 'src/cli', to: 'src/parser', strength: 2, importedNames: [] },
+                { from: 'src/parser', to: 'src/cli', strength: 1, importedNames: [] }, // mutual → 1 cycle
+                { from: 'src/cli', to: 'vitest', strength: 1, importedNames: [] }, // external → excluded
+              ],
+              cycles: [{ modules: ['src/cli', 'src/parser'], severity: 'warning' }],
+            },
+          },
+        },
+      } as unknown as ArchJSON;
+    }
+
+    async function routePackageJson(archJSON: ArchJSON): Promise<ArchJSON> {
+      const fsMock = await getFsMock();
+      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      await router.route(
+        archJSON,
+        makePaths(),
+        makeDiagram({ level: 'package', format: 'json' }),
+        makePool()
+      );
+      return fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
+    }
+
+    it('replaces package entities with the module graph internal nodes', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+
+      expect(written.entities.map((e) => e.id).sort()).toEqual([...INTERNAL_IDS].sort());
+      expect(written.entities.every((e) => e.type === 'package')).toBe(true);
+    });
+
+    it('emits only internal→internal edges with directory-level endpoints', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+
+      expect(written.relations).toHaveLength(2);
+      for (const r of written.relations) {
+        expect(r.type).toBe('dependency');
+        expect(INTERNAL_IDS).toContain(r.source);
+        expect(INTERNAL_IDS).toContain(r.target);
+      }
+    });
+
+    it('every relation endpoint resolves to an entity id (no dangling references)', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+      const ids = new Set(written.entities.map((e) => e.id));
+
+      expect(written.relations.length).toBeGreaterThan(0);
+      for (const r of written.relations) {
+        expect(ids.has(r.source)).toBe(true);
+        expect(ids.has(r.target)).toBe(true);
+      }
+    });
+
+    it('does not fold endpoints to top-level package names nor include external packages', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+      const endpoints = written.relations.flatMap((r) => [r.source, r.target]);
+
+      expect(endpoints).not.toContain('cli');
+      expect(endpoints).not.toContain('parser');
+      expect(endpoints).not.toContain('utils');
+      expect(endpoints).not.toContain('vitest');
+      expect(endpoints).not.toContain('');
+    });
+
+    it('keeps relation.id in <from>_dependency_<to> form (backward compatible)', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+
+      expect(written.relations.map((r) => r.id).sort()).toEqual([
+        'src/cli_dependency_src/parser',
+        'src/parser_dependency_src/cli',
+      ]);
+    });
+
+    it('keeps the module graph in extensions as the source of truth for excluded external edges', async () => {
+      const written = await routePackageJson(makeModuleGraphArchJSON());
+      const edges = written.extensions?.tsAnalysis?.moduleGraph?.edges ?? [];
+
+      expect(edges).toHaveLength(3);
+      expect(edges.some((e) => e.to === 'vitest')).toBe(true);
+    });
+
+    it('renders the project-root module with a stable (root) id while keeping external exclusion', async () => {
+      const rootArchJSON = makeArchJSON({
+        extensions: {
+          tsAnalysis: {
+            version: '1.1',
+            moduleGraph: {
+              nodes: [
+                {
+                  id: '',
+                  name: '(root)',
+                  type: 'internal',
+                  fileCount: 1,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
+                {
+                  id: 'src/cli',
+                  name: 'src/cli',
+                  type: 'internal',
+                  fileCount: 1,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
+              ],
+              edges: [{ from: '', to: 'src/cli', strength: 1, importedNames: [] }],
               cycles: [],
             },
           },
         } as unknown as ArchJSON['extensions'],
       });
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        aliasArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
+      const written = await routePackageJson(rootArchJSON);
 
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('parser');
-      expect(written.relations[0]?.target).toBe('mermaid');
+      expect(written.entities.map((e) => e.id)).toContain('(root)');
+      expect(written.relations[0]?.source).toBe('(root)');
+      expect(written.relations[0]?.target).toBe('src/cli');
+      // id keeps the raw module ids for backward compatibility
+      expect(written.relations[0]?.id).toBe('_dependency_src/cli');
     });
 
-    it('resolves @/cli/commands edge to "cli" package entity ID', async () => {
-      const fsMock = await getFsMock();
-
+    it('drops edges whose endpoint is not an internal node (unresolved @/ alias)', async () => {
       const aliasArchJSON = makeArchJSON({
         extensions: {
           tsAnalysis: {
             version: '1.1',
             moduleGraph: {
-              nodes: [],
-              edges: [
+              nodes: [
                 {
-                  from: '@/cli/commands',
-                  to: '@/parser/parallel-parser',
-                  strength: 2,
-                  importedNames: [],
+                  id: 'src/cli',
+                  name: 'src/cli',
+                  type: 'internal',
+                  fileCount: 1,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
                 },
+                {
+                  id: '@/types',
+                  name: '@/types',
+                  type: 'node_modules',
+                  fileCount: 0,
+                  stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+                },
+              ],
+              edges: [
+                { from: 'src/cli', to: '@/types', strength: 1, importedNames: [] },
+                { from: 'src/cli', to: 'commander', strength: 1, importedNames: [] },
               ],
               cycles: [],
             },
@@ -439,78 +471,48 @@ describe('DiagramOutputRouter', () => {
         } as unknown as ArchJSON['extensions'],
       });
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        aliasArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
-      );
+      const written = await routePackageJson(aliasArchJSON);
 
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('cli');
-      expect(written.relations[0]?.target).toBe('parser');
+      expect(written.relations).toHaveLength(0);
+      expect(written.entities.map((e) => e.id)).toEqual(['src/cli']);
     });
 
-    it('resolves src/ prefix in edge IDs to bare package names', async () => {
+    it('does not rewrite entities/relations when level=class', async () => {
       const fsMock = await getFsMock();
-
-      const srcArchJSON = makeArchJSON({
-        extensions: {
-          tsAnalysis: {
-            version: '1.1',
-            moduleGraph: {
-              nodes: [],
-              edges: [{ from: 'src/cli', to: 'src/utils', strength: 1, importedNames: [] }],
-              cycles: [],
-            },
-          },
-        } as unknown as ArchJSON['extensions'],
-      });
-
+      const archJSON = makeModuleGraphArchJSON();
       const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+
       await router.route(
-        srcArchJSON,
+        archJSON,
         makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
+        makeDiagram({ level: 'class', format: 'json' }),
         makePool()
       );
 
       const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('cli');
-      expect(written.relations[0]?.target).toBe('utils');
+      expect(written.entities.map((e) => e.id)).toEqual(['TopLevel']);
+      expect(written.relations).toHaveLength(0);
     });
 
-    it('passes through bare package names unchanged', async () => {
-      const fsMock = await getFsMock();
-
-      const bareArchJSON = makeArchJSON({
-        extensions: {
-          tsAnalysis: {
-            version: '1.1',
-            moduleGraph: {
-              nodes: [],
-              edges: [{ from: 'parser', to: 'mermaid', strength: 1, importedNames: [] }],
-              cycles: [],
-            },
-          },
-        } as unknown as ArchJSON['extensions'],
-      });
-
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
-      await router.route(
-        bareArchJSON,
-        makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
-        makePool()
+    it('leaves output untouched when moduleGraph is absent', async () => {
+      const written = await routePackageJson(
+        makeArchJSON({ extensions: {} as unknown as ArchJSON['extensions'] })
       );
 
-      const written = fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
-      expect(written.relations).toHaveLength(1);
-      expect(written.relations[0]?.source).toBe('parser');
-      expect(written.relations[0]?.target).toBe('mermaid');
+      expect(written.relations).toHaveLength(0);
+      expect(written.entities).toHaveLength(0);
+    });
+
+    it('does not mutate the original archJSON entities/relations arrays', async () => {
+      const archJSON = makeModuleGraphArchJSON();
+      const originalEntities = archJSON.entities;
+      const originalRelations = archJSON.relations;
+
+      await routePackageJson(archJSON);
+
+      expect(archJSON.entities).toBe(originalEntities);
+      expect(archJSON.relations).toBe(originalRelations);
+      expect(archJSON.relations).toHaveLength(0);
     });
   });
 

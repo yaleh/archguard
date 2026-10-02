@@ -16,7 +16,13 @@ import type { ArchJSON } from '@/types/index.js';
 vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/parser/metrics-calculator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
-vi.mock('@/cli/processors/diagram-output-router.js');
+vi.mock('@/cli/processors/diagram-output-router.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/cli/processors/diagram-output-router.js')>();
+  // Keep the real pure helper (the pipeline runner calls it directly); mock only
+  // the router class, whose behaviour each test overrides.
+  return { ...actual, DiagramOutputRouter: vi.fn() };
+});
 vi.mock('@/cli/progress/parallel-progress.js');
 vi.mock('@/mermaid/render-worker-pool.js', () => ({
   MermaidRenderWorkerPool: vi.fn().mockImplementation(() => ({
@@ -345,6 +351,158 @@ describe('DiagramPipelineRunner', () => {
           },
         })
       );
+    });
+  });
+
+  describe('TS package-level JSON self-consistency (moduleGraph-derived)', () => {
+    function makeTsPackageArchJSON(opts: {
+      mutual: boolean;
+      cycles: { modules: string[]; severity: 'warning' | 'error' }[];
+    }): ArchJSON {
+      const nodes = [
+        {
+          id: 'src/cli',
+          name: 'src/cli',
+          type: 'internal' as const,
+          fileCount: 3,
+          stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+        },
+        {
+          id: 'src/parser',
+          name: 'src/parser',
+          type: 'internal' as const,
+          fileCount: 5,
+          stats: { classes: 3, interfaces: 0, functions: 0, enums: 0 },
+        },
+        {
+          id: 'src/utils',
+          name: 'src/utils',
+          type: 'internal' as const,
+          fileCount: 2,
+          stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+        },
+        {
+          id: 'vitest',
+          name: 'vitest',
+          type: 'node_modules' as const,
+          fileCount: 0,
+          stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+        },
+      ];
+      const edges = [
+        { from: 'src/cli', to: 'src/parser', strength: 2, importedNames: [] },
+        ...(opts.mutual
+          ? [{ from: 'src/parser', to: 'src/cli', strength: 1, importedNames: [] }]
+          : []),
+        { from: 'src/cli', to: 'vitest', strength: 1, importedNames: [] },
+      ];
+
+      return {
+        ...makeArchJson(0, 0),
+        sourceFiles: ['src/cli/index.ts', 'src/parser/parallel-parser.ts', 'src/utils/helpers.ts'],
+        extensions: {
+          tsAnalysis: {
+            version: '1.1',
+            moduleGraph: { nodes, edges, cycles: opts.cycles },
+          },
+        } as unknown as ArchJSON['extensions'],
+      };
+    }
+
+    async function runPackage(moduleGraphArchJSON: ArchJSON) {
+      const { MetricsCalculator: RealMetricsCalculator } = await vi.importActual<
+        typeof import('@/parser/metrics-calculator.js')
+      >('@/parser/metrics-calculator.js');
+
+      setupBaseMocks();
+      const routeMock = vi.fn().mockResolvedValue(undefined);
+      (DiagramOutputRouter as any).mockImplementation(() => ({ route: routeMock }));
+      new MermaidRenderWorkerPool(1, {} as any);
+
+      const config = makeGlobalConfig({ format: 'json' });
+      const runner = new DiagramPipelineRunner(
+        new ArchJSONAggregator() as any,
+        new RealMetricsCalculator() as any,
+        new DiagramOutputRouter(config, makeProgress()) as any,
+        config,
+        makeProgress()
+      );
+
+      const result = await runner.run(
+        makeDiagram({ level: 'package', format: 'json' }),
+        moduleGraphArchJSON,
+        makePool()
+      );
+      return { written: routeMock.mock.calls[0]?.[0] as ArchJSON, result };
+    }
+
+    it('writes relations whose endpoints are all entity ids and folds nothing', async () => {
+      const { written, result } = await runPackage(
+        makeTsPackageArchJSON({
+          mutual: true,
+          cycles: [{ modules: ['src/cli', 'src/parser'], severity: 'warning' }],
+        })
+      );
+
+      expect(result.success, result.error).toBe(true);
+      const ids = new Set(written.entities.map((e) => e.id));
+      expect(written.entities.map((e) => e.id).sort()).toEqual([
+        'src/cli',
+        'src/parser',
+        'src/utils',
+      ]);
+      expect(written.relations).toHaveLength(2); // external vitest edge excluded
+      for (const r of written.relations) {
+        expect(ids.has(r.source)).toBe(true);
+        expect(ids.has(r.target)).toBe(true);
+        expect(r.type).toBe('dependency');
+      }
+      const endpoints = written.relations.flatMap((r) => [r.source, r.target]);
+      expect(endpoints).not.toContain('cli');
+      expect(endpoints).not.toContain('parser');
+      expect(endpoints).not.toContain('vitest');
+    });
+
+    it('metrics and metricVector agree with the written arrays and with moduleGraph.cycles', async () => {
+      const { written } = await runPackage(
+        makeTsPackageArchJSON({
+          mutual: true,
+          cycles: [{ modules: ['src/cli', 'src/parser'], severity: 'warning' }],
+        })
+      );
+      const mg = written.extensions?.tsAnalysis?.moduleGraph;
+
+      expect(written.metrics?.entityCount).toBe(written.entities.length);
+      expect(written.metrics?.relationCount).toBe(written.relations.length);
+      expect(written.metricVector?.totalEntities).toBe(written.entities.length);
+      expect(written.metricVector?.totalRelations).toBe(written.relations.length);
+      expect(written.metricVector?.sccCount).toBe(mg?.cycles.length);
+      expect(written.metricVector?.sccCount).toBe(1);
+      expect(written.metrics?.cycles).toHaveLength(1);
+    });
+
+    it('keeps relation.id in <from>_dependency_<to> form', async () => {
+      const { written } = await runPackage(
+        makeTsPackageArchJSON({
+          mutual: true,
+          cycles: [{ modules: ['src/cli', 'src/parser'], severity: 'warning' }],
+        })
+      );
+
+      expect(written.relations.map((r) => r.id).sort()).toEqual([
+        'src/cli_dependency_src/parser',
+        'src/parser_dependency_src/cli',
+      ]);
+    });
+
+    it('paired negative control: removing the mutual edge yields sccCount === 0', async () => {
+      const { written } = await runPackage(makeTsPackageArchJSON({ mutual: false, cycles: [] }));
+      const mg = written.extensions?.tsAnalysis?.moduleGraph;
+
+      expect(written.relations).toHaveLength(1);
+      expect(written.metrics?.cycles).toEqual([]);
+      expect(written.metricVector?.sccCount).toBe(0);
+      expect(written.metricVector?.sccCount).toBe(mg?.cycles.length);
     });
   });
 

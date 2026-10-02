@@ -16,7 +16,7 @@ import type { MermaidRendererOptions } from '@/mermaid/types.js';
 import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
 import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
 import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js';
-import type { ArchJSON, Relation } from '@/types/index.js';
+import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
@@ -35,6 +35,70 @@ export type OutputPaths = {
     svg: string;
   };
 };
+
+/**
+ * Build the package-level ArchJSON view for a TypeScript project from its
+ * `tsAnalysis.moduleGraph`.
+ *
+ * This is the ONE place that interprets the module graph as package-level
+ * entities/relations. Both the pipeline runner (before computing metrics) and
+ * the JSON writer below call it, so the written arrays and the metrics/
+ * metricVector derived from them can never disagree.
+ *
+ * Semantics:
+ * - `entities` = the module graph's `internal` nodes, one per project-relative
+ *   directory (e.g. `src/analysis`). The project-root module has the stable id
+ *   `(root)` (also its display name). Node `type` is `'package'`.
+ * - `relations` = module graph edges whose BOTH endpoints are internal nodes,
+ *   with `source`/`target` kept at directory granularity (never collapsed to a
+ *   top-level package name). `relation.id` keeps the existing
+ *   `<from>_dependency_<to>` form for backward compatibility.
+ * - Edges pointing at external packages (node_modules, `node:` builtins,
+ *   unresolved `@/` aliases) are NOT emitted as relations — their target is not
+ *   an entity, so emitting them would create dangling references. They remain
+ *   solely in `extensions.tsAnalysis.moduleGraph.edges`.
+ *
+ * Returns the input unchanged when there is no module graph or it has no
+ * internal nodes (non-TS languages, or TS without a module graph).
+ */
+export function buildTsPackageGraphArchJson(archJSON: ArchJSON): ArchJSON {
+  const moduleGraph = archJSON.extensions?.tsAnalysis?.moduleGraph;
+  if (!moduleGraph) return archJSON;
+
+  const internalIds = new Set(
+    moduleGraph.nodes.filter((node) => node.type === 'internal').map((node) => node.id)
+  );
+  if (internalIds.size === 0) return archJSON;
+
+  // Stable entity id for a module node. The project-root module has the empty
+  // module id, which would produce empty-string relation endpoints; render it
+  // as `(root)` instead.
+  const entityId = (moduleId: string): string => (moduleId === '' ? '(root)' : moduleId);
+
+  const entities: Entity[] = moduleGraph.nodes
+    .filter((node) => node.type === 'internal')
+    .map((node) => ({
+      id: entityId(node.id),
+      name: node.name,
+      type: 'package',
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: { file: '', startLine: 0, endLine: 0 },
+    }));
+
+  const relations: Relation[] = moduleGraph.edges
+    .filter((edge) => internalIds.has(edge.from) && internalIds.has(edge.to) && edge.from !== edge.to)
+    .map((edge) => ({
+      // Keep the raw module ids in the id so existing id-parsing consumers keep
+      // working for every non-root edge.
+      id: `${edge.from}_dependency_${edge.to}`,
+      type: 'dependency' as const,
+      source: entityId(edge.from),
+      target: entityId(edge.to),
+    }));
+
+  return { ...archJSON, entities, relations };
+}
 
 /**
  * DiagramOutputRouter
@@ -81,10 +145,10 @@ export class DiagramOutputRouter {
     // Step 1: json format
     if (format === 'json') {
       await fs.ensureDir(path.dirname(paths.paths.json));
-      const outputJson =
-        level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph
-          ? this.injectModuleGraphRelations(archJSON)
-          : archJSON;
+      // Package-level TS output is derived from the module graph, so entities and
+      // relations are at directory granularity and mutually consistent. Other
+      // languages / levels pass through unchanged.
+      const outputJson = level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
       await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
       return;
     }
@@ -176,48 +240,6 @@ export class DiagramOutputRouter {
       console.warn(`  ${label} SVG skipped (${msg}) — MMD saved, no SVG/PNG`);
       return null;
     }
-  }
-
-  /**
-   * Resolve a moduleGraph node ID to a package entity ID.
-   * Examples:
-   *   '@/parser/foo' → 'parser'
-   *   'src/parser'   → 'parser'
-   *   'parser'       → 'parser'
-   */
-  private resolveModuleNodeToPackageId(nodeId: string): string {
-    // Strip @/ prefix
-    const stripped = nodeId.startsWith('@/') ? nodeId.slice(2) : nodeId;
-    // Strip leading src/
-    const noSrc = stripped.startsWith('src/') ? stripped.slice(4) : stripped;
-    // First path component is the package name
-    return noSrc.split('/')[0];
-  }
-
-  /**
-   * Convert TsModuleGraph.edges to Relation[] and attach them to a shallow copy
-   * of the given ArchJSON. Called only for package-level JSON output.
-   *
-   * Each TsModuleDependency { from, to, strength } maps to:
-   *   { id, type: 'dependency', source: from, target: to }
-   *
-   * @/ alias prefixes and src/ prefixes are resolved to bare package names.
-   *
-   * The returned object shares all other fields with the input (shallow copy).
-   */
-  private injectModuleGraphRelations(archJSON: ArchJSON): ArchJSON {
-    const moduleGraph = archJSON.extensions.tsAnalysis.moduleGraph;
-    const relations: Relation[] = moduleGraph.edges.map((edge) => {
-      const source = this.resolveModuleNodeToPackageId(edge.from);
-      const target = this.resolveModuleNodeToPackageId(edge.to);
-      return {
-        id: `${edge.from}_dependency_${edge.to}`,
-        type: 'dependency' as const,
-        source,
-        target,
-      };
-    });
-    return { ...archJSON, relations };
   }
 
   /**
