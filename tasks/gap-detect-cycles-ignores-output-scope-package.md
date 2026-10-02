@@ -1,7 +1,7 @@
 ---
 id: gap-detect-cycles-ignores-output-scope-package
 title: archguard_detect_cycles 忽略 outputScope，package 粒度对目录级环返回与"无环"同形的 []
-status: todo
+status: ready
 labels:
   - gap
   - defect
