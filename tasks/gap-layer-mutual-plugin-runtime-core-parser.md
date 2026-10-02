@@ -23,11 +23,11 @@ depends_on:
 - `plugins/shared -> core`（type-only）：`src/plugins/shared/plugin-factory.ts` 依赖 `@/core/interfaces/language-plugin.js`（`ILanguagePlugin`）。
 - `plugins/shared -> parser`（**值依赖**）：`src/plugins/shared/query-loader.ts` 依赖 `@/parser/errors.js`（`ParseError`）。
 
-后两条与前两条构成目录级互指，`archguard_detect_cycles(outputScope=package)` 修复后会把它们报出。影响范围大：`ParserSession` 有 28 个依赖者、`SyntaxNodeLike` 有 40 个（`archguard_summary` 实测），所以这不是机械搬迁，**需要人先裁定"解析运行时类型归哪一层"**，不允许 worker 自行决定。
+后两条与前两条构成目录级互指，`archguard_detect_cycles(outputScope=package)` 会把它们报出。影响范围大：`ParserSession` 有 28 个依赖者、`SyntaxNodeLike` 有 40 个（`archguard_summary` 实测）；按文件计，`src` 下有 34 个文件、连同 `tests` 共 102 个文件 import `syntax-tree`/`parser-backend`/`parser-runtime` 三个模块（2026-10-02 用 grep 实测）。所以这不是机械搬迁，**需要人先裁定"解析运行时类型归哪一层"**，不允许 worker 自行决定。
 
 候选方案（起草供裁定，非结论）：
 
-- **A（推荐起草）**：把 `plugins/shared` 里与具体语言无关的解析运行时部分（`syntax-tree.ts`、`parser-backend.ts`、`parser-runtime.ts`）下移到 core 层（如 `src/core/parser-runtime/`），`plugins/shared` 只保留插件工厂、查询加载等"插件胶水"；`ParseError` 下移到 `src/types` 或 core。结果：core/parser/plugins 都只依赖 core，`plugins/shared -> core/parser` 变成合法的向下依赖。代价：约 70 个导入点要改，应在旧路径保留类型 re-export 分批迁移。
+- **A（推荐起草）**：把 `plugins/shared` 里与具体语言无关的解析运行时部分（`syntax-tree.ts`、`parser-backend.ts`、`parser-runtime.ts`）下移到 core 层（如 `src/core/parser-runtime/`），`plugins/shared` 只保留插件工厂、查询加载等"插件胶水"；`ParseError` 下移到 `src/types` 或 core。结果：core/parser/plugins 都只依赖 core，`plugins/shared -> core/parser` 变成合法的向下依赖。代价：上述 34 个 src 文件和 102 个含测试的文件要改导入，应在旧路径保留类型 re-export 分批迁移。
 - **B**：保持 `plugins/shared` 为最底层，把 `src/core/rule-engine` 整体移出 core（并入 plugins 层）。代价：rule-engine 被 core/query 等引用的地方要核实，且违背 "core 放通用引擎" 的现有意图。
 - **C**：接受互指并在 `layers.yml`（或等价声明）里把 core、parser、plugins/shared 合并成一层，只靠守卫禁止它们依赖 cli/mermaid/analysis。代价：层级粒度变粗，放弃目录级互指的检出。
 
