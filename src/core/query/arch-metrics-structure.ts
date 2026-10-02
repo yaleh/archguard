@@ -7,8 +7,14 @@ import type { ExtensionAccessor } from './extension-accessor.js';
 
 export interface PackageStatEntry {
   package: string;
+  /** Files whose own directory is exactly this package (not descendants). */
   fileCount: number;
   testFileCount?: number;
+  /**
+   * Entities declared DIRECTLY in this package's files (not in subdirectories),
+   * matching `fileCount` and `languageStats`. `sum(entry.entityCount)` across all
+   * packages therefore equals the project's total entity count — no double-count.
+   */
   entityCount: number;
   methodCount: number;
   fieldCount: number;
@@ -318,6 +324,19 @@ export class StructureMetrics {
     return this.archJson.entities.filter((e) => cycleIds.has(e.id));
   }
 
+  /**
+   * Aggregate entity/method/field counts for the files DIRECTLY inside a package
+   * directory — not its descendants.
+   *
+   * Direct semantics match `fileCount` and `languageStats` (both built from the
+   * module's own files), keep `sum(package.entityCount)` equal to the project's
+   * total entity count, and stop parent directories from dominating `topPackages`
+   * ordering. Two former bugs are fixed here:
+   *   - the root package (`packagePrefix === ''`) used to build `sep === '/'`, which
+   *     no relative path starts with, so `(root)` always reported 0;
+   *   - non-root packages used prefix matching (`file.startsWith(sep)`), folding the
+   *     whole subtree into the parent's own count.
+   */
   private aggregateEntityMetrics(packagePrefix: string): {
     entityCount: number;
     methodCount: number;
@@ -326,15 +345,18 @@ export class StructureMetrics {
     let entityCount = 0,
       methodCount = 0,
       fieldCount = 0;
-    const sep = packagePrefix.endsWith('/') ? packagePrefix : packagePrefix + '/';
     const ws = this.archJson.workspaceRoot;
     for (const [rawFile, ids] of Object.entries(this.index.fileToIds)) {
       let file = rawFile;
       if (path.isAbsolute(file)) {
         if (ws) {
           file = path.relative(ws, file);
+        } else if (packagePrefix === '') {
+          // No workspaceRoot and an absolute path: the root directory cannot be
+          // recovered reliably, so skip rather than mis-bucket unrelated files.
+          continue;
         } else {
-          const marker = '/' + sep;
+          const marker = '/' + packagePrefix + '/';
           const markerIdx = file.indexOf(marker);
           if (markerIdx >= 0) {
             file = file.substring(markerIdx + 1);
@@ -343,7 +365,10 @@ export class StructureMetrics {
           }
         }
       }
-      if (file !== packagePrefix && !file.startsWith(sep)) continue;
+      // Direct match: the file's own directory must equal packagePrefix exactly.
+      const lastSlash = file.lastIndexOf('/');
+      const fileDir = lastSlash >= 0 ? file.substring(0, lastSlash) : '';
+      if (fileDir !== packagePrefix) continue;
       for (const id of ids) {
         const entity = this.entityMap.get(id);
         if (!entity) continue;

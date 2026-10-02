@@ -684,7 +684,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_get_package_stats',
     // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return per-package volume metrics..."
-    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped.',
+    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped. ' +
+      'entityCount/methodCount/fieldCount count only entities declared directly in the package directory (not its subdirectories), matching fileCount and languageStats; summing entityCount across packages equals the project total.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,

@@ -188,6 +188,165 @@ describe('StructureMetrics.getPackageStats — TypeScript module graph', () => {
   });
 });
 
+// ── TypeScript package count semantics (root prefix + direct scope) ─────────
+
+describe('StructureMetrics.getPackageStats — TS root package and count semantics', () => {
+  it('counts root-level files in the (root) package instead of always reporting 0', () => {
+    const archJson = makeArchJson({
+      language: 'typescript',
+      entities: [
+        {
+          ...makeEntity('a.A', 'A'),
+          sourceLocation: { file: 'a.ts', startLine: 1, endLine: 10 },
+        },
+        {
+          ...makeEntity('sub.b.B1', 'B1'),
+          sourceLocation: { file: 'sub/b.ts', startLine: 1, endLine: 10 },
+        },
+        {
+          ...makeEntity('sub.b.B2', 'B2'),
+          sourceLocation: { file: 'sub/b.ts', startLine: 11, endLine: 20 },
+        },
+      ],
+      sourceFiles: ['a.ts', 'sub/b.ts'],
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              {
+                id: '',
+                name: '(root)',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'sub',
+                name: 'sub',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+              },
+            ],
+            edges: [],
+            cycles: [],
+          },
+        },
+      },
+    });
+    const result = makeMetrics(archJson).getPackageStats();
+    const root = result.packages.find((p) => p.package === '(root)');
+    const sub = result.packages.find((p) => p.package === 'sub');
+    // (root) used to be 0 because packagePrefix '' produced sep '/' that no
+    // relative path starts with.
+    expect(root?.entityCount).toBe(1);
+    expect(sub?.entityCount).toBe(2);
+  });
+
+  it('counts only direct files, so entityCount sums to the project total (no subtree double-count)', () => {
+    const archJson = makeArchJson({
+      language: 'typescript',
+      entities: [
+        {
+          ...makeEntity('p.P1', 'P1'),
+          sourceLocation: { file: 'p/x.ts', startLine: 1, endLine: 10 },
+        },
+        {
+          ...makeEntity('p.c.C1', 'C1'),
+          sourceLocation: { file: 'p/c/y.ts', startLine: 1, endLine: 10 },
+        },
+        {
+          ...makeEntity('p.c.C2', 'C2'),
+          sourceLocation: { file: 'p/c/y.ts', startLine: 11, endLine: 20 },
+        },
+      ],
+      sourceFiles: ['p/x.ts', 'p/c/y.ts'],
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              {
+                id: 'p',
+                name: 'p',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'p/c',
+                name: 'p/c',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 2, interfaces: 0, functions: 0, enums: 0 },
+              },
+            ],
+            edges: [],
+            cycles: [],
+          },
+        },
+      },
+    });
+    const result = makeMetrics(archJson).getPackageStats(3);
+    const parent = result.packages.find((p) => p.package === 'p');
+    const child = result.packages.find((p) => p.package === 'p/c');
+    // Parent used to fold in the whole subtree (would have been 3).
+    expect(parent?.entityCount).toBe(1);
+    expect(child?.entityCount).toBe(2);
+    const sum = result.packages.reduce((n, p) => n + p.entityCount, 0);
+    expect(sum).toBe(archJson.entities.length);
+  });
+
+  it('flat directory: a single (root) package holds every entity, aligned with languageStats', () => {
+    const archJson = makeArchJson({
+      language: 'typescript',
+      entities: [
+        {
+          ...makeEntity('a.A', 'A'),
+          sourceLocation: { file: 'a.ts', startLine: 1, endLine: 10 },
+        },
+        {
+          ...makeEntity('b.F1', 'F1', { type: 'function' }),
+          sourceLocation: { file: 'b.ts', startLine: 1, endLine: 5 },
+        },
+        {
+          ...makeEntity('b.F2', 'F2', { type: 'function' }),
+          sourceLocation: { file: 'b.ts', startLine: 6, endLine: 12 },
+        },
+      ],
+      sourceFiles: ['a.ts', 'b.ts'],
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              {
+                id: '',
+                name: '(root)',
+                type: 'internal',
+                fileCount: 2,
+                stats: { classes: 1, interfaces: 0, functions: 2, enums: 0 },
+              },
+            ],
+            edges: [],
+            cycles: [],
+          },
+        },
+      },
+    });
+    const result = makeMetrics(archJson).getPackageStats(3);
+    expect(result.packages).toHaveLength(1); // == summary.totalPackageCount
+    const root = result.packages[0];
+    expect(root.package).toBe('(root)');
+    expect(root.entityCount).toBe(archJson.entities.length);
+    expect(root.entityCount).toBeGreaterThan(0);
+    // entityCount and languageStats must agree in direction (both non-zero here).
+    expect(root.languageStats?.classes).toBeGreaterThan(0);
+    expect(root.languageStats?.functions).toBeGreaterThan(0);
+  });
+});
+
 // ── OO fallback path ────────────────────────────────────────────────────────
 
 describe('StructureMetrics.getPackageStats — OO fallback', () => {
