@@ -9,6 +9,7 @@
 import type { ArchJSON, Relation } from '@/types/index.js';
 import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 
 export class ExtensionAccessor {
   constructor(private readonly archJson: ArchJSON) {}
@@ -36,6 +37,19 @@ export class ExtensionAccessor {
   /** Returns true when the ArchJSON carries a testAnalysis extension. */
   hasTestAnalysis(): boolean {
     return this.archJson.extensions?.testAnalysis !== undefined;
+  }
+
+  /**
+   * Return the TypeScript directory-level module graph, or undefined when the
+   * ArchJSON carries no tsAnalysis.moduleGraph (non-TS languages, Go Atlas, or
+   * an ArchJSON produced before the TS extension existed).
+   *
+   * The module graph nodes are project-root-relative directories and its edges
+   * are import relations between them — this is the only source of package-level
+   * (directory) edges for a TS scope.
+   */
+  getTsModuleGraph(): TsModuleGraph | undefined {
+    return this.archJson.extensions?.tsAnalysis?.moduleGraph;
   }
 
   /** Return all relations from the ArchJSON. */

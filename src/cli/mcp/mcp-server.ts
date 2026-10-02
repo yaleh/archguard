@@ -579,17 +579,26 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_detect_cycles',
-    'Detect dependency cycles in the architecture. For Go: the compiler prevents import cycles, so this tool will return empty for any valid Go project. Use outputScope param to control result granularity.',
+    'Detect dependency cycles in the architecture. Return shape depends on outputScope: ' +
+      '"class" (default) and "method" return an array of entity-granularity cycles ' +
+      '(CycleInfo[]). "package" returns a directory-granularity result ' +
+      '{ granularity: "package", evaluated, reason?, cycles: [{ size, modules }] } — when the ' +
+      'scope has no directory-level edges (non-TS languages, Go Atlas) it returns ' +
+      'evaluated:false with a reason, so "not evaluated" is never conflated with "no cycles". ' +
+      'For Go: the compiler prevents import cycles, so the class/method result will be empty.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
       outputScope: outputScopeParam('class'),
       queryFormat: queryFormatParam,
     },
-    async ({ projectRoot, scope }) => {
+    async ({ projectRoot, scope, outputScope }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const ctx = await loadEngine(path.join(root, '.archguard'), scope);
+        if (outputScope === 'package') {
+          return scopedJsonResponse(ctx, scope, ctx.engine.getPackageCycles());
+        }
         return scopedJsonResponse(ctx, scope, ctx.engine.getCycles());
       });
     }

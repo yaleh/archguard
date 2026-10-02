@@ -12,6 +12,7 @@ import type { ArchJSON, Entity, RelationType, CycleInfo } from '@/types/index.js
 import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 import { narrowEntities, filterRelationsForScope } from './output-scope-filter.js';
 import { serialize } from './edge-list-serializer.js';
 import { ArchMetrics } from './arch-metrics.js';
@@ -67,6 +68,29 @@ export interface EdgeListOutput {
   relations: EdgeListRelation[];
 }
 
+/** One directory-level strongly connected component (package-granularity cycle). */
+export interface PackageCycle {
+  /** Number of modules (directories) in this cycle. */
+  size: number;
+  /** Module IDs (project-root-relative directory paths) that form the SCC. */
+  modules: string[];
+}
+
+/**
+ * Package-granularity cycle result.
+ *
+ * Three-valued by construction: `evaluated: false` (with a `reason`) means the
+ * scope has no directory-level edges and the answer is genuinely unknown — it
+ * must NOT be conflated with `evaluated: true, cycles: []` ("evaluated, no cycles").
+ */
+export interface PackageCyclesResult {
+  granularity: 'package';
+  evaluated: boolean;
+  /** Present only when `evaluated` is false — why package cycles could not be computed. */
+  reason?: string;
+  cycles: PackageCycle[];
+}
+
 export class QueryEngine {
   private archJson: ArchJSON;
   private index: ArchIndex;
@@ -113,6 +137,96 @@ export class QueryEngine {
   /** Return all non-trivial cycles (SCCs with size > 1). */
   getCycles(): CycleInfo[] {
     return this.index.cycles;
+  }
+
+  /**
+   * Return directory-level cycles (strongly connected components of the TS
+   * module graph). Unlike {@link getCycles}, which is entity/class-granularity,
+   * this answers "which directories import each other in a cycle?".
+   *
+   * Returns an explicitly three-valued result so a caller can distinguish
+   * "no cycles at this granularity" (`evaluated: true, cycles: []`) from
+   * "this granularity was not evaluated" (`evaluated: false`, with a `reason`).
+   * The latter is returned for any scope without directory-level edges: non-TS
+   * languages, Go Atlas scopes, or an ArchJSON lacking `tsAnalysis.moduleGraph`.
+   */
+  getPackageCycles(): PackageCyclesResult {
+    const moduleGraph = this.extensionAccessor.getTsModuleGraph();
+    if (!moduleGraph) {
+      return {
+        granularity: 'package',
+        evaluated: false,
+        reason:
+          `no directory-level module graph for this scope ` +
+          `(language: ${this.archJson.language}; tsAnalysis.moduleGraph absent)`,
+        cycles: [],
+      };
+    }
+    return {
+      granularity: 'package',
+      evaluated: true,
+      cycles: this.computePackageCycles(moduleGraph),
+    };
+  }
+
+  /**
+   * Tarjan SCC over the module graph's internal directory edges. SCCs of size
+   * > 1 are directory-level cycles. External (node_modules) nodes and
+   * self-edges are ignored, matching the module graph's own cycle semantics.
+   */
+  private computePackageCycles(moduleGraph: TsModuleGraph): PackageCycle[] {
+    const internal = new Set(
+      moduleGraph.nodes.filter((n) => n.type === 'internal').map((n) => n.id)
+    );
+    const adj = new Map<string, string[]>();
+    for (const id of internal) adj.set(id, []);
+    for (const edge of moduleGraph.edges) {
+      if (edge.from === edge.to) continue;
+      if (internal.has(edge.from) && internal.has(edge.to)) {
+        adj.get(edge.from)?.push(edge.to);
+      }
+    }
+
+    const index = new Map<string, number>();
+    const lowlink = new Map<string, number>();
+    const onStack = new Set<string>();
+    const stack: string[] = [];
+    const sccs: string[][] = [];
+    let counter = 0;
+
+    const strongConnect = (v: string): void => {
+      index.set(v, counter);
+      lowlink.set(v, counter);
+      counter++;
+      stack.push(v);
+      onStack.add(v);
+      for (const w of adj.get(v) ?? []) {
+        if (!index.has(w)) {
+          strongConnect(w);
+          lowlink.set(v, Math.min(lowlink.get(v) ?? 0, lowlink.get(w) ?? 0));
+        } else if (onStack.has(w)) {
+          lowlink.set(v, Math.min(lowlink.get(v) ?? 0, index.get(w) ?? 0));
+        }
+      }
+      if (lowlink.get(v) === index.get(v)) {
+        const scc: string[] = [];
+        let w = '';
+        do {
+          w = stack.pop() ?? '';
+          onStack.delete(w);
+          scc.push(w);
+        } while (w !== v);
+        if (scc.length > 1) sccs.push(scc.sort());
+      }
+    };
+
+    for (const id of internal) {
+      if (!index.has(id)) strongConnect(id);
+    }
+
+    return sccs
+      .sort((a, b) => b.length - a.length || (a[0] ?? '').localeCompare(b[0] ?? ''))
+      .map((modules) => ({ size: modules.length, modules }));
   }
 
   /** Return a summary of the scope. */
