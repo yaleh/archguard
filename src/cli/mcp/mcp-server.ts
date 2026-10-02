@@ -66,6 +66,26 @@ function textResponse(text: string): { content: Array<{ type: 'text'; text: stri
   return { content: [{ type: 'text', text }] };
 }
 
+/**
+ * Guidance returned in `alternative` when a Go-Atlas-only tool is asked for a
+ * scope that has no Atlas data. Points callers at tools that DO work on their
+ * scope (never leave them with a bare "not applicable").
+ */
+function atlasOnlyAlternative(root: string, language: string | undefined): string {
+  if (language === 'go') {
+    return (
+      `Re-run archguard_analyze({ projectRoot: "${root}", lang: "go" }) with Atlas mode enabled ` +
+      '(default; omit --no-atlas).'
+    );
+  }
+  return (
+    'On this scope use archguard_get_package_stats or archguard_get_package_metrics (all languages) ' +
+    'for per-package volume and fan-in/fan-out, archguard_summary({ outputScope: "package" }) for ' +
+    'package-level counts, and archguard_detect_cycles({ outputScope: "package" }) for directory-level ' +
+    'cycles on TypeScript.'
+  );
+}
+
 interface ScopeInfoPayload {
   key: string;
   label: string;
@@ -427,7 +447,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependencies',
-    'Return direct and transitive class-level dependency graph with method signatures (outputScope=method by default); call graph edges (method→method calls) are not included — only class-level structural relations. For Go package-level dependencies use archguard_get_atlas_layer.',
+    'Return direct and transitive class-level dependency graph with method signatures (outputScope=method by default); call graph edges (method→method calls) are not included — only class-level structural relations. For Go Atlas package-level dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -461,7 +481,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependents',
-    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). For Go package-level reverse dependencies use archguard_get_atlas_layer.',
+    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). For Go Atlas package-level reverse dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -606,7 +626,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_summary',
-    'Return pre-computed architecture statistics: exact entity/relation counts (no graph enumeration needed), relation breakdown by type, top-N entities by in-degree / out-degree / method count. ALWAYS call this tool first for any counting or ranking query — do NOT attempt to enumerate or count items from other tool outputs. Default outputScope=package (L1 granularity); for method-level detail call archguard_get_dependencies.',
+    'Return pre-computed architecture statistics: exact entity/relation counts (no graph enumeration needed), relation breakdown by type, top-N entities by in-degree / out-degree / method count. ALWAYS call this tool first for any counting or ranking query — do NOT attempt to enumerate or count items from other tool outputs. Default outputScope=package (L1 granularity); for method-level detail call archguard_get_dependencies. The `capabilities` block reports `packageGraph`/`packageGraphKind`/`packageGraphReason`: a Go Atlas package graph is what archguard_get_package_fanin, archguard_get_package_fanout and archguard_get_atlas_layer require.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -624,8 +644,10 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_atlas_layer',
-    'Query a named layer of the Go Atlas architecture graph; returns nodes and edges for ' +
-      '`package`, `capability`, `goroutine`, or call chains for `flow`.',
+    'Query a named layer of the Go Atlas architecture graph; available only for a Go project ' +
+      'analyzed with Atlas mode (the default for Go). On any other scope it returns ' +
+      '{ applicable: false, reason, alternative } pointing at tools that do work there. ' +
+      'Returns nodes and edges for `package`, `capability`, `goroutine`, or call chains for `flow`.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -649,8 +671,17 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
         if (!extensionAccessor.hasAtlasExtension()) {
           return textResponse(
-            'No Atlas data found. This tool requires a Go project analyzed with Atlas mode.\n' +
-              `Run: archguard_analyze({ projectRoot: "${root}", lang: "go" })`
+            JSON.stringify(
+              {
+                applicable: false,
+                reason:
+                  `No Atlas data found in this scope (language: ${ctx.scopeEntry?.language ?? 'unknown'}). ` +
+                  'This tool requires a Go project analyzed with Atlas mode.',
+                alternative: atlasOnlyAlternative(root, ctx.scopeEntry?.language),
+              },
+              null,
+              2
+            )
           );
         }
 
@@ -684,7 +715,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
   server.tool(
     'archguard_get_package_stats',
     // adr-ok: ADR-006 — low-priority legacy description; pending fix to "Return per-package volume metrics..."
-    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped. ' +
+    'Get per-package volume metrics (file count, entity count, approximate line count) sorted and filtered by threshold. Returns package-level data only (outputScope=package by default); entity-level detail is stripped. Works on all languages; on scopes without a Go Atlas package graph (e.g. TypeScript) it is the alternative to the Atlas-only fan-in/fan-out tools. ' +
       'entityCount/methodCount/fieldCount count only entities declared directly in the package directory (not its subdirectories), matching fileCount and languageStats; summing entityCount across packages equals the project total.',
     {
       projectRoot: projectRootParam,

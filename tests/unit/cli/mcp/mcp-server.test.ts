@@ -1301,6 +1301,113 @@ describe('MCP parse pool transport teardown', () => {
 
 // ── Phase 120: Atlas analytics tool registration via createMcpServer ──────────
 
+// -- Go-Atlas-only capability declaration (gap-ts-package-graph-capability-undeclared) --
+
+describe('archguard_summary — packageGraph capability declaration', () => {
+  it('TypeScript scope: packageGraph=false carries a non-empty kind/reason (not silently false)', async () => {
+    // default mock is a TypeScript scope with no goAtlas extension
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_summary');
+    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+      capabilities: {
+        packageGraph: boolean;
+        packageGraphKind: string;
+        packageGraphReason: string;
+      };
+    };
+
+    expect(parsed.capabilities.packageGraph).toBe(false);
+    expect(parsed.capabilities.packageGraphKind).toBe('none');
+    expect(typeof parsed.capabilities.packageGraphReason).toBe('string');
+    expect(parsed.capabilities.packageGraphReason.length).toBeGreaterThan(0);
+    // The reason names a tool that DOES work on TS, so callers do not have to probe.
+    expect(parsed.capabilities.packageGraphReason).toContain('archguard_get_package_stats');
+  });
+
+  it('Go Atlas scope: packageGraph=true with packageGraphKind=go-atlas (unchanged availability)', async () => {
+    loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const cb = collectTools(server).get('archguard_summary');
+    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+      capabilities: {
+        packageGraph: boolean;
+        packageGraphKind: string;
+        packageGraphReason: string;
+      };
+    };
+
+    expect(parsed.capabilities.packageGraph).toBe(true);
+    expect(parsed.capabilities.packageGraphKind).toBe('go-atlas');
+    expect(parsed.capabilities.packageGraphReason.length).toBeGreaterThan(0);
+  });
+});
+
+/** Collect the atlas analytics tools (fan-in/fan-out/god-packages) as name → handler. */
+async function collectAtlasTools(): Promise<Map<string, Function>> {
+  const { registerAtlasAnalyticsTools } =
+    await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+  const server = new McpServer({ name: 'test', version: '1.0.0' });
+  const tools = new Map<string, Function>();
+  const originalTool = server.tool.bind(server);
+  vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+    tools.set(args[0] as string, args[args.length - 1] as Function);
+    return (originalTool as Function)(...args);
+  });
+  registerAtlasAnalyticsTools(server, '/workspace');
+  return tools;
+}
+
+describe('archguard_get_package_fanin — Go-Atlas-only boundary', () => {
+  it('TypeScript scope: applicable=false with an alternative naming archguard_get_package_stats', async () => {
+    // default mock is a TypeScript scope with hasAtlasExtension: false
+    const tools = await collectAtlasTools();
+    const cb = tools.get('archguard_get_package_fanin');
+    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+      applicable: boolean;
+      reason: string;
+      alternative: string;
+    };
+
+    expect(parsed.applicable).toBe(false);
+    expect(typeof parsed.alternative).toBe('string');
+    expect(parsed.alternative.length).toBeGreaterThan(0);
+    expect(parsed.alternative).toContain('archguard_get_package_stats');
+  });
+});
+
+describe('Go-Atlas-only tool descriptions', () => {
+  it('fan-in / fan-out / atlas-layer first sentences all name "Go Atlas"', async () => {
+    const { registerAtlasAnalyticsTools } =
+      await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+    const descriptions = new Map<string, string>();
+
+    const capture = (register: (server: McpServer, root: string) => void): void => {
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const originalTool = server.tool.bind(server);
+      vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+        descriptions.set(args[0] as string, args[1] as string);
+        return (originalTool as Function)(...args);
+      });
+      register(server, '/workspace');
+    };
+
+    capture(registerTools);
+    capture(registerAtlasAnalyticsTools);
+
+    for (const name of [
+      'archguard_get_package_fanin',
+      'archguard_get_package_fanout',
+      'archguard_get_atlas_layer',
+    ]) {
+      const description = descriptions.get(name);
+      expect(description, `${name} is not registered`).toBeTruthy();
+      // first sentence = up to the first period/newline
+      const firstSentence = (description ?? '').split(/[.\n]/)[0] ?? '';
+      expect(firstSentence).toContain('Go Atlas');
+    }
+  });
+});
+
 describe('createMcpServer — atlas analytics tool registration', () => {
   it('registers archguard_get_package_fanin', async () => {
     const { registerAtlasAnalyticsTools } =
