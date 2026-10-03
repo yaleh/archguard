@@ -62,6 +62,8 @@ depends_on:
 - src/core/rule-engine/ast-node.ts
 - src/core/rule-engine/rule-based-plugin.ts
 - src/core/rule-engine/rule-engine.ts
+- src/core/parser-runtime/index.ts
+- src/core/parser-runtime/parser-backend-resolver.ts
 - src/core/parser-runtime/syntax-tree.ts
 - src/core/parser-runtime/parser-backend.ts
 - src/core/parser-runtime/parser-runtime.ts
@@ -71,11 +73,15 @@ depends_on:
 - src/parser/parse-worker-pool.ts
 - src/parser/process-parse-worker-pools.ts
 - src/parser/parallel-parser.ts
+- src/plugins/shared/native-parser-backend.ts
+- src/plugins/shared/wasm-parser-backend.ts
 - src/plugins/shared/plugin-factory.ts
 - src/plugins/shared/query-loader.ts
+- src/plugins/shared/register-parser-runtime.ts
 - src/plugins/shared/syntax-tree.ts
 - src/plugins/shared/parser-backend.ts
 - src/plugins/shared/parser-runtime.ts
 - tests/unit/architecture/layer-imports.test.ts
+- tests/unit/core/rule-based-plugin.test.ts
 - docs/experiments/layer-map/layers.yml
 - tasks/gap-layer-mutual-plugin-runtime-core-parser.md
