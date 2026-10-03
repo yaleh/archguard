@@ -17,6 +17,8 @@ import type {
   NoSubstitutionTemplateLiteral,
   ImportDeclaration,
   ExportDeclaration,
+  ImportTypeNode,
+  LiteralTypeNode,
 } from 'ts-morph';
 import type {
   TsModuleGraph,
@@ -215,6 +217,23 @@ export class ModuleGraphBuilder {
         const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
         // A literal `import()` always loads the module at runtime → value dependency.
         applyResolution(fromModule, specifier, resolution, [], false);
+      }
+
+      // 3d. Type-position `import('...')` (TSImportType / ts-morph ImportTypeNode).
+      // These are *not* CallExpressions, so 3c never sees them, yet they are real
+      // module references:
+      //   config: import('@/core/interfaces/parser.js').ParseConfig
+      //   type T = import('./t1.js').X
+      //   Promise<import('./t2.js').Y>
+      //   readonly import('./w.js').W[]
+      // They are erased at compile time (no runtime coupling), so each contributes
+      // a type-only edge. A non-literal argument (`import(foo).F`) is not statically
+      // evaluable → no edge, exactly like a non-literal dynamic import().
+      for (const importType of sf.getDescendantsOfKind(SyntaxKind.ImportType)) {
+        const specifier = this.importTypeSpecifier(importType);
+        if (specifier === undefined) continue;
+        const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
+        applyResolution(fromModule, specifier, resolution, [], true);
       }
     }
 
@@ -503,6 +522,27 @@ export class ModuleGraphBuilder {
     }
     if (kind === SyntaxKind.NoSubstitutionTemplateLiteral) {
       return (first as NoSubstitutionTemplateLiteral).getLiteralText();
+    }
+    return undefined;
+  }
+
+  // ── Private: type-position import ─────────────────────────────────────────
+
+  /**
+   * Return the static specifier of a type-position `import('...')` (ImportTypeNode),
+   * or undefined when the argument is not a string / no-substitution template literal.
+   *
+   * The wrapping form does not matter: ts-morph exposes the same ImportTypeNode for
+   * `type T = import('x').X`, `Promise<import('x').X>`, `readonly import('x').X[]`
+   * and union members — this method only inspects the argument literal.
+   */
+  private importTypeSpecifier(node: ImportTypeNode): string | undefined {
+    const argument = node.getArgument();
+    if (argument.getKind() !== SyntaxKind.LiteralType) return undefined;
+    const literal = (argument as LiteralTypeNode).getLiteral();
+    const kind = literal.getKind();
+    if (kind === SyntaxKind.StringLiteral || kind === SyntaxKind.NoSubstitutionTemplateLiteral) {
+      return (literal as StringLiteral | NoSubstitutionTemplateLiteral).getLiteralText();
     }
     return undefined;
   }

@@ -140,6 +140,7 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
    另 9 条只是 strength 少计。
    **对阶段 2 有影响**：检查器要区分 type-only 与值依赖，而「只被类型位置 import type 引用」的目录对
    在图上**完全没有边**，这类 type-only 层间违例会被漏掉（archguard 自身 3 条，quay 0 条）。
+   （已由 `gap-ts-module-graph-misses-type-position-import-type` 修复，见下方「补记」。）
 
 ### 结论：阶段 0/1 的产物是否足以支撑阶段 2 的检查器
 
@@ -151,6 +152,31 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
   `gap-ts-module-graph-misses-type-position-import-type`；external 边的不稳定另立
   `gap-ts-module-graph-external-edge-resolution-dependent`（低优先，不阻塞阶段 2）。
 - 因此**阶段 2 可以开工**，但阶段 3 的「覆盖缺口」展示里必须把这两类缺口显式列出，不得让它们表现为"零违例"。
+
+### 补记：类型位置 `import('...')` 已修复（2026-10-03）
+
+`gap-ts-module-graph-misses-type-position-import-type` 已落地：`ModuleGraphBuilder` 新增对 ts-morph
+`ImportTypeNode`（`SyntaxKind.ImportType`）的扫描，覆盖 `config: import('@/x.js').Cfg`、
+`type T = import('./x.js').X`、`Promise<import('./y.js').Y>`、`readonly import('./z.js').W[]`、
+`typeof import('./v.js').V` 等包装形式，为其产出 **type-only** 边（计入 `typeOnlyStrength`、不计 `valueStrength`）；
+参数非字符串字面量时照旧不产边。`ImportTypeNode` 不是 `CallExpression`，故与既有的动态 `import()` 扫描互不重叠。
+
+独立对账脚本（`verify-edge-completeness.mjs`）同步把类型位置 `import('...')` 计为 type-only 边，并把
+`typePositionImpact` 改为描述「修复后残余影响」。用更新后的脚本在**修前树 / 修后树**（同一份 `src`，仅
+`module-graph-builder` 不同）各跑一次：
+
+| 指标 | 修前树 | 修后树 |
+|---|---|---|
+| `typePositionImpact.edgeAbsent` | 3 | **0** |
+| `typePositionImpact.edgeUnderCounted` | 9 | **0** |
+| 漏边 internal | 2 | **0** |
+| 多报 internal | 0 | **0** |
+| 判定 | fail | **pass**（external caveat 不变） |
+
+修后 archguard 自身出现 `cli/analyze -> core/interfaces`、`cli/processors -> core/interfaces` 两条此前完全缺失的
+type-only 边（`typeOnlyStrength >= 1`、`valueStrength = 0`）。quay（`packages/`）复跑仍 `status=pass`
+（该仓库 0 处类型位置 `import()`）。因此阶段 2 检查器不再有「只被类型位置 import 引用的目录对在图上无任何边」
+这一漏报面；`gap-ts-module-graph-external-edge-resolution-dependent`（external 边不稳定）仍未处理，不阻塞阶段 2。
 
 ## 风险与开放问题
 

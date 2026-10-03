@@ -557,8 +557,9 @@ function isAllTypeClause(clause) {
 }
 
 // 动态 import() 出现的【位置】分类。
-// 运行时 import() 是 CallExpression（builder 会取到边）；类型位置的 `import('x').T` 是 TSImportType
-// （builder 只扫 CallExpression，不产边）—— 必须分开，否则会把它误记成"漏边"。
+// 运行时 import() 是 CallExpression（值位置）；类型位置的 `import('x').T` 是 TSImportType。
+// 两者现在都由 builder 产边（类型位置自 gap-ts-module-graph-misses-type-position-import-type 起），
+// 但拆分不同：值位置 → value，类型位置 → type-only。因此仍要分类，分类结果同时决定 isTypeOnly。
 // `await import(...)` 不足以判定：`await Promise.all([import(a), import(b)])` 里每个 import 的前导
 // token 是 `[` / `,` 而不是 `await`（quay control-plane-http.ts 的真实写法）。
 
@@ -751,16 +752,19 @@ for (const f of sourceFiles) {
       text: d.text,
       position: d.position,
     };
-    if (d.position === 'type') {
-      typePositionImports.push(ev);
-      continue;
-    }
+    // 类型位置的 import('...')（TSImportType）是编译期擦除的类型引用，等价于一条
+    // type-only 边：builder 自 gap-ts-module-graph-misses-type-position-import-type 起
+    // 也为它产边，因此独立扫描同样把它计入边表（isTypeOnly=true）。单独再收集一份到
+    // typePositionImports，供下面的残余影响诊断用。
+    const isTypePosition = d.position === 'type';
+    if (isTypePosition) typePositionImports.push(ev);
     if (d.position === 'unknown') {
       unknownDynamic.push(ev);
       continue;
     }
     if (d.specifier === null) {
-      nonLiteralDynamic.push(ev);
+      // 非字面量类型位置 import() 与运行时一样不可静态求值：不产边，也不计入未求值动态 import。
+      if (!isTypePosition) nonLiteralDynamic.push(ev);
       continue;
     }
     const r = resolveTarget(f, d.specifier);
@@ -777,7 +781,7 @@ for (const f of sourceFiles) {
       selfStatements.push({ ...ev, module: to });
       continue;
     }
-    addEdge(fromModule, to, r.kind, false, ev);
+    addEdge(fromModule, to, r.kind, isTypePosition, ev);
   }
 }
 
@@ -865,8 +869,11 @@ for (const [key, b] of built.entries()) {
   });
 }
 
-// 类型位置 import() 的后果分析：解析到 internal 的，看 moduleGraph 里是否连边都没有
-// （边上没有 = 真实漏掉的 type-only 依赖；边在但少计 = 只是强度偏低）。
+// 类型位置 import() 的【残余】影响：独立扫描现在已把它计入边表，所以这两个清单描述的是
+// 「修复后仍存在的问题」——
+//   edgeAbsent      : 独立扫描有这条 type-only 依赖，moduleGraph 里却整条边都没有；
+//   edgeUnderCounted: 边在，但 moduleGraph 的 strength 少于独立扫描（这条 type-only 贡献没被计入）。
+// 修复前 archguard 自身为 edgeAbsent=3 / edgeUnderCounted=9；修复后两者都应归零。
 const typePositionImpact = { resolvedInternal: 0, edgeAbsent: [], edgeUnderCounted: [] };
 for (const t of typePositionImports) {
   const r = resolveTarget(path.resolve(root, t.file), t.specifier ?? '');
@@ -876,21 +883,26 @@ for (const t of typePositionImports) {
   if (from === r.module) continue;
   const key = `${from}|||${r.module}`;
   const b = built.get(key);
-  if (!b)
+  if (!b) {
     typePositionImpact.edgeAbsent.push({
       edge: `${from} -> ${r.module}`,
       file: t.file,
       line: t.line,
       specifier: t.specifier,
     });
-  else
+    continue;
+  }
+  const e = indep.get(key);
+  if (e && b.strength < e.strength) {
     typePositionImpact.edgeUnderCounted.push({
       edge: `${from} -> ${r.module}`,
       file: t.file,
       line: t.line,
       specifier: t.specifier,
       builtStrength: b.strength,
+      independentStrength: e.strength,
     });
+  }
 }
 
 // 内建 unresolved / unevaluatedDynamicImports 与独立扫描的对照
@@ -977,14 +989,16 @@ const report = {
     typePositionImports: {
       count: typePositionImports.length,
       note:
-        "TSImportType（类型位置的 import('...')），builder 只扫 SyntaxKind.CallExpression，因此不产边。" +
-        '属阶段 0 之外的新缺口，不在本任务内修。样例见 samples。',
+        "TSImportType（类型位置的 import('...')）—— 编译期擦除的类型引用，等价于一条 type-only 边。" +
+        'builder 自 gap-ts-module-graph-misses-type-position-import-type 起为它产边，独立扫描同样计入边表。' +
+        '此处为原始出现次数（含自指/非字面量）。样例见 samples。',
       samples: typePositionImports.slice(0, 10),
     },
     typePositionImpact: {
       note:
-        '类型位置 import() 若解析到项目内目录，其边在 moduleGraph 里可能【完全不存在】——' +
-        '这不是强度偏差，而是一条本该有的 type-only 依赖整条缺失。edgeAbsent 即此类。',
+        '类型位置 import() 的残余影响（独立扫描已计入边表后仍存在的问题）：edgeAbsent = 独立扫描有该 type-only ' +
+        '依赖但 moduleGraph 整条边缺失；edgeUnderCounted = 边在但 strength 少计（该 type-only 贡献没被计入）。' +
+        '修复前 archguard 自身 3 / 9，修复后两者应归零。',
       resolvedInternal: typePositionImpact.resolvedInternal,
       edgeAbsent: typePositionImpact.edgeAbsent,
       edgeUnderCounted: typePositionImpact.edgeUnderCounted,
@@ -1029,7 +1043,7 @@ function summaryText(r) {
     `  (b) strength 不符=${R.strengthMismatch.length}；拆分母等式违例=${R.splitInvariantViolations.length}；拆分缺字段=${R.splitMissing.length}；type-only 判定不符=${R.splitMismatch.length}`
   );
   L.push(
-    `  归因: 类型位置 import()=${r.attribution.typePositionImports.count}（builder 不产边，其中整条边缺失 ${r.attribution.typePositionImpact.edgeAbsent.length}、仅少计 ${r.attribution.typePositionImpact.edgeUnderCounted.length}） 无法归位 import()=${r.attribution.unknownDynamicImports.count} 未解析别名 built=${r.attribution.unresolvedAlias.built.length}/indep=${r.attribution.unresolvedAlias.independent.length} 动态 import 未求值 built=${r.attribution.unevaluatedDynamicImports.built}/indep=${r.attribution.unevaluatedDynamicImports.independent}`
+    `  归因: 类型位置 import()=${r.attribution.typePositionImports.count}（残余：整条边缺失 ${r.attribution.typePositionImpact.edgeAbsent.length}、少计 ${r.attribution.typePositionImpact.edgeUnderCounted.length}） 无法归位 import()=${r.attribution.unknownDynamicImports.count} 未解析别名 built=${r.attribution.unresolvedAlias.built.length}/indep=${r.attribution.unresolvedAlias.independent.length} 动态 import 未求值 built=${r.attribution.unevaluatedDynamicImports.built}/indep=${r.attribution.unevaluatedDynamicImports.independent}`
   );
   for (const m of R.missedInternal)
     L.push(
@@ -1091,13 +1105,13 @@ ${rows(R.splitMismatch, ['edge', 'built.typeOnly', 'built.value', 'independent.t
 
 ## 归因（独立扫描可见但 builder 结构性不产边的部分）
 
-- 类型位置 \`import('...')\`（TSImportType）: ${r.attribution.typePositionImports.count}
+- 类型位置 \`import('...')\`（TSImportType，已是独立扫描的 type-only 边）: ${r.attribution.typePositionImports.count}
 ${r.attribution.typePositionImports.samples.map((s) => `    - ${s.file}:${s.line} \`${s.specifier}\``).join('\n')}
   （上面只列前 ${r.attribution.typePositionImports.samples.length} 条，全量见 --json 产物）
-- 类型位置 import() 解析到项目内目录后，**整条边在 moduleGraph 里不存在**的: ${r.attribution.typePositionImpact.edgeAbsent.length}
+- 残余：独立扫描有该 type-only 依赖，但 moduleGraph **整条边不存在**的: ${r.attribution.typePositionImpact.edgeAbsent.length}
 ${r.attribution.typePositionImpact.edgeAbsent.map((s) => `    - ${s.edge}  (${s.file}:${s.line})`).join('\n')}
-- 其中只是被少计的: ${r.attribution.typePositionImpact.edgeUnderCounted.length}
-${r.attribution.typePositionImpact.edgeUnderCounted.map((s) => `    - ${s.edge}  built strength=${s.builtStrength}  (${s.file}:${s.line})`).join('\n')}
+- 残余：边在但 strength **少计**的: ${r.attribution.typePositionImpact.edgeUnderCounted.length}
+${r.attribution.typePositionImpact.edgeUnderCounted.map((s) => `    - ${s.edge}  built=${s.builtStrength} indep=${s.independentStrength}  (${s.file}:${s.line})`).join('\n')}
 - 无法自动归位的 \`import('...')\`: ${r.attribution.unknownDynamicImports.count}
 ${r.attribution.unknownDynamicImports.samples.map((s) => `    - ${s.file}:${s.line} \`${s.specifier}\``).join('\n')}
 - 未解析别名边: built ${r.attribution.unresolvedAlias.built.length} / indep ${r.attribution.unresolvedAlias.independent.length}（一致: ${r.attribution.unresolvedAlias.agree}）

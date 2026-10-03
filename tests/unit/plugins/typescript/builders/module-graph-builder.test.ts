@@ -248,6 +248,82 @@ export async function load() {
   });
 });
 
+describe('ModuleGraphBuilder — type-position import() (ImportTypeNode)', () => {
+  const MODULE_B = `export interface X {}
+export interface Y {}
+export interface Z {}
+export interface W {}
+export interface U {}`;
+
+  /** Build a graph from a single `src/a/x.ts` source against `src/b/index.ts`. */
+  const buildWith = (aSource: string) => {
+    const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+    project.createSourceFile('/root/src/b/index.ts', MODULE_B);
+    project.createSourceFile('/root/src/a/x.ts', aSource);
+    return new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+  };
+
+  // `import('...')` in a type position is a TSImportType / ts-morph ImportTypeNode,
+  // NOT a CallExpression — the builder must find it in every wrapping form.
+  const typePositionForms: Array<[label: string, source: string]> = [
+    ['type alias', `type T = import('../b/index').X;`],
+    ['interface property type', `interface I { p: import('../b/index').Y }`],
+    ['Promise<> type argument', `type P = Promise<import('../b/index').Z>;`],
+    ['readonly array element', `type R = readonly import('../b/index').W[];`],
+    ['union member', `type U2 = string | import('../b/index').U;`],
+    ['typeof import()', `type V = typeof import('../b/index').X;`],
+  ];
+
+  it.each(typePositionForms)(
+    '%s → strength=1, typeOnlyStrength=1, valueStrength=0',
+    (_label, src) => {
+      const graph = buildWith(src);
+      const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+      expect(edge).toBeDefined();
+      expect(edge?.strength).toBe(1);
+      expect(edge?.typeOnlyStrength).toBe(1);
+      expect(edge?.valueStrength).toBe(0);
+    }
+  );
+
+  it('does NOT emit an edge when the import() type argument is not a string literal', () => {
+    const graph = buildWith(`type F = import(someSpecifier).X;`);
+    expect(graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b')).toBeUndefined();
+    // A type-position non-literal is not a runtime dynamic import: not counted here.
+    expect(graph.unevaluatedDynamicImports ?? 0).toBe(0);
+  });
+
+  it('does NOT treat import( inside comments or string literals as a reference (negative control)', () => {
+    const graph = buildWith(
+      `// type T = import('../b/index').X
+/* interface I { p: import('../b/index').Y } */
+const s = "type T = import('../b/index').X";
+const t = 'type U = import("../b/index").Y';
+type Real = import('../b/index').U;`
+    );
+    // Three decoys (line comment, block comment, two string literals) must not
+    // produce edges — only the one genuine type-position reference counts.
+    expect(graph.edges.length).toBe(1);
+    const edge = graph.edges[0];
+    expect(edge.from).toBe('src/a');
+    expect(edge.to).toBe('src/b');
+    expect(edge.typeOnlyStrength).toBe(1);
+    expect(edge.valueStrength).toBe(0);
+  });
+
+  it('splits a directory pair carrying both a value import and a type-position import', () => {
+    const graph = buildWith(
+      `import { X } from '../b/index';
+type T = import('../b/index').Y;`
+    );
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+    expect(edge).toBeDefined();
+    expect(edge?.strength).toBe(2);
+    expect(edge?.typeOnlyStrength).toBe(1);
+    expect(edge?.valueStrength).toBe(1);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Type-only vs value dependency split (typeOnlyStrength / valueStrength)
 // ---------------------------------------------------------------------------
