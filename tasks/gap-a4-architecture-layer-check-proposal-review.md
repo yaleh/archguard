@@ -50,7 +50,7 @@ depends_on:
 
 - [x] 人的裁定已写入上面"## 人的裁定"一节，任务状态由 needs-human 改为 todo
 - [x] 评审后的 proposal 文档已按裁定更新（`docs/proposals/proposal-architecture-layer-check.md` 状态 Draft → Approved v2，并记录修订）
-- [ ] 若批准：已生成分阶段实施计划文档（`docs/plans/plan-a4-layer-check.md`）并按阶段立出 quay 任务 —— 阶段 0.5/A0 已立（todo）；阶段 2–4 的入口形态按裁定 2 待 A0 完成后裁定，尚未立项
+- [x] 若批准：已生成分阶段实施计划文档（`docs/plans/plan-a4-layer-check.md`）并按阶段立出 quay 任务 —— 阶段 0.5/A0 已立项且均已完成（done，见计划文档「当前状态」）；阶段 2–4 的入口形态按裁定 2 待 A0 完成后裁定，尚未立项
 - [x] 若批准：`docs/user-guide/architecture-checking-scenarios.md` 的 Limits 一节已加明确结论（限制成立，加提案指针）
 
 ## DoD
