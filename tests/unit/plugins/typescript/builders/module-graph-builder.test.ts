@@ -7,9 +7,9 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Project } from 'ts-morph';
+import { Project, SyntaxKind } from 'ts-morph';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
-import type { SourceFile, ImportDeclaration } from 'ts-morph';
+import type { SourceFile, ImportDeclaration, ExportDeclaration } from 'ts-morph';
 
 // ---------------------------------------------------------------------------
 // Helpers to create minimal ts-morph mock objects
@@ -42,6 +42,19 @@ function makeSourceFile(filePath: string, imports: ImportDeclaration[] = []): So
     getExportDeclarations: () => [],
     getDescendantsOfKind: () => [],
   } as unknown as SourceFile;
+}
+
+function makeExportDecl(
+  specifier: string,
+  resolvedFile: SourceFile | null = null
+): ExportDeclaration {
+  return {
+    getModuleSpecifierSourceFile: () => resolvedFile,
+    getModuleSpecifierValue: () => specifier,
+    getNamedExports: () => [],
+    getNamespaceExport: () => undefined,
+    isTypeOnly: () => false,
+  } as unknown as ExportDeclaration;
 }
 
 // ---------------------------------------------------------------------------
@@ -450,5 +463,101 @@ describe('ModuleGraphBuilder — bare alias resolution from tsconfig paths', () 
     expect(
       graph.unresolved?.some((u) => u.from === 'src/a' && u.specifier === '@/does/not/exist')
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// External edges are decided by the specifier, not by resolver success
+// ---------------------------------------------------------------------------
+
+describe('ModuleGraphBuilder — external edges are resolution-independent', () => {
+  const builder = new ModuleGraphBuilder();
+  const projectRoot = '/project/src';
+
+  /** A ts-morph SourceFile living in node_modules: reachable, but not our module. */
+  const nodeModulesFile = (pkg: string) =>
+    makeSourceFile(`/project/node_modules/${pkg}/lib/index.d.ts`);
+
+  /** A minimal `import('...')` CallExpression mock (SyntaxKind.ImportKeyword). */
+  const dynamicImport = (specifier: string) => ({
+    getExpression: () => ({ getKind: () => SyntaxKind.ImportKeyword }),
+    getArguments: () => [
+      { getKind: () => SyntaxKind.StringLiteral, getLiteralText: () => specifier },
+    ],
+  });
+
+  /** Source file mock carrying static imports, re-exports and dynamic imports. */
+  const callerFile = (
+    filePath: string,
+    parts: { imports?: ImportDeclaration[]; exports?: ExportDeclaration[]; dynamic?: unknown[] }
+  ) =>
+    ({
+      getFilePath: () => filePath,
+      getImportDeclarations: () => parts.imports ?? [],
+      getExportDeclarations: () => parts.exports ?? [],
+      // The builder asks for two different SyntaxKinds; only CallExpression is
+      // the dynamic-import collection (ImportType has no nodes in these mocks).
+      getDescendantsOfKind: (kind: SyntaxKind) =>
+        kind === SyntaxKind.CallExpression ? (parts.dynamic ?? []) : [],
+    }) as unknown as SourceFile;
+
+  it('does not drop the edge when ts-morph resolves the package into node_modules', () => {
+    // `fs-extra` resolves to a real .d.ts under node_modules (hence a non-null
+    // resolvedFile) but that file is not in fileToModule — the edge must survive.
+    const caller = callerFile('/project/src/a/x.ts', {
+      imports: [makeImportDecl('fs-extra', nodeModulesFile('fs-extra'), ['ensureDir'])],
+    });
+
+    const graph = builder.build(projectRoot, [caller], []);
+
+    const edge = graph.edges.find((e) => e.from === 'a' && e.to === 'fs-extra');
+    expect(edge).toBeDefined();
+    expect(edge?.strength).toBe(1);
+    expect(edge?.valueStrength).toBe(1);
+    expect(graph.nodes.find((n) => n.id === 'fs-extra')?.type).toBe('node_modules');
+  });
+
+  it('emits an external edge for `export ... from` a resolvable package', () => {
+    const caller = callerFile('/project/src/a/x.ts', {
+      exports: [makeExportDecl('micromatch', nodeModulesFile('micromatch'))],
+    });
+
+    const graph = builder.build(projectRoot, [caller], []);
+
+    expect(graph.edges.find((e) => e.from === 'a' && e.to === 'micromatch')).toBeDefined();
+  });
+
+  it('gives a resolvable and an unresolvable package the same static+dynamic edge', () => {
+    const caller = callerFile('/project/src/a/x.ts', {
+      imports: [
+        makeImportDecl('fs-extra', nodeModulesFile('fs-extra'), ['ensureDir']),
+        makeImportDecl('ghost-pkg', null, ['ghost']),
+      ],
+      dynamic: [dynamicImport('fs-extra'), dynamicImport('ghost-pkg')],
+    });
+
+    const graph = builder.build(projectRoot, [caller], []);
+
+    // Both packages get one static + one dynamic contribution (strength 2):
+    // resolver success must not decide whether the edge exists.
+    const resolved = graph.edges.find((e) => e.from === 'a' && e.to === 'fs-extra');
+    const unresolved = graph.edges.find((e) => e.from === 'a' && e.to === 'ghost-pkg');
+    expect(resolved?.strength).toBe(2);
+    expect(unresolved?.strength).toBe(2);
+    expect(graph.nodes.find((n) => n.id === 'ghost-pkg')?.type).toBe('node_modules');
+  });
+
+  it('still skips a relative specifier that resolves outside the source root', () => {
+    // Negative control: a relative import resolving to a file we do not own is
+    // NOT a package — it must not create a phantom external node.
+    const outsideFile = makeSourceFile('/project/outside/util.ts');
+    const caller = makeSourceFile('/project/src/a/x.ts', [
+      makeImportDecl('../../outside/util', outsideFile, ['util']),
+    ]);
+
+    const graph = builder.build(projectRoot, [caller], []);
+
+    expect(graph.edges.length).toBe(0);
+    expect(graph.nodes.some((n) => n.type === 'node_modules')).toBe(false);
   });
 });

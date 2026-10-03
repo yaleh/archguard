@@ -48,11 +48,13 @@ interface AliasConfig {
 /**
  * Outcome of trying to map a module specifier to a target module.
  * - `internal`        → an edge to an in-project module (mapped through fileToModule)
- * - `external`        → a bare package → node_modules node
+ * - `external`        → a bare package → node_modules node. Decided by the
+ *                       specifier alone, never by whether a resolver could find
+ *                       the package on disk (see `TsModuleDependency.to`).
  * - `unresolved-alias`→ an alias-prefixed specifier that could not be resolved
  *                       (recorded in `unresolved`, never as an external node)
- * - `skip`            → a relative specifier that does not resolve inside the project
- *                       (no edge, no phantom node)
+ * - `skip`            → a relative or alias-prefixed specifier that does not
+ *                       resolve to an in-project module (no edge, no phantom node)
  */
 type TargetResolution =
   | { kind: 'internal'; module: string }
@@ -383,10 +385,26 @@ export class ModuleGraphBuilder {
     if (resolvedFile) {
       const absTo = resolvedFile.getFilePath();
       const mod = fileToModule.get(absTo);
-      // File exists in the ts-morph project but outside our source root — skip.
-      // This avoids creating phantom ".." module nodes for imports that resolve
-      // to e.g. node_modules or sibling directories outside projectRoot.
-      return mod !== undefined ? { kind: 'internal', module: mod } : { kind: 'skip' };
+      if (mod !== undefined) return { kind: 'internal', module: mod };
+      // Resolved to a file outside the analysed source root (typically a file in
+      // node_modules). For a bare package specifier this is a real external
+      // dependency, and the edge MUST be emitted here: ts-morph *can* resolve
+      // such a package (that is why we got a SourceFile at all), but the resolved
+      // file is not one of our modules, so the old code returned `skip` and the
+      // edge vanished. That made the edge's existence depend on whether the
+      // resolver happened to find the package — the instability this change
+      // removes. Emitting it keeps this path consistent with the
+      // unresolved-bare-package branch below, which is where a literal
+      // `import('<pkg>')` always lands (ts-morph resolves no CallExpression
+      // argument), so static import/export and literal dynamic import() of the
+      // same package now agree.
+      // Relative and alias-prefixed specifiers that escape the source root stay
+      // skipped: they are not packages, and a phantom external node for them
+      // would be wrong.
+      if (!specifier.startsWith('.') && !this.matchAliasConfig(specifier, aliasConfig)) {
+        return { kind: 'external', name: this.externalPackageName(specifier) };
+      }
+      return { kind: 'skip' };
     }
 
     if (specifier.startsWith('.')) {
@@ -414,11 +432,23 @@ export class ModuleGraphBuilder {
       }
     }
 
-    // Bare package name (first segment, or first two for scoped packages)
-    const name = specifier.startsWith('@')
+    // Bare package name
+    return { kind: 'external', name: this.externalPackageName(specifier) };
+  }
+
+  /** Whether `specifier` matches one of the project's tsconfig `paths` aliases. */
+  private matchAliasConfig(specifier: string, aliasConfig: AliasConfig | undefined): boolean {
+    return Boolean(aliasConfig && this.matchAliasTargets(specifier, aliasConfig.paths).length > 0);
+  }
+
+  /**
+   * Package name of a bare specifier: the first segment, or the first two for a
+   * scoped package (`@scope/pkg/sub` → `@scope/pkg`).
+   */
+  private externalPackageName(specifier: string): string {
+    return specifier.startsWith('@')
       ? specifier.split('/').slice(0, 2).join('/')
       : specifier.split('/')[0];
-    return { kind: 'external', name };
   }
 
   /**

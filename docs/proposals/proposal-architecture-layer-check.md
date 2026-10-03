@@ -163,7 +163,8 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
    于是同一个包在不同目录下「有边 / 无边」取决于 ts-morph 是否解析得到它。动态 `import()` 不走 ts-morph 解析，
    一律落到 external——所以只有被 `await import` 过的包才一定出现在图里。
    **对阶段 2 无阻塞**：层间检查只消费 internal 边（`check-layers.mjs` 只把 external 计入覆盖缺口数字），
-   但覆盖缺口里的「外部依赖边数」会偏小。
+   但覆盖缺口里的「外部依赖边数」会偏小。（已由 `gap-ts-module-graph-external-edge-resolution-dependent` 修复，
+   见下方「补记：external 边的解析无关性已修复」。）
 2. **类型位置的 `import('...')`（TSImportType）整类不产边**——archguard 16 处、quay 0 处。
    builder 只扫 `SyntaxKind.CallExpression`，而 `config: import('@/core/interfaces/parser.js').ParseConfig`
    是 ImportTypeNode。16 处中 13 处解析到项目内目录：**3 条的边在 moduleGraph 里完全不存在**
@@ -182,7 +183,9 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
   按本任务 DoD「发现新的漏边须立新 gap 任务而不是顺手修」，已另立
   `gap-ts-module-graph-misses-type-position-import-type`；external 边的不稳定另立
   `gap-ts-module-graph-external-edge-resolution-dependent`（低优先，不阻塞阶段 2）。
-- 因此**阶段 2 可以开工**，但阶段 3 的「覆盖缺口」展示里必须把这两类缺口显式列出，不得让它们表现为"零违例"。
+  两个 gap 任务均已落地（见两条「补记」），两个项目的对账现均为 `status=pass` 且 external/internal 漏边全 0。
+- 因此**阶段 2 可以开工**；阶段 3 的「覆盖缺口」展示仍须把 external 边（解析无关）与 type-only 拆分明示，
+  不得让它们表现为"零违例"。
 
 ### 补记：类型位置 `import('...')` 已修复（2026-10-03）
 
@@ -207,7 +210,45 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
 修后 archguard 自身出现 `cli/analyze -> core/interfaces`、`cli/processors -> core/interfaces` 两条此前完全缺失的
 type-only 边（`typeOnlyStrength >= 1`、`valueStrength = 0`）。quay（`packages/`）复跑仍 `status=pass`
 （该仓库 0 处类型位置 `import()`）。因此阶段 2 检查器不再有「只被类型位置 import 引用的目录对在图上无任何边」
-这一漏报面；`gap-ts-module-graph-external-edge-resolution-dependent`（external 边不稳定）仍未处理，不阻塞阶段 2。
+这一漏报面。
+
+### 补记：external 边的解析无关性已修复（2026-10-03）
+
+`gap-ts-module-graph-external-edge-resolution-dependent` 已落地。`ModuleGraphBuilder.resolveTarget` 不再把
+「ts-morph 把裸包名解析到 `node_modules` 里的文件」当作 `skip`：裸包名（非 `.` 开头、且不匹配 tsconfig `paths`
+别名）一旦解析到源码根外，就按 **specifier 自身** 产出 external 边——与解析不到时落到的那条 external 分支同一口径。
+相对的 / 别名 specifier 逃出源码根仍 `skip`（不造幻影 external 节点）。语义写进 `TsModuleDependency.to` 的文档注释：
+external 边表示「该模块 **引用了** 这个包」，与解析器能否在磁盘上找到它无关，故静态 `import ... from '<pkg>'`、
+`export ... from '<pkg>'` 与字面量 `import('<pkg>')` 对同一个包产出一致的 external 边。
+
+用同一份 `src`（仅 `module-graph-builder` 不同）在 archguard 自身与 quay 各跑一次独立对账（`verify-edge-completeness.mjs`）：
+
+| 项目 | 指标 | 修前 | 修后 |
+|---|---|---|---|
+| archguard 自身 | 漏边 external | **31** | **0** |
+| archguard 自身 | 漏边 internal | 0 | 0 |
+| archguard 自身 | 多报 internal / external | 0 / 0 | 0 / 0 |
+| archguard 自身 | strength 与独立扫描不符（internal） | 0 | 0 |
+| archguard 自身 | external 边数 | 120 | **151**（+31） |
+| archguard 自身 | external 节点数 | 36 | **39**（+3） |
+| archguard 自身 | external 边 strength 合计 | 250 | 318 |
+| archguard 自身 | internal 边数 | 200 | 200 |
+| archguard 自身 | 判定 | pass | pass |
+| quay（`packages/`） | 漏边 internal / external | 0 / 0 | 0 / 0 |
+| quay（`packages/`） | external 边数 / 节点数 | 65 / 13 | 65 / 13 |
+| quay（`packages/`） | internal 边数 | 28 | 28 |
+| quay（`packages/`） | 判定 | pass | pass |
+
+archguard 自身 +31 条 external 边恰好等于此前逐条归因的 31 条（`fs-extra` 23、`micromatch` 6、`cli-progress` 1、
+`js-yaml` 1），新增 3 个 external 节点（`micromatch`、`cli-progress`、`js-yaml`；`fs-extra` 此前已因动态 `import()`
+存在）。external 边 strength 合计 250→318，超出 +31 的部分对应此前「只是少计」的 2 条
+（`cli/analyze -> fs-extra`、`cli/mcp/tools -> fs-extra` 各自补足到独立扫描值）。internal 边集在两套独立实现下
+仍逐条一致（archguard 200/200、quay 28/28），internal 漏边/多报/strength 判定仍全 0，即本次改动未破坏 internal
+边集合。quay 的 external 节点集合、边数与 strength 修复前后逐项相同（`status=pass` 不变）——该校验仓库的 external
+边此前已完整，没有一条源自杀 `skip`。
+
+下游展示影响：archguard 自身 external 节点 36→39、external 边 120→151（+26%），覆盖缺口里的「外部依赖边数」
+从此前系统性偏小上升为真实值；internal 模块数（47）与 internal 边数（200）不变，故阶段 2 层间检查的判定面不受影响。
 
 ## 风险与开放问题
 

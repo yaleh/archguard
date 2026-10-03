@@ -49,7 +49,20 @@ export interface TsModuleNode {
 }
 
 export interface TsModuleDependency {
+  /** Module id of the importing module (project-root-relative directory). */
   from: string;
+  /**
+   * Target of the edge. Either an internal module id, or — for an **external
+   * edge** — the referenced package name (a `node_modules` node such as
+   * `fs-extra`, `@scope/pkg`, or a builtin like `node:path`).
+   *
+   * External-edge semantics: the edge means "this module **references** this
+   * package", regardless of whether the package can be resolved to a concrete
+   * file. Whether ts-morph (or any resolver) happens to find the package on
+   * disk MUST NOT decide whether the edge exists: a static `import ... from
+   * '<pkg>'`, an `export ... from '<pkg>'` and a literal `import('<pkg>')` of the
+   * same package all contribute to the same external edge (or are all absent).
+   */
   to: string;
   /**
    * Total number of statements (static imports, `export ... from` re-exports and
