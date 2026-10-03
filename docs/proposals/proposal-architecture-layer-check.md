@@ -88,7 +88,69 @@ known_violations: [{ edge: "A -> B", evidence: "..." }]     # 棘轮基线
 | 3 | 单页展示 + 确定性输出 + `--check` | 阶段 2 |
 | 4 | 编排 skill + 起草 subagent | 阶段 2、3 |
 
+阶段 0/1 的**真实对照验证**见下文「阶段 0/1 验证记录」——两个项目上 internal 边集合完整、拆分与独立扫描一致；
+但发现阶段 0 未覆盖的一类漏边（类型位置的 `import('...')`），已另立 gap 任务。
+
 建议在 `gap-layer-mutual-plugin-runtime-core-parser` 完成后再把 archguard 自身的基线定为"零违例"，使其成为检查器的第一个真实样本。
+
+## 阶段 0/1 验证记录（2026-10-03）
+
+阶段 0/1 两个 gap 任务各自的 AC 是在**修前树**上写的、只验证了自己的缺口。在把阶段 2 的内核建在其上之前，
+用一条**不读 moduleGraph** 的独立路径重新取边对账。脚本：`docs/experiments/layer-map/verify-edge-completeness.mjs`
+（实验产物，不是阶段 2 的内核）。
+
+**独立性**：边由脚本自己按位置扫描源文件得出（行首 `import/export … from` 语句、`export * from`、字面量
+`import()`），不调用 ts-morph、不读 `moduleGraph.edges` 推导任何一条边；specifier → 目录的解析（相对路径候选扩展、
+tsconfig `paths` 别名、裸包名）与注释屏蔽均为独立实现，只从 tsconfig 读 `baseUrl`/`paths`。注释屏蔽是
+字符串/正则感知的状态机——`--self-test` 用 5 组成对负对照守住两面：注释/字符串里的路径**不产生**边，
+字符串里的 `/*` **不吞掉**后续真实代码（proposal §2 记录的 quay 事故）。同一输入连跑两次产物逐字节一致。
+
+复现：
+
+```bash
+node dist/cli/index.js analyze -s <项目源码根> -f json --output-dir /tmp/out --work-dir /tmp/work
+node docs/experiments/layer-map/verify-edge-completeness.mjs --self-test
+node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/package.json --label <名字> --json /tmp/r.json --md /tmp/r.md
+```
+
+### 结果
+
+| 项目 | 文件 | 独立边 / internal 内建边 | (a) 漏边 internal | (a) 多报 internal | (b) 拆分母等式违例 | (b) type-only 判定不符（internal） | 判定 |
+|---|---|---|---|---|---|---|---|
+| archguard 自身 | 306 | 348 / 197 | **0** | **0** | 0 | 0 | pass |
+| quay（`packages/`） | 125 | 93 / 28 | **0** | **0** | 0 | 0 | pass |
+
+两边的 `mg.unresolved`（0）与 `mg.unevaluatedDynamicImports`（archguard 4、quay 1）也与独立扫描逐一吻合，
+即阶段 0 声称覆盖的三类（重导出、字面量动态 `import()`、裸 `@/` 别名）在两个项目上都成立。
+
+### 逐条归因的偏差
+
+1. **external（node_modules）边集合既不完整也不稳定**——archguard 漏 31 条、其中 2 条只是少计；quay 0 条。
+   目标包：`fs-extra`(23)、`micromatch`(6)、`cli-progress`(1)、`js-yaml`(1)。
+   根因：`ModuleGraphBuilder.resolveTarget` 先看 ts-morph 的 `getModuleSpecifierSourceFile()`；裸包名若能解析到
+   `node_modules` 里的文件，该文件不在 `fileToModule` → 返回 `skip`（不产边），解析不到才落到 external 分支。
+   于是同一个包在不同目录下「有边 / 无边」取决于 ts-morph 是否解析得到它。动态 `import()` 不走 ts-morph 解析，
+   一律落到 external——所以只有被 `await import` 过的包才一定出现在图里。
+   **对阶段 2 无阻塞**：层间检查只消费 internal 边（`check-layers.mjs` 只把 external 计入覆盖缺口数字），
+   但覆盖缺口里的「外部依赖边数」会偏小。
+2. **类型位置的 `import('...')`（TSImportType）整类不产边**——archguard 16 处、quay 0 处。
+   builder 只扫 `SyntaxKind.CallExpression`，而 `config: import('@/core/interfaces/parser.js').ParseConfig`
+   是 ImportTypeNode。16 处中 13 处解析到项目内目录：**3 条的边在 moduleGraph 里完全不存在**
+   （`cli/analyze -> core/interfaces`、`cli/processors -> core/interfaces`——该目录对这两个模块的唯一引用就是它），
+   另 9 条只是 strength 少计。
+   **对阶段 2 有影响**：检查器要区分 type-only 与值依赖，而「只被类型位置 import type 引用」的目录对
+   在图上**完全没有边**，这类 type-only 层间违例会被漏掉（archguard 自身 3 条，quay 0 条）。
+
+### 结论：阶段 0/1 的产物是否足以支撑阶段 2 的检查器
+
+- **值依赖与具名 import 的边集合：足够。** 两个真实项目的 internal 边在两套独立实现下无缺无溢（0/0），
+  边强度逐条相等，`strength === typeOnlyStrength + valueStrength` 在全部边上成立，type-only 判定与独立扫描一致。
+- **有一个已知的、有界的盲区：类型位置 `import('...')`。** 影响面是可枚举的（archguard 3 条边整条缺失、
+  9 条少计；quay 0 条），且会以「整条边不存在」的形式让极少数 type-only 层间违例漏报。
+  按本任务 DoD「发现新的漏边须立新 gap 任务而不是顺手修」，已另立
+  `gap-ts-module-graph-misses-type-position-import-type`；external 边的不稳定另立
+  `gap-ts-module-graph-external-edge-resolution-dependent`（低优先，不阻塞阶段 2）。
+- 因此**阶段 2 可以开工**，但阶段 3 的「覆盖缺口」展示里必须把这两类缺口显式列出，不得让它们表现为"零违例"。
 
 ## 风险与开放问题
 
