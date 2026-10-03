@@ -1,7 +1,7 @@
 ---
 id: gap-layer-mutual-plugin-runtime-core-parser
 title: plugins/shared 与 core、parser 互指：先由人裁定解析运行时类型归属，再消除两条分层违例
-status: ready
+status: done
 labels:
   - gap
   - refactor
