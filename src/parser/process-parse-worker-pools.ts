@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
+import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
 import type { ParseWorkerLanguage } from './parse-worker-pool.js';
 import { ParseWorkerPool } from './parse-worker-pool.js';
 

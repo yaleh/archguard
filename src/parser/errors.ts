@@ -1,15 +1,9 @@
 /**
- * Parse Error - when TypeScript file parsing fails
+ * Back-compatibility re-export.
+ *
+ * ParseError moved to the core parser-runtime layer
+ * (src/core/parser-runtime/parse-error.ts) so the plugin runtime no longer has
+ * to import the parser layer for an error type. Kept so existing importers
+ * (src/cli/errors, the extractors, tests) keep resolving.
  */
-export class ParseError extends Error {
-  constructor(
-    message: string,
-    public readonly filePath: string,
-    public readonly line?: number,
-    public readonly column?: number
-  ) {
-    super(message);
-    this.name = 'ParseError';
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+export { ParseError } from '@/core/parser-runtime/parse-error.js';

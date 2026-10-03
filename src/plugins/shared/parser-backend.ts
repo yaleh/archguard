@@ -1,26 +1,16 @@
-import type { ParserRuntimeKind, ParserSession } from './syntax-tree.js';
-import { errorMessage } from '@/utils/error-message.js';
+/**
+ * Plugin runtime backend contract + the language-agnostic backend selector.
+ *
+ * The contract types (ParserLanguage / ParserBackend / ParserInitializationError)
+ * live in the core parser-runtime layer; this module re-exports them so existing
+ * importers keep resolving, and keeps the concrete `resolveParserBackend()`
+ * selector (which imports the native/WASM backends) in the runtime layer.
+ */
+import type { ParserBackend } from '@/core/parser-runtime/parser-backend.js';
+import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
 
-export type ParserLanguage = 'go' | 'java' | 'python' | 'cpp' | 'kotlin';
-
-export interface ParserBackend {
-  readonly runtime: ParserRuntimeKind;
-  createSession(language: ParserLanguage): Promise<ParserSession>;
-}
-
-export class ParserInitializationError extends Error {
-  constructor(
-    readonly language: ParserLanguage,
-    readonly backend: string,
-    cause: unknown
-  ) {
-    super(
-      `Failed to initialize ${language} parser with ${backend} backend: ${errorMessage(cause)}`,
-      { cause }
-    );
-    this.name = 'ParserInitializationError';
-  }
-}
+export type { ParserBackend, ParserLanguage } from '@/core/parser-runtime/parser-backend.js';
+export { ParserInitializationError } from '@/core/parser-runtime/parser-backend.js';
 
 /**
  * Select a parser backend by runtime kind.

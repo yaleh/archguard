@@ -1,10 +1,23 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { resolveParserBackend } from '@/plugins/shared/parser-backend.js';
+import { getParserBackendResolver } from '@/core/parser-runtime/parser-backend-resolver.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { ParseResult, ParseWorkerInitData, ParseWorkerJob } from './parse-worker-pool.js';
 import { errorMessage } from '@/utils/error-message.js';
 
 const initData = workerData as ParseWorkerInitData;
+
+/**
+ * A worker thread starts with a fresh module graph, so the parent's resolver
+ * registration does not carry over. The parent relayed the registration module
+ * specifier (build-root relative) through the init data; importing it
+ * registers the port in this thread.
+ */
+async function registerInjectedResolver(): Promise<void> {
+  const specifier = initData.backendResolverModule;
+  if (!specifier) return;
+  // Resolved against this worker's build directory so it works from dist/.
+  await import(/* @vite-ignore */ new URL(`../${specifier}`, import.meta.url).href);
+}
 
 type WorkerParser = {
   parseCode(code: string, filePath: string): ArchJSON;
@@ -19,7 +32,8 @@ async function createParser(): Promise<WorkerParser> {
     await plugin.initialize({ workspaceRoot: initData.workspaceRoot ?? process.cwd() });
     return plugin;
   }
-  const backend = await resolveParserBackend(initData.runtime);
+  await registerInjectedResolver();
+  const backend = await getParserBackendResolver().resolveBackend(initData.runtime);
   const module =
     initData.language === 'go'
       ? await import('@/plugins/golang/atlas/index.js')

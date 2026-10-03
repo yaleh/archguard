@@ -16,7 +16,7 @@ import type {
   ParserSession,
   SyntaxNodeLike,
   SyntaxTreeLike,
-} from '@/plugins/shared/syntax-tree.js';
+} from '@/core/parser-runtime/syntax-tree.js';
 import type { EntityNodeRule, LoadedPack } from '../pack-registry/types.js';
 import { childrenOfType, nodeText } from './ast-node.js';
 

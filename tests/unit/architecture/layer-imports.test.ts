@@ -8,13 +8,16 @@ import { describe, expect, it } from 'vitest';
  * Layer order (CLAUDE.md): types/utils < core, parser < plugins, and
  * mermaid < analysis < cli. A lower layer must never import a higher one.
  *
- * This guard freezes the two crossings relocated by
+ * This guard freezes the crossings relocated by
  * gap-layer-violations-relocate-misplaced-types:
  *   - src/analysis/** must not import src/cli/**
  *   - src/core/**     must not import src/cli/** or src/mermaid/**
- *
- * The plugins/shared <-> core/parser mutual reference is deliberately out of
- * scope (see gap-layer-mutual-plugin-runtime-core-parser).
+ * and the one-way direction established by
+ * gap-layer-mutual-plugin-runtime-core-parser:
+ *   - src/core/** and src/parser/** must not import the plugin runtime
+ *     (src/plugins/shared/**), and src/plugins/shared/** must not import
+ *     src/parser/**. Types and the resolver port they need now live in
+ *     src/core/parser-runtime/.
  *
  * Dependencies are read POSITIONALLY: only a line whose first non-whitespace
  * token begins an `import`/`export` statement counts, and comment lines are
@@ -32,7 +35,9 @@ interface LayerRule {
 
 const LAYER_RULES: readonly LayerRule[] = [
   { from: 'src/analysis/', forbidden: ['src/cli/'] },
-  { from: 'src/core/', forbidden: ['src/cli/', 'src/mermaid/'] },
+  { from: 'src/core/', forbidden: ['src/cli/', 'src/mermaid/', 'src/plugins/shared/'] },
+  { from: 'src/parser/', forbidden: ['src/plugins/shared/'] },
+  { from: 'src/plugins/shared/', forbidden: ['src/parser/'] },
 ];
 
 const isCommentLine = (line: string): boolean =>
@@ -138,7 +143,7 @@ function scanProject(): string[] {
 }
 
 describe('layer import direction guard', () => {
-  it('src/analysis and src/core never import a higher layer', () => {
+  it('no source file crosses up across a declared layer boundary', () => {
     expect(scanProject()).toEqual([]);
   });
 
@@ -180,5 +185,40 @@ describe('layer import direction guard', () => {
   it('catches a multi-line brace-delimited import that crosses up', () => {
     const source = "import type {\n  A,\n  B,\n} from '@/cli/y.js';\n";
     expect(findLayerViolations('src/core/x.ts', source)).toHaveLength(1);
+  });
+
+  it('flags core -> plugin runtime', () => {
+    const source = "import type { SyntaxNodeLike } from '@/plugins/shared/syntax-tree.js';\n";
+    expect(findLayerViolations('src/core/rule-engine/x.ts', source)).toHaveLength(1);
+  });
+
+  it('flags parser -> plugin runtime', () => {
+    const source = "import { resolveParserBackend } from '@/plugins/shared/parser-backend.js';\n";
+    expect(findLayerViolations('src/parser/parse-worker.ts', source)).toHaveLength(1);
+  });
+
+  it('flags plugin runtime -> parser', () => {
+    const source = "import { ParseError } from '@/parser/errors.js';\n";
+    expect(findLayerViolations('src/plugins/shared/query-loader.ts', source)).toHaveLength(1);
+  });
+
+  it('does NOT flag the plugin runtime importing a lower layer (core/parser-runtime)', () => {
+    const source = "import { ParserInitializationError } from '@/core/parser-runtime/parser-backend.js';\n";
+    expect(findLayerViolations('src/plugins/shared/parser-backend.ts', source)).toEqual([]);
+  });
+
+  it('does NOT flag the parser importing a lower layer (core/parser-runtime)', () => {
+    const source = "import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';\n";
+    expect(findLayerViolations('src/parser/parse-worker-pool.ts', source)).toEqual([]);
+  });
+
+  it('does NOT conflate a sibling directory with the plugin runtime prefix', () => {
+    const source = "import { x } from '@/plugins/shared2/not-shared.js';\n";
+    expect(findLayerViolations('src/parser/parse-worker.ts', source)).toEqual([]);
+  });
+
+  it('does NOT conflate a sibling directory with the parser prefix', () => {
+    const source = "import { x } from '@/parser2/not-parser.js';\n";
+    expect(findLayerViolations('src/plugins/shared/query-loader.ts', source)).toEqual([]);
   });
 });

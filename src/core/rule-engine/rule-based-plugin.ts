@@ -20,9 +20,12 @@ import type {
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 import type { ArchJSON, Entity, Relation, SupportedLanguage } from '@/types/index.js';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
-import { selectParserBackendFor } from '@/plugins/shared/parser-runtime.js';
-import type { ParserLanguage } from '@/plugins/shared/parser-backend.js';
-import type { ParserSession } from '@/plugins/shared/syntax-tree.js';
+import {
+  getParserBackendResolver,
+  type ParserBackendResolver,
+} from '@/core/parser-runtime/parser-backend-resolver.js';
+import type { ParserLanguage } from '@/core/parser-runtime/parser-backend.js';
+import type { ParserSession } from '@/core/parser-runtime/syntax-tree.js';
 import type { LoadedPack } from '../pack-registry/types.js';
 import { RuleEngine } from './rule-engine.js';
 
@@ -42,7 +45,11 @@ export class RuleBasedLanguagePlugin implements ILanguagePlugin {
   private session?: ParserSession;
   private initialized = false;
 
-  constructor(private readonly pack: LoadedPack) {
+  constructor(
+    private readonly pack: LoadedPack,
+    /** Optional resolver override (tests); defaults to the composition-root port. */
+    private readonly resolver?: ParserBackendResolver
+  ) {
     this.metadata = {
       name: pack.manifest.language,
       version: pack.manifest.version,
@@ -72,8 +79,10 @@ export class RuleBasedLanguagePlugin implements ILanguagePlugin {
         `RuleBasedLanguagePlugin: no tree-sitter grammar available for pack language '${language}'`
       );
     }
-    const { backend } = await selectParserBackendFor(language as ParserLanguage);
-    this.session = await backend.createSession(language as ParserLanguage);
+    // The concrete runtime is reached only through the injected port; a
+    // composition root (or an explicit resolver in tests) registers it.
+    const resolver = this.resolver ?? getParserBackendResolver();
+    this.session = await resolver.resolveSession(language as ParserLanguage);
     this.engine = new RuleEngine(this.pack, this.session, {
       workspaceRoot: config.workspaceRoot,
     });

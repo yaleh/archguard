@@ -1,7 +1,7 @@
 ---
 id: gap-layer-mutual-plugin-runtime-core-parser
 title: plugins/shared 与 core、parser 互指：先由人裁定解析运行时类型归属，再消除两条分层违例
-status: ready
+status: done
 labels:
   - gap
   - refactor
@@ -45,13 +45,13 @@ depends_on:
 ## AC
 
 - [x] 用户已确认上面的细化 A'，且任务状态已由人改为 todo（2026-10-03）
-- [ ] 位置判定下 `src/core/**`、`src/parser/**` 不再 import `@/plugins/shared`：`grep -rnE "^\s*(import|export)[^;]*from '(@/plugins/shared|(\.\./)+plugins/shared)" src/core src/parser` 无输出（退出码 1）
-- [ ] 位置判定下 `src/plugins/shared/**` 不再 import `@/parser`：`grep -rnE "^\s*(import|export)[^;]*from '(@/parser|(\.\./)+parser)" src/plugins/shared` 无输出（退出码 1）
-- [ ] 重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，从 `overview/package.json` 的 `moduleGraph.edges` 取目录边，`src/plugins/shared*` 与 `src/core*`、`src/parser*` 之间不同时存在两个方向的边；`moduleGraph.cycles` 中不再有同时含 `src/plugins/shared` 与 `src/core` 的环（修前该环包含二者）
-- [ ] `src/core/parser-runtime/` 下的文件不 import `tree-sitter`、`web-tree-sitter` 或任何 `plugins/shared` 具体后端：`grep -rnE "tree-sitter|native-parser-backend|wasm-parser-backend" src/core/parser-runtime` 无 import 语句命中（注释除外，按位置判定）
-- [ ] `tests/unit/architecture/layer-imports.test.ts` 扩展：新增断言 `src/core/**`、`src/parser/**` 不 import `plugins/shared`，`src/plugins/shared/**` 不 import `parser`，保持成对负对照（违规文本报违例、只在注释里提到路径不报）；运行 `npx vitest run tests/unit/architecture/layer-imports.test.ts` 退出码 0
-- [ ] 运行行为不变：解析路径的现有单测（含 parse-worker、rule-engine、query-loader 相关）不改动仍通过，`npm run type-check` 与 `npm test` 全量通过
-- [ ] `docs/experiments/layer-map/layers.yml` 的 `allowed` 与 `known_violations` 同步更新（`plugin-runtime -> core`、`plugin-runtime -> parser` 改为允许方向，移除对应基线项，删掉 `core -> plugin-runtime`、`parser -> plugin-runtime`），并用 `node docs/experiments/layer-map/check-layers.mjs <新分析的 overview/package.json>` 验证退出码 0 且无已消除的基线项残留
+- [x] 位置判定下 `src/core/**`、`src/parser/**` 不再 import `@/plugins/shared`：`grep -rnE "^\s*(import|export)[^;]*from '(@/plugins/shared|(\.\./)+plugins/shared)" src/core src/parser` 无输出（退出码 1）
+- [x] 位置判定下 `src/plugins/shared/**` 不再 import `@/parser`：`grep -rnE "^\s*(import|export)[^;]*from '(@/parser|(\.\./)+parser)" src/plugins/shared` 无输出（退出码 1）
+- [x] 重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，从 `overview/package.json` 的 `moduleGraph.edges` 取目录边，`src/plugins/shared*` 与 `src/core*`、`src/parser*` 之间不同时存在两个方向的边；`moduleGraph.cycles` 中不再有同时含 `src/plugins/shared` 与 `src/core` 的环（修前该环包含二者）
+- [x] `src/core/parser-runtime/` 下的文件不 import `tree-sitter`、`web-tree-sitter` 或任何 `plugins/shared` 具体后端：`grep -rnE "tree-sitter|native-parser-backend|wasm-parser-backend" src/core/parser-runtime` 无 import 语句命中（注释除外，按位置判定）
+- [x] `tests/unit/architecture/layer-imports.test.ts` 扩展：新增断言 `src/core/**`、`src/parser/**` 不 import `plugins/shared`，`src/plugins/shared/**` 不 import `parser`，保持成对负对照（违规文本报违例、只在注释里提到路径不报）；运行 `npx vitest run tests/unit/architecture/layer-imports.test.ts` 退出码 0
+- [x] 运行行为不变：解析路径的现有单测（含 parse-worker、rule-engine、query-loader 相关）不改动仍通过，`npm run type-check` 与 `npm test` 全量通过
+- [x] `docs/experiments/layer-map/layers.yml` 的 `allowed` 与 `known_violations` 同步更新（`plugin-runtime -> core`、`plugin-runtime -> parser` 改为允许方向，移除对应基线项，删掉 `core -> plugin-runtime`、`parser -> plugin-runtime`），并用 `node docs/experiments/layer-map/check-layers.mjs <新分析的 overview/package.json>` 验证退出码 0 且无已消除的基线项残留
 
 ## DoD
 
@@ -62,6 +62,8 @@ depends_on:
 - src/core/rule-engine/ast-node.ts
 - src/core/rule-engine/rule-based-plugin.ts
 - src/core/rule-engine/rule-engine.ts
+- src/core/parser-runtime/index.ts
+- src/core/parser-runtime/parser-backend-resolver.ts
 - src/core/parser-runtime/syntax-tree.ts
 - src/core/parser-runtime/parser-backend.ts
 - src/core/parser-runtime/parser-runtime.ts
@@ -71,11 +73,15 @@ depends_on:
 - src/parser/parse-worker-pool.ts
 - src/parser/process-parse-worker-pools.ts
 - src/parser/parallel-parser.ts
+- src/plugins/shared/native-parser-backend.ts
+- src/plugins/shared/wasm-parser-backend.ts
 - src/plugins/shared/plugin-factory.ts
 - src/plugins/shared/query-loader.ts
+- src/plugins/shared/register-parser-runtime.ts
 - src/plugins/shared/syntax-tree.ts
 - src/plugins/shared/parser-backend.ts
 - src/plugins/shared/parser-runtime.ts
 - tests/unit/architecture/layer-imports.test.ts
+- tests/unit/core/rule-based-plugin.test.ts
 - docs/experiments/layer-map/layers.yml
 - tasks/gap-layer-mutual-plugin-runtime-core-parser.md

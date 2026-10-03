@@ -5,7 +5,7 @@
  * engine reads fields and descendants without repeating substring slicing.
  */
 
-import type { SyntaxNodeLike } from '@/plugins/shared/syntax-tree.js';
+import type { SyntaxNodeLike } from '@/core/parser-runtime/syntax-tree.js';
 
 /** Named children of a node whose type matches `type`. */
 export function childrenOfType(node: SyntaxNodeLike, type: string): SyntaxNodeLike[] {

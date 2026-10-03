@@ -25,6 +25,10 @@
  * configured via the `nativeModuleRoot` option or
  * ARCHGUARD_NATIVE_MODULE_ROOT, and the selected native backend parses
  * through the same loaders the probe used.
+ *
+ * The policy/diagnostics surface (readParserRuntimePolicy, the diagnostics log,
+ * the selection record shape) is owned by the core parser-runtime layer and
+ * re-exported here; this module keeps the concrete selection machinery.
  */
 import type { ParserBackend, ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
@@ -37,14 +41,36 @@ import {
   type NativeModuleLoaders,
   type NativeParserLike,
 } from './native-parser-backend.js';
-import type { ParserRuntimeKind } from './syntax-tree.js';
-import { isParserRuntimePolicy, type ParserRuntimePolicy } from '@/types/parser-runtime.js';
+import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
+import type { ParserRuntimePolicy } from '@/types/parser-runtime.js';
+import {
+  hasParserRuntimeEnvOverride,
+  readParserRuntimePolicy,
+  recordParserRuntimeDiagnostic,
+  resetParserRuntimeDiagnostics,
+  type ParserBackendSelection,
+  type ParserRuntimeChoiceSource,
+} from '@/core/parser-runtime/parser-runtime.js';
+// Registration side effect: importing the policy module wires the core resolver
+// port and publishes the worker registration specifier.
+import './register-parser-runtime.js';
 
 export {
   defaultNativeLoaders,
   readNativeModuleRootEnv,
   type NativeModuleLoaders,
 } from './native-parser-backend.js';
+
+export {
+  getParserRuntimeDiagnostics,
+  runtimeDiagnosticVisible,
+} from '@/core/parser-runtime/parser-runtime.js';
+export {
+  hasParserRuntimeEnvOverride,
+  readParserRuntimePolicy,
+  type ParserBackendSelection,
+  type ParserRuntimeChoiceSource,
+};
 
 /** Minimal per-language fixtures used by the native health probe. */
 const PROBE_FIXTURES: Record<ParserLanguage, { code: string; rootType: string }> = {
@@ -118,49 +144,6 @@ export function probeNativeBinding(
   }
 }
 
-/** Read the canonical runtime policy from the environment. */
-export function readParserRuntimePolicy(env: NodeJS.ProcessEnv = process.env): ParserRuntimePolicy {
-  const runtime = env.ARCHGUARD_PARSER_RUNTIME;
-  if (runtime !== undefined && runtime !== '') {
-    if (isParserRuntimePolicy(runtime)) return runtime;
-    throw new Error(
-      `Invalid ARCHGUARD_PARSER_RUNTIME value "${runtime}" (expected "auto", "native", or "wasm")`
-    );
-  }
-  // Deprecated TASK-38 alias, kept for backward compatibility; superseded by
-  // ARCHGUARD_PARSER_RUNTIME when both are set.
-  const backend = env.ARCHGUARD_PARSER_BACKEND;
-  if (backend !== undefined && backend !== '') {
-    emitDeprecatedAliasWarning();
-    if (backend === 'native' || backend === 'wasm') return backend;
-    throw new Error(
-      `Invalid ARCHGUARD_PARSER_BACKEND value "${backend}" (expected "native" or "wasm")`
-    );
-  }
-  return 'auto';
-}
-
-/** True when an environment override (canonical or legacy alias) is set. */
-export function hasParserRuntimeEnvOverride(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.ARCHGUARD_PARSER_RUNTIME || env.ARCHGUARD_PARSER_BACKEND);
-}
-
-/** Where the effective policy came from (TASK-43 effective-runtime visibility). */
-export type ParserRuntimeChoiceSource = 'default' | 'env' | 'config' | 'explicit';
-
-export interface ParserBackendSelection {
-  readonly language: ParserLanguage;
-  readonly policy: ParserRuntimePolicy;
-  /** How the effective policy was chosen: default auto, env var, config file, or explicit caller override. */
-  readonly source: ParserRuntimeChoiceSource;
-  readonly runtime: ParserRuntimeKind;
-  readonly backend: ParserBackend;
-  /** Why native was rejected in `auto` mode; undefined when native was selected or policy is wasm/native. */
-  readonly fallbackReason?: string;
-  /** Preformatted diagnostics line: choice plus fallback reason. */
-  readonly diagnostic: string;
-}
-
 export interface SelectParserBackendOptions {
   /** Explicit policy override; defaults to env (ARCHGUARD_PARSER_RUNTIME, legacy ARCHGUARD_PARSER_BACKEND) then 'auto'. */
   policy?: ParserRuntimePolicy;
@@ -175,42 +158,11 @@ export interface SelectParserBackendOptions {
 }
 
 const selectionCache = new Map<string, Promise<ParserBackendSelection>>();
-const diagnosticsLog: string[] = [];
-
-/** Selection diagnostics recorded so far (choice plus fallback reason), in order. */
-export function getParserRuntimeDiagnostics(): readonly string[] {
-  return diagnosticsLog;
-}
-
-/**
- * Whether a runtime diagnostic line should be surfaced to the user (TASK-43):
- * always in verbose mode, and always on a fallback event (even non-verbose),
- * so "did my fallback work?" never requires guesswork.
- */
-export function runtimeDiagnosticVisible(
-  verbose: boolean,
-  selection: { fallbackReason?: string }
-): boolean {
-  return verbose || selection.fallbackReason !== undefined;
-}
-
-let deprecatedAliasWarningEmitted = false;
-
-/** Loud, exactly-once-per-process stderr warning for the deprecated alias (TASK-43). */
-function emitDeprecatedAliasWarning(): void {
-  if (deprecatedAliasWarningEmitted) return;
-  deprecatedAliasWarningEmitted = true;
-  console.error(
-    '[parser-runtime] WARNING: ARCHGUARD_PARSER_BACKEND is deprecated and will be removed in a ' +
-      'future release; use the canonical ARCHGUARD_PARSER_RUNTIME (auto|native|wasm) instead.'
-  );
-}
 
 /** Test hook: clear the per-language selection cache and diagnostics log. */
 export function resetParserBackendSelectionCache(): void {
   selectionCache.clear();
-  diagnosticsLog.length = 0;
-  deprecatedAliasWarningEmitted = false;
+  resetParserRuntimeDiagnostics();
 }
 
 /**
@@ -308,7 +260,7 @@ function finishSelection(
     ? `[parser-runtime] ${selection.language}: policy=${selection.policy} source=${source} -> ` +
       `${selection.runtime} (native probe failed: ${selection.fallbackReason})`
     : `[parser-runtime] ${selection.language}: policy=${selection.policy} source=${source} -> ${selection.runtime}`;
-  diagnosticsLog.push(diagnostic);
+  recordParserRuntimeDiagnostic(diagnostic);
   const full: ParserBackendSelection = { ...selection, source, diagnostic };
   options.onDiagnostic?.(diagnostic, full);
   return full;
