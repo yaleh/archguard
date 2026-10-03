@@ -1,7 +1,7 @@
 ---
 id: gap-fitness-check-relations-stub
 title: archguard check 的 no-dependency 规则因 check.ts 硬编码空 relations 永不失败（死桩）
-status: todo
+status: ready
 labels:
   - gap
   - defect
