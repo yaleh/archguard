@@ -32,3 +32,18 @@ extra:
 - src/cli/commands/query.ts
 - tests/unit/cli/commands/query.test.ts
 - tasks/gap-query-cycles-ignores-output-scope-package.md
+
+## Evidence
+
+验证于 e0b8d1aa（merge develop 之后的树），四条 AC 逐条复验：
+
+- **AC1** `src/cli/commands/query.ts`：`--cycles` 分支读 `opts.outputScope`；`package` 走 `engine.getPackageCycles()` 输出 `{granularity,evaluated,reason?,cycles}`，`evaluated:false` 时 `process.exitCode = 1`（不 `process.exit`，保证 reason/JSON 先落盘）；`class` 缺省仍走原 `getCycles()`。
+- **AC2** `npx vitest run tests/unit/cli/commands/query.test.ts` → 56 passed，exit 0。新增 `describe('query --cycles --output-scope package (Phase 101)')` 6 例，含成对用例：目录级互指夹具 → `evaluated:true` + 非空 cycles；无 moduleGraph → `evaluated:false` + 非空 reason + 非零退出码；class 缺省对照。
+- **AC3** 真实对照，同一产物（worktree `.archguard/query`，globalScopeKey `58ec3adf`，833 entities）：
+  - 修复后 `node dist/cli/index.js query --cycles --output-scope package` → `Found 4 directory-level dependency cycle(s)`，size 13/10/2/2，exit 0；
+  - 修前构建（主检出 `dist`，已确认不含 `getPackageCycles`）同 cwd 同参数 → `No dependency cycles detected.`，exit 0。二者对同一输入给出完全不同的结论，正是本缺陷。
+- **AC4** class 缺省 `query --cycles --format json` 修复前后输出逐字节相同（`diff` 为空）；`npm run type-check` 通过；`bash scripts/test.sh` 全量 → `372 passed | 3 skipped (375 files)`，`5470 passed | 18 skipped`，exit 0。
+
+**真实 not-evaluated 样本（DoD 要求）**：`--scope 2ac2a376`（go 夹具 scope，无 `tsAnalysis.moduleGraph`）→ 文本 `Directory-level dependency cycles were not evaluated: no directory-level module graph for this scope (language: go; tsAnalysis.moduleGraph absent)`，JSON `{granularity:"package",evaluated:false,reason:"...",cycles:[]}`，exit 1；修前同参数为 `No dependency cycles detected.` + exit 0 —— "未评估"与"已评估无环"同形，正是三态原则要消灭的形状。
+
+**环境说明（非代码改动）**：上一轮 doc-check/suite 变红与本修复无关，原因有二：(a) fan-in 的 doc-check 步骤执行 `bash <worktree>/scripts/test.sh --static-checks-doc`，而本仓 `scripts/test.sh` 对本协议 flag 不识别、落到全量 suite；(b) 该全量 suite 在本 worktree 内有 5 个 go/gopls 测试文件报 `Cannot find module '<worktree>/stream'`——vitest 3.2.4 `execute.*.js` 的 `normalizedDistDir.slice(root.length)`：worktree 根长度 53 时切出 `"st"`，使裸导入 `stream` 被误判为根相对 id 并外部化为 `file://<worktree>/stream`。触发前提是 worktree 的 `node_modules` 为指向主检出的符号链接（`normalizedDistDir` 不在根下）。处置：把该 worktree 的 `node_modules` 由符号链接换成真实目录（`cp -a`），`distDir` 因此落在根内，`relativeRoot` 恢复为 `/node_modules/vitest/dist`，5 个失败文件全部转绿。此项为 worktree 环境修复，未改动任何被 git 跟踪的文件。
