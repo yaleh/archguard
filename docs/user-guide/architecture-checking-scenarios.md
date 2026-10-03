@@ -406,3 +406,5 @@ It does not yet provide first-class architectural rule enforcement such as:
 - "all implementations must live under a specific module"
 
 Those checks can still be approximated today with query workflows, but they are not yet a dedicated policy engine.
+
+> **Update (2026-10-03):** a first-class declared-layer direction checker is approved but not yet implemented — see `docs/proposals/proposal-architecture-layer-check.md` (Approved v2) and `docs/plans/plan-a4-layer-check.md`. A `check` command and a `no-dependency` rule type do exist today, but their relations input is a stub, so the limitation above still stands in the current release.

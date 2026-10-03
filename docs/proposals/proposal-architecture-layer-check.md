@@ -1,9 +1,36 @@
 # Proposal: 分层声明 + 确定性方向检查 + 多层架构展示（A4）
 
-**状态**: Draft v1（待人审，未立项实现）
+**状态**: Approved v2（2026-10-03 人审通过，范围见「评审裁定」；阶段 2–4 的入口形态待 fitness 死桩修复后裁定）
 **日期**: 2026-10-03
 **关联**: `docs/experiments/layer-map/`（外部原型，提交 2a75651e）、`docs/user-guide/architecture-checking-scenarios.md`（"Limits" 一节明确写了目前没有一等的规则检查）
 **来源**: archguard 自身的分层实测；quay 项目架构审查提出的 A4/B8 需求；会话「archguard 架构语义映射」的原型实测
+
+---
+
+## 评审裁定（2026-10-03）
+
+人审结论（任务 `gap-a4-architecture-layer-check-proposal-review`）：
+
+1. **范围与非目标**：**批准**，按原文范围。目标 1–6 与非目标（不纳入运行时耦合 A3、不重引 PlantUML、不让 LLM 判定违例、不跨 scope 补边）照单通过。
+2. **实现入口形态**：**延后裁定**。先修既有 fitness 引擎的死桩——`gap-fitness-check-relations-stub`（`src/cli/commands/check.ts:59` 硬编码空 `relations`，`no-dependency` 规则永不生效）与同类缺陷 `gap-query-cycles-ignores-output-scope-package`（CLI `query --cycles` 忽略 `--output-scope`）——看到 fitness 引擎真实能力后，再定"复用扩展 `check`"还是"独立 `check-layers` 子命令"。
+3. **层声明与 `architecturalLayers` 的关系**：采用**方案 1 —— 层声明为唯一正本，`architecturalLayers` 降为派生投影**。人手只写层声明；analyze 时按每个包目录对 `globs` 最长匹配，投影出 `architecturalLayers` 注入 `ArchJSON.extensions.projectSemantics`；渲染器（`generator.ts` / `ts-module-graph-renderer.ts`）**不改**；无层声明文件时现有行为不变。`project-semantics-discovery` 的产出形状随之改为「起草层声明」。
+4. **分阶段起点**：先补阶段 0/1 验收 `gap-verify-module-graph-edge-completeness`（用独立的位置判定扫描对账 moduleGraph 边集合完整性与 type-only/值拆分），再进阶段 2。
+
+**开放问题处置**（随裁定 1 一并通过）：
+
+| # | 处置 |
+|---|---|
+| 1 边集合变化会改变现有数字 | 接受；由 `gap-verify-module-graph-edge-completeness` 覆盖 |
+| 2 层声明的维护成本 | 接受，已由 `not-evaluated` 设计覆盖 |
+| 3 多语言 | 接受，v1 只做 TS |
+| 4 `architecturalLayers` 与层声明的关系 | 见裁定 3（方案 1） |
+| 5 展示粒度 | 接受；阶段 3 的 AC 必须包含**浏览器目视验证**（原型仅做过字符串层验证） |
+| 6 quay 的 A1/A2 | 接受，各自单独提案，排在本提案之后 |
+
+**评审修订（相对 Draft v1）**：
+
+- 原文称 ArchGuard「没有一等的架构规则检查」**不准确**：`archguard check` + `fitness.rules` 已有一等规则引擎（`src/analysis/fitness/`），含 `type: 'no-dependency'` 的 from/to 约束规则。真正缺的是 allowlist/分层语义、层声明载体、棘轮基线、三态、type-only 拆分与展示。修订后的表述见「背景与动机」。
+- 原文以「`detect_cycles(package)` 返回 `[]`」为动机**已过时**：该缺陷已修（`src/core/query/query-engine.ts:153` 的 `getPackageCycles()`，MCP `detect_cycles(outputScope=package)` 现在能看见目录级环）。当前树实测有 4 个目录级 SCC（size 13/10/2/2）。修订后的动机是：**SCC 看得见环，但看不见单向的禁止方向**——"controller 不得直接调 repository"这类约束不是环。CLI `query --cycles` 侧仍忽略 `--output-scope`（见裁定 2 的第二个任务）。
 
 ---
 
@@ -11,10 +38,12 @@
 
 `architecture-checking-scenarios.md` 的 Limits 一节写明：ArchGuard 擅长结构观察（实体、关系、依赖形状、scope 摘要），但**没有**"package A 只能依赖 package B"这类规则检查，只能靠 query 流程近似。
 
+**修订（2026-10-03，见「评审修订」）**：`archguard check` 事实上已有一等的规则引擎（`fitness.rules`，含 `no-dependency` 的 from/to 约束规则），但它的依赖方向规则当前是**死桩**（`check.ts` 硬编码空 `relations`，永不生效），且只有 denylist，没有分层/allowlist/棘轮/三态。准确的说法是：**引擎骨架在，能力不在**。
+
 2026-10-02 起的两次独立实验（archguard 自身、quay 项目）表明，"声明层 → 确定性检查 → 单页展示"这条流程可以跑通，并且能发现 ArchGuard 现有工具看不见的问题：
 
-- archguard 自身：`detect_cycles(package)` 返回 `[]`，但目录级存在一个 27 目录的大环；按 CLAUDE.md 的分层声明检查出 5 条方向违例（其中 3 条只是类型放错层，2 条是 `plugins/shared` 与 core/parser 互指），已分别立任务并完成/裁定。
-- quay：目录级互指（`gate ↔ gate/config`、`src ↔ src/cli`）在 `detect_cycles(package)` 下同样是 `[]`。
+- archguard 自身：按 CLAUDE.md 的分层声明检查出 5 条方向违例（其中 3 条只是类型放错层，2 条是 `plugins/shared` 与 core/parser 互指），已分别立任务并完成/裁定。当时目录级存在一个 27 目录的大环，而 `detect_cycles(package)` 返回 `[]`——该缺陷此后已修（见「评审修订」），但**环 ≠ 方向**：单向的禁止方向，SCC 永远看不见。
+- quay：目录级互指（`gate ↔ gate/config`、`src ↔ src/cli`）在当时的 `detect_cycles(package)` 下同样是 `[]`。
 
 这些问题靠 grep 或人眼很难稳定发现，也很容易出错：quay 会话曾因**关键词 grep 把注释当 import** 报出 4 条假违例后撤回。需要一个**按位置判定、结果三态、可固化为基线**的内置能力。
 
@@ -50,7 +79,7 @@ known_violations: [{ edge: "A -> B", evidence: "..." }]     # 棘轮基线
 
 要点：
 - 层的归属必须**人审**：机械按目录名归层会出错（原型中 `plugins/shared` 若并入 `plugins` 会把正常依赖误报成违例）。
-- 与 `project-semantics.json` 的关系：现有 `architecturalLayers` 只是 `Record<路径, 层名>`，**表达不了方向**。本提案**不扩展**该字段，层声明另起文件，避免两份依赖声明并存；后续是否把 `architecturalLayers` 作为 glob→层名的子集由层声明引用，可作为开放问题。
+- 与 `project-semantics.json` 的关系（**裁定 3 / 方案 1**）：现有 `architecturalLayers` 只是 `Record<路径, 层名>`，**表达不了方向**，本提案**不扩展**该字段。层声明是「路径 → 层」的唯一正本；analyze 时按每个包目录对 `globs` 最长匹配，把结果投影成 `architecturalLayers` 注入 `ArchJSON.extensions.projectSemantics`（不落新文件、渲染器不改）。无层声明文件时，`architecturalLayers` 的现有行为完全不变。好处是「路径 → 层」只有一处人手作者，不存在漂移。
 
 ### 2. 取边与 type-only 拆分
 
@@ -72,26 +101,28 @@ known_violations: [{ edge: "A -> B", evidence: "..." }]     # 棘轮基线
 
 单页 HTML：层按 rank 分行的框图、违例表（方向、状态[基线/新增]、目录级边数、值依赖数、type-only 数、示例文件）、覆盖缺口说明。输出必须**确定**（排序稳定，不嵌入生成时间；数据时间戳作为输入的一部分单独显示），以支持 `--check` 模式（盘上产物与重新生成不一致则非零退出）。Mermaid component 图作为可选输出，沿用现有 Mermaid 渲染链路。
 
-### 5. 形态
+### 5. 形态（入口形态待裁定 2 的 A0 完成后确定）
 
-- **确定性内核**：一个 CLI 子命令（暂名 `archguard check-layers`）和一个对应的 MCP 工具；原型 `check-layers.mjs` 的逻辑迁入 `src/`，带单元测试。
+- **确定性内核**：一个 CLI 入口（独立子命令 `archguard check-layers`，或扩展 `archguard check` 的 fitness 规则类型 —— **未定**）和一个对应的 MCP 工具；原型 `check-layers.mjs` 的逻辑迁入 `src/`，带单元测试。
 - **编排 skill**：引导 1→5 步（分析、起草层声明、人审、检查、展示），把已知陷阱写进 skill：关键词 grep 会把注释当 import；读了旧的产物目录（用独立 `--output-dir` 并核对数据时间戳）；别名路径造成重复 scope。
 - **subagent**：仅用于"起草层声明初版"，输出必须标注"未经人审"。
 
-## 分阶段
+## 分阶段（2026-10-03 按裁定修订）
 
 | 阶段 | 内容 | 依赖 |
 |---|---|---|
 | 0 | moduleGraph 边集合完整（重导出、动态 import、别名） | `gap-ts-module-graph-misses-reexport-dynamic-and-bare-alias-edges` |
 | 1 | 边上的 type-only / 值依赖拆分 | `gap-ts-module-graph-type-only-edge-split` |
-| 2 | 检查器内核（CLI + MCP 工具）+ 层声明 schema 校验 + 基线 | 阶段 1 |
-| 3 | 单页展示 + 确定性输出 + `--check` | 阶段 2 |
-| 4 | 编排 skill + 起草 subagent | 阶段 2、3 |
+| 0.5 | 阶段 0/1 验收补回：独立位置判定对账（见下方「阶段 0/1 验证记录」） | `gap-verify-module-graph-edge-completeness` |
+| A0 | 修 fitness 引擎死桩：`check` 空 relations；CLI `query --cycles` 忽略 `--output-scope` | `gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package` |
+| 2 | 检查器内核 + 层声明 schema 校验 + 基线。**入口形态（复用 `check` / 独立子命令、命令名、是否同给 MCP 工具、skill 是否入 plugin）待 A0 完成后裁定** | 0.5、A0 |
+| 3 | 单页展示 + 确定性输出 + `--check`（含浏览器目视验证） | 阶段 2 |
+| 4 | 编排 skill + 起草 subagent；`project-semantics-discovery` 改为起草层声明 | 阶段 2、3 |
 
 阶段 0/1 的**真实对照验证**见下文「阶段 0/1 验证记录」——两个项目上 internal 边集合完整、拆分与独立扫描一致；
 但发现阶段 0 未覆盖的一类漏边（类型位置的 `import('...')`），已另立 gap 任务。
 
-建议在 `gap-layer-mutual-plugin-runtime-core-parser` 完成后再把 archguard 自身的基线定为"零违例"，使其成为检查器的第一个真实样本。
+原建议（`gap-layer-mutual-plugin-runtime-core-parser` 完成后把 archguard 自身基线定为"零违例"）**已满足**：当前树实测 25 条层间边、0 违例、0 覆盖缺口（2026-10-03，`docs/experiments/layer-map/check-layers.mjs` 退出码 0）。
 
 ## 阶段 0/1 验证记录（2026-10-03）
 
@@ -157,7 +188,7 @@ node docs/experiments/layer-map/verify-edge-completeness.mjs /tmp/out/overview/p
 1. **边集合变化会改变现有数字**：阶段 0 增加边后，`moduleGraph.cycles` 与 package 层 metrics 可能出现新环/新数值，需要逐个确认真实性。
 2. **层声明的维护成本**：目录重组时 glob 会失效；检查器对"glob 全不匹配"必须返回 `not-evaluated`，而不是 pass。
 3. **多语言**：本提案只覆盖 TS（目录级 moduleGraph）。Go 已有 Atlas 包图；Java/Python 等需要另行评估，先不承诺。
-4. **`architecturalLayers` 与层声明的关系**：是否让层声明引用 `project-semantics.json` 的分组，开放。
+4. ~~**`architecturalLayers` 与层声明的关系**~~：已裁定为**方案 1**（层声明为正本，`architecturalLayers` 为派生投影），见「评审裁定」3。
 5. **展示粒度**：单页 HTML 只在字符串层面验证过，没有在浏览器里目视验证，阶段 3 需要补。
 6. **quay 提出的 A1（type alias 与非导出声明纳入实体）、A2（字面量数据表抽取）**：与本提案互相独立，且会改变实体数与现有基线，建议单独提案，排在本提案之后。
 
