@@ -1,7 +1,7 @@
 ---
 id: gap-layer-mutual-plugin-runtime-core-parser
 title: plugins/shared 与 core、parser 互指：先由人裁定解析运行时类型归属，再消除两条分层违例
-status: needs-human
+status: todo
 labels:
   - gap
   - refactor
@@ -34,9 +34,7 @@ depends_on:
 
 ## 人的裁定
 
-**已裁定：方案 A**（用户，2026-10-03）：把 `plugins/shared` 里与具体语言无关的解析运行时部分下移到 core 层（如 `src/core/parser-runtime/`），`plugins/shared` 只保留插件工厂、查询加载等"插件胶水"；`ParseError` 下移到 `src/types` 或 core；旧路径保留类型 re-export，分批迁移。
-
-**待用户确认的细化（A'，由上面事实 2、3 推出；确认前本任务保持 needs-human）**：
+**已裁定：方案 A，并确认细化 A'**（用户，2026-10-03）：把 `plugins/shared` 里与具体语言无关的解析运行时部分下移到 core 层（`src/core/parser-runtime/`），`plugins/shared` 只保留插件工厂、查询加载等"插件胶水"；旧路径保留类型 re-export，分批迁移。细化 A' 已获同意，内容如下：
 
 - 下移到 `src/core/parser-runtime/` 的只有**接口层**：`syntax-tree.ts` 全部；`parser-backend.ts` 里的类型（`ParserBackend`、`ParserLanguage`）与 `ParserInitializationError`；`parser-runtime.ts` 里不依赖具体后端的类型与策略判断。
 - **具体后端与选择逻辑留在 `plugins/shared`**：`native-parser-backend.ts`、`wasm-parser-backend.ts`、`resolveParserBackend`、`selectParserBackendFor` 及其对具体后端的 import。
@@ -46,7 +44,7 @@ depends_on:
 
 ## AC
 
-- [ ] 用户已确认上面的细化 A'（或给出替代），且任务状态已由人改为 todo（本项未满足前，worker 不得开始实现）
+- [x] 用户已确认上面的细化 A'，且任务状态已由人改为 todo（2026-10-03）
 - [ ] 位置判定下 `src/core/**`、`src/parser/**` 不再 import `@/plugins/shared`：`grep -rnE "^\s*(import|export)[^;]*from '(@/plugins/shared|(\.\./)+plugins/shared)" src/core src/parser` 无输出（退出码 1）
 - [ ] 位置判定下 `src/plugins/shared/**` 不再 import `@/parser`：`grep -rnE "^\s*(import|export)[^;]*from '(@/parser|(\.\./)+parser)" src/plugins/shared` 无输出（退出码 1）
 - [ ] 重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，从 `overview/package.json` 的 `moduleGraph.edges` 取目录边，`src/plugins/shared*` 与 `src/core*`、`src/parser*` 之间不同时存在两个方向的边；`moduleGraph.cycles` 中不再有同时含 `src/plugins/shared` 与 `src/core` 的环（修前该环包含二者）
@@ -57,7 +55,7 @@ depends_on:
 
 ## DoD
 
-必须先有用户对细化 A' 的确认。完成的标准不是"文件搬完"，而是在重新构建后的真实 archguard 上重新分析，`plugins/shared` 与 core、parser 之间的目录级互指消失（边只剩 `plugins/shared` 向下依赖 core/parser 的单向），`moduleGraph.cycles` 里不再同时含这两组目录，core 层没有引入对 tree-sitter 具体后端的依赖，并且解析运行行为不变（全量测试套件通过，且对本仓库自身重新执行一次 `analyze` 的实体数与修前一致）。
+完成的标准不是"文件搬完"，而是在重新构建后的真实 archguard 上重新分析，`plugins/shared` 与 core、parser 之间的目录级互指消失（边只剩 `plugins/shared` 向下依赖 core/parser 的单向），`moduleGraph.cycles` 里不再同时含这两组目录，core 层没有引入对 tree-sitter 具体后端的依赖，并且解析运行行为不变（全量测试套件通过，且对本仓库自身重新执行一次 `analyze` 的实体数与修前一致）。
 
 ## Touches
 
