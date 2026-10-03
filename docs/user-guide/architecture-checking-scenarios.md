@@ -198,6 +198,39 @@ Good fit for:
 - Layer-by-layer review
 - Team ownership boundaries
 
+### Scopes Do Not Share Dependency Edges
+
+Every diagram config entry — and every path passed to `--sources` — becomes its own query scope:
+
+```bash
+archguard analyze -s ./packages ./plugin/scripts
+archguard query --list-scopes
+```
+
+A scope's module graph only contains directories inside that scope's own source root. Directory-to-directory edges **within** a scope are complete, but imports that cross from one scope into another are dropped from **every** scope — neither the importing scope nor the imported scope records them.
+
+A two-directory fixture makes this concrete. `p/` holds `core/z.ts` and `y.ts`; `q/` holds `util/w.ts` and `x.ts`, and `q/x.ts` imports `../p/y`:
+
+- Analyze the **common parent root** as a **single source** (`-s .`) → one scope whose `moduleGraph.edges` contains `q -> p`, alongside the internal `p -> p/core` and `q -> q/util`.
+- Analyze `p` and `q` as two sources (`-s ./p ./q`) → two scopes. The `p` scope still reports `root -> core` and the `q` scope still reports `root -> util`, but the real `q -> p` import appears in neither graph.
+
+So when you need cross-directory or cross-subsystem checks — layering rules, hub detection, cycles that span packages — analyze a **common parent root as a single source** and select subsystems with directories or globs. Splitting a tree into multiple sources is exactly what makes the boundary-crossing edges disappear.
+
+Until cross-scope edges are modeled, backfill them by hand, and match import statements *by position* — a path that appears only in a comment or a string literal is not a dependency:
+
+```bash
+# real `../p/...` imports under q/, ignoring comment-only mentions
+grep -rn "^[[:space:]]*import .*from ['\"]\.\./p/" ./q
+```
+
+Source paths are normalized with `realpath` before a scope key is computed, so the same directory reached through a symlinked alias, a trailing slash, or a `..` segment resolves to a single scope rather than several. If stale scopes still accumulate (for example after a directory rename), list them and remove the ones you no longer need by key:
+
+```bash
+archguard query --list-scopes
+archguard cache prune-scopes --key <scope-key> --dry-run
+archguard cache prune-scopes --key <scope-key>
+```
+
 ## 8. Review Go Projects with Atlas Layers
 
 Use this when a standard package/class/method view is not enough for Go systems.
