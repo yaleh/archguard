@@ -34,12 +34,12 @@ depends_on:
 
 ## AC
 
-- [ ] `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 新增用例，逐形态断言（每个形态一个夹具，目录 a 引用目录 b）：`import type {A}` → `typeOnlyStrength=1,valueStrength=0`；`import {type A, type B}` → type-only；`import {type A, B}` → value；`import * as X` → value；`import 'x'`（副作用）→ value；`export {A} from` → value；`export type {A} from` → type-only；字面量 `import()` → value
-- [ ] 同一测试文件新增用例：同一目录对之间混合 3 条 type-only 与 2 条值依赖，得到 `strength=5,typeOnlyStrength=3,valueStrength=2`；并断言对所有边 `strength === typeOnlyStrength + valueStrength`
-- [ ] 确定性：对同一夹具连续两次生成并经 `canonicalizeArchJson` 序列化，输出逐字节一致（在 `tests/unit/cli/utils/` 现有 canonicalize 测试文件里新增用例，或新增用例文件并在 Touches 中声明）
-- [ ] 运行 `npx vitest run tests/unit/plugins/typescript/builders/module-graph-builder.test.ts tests/plugins/typescript/builders/module-graph-builder.test.ts tests/unit/mermaid/ts-module-graph-renderer.test.ts` 退出码 0，且原有用例不改动仍通过
-- [ ] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，`moduleGraph.edges` 全部满足 `strength === typeOnlyStrength + valueStrength`，存在至少一条 `typeOnlyStrength>0` 且 `valueStrength=0` 的边和至少一条 `valueStrength>0` 的边；抽查 3 条边，其 `typeOnlyStrength` 与位置判定的 grep（行首 `import type`/`export type` 语句、不含注释）计数一致
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 新增用例，逐形态断言（每个形态一个夹具，目录 a 引用目录 b）：`import type {A}` → `typeOnlyStrength=1,valueStrength=0`；`import {type A, type B}` → type-only；`import {type A, B}` → value；`import * as X` → value；`import 'x'`（副作用）→ value；`export {A} from` → value；`export type {A} from` → type-only；字面量 `import()` → value
+- [x] 同一测试文件新增用例：同一目录对之间混合 3 条 type-only 与 2 条值依赖，得到 `strength=5,typeOnlyStrength=3,valueStrength=2`；并断言对所有边 `strength === typeOnlyStrength + valueStrength`
+- [x] 确定性：对同一夹具连续两次生成并经 `canonicalizeArchJson` 序列化，输出逐字节一致（在 `tests/unit/cli/utils/` 现有 canonicalize 测试文件里新增用例，或新增用例文件并在 Touches 中声明）
+- [x] 运行 `npx vitest run tests/unit/plugins/typescript/builders/module-graph-builder.test.ts tests/plugins/typescript/builders/module-graph-builder.test.ts tests/unit/mermaid/ts-module-graph-renderer.test.ts` 退出码 0，且原有用例不改动仍通过
+- [x] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，`moduleGraph.edges` 全部满足 `strength === typeOnlyStrength + valueStrength`，存在至少一条 `typeOnlyStrength>0` 且 `valueStrength=0` 的边和至少一条 `valueStrength>0` 的边；抽查 3 条边，其 `typeOnlyStrength` 与位置判定的 grep（行首 `import type`/`export type` 语句、不含注释）计数一致
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
@@ -53,4 +53,5 @@ depends_on:
 - src/cli/utils/canonicalize-arch-json.ts
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
 - tests/plugins/typescript/builders/module-graph-builder.test.ts
+- tests/unit/cli/utils/canonicalize-arch-json.test.ts
 - tasks/gap-ts-module-graph-type-only-edge-split.md
