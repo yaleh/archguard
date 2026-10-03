@@ -23,12 +23,12 @@ extra:
 
 ## AC
 
-- [ ] 明确 external 边的语义并写进 `TsModuleDependency` 的文档注释：external 边表示「该模块引用了这个包」，与「ts-morph 能否解析到它」无关
-- [ ] 使静态 `import ... from '<裸包名>'` / `export ... from '<裸包名>'` 与字面量 `import('<裸包名>')` 对同一个包产出一致的 external 边（要么都有、要么都无）
-- [ ] 单元测试：一个能解析到 node_modules 的包与一个解析不到的包，静态 import 与动态 import() 各自产边一致（不得因解析成功而丢边）
-- [ ] archguard 自身复跑对账：external 漏边由 31 降为 0，`missedInternal`/`extraInternal`/`strengthMismatch(internal)` 仍为 0
-- [ ] quay 复跑对账 `status=pass` 不变，且 external 边数修复前后有对照记录（写进任务 body 或 body 引用的验证记录）
-- [ ] 修复前后的 external 边数对照补进 `docs/proposals/proposal-architecture-layer-check.md` 的「阶段 0/1 验证记录」相应段落
+- [x] 明确 external 边的语义并写进 `TsModuleDependency` 的文档注释：external 边表示「该模块引用了这个包」，与「ts-morph 能否解析到它」无关
+- [x] 使静态 `import ... from '<裸包名>'` / `export ... from '<裸包名>'` 与字面量 `import('<裸包名>')` 对同一个包产出一致的 external 边（要么都有、要么都无）
+- [x] 单元测试：一个能解析到 node_modules 的包与一个解析不到的包，静态 import 与动态 import() 各自产边一致（不得因解析成功而丢边）
+- [x] archguard 自身复跑对账：external 漏边由 31 降为 0，`missedInternal`/`extraInternal`/`strengthMismatch(internal)` 仍为 0
+- [x] quay 复跑对账 `status=pass` 不变，且 external 边数修复前后有对照记录（写进任务 body 或 body 引用的验证记录）
+- [x] 修复前后的 external 边数对照补进 `docs/proposals/proposal-architecture-layer-check.md` 的「阶段 0/1 验证记录」相应段落
 
 ## DoD
 
@@ -40,3 +40,13 @@ extra:
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
 - docs/proposals/proposal-architecture-layer-check.md
 - tasks/gap-ts-module-graph-external-edge-resolution-dependent.md
+
+## 验证记录（2026-10-03）
+
+独立对账（`docs/experiments/layer-map/verify-edge-completeness.mjs`，同一份 src，仅 `module-graph-builder` 不同）：
+
+- archguard 自身：漏边 external **31 → 0**；漏边 internal 0/0、多报 internal 0/0、`strengthMismatch(internal)` 0 全部不变。
+  external 边 **120 → 151**（+31）、external 节点 **36 → 39**（+3：micromatch/cli-progress/js-yaml）、
+  external strength 合计 250 → 318；internal 边 200 → 200 不变。
+- quay（`packages/`）：`status=pass` 不变；external 边 65 → 65、节点 13 → 13、internal 边 28 → 28（逐项相同）。
+- 对照表已补进 `docs/proposals/proposal-architecture-layer-check.md` 的「阶段 0/1 验证记录」段（见该文件「补记：external 边的解析无关性已修复」）。
