@@ -28,12 +28,12 @@ extra:
 
 ## AC
 
-- [ ] `ModuleGraphBuilder` 识别类型位置的 `import('...')`（ts-morph `ImportTypeNode`，含 `readonly`/联合/`Promise<>` 嵌套等包装形式），为其产出 type-only 边：计入 `typeOnlyStrength`、**不计** `valueStrength`、`strength` 同步 +1；参数非字符串字面量时照旧不产边
-- [ ] 字符串字面量与注释里的 `import(` 不被误判为类型位置引用（负对照）
-- [ ] 单元测试覆盖：`type T = import('./x.js').X`、`interface I { p: import('./y.js').Y }`、`Promise<import('./z.js').Z>`、`readonly import('./w.js').W[]`、非字面量参数
-- [ ] 在 archguard 自身重跑 `node dist/cli/index.js analyze -s src -f json --output-dir <tmp> --work-dir <tmp>` 后，`cli/analyze -> core/interfaces` 与 `cli/processors -> core/interfaces` 两条边出现在 `extensions.tsAnalysis.moduleGraph.edges`，且 `typeOnlyStrength >= 1`、`valueStrength === 0`
-- [ ] `node docs/experiments/layer-map/verify-edge-completeness.mjs <archguard package.json>` 复跑：`typePositionImpact.edgeAbsent` 由 3 降为 0、`edgeUnderCounted` 由 9 降为 0，且 `missedInternal`/`extraInternal` 仍为 0
-- [ ] quay 侧复跑对账仍为 `status=pass`（external caveat 允许存在）
+- [x] `ModuleGraphBuilder` 识别类型位置的 `import('...')`（ts-morph `ImportTypeNode`，含 `readonly`/联合/`Promise<>` 嵌套等包装形式），为其产出 type-only 边：计入 `typeOnlyStrength`、**不计** `valueStrength`、`strength` 同步 +1；参数非字符串字面量时照旧不产边
+- [x] 字符串字面量与注释里的 `import(` 不被误判为类型位置引用（负对照）
+- [x] 单元测试覆盖：`type T = import('./x.js').X`、`interface I { p: import('./y.js').Y }`、`Promise<import('./z.js').Z>`、`readonly import('./w.js').W[]`、非字面量参数
+- [x] 在 archguard 自身重跑 `node dist/cli/index.js analyze -s src -f json --output-dir <tmp> --work-dir <tmp>` 后，`cli/analyze -> core/interfaces` 与 `cli/processors -> core/interfaces` 两条边出现在 `extensions.tsAnalysis.moduleGraph.edges`，且 `typeOnlyStrength >= 1`、`valueStrength === 0`
+- [x] `node docs/experiments/layer-map/verify-edge-completeness.mjs <archguard package.json>` 复跑：`typePositionImpact.edgeAbsent` 由 3 降为 0、`edgeUnderCounted` 由 9 降为 0，且 `missedInternal`/`extraInternal` 仍为 0
+- [x] quay 侧复跑对账仍为 `status=pass`（external caveat 允许存在）
 
 ## DoD
 
@@ -45,3 +45,4 @@ extra:
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
 - docs/proposals/proposal-architecture-layer-check.md
 - tasks/gap-ts-module-graph-misses-type-position-import-type.md
+- docs/experiments/layer-map/verify-edge-completeness.mjs
