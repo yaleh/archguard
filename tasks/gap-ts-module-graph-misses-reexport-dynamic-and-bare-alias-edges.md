@@ -1,7 +1,7 @@
 ---
 id: gap-ts-module-graph-misses-reexport-dynamic-and-bare-alias-edges
 title: TS moduleGraph 漏边：export-from 重导出、字面量动态 import 不产生边，裸 @/ 别名解析失败被记成外部包
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -33,12 +33,12 @@ extra:
 
 ## AC
 
-- [ ] `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 新增用例：夹具里 `a/x.ts` 含 `export { Y } from '../b/y.js'`，`buildModuleGraph` 返回的 edges 含 `a -> b`；对照夹具里只有注释写了 `export ... from '../b/y.js'` 时没有该边（成对负对照）
-- [ ] 同一测试文件新增用例：`a/x.ts` 含 `await import('../b/y.js')`（字面量）产生 `a -> b` 边；含 `import(someVar)`（非字面量）不产生边且未评估计数加一
-- [ ] 同一测试文件新增用例：夹具 tsconfig `paths` 为 `{"@/*": ["src/*"]}`，`a/x.ts` 含裸 `import type { T } from '@/types'`（ts-morph 解析不到目录 index），edges 含指向 `src/types` 的内部边，且 nodes 里**没有** id 为 `@/types` 的外部节点；解析不了的别名 specifier 进入 unresolved 字段而不是外部节点
-- [ ] 运行 `npx vitest run tests/unit/plugins/typescript/builders/module-graph-builder.test.ts tests/plugins/typescript/builders/module-graph-builder.test.ts` 退出码 0，且原有用例不改动仍通过
-- [ ] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，`moduleGraph.nodes` 中不再有 id 以 `@/` 开头的节点，存在 `src/parser -> src/types` 边，`src/cli -> src/core` 的 `strength` 大于修前（含 re-export）；给出修前修后的 edges 总数与 `moduleGraph.cycles` 对照，并对新增的环逐个说明
-- [ ] `npm run type-check` 与 `npm test` 全量通过
+- [x] `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 新增用例：夹具里 `a/x.ts` 含 `export { Y } from '../b/y.js'`，`buildModuleGraph` 返回的 edges 含 `a -> b`；对照夹具里只有注释写了 `export ... from '../b/y.js'` 时没有该边（成对负对照）
+- [x] 同一测试文件新增用例：`a/x.ts` 含 `await import('../b/y.js')`（字面量）产生 `a -> b` 边；含 `import(someVar)`（非字面量）不产生边且未评估计数加一
+- [x] 同一测试文件新增用例：夹具 tsconfig `paths` 为 `{"@/*": ["src/*"]}`，`a/x.ts` 含裸 `import type { T } from '@/types'`（ts-morph 解析不到目录 index），edges 含指向 `src/types` 的内部边，且 nodes 里**没有** id 为 `@/types` 的外部节点；解析不了的别名 specifier 进入 unresolved 字段而不是外部节点
+- [x] 运行 `npx vitest run tests/unit/plugins/typescript/builders/module-graph-builder.test.ts tests/plugins/typescript/builders/module-graph-builder.test.ts` 退出码 0，且原有用例不改动仍通过
+- [x] 真实对照：对 archguard 自身重新 `node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/<dir>` 后，`moduleGraph.nodes` 中不再有 id 以 `@/` 开头的节点，存在 `src/parser -> src/types` 边，`src/cli -> src/core` 的 `strength` 大于修前（含 re-export）；给出修前修后的 edges 总数与 `moduleGraph.cycles` 对照，并对新增的环逐个说明
+- [x] `npm run type-check` 与 `npm test` 全量通过
 
 ## DoD
 
