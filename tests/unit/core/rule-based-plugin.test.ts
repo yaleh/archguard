@@ -9,6 +9,10 @@ import path from 'path';
 import os from 'os';
 import { PackRegistry, PluginRegistry, RuleBasedLanguagePlugin } from '@/core/index.js';
 import type { LoadedPack } from '@/core/index.js';
+// This test drives RuleBasedLanguagePlugin directly, with no composition root,
+// so it must register the parser backend resolver itself (the same side effect
+// a real entry point triggers by importing the plugin runtime).
+import '@/plugins/shared/register-parser-runtime.js';
 
 async function writePythonPack(dir: string): Promise<void> {
   await fs.ensureDir(path.join(dir, 'rules'));

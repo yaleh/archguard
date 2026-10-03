@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import './register-parser-runtime.js';
 import type { ParserBackend, ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
 import type {

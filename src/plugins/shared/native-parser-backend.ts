@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import './register-parser-runtime.js';
 import type { ParserBackend, ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
 import type { ParserQueryLike, ParserSession, SyntaxTreeLike } from './syntax-tree.js';

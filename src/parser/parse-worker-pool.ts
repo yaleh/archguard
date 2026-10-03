@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { ArchJSON } from '@/types/index.js';
-import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
-import type { ParserLanguage } from '@/plugins/shared/parser-backend.js';
+import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
+import type { ParserLanguage } from '@/core/parser-runtime/parser-backend.js';
+import { getParserBackendResolverModuleSpecifier } from '@/core/parser-runtime/parser-backend-resolver.js';
 import type { ParseConfig } from '@/core/interfaces/parser.js';
 
 export type ParseWorkerLanguage = 'typescript' | ParserLanguage;
@@ -14,6 +15,12 @@ export interface ParseWorkerInitData {
   language: ParseWorkerLanguage;
   runtime: ParserRuntimeKind;
   workspaceRoot?: string;
+  /**
+   * Build-root-relative specifier of the module a worker imports to register
+   * its own parser backend resolver. Relayed verbatim from the core port; the
+   * parser layer never names a concrete module.
+   */
+  backendResolverModule?: string;
 }
 
 export interface ParseJob {
@@ -60,14 +67,19 @@ export class ParseWorkerPool {
   private started = false;
   private terminating = false;
   private dispatched = 0;
+  private readonly initData: ParseWorkerInitData;
 
-  constructor(
-    private readonly poolSize: number,
-    private readonly initData: ParseWorkerInitData
-  ) {
+  constructor(private readonly poolSize: number, initData: ParseWorkerInitData) {
     if (!Number.isInteger(poolSize) || poolSize < 1) {
       throw new Error('Parse worker pool size must be a positive integer');
     }
+    // Default the worker registration specifier from the core port unless the
+    // caller supplied one; the worker imports it to register in-thread.
+    this.initData = {
+      ...initData,
+      backendResolverModule:
+        initData.backendResolverModule ?? getParserBackendResolverModuleSpecifier(),
+    };
   }
 
   get size(): number {

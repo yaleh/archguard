@@ -13,7 +13,7 @@ import fs from 'fs/promises';
 import type { ParseCache } from './parse-cache.js';
 import type { IParserFacade } from '@/core/interfaces/parser-facade.js';
 import { ParseWorkerPool } from './parse-worker-pool.js';
-import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
+import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
 
 /** Worker startup is slower than serial parsing below this measured crossover. */
 export const PARSE_WORKER_THRESHOLD = 12;

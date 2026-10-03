@@ -9,7 +9,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ParseError } from '@/parser/errors.js';
+import { ParseError } from '@/core/parser-runtime/parse-error.js';
 import type { ParserQueryLike } from './syntax-tree.js';
 
 /** Map of query name (filename without `.scm`) → compiled query. */
