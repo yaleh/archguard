@@ -1,0 +1,89 @@
+# layers.yml — DRAFT（2026-10-02）。archguard 自身的层映射：glob → 层，以及允许的依赖方向。
+#
+# 状态：draft，由 LLM 起草、尚未经人审裁决。人审之前它是"声明"，不是不变量。
+# 方向约定：edge "A -> B" 表示 A 的代码 import B。allowed 里没列的方向 = 禁止（同层除外）。
+# 取边来源：ArchGuard 的 extensions.tsAnalysis.moduleGraph.edges（目录级边，不是解析 relation.id）。
+# 层的起草依据：CLAUDE.md 的三层架构（Parser / Mermaid / CLI）+ 实测边；
+#   plugins/shared 被单独拆成 plugin-runtime —— 它是解析运行时/语法树类型，被 core 与 parser 依赖，
+#   并进 plugins 会把正常依赖误报成违例。
+
+layers:
+  types:
+    rank: 0
+    globs: ["src/types", "src/types/**", "src/utils", "src/utils/**"]
+  plugin-runtime:
+    rank: 1
+    globs: ["src/plugins/shared", "src/plugins/shared/**"]
+  core:
+    rank: 2
+    globs: ["src/core", "src/core/**"]
+  parser:
+    rank: 3
+    globs: ["src/parser", "src/parser/**"]
+  plugins:
+    rank: 4
+    globs: ["src/plugins", "src/plugins/**"]      # 最长匹配优先，plugins/shared 归 plugin-runtime
+  mermaid:
+    rank: 4
+    globs: ["src/mermaid", "src/mermaid/**"]
+  analysis:
+    rank: 5
+    globs: ["src/analysis", "src/analysis/**"]
+  cli:
+    rank: 6
+    globs: ["src/cli", "src/cli/**"]
+  entry:
+    rank: 7
+    globs: ["src"]                                 # src/index.ts 等根文件
+
+# 非生产目录：不参与层检查，也不算覆盖缺口
+ignore: ["tests", "tests/**", "examples", "examples/**", "templates", "templates/**", "scripts", "scripts/**", ""]
+
+# 目标方向（人裁决前是草案）
+allowed:
+  - plugin-runtime -> types
+  - core -> types
+  - core -> plugin-runtime
+  - parser -> types
+  - parser -> core
+  - parser -> plugin-runtime
+  - plugins -> types
+  - plugins -> core
+  - plugins -> parser
+  - plugins -> plugin-runtime
+  - mermaid -> types
+  - mermaid -> core
+  - analysis -> types
+  - analysis -> core
+  - analysis -> parser
+  - analysis -> plugin-runtime
+  - analysis -> plugins
+  - analysis -> mermaid
+  - cli -> types
+  - cli -> core
+  - cli -> parser
+  - cli -> plugin-runtime
+  - cli -> plugins
+  - cli -> mermaid
+  - cli -> analysis
+  - entry -> types
+  - entry -> core
+  - entry -> parser
+  - entry -> plugins
+  - entry -> mermaid
+  - entry -> analysis
+  - entry -> cli
+
+# 已实测存在的违例基线（棘轮：只许减不许增）。2026-10-02 首次运行的结果，证据已用位置判定的 grep 核对。
+# 注意：这是"现状快照"，不是"这些方向是对的"——是否接受、如何消除由人裁决。
+known_violations:
+  - edge: "analysis -> cli"
+    evidence: "3 个文件，4 条 import（3 type-only，1 值依赖：analysis/metrics-history-reader.ts -> cli/metrics-history-writer.js）"
+  - edge: "core -> mermaid"
+    evidence: "core/interfaces/renderer-facade.ts 仅 import type（@/mermaid/diagram-generator.js）"
+  - edge: "core -> cli"
+    evidence: "core/query/query-engine.ts 仅 import type（@/cli/query/query-manifest.js）"
+  - edge: "plugin-runtime -> core"
+    evidence: "plugins/shared/plugin-factory.ts 仅 import type（@/core/interfaces/language-plugin.js）；而 core -> plugin-runtime 同时存在，二者互指"
+  - edge: "plugin-runtime -> parser"
+    evidence: "plugins/shared/query-loader.ts 值依赖 @/parser/errors.js（ParseError）；而 parser -> plugin-runtime 同时存在，二者互指"
