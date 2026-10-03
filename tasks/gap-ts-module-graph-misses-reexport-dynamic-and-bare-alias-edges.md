@@ -1,7 +1,7 @@
 ---
 id: gap-ts-module-graph-misses-reexport-dynamic-and-bare-alias-edges
 title: TS moduleGraph 漏边：export-from 重导出、字面量动态 import 不产生边，裸 @/ 别名解析失败被记成外部包
-status: ready
+status: done
 labels:
   - gap
   - defect

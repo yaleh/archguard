@@ -6,7 +6,8 @@
  * the fileToModule map.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { Project } from 'ts-morph';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
 import type { SourceFile, ImportDeclaration } from 'ts-morph';
 
@@ -32,6 +33,10 @@ function makeSourceFile(filePath: string, imports: ImportDeclaration[] = []): So
   return {
     getFilePath: () => filePath,
     getImportDeclarations: () => imports,
+    // The builder also walks re-exports and dynamic imports; these mocks carry
+    // neither, so the collections are empty (no behaviour change for the cases above).
+    getExportDeclarations: () => [],
+    getDescendantsOfKind: () => [],
   } as unknown as SourceFile;
 }
 
@@ -175,5 +180,102 @@ describe('ModuleGraphBuilder — relative import fallback resolution', () => {
     const edge = graph.edges.find((e) => e.from === 'api' && e.to === 'utils');
     expect(edge).toBeDefined();
     expect(edge?.importedNames).toContain('helper');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Re-exports, dynamic imports and bare-alias resolution (real ts-morph project)
+// ---------------------------------------------------------------------------
+
+describe('ModuleGraphBuilder — export ... from re-exports', () => {
+  let project: Project;
+
+  beforeEach(() => {
+    project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+  });
+
+  it('emits a -> b when a/x.ts re-exports from ../b/y.js', () => {
+    project.createSourceFile('/root/src/b/y.ts', `export const Y = 1;`);
+    project.createSourceFile('/root/src/a/x.ts', `export { Y } from '../b/y.js';`);
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+    expect(edge).toBeDefined();
+  });
+
+  it('does NOT emit the edge when the export-from text only appears in a comment', () => {
+    // Paired negative control: the specifier is present as text, but there is no
+    // ExportDeclaration, so no edge must be produced.
+    project.createSourceFile('/root/src/b/y.ts', `export const Y = 1;`);
+    project.createSourceFile('/root/src/a/x.ts', `// export { Y } from '../b/y.js';`);
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+    expect(edge).toBeUndefined();
+  });
+});
+
+describe('ModuleGraphBuilder — literal dynamic import', () => {
+  let project: Project;
+
+  beforeEach(() => {
+    project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+  });
+
+  it('emits a -> b for a literal import() and counts a non-literal one as unevaluated', () => {
+    project.createSourceFile('/root/src/b/y.ts', `export const Y = 1;`);
+    project.createSourceFile(
+      '/root/src/a/x.ts',
+      `const someVar = 'whatever';
+export async function load() {
+  await import('../b/y.js');
+  const mod = await import(someVar);
+  return mod;
+}`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+    expect(edge).toBeDefined();
+    expect(graph.unevaluatedDynamicImports).toBe(1);
+  });
+});
+
+describe('ModuleGraphBuilder — bare alias resolution from tsconfig paths', () => {
+  const makeProject = (): Project =>
+    new Project({
+      useInMemoryFileSystem: true,
+      compilerOptions: { target: 99, baseUrl: '/root', paths: { '@/*': ['src/*'] } },
+    });
+
+  it('resolves bare @/types to src/types and produces no @/ external node', () => {
+    const project = makeProject();
+    project.createSourceFile('/root/src/types/index.ts', `export interface T {}`);
+    project.createSourceFile(
+      '/root/src/a/x.ts',
+      `import type { T } from '@/types';\nexport type U = T;`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/types');
+    expect(edge).toBeDefined();
+    expect(graph.nodes.find((n) => n.id === '@/types')).toBeUndefined();
+    expect(graph.nodes.some((n) => n.id.startsWith('@/'))).toBe(false);
+  });
+
+  it('records an unresolvable alias specifier in unresolved instead of an external node', () => {
+    const project = makeProject();
+    project.createSourceFile('/root/src/a/x.ts', `import { Missing } from '@/does/not/exist';`);
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    expect(graph.nodes.some((n) => n.id.startsWith('@/'))).toBe(false);
+    expect(
+      graph.unresolved?.some((u) => u.from === 'src/a' && u.specifier === '@/does/not/exist')
+    ).toBe(true);
   });
 });
