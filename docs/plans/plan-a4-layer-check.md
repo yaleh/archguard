@@ -2,7 +2,7 @@
 
 > Proposal: `docs/proposals/proposal-architecture-layer-check.md` (Approved v2, 2026-10-03)
 > Review task: `gap-a4-architecture-layer-check-proposal-review`
-> Status: Draft — 阶段 0/1 已完成；阶段 2–4 的入口形态待 A0 完成后由人裁定
+> Status: Active — 阶段 0/0.5/1/A0 均已完成（2026-10-03）；阶段 2–4 的入口形态裁定点**现已到**，待人裁定
 > Priority: MEDIUM
 
 ---
@@ -25,17 +25,30 @@
 |---|---|---|---|---|
 | 0 | — | moduleGraph 边集合完整 | `gap-ts-module-graph-misses-reexport-dynamic-and-bare-alias-edges` | done |
 | 1 | — | type-only / 值依赖拆分 | `gap-ts-module-graph-type-only-edge-split` | done |
-| —（评审新增） | **0.5** | 阶段 0/1 验收补回：独立位置判定对账 | `gap-verify-module-graph-edge-completeness` | todo |
-| —（评审新增） | **A0** | 修 fitness 引擎死桩 | `gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package` | todo |
+| —（评审新增） | **0.5** | 阶段 0/1 验收补回：独立位置判定对账 | `gap-verify-module-graph-edge-completeness` | done |
+| —（评审新增） | **A0** | 修 fitness 引擎死桩 | `gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package` | done |
 | 2 | **B** | 层声明 schema + 检查器内核 + 基线（**入口形态待裁定**） | 未立项 | blocked |
 | 3 | **C** | 单页展示 + 确定性输出 + `--check` | 未立项 | blocked |
 | 4 | **D** | 编排 skill + 起草 subagent + discovery skill 改产出 | 未立项 | blocked |
+
+**当前状态（2026-10-03）**：阶段 0/0.5/1/A0 全部落地；阶段 B/C/D 仍阻塞在入口形态裁定上。
+
+- **0.5**：独立对账脚本（`docs/experiments/layer-map/verify-edge-completeness.mjs`，不读 moduleGraph）
+  在 archguard 自身与 quay 两个真实项目上 internal 漏边/多报均为 0/0，
+  `strength === typeOnlyStrength + valueStrength` 逐条成立，type-only 判定与独立扫描一致。
+  过程中发现的类型位置 `import('...')` 与 external 边两类漏边已另立 gap 任务并已完成
+  （见 proposal 的两条「补记」）。
+- **A0**：`check.ts` 不再硬编码空 relations —— 真实禁止方向得退出码 1 并打印具体边，无产物得
+  `NOT-EVALUATED`（退出码 2）；CLI `query --cycles --output-scope package` 对 archguard 自身
+  返回 4 个目录级 SCC（修前同参数报「无环」）。
+
+**下一人动作**：按裁定 2 定入口形态（见「A0 完成后的裁定点（人，现已到）」），随后立阶段 B/C/D 任务。
 
 ---
 
 ## 阶段 0.5 — 阶段 0/1 验收补回
 
-**任务**：`gap-verify-module-graph-edge-completeness`（todo）
+**任务**：`gap-verify-module-graph-edge-completeness`（**done**，2026-10-03）
 
 **为什么**：阶段 0/1 两个 gap 任务的 AC 是修前树写的、只验证了各自缺口。检查器内核一旦建在其上，
 边集合的任何遗漏都会变成检查器的静默漏报。补一组独立对账：
@@ -48,11 +61,17 @@
 **出口条件**：两项目各产出可复读的对账结果；漏边为 0 或逐条归因；若发现新漏边，立新 gap 任务，
 不在本阶段内顺手修。
 
+**结果**：两项目（archguard 自身、quay `packages/`）对账均 `pass`，internal 漏边/多报 0/0，
+拆分母等式与 type-only 判定全部一致；`mg.unresolved` 与 `mg.unevaluatedDynamicImports` 与独立扫描逐一吻合。
+对账过程中发现两类偏差（external 边解析相关、类型位置 `import('...')` 整类不产边），
+已按出口条件**另立**两个 gap 任务（`gap-ts-module-graph-external-edge-resolution-dependent`、
+`gap-ts-module-graph-misses-type-position-import-type`）并均已完成，未在本阶段内顺手修。
+
 ---
 
 ## 阶段 A0 — 修 fitness 引擎死桩（形态裁定的前置）
 
-**任务**：`gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package`（均 todo）
+**任务**：`gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package`（均 **done**，2026-10-03）
 
 **为什么**：`archguard check` 已有一等规则引擎（`fitness.rules` + `no-dependency`），但
 `src/cli/commands/check.ts:59` 硬编码空 `relations`，规则永不生效；CLI `query --cycles` 又忽略
@@ -61,7 +80,12 @@
 
 **出口条件**：两个任务 done，各自有真实项目上的非零退出码 / 非空输出证据。
 
-**A0 完成后的裁定点（人）**：入口形态 = 扩展 `archguard check` 的 fitness 规则类型，还是独立
+**结果**：两任务各自的 DoD 均以真实项目证据满足——`archguard check` 对真实禁止方向返回退出码 1
+并打印具体违例边（修前同配置恒为 0），无产物时返回 `NOT-EVALUATED` 且退出码 2（不再与 pass 同形）；
+CLI `query --cycles --output-scope package` 对 archguard 自身返回 4 个目录级 SCC（size 13/10/2/2），
+修前同参数打印「No dependency cycles detected.」。据此引擎的真实形状已可见，入口形态裁定所需依据齐备。
+
+**A0 完成后的裁定点（人，现已到）**：入口形态 = 扩展 `archguard check` 的 fitness 规则类型，还是独立
 `archguard check-layers` 子命令？命令名？是否同时提供 MCP 工具？编排 skill 是否放进 archguard plugin？
 
 ---
