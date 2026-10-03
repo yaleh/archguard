@@ -1,7 +1,7 @@
 ---
 id: GOAL-001
 title: 发布过程可信：master 是最近一次全绿发布，npm + claude plugin 两渠道版本一致且真实装得上
-status: active
+status: achieved
 kind: goal
 origin: 人 2026-09-25 在会话中三项裁定：(a) 渠道不砍，保留 npm + Claude Code plugin 形态；(b) 发布由人在
   Claude Code 会话中触发；(c) 默认分支保持 master。规范依据 = quay 的
@@ -10,6 +10,12 @@ origin: 人 2026-09-25 在会话中三项裁定：(a) 渠道不砍，保留 npm 
   SPEC-goal-mechanism-2026-09-06 §11（task 层判据是一次性的，需长期维持的保证上移 goal 层）。本 goal 是
   archguard goal store 的第一条记录（goals/ 此前为空）。
 activatedAt: 2026-09-25T14:32:29.436Z
+statusLog:
+  - at: 2026-10-03T12:33:06.971Z
+    from: active
+    to: achieved
+    actor: goal-driver
+    reason: "I2: all ACs achieved + sufficiency covered"
 ---
 ## 背景（2026-09-25 实测，全部为直接量）
 
