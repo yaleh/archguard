@@ -17,7 +17,7 @@ depends_on:
 ---
 ## Proposal
 
-`docs/architecture-checking-scenarios.md`（实际路径 `docs/user-guide/architecture-checking-scenarios.md`）的 Limits 一节写明 ArchGuard 目前没有一等的架构规则检查。2026-10-02 起 archguard 自身与 quay 项目的两次独立实验证明"层声明 → 确定性检查 → 单页展示"可以跑通，并发现了 `detect_cycles(package)` 看不见的目录级环与方向违例。proposal 已写成文档 `docs/proposals/proposal-architecture-layer-check.md`（Draft v1，2026-10-03），外部原型在 `docs/experiments/layer-map/`（提交 2a75651e）。
+`docs/architecture-checking-scenarios.md`（实际路径 `docs/user-guide/architecture-checking-scenarios.md`）的 Limits 一节写明 ArchGuard 目前没有一等的架构规则检查。2026-10-02 起 archguard 自身与 quay 项目的两次独立实验证明"层声明 → 确定性检查 → 单页展示"可以跑通，并发现了 `detect_cycles(package)` 看不见的目录级环与方向违例。proposal 已写成文档 `docs/proposals/proposal-architecture-layer-check.md`（2026-10-03 写成，已按本次评审裁定更新为 Approved v2），外部原型在 `docs/experiments/layer-map/`（提交 2a75651e）。
 
 本任务不是实现，而是**人评审该 proposal 并裁定范围**，之后再由 `quay-task-to-plan`（或 feature-to-backlog 流程）拆成分阶段的实施任务。proposal 的核心主张：
 
@@ -61,6 +61,5 @@ depends_on:
 
 - docs/proposals/proposal-architecture-layer-check.md
 - docs/user-guide/architecture-checking-scenarios.md
-- tasks/gap-a4-architecture-layer-check-proposal-review.md
 - docs/plans/plan-a4-layer-check.md
-- docs/proposals/proposal-architecture-layer-check.md
+- tasks/gap-a4-architecture-layer-check-proposal-review.md
