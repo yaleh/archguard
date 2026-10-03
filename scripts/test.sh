@@ -16,10 +16,18 @@
 # `cd` below. Without it a relative test path would resolve against the main checkout and the scoped
 # gate would silently judge a tree that is not the one under test.
 #
+# --perf is a separate, manually-invoked lane: it runs the vitest.perf.config.ts suite
+# (tests/integration/performance/**, 120s timeout, singleFork:false — deliberately excluded from
+# the default `npm test` / vitest.config.ts run). quay never passes --perf itself — loop.test_command
+# stays `bash scripts/test.sh` and fan-in/scoped-gate rounds are unaffected by it. Performance numbers
+# are timing-sensitive and not a correctness gate, so they are not wired into every round; run them
+# on demand instead.
+#
 # Usage:
 #   bash scripts/test.sh                      # full suite (vitest run)
 #   bash scripts/test.sh tests/unit/foo.test.ts [more files...]   # scoped run
 #   bash scripts/test.sh --for-task <task-id> [--allow-thin]      # scoped run over the task's Touches
+#   bash scripts/test.sh --perf [tests/integration/performance/foo.test.ts ...]  # perf lane (manual)
 set -euo pipefail
 
 # Self-locating: run against the tree this script lives in, whatever cwd the caller had.
@@ -27,6 +35,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 FILES=()
 SCOPED_TASK=""
+PERF=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -43,9 +52,10 @@ while [ $# -gt 0 ]; do
     # script's selection is never thin — with no positional files it runs the full
     # suite, which is strictly more signal than the caller asked to allow.
     --allow-thin) shift ;;
+    # --perf: switch the engine to vitest.perf.config.ts (see header comment). Boolean, no value.
+    --perf) PERF=1; shift ;;
     # vitest runs with pool=forks/singleFork (vitest.config.ts); concurrency is not tunable here.
     --test-concurrency=*) shift ;;
-    --allow-thin) shift ;;  # the scoped set may legitimately be smaller than the suite
     -*) shift ;;  # unknown flags are ignored rather than failing the gate
     *)
       [ -e "$1" ] || { echo "error: test file not found: $1" >&2; exit 1; }
@@ -84,6 +94,14 @@ if [ -n "$SCOPED_TASK" ]; then
       ' "$task_file"
     )
   fi
+fi
+
+if [ "$PERF" = 1 ]; then
+  if [ ${#FILES[@]} -gt 0 ]; then
+    mapfile -t FILES < <(printf '%s\n' "${FILES[@]}" | awk '!seen[$0]++')
+    exec npx vitest run --config vitest.perf.config.ts "${FILES[@]}"
+  fi
+  exec npx vitest run --config vitest.perf.config.ts
 fi
 
 if [ ${#FILES[@]} -gt 0 ]; then
