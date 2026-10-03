@@ -1,7 +1,7 @@
 ---
 id: gap-ts-module-graph-external-edge-resolution-dependent
 title: moduleGraph 的 external 边是否出现取决于 ts-morph 能否解析到 node_modules
-status: todo
+status: ready
 labels:
   - gap
   - typescript
