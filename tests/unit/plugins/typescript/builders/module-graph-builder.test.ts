@@ -19,13 +19,17 @@ function makeImportDecl(
   specifier: string,
   resolvedFile: SourceFile | null = null,
   namedImports: string[] = [],
-  defaultImport: string | null = null
+  defaultImport: string | null = null,
+  typeOnly = false
 ): ImportDeclaration {
   return {
     getModuleSpecifierSourceFile: () => resolvedFile,
     getModuleSpecifierValue: () => specifier,
-    getNamedImports: () => namedImports.map((n) => ({ getName: () => n })),
+    getNamedImports: () =>
+      namedImports.map((n) => ({ getName: () => n, isTypeOnly: () => typeOnly })),
     getDefaultImport: () => (defaultImport ? { getText: () => defaultImport } : undefined),
+    getNamespaceImport: () => undefined,
+    isTypeOnly: () => typeOnly,
   } as unknown as ImportDeclaration;
 }
 
@@ -241,6 +245,99 @@ export async function load() {
     const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
     expect(edge).toBeDefined();
     expect(graph.unevaluatedDynamicImports).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Type-only vs value dependency split (typeOnlyStrength / valueStrength)
+// ---------------------------------------------------------------------------
+
+describe('ModuleGraphBuilder — type-only vs value edge strength', () => {
+  const MODULE_B = `export const A = 1;
+export const B = 2;
+export default 1;
+export interface T {}
+export type U = number;`;
+
+  /** Build a graph from a single `src/a/x.ts` source against `src/b/index.ts`. */
+  const buildWith = (aSource: string) => {
+    const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+    project.createSourceFile('/root/src/b/index.ts', MODULE_B);
+    project.createSourceFile('/root/src/a/x.ts', aSource);
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+    return graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+  };
+
+  const typeOnlyForms: Array<[label: string, source: string]> = [
+    ['import type { A }', `import type { A } from '../b/index';`],
+    ['import type X (type default import)', `import type X from '../b/index';`],
+    ['import type * as X (type namespace import)', `import type * as X from '../b/index';`],
+    [
+      'import { type A, type B } (all named type-only)',
+      `import { type A, type B } from '../b/index';`,
+    ],
+    ['export type { A }', `export type { A } from '../b/index';`],
+    ['export type *', `export type * from '../b/index';`],
+  ];
+
+  it.each(typeOnlyForms)('%s → strength=1, typeOnlyStrength=1, valueStrength=0', (_label, src) => {
+    const edge = buildWith(src);
+    expect(edge).toBeDefined();
+    expect(edge?.strength).toBe(1);
+    expect(edge?.typeOnlyStrength).toBe(1);
+    expect(edge?.valueStrength).toBe(0);
+  });
+
+  const valueForms: Array<[label: string, source: string]> = [
+    ['import { type A, B } (mixed named)', `import { type A, B } from '../b/index';`],
+    ['import { A } (plain named)', `import { A } from '../b/index';`],
+    ['import X (default)', `import X from '../b/index';`],
+    ['import * as X (namespace)', `import * as X from '../b/index';`],
+    ['import (side-effect only)', `import '../b/index';`],
+    ['export { A }', `export { A } from '../b/index';`],
+    ['export *', `export * from '../b/index';`],
+    ['export * as ns', `export * as ns from '../b/index';`],
+    [
+      'literal dynamic import()',
+      `export async function load() {\n  return import('../b/index');\n}`,
+    ],
+  ];
+
+  it.each(valueForms)('%s → strength=1, typeOnlyStrength=0, valueStrength=1', (_label, src) => {
+    const edge = buildWith(src);
+    expect(edge).toBeDefined();
+    expect(edge?.strength).toBe(1);
+    expect(edge?.typeOnlyStrength).toBe(0);
+    expect(edge?.valueStrength).toBe(1);
+  });
+
+  it('splits a mixed directory pair into 3 type-only + 2 value (strength=5)', () => {
+    const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+    project.createSourceFile('/root/src/b/index.ts', MODULE_B);
+    // 3 type-only statements + 2 value statements, all targeting src/b.
+    project.createSourceFile(
+      '/root/src/a/x.ts',
+      `import type { A } from '../b/index';
+import type { B } from '../b/index';
+import { type T, type U } from '../b/index';
+import { A as valueA } from '../b/index';
+import '../b/index';`
+    );
+    // A second directory pair so the invariant is asserted over more than one edge.
+    project.createSourceFile('/root/src/c/y.ts', `export { A as reA } from '../b/index';`);
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+    const edge = graph.edges.find((e) => e.from === 'src/a' && e.to === 'src/b');
+    expect(edge).toBeDefined();
+    expect(edge?.strength).toBe(5);
+    expect(edge?.typeOnlyStrength).toBe(3);
+    expect(edge?.valueStrength).toBe(2);
+
+    // Invariant holds for every edge in the graph.
+    expect(graph.edges.length).toBeGreaterThanOrEqual(2);
+    for (const e of graph.edges) {
+      expect(e.strength).toBe((e.typeOnlyStrength ?? 0) + (e.valueStrength ?? 0));
+    }
   });
 });
 

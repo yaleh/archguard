@@ -51,7 +51,28 @@ export interface TsModuleNode {
 export interface TsModuleDependency {
   from: string;
   to: string;
+  /**
+   * Total number of statements (static imports, `export ... from` re-exports and
+   * literal dynamic `import()` calls) that contribute to this edge.
+   * Invariant (for edges produced by builders that populate the split fields):
+   * `strength === typeOnlyStrength + valueStrength`.
+   */
   strength: number;
+  /**
+   * Number of contributing statements that are type-only (erased at compile
+   * time, produce no runtime coupling): `import type ...`, `export type ... from`,
+   * and all-named-type-only forms such as `import { type A, type B }`.
+   * Optional — edges produced before this field existed leave it `undefined`,
+   * and consumers MUST treat `undefined` as "unknown", never as 0.
+   */
+  typeOnlyStrength?: number;
+  /**
+   * Number of contributing statements that are value dependencies (survive to
+   * runtime): default/namespace/side-effect imports, mixed `import { type A, B }`,
+   * `export { A } from`, `export * from`, and literal dynamic `import()`.
+   * Optional — absent means "unknown", not 0.
+   */
+  valueStrength?: number;
   importedNames: string[];
 }
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { Project } from 'ts-morph';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
+import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
 import type { ArchJSON, Entity, Member, Relation, Module } from '@/types/index.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 
 function makeMinimalArchJson(overrides: Partial<ArchJSON> = {}): ArchJSON {
   return {
@@ -179,6 +182,41 @@ describe('canonicalizeArchJson', () => {
       const once = canonicalizeArchJson(input);
       const twice = canonicalizeArchJson(once);
       expect(twice).toEqual(once);
+    });
+  });
+
+  describe('moduleGraph edge determinism with type-only split fields', () => {
+    const buildGraph = (): TsModuleGraph => {
+      const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+      project.createSourceFile(
+        '/root/src/b/index.ts',
+        `export const A = 1;\nexport interface T {}`
+      );
+      project.createSourceFile(
+        '/root/src/a/x.ts',
+        `import type { T } from '../b/index';\nimport { A } from '../b/index';`
+      );
+      return new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+    };
+
+    const makeArchJson = (moduleGraph: TsModuleGraph): ArchJSON =>
+      makeMinimalArchJson({
+        extensions: { tsAnalysis: { version: '1.0', moduleGraph } },
+      });
+
+    it('serializes byte-for-byte identically across two independent generations', () => {
+      const first = JSON.stringify(canonicalizeArchJson(makeArchJson(buildGraph())));
+      const second = JSON.stringify(canonicalizeArchJson(makeArchJson(buildGraph())));
+
+      expect(second).toBe(first);
+      // The split fields survive canonicalization (the edge sort must not drop them).
+      expect(first).toContain('"typeOnlyStrength":1');
+      expect(first).toContain('"valueStrength":1');
+      // And the per-edge invariant holds after serialization.
+      const canon = canonicalizeArchJson(makeArchJson(buildGraph()));
+      for (const edge of canon.extensions?.tsAnalysis?.moduleGraph?.edges ?? []) {
+        expect(edge.strength).toBe((edge.typeOnlyStrength ?? 0) + (edge.valueStrength ?? 0));
+      }
     });
   });
 

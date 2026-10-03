@@ -15,6 +15,8 @@ import type {
   CallExpression,
   StringLiteral,
   NoSubstitutionTemplateLiteral,
+  ImportDeclaration,
+  ExportDeclaration,
 } from 'ts-morph';
 import type {
   TsModuleGraph,
@@ -28,6 +30,10 @@ import path from 'node:path';
 
 interface EdgeAccumulator {
   strength: number;
+  /** Subset of `strength` from type-only statements (no runtime coupling). */
+  typeOnlyStrength: number;
+  /** Subset of `strength` from value (runtime) statements. */
+  valueStrength: number;
   importedNames: Set<string>;
 }
 
@@ -94,16 +100,23 @@ export class ModuleGraphBuilder {
     // Dynamic import() calls whose argument was not a string literal
     let unevaluatedDynamicImports = 0;
 
-    const record = (fromModule: string, toModule: string, names: Iterable<string>): void => {
+    const record = (
+      fromModule: string,
+      toModule: string,
+      names: Iterable<string>,
+      isTypeOnly: boolean
+    ): void => {
       // Skip self-imports
       if (fromModule === toModule) return;
       const edgeKey = `${fromModule}|||${toModule}`;
       let acc = edgeMap.get(edgeKey);
       if (!acc) {
-        acc = { strength: 0, importedNames: new Set() };
+        acc = { strength: 0, typeOnlyStrength: 0, valueStrength: 0, importedNames: new Set() };
         edgeMap.set(edgeKey, acc);
       }
       acc.strength += 1;
+      if (isTypeOnly) acc.typeOnlyStrength += 1;
+      else acc.valueStrength += 1;
       for (const name of names) acc.importedNames.add(name);
     };
 
@@ -111,15 +124,16 @@ export class ModuleGraphBuilder {
       fromModule: string,
       specifier: string,
       resolution: TargetResolution,
-      names: Iterable<string>
+      names: Iterable<string>,
+      isTypeOnly: boolean
     ): void => {
       switch (resolution.kind) {
         case 'internal':
-          record(fromModule, resolution.module, names);
+          record(fromModule, resolution.module, names, isTypeOnly);
           break;
         case 'external':
           externalModules.add(resolution.name);
-          record(fromModule, resolution.name, names);
+          record(fromModule, resolution.name, names, isTypeOnly);
           break;
         case 'unresolved-alias':
           unresolved.push({ from: fromModule, specifier });
@@ -150,7 +164,13 @@ export class ModuleGraphBuilder {
         const defaultImport = importDecl.getDefaultImport();
         if (defaultImport) names.add(defaultImport.getText());
 
-        applyResolution(fromModule, specifier, resolution, names);
+        applyResolution(
+          fromModule,
+          specifier,
+          resolution,
+          names,
+          this.isTypeOnlyImport(importDecl)
+        );
       }
 
       // 3b. `export ... from` re-exports (including `export * from`,
@@ -172,7 +192,13 @@ export class ModuleGraphBuilder {
         const namespaceExport = exportDecl.getNamespaceExport();
         if (namespaceExport) names.add(namespaceExport.getName());
 
-        applyResolution(fromModule, specifier, resolution, names);
+        applyResolution(
+          fromModule,
+          specifier,
+          resolution,
+          names,
+          this.isTypeOnlyExport(exportDecl)
+        );
       }
 
       // 3c. Literal dynamic `import('...')`. Non-literal arguments cannot be
@@ -187,7 +213,8 @@ export class ModuleGraphBuilder {
         // ts-morph exposes no module-specifier resolution for a CallExpression
         // argument, so resolve manually against fileToModule (relative + alias).
         const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
-        applyResolution(fromModule, specifier, resolution, []);
+        // A literal `import()` always loads the module at runtime → value dependency.
+        applyResolution(fromModule, specifier, resolution, [], false);
       }
     }
 
@@ -199,6 +226,8 @@ export class ModuleGraphBuilder {
         from,
         to,
         strength: acc.strength,
+        typeOnlyStrength: acc.typeOnlyStrength,
+        valueStrength: acc.valueStrength,
         importedNames: [...acc.importedNames],
       });
     }
@@ -273,6 +302,50 @@ export class ModuleGraphBuilder {
       graph.unevaluatedDynamicImports = unevaluatedDynamicImports;
     }
     return graph;
+  }
+
+  // ── Private: type-only classification ─────────────────────────────────────
+
+  /**
+   * Whether an import declaration is a type-only dependency (erased at compile
+   * time, no runtime coupling).
+   *
+   * Type-only:
+   * - `import type { A } from 'x'` / `import type X from 'x'` / `import type * as X from 'x'`
+   *   (declaration-level `isTypeOnly()`);
+   * - `import { type A, type B } from 'x'` — every named import carries the `type`
+   *   modifier and there is no default/namespace import.
+   *
+   * Value (runtime):
+   * - mixed `import { type A, B } from 'x'`, `import X from 'x'`, `import * as X`,
+   *   side-effect `import 'x'`, plain `import { A } from 'x'`.
+   */
+  private isTypeOnlyImport(importDecl: ImportDeclaration): boolean {
+    if (importDecl.isTypeOnly()) return true;
+    const namedImports = importDecl.getNamedImports();
+    if (namedImports.length === 0) return false;
+    if (importDecl.getDefaultImport() || importDecl.getNamespaceImport()) return false;
+    return namedImports.every((named) => named.isTypeOnly());
+  }
+
+  /**
+   * Whether an `export ... from` re-export is a type-only dependency.
+   *
+   * Type-only:
+   * - `export type { A } from 'x'` / `export type * from 'x'` / `export type * as ns from 'x'`
+   *   (declaration-level `isTypeOnly()`);
+   * - `export { type A, type B } from 'x'` — every named export carries the `type`
+   *   modifier and there is no namespace export.
+   *
+   * Value (runtime): `export { A } from 'x'`, `export * from 'x'`,
+   * `export * as ns from 'x'`.
+   */
+  private isTypeOnlyExport(exportDecl: ExportDeclaration): boolean {
+    if (exportDecl.isTypeOnly()) return true;
+    const namedExports = exportDecl.getNamedExports();
+    if (namedExports.length === 0) return false;
+    if (exportDecl.getNamespaceExport()) return false;
+    return namedExports.every((named) => named.isTypeOnly());
   }
 
   // ── Private: specifier resolution ─────────────────────────────────────────
