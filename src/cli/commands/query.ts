@@ -18,6 +18,7 @@ import type {
   QueryOutputFormat,
   EdgeListOutput,
 } from '../query/query-engine.js';
+import type { PackageCyclesResult } from '@/core/query/query-engine.js';
 import type { Entity, CycleInfo } from '@/types/index.js';
 import type { GoAtlasLayers } from '@/types/extensions/go-atlas.js';
 import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
@@ -387,9 +388,27 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
       if (!isJson) formatEntityList(entities, `Entities in ${opts.file}`);
     } else if (opts.cycles) {
-      const cycles = engine.getCycles();
-      result = cycles;
-      if (!isJson) formatCycles(cycles);
+      // Phase 101: --cycles honours --output-scope (mirrors the MCP handler,
+      // see archguard_detect_cycles in mcp-server.ts). At package granularity the
+      // answer comes from the directory-level TS module graph and is three-valued
+      // (evaluated true/false) — "not evaluated" must never be rendered the same
+      // way as "evaluated, no cycles". class (default) is unchanged.
+      if (opts.outputScope === 'package') {
+        const packageCycles = engine.getPackageCycles();
+        result = packageCycles;
+        if (!isJson) formatPackageCycles(packageCycles);
+        if (!packageCycles.evaluated) {
+          // The query could not be answered at this granularity. The reason has
+          // already been written; signal "unknown" with a non-zero exit code so a
+          // caller cannot read it as "no cycles" (set process.exitCode rather than
+          // process.exit so the reason/JSON is flushed first).
+          process.exitCode = 1;
+        }
+      } else {
+        const cycles = engine.getCycles();
+        result = cycles;
+        if (!isJson) formatCycles(cycles);
+      }
     } else if (opts.summary) {
       const summary = engine.getSummary();
       result = summary;
@@ -969,6 +988,30 @@ function formatCycles(cycles: CycleInfo[]): void {
     const c = cycles[i];
     console.log(`  Cycle ${i + 1} (size ${c.size}): ${c.memberNames.join(' -> ')}`);
     console.log(`    Files: ${c.files.join(', ')}`);
+  }
+}
+
+/**
+ * Render a package-granularity cycle result. Keeps the three states distinct:
+ * not-evaluated (prints why), evaluated-with-no-cycles, and evaluated-with-cycles.
+ */
+function formatPackageCycles(result: PackageCyclesResult): void {
+  if (!result.evaluated) {
+    console.log(
+      `Directory-level dependency cycles were not evaluated: ${result.reason ?? 'unknown reason'}`
+    );
+    return;
+  }
+
+  if (result.cycles.length === 0) {
+    console.log('No directory-level dependency cycles detected.');
+    return;
+  }
+
+  console.log(`Found ${result.cycles.length} directory-level dependency cycle(s):\n`);
+  for (let i = 0; i < result.cycles.length; i++) {
+    const c = result.cycles[i];
+    console.log(`  Cycle ${i + 1} (size ${c.size}): ${c.modules.join(' -> ')}`);
   }
 }
 

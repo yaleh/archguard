@@ -9,6 +9,7 @@ import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { PackageStatEntry, PackageStatsResult } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 
 // Mock engine-loader before importing the command
 vi.mock('@/cli/query/engine-loader.js', () => ({
@@ -92,6 +93,46 @@ function createTestEngine(scope: QueryScopeEntry = parsedScope): QueryEngine {
   return new QueryEngine({ archJson, archIndex, scopeEntry: scope });
 }
 
+/** Build a TS module graph (directory-level) node/edge set. */
+function makeTsModuleGraph(
+  nodeIds: string[],
+  edges: Array<{ from: string; to: string }>
+): TsModuleGraph {
+  return {
+    nodes: nodeIds.map((id) => ({
+      id,
+      name: id,
+      type: 'internal' as const,
+      fileCount: 1,
+      stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+    })),
+    edges: edges.map((e) => ({ ...e, strength: 1, importedNames: [] })),
+    cycles: [],
+  };
+}
+
+/** ArchJSON carrying (or deliberately missing) a tsAnalysis.moduleGraph. */
+function makeArchJsonWithModuleGraph(
+  moduleGraph: TsModuleGraph | undefined,
+  language: string = 'typescript'
+): ArchJSON {
+  return {
+    ...makeArchJson(),
+    language,
+    extensions: moduleGraph ? { tsAnalysis: { version: '1.0', moduleGraph } } : {},
+  };
+}
+
+/** Engine over an ArchJSON that may carry a directory-level module graph. */
+function createModuleGraphEngine(
+  moduleGraph: TsModuleGraph | undefined,
+  language: string = 'typescript'
+): QueryEngine {
+  const archJson = makeArchJsonWithModuleGraph(moduleGraph, language);
+  const archIndex = buildArchIndex(archJson, 'modulegraph-testhash');
+  return new QueryEngine({ archJson, archIndex, scopeEntry: parsedScope });
+}
+
 function wrapEngine(engine: QueryEngine, scope: QueryScopeEntry = parsedScope) {
   return {
     engine,
@@ -108,6 +149,7 @@ let consoleErrorOutput: string[];
 let originalLog: typeof console.log;
 let originalError: typeof console.error;
 let originalExit: typeof process.exit;
+let originalExitCode: typeof process.exitCode;
 
 beforeEach(() => {
   consoleOutput = [];
@@ -115,6 +157,7 @@ beforeEach(() => {
   originalLog = console.log;
   originalError = console.error;
   originalExit = process.exit;
+  originalExitCode = process.exitCode;
 
   console.log = (...args: unknown[]) => {
     consoleOutput.push(args.map(String).join(' '));
@@ -123,6 +166,9 @@ beforeEach(() => {
     consoleErrorOutput.push(args.map(String).join(' '));
   };
   process.exit = vi.fn() as unknown as typeof process.exit;
+  // The not-evaluated package-cycles path sets process.exitCode = 1; reset it so
+  // it never leaks into the vitest worker's own exit status.
+  process.exitCode = undefined;
 
   vi.mocked(resolveArchDir).mockClear();
   vi.mocked(loadEngine).mockClear();
@@ -133,6 +179,7 @@ afterEach(() => {
   console.log = originalLog;
   console.error = originalError;
   process.exit = originalExit;
+  process.exitCode = originalExitCode;
 });
 
 async function runQuery(...args: string[]): Promise<void> {
@@ -704,5 +751,96 @@ describe('query command --output-scope / edge-list safety (Phase 101)', () => {
     vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
     await runQuery('--entity', 'CacheManager', '--output-scope', 'package');
     expect(process.exit).not.toHaveBeenCalledWith(1);
+  });
+});
+
+describe('query --cycles --output-scope package (Phase 101)', () => {
+  it('reports directory-level mutual imports as evaluated with non-empty cycles', async () => {
+    // a → a/b and a/b → a: a directory-level 2-cycle.
+    const moduleGraph = makeTsModuleGraph(
+      ['src/a', 'src/a/b'],
+      [
+        { from: 'src/a', to: 'src/a/b' },
+        { from: 'src/a/b', to: 'src/a' },
+      ]
+    );
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createModuleGraphEngine(moduleGraph)));
+
+    await runQuery('--cycles', '--output-scope', 'package', '--format', 'json');
+
+    const parsed = JSON.parse(consoleOutput.join('\n'));
+    expect(parsed.granularity).toBe('package');
+    expect(parsed.evaluated).toBe(true);
+    expect(parsed.cycles.length).toBeGreaterThan(0);
+    const modules = parsed.cycles.flatMap((c: { modules: string[] }) => c.modules);
+    expect(modules).toContain('src/a');
+    expect(modules).toContain('src/a/b');
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  it('renders directory-level cycles as text, not the entity-level "no cycles" line', async () => {
+    const moduleGraph = makeTsModuleGraph(
+      ['src/a', 'src/a/b'],
+      [
+        { from: 'src/a', to: 'src/a/b' },
+        { from: 'src/a/b', to: 'src/a' },
+      ]
+    );
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createModuleGraphEngine(moduleGraph)));
+
+    await runQuery('--cycles', '--output-scope', 'package');
+
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('directory-level dependency cycle');
+    expect(output).not.toContain('No dependency cycles detected.');
+  });
+
+  it('negative control: no mutual edge yields evaluated=true with cycles []', async () => {
+    const moduleGraph = makeTsModuleGraph(['src/a', 'src/a/b'], [{ from: 'src/a', to: 'src/a/b' }]);
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createModuleGraphEngine(moduleGraph)));
+
+    await runQuery('--cycles', '--output-scope', 'package', '--format', 'json');
+
+    const parsed = JSON.parse(consoleOutput.join('\n'));
+    expect(parsed.evaluated).toBe(true);
+    expect(parsed.cycles).toEqual([]);
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  it('no moduleGraph yields evaluated=false with a non-empty reason and non-zero exit code', async () => {
+    // e.g. a Go scope — no tsAnalysis.moduleGraph at all.
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createModuleGraphEngine(undefined, 'go')));
+
+    await runQuery('--cycles', '--output-scope', 'package', '--format', 'json');
+
+    const parsed = JSON.parse(consoleOutput.join('\n'));
+    expect(parsed.granularity).toBe('package');
+    expect(parsed.evaluated).toBe(false);
+    expect(typeof parsed.reason).toBe('string');
+    expect(parsed.reason.length).toBeGreaterThan(0);
+    expect(parsed.cycles).toEqual([]);
+    // "not evaluated" must be signaled, not silently read as "no cycles".
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('prints the reason in text mode for a not-evaluated scope', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createModuleGraphEngine(undefined, 'go')));
+
+    await runQuery('--cycles', '--output-scope', 'package');
+
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('were not evaluated');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('class default (no --output-scope) still returns entity-granularity cycles', async () => {
+    vi.mocked(loadEngine).mockResolvedValue(wrapEngine(createTestEngine()));
+
+    await runQuery('--cycles');
+
+    const output = consoleOutput.join('\n');
+    expect(output).toContain('CacheManager');
+    expect(output).toContain('DiagramProcessor');
+    expect(process.exitCode).not.toBe(1);
   });
 });
