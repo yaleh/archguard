@@ -1,7 +1,7 @@
 ---
 id: gap-a4-architecture-layer-check-proposal-review
 title: A4 分层声明 + 确定性方向检查 + 展示：proposal 评审并拆分实施计划
-status: todo
+status: ready
 labels:
   - proposal
   - architecture
