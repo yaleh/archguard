@@ -48,8 +48,11 @@ export function createCheckCommand(): Command {
   cmd
     .description('Check architecture fitness rules against current metrics')
     .option('--config <path>', 'Config file path', 'archguard.config.json')
-    .option('--output-dir <dir>', 'Output directory', '.archguard')
-    .action(async (options: { config: string; outputDir: string }) => {
+    .option(
+      '--output-dir <dir>',
+      'Directory holding the analyze snapshots (default: config outputDir)'
+    )
+    .action(async (options: { config: string; outputDir?: string }) => {
       // 1. Load config — cast to unknown first to access optional `fitness` field
       const loader = new ConfigLoader();
       const config = await loader.load({}, options.config);
@@ -65,21 +68,25 @@ export function createCheckCommand(): Command {
         return;
       }
 
-      // 3. Load snapshots — use the most recent one
-      const snapshots = await loadSnapshots(options.outputDir);
+      // 3. Load snapshots — use the most recent one. `analyze` writes them to
+      //    <outputDir>/snapshots, where outputDir defaults to <workDir>/output;
+      //    reading the bare work dir here would never find them.
+      const snapshotDir = options.outputDir ?? config.outputDir;
+      const snapshots = await loadSnapshots(snapshotDir);
       if (snapshots.length === 0) {
-        console.log('No snapshots found. Run `archguard analyze` first.');
+        console.log(`No snapshots found under ${snapshotDir}. Run \`archguard analyze\` first.`);
         return;
       }
 
       const snapshot = snapshots[0];
 
-      // 4. Relations — load the real edges from the analyze artifacts.
+      // 4. Relations — load the real edges from the analyze artifacts
+      //    (<workDir>/query/<scopeKey>/arch.json).
       //    `null` (no artifact / no edges at this granularity) is surfaced to
       //    the user and turns `no-dependency` rules into NOT-EVALUATED; it is
       //    deliberately not collapsed into an empty graph, which would make
       //    every dependency rule pass vacuously.
-      const relationData = await loadFitnessRelations(options.outputDir);
+      const relationData = await loadFitnessRelations(config.workDir);
       if (relationData.relations === null) {
         console.log(
           `Relation data unavailable: ${relationData.detail}. ` +

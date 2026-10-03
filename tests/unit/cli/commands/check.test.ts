@@ -62,13 +62,13 @@ function makeSnapshot(overrides: Partial<MetricSnapshot> = {}): MetricSnapshot {
   };
 }
 
-/** Write the analyze artifacts a real run would leave under `<archDir>/query/`. */
+/** Write the analyze artifacts a real run would leave under `<workDir>/query/`. */
 async function writeQueryArtifacts(
-  archDir: string,
+  workDir: string,
   edges: Array<[string, string]>,
   scopeKey = 'scope0001'
 ): Promise<void> {
-  const queryDir = path.join(archDir, 'query');
+  const queryDir = path.join(workDir, 'query');
   await fs.ensureDir(path.join(queryDir, scopeKey));
   await fs.writeJson(path.join(queryDir, 'manifest.json'), {
     version: '1.0',
@@ -131,12 +131,20 @@ describe('createCheckCommand', () => {
     return dir;
   }
 
-  /** Point the command at a fresh empty work dir (no analyze artifacts). */
+  /** Config the command would load: work dir (query artifacts) + output dir (snapshots). */
+  function mockConfig(workDir: string, rules: unknown[], failOnViolation = true): void {
+    mockLoad.mockResolvedValue({
+      workDir,
+      outputDir: workDir,
+      fitness: { rules, failOnViolation },
+    });
+  }
+
   async function runCheck(rules: unknown[], failOnViolation = true): Promise<string> {
-    mockLoad.mockResolvedValue({ fitness: { rules, failOnViolation } });
     const dir = await makeTmpDir();
+    mockConfig(dir, rules, failOnViolation);
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', dir], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
     return dir;
   }
 
@@ -171,14 +179,12 @@ describe('createCheckCommand', () => {
   // -- no-dependency: real relations from the analyze artifact --
 
   it('no-dependency: forbidden from→to edge exists → FAIL, prints the edge, exits 1', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: { rules: [FORBIDDEN_RULE], failOnViolation: true },
-    });
     const dir = await makeTmpDir();
+    mockConfig(dir, [FORBIDDEN_RULE]);
     await writeQueryArtifacts(dir, [['src/parser/p.ts.P', 'src/cli/c.ts.C']]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', dir], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     const output = allOutput();
     expect(output).toContain('FAIL');
@@ -190,15 +196,13 @@ describe('createCheckCommand', () => {
   });
 
   it('no-dependency: no such edge in the graph → PASS, does not exit non-zero', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: { rules: [FORBIDDEN_RULE], failOnViolation: true },
-    });
     const dir = await makeTmpDir();
+    mockConfig(dir, [FORBIDDEN_RULE]);
     // Only the reverse direction exists — the rule must not fire.
     await writeQueryArtifacts(dir, [['src/cli/c.ts.C', 'src/parser/p.ts.P']]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', dir], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     const output = allOutput();
     expect(output).toContain('PASS');
@@ -220,14 +224,12 @@ describe('createCheckCommand', () => {
   });
 
   it('no-dependency with an artifact that has zero edges → NOT-EVALUATED, exits 2', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: { rules: [FORBIDDEN_RULE], failOnViolation: true },
-    });
     const dir = await makeTmpDir();
+    mockConfig(dir, [FORBIDDEN_RULE]);
     await writeQueryArtifacts(dir, []);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', dir], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     const output = allOutput();
     expect(output).toContain('NOT-EVALUATED');
@@ -237,82 +239,86 @@ describe('createCheckCommand', () => {
   });
 
   it('violation outranks not-evaluated when both are present → exits 1', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: {
-        rules: [FORBIDDEN_RULE, { metric: 'sccCount', op: '<=', value: -1, message: 'Impossible' }],
-        failOnViolation: true,
-      },
-    });
     const dir = await makeTmpDir();
+    mockConfig(dir, [
+      FORBIDDEN_RULE,
+      { metric: 'sccCount', op: '<=', value: -1, message: 'Impossible' },
+    ]);
     await writeQueryArtifacts(dir, [['src/parser/p.ts.P', 'src/cli/c.ts.C']]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', dir], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     expect(processExitSpy).toHaveBeenCalledWith(1);
     expect(processExitSpy).not.toHaveBeenCalledWith(2);
   });
 
+  // -- directory resolution (analyze writes snapshots to <outputDir>, query to <workDir>) --
+
+  it('reads snapshots from config.outputDir when --output-dir is omitted', async () => {
+    const dir = await makeTmpDir();
+    mockConfig(dir, [{ metric: 'sccCount', op: '<=', value: 0, message: 'No cycles' }]);
+
+    const cmd = createCheckCommand();
+    await cmd.parseAsync([], { from: 'user' });
+
+    expect(loadSnapshots).toHaveBeenCalledWith(dir);
+  });
+
+  it('--output-dir overrides config.outputDir for snapshot discovery', async () => {
+    const dir = await makeTmpDir();
+    const override = await makeTmpDir();
+    mockConfig(dir, [{ metric: 'sccCount', op: '<=', value: 0, message: 'No cycles' }]);
+
+    const cmd = createCheckCommand();
+    await cmd.parseAsync(['--output-dir', override], { from: 'user' });
+
+    expect(loadSnapshots).toHaveBeenCalledWith(override);
+  });
+
   // -- metric rules / command plumbing --
 
   it('all rules pass → exits with 0 (or no exit call)', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: {
-        rules: [
-          { metric: 'sccCount', op: '<=', value: 0, message: 'No cyclic dependencies allowed' },
-        ],
-        failOnViolation: true,
-      },
-    });
-    const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await runCheck([
+      { metric: 'sccCount', op: '<=', value: 0, message: 'No cyclic dependencies allowed' },
+    ]);
 
     expect(processExitSpy).not.toHaveBeenCalledWith(1);
     expect(processExitSpy).not.toHaveBeenCalledWith(2);
   });
 
   it('one metric rule fails + failOnViolation=true → exits with code 1', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: {
-        rules: [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }],
-        failOnViolation: true,
-      },
-    });
+    const dir = await makeTmpDir();
+    mockConfig(dir, [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }]);
     vi.mocked(loadSnapshots).mockResolvedValue([
       makeSnapshot({ metricVector: makeVector({ maxInDegree: 25 }) }),
     ]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     expect(processExitSpy).toHaveBeenCalledWith(1);
   });
 
   it('one rule fails + failOnViolation=false → exits with code 0', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: {
-        rules: [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }],
-        failOnViolation: false,
-      },
-    });
+    const dir = await makeTmpDir();
+    mockConfig(dir, [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }], false);
     vi.mocked(loadSnapshots).mockResolvedValue([
       makeSnapshot({ metricVector: makeVector({ maxInDegree: 25 }) }),
     ]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     expect(processExitSpy).not.toHaveBeenCalledWith(1);
   });
 
   it('no fitness config in loaded config → prints "No fitness rules configured" and exits 0', async () => {
-    mockLoad.mockResolvedValue({
-      // no fitness field
-      outputDir: '.archguard',
-    });
+    const dir = await makeTmpDir();
+    mockLoad.mockResolvedValue({ workDir: dir, outputDir: dir });
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     const output = allOutput();
     expect(output).toContain('No fitness rules configured');
@@ -320,18 +326,14 @@ describe('createCheckCommand', () => {
   });
 
   it('output includes rule message and actual value for failed rules', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: {
-        rules: [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }],
-        failOnViolation: false,
-      },
-    });
+    const dir = await makeTmpDir();
+    mockConfig(dir, [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }], false);
     vi.mocked(loadSnapshots).mockResolvedValue([
       makeSnapshot({ metricVector: makeVector({ maxInDegree: 25 }) }),
     ]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     const output = allOutput();
     expect(output).toContain('FAIL');
@@ -340,13 +342,12 @@ describe('createCheckCommand', () => {
   });
 
   it('no snapshots → asks the user to analyze first, does not exit non-zero', async () => {
-    mockLoad.mockResolvedValue({
-      fitness: { rules: [FORBIDDEN_RULE], failOnViolation: true },
-    });
+    const dir = await makeTmpDir();
+    mockConfig(dir, [FORBIDDEN_RULE]);
     vi.mocked(loadSnapshots).mockResolvedValue([]);
 
     const cmd = createCheckCommand();
-    await cmd.parseAsync(['--output-dir', await makeTmpDir()], { from: 'user' });
+    await cmd.parseAsync([], { from: 'user' });
 
     expect(allOutput()).toContain('No snapshots found');
     expect(processExitSpy).not.toHaveBeenCalledWith(1);
