@@ -18,11 +18,11 @@ A4 层检查提案（`docs/proposals/proposal-architecture-layer-check.md`）的
 
 ## AC
 
-- [ ] 新增独立对账脚本（不读 moduleGraph，自己按位置扫描源文件），对 archguard 自身输出漏边/多报边清单
-- [ ] (a) archguard 自身：moduleGraph 相对独立扫描漏边为 0；若有偏差逐条给出归因（可接受的有明确理由，如外部包边）
-- [ ] (b) 每条边满足 `strength === typeOnlyStrength + valueStrength`，且 type-only 判定与独立扫描一致
-- [ ] 在 quay 项目上重复 (a)(b) 并留档结果
-- [ ] 结论写入 proposal 的阶段 0/1 行或单独验证记录，供阶段 2 引用
+- [x] 新增独立对账脚本（不读 moduleGraph，自己按位置扫描源文件），对 archguard 自身输出漏边/多报边清单
+- [x] (a) archguard 自身：moduleGraph 相对独立扫描漏边为 0；若有偏差逐条给出归因（可接受的有明确理由，如外部包边）
+- [x] (b) 每条边满足 `strength === typeOnlyStrength + valueStrength`，且 type-only 判定与独立扫描一致
+- [x] 在 quay 项目上重复 (a)(b) 并留档结果
+- [x] 结论写入 proposal 的阶段 0/1 行或单独验证记录，供阶段 2 引用
 
 ## DoD
 
