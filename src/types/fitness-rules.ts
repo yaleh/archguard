@@ -46,7 +46,18 @@ export interface FitnessConfig {
 
 export interface RuleResult {
   rule: FitnessRule;
+  /**
+   * Whether the rule's constraint held. Only meaningful when `evaluated` is
+   * not `false`; a not-evaluated result must never be read as a pass.
+   */
   passed: boolean;
   actual?: number | string;
   detail?: string;
+  /**
+   * Tri-state marker (A4): `false` means the rule could not be evaluated —
+   * e.g. a `no-dependency` rule with no relation artifact available. Omitted
+   * (or `true`) means it was evaluated normally. Callers must surface
+   * not-evaluated results distinctly from both pass and fail.
+   */
+  evaluated?: boolean;
 }
