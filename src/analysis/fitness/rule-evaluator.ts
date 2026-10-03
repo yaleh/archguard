@@ -60,10 +60,17 @@ export function evaluateMetricRule(rule: MetricThresholdRule, vector: MetricVect
   return { rule, passed, actual };
 }
 
+/**
+ * Evaluate every configured rule.
+ *
+ * `relations` is `null` when no relation graph could be loaded; dependency
+ * rules then come back marked `evaluated: false` (not-evaluated) rather than
+ * silently passing.
+ */
 export function evaluateAllRules(
   rules: FitnessRule[],
   vector: MetricVector,
-  relations: Relation[]
+  relations: readonly Relation[] | null
 ): RuleResult[] {
   return rules.map((rule) => {
     if (rule.type === 'no-dependency') {
