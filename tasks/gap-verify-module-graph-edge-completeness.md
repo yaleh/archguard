@@ -1,7 +1,7 @@
 ---
 id: gap-verify-module-graph-edge-completeness
 title: 阶段 0/1 验收补回：moduleGraph 边集合完整性 + type-only/值拆分 的真实对照
-status: todo
+status: ready
 labels:
   - gap
   - verification
