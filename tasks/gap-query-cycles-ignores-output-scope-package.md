@@ -1,7 +1,7 @@
 ---
 id: gap-query-cycles-ignores-output-scope-package
 title: CLI `query --cycles --output-scope package` 忽略 output-scope，对存在目录级环的树报"无环"
-status: todo
+status: ready
 labels:
   - gap
   - defect
