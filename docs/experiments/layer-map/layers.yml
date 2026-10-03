@@ -44,9 +44,11 @@ allowed:
   - plugin-runtime -> types
   - plugin-runtime -> core
   - plugin-runtime -> parser
+  - plugin-runtime -> plugins      # 动态装配边：plugin-factory 动态 import 具体语言插件
   - core -> types
   - parser -> types
   - parser -> core
+  - parser -> plugins              # 动态装配边：parse-worker 动态 import 具体语言插件
   - plugins -> types
   - plugins -> core
   - plugins -> parser
@@ -79,12 +81,8 @@ allowed:
 # 2026-10-03（gap-layer-mutual-plugin-runtime-core-parser，裁定 A'）：解析运行时接口下移到
 # src/core/parser-runtime/，core/parser 改为经 ParserBackendResolver 端口注入，因此
 # core -> plugin-runtime、parser -> plugin-runtime 两条边消失并已从 allowed 删除；
-# plugin-runtime -> core / plugin-runtime -> parser 由基线转为允许方向（见上方 allowed），
-# 对应两项基线项从本列表移除。
-known_violations:
-  - edge: "analysis -> cli"
-    evidence: "3 个文件，4 条 import（3 type-only，1 值依赖：analysis/metrics-history-reader.ts -> cli/metrics-history-writer.js）"
-  - edge: "core -> mermaid"
-    evidence: "core/interfaces/renderer-facade.ts 仅 import type（@/mermaid/diagram-generator.js）"
-  - edge: "core -> cli"
-    evidence: "core/query/query-engine.ts 仅 import type（@/cli/query/query-manifest.js）"
+# plugin-runtime -> core / plugin-runtime -> parser 由基线转为允许方向（见上方 allowed）。
+# 同时，check-layers 对新的 module graph 汇报 analysis -> cli、core -> cli、core -> mermaid
+# 三条基线项已消除（positional grep 复核：src/analysis、src/core 已无对应 import），
+# 一并从基线删除——基线只保留仍然存在的违例。
+known_violations: []
