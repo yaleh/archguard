@@ -1,7 +1,7 @@
 ---
 id: gap-doc-multi-source-scope-cross-directory-edges
 title: 文档：多个 sources 各成独立 scope、scope 间 import 边不可见；需要跨目录边时用共同上层根
-status: ready
+status: done
 labels:
   - gap
   - docs
