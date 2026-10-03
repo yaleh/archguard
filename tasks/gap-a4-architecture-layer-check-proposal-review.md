@@ -1,7 +1,7 @@
 ---
 id: gap-a4-architecture-layer-check-proposal-review
 title: A4 分层声明 + 确定性方向检查 + 展示：proposal 评审并拆分实施计划
-status: needs-human
+status: todo
 labels:
   - proposal
   - architecture
@@ -11,7 +11,9 @@ children: []
 extra:
   schema: execution
 depends_on:
-  - gap-ts-module-graph-type-only-edge-split
+  - gap-verify-module-graph-edge-completeness
+  - gap-fitness-check-relations-stub
+  - gap-query-cycles-ignores-output-scope-package
 ---
 ## Proposal
 
@@ -25,16 +27,31 @@ depends_on:
 - 形态：确定性内核（CLI 子命令 + MCP 工具）+ 编排 skill + 仅用于起草初版层声明的 subagent；
 - 不纳入：运行时耦合发现（quay A3）、PlantUML 输出、跨 scope 补边。
 
-## 人的裁定
+## 人的裁定（2026-10-03）
 
-（待填：1. 是否同意 proposal 的范围与非目标；2. 形态（CLI 子命令名、是否同时提供 MCP 工具、skill 是否放进 archguard plugin）；3. `architecturalLayers` 与层声明的关系（独立文件 / 层声明引用它）；4. 实施分阶段的先后；5. 开放问题 1–6 各自的处置。裁定写入后，把状态改为 todo，并由 `quay-task-to-plan` 产出实施计划。）
+1. **范围与非目标**：批准，按原文范围（目标 1–6；非目标：不纳入运行时耦合 A3、不重引 PlantUML、不让 LLM 判定违例、不跨 scope 补边）。
+2. **实现入口形态**：延后裁定。先修 fitness 引擎死桩 `gap-fitness-check-relations-stub` 与 `gap-query-cycles-ignores-output-scope-package`，看到引擎真实能力后再定「扩展 archguard check」还是「独立 check-layers 子命令」。
+3. **层声明与 architecturalLayers 的关系**：方案 1 —— 层声明为唯一正本，architecturalLayers 降为 analyze 时的派生投影（投影进 ArchJSON.extensions.projectSemantics，渲染器不改，无声明文件时行为不变）。
+4. **分阶段起点**：先补阶段 0/1 验收 `gap-verify-module-graph-edge-completeness`，再进阶段 2。
+
+开放问题 1–6 处置：1 → 由验收任务覆盖；2 → 接受（not-evaluated 设计已覆盖）；3 → 接受，v1 只做 TS；4 → 见裁定 3；5 → 接受，阶段 3 AC 必须含浏览器目视验证；6 → A1/A2 各自单独提案，排后。
+
+评审新发现（已立案）：`archguard check` 已存在 fitness 规则引擎（`fitness.rules` + `no-dependency`），proposal 原文「没有一等的规则检查」不准确；且 `src/cli/commands/check.ts` 硬编码空 relations 使该规则永不生效。`detect_cycles(package)` 缺陷已修，proposal 动机已改写为「环 ≠ 方向」。
+
+产出：
+- proposal 更新为 Approved v2 并记录修订：`docs/proposals/proposal-architecture-layer-check.md`
+- 实施计划：`docs/plans/plan-a4-layer-check.md`
+- 前置任务（todo）：`gap-verify-module-graph-edge-completeness`、`gap-fitness-check-relations-stub`、`gap-query-cycles-ignores-output-scope-package`
+- `docs/user-guide/architecture-checking-scenarios.md` 的 Limits 一节已加 2026-10-03 结论（限制成立，指向本提案）
+
+下一步（人）：A0 完成后裁定入口形态，再立阶段 2–4 的任务。
 
 ## AC
 
-- [ ] 人的裁定已写入上面"## 人的裁定"一节，且任务状态已由人改为 todo（本项未满足前不得开始实现）
-- [ ] 评审后的 proposal 文档已按裁定更新（`docs/proposals/proposal-architecture-layer-check.md` 状态从 Draft 改为 Approved 或 Rejected，并记录修订）
-- [ ] 若批准：已生成分阶段实施计划文档（`docs/plans/` 下）并按阶段立出 quay 任务，每个任务的 Touches 具体到文件、带测试文件，依赖关系用 `depends_on` 声明
-- [ ] 若批准：`docs/user-guide/architecture-checking-scenarios.md` 的 Limits 一节是否需要修改已有明确结论
+- [x] 人的裁定已写入上面"## 人的裁定"一节，任务状态由 needs-human 改为 todo
+- [x] 评审后的 proposal 文档已按裁定更新（`docs/proposals/proposal-architecture-layer-check.md` 状态 Draft → Approved v2，并记录修订）
+- [ ] 若批准：已生成分阶段实施计划文档（`docs/plans/plan-a4-layer-check.md`）并按阶段立出 quay 任务 —— 阶段 0.5/A0 已立（todo）；阶段 2–4 的入口形态按裁定 2 待 A0 完成后裁定，尚未立项
+- [x] 若批准：`docs/user-guide/architecture-checking-scenarios.md` 的 Limits 一节已加明确结论（限制成立，加提案指针）
 
 ## DoD
 
@@ -45,3 +62,5 @@ depends_on:
 - docs/proposals/proposal-architecture-layer-check.md
 - docs/user-guide/architecture-checking-scenarios.md
 - tasks/gap-a4-architecture-layer-check-proposal-review.md
+- docs/plans/plan-a4-layer-check.md
+- docs/proposals/proposal-architecture-layer-check.md
