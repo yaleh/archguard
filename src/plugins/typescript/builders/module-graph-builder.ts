@@ -1,19 +1,27 @@
 /**
  * ModuleGraphBuilder
  *
- * Builds a TsModuleGraph from ts-morph SourceFile[] using import declarations.
+ * Builds a TsModuleGraph from ts-morph SourceFile[] using import declarations,
+ * `export ... from` re-exports and literal dynamic `import()` calls.
  * Does NOT trigger a second parse — uses the same Project instance already created.
  *
  * Module ID = project-root-relative directory of the source file.
  * e.g. file at /root/src/cli/index.ts with root=/root → module id: "src/cli"
  */
 
-import type { SourceFile } from 'ts-morph';
+import { SyntaxKind } from 'ts-morph';
+import type {
+  SourceFile,
+  CallExpression,
+  StringLiteral,
+  NoSubstitutionTemplateLiteral,
+} from 'ts-morph';
 import type {
   TsModuleGraph,
   TsModuleNode,
   TsModuleDependency,
   TsModuleCycle,
+  TsModuleUnresolvedRef,
 } from '@/types/extensions/ts-analysis.js';
 import type { Entity } from '@/types/index.js';
 import path from 'node:path';
@@ -22,6 +30,30 @@ interface EdgeAccumulator {
   strength: number;
   importedNames: Set<string>;
 }
+
+/** Path-alias configuration read from the project's compiler options / tsconfig. */
+interface AliasConfig {
+  baseUrl: string;
+  paths: Record<string, string[]>;
+}
+
+/**
+ * Outcome of trying to map a module specifier to a target module.
+ * - `internal`        → an edge to an in-project module (mapped through fileToModule)
+ * - `external`        → a bare package → node_modules node
+ * - `unresolved-alias`→ an alias-prefixed specifier that could not be resolved
+ *                       (recorded in `unresolved`, never as an external node)
+ * - `skip`            → a relative specifier that does not resolve inside the project
+ *                       (no edge, no phantom node)
+ */
+type TargetResolution =
+  | { kind: 'internal'; module: string }
+  | { kind: 'external'; name: string }
+  | { kind: 'unresolved-alias' }
+  | { kind: 'skip' };
+
+const JS_EXTENSIONS = ['.js', '.jsx', '.mjs', '.cjs'];
+const TS_EXTENSIONS = ['.ts', '.tsx', '.d.ts'];
 
 export class ModuleGraphBuilder {
   /**
@@ -49,85 +81,113 @@ export class ModuleGraphBuilder {
     // 2. Collect all unique module IDs (internal)
     const internalModuleIds = new Set<string>(fileToModule.values());
 
+    // 2b. Path aliases from the shared project's compiler options (baseUrl/paths),
+    // so bare `@/types`-style specifiers can be resolved without hardcoding `src/`.
+    const aliasConfig = this.deriveAliasConfig(projectRoot, sourceFiles);
+
     // 3. Aggregate edges: (from, to) → { strength, importedNames }
     const edgeMap = new Map<string, EdgeAccumulator>();
     // Track external (node_modules) modules
     const externalModules = new Set<string>();
+    // Alias specifiers that could not be resolved to an internal module
+    const unresolved: TsModuleUnresolvedRef[] = [];
+    // Dynamic import() calls whose argument was not a string literal
+    let unevaluatedDynamicImports = 0;
+
+    const record = (fromModule: string, toModule: string, names: Iterable<string>): void => {
+      // Skip self-imports
+      if (fromModule === toModule) return;
+      const edgeKey = `${fromModule}|||${toModule}`;
+      let acc = edgeMap.get(edgeKey);
+      if (!acc) {
+        acc = { strength: 0, importedNames: new Set() };
+        edgeMap.set(edgeKey, acc);
+      }
+      acc.strength += 1;
+      for (const name of names) acc.importedNames.add(name);
+    };
+
+    const applyResolution = (
+      fromModule: string,
+      specifier: string,
+      resolution: TargetResolution,
+      names: Iterable<string>
+    ): void => {
+      switch (resolution.kind) {
+        case 'internal':
+          record(fromModule, resolution.module, names);
+          break;
+        case 'external':
+          externalModules.add(resolution.name);
+          record(fromModule, resolution.name, names);
+          break;
+        case 'unresolved-alias':
+          unresolved.push({ from: fromModule, specifier });
+          break;
+        case 'skip':
+          break;
+      }
+    };
 
     for (const sf of sourceFiles) {
       const fromModule = fileToModule.get(sf.getFilePath());
+      if (fromModule === undefined) continue;
 
+      // 3a. Static imports
       for (const importDecl of sf.getImportDeclarations()) {
+        const specifier = importDecl.getModuleSpecifierValue();
         const resolvedFile = importDecl.getModuleSpecifierSourceFile();
+        const resolution = this.resolveTarget(
+          sf,
+          specifier,
+          resolvedFile,
+          fileToModule,
+          aliasConfig
+        );
 
-        let toModule: string;
-
-        if (resolvedFile) {
-          const absTo = resolvedFile.getFilePath();
-          if (fileToModule.has(absTo)) {
-            toModule = fileToModule.get(absTo) ?? '';
-          } else {
-            // File exists in ts-morph project but outside our source root — skip.
-            // This avoids creating phantom ".." module nodes for imports that
-            // resolve to e.g. node_modules or sibling directories outside projectRoot.
-            continue;
-          }
-        } else {
-          // Unresolved import
-          const specifier = importDecl.getModuleSpecifierValue();
-          if (specifier.startsWith('.')) {
-            // Attempt manual resolution: resolve path relative to this source file,
-            // then try common extension/index candidates against the fileToModule map.
-            // This handles the common case where ts-morph can't resolve the import
-            // with ArchGuard's sparse compiler options, but the target file IS in
-            // the project (already in fileToModule).
-            const sfPath = sf.getFilePath();
-            const base = path.resolve(path.dirname(sfPath), specifier);
-            const candidates = [
-              base,
-              base + '.ts',
-              base + '.tsx',
-              base + '.d.ts',
-              base + '/index.ts',
-              base + '/index.tsx',
-            ];
-            let resolved = false;
-            for (const candidate of candidates) {
-              if (fileToModule.has(candidate)) {
-                toModule = fileToModule.get(candidate) ?? '';
-                resolved = true;
-                break;
-              }
-            }
-            if (!resolved) continue; // broken/missing — skip without creating phantom node
-          } else {
-            // Use the bare package name (first path segment)
-            toModule = specifier.startsWith('@')
-              ? specifier.split('/').slice(0, 2).join('/')
-              : specifier.split('/')[0];
-            externalModules.add(toModule);
-          }
-        }
-
-        // Skip self-imports
-        if (fromModule === toModule) continue;
-
-        const edgeKey = `${fromModule}|||${toModule}`;
-        if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, { strength: 0, importedNames: new Set() });
-        }
-        const acc = edgeMap.get(edgeKey);
-        acc.strength += 1;
-
-        // Collect named imports
-        for (const named of importDecl.getNamedImports()) {
-          acc.importedNames.add(named.getName());
-        }
-        // Default import
+        const names = new Set<string>();
+        for (const named of importDecl.getNamedImports()) names.add(named.getName());
         const defaultImport = importDecl.getDefaultImport();
-        if (defaultImport) {
-          acc.importedNames.add(defaultImport.getText());
+        if (defaultImport) names.add(defaultImport.getText());
+
+        applyResolution(fromModule, specifier, resolution, names);
+      }
+
+      // 3b. `export ... from` re-exports (including `export * from`,
+      // `export type ... from`, `export * as ns from`)
+      for (const exportDecl of sf.getExportDeclarations()) {
+        const specifier = exportDecl.getModuleSpecifierValue();
+        if (!specifier) continue; // `export { x }` with no `from` clause
+        const resolvedFile = exportDecl.getModuleSpecifierSourceFile();
+        const resolution = this.resolveTarget(
+          sf,
+          specifier,
+          resolvedFile,
+          fileToModule,
+          aliasConfig
+        );
+
+        const names = new Set<string>();
+        for (const named of exportDecl.getNamedExports()) names.add(named.getName());
+        const namespaceExport = exportDecl.getNamespaceExport();
+        if (namespaceExport) names.add(namespaceExport.getName());
+
+        applyResolution(fromModule, specifier, resolution, names);
+      }
+
+      // 3c. Literal dynamic `import('...')`. Non-literal arguments cannot be
+      // evaluated statically: no edge is produced and they are counted.
+      for (const call of sf.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+        if (!this.isDynamicImportCall(call)) continue;
+        const specifier = this.dynamicImportSpecifier(call);
+        if (specifier === undefined) {
+          unevaluatedDynamicImports += 1;
+          continue;
         }
+        // ts-morph exposes no module-specifier resolution for a CallExpression
+        // argument, so resolve manually against fileToModule (relative + alias).
+        const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
+        applyResolution(fromModule, specifier, resolution, []);
       }
     }
 
@@ -207,7 +267,171 @@ export class ModuleGraphBuilder {
     // 8. Detect cycles via DFS on internal module graph
     const cycles = this.detectCycles(internalModuleIds, edges);
 
-    return { nodes, edges, cycles };
+    const graph: TsModuleGraph = { nodes, edges, cycles };
+    if (unresolved.length > 0) graph.unresolved = unresolved;
+    if (unevaluatedDynamicImports > 0) {
+      graph.unevaluatedDynamicImports = unevaluatedDynamicImports;
+    }
+    return graph;
+  }
+
+  // ── Private: specifier resolution ─────────────────────────────────────────
+
+  /**
+   * Resolve a module specifier to an internal module, an external package, or
+   * an explicitly-visible unresolved/ skipped outcome.
+   */
+  private resolveTarget(
+    sf: SourceFile,
+    specifier: string,
+    resolvedFile: SourceFile | null | undefined,
+    fileToModule: Map<string, string>,
+    aliasConfig: AliasConfig | undefined
+  ): TargetResolution {
+    if (resolvedFile) {
+      const absTo = resolvedFile.getFilePath();
+      const mod = fileToModule.get(absTo);
+      // File exists in the ts-morph project but outside our source root — skip.
+      // This avoids creating phantom ".." module nodes for imports that resolve
+      // to e.g. node_modules or sibling directories outside projectRoot.
+      return mod !== undefined ? { kind: 'internal', module: mod } : { kind: 'skip' };
+    }
+
+    if (specifier.startsWith('.')) {
+      // Manual relative resolution: resolve the path against this source file and
+      // try common extension/index candidates against the fileToModule map. This
+      // handles ts-morph's inability to resolve with ArchGuard's sparse options
+      // even though the target file IS already in the project.
+      const base = path.resolve(path.dirname(sf.getFilePath()), specifier);
+      const mod = this.findModuleForPath(base, fileToModule);
+      return mod !== undefined ? { kind: 'internal', module: mod } : { kind: 'skip' };
+    }
+
+    // Alias-prefixed specifier: resolve through the tsconfig `paths` mapping.
+    if (aliasConfig) {
+      const targets = this.matchAliasTargets(specifier, aliasConfig.paths);
+      if (targets.length > 0) {
+        for (const target of targets) {
+          const abs = path.resolve(aliasConfig.baseUrl, target);
+          const mod = this.findModuleForPath(abs, fileToModule);
+          if (mod !== undefined) return { kind: 'internal', module: mod };
+        }
+        // Alias matched but the target is not in the project: keep it visible
+        // instead of misclassifying it as an external node.
+        return { kind: 'unresolved-alias' };
+      }
+    }
+
+    // Bare package name (first segment, or first two for scoped packages)
+    const name = specifier.startsWith('@')
+      ? specifier.split('/').slice(0, 2).join('/')
+      : specifier.split('/')[0];
+    return { kind: 'external', name };
+  }
+
+  /**
+   * Expand an absolute path into the candidate file paths that may hold the
+   * module, then look each up in fileToModule. Handles extensionless imports,
+   * directory-index imports and TS's `.js` → `.ts` specifier convention.
+   */
+  private findModuleForPath(
+    absPath: string,
+    fileToModule: Map<string, string>
+  ): string | undefined {
+    for (const candidate of this.expandCandidates(absPath)) {
+      const mod = fileToModule.get(candidate);
+      if (mod !== undefined) return mod;
+    }
+    return undefined;
+  }
+
+  private expandCandidates(absPath: string): string[] {
+    const candidates: string[] = [absPath];
+    for (const jsExt of JS_EXTENSIONS) {
+      if (absPath.endsWith(jsExt)) {
+        const stem = absPath.slice(0, -jsExt.length);
+        candidates.push(stem);
+        for (const tsExt of TS_EXTENSIONS) candidates.push(stem + tsExt);
+      }
+    }
+    for (const tsExt of TS_EXTENSIONS) candidates.push(absPath + tsExt);
+    candidates.push(absPath + '/index.ts', absPath + '/index.tsx', absPath + '/index.d.ts');
+    return [...new Set(candidates)];
+  }
+
+  /**
+   * Apply the tsconfig `paths` algorithm: an exact key match wins; otherwise the
+   * first wildcard pattern (`*`) whose prefix/suffix bracket the specifier is used.
+   */
+  private matchAliasTargets(specifier: string, paths: Record<string, string[]>): string[] {
+    const exact = paths[specifier];
+    if (exact) return [...exact];
+
+    for (const [pattern, mapped] of Object.entries(paths)) {
+      const starIndex = pattern.indexOf('*');
+      if (starIndex === -1) continue;
+      const prefix = pattern.slice(0, starIndex);
+      const suffix = pattern.slice(starIndex + 1);
+      if (
+        !specifier.startsWith(prefix) ||
+        !specifier.endsWith(suffix) ||
+        specifier.length < prefix.length + suffix.length
+      ) {
+        continue;
+      }
+      const star = specifier.slice(prefix.length, specifier.length - suffix.length);
+      return mapped.map((target) => target.replace('*', star));
+    }
+    return [];
+  }
+
+  /**
+   * Read `baseUrl` / `paths` from the shared ts-morph project's compiler options
+   * (populated from the nearest tsconfig.json). Returns undefined when the
+   * project carries no alias configuration.
+   */
+  private deriveAliasConfig(
+    projectRoot: string,
+    sourceFiles: SourceFile[]
+  ): AliasConfig | undefined {
+    for (const sf of sourceFiles) {
+      const getProject = (sf as { getProject?: () => unknown }).getProject;
+      if (typeof getProject !== 'function') continue;
+      const project = getProject.call(sf) as
+        | { getCompilerOptions?: () => { baseUrl?: string; paths?: Record<string, string[]> } }
+        | undefined;
+      const compilerOptions = project?.getCompilerOptions?.();
+      if (!compilerOptions) continue;
+      if (!compilerOptions.paths && !compilerOptions.baseUrl) continue;
+      const baseUrl = compilerOptions.baseUrl
+        ? path.resolve(String(compilerOptions.baseUrl))
+        : projectRoot;
+      return { baseUrl, paths: compilerOptions.paths ?? {} };
+    }
+    return undefined;
+  }
+
+  // ── Private: dynamic import ───────────────────────────────────────────────
+
+  private isDynamicImportCall(call: CallExpression): boolean {
+    return call.getExpression().getKind() === SyntaxKind.ImportKeyword;
+  }
+
+  /**
+   * Return the static specifier of a dynamic `import()` call, or undefined when
+   * the argument is not a string literal / no-substitution template literal.
+   */
+  private dynamicImportSpecifier(call: CallExpression): string | undefined {
+    const first = call.getArguments()[0];
+    if (!first) return undefined;
+    const kind = first.getKind();
+    if (kind === SyntaxKind.StringLiteral) {
+      return (first as StringLiteral).getLiteralText();
+    }
+    if (kind === SyntaxKind.NoSubstitutionTemplateLiteral) {
+      return (first as NoSubstitutionTemplateLiteral).getLiteralText();
+    }
+    return undefined;
   }
 
   /**
