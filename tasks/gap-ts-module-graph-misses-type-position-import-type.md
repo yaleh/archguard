@@ -1,7 +1,7 @@
 ---
 id: gap-ts-module-graph-misses-type-position-import-type
 title: moduleGraph 漏掉类型位置的 import('...')（TSImportType）导致的 type-only 边缺失
-status: ready
+status: done
 labels:
   - gap
   - typescript
