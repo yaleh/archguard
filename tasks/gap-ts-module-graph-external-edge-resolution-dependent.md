@@ -39,6 +39,7 @@ extra:
 - src/plugins/typescript/builders/module-graph-builder.ts
 - src/types/extensions/ts-analysis.ts
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
+- tests/unit/parser/parallel-parser.test.ts
 - docs/proposals/proposal-architecture-layer-check.md
 - tasks/gap-ts-module-graph-external-edge-resolution-dependent.md
 
@@ -51,3 +52,15 @@ extra:
   external strength 合计 250 → 318；internal 边 200 → 200 不变。
 - quay（`packages/`）：`status=pass` 不变；external 边 65 → 65、节点 13 → 13、internal 边 28 → 28（逐项相同）。
 - 对照表已补进 `docs/proposals/proposal-architecture-layer-check.md` 的「阶段 0/1 验证记录」段（见该文件「补记：external 边的解析无关性已修复」）。
+
+### 附带修复：`parallel-parser` 内存断言的假失败（非本任务 AC，落地前的机械门阻塞）
+
+fan-in 的 `doc-check` 步跑的是**全量套件**（`scripts/test.sh --static-checks-doc` 未命中 doc 分支 ⇒ 落到 `npx vitest run`）。
+先前 round 卡在该步：`tests/unit/parser/parallel-parser.test.ts > Performance Metrics > should track memory usage`
+`AssertionError: expected -28122144 to be greater than 0`。
+
+根因是该断言本身错误：`ParsingMetrics.memoryUsage.heapUsed` 是 `endMemory.heapUsed - startMemory.heapUsed`
+的**有符号增量**（`src/parser/parallel-parser.ts:279`），测量窗口内发生一次 GC 就会为负——与本次
+module-graph 改动无关，单跑该文件恒绿、全量跑偶发红。修法对齐姊妹用例
+`tests/integration/performance/benchmark.test.ts`（那里对 heapUsed 用 `Math.abs`，对绝对值才断 `> 0`）：
+断言 `Number.isFinite(heapUsed)`，正数性改断绝对量 `heapTotal > 0`。故此行加入 ## Touches。
