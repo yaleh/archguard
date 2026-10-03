@@ -37,6 +37,7 @@ extra:
 ## Touches
 
 - src/plugins/typescript/builders/module-graph-builder.ts
+- src/types/extensions/ts-analysis.ts
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
 - docs/proposals/proposal-architecture-layer-check.md
 - tasks/gap-ts-module-graph-external-edge-resolution-dependent.md
