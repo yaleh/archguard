@@ -5,6 +5,43 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.36] - 2026-10-03
+
+### Fixed
+- TypeScript `moduleGraph`: capture `export ... from`, literal dynamic `import()`,
+  and bare-alias edges that were previously dropped, and emit type-only edges for
+  type-position `import()` (both previously invisible)
+- TypeScript `moduleGraph`: external (non-workspace) edges are now
+  resolution-independent — the same import no longer produces a different graph
+  depending on whether it happened to resolve
+- `archguard_analyze` package-level JSON: derive the package graph from the module
+  graph so node/edge/entity counts are self-consistent, and count `entityCount`
+  from direct files (including the root) rather than double-counting
+- `archguard_detect_cycles`: honour `outputScope: "package"` (three-valued, no longer
+  silently falling back to class granularity)
+- `archguard_detect_cycles` / `archguard_get_package_metrics`: declare the
+  Go-Atlas-only `packageGraph` capability on TypeScript scopes instead of implying support
+- `analyze` / `check`: resolve work/output directories from config the same way
+  `analyze` does; `check` now loads real relations for no-dependency rules (previously
+  evaluated against a stub, so the rule could never fire)
+- File discovery: `.gitignore` and `.archguardignore` matches now actually exclude on
+  the TypeScript plugin path; a single symlink-free discovery pass for ts-morph now
+  covers `.tsx`/`.js`/`.jsx` and reports skipped extensions
+- Duplicate detection: stop following symlinks during the scan
+- `cache`: `prune-scopes` command; scope lists now expose `generatedAt`
+
+### Added
+- `analyze` honouring ignore files (`.gitignore`, `.archguardignore`) with the
+  effective exclude rules reported in the run output
+- Release tooling: fast-forward-only `advance-master` workflow, version-carrier
+  consistency guard, and the release-run ledger (record + verify)
+- `scripts/test.sh --perf` lane for the timing-sensitive performance suite (manual,
+  never part of a correctness gate)
+
+### Changed
+- Layers: inject the parser runtime into `core/parser` and drop the mutual
+  directory-level dependency; relocate types/constants below their consumers
+
 ## [0.1.35] - 2026-09-30
 
 ### Fixed
