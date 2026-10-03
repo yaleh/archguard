@@ -42,7 +42,7 @@ interface QueryManifestShape {
 /**
  * Load the relation edges for the global scope of an analyzed project.
  *
- * @param archDir - ArchGuard work directory (the `--output-dir`, e.g. `.archguard`).
+ * @param archDir - ArchGuard work directory (config `workDir`, e.g. `.archguard`).
  * @returns The edges plus provenance, or `relations: null` with a reason.
  */
 export async function loadFitnessRelations(archDir: string): Promise<FitnessRelationsResult> {
