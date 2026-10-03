@@ -18,10 +18,10 @@ extra:
 
 ## AC
 
-- [ ] `query.ts` 的 `--cycles` 分支读取 `opts.outputScope`，package 时调用 `engine.getPackageCycles()`，按三态输出
-- [ ] `tests/unit/cli/commands/query.test.ts` 新增成对用例：含目录级互指的夹具 package 返回非空 cycles；无 moduleGraph 返回 `evaluated:false` + 非空 reason；`npx vitest run tests/unit/cli/commands/query.test.ts` 退出码 0
-- [ ] 真实对照：对 archguard 自身 `query --cycles --output-scope package` 输出非空 cycles（当前树 4 个 SCC），修前同参数为 "No dependency cycles detected."
-- [ ] class 缺省调用返回与修前一致；type-check + 全量测试通过
+- [x] `query.ts` 的 `--cycles` 分支读取 `opts.outputScope`，package 时调用 `engine.getPackageCycles()`，按三态输出
+- [x] `tests/unit/cli/commands/query.test.ts` 新增成对用例：含目录级互指的夹具 package 返回非空 cycles；无 moduleGraph 返回 `evaluated:false` + 非空 reason；`npx vitest run tests/unit/cli/commands/query.test.ts` 退出码 0
+- [x] 真实对照：对 archguard 自身 `query --cycles --output-scope package` 输出非空 cycles（当前树 4 个 SCC），修前同参数为 "No dependency cycles detected."
+- [x] class 缺省调用返回与修前一致；type-check + 全量测试通过
 
 ## DoD
 
