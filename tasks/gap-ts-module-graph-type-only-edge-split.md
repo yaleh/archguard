@@ -2,7 +2,7 @@
 id: gap-ts-module-graph-type-only-edge-split
 title: TS moduleGraph 边区分 type-only 与值依赖：新增 typeOnlyStrength / valueStrength（A4
   分层检查的前提）
-status: ready
+status: done
 labels:
   - gap
   - typescript
