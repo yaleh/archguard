@@ -278,7 +278,13 @@ describe('ParallelParser', () => {
       expect(metrics).toHaveProperty('memoryUsage');
       expect(metrics.memoryUsage).toHaveProperty('heapUsed');
       expect(metrics.memoryUsage).toHaveProperty('heapTotal');
-      expect(metrics.memoryUsage.heapUsed).toBeGreaterThan(0);
+      // heapUsed is a *delta* (endMemory - startMemory) and is legitimately
+      // negative when a GC pause lands inside the measurement window — so it
+      // cannot be asserted > 0. Assert it is a tracked number (mirrors the
+      // signed-delta handling in tests/integration/performance/benchmark.test.ts)
+      // and use the absolute heapTotal for the positivity check.
+      expect(Number.isFinite(metrics.memoryUsage.heapUsed)).toBe(true);
+      expect(metrics.memoryUsage.heapTotal).toBeGreaterThan(0);
     });
 
     it('should include file count in metrics', async () => {
