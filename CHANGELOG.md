@@ -5,6 +5,24 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.37] - 2026-10-08
+
+### Fixed
+- `archguard_get_evidence_pack`: the success path now carries `evaluated: true`, mirroring
+  `evaluated: false` on the not-evaluated path, so `if (!result.evaluated)` can no longer
+  misread a real result as "not evaluated". This closes the same gap `get_intrinsic_dimension`
+  had fixed in 0.1.35; it was deliberately held back from that release to batch here.
+
+### Changed
+- Internal layering (no public behaviour change): `drift-baseline` moved from `cli/utils` into
+  `cli/analyze` (it re-runs the analysis pipeline — an analyze concern), and the `DiagramResult`
+  type was extracted into the leaf types layer (`src/types/diagram-result.ts`, re-exported from
+  `src/types/index.ts`). This removes `cli/utils`'s outbound edges into the cli cycle.
+
+### Tooling (repo-local — not part of the published npm package)
+- `arch-layer-review` skill (Phase D1 semantic architecture review) plus its single-tree /
+  architecture-health question set.
+
 ## [0.1.36] - 2026-10-03
 
 ### Fixed
