@@ -2,7 +2,7 @@
 id: gap-a4-d1-semantic-review-skill
 title: A4 Phase D1：实现 arch-layer-review 语义架构 review MVP skill（薄语义层，不新增
   deterministic gate）
-status: ready
+status: done
 labels:
   - gap
   - architecture
