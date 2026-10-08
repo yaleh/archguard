@@ -2,7 +2,7 @@
 id: gap-arch-layer-review-plugin-registration
 title: arch-layer-review skill 未打包进发布渠道：从 .claude/skills 搬到 plugin/skills +
   .agents/skills，注册进 plugin.json
-status: todo
+status: ready
 labels:
   - gap
   - architecture
