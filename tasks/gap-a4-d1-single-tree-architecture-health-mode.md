@@ -2,7 +2,7 @@
 id: gap-a4-d1-single-tree-architecture-health-mode
 title: A4 Phase D1：给 arch-layer-review 加 single-tree / architecture-health
   问题集（不改既有 before/after 四问）
-status: todo
+status: ready
 labels:
   - gap
   - architecture
