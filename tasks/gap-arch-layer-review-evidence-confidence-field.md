@@ -33,15 +33,16 @@ Quay 的"Quay 架构审查与 ArchGuard 能力评估"会话用 `arch-layer-revie
   - `corroborated-by-2-methods`：至少两种独立方法/数据源互相印证（如目录级边 + 独立 grep 对账都指向同一结论）
   - 规则：当某个 MCP 工具/底层数据源自己声明了置信度警告（如 `silhouetteScore` 之类的自报指标、或任何工具输出里包含"低置信度"/"low confidence"/"heuristic"字样），引用它作为证据时 `caveat` **必须非空**且复述该警告，不能悄悄吞掉。
 - 更新两份既有 worked example（`goal-030-example-output.json`、`archguard-selfreview-example-output.json`，plugin + .agents 各一份，共 4 个文件）：每条现有 evidence 补上 `confidence` 字段——`goal-030` 案例里引用的那些 moduleGraph 边读数都是 `deterministic`；若 `archguard-selfreview` 案例里有引用过代理指标/单次读数的证据，相应标注；若两份 example 里都没有天然的"低置信度"场景，额外补一条**新的** conclusion（或扩展现有一条）体现 `proxy-metric` + 非空 `caveat` 的真实用法，不能让这个分支永远测不到。
+- （实现补充）本任务成文后，`references/goal-030-drift-and-stale-declaration-example.json`（plugin + .agents）由另一任务新增，同属本 skill 的 example 集；为使 evidence[] 的 `confidence` 契约对该 skill 的**每一份**示例成立，一并转换该第三份 example，并在 `## Touches` 中声明。
 
 ## AC
 
-- [ ] `plugin/skills/arch-layer-review/SKILL.md` 的"Output contract"一节包含 `confidence` 字段定义，四个 `source` 枚举值全部出现在文本里（grep 可核对：`deterministic`、`proxy-metric`、`single-reading`、`corroborated-by-2-methods`）
-- [ ] 文本明确写出"工具自报低置信度时 caveat 必填"这条规则的等价表述（grep `caveat`/"必填"或"required"类关键词）
-- [ ] 两份既有 example JSON（plugin + .agents 共 4 个文件，两两逐字节相同）的**每一条** `judgment.conclusions[].evidence[]` 对象都带非空 `confidence.source`（合法枚举值之一）
-- [ ] 至少一条 evidence 的 `confidence.source` 是 `proxy-metric` 或 `single-reading`，且其 `caveat` 为非空字符串（真实体现"低置信度被标注"这个场景，不能全是 `deterministic`/`null` 糊弄过去）
-- [ ] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言：对两份 example 递归扫描所有 evidence 对象，要求 `confidence` 字段存在且 `source` 是四个合法值之一；再新增一条断言专门核对"至少一条 `caveat` 非空"这个场景确实被覆盖了；不得修改任何既有断言的文字
-- [ ] `npm test`、`npm run type-check` 通过
+- [x] `plugin/skills/arch-layer-review/SKILL.md` 的"Output contract"一节包含 `confidence` 字段定义，四个 `source` 枚举值全部出现在文本里（grep 可核对：`deterministic`、`proxy-metric`、`single-reading`、`corroborated-by-2-methods`）
+- [x] 文本明确写出"工具自报低置信度时 caveat 必填"这条规则的等价表述（grep `caveat`/"必填"或"required"类关键词）
+- [x] 两份既有 example JSON（plugin + .agents 共 4 个文件，两两逐字节相同）的**每一条** `judgment.conclusions[].evidence[]` 对象都带非空 `confidence.source`（合法枚举值之一）
+- [x] 至少一条 evidence 的 `confidence.source` 是 `proxy-metric` 或 `single-reading`，且其 `caveat` 为非空字符串（真实体现"低置信度被标注"这个场景，不能全是 `deterministic`/`null` 糊弄过去）
+- [x] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言：对两份 example 递归扫描所有 evidence 对象，要求 `confidence` 字段存在且 `source` 是四个合法值之一；再新增一条断言专门核对"至少一条 `caveat` 非空"这个场景确实被覆盖了；不得修改任何既有断言的文字
+- [x] `npm test`、`npm run type-check` 通过
 
 ## DoD
 
@@ -59,5 +60,7 @@ Quay 的"Quay 架构审查与 ArchGuard 能力评估"会话用 `arch-layer-revie
 - .agents/skills/arch-layer-review/references/goal-030-example-output.json
 - plugin/skills/arch-layer-review/references/archguard-selfreview-example-output.json
 - .agents/skills/arch-layer-review/references/archguard-selfreview-example-output.json
+- plugin/skills/arch-layer-review/references/goal-030-drift-and-stale-declaration-example.json
+- .agents/skills/arch-layer-review/references/goal-030-drift-and-stale-declaration-example.json
 - tests/unit/skills/arch-layer-review-skill.test.ts
 - tasks/gap-arch-layer-review-evidence-confidence-field.md
