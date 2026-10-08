@@ -53,7 +53,7 @@ extra:
 
 ## Touches
 
-- .claude/skills/arch-layer-review/SKILL.md
-- .claude/skills/arch-layer-review/references/goal-030-example-output.json
-- tests/unit/skills/arch-layer-review-skill.test.ts
+- .claude/skills/arch-layer-review/SKILL.md (new)
+- .claude/skills/arch-layer-review/references/goal-030-example-output.json (new)
+- tests/unit/skills/arch-layer-review-skill.test.ts (new)
 - tasks/gap-a4-d1-semantic-review-skill.md
