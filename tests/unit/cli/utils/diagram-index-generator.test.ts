@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DiagramIndexGenerator } from '@/cli/utils/diagram-index-generator.js';
-import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
-import type { ArchJSONMetrics, FileStats, CycleInfo } from '@/types/index.js';
+import type { ArchJSONMetrics, DiagramResult, FileStats, CycleInfo } from '@/types/index.js';
 import type { GlobalConfig } from '@/types/config.js';
 import os from 'os';
 import path from 'path';

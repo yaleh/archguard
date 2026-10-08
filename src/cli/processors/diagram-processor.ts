@@ -19,7 +19,8 @@ import type { ParseCache } from '@/parser/parse-cache.js';
 import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
-import type { ArchJSON, ArchJSONMetrics } from '@/types/index.js';
+import type { ArchJSON } from '@/types/index.js';
+import type { DiagramResult } from '@/types/diagram-result.js';
 import type { QuerySourceGroup } from '@/cli/query/query-manifest.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
@@ -88,35 +89,14 @@ export interface DiagramProcessorOptions {
 }
 
 /**
- * Result from processing a single diagram
+ * Result from processing a single diagram.
+ *
+ * Definition lives in the leaf types layer (`@/types/diagram-result.js`) so
+ * consumers other than this module (e.g. `cli/utils/diagram-index-generator`)
+ * can import it without reverse-importing `cli/processors`. Re-exported here so
+ * existing importers of `diagram-processor` are unaffected.
  */
-export interface DiagramResult {
-  /** Diagram name */
-  name: string;
-  /** Whether processing succeeded */
-  success: boolean;
-  /** Output file paths (if successful) */
-  paths?: {
-    mmd?: string;
-    svg?: string;
-    png?: string;
-    json?: string;
-  };
-  /** Processing statistics (if successful) */
-  stats?: {
-    entities: number;
-    relations: number;
-    parseTime: number;
-  };
-  /** Error message (if failed) */
-  error?: string;
-  /**
-   * Structural metrics for this diagram (computed regardless of output format).
-   * Used by DiagramIndexGenerator to render index.md stats tables.
-   * Only present when success === true.
-   */
-  metrics?: ArchJSONMetrics;
-}
+export type { DiagramResult } from '@/types/diagram-result.js';
 
 /**
  * DiagramProcessor - Unified diagram processor

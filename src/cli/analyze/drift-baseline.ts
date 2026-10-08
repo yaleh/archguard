@@ -12,14 +12,14 @@
  *      commits to compare from `arch-health-history.json` and produce the two
  *      `DriftSnapshot` objects.
  *
- * @module cli/utils/drift-baseline
+ * @module cli/analyze/drift-baseline
  */
 
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { execa } from 'execa';
-import { runAnalysis } from '../analyze/run-analysis.js';
+import { runAnalysis } from './run-analysis.js';
 import { ProgressReporter } from '../progress/index.js';
 import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
 import type { ArchHealthHistory, DriftSnapshot } from '@/analysis/jl/types.js';
