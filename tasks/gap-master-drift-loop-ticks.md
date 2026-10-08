@@ -2,7 +2,7 @@
 id: gap-master-drift-loop-ticks
 title: master 被 loop 的 task-store tick 推离发布 tag，且 AC-001 守卫不在任何常驻路径：恢复 master 到
   v0.1.38、把主检出切回 fork_baseline、并给守卫接常驻断言（GOAL-001 / AC-001）
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -38,12 +38,12 @@ GOAL-001 / AC-001 回归（本轮两次独立复测均为假）：工作区根�
 
 ## AC
 
-- [ ] `git -C /data/home/yale/work/archguard tag --points-at master | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'` exit 0（master 的提交带回版本 tag）
-- [ ] `bash scripts/check-master-at-tag.sh /data/home/yale/work/archguard` exit 0（工作区根上 AC-001 判据为真）
-- [ ] 漂移源已除：`test "$(git -C /data/home/yale/work/archguard symbolic-ref --short HEAD)" != "master"` exit 0（loop 的 task-store tick 从此不落在 master 上；默认做法是切到 `develop`）
-- [ ] `grep -Eq 'check-master-at-tag\.sh' tests/unit/scripts/release-workflow.test.ts` 命中且该文件含对 `REPO_ROOT` 的真实仓库断言，`npx vitest run tests/unit/scripts/release-workflow.test.ts` exit 0
-- [ ] `grep -q 'check-master-at-tag.sh' .github/workflows/ci.yml` exit 0（ci.yml 在 push 到 master 时跑守卫）
-- [ ] `npm run type-check` exit 0
+- [x] `git -C /data/home/yale/work/archguard tag --points-at master | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'` exit 0（master 的提交带回版本 tag）
+- [x] `bash scripts/check-master-at-tag.sh /data/home/yale/work/archguard` exit 0（工作区根上 AC-001 判据为真）
+- [x] 漂移源已除：`test "$(git -C /data/home/yale/work/archguard symbolic-ref --short HEAD)" != "master"` exit 0（loop 的 task-store tick 从此不落在 master 上；默认做法是切到 `develop`）
+- [x] `grep -Eq 'check-master-at-tag\.sh' tests/unit/scripts/release-workflow.test.ts` 命中且该文件含对 `REPO_ROOT` 的真实仓库断言，`npx vitest run tests/unit/scripts/release-workflow.test.ts` exit 0
+- [x] `grep -q 'check-master-at-tag.sh' .github/workflows/ci.yml` exit 0（ci.yml 在 push 到 master 时跑守卫）
+- [x] `npm run type-check` exit 0
 
 ## DoD
 

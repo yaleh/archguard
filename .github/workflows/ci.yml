@@ -23,13 +23,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          # The version-tag guard below reads git tags; actions/checkout's default
-          # shallow clone (fetch-depth: 1) does not fetch them, which would make the
-          # guard fail for the wrong reason (no tags at all, not a missing tag).
+          # Full history + tags: both version guards below read git tags, and
+          # actions/checkout's default shallow clone (fetch-depth: 1) fetches
+          # neither the tags nor the history the master-at-tag judgement needs
+          # (the same judgement is run against this checkout from inside the
+          # unit suite, tests/unit/scripts/release-workflow.test.ts). A depth-1
+          # clone would make the guards fail for the wrong reason — no tags at
+          # all, or an untagged master — instead of the real invariant.
           fetch-depth: 0
 
+      # GOAL-001 / AC-002: the checked-out branch's package.json version must
+      # have a same-named release tag. Named as its own step so the failure is
+      # labelled instead of buried in the suite (which also asserts it).
       - name: Version must have a same-named tag (GOAL-001 / AC-002)
         run: bash scripts/check-version-has-tag.sh
+
+      # GOAL-001 / AC-001. On a push to master, master is the checked-out
+      # branch, so its value domain can be judged directly with the same
+      # executable criterion the goal check uses. Named as its own step so the
+      # failure is labelled instead of buried in the suite (which also asserts
+      # it — belt and braces on the standing path).
+      - name: Check master is at a release tag
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: bash scripts/check-master-at-tag.sh
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
