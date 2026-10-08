@@ -88,6 +88,18 @@ CLI `query --cycles --output-scope package` 对 archguard 自身返回 4 个目�
 **A0 完成后的裁定点（人，现已到）**：入口形态 = 扩展 `archguard check` 的 fitness 规则类型，还是独立
 `archguard check-layers` 子命令？命令名？是否同时提供 MCP 工具？编排 skill 是否放进 archguard plugin？
 
+> ⚠️ **与 Phase D1 的区分（2026-10-08，三个会话核对后补记）**：上面这条"编排 skill 是否放进
+> archguard plugin"问的是**本阶段（阶段 B/C/D）层检查内核自己的编排 skill**，尚未裁定，仍 blocked。
+> **不要**把它读成覆盖了 `proposal-architecture-layer-check.md` "Phase D1"一节的 `arch-layer-review`
+> skill——那是另一个独立的、已落地的 skill（任务 `gap-a4-d1-semantic-review-skill`，已 done），proposal
+> 原文明确写"**不依赖阶段 2–4**……**入口形态裁定不阻塞 D1 上线**"。D1 该不该随插件发布这个具体问题，
+> 全库 grep（docs/tasks/goals/adr）无任何"必须保持本地"的裁定——`.claude/skills/` 只是落地时的 MVP
+> 谨慎默认，不是裁定结果。2026-10-08 因 quay 跨项目调用需求（新证据：本地未发布的 skill 对外部项目的
+> user-scope 安装不可见）当场裁定：**D1 的 `arch-layer-review` 随插件发布**（任务
+> `gap-arch-layer-review-plugin-registration`）。裁定人：本会话所在对话的用户（直接指示"按项目发布流程
+> 发布新版本…不要只改工作区不发布"），满足 GOAL-001"发布由人在 Claude Code 会话中触发"的既有裁定——
+> 不是两个 agent 会话自行达成的一致。
+
 ---
 
 ## 阶段 B — 层声明 schema + 检查器内核 + 基线（blocked on A0 裁定）
