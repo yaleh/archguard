@@ -5,6 +5,19 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.38] - 2026-10-08
+
+### Fixed
+- `arch-layer-review` skill is now bundled and registered with the published plugin
+  (`plugin/skills/arch-layer-review/` + `plugin/.claude-plugin/plugin.json` `commands`), instead of
+  only existing in the repo-local, unshipped `.claude/skills/` location noted in 0.1.37's entry
+  below. External projects installing the `archguard@archguard` Claude Code plugin at user scope can
+  now discover and invoke `archguard:arch-layer-review`.
+- `.gitignore`'s `archguard*.json` rule was silently excluding
+  `.agents/skills/arch-layer-review/references/archguard-selfreview-example-output.json` from git
+  (the same class of collision the existing `project-semantics-discovery` negation line already
+  worked around); added the matching negation line.
+
 ## [0.1.37] - 2026-10-08
 
 ### Fixed
