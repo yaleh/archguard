@@ -196,6 +196,21 @@ Phase D1 对 GOAL-030 的输出骨架（节选，`verdict` 为语义判断，`ev
 
 这与 Phase D1 的 MVP 四类问题逐条对应：问题 1→陷阱 2、问题 3→orchestrator 是否仍直接持有 state（即"决策权是否转移"）、问题 4→陷阱 1（搬壳不搬心）。
 
+#### Single-tree / Architecture-Health 模式（2026-10-08 追加）
+
+**动机**：上面的四类 MVP 问题全部要求"一次具体的改动"（旧实现 vs 新实现）才能判断——2026-10-08 对 archguard 自身做 Phase D1 dogfooding 自查时实测到：没有 before/after 时，四问里"orchestrator domain state"与"shell move vs real move"结构性答不出来（不是证据不够，是问题本身没有可比较的对象），只能诚实标 `not-evaluated`，但另外两问（ownership convergence、responsibility migration）在"声明文件自带已消除基线的叙述"时仍可退化成静态快照判断。这次 dogfooding 同时发现 `check-layers.mjs` 本身对**同层环**（如 archguard 自身 `src/cli` 内部 10 目录、31 条边、89 值依赖的环）结构性不可见——它只比较跨层边，`pass` 不代表"没有环"，只代表"没有跨层方向违例"。这是一个比"要不要 before/after"更根本的缺口：即使完全不做重构对比，单纯问"这棵树现在架构健不健康"，现有四问也没有一个能直接回答。
+
+**新增能力，不是新机制**：仍然是消费同一批既有产出（moduleGraph、`check-layers.mjs`、layers.yml），仍然遵守三层物理分区，仍然不新增确定性检查器、不改变 `check-layers.mjs` 的裁决权——只是追加一套**专为单棵树设计的问题集**，与原四问并存（原四问用于 before/after 比较场景，新问题集用于"体检当前这棵树"场景；调用方按场景选择问题集，不是互相替代）。
+
+**单树体检问题集（4 问，均可从单棵树 + 声明文件直接或间接回答，不要求 diff）**：
+
+1. **跨层环覆盖**（cross-layer cycle coverage）：每一个跨层目录环的成员对，是否在 `layers.yml` 的 `allowed` 里都有对应方向的声明？有声明 → 这是设计选择（如 archguard 自身 `plugin-runtime <-> plugins` 的动态装配边），标注清楚、不算违例；没有声明但 `check-layers.mjs` 仍判 `pass`（因为这对边本身恰好没有被判例命中）→ 要显式指出这是一个覆盖缺口，不能被 `pass` 掩盖。
+2. **同层环暴露**（intra-layer cycle exposure）：对 `moduleGraph.cycles` 里每一个环，判断其成员是否全部落在 `layers.yml` 的同一个层。全部同层 → 这是 `check-layers.mjs` 结构性看不见的一类环，必须在报告里单独列出并标注"declared rules 对此环未评估"，不能因为 `check-layers.mjs` 报 `pass` 就略过不提。
+3. **叶子层纯净度**（leaf-layer purity）：对声明里被最多其它目录依赖、本身应该是叶子的层/目录（典型如 `utils`/`types`/`shared` 一类命名），检查其出边是否存在"反向进入调用方所在环"的边——这是 2026-10-08 发现 `src/cli/utils -> src/cli/analyze`/`-> src/cli/processors` 两条反向边的同一类判断，泛化成可对任意项目重复执行的问题。
+4. **声明覆盖缺口**（declaration coverage gap）：`check-layers.mjs` 输出里的"未映射目录"列表，以及这些目录的 `entityCount` 占全树 `entityCount` 的比例——避免"声明只覆盖了一小部分代码却看起来全绿"的假象。
+
+**输出契约不变**：仍是 `facts`/`declaredRules`/`judgment` 三个顶层 key；`judgment` 仍是四态（`converged`/`cosmetic`/`regressed`/`not-evaluated`——单树场景下，"converged" 读作"当前已符合声明"而非"收敛动作完成"，"regressed" 读作"存在声明之外的真实耦合"）；每条结论仍要求非空 `evidence`；仍不得出现 `pass`/`fail`/`exitCode` 字段名。
+
 ## 分阶段（2026-10-03 按裁定修订）
 
 | 阶段 | 内容 | 依赖 |
@@ -207,7 +222,7 @@ Phase D1 对 GOAL-030 的输出骨架（节选，`verdict` 为语义判断，`ev
 | 2 | 检查器内核 + 层声明 schema 校验 + 基线。**入口形态（复用 `check` / 独立子命令、命令名、是否同给 MCP 工具、skill 是否入 plugin）待 A0 完成后裁定** | 0.5、A0 |
 | 3 | 单页展示 + 确定性输出 + `--check`（含浏览器目视验证） | 阶段 2 |
 | 4 | 编排 skill + 起草 subagent；`project-semantics-discovery` 改为起草层声明 | 阶段 2、3 |
-| **D1** | **Semantic Architecture Review（2026-10-08 追加）**：薄语义层 skill，消费阶段 0.5/1 的 moduleGraph + `check-layers.mjs`（原样调用，不等阶段 2 的内核落地）+ 可选 extra-checker/acceptance-protocol，产出 evidence-backed 四态判断（非 gate） | 0.5、1（**不依赖阶段 2–4**——`check-layers.mjs` 原型已可直接消费，入口形态裁定不阻塞 D1 上线；待阶段 2 落地后 D1 可切换到新的确定性 CLI 入口，不改 D1 自身契约） |
+| **D1** | **Semantic Architecture Review（2026-10-08 追加）**：薄语义层 skill，消费阶段 0.5/1 的 moduleGraph + `check-layers.mjs`（原样调用，不等阶段 2 的内核落地）+ 可选 extra-checker/acceptance-protocol，产出 evidence-backed 四态判断（非 gate）。两套问题集并存：原四问用于 before/after 重构对比，**single-tree / architecture-health 四问**（2026-10-08 追加，见上方同名小节）用于单棵树体检 | 0.5、1（**不依赖阶段 2–4**——`check-layers.mjs` 原型已可直接消费，入口形态裁定不阻塞 D1 上线；待阶段 2 落地后 D1 可切换到新的确定性 CLI 入口，不改 D1 自身契约） |
 
 阶段 0/1 的**真实对照验证**见下文「阶段 0/1 验证记录」——两个项目上 internal 边集合完整、拆分与独立扫描一致；
 但发现阶段 0 未覆盖的一类漏边（类型位置的 `import('...')`），已另立 gap 任务。
