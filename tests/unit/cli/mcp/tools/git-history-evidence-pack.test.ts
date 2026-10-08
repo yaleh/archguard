@@ -268,15 +268,15 @@ describe('archguard_get_evidence_pack — not evaluated (TASK-93)', () => {
     expect(parsed).not.toHaveProperty('results');
   });
 
-  it('partial hit → still returns the matched entries (no evaluated:false)', async () => {
+  it('partial hit → still returns the matched entries, with evaluated:true (not evaluated:false)', async () => {
     loadHistoryDataMock.mockResolvedValue(makeMockData([{ path: 'src/a.ts' }]));
     const text = await call([
       { targetType: 'file', target: 'src/a.ts' },
       { targetType: 'file', target: 'src/missing.ts' },
     ]);
     expect(text).toContain('## Evidence Pack');
-    expect(text).not.toContain('"evaluated"');
     const parsed = JSON.parse(text.match(/```json\n([\s\S]+?)\n```/)[1]);
+    expect(parsed.evaluated).toBe(true);
     expect(parsed.results).toHaveLength(1);
     expect(parsed.notFound).toHaveLength(1);
   });
