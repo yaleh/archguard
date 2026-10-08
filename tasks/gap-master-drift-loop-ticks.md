@@ -2,7 +2,7 @@
 id: gap-master-drift-loop-ticks
 title: master 被 loop 的 task-store tick 推离发布 tag，且 AC-001 守卫不在任何常驻路径：恢复 master 到
   v0.1.38、把主检出切回 fork_baseline、并给守卫接常驻断言（GOAL-001 / AC-001）
-status: ready
+status: done
 labels:
   - gap
   - defect
