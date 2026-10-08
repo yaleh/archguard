@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    # develop is included so the version-tag invariant (GOAL-001 / AC-002) is gated
+    # on the integration line: a version bumped past its tag lands on develop via
+    # fan-in long before any master/main release push, and used to be ungated entirely.
+    branches: [main, master, develop]
   pull_request:
     branches: [main, master]
 
@@ -19,6 +22,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # The version-tag guard below reads git tags; actions/checkout's default
+          # shallow clone (fetch-depth: 1) does not fetch them, which would make the
+          # guard fail for the wrong reason (no tags at all, not a missing tag).
+          fetch-depth: 0
+
+      - name: Version must have a same-named tag (GOAL-001 / AC-002)
+        run: bash scripts/check-version-has-tag.sh
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3

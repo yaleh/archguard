@@ -70,6 +70,16 @@ describe('check-version-has-tag.sh', () => {
     expect(r.stderr).toContain('CAUSE=package-version-unreadable');
   });
 
+  it('passes on the real repository — the version-tag invariant is STANDING, not only at the publish boundary', () => {
+    // GOAL-001 / AC-002: this guard used to run only at the publish boundary
+    // (`prepublishOnly`), so a version bumped past its tag could sit in the tree
+    // indefinitely — `npm test` stayed green because no test ran the guard on the
+    // real repository. Running it here makes `npm test` (and therefore CI) the gate:
+    // if package.json's version has no same-named `v*` tag, this test goes red.
+    const r = runCheck(REPO_ROOT);
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+  });
+
   it('is wired into the repo prepublishOnly script', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf-8'));
     expect(pkg.scripts.prepublishOnly).toContain('scripts/check-version-has-tag.sh');
