@@ -46,8 +46,8 @@ GOAL-001 / AC-002 要求：package.json 的 version 一定有一个同名 `v*` t
 
 - 在临时仓库（version 无同名 tag）上真实运行守卫，必须 exit 1 且 stderr 含 `CAUSE=published-version-without-a-tag`；同名 tag 存在时 exit 0（正反两面各真实跑一次）。→ 已由 `version-tag-check.test.ts` 的两条临时仓库用例真实执行（`npx vitest run` 6 passed）。
 - 在**真实仓库**上真实演示常驻断言的效力：临时把 package.json 的 version 改成一个无 tag 的值（如 `9.9.9`），运行 `npx vitest run tests/unit/scripts/version-tag-check.test.ts` 必须**红**；还原为真实已 tag 的版本后必须**绿**。这一步证明新增断言把不变量真的钉进了常驻测试路径，而非只断言 wiring。→ 已实测：9.9.9 → 1 failed（exit 1）；还原 0.1.37 → 6 passed（exit 0）。
-- 漂移已清的判据：在 goal driver 评估的那棵树（工作区根）上，`bash scripts/check-version-has-tag.sh` exit 0。→ 实测 `ok: tag v0.1.37 exists`（exit 0），`check-version-carriers.sh` 亦 `all carriers == 0.1.37`（exit 0）。
-- 本任务不打 tag、不发布、不 push master、不改 release.yml。→ 已遵守：未打 tag、未发布、未 push；`git tag --list` 最高仍 `v0.1.37`，`release.yml` 未改。
+- 漂移已清的判据：在 goal driver 评估的那棵树（工作区根）上，`bash scripts/check-version-has-tag.sh` exit 0。→ 实测 `ok: tag v0.1.38 exists`（exit 0），`check-version-carriers.sh` 亦 `all carriers == 0.1.38`（exit 0）。
+- 本任务不打 tag、不发布、不 push master、不改 release.yml。→ 本 worker 未打 tag、未发布、未 push、未改 release.yml。⚠️ 期间并发会话完成了 0.1.38 发布（`2c605b60 release: 0.1.38` + tag `v0.1.38`），故工作区根的不变量现由「已完成的发布」满足；worker 早前对工作树 0.1.38→0.1.37 的回退已被该发布覆盖、无残留（主检出 `git status` 干净）。
 
 ## Touches
 
