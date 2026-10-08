@@ -92,7 +92,21 @@ sources can directly or indirectly support.
    are facts, not judgments.
 3. Run `check-layers.mjs` on the moduleGraph JSON plus `layers.yml`; capture its
    `status` (`pass` / `fail` / `not-evaluated`), `violations`, and `gaps`.
-4. Read any acceptance protocol / trap checklist supplied with the review.
+4. **Prefer the checker's structured modes over re-deriving their content by hand**
+   (both are optional flags; the checker is still called verbatim, its authority
+   unchanged — this skill never recomputes either):
+   - two independently evaluated trees in hand (a before/after slice) ⇒ pass
+     `--before <before/overview/package.json>`. Read its `driftReport`: each
+     cross-layer edge is classified `new-and-undeclared` / `new-and-declared` /
+     `preexisting-and-undeclared` from a real comparison of the two trees' edge
+     sets. Cite the record, do not eyeball a manual diff.
+   - asking about cycles (including the single-tree questions below) ⇒ pass
+     `--classify-cycles`. Read its `cycleClassification` (`intra-layer` /
+     `cross-layer-declared` / `cross-layer-undeclared`) and its
+     `bidirectionalAllowedPairs`. Same reading, no hand-set arithmetic.
+   Omitting both flags keeps `check-layers.mjs` byte-identical to its previous
+   output, so this is additive, never a replacement.
+5. Read any acceptance protocol / trap checklist supplied with the review.
 
 ### Step 2 — Focus (localize the claim)
 
@@ -119,6 +133,31 @@ Every conclusion must cite a non-empty `evidence` array of concrete items (a
 Also walk the acceptance protocol's `trapChecklist`: for each trap record whether
 it is `hit` (`true` / `false`) plus a `reason` citing the reading that decided it.
 
+#### `declarationStatus` — an annotation on the declaration, not a fifth verdict
+
+A `driftReport` record and a semantic verdict answer different questions, and a
+change can be semantically right while the *declaration* is out of date. To say
+that without inventing a new outcome, each conclusion may carry an **independent
+annotation field** `declarationStatus` (`"current"` | `"stale"` | `"not-evaluated"`)
+plus `recommendedDeclarationUpdate` (a concrete suggestion string, or `null`):
+
+- **Do NOT add a fifth `verdict` state.** The four-state vocabulary
+  (`converged` / `cosmetic` / `regressed` / `not-evaluated`) is unchanged and
+  `declarationStatus` is **not** another verdict — it only says whether the
+  declaration has kept up with the implementation.
+- `driftReport` shows a `new-and-undeclared` edge ⇒ ask whether the *change* is
+  what the declaration's intent already implies (e.g. the goal / acceptance
+  protocol names that direction as expected). If yes, keep the semantic `verdict`
+  honest (often `converged` — the structure moved toward the declared owner) and
+  mark `declarationStatus: "stale"` with a specific
+  `recommendedDeclarationUpdate` (e.g. "add `core-gate -> core-kernel` to
+  `layers.yml`'s `allowed`"). Do **not** blanket-declare `regressed` just because
+  the checker now reports a violation.
+- A `preexisting-and-undeclared` edge is **not** this change's fault: annotate it
+  as pre-existing debt and never attribute it to the reviewed change.
+- `not-evaluated` when the declaration layer structurally cannot judge it (e.g. an
+  intra-layer cycle, which the cross-layer direction check cannot see).
+
 ### Step 4 — Synthesize
 
 Emit the output contract below. Keep the three layers physically separate — never
@@ -139,6 +178,9 @@ A JSON document with three top-level keys, one per layer:
 - `judgment` — the semantic interpretation: an array of conclusion objects (the
   four MVP questions) each with `question`, `verdict` (four-state), non-empty
   `evidence`, and a `trapChecklist` covering the acceptance protocol traps.
+  Optionally also `declarationStatus` (`"current"` | `"stale"` | `"not-evaluated"`)
+  and `recommendedDeclarationUpdate` — a **supplementary annotation on the
+  declaration layer, never a fifth verdict state** (see Step 3).
 
 Rules for the `judgment` block:
 
@@ -154,6 +196,15 @@ See `references/goal-030-example-output.json` for a worked example — the quay
 GOAL-030 "promotion writes converge to kernel transition decision" slice, whose
 acceptance protocol enumerates the three traps (shell-move, third implementation,
 unchanged interface shape).
+
+See `references/goal-030-drift-and-stale-declaration-example.json` for the
+drift-consumption worked example — the same GOAL-030 slice, before (fork point)
+vs. after (branch tip), where `check-layers.mjs --before` really classifies
+`gate/lifecycle.ts -> kernel/task-transition.ts` (layer edge
+`core-gate -> core-kernel`) as `new-and-undeclared`: the verdict stays
+`converged` (the direction is the one the goal intends) while
+`declarationStatus: "stale"` records that `layers.yml`'s `allowed` has not caught
+up, with a concrete `recommendedDeclarationUpdate`.
 
 ## Single-tree / Architecture-Health Mode (2026-10-08)
 
@@ -178,20 +229,32 @@ check uses the four below. This is **not a new mechanism** — it consumes the s
 artifacts (`moduleGraph`, `check-layers.mjs`, `layers.yml`) and adds no new
 deterministic checker and changes no authority.
 
+Run `check-layers.mjs --classify-cycles` first and read its `cycleClassification`
++ `bidirectionalAllowedPairs`: questions 1 and 2 below are exactly that pure
+set-arithmetic, so **cite the checker's record per cycle instead of recomputing
+"are all members the same layer / is each adjacent direction declared" by hand**.
+`bidirectionalAllowedPairs` (a layer pair listed `A -> B` *and* `B -> A` in
+`allowed`) is worth surfacing on its own: such a declaration says "these two layers
+depend on each other by design" and should be human-reviewed rather than drowned
+in the violation list.
+
 The four single-tree questions:
 
 1. **cross-layer cycle coverage** (跨层环覆盖) — for every **cross-layer**
-   directory cycle in `moduleGraph.cycles`, is each member pair's direction
-   declared in `layers.yml`'s `allowed`? Declared ⇒ this is a design choice
-   (e.g. ArchGuard's own `plugin-runtime <-> plugins` dynamic-assembly edges),
-   annotate it — it is not a violation. Undeclared yet `check-layers.mjs` still
-   says `pass` (because that pair happened not to hit a violation rule) ⇒ name it
-   explicitly as a **coverage gap** that `pass` must not paper over.
-2. **intra-layer cycle exposure** (同层环暴露) — for every cycle in
-   `moduleGraph.cycles`, do all its members fall in the *same* declared layer? If
-   yes, it is a cycle `check-layers.mjs` structurally cannot see: list it
-   separately and annotate it **"declared rules 对此环未评估"** — never skip it
-   just because `check-layers.mjs` reports `pass`.
+   directory cycle, read `cycleClassification`'s `cross-layer-declared` /
+   `cross-layer-undeclared` rather than re-deriving it. Declared ⇒ this is a
+   design choice (e.g. ArchGuard's own `plugin-runtime <-> plugins`
+   dynamic-assembly edges), annotate it — it is not a violation. Undeclared yet
+   `check-layers.mjs` still says `pass` (because that pair happened not to hit a
+   violation rule) ⇒ name it explicitly as a **coverage gap** that `pass` must not
+   paper over. The checker's `cross-layer-declared` is the deterministic form of
+   this judgment; the LLM only explains it.
+2. **intra-layer cycle exposure** (同层环暴露) — read the cycles
+   `cycleClassification` marks `intra-layer`: it is a cycle `check-layers.mjs`
+   structurally cannot see (the cross-layer direction check does not evaluate it),
+   and it must never silently disappear from `cycleClassification`. List each one
+   and annotate it **"declared rules 对此环未评估"** — never skip it just because
+   `check-layers.mjs` reports `pass`.
 3. **leaf-layer purity** (叶子层纯净度) — for layers/directories that the
    declaration treats as leaves (the most-depended-upon ones; typical names
    `utils` / `types` / `shared`), does any out-edge point **back into the cycle of

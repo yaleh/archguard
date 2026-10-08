@@ -1,0 +1,158 @@
+{
+  "schema": "arch-layer-review/example/v1",
+  "note": "arch-layer-review skill 的第二个 worked example：演示如何消费 check-layers.mjs 的 --before driftReport / --classify-cycles 结构化输出，并在【不新增 verdict 状态】的前提下用 declarationStatus 标注『实现是对的、声明没跟上』。facts 段是 2026-10-08 真实跑的 quay 快照读数（before = goal 分支 fork 点，after = goal/GOAL-030 tip），declaredRules 段是 check-layers.mjs 的真实输出；judgment 段仍是建议性语义解读，不是 gate。",
+  "subject": {
+    "goal": "GOAL-030",
+    "title": "晋升写入经 kernel 转移决策并留痕",
+    "repo": "quay",
+    "evaluatedPhase": "before/after",
+    "evaluatedRefs": {
+      "before": "develop @7b97f250d（goal/GOAL-030 的 fork 点）",
+      "after": "goal/GOAL-030 @8c8973dfa（当前 tip）"
+    },
+    "focusEdge": "packages/quay/src/gate/lifecycle.ts -> packages/quay/src/kernel/task-transition.ts（层间边 core-gate -> core-kernel）",
+    "focusEdgeReading": "lifecycle.ts:30 `import { LIFECYCLE_EDGES, type LifecycleEdge, type LifecycleEdgeKind, type LifecycleActor } from '../kernel/task-transition.ts'` —— LIFECYCLE_EDGES 是值导入，该目录级边 valueStrength=1 / typeOnlyStrength=0",
+    "acceptanceProtocol": [
+      "陷阱1 搬壳不搬心：新 kernel 模块是否反向 import plugin/scripts 的写入原语（patchStatusField / commitTaskFile）",
+      "陷阱2 第三套实现：LIFECYCLE_EDGES 等转移规则表在全仓是否只有一处定义，且该定义位于 kernel",
+      "陷阱3 接口形状未变：调用方是否仍传一个未类型化的大 opts 对象，边界没有在签名上变清楚",
+      "陷阱4 声明漂移：gate 新增对 kernel 的 value import 是否被误判为『这次改坏了』，实际只是 layers.yml 的 allowed 没跟上"
+    ]
+  },
+  "layerDiscipline": {
+    "note": "三层物理分区，不得合并成一张表展示。",
+    "layers": [
+      {
+        "id": "mechanical-facts",
+        "producedBy": "ArchGuard analyze 输出（moduleGraph 边 / cycles / metrics 原始读数）",
+        "authority": "唯一真相，同一输入逐字节一致"
+      },
+      {
+        "id": "declared-rules",
+        "producedBy": "docs/experiments/layer-map/check-layers.mjs 的三态判定（含 not-evaluated）与其 --before / --classify-cycles 结构化输出",
+        "authority": "裁决权在本层；本 skill 只引用，不重算、不覆盖"
+      },
+      {
+        "id": "semantic-interpretation",
+        "producedBy": "LLM（本 skill）的四态判断 + 引用的 evidence 条目 + declarationStatus 标注",
+        "authority": "仅供参考，不是 gate；证据条目可重放，叙述文字不要求逐字节一致"
+      }
+    ]
+  },
+  "facts": {
+    "source": "node dist/cli/index.js analyze -f json --diagrams package（对 fork 点与 goal 分支 tip 各一份独立快照，原样调用，不经 detect_cycles MCP 工具）",
+    "note": "机械事实层：以下均为读数，不含任何语义判断词。两份快照来自两棵干净的 checkout（无 dist 构建产物），同一次 analyze 版本，因此可比。",
+    "before": {
+      "ref": "develop @7b97f250d",
+      "measured": true,
+      "nodes": 50,
+      "edges": 137,
+      "directoryCycles": 1,
+      "gateToKernelEdge": null
+    },
+    "after": {
+      "ref": "goal/GOAL-030 @8c8973dfa",
+      "measured": true,
+      "nodes": 50,
+      "edges": 139,
+      "directoryCycles": 1,
+      "gateToKernelEdge": {
+        "from": "packages/quay/src/gate",
+        "to": "packages/quay/src/kernel",
+        "strength": 1,
+        "typeOnlyStrength": 0,
+        "valueStrength": 1,
+        "importedNames": ["LIFECYCLE_EDGES", "LifecycleEdge", "LifecycleEdgeKind", "LifecycleActor"]
+      }
+    },
+    "delta": {
+      "note": "before -> after 两份 moduleGraph 边集合的真实差集（不是启发式）。",
+      "addedInternalEdges": ["packages/quay/src/gate -> packages/quay/src/kernel"],
+      "addedExternalEdges": ["packages/quay/src/kernel -> node:url"],
+      "removedEdges": []
+    }
+  },
+  "declaredRules": {
+    "source": "docs/experiments/layer-map/check-layers.mjs（原样调用，不改）",
+    "layersFile": "quay/docs/layers.yml（draft，位于 .claude/worktrees/layers-yml-draft）",
+    "invocation": "node check-layers.mjs <after/overview/package.json> <quay layers.yml> --before <before/overview/package.json> --classify-cycles",
+    "status": "fail",
+    "newViolations": ["core-gate -> core-kernel"],
+    "driftReport": [
+      {
+        "edge": { "from": "core-gate", "to": "core-kernel" },
+        "classification": "new-and-undeclared",
+        "evidence": { "beforePresent": false, "afterPresent": true, "declared": false }
+      }
+    ],
+    "cycleClassification": [
+      {
+        "cycleId": "cycle-1",
+        "members": [
+          "packages/quay/src/fan-in",
+          "packages/quay/src/cli",
+          "packages/quay/src/gate/factories",
+          "packages/quay/src/gate/config",
+          "packages/quay/src/gate",
+          "packages/quay/src"
+        ],
+        "layerMembership": ["core-fan-in", "core-cli", "core-gate", "core-root"],
+        "classification": "cross-layer-declared"
+      }
+    ],
+    "bidirectionalAllowedPairs": ["core-cli <-> core-root", "core-gate <-> core-root"],
+    "cycleClassificationNote": "quay 草案自己记的 gate <-> gate/config <-> gate/factories 同层互指出现在本文件的 known_violations 里；它在本 moduleGraph 的 cycles 中已被合并进上面这个跨层环，所以 --classify-cycles 对这个 6 成员环给的是 cross-layer-declared（每一对相邻成员的方向都在 allowed 里），不是 intra-layer。",
+    "authority": "declared architecture rules 层；pass / fail / not-evaluated 三态由 check-layers.mjs 产出，本 skill 不改变它。driftReport / cycleClassification 同样是 check-layers.mjs 的机械输出，本 skill 只引用。"
+  },
+  "judgment": {
+    "disclaimer": "四态判断是建议性语义解读，不是 gate，不产生任何机械判定字段。",
+    "note": "declarationStatus 是【独立于 verdict 的标注字段】，取值 current / stale / not-evaluated；它不新增第 5 个 verdict 状态，不改四态词汇表，也不是另一套判定结果——它只说明『声明层是否跟得上实现』。verdict 回答语义问题，declarationStatus 只回答声明是否过期。",
+    "conclusions": [
+      {
+        "id": "declaration-drift-gate-kernel",
+        "question": "GOAL-030 的转移决策是否收敛到声明所拥有的 kernel 层、且 gate 对 kernel 的新依赖是否符合本次改动的声明意图",
+        "verdict": "converged",
+        "declarationStatus": "stale",
+        "recommendedDeclarationUpdate": "把 'core-gate -> core-kernel' 加进 quay layers.yml 的 allowed（gate/lifecycle.ts 从 kernel/task-transition.ts 取 LIFECYCLE_EDGES 等共享定义，是 gate 依赖 kernel 的正当方向）",
+        "reasoning": "check-layers.mjs 的 driftReport 把这条边归为 new-and-undeclared（beforePresent=false / afterPresent=true / declared=false）：它是这次改动新引入的、且不在 allowed 里。但它不是实现退步——kernel 正是声明给转移决策的层（GOAL-030 把 LIFECYCLE_EDGES 的唯一定义放进 kernel/task-transition.ts，gate 只是消费它）。真正过期的是声明：quay layers.yml 的 allowed 没有跟上这次方向。因此 verdict 不判 regressed 来笼统归咎，而是标注 declarationStatus=stale 并给出具体补列建议。",
+        "evidence": [
+          "facts.delta.addedInternalEdges = ['packages/quay/src/gate -> packages/quay/src/kernel']（两份独立快照 moduleGraph.edges 的真实差集）",
+          "facts.after.gateToKernelEdge.valueStrength = 1（值依赖，不是 type-only；lifecycle.ts:30 的 LIFECYCLE_EDGES 导入）",
+          "declaredRules.driftReport[0].classification = new-and-undeclared，evidence = {beforePresent:false, afterPresent:true, declared:false}",
+          "declaredRules.newViolations = ['core-gate -> core-kernel']（status 由 pass 变为 fail，且只新增这一条）"
+        ],
+        "advisory": "补列建议是给人审 layers.yml 用的输入，不是自动改写声明——declaredRules 层的裁决权仍在人 + check-layers.mjs。"
+      },
+      {
+        "id": "intra-layer-cycle-not-exposed",
+        "question": "quay 草案记录的 gate <-> gate/config <-> gate/factories 同层互指，check-layers.mjs 的跨层方向检查能否看见",
+        "verdict": "not-evaluated",
+        "declarationStatus": "not-evaluated",
+        "recommendedDeclarationUpdate": null,
+        "reasoning": "同层环不含跨层方向，声明层没有可裁决的方向（本 moduleGraph 的 cycles 里该互指已被合并进一个跨层环，--classify-cycles 对那个 6 成员环给的是 cross-layer-declared）。所以这里不是『证据太薄』，而是『声明层结构上评估不了它』——诚实取值是 not-evaluated，不能因为 status 恰好没有新增违例就当作通过。",
+        "evidence": [
+          "declaredRules.cycleClassification[0].classification = cross-layer-declared（6 成员环，layerMembership 含 core-fan-in/core-cli/core-gate/core-root）",
+          "declaredRules.cycleClassification[0].members 中 packages/quay/src/gate/factories 与 packages/quay/src/gate/config 同属 core-gate 层",
+          "facts.after.directoryCycles = 1"
+        ],
+        "advisory": "若要把同层环变成可机械裁决的对象，需要另加判据（如『目录级环数 = 0』），那属于新的确定性检查器范畴，不在本 skill 内做。"
+      }
+    ],
+    "trapChecklist": [
+      {
+        "trap": "声明漂移（陷阱4）：把 gate 新增对 kernel 的 value import 误判成『这次改坏了』",
+        "hit": false,
+        "reason": "driftReport 三态把『新引入且未声明』与『既有未声明债务』分开；这条边是 new-and-undeclared 且方向正当，标 declarationStatus=stale 而不是 regressed。",
+        "evidence": ["declaredRules.driftReport[0].evidence.declared = false", "declaredRules.driftReport[0].classification = new-and-undeclared"]
+      }
+    ]
+  },
+  "replayability": {
+    "note": "facts 段可直接重放：对 quay 的 7b97f250d 与 8c8973dfa 各跑一次 apply/analyze 命令，再对两份 package.json 调用带 --before / --classify-cycles 的 check-layers.mjs。judgment 段的 evidence 引用可逐条核对；prose 允许变化。",
+    "commands": [
+      "git -C quay worktree add --detach /tmp/quay-before 7b97f250d",
+      "node dist/cli/index.js analyze -f json --diagrams package --output-dir /tmp/ag-quay-before   # cwd=/tmp/quay-before",
+      "node docs/experiments/layer-map/check-layers.mjs /tmp/ag-quay-after/overview/package.json <quay>/docs/layers.yml --before /tmp/ag-quay-before/overview/package.json --classify-cycles"
+    ]
+  }
+}

@@ -232,3 +232,107 @@ describe('arch-layer-review skill — single-tree / architecture-health mode', (
     expect(skill).toContain('not-evaluated');
   });
 });
+
+describe('arch-layer-review skill — drift / cycle-classification consumption', () => {
+  const driftExamplePath = path.join(
+    skillDir,
+    'references',
+    'goal-030-drift-and-stale-declaration-example.json'
+  );
+
+  it('ships the drift worked example with the three physical-partition keys', async () => {
+    expect(await fs.pathExists(driftExamplePath)).toBe(true);
+    const raw = await fs.readJson(driftExamplePath);
+
+    expect(typeof raw).toBe('object');
+    expect(raw).toHaveProperty('facts');
+    expect(raw).toHaveProperty('declaredRules');
+    expect(raw).toHaveProperty('judgment');
+  });
+
+  it('classifies the real gate/lifecycle.ts -> kernel/task-transition.ts edge as new-and-undeclared', async () => {
+    const raw = await fs.readJson(driftExamplePath);
+
+    const record = raw.declaredRules.driftReport.find(
+      (d: { edge: { from: string; to: string } }) =>
+        d.edge.from === 'core-gate' && d.edge.to === 'core-kernel'
+    );
+    expect(record).toBeDefined();
+    expect(record.classification).toBe('new-and-undeclared');
+    expect(record.evidence).toEqual({
+      beforePresent: false,
+      afterPresent: true,
+      declared: false,
+    });
+
+    // The evidence cites the real quay source edge, not a generic placeholder.
+    const blob = JSON.stringify(raw);
+    expect(blob).toContain('gate/lifecycle.ts');
+    expect(blob).toContain('kernel/task-transition.ts');
+  });
+
+  it('annotates a stale declaration without adding a fifth verdict state', async () => {
+    const raw = await fs.readJson(driftExamplePath);
+
+    const stale = raw.judgment.conclusions.filter(
+      (c: { declarationStatus?: string }) => c.declarationStatus === 'stale'
+    );
+    expect(stale.length).toBeGreaterThan(0);
+    for (const conclusion of stale) {
+      expect(typeof conclusion.recommendedDeclarationUpdate).toBe('string');
+      expect(conclusion.recommendedDeclarationUpdate.length).toBeGreaterThan(0);
+      // declarationStatus supplements the verdict — it is not a verdict itself.
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
+        conclusion.verdict
+      );
+    }
+
+    // Every conclusion keeps a non-empty evidence array, exactly as before.
+    for (const conclusion of raw.judgment.conclusions) {
+      expect(Array.isArray(conclusion.evidence)).toBe(true);
+      expect(conclusion.evidence.length).toBeGreaterThan(0);
+    }
+
+    // `declarationStatus` is explicitly documented as independent of, not a
+    // replacement for, the four-state verdict vocabulary.
+    const skill = await fs.readFile(skillPath, 'utf-8');
+    expect(skill).toContain('declarationStatus');
+    expect(skill).toMatch(/fifth `verdict` state|not another verdict/i);
+    expect(skill).toContain('--before');
+    expect(skill).toContain('--classify-cycles');
+  });
+
+  it('never exposes a mechanical gate verdict shape in the drift example', async () => {
+    const text = await fs.readFile(driftExamplePath, 'utf-8');
+    const raw = await fs.readJson(driftExamplePath);
+
+    expect(text).not.toContain('"exitCode"');
+    expect(text).not.toContain('"pass":');
+    expect(text).not.toContain('"fail":');
+
+    const keys = collectKeys(raw);
+    for (const forbidden of ['exitCode', 'pass', 'fail', 'passed', 'failed', 'statusCode']) {
+      expect(keys).not.toContain(forbidden);
+    }
+
+    for (const conclusion of raw.judgment.conclusions) {
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
+        conclusion.verdict
+      );
+      expect(JSON.stringify(conclusion)).not.toMatch(/"pass"|"fail"/);
+    }
+  });
+
+  it('keeps the plugin/ and .agents/ skill copies byte-identical', async () => {
+    for (const rel of [
+      'SKILL.md',
+      path.join('references', 'goal-030-drift-and-stale-declaration-example.json'),
+      path.join('references', 'goal-030-example-output.json'),
+      path.join('references', 'archguard-selfreview-example-output.json'),
+    ]) {
+      const agents = await fs.readFile(path.join('.agents', 'skills', 'arch-layer-review', rel), 'utf-8');
+      const plugin = await fs.readFile(path.join('plugin', 'skills', 'arch-layer-review', rel), 'utf-8');
+      expect(plugin).toBe(agents);
+    }
+  });
+});

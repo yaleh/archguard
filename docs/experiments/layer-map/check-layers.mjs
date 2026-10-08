@@ -2,11 +2,20 @@
 // check-layers.mjs — 确定性层方向检查（实验原型，不含 LLM 判断）。
 //
 // 用法: node docs/experiments/layer-map/check-layers.mjs <overview/package.json> [layers.yml] [--html out.html] [--json out.json]
+//        [--before <before/overview/package.json>] [--classify-cycles]
 // 退出码: 0 = 通过（无新增违例） | 1 = 有新增违例 | 2 = 未评估（输入读不懂，绝不等同于通过）
 //
 // 取边: ArchGuard 的 extensions.tsAnalysis.moduleGraph.edges（目录级）。
 // type-only / 值依赖拆分: 对违例边按【位置】扫描源文件里行首的 import/export ... from 语句
 // （注释行、字符串里的文件名不算），与 ArchGuard 的边相互印证而不是替代它。
+//
+// 两个可选 flag（省略时输出与不加这两个 flag 的版本逐字节相同，纯加法）：
+//   --before <json>     另一棵独立评估过的树（package 级 ArchJSON），报告多一个 driftReport 字段：
+//                       逐条跨层边分类为 new-and-undeclared / new-and-declared / preexisting-and-undeclared。
+//                       判定真的比较两份独立的边集合，不用启发式。
+//   --classify-cycles   报告多一个 cycleClassification 字段：moduleGraph.cycles 的每个环分类为
+//                       intra-layer / cross-layer-declared / cross-layer-undeclared（纯集合运算）；
+//                       另有 bidirectionalAllowedPairs 列出 allowed 里同时存在 A -> B 与 B -> A 的层对。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,8 +26,16 @@ const flag = (n) => {
   const i = args.indexOf(n);
   return i >= 0 ? args.splice(i, 2)[1] : null;
 };
+const boolFlag = (n) => {
+  const i = args.indexOf(n);
+  if (i < 0) return false;
+  args.splice(i, 1);
+  return true;
+};
 const htmlOut = flag('--html');
 const jsonOut = flag('--json');
+const beforePath = flag('--before');
+const classifyCycles = boolFlag('--classify-cycles');
 const [archPath, layersPath = new URL('./layers.yml', import.meta.url).pathname] = args;
 
 function finish(report, code) {
@@ -45,6 +62,18 @@ if (!mg || !Array.isArray(mg.edges) || !Array.isArray(mg.nodes)) {
   notEvaluated('输入缺少 extensions.tsAnalysis.moduleGraph（非 TS，或不是 package 层 JSON）');
 }
 if (!spec?.layers || !Array.isArray(spec.allowed)) notEvaluated('layers.yml 缺少 layers 或 allowed');
+
+// --before：另一棵独立评估过的树。读不懂就没有可比对象，给 not-evaluated，绝不退回空 driftReport。
+let beforeMg = null;
+if (beforePath) {
+  try {
+    beforeMg = JSON.parse(fs.readFileSync(beforePath, 'utf8'))?.extensions?.tsAnalysis?.moduleGraph;
+  } catch (e) {
+    notEvaluated(`读取 --before 输入失败: ${e.message}`);
+  }
+  if (!beforeMg || !Array.isArray(beforeMg.edges) || !Array.isArray(beforeMg.nodes))
+    notEvaluated('--before 输入缺少 extensions.tsAnalysis.moduleGraph（非 TS，或不是 package 层 JSON）');
+}
 
 // ── glob → 层（最长字面前缀优先）─────────────────────────────────────────
 const toRe = (g) =>
@@ -147,6 +176,81 @@ for (const f of files) {
 if (internal.size === 0) notEvaluated('moduleGraph 里没有 internal 目录节点，没有可评估的内容');
 if (layerEdges.length === 0) notEvaluated('没有评估到任何层间边（layers.yml 的 glob 可能与目录不匹配，或输入为空图）');
 
+// ── B1: --before drift 分类 ──────────────────────────────────────────────
+// 把一棵树的目录级边投影成层间边集合（与上面 pair 同一套 internal/layerOf 规则，可复用）。
+function layerEdgeSet(graph) {
+  const gInternal = new Set(graph.nodes.filter((n) => n.type === 'internal').map((n) => n.id));
+  const out = new Set();
+  for (const e of graph.edges) {
+    if (!gInternal.has(e.from) || !gInternal.has(e.to)) continue;
+    const a = layerOf(e.from);
+    const b = layerOf(e.to);
+    if (!a || !b || a === 'ignored' || b === 'ignored' || a === b) continue;
+    out.add(`${a} -> ${b}`);
+  }
+  return out;
+}
+let driftReport;
+if (beforeMg) {
+  const beforePairs = layerEdgeSet(beforeMg); // 真的读了 before 树的 moduleGraph.edges
+  const afterPairs = new Set(pair.keys());
+  const records = [];
+  for (const edge of [...new Set([...beforePairs, ...afterPairs])].sort()) {
+    const beforePresent = beforePairs.has(edge);
+    const afterPresent = afterPairs.has(edge);
+    const declared = allowed.has(edge);
+    let classification;
+    if (afterPresent && !beforePresent) classification = declared ? 'new-and-declared' : 'new-and-undeclared';
+    else if (beforePresent && afterPresent && !declared) classification = 'preexisting-and-undeclared';
+    else continue; // preexisting-and-declared（噪声，不列）/ 只出现在 before 的消失边（不是 drift 分类项）
+    const [from, to] = edge.split(' -> ');
+    records.push({ edge: { from, to }, classification, evidence: { beforePresent, afterPresent, declared } });
+  }
+  driftReport = records;
+}
+
+// ── B2: --classify-cycles ────────────────────────────────────────────────
+// "某环的成员是否全部同层 / 相邻方向是否已声明" 是纯集合运算，不需要 LLM。
+let cycleClassification;
+let bidirectionalAllowedPairs;
+if (classifyCycles) {
+  const edgeSet = new Set(mg.edges.map((e) => `${e.from} -> ${e.to}`));
+  const cycles = Array.isArray(mg.cycles) ? mg.cycles : [];
+  cycleClassification = cycles.map((c, i) => {
+    const members = Array.isArray(c) ? c : (c.modules ?? []);
+    const layerMembership = [...new Set(members.map((m) => layerOf(m) ?? 'unmapped'))];
+    const mappedLayers = members.map((m) => layerOf(m)).filter((l) => l && l !== 'ignored');
+    const allMapped = mappedLayers.length === members.length;
+    let classification;
+    if (allMapped && new Set(mappedLayers).size === 1) {
+      classification = 'intra-layer'; // 全部成员映射到同一层：check-layers 的跨层方向检查结构上看不见它
+    } else {
+      let allDeclared = true;
+      for (let k = 0; k < members.length; k++) {
+        const u = members[k];
+        const v = members[(k + 1) % members.length];
+        const a = layerOf(u);
+        const b = layerOf(v);
+        if (!a || !b || a === 'ignored' || b === 'ignored') {
+          allDeclared = false; // 相邻成员有一端没映射到层 → 这条方向无从声明
+          continue;
+        }
+        if (a === b) continue; // 同层相邻，没有跨层方向要声明
+        if (edgeSet.has(`${u} -> ${v}`) && !allowed.has(`${a} -> ${b}`)) allDeclared = false;
+        if (edgeSet.has(`${v} -> ${u}`) && !allowed.has(`${b} -> ${a}`)) allDeclared = false;
+      }
+      classification = allDeclared ? 'cross-layer-declared' : 'cross-layer-undeclared';
+    }
+    return { cycleId: `cycle-${i + 1}`, members, layerMembership, classification };
+  });
+  const bidir = [];
+  for (const e of [...allowed]) {
+    const [a, b] = e.split(' -> ');
+    if (a < b && allowed.has(`${b} -> ${a}`)) bidir.push(`${a} <-> ${b}`);
+  }
+  bidirectionalAllowedPairs = bidir.sort();
+}
+
 const layersOut = Object.fromEntries(
   Object.entries(spec.layers).map(([n, d]) => [n, { rank: d.rank ?? 0, dirs: [...internal].filter((x) => layerOf(x) === n) }])
 );
@@ -161,6 +265,11 @@ const report = {
   resolvedBaseline,
   gaps,
 };
+if (beforeMg) report.driftReport = driftReport;
+if (classifyCycles) {
+  report.cycleClassification = cycleClassification;
+  report.bidirectionalAllowedPairs = bidirectionalAllowedPairs;
+}
 finish(report, status === 'pass' ? 0 : 1);
 
 // ── 输出 ─────────────────────────────────────────────────────────────────
@@ -171,6 +280,18 @@ function summaryText(r) {
     lines.push(`  ${v.baseline ? '[baseline]' : '[NEW]     '} ${v.edge}  dirEdges=${v.count}  value=${v.value ?? '?'} type-only=${v.typeOnly ?? '?'}`);
   if (r.resolvedBaseline.length) lines.push(`  已消除的基线项（可从 known_violations 删除）: ${r.resolvedBaseline.join('; ')}`);
   lines.push(`  覆盖缺口: 未映射目录 ${r.gaps.unmappedDirs.length}，未解析别名边 ${r.gaps.unresolvedEdges.length}`);
+  // 以下两段仅在传了 --before / --classify-cycles 时存在（对应 report 字段），不影响省略时的逐字节输出。
+  if (r.driftReport) {
+    const byKind = (k) => r.driftReport.filter((d) => d.classification === k);
+    lines.push(
+      `  drift（vs --before）: new-and-undeclared=${byKind('new-and-undeclared').length}  new-and-declared=${byKind('new-and-declared').length}  preexisting-and-undeclared=${byKind('preexisting-and-undeclared').length}`
+    );
+    for (const d of r.driftReport) lines.push(`    [${d.classification}] ${d.edge.from} -> ${d.edge.to}`);
+  }
+  if (r.cycleClassification) {
+    lines.push(`  环分类（--classify-cycles）: ${r.cycleClassification.map((c) => `${c.cycleId}=${c.classification}`).join('  ')}`);
+    if (r.bidirectionalAllowedPairs?.length) lines.push(`  双向 allowed 层对（值得人复核）: ${r.bidirectionalAllowedPairs.join('; ')}`);
+  }
   return lines.join('\n');
 }
 
