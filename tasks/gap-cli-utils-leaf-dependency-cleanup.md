@@ -29,12 +29,12 @@ extra:
 
 ## AC
 
-- [ ] `node dist/cli/index.js analyze -f json --output-dir <tmp> --diagrams package` 重跑后，`extensions.tsAnalysis.moduleGraph.edges` 里不再存在 `{from: "src/cli/utils", to: "src/cli/analyze"}` 或 `{from: "src/cli/utils", to: "src/cli/processors"}` 这两条边（搬迁前这两条边各自 strength=1，用于对比的 before 产物由本任务自己在实现前先跑一次留存）
-- [ ] 同一产物的 `extensions.tsAnalysis.moduleGraph.cycles` 里，原 10 目录（`src/cli` + 9 子目录）的 `error` 环成员不再包含 `src/cli/utils`（即该环收缩为 9 个目录，或因此被拆成更小的环/完全消失——以实测为准，但 `src/cli/utils` 必须不在其中任何一个环里）
-- [ ] `node docs/experiments/layer-map/check-layers.mjs <上面的 package.json> docs/experiments/layer-map/layers.yml` 仍为 `status=pass`，`violations=0`（本次改动不引入新的跨层违例——搬迁后 `cli/analyze` 内部边增多、`cli -> processors`/`types -> ...` 等跨层边方向不变，理论上不影响声明层判定，但要求实测确认，不能假设）
-- [ ] `npm run type-check` 通过（搬迁文件、改 import 路径后 TS 编译零错误）
-- [ ] `npm test`（或至少 `tests/unit/cli/utils/drift-baseline*.test.ts`[若存在]、`tests/unit/cli/mcp/tools/arch-health-drift-tool.test.ts`、`tests/unit/cli/utils/diagram-index-generator.test.ts`、`tests/unit/cli/analyze/run-analysis.test.ts` 对应的 scoped 测试）全绿
-- [ ] `src/cli/analyze/arch-health.ts` 里引用旧路径 `cli/utils/drift-baseline.ts` 的文档注释已更新为新路径，注释所解释的防环理由本身不变
+- [x] `node dist/cli/index.js analyze -f json --output-dir <tmp> --diagrams package` 重跑后，`extensions.tsAnalysis.moduleGraph.edges` 里不再存在 `{from: "src/cli/utils", to: "src/cli/analyze"}` 或 `{from: "src/cli/utils", to: "src/cli/processors"}` 这两条边（搬迁前这两条边各自 strength=1，用于对比的 before 产物由本任务自己在实现前先跑一次留存）
+- [x] 同一产物的 `extensions.tsAnalysis.moduleGraph.cycles` 里，原 10 目录（`src/cli` + 9 子目录）的 `error` 环成员不再包含 `src/cli/utils`（即该环收缩为 9 个目录，或因此被拆成更小的环/完全消失——以实测为准，但 `src/cli/utils` 必须不在其中任何一个环里）
+- [x] `node docs/experiments/layer-map/check-layers.mjs <上面的 package.json> docs/experiments/layer-map/layers.yml` 仍为 `status=pass`，`violations=0`（本次改动不引入新的跨层违例——搬迁后 `cli/analyze` 内部边增多、`cli -> processors`/`types -> ...` 等跨层边方向不变，理论上不影响声明层判定，但要求实测确认，不能假设）
+- [x] `npm run type-check` 通过（搬迁文件、改 import 路径后 TS 编译零错误）
+- [x] `npm test`（或至少 `tests/unit/cli/utils/drift-baseline*.test.ts`[若存在]、`tests/unit/cli/mcp/tools/arch-health-drift-tool.test.ts`、`tests/unit/cli/utils/diagram-index-generator.test.ts`、`tests/unit/cli/analyze/run-analysis.test.ts` 对应的 scoped 测试）全绿
+- [x] `src/cli/analyze/arch-health.ts` 里引用旧路径 `cli/utils/drift-baseline.ts` 的文档注释已更新为新路径，注释所解释的防环理由本身不变
 
 ## DoD
 
@@ -43,6 +43,16 @@ extra:
 1. **before/after 的 moduleGraph/cycle 证据真实存在且可复核**——实现者必须在动手前先跑一次 `analyze -f json`（作为 before 基线，建议存到 `/tmp` 而不是提交进仓库），动手后再跑一次（after），把两次 `cycles` 和两条目标边的读数都写进本任务的实现说明或 PR 描述里，不能只说"应该修好了"。
 2. **没有把问题搬到别处而不是真正消除**——`drift-baseline.ts` 搬进 `src/cli/analyze/` 之后，必须确认 `cli/analyze` 内部或 `cli/analyze -> ` 别的目录没有因此新增一条反向进环的边（比如如果 `drift-baseline.ts` 搬过去后又被环内别的目录反向依赖，等于没解决，只是换了个地方画圈）。
 3. **范围没有扩大**——只动上面列的两处反向依赖，不借机重排 `cli/` 下其它目录结构、不去动环内本来就互相合法依赖的 `cli/mcp <-> cli/mcp/tools`（14/14 强度，另一个真实存在但本任务明确不处理的耦合，留给以后单独评估）。
+
+### 实现说明（before/after 证据）
+
+命令：`node dist/cli/index.js analyze -f json --output-dir <tmp> --diagrams package`，读数取自
+`<tmp>/<project>/overview/package.json` 的 `extensions.tsAnalysis.moduleGraph`。
+
+- **两条目标边**：before 各存在（`src/cli/utils -> src/cli/analyze` strength=1 value；`src/cli/utils -> src/cli/processors` strength=1 type-only）；after 均为 0 条。
+- **cycles**：before 的 `error` 环成员 10 个 = `[src/cli, src/cli/cognitive, src/cli/mcp, src/cli/mcp/tools, src/cli/cache, src/cli/query, src/cli/analyze, src/cli/utils, src/cli/processors, src/cli/commands]`；after 收缩为 5 个 = `[src/cli, src/cli/mcp, src/cli/mcp/tools, src/cli/analyze, src/cli/commands]`。`src/cli/utils` 不在任何环里；其剩余出边仅指向外部包与 `src/analysis` + `src/types`。
+- **边 diff**：新增仅 2 条 —— `src/cli/analyze -> os`（drift-baseline 迁入带来）与 `src/cli/mcp/tools -> src/cli/analyze`（引用路径变化）；删除 5 条（原 `src/cli/utils -> {execa, os, analyze, processors, progress}`）。进入 `src/cli/analyze` 的边：before `[commands=3, mcp=1, utils=1]` → after `[commands=6, mcp=1, mcp/tools=1]`。**没有新增反向进环边**：`src/cli/analyze` 本就是环成员，SCC 严格收缩（10→5），未把问题搬去别处。
+- **check-layers**：before/after 均 `status=pass violations=0 new=0`（25 条 layerEdges）。
 
 ## Touches
 
