@@ -34,13 +34,13 @@ extra:
 
 ## AC
 
-- [ ] `.claude/skills/arch-layer-review/SKILL.md` 存在，且其 frontmatter 含非空 `name`/`description` 字段（与 `cognitive-analysis`/`project-semantics-discovery` 同构）——用 `node -e "require('fs').readFileSync('.claude/skills/arch-layer-review/SKILL.md','utf8')"` 读取后人工/脚本核对 frontmatter 字段非空
-- [ ] `SKILL.md` 正文同时出现以下关键词（grep 可核对）：`check-layers.mjs`（声明原样复用、不新增确定性检查器）、`moduleGraph`、`not-evaluated`、`evidence`、以下四个判断主题逐一出现——"ownership"、"orchestrator"、"domain state"、"搬壳"或"搬文件"——以及 NOT-in-MVP 排除项关键词：`DDD`、`OOD`、`架构风格`、`评分`
-- [ ] 提供 `.claude/skills/arch-layer-review/references/goal-030-example-output.json`：合法 JSON，顶层字段至少含 `facts`、`declaredRules`、`judgment` 三个 key（对应三层物理分区），`judgment` 下每条结论对象都含非空 `evidence` 数组
-- [ ] 上一条 example JSON 中，对 JSON 文本做字符串扫描，**不得**出现 `"exitCode"`、`"pass":` 或 `"fail":` 这三类会被误读成确定性 gate 退出码/布尔判定的字段写法（防止语义判断伪装成机械 PASS/FAIL；允许出现在自由文本叙述里，但不能作为 JSON 字段名/值出现在 `judgment` 节点下）
-- [ ] example JSON 的 `judgment` 节点覆盖 proposal "Phase D1 的首个真实案例" 一节列出的三个陷阱（搬壳不搬心 / 第三套实现 / 接口形状未变），每个陷阱有独立的 `trapChecklist` 式条目（命中/未命中 + 理由）
-- [ ] 新增 `tests/unit/skills/arch-layer-review-skill.test.ts`：至少覆盖——(a) SKILL.md 与 example JSON 文件存在；(b) example JSON 可解析且满足上面"三个顶层 key + evidence 非空"的结构断言；(c) example JSON 不含 `exitCode`/`pass`/`fail` 字段名（用 `JSON.stringify` 后的字符串匹配或递归 key 扫描）；(d) SKILL.md 文本包含上面列出的关键词断言
-- [ ] `npm test`（或该测试文件的 scoped 等效命令）全绿，`npm run type-check` 通过
+- [x] `.claude/skills/arch-layer-review/SKILL.md` 存在，且其 frontmatter 含非空 `name`/`description` 字段（与 `cognitive-analysis`/`project-semantics-discovery` 同构）——用 `node -e "require('fs').readFileSync('.claude/skills/arch-layer-review/SKILL.md','utf8')"` 读取后人工/脚本核对 frontmatter 字段非空
+- [x] `SKILL.md` 正文同时出现以下关键词（grep 可核对）：`check-layers.mjs`（声明原样复用、不新增确定性检查器）、`moduleGraph`、`not-evaluated`、`evidence`、以下四个判断主题逐一出现——"ownership"、"orchestrator"、"domain state"、"搬壳"或"搬文件"——以及 NOT-in-MVP 排除项关键词：`DDD`、`OOD`、`架构风格`、`评分`
+- [x] 提供 `.claude/skills/arch-layer-review/references/goal-030-example-output.json`：合法 JSON，顶层字段至少含 `facts`、`declaredRules`、`judgment` 三个 key（对应三层物理分区），`judgment` 下每条结论对象都含非空 `evidence` 数组
+- [x] 上一条 example JSON 中，对 JSON 文本做字符串扫描，**不得**出现 `"exitCode"`、`"pass":` 或 `"fail":` 这三类会被误读成确定性 gate 退出码/布尔判定的字段写法（防止语义判断伪装成机械 PASS/FAIL；允许出现在自由文本叙述里，但不能作为 JSON 字段名/值出现在 `judgment` 节点下）
+- [x] example JSON 的 `judgment` 节点覆盖 proposal "Phase D1 的首个真实案例" 一节列出的三个陷阱（搬壳不搬心 / 第三套实现 / 接口形状未变），每个陷阱有独立的 `trapChecklist` 式条目（命中/未命中 + 理由）
+- [x] 新增 `tests/unit/skills/arch-layer-review-skill.test.ts`：至少覆盖——(a) SKILL.md 与 example JSON 文件存在；(b) example JSON 可解析且满足上面"三个顶层 key + evidence 非空"的结构断言；(c) example JSON 不含 `exitCode`/`pass`/`fail` 字段名（用 `JSON.stringify` 后的字符串匹配或递归 key 扫描）；(d) SKILL.md 文本包含上面列出的关键词断言
+- [x] `npm test`（或该测试文件的 scoped 等效命令）全绿，`npm run type-check` 通过
 
 ## DoD
 
