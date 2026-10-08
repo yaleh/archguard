@@ -2,7 +2,7 @@
 id: gap-untagged-version-drift-guard
 title: 无 tag 的版本漂移无闸：把 AC-002 守卫从 prepublishOnly 提升为常驻不变量，并清除当前未发布的 0.1.38
   漂移（GOAL-001 / AC-002）
-status: todo
+status: ready
 labels:
   - gap
   - defect
