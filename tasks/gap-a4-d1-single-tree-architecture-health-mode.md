@@ -31,12 +31,12 @@ depends_on:
 
 ## AC
 
-- [ ] `.claude/skills/arch-layer-review/SKILL.md` 新增一节（可命名"Single-tree / Architecture-Health Mode"或等价标题），正文同时包含以下关键词（grep 可核对）：`cross-layer`（或"跨层环覆盖"）、`intra-layer`（或"同层环暴露"）、`leaf`（或"叶子层纯净度"）、`coverage gap`（或"声明覆盖缺口"）；且该节明确写出"与 before/after 四问并存，不替代"这句话的等价表述
-- [ ] `SKILL.md` 原有四问（ownership convergence/responsibility migration/orchestrator domain state/shell move vs real move）的文字**逐字未被改动**——用 `git diff` 核对本次改动只在 `SKILL.md` 里新增内容，没有删除或改写原四问段落
-- [ ] 新增 `.claude/skills/arch-layer-review/references/archguard-selfreview-example-output.json`：合法 JSON，顶层字段仍是 `facts`/`declaredRules`/`judgment` 三个 key；`judgment` 数组覆盖上面 4 类新问题，每条有非空 `evidence`；至少一条 evidence 直接引用 2026-10-08 dogfooding 的真实读数（`src/cli/utils -> src/cli/analyze` 或 `-> src/cli/processors` 边、或 `src/plugins/shared -> src/core/parser-runtime` 边、或 archguard 自身 `src/cli` 10 目录环），不是泛化占位文本
-- [ ] 上一条 example JSON 同样不得出现 `"exitCode"`、`"pass":`、`"fail":` 这三类字段写法（与既有 `goal-030-example-output.json` 的同一条约束一致）
-- [ ] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言覆盖：(a) 新 example JSON 文件存在且可解析，满足三个顶层 key + evidence 非空；(b) 新 example JSON 不含 `exitCode`/`pass`/`fail` 字段名；(c) `SKILL.md` 文本包含上面列出的新增关键词；(d) `SKILL.md` 原有四问关键词断言（`ownership`/`orchestrator`/`domain state`/"搬壳"或"搬文件"）仍然存在——防止本任务改坏了既有断言
-- [ ] `npm test`（或该测试文件的 scoped 等效命令）全绿，`npm run type-check` 通过
+- [x] `.claude/skills/arch-layer-review/SKILL.md` 新增一节（可命名"Single-tree / Architecture-Health Mode"或等价标题），正文同时包含以下关键词（grep 可核对）：`cross-layer`（或"跨层环覆盖"）、`intra-layer`（或"同层环暴露"）、`leaf`（或"叶子层纯净度"）、`coverage gap`（或"声明覆盖缺口"）；且该节明确写出"与 before/after 四问并存，不替代"这句话的等价表述
+- [x] `SKILL.md` 原有四问（ownership convergence/responsibility migration/orchestrator domain state/shell move vs real move）的文字**逐字未被改动**——用 `git diff` 核对本次改动只在 `SKILL.md` 里新增内容，没有删除或改写原四问段落
+- [x] 新增 `.claude/skills/arch-layer-review/references/archguard-selfreview-example-output.json`：合法 JSON，顶层字段仍是 `facts`/`declaredRules`/`judgment` 三个 key；`judgment` 数组覆盖上面 4 类新问题，每条有非空 `evidence`；至少一条 evidence 直接引用 2026-10-08 dogfooding 的真实读数（`src/cli/utils -> src/cli/analyze` 或 `-> src/cli/processors` 边、或 `src/plugins/shared -> src/core/parser-runtime` 边、或 archguard 自身 `src/cli` 10 目录环），不是泛化占位文本
+- [x] 上一条 example JSON 同样不得出现 `"exitCode"`、`"pass":`、`"fail":` 这三类字段写法（与既有 `goal-030-example-output.json` 的同一条约束一致）
+- [x] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言覆盖：(a) 新 example JSON 文件存在且可解析，满足三个顶层 key + evidence 非空；(b) 新 example JSON 不含 `exitCode`/`pass`/`fail` 字段名；(c) `SKILL.md` 文本包含上面列出的新增关键词；(d) `SKILL.md` 原有四问关键词断言（`ownership`/`orchestrator`/`domain state`/"搬壳"或"搬文件"）仍然存在——防止本任务改坏了既有断言
+- [x] `npm test`（或该测试文件的 scoped 等效命令）全绿，`npm run type-check` 通过
 
 ## DoD
 
