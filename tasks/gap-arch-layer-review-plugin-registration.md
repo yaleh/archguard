@@ -36,14 +36,14 @@ Quay 新常驻会话（session 886cc353-96b4-4cae-a826-984df8434ca9）实测：u
 
 ## AC
 
-- [ ] `plugin/skills/arch-layer-review/SKILL.md` 与 `.agents/skills/arch-layer-review/SKILL.md` 存在且内容与原 `.claude/skills/arch-layer-review/SKILL.md` 一致（`diff` 核对，除路径本身外逐字节相同）
-- [ ] `.claude/skills/arch-layer-review/` 目录已删除（`test -d .claude/skills/arch-layer-review` 返回非 0）
-- [ ] `node -e "console.log(JSON.parse(require('fs').readFileSync('plugin/.claude-plugin/plugin.json')).commands)"` 的输出数组包含 `"./skills/arch-layer-review/SKILL.md"`
-- [ ] `npx vitest run tests/unit/packaging/plugin-package.test.ts` 全绿，且该文件的 `describe('plugin skills', ...)` 用例断言的 skill 列表包含三个（`feature-developer`、`project-semantics-discovery`、`arch-layer-review`）
-- [ ] `npx vitest run tests/unit/skills/arch-layer-review-skill.test.ts` 全绿（路径已指向 `.agents/skills/arch-layer-review`，不再依赖已删除的 `.claude/skills/` 副本）
-- [ ] `npm run build && node -e "const p=require('./plugin/package.json'); console.log(p.files)"` 确认 `plugin/package.json` 的 `files` 字段仍含 `"skills/"`（无需改动，仅用于验收：既有通配符字段天然覆盖新目录，核对它没被意外改窄）
-- [ ] `npm pack` 在 `plugin/` 目录下打出的 tarball（`npm pack --dry-run` 即可，不需要真的产出文件）列出的文件清单里包含 `skills/arch-layer-review/SKILL.md`——这是"真的会被发布"的最终机械证据，比"文件在磁盘上"更硬
-- [ ] `npm test`（全量）与 `npm run type-check` 通过
+- [x] `plugin/skills/arch-layer-review/SKILL.md` 与 `.agents/skills/arch-layer-review/SKILL.md` 存在且内容与原 `.claude/skills/arch-layer-review/SKILL.md` 一致（`diff` 核对，除路径本身外逐字节相同）
+- [x] `.claude/skills/arch-layer-review/` 目录已删除（`test -d .claude/skills/arch-layer-review` 返回非 0）
+- [x] `node -e "console.log(JSON.parse(require('fs').readFileSync('plugin/.claude-plugin/plugin.json')).commands)"` 的输出数组包含 `"./skills/arch-layer-review/SKILL.md"`
+- [x] `npx vitest run tests/unit/packaging/plugin-package.test.ts` 全绿，且该文件的 `describe('plugin skills', ...)` 用例断言的 skill 列表包含三个（`feature-developer`、`project-semantics-discovery`、`arch-layer-review`）
+- [x] `npx vitest run tests/unit/skills/arch-layer-review-skill.test.ts` 全绿（路径已指向 `.agents/skills/arch-layer-review`，不再依赖已删除的 `.claude/skills/` 副本）
+- [x] `npm run build && node -e "const p=require('./plugin/package.json'); console.log(p.files)"` 确认 `plugin/package.json` 的 `files` 字段仍含 `"skills/"`（无需改动，仅用于验收：既有通配符字段天然覆盖新目录，核对它没被意外改窄）
+- [x] `npm pack` 在 `plugin/` 目录下打出的 tarball（`npm pack --dry-run` 即可，不需要真的产出文件）列出的文件清单里包含 `skills/arch-layer-review/SKILL.md`——这是"真的会被发布"的最终机械证据，比"文件在磁盘上"更硬
+- [x] `npm test`（全量）与 `npm run type-check` 通过
 
 ## DoD
 
