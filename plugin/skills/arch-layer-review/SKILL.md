@@ -177,7 +177,9 @@ A JSON document with three top-level keys, one per layer:
   explicit `authority` note that this layer is the sole verdict-holder.
 - `judgment` — the semantic interpretation: an array of conclusion objects (the
   four MVP questions) each with `question`, `verdict` (four-state), non-empty
-  `evidence`, and a `trapChecklist` covering the acceptance protocol traps.
+  `evidence` (every evidence item is an object carrying a required `confidence`
+  field — see below), and a `trapChecklist` covering the acceptance protocol
+  traps.
   Optionally also `declarationStatus` (`"current"` | `"stale"` | `"not-evaluated"`)
   and `recommendedDeclarationUpdate` — a **supplementary annotation on the
   declaration layer, never a fifth verdict state** (see Step 3).
@@ -191,6 +193,44 @@ Rules for the `judgment` block:
   mistaken for a mechanical PASS/FAIL.
 - The verdict is advisory: it does not change any state machine, gate result, or
   the `check-layers.mjs` verdict.
+- Every `evidence` item carries a required `confidence` field, and a
+  `proxy-metric` item with a missing or empty `caveat` is a contract violation
+  (see below).
+
+### `evidence[]` — every item carries a required `confidence` field
+
+Each item in an `evidence` array — both a conclusion's `evidence` and a
+`trapChecklist` entry's `evidence` — is an object with two keys:
+
+- `statement` — the concrete reading being cited (a `moduleGraph` edge reading, an
+  entity-count delta, a specific line from the `check-layers.mjs` report, a
+  symbol location). This is the string an earlier contract allowed inline.
+- `confidence` — an object with exactly two keys:
+  - `source` — one of exactly four values:
+    - `deterministic` — read directly from ArchGuard's mechanical output
+      (`moduleGraph` edges / cycles / metrics) or a `check-layers.mjs` verdict
+      (its three-state result, a `driftReport` record). `caveat` is normally
+      `null`.
+    - `proxy-metric` — the cited number is a **proxy** indicator, not a direct
+      measurement of the question at stake (e.g. a `get_cluster_boundary`
+      `silhouetteScore` standing in for "is this grouping sound"). `caveat` is
+      **required non-empty**: name the proxy's specific limitation.
+    - `single-reading` — one reading with no cross-check (a single `analyze` run
+      on one ref / environment). `caveat` should name what was not cross-checked.
+    - `corroborated-by-2-methods` — at least two independent methods / data
+      sources reconcile to the same conclusion (e.g. directory-level edges plus
+      an independent grep). `caveat` is normally `null`.
+  - `caveat` — `string | null`. **Required non-empty whenever `source` is
+    `proxy-metric`.**
+
+**A tool's own confidence warning is never swallowed.** When a tool or underlying
+data source *itself declares* a confidence caveat — a self-reported metric such
+as `get_cluster_boundary`'s `silhouetteScore`, which can ship with an explicit
+`warning` like `"no clear cluster structure detected"`, or any output containing
+"low confidence" / "低置信度" / "heuristic" — citing it as evidence **requires**
+`caveat` to be non-empty and to restate that warning. The whole point of
+`confidence` is that a low-confidence reading must never silently enter the
+report looking as strong as a `deterministic` one.
 
 See `references/goal-030-example-output.json` for a worked example — the quay
 GOAL-030 "promotion writes converge to kernel transition decision" slice, whose

@@ -93,10 +93,25 @@
         "verdict": "not-evaluated",
         "baselineObservation": "基线未收敛于 kernel：两条写入的实现与调用点都位于 plugin/scripts，kernel 尚无 task-transition.ts",
         "evidence": [
-          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
-          "facts.before.kernelTaskTransitionModule = null",
-          "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（kernel 已被 plugin/scripts 依赖，但不经晋升写入路径）",
-          "declaredRules.status = not-evaluated（layers.yml 未落地，声明层给不出裁决）"
+          {
+            "statement": "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.kernelTaskTransitionModule = null",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（kernel 已被 plugin/scripts 依赖，但不经晋升写入路径）",
+            "confidence": {
+              "source": "proxy-metric",
+              "caveat": "边强度是 import 计数的代理指标，不是『晋升写入路径是否只剩 kernel 一份实现』的直接度量：它把 plugin/scripts 对 kernel 的全部 import 聚合成一个数字，分不出其中哪些走的是 transfer 决策路径；路径归属仍须读新模块自身的 import 语句。"
+            }
+          },
+          {
+            "statement": "declaredRules.status = not-evaluated（layers.yml 未落地，声明层给不出裁决）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "改动落地后须重跑：以 after 树的 applyPromotions / applyRevaluations 调用点与 kernel/task-transition.ts 的出边为证据，判定是否真的只有一份实现。"
       },
@@ -106,9 +121,18 @@
         "verdict": "not-evaluated",
         "baselineObservation": "基线上转移决策尚未迁移：TRANSITIONS 与 LIFECYCLE_EDGES 都还定义在 packages/quay/src/gate/lifecycle.ts",
         "evidence": [
-          "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
-          "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only）",
-          "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0"
+          {
+            "statement": "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "须在 after 树核对 LIFECYCLE_EDGES 是否成为全仓唯一定义且位于 kernel；gate/lifecycle.ts 若仍保留一份可独立演化的等价表，即未迁移。"
       },
@@ -118,9 +142,18 @@
         "verdict": "not-evaluated",
         "baselineObservation": "基线上 orchestrator 仍直接持有 domain state：promotion driver 的 ready-pool-check 直接读 frontmatter status、比对合法转移、写盘",
         "evidence": [
-          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts",
-          "facts.before.symbolLocations.patchStatusField = plugin/scripts/task-ops.ts（编排层自己落盘）",
-          "facts.before.symbolLocations.commitTaskFile = plugin/scripts/task-ops.ts（编排层自己提交）"
+          {
+            "statement": "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.symbolLocations.patchStatusField = plugin/scripts/task-ops.ts（编排层自己落盘）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.symbolLocations.commitTaskFile = plugin/scripts/task-ops.ts（编排层自己提交）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "收敛的目标形态是“把意图传给 kernel，由 kernel 判断并执行”；判定依据是写入原语与转移判断是否从 plugin/scripts 消失、调用点是否只传意图。"
       },
@@ -130,8 +163,17 @@
         "verdict": "not-evaluated",
         "baselineObservation": "基线上尚无结构变化（无新 kernel 模块），故“搬壳”无从判定",
         "evidence": [
-          "facts.before.kernelTaskTransitionModule = null",
-          "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（既有 14 条边属于既有 kernel 模块，与本次切片无关）"
+          {
+            "statement": "facts.before.kernelTaskTransitionModule = null",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（既有 14 条边属于既有 kernel 模块，与本次切片无关）",
+            "confidence": {
+              "source": "single-reading",
+              "caveat": "只有一个 before 快照、没有 after 树可交叉核对（本次评估是单快照基线），所以这条读数只能说明『基线尚无新 kernel 模块』，不能据以判定搬壳是否发生；结论因此仍是 not-evaluated。"
+            }
+          }
         ],
         "advisory": "搬壳的机械佐证是 after 树新增模块的出边：若仍指向 plugin/scripts 的写入原语，或根本没有调用方消费新模块（孤岛代码），则未真正收敛。"
       }
@@ -142,8 +184,14 @@
         "hit": false,
         "reason": "基线尚无 kernel/task-transition.ts，陷阱条件尚未出现，无从命中；此为待 after 树核验项。",
         "evidence": [
-          "facts.before.kernelTaskTransitionModule = null",
-          "proposal Phase D1 陷阱1 原文：新 kernel 模块的函数体内部若仍 import 回 plugin/scripts/task-ops.ts 的 patchStatusField / commitTaskFile 做真正的落盘，则 edge count 上升是真的、但决策的心脏仍在 orchestration 层"
+          {
+            "statement": "facts.before.kernelTaskTransitionModule = null",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "proposal Phase D1 陷阱1 原文：新 kernel 模块的函数体内部若仍 import 回 plugin/scripts/task-ops.ts 的 patchStatusField / commitTaskFile 做真正的落盘，则 edge count 上升是真的、但决策的心脏仍在 orchestration 层",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "howToCheck": "读 after 树新模块自身的 import 语句，确认其出边只指向 kernel 目录内部 + 外部包（node 内建 / npm），一条都不指回 plugin/scripts。"
       },
@@ -152,10 +200,22 @@
         "hit": true,
         "reason": "基线即可命中：转移规则表分布在 packages/quay/src/gate/lifecycle.ts（TRANSITIONS 与 LIFECYCLE_EDGES 两处），未唯一收敛于 kernel；若改动只切 ready-pool-check 而不动 gate，会留下第三个可独立演化的等价表。",
         "evidence": [
-          "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
-          "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only，尚未被任何 writer 消费）",
-          "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0（gate 完全不依赖 kernel）",
-          "GOAL-030 范围原文：LIFECYCLE_EDGES 唯一定义下沉 kernel、gate/lifecycle.ts 改为 re-export；不造第三套实现"
+          {
+            "statement": "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only，尚未被任何 writer 消费）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0（gate 完全不依赖 kernel）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "GOAL-030 范围原文：LIFECYCLE_EDGES 唯一定义下沉 kernel、gate/lifecycle.ts 改为 re-export；不造第三套实现",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "howToCheck": "显式检查 LIFECYCLE_EDGES / 等价转移规则表在全仓的声明处是否只有一处，且该处位于 kernel。"
       },
@@ -164,8 +224,14 @@
         "hit": true,
         "reason": "基线命中：applyPromotions(opts) 的 opts 未类型化，边界未在签名上表达；即使函数体搬进 kernel，只要签名不变，“边界更明确”的目标就没达成。",
         "evidence": [
-          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
-          "proposal Phase D1 陷阱3 原文：即使两条写入函数本体真的搬进 kernel，若调用方传入的仍是未类型化的大 opts 对象（当前 applyPromotions(opts) 的形状），领域边界目标就没有真正达成"
+          {
+            "statement": "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "proposal Phase D1 陷阱3 原文：即使两条写入函数本体真的搬进 kernel，若调用方传入的仍是未类型化的大 opts 对象（当前 applyPromotions(opts) 的形状），领域边界目标就没有真正达成",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "howToCheck": "读 after 树的函数签名语义：调用方是否只传声明层定义的意图类型，而不是把整个可变 opts 透传。"
       }

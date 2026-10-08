@@ -116,10 +116,22 @@
         "recommendedDeclarationUpdate": "把 'core-gate -> core-kernel' 加进 quay layers.yml 的 allowed（gate/lifecycle.ts 从 kernel/task-transition.ts 取 LIFECYCLE_EDGES 等共享定义，是 gate 依赖 kernel 的正当方向）",
         "reasoning": "check-layers.mjs 的 driftReport 把这条边归为 new-and-undeclared（beforePresent=false / afterPresent=true / declared=false）：它是这次改动新引入的、且不在 allowed 里。但它不是实现退步——kernel 正是声明给转移决策的层（GOAL-030 把 LIFECYCLE_EDGES 的唯一定义放进 kernel/task-transition.ts，gate 只是消费它）。真正过期的是声明：quay layers.yml 的 allowed 没有跟上这次方向。因此 verdict 不判 regressed 来笼统归咎，而是标注 declarationStatus=stale 并给出具体补列建议。",
         "evidence": [
-          "facts.delta.addedInternalEdges = ['packages/quay/src/gate -> packages/quay/src/kernel']（两份独立快照 moduleGraph.edges 的真实差集）",
-          "facts.after.gateToKernelEdge.valueStrength = 1（值依赖，不是 type-only；lifecycle.ts:30 的 LIFECYCLE_EDGES 导入）",
-          "declaredRules.driftReport[0].classification = new-and-undeclared，evidence = {beforePresent:false, afterPresent:true, declared:false}",
-          "declaredRules.newViolations = ['core-gate -> core-kernel']（status 由 pass 变为 fail，且只新增这一条）"
+          {
+            "statement": "facts.delta.addedInternalEdges = ['packages/quay/src/gate -> packages/quay/src/kernel']（两份独立快照 moduleGraph.edges 的真实差集）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.after.gateToKernelEdge.valueStrength = 1（值依赖，不是 type-only；lifecycle.ts:30 的 LIFECYCLE_EDGES 导入）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.driftReport[0].classification = new-and-undeclared，evidence = {beforePresent:false, afterPresent:true, declared:false}",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.newViolations = ['core-gate -> core-kernel']（status 由 pass 变为 fail，且只新增这一条）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "补列建议是给人审 layers.yml 用的输入，不是自动改写声明——declaredRules 层的裁决权仍在人 + check-layers.mjs。"
       },
@@ -131,9 +143,18 @@
         "recommendedDeclarationUpdate": null,
         "reasoning": "同层环不含跨层方向，声明层没有可裁决的方向（本 moduleGraph 的 cycles 里该互指已被合并进一个跨层环，--classify-cycles 对那个 6 成员环给的是 cross-layer-declared）。所以这里不是『证据太薄』，而是『声明层结构上评估不了它』——诚实取值是 not-evaluated，不能因为 status 恰好没有新增违例就当作通过。",
         "evidence": [
-          "declaredRules.cycleClassification[0].classification = cross-layer-declared（6 成员环，layerMembership 含 core-fan-in/core-cli/core-gate/core-root）",
-          "declaredRules.cycleClassification[0].members 中 packages/quay/src/gate/factories 与 packages/quay/src/gate/config 同属 core-gate 层",
-          "facts.after.directoryCycles = 1"
+          {
+            "statement": "declaredRules.cycleClassification[0].classification = cross-layer-declared（6 成员环，layerMembership 含 core-fan-in/core-cli/core-gate/core-root）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.cycleClassification[0].members 中 packages/quay/src/gate/factories 与 packages/quay/src/gate/config 同属 core-gate 层",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.after.directoryCycles = 1",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "若要把同层环变成可机械裁决的对象，需要另加判据（如『目录级环数 = 0』），那属于新的确定性检查器范畴，不在本 skill 内做。"
       }
@@ -143,7 +164,16 @@
         "trap": "声明漂移（陷阱4）：把 gate 新增对 kernel 的 value import 误判成『这次改坏了』",
         "hit": false,
         "reason": "driftReport 三态把『新引入且未声明』与『既有未声明债务』分开；这条边是 new-and-undeclared 且方向正当，标 declarationStatus=stale 而不是 regressed。",
-        "evidence": ["declaredRules.driftReport[0].evidence.declared = false", "declaredRules.driftReport[0].classification = new-and-undeclared"]
+        "evidence": [
+          {
+            "statement": "declaredRules.driftReport[0].evidence.declared = false",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.driftReport[0].classification = new-and-undeclared",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
+        ]
       }
     ]
   },

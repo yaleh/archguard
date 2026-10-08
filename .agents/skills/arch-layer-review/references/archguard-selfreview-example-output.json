@@ -177,7 +177,23 @@
       }
     },
     "entityCount": 61,
-    "internalNodeCount": 61
+    "internalNodeCount": 61,
+    "clusterBoundary": {
+      "source": "archguard_get_cluster_boundary（MCP 工具，projectRoot=archguard 检出）——2026-10-08 单独取的一次读数，和上面 ref 4350106733 的 analyze 读数不是同一次运行；本块专门用来演示 confidence.source=proxy-metric 的真实用法。",
+      "measured": true,
+      "silhouetteScore": -0.107,
+      "globalBAS": 0.3736,
+      "clusterCount": 55,
+      "entityCount": 446,
+      "packageCount": 52,
+      "splitPackages": [
+        { "packageName": "src/cli/processors", "purity": 0.3333 },
+        { "packageName": "src/parser", "purity": 0.3889 },
+        { "packageName": "src/plugins/cpp", "purity": 0.3 },
+        { "packageName": "src/plugins/python", "purity": 0.3636 }
+      ],
+      "toolReportedWarning": "no clear cluster structure detected"
+    }
   },
   "declaredRules": {
     "source": "docs/experiments/layer-map/check-layers.mjs <overview/package.json> docs/experiments/layer-map/layers.yml（原样调用，不改）",
@@ -204,12 +220,30 @@
         "verdict": "converged",
         "baselineObservation": "两个跨层环的成员对方向都在 allowed 里：plugin-runtime <-> plugins 的动态装配双向边、plugins <-> parser 的动态装配双向边——均为设计选择，不构成违例，也不是覆盖缺口。",
         "evidence": [
-          "facts.cycles[0].modules 含 src/plugins/shared（plugin-runtime 层）与 src/plugins/{cpp,golang,kotlin,java,python}（plugins 层），是跨层环",
-          "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugin-runtime -> plugins'] = src/plugins/shared -> src/plugins/{cpp,golang/atlas,java,kotlin,python} 各 strength=1",
-          "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugins -> plugin-runtime'] = src/plugins/{cpp,cpp/builders,cpp/mappers,golang,golang/builders,java,kotlin,kotlin/builders,python} -> src/plugins/shared，strength 2..7",
-          "layers.yml allowed 同时列出 'plugin-runtime -> plugins' 与 'plugins -> plugin-runtime'（均标注为动态装配边）",
-          "facts.cycles[1].modules = [src/plugins/typescript, src/parser]；allowed 同时列出 'plugins -> parser' 与 'parser -> plugins'",
-          "declaredRules.status = pass（check-layers.mjs 对跨层方向无违例）"
+          {
+            "statement": "facts.cycles[0].modules 含 src/plugins/shared（plugin-runtime 层）与 src/plugins/{cpp,golang,kotlin,java,python}（plugins 层），是跨层环",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugin-runtime -> plugins'] = src/plugins/shared -> src/plugins/{cpp,golang/atlas,java,kotlin,python} 各 strength=1",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugins -> plugin-runtime'] = src/plugins/{cpp,cpp/builders,cpp/mappers,golang,golang/builders,java,kotlin,kotlin/builders,python} -> src/plugins/shared，strength 2..7",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "layers.yml allowed 同时列出 'plugin-runtime -> plugins' 与 'plugins -> plugin-runtime'（均标注为动态装配边）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.cycles[1].modules = [src/plugins/typescript, src/parser]；allowed 同时列出 'plugins -> parser' 与 'parser -> plugins'",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.status = pass（check-layers.mjs 对跨层方向无违例）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "跨层环本身不是问题；问题是“有没有声明”。declared rules 对这两个环都给出了声明，因此判 converged——但若某个跨层环的方向不在 allowed 而 check-layers.mjs 仍报 pass（该对边恰好没被违例判例命中），必须显式标注为 coverage gap，不能被 pass 掩盖。"
       },
@@ -219,10 +253,22 @@
         "verdict": "not-evaluated",
         "baselineObservation": "存在两个同层环：src/cli 10 目录 error 环（全部属于 cli 层）、src/analysis/{fitness,gim} warning 环（全部属于 analysis 层）。check-layers.mjs 只比较跨层边，对这两类环结构性不可见——declared rules 对此环未评估。",
         "evidence": [
-          "facts.cycles[3].modules 10 个全部 src/cli/*（cognitive, mcp, mcp/tools, cache, query, analyze, utils, processors, commands, cli），declaredRules.layers.cli.globs 覆盖全部这 10 个目录 → 同层环",
-          "facts.cycles[2].modules = [src/analysis/fitness, src/analysis/gim]，两者都在 analysis 层 → 同层环",
-          "declaredRules.status = pass（check-layers.mjs 仅比较跨层边，25 条 layerEdges，对同层环零评估力）",
-          "proposal Phase D1「Single-tree / Architecture-Health 模式」原文：check-layers.mjs 本身对同层环结构性不可见，pass 不代表“没有环”，只代表“没有跨层方向违例”"
+          {
+            "statement": "facts.cycles[3].modules 10 个全部 src/cli/*（cognitive, mcp, mcp/tools, cache, query, analyze, utils, processors, commands, cli），declaredRules.layers.cli.globs 覆盖全部这 10 个目录 → 同层环",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.cycles[2].modules = [src/analysis/fitness, src/analysis/gim]，两者都在 analysis 层 → 同层环",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.status = pass（check-layers.mjs 仅比较跨层边，25 条 layerEdges，对同层环零评估力）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "proposal Phase D1「Single-tree / Architecture-Health 模式」原文：check-layers.mjs 本身对同层环结构性不可见，pass 不代表“没有环”，只代表“没有跨层方向违例”",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "同层环必须在报告里单独列出并标注“declared rules 对此环未评估”（本文即该标注），不能因为 check-layers.mjs 报 pass 就略过。cli 10 目录环的消除是另一条独立任务（src/cli/utils 反向边治理）的范围，本 skill 只负责暴露。"
       },
@@ -232,10 +278,22 @@
         "verdict": "regressed",
         "baselineObservation": "src/cli/utils 是被几乎所有 cli 子目录依赖的叶子候选（命名 utils），但它有两条出边反向进入它自己所在调用方环（cli 10 目录环）：src/cli/analyze（值依赖）与 src/cli/processors（type-only）。这是声明之外的真实耦合。",
         "evidence": [
-          "src/cli/utils -> src/cli/analyze：strength=1（valueStrength=1，importedNames=[runAnalysis]）—— 反向进入 cli 环",
-          "src/cli/utils -> src/cli/processors：strength=1（typeOnlyStrength=1，importedNames=[DiagramResult]）—— 反向进入 cli 环（type-only）",
-          "facts.cycles[3].modules 同时含 src/cli/utils、src/cli/analyze、src/cli/processors —— 两条反向边的目标与源在同一个环内",
-          "facts.leafCandidates['src/cli/utils'].outEdges 的其余出边指向 src/types、src/types/extensions、src/analysis/jl、src/cli/progress 与外部包——只有 analyze/processors 两条回头进入 cli 环"
+          {
+            "statement": "src/cli/utils -> src/cli/analyze：strength=1（valueStrength=1，importedNames=[runAnalysis]）—— 反向进入 cli 环",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "src/cli/utils -> src/cli/processors：strength=1（typeOnlyStrength=1，importedNames=[DiagramResult]）—— 反向进入 cli 环（type-only）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.cycles[3].modules 同时含 src/cli/utils、src/cli/analyze、src/cli/processors —— 两条反向边的目标与源在同一个环内",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.leafCandidates['src/cli/utils'].outEdges 的其余出边指向 src/types、src/types/extensions、src/analysis/jl、src/cli/progress 与外部包——只有 analyze/processors 两条回头进入 cli 环",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "detection-only：本 skill 只落地“检测这一问”，不负责修复。具体消除是独立任务 gap-cli-utils-leaf-dependency-cleanup 的代码范围（搬走 src/cli/utils/drift-baseline.ts、抽出 DiagramResult 类型）。"
       },
@@ -245,12 +303,50 @@
         "verdict": "converged",
         "baselineObservation": "本次读数未映射目录为 0，全树 61 个 internal 节点全部落在某个声明层的 glob 内——声明覆盖面为 100%，不存在“只覆盖一小部分却看起来全绿”的假象。",
         "evidence": [
-          "declaredRules.coverageGaps.unmappedDirs = []（未映射目录 0 个）",
-          "declaredRules.coverageGaps.unresolvedEdges = []（未解析别名边 0 条）",
-          "facts.internalNodeCount = 61，declaredRules.layers 的 9 个层共列出全部 61 个 internal 目录 → 覆盖 61/61 = 100%",
-          "declaredRules.coverageGaps.externalEdgesIgnored = 171（外部包边被忽略——不计入覆盖缺口，仅作读数）"
+          {
+            "statement": "declaredRules.coverageGaps.unmappedDirs = []（未映射目录 0 个）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "declaredRules.coverageGaps.unresolvedEdges = []（未解析别名边 0 条）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          },
+          {
+            "statement": "facts.internalNodeCount = 61，declaredRules.layers 的 9 个层共列出全部 61 个 internal 目录 → 覆盖 61/61 = 100%",
+            "confidence": {
+              "source": "single-reading",
+              "caveat": "覆盖率是 ref 4350106733 上单次 analyze 的读数，没有在第二个 ref 或第二套层 glob 上交叉核对：层 glob 是目录级匹配，一旦有新增目录落进 unmappedDirs，100% 立刻失效，本读数只对该快照成立。"
+            }
+          },
+          {
+            "statement": "declaredRules.coverageGaps.externalEdgesIgnored = 171（外部包边被忽略——不计入覆盖缺口，仅作读数）",
+            "confidence": { "source": "deterministic", "caveat": null }
+          }
         ],
         "advisory": "本读数是 archguard 自身当时的快照；该问的价值在于对任意项目可重复执行——一旦 unmappedDirs 非空，必须报出这些目录的 entityCount 占全树比例，避免用 pass 掩盖“声明只覆盖一小部分代码”。"
+      },
+      {
+        "id": "package-cluster-cohesion-proxy",
+        "question": "包分组合理性（代理指标）：加权邻接几何聚类出的簇，和目录/声明层边界是否一致——即“声明的层”在结构上是否真的是内聚的分组",
+        "verdict": "not-evaluated",
+        "baselineObservation": "get_cluster_boundary 自报 silhouetteScore=-0.107、globalBAS=0.3736，并在同一份输出里直接给出 warning=“no clear cluster structure detected”：几何聚类层面没有清晰的簇结构，因此它既不能支持也不能否证“目录分组合理”这个结论。把它当证据引用时必须复述该自报警告，不能只挑 globalBAS=0.3736 这个看起来还有点的分。",
+        "evidence": [
+          {
+            "statement": "archguard_get_cluster_boundary 在 archguard 检出上自报 silhouetteScore=-0.107、clusterCount=55、globalBAS=0.3736，同一份输出带 warning=“no clear cluster structure detected”",
+            "confidence": {
+              "source": "proxy-metric",
+              "caveat": "silhouetteScore 是对“加权邻接几何聚类是否分离”的代理度量，不是“职责归属是否正确”的直接度量；该工具自己声明了低置信度警告（“no clear cluster structure detected”，且剪影系数为负=低于随机水平），划分还依赖 KMeans 随机投影。因此它只能说明“这个数据集上读不出清晰的簇结构”，不能据以判定任何一条层的归属对错，也不能反过来用 globalBAS=0.3736 论证分组合理。"
+            }
+          },
+          {
+            "statement": "splitPackages 里 src/cli/processors purity=0.3333、src/parser purity=0.3889、src/plugins/cpp purity=0.3、src/plugins/python purity=0.3636 —— 这些包的实体被拆进多个簇",
+            "confidence": {
+              "source": "single-reading",
+              "caveat": "这是单次聚类运行（同一份 arch.json、单次 KMeans）的单次读数；簇编号与划分随随机种子/投影变化，换个 ref 或重跑一次 splitPackages 名单可能不同，本读数只对该次运行成立。"
+            }
+          }
+        ],
+        "advisory": "该问本身有价值（分组合理性是 layers.yml 声明的前提），但当前证据强度不足以支持任何四态判断：proxy-metric 的自报警告使它只能停在 not-evaluated。要把它升级为 converged/regressed，需要不依赖几何聚类的直接证据（目录级边 + 声明层 glob 的精确覆盖），而不是这个近随机的剪影系数。"
       }
     ]
   },

@@ -336,3 +336,104 @@ describe('arch-layer-review skill — drift / cycle-classification consumption',
     }
   });
 });
+
+describe('arch-layer-review skill — evidence confidence field (gap-arch-layer-review-evidence-confidence-field)', () => {
+  const LEGAL_SOURCES = [
+    'deterministic',
+    'proxy-metric',
+    'single-reading',
+    'corroborated-by-2-methods',
+  ];
+  const confidenceExamples = [
+    path.join(skillDir, 'references', 'goal-030-example-output.json'),
+    path.join(skillDir, 'references', 'archguard-selfreview-example-output.json'),
+    path.join(skillDir, 'references', 'goal-030-drift-and-stale-declaration-example.json'),
+  ];
+
+  /**
+   * Recursively collect every item of every `evidence` array in a parsed JSON
+   * value — a conclusion's `evidence` and a `trapChecklist` entry's alike.
+   */
+  function collectEvidenceItems(value: unknown, out: unknown[] = []): unknown[] {
+    if (Array.isArray(value)) {
+      for (const item of value) collectEvidenceItems(item, out);
+    } else if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        if (key === 'evidence' && Array.isArray(child)) out.push(...child);
+        collectEvidenceItems(child, out);
+      }
+    }
+    return out;
+  }
+
+  it('gives every evidence item a confidence.source drawn from the four legal values', async () => {
+    for (const examplePath of confidenceExamples) {
+      const raw = await fs.readJson(examplePath);
+      const items = collectEvidenceItems(raw);
+      expect(items.length).toBeGreaterThan(0);
+
+      for (const item of items) {
+        // A bare string is no longer a legal evidence item — it must be an
+        // object that carries the confidence annotation.
+        expect(typeof item).toBe('object');
+        expect(item).not.toBeNull();
+
+        const confidence = (item as { confidence?: { source?: unknown; caveat?: unknown } })
+          .confidence;
+        expect(confidence).toBeDefined();
+        expect(typeof confidence?.source).toBe('string');
+        expect((confidence?.source as string).length).toBeGreaterThan(0);
+        expect(LEGAL_SOURCES).toContain(confidence?.source as string);
+
+        // `caveat` is part of the contract (a string, or null).
+        expect(confidence).toHaveProperty('caveat');
+        expect(confidence?.caveat === null || typeof confidence?.caveat === 'string').toBe(true);
+      }
+    }
+  });
+
+  it('requires a non-empty caveat for proxy-metric, and the low-confidence branch is really covered', async () => {
+    let lowConfidenceWithCaveat = 0;
+
+    for (const examplePath of confidenceExamples) {
+      const raw = await fs.readJson(examplePath);
+
+      for (const item of collectEvidenceItems(raw)) {
+        const confidence = (item as { confidence?: { source?: string; caveat?: string | null } })
+          .confidence;
+        const source = confidence?.source;
+
+        // A proxy metric with no caveat is exactly the silent-low-confidence
+        // failure this contract forbids.
+        if (source === 'proxy-metric') {
+          expect(typeof confidence?.caveat).toBe('string');
+          expect((confidence?.caveat ?? '').length).toBeGreaterThan(0);
+        }
+
+        if (
+          (source === 'proxy-metric' || source === 'single-reading') &&
+          typeof confidence?.caveat === 'string' &&
+          confidence.caveat.length > 0
+        ) {
+          lowConfidenceWithCaveat += 1;
+        }
+      }
+    }
+
+    // The proxy-metric / single-reading + non-empty-caveat branch must be
+    // exercised by a real example, not merely described in prose.
+    expect(lowConfidenceWithCaveat).toBeGreaterThan(0);
+  });
+
+  it('documents the four confidence sources and the self-reported-warning rule in the output contract', async () => {
+    const skill = await fs.readFile(skillPath, 'utf-8');
+
+    for (const source of LEGAL_SOURCES) {
+      expect(skill).toContain(source);
+    }
+
+    // The "a tool that self-reports low confidence must not be swallowed" rule.
+    expect(skill).toContain('caveat');
+    expect(skill).toMatch(/self-report|低置信度|low confidence|heuristic/i);
+  });
+});
