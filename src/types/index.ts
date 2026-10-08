@@ -12,6 +12,10 @@ export type { MetricVector } from './metric-vector.js';
 // Export CognitiveSummaryEntry type (archguard_get_cognitive_summary MCP tool)
 export type { CognitiveSummaryEntry } from './cognitive-summary.js';
 
+// Export DiagramResult type (diagram processing outcome; owned by types layer
+// so consumers like cli/utils do not reverse-import cli/processors)
+export type { DiagramResult } from './diagram-result.js';
+
 // Export extension types (ADR-002)
 export type { ArchJSONExtensions } from './extensions/index.js';
 export type {

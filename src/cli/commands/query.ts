@@ -30,7 +30,7 @@ import {
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { TREND_DELTA_THRESHOLD, DRIFT_THRESHOLDS } from '@/analysis/jl/types.js';
 import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
-import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../utils/drift-baseline.js';
+import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../analyze/drift-baseline.js';
 import { formatDriftReport } from '../utils/drift-reporter.js';
 import { loadArchJsonForCluster } from '../utils/cluster-archjson-loader.js';
 import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
