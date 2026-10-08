@@ -33,21 +33,21 @@ GOAL-001 / AC-002 要求：package.json 的 version 一定有一个同名 `v*` t
 
 ## AC
 
-- [ ] 工作区根（`/data/home/yale/work/archguard`，即 goal driver 评估的那棵树）上 `bash scripts/check-version-has-tag.sh /data/home/yale/work/archguard` exit 0（漂移已清：package.json version 有同名 tag）
-- [ ] 六处载体逐字相等且等于最后一次已 tag 的版本：`bash scripts/check-version-carriers.sh /data/home/yale/work/archguard` exit 0
-- [ ] `grep -Eq 'runCheck\(REPO_ROOT\)' tests/unit/scripts/version-tag-check.test.ts` 命中（新增对真实仓库运行守卫并断言 exit 0 的用例），且 `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0
-- [ ] `grep -q 'check-version-has-tag.sh' .github/workflows/ci.yml` 命中，且 `grep -A2 '^  push:' .github/workflows/ci.yml | grep -q develop` 命中（ci.yml 的 push 触发分支包含 develop）
-- [ ] `node -e "const s=require('./package.json').scripts.prepublishOnly; if(!s.includes('scripts/check-version-has-tag.sh')) process.exit(1)"` exit 0（守卫仍接在发布边界上）
-- [ ] `npm run type-check` exit 0
+- [x] 工作区根（`/data/home/yale/work/archguard`，即 goal driver 评估的那棵树）上 `bash scripts/check-version-has-tag.sh /data/home/yale/work/archguard` exit 0（漂移已清：package.json version 有同名 tag）
+- [x] 六处载体逐字相等且等于最后一次已 tag 的版本：`bash scripts/check-version-carriers.sh /data/home/yale/work/archguard` exit 0
+- [x] `grep -Eq 'runCheck\(REPO_ROOT\)' tests/unit/scripts/version-tag-check.test.ts` 命中（新增对真实仓库运行守卫并断言 exit 0 的用例），且 `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0
+- [x] `grep -q 'check-version-has-tag.sh' .github/workflows/ci.yml` 命中，且 `grep -A2 '^  push:' .github/workflows/ci.yml | grep -q develop` 命中（ci.yml 的 push 触发分支包含 develop）
+- [x] `node -e "const s=require('./package.json').scripts.prepublishOnly; if(!s.includes('scripts/check-version-has-tag.sh')) process.exit(1)"` exit 0（守卫仍接在发布边界上）
+- [x] `npm run type-check` exit 0
 
 ## DoD
 
 真实落地的标准不是「脚本存在 / wiring grep 命中」，而是机制被真实操作过：
 
-- 在临时仓库（version 无同名 tag）上真实运行守卫，必须 exit 1 且 stderr 含 `CAUSE=published-version-without-a-tag`；同名 tag 存在时 exit 0（正反两面各真实跑一次）。
-- 在**真实仓库**上真实演示常驻断言的效力：临时把 package.json 的 version 改成一个无 tag 的值（如 `9.9.9`），运行 `npx vitest run tests/unit/scripts/version-tag-check.test.ts` 必须**红**；还原为真实已 tag 的版本后必须**绿**。这一步证明新增断言把不变量真的钉进了常驻测试路径，而非只断言 wiring。
-- 漂移已清的判据：在 goal driver 评估的那棵树（工作区根）上，`bash scripts/check-version-has-tag.sh` exit 0。
-- 本任务不打 tag、不发布、不 push master、不改 release.yml。
+- 在临时仓库（version 无同名 tag）上真实运行守卫，必须 exit 1 且 stderr 含 `CAUSE=published-version-without-a-tag`；同名 tag 存在时 exit 0（正反两面各真实跑一次）。→ 已由 `version-tag-check.test.ts` 的两条临时仓库用例真实执行（`npx vitest run` 6 passed）。
+- 在**真实仓库**上真实演示常驻断言的效力：临时把 package.json 的 version 改成一个无 tag 的值（如 `9.9.9`），运行 `npx vitest run tests/unit/scripts/version-tag-check.test.ts` 必须**红**；还原为真实已 tag 的版本后必须**绿**。这一步证明新增断言把不变量真的钉进了常驻测试路径，而非只断言 wiring。→ 已实测：9.9.9 → 1 failed（exit 1）；还原 0.1.37 → 6 passed（exit 0）。
+- 漂移已清的判据：在 goal driver 评估的那棵树（工作区根）上，`bash scripts/check-version-has-tag.sh` exit 0。→ 实测 `ok: tag v0.1.37 exists`（exit 0），`check-version-carriers.sh` 亦 `all carriers == 0.1.37`（exit 0）。
+- 本任务不打 tag、不发布、不 push master、不改 release.yml。→ 已遵守：未打 tag、未发布、未 push；`git tag --list` 最高仍 `v0.1.37`，`release.yml` 未改。
 
 ## Touches
 
