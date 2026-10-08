@@ -1,7 +1,7 @@
 ---
 id: gap-arch-layer-review-evidence-confidence-field
 title: arch-layer-review 的 judgment evidence 加 confidence/caveat 字段，不让低置信度证据悄悄混进结论
-status: ready
+status: done
 labels:
   - gap
   - architecture
