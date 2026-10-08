@@ -1,0 +1,180 @@
+{
+  "schema": "arch-layer-review/example/v1",
+  "note": "arch-layer-review skill 的参考样例输出，用于演示输出契约与四态判断结构。四态判断是建议性语义解读，不是 gate，不产生任何机械判定字段。除标注为 measured baseline 的读数外，本文件是 worked example，不是某次真实运行的逐字节产物。",
+  "subject": {
+    "goal": "GOAL-030",
+    "title": "晋升写入经 kernel 转移决策并留痕",
+    "repo": "quay",
+    "evaluatedPhase": "before",
+    "evaluatedRef": "develop @97d17da6b",
+    "refactorSlice": "plugin/scripts/ready-pool-check.ts 的 applyPromotions（todo→ready，promote 边）与 applyRevaluations（ready→todo，retreat 边）两条状态写入改走 kernel 转移决策（基于 LIFECYCLE_EDGES），并为每次转移写一条结构化事件",
+    "declaredTargetLayer": "packages/quay/src/kernel",
+    "acceptanceProtocol": [
+      "陷阱1 搬壳不搬心：新 kernel 模块是否反向 import plugin/scripts 的写入原语（patchStatusField / commitTaskFile）",
+      "陷阱2 第三套实现：LIFECYCLE_EDGES 等转移规则表在全仓是否只有一处定义，且该定义位于 kernel",
+      "陷阱3 接口形状未变：调用方是否仍传一个未类型化的大 opts 对象，边界没有在签名上变清楚"
+    ]
+  },
+  "layerDiscipline": {
+    "note": "三层物理分区，不得合并成一张表展示。",
+    "layers": [
+      {
+        "id": "mechanical-facts",
+        "producedBy": "ArchGuard analyze 输出（moduleGraph 边 / cycles / metrics 原始读数）",
+        "authority": "唯一真相，同一输入逐字节一致"
+      },
+      {
+        "id": "declared-rules",
+        "producedBy": "docs/experiments/layer-map/check-layers.mjs 的三态判定（含 not-evaluated）",
+        "authority": "裁决权在本层；本 skill 只引用，不重算、不覆盖"
+      },
+      {
+        "id": "semantic-interpretation",
+        "producedBy": "LLM（本 skill）的四态判断 + 引用的 evidence 条目",
+        "authority": "仅供参考，不是 gate；证据条目可重放，叙述文字不要求逐字节一致"
+      }
+    ]
+  },
+  "facts": {
+    "source": "node dist/cli/index.js analyze -f json → extensions.tsAnalysis.moduleGraph（原样调用，不经 detect_cycles MCP 工具）",
+    "note": "机械事实层：以下均为读数，不含任何语义判断词。",
+    "before": {
+      "ref": "develop @97d17da6b",
+      "measured": true,
+      "directoryCycles": 1,
+      "edgeStrength": {
+        "plugin/scripts -> packages/quay/src/kernel": 14,
+        "plugin/scripts -> non-kernel packages": 44,
+        "packages -> plugin/scripts": 0,
+        "packages/quay/src/gate -> packages/quay/src/kernel": 0
+      },
+      "symbolLocations": {
+        "TRANSITIONS": "packages/quay/src/gate/lifecycle.ts（runPromote / runRetreat 行走的 promote/retreat 邻接表）",
+        "LIFECYCLE_EDGES": "packages/quay/src/gate/lifecycle.ts（declaration only，尚未被任何 writer 消费）",
+        "patchStatusField": "plugin/scripts/task-ops.ts",
+        "commitTaskFile": "plugin/scripts/task-ops.ts",
+        "applyPromotions": "plugin/scripts/ready-pool-check.ts（opts 未类型化）",
+        "applyRevaluations": "plugin/scripts/ready-pool-check.ts"
+      },
+      "kernelModules": [
+        "control-plane-http.ts",
+        "control-state.ts",
+        "env-merge.ts",
+        "proc-identity.ts",
+        "regex-escape.ts",
+        "shape-sections.ts",
+        "task-shape-artifacts.ts",
+        "write-json-atomic.ts"
+      ],
+      "kernelTaskTransitionModule": null
+    }
+  },
+  "declaredRules": {
+    "source": "docs/experiments/layer-map/check-layers.mjs（原样调用，不改）",
+    "layersFile": "quay/layers.yml",
+    "status": "not-evaluated",
+    "reason": "quay 的 layers.yml 尚未落地（仅存在于 .claude/worktrees/layers-yml-draft），check-layers.mjs 读不到输入 → not-evaluated（未评估，绝不等同于通过）。本层结论的裁决权在 check-layers.mjs；本 skill 只引用，不重算、不覆盖。",
+    "violations": [],
+    "coverageGaps": {
+      "unmappedDirs": [],
+      "unresolvedEdges": [],
+      "externalEdgesIgnored": 0
+    },
+    "authority": "declared architecture rules 层；pass / fail / not-evaluated 三态由 check-layers.mjs 产出，本 skill 不改变它。"
+  },
+  "judgment": {
+    "disclaimer": "以下为 LLM 语义解读，仅供参考，不是 gate，不产生机械退出码或布尔判定。三类裁决中只有 declaredRules 层（check-layers.mjs）持有裁决权；本 skill 不改变它。",
+    "phase": "before-baseline acceptance run（单快照）",
+    "note": "本次评估是 GOAL-030 的 before 基线：代码改动尚未落地（goal/GOAL-030 分支仅含 goal 记账，无代码），因此“是否收敛”类结论为 not-evaluated；基线本身已经能观察到的陷阱条件记入 trapChecklist。提供 after 树后，四条结论的 verdict 即可从 not-evaluated 升级为 converged / cosmetic / regressed 之一。",
+    "conclusions": [
+      {
+        "id": "ownership-convergence",
+        "question": "ownership 是否收敛：一类状态转移的决策 + 执行逻辑是否只在声明的那一层（kernel）有一份实现",
+        "verdict": "not-evaluated",
+        "baselineObservation": "基线未收敛于 kernel：两条写入的实现与调用点都位于 plugin/scripts，kernel 尚无 task-transition.ts",
+        "evidence": [
+          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
+          "facts.before.kernelTaskTransitionModule = null",
+          "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（kernel 已被 plugin/scripts 依赖，但不经晋升写入路径）",
+          "declaredRules.status = not-evaluated（layers.yml 未落地，声明层给不出裁决）"
+        ],
+        "advisory": "改动落地后须重跑：以 after 树的 applyPromotions / applyRevaluations 调用点与 kernel/task-transition.ts 的出边为证据，判定是否真的只有一份实现。"
+      },
+      {
+        "id": "responsibility-migration",
+        "question": "职责是否从错误层迁移到正确层：声明为“该在 kernel”的转移决策，是否真的从 plugin/scripts 的代码里消失",
+        "verdict": "not-evaluated",
+        "baselineObservation": "基线上转移决策尚未迁移：TRANSITIONS 与 LIFECYCLE_EDGES 都还定义在 packages/quay/src/gate/lifecycle.ts",
+        "evidence": [
+          "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
+          "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only）",
+          "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0"
+        ],
+        "advisory": "须在 after 树核对 LIFECYCLE_EDGES 是否成为全仓唯一定义且位于 kernel；gate/lifecycle.ts 若仍保留一份可独立演化的等价表，即未迁移。"
+      },
+      {
+        "id": "orchestrator-domain-state",
+        "question": "orchestrator 是否仍直接持有 domain state：驱动 / 编排层是否还在做“读状态、判断是否合法、写状态”三件事",
+        "verdict": "not-evaluated",
+        "baselineObservation": "基线上 orchestrator 仍直接持有 domain state：promotion driver 的 ready-pool-check 直接读 frontmatter status、比对合法转移、写盘",
+        "evidence": [
+          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts",
+          "facts.before.symbolLocations.patchStatusField = plugin/scripts/task-ops.ts（编排层自己落盘）",
+          "facts.before.symbolLocations.commitTaskFile = plugin/scripts/task-ops.ts（编排层自己提交）"
+        ],
+        "advisory": "收敛的目标形态是“把意图传给 kernel，由 kernel 判断并执行”；判定依据是写入原语与转移判断是否从 plugin/scripts 消失、调用点是否只传意图。"
+      },
+      {
+        "id": "structural-move-vs-shell",
+        "question": "结构变化是否只是搬文件 / 换壳：新增模块是否只是把旧实现复制过去、import 换向，旧调用方与语义角色都没真正改变",
+        "verdict": "not-evaluated",
+        "baselineObservation": "基线上尚无结构变化（无新 kernel 模块），故“搬壳”无从判定",
+        "evidence": [
+          "facts.before.kernelTaskTransitionModule = null",
+          "facts.before.edgeStrength['plugin/scripts -> packages/quay/src/kernel'] = 14（既有 14 条边属于既有 kernel 模块，与本次切片无关）"
+        ],
+        "advisory": "搬壳的机械佐证是 after 树新增模块的出边：若仍指向 plugin/scripts 的写入原语，或根本没有调用方消费新模块（孤岛代码），则未真正收敛。"
+      }
+    ],
+    "trapChecklist": [
+      {
+        "trap": "搬壳不搬心：新 kernel 模块反向 import plugin/scripts 的写入原语",
+        "hit": false,
+        "reason": "基线尚无 kernel/task-transition.ts，陷阱条件尚未出现，无从命中；此为待 after 树核验项。",
+        "evidence": [
+          "facts.before.kernelTaskTransitionModule = null",
+          "proposal Phase D1 陷阱1 原文：新 kernel 模块的函数体内部若仍 import 回 plugin/scripts/task-ops.ts 的 patchStatusField / commitTaskFile 做真正的落盘，则 edge count 上升是真的、但决策的心脏仍在 orchestration 层"
+        ],
+        "howToCheck": "读 after 树新模块自身的 import 语句，确认其出边只指向 kernel 目录内部 + 外部包（node 内建 / npm），一条都不指回 plugin/scripts。"
+      },
+      {
+        "trap": "第三套实现（只改一侧）：gate/lifecycle.ts 仍维护独立一份 TRANSITIONS",
+        "hit": true,
+        "reason": "基线即可命中：转移规则表分布在 packages/quay/src/gate/lifecycle.ts（TRANSITIONS 与 LIFECYCLE_EDGES 两处），未唯一收敛于 kernel；若改动只切 ready-pool-check 而不动 gate，会留下第三个可独立演化的等价表。",
+        "evidence": [
+          "facts.before.symbolLocations.TRANSITIONS = packages/quay/src/gate/lifecycle.ts",
+          "facts.before.symbolLocations.LIFECYCLE_EDGES = packages/quay/src/gate/lifecycle.ts（declaration only，尚未被任何 writer 消费）",
+          "facts.before.edgeStrength['packages/quay/src/gate -> packages/quay/src/kernel'] = 0（gate 完全不依赖 kernel）",
+          "GOAL-030 范围原文：LIFECYCLE_EDGES 唯一定义下沉 kernel、gate/lifecycle.ts 改为 re-export；不造第三套实现"
+        ],
+        "howToCheck": "显式检查 LIFECYCLE_EDGES / 等价转移规则表在全仓的声明处是否只有一处，且该处位于 kernel。"
+      },
+      {
+        "trap": "接口形状未变（领域边界没有变清楚）：调用方仍传未类型化的大 opts 对象",
+        "hit": true,
+        "reason": "基线命中：applyPromotions(opts) 的 opts 未类型化，边界未在签名上表达；即使函数体搬进 kernel，只要签名不变，“边界更明确”的目标就没达成。",
+        "evidence": [
+          "facts.before.symbolLocations.applyPromotions = plugin/scripts/ready-pool-check.ts（opts 未类型化）",
+          "proposal Phase D1 陷阱3 原文：即使两条写入函数本体真的搬进 kernel，若调用方传入的仍是未类型化的大 opts 对象（当前 applyPromotions(opts) 的形状），领域边界目标就没有真正达成"
+        ],
+        "howToCheck": "读 after 树的函数签名语义：调用方是否只传声明层定义的意图类型，而不是把整个可变 opts 透传。"
+      }
+    ]
+  },
+  "replayability": {
+    "note": "证据条目可重放（同一输入引用的读数一致），叙述文字允许不同；本层不要求逐字节一致，这是与前两层确定性产物的刻意区别。",
+    "backingReadings": [
+      "plugin/scripts -> kernel 强度 14、plugin/scripts -> 非 kernel 强度 44、packages -> plugin 0、目录环 1（GOAL-030 前置读数，docs/rup/architecture-views.md §6，develop @97d17da6b）"
+    ]
+  }
+}

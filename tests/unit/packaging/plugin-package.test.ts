@@ -129,8 +129,8 @@ describe('marketplace (repo-root .claude-plugin/marketplace.json)', () => {
 });
 
 describe('plugin skills', () => {
-  it('bundles the feature-developer and project-semantics-discovery skills', () => {
-    for (const skill of ['feature-developer', 'project-semantics-discovery']) {
+  it('bundles the feature-developer, project-semantics-discovery, and arch-layer-review skills', () => {
+    for (const skill of ['feature-developer', 'project-semantics-discovery', 'arch-layer-review']) {
       expect(
         existsSync(path.join(pluginDir, 'skills', skill, 'SKILL.md')),
         `skills/${skill}/SKILL.md missing`

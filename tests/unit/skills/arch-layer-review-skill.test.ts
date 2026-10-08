@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 
-const skillDir = path.resolve('.claude/skills/arch-layer-review');
+const skillDir = path.resolve('.agents/skills/arch-layer-review');
 const skillPath = path.join(skillDir, 'SKILL.md');
 const examplePath = path.join(skillDir, 'references', 'goal-030-example-output.json');
 const selfReviewPath = path.join(
