@@ -45,14 +45,14 @@ Quay 新会话（"Quay 架构审查与 ArchGuard 能力评估"）实际用 `arch
 
 ## AC
 
-- [ ] `node docs/experiments/layer-map/check-layers.mjs <arch.json> <layers.yml>`（不传 `--before`/`--classify-cycles`）的输出与改动前逐字节相同——用改动前后各跑一次存量 fixture 做 diff 核对，证明纯加法
-- [ ] 合成 fixture：准备一对 before/after moduleGraph JSON，after 比 before 多一条未声明跨层边，`--before` 模式下该边必须落在 `driftReport` 的 `new-and-undeclared`；另一条 before/after 都有的未声明边必须落在 `preexisting-and-undeclared`；零新增边的 fixture 必须返回空 `driftReport` 数组，而不是省略该字段或报 pass
-- [ ] 合成 fixture：一个全部成员同层的环，`--classify-cycles` 下必须标 `intra-layer`，不能从 `cycleClassification` 里静默消失；一个双向都 `allowed` 的层对必须出现在 `bidirectionalAllowedPairs`
-- [ ] 用 quay GOAL-030 的真实材料复现：`packages/quay/src/gate/lifecycle.ts -> kernel/task-transition.ts` 这条边在 `--before` 模式下必须分类为 `new-and-undeclared`（需要 quay 仓库 goal 分支 fork 点与当前 tip 各一份 ArchJSON 快照，可以是本任务实现者自己跑出来存在 `/tmp`，不提交进 archguard 仓库）
-- [ ] `SKILL.md`（plugin + .agents 两份逐字节相同）新增消费 `--before`/`--classify-cycles` 的说明，且明确写出"不新增第5个verdict状态，`declarationStatus`是独立标注字段"这句等价表述
-- [ ] 新增 worked example JSON 存在、合法、`judgment.conclusions` 至少一条含 `declarationStatus: "stale"` 且 `recommendedDeclarationUpdate` 非空字符串，`evidence` 引用真实的 `gate/lifecycle.ts -> kernel/task-transition.ts` 边
-- [ ] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言覆盖上述 example 的结构，且不破坏任何既有断言（`git diff` 核对原有测试用例文字未被改动，只新增）
-- [ ] `npm test`、`npm run type-check` 通过
+- [x] `node docs/experiments/layer-map/check-layers.mjs <arch.json> <layers.yml>`（不传 `--before`/`--classify-cycles`）的输出与改动前逐字节相同——用改动前后各跑一次存量 fixture 做 diff 核对，证明纯加法
+- [x] 合成 fixture：准备一对 before/after moduleGraph JSON，after 比 before 多一条未声明跨层边，`--before` 模式下该边必须落在 `driftReport` 的 `new-and-undeclared`；另一条 before/after 都有的未声明边必须落在 `preexisting-and-undeclared`；零新增边的 fixture 必须返回空 `driftReport` 数组，而不是省略该字段或报 pass
+- [x] 合成 fixture：一个全部成员同层的环，`--classify-cycles` 下必须标 `intra-layer`，不能从 `cycleClassification` 里静默消失；一个双向都 `allowed` 的层对必须出现在 `bidirectionalAllowedPairs`
+- [x] 用 quay GOAL-030 的真实材料复现：`packages/quay/src/gate/lifecycle.ts -> kernel/task-transition.ts` 这条边在 `--before` 模式下必须分类为 `new-and-undeclared`（需要 quay 仓库 goal 分支 fork 点与当前 tip 各一份 ArchJSON 快照，可以是本任务实现者自己跑出来存在 `/tmp`，不提交进 archguard 仓库）
+- [x] `SKILL.md`（plugin + .agents 两份逐字节相同）新增消费 `--before`/`--classify-cycles` 的说明，且明确写出"不新增第5个verdict状态，`declarationStatus`是独立标注字段"这句等价表述
+- [x] 新增 worked example JSON 存在、合法、`judgment.conclusions` 至少一条含 `declarationStatus: "stale"` 且 `recommendedDeclarationUpdate` 非空字符串，`evidence` 引用真实的 `gate/lifecycle.ts -> kernel/task-transition.ts` 边
+- [x] `tests/unit/skills/arch-layer-review-skill.test.ts` 新增断言覆盖上述 example 的结构，且不破坏任何既有断言（`git diff` 核对原有测试用例文字未被改动，只新增）
+- [x] `npm test`、`npm run type-check` 通过
 
 ## DoD
 
