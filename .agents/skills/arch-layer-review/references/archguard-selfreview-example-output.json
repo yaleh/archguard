@@ -1,0 +1,263 @@
+{
+  "schema": "arch-layer-review/example/v1",
+  "note": "arch-layer-review skill 的 single-tree / architecture-health 模式参考样例：对 archguard 自身的一棵树做体检（没有 before/after 改动可比较）。与 references/goal-030-example-output.json 的 before/after 四问并存，不替代。四态判断是建议性语义解读，不是 gate，不产生任何机械判定字段。facts 与 declaredRules 两层是 2026-10-08 的真实读数；judgment 层是 LLM 语义解读，叙述文字不要求逐字节一致。",
+  "subject": {
+    "repo": "archguard",
+    "mode": "single-tree / architecture-health",
+    "evaluatedAt": "2026-10-08",
+    "evaluatedRef": "435010673365585fe1a0b74310a83fcccb536e66",
+    "sources": "./src",
+    "declaredTargetLayersFile": "docs/experiments/layer-map/layers.yml",
+    "note": "单棵树体检：无 before/after，故使用 single-tree 四问，而不是 before/after 四问。"
+  },
+  "layerDiscipline": {
+    "note": "三层物理分区，不得合并成一张表展示；契约与原 before/after 四问完全一致。",
+    "layers": [
+      {
+        "id": "mechanical-facts",
+        "producedBy": "ArchGuard analyze 输出（moduleGraph 边 / cycles / 节点统计原始读数）",
+        "authority": "唯一真相，同一输入逐字节一致"
+      },
+      {
+        "id": "declared-rules",
+        "producedBy": "docs/experiments/layer-map/check-layers.mjs 的三态判定（含 not-evaluated）",
+        "authority": "裁决权在本层；本 skill 只引用，不重算、不覆盖"
+      },
+      {
+        "id": "semantic-interpretation",
+        "producedBy": "LLM（本 skill）的四态判断 + 引用的 evidence 条目",
+        "authority": "仅供参考，不是 gate；证据条目可重放，叙述文字不要求逐字节一致"
+      }
+    ]
+  },
+  "facts": {
+    "source": "node dist/cli/index.js analyze -f json --output-dir <tmp> --diagrams package（仓库根自动探测；目录级节点 id 带 src/ 前缀）",
+    "note": "机械事实层：2026-10-08 对 archguard 自身单棵树的实际读数，不含任何语义判断词。",
+    "measured": true,
+    "evaluatedRef": "435010673365585fe1a0b74310a83fcccb536e66",
+    "directoryCycles": 4,
+    "cycles": [
+      {
+        "severity": "error",
+        "size": 13,
+        "modules": [
+          "src/plugins/golang/atlas/builders",
+          "src/plugins/golang/builders",
+          "src/plugins/golang/atlas/renderers",
+          "src/plugins/kotlin/builders",
+          "src/plugins/kotlin",
+          "src/plugins/cpp/mappers",
+          "src/plugins/cpp/builders",
+          "src/plugins/cpp",
+          "src/plugins/python",
+          "src/plugins/java",
+          "src/plugins/shared",
+          "src/plugins/golang",
+          "src/plugins/golang/atlas"
+        ]
+      },
+      {
+        "severity": "warning",
+        "size": 2,
+        "modules": ["src/plugins/typescript", "src/parser"]
+      },
+      {
+        "severity": "warning",
+        "size": 2,
+        "modules": ["src/analysis/fitness", "src/analysis/gim"]
+      },
+      {
+        "severity": "error",
+        "size": 10,
+        "modules": [
+          "src/cli/cognitive",
+          "src/cli/mcp",
+          "src/cli/mcp/tools",
+          "src/cli/cache",
+          "src/cli/query",
+          "src/cli/analyze",
+          "src/cli/utils",
+          "src/cli/processors",
+          "src/cli/commands",
+          "src/cli"
+        ]
+      }
+    ],
+    "leafCandidates": {
+      "src/cli/utils": {
+        "outEdges": [
+          {
+            "to": "src/cli/analyze",
+            "strength": 1,
+            "typeOnlyStrength": 0,
+            "valueStrength": 1,
+            "importedNames": ["runAnalysis"]
+          },
+          {
+            "to": "src/cli/processors",
+            "strength": 1,
+            "typeOnlyStrength": 1,
+            "valueStrength": 0,
+            "importedNames": ["DiagramResult"]
+          },
+          {
+            "to": "src/cli/progress",
+            "strength": 1,
+            "typeOnlyStrength": 0,
+            "valueStrength": 1,
+            "importedNames": ["ProgressReporter"]
+          },
+          {
+            "to": "src/types",
+            "strength": 11,
+            "typeOnlyStrength": 11,
+            "valueStrength": 0,
+            "importedNames": [
+              "ArchJSON",
+              "Entity",
+              "Member",
+              "Module",
+              "Relation",
+              "ArchJSONMetrics",
+              "DiagramConfig",
+              "GlobalConfig"
+            ]
+          },
+          {
+            "to": "src/types/extensions",
+            "strength": 1,
+            "typeOnlyStrength": 1,
+            "valueStrength": 0,
+            "importedNames": ["TestAnalysis"]
+          },
+          {
+            "to": "src/analysis/jl",
+            "strength": 3,
+            "typeOnlyStrength": 2,
+            "valueStrength": 1,
+            "importedNames": [
+              "buildAdjacencyMatrix",
+              "ArchHealthHistory",
+              "DriftSnapshot",
+              "DriftLevel",
+              "DriftReport"
+            ]
+          }
+        ]
+      }
+    },
+    "crossLayerCycleEdges": {
+      "note": "跨层环的两个方向是否都有 declared 方向（供 question 1 核对）。",
+      "plugin-runtime <-> plugins": {
+        "plugin-runtime -> plugins": [
+          { "edge": "src/plugins/shared -> src/plugins/cpp", "strength": 1 },
+          { "edge": "src/plugins/shared -> src/plugins/golang/atlas", "strength": 1 },
+          { "edge": "src/plugins/shared -> src/plugins/java", "strength": 1 },
+          { "edge": "src/plugins/shared -> src/plugins/kotlin", "strength": 1 },
+          { "edge": "src/plugins/shared -> src/plugins/python", "strength": 1 }
+        ],
+        "plugins -> plugin-runtime": [
+          { "edge": "src/plugins/cpp -> src/plugins/shared", "strength": 5 },
+          { "edge": "src/plugins/cpp/builders -> src/plugins/shared", "strength": 1 },
+          { "edge": "src/plugins/cpp/mappers -> src/plugins/shared", "strength": 7 },
+          { "edge": "src/plugins/golang -> src/plugins/shared", "strength": 6 },
+          { "edge": "src/plugins/golang/builders -> src/plugins/shared", "strength": 5 },
+          { "edge": "src/plugins/java -> src/plugins/shared", "strength": 4 },
+          { "edge": "src/plugins/kotlin -> src/plugins/shared", "strength": 4 },
+          { "edge": "src/plugins/kotlin/builders -> src/plugins/shared", "strength": 2 },
+          { "edge": "src/plugins/python -> src/plugins/shared", "strength": 4 }
+        ]
+      },
+      "plugin-runtime -> core": {
+        "src/plugins/shared -> src/core/parser-runtime": {
+          "strength": 10,
+          "typeOnlyStrength": 4,
+          "valueStrength": 6
+        }
+      }
+    },
+    "entityCount": 61,
+    "internalNodeCount": 61
+  },
+  "declaredRules": {
+    "source": "docs/experiments/layer-map/check-layers.mjs <overview/package.json> docs/experiments/layer-map/layers.yml（原样调用，不改）",
+    "layersFile": "docs/experiments/layer-map/layers.yml",
+    "status": "pass",
+    "layerEdges": 25,
+    "violations": [],
+    "newViolations": [],
+    "coverageGaps": {
+      "unmappedDirs": [],
+      "unresolvedEdges": [],
+      "externalEdgesIgnored": 171
+    },
+    "authority": "declared architecture rules 层；pass / fail / not-evaluated 三态由 check-layers.mjs 产出，本 skill 不改变它。注意：pass 只表示“没有跨层方向违例”，它结构性看不见同层环（见 judgment 第 2 问）。"
+  },
+  "judgment": {
+    "disclaimer": "以下为 LLM 语义解读，仅供参考，不是 gate，不产生机械退出码或布尔判定。三类裁决中只有 declaredRules 层（check-layers.mjs）持有裁决权；本 skill 不改变它。",
+    "mode": "single-tree / architecture-health",
+    "note": "单棵树体检：没有 before/after 可比较，因此使用 single-tree 四问。四态在单树场景下读作：converged = 当前已符合声明；regressed = 存在声明之外的真实耦合；not-evaluated = 声明层对此结构性地无法评估。",
+    "conclusions": [
+      {
+        "id": "cross-layer-cycle-coverage",
+        "question": "跨层环覆盖：moduleGraph.cycles 里每一个【跨层】目录环的成员对，其方向是否在 layers.yml 的 allowed 里有声明",
+        "verdict": "converged",
+        "baselineObservation": "两个跨层环的成员对方向都在 allowed 里：plugin-runtime <-> plugins 的动态装配双向边、plugins <-> parser 的动态装配双向边——均为设计选择，不构成违例，也不是覆盖缺口。",
+        "evidence": [
+          "facts.cycles[0].modules 含 src/plugins/shared（plugin-runtime 层）与 src/plugins/{cpp,golang,kotlin,java,python}（plugins 层），是跨层环",
+          "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugin-runtime -> plugins'] = src/plugins/shared -> src/plugins/{cpp,golang/atlas,java,kotlin,python} 各 strength=1",
+          "facts.crossLayerCycleEdges['plugin-runtime <-> plugins']['plugins -> plugin-runtime'] = src/plugins/{cpp,cpp/builders,cpp/mappers,golang,golang/builders,java,kotlin,kotlin/builders,python} -> src/plugins/shared，strength 2..7",
+          "layers.yml allowed 同时列出 'plugin-runtime -> plugins' 与 'plugins -> plugin-runtime'（均标注为动态装配边）",
+          "facts.cycles[1].modules = [src/plugins/typescript, src/parser]；allowed 同时列出 'plugins -> parser' 与 'parser -> plugins'",
+          "declaredRules.status = pass（check-layers.mjs 对跨层方向无违例）"
+        ],
+        "advisory": "跨层环本身不是问题；问题是“有没有声明”。declared rules 对这两个环都给出了声明，因此判 converged——但若某个跨层环的方向不在 allowed 而 check-layers.mjs 仍报 pass（该对边恰好没被违例判例命中），必须显式标注为 coverage gap，不能被 pass 掩盖。"
+      },
+      {
+        "id": "intra-layer-cycle-exposure",
+        "question": "同层环暴露：moduleGraph.cycles 里每一个环，其成员是否全部落在 layers.yml 的同一个层",
+        "verdict": "not-evaluated",
+        "baselineObservation": "存在两个同层环：src/cli 10 目录 error 环（全部属于 cli 层）、src/analysis/{fitness,gim} warning 环（全部属于 analysis 层）。check-layers.mjs 只比较跨层边，对这两类环结构性不可见——declared rules 对此环未评估。",
+        "evidence": [
+          "facts.cycles[3].modules 10 个全部 src/cli/*（cognitive, mcp, mcp/tools, cache, query, analyze, utils, processors, commands, cli），declaredRules.layers.cli.globs 覆盖全部这 10 个目录 → 同层环",
+          "facts.cycles[2].modules = [src/analysis/fitness, src/analysis/gim]，两者都在 analysis 层 → 同层环",
+          "declaredRules.status = pass（check-layers.mjs 仅比较跨层边，25 条 layerEdges，对同层环零评估力）",
+          "proposal Phase D1「Single-tree / Architecture-Health 模式」原文：check-layers.mjs 本身对同层环结构性不可见，pass 不代表“没有环”，只代表“没有跨层方向违例”"
+        ],
+        "advisory": "同层环必须在报告里单独列出并标注“declared rules 对此环未评估”（本文即该标注），不能因为 check-layers.mjs 报 pass 就略过。cli 10 目录环的消除是另一条独立任务（src/cli/utils 反向边治理）的范围，本 skill 只负责暴露。"
+      },
+      {
+        "id": "leaf-layer-purity",
+        "question": "叶子层纯净度：声明中应为叶子的层/目录（典型命名 utils/types/shared），其出边是否存在“反向进入调用方所在环”的边",
+        "verdict": "regressed",
+        "baselineObservation": "src/cli/utils 是被几乎所有 cli 子目录依赖的叶子候选（命名 utils），但它有两条出边反向进入它自己所在调用方环（cli 10 目录环）：src/cli/analyze（值依赖）与 src/cli/processors（type-only）。这是声明之外的真实耦合。",
+        "evidence": [
+          "src/cli/utils -> src/cli/analyze：strength=1（valueStrength=1，importedNames=[runAnalysis]）—— 反向进入 cli 环",
+          "src/cli/utils -> src/cli/processors：strength=1（typeOnlyStrength=1，importedNames=[DiagramResult]）—— 反向进入 cli 环（type-only）",
+          "facts.cycles[3].modules 同时含 src/cli/utils、src/cli/analyze、src/cli/processors —— 两条反向边的目标与源在同一个环内",
+          "facts.leafCandidates['src/cli/utils'].outEdges 的其余出边指向 src/types、src/types/extensions、src/analysis/jl、src/cli/progress 与外部包——只有 analyze/processors 两条回头进入 cli 环"
+        ],
+        "advisory": "detection-only：本 skill 只落地“检测这一问”，不负责修复。具体消除是独立任务 gap-cli-utils-leaf-dependency-cleanup 的代码范围（搬走 src/cli/utils/drift-baseline.ts、抽出 DiagramResult 类型）。"
+      },
+      {
+        "id": "declaration-coverage-gap",
+        "question": "声明覆盖缺口：check-layers.mjs 的“未映射目录”列表，及其 entityCount 占全树 entityCount 的比例",
+        "verdict": "converged",
+        "baselineObservation": "本次读数未映射目录为 0，全树 61 个 internal 节点全部落在某个声明层的 glob 内——声明覆盖面为 100%，不存在“只覆盖一小部分却看起来全绿”的假象。",
+        "evidence": [
+          "declaredRules.coverageGaps.unmappedDirs = []（未映射目录 0 个）",
+          "declaredRules.coverageGaps.unresolvedEdges = []（未解析别名边 0 条）",
+          "facts.internalNodeCount = 61，declaredRules.layers 的 9 个层共列出全部 61 个 internal 目录 → 覆盖 61/61 = 100%",
+          "declaredRules.coverageGaps.externalEdgesIgnored = 171（外部包边被忽略——不计入覆盖缺口，仅作读数）"
+        ],
+        "advisory": "本读数是 archguard 自身当时的快照；该问的价值在于对任意项目可重复执行——一旦 unmappedDirs 非空，必须报出这些目录的 entityCount 占全树比例，避免用 pass 掩盖“声明只覆盖一小部分代码”。"
+      }
+    ]
+  },
+  "replayability": {
+    "note": "证据条目可重放（同一输入引用的读数一致），叙述文字允许不同；本层不要求逐字节一致，这是与前两层确定性产物的刻意区别。",
+    "backingReadings": [
+      "2026-10-08 单棵树 analyze 读数（ref 4350106733）：4 个目录环（13 error plugins 跨层 / 2 warning plugins<->parser 跨层 / 2 warning analysis 同层 / 10 error cli 同层），src/cli/utils 反向边两条（-> src/cli/analyze 值、-> src/cli/processors type-only），src/plugins/shared -> src/core/parser-runtime strength=10，check-layers.mjs status=pass layerEdges=25 violations=0 unmappedDirs=0 externalEdgesIgnored=171"
+    ]
+  }
+}
