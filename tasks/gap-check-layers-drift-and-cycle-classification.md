@@ -1,7 +1,7 @@
 ---
 id: gap-check-layers-drift-and-cycle-classification
 title: check-layers.mjs 新增两个确定性结构化分析模式：--before drift 分类 + --classify-cycles 环分类
-status: ready
+status: done
 labels:
   - gap
   - architecture
