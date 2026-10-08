@@ -1,9 +1,9 @@
 # Proposal: 分层声明 + 确定性方向检查 + 多层架构展示（A4）
 
-**状态**: Approved v2（2026-10-03 人审通过，范围见「评审裁定」；阶段 2–4 的入口形态待 fitness 死桩修复后裁定）
-**日期**: 2026-10-03
+**状态**: Approved v2（2026-10-03 人审通过，范围见「评审裁定」；阶段 2–4 的入口形态待 fitness 死桩修复后裁定）+ **Phase D1 追加**（2026-10-08，语义架构 review，附加阶段，见「Phase D1」；不改变本提案确定性内核的裁决权，不是对 Approved v2 范围的替代）
+**日期**: 2026-10-03（Phase D1 追加于 2026-10-08）
 **关联**: `docs/experiments/layer-map/`（外部原型，提交 2a75651e）、`docs/user-guide/architecture-checking-scenarios.md`（"Limits" 一节明确写了目前没有一等的规则检查）
-**来源**: archguard 自身的分层实测；quay 项目架构审查提出的 A4/B8 需求；会话「archguard 架构语义映射」的原型实测
+**来源**: archguard 自身的分层实测；quay 项目架构审查提出的 A4/B8 需求；会话「archguard 架构语义映射」的原型实测；quay GOAL-030（promotion driver 状态写入收敛到 kernel transition decision）的真实验收需求驱动了 Phase D1
 
 ---
 
@@ -107,6 +107,95 @@ known_violations: [{ edge: "A -> B", evidence: "..." }]     # 棘轮基线
 - **编排 skill**：引导 1→5 步（分析、起草层声明、人审、检查、展示），把已知陷阱写进 skill：关键词 grep 会把注释当 import；读了旧的产物目录（用独立 `--output-dir` 并核对数据时间戳）；别名路径造成重复 scope。
 - **subagent**：仅用于"起草层声明初版"，输出必须标注"未经人审"。
 
+### 6. Phase D1 — Semantic Architecture Review（2026-10-08 追加，附加阶段）
+
+**这不是对阶段 2–4 的替代，是在阶段 2–4 的确定性内核之上追加的一层。** 阶段 0–4 的全部产出（moduleGraph、层声明、`check-layers.mjs` 的 pass/fail/not-evaluated 判定）在 Phase D1 里**只被消费，不被改写**——Phase D1 不产生新的确定性 gate，也不取代 `check-layers.mjs` 的裁决权（见下面"三层区分"）。
+
+**动机**：阶段 0–4 回答的是"declared 的层方向有没有被违反"，这是**声明层**的问题——层声明本身（谁属于哪一层、哪个方向允许）仍需要人审。但 quay GOAL-030 这类重构 goal 提出了另一类问题：**"状态转移 ownership 是不是真的从 orchestration 层收敛到了 kernel 层"**——这个问题即使 `layers.yml` 没有任何新增违例（因为旧实现和新实现可能落在同一层的 glob 之内，或者改动者只是在同一层内部把函数名换了），也可能完全没有发生。阶段 0–4 的确定性边数/环数/三态结果**答不了**这类"结构变化是真收敛还是只是搬了个壳"的问题——这正是 Phase D1 要补的缺口，具体案例见本文件"Phase D1 的首个真实案例：quay GOAL-030"一节。
+
+#### 输入
+
+- ArchGuard 的 module/package/entity graph（`extensions.tsAnalysis.moduleGraph`）、`cycles`、package 级 `metrics`（fileCount/entityCount/outDegree 等）
+- 阶段 2 的声明层产物：`layers.yml`（声明本身）+ 确定性检查器的判定结果（`pass`/`fail`/`not-evaluated` 三态，含违例清单与覆盖缺口）
+- **可选** before/after diff：两次独立评估（before 树、after 树）各自的上述产物，用于判断"这次改动让结构往声明的方向走近了还是只是换了位置"
+- **可选** repo docs / project semantics：`project-semantics-discovery` 的既有产出（`architecturalLayers` 投影）、proposal/plan/ADR 原文、以及人审过的"验收协议"（一份列明判断陷阱的清单，如本文件下面 GOAL-030 案例给出的四项检查）
+
+#### 输出
+
+**evidence-backed semantic interpretation，不是新的 deterministic gate。** 具体地：
+
+- 每条结论必须引用支撑它的"输入"里的具体条目（某条 moduleGraph 边、某个 entityCount 差值、`check-layers.mjs` 报告里的某一行），不允许悬空下结论
+- 结论带四态读数（真收敛 / 形似但未竟 / 回归 / 未评估），**不是 pass/fail**——这四态是语义判断的结果标签，不是退出码，不进 CI 机械门
+- 不可重放到同一个"退出码"——两次调用同一输入允许文字表述不同，但引用的证据条目必须一致（证据可重放，叙述不要求逐字节相同，这是和阶段 2 确定性检查器"同一输入连续两次产物逐字节一致"的刻意区别，见"三层区分"）
+
+#### MVP 范围："薄语义层"——只覆盖这四类判断
+
+第一版**只**回答以下四类问题，不做更多：
+
+1. **ownership 是否收敛**：某个职责（如一类状态转移）的决策与执行逻辑，是不是真的只在声明该职责所属的那一层（如 kernel）存在一份实现，而不是旧层依然保留一份、新层又加一份（"第三套实现"）。
+2. **职责是否从错误层迁移到正确层**：声明为"该在 X 层"的职责，是否真的从 Y 层（declared 之外）的代码里消失了，而不是 Y 层继续保留一份"看起来没用但其实还在被调用"的实现。
+3. **orchestrator 是否仍直接持有 domain state**：驱动/编排层（如 `plugin/scripts` 一类文件）在改动后是否还在直接做"读状态、判断是否合法、写状态"的三件事，还是已经变成"把意图传给 domain 层，由 domain 层判断并执行"。
+4. **结构变化是否只是搬文件/换壳**：新增的模块/文件是否只是把旧实现的代码体复制过去、import 路径换了个方向，但旧实现的调用方和旧文件的语义角色都没有真正改变（比如新 kernel 模块的函数体内部仍然 `import` 回旧文件的底层写入原语）。
+
+**明确 NOT in MVP**（第一版不做，不是"暂时忘了"，是刻意排除）：
+
+- 完整 DDD（领域驱动设计）建模——不产出聚合根/值对象/领域事件的完整划分
+- OOD（面向对象设计）评审——不产出类职责划分、继承/组合建议
+- 架构风格诊断——不判断"这是不是微服务/分层架构/六边形架构"之类的风格归类
+- 全局系统设计评分——不产出任何形式的"架构健康度打分"或排名
+
+这四类不在 MVP 范围，是因为它们需要的判断依据（领域模型、团队约定、非功能需求）超出了"ArchGuard 机械输出 + 声明层产物"能提供的证据面——MVP 只处理"文中四类问题"所需、能被机械事实或声明直接或间接证明的部分。
+
+#### 三层区分（必须物理分区，不能混写）
+
+| 层 | 产出 | 谁说了算 | 可重放性 |
+|---|---|---|---|
+| **机械事实** | moduleGraph 边/环/entityCount 等原始读数 | ArchGuard 的 `analyze` 输出，唯一真相 | 同一输入逐字节一致 |
+| **declared architecture rules** | `layers.yml` 声明 + `check-layers.mjs` 的 pass/fail/not-evaluated | 人审过的声明文件 + 阶段 2–3 的确定性检查器，**裁决权在这一层，Phase D1 不染指** | 同一输入逐字节一致（阶段 2–3 的既有要求不变） |
+| **LLM semantic interpretation** | Phase D1 的四态判断 + 引用的证据条目 | LLM，**仅供参考，不是 gate**，人/任务门决定是否采信 | 证据引用可重放，叙述文字不要求逐字节一致 |
+
+这与阶段 3"验证方式"一节"同一输入连续两次生成，产物逐字节一致"的要求不冲突——那条要求继续只约束前两层；Phase D1 是第三层，明确放宽到"证据可核实，叙述允许变化"，且**永远不能冒充前两层的确定性结果**。
+
+#### 可复用资产（不从零设计）
+
+| 资产 | 现状 | Phase D1 里的角色 |
+|---|---|---|
+| `archguard analyze -f json`（CLI） | 已发布 | 事实层唯一数据源，原样调用；注意从非项目自身目录跑，避免继承当前仓库 `archguard.config.json` 的 exclude（实测会吞掉 `**/scripts/**`） |
+| `extensions.tsAnalysis.moduleGraph` | 已是稳定字段 | 事实层核心：cycles、目录级边、nodes.stats 直读，不经 `detect_cycles` MCP 工具 |
+| `docs/experiments/layer-map/check-layers.mjs` + `layers.yml` | 本提案阶段 0–1 的既有原型 | **原样调用，不改**——declared architecture rules 层的唯一判定来源 |
+| HTML/JSON output（阶段 3 设计，`check-layers.mjs` 已有雏形） | 已有单页 HTML 渲染雏形 | Phase D1 复用同一渲染风格，但报告里明确物理分区"机械事实/声明判定/语义解读"三块，不能合并展示成一个表 |
+| `project-semantics-discovery` skill（已发布） | 方向是"把语义知识喂给 ArchGuard"，产出 `architecturalLayers` 投影 | **可选兜底输入**：仅当没有 `layers.yml` 时，取它的分组提示喂给语义判断步骤做弱提示，不替代层声明（遵守"评审裁定 3 / 方案 1"——层声明是唯一正本） |
+| `cognitive-analysis` skill（`.claude/skills/`，未随插件发布） | probe→focus→deepDive→synthesize→cache 五步模板，文件级认知负荷分类 | **复用"形状"不复用工具**：Phase D1 的语义判断步骤沿用同一"先收集确定性信号、再分类、再给结构化双表输出"的模式，粒度从单文件换成"职责/ownership" |
+
+#### Phase D1 的首个真实案例：quay GOAL-030
+
+GOAL-030 的切片是"promotion driver 的 todo→ready / ready→todo 两条状态写入收敛到 kernel transition decision"。**只看 edge count 判断不了 ownership 是否真的收敛**，原因和判断方法如下（均为本次 before 基线实测，未改 quay 代码）：
+
+- **陷阱 1（搬壳不搬心）**：如果 after 树里 `plugin/scripts -> packages/quay/src/kernel` 的边强度上升了（看起来"更依赖 kernel 了"），但新 kernel 模块的函数体内部仍然 `import` 回 `plugin/scripts/task-ops.ts` 的 `patchStatusField`/`commitTaskFile` 做真正的落盘——edge count 上升是真的，但决策的"心脏"仍在 orchestration 层，ownership 没有收敛。Phase D1 的判断方法：不只读目录级边，还要读新模块自身的 import 语句，确认它的出边只指向 kernel 目录内部 + 外部包（node 内建/npm），一条都不指回 `plugin/scripts`。quay 自带的 `import-graph-check.ts` 的"kernel 边界"规则（`kernelChecked`/`kernelViolations`）恰好是这条判断的机械佐证，但它只能回答"有没有违反"，回答不了"为什么没有违反就等于收敛了"——例如 kernel 新模块完全没有被任何调用方使用（孤岛代码），`kernelViolations` 仍然是 `[]`，但 ownership 同样没有收敛，因为没人真的把决策权交给它。
+- **陷阱 2（只改一侧）**：`packages/quay/src/gate/lifecycle.ts` 的 `runPromote`/`runRetreat` 当前完全不依赖 kernel（`gate -> kernel` 边读数为 0）。如果 after 树只把 `ready-pool-check.ts` 的两条写入切到了新 kernel 模块，但 `gate/lifecycle.ts` 继续维护自己的一份 `TRANSITIONS`——edge count 和层声明都可能"看起来没问题"（因为 `gate/lifecycle.ts` 没有新增违反声明方向的边），但这是"新增了第三套实现"而不是"收敛成一套"。Phase D1 的判断方法：显式检查 `LIFECYCLE_EDGES`/等价的转移规则表在全仓是否仍然只有一处定义，且该定义位于声明的那一层（kernel）——这条判断无法从边数或环数推出，必须读两处代码的实际内容做比对。
+- **陷阱 3（接口形状不变 = 边界没有变清楚）**：即使两条写入函数本体真的搬进了 kernel，如果调用方传入的仍然是一个未类型化的大 `opts` 对象（当前 `applyPromotions(opts)` 的形状），"领域边界更明确"这个目标就没有真正达成——这条同样不是 edge count 能回答的，需要读函数签名的语义。
+
+Phase D1 对 GOAL-030 的输出骨架（节选，`verdict` 为语义判断，`evidence` 字段引用机械事实/声明判定具体条目）：
+
+```json
+{
+  "ownershipConvergence": {
+    "verdict": "converged | cosmetic | regressed | not-evaluated",
+    "evidence": [
+      "facts.after.edges['packages/quay/src/gate->packages/quay/src/kernel']",
+      "declaredRules.after.checkLayers.violations（应为空或与基线一致）",
+      "extraCheckers.after['import-graph-check'].kernelViolations（应为 []）"
+    ],
+    "trapChecklist": [
+      { "trap": "新 kernel 模块是否反向 import plugin/scripts 的写入原语", "hit": false },
+      { "trap": "gate/lifecycle.ts 是否仍维护独立一份 TRANSITIONS", "hit": false }
+    ]
+  }
+}
+```
+
+这与 Phase D1 的 MVP 四类问题逐条对应：问题 1→陷阱 2、问题 3→orchestrator 是否仍直接持有 state（即"决策权是否转移"）、问题 4→陷阱 1（搬壳不搬心）。
+
 ## 分阶段（2026-10-03 按裁定修订）
 
 | 阶段 | 内容 | 依赖 |
@@ -118,6 +207,7 @@ known_violations: [{ edge: "A -> B", evidence: "..." }]     # 棘轮基线
 | 2 | 检查器内核 + 层声明 schema 校验 + 基线。**入口形态（复用 `check` / 独立子命令、命令名、是否同给 MCP 工具、skill 是否入 plugin）待 A0 完成后裁定** | 0.5、A0 |
 | 3 | 单页展示 + 确定性输出 + `--check`（含浏览器目视验证） | 阶段 2 |
 | 4 | 编排 skill + 起草 subagent；`project-semantics-discovery` 改为起草层声明 | 阶段 2、3 |
+| **D1** | **Semantic Architecture Review（2026-10-08 追加）**：薄语义层 skill，消费阶段 0.5/1 的 moduleGraph + `check-layers.mjs`（原样调用，不等阶段 2 的内核落地）+ 可选 extra-checker/acceptance-protocol，产出 evidence-backed 四态判断（非 gate） | 0.5、1（**不依赖阶段 2–4**——`check-layers.mjs` 原型已可直接消费，入口形态裁定不阻塞 D1 上线；待阶段 2 落地后 D1 可切换到新的确定性 CLI 入口，不改 D1 自身契约） |
 
 阶段 0/1 的**真实对照验证**见下文「阶段 0/1 验证记录」——两个项目上 internal 边集合完整、拆分与独立扫描一致；
 但发现阶段 0 未覆盖的一类漏边（类型位置的 `import('...')`），已另立 gap 任务。
@@ -258,6 +348,7 @@ archguard 自身 +31 条 external 边恰好等于此前逐条归因的 31 条（
 4. ~~**`architecturalLayers` 与层声明的关系**~~：已裁定为**方案 1**（层声明为正本，`architecturalLayers` 为派生投影），见「评审裁定」3。
 5. **展示粒度**：单页 HTML 只在字符串层面验证过，没有在浏览器里目视验证，阶段 3 需要补。
 6. **quay 提出的 A1（type alias 与非导出声明纳入实体）、A2（字面量数据表抽取）**：与本提案互相独立，且会改变实体数与现有基线，建议单独提案，排在本提案之后。
+7. **（D1 专属风险）LLM 判断被误用为机械 gate**：Phase D1 的四态判断（真收敛/形似但未竟/回归/未评估）结构上很像阶段 2–3 的 pass/fail/not-evaluated 三态，容易被下游消费者（人或自动化）误当成同等裁决力使用。缓解：D1 的输出契约强制要求每条判断带 `evidence` 字段引用机械事实/声明判定的具体条目，报告里三层（机械事实/declared rules/语义解读）必须物理分区展示，不能合并成一张表；D1 不写回任何状态机或 gate 结果。
 
 ## 验证方式（落地时）
 
