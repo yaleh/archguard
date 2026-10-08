@@ -1,7 +1,7 @@
 ---
 id: gap-cli-utils-leaf-dependency-cleanup
 title: src/cli/utils 退出 cli 10 目录环：搬走 drift-baseline.ts、抽出 DiagramResult 类型，消除两条反向依赖
-status: todo
+status: ready
 labels:
   - gap
   - architecture
