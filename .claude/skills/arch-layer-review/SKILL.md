@@ -155,6 +155,63 @@ GOAL-030 "promotion writes converge to kernel transition decision" slice, whose
 acceptance protocol enumerates the three traps (shell-move, third implementation,
 unchanged interface shape).
 
+## Single-tree / Architecture-Health Mode (2026-10-08)
+
+The four MVP questions above all assume **one concrete change** — an old
+implementation vs. a new one — so they can only judge a before/after refactor
+slice. When you only have **a single tree** and want to ask "is this
+architecture healthy as it stands right now?", two of them (orchestrator domain
+state, shell move vs. real move) are structurally unanswerable: there is no
+compared object, so the honest verdict is `not-evaluated`, not "the evidence was
+thin". The 2026-10-08 ArchGuard self-review measured this directly, and alongside
+it a second gap: `check-layers.mjs`'s `pass` is **structurally blind to
+intra-layer cycles** — it compares cross-layer directions only, so a `pass` means
+"no cross-layer direction violation", never "there are no cycles".
+
+This mode adds a **second question set** that **coexists with the before/after
+four questions — it does not replace them**. Both sets run under the same
+three-layer output contract (`facts` / `declaredRules` / `judgment`), the same
+four-state vocabulary, the same non-empty-`evidence` rule, and the same ban on
+`pass`/`fail`/`exitCode` field names. The caller picks the set by scenario:
+before/after refactor comparison uses the four MVP questions; a single-tree health
+check uses the four below. This is **not a new mechanism** — it consumes the same
+artifacts (`moduleGraph`, `check-layers.mjs`, `layers.yml`) and adds no new
+deterministic checker and changes no authority.
+
+The four single-tree questions:
+
+1. **cross-layer cycle coverage** (跨层环覆盖) — for every **cross-layer**
+   directory cycle in `moduleGraph.cycles`, is each member pair's direction
+   declared in `layers.yml`'s `allowed`? Declared ⇒ this is a design choice
+   (e.g. ArchGuard's own `plugin-runtime <-> plugins` dynamic-assembly edges),
+   annotate it — it is not a violation. Undeclared yet `check-layers.mjs` still
+   says `pass` (because that pair happened not to hit a violation rule) ⇒ name it
+   explicitly as a **coverage gap** that `pass` must not paper over.
+2. **intra-layer cycle exposure** (同层环暴露) — for every cycle in
+   `moduleGraph.cycles`, do all its members fall in the *same* declared layer? If
+   yes, it is a cycle `check-layers.mjs` structurally cannot see: list it
+   separately and annotate it **"declared rules 对此环未评估"** — never skip it
+   just because `check-layers.mjs` reports `pass`.
+3. **leaf-layer purity** (叶子层纯净度) — for layers/directories that the
+   declaration treats as leaves (the most-depended-upon ones; typical names
+   `utils` / `types` / `shared`), does any out-edge point **back into the cycle of
+   its callers**? (2026-10-08: `src/cli/utils -> src/cli/analyze` value edge and
+   `src/cli/utils -> src/cli/processors` type-only edge — the same class of
+   judgment, generalized so it can be re-run on any project.)
+4. **declaration coverage gap** (声明覆盖缺口) — `check-layers.mjs`'s
+   unmapped-directory list plus those directories' `entityCount` share of the
+   whole tree's `entityCount` — so "the declaration covers only a sliver but looks
+   all-green" cannot hide.
+
+Single-tree reading of the four-state verdict: `converged` reads as "currently
+conforms to the declaration", `regressed` reads as "a real coupling exists
+outside the declaration", and `not-evaluated` covers "the declaration layer
+structurally cannot evaluate this" (the intra-layer-cycle case). Every conclusion
+still requires a non-empty `evidence` array, exactly as above.
+
+See `references/archguard-selfreview-example-output.json` for a worked single-tree
+example — ArchGuard's own 2026-10-08 self-review.
+
 ## Boundary rule
 
 If answering a judgment seems to require **writing a new deterministic checker**,
