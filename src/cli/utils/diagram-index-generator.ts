@@ -10,9 +10,8 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { GlobalConfig } from '@/types/config.js';
-import type { ArchJSONMetrics } from '@/types/index.js';
+import type { ArchJSONMetrics, DiagramResult } from '@/types/index.js';
 
 /**
  * IndexGenerator for v2.0 DiagramProcessor

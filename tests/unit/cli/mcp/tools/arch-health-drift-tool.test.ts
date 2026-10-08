@@ -14,8 +14,8 @@ vi.mock('@/cli/mcp/mcp-server.js', () => ({
 vi.mock('@/analysis/jl/history-writer.js', () => ({
   readHistoryFile: vi.fn(),
 }));
-vi.mock('@/cli/utils/drift-baseline.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/cli/utils/drift-baseline.js')>();
+vi.mock('@/cli/analyze/drift-baseline.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/cli/analyze/drift-baseline.js')>();
   return {
     ...actual,
     reanalyzeCommitSnapshot: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('@/cli/utils/drift-baseline.js', async (importOriginal) => {
 });
 
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { reanalyzeCommitSnapshot } from '@/cli/utils/drift-baseline.js';
+import { reanalyzeCommitSnapshot } from '@/cli/analyze/drift-baseline.js';
 import { registerArchHealthDriftTool } from '@/cli/mcp/tools/arch-health-tools.js';
 import type {
   ArchHealthHistory,

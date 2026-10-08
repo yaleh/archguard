@@ -20,7 +20,7 @@ import type { ArchJSON } from '@/types/index.js';
 /**
  * Resolve HEAD's full commit sha from `root`, or null when unavailable
  * (not a git repo, no commits yet, git missing). Duplicated from
- * `cli/utils/drift-baseline.ts` rather than imported from it: that module
+ * `cli/analyze/drift-baseline.ts` rather than imported from it: that module
  * imports `runAnalysis`, which imports `computeArchHealth` from this file —
  * importing back would create a require cycle.
  */
