@@ -177,14 +177,25 @@ describe('check-master-at-tag.sh', () => {
     expect(r.stderr).toContain('CAUSE=no-master-ref');
   });
 
-  it('judges the real repository it lives in', () => {
-    // The criterion must be runnable against this repo, not only fixtures.
+  it('judges the real repository it lives in: master must sit on a release tag', () => {
+    // The criterion is only a guard if it actually runs against the checkout
+    // `npm test` runs in — that is what turns a drifted `master` into a red
+    // suite on the loop's own permanent path (AC-001). This is the assertion
+    // that keeps the `master-not-at-a-version-tag` regression from recurring
+    // silently: with the loop's task-store ticks landing on the main checkout,
+    // master was pushed past the release tag one commit at a time and nothing
+    // on the standing path noticed.
     const r = runCheck(REPO_ROOT);
-    expect([0, 1]).toContain(r.status);
-    if (r.status === 1) {
-      expect(r.stderr).toMatch(/CAUSE=(no-master-ref|master-not-at-a-version-tag)/);
-    } else {
-      expect(r.stdout).toMatch(/^ok: master [0-9a-f]+ is at v\d+\.\d+\.\d+$/m);
-    }
+
+    // Exactly one state is exempt: no local master ref at all (e.g. a CI PR
+    // checkout, where actions/checkout leaves `refs/heads/master` unborn). That
+    // state says nothing about master's value domain, so nothing to judge.
+    if (r.stderr.includes('CAUSE=no-master-ref')) return;
+
+    // Every other failure is drift. Never tolerated, in any environment: this
+    // repo's master must sit on a vX.Y.Z commit or this suite is red.
+    expect(r.stderr).not.toContain('CAUSE=master-not-at-a-version-tag');
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/^ok: master [0-9a-f]+ is at v\d+\.\d+\.\d+$/m);
   });
 });
