@@ -2,7 +2,7 @@
 id: gap-refactor-slice-expected-delta-prototype
 title: Refactor Slice / Expected Delta 极小原型：显式切法 → 确定性预期 delta + 负对照（GOAL-033
   为唯一 dogfood，predicted/observed 物理分区）
-status: ready
+status: done
 labels:
   - gap
   - architecture
