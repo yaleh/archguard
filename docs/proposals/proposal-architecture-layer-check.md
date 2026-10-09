@@ -211,6 +211,30 @@ Phase D1 对 GOAL-030 的输出骨架（节选，`verdict` 为语义判断，`ev
 
 **输出契约不变**：仍是 `facts`/`declaredRules`/`judgment` 三个顶层 key；`judgment` 仍是四态（`converged`/`cosmetic`/`regressed`/`not-evaluated`——单树场景下，"converged" 读作"当前已符合声明"而非"收敛动作完成"，"regressed" 读作"存在声明之外的真实耦合"）；每条结论仍要求非空 `evidence`；仍不得出现 `pass`/`fail`/`exitCode` 字段名。
 
+#### Refactor Slice / Expected Delta 极小原型（2026-10-09 追加，Phase D1 的确定性前置件）
+
+**补的是哪个缺口**：Phase D1 判断「结构变化是真收敛还是只搬了壳」时，缺一个**在做之前**就能给出的机械读数——「按这份显式切法动刀，预期 delta 是什么」。quay GOAL-033 暴露了这一点：goal 正文与 AC-351 写下的预测是 package SCC **6 → 5**（"其余五员不动"），实测是 **6 → 4**——`fan-in` 在环内的唯一入边就是 `cli -> fan-in`，删掉 `"" -> cli` 后 `cli` 入环归零，`fan-in` 只经 `cli` 入环而随之一起离开。这个结构性事实**在动手之前用图就能算出来**，却被手写预测漏掉（GOAL-033 自己的证据文件 `analysisNote` 已自认 "AC-351's `rest` expectation (with fan-in) is falsified"）。
+
+**它是什么**：`docs/experiments/layer-map/slice-delta.mjs`，独立脚本（不是给 `check-layers.mjs` 加第三个 flag——那会模糊本提案费力建立的三层边界，独立脚本对既有裁决权零风险）。
+
+```bash
+node docs/experiments/layer-map/slice-delta.mjs <current.arch.json> \
+  --slice <slice.json> [--observed <observed.json>] [--json <out.json>]
+# 退出码: 0 = 已评估且护栏通过 | 1 = 已评估但护栏被触发 | 2 = 未评估
+```
+
+**边界（与上面"三层区分"一致，刻意收窄）**：
+
+- **三层分区**：事实层只读 `extensions.tsAnalysis.moduleGraph`；**不碰** `check-layers.mjs` / `layers.yml` 的 declared-rules 裁决权（本原型输出**不是** gate，不进 CI 机械门）；**零**语义判断——「该不该做这刀 / 有没有更好的切法 / 优先级」一概不回答，`proposedCut` 段是输入的回显 + 可对账性检查。
+- **不发明方案**：切法由显式输入提供（`proposedCut.moves` = 文件 + `from`/`to` + 符号名），脚本没有 proposer。
+- **不产出 `pass`/`fail` 字段名**：状态只有 `evaluated`/`not-evaluated`，护栏用 `violations` 表述。
+- **predicted / computed / observed 物理分区**：`declaredPrediction`（人写，原样保留）、`computedDelta`（ArchGuard 在本图上重算）、`observedDelta`（经独立的 `--observed` 文件传入）三者互不回灌；observed 只在最后装配对比段时被读取。这条由 `tests/unit/architecture/slice-delta.test.ts` 的反向测试**机械保证**：同一图 + 同一 slice，分别传 observed=6→4、observed=999→1（篡改）、完全不传，`computedDelta` 与 `negativeControl` 两段的 `JSON.stringify` 逐字节相同，差异只允许出现在 `observedDelta`/`predictionComparison`。
+- **不猜**：目录粒度上对不了账的情形（`importedNames` 只被切法覆盖一部分、重算 SCC 与 `mg.cycles` 不一致、缺 negative control）一律 `not-evaluated` + 退出码 2，不出"看着合理"的报告。对账用 `importedNames` 做**集合判定**，只覆盖一部分就 `not-evaluated`（不按比例折算）。
+- **至少一个负对照由机制强制**：`negativeControl.restoreEdges` 缺失或为空 ⇒ `not-evaluated`。
+- **模拟规则的已知边界**：只对账「**进入** moved-from 目录的边」。目录级边不带"由哪个文件产生"的信息，所以「从 moved-from 目录出发的边」不建模——`computedDelta.sccAfter` 是这条规则下的读数，不是对真实重命名/搬壳操作的完整模拟。假设随报告 `proposedCut.assumptions` 一并输出。
+
+**唯一 dogfood case = quay GOAL-033**（本原型不泛化）：fixture 是 fork point `1ac06fd85` 的 `packages/quay/src` 子树（treeSha `5213eb614130bf9f8ade9e38b46da7e60fb1c536`）由 ArchGuard 0.1.38 单根分析得到的真实 package 级 ArchJSON，随任务提交进 `tests/fixtures/slice-delta/`，离线可复现（不依赖 quay 的 `.archguard/query/` 残留 scope）。定论点：before 图 + 显式切法算出 **6 → 4**，与 `.quay/goal-033-evidence/archguard-before-after.json` 的实测一致，并指出 `fan-in` 离开的原因来自**重算可达性**（其唯一入边来源是 `cli`，而 `cli` 已离开剩余环），不是照抄证据文件的文字。人写的 6→5 与实测的 6→4 在报告里作为**两个独立读数**并列（`predictionComparison.relation = diverges` / `agrees`），脚本只报"一致/不一致"，不判谁对谁错。
+
 ## 分阶段（2026-10-03 按裁定修订）
 
 | 阶段 | 内容 | 依赖 |

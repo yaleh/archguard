@@ -55,6 +55,43 @@ node docs/experiments/layer-map/check-layers.mjs /tmp/ag-layer-demo/archguard/ov
 - `gap-ts-package-graph-capability-undeclared`：TS 上 `packageGraph` 恒 false，相关工具无明确不可用声明。
 - `gap-ts-package-stats-root-prefix-and-count-semantics`：根目录 `entityCount` 恒为 0，父目录按子树累计。
 
+## Refactor Slice / Expected Delta（`slice-delta.mjs`，2026-10-09 追加）
+
+回答的问题只有一个：「**按这份显式给出的切法**动刀，这棵树的 architecture delta 会是什么？」
+它**不**回答「该不该动这刀」——切法由外部输入提供，脚本不发明方案、不排序、不建议，也**不是 gate**。
+
+```bash
+node docs/experiments/layer-map/slice-delta.mjs <current.arch.json> \
+  --slice <slice.json> [--observed <observed.json>] [--json <out.json>]
+# 退出码: 0 = 已评估且护栏通过 | 1 = 已评估但护栏被触发 | 2 = 未评估
+```
+
+- `<current.arch.json>`：package 级 ArchJSON（消费 `extensions.tsAnalysis.moduleGraph`）。用
+  `node dist/cli/index.js analyze -s <dir> -f json --diagrams package --output-dir <out>` 得到。
+- `--slice`：显式切法。`proposedCut.moves[].file/from/to/symbols` 只表达「哪个文件的哪些符号从哪个目录搬到哪个目录」，
+  **没有**任何「删掉 A -> B」的边级指令；`mustNotChange` 是护栏；`negativeControl.restoreEdges` 只用于证伪，不进计算。
+- `--observed`：外部后验读数，**只进对比段**，不参与任何计算。
+
+读法与边界：
+
+- 对账用 `importedNames` 做**集合判定**：只有当一个名字集合被某次 move 的 `symbols` 完整覆盖时，才认为该边被这次搬迁解释；
+  只覆盖一部分 ⇒ `not-evaluated`（不猜、不按比例折算）。
+- **只对账「进入 moved-from 目录的边」**：目录级边不带「由哪个文件产生」的信息，因此「从 moved-from 目录出发的边」不建模。
+  `computedDelta.sccAfter` 是这条模拟规则下的读数，假设随报告 `proposedCut.assumptions` 一并输出。
+- 自校验：脚本按 Tarjan 从 `mg.edges` 重算全部 size>1 的 SCC，与 `mg.cycles` 做集合比对；不一致即 `not-evaluated`。
+- 没有 negative control（`restoreEdges` 缺失或为空）⇒ `not-evaluated`——「至少一个负对照」由机制强制，不靠人记得。
+- `declaredPrediction`（人写）/ `computedDelta`（本图重算）/ `observedDelta`（外部后验）三者**物理分区、互不回灌**；
+  由 `tests/unit/architecture/slice-delta.test.ts` 的「换掉 observed，`computedDelta` 与 `negativeControl` 逐字节不变」
+  反向测试看住。`predictionComparison` 只报两个读数「一致/不一致」（`relation`），不判谁对谁错。
+- 不碰 `check-layers.mjs` / `layers.yml` 的裁决权；不产出 `pass`/`fail` 字段名（用 `evaluated`/`not-evaluated`
+  与护栏 `violations` 表述），所以退出码不会被误读成 declared-rules 层的 gate。
+
+唯一 dogfood case：quay GOAL-033（fork point `1ac06fd85` 的 `packages/quay/src` 子树，ArchGuard 0.1.38
+单根分析的真实 package 级 ArchJSON，落在 `tests/fixtures/slice-delta/`，离线可复现）。定论点：before 环 6 员
+（`""`、`cli`、`fan-in`、`gate`、`gate/config`、`gate/factories`）→ 切完后 4 员（`""`、`gate`、`gate/config`、
+`gate/factories`）——`fan-in` 随 `cli` 一起离开，因为它的唯一入边来源是 `cli`，而 `cli` 的入边归零。
+人写的预测是 6→5、实测是 6→4，两者在报告里作为**两个独立读数**并列。
+
 ## 未做 / 未验证
 
 - 运行时层（manager/worker、任务状态机）不在 import 图里，本检查不覆盖。

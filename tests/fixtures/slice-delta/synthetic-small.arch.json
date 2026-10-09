@@ -1,0 +1,36 @@
+{
+  "_comment": "手写的最小合成 package 级 ArchJSON，只用于 slice-delta.mjs 的护栏单测（AC-6 缺负对照 / AC-7 自校验失败 / AC-8 覆盖不足），不声称来自任何真实仓库分析。形状与 extensions.tsAnalysis.moduleGraph 一致：internal 目录节点 + 目录级边（带 importedNames）+ cycles。",
+  "version": "1.1",
+  "language": "typescript",
+  "timestamp": "2026-10-09T00:00:00.000Z",
+  "workspaceRoot": "/synthetic/slice-delta-small",
+  "sourceFiles": [],
+  "entities": [],
+  "relations": [],
+  "extensions": {
+    "tsAnalysis": {
+      "moduleGraph": {
+        "nodes": [
+          { "id": "", "name": "(root)", "type": "internal", "fileCount": 2, "stats": { "classes": 0, "interfaces": 0, "functions": 2, "enums": 0 } },
+          { "id": "alpha", "name": "alpha", "type": "internal", "fileCount": 2, "stats": { "classes": 0, "interfaces": 0, "functions": 2, "enums": 0 } },
+          { "id": "beta", "name": "beta", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "gamma", "name": "gamma", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "delta", "name": "delta", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "node:fs", "name": "node:fs", "type": "node_modules", "fileCount": 0, "stats": { "classes": 0, "interfaces": 0, "functions": 0, "enums": 0 } }
+        ],
+        "edges": [
+          { "from": "", "to": "alpha", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["alphaMain", "alphaHelper"] },
+          { "from": "alpha", "to": "beta", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["betaOne"] },
+          { "from": "beta", "to": "", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["rootUtil"] },
+          { "from": "", "to": "gamma", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["gammaOne"] },
+          { "from": "gamma", "to": "delta", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["deltaOne"] },
+          { "from": "alpha", "to": "node:fs", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["fs"] }
+        ],
+        "cycles": [{ "modules": ["alpha", "beta", ""], "severity": "error" }],
+        "unevaluatedDynamicImports": []
+      }
+    }
+  },
+  "metrics": { "totalEntities": 0, "totalRelations": 0 },
+  "metricVector": {}
+}
