@@ -211,6 +211,31 @@ Phase D1 对 GOAL-030 的输出骨架（节选，`verdict` 为语义判断，`ev
 
 **输出契约不变**：仍是 `facts`/`declaredRules`/`judgment` 三个顶层 key；`judgment` 仍是四态（`converged`/`cosmetic`/`regressed`/`not-evaluated`——单树场景下，"converged" 读作"当前已符合声明"而非"收敛动作完成"，"regressed" 读作"存在声明之外的真实耦合"）；每条结论仍要求非空 `evidence`；仍不得出现 `pass`/`fail`/`exitCode` 字段名。
 
+### 7. Phase D2 — Refactor Slice / Expected Delta（2026-10-09 追加，附加原型）
+
+**同 Phase D1：这是附加层，不替代阶段 0–4，也不改变 `check-layers.mjs` 的裁决权。** 与前两节的区别是问题类型——D1 问"这次改动是不是真收敛"（语义判断，需要 LLM），D2 问"**按这份切法动刀，这棵树会变成什么样**"（纯图上的集合运算，**不需要 LLM，也不该有 LLM**）。
+
+**动机**：quay GOAL-033 是最干净的证据。goal 正文与 AC-351 手写的预测是 package SCC **6 → 5**（"cli 离开，其余五员不动"），实测是 **6 → 4**：`fan-in` 在环内的唯一入边就是 `cli -> fan-in`，删掉 `"" -> cli` 之后 `cli` 入环归零，`fan-in` 只经 `cli` 入环而随之一起离开。GOAL-033 自己的证据文件 `.quay/goal-033-evidence/archguard-before-after.json` 的 `analysisNote` 已自认 AC-351 的期望被证伪。**这个结构性事实在动手之前用图就能算出来**——"预测 6→5 在 goal 自己的约束下是不可能的"，而阶段 0–4 与 Phase D1 都不产出这类"切法 → 预期 delta"的读数。
+
+**输入 / 输出 / 退出码**（原型 `docs/experiments/layer-map/slice-delta.mjs`）：
+
+```bash
+node docs/experiments/layer-map/slice-delta.mjs <current.arch.json> --slice <slice.json> [--observed <observed.json>] [--json <out>]
+# 0 = 已评估且护栏通过 | 1 = 已评估但护栏被触发 | 2 = 未评估
+```
+
+切法由 `slice.json` **显式给出**（`proposedCut.moves`：文件搬迁的 from/to + 符号名；可选 `consumers` 声明目录内不可见的消费者），ArchGuard **不发明方案**。对账用的是图自己的 `importedNames`：只有当一个名字集合被某次 move 的 `symbols` **完整覆盖**时才认为该边被这次搬迁解释，覆盖不全即 `not-evaluated`（不按比例折算、不猜）。输出段：`current`（环成员 / 搬迁源入边读数）、`affectedConsumers`、`computedDelta`（removed/added/strengthened 边、sccBefore/sccAfter/sccLeft、以及**算出来的** leaving 原因 `whyLeft`）、`mustNotChange`（`forbiddenNewEdges` + `untouchedDirs`）、`negativeControl`、`provenance`。
+
+**predicted / declared / observed 三者物理分区**：`computedDelta` 只由 (moduleGraph, proposedCut, mustNotChange, negativeControl) 算出；人写的 `declaredPrediction` 与后验读数 `observedDelta`（单独的 `--observed` 文件）只在最后装配对比段时被读，任何一条路径都不把它们写回计算字段。这条不是靠约定——`tests/unit/architecture/slice-delta.test.ts` 用一个反向测试看住它（把 observed 换成 999→1 后，`computedDelta` 与 `negativeControl` 必须逐字节不变）。
+
+**negative control 由机制强制**：`negativeControl.restoreEdges` 为空即 `not-evaluated`，不给"看起来没问题"。判据相对 before 才有意义——关注点本来就可能停在一个 size>1 的剩余环里（GOAL-033 的 gate 环），所以判据是"**这次切法踢出去的目录是否全部回到环里**"（SCC 恰好恢复 before 成员），而不是"subject 是否在 size>1 的环里"（后者会被一条无关边轻易满足）。
+
+**明确的边界（越界即停止）**：
+
+- deterministic core **只**做事实计算与 delta 验证；**不**做 ownership 语义推断、**不**做自动 proposer、**不**给方案排序或建议——输出是"做这刀会怎样"，不是"该不该做这刀"。判断"该不该"仍属 Quay/meta-driver。
+- **替代 proposal 的入口形态裁定不适用**：D2 是独立实验原型，与 D1 一样消费既有的 `extensions.tsAnalysis.moduleGraph`，**不修改** `check-layers.mjs` / `layers.yml`，也不产出 `pass`/`fail` 这类会被误读成 gate 的字段名。
+- 已知覆盖缺口（原样写进输出，不掩盖）：目录级图不表示同目录内的 import，"同目录 import 因搬迁变成跨目录 import"这类新边图上结构性看不见，只能由 `consumers` 显式声明并标 `source: declared-consumer`；`importedNames` 不携带"符号→文件"定位，因此边强度增量算不出来，只记 `strengthenedEdges`。
+
 ## 分阶段（2026-10-03 按裁定修订）
 
 | 阶段 | 内容 | 依赖 |

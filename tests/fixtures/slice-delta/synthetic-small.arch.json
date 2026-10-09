@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "language": "typescript",
+  "timestamp": "2026-10-09T00:00:00.000Z",
+  "workspaceRoot": "/nonexistent/synthetic-small",
+  "sourceFiles": [],
+  "entities": [],
+  "relations": [],
+  "extensions": {
+    "tsAnalysis": {
+      "version": "1",
+      "moduleGraph": {
+        "nodes": [
+          { "id": "", "name": "(root)", "type": "internal", "fileCount": 2, "stats": { "classes": 0, "interfaces": 0, "functions": 2, "enums": 0 } },
+          { "id": "a", "name": "a", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "b", "name": "b", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "c", "name": "c", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+          { "id": "left-pad", "name": "left-pad", "type": "node_modules", "fileCount": 0, "stats": { "classes": 0, "interfaces": 0, "functions": 0, "enums": 0 } }
+        ],
+        "edges": [
+          { "from": "", "to": "a", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["x"] },
+          { "from": "a", "to": "b", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["y"] },
+          { "from": "b", "to": "", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["z"] },
+          { "from": "", "to": "c", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["pre-existing"] },
+          { "from": "a", "to": "left-pad", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["lp"] }
+        ],
+        "cycles": [{ "modules": ["a", "b", ""], "severity": "error" }],
+        "unevaluatedDynamicImports": []
+      }
+    }
+  }
+}

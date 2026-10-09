@@ -40,6 +40,34 @@ node docs/experiments/layer-map/check-layers.mjs /tmp/ag-layer-demo/archguard/ov
 - 从基线删去一条 → fail，退出码 1，且只新增那一条
 - 输入缺 moduleGraph / 文件不存在 / 空图 / glob 与目录全不匹配 → not-evaluated，退出码 2（**不得与 pass 同形**）
 
+## Refactor Slice / Expected Delta（`slice-delta.mjs`，2026-10-09 追加）
+
+问的是另一类问题：**"按这份显式给出的切法动刀，这棵树的 architecture delta 会是什么？"**
+——不是"该不该动这刀"。切法由外部输入提供，脚本不发明方案、不排序、不建议。
+
+```bash
+node docs/experiments/layer-map/slice-delta.mjs <current.arch.json> \
+  --slice <slice.json> [--observed <observed.json>] [--json <out.json>]
+# 0 = 已评估且护栏通过 | 1 = 已评估但护栏被触发 | 2 = 未评估
+```
+
+- **取边**：同样是 `extensions.tsAnalysis.moduleGraph`，且脚本自己按 Tarjan 重算 size>1 的 SCC
+  与 `moduleGraph.cycles` 做集合比对；**不一致即 not-evaluated**（在这张图上不可信的模拟不出结论）。
+- **对账靠 `importedNames`，不靠被喂答案**：`proposedCut.moves` 只说"哪个文件的哪些符号从哪个目录搬到哪个目录"，
+  脚本自己判断进入 moved-from 目录的哪条边被这次搬迁完整覆盖（覆盖不全 → not-evaluated，不按比例折算）。
+- **predicted / declared / observed 物理分区**：`computedDelta` 只由图 + 切法算出；人写的 `declaredPrediction`
+  与后验的 `--observed` 只在最后装配对比段时被读。反向测试（换掉 observed 后 `computedDelta` 逐字节不变）
+  在 `tests/unit/architecture/slice-delta.test.ts` 里看住这条。
+- **negative control 由机制强制**：`restoreEdges` 为空即 not-evaluated。判据是"这次切法踢出去的目录是否
+  全部回到环里"（SCC 恰好恢复 before 成员），**不是**"subject 在 size>1 的环里"——后者会被一条无关边满足。
+- **首个 dogfood = quay GOAL-033**：fixture 是 fork point 真实子树（treeSha `5213eb61...`）的 package 级 ArchJSON。
+  脚本从图上算出 SCC **6 → 4**（`cli` 与 `fan-in` 一起离开，因为 `fan-in` 的唯一入边是 `cli -> fan-in`），
+  而 goal 正文手写的预测是 6 → 5 —— 两个读数分开记录，本脚本不改写人写的那个。
+- **边界**：不修改 `check-layers.mjs` / `layers.yml`，不产出 `pass`/`fail` 字段名，不做 ownership 语义推断、不做自动 proposer。
+  已知覆盖缺口写在输出里：目录级图看不见同目录 import，搬迁后由"同目录 import 变成跨目录 import"产生的新边
+  只能由 `consumers` 显式声明（标 `source: declared-consumer`）；`importedNames` 不携带"符号→文件"定位，
+  所以边强度增量算不出来，只记 `strengthenedEdges`。
+
 ## 踩过的坑（写 skill 时要带上）
 
 - **空输入会返回 pass**：初版对空 moduleGraph 返回通过（什么都没评估到）。已修：没有 internal 目录或没有层间边时返回"未评估"。

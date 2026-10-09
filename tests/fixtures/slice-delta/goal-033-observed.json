@@ -1,0 +1,12 @@
+{
+  "provenance": {
+    "repo": "/data/home/yale/work/quay",
+    "ref": "goal/GOAL-033 tip d1ea4331d840777f63aef1d2267a25dd39f6d884",
+    "commit": "d1ea4331d840777f63aef1d2267a25dd39f6d884",
+    "recordedIn": ".quay/goal-033-evidence/archguard-before-after.json#after（scope c85d8d95，ArchGuard 0.1.38）"
+  },
+  "sccSize": 4,
+  "sccMembers": ["", "gate", "gate/config", "gate/factories"],
+  "subjectFanIn": 0,
+  "note": "后验读数，来自 GOAL-033 落地后的实测；只作为对比段的另一个读数传入，不参与任何计算"
+}
