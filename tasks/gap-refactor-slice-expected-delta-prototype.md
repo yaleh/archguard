@@ -66,19 +66,19 @@ node docs/experiments/layer-map/slice-delta.mjs <current.arch.json> \
 
 ## AC
 
-- [ ] `docs/experiments/layer-map/slice-delta.mjs` 存在；无参数调用时打印用法并以退出码 2 结束（不是抛异常崩溃）
-- [ ] 用 quay GOAL-033 的真实 fixture（`tests/fixtures/slice-delta/goal-033-fork-point.arch.json` + `goal-033-slice.json`）运行：`current.sccSize === 6` 且成员含 `""`、`cli`、`fan-in`；`computedDelta.sccAfter` 恰为 4 员（`""`、`gate`、`gate/config`、`gate/factories`，**不含** `cli`、**不含** `fan-in`）；`computedDelta.removedEdges` 恰有一条 `-> cli`；`addedEdges` 里没有任何 `-> fan-in` 边
-- [ ] **predicted 6→5 与 observed 6→4 被区分**：slice 里 `declaredPrediction.sccSize=5` 时，报告里 `declaredPrediction` 原样是 5、`computedDelta.sccAfter` 是 4、`predictionComparison.declaredVsComputed` 标不与预期一致；`--observed goal-033-observed.json`（6→4）时 `observedDelta` 原样保留且与 `computedDelta` 判为一致
-- [ ] **防倒灌（机械反向测试）**：同一 `<current.arch.json>` + 同一 `slice.json`，分别传 (a) observed = 6→4、(b) observed = 999→1 的篡改文件、(c) 完全不传 `--observed`，三种情形下 `computedDelta` 与 `negativeControl` 两个段的 `JSON.stringify` 结果**逐字节相同**；差异只允许出现在 `observedDelta`/`predictionComparison` 里
-- [ ] **negative control 可证伪**：GOAL-033 输入下 `negativeControl.subjectBackInScc === true`、`falsified === true`；把 `restoreEdges` 换成一条与关注点无关的边（如 `kernel -> ts-demo`）时 `falsified === false` 且进程退出码为 1
-- [ ] **must-not-change 可触发**：构造一份切法会让 `"" -> fan-in` 新出现的输入，`mustNotChange.violations` 非空且退出码为 1
-- [ ] **自校验失败降级**：从 fixture 的 `mg.edges` 里删掉一条构成环的边使重算 SCC 与 `mg.cycles` 不一致 → `status === "not-evaluated"`、退出码 2、reason 里点明是自校验失败（不是静默出一份看着合理的报告）
-- [ ] **覆盖不足不猜**：构造一条进入 moved-from 目录、但 `importedNames` 只被切法覆盖一部分的边 → `status === "not-evaluated"`、退出码 2，reason 点名那条边与未覆盖的名字
-- [ ] `provenance` 段含：`analysis`（`workspaceRoot`、`timestamp`）、`slice`（声明的 `repo`/`ref`/`commit`/`worktree` 原样）、`tool`（本仓库 `package.json` 的 archguard 版本 + 脚本相对路径）、`observed`（或 null）、以及 `provenanceConsistency`（`match`/`mismatch`/`not-checked` 三态——`workspaceRoot` 不是 git work tree 时如实报 `not-checked` 并给理由）
-- [ ] 没有 negative control（`negativeControl.restoreEdges` 缺失或为空）时 `status === "not-evaluated"`、退出码 2——"至少一个负对照"由机制强制，不靠人记得
-- [ ] `tests/unit/architecture/slice-delta.test.ts` 存在并覆盖上述各项（含防倒灌的逐字节断言）；`npm test` 与 `npm run type-check` 通过
-- [ ] `docs/proposals/proposal-architecture-layer-check.md` 增补一节（**纯追加**，不改既有 D1 文字），说明该原型的输入/输出/退出码与"不是 gate、不发明方案、不改 `check-layers.mjs` 裁决权"的边界；`git diff` 核对只有新增
-- [ ] `docs/experiments/layer-map/README.md` 增补该脚本的用法与边界说明
+- [x] `docs/experiments/layer-map/slice-delta.mjs` 存在；无参数调用时打印用法并以退出码 2 结束（不是抛异常崩溃）
+- [x] 用 quay GOAL-033 的真实 fixture（`tests/fixtures/slice-delta/goal-033-fork-point.arch.json` + `goal-033-slice.json`）运行：`current.sccSize === 6` 且成员含 `""`、`cli`、`fan-in`；`computedDelta.sccAfter` 恰为 4 员（`""`、`gate`、`gate/config`、`gate/factories`，**不含** `cli`、**不含** `fan-in`）；`computedDelta.removedEdges` 恰有一条 `-> cli`；`addedEdges` 里没有任何 `-> fan-in` 边
+- [x] **predicted 6→5 与 observed 6→4 被区分**：slice 里 `declaredPrediction.sccSize=5` 时，报告里 `declaredPrediction` 原样是 5、`computedDelta.sccAfter` 是 4、`predictionComparison.declaredVsComputed` 标不与预期一致；`--observed goal-033-observed.json`（6→4）时 `observedDelta` 原样保留且与 `computedDelta` 判为一致
+- [x] **防倒灌（机械反向测试）**：同一 `<current.arch.json>` + 同一 `slice.json`，分别传 (a) observed = 6→4、(b) observed = 999→1 的篡改文件、(c) 完全不传 `--observed`，三种情形下 `computedDelta` 与 `negativeControl` 两个段的 `JSON.stringify` 结果**逐字节相同**；差异只允许出现在 `observedDelta`/`predictionComparison` 里
+- [x] **negative control 可证伪**：GOAL-033 输入下 `negativeControl.subjectBackInScc === true`、`falsified === true`；把 `restoreEdges` 换成一条与关注点无关的边（如 `kernel -> ts-demo`）时 `falsified === false` 且进程退出码为 1
+- [x] **must-not-change 可触发**：构造一份切法会让 `"" -> fan-in` 新出现的输入，`mustNotChange.violations` 非空且退出码为 1
+- [x] **自校验失败降级**：从 fixture 的 `mg.edges` 里删掉一条构成环的边使重算 SCC 与 `mg.cycles` 不一致 → `status === "not-evaluated"`、退出码 2、reason 里点明是自校验失败（不是静默出一份看着合理的报告）
+- [x] **覆盖不足不猜**：构造一条进入 moved-from 目录、但 `importedNames` 只被切法覆盖一部分的边 → `status === "not-evaluated"`、退出码 2，reason 点名那条边与未覆盖的名字
+- [x] `provenance` 段含：`analysis`（`workspaceRoot`、`timestamp`）、`slice`（声明的 `repo`/`ref`/`commit`/`worktree` 原样）、`tool`（本仓库 `package.json` 的 archguard 版本 + 脚本相对路径）、`observed`（或 null）、以及 `provenanceConsistency`（`match`/`mismatch`/`not-checked` 三态——`workspaceRoot` 不是 git work tree 时如实报 `not-checked` 并给理由）
+- [x] 没有 negative control（`negativeControl.restoreEdges` 缺失或为空）时 `status === "not-evaluated"`、退出码 2——"至少一个负对照"由机制强制，不靠人记得
+- [x] `tests/unit/architecture/slice-delta.test.ts` 存在并覆盖上述各项（含防倒灌的逐字节断言）；`npm test` 与 `npm run type-check` 通过
+- [x] `docs/proposals/proposal-architecture-layer-check.md` 增补一节（**纯追加**，不改既有 D1 文字），说明该原型的输入/输出/退出码与"不是 gate、不发明方案、不改 `check-layers.mjs` 裁决权"的边界；`git diff` 核对只有新增
+- [x] `docs/experiments/layer-map/README.md` 增补该脚本的用法与边界说明
 
 ## DoD
 
