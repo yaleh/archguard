@@ -57,6 +57,11 @@ node docs/experiments/layer-map/check-layers.mjs /tmp/ag-layer-demo/archguard/ov
 
 ## Refactor Slice / Expected Delta（`slice-delta.mjs`，2026-10-09 追加）
 
+> **冻结参考，已被产品面取代。** 这里的 `slice-delta.mjs` 只作为已验证语义的参考实现保留（parity 测试
+> 拿它当基线）；消费者请改用发布产物可达的 `archguard slice-delta` CLI 与
+> `archguard_simulate_refactor_slice` MCP 工具，库 API 为 `@yalehwang/archguard` 的
+> `simulateRefactorSlice`（见 `docs/user-guide/slice-delta.md`）。
+
 回答的问题只有一个：「**按这份显式给出的切法**动刀，这棵树的 architecture delta 会是什么？」
 它**不**回答「该不该动这刀」——切法由外部输入提供，脚本不发明方案、不排序、不建议，也**不是 gate**。
 
