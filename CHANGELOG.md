@@ -5,6 +5,34 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.39] - 2026-10-10
+
+### Added
+- **Refactor Slice / Expected Delta** — answer "if I apply *this explicitly-declared*
+  cut, what is the architecture delta of this tree?" from the package-level
+  `extensions.tsAnalysis.moduleGraph`. The cut is supplied by the caller (ArchGuard
+  never invents, ranks or selects a slice), and the report is **not a gate**: it says
+  `evaluated`/`not-evaluated` and `guards.clean`, never `pass`/`fail`. Exposed on three
+  stable surfaces, all reachable from the release artifacts:
+  - `simulateRefactorSlice()` library API, exported from the package root;
+  - `archguard slice-delta` CLI subcommand (exit `0` evaluated & clean, `1` evaluated
+    but a guard tripped, `2` not evaluated);
+  - `archguard_simulate_refactor_slice` MCP tool (graph resolved from the analyzed
+    scope, same resolution every other query tool uses).
+  The report carries `removedEdges`/`addedEdges`/`strengthenedEdges`, `sccBefore`/
+  `sccAfter`/`sccLeft`/`sccRemaining` plus a *computed* `whyLeft` explanation, affected
+  consumers, `mustNotChange` violations, and negative-control falsifiability. The
+  caller's declared prediction, the computed delta and the post-merge observed reading
+  are three **physically partitioned** readings — an anti-stuffing reverse test pins
+  `computedDelta`/`negativeControl` byte-identical regardless of what `observed` says.
+  Fail-closed: an under-specified cut (a moved-from edge whose `importedNames` are only
+  partly covered by the declared `symbols`), a graph whose recomputed SCCs disagree with
+  `moduleGraph.cycles`, or a slice with no negative control are reported as
+  `not-evaluated` with a reason rather than guessed at.
+  The semantics were prototyped and verified in `docs/experiments/layer-map/slice-delta.mjs`;
+  that experiment is kept as a frozen reference and a parity test keeps the two from
+  drifting.
+
 ## [0.1.38] - 2026-10-08
 
 ### Fixed
