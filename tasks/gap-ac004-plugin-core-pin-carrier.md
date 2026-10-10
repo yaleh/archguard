@@ -47,15 +47,15 @@ AC-004 唯一断言的载体是 `plugin/package.json` 的依赖钉 `dependencies
 
 ## AC
 
-- [ ] `bash scripts/check-version-carriers.sh` 在仓库根 exit 0，stdout 含 `all carriers == <package.json 的 version>`（第七处钉已在枚举内，当前真值成立；不写死字面量）
-- [ ] 临时夹具复现本次窗口树（`package.json` 与六处版本载体 = `0.1.40`、依赖钉留 `0.1.39`）→ `bash scripts/check-version-carriers.sh <fixture>` exit 1，stderr 含 `CAUSE=plugin-core-dependency-not-exact` 且点名该钉
-- [ ] 夹具中把钉写成范围 `^0.1.40` → 同样 exit 1 且含 `CAUSE=plugin-core-dependency-not-exact`；删除 `dependencies` 整键 → exit 1 且含 `CAUSE=plugin-missing-core-dependency`
-- [ ] 对同一夹具跑 `node scripts/sync-plugin-core-pin.mjs --from-package <fixture>` 后钉逐字等于夹具 version，再跑 check exit 0；二次运行生成器字节不变（幂等）
-- [ ] `node scripts/sync-plugin-core-pin.mjs --check` 在仓库根 exit 0
-- [ ] `npx vitest run tests/unit/packaging/plugin-package.test.ts` exit 0，覆盖窗口复现 / 范围 / 缺失 / 幂等四种形态
-- [ ] `node -e "const s=require('./package.json').scripts; if(!s.version||!s.version.includes('sync-plugin-core-pin')) process.exit(1)"` exit 0（bump 路径已接管该钉）
-- [ ] `npm run type-check` exit 0
-- [ ] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 仅含 `scripts/check-version-carriers.sh`、`scripts/sync-plugin-core-pin.mjs`、`tests/unit/packaging/plugin-package.test.ts`、`package.json` 与本任务 `tasks/gap-ac004-plugin-core-pin-carrier.md`；不含任何载体 version 值改动，且无 `git tag` / `git push` / `npm publish` 执行记录
+- [x] `bash scripts/check-version-carriers.sh` 在仓库根 exit 0，stdout 含 `all carriers == <package.json 的 version>`（第七处钉已在枚举内，当前真值成立；不写死字面量）
+- [x] 临时夹具复现本次窗口树（`package.json` 与六处版本载体 = `0.1.40`、依赖钉留 `0.1.39`）→ `bash scripts/check-version-carriers.sh <fixture>` exit 1，stderr 含 `CAUSE=plugin-core-dependency-not-exact` 且点名该钉
+- [x] 夹具中把钉写成范围 `^0.1.40` → 同样 exit 1 且含 `CAUSE=plugin-core-dependency-not-exact`；删除 `dependencies` 整键 → exit 1 且含 `CAUSE=plugin-missing-core-dependency`
+- [x] 对同一夹具跑 `node scripts/sync-plugin-core-pin.mjs --from-package <fixture>` 后钉逐字等于夹具 version，再跑 check exit 0；二次运行生成器字节不变（幂等）
+- [x] `node scripts/sync-plugin-core-pin.mjs --check` 在仓库根 exit 0
+- [x] `npx vitest run tests/unit/packaging/plugin-package.test.ts` exit 0，覆盖窗口复现 / 范围 / 缺失 / 幂等四种形态
+- [x] `node -e "const s=require('./package.json').scripts; if(!s.version||!s.version.includes('sync-plugin-core-pin')) process.exit(1)"` exit 0（bump 路径已接管该钉）
+- [x] `npm run type-check` exit 0
+- [x] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 仅含 `scripts/check-version-carriers.sh`、`scripts/sync-plugin-core-pin.mjs`、`tests/unit/packaging/plugin-package.test.ts`、`package.json` 与本任务 `tasks/gap-ac004-plugin-core-pin-carrier.md`；不含任何载体 version 值改动，且无 `git tag` / `git push` / `npm publish` 执行记录
 
 ## DoD
 
