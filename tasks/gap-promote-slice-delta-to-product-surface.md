@@ -106,20 +106,20 @@ archguard slice-delta --slice <slice.json> [--root <dir>] [--scope <key>] \
 
 ## AC
 
-- [ ] `src/analysis/slice-delta/{types,simulate,index}.ts` 存在；`simulate.ts` 不 import `fs`/`path`/`child_process`（`grep -nE "node:(fs|path|child_process)|from 'fs'|from 'path'" src/analysis/slice-delta/simulate.ts` 无输出）
-- [ ] `src/index.ts` 导出 `simulateRefactorSlice`；`npm run build` 后 `node -e "const m=require('./dist/index.js');console.log(typeof m.simulateRefactorSlice)"` 打印 `function`（**这是「发布产物可达」的机械证据**，不是读源码猜）
-- [ ] `archguard slice-delta --help` 退出 0 并列出用法；对 GOAL-033 fixture（`tests/fixtures/slice-delta/goal-033-fork-point.arch.json` + `goal-033-slice.json`，`--arch` 显式给图）运行退出 0，报告 `current.sccSize===6`、`computedDelta.sccAfter` 恰为 4 员（`""`、`gate`、`gate/config`、`gate/factories`）、`sccLeft` 含 `cli` 与 `fan-in`、`removedEdges` 恰一条 `-> cli`、`addedEdges` 无任何 `-> fan-in`
-- [ ] MCP 工具 `archguard_simulate_refactor_slice` 已注册（`grep -n archguard_simulate_refactor_slice src/cli/mcp/mcp-server.ts` 有输出），且有单测直接调用其 handler：给定 fixture 图 + GOAL-033 slice 得到 6→4；scope 解析不到时返回 isError 且提示可操作
-- [ ] **退出码三态**：护栏干净→0；把 `restoreEdges` 换成无关边（`kernel -> ts-demo`）→`falsified=false` 且退出 **1**；让 `"" -> fan-in` 成为新边→`violations` 非空且退出 **1**；`negativeControl` 缺失→**2**；切法符号覆盖不全→**2** 且 reason 点名未覆盖的名字；篡改 `edges` 使重算 SCC 与 `cycles` 不一致→**2** 且 reason 说明是自校验失败
-- [ ] **anti-stuffing（反向测试，逐字节）**：同一 `(graph, slice)` 下分别传 (a) observed=6→4、(b) 篡改 observed=999→1、(c) 不传 observed，三种情形 `JSON.stringify(report.computedDelta)` 与 `JSON.stringify(report.negativeControl)` **完全相同**；差异只允许出现在 `observedDelta` / `predictionComparison`
-- [ ] **negative control 判据相对 before**：单测断言 `falsified` 为 `sccLeft 非空 && 恢复后成员集合 === before 成员集合`；另有一个「切法不改变 SCC（`sccLeft` 为空）」的合成用例 → `falsified === false` 且带 reason，**不得**因为「subject 在 size>1 环里」而误判为 true
-- [ ] **parity 测试**：`tests/unit/analysis/slice-delta/` 下有一个用例以子进程运行 `docs/experiments/layer-map/slice-delta.mjs`，与库实现对同一 fixture 的输出比较 `computedDelta` / `negativeControl` / `sccAfter` 一致（两者分叉即红）
-- [ ] `src/` 下没有任何文件 import `docs/experiments/**`（`grep -rn "docs/experiments" src/` 无输出）
-- [ ] 报告里**没有** `pass`/`fail`/`exitCode` 字段名（递归扫描报告 key 断言）
-- [ ] `provenance.tool.archguardVersion` 非空且等于 `package.json` 的 version；`provenance` 五段齐全（`analysis`/`slice`/`observed`/`tool`/`provenanceConsistency`）
-- [ ] 提供面向消费者的稳定调用示例文档（库 API / CLI / MCP 三段，各含一段可直接复制的代码或命令），并说明「切法由调用方给出、ArchGuard 不选 slice」
-- [ ] `docs/experiments/layer-map/README.md` 加一句指向新产品面（说明实验脚本已被 `archguard slice-delta` / `archguard_simulate_refactor_slice` 取代，保留为冻结参考）
-- [ ] `npm test`、`npm run type-check`、`npm run lint` 通过（lint 不新增 error）
+- [x] `src/analysis/slice-delta/{types,simulate,index}.ts` 存在；`simulate.ts` 不 import `fs`/`path`/`child_process`（`grep -nE "node:(fs|path|child_process)|from 'fs'|from 'path'" src/analysis/slice-delta/simulate.ts` 无输出）
+- [x] `src/index.ts` 导出 `simulateRefactorSlice`；`npm run build` 后 `node -e "const m=require('./dist/index.js');console.log(typeof m.simulateRefactorSlice)"` 打印 `function`（**这是「发布产物可达」的机械证据**，不是读源码猜）
+- [x] `archguard slice-delta --help` 退出 0 并列出用法；对 GOAL-033 fixture（`tests/fixtures/slice-delta/goal-033-fork-point.arch.json` + `goal-033-slice.json`，`--arch` 显式给图）运行退出 0，报告 `current.sccSize===6`、`computedDelta.sccAfter` 恰为 4 员（`""`、`gate`、`gate/config`、`gate/factories`）、`sccLeft` 含 `cli` 与 `fan-in`、`removedEdges` 恰一条 `-> cli`、`addedEdges` 无任何 `-> fan-in`
+- [x] MCP 工具 `archguard_simulate_refactor_slice` 已注册（`grep -n archguard_simulate_refactor_slice src/cli/mcp/mcp-server.ts` 有输出），且有单测直接调用其 handler：给定 fixture 图 + GOAL-033 slice 得到 6→4；scope 解析不到时返回 isError 且提示可操作
+- [x] **退出码三态**：护栏干净→0；把 `restoreEdges` 换成无关边（`kernel -> ts-demo`）→`falsified=false` 且退出 **1**；让 `"" -> fan-in` 成为新边→`violations` 非空且退出 **1**；`negativeControl` 缺失→**2**；切法符号覆盖不全→**2** 且 reason 点名未覆盖的名字；篡改 `edges` 使重算 SCC 与 `cycles` 不一致→**2** 且 reason 说明是自校验失败
+- [x] **anti-stuffing（反向测试，逐字节）**：同一 `(graph, slice)` 下分别传 (a) observed=6→4、(b) 篡改 observed=999→1、(c) 不传 observed，三种情形 `JSON.stringify(report.computedDelta)` 与 `JSON.stringify(report.negativeControl)` **完全相同**；差异只允许出现在 `observedDelta` / `predictionComparison`
+- [x] **negative control 判据相对 before**：单测断言 `falsified` 为 `sccLeft 非空 && 恢复后成员集合 === before 成员集合`；另有一个「切法不改变 SCC（`sccLeft` 为空）」的合成用例 → `falsified === false` 且带 reason，**不得**因为「subject 在 size>1 环里」而误判为 true
+- [x] **parity 测试**：`tests/unit/analysis/slice-delta/` 下有一个用例以子进程运行 `docs/experiments/layer-map/slice-delta.mjs`，与库实现对同一 fixture 的输出比较 `computedDelta` / `negativeControl` / `sccAfter` 一致（两者分叉即红）
+- [x] `src/` 下没有任何文件 import `docs/experiments/**`（`grep -rn "docs/experiments" src/` 无输出）
+- [x] 报告里**没有** `pass`/`fail`/`exitCode` 字段名（递归扫描报告 key 断言）
+- [x] `provenance.tool.archguardVersion` 非空且等于 `package.json` 的 version；`provenance` 五段齐全（`analysis`/`slice`/`observed`/`tool`/`provenanceConsistency`）
+- [x] 提供面向消费者的稳定调用示例文档（库 API / CLI / MCP 三段，各含一段可直接复制的代码或命令），并说明「切法由调用方给出、ArchGuard 不选 slice」
+- [x] `docs/experiments/layer-map/README.md` 加一句指向新产品面（说明实验脚本已被 `archguard slice-delta` / `archguard_simulate_refactor_slice` 取代，保留为冻结参考）
+- [x] `npm test`、`npm run type-check`、`npm run lint` 通过（lint 不新增 error）
 
 ## DoD
 
