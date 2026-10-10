@@ -106,6 +106,247 @@ describe('JavaPlugin.extractTestStructure', () => {
     expect(result.importedSourceFiles).toContain('com/example/util/Helper.java');
     expect(result.importedSourceFiles.some((f) => f.startsWith('java/'))).toBe(false);
   });
+
+  it('preserves assertion total when assertions are fewer than test cases (rounding fix)', () => {
+    // 11 assertions across 53 cases: Math.round(11/53)=0 would misclassify as zero-assertion.
+    const code = [
+      'import org.junit.Test;',
+      'import static org.junit.Assert.assertNotNull;',
+      'class BoundaryTest {',
+      ...Array.from({ length: 53 }, (_, i) => [
+        '  @Test',
+        `  public void test${i}() {`,
+        i % 5 === 0 ? '    assertNotNull(view);' : '',
+        '  }',
+      ]).flat(),
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure('BoundaryTest.java', code);
+    expect(result).not.toBeNull();
+    expect(result.testCases).toHaveLength(53);
+    // File-level total must be preserved (not rounded away).
+    expect(result.totalAssertions).toBe(11);
+    // At least one case carries an assertion — no longer all zeros.
+    const sum = result.testCases.reduce((s, c) => s + c.assertionCount, 0);
+    expect(sum).toBe(11);
+  });
+
+  it('counts Mockito verify/when assertions (previously missed)', () => {
+    const code = [
+      'import org.junit.Test;',
+      'import static org.mockito.Mockito.verify;',
+      'import static org.mockito.Mockito.when;',
+      'class ServiceTest {',
+      '  @Test',
+      '  public void works() {',
+      '    when(repo.find(1)).thenReturn(entity);',
+      '    verify(repo).save(entity);',
+      '    verifyNoMoreInteractions(repo);',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure('ServiceTest.java', code);
+    expect(result).not.toBeNull();
+    // 1 when + 1 verify + 1 verifyNoMoreInteractions
+    expect(result.totalAssertions).toBe(3);
+  });
+
+  it('applies custom assertion regexes from patternConfig', () => {
+    const code = [
+      'import org.junit.Test;',
+      'class CustomTest {',
+      '  @Test',
+      '  public void t() {',
+      '    myAssert(1, 2);',
+      '    myAssert(3, 4);',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure('CustomTest.java', code, {
+      customAssertionRegexes: ['\\bmyAssert\\s*\\('],
+    });
+    expect(result).not.toBeNull();
+    expect(result.totalAssertions).toBe(2);
+  });
+
+  it('does not double-count when custom regex overlaps a default pattern', () => {
+    const code = [
+      'import org.junit.Test;',
+      'import static org.junit.Assert.assertEquals;',
+      'class CustomTest {',
+      '  @Test',
+      '  public void t() {',
+      '    assertEquals(1, x);',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure('CustomTest.java', code, {
+      customAssertionRegexes: ['\\bassertEquals\\s*\\('],
+    });
+    expect(result).not.toBeNull();
+    // assertEquals counted once by default patterns; custom regex is a separate count,
+    // mirroring Kotlin/C++ plugin behaviour (custom patterns are additive).
+    expect(result.totalAssertions).toBe(2);
+  });
+
+  it('infers same-package target FooTest → com.x.Foo', () => {
+    const code = [
+      'package com.example.calc;',
+      'import org.junit.Test;',
+      'class CalculatorTest {',
+      '  @Test',
+      '  public void adds() {}',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/app/src/test/java/com/example/calc/CalculatorTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.calc.Calculator');
+  });
+
+  it('infers same-package target TestFoo → com.x.Foo', () => {
+    const code = [
+      'package com.example.util;',
+      'import org.junit.Test;',
+      'class TestHelper {',
+      '  @Test',
+      '  public void works() {}',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/app/src/test/java/com/example/util/TestHelper.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.util.Helper');
+  });
+
+  it('returns empty samePackageTargets when no package declaration', () => {
+    const code = ['import org.junit.Test;', 'class FooTest {', '  @Test', '  void t() {}', '}'].join(
+      '\n'
+    );
+    const result = plugin.extractTestStructure('FooTest.java', code);
+    expect(result?.samePackageTargets).toEqual([]);
+  });
+
+  it('does not include the test class itself as a target', () => {
+    const code = [
+      'package com.example;',
+      'import org.junit.Test;',
+      'class FooTest {',
+      '  @Test',
+      '  void t() {}',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/app/src/test/java/com/example/FooTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).not.toContain('com.example.FooTest');
+    expect(result?.samePackageTargets).toContain('com.example.Foo');
+  });
+
+  it('infers same-package targets from direct `new` references', () => {
+    const code = [
+      'package com.example.bean;',
+      'import org.junit.Test;',
+      'class BeanBasicDataTest {',
+      '  @Test',
+      '  public void build() {',
+      '    BaseUnitBean base = new BaseUnitBean();',
+      '    ConnectionBean conn = new ConnectionBean();',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/fjspray/src/test/java/com/example/bean/BeanBasicDataTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.bean.BaseUnitBean');
+    expect(result?.samePackageTargets).toContain('com.example.bean.ConnectionBean');
+  });
+
+  it('infers same-package targets from static method calls', () => {
+    const code = [
+      'package com.example.widget;',
+      'import org.junit.Test;',
+      'class FieldEditCoverageTest {',
+      '  @Test',
+      '  public void edit() {',
+      '    FieldEditView.initEditText(view, 5, true);',
+      '    FieldEditView.setErrorHint(FieldEditView.EMPTY_ERROR_TYPE);',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/fjwidget/src/test/java/com/example/widget/FieldEditCoverageTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.widget.FieldEditView');
+  });
+
+  it('does not infer same-package targets for imported classes', () => {
+    // An imported class with the same simple name must not be mis-attributed to
+    // the test's package — it resolves via import matching instead.
+    const code = [
+      'package com.example.bean;',
+      'import com.other.ExternalBean;',
+      'import org.junit.Test;',
+      'class BeanTest {',
+      '  @Test',
+      '  public void t() {',
+      '    ExternalBean b = new ExternalBean();',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/fjspray/src/test/java/com/example/bean/BeanTest.java',
+      code
+    );
+    // ExternalBean is imported → not added as a same-package target.
+    expect(result?.samePackageTargets).not.toContain('com.example.bean.ExternalBean');
+  });
+
+  it('infers same-package targets from .class literals (reflection tests)', () => {
+    const code = [
+      'package com.example.jimu;',
+      'import org.junit.Test;',
+      'import java.lang.reflect.Method;',
+      'class InterfaceCoverageTest {',
+      '  @Test',
+      '  public void methodsExist() {',
+      '    Method[] ms = IJimuManager.class.getDeclaredMethods();',
+      '    Method[] cs = TrailOptCallback.class.getDeclaredMethods();',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/fjcountarea/src/test/java/com/example/jimu/InterfaceCoverageTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.jimu.IJimuManager');
+    expect(result?.samePackageTargets).toContain('com.example.jimu.TrailOptCallback');
+  });
+
+  it('infers targets from Class.forName fully-qualified literals', () => {
+    const code = [
+      'package com.example.field;',
+      'import org.junit.Test;',
+      'class FieldStructureTest {',
+      '  @Test',
+      '  public void classesExist() throws Exception {',
+      '    Class.forName("com.example.field.adapter.PrescriptionAdapter");',
+      '    Class.forName("com.example.field.adapter.BoundariesAdapter");',
+      '  }',
+      '}',
+    ].join('\n');
+    const result = plugin.extractTestStructure(
+      '/repo/app/src/test/java/com/example/field/FieldStructureTest.java',
+      code
+    );
+    expect(result?.samePackageTargets).toContain('com.example.field.adapter.PrescriptionAdapter');
+    expect(result?.samePackageTargets).toContain('com.example.field.adapter.BoundariesAdapter');
+  });
 });
 
 describe('JavaPlugin.canHandle', () => {
