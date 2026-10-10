@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Release-window guard (GOAL-001 / AC-002).
+#
+# AC-002 reads the MAIN checkout's working tree: package.json's version must have a same-named
+# `v*` tag. A release that bumps package.json in the main checkout and only tags it later opens
+# a window the goal driver samples every ~40s. The runbook used `npm version … --no-git-tag-version`,
+# which defers the tag by design, so the window was in the process, not an accident.
+#
+# This hook closes the naive path at the moment it happens: a commit in the MAIN worktree that
+# BUMPS package.json's version to a value with no same-named tag is refused. It deliberately
+# does NOT reject:
+#   - a commit in a LINKED worktree (the sanctioned place to release; scripts/release.sh builds
+#     and tags atomically there), or
+#   - a commit that already has the matching tag (tag-then-commit is fine), or
+#   - any commit that does not change package.json's version (every ordinary task commit), or
+#   - the initial commit of a repository (adding a first version is not a "bump").
+#
+# scripts/release.sh does not trip this hook: it assembles the release commit with git plumbing
+# (commit-tree), which is exactly the atomic path this hook is steering people toward.
+#
+# Installed by `git config core.hooksPath .githooks` (a repo-level setting, shared by every
+# worktree); if the path does not exist in a given worktree, git simply finds no hook.
+set -uo pipefail
+
+# --- main worktree only --------------------------------------------------------
+# Linked worktree => own git dir under <common>/worktrees/<name>. Main worktree => git dir IS
+# the common dir. Only the main worktree's tree is what AC-002 samples, so only guard it.
+git_dir_abs="$(cd "$(git rev-parse --absolute-git-dir 2>/dev/null || git rev-parse --git-dir)" && pwd -P)"
+common_abs="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+if [ "$git_dir_abs" != "$common_abs" ]; then
+  exit 0
+fi
+
+# --- and only an actual bump ---------------------------------------------------
+# No HEAD yet (initial commit): nothing to have bumped from.
+git rev-parse -q --verify HEAD >/dev/null 2>&1 || exit 0
+
+read_version() {
+  # $1 — a git object spec for package.json, e.g. ':package.json' (index) or 'HEAD:package.json'
+  git show "$1" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    doc = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+v = doc.get("version")
+if isinstance(v, str) and v:
+    print(v)
+'
+}
+
+staged="$(read_version ':package.json')"
+head_version="$(read_version 'HEAD:package.json')"
+
+# No readable staged version (task commits that do not stage package.json): nothing to guard.
+[ -n "$staged" ] || exit 0
+# Version unchanged in this commit: not a bump.
+[ "$staged" != "$head_version" ] || exit 0
+# The bump already has its tag: the invariant holds — allow.
+git rev-parse -q --verify "refs/tags/v$staged" >/dev/null 2>&1 && exit 0
+
+cat >&2 <<EOF
+CAUSE=untagged-version-bump-in-main-worktree: this commit bumps package.json to $staged with no tag v$staged, in the MAIN worktree — the working tree AC-002 samples. That leaves a version whose tag does not exist for the whole release window.
+
+Do not cut a release in the main checkout. Either:
+  - release from a LINKED worktree: git worktree add <path> -b <branch> && (cd <path> && bash scripts/release.sh $staged)  (bump + commit + tag atomically), or
+  - create the tag first (git tag v$staged) if this bump is intentional and already published.
+EOF
+exit 1
