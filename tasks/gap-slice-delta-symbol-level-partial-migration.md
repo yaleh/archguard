@@ -69,20 +69,20 @@ extra:
 
 ## AC
 
-- [ ] **真实负例 → 新正例**：以本机今日 claudecodeui `src` 的真实 package 级图（137 节点 / 549 边 / 96 internal / 42 员环 / `unresolved` 100 条 / `unevaluatedDynamicImports` 2）为 fixture（`tests/fixtures/slice-delta/claudecodeui-frontend.arch.json`，moduleGraph 投影，注明是真实 `analyze` 产物的投影）。**同一份单符号切法**（`from: modules/settings/hooks`, `to: shared`, `symbols: ["readDeviceName"]`）在改动前必须 `not-evaluated` 且 reason 逐字等于本任务 Proposal 第 1 条引用的那句（可作为回归基线断言）；**补上 `stays` 声明**（把 `readMcpNavigationPolicy`/`writeMcpNavigationPolicy`/`McpNavigationPolicy`/`useSettingsController`/`useWebPush` 声明为留在 `modules/settings/hooks`）后必须 `evaluated` 且 exit 0
-- [ ] 上一条的 `evaluated` 报告里：`shared/context -> modules/settings`（该边 `importedNames` 恰为 `["readDeviceName"]`，被完整覆盖）被判为 removed/retarget 到 `shared`；`modules/settings -> modules/settings/hooks` 判为**存活**且 `accounting` 里 5 个 staying 名字齐备、`unaccounted` 为空
-- [ ] **legacy 兼容（逐字节）**：既有 `tests/fixtures/slice-delta/goal-033-slice.json`（无 `stays`）对既有 GOAL-033 fixture 的输出与改动前**逐字节相同**（`computedDelta` / `negativeControl` / `sccAfter` 全等，仍 6→4、exit 0）
-- [ ] **fail-closed 未被削弱**：不声明 `stays` 的 claudecodeui 单符号切法仍 `not-evaluated`、exit 2、reason 点名未覆盖的 5 个名字（同一个负例既是新正例的前半，也是这条的断言）
-- [ ] **mixed destinations 负对照**：同一个符号被两条 move/stays 声明到**不同**目的地 ⇒ `not-evaluated`、exit 2；`from === to` 的 move ⇒ `not-evaluated`、exit 2 且 reason **指向 `stays`**（不是指向"混合目的地"）
-- [ ] **mixed destinations 正例**：一条边的名字被显式声明到两个**不同**目的地 ⇒ `evaluated`，added 边每个目的地各一条，且 `accounting.destinations` 列出两者
-- [ ] **缺漏 consumer 仍可见**：切法漏掉一个图上真实存在的消费者 ⇒ `not-evaluated` 且 reason 点名那条边与未覆盖名字；在 `accounting`（或等价段）里该消费者的 `sourceDir` 可被定位（`modules/chat/hooks` 这一条在真实 fixture 上可复现）
-- [ ] **unknown 显式化且不伪造**：报告含 `unknowns` 段，列出与切法相关的 unresolved 别名 ref、`unevaluatedDynamicImports` 计数、barrel/re-export 边；这些**不**进入 delta 计算；**新增**的 fail-closed（unresolved ref 的 `from` 参与切法 ⇒ not-evaluated）有专门用例
-- [ ] **`subject` 接受文件路径**：给 `modules/settings/hooks/useMcpNavigationSettings.ts` 这类文件路径时归一化到所在 internal 目录并正常评估；给不存在的路径/节点 ⇒ `not-evaluated` 且 reason 说明（不静默取空）
-- [ ] **CLI/MCP parity**：同一（真实 fixture + 含 `stays` 的 slice）分别经 `archguard slice-delta` 与 `archguard_simulate_refactor_slice` 调用，`computedDelta` / `negativeControl` / `guards` **逐字节相同**
-- [ ] **规模回归**：真实 claudecodeui 图（137/549）上的 CLI 调用在合理时间内完成（目标 < 5s，与既有规模同数量级），且 `npm test` 全量通过
-- [ ] 工具描述（`slice-delta-tool.ts` 的 description 与 zod `.describe`）与 `docs/user-guide/slice-delta.md` 更新为**完整** slice schema：`moves[]`/`stays[]` 字段名、目的地规则、fail-closed 清单、`accounting`/`unknowns` 的读法
-- [ ] 报告里仍**没有** `pass`/`fail`/`exitCode` 字段名；`git diff` 证明 `docs/experiments/layer-map/slice-delta.mjs` 与其 17 个既有测试**逐字节未改**
-- [ ] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
+- [x] **真实负例 → 新正例**：以本机今日 claudecodeui `src` 的真实 package 级图（137 节点 / 549 边 / 96 internal / 42 员环 / `unresolved` 100 条 / `unevaluatedDynamicImports` 2）为 fixture（`tests/fixtures/slice-delta/claudecodeui-frontend.arch.json`，moduleGraph 投影，注明是真实 `analyze` 产物的投影）。**同一份单符号切法**（`from: modules/settings/hooks`, `to: shared`, `symbols: ["readDeviceName"]`）在改动前必须 `not-evaluated` 且 reason 逐字等于本任务 Proposal 第 1 条引用的那句（可作为回归基线断言）；**补上 `stays` 声明**（把 `readMcpNavigationPolicy`/`writeMcpNavigationPolicy`/`McpNavigationPolicy`/`useSettingsController`/`useWebPush` 声明为留在 `modules/settings/hooks`）后必须 `evaluated` 且 exit 0
+- [x] 上一条的 `evaluated` 报告里：`shared/context -> modules/settings`（该边 `importedNames` 恰为 `["readDeviceName"]`，被完整覆盖）被判为 removed/retarget 到 `shared`；`modules/settings -> modules/settings/hooks` 判为**存活**且 `accounting` 里 5 个 staying 名字齐备、`unaccounted` 为空
+- [x] **legacy 兼容（逐字节）**：既有 `tests/fixtures/slice-delta/goal-033-slice.json`（无 `stays`）对既有 GOAL-033 fixture 的输出与改动前**逐字节相同**（`computedDelta` / `negativeControl` / `sccAfter` 全等，仍 6→4、exit 0）
+- [x] **fail-closed 未被削弱**：不声明 `stays` 的 claudecodeui 单符号切法仍 `not-evaluated`、exit 2、reason 点名未覆盖的 5 个名字（同一个负例既是新正例的前半，也是这条的断言）
+- [x] **mixed destinations 负对照**：同一个符号被两条 move/stays 声明到**不同**目的地 ⇒ `not-evaluated`、exit 2；`from === to` 的 move ⇒ `not-evaluated`、exit 2 且 reason **指向 `stays`**（不是指向"混合目的地"）
+- [x] **mixed destinations 正例**：一条边的名字被显式声明到两个**不同**目的地 ⇒ `evaluated`，added 边每个目的地各一条，且 `accounting.destinations` 列出两者
+- [x] **缺漏 consumer 仍可见**：切法漏掉一个图上真实存在的消费者 ⇒ `not-evaluated` 且 reason 点名那条边与未覆盖名字；在 `accounting`（或等价段）里该消费者的 `sourceDir` 可被定位（`modules/chat/hooks` 这一条在真实 fixture 上可复现）
+- [x] **unknown 显式化且不伪造**：报告含 `unknowns` 段，列出与切法相关的 unresolved 别名 ref、`unevaluatedDynamicImports` 计数、barrel/re-export 边；这些**不**进入 delta 计算；**新增**的 fail-closed（unresolved ref 的 `from` 参与切法 ⇒ not-evaluated）有专门用例
+- [x] **`subject` 接受文件路径**：给 `modules/settings/hooks/useMcpNavigationSettings.ts` 这类文件路径时归一化到所在 internal 目录并正常评估；给不存在的路径/节点 ⇒ `not-evaluated` 且 reason 说明（不静默取空）
+- [x] **CLI/MCP parity**：同一（真实 fixture + 含 `stays` 的 slice）分别经 `archguard slice-delta` 与 `archguard_simulate_refactor_slice` 调用，`computedDelta` / `negativeControl` / `guards` **逐字节相同**
+- [x] **规模回归**：真实 claudecodeui 图（137/549）上的 CLI 调用在合理时间内完成（目标 < 5s，与既有规模同数量级），且 `npm test` 全量通过
+- [x] 工具描述（`slice-delta-tool.ts` 的 description 与 zod `.describe`）与 `docs/user-guide/slice-delta.md` 更新为**完整** slice schema：`moves[]`/`stays[]` 字段名、目的地规则、fail-closed 清单、`accounting`/`unknowns` 的读法
+- [x] 报告里仍**没有** `pass`/`fail`/`exitCode` 字段名；`git diff` 证明 `docs/experiments/layer-map/slice-delta.mjs` 与其 17 个既有测试**逐字节未改**
+- [x] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
 
 ## DoD
 
