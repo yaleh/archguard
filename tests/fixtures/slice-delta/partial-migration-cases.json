@@ -1,0 +1,101 @@
+{
+  "note": "Synthetic cases for the partial-migration vocabulary (proposedCut.stays): single-edge multi-destination (legal), per-symbol multi-destination (illegal), from===to (illegal, points to stays), and a missed real consumer. The graph is a tiny five-dir module graph whose only cycle is a ⇄ b; unresolved refs come from `b` (NOT a participant of the subject-a cuts, so they belong in `unknowns` rather than tripping the new fail-closed).",
+  "graph": {
+    "nodes": [
+      { "id": "", "name": "(root)", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+      { "id": "a", "name": "a", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+      { "id": "b", "name": "b", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+      { "id": "c", "name": "c", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } },
+      { "id": "d", "name": "d", "type": "internal", "fileCount": 1, "stats": { "classes": 0, "interfaces": 0, "functions": 1, "enums": 0 } }
+    ],
+    "edges": [
+      { "from": "", "to": "a", "strength": 3, "typeOnlyStrength": 0, "valueStrength": 3, "importedNames": ["x", "y", "z"] },
+      { "from": "a", "to": "b", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["p"] },
+      { "from": "b", "to": "a", "strength": 1, "typeOnlyStrength": 0, "valueStrength": 1, "importedNames": ["q"] },
+      { "from": "d", "to": "a", "strength": 2, "typeOnlyStrength": 0, "valueStrength": 2, "importedNames": ["w", "x"] }
+    ],
+    "cycles": [{ "modules": ["a", "b"], "severity": "error" }],
+    "unresolved": [{ "from": "b", "specifier": "@/b/missing-thing" }],
+    "unevaluatedDynamicImports": 1
+  },
+  "cases": {
+    "mixedDestinationsPositive": {
+      "slice": {
+        "subject": "a",
+        "concern": "one edge's names declared to two different destinations is legal once each is declared",
+        "proposedCut": {
+          "moves": [
+            { "file": "x.ts", "from": "a", "to": "c", "symbols": ["x"] },
+            { "file": "y.ts", "from": "a", "to": "d", "symbols": ["y"] }
+          ],
+          "stays": [{ "dir": "a", "symbols": ["z", "w"] }],
+          "consumers": []
+        },
+        "negativeControl": { "description": "no-op restore", "restoreEdges": [{ "from": "b", "to": "a" }] }
+      },
+      "expect": {
+        "status": "evaluated",
+        "accountingEdge": " -> a",
+        "destinations": ["c", "d"],
+        "added": [" -> c", " -> d", "d -> c"]
+      }
+    },
+    "mixedDestinationsNegative": {
+      "slice": {
+        "subject": "a",
+        "concern": "one symbol declared to two different destinations is illegal",
+        "proposedCut": {
+          "moves": [
+            { "file": "x.ts", "from": "a", "to": "c", "symbols": ["x"] },
+            { "file": "x2.ts", "from": "a", "to": "d", "symbols": ["x"] }
+          ],
+          "consumers": []
+        },
+        "negativeControl": { "restoreEdges": [{ "from": "b", "to": "a" }] }
+      },
+      "expect": { "status": "not-evaluated", "reasonContains": "被两处 move 搬向不同目录" }
+    },
+    "symbolMovedAndStayed": {
+      "slice": {
+        "subject": "a",
+        "concern": "a symbol cannot be both moved and declared staying",
+        "proposedCut": {
+          "moves": [{ "file": "x.ts", "from": "a", "to": "c", "symbols": ["x"] }],
+          "stays": [{ "dir": "a", "symbols": ["x"] }],
+          "consumers": []
+        },
+        "negativeControl": { "restoreEdges": [{ "from": "b", "to": "a" }] }
+      },
+      "expect": { "status": "not-evaluated", "reasonContains": "目的地冲突" }
+    },
+    "fromEqualsTo": {
+      "slice": {
+        "subject": "a",
+        "concern": "from===to is not a move; it must point the caller at stays",
+        "proposedCut": {
+          "moves": [{ "file": "x.ts", "from": "a", "to": "a", "symbols": ["x"] }],
+          "consumers": []
+        },
+        "negativeControl": { "restoreEdges": [{ "from": "b", "to": "a" }] }
+      },
+      "expect": { "status": "not-evaluated", "reasonContains": "proposedCut.stays" }
+    },
+    "missedConsumer": {
+      "slice": {
+        "subject": "a",
+        "concern": "a real consumer edge (d -> a) is missed: w on that edge is neither moved nor declared staying",
+        "proposedCut": {
+          "moves": [{ "file": "x.ts", "from": "a", "to": "c", "symbols": ["x"] }],
+          "stays": [{ "dir": "a", "symbols": ["y", "z"] }],
+          "consumers": []
+        },
+        "negativeControl": { "restoreEdges": [{ "from": "b", "to": "a" }] }
+      },
+      "expect": {
+        "status": "not-evaluated",
+        "reasonContains": "d -> a",
+        "reasonNamesAll": ["w"]
+      }
+    }
+  }
+}

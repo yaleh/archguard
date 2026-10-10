@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerSliceDeltaTool } from '@/cli/mcp/tools/slice-delta-tool.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
+import { runSliceDelta } from '@/cli/commands/slice-delta.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
   const actual = await vi.importActual<typeof import('@/cli/query/engine-loader.js')>(
@@ -110,5 +111,48 @@ describe('archguard_simulate_refactor_slice — handler', () => {
     expect(result.isError).toBe(true);
     expect(String(result.content[0].text)).toMatch(/archguard_analyze/);
     expect(String(result.content[0].text)).toMatch(/moduleGraph/);
+  });
+});
+
+// ── claudecodeui real fixture + CLI/MCP parity ────────────────────────────────
+
+const CC_ARCH = path.join(FIX, 'claudecodeui-frontend.arch.json');
+const CC_SLICE_PATH = path.join(FIX, 'claudecodeui-readdevicename-slice.json');
+const ccGraph = readJson(CC_ARCH).extensions.tsAnalysis.moduleGraph;
+const ccSlice = readJson(CC_SLICE_PATH);
+
+describe('archguard_simulate_refactor_slice — claudecodeui real fixture', () => {
+  beforeEach(() => {
+    loadEngineMock.mockReset();
+    mockGraph(ccGraph);
+  });
+
+  it('AC1: evaluates the real single-symbol cut once stays is declared', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_simulate_refactor_slice');
+    const result = await handler({ projectRoot: '/workspace', slice: ccSlice });
+    const report = JSON.parse(String(result.content[0].text));
+    expect(report.status).toBe('evaluated');
+    expect(report.current.sccSize).toBe(42);
+    expect(report.accounting.length).toBeGreaterThanOrEqual(3);
+    expect(report.unknowns.barrelEdges.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('AC9: CLI and MCP agree byte-for-byte on computedDelta / negativeControl / guards / accounting', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_simulate_refactor_slice');
+    const mcpResult = await handler({ projectRoot: '/workspace', slice: ccSlice });
+    const mcpReport = JSON.parse(String(mcpResult.content[0].text));
+
+    const cli = await runSliceDelta({ slice: CC_SLICE_PATH, arch: CC_ARCH });
+    const cliReport = cli.report;
+
+    expect(JSON.stringify(mcpReport.computedDelta)).toBe(JSON.stringify(cliReport.computedDelta));
+    expect(JSON.stringify(mcpReport.negativeControl)).toBe(
+      JSON.stringify(cliReport.negativeControl)
+    );
+    expect(JSON.stringify(mcpReport.guards)).toBe(JSON.stringify(cliReport.guards));
+    expect(JSON.stringify(mcpReport.accounting)).toBe(JSON.stringify(cliReport.accounting));
+    expect(JSON.stringify(mcpReport.unknowns)).toBe(JSON.stringify(cliReport.unknowns));
   });
 });

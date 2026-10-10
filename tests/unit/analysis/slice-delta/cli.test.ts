@@ -220,6 +220,53 @@ describe('archguard slice-delta — field boundaries', () => {
   });
 });
 
+const CC_ARCH = path.join(FIX, 'claudecodeui-frontend.arch.json');
+const CC_SLICE = path.join(FIX, 'claudecodeui-readdevicename-slice.json');
+
+describe('archguard slice-delta — claudecodeui real fixture (partial migration)', () => {
+  it('AC1/AC9: with stays the real single-symbol cut is evaluated end-to-end', async () => {
+    const r = await runSliceDelta({ slice: CC_SLICE, arch: CC_ARCH });
+    expect(r.report.status).toBe('evaluated');
+    if (r.report.status !== 'evaluated') return;
+    expect(r.report.current.sccSize).toBe(42);
+    expect(r.report.computedDelta.removedEdges).toHaveLength(1);
+    expect(r.report.computedDelta.removedEdges[0]).toMatchObject({
+      from: 'shared/context',
+      to: 'modules/settings',
+      becomes: 'retargeted-to:shared',
+    });
+    expect(r.report.accounting?.length).toBeGreaterThanOrEqual(3);
+    expect(r.report.unknowns?.unevaluatedDynamicImports).toBe(2);
+    // Honest reading: this cut does NOT shrink the real 42-member cycle (the two
+    // surviving edges keep it), so the declared negative control has nothing to
+    // falsify. The report is `evaluated`; the guard is tripped → exit 1. DoD #4
+    // forbids loosening the fail-closed guard just to force a green exit 0.
+    expect(r.report.guards.clean).toBe(false);
+    expect(r.exitCode).toBe(1);
+  });
+
+  it('AC4: without stays the same cut is not-evaluated, exit 2', async () => {
+    const base = readJson(CC_SLICE);
+    const noStays = writeSlice('cc-nostays.json', {
+      ...base,
+      proposedCut: { moves: base.proposedCut.moves, consumers: [] },
+    });
+    const r = await runSliceDelta({ slice: noStays, arch: CC_ARCH });
+    expect(r.exitCode).toBe(2);
+    if (r.report.status !== 'not-evaluated') return;
+    expect(r.report.reason).toContain('modules/settings -> modules/settings/hooks');
+    expect(r.report.reason).toContain('readDeviceName');
+  });
+
+  it('AC10: the real 137-node / 549-edge graph evaluates comfortably under 5s', async () => {
+    const t0 = Date.now();
+    const r = await runSliceDelta({ slice: CC_SLICE, arch: CC_ARCH });
+    const ms = Date.now() - t0;
+    expect(r.report.status).toBe('evaluated');
+    expect(ms).toBeLessThan(5000);
+  });
+});
+
 describe('buildSliceDeltaProvenance — git consistency three-state', () => {
   it('not-checked when no commit is declared', () => {
     const p = buildSliceDeltaProvenance({

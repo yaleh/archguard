@@ -21,6 +21,22 @@ export interface SliceMove {
   note?: string;
 }
 
+/**
+ * A caller-declared "these symbols stay put in `dir`" (NEW, additive).
+ *
+ * This is the vocabulary a *partial* migration needs: when one directory edge's
+ * `importedNames` contains both symbols that move and symbols that stay, the
+ * caller must be able to say — explicitly — that the remaining names were
+ * inspected and stay. Without it the only options are hand-arithmetic or a
+ * file-level split first. An undeclared name is NEVER defaulted to "stays":
+ * it stays `not-evaluated`. `stays` is a declaration, not a fallback.
+ */
+export interface SliceStay {
+  dir: string;
+  symbols: string[];
+  note?: string;
+}
+
 /** A caller-declared consumer (needed because same-directory imports are invisible on a directory graph). */
 export interface SliceConsumer {
   file?: string;
@@ -39,13 +55,18 @@ export interface SliceEdge {
  * supplies it. Everything here is either the cut, a guard, or a prediction.
  */
 export interface RefactorSliceDeclaration {
-  /** Directory node id that is the concern (must be an internal node of the graph). */
+  /**
+   * Directory node id that is the concern, OR a file path (normalized to the
+   * internal dir that contains it). Must resolve to an internal node of the graph.
+   */
   subject: string;
   concern?: string;
   /** Provenance declared by the caller; echoed as-is into `provenance.slice`. */
   provenance?: Record<string, unknown>;
   proposedCut: {
     moves: SliceMove[];
+    /** Symbols explicitly declared to stay put. The vocabulary for partial migration. */
+    stays?: SliceStay[];
     consumers?: SliceConsumer[];
     note?: string;
   };
@@ -68,6 +89,14 @@ export interface RefactorSliceDeclaration {
   };
 }
 
+/**
+ * `certainty` is present ONLY when the edge is structurally unknown (a
+ * barrel / re-export edge whose coupling the directory graph cannot fully see).
+ * Its absence means `deterministic`. It is never emitted as a fake
+ * `'deterministic'` value, so an undeclared input keeps byte-identical edges.
+ */
+export type SliceEdgeCertainty = 'unknown';
+
 /** Edge removed by the cut (importedNames fully covered by a move's symbols). */
 export interface SliceDeltaRemovedEdge {
   from: string;
@@ -75,8 +104,12 @@ export interface SliceDeltaRemovedEdge {
   valueStrength: number | null;
   typeOnlyStrength: number | null;
   importedNames: string[];
-  /** `intra-directory` (retargeted into the source dir itself) or `retargeted-to:<dir>`. */
+  /**
+   * `intra-directory` (retargeted into the source dir itself) or
+   * `retargeted-to:<dir>` (comma-joined for a legal multi-destination edge).
+   */
   becomes: string;
+  certainty?: SliceEdgeCertainty;
 }
 
 /** Edge the cut would newly create (from retarget or from a declared consumer). */
@@ -85,6 +118,7 @@ export interface SliceDeltaAddedEdge {
   to: string;
   source: 'retarget-from-removed-edge' | 'declared-consumer';
   via?: string | null;
+  certainty?: SliceEdgeCertainty;
 }
 
 /**
@@ -129,6 +163,43 @@ export interface SliceDeltaDeclaredConsumer {
   status: 'graph-visible' | 'intra-directory' | 'unverifiable';
   movedToDir: string;
   note?: string;
+}
+
+/**
+ * Per-affected-edge accounting (NEW report section). Turns the three
+ * ClaudeCodeUI rejections into *information*: which names move where, which
+ * were explicitly declared staying, which (if any) are unaccounted, and
+ * whether the edge is a barrel/re-export the directory graph cannot fully see.
+ */
+export interface SliceDeltaAccountingEntry {
+  edge: string;
+  names: string[];
+  moving: Array<{ name: string; to: string }>;
+  staying: string[];
+  unaccounted: string[];
+  /** Distinct destinations the moved names go to. */
+  destinations: string[];
+  /** True when the edge's target re-exports from a moved-from dir (unknown coupling). */
+  barrel: boolean;
+  certainty: 'deterministic' | 'unknown';
+}
+
+/** A graph-visible unresolved alias reference (never fed into the delta). */
+export interface SliceDeltaUnresolvedAliasRef {
+  from: string;
+  specifier: string;
+}
+
+/**
+ * The explicit "here is what the graph cannot see" section (NEW). None of it
+ * feeds `computedDelta`; it exists so uncertainty is declared rather than
+ * silently folded into a deterministic-looking edge count.
+ */
+export interface SliceDeltaUnknowns {
+  unresolvedAliasRefs: SliceDeltaUnresolvedAliasRef[];
+  unevaluatedDynamicImports: number;
+  /** Affected edges that are barrel/re-export edges. */
+  barrelEdges: string[];
 }
 
 /** A must-not-change violation. */
@@ -203,11 +274,21 @@ export interface SliceDeltaEvaluatedReport {
   current: SliceDeltaCurrent;
   proposedCut: {
     moves: SliceMove[];
+    /** Echoed only when the declaration carried a `stays` clause (additive-only). */
+    stays?: SliceStay[];
     declaredConsumerCount: number;
     assumptions: string[];
   };
   affectedConsumers: SliceDeltaAffectedConsumer[];
   declaredConsumers: SliceDeltaDeclaredConsumer[];
+  /**
+   * Present only when this declaration exercises a partial-migration feature
+   * (a `stays` clause, a multi-destination edge, or an unknown/barrel edge).
+   * A plain fully-covered cut omits both sections, keeping its report identical
+   * to the pre-extension output.
+   */
+  accounting?: SliceDeltaAccountingEntry[];
+  unknowns?: SliceDeltaUnknowns;
   computedDelta: SliceDeltaComputed;
   mustNotChange: {
     forbiddenNewEdges: SliceEdge[];

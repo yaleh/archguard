@@ -327,6 +327,265 @@ describe('src does not import the frozen experiment path', () => {
   });
 });
 
+// ── claudecodeui real fixture: symbol-level partial migration ─────────────────
+
+const ccArch = readJson(path.join(FIX, 'claudecodeui-frontend.arch.json'));
+const ccGraph = ccArch.extensions.tsAnalysis.moduleGraph as TsModuleGraph;
+const ccSlice = readJson(
+  path.join(FIX, 'claudecodeui-readdevicename-slice.json')
+) as RefactorSliceDeclaration;
+const ccNoStays: RefactorSliceDeclaration = {
+  ...ccSlice,
+  proposedCut: { moves: ccSlice.proposedCut.moves, consumers: [] },
+};
+const STAYS_5 = [
+  'readMcpNavigationPolicy',
+  'writeMcpNavigationPolicy',
+  'McpNavigationPolicy',
+  'useSettingsController',
+  'useWebPush',
+];
+/** Proposal §1, rejection #1 — the exact sentence the pre-change tool emitted (a prefix). */
+const PROPOSAL_QUOTE_1 =
+  '切法覆盖不足：边 modules/settings -> modules/settings/hooks 的 importedNames=[' +
+  'readDeviceName, readMcpNavigationPolicy, writeMcpNavigationPolicy, McpNavigationPolicy, useSettingsController, useWebPush' +
+  '] 中 [readMcpNavigationPolicy, writeMcpNavigationPolicy, McpNavigationPolicy, useSettingsController, useWebPush] 未被任何 move 的 symbols 覆盖';
+
+describe('claudecodeui real fixture — symbol-level partial migration', () => {
+  it('AC1 baseline: the single-symbol cut WITHOUT stays reproduces the Proposal reason verbatim', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccNoStays });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason.startsWith(PROPOSAL_QUOTE_1)).toBe(true);
+    expect(r.reason).toBe(
+      `${PROPOSAL_QUOTE_1} —— 目录粒度上无法判断这条边是否随搬迁消失，本实现不猜`
+    );
+  });
+
+  it('AC1/AC2: adding the stays clause flips the SAME cut to evaluated (was not-evaluated)', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.subject).toBe('modules/settings');
+  });
+
+  it('AC2: shared/context -> modules/settings is removed and retargeted to shared', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const removed = r.computedDelta.removedEdges.find(
+      (e) => e.from === 'shared/context' && e.to === 'modules/settings'
+    );
+    expect(removed).toBeDefined();
+    expect(removed?.becomes).toBe('retargeted-to:shared');
+    expect(removed?.importedNames).toEqual(['readDeviceName']);
+    const retargets = [
+      ...r.computedDelta.addedEdges.map((a) => `${a.from} -> ${a.to}`),
+      ...r.computedDelta.strengthenedEdges.map((s) => `${s.from} -> ${s.to}`),
+    ];
+    expect(retargets).toContain('shared/context -> shared');
+  });
+
+  it('AC2: modules/settings -> modules/settings/hooks SURVIVES with all 5 staying names, unaccounted empty', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const key = 'modules/settings -> modules/settings/hooks';
+    expect(r.computedDelta.removedEdges.map((e) => `${e.from} -> ${e.to}`)).not.toContain(key);
+    const entry = (r.accounting ?? []).find((a) => a.edge === key);
+    expect(entry).toBeDefined();
+    expect(entry?.staying.slice().sort()).toEqual([...STAYS_5].sort());
+    expect(entry?.unaccounted).toEqual([]);
+    expect(entry?.moving).toEqual([{ name: 'readDeviceName', to: 'shared' }]);
+  });
+
+  it('AC4: fail-closed is NOT weakened — the no-stays cut still names all 5 uncovered symbols', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccNoStays });
+    if (r.status !== 'not-evaluated') throw new Error('expected not-evaluated');
+    for (const name of STAYS_5) expect(r.reason).toContain(name);
+    expect(r.reason).toMatch(/modules\/settings -> modules\/settings\/hooks/);
+  });
+
+  it('AC7: unknowns section is present and never feeds the delta', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    expect(r.unknowns).toBeDefined();
+    expect(r.unknowns?.unevaluatedDynamicImports).toBe(2);
+    expect(r.unknowns?.unresolvedAliasRefs.some((u) => u.from === 'modules/chat/audio')).toBe(true);
+    expect(r.unknowns?.barrelEdges).toEqual(
+      expect.arrayContaining([
+        'modules/chat/hooks -> modules/settings',
+        'shared/context -> modules/settings',
+      ])
+    );
+    // None of the unknown refs is in an added/removed edge's name list.
+    const deltaStrings = JSON.stringify(r.computedDelta);
+    expect(deltaStrings).not.toContain('voiceFrameProcessor');
+  });
+
+  it('AC7: a cut FROM modules/settings misses the real modules/chat/hooks consumer', () => {
+    const slice: RefactorSliceDeclaration = {
+      subject: 'modules/settings',
+      proposedCut: {
+        moves: [{ from: 'modules/settings', to: 'shared', symbols: ['readDeviceName'] }],
+        consumers: [],
+      },
+      negativeControl: { restoreEdges: [{ from: 'shared/context', to: 'modules/settings' }] },
+    };
+    const r = simulateRefactorSlice({ graph: ccGraph, slice });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('modules/chat/hooks -> modules/settings');
+    expect(r.reason).toContain('readMcpNavigationPolicy');
+    expect(r.reason).toContain('writeMcpNavigationPolicy');
+  });
+
+  it('AC8: barrel/re-export edges carry certainty=unknown; deterministic edges omit it', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const removed = r.computedDelta.removedEdges.find((e) => e.to === 'modules/settings');
+    expect(removed?.certainty).toBe('unknown'); // barrel edge
+    const byEdge = new Map((r.accounting ?? []).map((a) => [a.edge, a]));
+    expect(byEdge.get('shared/context -> modules/settings')?.certainty).toBe('unknown');
+    expect(byEdge.get('modules/settings -> modules/settings/hooks')?.certainty).toBe(
+      'deterministic'
+    );
+  });
+
+  it('AC9: a file-path subject normalizes to its containing internal dir', () => {
+    const r = simulateRefactorSlice({
+      graph: ccGraph,
+      slice: { ...ccSlice, subject: 'modules/settings/hooks/useMcpNavigationSettings.ts' },
+    });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.subject).toBe('modules/settings/hooks');
+  });
+
+  it('AC9: a subject that is neither a node nor a resolvable path is not-evaluated (never silently emptied)', () => {
+    const r = simulateRefactorSlice({
+      graph: ccGraph,
+      slice: { ...ccSlice, subject: 'does/not/exist.ts' },
+    });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toMatch(/不静默取空|文件路径/);
+  });
+
+  it('AC11: the real-fixture report still has no pass / fail / exitCode field names', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    const keys = new Set<string>();
+    const walk = (o: unknown): void => {
+      if (!o || typeof o !== 'object') return;
+      for (const k of Object.keys(o as Record<string, unknown>)) {
+        keys.add(k);
+        walk((o as Record<string, unknown>)[k]);
+      }
+    };
+    walk(r);
+    expect(keys.has('pass')).toBe(false);
+    expect(keys.has('fail')).toBe(false);
+    expect(keys.has('exitCode')).toBe(false);
+  });
+});
+
+// ── additive-only compatibility for a plain (no-stays) cut ────────────────────
+
+describe('additive-only: a plain cut report is unchanged in shape', () => {
+  it('GOAL-033 (no stays) emits NEITHER accounting NOR unknowns, and no proposedCut.stays', () => {
+    const r = simulateRefactorSlice({ graph: goalGraph, slice: goalSlice, observed: goalObserved });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(Object.prototype.hasOwnProperty.call(r, 'accounting')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(r, 'unknowns')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(r.proposedCut, 'stays')).toBe(false);
+    // core sections unchanged (6 → 4, one removed edge, guard clean)
+    expect(r.current.sccSize).toBe(6);
+    expect(r.computedDelta.sccAfter).toEqual(['', 'gate', 'gate/config', 'gate/factories']);
+    expect(r.computedDelta.removedEdges).toHaveLength(1);
+    expect(r.computedDelta.addedEdges).toEqual([]);
+    expect(r.guards.clean).toBe(true);
+  });
+
+  it('a stays-carrying cut adds exactly the two new sections + proposedCut.stays', () => {
+    const r = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    expect(Array.isArray(r.accounting)).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(r, 'unknowns')).toBe(true);
+    expect(r.proposedCut.stays).toEqual(ccSlice.proposedCut.stays);
+  });
+});
+
+// ── partial-migration vocabulary cases (synthetic) ────────────────────────────
+
+const pm = readJson(path.join(FIX, 'partial-migration-cases.json'));
+const pmGraph = pm.graph as TsModuleGraph;
+const pmCase = (name: string): RefactorSliceDeclaration =>
+  pm.cases[name].slice as RefactorSliceDeclaration;
+
+describe('partial-migration vocabulary', () => {
+  it('AC6: one edge declared to two different destinations is legal (evaluated)', () => {
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('mixedDestinationsPositive') });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    const entry = (r.accounting ?? []).find(
+      (a) => a.edge === pm.cases.mixedDestinationsPositive.expect.accountingEdge
+    );
+    expect(entry?.destinations.slice().sort()).toEqual(['c', 'd']);
+    const added = r.computedDelta.addedEdges.map((a) => `${a.from} -> ${a.to}`);
+    for (const e of pm.cases.mixedDestinationsPositive.expect.added) expect(added).toContain(e);
+  });
+
+  it('AC5: one symbol to two different destinations (two moves) is not-evaluated', () => {
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('mixedDestinationsNegative') });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain(pm.cases.mixedDestinationsNegative.expect.reasonContains);
+  });
+
+  it('AC5: a symbol both moved and declared staying is a destination conflict', () => {
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('symbolMovedAndStayed') });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('目的地冲突');
+  });
+
+  it('AC5: from === to is not-evaluated and points at stays (not at "mixed destinations")', () => {
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('fromEqualsTo') });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('proposedCut.stays');
+    expect(r.reason).not.toContain('混合目的地');
+  });
+
+  it('AC7: a missed real consumer is not-evaluated, naming the edge and the uncovered name', () => {
+    const c = pm.cases.missedConsumer;
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('missedConsumer') });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain(c.expect.reasonContains); // the "d -> a" edge (sourceDir d locatable)
+    for (const n of c.expect.reasonNamesAll) expect(r.reason).toContain(n);
+  });
+
+  it('AC7: a NON-participating unresolved ref appears in unknowns (and does not block evaluation)', () => {
+    const r = simulateRefactorSlice({ graph: pmGraph, slice: pmCase('mixedDestinationsPositive') });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.unknowns?.unresolvedAliasRefs).toEqual([
+      { from: 'b', specifier: '@/b/missing-thing' },
+    ]);
+    expect(r.unknowns?.unevaluatedDynamicImports).toBe(1);
+  });
+
+  it('AC7/NEW fail-closed: an unresolved ref whose `from` PARTICIPATES in the cut is not-evaluated', () => {
+    const graph: TsModuleGraph = JSON.parse(JSON.stringify(pmGraph));
+    graph.unresolved = [{ from: 'a', specifier: '@/a/missing-thing' }];
+    const r = simulateRefactorSlice({ graph, slice: pmCase('mixedDestinationsPositive') });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toMatch(/未解析别名/);
+    expect(r.reason).toContain('@/a/missing-thing');
+  });
+});
+
 function zeroStats(): { classes: number; interfaces: number; functions: number; enums: number } {
   return { classes: 0, interfaces: 0, functions: 0, enums: 0 };
 }

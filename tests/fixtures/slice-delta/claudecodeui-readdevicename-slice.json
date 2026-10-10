@@ -1,0 +1,44 @@
+{
+  "subject": "modules/settings",
+  "concern": "缩小 claudecodeui 前端 42 包环：把单个符号 readDeviceName 从 modules/settings/hooks 搬到 shared；同一目录边上共同旅行的 5 个符号（navigation-policy 组）显式声明留在原地。",
+  "provenance": {
+    "repo": "/data/home/yale/work/claudecodeui",
+    "ref": "2026-10-10 ownership-first architecture review §3 Candidate 3 (corrected minimal cut)",
+    "graph": "tests/fixtures/slice-delta/claudecodeui-frontend.arch.json (projection of scope 93e0a992)"
+  },
+  "proposedCut": {
+    "note": "真实单符号切法。stays 让「同一目录边只有一部分名字真的搬走」第一次可表达——未声明的名字仍然 fail-closed（见同目录的负例用例）。",
+    "moves": [
+      {
+        "file": "modules/settings/hooks/useMcpNavigationSettings.ts",
+        "from": "modules/settings/hooks",
+        "to": "shared",
+        "symbols": ["readDeviceName"],
+        "note": "readDeviceName 是依赖自由的设备名读取器，搬去 shared。"
+      }
+    ],
+    "stays": [
+      {
+        "dir": "modules/settings/hooks",
+        "symbols": [
+          "readMcpNavigationPolicy",
+          "writeMcpNavigationPolicy",
+          "McpNavigationPolicy",
+          "useSettingsController",
+          "useWebPush"
+        ],
+        "note": "navigation-policy 组是 genuinely settings 领域状态（报告 §3 Candidate 3 明确 non-goal：不搬它们）。"
+      }
+    ],
+    "consumers": []
+  },
+  "mustNotChange": {
+    "note": "本切法不对无关目录提要求；负对照见 negativeControl。",
+    "forbiddenNewEdges": [],
+    "untouchedDirs": []
+  },
+  "negativeControl": {
+    "description": "把单符号搬迁删掉的 shared/context -> modules/settings 边加回去，subject 的环成员集合必须回到 before。",
+    "restoreEdges": [{ "from": "shared/context", "to": "modules/settings" }]
+  }
+}

@@ -27,6 +27,7 @@ import type { TsModuleGraph, TsModuleDependency } from '@/types/extensions/ts-an
 import type {
   RefactorSliceDeclaration,
   SimulateRefactorSliceInput,
+  SliceDeltaAccountingEntry,
   SliceDeltaAddedEdge,
   SliceDeltaAffectedConsumer,
   SliceDeltaComputed,
@@ -37,10 +38,12 @@ import type {
   SliceDeltaRemovedEdge,
   SliceDeltaReport,
   SliceDeltaStrengthenedEdge,
+  SliceDeltaUnknowns,
   SliceDeltaViolation,
   SliceDeltaWhyLeft,
   SliceEdge,
   SliceMove,
+  SliceStay,
 } from './types.js';
 
 /** The input fields that feed `computedDelta` and `negativeControl` (honesty field). */
@@ -129,6 +132,38 @@ function inSources(dir: string, edges: Array<{ from: string; to: string }>): str
 }
 
 /**
+ * A declaration may name the subject by directory node id OR by a file path
+ * (e.g. `modules/settings/hooks/useMcpNavigationSettings.ts`). Normalize the
+ * latter to its containing internal directory — the LONGEST internal dir that is
+ * a path prefix. A path that matches no internal dir yields `null` (the caller
+ * reports `not-evaluated`); it is never silently emptied to the root.
+ */
+function normalizeSubjectDir(
+  raw: string,
+  internalDirs: string[],
+  internalSet: Set<string>
+): string | null {
+  if (internalSet.has(raw)) return raw;
+  if (typeof raw !== 'string' || raw.length === 0 || !raw.includes('/')) return null;
+  const norm = raw.replace(/\\/g, '/').replace(/^\.\//, '');
+  let best: string | null = null;
+  for (const d of internalDirs) {
+    if (d === '') continue;
+    if ((norm === d || norm.startsWith(`${d}/`)) && (best === null || d.length > best.length)) {
+      best = d;
+    }
+  }
+  return best;
+}
+
+/** `unevaluatedDynamicImports` is documented as a number; tolerate an array / absent. */
+function dynamicImportCount(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (Array.isArray(raw)) return raw.length;
+  return 0;
+}
+
+/**
  * The pure entry point. Never throws a business exception — insufficient signal
  * yields `{ status: 'not-evaluated', reason }` with no partial delta.
  */
@@ -178,9 +213,15 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   }
 
   // ── The subject's cycle ──────────────────────────────────────────────────
-  const subject = slice?.subject ?? '';
-  if (!internalSet.has(subject)) {
-    return notEvaluated(`slice.subject=${JSON.stringify(subject)} 不是本图的 internal 目录节点`);
+  // The subject may be a directory node id OR a file path (normalized to its
+  // containing internal dir). A value that resolves to neither is a hard
+  // not-evaluated — never silently emptied to the root.
+  const rawSubject = slice?.subject ?? '';
+  const subject = normalizeSubjectDir(rawSubject, internalDirs, internalSet);
+  if (subject === null) {
+    return notEvaluated(
+      `slice.subject=${JSON.stringify(rawSubject)} 不是本图的 internal 目录节点，也不是能归一到某个 internal 目录的文件路径（不静默取空）`
+    );
   }
   const beforeScc = (recomputed.find((c) => c.includes(subject)) ?? [subject]).slice().sort();
 
@@ -205,7 +246,17 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
         `move ${m.file ?? '?'} 没有声明 symbols：目录粒度上无法把它与任何一条边对账`
       );
     }
+    if (m.from === m.to) {
+      // `from === to` is not a move. It used to fall into the "mixed destinations"
+      // branch and pointed the caller at the wrong fix; now it points at `stays`.
+      return notEvaluated(
+        `move ${m.file ?? '?'} 的 from === to（${JSON.stringify(m.from)}）：原地不动的符号要用 proposedCut.stays 显式声明，而不是 from === to 的 move`
+      );
+    }
   }
+
+  const movesFrom = new Set(moves.map((m) => m.from));
+  const movesTo = new Set(moves.map((m) => m.to));
 
   const symbolsOfDir = new Map<string, Set<string>>();
   for (const m of moves) {
@@ -226,61 +277,192 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     }
   }
 
+  // ── stays (NEW): explicit "these names were inspected and stay put" ────────
+  const stays: SliceStay[] = slice?.proposedCut?.stays ?? [];
+  if (!Array.isArray(stays)) {
+    return notEvaluated('slice.proposedCut.stays 不是数组');
+  }
+  const stayedSymbolDir = new Map<string, string>();
+  for (const s of stays) {
+    if (!internalSet.has(s?.dir)) {
+      return notEvaluated(`stays 声明 ${JSON.stringify(s?.dir)} 不是本图的 internal 目录节点`);
+    }
+    if (!Array.isArray(s.symbols) || s.symbols.length === 0) {
+      return notEvaluated(`stays 声明 ${JSON.stringify(s.dir)} 没有声明 symbols：无法对账`);
+    }
+    for (const sym of s.symbols) {
+      const prev = stayedSymbolDir.get(sym);
+      if (prev !== undefined && prev !== s.dir) {
+        return notEvaluated(
+          `符号 ${sym} 被两处 stays 声明留在不同目录（${prev} 与 ${s.dir}）：目的地冲突，无法对账`
+        );
+      }
+      stayedSymbolDir.set(sym, s.dir);
+    }
+  }
+  // A name cannot be declared to move AND to stay — that is two destinations.
+  for (const [sym, dir] of stayedSymbolDir) {
+    const m = destOfSymbol.get(sym);
+    if (m) {
+      return notEvaluated(
+        `符号 ${sym} 既被 move 搬向 ${m.to} 又被 stays 声明留在 ${dir}：目的地冲突，无法对账`
+      );
+    }
+  }
+
+  // ── NEW fail-closed: an unresolved alias ref whose `from` participates ─────
+  // `unresolved` means the edge is MISSING from the graph; if it touches the cut
+  // (moved-from / a destination / the subject) the delta's edge SET itself is
+  // incomplete, so no number may be emitted.
+  const participating = new Set<string>([...movesFrom, ...movesTo, subject]);
+  const unresolvedRefs = Array.isArray(graph.unresolved) ? graph.unresolved : [];
+  const participatingUnresolved = unresolvedRefs.find((u) => participating.has(u?.from));
+  if (participatingUnresolved) {
+    return notEvaluated(
+      `未解析别名 ref（from=${JSON.stringify(participatingUnresolved.from)} specifier=${JSON.stringify(participatingUnresolved.specifier)}）的 from 目录参与本次切法（moved-from / 目的地 / subject）：该边在图上缺失，delta 的边集合本身不完整，本实现不出数`
+    );
+  }
+
+  // Dirs that structurally re-export from a moved-from dir — a barrel edge whose
+  // extra coupling a directory graph cannot see (recorded as `unknown`, never
+  // folded into a deterministic edge count).
+  const reexportsFromMoved = new Set<string>();
+  for (const e of internalEdges) if (movesFrom.has(e.to)) reexportsFromMoved.add(e.from);
+
   const assumptions = [
     '目录级图不表示同目录内的 import；搬迁后由「同目录 import 变成跨目录 import」产生的新边，图上结构性看不见，只能由 slice.proposedCut.consumers 显式声明（这类 added 边标 source=declared-consumer）。',
     'importedNames 是目录级边的名字集合，不携带「哪个名字来自哪个文件」的位置信息；因此只有当一个名字集合被某次 move 的 symbols 完整覆盖时才认为该边被这次搬迁解释。',
     '本实现只对账「进入 moved-from 目录的边」。目录级边不带「由哪个文件产生」的信息，因此无法判断某条「从 moved-from 目录出发」的边是否随某个文件一并搬走——本实现的 sccAfter 是这条模拟规则下的读数，不是对真实重命名/搬壳操作的完整模拟（保留 façade 还是整体搬迁，需要调用方在切法里自行表达）。',
+    // Appended only for a partial-migration declaration, so a plain cut's
+    // `proposedCut` stays byte-identical to the pre-extension output.
+    ...(stays.length > 0
+      ? [
+          'proposedCut.stays 是「这些名字我核对过、留在原目录」的显式声明，用于表达部分迁移；没有任何一条路径把「未声明的名字」默认成「留下」——未声明的名字仍然 not-evaluated。凡在 importedNames 里出现的已搬走名字，其所在目录边都会被对账（包括进入某个 re-export/barrel 目录、再转发该名字的边），因此 barrel 边上共同旅行的符号会被一并点名，而不是被静默略过。re-export/barrel 边在 accounting.certainty / unknowns.barrelEdges 里显式标为 unknown。',
+        ]
+      : []),
   ];
 
-  // ── Reconcile every edge entering a moved-from dir (set judgment on importedNames) ─
+  // ── Reconcile every edge touched by a moved symbol (set judgment on importedNames) ─
+  // Selection is by imported NAME (then each name's destination is decided): any
+  // edge carrying a moved name is accounted for, including a re-export/barrel edge
+  // that forwards the name from a directory other than the moved-from dir. An edge
+  // importing ONLY declared-staying names is untouched by the cut and skipped.
   const removedEdges: SliceDeltaRemovedEdge[] = [];
   const addedCandidates: SliceDeltaAddedEdge[] = [];
   const affectedConsumers: SliceDeltaAffectedConsumer[] = [];
-  for (const e of internalEdges) {
-    const movedSymbols = symbolsOfDir.get(e.to);
-    if (!movedSymbols) continue;
+  const accounting: SliceDeltaAccountingEntry[] = [];
+  const affectedDirs = new Set<string>();
+  let sawMultiDestination = false;
+  let sawUnknown = false;
+  // Iteration order: edges ENTERING a moved-from dir are reconciled first, then the
+  // remaining edges touched by a moved name (e.g. a barrel/re-export edge that
+  // forwards the name from another directory). This preserves the pre-extension
+  // fail-closed reading EXACTLY for an undeclared input: the same first
+  // coverage-shortfall edge (with the same name list) is reported.
+  const orderedEdges = [
+    ...internalEdges.filter((e) => movesFrom.has(e.to)),
+    ...internalEdges.filter((e) => !movesFrom.has(e.to)),
+  ];
+  for (const e of orderedEdges) {
     const names = e.importedNames;
     if (names.length === 0) {
-      return notEvaluated(
-        `边 ${edgeKeyOf(e.from, e.to)} 进入被搬迁目录却没有 importedNames，目录粒度上无法对账这次搬迁`
-      );
+      // Preserved fail-closed: an edge ENTERING a moved-from dir must carry importedNames.
+      if (movesFrom.has(e.to)) {
+        return notEvaluated(
+          `边 ${edgeKeyOf(e.from, e.to)} 进入被搬迁目录却没有 importedNames，目录粒度上无法对账这次搬迁`
+        );
+      }
+      continue;
     }
-    const covered = names.filter((n) => movedSymbols.has(n));
-    if (covered.length === 0) continue; // this edge has nothing to do with the cut
-    const uncovered = names.filter((n) => !movedSymbols.has(n));
+    const affected = names.some((n) => destOfSymbol.has(n));
+    if (!affected) continue; // nothing that moves appears on this edge
+    const uncovered = names.filter((n) => !destOfSymbol.has(n) && !stayedSymbolDir.has(n));
     if (uncovered.length > 0) {
       return notEvaluated(
         `切法覆盖不足：边 ${edgeKeyOf(e.from, e.to)} 的 importedNames=[${names.join(', ')}] 中 [${uncovered.join(', ')}] 未被任何 move 的 symbols 覆盖 —— 目录粒度上无法判断这条边是否随搬迁消失，本实现不猜`
       );
     }
-    const dests = [...new Set(names.map((n) => destOfSymbol.get(n).to))];
-    if (dests.length > 1) {
-      return notEvaluated(
-        `边 ${edgeKeyOf(e.from, e.to)} 的 importedNames 被搬向不同目录（${dests.join(', ')}）：无法在目录粒度上对账`
-      );
-    }
-    const dest = dests[0];
-    const becomes = e.from === dest ? 'intra-directory' : `retargeted-to:${dest}`;
-    removedEdges.push({
-      from: e.from,
-      to: e.to,
-      valueStrength: e.valueStrength,
-      typeOnlyStrength: e.typeOnlyStrength,
-      importedNames: names,
-      becomes,
+    const moving = names.filter((n) => destOfSymbol.has(n));
+    const staying = names.filter((n) => stayedSymbolDir.has(n));
+    const dests = [...new Set(moving.map((n) => destOfSymbol.get(n).to))];
+    const barrel = reexportsFromMoved.has(e.to);
+    if (dests.length > 1) sawMultiDestination = true;
+    if (barrel) sawUnknown = true;
+    const edgeKeyStr = edgeKeyOf(e.from, e.to);
+    affectedDirs.add(e.from);
+    affectedDirs.add(e.to);
+    accounting.push({
+      edge: edgeKeyStr,
+      names,
+      moving: moving.map((n) => ({ name: n, to: destOfSymbol.get(n).to })),
+      staying,
+      unaccounted: [],
+      destinations: dests,
+      barrel,
+      certainty: barrel ? 'unknown' : 'deterministic',
     });
-    if (e.from !== dest) {
-      addedCandidates.push({ from: e.from, to: dest, source: 'retarget-from-removed-edge' });
+    const certaintyExtra = barrel ? { certainty: 'unknown' as const } : {};
+    const movedToDir = dests.join(', ');
+    if (staying.length === 0) {
+      const becomes =
+        dests.length === 1
+          ? e.from === dests[0]
+            ? 'intra-directory'
+            : `retargeted-to:${dests[0]}`
+          : `retargeted-to:${movedToDir}`;
+      removedEdges.push({
+        from: e.from,
+        to: e.to,
+        valueStrength: e.valueStrength,
+        typeOnlyStrength: e.typeOnlyStrength,
+        importedNames: names,
+        becomes,
+        ...certaintyExtra,
+      });
+      for (const d of dests) {
+        if (e.from !== d) {
+          addedCandidates.push({
+            from: e.from,
+            to: d,
+            source: 'retarget-from-removed-edge',
+            ...certaintyExtra,
+          });
+        }
+      }
+      affectedConsumers.push({
+        edge: edgeKeyStr,
+        sourceDir: e.from,
+        movedFromDir: e.to,
+        movedToDir,
+        importedNames: names,
+        becomes,
+        explainedBy: moving.map((n) => `${destOfSymbol.get(n).file ?? '?'}#${n}`),
+      });
+    } else {
+      // A PARTIAL migration: some names move, some are explicitly declared staying.
+      // The original edge A -> B SURVIVES (its staying names keep it) and each moved
+      // name adds A -> D. Its strength increment is not computed (the directory graph
+      // carries no symbol→file localization) — same honest labelling as strengthenedEdges.
+      for (const d of dests) {
+        if (e.from !== d) {
+          addedCandidates.push({
+            from: e.from,
+            to: d,
+            source: 'retarget-from-removed-edge',
+            ...certaintyExtra,
+          });
+        }
+      }
+      affectedConsumers.push({
+        edge: edgeKeyStr,
+        sourceDir: e.from,
+        movedFromDir: e.to,
+        movedToDir,
+        importedNames: names,
+        becomes: 'survives',
+        explainedBy: moving.map((n) => `${destOfSymbol.get(n).file ?? '?'}#${n}`),
+      });
     }
-    affectedConsumers.push({
-      edge: edgeKeyOf(e.from, e.to),
-      sourceDir: e.from,
-      movedFromDir: e.to,
-      movedToDir: dest,
-      importedNames: names,
-      becomes,
-      explainedBy: names.map((n) => `${destOfSymbol.get(n).file ?? '?'}#${n}`),
-    });
   }
 
   // ── Declared consumers: reconcile with the graph; graph-invisible ones补成 added 边 ─
@@ -374,6 +556,26 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   const sccsAfter = sccsOf(internalDirs, afterEdges);
   const afterScc = (sccsAfter.find((c) => c.includes(subject)) ?? [subject]).slice().sort();
   const sccLeft = beforeScc.filter((m) => !afterScc.includes(m));
+
+  // ── accounting / unknowns (NEW diagnostics; NEVER feed computedDelta) ─────
+  // Emitted only when this declaration exercises a partial-migration feature, so a
+  // plain fully-covered cut keeps a report identical to the pre-extension output.
+  const emitPartialDiagnostics = stays.length > 0 || sawMultiDestination || sawUnknown;
+  const relatedDirs = new Set<string>([
+    ...beforeScc,
+    ...afterScc,
+    ...affectedDirs,
+    ...movesFrom,
+    ...movesTo,
+    subject,
+  ]);
+  const unknowns: SliceDeltaUnknowns = {
+    unresolvedAliasRefs: unresolvedRefs
+      .filter((u) => relatedDirs.has(u.from))
+      .map((u) => ({ from: u.from, specifier: u.specifier })),
+    unevaluatedDynamicImports: dynamicImportCount(graph.unevaluatedDynamicImports),
+    barrelEdges: accounting.filter((a) => a.barrel).map((a) => a.edge),
+  };
 
   // ── must-not-change guards ───────────────────────────────────────────────
   const mustNotChange = slice?.mustNotChange ?? {};
@@ -509,11 +711,13 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     },
     proposedCut: {
       moves,
+      ...(stays.length > 0 ? { stays } : {}),
       declaredConsumerCount: (slice?.proposedCut?.consumers ?? []).length,
       assumptions,
     },
     affectedConsumers,
     declaredConsumers,
+    ...(emitPartialDiagnostics ? { accounting, unknowns } : {}),
     computedDelta,
     mustNotChange: {
       forbiddenNewEdges: mustNotChange.forbiddenNewEdges ?? [],

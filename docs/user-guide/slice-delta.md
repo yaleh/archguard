@@ -36,10 +36,30 @@ Three states, never conflated:
 | evaluated, guard tripped | a reading where `must-not-change` fired or the negative control was not falsifiable | `1` |
 | not evaluated | not enough signal — **no** partial delta is produced | `2` |
 
+## Diagnostics: `accounting` and `unknowns`
+
+Two additive report sections make the tool's uncertainty explicit instead of rejecting on it:
+
+- **`accounting[]`** — one entry per affected directory edge:
+  `{ edge, names, moving:[{name,to}], staying, unaccounted, destinations, barrel, certainty }`.
+  It turns an under-specified cut's rejection into *information*: you can see exactly which
+  co-traveling symbols move, which were declared staying, and which (if any) are unaccounted.
+- **`unknowns`** — `{ unresolvedAliasRefs, unevaluatedDynamicImports, barrelEdges }`. These are the
+  couplings the directory graph cannot fully see. **None of it feeds `computedDelta`.** An added or
+  removed edge that is a barrel/re-export edge carries `certainty: "unknown"`; a deterministic edge
+  omits the field (its absence means deterministic — it is never emitted as a fake value).
+
+Both sections are emitted only when the declaration actually exercises a partial-migration feature
+(a `stays` clause, a multi-destination edge, or an unknown/barrel edge); a plain fully-covered cut
+keeps a report identical to the pre-extension output.
+
 `not-evaluated` is returned (never "best effort") when: the recomputed SCCs disagree with
-`moduleGraph.cycles` (self-check failure); a moved-from edge's `importedNames` are only
-partly covered by the cut's `symbols`; an edge entering a moved-from dir has no
-`importedNames`; or `negativeControl.restoreEdges` is missing/empty.
+`moduleGraph.cycles` (self-check failure); an edge carrying a moved name has an `importedNames` name
+that is neither moved nor declared by `stays` (a partial migration was not declared); an edge
+entering a moved-from dir has no `importedNames`; an **unresolved alias ref**'s `from` dir
+participates in the cut (moved-from / destination / subject — the edge set itself is incomplete);
+`proposedCut.moves` is empty; a move has `from === to`; or `negativeControl.restoreEdges` is
+missing/empty.
 
 ## Library API
 
@@ -99,16 +119,24 @@ Returns the report JSON as text. If the scope cannot be resolved (or carries no
 `extensions.tsAnalysis.moduleGraph`), it returns `isError` with an actionable hint:
 run `archguard_analyze` first.
 
-## The slice object
+## The slice object (complete schema)
 
 ```jsonc
 {
-  "subject": "",                 // internal dir node id that is the concern
+  "subject": "",                 // internal dir node id, OR a file path (normalized to its dir)
+  "concern": "...",
+  "provenance": { "commit": "..." },
   "proposedCut": {
     "moves": [
-      { "file": "cli/driver.ts", "from": "cli", "to": "", "symbols": ["runDriver"] }
+      // file relocation intent: these symbols move from `from` to `to` (to ≠ from)
+      { "file": "cli/driver.ts", "from": "cli", "to": "", "symbols": ["runDriver"], "note": "..." }
+    ],
+    "stays": [
+      // NEW: these names were inspected and stay put in `dir` (partial migration)
+      { "dir": "modules/settings/hooks", "symbols": ["useWebPush"], "note": "..." }
     ],
     "consumers": [
+      // graph-invisible consumers (same-directory imports) that become cross-directory
       { "file": "cli/server.ts", "dir": "cli", "imports": ["runDriver"] }
     ]
   },
@@ -121,11 +149,33 @@ run `archguard_analyze` first.
 }
 ```
 
-- A move declares *which file's which symbols move from directory A to directory B* — there
-  is **no** edge-level "delete A -> B" instruction.
-- `importedNames` on directory-level edges are treated as a **set**: an edge entering a
-  moved-from dir is explained only when its names are *fully* covered by a move's `symbols`;
-  partial coverage is `not-evaluated` (no proportional guessing).
+### `moves[]` / `stays[]` field names
+
+- A **move** declares *which file's which symbols move from directory `from` to directory `to`* —
+  there is **no** edge-level "delete A -> B" instruction. `symbols: string[]` (not an entity name).
+  `file` is documentation only; `from`/`to` are directory node ids.
+- **`stays`** is the partial-migration vocabulary: "these names I checked and they stay in `dir`".
+  When one directory edge's `importedNames` mixes symbols that move with symbols that stay, declare
+  the stayers here. `stays` is a **declaration, not a fallback**: a name that is neither moved nor
+  declared staying is still `not-evaluated`. There is **no** path that defaults an undeclared name
+  to "stays". This is the whole safety of the extension.
+- `from === to` on a move is an **error** (use `stays`).
+
+### Destination & coverage rule
+
+Every directory edge whose `importedNames` contains a **moved** name is reconciled. For each name,
+the destination is **declared**, never guessed:
+
+- moved by a move → that move's `to`; declared by `stays` → stays in its `dir`.
+- A name accounted by **neither** ⇒ `not-evaluated` (naming the edge and the uncovered names).
+- Multiple destinations on **one** edge are legal: an added edge per destination, and the original
+  edge **survives** if any of its names stay. A surviving edge's strength increment is **not**
+  computed (`strength: null`) — the directory graph carries no symbol→file localization.
+- A single **symbol** declared to two different destinations (two moves, or moved + stayed) is a
+  conflict ⇒ `not-evaluated`.
+- Edges that re-export a moved name from another directory (barrel edges) are reconciled too
+  (recorded as `barrel: true` / `certainty: "unknown"`), so co-traveling symbols on a barrel are
+  named rather than silently skipped.
 - Same-directory imports are invisible on a directory graph; a cut that turns such an import
   cross-directory must declare it under `consumers`.
 
