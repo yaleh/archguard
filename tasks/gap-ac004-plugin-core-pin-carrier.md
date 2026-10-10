@@ -2,7 +2,7 @@
 id: gap-ac004-plugin-core-pin-carrier
 title: plugin 对 core 的精确版本钉（第七处载体）不在任何齐步派生/校验面：发布窗口内滞后 0.1.38 vs 0.1.39（GOAL-001
   / AC-004）
-status: ready
+status: done
 labels:
   - gap
   - defect
