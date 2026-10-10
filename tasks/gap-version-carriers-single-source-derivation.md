@@ -1,7 +1,7 @@
 ---
 id: gap-version-carriers-single-source-derivation
 title: 六处版本载体的单一来源 + 齐步生成：消除发布窗口内 npm 侧先行、plugin 侧滞后的载体错位（GOAL-001 / AC-003）
-status: todo
+status: ready
 labels:
   - gap
   - defect
