@@ -31,6 +31,7 @@ function errorResponse(text: string): {
 }
 
 export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): void {
+  // adr-ok: ADR-007 — MCP surface for the top-level `archguard slice-delta` subcommand, not a `query` --flag
   server.tool(
     'archguard_simulate_refactor_slice',
     "Simulate an explicitly-declared refactor slice against the scope's TypeScript module graph and " +
