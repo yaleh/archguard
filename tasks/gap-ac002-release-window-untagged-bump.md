@@ -2,7 +2,7 @@
 id: gap-ac002-release-window-untagged-bump
 title: AC-002 在发布窗口内假红：发布先抬 package.json 再建 tag（主检出内 bump + runbook 显式
   --no-git-tag-version），验收读工作树 → 让 bump+tag 原子化并把发布赶出主检出
-status: ready
+status: done
 labels:
   - gap
   - defect
