@@ -2,7 +2,7 @@
 id: gap-promote-slice-delta-to-product-surface
 title: 把 slice-delta 原型提升为稳定产品面：src/analysis/slice-delta 库 API + archguard
   slice-delta CLI + archguard_simulate_refactor_slice MCP，全部随发布产物可达
-status: todo
+status: ready
 labels:
   - gap
   - architecture
