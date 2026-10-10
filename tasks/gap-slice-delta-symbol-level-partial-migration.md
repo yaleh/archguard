@@ -2,7 +2,7 @@
 id: gap-slice-delta-symbol-level-partial-migration
 title: slice-delta 支持 symbol-level 切片与单边 importedNames 部分迁移（新增显式 stays
   声明），保留未声明即 fail-closed，并把 alias/reexport/dynamic 的 unknown 显式化
-status: todo
+status: ready
 labels:
   - gap
   - architecture
