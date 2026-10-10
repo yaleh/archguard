@@ -44,12 +44,12 @@ goal_ac: AC-003
 
 ## AC
 
-- [ ] `bash scripts/check-version-carriers.sh` 在仓库根 exit 0，stdout 含 `all carriers == <version>`，且 `VERSION` 文件存在并逐字等于该 version（判据为外部来源：六处 == VERSION）
-- [ ] `node scripts/sync-version-carriers.mjs --check` 在仓库根 exit 0；反例：在临时夹具中构造「六处互相相等（均 1.2.3）但 VERSION=9.9.9」→ exit 1 且 stderr 含 `CAUSE=version-carriers-disagree`（证明判据能看见旧形态看不见的『全体一致但过时』树）
-- [ ] `npx vitest run tests/unit/scripts/version-carriers-check.test.ts` exit 0，覆盖：VERSION 为比较来源；六处互相相等却 ≠ VERSION → exit 1；六处逐一 ≠ VERSION → exit 1 且点名该处；VERSION 缺失 → exit 1 含 `CAUSE=version-carrier-unreadable`；生成器齐步写出六处且二次调用字节不变；仓库根真实运行 exit 0
-- [ ] `node -e "const s=require('./package.json').scripts; if(!s.version||!s.version.includes('sync-version-carriers')) process.exit(1)"` exit 0（bump 路径已由生成器接管）
-- [ ] `npm run type-check` exit 0
-- [ ] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 仅含 `VERSION`、`scripts/sync-version-carriers.mjs`、`scripts/check-version-carriers.sh`、`tests/unit/scripts/version-carriers-check.test.ts`、`package.json` 与本任务 `tasks/gap-version-carriers-single-source-derivation.md`；不含六处载体的 version 值改动（六处仍等于当前发布版本），且无 `git tag` / `git push` / `npm publish` 执行记录
+- [x] `bash scripts/check-version-carriers.sh` 在仓库根 exit 0，stdout 含 `all carriers == <version>`，且 `VERSION` 文件存在并逐字等于该 version（判据为外部来源：六处 == VERSION）
+- [x] `node scripts/sync-version-carriers.mjs --check` 在仓库根 exit 0；反例：在临时夹具中构造「六处互相相等（均 1.2.3）但 VERSION=9.9.9」→ exit 1 且 stderr 含 `CAUSE=version-carriers-disagree`（证明判据能看见旧形态看不见的『全体一致但过时』树）
+- [x] `npx vitest run tests/unit/scripts/version-carriers-check.test.ts` exit 0，覆盖：VERSION 为比较来源；六处互相相等却 ≠ VERSION → exit 1；六处逐一 ≠ VERSION → exit 1 且点名该处；VERSION 缺失 → exit 1 含 `CAUSE=version-carrier-unreadable`；生成器齐步写出六处且二次调用字节不变；仓库根真实运行 exit 0
+- [x] `node -e "const s=require('./package.json').scripts; if(!s.version||!s.version.includes('sync-version-carriers')) process.exit(1)"` exit 0（bump 路径已由生成器接管）
+- [x] `npm run type-check` exit 0
+- [x] `git diff --name-only $(git merge-base HEAD develop)..HEAD` 仅含 `VERSION`、`scripts/sync-version-carriers.mjs`、`scripts/check-version-carriers.sh`、`tests/unit/scripts/version-carriers-check.test.ts`、`package.json` 与本任务 `tasks/gap-version-carriers-single-source-derivation.md`；不含六处载体的 version 值改动（六处仍等于当前发布版本），且无 `git tag` / `git push` / `npm publish` 执行记录
 
 ## DoD
 
