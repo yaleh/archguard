@@ -42,12 +42,12 @@ AC-002 的验收脚本（`goals/AC-002-每个已发布版本都留下可核对�
 
 ## AC
 
-- [ ] `bash scripts/check-version-has-tag.sh /data/home/yale/work/archguard` exit 0（基线：当前不变量已由 v0.1.39 满足）
-- [ ] `scripts/release.sh` 存在且 `bash scripts/release.sh --help` exit 0；在临时仓库真实跑 `bash scripts/release.sh 9.9.9` 后 `git rev-parse -q --verify refs/tags/v9.9.9` 命中，且 `git log --format=%s -1` == `release: 9.9.9`
-- [ ] 在主 worktree 内运行 `bash scripts/release.sh 9.9.9` exit≠0 且 stderr 含 `CAUSE=release-must-run-in-a-linked-worktree`
-- [ ] `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0，覆盖：原子发布成功、linked worktree 放行、主 worktree 拒绝、pre-commit 主 worktree 无 tag bump 拒绝 / 有 tag 放行
-- [ ] `.githooks/pre-commit` 存在且可执行；`git -C /data/home/yale/work/archguard config --get core.hooksPath` 输出 `.githooks`
-- [ ] `npm run type-check` exit 0
+- [x] `bash scripts/check-version-has-tag.sh /data/home/yale/work/archguard` exit 0（基线：当前不变量已由 v0.1.39 满足）
+- [x] `scripts/release.sh` 存在且 `bash scripts/release.sh --help` exit 0；在临时仓库真实跑 `bash scripts/release.sh 9.9.9` 后 `git rev-parse -q --verify refs/tags/v9.9.9` 命中，且 `git log --format=%s -1` == `release: 9.9.9`
+- [x] 在主 worktree 内运行 `bash scripts/release.sh 9.9.9` exit≠0 且 stderr 含 `CAUSE=release-must-run-in-a-linked-worktree`
+- [x] `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0，覆盖：原子发布成功、linked worktree 放行、主 worktree 拒绝、pre-commit 主 worktree 无 tag bump 拒绝 / 有 tag 放行
+- [x] `.githooks/pre-commit` 存在且可执行；`git -C /data/home/yale/work/archguard config --get core.hooksPath` 输出 `.githooks`
+- [x] `npm run type-check` exit 0
 
 ## DoD
 
