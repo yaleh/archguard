@@ -34,8 +34,8 @@ AC-002 的验收脚本（`goals/AC-002-每个已发布版本都留下可核对�
 1. **让 bump 与 tag 原子化，消灭窗口**：新增 `scripts/release.sh X.Y.Z`，在一次非交互调用内按序完成——写/占位 CHANGELOG 条目 → 同步六处版本载体 → `bash scripts/check-version-carriers.sh` 必须 exit 0 → `git commit -m "release: X.Y.Z"` → **紧接** `git tag vX.Y.Z`，中途不插入 build/test/其他工作（build/test 留给 push 后 `release.yml` 的 verify）。脚本结束自校验 `git rev-parse -q --verify refs/tags/vX.Y.Z`，失败即 exit 1 并回滚该提交。目标：未打 tag 窗口 < 一次轮询间隔（~40s），实践 < 1s。
 2. **把发布赶出主检出**：`scripts/release.sh` 在**主 worktree**（`git rev-parse --git-dir` == `git rev-parse --git-common-dir`）运行时拒绝执行，稳定错误码 `CAUSE=release-must-run-in-a-linked-worktree`，提示在 linked worktree 内做（与 runbook §1「独立 worktree」一致）。这样主检出工作树在整场发布里永远不改，验收树恒绿；主检出只在发布完成后 fast-forward 到带 tag 的 release 提交。
 3. **把守卫放到窗口里真的会跑的路径上**：新增 `.githooks/pre-commit`（并在共享 git config 设 `core.hooksPath=.githooks`）：仅当**本提交把 `package.json` version 抬到一个无同名 tag 的值、且发生在主 worktree** 时拒绝提交（linked worktree 或有 tag 时放行；无关的任务提交不受影响），把「在主检出里 bump 而不建 tag」在提交那一刻钉死，不依赖任何人记得跑 `npm test`。
-4. **把流程写进仓库（不再是记忆）**：新增 `docs/dev-guide/release-runbook.md`，写明「发布只在 linked worktree 内、用 `scripts/release.sh` 原子完成 bump+commit+tag；主检出只在发布后 ff 到带 tag 的 release 提交」。
-5. **回归测试**：新增 `tests/unit/scripts/release-script.test.ts`（或等价命名），覆盖 `scripts/release.sh` 与 pre-commit 钩子的临时仓库正反例。
+4. **把流程落进仓库（不再是记忆）**：`scripts/release.sh --help` 与脚本头注释写明「发布只在 linked worktree 内、用本脚本原子完成 bump+commit+tag；主检出只在发布后 ff 到带 tag 的 release 提交」；`package.json` 增加 `release` 别名指向该脚本。
+5. **回归测试（复用已有的不变量测试文件）**：扩展 `tests/unit/scripts/version-tag-check.test.ts`——复用其已有的临时仓库夹具，加入 release 窗口相关用例（原子发布后 tag 立即存在、主 worktree 拒绝、pre-commit 主 worktree 无 tag bump 拒绝 / 有 tag 或 linked worktree 放行）。
 
 <!-- dedup-ref -->
 机制去重：claim 本 AC 的任务共 2 个，均 `done`——`gap-version-tag-check-prepublish-guard`（把断言放在发布边界 `prepublishOnly`）、`gap-untagged-version-drift-guard`（提升为常驻不变量，但观察面仍是干净树）。本任务修的是「**验收观察面（主检出瞬时工作树）与守卫观察面（干净树）不一致**」这一机制缝，是上一次 done 修复未守住的回归，不是重复立案。相邻但机制不同：`gap-version-carriers-consistency-check`（AC-003 六载体互相相等）、`gap-release-workflow-advance-master-ff-only`（AC-001）、`gap-release-run-ledger-recorder`（AC-005），均不改本任务的断言面。粒度：`task-granularity-advice` 对本任务 Touches 返回 `peers: []` / `mentions: []`，无合并候选。
@@ -45,9 +45,8 @@ AC-002 的验收脚本（`goals/AC-002-每个已发布版本都留下可核对�
 - [ ] `bash scripts/check-version-has-tag.sh /data/home/yale/work/archguard` exit 0（基线：当前不变量已由 v0.1.39 满足）
 - [ ] `scripts/release.sh` 存在且 `bash scripts/release.sh --help` exit 0；在临时仓库真实跑 `bash scripts/release.sh 9.9.9` 后 `git rev-parse -q --verify refs/tags/v9.9.9` 命中，且 `git log --format=%s -1` == `release: 9.9.9`
 - [ ] 在主 worktree 内运行 `bash scripts/release.sh 9.9.9` exit≠0 且 stderr 含 `CAUSE=release-must-run-in-a-linked-worktree`
-- [ ] `npx vitest run tests/unit/scripts/release-script.test.ts` exit 0，覆盖：原子发布成功、linked worktree 放行、主 worktree 拒绝、pre-commit 主 worktree 无 tag bump 拒绝 / 有 tag 放行
+- [ ] `npx vitest run tests/unit/scripts/version-tag-check.test.ts` exit 0，覆盖：原子发布成功、linked worktree 放行、主 worktree 拒绝、pre-commit 主 worktree 无 tag bump 拒绝 / 有 tag 放行
 - [ ] `.githooks/pre-commit` 存在且可执行；`git -C /data/home/yale/work/archguard config --get core.hooksPath` 输出 `.githooks`
-- [ ] `test -f docs/dev-guide/release-runbook.md && grep -q 'linked worktree' docs/dev-guide/release-runbook.md` exit 0
 - [ ] `npm run type-check` exit 0
 
 ## DoD
@@ -63,6 +62,5 @@ AC-002 的验收脚本（`goals/AC-002-每个已发布版本都留下可核对�
 - scripts/release.sh
 - .githooks/pre-commit
 - package.json
-- tests/unit/scripts/release-script.test.ts
-- docs/dev-guide/release-runbook.md
+- tests/unit/scripts/version-tag-check.test.ts
 - tasks/gap-ac002-release-window-untagged-bump.md
