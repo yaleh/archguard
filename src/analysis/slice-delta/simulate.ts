@@ -57,6 +57,9 @@ const COMPUTED_INPUTS_USED = [
 const STRENGTH_NOTE =
   '目录级图不携带「符号→文件」定位，无法计算这条边的强度增量；只记录它确实指向一条已存在的边。';
 
+const SURVIVING_NOTE =
+  '这条目录边没有消失：声明留在原地的名字仍从该目录 import。目录级图不携带「符号→文件」定位，强度增量不可算，故 strength=null ——不按留在原地/搬走的名字个数折算。';
+
 /** Minimal internal-edge view the core works on (mirrors the prototype's `internalEdges`). */
 interface GraphEdge {
   from: string;
@@ -391,6 +394,7 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     const edgeKeyStr = edgeKeyOf(e.from, e.to);
     affectedDirs.add(e.from);
     affectedDirs.add(e.to);
+    const survives = staying.length > 0;
     accounting.push({
       edge: edgeKeyStr,
       names,
@@ -400,6 +404,7 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
       destinations: dests,
       barrel,
       certainty: barrel ? 'unknown' : 'deterministic',
+      ...(survives ? { survives: true, strength: null, note: SURVIVING_NOTE } : {}),
     });
     const certaintyExtra = barrel ? { certainty: 'unknown' as const } : {};
     const movedToDir = dests.join(', ');

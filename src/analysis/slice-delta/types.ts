@@ -182,6 +182,11 @@ export interface SliceDeltaAccountingEntry {
   /** True when the edge's target re-exports from a moved-from dir (unknown coupling). */
   barrel: boolean;
   certainty: 'deterministic' | 'unknown';
+  /** Present only when some of the edge's names stay: the original edge SURVIVES. */
+  survives?: true;
+  /** Always `null` for a surviving edge — the directory graph cannot compute the increment. */
+  strength?: null;
+  note?: string;
 }
 
 /** A graph-visible unresolved alias reference (never fed into the delta). */

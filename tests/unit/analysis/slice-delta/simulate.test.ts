@@ -395,6 +395,10 @@ describe('claudecodeui real fixture — symbol-level partial migration', () => {
     expect(entry?.staying.slice().sort()).toEqual([...STAYS_5].sort());
     expect(entry?.unaccounted).toEqual([]);
     expect(entry?.moving).toEqual([{ name: 'readDeviceName', to: 'shared' }]);
+    // DoD #3: the surviving edge's strength increment is not computed — always null.
+    expect(entry?.survives).toBe(true);
+    expect(entry?.strength).toBeNull();
+    expect(typeof entry?.note).toBe('string');
   });
 
   it('AC4: fail-closed is NOT weakened — the no-stays cut still names all 5 uncovered symbols', () => {
