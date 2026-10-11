@@ -56,10 +56,11 @@ keeps a report identical to the pre-extension output.
 `not-evaluated` is returned (never "best effort") when: the recomputed SCCs disagree with
 `moduleGraph.cycles` (self-check failure); an edge carrying a moved name has an `importedNames` name
 that is neither moved nor declared by `stays` (a partial migration was not declared); an edge
-entering a moved-from dir has no `importedNames`; an **unresolved alias ref**'s `from` dir
-participates in the cut (moved-from / destination / subject — the edge set itself is incomplete);
-`proposedCut.moves` is empty; a move has `from === to`; or `negativeControl.restoreEdges` is
-missing/empty.
+entering a moved-from dir has no `importedNames`; a `move.to` is neither an internal dir node nor
+declared in `newDirs` (the reason lists the legal internal dirs and both fixes); a `newDirs` entry
+names an existing node; an **unresolved alias ref**'s `from` dir participates in the cut
+(moved-from / destination / subject — the edge set itself is incomplete); `proposedCut.moves` is
+empty; a move has `from === to`; or `negativeControl.restoreEdges` is missing/empty.
 
 ## Library API
 
@@ -135,6 +136,10 @@ run `archguard_analyze` first.
       // NEW: these names were inspected and stay put in `dir` (partial migration)
       { "dir": "modules/settings/hooks", "symbols": ["useWebPush"], "note": "..." }
     ],
+    "newDirs": [
+      // NEW: destinations declared to be NEWLY CREATED (absent from the graph)
+      "gate/runtime"
+    ],
     "consumers": [
       // graph-invisible consumers (same-directory imports) that become cross-directory
       { "file": "cli/server.ts", "dir": "cli", "imports": ["runDriver"] }
@@ -160,6 +165,45 @@ run `archguard_analyze` first.
   declared staying is still `not-evaluated`. There is **no** path that defaults an undeclared name
   to "stays". This is the whole safety of the extension.
 - `from === to` on a move is an **error** (use `stays`).
+
+### Newly-created destination directories (`newDirs`)
+
+A move's `to` must be a directory the graph already contains — **unless** the caller
+explicitly declares it new:
+
+```jsonc
+"proposedCut": {
+  "moves": [
+    { "file": "gate/types.ts", "from": "gate", "to": "gate/runtime", "symbols": ["GateFn"] }
+  ],
+  "newDirs": ["gate/runtime"]
+}
+```
+
+A directory named in `newDirs` becomes a **new node of the simulated graph** even though
+it is absent from the input graph (the "extract a new module / domain object" intervention).
+Edges that carried a moved symbol into the moved-from dir are retargeted to the new node, so
+it appears in `accounting[].destinations`, in `computedDelta.addedEdges`, and — if it
+participates in a cycle — in `sccAfter`. (On a directory graph a new node has only incoming
+edges from this cut, so it is normally a sink and not in any cycle.)
+
+**The two invariants that make this safe:**
+
+1. **Declaration, not a fallback.** The ONLY path that treats an absent directory as new is an
+   explicit entry in `newDirs`. A `move.to` that is neither an internal node nor declared new is
+   still `not-evaluated` (exit 2), and the reason names both the legal internal dirs and the two
+   fixes — "retarget to an existing node" or "declare it new". Declaring an *existing* node as new
+   is itself rejected.
+2. **No fabricated readings.** A new node has **no readings of its own**: `computedDelta.syntheticNodes`
+   reports each one with `fileCount: null`, `stats: null` and a note. It is never `0`, never a
+   guessed number — the tool has not inspected that directory. Its `inboundEdges` are exactly the
+   edges this cut creates; its outbound edges are not listed because the directory graph cannot
+   see the moved files' own imports (that is "not inspected", not "zero").
+
+Everything else still applies unchanged: coverage (every `importedNames` name must be moved or
+declared by `stays`), the destination-conflict rule, `unknowns`, and the mandatory negative control
+(an empty `restoreEdges` is still `not-evaluated`). Declaring a new dir does **not** weaken
+fail-closed.
 
 ### Destination & coverage rule
 

@@ -67,6 +67,18 @@ export interface RefactorSliceDeclaration {
     moves: SliceMove[];
     /** Symbols explicitly declared to stay put. The vocabulary for partial migration. */
     stays?: SliceStay[];
+    /**
+     * Destinations explicitly declared to be NEWLY CREATED directories (additive).
+     *
+     * A directory named here becomes a new node of the simulated graph even though
+     * it is ABSENT from the input graph. This is the ONLY way a `move.to` may name
+     * a directory the graph does not contain: an UNDECLARED non-internal `to` stays
+     * `not-evaluated`. A declared-new dir has NO readings of its own — its
+     * `fileCount` / `stats` are unknown (emitted as `null`, never `0`), and its
+     * edges are exactly the ones THIS cut creates by retargeting (no path invents
+     * an edge or a count for it).
+     */
+    newDirs?: string[];
     consumers?: SliceConsumer[];
     note?: string;
   };
@@ -196,6 +208,25 @@ export interface SliceDeltaUnresolvedAliasRef {
 }
 
 /**
+ * A node materialized SOLELY from a `proposedCut.newDirs` declaration (NEW).
+ *
+ * Its `fileCount` / `stats` are UNKNOWN — emitted as `null`, never `0` and never a
+ * guessed number — because the directory is absent from the analysed graph: the
+ * tool has not inspected it and must not invent a reading. Its `inboundEdges` are
+ * exactly the edges this cut creates by retargeting into it; it has no outgoing
+ * edges on a directory graph (the moved files' own imports are not visible), which
+ * the `note` says explicitly rather than reporting a fabricated zero.
+ */
+export interface SliceDeltaSyntheticNode {
+  id: string;
+  fileCount: null;
+  stats: null;
+  /** Edges this cut creates INTO the new node (`"<from> -> <id>"`), sorted. */
+  inboundEdges: string[];
+  note: string;
+}
+
+/**
  * The explicit "here is what the graph cannot see" section (NEW). None of it
  * feeds `computedDelta`; it exists so uncertainty is declared rather than
  * silently folded into a deterministic-looking edge count.
@@ -228,6 +259,13 @@ export interface SliceDeltaComputed {
   removedEdges: SliceDeltaRemovedEdge[];
   addedEdges: SliceDeltaAddedEdge[];
   strengthenedEdges: SliceDeltaStrengthenedEdge[];
+  /**
+   * Present only when the cut materializes at least one declared-new directory
+   * (`proposedCut.newDirs`). Each entry is the new node's report: counts unknown
+   * (`null`), inbound edges only. Omitted for a cut that declares no new dir, so a
+   * plain report stays byte-identical to the pre-extension output.
+   */
+  syntheticNodes?: SliceDeltaSyntheticNode[];
   sccBefore: string[];
   sccAfter: string[];
   sccLeft: string[];
@@ -281,6 +319,8 @@ export interface SliceDeltaEvaluatedReport {
     moves: SliceMove[];
     /** Echoed only when the declaration carried a `stays` clause (additive-only). */
     stays?: SliceStay[];
+    /** Echoed only when the declaration carried a `newDirs` list (additive-only). */
+    newDirs?: string[];
     declaredConsumerCount: number;
     assumptions: string[];
   };

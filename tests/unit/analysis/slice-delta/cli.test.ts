@@ -267,6 +267,67 @@ describe('archguard slice-delta — claudecodeui real fixture (partial migration
   });
 });
 
+describe('archguard slice-delta — explicit new destination directory', () => {
+  const QUAY_ARCH = path.join(FIX, 'quay-gate-cycle.arch.json');
+  const GATE_STAYS = [
+    'listGates',
+    'appendGateEvent',
+    'queryGateEvents',
+    'resolveAcceptanceTimeout',
+    'timeoutKnobHint',
+    'runGate',
+    'resolveGateLogPath',
+    'runGateLogQuery',
+    'runComplete',
+    'runAdjudicate',
+    'runPromote',
+    'runRetreat',
+    'runCompleteOutOfBand',
+  ];
+  const case11 = (newDirs?: string[]) => ({
+    subject: 'gate/factories',
+    concern: 'ownership-active case #11',
+    proposedCut: {
+      moves: [
+        { file: 'gate/types.ts', from: 'gate', to: 'gate/runtime', symbols: ['GateFn'] },
+        {
+          file: 'gate/acceptance-runner.ts',
+          from: 'gate',
+          to: 'gate/runtime',
+          symbols: ['runAcceptance', 'verdictFromAcceptance'],
+        },
+      ],
+      stays: [{ dir: 'gate', symbols: GATE_STAYS }],
+      ...(newDirs ? { newDirs } : {}),
+    },
+    negativeControl: {
+      restoreEdges: [
+        { from: 'gate/config', to: 'gate' },
+        { from: 'gate/factories', to: 'gate' },
+      ],
+    },
+  });
+
+  it('AC4: the real case-#11 cut is exit 2 without the declaration and evaluated with it', async () => {
+    const noDecl = writeSlice('q-nodirs.json', case11());
+    const before = await runSliceDelta({ slice: noDecl, arch: QUAY_ARCH });
+    expect(before.exitCode).toBe(2);
+    expect(before.report.status).toBe('not-evaluated');
+    if (before.report.status === 'not-evaluated') {
+      expect(before.report.reason).toContain('gate/runtime');
+      expect(before.report.reason).toContain('newDirs');
+    }
+
+    const decl = writeSlice('q-dirs.json', case11(['gate/runtime']));
+    const after = await runSliceDelta({ slice: decl, arch: QUAY_ARCH });
+    expect(after.report.status).toBe('evaluated');
+    if (after.report.status !== 'evaluated') return;
+    expect(after.report.computedDelta.syntheticNodes?.map((n) => n.id)).toEqual(['gate/runtime']);
+    expect(after.report.computedDelta.syntheticNodes?.[0].fileCount).toBeNull();
+    expect(after.report.computedDelta.syntheticNodes?.[0].stats).toBeNull();
+  });
+});
+
 describe('buildSliceDeltaProvenance — git consistency three-state', () => {
   it('not-checked when no commit is declared', () => {
     const p = buildSliceDeltaProvenance({

@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerSliceDeltaTool } from '@/cli/mcp/tools/slice-delta-tool.js';
@@ -154,5 +155,81 @@ describe('archguard_simulate_refactor_slice — claudecodeui real fixture', () =
     expect(JSON.stringify(mcpReport.guards)).toBe(JSON.stringify(cliReport.guards));
     expect(JSON.stringify(mcpReport.accounting)).toBe(JSON.stringify(cliReport.accounting));
     expect(JSON.stringify(mcpReport.unknowns)).toBe(JSON.stringify(cliReport.unknowns));
+  });
+});
+
+// ── explicit new destination directory (newDirs): CLI/MCP parity (AC8) ─────────
+
+const QUAY_ARCH = path.join(FIX, 'quay-gate-cycle.arch.json');
+const quayGraph = readJson(QUAY_ARCH).extensions.tsAnalysis.moduleGraph;
+
+describe('archguard_simulate_refactor_slice — newDirs CLI/MCP parity', () => {
+  beforeEach(() => {
+    loadEngineMock.mockReset();
+    mockGraph(quayGraph);
+  });
+
+  it('AC8: the same newDirs input agrees byte-for-byte between the CLI and the MCP tool', async () => {
+    const slice = {
+      subject: 'gate/factories',
+      concern: 'ownership-active case #11',
+      proposedCut: {
+        moves: [
+          { file: 'gate/types.ts', from: 'gate', to: 'gate/runtime', symbols: ['GateFn'] },
+          {
+            file: 'gate/acceptance-runner.ts',
+            from: 'gate',
+            to: 'gate/runtime',
+            symbols: ['runAcceptance', 'verdictFromAcceptance'],
+          },
+        ],
+        newDirs: ['gate/runtime'],
+        stays: [
+          {
+            dir: 'gate',
+            symbols: [
+              'listGates',
+              'appendGateEvent',
+              'queryGateEvents',
+              'resolveAcceptanceTimeout',
+              'timeoutKnobHint',
+              'runGate',
+              'resolveGateLogPath',
+              'runGateLogQuery',
+              'runComplete',
+              'runAdjudicate',
+              'runPromote',
+              'runRetreat',
+              'runCompleteOutOfBand',
+            ],
+          },
+        ],
+      },
+      negativeControl: {
+        restoreEdges: [
+          { from: 'gate/config', to: 'gate' },
+          { from: 'gate/factories', to: 'gate' },
+        ],
+      },
+    };
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_simulate_refactor_slice');
+    const mcpResult = await handler({ projectRoot: '/workspace', slice });
+    const mcpReport = JSON.parse(String(mcpResult.content[0].text));
+    expect(mcpReport.status).toBe('evaluated');
+    expect(mcpReport.computedDelta.syntheticNodes?.[0].fileCount).toBeNull();
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slice-mcp-newdirs-'));
+    const slicePath = path.join(dir, 'slice.json');
+    fs.writeFileSync(slicePath, JSON.stringify(slice));
+    const cli = await runSliceDelta({ slice: slicePath, arch: QUAY_ARCH });
+    const cliReport = cli.report;
+
+    expect(JSON.stringify(mcpReport.computedDelta)).toBe(JSON.stringify(cliReport.computedDelta));
+    expect(JSON.stringify(mcpReport.negativeControl)).toBe(
+      JSON.stringify(cliReport.negativeControl)
+    );
+    expect(JSON.stringify(mcpReport.guards)).toBe(JSON.stringify(cliReport.guards));
   });
 });

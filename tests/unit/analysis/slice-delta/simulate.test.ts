@@ -596,3 +596,292 @@ function zeroStats(): { classes: number; interfaces: number; functions: number; 
 function edge(from: string, to: string, importedNames: string[]) {
   return { from, to, strength: 1, typeOnlyStrength: 0, valueStrength: 1, importedNames };
 }
+
+// ── explicit new destination directory (proposedCut.newDirs) ──────────────────
+
+function nodesOf(ids: string[]) {
+  return ids.map((id) => ({
+    id,
+    name: id,
+    type: 'internal' as const,
+    fileCount: 1,
+    stats: zeroStats(),
+  }));
+}
+
+/** A tiny graph where moving ONE symbol into a graph-absent dir is fully covered:
+ *  a ⇄ b; moving `backName` (exported by `a`, imported by `b`) into the new dir `newmod`. */
+const newDirGraph: TsModuleGraph = {
+  nodes: nodesOf(['a', 'b']),
+  edges: [edge('a', 'b', ['movedName']), edge('b', 'a', ['backName'])],
+  cycles: [{ modules: ['a', 'b'], severity: 'error' }],
+};
+const newDirSlice = (over: Record<string, unknown> = {}): RefactorSliceDeclaration =>
+  ({
+    subject: 'a',
+    proposedCut: {
+      moves: [{ file: 'x.ts', from: 'a', to: 'newmod', symbols: ['backName'] }],
+      newDirs: ['newmod'],
+    },
+    negativeControl: { restoreEdges: [{ from: 'b', to: 'a' }] },
+    ...over,
+  }) as RefactorSliceDeclaration;
+
+const quayArch = readJson(path.join(FIX, 'quay-gate-cycle.arch.json'));
+const quayGraph = quayArch.extensions.tsAnalysis.moduleGraph as TsModuleGraph;
+
+/** Names `"" -> gate` imports that the case-#11 cut does NOT move (the gate/index re-exports). */
+const GATE_STAYS = [
+  'listGates',
+  'appendGateEvent',
+  'queryGateEvents',
+  'resolveAcceptanceTimeout',
+  'timeoutKnobHint',
+  'runGate',
+  'resolveGateLogPath',
+  'runGateLogQuery',
+  'runComplete',
+  'runAdjudicate',
+  'runPromote',
+  'runRetreat',
+  'runCompleteOutOfBand',
+];
+
+/**
+ * Case #11 shape (carrier `quay/.quay/ownership-shadow-proposals.jsonl`, graph sha256
+ * a3946f08…): extract gate/types.ts (`GateFn`) + gate/acceptance-runner.ts
+ * (`runAcceptance`, `verdictFromAcceptance`) into a NEW leaf dir `gate/runtime`, which
+ * is ABSENT from the graph and from disk. `withNewDirs` toggles ONLY the declaration.
+ */
+const realCaseSlice = (withNewDirs: boolean): RefactorSliceDeclaration =>
+  ({
+    subject: 'gate/factories',
+    concern:
+      'ownership-active case #11: move the two gate specifiers into a new leaf dir gate/runtime',
+    proposedCut: {
+      moves: [
+        { file: 'gate/types.ts', from: 'gate', to: 'gate/runtime', symbols: ['GateFn'] },
+        {
+          file: 'gate/acceptance-runner.ts',
+          from: 'gate',
+          to: 'gate/runtime',
+          symbols: ['runAcceptance', 'verdictFromAcceptance'],
+        },
+      ],
+      ...(withNewDirs ? { newDirs: ['gate/runtime'] } : {}),
+      stays: [{ dir: 'gate', symbols: GATE_STAYS }],
+    },
+    negativeControl: {
+      restoreEdges: [
+        { from: 'gate/config', to: 'gate' },
+        { from: 'gate/factories', to: 'gate' },
+      ],
+    },
+  }) as RefactorSliceDeclaration;
+
+describe('simulateRefactorSlice — explicit new destination directory (newDirs)', () => {
+  it('AC1: a symbol moved to a graph-absent dir, declared new → evaluated; node appears in accounting.destinations + addedEdges', () => {
+    const r = simulateRefactorSlice({ graph: newDirGraph, slice: newDirSlice() });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    const entry = (r.accounting ?? []).find((a) => a.edge === 'b -> a');
+    expect(entry?.destinations).toEqual(['newmod']);
+    expect(r.computedDelta.addedEdges).toEqual([
+      { from: 'b', to: 'newmod', source: 'retarget-from-removed-edge' },
+    ]);
+    expect(r.computedDelta.syntheticNodes?.map((n) => n.id)).toEqual(['newmod']);
+    expect(r.computedDelta.syntheticNodes?.[0].inboundEdges).toEqual(['b -> newmod']);
+    expect(r.guards.clean).toBe(true);
+  });
+
+  it('AC2: the new node carries NO guessed count — fileCount/stats are null and no number appears anywhere under it', () => {
+    const r = simulateRefactorSlice({ graph: newDirGraph, slice: newDirSlice() });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const node = r.computedDelta.syntheticNodes?.[0];
+    expect(node).toBeDefined();
+    expect(node?.fileCount).toBeNull();
+    expect(node?.stats).toBeNull();
+    // Recursive scan: no numeric value may exist anywhere under the synthetic node.
+    const numbers: Array<[string, unknown]> = [];
+    const walk = (o: unknown, p: string): void => {
+      if (o === null) return;
+      if (typeof o === 'number') {
+        numbers.push([p, o]);
+        return;
+      }
+      if (Array.isArray(o)) {
+        o.forEach((v, i) => walk(v, `${p}[${i}]`));
+        return;
+      }
+      if (typeof o === 'object') {
+        for (const [k, v] of Object.entries(o as Record<string, unknown>)) walk(v, `${p}.${k}`);
+      }
+    };
+    walk(node, 'syntheticNode');
+    expect(numbers).toEqual([]);
+  });
+
+  it('AC3: the SAME cut without the declaration is still not-evaluated, and the reason is actionable (legal dirs + the two fixes)', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({
+        proposedCut: { moves: [{ file: 'x.ts', from: 'a', to: 'newmod', symbols: ['backName'] }] },
+      }),
+    });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('"newmod"'); // the offending destination
+    expect(r.reason).toContain('"a"'); // (a) at least one legal internal dir is named
+    expect(r.reason).toContain('newDirs'); // (b) the fix action…
+    expect(r.reason).toContain('声明'); // …"declare it new"
+  });
+
+  it('AC4 (real case #11): declaring gate/runtime new flips the SAME cut from not-evaluated → evaluated', () => {
+    const before = simulateRefactorSlice({ graph: quayGraph, slice: realCaseSlice(false) });
+    expect(before.status).toBe('not-evaluated');
+    if (before.status === 'not-evaluated') expect(before.reason).toContain('gate/runtime');
+
+    const after = simulateRefactorSlice({ graph: quayGraph, slice: realCaseSlice(true) });
+    expect(after.status).toBe('evaluated');
+    if (after.status !== 'evaluated') return;
+    expect(after.computedDelta.syntheticNodes?.map((n) => n.id)).toEqual(['gate/runtime']);
+    expect(after.computedDelta.syntheticNodes?.[0].fileCount).toBeNull();
+    // the new node lands in accounting.destinations (it is a retarget destination)
+    const destinations = (after.accounting ?? []).flatMap((a) => a.destinations);
+    expect(destinations).toContain('gate/runtime');
+    // a new node has only incoming edges from this cut ⇒ it is a sink, never in a cycle
+    expect(after.computedDelta.sccAfter).not.toContain('gate/runtime');
+  });
+
+  it('AC6: unknowns (unresolved refs / dynamic imports / barrel) is NOT masked by a new directory', () => {
+    // (a) real graph: the dynamic-import count survives the new-dir cut
+    const real = simulateRefactorSlice({ graph: quayGraph, slice: realCaseSlice(true) });
+    if (real.status !== 'evaluated') throw new Error('expected evaluated');
+    expect(real.unknowns?.unevaluatedDynamicImports).toBe(1);
+
+    // (b) a barrel/re-export edge carrying a moved name keeps certainty:'unknown',
+    //     and a non-participating unresolved ref still lands in `unknowns`.
+    const barrelGraph: TsModuleGraph = {
+      nodes: nodesOf(['orig', 'barrel', 'consumer']),
+      edges: [
+        edge('barrel', 'orig', ['movedSym']),
+        edge('consumer', 'barrel', ['movedSym']),
+        edge('orig', 'consumer', ['link']),
+      ],
+      cycles: [{ modules: ['barrel', 'consumer', 'orig'], severity: 'error' }],
+      unresolved: [{ from: 'consumer', specifier: '@/consumer/missing' }],
+      unevaluatedDynamicImports: 2,
+    };
+    const r = simulateRefactorSlice({
+      graph: barrelGraph,
+      slice: {
+        subject: 'orig',
+        proposedCut: {
+          moves: [{ from: 'orig', to: 'newmod', symbols: ['movedSym'] }],
+          newDirs: ['newmod'],
+        },
+        negativeControl: { restoreEdges: [{ from: 'barrel', to: 'orig' }] },
+      },
+    });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    const barrel = (r.accounting ?? []).find((a) => a.edge === 'consumer -> barrel');
+    expect(barrel?.barrel).toBe(true);
+    expect(barrel?.certainty).toBe('unknown');
+    expect(r.unknowns?.barrelEdges).toContain('consumer -> barrel');
+    expect(r.unknowns?.unresolvedAliasRefs).toEqual([
+      { from: 'consumer', specifier: '@/consumer/missing' },
+    ]);
+    expect(r.unknowns?.unevaluatedDynamicImports).toBe(2);
+  });
+
+  it('AC7: a new-dir cut with an empty negativeControl is still not-evaluated (not relaxed by "new")', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({ negativeControl: { restoreEdges: [] } }),
+    });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toMatch(/negative control/);
+  });
+
+  it('AC9: a symbol moved to a new dir AND declared staying in an existing dir is a destination conflict', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({
+        proposedCut: {
+          moves: [{ file: 'x.ts', from: 'a', to: 'newmod', symbols: ['backName'] }],
+          newDirs: ['newmod'],
+          stays: [{ dir: 'a', symbols: ['backName'] }],
+        },
+      }),
+    });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('目的地冲突');
+  });
+
+  it('DoD#2: a missing `to` NOT declared new never becomes a node (declaration ≠ guess)', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({
+        proposedCut: { moves: [{ from: 'a', to: 'nowhere', symbols: ['backName'] }] },
+      }),
+    });
+    expect(r.status).toBe('not-evaluated');
+    expect((r as { computedDelta?: unknown }).computedDelta).toBeUndefined();
+  });
+
+  it('declaring an EXISTING graph node as new is rejected (not silently ignored)', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({
+        proposedCut: {
+          moves: [{ from: 'a', to: 'b', symbols: ['backName'] }],
+          newDirs: ['b'],
+        },
+      }),
+    });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toContain('已是本图的目录节点');
+  });
+
+  it('a declared-but-unused newDirs entry materializes NO node', () => {
+    const r = simulateRefactorSlice({
+      graph: newDirGraph,
+      slice: newDirSlice({
+        proposedCut: {
+          moves: [{ from: 'a', to: 'b', symbols: ['backName'] }],
+          newDirs: ['unused'],
+        },
+      }),
+    });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.computedDelta.syntheticNodes).toBeUndefined();
+  });
+});
+
+// ── additive-only: legacy fixtures byte-identical (AC5) ───────────────────────
+
+const legacyGolden = readJson(path.join(FIX, 'legacy-reports.golden.json'));
+const pmFixture = readJson(path.join(FIX, 'partial-migration-cases.json'));
+const legacyCases: Record<string, () => unknown> = {
+  goal: () => simulateRefactorSlice({ graph: goalGraph, slice: goalSlice, observed: goalObserved }),
+  goalNoObs: () => simulateRefactorSlice({ graph: goalGraph, slice: goalSlice }),
+  syn: () => simulateRefactorSlice({ graph: synthGraph, slice: synSlice() }),
+  cc: () => simulateRefactorSlice({ graph: ccGraph, slice: ccSlice }),
+};
+for (const key of Object.keys(pmFixture.cases)) {
+  legacyCases[`pm:${key}`] = () =>
+    simulateRefactorSlice({ graph: pmFixture.graph, slice: pmFixture.cases[key].slice });
+}
+
+describe('additive-only: no newDirs ⇒ every legacy fixture is byte-identical (AC5)', () => {
+  for (const key of Object.keys(legacyCases)) {
+    it(`${key}: report is byte-identical to the pre-change build`, () => {
+      expect(JSON.stringify(legacyCases[key]())).toBe(JSON.stringify(legacyGolden[key]));
+    });
+  }
+});

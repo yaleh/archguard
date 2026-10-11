@@ -38,6 +38,7 @@ import type {
   SliceDeltaRemovedEdge,
   SliceDeltaReport,
   SliceDeltaStrengthenedEdge,
+  SliceDeltaSyntheticNode,
   SliceDeltaUnknowns,
   SliceDeltaViolation,
   SliceDeltaWhyLeft,
@@ -59,6 +60,15 @@ const STRENGTH_NOTE =
 
 const SURVIVING_NOTE =
   '这条目录边没有消失：声明留在原地的名字仍从该目录 import。目录级图不携带「符号→文件」定位，强度增量不可算，故 strength=null ——不按留在原地/搬走的名字个数折算。';
+
+/**
+ * Fixed note on every synthetic (declared-new) node. It states the three
+ * honesty invariants mechanically: the counts are unknown (null, not 0), the
+ * content is only what this cut moves in, and the outbound edges are "not
+ * inspected" rather than "zero".
+ */
+const SYNTHETIC_NODE_NOTE =
+  '这个节点由 proposedCut.newDirs 显式声明为新建目录：除本次切法搬入的符号外没有内容。fileCount / stats 一律 unknown（null）——未查，不是 0，也没有任何被猜出来的读数。它的入边只由本次切法产生（retarget 自被移除的边，见 inboundEdges）；出边在目录级图上不可见（搬入文件自身的 import 不上图），因此不在此列出——是「未查」，不是「没有出边」。';
 
 /** Minimal internal-edge view the core works on (mirrors the prototype's `internalEdges`). */
 interface GraphEdge {
@@ -233,15 +243,52 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   if (!Array.isArray(moves) || moves.length === 0) {
     return notEvaluated('slice.proposedCut.moves 为空：没有切法就没有 delta 可算');
   }
+
+  // ── proposedCut.newDirs (NEW): "this destination dir is NEWLY CREATED" ──────
+  // This is a DECLARATION, not a fallback. A directory named here is allowed as a
+  // move's `to` even though it is absent from the graph. Nothing else treats an
+  // absent dir as new: an undeclared non-internal `to` still fails closed below.
+  const rawNewDirs = slice?.proposedCut?.newDirs;
+  if (rawNewDirs !== undefined && !Array.isArray(rawNewDirs)) {
+    return notEvaluated('slice.proposedCut.newDirs 不是数组');
+  }
+  const declaredNewDirs: string[] = Array.isArray(rawNewDirs) ? rawNewDirs : [];
+  const allNodeIds = new Set(graph.nodes.map((n) => n.id));
+  const newDirSet = new Set<string>();
+  for (const d of declaredNewDirs) {
+    if (typeof d !== 'string' || d.length === 0) {
+      return notEvaluated(
+        `proposedCut.newDirs 里有非字符串/空项（${JSON.stringify(d)}）：新目录必须是非空目录 id`
+      );
+    }
+    if (allNodeIds.has(d)) {
+      // Declaring an existing graph node "new" is a contradiction — and the one
+      // thing that could smuggle a fabricated node in. Never silently ignore it.
+      return notEvaluated(
+        `proposedCut.newDirs 声明 ${JSON.stringify(d)} 为新目录，但它已是本图的目录节点：不能把已有目录声明为新建（「声明」与「猜」必须分开）`
+      );
+    }
+    newDirSet.add(d);
+  }
+
   for (const m of moves) {
     if (!internalSet.has(m.from)) {
       return notEvaluated(
         `move ${m.file ?? '?'} 的 from=${JSON.stringify(m.from)} 不是本图的 internal 目录节点`
       );
     }
-    if (!internalSet.has(m.to)) {
+    if (!internalSet.has(m.to) && !newDirSet.has(m.to)) {
+      // Fail-closed, but ACTIONABLE: name the legal internal targets AND the two
+      // possible fixes (change the target, or declare it new). This is the split
+      // between "guessed" and "declared".
+      const validDirs = [...internalDirs]
+        .sort()
+        .map((x) => JSON.stringify(x))
+        .join(', ');
       return notEvaluated(
-        `move ${m.file ?? '?'} 的 to=${JSON.stringify(m.to)} 不是本图的 internal 目录节点`
+        `move ${m.file ?? '?'} 的 to=${JSON.stringify(m.to)} 既不是本图的 internal 目录节点，也没有在 proposedCut.newDirs 里被显式声明为新目录。` +
+          `合法目的地（本图的 internal 目录节点）：[${validDirs}]。` +
+          `修复：要么把 to 改成本图已有的 internal 目录节点，要么在 proposedCut.newDirs 里显式声明 ${JSON.stringify(m.to)} 是一个新建目录（除本次搬入的符号外为空）。`
       );
     }
     if (!Array.isArray(m.symbols) || m.symbols.length === 0) {
@@ -260,6 +307,12 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
 
   const movesFrom = new Set(moves.map((m) => m.from));
   const movesTo = new Set(moves.map((m) => m.to));
+
+  // New nodes actually materialized: declared-new dirs that a move targets. A
+  // declared-but-unused newDir adds NOTHING to the graph (no fabricated node).
+  const materializedNewDirs = [...newDirSet].filter((d) => movesTo.has(d)).sort();
+  // The simulated graph's node set: real internal dirs + materialized new nodes.
+  const afterNodes = [...internalDirs, ...materializedNewDirs];
 
   const symbolsOfDir = new Map<string, Set<string>>();
   for (const m of moves) {
@@ -341,6 +394,13 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     ...(stays.length > 0
       ? [
           'proposedCut.stays 是「这些名字我核对过、留在原目录」的显式声明，用于表达部分迁移；没有任何一条路径把「未声明的名字」默认成「留下」——未声明的名字仍然 not-evaluated。凡在 importedNames 里出现的已搬走名字，其所在目录边都会被对账（包括进入某个 re-export/barrel 目录、再转发该名字的边），因此 barrel 边上共同旅行的符号会被一并点名，而不是被静默略过。re-export/barrel 边在 accounting.certainty / unknowns.barrelEdges 里显式标为 unknown。',
+        ]
+      : []),
+    // Appended only when a directory is EXPLICITLY declared new, so a cut without
+    // `newDirs` keeps its `proposedCut` byte-identical.
+    ...(materializedNewDirs.length > 0
+      ? [
+          `proposedCut.newDirs 显式声明的目录（[${materializedNewDirs.join(', ')}]）在模拟图里成为新节点：除本次切法搬入的符号外没有内容。它的入边只由本次切法产生（retarget 自被移除、且名字落在该新目录的边）；出边在目录级图上不可见，不作任何假设。该节点的 fileCount / stats 一律 unknown（null）——未查，不编造读数。缺一条显式声明时，指向本图不存在目录的 move 仍然 not-evaluated。`,
         ]
       : []),
   ];
@@ -558,14 +618,16 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     afterEdges.push({ from: a.from, to: a.to });
   }
 
-  const sccsAfter = sccsOf(internalDirs, afterEdges);
+  // SCC over the simulated graph's node set (real dirs + declared-new nodes).
+  const sccsAfter = sccsOf(afterNodes, afterEdges);
   const afterScc = (sccsAfter.find((c) => c.includes(subject)) ?? [subject]).slice().sort();
   const sccLeft = beforeScc.filter((m) => !afterScc.includes(m));
 
   // ── accounting / unknowns (NEW diagnostics; NEVER feed computedDelta) ─────
   // Emitted only when this declaration exercises a partial-migration feature, so a
   // plain fully-covered cut keeps a report identical to the pre-extension output.
-  const emitPartialDiagnostics = stays.length > 0 || sawMultiDestination || sawUnknown;
+  const emitPartialDiagnostics =
+    stays.length > 0 || sawMultiDestination || sawUnknown || materializedNewDirs.length > 0;
   const relatedDirs = new Set<string>([
     ...beforeScc,
     ...afterScc,
@@ -622,7 +684,7 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     }
   }
   const restoredScc = (
-    sccsOf(internalDirs, restoredEdges).find((c) => c.includes(subject)) ?? [subject]
+    sccsOf(afterNodes, restoredEdges).find((c) => c.includes(subject)) ?? [subject]
   )
     .slice()
     .sort();
@@ -686,11 +748,26 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
 
   const declaredPrediction = slice?.declaredPrediction ?? null;
 
+  // ── syntheticNodes (NEW): the declared-new nodes' report (counts unknown) ──
+  // Emitted only when a declaration actually materialized a new node, so a plain
+  // cut's computedDelta keeps its exact key set (byte-identical output).
+  const syntheticNodes: SliceDeltaSyntheticNode[] = materializedNewDirs.map((id) => ({
+    id,
+    fileCount: null,
+    stats: null,
+    inboundEdges: afterEdges
+      .filter((e) => e.to === id)
+      .map((e) => edgeKeyOf(e.from, e.to))
+      .sort(),
+    note: SYNTHETIC_NODE_NOTE,
+  }));
+
   const computedDelta: SliceDeltaComputed = {
     inputsUsed: [...COMPUTED_INPUTS_USED],
     removedEdges,
     addedEdges,
     strengthenedEdges,
+    ...(syntheticNodes.length > 0 ? { syntheticNodes } : {}),
     sccBefore: beforeScc,
     sccAfter: afterScc,
     sccLeft,
@@ -717,6 +794,7 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     proposedCut: {
       moves,
       ...(stays.length > 0 ? { stays } : {}),
+      ...(declaredNewDirs.length > 0 ? { newDirs: declaredNewDirs } : {}),
       declaredConsumerCount: (slice?.proposedCut?.consumers ?? []).length,
       assumptions,
     },

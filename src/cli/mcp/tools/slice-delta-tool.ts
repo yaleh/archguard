@@ -47,6 +47,13 @@ export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): 
       '                          `dir`". This is how a PARTIAL migration is expressed: when one directory\n' +
       "                          edge's importedNames mixes moving and staying symbols, declare the\n" +
       '                          stayers here. An UNDECLARED name is NEVER defaulted to "stays".\n' +
+      '  proposedCut.newDirs[] — string[]: directories EXPLICITLY DECLARED to be NEWLY CREATED. A dir\n' +
+      '                          named here is allowed as a move.to even though it is ABSENT from the\n' +
+      '                          graph; it becomes a new node of the simulated graph (its inbound edges\n' +
+      '                          are only the ones THIS cut creates). This is the ONLY way a move.to may\n' +
+      '                          name a missing dir — an UNDECLARED non-internal `to` stays not-evaluated.\n' +
+      '                          A new node has NO readings of its own: fileCount / stats are null (never\n' +
+      '                          0, never guessed), reported under computedDelta.syntheticNodes.\n' +
       '  proposedCut.consumers[] — { file?, dir, imports[] }: graph-invisible (same-dir) consumers.\n' +
       '  mustNotChange{forbiddenNewEdges, untouchedDirs} / negativeControl.restoreEdges[] / declaredPrediction.\n\n' +
       'DESTINATION / COVERAGE RULE: every edge whose importedNames contains a moved name is reconciled.\n' +
@@ -54,7 +61,9 @@ export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): 
       'DECLARED destination. Multiple destinations on ONE edge are legal (an added edge per destination).\n' +
       'A name in neither is fail-closed (not-evaluated, naming the edge and the uncovered names).\n\n' +
       'FAIL-CLOSED (not-evaluated, exit 2): recomputed SCC ≠ moduleGraph.cycles; an edge entering a\n' +
-      'moved-from dir with no importedNames; a name covered by no move/stays; an unresolved alias ref\n' +
+      'moved-from dir with no importedNames; a name covered by no move/stays; a move.to that is\n' +
+      'NEITHER an internal node NOR declared in proposedCut.newDirs (the reason then names the legal\n' +
+      'internal dirs and the two fixes — retarget, or declare it new); an unresolved alias ref\n' +
       'whose `from` dir participates (moved-from / destination / subject); missing negativeControl.\n\n' +
       'READ THE DIAGNOSTICS: `accounting[]` shows per-edge {names, moving:[{name,to}], staying,\n' +
       'unaccounted, destinations, barrel, certainty}. `unknowns` lists cut-related unresolved alias refs,\n' +
@@ -76,14 +85,17 @@ export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): 
         .describe(
           'The explicit slice declaration object. subject: dir node id OR file path (normalized). ' +
             'proposedCut: { moves:[{file?,from,to,symbols[],note?}], stays?:[{dir,symbols[],note?}], ' +
-            'consumers?:[{file?,dir,imports[]}], note? }. `stays` declares symbols that remain in `dir` ' +
-            '(the partial-migration vocabulary); an undeclared name is never defaulted to staying. ' +
+            'newDirs?:string[], consumers?:[{file?,dir,imports[]}], note? }. `stays` declares symbols that ' +
+            'remain in `dir` (the partial-migration vocabulary); an undeclared name is never defaulted to ' +
+            'staying. `newDirs` declares destinations that are NEWLY CREATED (absent from the graph): a ' +
+            'move.to may name one of these, and it becomes a new node with unknown (null) counts; an ' +
+            'UNDECLARED missing `to` is still fail-closed. ' +
             '`from===to` moves are rejected (use stays); a symbol in two moves / moved+stayed is a ' +
             'destination conflict. mustNotChange{forbiddenNewEdges,untouchedDirs} / ' +
             'negativeControl{description?,restoreEdges[]} / declaredPrediction. ' +
             'The report adds `accounting[]` (per-edge moving/staying/unaccounted/destinations/barrel) ' +
             'and `unknowns` (cut-related unresolved refs, unevaluatedDynamicImports, barrel edges) — ' +
-            'neither feeds computedDelta.'
+            'neither feeds computedDelta. A declared-new node is reported under computedDelta.syntheticNodes.'
         ),
       observed: z
         .record(z.string(), z.unknown())
