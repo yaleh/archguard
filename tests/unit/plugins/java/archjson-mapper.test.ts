@@ -316,3 +316,60 @@ describe('ArchJsonMapper — reconcileInheritanceTargets — cross-package inher
     expect(result[2].target).toBe('com.a.Dep'); // unchanged
   });
 });
+
+describe('ArchJsonMapper — mapEntities excludes test-directory stubs', () => {
+  let mapper: ArchJsonMapper;
+
+  beforeEach(() => {
+    mapper = new ArchJsonMapper();
+  });
+
+  function rawClass(name: string, filePath: string) {
+    return {
+      name,
+      packageName: 'com.example',
+      modifiers: ['public'],
+      interfaces: [],
+      fields: [],
+      methods: [],
+      constructors: [],
+      annotations: [],
+      isAbstract: false,
+      filePath,
+      startLine: 1,
+      endLine: 5,
+    };
+  }
+
+  it('drops entities whose source lives under src/test (external stub classes)', () => {
+    const result = mapper.mapEntities([
+      {
+        name: 'com.example',
+        classes: [
+          rawClass('RealService', '/repo/app/src/main/java/com/example/RealService.java'),
+          // android stub placed in test sources — must NOT become an entity
+          rawClass('Context', '/repo/app/src/test/java/android/content/Context.java'),
+        ],
+        interfaces: [],
+        enums: [],
+      },
+    ]);
+    const ids = result.map((e) => e.id);
+    expect(ids).toContain('com.example.RealService');
+    expect(ids).not.toContain('com.example.Context');
+  });
+
+  it('drops entities under src/androidTest too', () => {
+    const result = mapper.mapEntities([
+      {
+        name: 'com.example',
+        classes: [
+          rawClass('InstrumentedTest', '/repo/app/src/androidTest/java/com/example/InstrumentedTest.java'),
+        ],
+        interfaces: [],
+        enums: [],
+      },
+    ]);
+    expect(result).toHaveLength(0);
+  });
+});
