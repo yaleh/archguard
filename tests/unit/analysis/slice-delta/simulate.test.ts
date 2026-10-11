@@ -590,6 +590,113 @@ describe('partial-migration vocabulary', () => {
   });
 });
 
+// ── reconciliation scope: a shared NAME is not proof of the same entity ────────
+
+describe('reconciliation scope — name collisions are kept, never silently removed', () => {
+  const internalNode = (
+    id: string
+  ): {
+    id: string;
+    name: string;
+    type: 'internal';
+    fileCount: number;
+    stats: { classes: number; interfaces: number; functions: number; enums: number };
+  } => ({
+    id,
+    name: id || '(root)',
+    type: 'internal' as const,
+    fileCount: 1,
+    stats: zeroStats(),
+  });
+  const mkGraph = (
+    ids: string[],
+    edges: ReturnType<typeof edge>[],
+    cycles: Array<{ modules: string[]; severity: string }> = []
+  ): TsModuleGraph => ({ nodes: ids.map(internalNode), edges, cycles });
+  // `foo` moves X -> D; nothing else is declared.
+  const fooMove = (over: Record<string, unknown> = {}): RefactorSliceDeclaration =>
+    ({
+      subject: '',
+      proposedCut: { moves: [{ file: 'foo.ts', from: 'X', to: 'D', symbols: ['foo'] }] },
+      negativeControl: { restoreEdges: [{ from: '', to: 'X' }] },
+      ...over,
+    }) as RefactorSliceDeclaration;
+  const edgeKeys = (es: Array<{ from: string; to: string }>): string[] =>
+    es.map((e) => `${e.from} -> ${e.to}`);
+
+  it('AC1: the minimal repro — " -> Y" shares the moved name but is NOT removed; it is recorded', () => {
+    // The task's exact falsification point: "", X, Y, D; edges " -> X" and
+    // " -> Y" BOTH carry only the name `foo`; one move foo: X -> D. Before the fix
+    // " -> Y" was silently removed as `retargeted-to:D`.
+    const graph = mkGraph(['', 'X', 'Y', 'D'], [edge('', 'X', ['foo']), edge('', 'Y', ['foo'])]);
+    const r = simulateRefactorSlice({ graph, slice: fooMove() });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    // The moved-from edge is reconciled and retargeted...
+    expect(edgeKeys(r.computedDelta.removedEdges)).toEqual([' -> X']);
+    expect(r.computedDelta.removedEdges[0].becomes).toBe('retargeted-to:D');
+    expect(edgeKeys(r.computedDelta.addedEdges)).toEqual([' -> D']);
+    // ...and " -> Y" appears in NO delta section — it is kept unchanged.
+    const deltaKeys = [
+      ...edgeKeys(r.computedDelta.removedEdges),
+      ...edgeKeys(r.computedDelta.addedEdges),
+      ...edgeKeys(r.computedDelta.strengthenedEdges),
+    ];
+    expect(deltaKeys).not.toContain(' -> Y');
+    // It IS surfaced, honestly, as a name-collision the directory graph cannot resolve.
+    expect(r.unknowns?.nameCollisionEdges).toEqual([' -> Y']);
+    expect(r.unknowns?.barrelEdges).toEqual([]);
+  });
+
+  it('AC3: the accounted (reconciled) edge set is exactly the moved-from-entering edge', () => {
+    const graph = mkGraph(['', 'X', 'Y', 'D'], [edge('', 'X', ['foo']), edge('', 'Y', ['foo'])]);
+    const r = simulateRefactorSlice({ graph, slice: fooMove() });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    expect((r.accounting ?? []).map((a) => a.edge)).toEqual([' -> X']);
+  });
+
+  it('AC1: a kept collision edge still participates in the after-graph (it is not dropped)', () => {
+    // " -> Y" is part of a real cycle " ⇄ Y". If the fix had removed it, Y would
+    // leave the subject's SCC; because it is KEPT, the SCC survives.
+    const graph = mkGraph(
+      ['', 'X', 'Y', 'D'],
+      [edge('', 'X', ['foo']), edge('', 'Y', ['foo']), edge('Y', '', ['yRoot'])],
+      [{ modules: ['', 'Y'], severity: 'error' }]
+    );
+    const r = simulateRefactorSlice({ graph, slice: fooMove() });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.current.sccMembers).toEqual(['', 'Y']);
+    expect(r.computedDelta.sccAfter).toContain('Y'); // the kept edge keeps the cycle
+    expect(r.unknowns?.nameCollisionEdges).toEqual([' -> Y']);
+  });
+
+  it('AC2: an edge entering a STRUCTURAL re-export from a moved-from dir is reconciled (barrel)', () => {
+    // B re-exports from X (edge B -> X); the edge " -> B" forwards the moved name.
+    // That structural tie makes it reconcilable — the barrel relaxation is preserved.
+    const graph = mkGraph(
+      ['', 'X', 'B', 'D'],
+      [edge('', 'X', ['foo']), edge('B', 'X', ['foo']), edge('', 'B', ['foo'])]
+    );
+    const r = simulateRefactorSlice({ graph, slice: fooMove() });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(edgeKeys(r.computedDelta.removedEdges)).toContain(' -> B');
+    expect(r.computedDelta.removedEdges.find((e) => e.to === 'B')?.certainty).toBe('unknown');
+    expect((r.accounting ?? []).find((a) => a.edge === ' -> B')?.barrel).toBe(true);
+    expect(r.unknowns?.barrelEdges).toContain(' -> B');
+    expect(r.unknowns?.nameCollisionEdges ?? []).toEqual([]);
+
+    // Control: WITHOUT the structural tie (drop B -> X) the same edge is a bare
+    // name collision — kept, not reconciled.
+    const graph2 = mkGraph(['', 'X', 'B', 'D'], [edge('', 'X', ['foo']), edge('', 'B', ['foo'])]);
+    const r2 = simulateRefactorSlice({ graph: graph2, slice: fooMove() });
+    if (r2.status !== 'evaluated') throw new Error('expected evaluated');
+    expect(edgeKeys(r2.computedDelta.removedEdges)).toEqual([' -> X']);
+    expect(r2.unknowns?.nameCollisionEdges).toEqual([' -> B']);
+  });
+});
+
 function zeroStats(): { classes: number; interfaces: number; functions: number; enums: number } {
   return { classes: 0, interfaces: 0, functions: 0, enums: 0 };
 }
