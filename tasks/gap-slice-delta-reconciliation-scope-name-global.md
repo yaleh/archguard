@@ -60,13 +60,13 @@ addedEdges  : [" -> D"]
 
 ## AC
 
-- [ ] **复现用例变绿**：上面的最小图 + 单条 move（无 `stays`）→ `removedEdges` **不含** `" -> Y"`，含 `" -> X (retargeted-to:D)"`；`" -> Y"` 要么原样保留、要么出现在 `unknowns`/`certainty: 'unknown'` 里（取决于实现选的那条路），**不得**出现在 `removedEdges`
-- [ ] **barrel 语义不丢**：进入一个**结构性 re-export from moved-from dir** 的目录的边，仍然被对账（用一条这样的边做正例；这正是 `reexportsFromMoved` 存在的理由）
-- [ ] **文档与代码一致**：`simulate.ts` 的 `assumptions` 关于"只对账进入 moved-from 目录的边"的表述与实现相符（二选一改哪边都行，但不许继续矛盾）；并有一条测试断言实际参与对账的边集合
-- [ ] **legacy 逐字节**：`tests/fixtures/slice-delta/` 下全部既有夹具（`goal-033-*`、`claudecodeui-*`、`synthetic-small`、`partial-migration-cases`）输出与改动前**逐字节相同**（它们的同名撞车若存在，必须在 `unknowns` 里可见而不是靠改数字糊过去）
-- [ ] **不新增假 red**：既有夹具一个都不许从 `evaluated` 掉到 `not-evaluated`（若某条夹具真的命中同名歧义，如实记录并说明，不许为了好看放宽回去）
-- [ ] **CLI/MCP parity**：同一输入经 CLI 与 MCP 调用，`computedDelta`/`negativeControl`/`guards` 逐字节相同
-- [ ] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
+- [x] **复现用例变绿**：上面的最小图 + 单条 move（无 `stays`）→ `removedEdges` **不含** `" -> Y"`，含 `" -> X (retargeted-to:D)"`；`" -> Y"` 要么原样保留、要么出现在 `unknowns`/`certainty: 'unknown'` 里（取决于实现选的那条路），**不得**出现在 `removedEdges`
+- [x] **barrel 语义不丢**：进入一个**结构性 re-export from moved-from dir** 的目录的边，仍然被对账（用一条这样的边做正例；这正是 `reexportsFromMoved` 存在的理由）
+- [x] **文档与代码一致**：`simulate.ts` 的 `assumptions` 关于"只对账进入 moved-from 目录的边"的表述与实现相符（二选一改哪边都行，但不许继续矛盾）；并有一条测试断言实际参与对账的边集合
+- [x] **legacy 逐字节**：`tests/fixtures/slice-delta/` 下全部既有夹具（`goal-033-*`、`claudecodeui-*`、`synthetic-small`、`partial-migration-cases`）输出与改动前**逐字节相同**（它们的同名撞车若存在，必须在 `unknowns` 里可见而不是靠改数字糊过去）
+- [x] **不新增假 red**：既有夹具一个都不许从 `evaluated` 掉到 `not-evaluated`（若某条夹具真的命中同名歧义，如实记录并说明，不许为了好看放宽回去）
+- [x] **CLI/MCP parity**：同一输入经 CLI 与 MCP 调用，`computedDelta`/`negativeControl`/`guards` 逐字节相同
+- [x] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
 
 ## DoD
 
