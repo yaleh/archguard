@@ -5,6 +5,43 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.40] - 2026-10-11
+
+### Added
+- **`slice-delta`: `proposedCut.stays[]`** — symbol-level partial migration. A caller can
+  now declare the names it inspected that *stay put* in a directory, which is what makes
+  "only some of one directory edge's `importedNames` move" expressible at all. An edge with
+  staying names **survives** (it is not removed) and gains one retarget edge per destination;
+  `accounting[]` records `survives: true`, `staying[]`, `unaccounted: []`. A name covered by
+  neither `moves` nor `stays` is still `not-evaluated` — undeclared names are never defaulted
+  to "stays".
+- **`slice-delta`: `proposedCut.newDirs[]`** — an explicitly-declared *new* destination
+  directory becomes a node in the simulated graph, so the ownership-first "extract a new
+  module" cut is representable. New nodes are reported in `computedDelta.syntheticNodes[]`
+  with `fileCount: null` / `stats: null` — **unknown, never 0 and never a guessed reading**.
+  An undeclared destination that is not an existing node stays `not-evaluated`, and the reason
+  now names both the legal nodes and the two available fixes. Declaring an *existing* directory
+  as new is refused ("declaration and guessing must stay separate").
+- `slice-delta`: `unknowns.nameCollisionEdges[]` and `unknowns.barrelEdges[]` diagnostics, plus
+  `accounting[]` / `unknowns[]` / `syntheticNodes[]` on any report that exercises a
+  partial-migration feature.
+
+### Fixed
+- **`slice-delta`: reconciliation scope no longer leaks across directories.** A moved symbol's
+  name was matched **globally**, so an edge entering an unrelated directory that happened to
+  carry a same-named symbol was silently recorded as removed and retargeted. Reconciliation is
+  now confined to edges entering a moved-from directory, plus structurally-tied re-export/barrel
+  edges; anything else is preserved and named in `unknowns.nameCollisionEdges`. The module's
+  documented assumption now matches the code.
+
+### Changed (release tooling — not part of the published runtime surface)
+- The six version carriers are derived from a single `VERSION` file
+  (`scripts/sync-version-carriers.mjs`), and the plugin's exact-core pin became a guarded
+  seventh carrier (`scripts/sync-plugin-core-pin.mjs`).
+- `scripts/release.sh`: an atomic release cut that refuses to run in the main worktree and
+  creates the tag with the bump, closing the "tree shows a version whose tag does not exist"
+  window that 0.1.38 and 0.1.39 both hit.
+
 ## [0.1.39] - 2026-10-10
 
 ### Added
