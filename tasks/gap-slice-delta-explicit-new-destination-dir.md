@@ -12,6 +12,20 @@ children: []
 extra:
   schema: execution
 ---
+---
+id: gap-slice-delta-explicit-new-destination-dir
+title: slice-delta 支持「显式声明的新目的地目录」：ownership-first 的「抽取新模块」才可被模拟，未声明仍
+  fail-closed 且不伪造新节点读数
+status: ready
+labels:
+  - gap
+  - architecture
+  - product-surface
+parent: null
+children: []
+extra:
+  schema: execution
+---
 ## Proposal
 
 Quay 的 ownership-active 投研环在真库上跑了 90 条记录、21 个候选、**0 个准入**；其中 **11 条**带着 `slice_delta`，**11/11 全是 `not-evaluated`，没有一条算出过 delta**（carrier: quay `.quay/ownership-shadow-proposals.jsonl`，本次逐条读出）。按拒绝原因分类：
@@ -74,4 +88,6 @@ Quay 的 ownership-active 投研环在真库上跑了 90 条记录、21 个候�
 - tests/unit/analysis/slice-delta/cli.test.ts
 - tests/unit/analysis/slice-delta/parity.test.ts
 - tests/unit/cli/mcp/slice-delta-tool.test.ts
+- tests/fixtures/slice-delta/quay-gate-cycle.arch.json
+- tests/fixtures/slice-delta/legacy-reports.golden.json
 - tasks/gap-slice-delta-explicit-new-destination-dir.md
