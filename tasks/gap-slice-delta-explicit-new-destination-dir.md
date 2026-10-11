@@ -2,7 +2,7 @@
 id: gap-slice-delta-explicit-new-destination-dir
 title: slice-delta 支持「显式声明的新目的地目录」：ownership-first 的「抽取新模块」才可被模拟，未声明仍
   fail-closed 且不伪造新节点读数
-status: todo
+status: ready
 labels:
   - gap
   - architecture
