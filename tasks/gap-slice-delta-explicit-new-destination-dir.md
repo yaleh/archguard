@@ -32,7 +32,7 @@ Quay 的 ownership-active 投研环在真库上跑了 90 条记录、21 个候�
 
 新增一个**显式声明**：某个目的地目录是**新建的**（除本次搬入的符号外为空）。据此才允许把它当图上的一个新 internal 节点参与模拟。
 
-- 声明形态（加法，不破坏既有输入）：`proposedCut.moves[].toIsNew?: boolean`，或 `proposedCut.newDirs?: string[]`（实现任选其一，但只能有一个正本，写进工具描述与 `docs/user-guide/slice-delta.md`）。
+- 声明形态（加法，不破坏既有输入）：`proposedCut.moves[].toIsNew?: boolean`，或 `proposedCut.newDirs?: string[]`（实现任选其一，但只能有一个正本，写进工具描述与 `docs/user-guide/slice-delta.md`）。**本实现选定 `proposedCut.newDirs?: string[]` 作为唯一正本**（未实现 `toIsNew`）。
 - 语义：被声明为新的目录 → 在模拟图里成为新节点；指向它的边照常 retarget；SCC 照常用含新节点的图重算；`accounting.destinations` 列出它。
 - **新节点的读数是 unknown，不是 0**：`fileCount` / `stats` 一律缺值或显式 `null` + note（缺值=未查，与本仓库既有 hard rule 一致）。新节点的"入边/出边"只由本次切法产生，这一点要在报告里写明。
 - **fail-closed 保留**：`move.to` 既不是本图 internal 节点、也没有被声明为新 → 仍然 `not-evaluated`（exit 2），reason **同时**列出可用于对照的合法 internal 目录节点清单 **和** 修复动作（"要么改成既有节点，要么显式声明它是新目录"）。这条是把"猜"和"声明"分开的关键。
@@ -40,17 +40,17 @@ Quay 的 ownership-active 投研环在真库上跑了 90 条记录、21 个候�
 
 ## AC
 
-- [ ] 把一个符号搬向**本图不存在**的目录、并显式声明该目录为新 → `status === 'evaluated'`；`computedDelta` 里该新节点出现在 `accounting.destinations`（以及受影响的 added/removed 边与 `sccAfter` 的成员里，若它确实参与环）
-- [ ] 上一条报告里新节点的 `fileCount`/`stats` 是 **null/缺值 + note**，**不是 0 也不是任何编造数字**（用递归扫描断言：新节点对象上不存在被猜出来的计数）
-- [ ] **同一切法、去掉"新目录"声明 → 仍然 `not-evaluated`、exit 2**，且 reason 同时包含 (a) 至少一个合法 internal 目录节点名 与 (b) 指向"声明为新目录"的修复动作
-- [ ] **真实案例复现**：按 carrier 里第 11 条的形状（目标 `gate/runtime`）构造输入，声明前后分别是 `not-evaluated` → `evaluated`（这是本任务存在的理由，不能只用合成夹具交差）
-- [ ] **legacy 回归（逐字节）**：既有 `tests/fixtures/slice-delta/` 下全部既有夹具（`goal-033-*`、`claudecodeui-*`、`synthetic-small`、`partial-migration-cases`）的输出与改动前**逐字节相同**（不传新增字段 ⇒ 行为不变）
-- [ ] **unknown 不被新目录掩盖**：`unresolved` 别名 / `unevaluatedDynamicImports` / barrel 边的既有 `certainty: 'unknown'` 与 `unknowns` 段在含新目录的切法上照常出现
-- [ ] **negative control 仍然强制**：含新目录的切法若 `negativeControl.restoreEdges` 为空 → `not-evaluated`（exit 2），不因为"新目录"而放行
-- [ ] **CLI/MCP parity**：同一（含新目录声明的）输入经 `archguard slice-delta` 与 `archguard_simulate_refactor_slice` 调用，`computedDelta`/`negativeControl`/`guards` **逐字节相同**
-- [ ] 目的地冲突：同一符号既搬向新目录、又被 `stays` 留在既有目录 → `not-evaluated`（既有冲突规则未被绕过）
-- [ ] 工具描述（`slice-delta-tool.ts`）与 `docs/user-guide/slice-delta.md` 记录新字段、新节点的 unknown 语义、以及 fail-closed 的边界
-- [ ] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
+- [x] 把一个符号搬向**本图不存在**的目录、并显式声明该目录为新 → `status === 'evaluated'`；`computedDelta` 里该新节点出现在 `accounting.destinations`（以及受影响的 added/removed 边与 `sccAfter` 的成员里，若它确实参与环）
+- [x] 上一条报告里新节点的 `fileCount`/`stats` 是 **null/缺值 + note**，**不是 0 也不是任何编造数字**（用递归扫描断言：新节点对象上不存在被猜出来的计数）
+- [x] **同一切法、去掉"新目录"声明 → 仍然 `not-evaluated`、exit 2**，且 reason 同时包含 (a) 至少一个合法 internal 目录节点名 与 (b) 指向"声明为新目录"的修复动作
+- [x] **真实案例复现**：按 carrier 里第 11 条的形状（目标 `gate/runtime`）构造输入，声明前后分别是 `not-evaluated` → `evaluated`（这是本任务存在的理由，不能只用合成夹具交差）
+- [x] **legacy 回归（逐字节）**：既有 `tests/fixtures/slice-delta/` 下全部既有夹具（`goal-033-*`、`claudecodeui-*`、`synthetic-small`、`partial-migration-cases`）的输出与改动前**逐字节相同**（不传新增字段 ⇒ 行为不变）
+- [x] **unknown 不被新目录掩盖**：`unresolved` 别名 / `unevaluatedDynamicImports` / barrel 边的既有 `certainty: 'unknown'` 与 `unknowns` 段在含新目录的切法上照常出现
+- [x] **negative control 仍然强制**：含新目录的切法若 `negativeControl.restoreEdges` 为空 → `not-evaluated`（exit 2），不因为"新目录"而放行
+- [x] **CLI/MCP parity**：同一（含新目录声明的）输入经 `archguard slice-delta` 与 `archguard_simulate_refactor_slice` 调用，`computedDelta`/`negativeControl`/`guards` **逐字节相同**
+- [x] 目的地冲突：同一符号既搬向新目录、又被 `stays` 留在既有目录 → `not-evaluated`（既有冲突规则未被绕过）
+- [x] 工具描述（`slice-delta-tool.ts`）与 `docs/user-guide/slice-delta.md` 记录新字段、新节点的 unknown 语义、以及 fail-closed 的边界
+- [x] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
 
 ## DoD
 
