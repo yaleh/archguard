@@ -2,7 +2,7 @@
 id: gap-slice-delta-unreferenced-declared-symbols
 title: slice-delta 对「声明了但图上任何边都不引用」的符号完全静默：产出与基线逐字节相同的 delta
   且无任何诊断，消费者只能靠近似代理自检（实测误报 6/16）
-status: todo
+status: ready
 labels:
   - gap
   - architecture
