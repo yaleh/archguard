@@ -2,7 +2,7 @@
 id: gap-slice-delta-reconciliation-scope-name-global
 title: slice-delta 对账范围泄漏：move 的符号名在图上是全局匹配的，导致未进入 moved-from 目录的边被静默判为
   removed（与自身文档假设矛盾，实测可复现）
-status: ready
+status: done
 labels:
   - gap
   - architecture
