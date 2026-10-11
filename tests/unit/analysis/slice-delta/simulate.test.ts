@@ -1134,6 +1134,53 @@ describe('unknowns.unreferencedSymbols — declared names on no internal edge', 
     expect(r.unknowns?.unreferencedSymbols ?? []).not.toContain('forwarded');
   });
 
+  it('AC3: a symbol whose ONLY occurrence is an EXTERNAL edge is not flagged (the set is internal + external)', () => {
+    // `extOnly` appears nowhere except an edge from "" to an external package.
+    const graph: TsModuleGraph = {
+      nodes: ['', 'A', 'D'].map((id) => ({
+        id,
+        name: id || '(root)',
+        type: 'internal',
+        fileCount: 1,
+        stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+      })),
+      edges: [
+        {
+          from: '',
+          to: 'A',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['shared'],
+        },
+        {
+          from: '',
+          to: 'some-external-package',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['extOnly'],
+        },
+      ],
+      cycles: [],
+    } as unknown as TsModuleGraph;
+    const slice: RefactorSliceDeclaration = {
+      subject: '',
+      proposedCut: {
+        moves: [{ file: 'a.ts', from: 'A', to: 'D', symbols: ['shared'] }],
+        stays: [{ dir: 'A', symbols: ['extOnly'] }],
+      },
+      negativeControl: { restoreEdges: [{ from: '', to: 'A' }] },
+    };
+    const r = simulateRefactorSlice({ graph, slice });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    // The reference set is over ALL edges (internal AND external): an external-edge
+    // name is referenced, so the field must not list it.
+    expect(r.unknowns?.unreferencedSymbols ?? []).not.toContain('extOnly');
+    expect(r.unknowns?.unreferencedSymbols).toBeUndefined();
+  });
+
   it('AC4: stays[].symbols are covered too — an unreferenced stay name is flagged', () => {
     const graph: TsModuleGraph = {
       nodes: ['', 'A', 'D', 'barrel'].map((id) => ({
@@ -1178,7 +1225,7 @@ describe('unknowns.unreferencedSymbols — declared names on no internal edge', 
     expect(r.unknowns?.unreferencedSymbols).toEqual(['stayOnlyName']);
   });
 
-  it('AC6: the boundary wording is present and never calls the field a fabrication check', () => {
+  it('AC6: the boundary wording + exact set operation are documented, never a fabrication check', () => {
     const doc = fs.readFileSync(
       path.join(REPO_ROOT, 'docs', 'user-guide', 'slice-delta.md'),
       'utf8'
@@ -1189,11 +1236,16 @@ describe('unknowns.unreferencedSymbols — declared names on no internal edge', 
     );
     for (const src of [doc, toolSrc]) {
       expect(src).toContain('unreferencedSymbols');
-      // equivalent of: "not referenced by any directory-level edge" ≠ "does not exist"
-      expect(src).toMatch(/not referenced by any directory-level edge/);
+      // equivalent of: "not referenced by any edge" ≠ "does not exist"
+      expect(src).toMatch(/not referenced by any edge/);
       expect(src).toMatch(/does not exist/i);
+      // AC6: the reference set must be spelled out and be internal + external.
+      expect(src).toMatch(/importedNames/);
+      expect(src).toMatch(/internal (AND|or|\+|和)/i);
+      expect(src).toMatch(/external/i);
     }
-    // The field's own in-report note must not read as a verdict.
+    // The field's own in-report note must state the set operation + boundary, and
+    // must not read as a verdict.
     const r = simulateRefactorSlice({
       graph: synthGraph,
       slice: synWith(['alphaMain', 'alphaHelper', BOGUS]),
@@ -1201,6 +1253,7 @@ describe('unknowns.unreferencedSymbols — declared names on no internal edge', 
     if (r.status !== 'evaluated') throw new Error('expected evaluated');
     const note = r.unknowns?.unreferencedSymbolsNote ?? '';
     expect(note).toMatch(/不等于/);
+    expect(note).toMatch(/internal 或 external/);
     expect(note).not.toMatch(/fabricat|hallucinat/i);
   });
 });

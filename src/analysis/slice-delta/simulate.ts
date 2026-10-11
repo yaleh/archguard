@@ -72,15 +72,16 @@ const SYNTHETIC_NODE_NOTE =
 
 /**
  * Boundary note that MUST travel with `unknowns.unreferencedSymbols`, inside the
- * report itself. It states the exact limit of the fact — a name declared in
- * `moves[]`/`stays[]` that appears on no internal edge's `importedNames` — so a
- * consumer cannot mistake it for a verdict about whether the name exists: the
- * directory graph cannot represent same-directory imports, so a real symbol imported
- * only within its own directory lands here exactly like a name that is on no edge at
- * all. Deliberately phrased as a FACT plus its limitation, never as a check.
+ * report itself. It states the exact set operation (a name is "referenced" iff it
+ * appears in SOME edge's `importedNames`, internal or external) and its limit — a
+ * name declared in `moves[]`/`stays[]` that appears on no edge may still be a real
+ * symbol: the directory graph cannot represent same-directory imports, so a real
+ * symbol imported only within its own directory lands here exactly like a name that
+ * is on no edge at all. Deliberately phrased as a FACT plus its limitation, never as
+ * a check.
  */
 const UNREFERENCED_SYMBOLS_NOTE =
-  '「未被任何目录级边引用」不等于「不存在」：同目录 import 在目录级图上不可见（见 proposedCut.assumptions 首条），一个只在自己所在目录内被 import 的真实符号同样会出现在这里。本字段只陈述「这些名字没有出现在任何 internal 边的 importedNames 上」这一事实，是否真的存在由调用方判断，本实现不做该判断。';
+  '「未被任何图边引用」不等于「不存在」：本字段的判定是集合运算——该名字是否出现在图中任一 internal 或 external 边的 importedNames 上。目录级图不表示同目录 import（见 proposedCut.assumptions 首条），因此一个只在自己所在目录内被 import 的真实符号同样会出现在这里。本字段只陈述「这些名字不在任何边的 importedNames 上」这一事实，是否真的存在由调用方判断，本实现不做该判断。';
 
 /** Minimal internal-edge view the core works on (mirrors the prototype's `internalEdges`). */
 interface GraphEdge {
@@ -670,15 +671,26 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     subject,
   ]);
   // ── unreferencedSymbols (NEW, additive): a precise FACT, never a verdict ──────
-  // Names declared in moves[].symbols / stays[].symbols that appear on NO internal
-  // edge's importedNames — a pure SET difference over the graph the tool actually
-  // has, never a heuristic (e.g. "on a cross-directory edge?", the proxy that
-  // misjudged 6/16 real symbols downstream). On a directory graph same-directory
-  // imports are invisible (assumptions[0]), so this list is "not referenced by any
-  // directory-level edge", NOT "does not exist": a real symbol imported only within
+  // Names declared in moves[].symbols / stays[].symbols that appear on NO edge's
+  // importedNames. The reference set is EXACTLY the union of `importedNames` over
+  // EVERY edge of the module graph — internal (dir→dir) AND external (dir→package):
+  //
+  //   referenced := ⋃ { e.importedNames : e ∈ graph.edges }
+  //   unreferencedSymbols := declaredNames \ referenced          (sorted, non-empty only)
+  //
+  // It is a pure SET difference over the graph the tool actually has — never a
+  // heuristic (e.g. "is it on a cross-directory edge?"), which is the coarser proxy
+  // the downstream repair loop had to approximate with and that could not see the
+  // external edges. What it excludes, deliberately: same-directory imports, which a
+  // directory graph does not represent at all (assumptions[0]), and any edge whose
+  // coupling the graph collapses — so this list is "not referenced by any
+  // directory-level edge", NOT "does not exist". A real symbol imported only within
   // its own directory lands here exactly like a name that is on no edge at all.
   const referencedNames = new Set<string>();
-  for (const e of internalEdges) for (const n of e.importedNames) referencedNames.add(n);
+  for (const e of graph.edges) {
+    if (!Array.isArray(e.importedNames)) continue;
+    for (const n of e.importedNames) referencedNames.add(n);
+  }
   const declaredNames = [...new Set([...destOfSymbol.keys(), ...stayedSymbolDir.keys()])];
   const unreferencedSymbols = declaredNames
     .filter((n) => !referencedNames.has(n))

@@ -246,28 +246,34 @@ export interface SliceDeltaUnknowns {
   nameCollisionEdges?: string[];
   /**
    * Names declared in `proposedCut.moves[].symbols` / `proposedCut.stays[].symbols`
-   * that appear on NO internal edge's `importedNames`.
+   * that appear on NO edge's `importedNames`.
    *
-   * This is a precise, recomputable SET difference — literally "is this name on any
-   * directory-level edge?" — never a heuristic such as "is it on a cross-directory
-   * edge?", which is exactly the proxy that misjudged 6 of 16 real symbols in the
-   * downstream end-to-end experiment. Present only when non-empty, so an unaffected
-   * cut keeps byte-identical diagnostics.
+   * THE SET OPERATION, exactly (no heuristic):
+   * ```
+   *   referenced          := ⋃ { e.importedNames : e ∈ moduleGraph.edges }   // internal AND external
+   *   unreferencedSymbols := declaredNames \ referenced                      // sorted; present iff non-empty
+   * ```
+   * The reference set includes EVERY edge of the graph — internal (dir→dir) and
+   * external (dir→package). It excludes same-directory imports, which a directory
+   * graph does not represent at all (see `proposedCut.assumptions[0]`). It is never a
+   * heuristic such as "is the name on a cross-directory edge?", which is the coarser
+   * proxy the downstream repair loop had to approximate with (it saw only a subset of
+   * the edges). Present only when non-empty, so an unaffected cut keeps byte-identical
+   * diagnostics.
    *
-   * ⚠️ BOUNDARY — this is a FACT, not a verdict. "Not referenced by any directory-level
-   * edge" is NOT "does not exist": a directory graph does not represent same-directory
-   * imports (see `proposedCut.assumptions[0]`), so a symbol that is real but imported
-   * only within its OWN directory — or that this cut simply does not route through any
-   * reconciled edge — appears here exactly as a name that is on no edge at all does.
-   * The directory graph cannot tell these apart. Do NOT read this field as an existence
-   * check; the caller decides. {@link unreferencedSymbolsNote} carries this boundary
-   * into the report itself.
+   * ⚠️ BOUNDARY — this is a FACT, not a verdict. "Not referenced by any edge" is NOT
+   * "does not exist": a symbol that is real but imported only within its OWN directory
+   * — or that this cut simply does not route through any reconciled edge — appears
+   * here exactly as a name that is on no edge at all does. The graph cannot tell these
+   * apart. Do NOT read this field as an existence check; the caller decides.
+   * {@link unreferencedSymbolsNote} carries this boundary into the report itself.
    */
   unreferencedSymbols?: string[];
   /**
    * Boundary note that travels with {@link unreferencedSymbols} (present iff it is).
-   * It states, inside the report, that "not referenced by any directory-level edge" is
-   * not "does not exist", so a consumer cannot mistake the fact for a verdict.
+   * It states, inside the report, both the set operation (some edge's `importedNames`,
+   * internal or external) and that "not referenced by any edge" is not "does not
+   * exist", so a consumer cannot mistake the fact for a verdict.
    */
   unreferencedSymbolsNote?: string;
 }

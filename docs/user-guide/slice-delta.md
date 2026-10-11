@@ -53,18 +53,28 @@ Two additive report sections make the tool's uncertainty explicit instead of rej
   but neither enter a moved-from dir nor structurally re-export from one: they are left unchanged and
   named here rather than silently removed.
   `unreferencedSymbols` (present only when non-empty) names every symbol declared in `moves[].symbols`
-  or `stays[].symbols` that appears on **no** internal edge's `importedNames`. It is a precise,
-  recomputable set difference — the literal question "is this name on any directory-level edge?" — and
-  it is deliberately **not** a heuristic such as "is it on a cross-directory edge?" (that coarser proxy
-  misjudged 6 of 16 real symbols in the downstream end-to-end experiment). Its companion
-  `unreferencedSymbolsNote` states the boundary in the report.
+  or `stays[].symbols` that appears on **no** edge's `importedNames`. The set operation is exact and
+  self-contained:
 
-  ⚠️ **`unreferencedSymbols` is a fact, not a verdict — "not referenced by any directory-level edge"
-  is NOT "does not exist".** A directory graph does not represent same-directory imports, so a symbol
-  that is real but imported only within its **own** directory — or that this cut simply does not route
-  through any reconciled edge — lands in `unreferencedSymbols` exactly as a name that is on no edge at
-  all does. The tool cannot tell these apart at directory granularity. Read it as "these declared names
-  the graph cannot corroborate", never as an existence check; the caller decides.
+  ```text
+  referenced          := ⋃ { e.importedNames : e ∈ moduleGraph.edges }   // internal AND external
+  unreferencedSymbols := declaredNames \ referenced                      // sorted; non-empty only
+  ```
+
+  **It includes** every edge of the graph — internal (dir→dir) and external (dir→package). **It
+  excludes** same-directory imports, which a directory graph does not represent as edges at all. It is
+  a precise, recomputable set difference — never a heuristic such as "is the name on a cross-directory
+  edge?", which is the coarser proxy the downstream repair loop had to approximate with (a proxy that
+  cannot see the external edges). Its companion `unreferencedSymbolsNote` states the same set operation
+  and boundary in the report.
+
+  ⚠️ **`unreferencedSymbols` is a fact, not a verdict — this is the "does not exist"
+  misconception it must NOT be read as: "not referenced by any edge" ≠ existence.** A directory graph
+  does not represent same-directory imports, so a symbol that is real but
+  imported only within its **own** directory — or that this cut simply does not route through any
+  reconciled edge — lands in `unreferencedSymbols` exactly as a name that is on no edge at all does.
+  The tool cannot tell these apart at directory granularity. Read it as "these declared names the graph
+  cannot corroborate", never as an existence check; the caller decides.
 
 `accounting` is emitted only when the declaration exercises a partial-migration feature (a `stays`
 clause, a multi-destination edge, an unknown/barrel edge, or a name collision). `unknowns` is emitted
