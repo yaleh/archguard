@@ -236,6 +236,14 @@ export interface SliceDeltaUnknowns {
   unevaluatedDynamicImports: number;
   /** Affected edges that are barrel/re-export edges. */
   barrelEdges: string[];
+  /**
+   * Edges that carry a moved symbol's NAME but neither enter a moved-from dir nor
+   * structurally re-export from one. A directory graph cannot prove two same-named
+   * symbols are one entity, so these edges are left UNCHANGED (never removed and never
+   * retargeted) and listed here as the remaining name-collision limitation. Present
+   * only when non-empty, so an unaffected cut keeps byte-identical diagnostics.
+   */
+  nameCollisionEdges?: string[];
 }
 
 /** A must-not-change violation. */

@@ -388,7 +388,7 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   const assumptions = [
     '目录级图不表示同目录内的 import；搬迁后由「同目录 import 变成跨目录 import」产生的新边，图上结构性看不见，只能由 slice.proposedCut.consumers 显式声明（这类 added 边标 source=declared-consumer）。',
     'importedNames 是目录级边的名字集合，不携带「哪个名字来自哪个文件」的位置信息；因此只有当一个名字集合被某次 move 的 symbols 完整覆盖时才认为该边被这次搬迁解释。',
-    '本实现只对账「进入 moved-from 目录的边」。目录级边不带「由哪个文件产生」的信息，因此无法判断某条「从 moved-from 目录出发」的边是否随某个文件一并搬走——本实现的 sccAfter 是这条模拟规则下的读数，不是对真实重命名/搬壳操作的完整模拟（保留 façade 还是整体搬迁，需要调用方在切法里自行表达）。',
+    '本实现只对账「进入 moved-from 目录的边」，以及「进入某个结构性 re-export from moved-from 目录的边」（reexportsFromMoved 命中的 barrel 边）。除这两类之外，任何一条边即使携带了与某次 move 的符号同名的名字，也不因名字撞上而被对账——目录级图无法证明两个同名符号是同一实体，这类边原样保留并在 unknowns.nameCollisionEdges 里点名，绝不静默删除。目录级边不带「由哪个文件产生」的信息，因此无法判断某条「从 moved-from 目录出发」的边是否随某个文件一并搬走——本实现的 sccAfter 是这条模拟规则下的读数，不是对真实重命名/搬壳操作的完整模拟（保留 façade 还是整体搬迁，需要调用方在切法里自行表达）。',
     // Appended only for a partial-migration declaration, so a plain cut's
     // `proposedCut` stays byte-identical to the pre-extension output.
     ...(stays.length > 0
@@ -405,20 +405,25 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
       : []),
   ];
 
-  // ── Reconcile every edge touched by a moved symbol (set judgment on importedNames) ─
-  // Selection is by imported NAME (then each name's destination is decided): any
-  // edge carrying a moved name is accounted for, including a re-export/barrel edge
-  // that forwards the name from a directory other than the moved-from dir. An edge
+  // ── Reconcile edges the directory graph STRUCTURALLY ties to the move ────────
+  // An edge is reconciled ONLY when the graph structurally connects it to the cut:
+  // its target IS a moved-from directory, or its target structurally re-exports from
+  // one (a barrel edge — `reexportsFromMoved`, computed above). Selection among those
+  // is by imported NAME (then each name's destination is decided). A same-NAME
+  // collision alone is NOT evidence that two symbols are the same entity: an edge that
+  // merely carries a moved name, without either structural tie, is left UNCHANGED and
+  // recorded in `unknowns.nameCollisionEdges` — NEVER silently removed. An edge
   // importing ONLY declared-staying names is untouched by the cut and skipped.
   const removedEdges: SliceDeltaRemovedEdge[] = [];
   const addedCandidates: SliceDeltaAddedEdge[] = [];
   const affectedConsumers: SliceDeltaAffectedConsumer[] = [];
   const accounting: SliceDeltaAccountingEntry[] = [];
   const affectedDirs = new Set<string>();
+  const nameCollisionEdges: string[] = [];
   let sawMultiDestination = false;
   let sawUnknown = false;
   // Iteration order: edges ENTERING a moved-from dir are reconciled first, then the
-  // remaining edges touched by a moved name (e.g. a barrel/re-export edge that
+  // remaining in-scope edges touched by a moved name (a barrel/re-export edge that
   // forwards the name from another directory). This preserves the pre-extension
   // fail-closed reading EXACTLY for an undeclared input: the same first
   // coverage-shortfall edge (with the same name list) is reported.
@@ -439,6 +444,16 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     }
     const affected = names.some((n) => destOfSymbol.has(n));
     if (!affected) continue; // nothing that moves appears on this edge
+    const barrel = reexportsFromMoved.has(e.to);
+    // Scope gate — a structural tie to a move is REQUIRED. `movesFrom.has(e.to)` is the
+    // edge entering a moved-from dir; `barrel` is the structurally-proven re-export
+    // case (its target imports from a moved-from dir). Any OTHER edge carrying a
+    // colliding name is not reconciled: the directory graph cannot prove the name on it
+    // is the moved entity, so the edge is kept as-is and the ambiguity is recorded.
+    if (!movesFrom.has(e.to) && !barrel) {
+      nameCollisionEdges.push(edgeKeyOf(e.from, e.to));
+      continue;
+    }
     const uncovered = names.filter((n) => !destOfSymbol.has(n) && !stayedSymbolDir.has(n));
     if (uncovered.length > 0) {
       return notEvaluated(
@@ -448,7 +463,6 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     const moving = names.filter((n) => destOfSymbol.has(n));
     const staying = names.filter((n) => stayedSymbolDir.has(n));
     const dests = [...new Set(moving.map((n) => destOfSymbol.get(n).to))];
-    const barrel = reexportsFromMoved.has(e.to);
     if (dests.length > 1) sawMultiDestination = true;
     if (barrel) sawUnknown = true;
     const edgeKeyStr = edgeKeyOf(e.from, e.to);
@@ -627,7 +641,11 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   // Emitted only when this declaration exercises a partial-migration feature, so a
   // plain fully-covered cut keeps a report identical to the pre-extension output.
   const emitPartialDiagnostics =
-    stays.length > 0 || sawMultiDestination || sawUnknown || materializedNewDirs.length > 0;
+    stays.length > 0 ||
+    sawMultiDestination ||
+    sawUnknown ||
+    materializedNewDirs.length > 0 ||
+    nameCollisionEdges.length > 0;
   const relatedDirs = new Set<string>([
     ...beforeScc,
     ...afterScc,
@@ -642,6 +660,10 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
       .map((u) => ({ from: u.from, specifier: u.specifier })),
     unevaluatedDynamicImports: dynamicImportCount(graph.unevaluatedDynamicImports),
     barrelEdges: accounting.filter((a) => a.barrel).map((a) => a.edge),
+    // Present only when non-empty, so an unaffected legacy cut keeps byte-identical
+    // diagnostics. These edges were KEPT (not removed) — the list is the honest出口
+    // for the name-collision limitation, not a delta input.
+    ...(nameCollisionEdges.length > 0 ? { nameCollisionEdges } : {}),
   };
 
   // ── must-not-change guards ───────────────────────────────────────────────

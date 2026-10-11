@@ -233,3 +233,89 @@ describe('archguard_simulate_refactor_slice — newDirs CLI/MCP parity', () => {
     expect(JSON.stringify(mcpReport.guards)).toBe(JSON.stringify(cliReport.guards));
   });
 });
+
+// ── name-collision repro: CLI/MCP byte-parity on the NEW scope behaviour ──────
+
+describe('archguard_simulate_refactor_slice — name-collision parity (CLI vs MCP)', () => {
+  // The task's exact falsification point: " -> X" and " -> Y" both carry only `foo`;
+  // foo moves X -> D. " -> Y" must be a kept collision, not a removed edge.
+  const reproGraph = {
+    nodes: ['', 'X', 'Y', 'D'].map((id) => ({
+      id,
+      name: id || '(root)',
+      type: 'internal',
+      fileCount: 1,
+      stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+    })),
+    edges: [
+      {
+        from: '',
+        to: 'X',
+        strength: 1,
+        typeOnlyStrength: 0,
+        valueStrength: 1,
+        importedNames: ['foo'],
+      },
+      {
+        from: '',
+        to: 'Y',
+        strength: 1,
+        typeOnlyStrength: 0,
+        valueStrength: 1,
+        importedNames: ['foo'],
+      },
+    ],
+    cycles: [],
+  };
+  const reproSlice = {
+    subject: '',
+    proposedCut: { moves: [{ file: 'foo.ts', from: 'X', to: 'D', symbols: ['foo'] }] },
+    negativeControl: { restoreEdges: [{ from: '', to: 'X' }] },
+  };
+
+  beforeEach(() => {
+    loadEngineMock.mockReset();
+    mockGraph(reproGraph);
+  });
+
+  it('AC6: CLI and MCP agree byte-for-byte on computedDelta / negativeControl / guards / unknowns', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_simulate_refactor_slice');
+    const mcpResult = await handler({ projectRoot: '/workspace', slice: reproSlice });
+    const mcpReport = JSON.parse(String(mcpResult.content[0].text));
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'slice-delta-collision-'));
+    try {
+      const archPath = path.join(tmp, 'repro.arch.json');
+      fs.writeFileSync(
+        archPath,
+        JSON.stringify({
+          language: 'typescript',
+          extensions: { tsAnalysis: { moduleGraph: reproGraph } },
+        })
+      );
+      const slicePath = path.join(tmp, 'repro.slice.json');
+      fs.writeFileSync(slicePath, JSON.stringify(reproSlice));
+      const cli = await runSliceDelta({ slice: slicePath, arch: archPath });
+      if (cli.report.status !== 'evaluated') throw new Error('expected evaluated');
+
+      expect(JSON.stringify(mcpReport.computedDelta)).toBe(
+        JSON.stringify(cli.report.computedDelta)
+      );
+      expect(JSON.stringify(mcpReport.negativeControl)).toBe(
+        JSON.stringify(cli.report.negativeControl)
+      );
+      expect(JSON.stringify(mcpReport.guards)).toBe(JSON.stringify(cli.report.guards));
+      expect(JSON.stringify(mcpReport.unknowns)).toBe(JSON.stringify(cli.report.unknowns));
+      // The new behaviour, observed through BOTH adapters: the collision is kept + named.
+      expect(
+        mcpReport.computedDelta.removedEdges.map(
+          (e: { from: string; to: string }) => `${e.from} -> ${e.to}`
+        )
+      ).toEqual([' -> X']);
+      expect(mcpReport.unknowns.nameCollisionEdges).toEqual([' -> Y']);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
