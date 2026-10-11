@@ -44,17 +44,32 @@ Two additive report sections make the tool's uncertainty explicit instead of rej
   `{ edge, names, moving:[{name,to}], staying, unaccounted, destinations, barrel, certainty }`.
   It turns an under-specified cut's rejection into *information*: you can see exactly which
   co-traveling symbols move, which were declared staying, and which (if any) are unaccounted.
-- **`unknowns`** — `{ unresolvedAliasRefs, unevaluatedDynamicImports, barrelEdges, nameCollisionEdges? }`.
+- **`unknowns`** — `{ unresolvedAliasRefs, unevaluatedDynamicImports, barrelEdges, nameCollisionEdges?,
+  unreferencedSymbols?, unreferencedSymbolsNote? }`.
   These are the couplings the directory graph cannot fully see. **None of it feeds `computedDelta`.** An
   added or removed edge that is a barrel/re-export edge carries `certainty: "unknown"`; a deterministic
   edge omits the field (its absence means deterministic — it is never emitted as a fake value).
   `nameCollisionEdges` (present only when non-empty) lists edges that carry a moved symbol's **name**
   but neither enter a moved-from dir nor structurally re-export from one: they are left unchanged and
   named here rather than silently removed.
+  `unreferencedSymbols` (present only when non-empty) names every symbol declared in `moves[].symbols`
+  or `stays[].symbols` that appears on **no** internal edge's `importedNames`. It is a precise,
+  recomputable set difference — the literal question "is this name on any directory-level edge?" — and
+  it is deliberately **not** a heuristic such as "is it on a cross-directory edge?" (that coarser proxy
+  misjudged 6 of 16 real symbols in the downstream end-to-end experiment). Its companion
+  `unreferencedSymbolsNote` states the boundary in the report.
 
-Both sections are emitted only when the declaration actually exercises a partial-migration feature
-(a `stays` clause, a multi-destination edge, an unknown/barrel edge, or a name collision); a plain
-fully-covered cut keeps a report identical to the pre-extension output.
+  ⚠️ **`unreferencedSymbols` is a fact, not a verdict — "not referenced by any directory-level edge"
+  is NOT "does not exist".** A directory graph does not represent same-directory imports, so a symbol
+  that is real but imported only within its **own** directory — or that this cut simply does not route
+  through any reconciled edge — lands in `unreferencedSymbols` exactly as a name that is on no edge at
+  all does. The tool cannot tell these apart at directory granularity. Read it as "these declared names
+  the graph cannot corroborate", never as an existence check; the caller decides.
+
+`accounting` is emitted only when the declaration exercises a partial-migration feature (a `stays`
+clause, a multi-destination edge, an unknown/barrel edge, or a name collision). `unknowns` is emitted
+whenever it carries content — the partial-migration features above **or** a non-empty
+`unreferencedSymbols`. A cut with neither keeps a report identical to the pre-extension output.
 
 `not-evaluated` is returned (never "best effort") when: the recomputed SCCs disagree with
 `moduleGraph.cycles` (self-check failure); a **reconciled** edge carrying a moved name has an

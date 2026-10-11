@@ -68,7 +68,13 @@ export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): 
       'READ THE DIAGNOSTICS: `accounting[]` shows per-edge {names, moving:[{name,to}], staying,\n' +
       'unaccounted, destinations, barrel, certainty}. `unknowns` lists cut-related unresolved alias refs,\n' +
       'the unevaluatedDynamicImports count, and barrel/re-export edges — NONE of it feeds computedDelta;\n' +
-      'an edge carrying `certainty:"unknown"` is a barrel/re-export the directory graph cannot fully see.',
+      'an edge carrying `certainty:"unknown"` is a barrel/re-export the directory graph cannot fully see.\n' +
+      '`unknowns.unreferencedSymbols` (present only when non-empty) names every symbol declared in\n' +
+      "`moves[]`/`stays[]` that appears on NO internal edge's importedNames — a precise fact, NOT an\n" +
+      'existence check: a directory graph does not represent same-directory imports, so a symbol that is\n' +
+      'real but imported only within its OWN directory appears there exactly like a name that is on no\n' +
+      'edge at all ("not referenced by any directory-level edge" ≠ "does not exist"). Its companion\n' +
+      '`unreferencedSymbolsNote` states the same boundary in the report.',
     {
       projectRoot: z
         .string()

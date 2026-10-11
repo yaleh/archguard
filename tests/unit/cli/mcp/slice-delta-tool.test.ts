@@ -31,6 +31,7 @@ const readJson = (p: string): any => JSON.parse(fs.readFileSync(p, 'utf8'));
 const goalGraph = readJson(path.join(FIX, 'goal-033-fork-point.arch.json')).extensions.tsAnalysis
   .moduleGraph;
 const goalSlice = readJson(path.join(FIX, 'goal-033-slice.json'));
+const GOAL_ARCH = path.join(FIX, 'goal-033-fork-point.arch.json');
 
 const loadEngineMock = vi.mocked(loadEngine);
 
@@ -316,6 +317,59 @@ describe('archguard_simulate_refactor_slice — name-collision parity (CLI vs MC
       expect(mcpReport.unknowns.nameCollisionEdges).toEqual([' -> Y']);
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── unreferencedSymbols: the new diagnostic through BOTH faces ────────────────
+
+describe('archguard_simulate_refactor_slice — unreferencedSymbols parity (CLI vs MCP)', () => {
+  beforeEach(() => {
+    loadEngineMock.mockReset();
+    mockGraph(goalGraph);
+  });
+
+  it('AC: the same declared-on-no-edge name yields byte-identical unknowns on both faces', async () => {
+    const slice = {
+      ...goalSlice,
+      proposedCut: {
+        ...goalSlice.proposedCut,
+        moves: [
+          ...goalSlice.proposedCut.moves,
+          {
+            file: 'ghost.ts',
+            from: 'cli',
+            to: '',
+            symbols: ['thisSymbolDoesNotExistAnywhere12345'],
+          },
+        ],
+      },
+    };
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_simulate_refactor_slice');
+    const mcpResult = await handler({ projectRoot: '/workspace', slice });
+    const mcpReport = JSON.parse(String(mcpResult.content[0].text));
+    expect(mcpReport.status).toBe('evaluated');
+    expect(mcpReport.unknowns.unreferencedSymbols).toContain('thisSymbolDoesNotExistAnywhere12345');
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slice-mcp-unref-'));
+    try {
+      const slicePath = path.join(dir, 'slice.json');
+      fs.writeFileSync(slicePath, JSON.stringify(slice));
+      const cli = await runSliceDelta({ slice: slicePath, arch: GOAL_ARCH });
+      if (cli.report.status !== 'evaluated') throw new Error('expected evaluated');
+
+      // The new field flows through both adapters identically (same pure core).
+      expect(JSON.stringify(mcpReport.unknowns)).toBe(JSON.stringify(cli.report.unknowns));
+      expect(JSON.stringify(mcpReport.computedDelta)).toBe(
+        JSON.stringify(cli.report.computedDelta)
+      );
+      expect(cli.report.unknowns?.unreferencedSymbols).toContain(
+        'thisSymbolDoesNotExistAnywhere12345'
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });

@@ -244,6 +244,32 @@ export interface SliceDeltaUnknowns {
    * only when non-empty, so an unaffected cut keeps byte-identical diagnostics.
    */
   nameCollisionEdges?: string[];
+  /**
+   * Names declared in `proposedCut.moves[].symbols` / `proposedCut.stays[].symbols`
+   * that appear on NO internal edge's `importedNames`.
+   *
+   * This is a precise, recomputable SET difference — literally "is this name on any
+   * directory-level edge?" — never a heuristic such as "is it on a cross-directory
+   * edge?", which is exactly the proxy that misjudged 6 of 16 real symbols in the
+   * downstream end-to-end experiment. Present only when non-empty, so an unaffected
+   * cut keeps byte-identical diagnostics.
+   *
+   * ⚠️ BOUNDARY — this is a FACT, not a verdict. "Not referenced by any directory-level
+   * edge" is NOT "does not exist": a directory graph does not represent same-directory
+   * imports (see `proposedCut.assumptions[0]`), so a symbol that is real but imported
+   * only within its OWN directory — or that this cut simply does not route through any
+   * reconciled edge — appears here exactly as a name that is on no edge at all does.
+   * The directory graph cannot tell these apart. Do NOT read this field as an existence
+   * check; the caller decides. {@link unreferencedSymbolsNote} carries this boundary
+   * into the report itself.
+   */
+  unreferencedSymbols?: string[];
+  /**
+   * Boundary note that travels with {@link unreferencedSymbols} (present iff it is).
+   * It states, inside the report, that "not referenced by any directory-level edge" is
+   * not "does not exist", so a consumer cannot mistake the fact for a verdict.
+   */
+  unreferencedSymbolsNote?: string;
 }
 
 /** A must-not-change violation. */

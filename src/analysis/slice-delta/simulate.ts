@@ -70,6 +70,18 @@ const SURVIVING_NOTE =
 const SYNTHETIC_NODE_NOTE =
   '这个节点由 proposedCut.newDirs 显式声明为新建目录：除本次切法搬入的符号外没有内容。fileCount / stats 一律 unknown（null）——未查，不是 0，也没有任何被猜出来的读数。它的入边只由本次切法产生（retarget 自被移除的边，见 inboundEdges）；出边在目录级图上不可见（搬入文件自身的 import 不上图），因此不在此列出——是「未查」，不是「没有出边」。';
 
+/**
+ * Boundary note that MUST travel with `unknowns.unreferencedSymbols`, inside the
+ * report itself. It states the exact limit of the fact — a name declared in
+ * `moves[]`/`stays[]` that appears on no internal edge's `importedNames` — so a
+ * consumer cannot mistake it for a verdict about whether the name exists: the
+ * directory graph cannot represent same-directory imports, so a real symbol imported
+ * only within its own directory lands here exactly like a name that is on no edge at
+ * all. Deliberately phrased as a FACT plus its limitation, never as a check.
+ */
+const UNREFERENCED_SYMBOLS_NOTE =
+  '「未被任何目录级边引用」不等于「不存在」：同目录 import 在目录级图上不可见（见 proposedCut.assumptions 首条），一个只在自己所在目录内被 import 的真实符号同样会出现在这里。本字段只陈述「这些名字没有出现在任何 internal 边的 importedNames 上」这一事实，是否真的存在由调用方判断，本实现不做该判断。';
+
 /** Minimal internal-edge view the core works on (mirrors the prototype's `internalEdges`). */
 interface GraphEdge {
   from: string;
@@ -638,8 +650,11 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
   const sccLeft = beforeScc.filter((m) => !afterScc.includes(m));
 
   // ── accounting / unknowns (NEW diagnostics; NEVER feed computedDelta) ─────
-  // Emitted only when this declaration exercises a partial-migration feature, so a
-  // plain fully-covered cut keeps a report identical to the pre-extension output.
+  // `accounting` is emitted only when this declaration exercises a partial-migration
+  // feature, so a plain fully-covered cut keeps a report identical to the
+  // pre-extension output. `unknowns` additionally carries the additive
+  // `unreferencedSymbols` fact, so it is emitted whenever it has content —
+  // including a plain cut that declares a name on no directory-level edge.
   const emitPartialDiagnostics =
     stays.length > 0 ||
     sawMultiDestination ||
@@ -654,6 +669,21 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     ...movesTo,
     subject,
   ]);
+  // ── unreferencedSymbols (NEW, additive): a precise FACT, never a verdict ──────
+  // Names declared in moves[].symbols / stays[].symbols that appear on NO internal
+  // edge's importedNames — a pure SET difference over the graph the tool actually
+  // has, never a heuristic (e.g. "on a cross-directory edge?", the proxy that
+  // misjudged 6/16 real symbols downstream). On a directory graph same-directory
+  // imports are invisible (assumptions[0]), so this list is "not referenced by any
+  // directory-level edge", NOT "does not exist": a real symbol imported only within
+  // its own directory lands here exactly like a name that is on no edge at all.
+  const referencedNames = new Set<string>();
+  for (const e of internalEdges) for (const n of e.importedNames) referencedNames.add(n);
+  const declaredNames = [...new Set([...destOfSymbol.keys(), ...stayedSymbolDir.keys()])];
+  const unreferencedSymbols = declaredNames
+    .filter((n) => !referencedNames.has(n))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
   const unknowns: SliceDeltaUnknowns = {
     unresolvedAliasRefs: unresolvedRefs
       .filter((u) => relatedDirs.has(u.from))
@@ -664,6 +694,14 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     // diagnostics. These edges were KEPT (not removed) — the list is the honest出口
     // for the name-collision limitation, not a delta input.
     ...(nameCollisionEdges.length > 0 ? { nameCollisionEdges } : {}),
+    // Present only when non-empty. A precise fact plus its boundary note — NOT an
+    // existence verdict (see UNREFERENCED_SYMBOLS_NOTE / the SliceDeltaUnknowns docs).
+    ...(unreferencedSymbols.length > 0
+      ? {
+          unreferencedSymbols,
+          unreferencedSymbolsNote: UNREFERENCED_SYMBOLS_NOTE,
+        }
+      : {}),
   };
 
   // ── must-not-change guards ───────────────────────────────────────────────
@@ -822,7 +860,8 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
     },
     affectedConsumers,
     declaredConsumers,
-    ...(emitPartialDiagnostics ? { accounting, unknowns } : {}),
+    ...(emitPartialDiagnostics ? { accounting } : {}),
+    ...(emitPartialDiagnostics || unreferencedSymbols.length > 0 ? { unknowns } : {}),
     computedDelta,
     mustNotChange: {
       forbiddenNewEdges: mustNotChange.forbiddenNewEdges ?? [],

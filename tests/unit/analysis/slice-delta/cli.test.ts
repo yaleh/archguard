@@ -220,6 +220,41 @@ describe('archguard slice-delta — field boundaries', () => {
   });
 });
 
+describe('archguard slice-delta — unreferenced declared symbols (through the CLI face)', () => {
+  it('AC1/AC2: a name on no edge is named in unknowns.unreferencedSymbols and changes no delta', async () => {
+    const base = readJson(GOAL_SLICE);
+    const withGhost = writeSlice('goal-ghost.json', {
+      ...base,
+      proposedCut: {
+        ...base.proposedCut,
+        moves: [
+          ...base.proposedCut.moves,
+          {
+            file: 'ghost.ts',
+            from: 'cli',
+            to: '',
+            symbols: ['thisSymbolDoesNotExistAnywhere12345'],
+          },
+        ],
+      },
+    });
+    const r = await runSliceDelta({ slice: withGhost, arch: GOAL_ARCH });
+    expect(r.exitCode).toBe(0);
+    if (r.report.status !== 'evaluated') return;
+    expect(r.report.unknowns?.unreferencedSymbols).toContain('thisSymbolDoesNotExistAnywhere12345');
+
+    const baseline = await runSliceDelta({ slice: GOAL_SLICE, arch: GOAL_ARCH });
+    if (baseline.report.status !== 'evaluated') return;
+    // A diagnostic addition — status and the delta are untouched.
+    expect(JSON.stringify(r.report.computedDelta)).toBe(
+      JSON.stringify(baseline.report.computedDelta)
+    );
+    expect(JSON.stringify(r.report.negativeControl)).toBe(
+      JSON.stringify(baseline.report.negativeControl)
+    );
+  });
+});
+
 const CC_ARCH = path.join(FIX, 'claudecodeui-frontend.arch.json');
 const CC_SLICE = path.join(FIX, 'claudecodeui-readdevicename-slice.json');
 

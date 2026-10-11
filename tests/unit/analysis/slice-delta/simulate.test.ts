@@ -494,12 +494,26 @@ describe('claudecodeui real fixture — symbol-level partial migration', () => {
 // ── additive-only compatibility for a plain (no-stays) cut ────────────────────
 
 describe('additive-only: a plain cut report is unchanged in shape', () => {
-  it('GOAL-033 (no stays) emits NEITHER accounting NOR unknowns, and no proposedCut.stays', () => {
+  it('GOAL-033 (no stays) emits NO accounting, and carries unknowns ONLY for its unreferenced declared names', () => {
     const r = simulateRefactorSlice({ graph: goalGraph, slice: goalSlice, observed: goalObserved });
     expect(r.status).toBe('evaluated');
     if (r.status !== 'evaluated') return;
     expect(Object.prototype.hasOwnProperty.call(r, 'accounting')).toBe(false);
-    expect(Object.prototype.hasOwnProperty.call(r, 'unknowns')).toBe(false);
+    // GOAL-033 declares names (cli/driver-vocab.ts words, cli/server.ts's async
+    // driver entry) whose only imports are same-directory — invisible on a directory
+    // graph — so they appear on no internal edge. The additive `unknowns` section IS
+    // emitted, carrying exactly those names as a FACT (never an existence verdict).
+    expect(Object.prototype.hasOwnProperty.call(r, 'unknowns')).toBe(true);
+    expect(r.unknowns?.unreferencedSymbols).toEqual([
+      'DriverRunResult',
+      'KINDS',
+      'VERBS',
+      'resolveDriverInvocation',
+      'runDriverAsync',
+    ]);
+    // The boundary note travels with the field, in the report itself.
+    expect(typeof r.unknowns?.unreferencedSymbolsNote).toBe('string');
+    expect(r.unknowns?.unreferencedSymbolsNote).toMatch(/不等于/);
     expect(Object.prototype.hasOwnProperty.call(r.proposedCut, 'stays')).toBe(false);
     // core sections unchanged (6 → 4, one removed edge, guard clean)
     expect(r.current.sccSize).toBe(6);
@@ -985,10 +999,208 @@ for (const key of Object.keys(pmFixture.cases)) {
     simulateRefactorSlice({ graph: pmFixture.graph, slice: pmFixture.cases[key].slice });
 }
 
-describe('additive-only: no newDirs ⇒ every legacy fixture is byte-identical (AC5)', () => {
+describe('additive-only: legacy fixtures differ from the pre-change build ONLY by the new field (AC5)', () => {
   for (const key of Object.keys(legacyCases)) {
-    it(`${key}: report is byte-identical to the pre-change build`, () => {
-      expect(JSON.stringify(legacyCases[key]())).toBe(JSON.stringify(legacyGolden[key]));
+    it(`${key}: byte-identical once the additive unreferencedSymbols field is stripped`, () => {
+      const now = JSON.parse(JSON.stringify(legacyCases[key]())) as Record<string, unknown>;
+      const golden = legacyGolden[key] as Record<string, unknown>;
+      // This task may introduce exactly ONE additive change: `unknowns.unreferencedSymbols`
+      // (+ its note). Strip it and the rest must be byte-identical — the AC's
+      // "when the field is not triggered" property. A fixture whose declared names are
+      // all on some internal edge has nothing stripped and is fully unchanged.
+      if ('unknowns' in golden) {
+        const u = now.unknowns as Record<string, unknown> | undefined;
+        if (u) {
+          delete u.unreferencedSymbols;
+          delete u.unreferencedSymbolsNote;
+        }
+      } else {
+        delete now.unknowns;
+      }
+      expect(JSON.stringify(now)).toBe(JSON.stringify(golden));
     });
   }
+
+  it('the new field is NEVER emitted unconditionally (recursive key scan on a clean cut)', () => {
+    // syn declares only symbols that appear on an internal edge → no unreferenced
+    // symbol → the key must be entirely absent (an empty array is never emitted).
+    const keys = new Set<string>();
+    const walk = (o: unknown): void => {
+      if (!o || typeof o !== 'object') return;
+      for (const k of Object.keys(o as Record<string, unknown>)) {
+        keys.add(k);
+        walk((o as Record<string, unknown>)[k]);
+      }
+    };
+    walk(legacyCases.syn());
+    expect(keys.has('unreferencedSymbols')).toBe(false);
+    expect(keys.has('unreferencedSymbolsNote')).toBe(false);
+  });
+});
+
+// ── gap-slice-delta-unreferenced-declared-symbols ─────────────────────────────
+
+describe('unknowns.unreferencedSymbols — declared names on no internal edge', () => {
+  const BOGUS = 'thisSymbolDoesNotExistAnywhere12345';
+  const synWith = (symbols: string[]): RefactorSliceDeclaration =>
+    synSlice({
+      proposedCut: {
+        moves: [{ file: 'alpha-main.ts', from: 'alpha', to: '', symbols }],
+        consumers: [],
+      },
+    });
+
+  it('AC1: a declared name on no edge appears in unknowns.unreferencedSymbols', () => {
+    const r = simulateRefactorSlice({
+      graph: synthGraph,
+      slice: synWith(['alphaMain', 'alphaHelper', BOGUS]),
+    });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.unknowns?.unreferencedSymbols).toEqual([BOGUS]);
+  });
+
+  it('AC2: adding the name changes NEITHER status NOR computedDelta (a diagnostic, not a gate)', () => {
+    const base = simulateRefactorSlice({
+      graph: synthGraph,
+      slice: synWith(['alphaMain', 'alphaHelper']),
+    });
+    const withBogus = simulateRefactorSlice({
+      graph: synthGraph,
+      slice: synWith(['alphaMain', 'alphaHelper', BOGUS]),
+    });
+    expect(base.status).toBe('evaluated');
+    expect(withBogus.status).toBe('evaluated');
+    if (base.status !== 'evaluated' || withBogus.status !== 'evaluated') return;
+    expect(JSON.stringify(withBogus.computedDelta)).toBe(JSON.stringify(base.computedDelta));
+    expect(JSON.stringify(withBogus.guards)).toBe(JSON.stringify(base.guards));
+    expect(JSON.stringify(withBogus.negativeControl)).toBe(JSON.stringify(base.negativeControl));
+    // the base (all referenced) carries no such field at all
+    expect(base.unknowns?.unreferencedSymbols).toBeUndefined();
+  });
+
+  it('AC3: a symbol that IS on an internal edge is never flagged (real GOAL-033 names)', () => {
+    const r = simulateRefactorSlice({ graph: goalGraph, slice: goalSlice });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const flagged = r.unknowns?.unreferencedSymbols ?? [];
+    // runDriver / ALL_SERVICE_NAMES / HOSTED_SERVICE_NAMES appear on "" -> cli.
+    for (const onEdge of ['runDriver', 'ALL_SERVICE_NAMES', 'HOSTED_SERVICE_NAMES']) {
+      expect(flagged).not.toContain(onEdge);
+    }
+  });
+
+  it('AC3: a symbol whose ONLY internal-edge occurrence is a barrel/re-export edge is not flagged', () => {
+    // barrel -> A re-exports from the moved-from dir A; "" -> barrel forwards a name.
+    // `forwarded` appears on NO edge except the barrel edge "" -> barrel.
+    const graph: TsModuleGraph = {
+      nodes: ['', 'A', 'D', 'barrel'].map((id) => ({
+        id,
+        name: id || '(root)',
+        type: 'internal',
+        fileCount: 1,
+        stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+      })),
+      edges: [
+        {
+          from: 'barrel',
+          to: 'A',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['shared'],
+        },
+        {
+          from: '',
+          to: 'barrel',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['forwarded'],
+        },
+      ],
+      cycles: [],
+    } as unknown as TsModuleGraph;
+    const slice: RefactorSliceDeclaration = {
+      subject: '',
+      proposedCut: {
+        moves: [{ file: 'a.ts', from: 'A', to: 'D', symbols: ['shared'] }],
+        stays: [{ dir: 'barrel', symbols: ['forwarded'] }],
+      },
+      negativeControl: { restoreEdges: [{ from: '', to: 'A' }] },
+    };
+    const r = simulateRefactorSlice({ graph, slice });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    expect(r.unknowns?.unreferencedSymbols ?? []).not.toContain('forwarded');
+  });
+
+  it('AC4: stays[].symbols are covered too — an unreferenced stay name is flagged', () => {
+    const graph: TsModuleGraph = {
+      nodes: ['', 'A', 'D', 'barrel'].map((id) => ({
+        id,
+        name: id || '(root)',
+        type: 'internal',
+        fileCount: 1,
+        stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+      })),
+      edges: [
+        {
+          from: 'barrel',
+          to: 'A',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['shared'],
+        },
+        {
+          from: '',
+          to: 'barrel',
+          strength: 1,
+          typeOnlyStrength: 0,
+          valueStrength: 1,
+          importedNames: ['other'],
+        },
+      ],
+      cycles: [],
+    } as unknown as TsModuleGraph;
+    const slice: RefactorSliceDeclaration = {
+      subject: '',
+      proposedCut: {
+        moves: [{ file: 'a.ts', from: 'A', to: 'D', symbols: ['shared'] }],
+        stays: [{ dir: 'barrel', symbols: ['stayOnlyName'] }],
+      },
+      negativeControl: { restoreEdges: [{ from: '', to: 'A' }] },
+    };
+    const r = simulateRefactorSlice({ graph, slice });
+    expect(r.status).toBe('evaluated');
+    if (r.status !== 'evaluated') return;
+    // `stayOnlyName` is declared staying but on no edge → it MUST be listed.
+    expect(r.unknowns?.unreferencedSymbols).toEqual(['stayOnlyName']);
+  });
+
+  it('AC6: the boundary wording is present and never calls the field a fabrication check', () => {
+    const doc = fs.readFileSync(
+      path.join(REPO_ROOT, 'docs', 'user-guide', 'slice-delta.md'),
+      'utf8'
+    );
+    const toolSrc = fs.readFileSync(
+      path.join(REPO_ROOT, 'src', 'cli', 'mcp', 'tools', 'slice-delta-tool.ts'),
+      'utf8'
+    );
+    for (const src of [doc, toolSrc]) {
+      expect(src).toContain('unreferencedSymbols');
+      // equivalent of: "not referenced by any directory-level edge" ≠ "does not exist"
+      expect(src).toMatch(/not referenced by any directory-level edge/);
+      expect(src).toMatch(/does not exist/i);
+    }
+    // The field's own in-report note must not read as a verdict.
+    const r = simulateRefactorSlice({
+      graph: synthGraph,
+      slice: synWith(['alphaMain', 'alphaHelper', BOGUS]),
+    });
+    if (r.status !== 'evaluated') throw new Error('expected evaluated');
+    const note = r.unknowns?.unreferencedSymbolsNote ?? '';
+    expect(note).toMatch(/不等于/);
+    expect(note).not.toMatch(/fabricat|hallucinat/i);
+  });
 });
