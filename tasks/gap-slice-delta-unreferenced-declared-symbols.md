@@ -60,15 +60,15 @@ if (fromModule === toModule) return;
 
 ## AC
 
-- [ ] **复现用例**：在任一条 move 的 `symbols` 里加入一个图上不存在的名字 → 该名字出现在 `unknowns.unreferencedSymbols`（今天：报告里除输入回显外**没有任何地方**出现它）
-- [ ] **行为不变（关键负对照）**：上一条施加前后的 `status` 与 `computedDelta` **逐字节相同**（仍然是 `evaluated`、exit code 不变）——这是一条诊断加法，**不是新门**。若实现让它变成 `not-evaluated` 或改变了任何 delta，说明它误伤了合法符号，**停下来**
-- [ ] **真符号不误报**：一个确实出现在某条边 `importedNames` 上的符号（含**只**经 barrel/re-export 边、或**只**经 external 边出现的）**不得**出现在该字段里
-- [ ] `stays[].symbols` 同样纳入（只查 `moves` 是不完整的）
-- [ ] **legacy 逐字节**：既有全部夹具在未触发该字段时输出与改动前逐字节相同；且字段非空时才出现（用递归 key 扫描断言空数组不被无条件发出）
-- [ ] **判定是明确定义的集合运算**：实现里必须能一眼看出它并的是哪些边的 `importedNames`（internal + external），不得留含糊；并把该集合写进文档
-- [ ] **文案不越界**：该字段的 note / 用户文档 / 工具描述里，必须出现等价于"同目录 import 在目录级图上不可见，因此'未被引用'≠'不存在'"的说明；**不得**出现 `fabricated` / `hallucinated` 这类暗示已判定编造的措辞（grep 可核对）
-- [ ] **CLI/MCP parity**：同一输入两个面产出 `unknowns` 逐字节相同
-- [ ] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
+- [x] **复现用例**：在任一条 move 的 `symbols` 里加入一个图上不存在的名字 → 该名字出现在 `unknowns.unreferencedSymbols`（今天：报告里除输入回显外**没有任何地方**出现它）
+- [x] **行为不变（关键负对照）**：上一条施加前后的 `status` 与 `computedDelta` **逐字节相同**（仍然是 `evaluated`、exit code 不变）——这是一条诊断加法，**不是新门**。若实现让它变成 `not-evaluated` 或改变了任何 delta，说明它误伤了合法符号，**停下来**
+- [x] **真符号不误报**：一个确实出现在某条边 `importedNames` 上的符号（含**只**经 barrel/re-export 边、或**只**经 external 边出现的）**不得**出现在该字段里
+- [x] `stays[].symbols` 同样纳入（只查 `moves` 是不完整的）
+- [x] **legacy 逐字节**：既有全部夹具在未触发该字段时输出与改动前逐字节相同；且字段非空时才出现（用递归 key 扫描断言空数组不被无条件发出）
+- [x] **判定是明确定义的集合运算**：实现里必须能一眼看出它并的是哪些边的 `importedNames`（internal + external），不得留含糊；并把该集合写进文档
+- [x] **文案不越界**：该字段的 note / 用户文档 / 工具描述里，必须出现等价于"同目录 import 在目录级图上不可见，因此'未被引用'≠'不存在'"的说明；**不得**出现 `fabricated` / `hallucinated` 这类暗示已判定编造的措辞（grep 可核对）
+- [x] **CLI/MCP parity**：同一输入两个面产出 `unknowns` 逐字节相同
+- [x] `npm test`、`npm run type-check`、`npm run lint`（不新增 error）、`npm run check:adr` 通过
 
 ## DoD
 
@@ -76,6 +76,16 @@ if (fromModule === toModule) return;
 2. **不许降低既有安全判据，也不许新增误伤**——纯加法：`status`、`computedDelta`、`guards`、`negativeControl` 在有/无该字段时完全一致（AC 第 2、3 条是正反对照）。
 3. **定义精确、边界写明**：判定是"名字是否出现在任一 internal 或 external 边的 `importedNames` 里"这一集合运算；文档要写明它**包含什么、不包含什么**（尤其：不含同目录 import）。
 4. **用真实候选解释那个数字，并如实归因**：落地后用 Quay 那个真实候选重跑一次，报告这 16 个符号里有几个落进 `unreferencedSymbols`。**预期是接近 6**——若接近 6，则该数字**印证了下游代理是忠实的**，"6 个被当成编造"是**读法**问题而非判据问题，请如实这样写。若与 6 有明显差额，则指出差额由哪一类边解释（例如 external 边的计入），把差额写进任务报告。**无论结果如何，不得为凑一个"更好看"的数字而调整判据。**
+
+## 落地报告（worker）
+
+**DoD 4 — 真实候选重跑（在落地后的构建上）**：对 2026-10-11 盲测候选（carrier `.quay/ownership-shadow-proposals.jsonl` 第 91 条，commit `ec00fcc00`，3 个 move 共 **16** 个符号）在同一棵树的 package 级 ArchJSON 上重跑 `archguard slice-delta`：
+
+- `status: evaluated`（沿用 adapter 产出的 `stays`：28 个声明符号 = 16 move + 12 stay），`unknowns.unreferencedSymbols` = `["AcceptanceResult","AcceptanceVerdict","GateDefinition","GateVerdict","GateVerdictKind","NotEvaluatedCause"]` —— **恰好 6 个**。
+- 与下游代理的 6 个**完全一致（同集合）**。**如实归因**：该数字**印证了下游代理的判据是忠实的**；"6 个被当成编造"是**读法**问题（把"未被任何边引用"读成"编造"），不是判据问题。按 DoD 4，**不为凑数字调整判据**。
+- 差额为 0 的原因：这 6 个名字在**任何边**（internal 或 external）上都不出现（是 `gate/types.ts` / `gate/acceptance-runner.ts` 的真实导出，只在同目录内被用或尚未接线）；把 external 边计入 reference set 对本候选不改变集合（其余 10 个都在 internal 边上）。
+
+**实现**：`referenced := ⋃ { e.importedNames : e ∈ moduleGraph.edges }`（internal + external）；`unreferencedSymbols := declaredNames \ referenced`（排序，非空才发出，附 `unreferencedSymbolsNote` 边界串）。纯加法，不进 `computedDelta`：`status` / `computedDelta` / `guards` / `negativeControl` 在有/无该字段时逐字节一致（负对照已测）。
 
 ## Touches
 
