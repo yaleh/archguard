@@ -15,9 +15,9 @@ extra:
 
 ## AC
 
-- [ ] 每个 scope 查询结果（或 `archguard_summary`/`scopeInfo`）包含 staleness 字段，比较 `generatedAt` 与当前 git HEAD（无 git 时标 `not-checked`）；新增用例到 `tests/unit/cli/mcp/mcp-server.test.ts`
-- [ ] 一个 `generatedAt` 早于 HEAD 的 scope 被标 stale 且带「重跑 analyze」提示，新鲜的 scope 不被标
-- [ ] 现有 summary/scopeInfo 用例不回归
+- [x] 每个 scope 查询结果（或 `archguard_summary`/`scopeInfo`）包含 staleness 字段，比较 `generatedAt` 与当前 git HEAD（无 git 时标 `not-checked`）；新增用例到 `tests/unit/cli/mcp/mcp-server.test.ts`
+- [x] 一个 `generatedAt` 早于 HEAD 的 scope 被标 stale 且带「重跑 analyze」提示，新鲜的 scope 不被标
+- [x] 现有 summary/scopeInfo 用例不回归
 
 ## DoD
 
@@ -28,4 +28,5 @@ extra:
 - src/cli/mcp/mcp-server.ts
 - src/cli/query/engine-loader.ts
 - tests/unit/cli/mcp/mcp-server.test.ts
+- tests/unit/cli/query/engine-loader.test.ts
 - tasks/gap-query-stale-snapshot-warning.md
