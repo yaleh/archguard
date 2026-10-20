@@ -6,6 +6,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { promises as fsp } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type { Entity, ArchJSON } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
@@ -239,6 +242,64 @@ describe('archguard_get_cognitive_summary — missing entity', () => {
 
     expect(parsed[0].found).toBe(false);
     expect(parsed[0].reason).toBe('in-graph-no-artifact');
+  });
+
+  it('returns reason in-graph-no-artifact when the entity exists in another query scope', async () => {
+    const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'archguard-cognitive-summary-'));
+    try {
+      const archDir = path.join(tmp, '.archguard');
+      const primaryDir = path.join(archDir, 'query', 'primary');
+      const otherDir = path.join(archDir, 'query', 'other');
+      await fsp.mkdir(primaryDir, { recursive: true });
+      await fsp.mkdir(otherDir, { recursive: true });
+
+      const scope = (key: string, entityCount: number) => ({
+        key,
+        label: key,
+        language: 'typescript',
+        kind: 'parsed' as const,
+        sources: [`/${key}/src`],
+        entityCount,
+        relationCount: 0,
+        hasAtlasExtension: false,
+      });
+      await fsp.writeFile(
+        path.join(archDir, 'query', 'manifest.json'),
+        JSON.stringify({
+          version: '1.0',
+          generatedAt: '2026-01-01T00:00:00Z',
+          scopes: [scope('primary', 0), scope('other', 1)],
+        })
+      );
+      await fsp.writeFile(path.join(primaryDir, 'arch.json'), JSON.stringify({ entities: [] }));
+      await fsp.writeFile(
+        path.join(otherDir, 'arch.json'),
+        JSON.stringify({
+          entities: [{ id: 'cross.ts.CrossScope', name: 'CrossScope', type: 'class' }],
+        })
+      );
+
+      const ctx = buildEngineContext([]);
+      ctx.scopeEntry = { ...ctx.scopeEntry, key: 'primary' };
+      loadEngineMock.mockResolvedValue(ctx);
+
+      const server = new McpServer({ name: 'test', version: '1.0.0' });
+      const tools = collectTools(server);
+      const cb = tools.get('archguard_get_cognitive_summary');
+
+      const result = await cb({ entities: ['CrossScope', 'cross.ts.CrossScope'], projectRoot: tmp });
+      const parsed = JSON.parse(result.content[0].text) as any[];
+
+      expect(parsed[0].found).toBe(false);
+      expect(parsed[0].reason).toBe('in-graph-no-artifact');
+      expect(parsed[0].reasonDetail).toContain("'other'");
+
+      // The same entity, addressed by its id, is an id-format problem.
+      expect(parsed[1].reason).toBe('id-format-mismatch');
+      expect(parsed[1].resolvedName).toBe('CrossScope');
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true });
+    }
   });
 
   it('reports projectSemantics "missing" instead of a silent null coverage ratio', async () => {

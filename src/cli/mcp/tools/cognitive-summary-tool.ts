@@ -24,9 +24,10 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { promises as fs } from 'node:fs';
 import path from 'path';
 import type { Entity } from '@/types/index.js';
-import { loadEngine } from '../../query/engine-loader.js';
+import { loadEngine, readManifest } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
 import { loadHistoryData } from '../../git-history/history-loader.js';
 import { HistoryQuery } from '../../git-history/history-query.js';
@@ -136,6 +137,64 @@ function classifyMissingEntity(
   };
 }
 
+interface OtherScopeHit {
+  scopeKey: string;
+  /** `id` = the exact input is an entity id in that scope; `format` = the derived name matched; `name` = the input is a name there. */
+  matchedBy: 'id' | 'format' | 'name';
+  resolvedName: string;
+}
+
+/**
+ * Look for the requested entity (as an id, an id-derived name, or a plain
+ * name) in the OTHER query scopes of the same manifest. A hit means the entity
+ * IS in the project graph, just not in the scope this summary loaded — which is
+ * materially different from "not in the graph at all".
+ *
+ * Best-effort: unreadable manifest/scope artifacts simply leave the caller's
+ * not-in-graph classification intact.
+ */
+async function probeEntityInOtherScopes(
+  archDir: string,
+  loadedScopeKey: string,
+  name: string,
+  idDerivedName?: string
+): Promise<OtherScopeHit | undefined> {
+  try {
+    const manifest = await readManifest(archDir);
+    for (const scope of manifest.scopes) {
+      if (scope.key === loadedScopeKey) continue;
+      const archPath = path.join(archDir, 'query', scope.key, 'arch.json');
+      const raw = await fs.readFile(archPath, 'utf8');
+      const parsed = JSON.parse(raw) as { entities?: Array<{ id?: string; name?: string }> };
+      const entities = parsed.entities ?? [];
+
+      const byId = entities.find((entity) => entity.id === name);
+      if (byId !== undefined) {
+        return {
+          scopeKey: scope.key,
+          matchedBy: 'id',
+          resolvedName: byId.name ?? idDerivedName ?? name,
+        };
+      }
+
+      if (idDerivedName !== undefined && idDerivedName !== name) {
+        const byDerivedName = entities.find((entity) => entity.name === idDerivedName);
+        if (byDerivedName !== undefined) {
+          return { scopeKey: scope.key, matchedBy: 'format', resolvedName: idDerivedName };
+        }
+      }
+
+      const byName = entities.find((entity) => entity.name === name);
+      if (byName !== undefined) {
+        return { scopeKey: scope.key, matchedBy: 'name', resolvedName: name };
+      }
+    }
+  } catch {
+    // Manifest or scope artifacts unavailable — keep the caller's classification.
+  }
+  return undefined;
+}
+
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
 }
@@ -179,7 +238,8 @@ export function registerCognitiveSummaryTool(server: McpServer, defaultRoot: str
           : path.join(root, '.archguard');
 
         // Load primary engine (throws if no analysis artifacts found)
-        const { engine, extensionAccessor } = await loadEngine(resolvedArchDir);
+        const { engine, extensionAccessor, scopeEntry } = await loadEngine(resolvedArchDir);
+        const loadedScopeKey = scopeEntry?.key ?? '';
 
         // Load git history data (optional — null when absent)
         let historyQuery: HistoryQuery | null = null;
@@ -206,11 +266,42 @@ export function registerCognitiveSummaryTool(server: McpServer, defaultRoot: str
           const found = engine.findEntity(entityName) as Entity[];
 
           if (!found || found.length === 0) {
-            const classification = classifyMissingEntity(
+            let classification = classifyMissingEntity(
               entityName,
               (candidate) => engine.findEntity(candidate) as Entity[],
               entityIds
             );
+            // The entity may live in another query scope of the same graph, or
+            // the input may be an entity id — report which, instead of claiming
+            // it is absent entirely.
+            if (classification.reason === 'not-in-graph' && loadedScopeKey) {
+              const idDerivedName = ID_LIKE_RE.test(entityName)
+                ? lastEntitySegment(entityName)
+                : undefined;
+              const hit = await probeEntityInOtherScopes(
+                resolvedArchDir,
+                loadedScopeKey,
+                entityName,
+                idDerivedName
+              );
+              if (hit !== undefined) {
+                classification =
+                  hit.matchedBy === 'name'
+                    ? {
+                        reason: 'in-graph-no-artifact',
+                        reasonDetail:
+                          `entity '${entityName}' exists in query scope '${hit.scopeKey}' but not ` +
+                          `in the loaded scope '${loadedScopeKey}' — this summary has no artifact for it`,
+                      }
+                    : {
+                        reason: 'id-format-mismatch',
+                        reasonDetail:
+                          `'${entityName}' is an entity id in query scope '${hit.scopeKey}'; ` +
+                          `query the entity name '${hit.resolvedName}' instead`,
+                        resolvedName: hit.resolvedName,
+                      };
+              }
+            }
             results.push({
               name: entityName,
               found: false,
