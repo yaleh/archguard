@@ -10,8 +10,10 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { QueryScopeCollector } from '@/cli/processors/query-scope-collector.js';
-import type { ArchJSON } from '@/types/index.js';
+import { QueryScopeCollector, mergeQueryScopes } from '@/cli/processors/query-scope-collector.js';
+import { loadEngine, resolveScope, MERGED_SCOPE_KEY } from '@/cli/query/engine-loader.js';
+import type { ArchJSON, Relation } from '@/types/index.js';
+import type { QueryScopeEntry } from '@/types/query-scope.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -272,5 +274,415 @@ describe('QueryScopeCollector', () => {
 
       expect(collector.getLastArchJson()).toBe(third);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Merged multi-scope view
+// ---------------------------------------------------------------------------
+
+interface FixtureEntity {
+  id: string;
+  name: string;
+  file: string;
+}
+
+interface FixtureScopeOptions {
+  entities: FixtureEntity[];
+  relations?: Relation[];
+  /** Internal directory module ids, relative to the scope root. */
+  modules?: string[];
+}
+
+/**
+ * Build a per-scope ArchJSON shaped exactly like the one `analyze` persists:
+ * entity ids and relation targets are scope-root-relative, and the module
+ * graph knows only the directories inside that root.
+ */
+function makeScopeArchJson(root: string, options: FixtureScopeOptions): ArchJSON {
+  const modules = options.modules ?? [''];
+  return {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    sourceFiles: options.entities.map((entity) => `${root}/${entity.file}`),
+    entities: options.entities.map((entity) => ({
+      id: entity.id,
+      name: entity.name,
+      type: 'class' as const,
+      visibility: 'public' as const,
+      sourceLocation: { file: entity.file, startLine: 1, endLine: 2 },
+      members: [],
+    })),
+    relations: options.relations ?? [],
+    extensions: {
+      tsAnalysis: {
+        version: '1.0',
+        moduleGraph: {
+          nodes: modules.map((id) => ({
+            id,
+            name: id || '(root)',
+            type: 'internal' as const,
+            fileCount: 1,
+            stats: { classes: 0, interfaces: 0, functions: 0, enums: 0 },
+          })),
+          edges: [],
+          cycles: [],
+        },
+      },
+    },
+  };
+}
+
+const P_ROOT = '/fixture/p';
+const Q_ROOT = '/fixture/q';
+
+function makePQScopes(): {
+  pScope: {
+    key: string;
+    sources: string[];
+    archJson: ArchJSON;
+    kind: 'parsed';
+  };
+  qScope: {
+    key: string;
+    sources: string[];
+    archJson: ArchJSON;
+    kind: 'parsed';
+  };
+} {
+  const pScope = {
+    key: 'p-scope',
+    sources: [P_ROOT],
+    kind: 'parsed' as const,
+    archJson: makeScopeArchJson(P_ROOT, {
+      entities: [{ id: 'y.ts.Y', name: 'Y', file: 'y.ts' }],
+    }),
+  };
+  const qScope = {
+    key: 'q-scope',
+    sources: [Q_ROOT],
+    kind: 'parsed' as const,
+    archJson: makeScopeArchJson(Q_ROOT, {
+      entities: [{ id: 'x.ts.X', name: 'X', file: 'x.ts' }],
+      relations: [
+        {
+          id: 'x.ts.X_dependency_../p/y.ts.Y',
+          type: 'dependency',
+          source: 'x.ts.X',
+          target: '../p/y.ts.Y',
+        },
+      ],
+    }),
+  };
+  return { pScope, qScope };
+}
+
+describe('mergeQueryScopes()', () => {
+  it('returns null for a single scope — the per-source behavior must not change', () => {
+    const { pScope } = makePQScopes();
+    expect(mergeQueryScopes([pScope])).toBeNull();
+    expect(mergeQueryScopes([])).toBeNull();
+  });
+
+  it('re-bases entities and recovers the q → p cross-scope relation', () => {
+    const { pScope, qScope } = makePQScopes();
+
+    const view = mergeQueryScopes([pScope, qScope]);
+
+    expect(view.archJson.entities.map((entity) => entity.id).sort()).toEqual([
+      'p/y.ts.Y',
+      'q/x.ts.X',
+    ]);
+    expect(view.archJson.relations).toHaveLength(1);
+    expect(view.archJson.relations[0]).toMatchObject({
+      source: 'q/x.ts.X',
+      target: 'p/y.ts.Y',
+      type: 'dependency',
+    });
+  });
+
+  it('adds the cross-scope edge to the merged module graph', () => {
+    const { pScope, qScope } = makePQScopes();
+
+    const view = mergeQueryScopes([pScope, qScope]);
+    const graph = view.archJson.extensions?.tsAnalysis?.moduleGraph;
+
+    expect(graph?.nodes.map((node) => node.id).sort()).toEqual(['p', 'q']);
+    const edge = graph?.edges.find((candidate) => candidate.from === 'q' && candidate.to === 'p');
+    expect(edge).toBeDefined();
+    expect(edge?.importedNames).toEqual(['Y']);
+    expect(edge?.strength).toBe(1);
+    // Relations carry no statement position — the derived edge says so.
+    expect(edge?.evidence).toEqual([{ specifier: '', file: 'q/x.ts', line: 0, kind: 'import' }]);
+  });
+
+  it('enumerates the recovered cross-scope edge with both scope keys', () => {
+    const { pScope, qScope } = makePQScopes();
+
+    const view = mergeQueryScopes([pScope, qScope]);
+
+    expect(view.crossScopeEdges).toEqual([
+      {
+        from: 'q',
+        to: 'p',
+        fromScope: 'q-scope',
+        toScope: 'p-scope',
+        source: 'q/x.ts.X',
+        target: 'p/y.ts.Y',
+      },
+    ]);
+  });
+
+  it('does not collide when two scopes use the same scope-relative entity id', () => {
+    const aScope = {
+      key: 'a-scope',
+      sources: [P_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(P_ROOT, {
+        entities: [{ id: 'x.ts.X', name: 'X', file: 'x.ts' }],
+      }),
+    };
+    const bScope = {
+      key: 'b-scope',
+      sources: [Q_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(Q_ROOT, {
+        entities: [{ id: 'x.ts.X', name: 'X', file: 'x.ts' }],
+      }),
+    };
+
+    const view = mergeQueryScopes([aScope, bScope]);
+
+    expect(view.archJson.entities.map((entity) => entity.id).sort()).toEqual([
+      'p/x.ts.X',
+      'q/x.ts.X',
+    ]);
+    expect(view.crossScopeEdges).toEqual([]);
+  });
+
+  it('recomputes directory cycles over the merged graph', () => {
+    const pScope = {
+      key: 'p-scope',
+      sources: [P_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(P_ROOT, {
+        entities: [{ id: 'y.ts.Y', name: 'Y', file: 'y.ts' }],
+        relations: [
+          {
+            id: 'y.ts.Y_dependency_../q/x.ts.X',
+            type: 'dependency',
+            source: 'y.ts.Y',
+            target: '../q/x.ts.X',
+          },
+        ],
+      }),
+    };
+    const qScope = {
+      key: 'q-scope',
+      sources: [Q_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(Q_ROOT, {
+        entities: [{ id: 'x.ts.X', name: 'X', file: 'x.ts' }],
+        relations: [
+          {
+            id: 'x.ts.X_dependency_../p/y.ts.Y',
+            type: 'dependency',
+            source: 'x.ts.X',
+            target: '../p/y.ts.Y',
+          },
+        ],
+      }),
+    };
+
+    const view = mergeQueryScopes([pScope, qScope]);
+    const cycles = view.archJson.extensions?.tsAnalysis?.moduleGraph?.cycles ?? [];
+
+    expect(cycles).toHaveLength(1);
+    expect(cycles[0].modules).toEqual(['p', 'q']);
+    expect(cycles[0].severity).toBe('warning');
+    expect(view.crossScopeEdges.map((edge) => `${edge.from}->${edge.to}`).sort()).toEqual([
+      'p->q',
+      'q->p',
+    ]);
+  });
+
+  it('leaves targets that resolve to no known scope visible instead of dropping them', () => {
+    const pScope = {
+      key: 'p-scope',
+      sources: [P_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(P_ROOT, {
+        entities: [{ id: 'y.ts.Y', name: 'Y', file: 'y.ts' }],
+      }),
+    };
+    const qScope = {
+      key: 'q-scope',
+      sources: [Q_ROOT],
+      kind: 'parsed' as const,
+      archJson: makeScopeArchJson(Q_ROOT, {
+        entities: [{ id: 'x.ts.X', name: 'X', file: 'x.ts' }],
+        relations: [
+          {
+            id: 'x.ts.X_dependency_../elsewhere/z.ts.Z',
+            type: 'dependency',
+            source: 'x.ts.X',
+            target: '../elsewhere/z.ts.Z',
+          },
+        ],
+      }),
+    };
+
+    const view = mergeQueryScopes([pScope, qScope]);
+
+    expect(view.archJson.relations[0].target).toBe('elsewhere/z.ts.Z');
+    expect(view.crossScopeEdges).toEqual([]);
+  });
+});
+
+describe('merged scope through the query loader', () => {
+  let tmp: string | undefined;
+
+  afterEach(() => {
+    if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
+    tmp = undefined;
+  });
+
+  function scopeEntry(
+    key: string,
+    label: string,
+    sources: string[],
+    archJson: ArchJSON
+  ): QueryScopeEntry {
+    return {
+      key,
+      label,
+      language: 'typescript',
+      kind: 'parsed',
+      sources,
+      entityCount: archJson.entities.length,
+      relationCount: archJson.relations.length,
+      hasAtlasExtension: false,
+      generatedAt: '2026-01-01T00:00:00.000Z',
+    };
+  }
+
+  function writeWorkspace(entries: QueryScopeEntry[], archJsons: Map<string, ArchJSON>): void {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'merged-scope-'));
+    const queryDir = path.join(tmp, 'query');
+    fs.mkdirSync(queryDir, { recursive: true });
+    for (const entry of entries) {
+      const archJson = archJsons.get(entry.key);
+      if (!archJson) continue;
+      const scopeDir = path.join(queryDir, entry.key);
+      fs.mkdirSync(scopeDir, { recursive: true });
+      fs.writeFileSync(path.join(scopeDir, 'arch.json'), JSON.stringify(archJson, null, 2));
+    }
+    fs.writeFileSync(
+      path.join(queryDir, 'manifest.json'),
+      JSON.stringify(
+        {
+          version: '1.0',
+          generatedAt: '2026-01-01T00:00:00.000Z',
+          globalScopeKey: entries[0]?.key,
+          scopes: entries,
+        },
+        null,
+        2
+      )
+    );
+  }
+
+  function writePQWorkspace(): { pKey: string; qKey: string } {
+    const { pScope, qScope } = makePQScopes();
+    const pKey = pScope.key;
+    const qKey = qScope.key;
+    const entries = [
+      scopeEntry(pKey, 'p (typescript)', pScope.sources, pScope.archJson),
+      scopeEntry(qKey, 'q (typescript)', qScope.sources, qScope.archJson),
+    ];
+    writeWorkspace(
+      entries,
+      new Map([
+        [pKey, pScope.archJson],
+        [qKey, qScope.archJson],
+      ])
+    );
+    return { pKey, qKey };
+  }
+
+  it('resolves the synthetic merged scope entry', async () => {
+    writePQWorkspace();
+
+    const entry = await resolveScope(tmp, MERGED_SCOPE_KEY);
+
+    expect(entry.key).toBe(MERGED_SCOPE_KEY);
+    expect(entry.kind).toBe('derived');
+    expect([...entry.sources].sort()).toEqual([P_ROOT, Q_ROOT]);
+    expect(entry.label).toBe('merged (2 scopes)');
+  });
+
+  it('exposes the q → p edge through the engine and package graph', async () => {
+    writePQWorkspace();
+
+    const ctx = await loadEngine(tmp, MERGED_SCOPE_KEY);
+
+    expect(ctx.scopeInfo.key).toBe(MERGED_SCOPE_KEY);
+    expect(ctx.engine.getCrossScopeEdges()).toEqual([
+      {
+        from: 'q',
+        to: 'p',
+        fromScope: 'q-scope',
+        toScope: 'p-scope',
+        source: 'q/x.ts.X',
+        target: 'p/y.ts.Y',
+      },
+    ]);
+    expect(ctx.engine.findEntity('X')).toHaveLength(1);
+    expect(ctx.engine.findEntity('Y')).toHaveLength(1);
+
+    const packageCycles = ctx.engine.getPackageCycles();
+    expect(packageCycles.evaluated).toBe(true);
+    expect(packageCycles.edgeDeletions?.some((edge) => edge.from === 'q' && edge.to === 'p')).toBe(
+      true
+    );
+
+    expect(ctx.availableScopes.map((scope) => scope.key)).toContain(MERGED_SCOPE_KEY);
+  });
+
+  it('leaves a normal per-scope query untouched (no cross-scope edges attached)', async () => {
+    const { pKey } = writePQWorkspace();
+
+    const ctx = await loadEngine(tmp, pKey);
+
+    expect(ctx.scopeInfo.key).toBe(pKey);
+    expect(ctx.engine.getCrossScopeEdges()).toBeUndefined();
+    expect(ctx.engine.findEntity('Y')).toHaveLength(1);
+    expect(ctx.engine.findEntity('X')).toHaveLength(0);
+  });
+
+  it('rejects the merged alias when only one scope exists', async () => {
+    const { pScope } = makePQScopes();
+    const entry = scopeEntry(pScope.key, 'p (typescript)', pScope.sources, pScope.archJson);
+    writeWorkspace([entry], new Map([[pScope.key, pScope.archJson]]));
+
+    await expect(resolveScope(tmp, MERGED_SCOPE_KEY)).rejects.toThrow(/at least two/);
+  });
+
+  it('lets a real scope whose key is "merged" win over the synthetic alias', async () => {
+    const { pScope, qScope } = makePQScopes();
+    const realMerged = scopeEntry('merged', 'real merged scope', pScope.sources, pScope.archJson);
+    writeWorkspace(
+      [realMerged, scopeEntry(qScope.key, 'q (typescript)', qScope.sources, qScope.archJson)],
+      new Map([
+        ['merged', pScope.archJson],
+        [qScope.key, qScope.archJson],
+      ])
+    );
+
+    const entry = await resolveScope(tmp, 'merged');
+
+    expect(entry.label).toBe('real merged scope');
+    expect(entry.kind).toBe('parsed');
   });
 });

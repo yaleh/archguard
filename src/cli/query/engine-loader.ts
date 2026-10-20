@@ -9,7 +9,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { execFileSync } from 'node:child_process';
-import type { QueryManifest, QueryScopeEntry } from './query-manifest.js';
+import type { QueryManifest, QueryScopeEntry, QuerySourceGroup } from './query-manifest.js';
 import type { ArchIndex } from './arch-index.js';
 import type { ArchJSON } from '@/types/index.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
@@ -18,6 +18,23 @@ import { atomicWriteFile } from './query-artifacts.js';
 import { QueryEngine } from './query-engine.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import { RelationQueryService } from '@/core/query/relation-query-service.js';
+import { mergeQueryScopes } from '../processors/query-scope-collector.js';
+
+/**
+ * Synthetic scope alias: every scope in the manifest merged into one view.
+ *
+ * Individual scopes keep their own source root and therefore drop imports that
+ * cross into another root. `scope=merged` re-bases them onto their common
+ * ancestor and folds the recovered cross-scope edges back in. A real scope
+ * whose key is literally `merged` still wins (exact-key match is checked
+ * first).
+ */
+export const MERGED_SCOPE_KEY = 'merged';
+
+/** Label shown for the synthetic merged scope. */
+export function mergedScopeLabel(scopeCount: number): string {
+  return `merged (${scopeCount} scopes)`;
+}
 
 /** Where the current git HEAD sits, as read from the project that owns the snapshot. */
 export interface GitHeadInfo {
@@ -71,8 +88,11 @@ export function readGitHead(projectRoot: string): GitHeadInfo | undefined {
     stdio: ['ignore', 'pipe', 'ignore'] as ['ignore', 'pipe', 'ignore'],
   };
   try {
-    const sha = execFileSync('git', ['-C', projectRoot, 'rev-parse', '--short=12', 'HEAD'], opts)
-      .trim();
+    const sha = execFileSync(
+      'git',
+      ['-C', projectRoot, 'rev-parse', '--short=12', 'HEAD'],
+      opts
+    ).trim();
     const committedAt = execFileSync(
       'git',
       ['-C', projectRoot, 'log', '-1', '--format=%cI', 'HEAD'],
@@ -178,7 +198,7 @@ export async function resolveScope(queryRoot: string, scopeKey?: string): Promis
 async function resolveScopeWithManifest(
   queryRoot: string,
   scopeKey?: string
-): Promise<{ scopeEntry: QueryScopeEntry; manifest: QueryManifest }> {
+): Promise<{ scopeEntry: QueryScopeEntry; manifest: QueryManifest; merged: boolean }> {
   const manifestPath = path.join(queryRoot, 'query', 'manifest.json');
   if (!(await fs.pathExists(manifestPath))) {
     throw new Error('No query data found. Run `archguard analyze` first.');
@@ -202,24 +222,42 @@ async function resolveScopeWithManifest(
         `Global query scope "${manifest.globalScopeKey}" is missing from manifest. Run \`archguard analyze\` to regenerate.`
       );
     }
-    return { scopeEntry: globalScope, manifest };
+    return { scopeEntry: globalScope, manifest, merged: false };
+  }
+
+  // A real scope key always wins over the synthetic alias below.
+  if (scopeKey) {
+    const exact = manifest.scopes.find((s) => s.key === scopeKey);
+    if (exact) return { scopeEntry: exact, manifest, merged: false };
+  }
+
+  // Explicit scope: synthetic "merged" alias — one view over every scope.
+  if (scopeKey?.toLowerCase() === MERGED_SCOPE_KEY) {
+    if (manifest.scopes.length < 2) {
+      throw new Error(
+        `Merged view requires at least two query scopes; only "${manifest.scopes[0].key}" is available. Query it directly, or analyze additional sources.`
+      );
+    }
+    return {
+      scopeEntry: buildMergedScopeEntry(manifest),
+      manifest,
+      merged: true,
+    };
   }
 
   // Explicit scope: match by key or label
   if (scopeKey) {
     const lower = scopeKey.toLowerCase();
-    const found =
-      manifest.scopes.find((s) => s.key === scopeKey) ??
-      manifest.scopes.find((s) => s.label.toLowerCase().includes(lower));
+    const found = manifest.scopes.find((s) => s.label.toLowerCase().includes(lower));
     if (!found) {
       const scopeList = manifest.scopes.map((s) => `  ${s.key}  ${s.label}`).join('\n');
       throw new Error(`Scope "${scopeKey}" not found. Available scopes:\n${scopeList}`);
     }
-    return { scopeEntry: found, manifest };
+    return { scopeEntry: found, manifest, merged: false };
   }
 
   if (manifest.scopes.length === 1) {
-    return { scopeEntry: manifest.scopes[0], manifest };
+    return { scopeEntry: manifest.scopes[0], manifest, merged: false };
   }
 
   if (!manifest.globalScopeKey) {
@@ -235,7 +273,23 @@ async function resolveScopeWithManifest(
     );
   }
 
-  return { scopeEntry: globalScope, manifest };
+  return { scopeEntry: globalScope, manifest, merged: false };
+}
+
+/** Build the synthetic manifest entry used for `scope=merged`. */
+function buildMergedScopeEntry(manifest: QueryManifest): QueryScopeEntry {
+  const sources = [...new Set(manifest.scopes.flatMap((scope) => scope.sources))].sort();
+  return {
+    key: MERGED_SCOPE_KEY,
+    label: mergedScopeLabel(manifest.scopes.length),
+    language: manifest.scopes[0].language,
+    kind: 'derived',
+    sources,
+    entityCount: manifest.scopes.reduce((sum, scope) => sum + scope.entityCount, 0),
+    relationCount: manifest.scopes.reduce((sum, scope) => sum + scope.relationCount, 0),
+    hasAtlasExtension: manifest.scopes.some((scope) => scope.hasAtlasExtension),
+    generatedAt: manifest.generatedAt,
+  };
 }
 
 /**
@@ -248,7 +302,9 @@ async function resolveScopeWithManifest(
  */
 export async function loadEngine(archDir: string, scopeKey?: string): Promise<QueryContext> {
   const queryRoot = archDir;
-  const { scopeEntry, manifest } = await resolveScopeWithManifest(queryRoot, scopeKey);
+  const { scopeEntry, manifest, merged } = await resolveScopeWithManifest(queryRoot, scopeKey);
+
+  if (merged) return loadMergedEngine(queryRoot, manifest, scopeEntry);
 
   const archJsonPath = path.join(queryRoot, 'query', scopeEntry.key, 'arch.json');
   if (!(await fs.pathExists(archJsonPath))) {
@@ -288,16 +344,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
   }
 
   // Inject standalone test-analysis.json if present (written by --include-tests)
-  const testAnalysisPath = path.join(queryRoot, 'query', 'test-analysis.json');
-  if (await fs.pathExists(testAnalysisPath)) {
-    try {
-      const testAnalysis = (await fs.readJson(testAnalysisPath)) as TestAnalysis;
-      if (!archJson.extensions) archJson.extensions = {};
-      archJson.extensions.testAnalysis = testAnalysis;
-    } catch {
-      // ignore corrupt file
-    }
-  }
+  await injectStandaloneTestAnalysis(queryRoot, archJson);
 
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
   const extensionAccessor = new ExtensionAccessor(archJson);
@@ -326,4 +373,109 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
     scopeInfo,
     availableScopes,
   };
+}
+
+/**
+ * Build a QueryEngine over every scope in the manifest.
+ *
+ * The merged ArchJSON is derived in memory — nothing is written to disk, so
+ * individual-scope artifacts and their hashes stay untouched.
+ */
+async function loadMergedEngine(
+  queryRoot: string,
+  manifest: QueryManifest,
+  syntheticEntry: QueryScopeEntry
+): Promise<QueryContext> {
+  const groups: QuerySourceGroup[] = [];
+  for (const entry of manifest.scopes) {
+    const archJsonPath = path.join(queryRoot, 'query', entry.key, 'arch.json');
+    if (!(await fs.pathExists(archJsonPath))) continue;
+    const archJson = (await fs.readJson(archJsonPath)) as ArchJSON;
+    groups.push({
+      key: entry.key,
+      sources: entry.sources,
+      archJson,
+      kind: entry.kind,
+      role: entry.role,
+    });
+  }
+
+  const view = mergeQueryScopes(groups);
+  if (!view) {
+    throw new Error(
+      `Merged query view requires at least two readable query scopes under ${path.join(
+        queryRoot,
+        'query'
+      )}. Run \`archguard analyze\` to regenerate.`
+    );
+  }
+
+  const archJson = view.archJson;
+  await injectStandaloneTestAnalysis(queryRoot, archJson);
+
+  // Derived in memory: the hash is only an index key, it never needs to match
+  // bytes on disk.
+  const archJsonHash = crypto.createHash('sha256').update(JSON.stringify(archJson)).digest('hex');
+  const archIndex = buildArchIndex(archJson, archJsonHash);
+  const scopeEntry: QueryScopeEntry = {
+    ...syntheticEntry,
+    entityCount: archJson.entities.length,
+    relationCount: archJson.relations.length,
+    hasAtlasExtension: new ExtensionAccessor(archJson).hasAtlasExtension(),
+  };
+
+  const engine = new QueryEngine({
+    archJson,
+    archIndex,
+    scopeEntry,
+    crossScopeEdges: view.crossScopeEdges,
+  });
+  const extensionAccessor = new ExtensionAccessor(archJson);
+  const relationQueryService = engine.relationQueryService;
+  const projectRoot = path.dirname(queryRoot);
+  const scopeInfo: ResolvedScopeInfo = {
+    key: scopeEntry.key,
+    label: scopeEntry.label,
+    sources: scopeEntry.sources,
+    generatedAt: manifest.generatedAt,
+    staleness: computeStaleness(manifest.generatedAt, readGitHead(projectRoot)),
+  };
+  const availableScopes: AvailableScope[] = [
+    ...manifest.scopes.map((s) => ({
+      key: s.key,
+      label: s.label,
+      entityCount: s.entityCount,
+      generatedAt: s.generatedAt,
+    })),
+    {
+      key: scopeEntry.key,
+      label: scopeEntry.label,
+      entityCount: scopeEntry.entityCount,
+      generatedAt: manifest.generatedAt,
+    },
+  ];
+  return {
+    engine,
+    extensionAccessor,
+    scopeEntry,
+    relationQueryService,
+    scopeInfo,
+    availableScopes,
+  };
+}
+
+/**
+ * Inject the standalone `test-analysis.json` (written by `--include-tests`)
+ * into an in-memory ArchJSON, if present. A corrupt file is ignored.
+ */
+async function injectStandaloneTestAnalysis(queryRoot: string, archJson: ArchJSON): Promise<void> {
+  const testAnalysisPath = path.join(queryRoot, 'query', 'test-analysis.json');
+  if (!(await fs.pathExists(testAnalysisPath))) return;
+  try {
+    const testAnalysis = (await fs.readJson(testAnalysisPath)) as TestAnalysis;
+    if (!archJson.extensions) archJson.extensions = {};
+    archJson.extensions.testAnalysis = testAnalysis;
+  } catch {
+    // ignore corrupt file
+  }
 }

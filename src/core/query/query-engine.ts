@@ -35,10 +35,43 @@ export interface EntitySummary {
   fieldCount: number;
 }
 
+/**
+ * One import edge that crossed a query-scope boundary.
+ *
+ * Scopes are analysed independently, so an import from one source root into
+ * another is dropped from every individual scope's module graph. A merged
+ * multi-scope view recovers it from the entity-level relations and records it
+ * here, in merged (common-root-relative) coordinates.
+ *
+ * `source`/`target` are the merged entity ids (e.g. `q/x.ts.X` →
+ * `p/y.ts.Y`); `from`/`to` are the directory module ids derived from them
+ * (e.g. `q` → `p`).
+ */
+export interface CrossScopeEdge {
+  /** Importing directory module id, relative to the merged common root. */
+  from: string;
+  /** Imported directory module id, relative to the merged common root. */
+  to: string;
+  /** Scope key of the importing entity. */
+  fromScope: string;
+  /** Scope key of the imported entity. */
+  toScope: string;
+  /** Merged entity id that owns the relation. */
+  source: string;
+  /** Merged entity id the relation points at. */
+  target: string;
+}
+
 export interface QueryEngineOptions {
   archJson: ArchJSON;
   archIndex: ArchIndex;
   scopeEntry: QueryScopeEntry;
+  /**
+   * Cross-scope edges recovered by a merged multi-scope view. Absent for a
+   * normal single-scope engine — absence must stay distinguishable from
+   * "evaluated, no cross-scope edges" (`[]`).
+   */
+  crossScopeEdges?: readonly CrossScopeEdge[];
 }
 
 export type OutputScope = 'package' | 'class' | 'method';
@@ -194,6 +227,7 @@ export class QueryEngine {
   private archJson: ArchJSON;
   private index: ArchIndex;
   private scopeEntry: QueryScopeEntry;
+  private readonly crossScopeEdges: readonly CrossScopeEdge[] | undefined;
   private readonly metrics: ArchMetrics;
   private readonly extensionAccessor: ExtensionAccessor;
   private readonly entityQueryService: EntityQueryService;
@@ -203,6 +237,7 @@ export class QueryEngine {
     this.archJson = options.archJson;
     this.index = options.archIndex;
     this.scopeEntry = options.scopeEntry;
+    this.crossScopeEdges = options.crossScopeEdges;
     this.extensionAccessor = new ExtensionAccessor(options.archJson);
     this.entityQueryService = new EntityQueryService(options.archJson, options.archIndex);
     this.relationQueryService = new RelationQueryService(
@@ -231,6 +266,17 @@ export class QueryEngine {
     options?: QueryMethodOptions
   ): Entity[] | Partial<Entity>[] | EdgeListOutput {
     return this.applyOutputOptions(this.entityQueryService.getFileEntities(filePath), options);
+  }
+
+  /**
+   * Return the cross-scope import edges recovered by a merged multi-scope view.
+   *
+   * Returns `undefined` for a normal single-scope engine (the question was not
+   * evaluated) and `[]` for a merged view where the scopes are genuinely
+   * independent. Callers must not conflate the two.
+   */
+  getCrossScopeEdges(): readonly CrossScopeEdge[] | undefined {
+    return this.crossScopeEdges;
   }
 
   /** Return all non-trivial cycles (SCCs with size > 1). */
