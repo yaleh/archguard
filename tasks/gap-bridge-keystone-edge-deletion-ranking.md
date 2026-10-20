@@ -1,7 +1,7 @@
 ---
 id: gap-bridge-keystone-edge-deletion-ranking
 title: 内建 bridge/keystone 分析：单边删除对 maxScc 的影响排名
-status: ready
+status: done
 labels:
   - gap
 parent: null
