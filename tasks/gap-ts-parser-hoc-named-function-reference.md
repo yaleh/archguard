@@ -18,9 +18,9 @@ extra:
 
 ## AC
 
-- [ ] `unwrapFunctionInitializer` 对 `memo/forwardRef/React.memo/React.forwardRef(<NamedFunctionIdentifier>)` 形态产出实体（name 取 const 名），不因 firstArg 是 Identifier 而 return undefined
-- [ ] `tests/unit/parser/function-extractor.test.ts` 新增 fixture：`function MarkdownBodyRenderer(){…}` + `export const MarkdownBody = memo(MarkdownBodyRenderer)`，经 `parseCode` 产出 1 个 entity
-- [ ] 现有三种形态不回归：`export const X = memo((inline arrow))`、`export default memo(<Identifier>)`、`export { X }`
+- [x] `unwrapFunctionInitializer` 对 `memo/forwardRef/React.memo/React.forwardRef(<NamedFunctionIdentifier>)` 形态产出实体（name 取 const 名），不因 firstArg 是 Identifier 而 return undefined
+- [x] `tests/unit/parser/function-extractor.test.ts` 新增 fixture：`function MarkdownBodyRenderer(){…}` + `export const MarkdownBody = memo(MarkdownBodyRenderer)`，经 `parseCode` 产出 1 个 entity
+- [x] 现有三种形态不回归：`export const X = memo((inline arrow))`、`export default memo(<Identifier>)`、`export { X }`
 
 ## DoD
 
