@@ -147,10 +147,12 @@ export class HistoryTargetNotFoundError extends Error {
     public readonly resolvedTarget: string,
     detail: string,
     public readonly analyzedPaths?: string[],
-    public readonly window?: { windowStart?: string; windowEnd?: string; sinceDays: number }
+    public readonly window?: { windowStart?: string; windowEnd?: string; sinceDays: number },
+    public readonly suggestion?: string
   ) {
     super(
-      `Target "${target}" (type: ${targetType}) not found in git history data [${code}]. ${detail}`
+      `Target "${target}" (type: ${targetType}) not found in git history data [${code}]. ${detail}` +
+        (suggestion ? ` ${suggestion}` : '')
     );
     this.name = 'HistoryTargetNotFoundError';
   }
@@ -158,6 +160,20 @@ export class HistoryTargetNotFoundError extends Error {
 
 const isUnder = (p: string, dir: string): boolean =>
   dir === '' || p === dir || p.startsWith(dir + '/');
+
+/**
+ * If `path` contains `target` as a whole path suffix (or is the target), return the
+ * prefix of `path` through the end of `target` — the repo-relative directory the
+ * under-specified target would denote. Used to anchor a relative writing such as
+ * `modules/session-hosts` to the collected path `server/modules/session-hosts`.
+ */
+function anchoredPrefix(path: string, target: string): string | undefined {
+  if (path === target || path.startsWith(target + '/')) return target;
+  const at = path.indexOf('/' + target + '/');
+  if (at >= 0) return path.slice(0, at + 1 + target.length);
+  if (path.endsWith('/' + target)) return path.slice(0, path.length - target.length - 1);
+  return undefined;
+}
 
 /**
  * Normalize a caller-supplied target path so it matches the plain repo-relative
@@ -226,18 +242,147 @@ export class HistoryQuery {
   // -------------------------------------------------------------------------
 
   /**
-   * Resolve a target written either repo-relative or key-relative to the key used in the
-   * metrics maps. A target starting with `keyRoot/` has that prefix stripped; if the
-   * stripped key is absent but the literal target exists, the literal wins.
+   * Resolve a target written repo-relative, key-relative, or relative to a collected
+   * directory to the key used in the metrics maps.
+   *
+   * Candidate keys, in preference order: the key-relative form of the target, the
+   * literal target (a key that merely shares the `keyRoot/` prefix, TASK-95), then a
+   * package roll-up or an anchored relative writing.
+   *
+   * The last step is what makes package queries behave like file queries: package
+   * metrics are keyed at `packageDepth`, so a caller asking about a *directory*
+   * (`server/modules/session-hosts`, or `modules/session-hosts`) has no exact key.
+   * Rather than reporting `no-commits-in-window`, resolve it to the collected package
+   * that contains it (`server`) — or, when the writing is ambiguous, to the one
+   * anchored reading all index entries agree on. `resolvedTarget` echoes the key that
+   * actually answered, so a roll-up is never silent.
    */
   private resolveKey(targetType: 'package' | 'file', target: string): string {
-    const keyRoot = this.data.manifest.keyRoot ?? '';
-    const map = targetType === 'file' ? this.data.fileMetrics : this.data.packageMetrics;
-    if (keyRoot !== '' && target.startsWith(keyRoot + '/')) {
-      const stripped = target.slice(keyRoot.length + 1);
-      if (map.has(stripped) || !map.has(target)) return stripped;
+    const keys = this.candidateKeys(targetType, target);
+    for (const key of keys) {
+      const hit = this.matchKey(targetType, key);
+      if (hit !== undefined) return hit;
     }
-    return target;
+
+    // Under-specified writing (e.g. `modules/session-hosts`): anchor it to indexed
+    // paths. Resolve only when every anchor agrees on a single metrics key.
+    const hits = new Set<string>();
+    for (const reading of this.anchorReadings(targetType, target)) {
+      const hit = this.matchKey(targetType, this.toKey(targetType, reading));
+      if (hit !== undefined) hits.add(hit);
+    }
+    if (hits.size === 1) return [...hits][0];
+
+    return keys[0] ?? target;
+  }
+
+  /** The literal + key-relative readings of a target, in preference order. */
+  private candidateKeys(targetType: 'package' | 'file', target: string): string[] {
+    const keys: string[] = [];
+    const push = (key: string): void => {
+      if (key !== '' && !keys.includes(key)) keys.push(key);
+    };
+    push(this.toKey(targetType, target));
+    // A target may also be a literal key that happens to start with `keyRoot/`.
+    push(target);
+    return keys;
+  }
+
+  /**
+   * Convert a repo-relative path to a metrics key by stripping `keyRoot/`. A target
+   * that is already key-relative is returned unchanged; the analyzed root itself is
+   * the `.` package.
+   */
+  private toKey(targetType: 'package' | 'file', reading: string): string {
+    const keyRoot = this.data.manifest.keyRoot ?? '';
+    if (keyRoot === '') return reading;
+    if (reading === keyRoot) return targetType === 'package' ? '.' : '';
+    if (reading.startsWith(keyRoot + '/')) return reading.slice(keyRoot.length + 1);
+    return reading;
+  }
+
+  /**
+   * Exact key match, or — for packages — the longest collected package containing the
+   * key (a directory below a package belongs to that package).
+   */
+  private matchKey(targetType: 'package' | 'file', key: string): string | undefined {
+    const map = targetType === 'file' ? this.data.fileMetrics : this.data.packageMetrics;
+    if (map.has(key)) return key;
+    if (targetType !== 'package') return undefined;
+    let best: string | undefined;
+    for (const candidate of map.keys()) {
+      if (isUnder(key, candidate) && (best === undefined || candidate.length > best.length)) {
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Repo-relative readings of an under-specified target, discovered from the indexed
+   * file paths (file metrics are key-relative, so they carry the collected roots).
+   */
+  private anchorReadings(targetType: 'package' | 'file', target: string): string[] {
+    const keyRoot = this.data.manifest.keyRoot ?? '';
+    const anchored = new Set<string>();
+    for (const path of this.data.fileMetrics.keys()) {
+      if (targetType === 'file') {
+        if (path === target || path.endsWith('/' + target)) anchored.add(path);
+      } else {
+        const prefix = anchoredPrefix(path, target);
+        if (prefix !== undefined) anchored.add(prefix);
+      }
+    }
+    return [...anchored].map((reading) => (keyRoot !== '' ? `${keyRoot}/${reading}` : reading));
+  }
+
+  /** Repo-relative readings considered when classifying a miss. */
+  private missReadings(targetType: 'package' | 'file', target: string): string[] {
+    const keyRoot = this.data.manifest.keyRoot ?? '';
+    const readings = [target];
+    if (keyRoot !== '' && !isUnder(target, keyRoot)) readings.push(`${keyRoot}/${target}`);
+    for (const reading of this.anchorReadings(targetType, target)) {
+      if (!readings.includes(reading)) readings.push(reading);
+    }
+    return readings;
+  }
+
+  /** Human-readable hint for a miss: which writings are accepted / resolve. */
+  private missSuggestion(targetType: 'package' | 'file', target: string): string {
+    const m = this.data.manifest;
+    const keyRoot = m.keyRoot ?? '';
+    const pathFilters = (m.pathFilters ?? []).filter((f) => f !== '');
+    const map = targetType === 'file' ? this.data.fileMetrics : this.data.packageMetrics;
+
+    const anchored = this.anchorReadings(targetType, target)
+      .map((reading) => ({
+        reading,
+        key: this.matchKey(targetType, this.toKey(targetType, reading)),
+      }))
+      .filter((a): a is { reading: string; key: string } => a.key !== undefined);
+
+    const parts: string[] = [];
+    if (anchored.length > 0) {
+      parts.push(
+        `Suggested writing: ${anchored
+          .map(
+            (a) => `'${a.reading}'${a.key !== a.reading ? ` (${targetType} key '${a.key}')` : ''}`
+          )
+          .join(' or ')}.`
+      );
+    } else if (pathFilters.length > 0) {
+      parts.push(
+        `Write the target repo-relative, e.g. '${pathFilters[0]}/<path>'` +
+          (keyRoot !== '' ? `, or relative to keyRoot '${keyRoot}'.` : '.')
+      );
+    }
+    if (targetType === 'package' && map.size > 0) {
+      const keys = [...map.keys()].sort();
+      parts.push(
+        `Available package keys: ${keys.slice(0, 20).join(', ')}${keys.length > 20 ? ', …' : ''}.`
+      );
+    }
+    return parts.join(' ');
   }
 
   private notFoundError(
@@ -257,10 +402,14 @@ export class HistoryQuery {
     }
     const keyRoot = m.keyRoot;
     const pathFilters = m.pathFilters ?? [keyRoot];
-    // The target may be written repo-relative or key-relative; a miss is "outside" only when
-    // neither reading falls under a collected directory.
-    const candidates = [target, keyRoot ? `${keyRoot}/${resolved}` : resolved];
-    const covered = candidates.some((c) => pathFilters.some((f) => isUnder(c, f) || isUnder(f, c)));
+    const suggestion = this.missSuggestion(targetType, target);
+    // The target may be written repo-relative, keyRoot-relative, or relative to a
+    // collected directory; a miss is "outside" only when none of those readings falls
+    // under a collected directory. This keeps the classification identical for the
+    // repo-relative and relative writings of the same path.
+    const covered = this.missReadings(targetType, target).some((c) =>
+      pathFilters.some((f) => isUnder(c, f) || isUnder(f, c))
+    );
     if (!covered) {
       return new HistoryTargetNotFoundError(
         'outside-analyzed-paths',
@@ -268,7 +417,9 @@ export class HistoryQuery {
         targetType,
         resolved,
         `"${target}" is not under any analyzed directory. Collected directories (relative to git root): ${pathFilters.map((f) => f || '.').join(', ')}.`,
-        pathFilters
+        pathFilters,
+        undefined,
+        suggestion
       );
     }
     const window = {
@@ -287,7 +438,8 @@ export class HistoryQuery {
       resolved,
       `The path is within an analyzed directory but has no commits in the analyzed window (${span}).`,
       pathFilters,
-      window
+      window,
+      suggestion
     );
   }
 
