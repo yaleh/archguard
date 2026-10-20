@@ -16,9 +16,9 @@ extra:
 
 ## AC
 
-- [ ] TS scope 上 `archguard_detect_god_packages` 不再返回 `applicable:false`，而是返回 `{applicable:true, godPackages:[{packageName, fanIn, fanOut, fileCount, entityCount, loc?, reasons[]}]}`，reason 至少支持 `highFanIn` / `highFanOut` / `tooManyFiles` / 体积阈值
-- [ ] Go/Atlas scope 行为不变（仍走 Atlas 包图路径）；无 Atlas 的 TS 走新路径；其它语言仍 `applicable:false` 带 `alternative` 指向 `get_package_metrics`/`get_package_stats`
-- [ ] `tests/unit/cli/mcp/atlas-analytics-tools.test.ts` 新增 TS fixture 断言：一个 fanOut 与 fileCount 双超阈值的包被标出且 reason 正确
+- [x] TS scope 上 `archguard_detect_god_packages` 不再返回 `applicable:false`，而是返回 `{applicable:true, godPackages:[{packageName, fanIn, fanOut, fileCount, entityCount, loc?, reasons[]}]}`，reason 至少支持 `highFanIn` / `highFanOut` / `tooManyFiles` / 体积阈值
+- [x] Go/Atlas scope 行为不变（仍走 Atlas 包图路径）；无 Atlas 的 TS 走新路径；其它语言仍 `applicable:false` 带 `alternative` 指向 `get_package_metrics`/`get_package_stats`
+- [x] `tests/unit/cli/mcp/atlas-analytics-tools.test.ts` 新增 TS fixture 断言：一个 fanOut 与 fileCount 双超阈值的包被标出且 reason 正确
 
 ## DoD
 
