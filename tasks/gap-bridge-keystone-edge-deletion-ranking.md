@@ -15,9 +15,9 @@ extra:
 
 ## AC
 
-- [ ] 新增查询/工具（如 `archguard_detect_bridges` 或 package-cycle 输出里的 bridge 字段）：对每条内部包边给出 `{from, to, specifier, maxSccBefore, maxSccAfter, delta}`；新增用例到 `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 或等价处
-- [ ] 夹具：一个 SCC 里，删某条边使 maxScc 下降、删另一条边不变——前者被排为 bridge 候选，后者不是
-- [ ] 无 TS moduleGraph 时返回 not-evaluated 带 reason（不伪造空读数）
+- [x] 新增查询/工具（如 `archguard_detect_bridges` 或 package-cycle 输出里的 bridge 字段）：对每条内部包边给出 `{from, to, specifier, maxSccBefore, maxSccAfter, delta}`；新增用例到 `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts` 或等价处
+- [x] 夹具：一个 SCC 里，删某条边使 maxScc 下降、删另一条边不变——前者被排为 bridge 候选，后者不是
+- [x] 无 TS moduleGraph 时返回 not-evaluated 带 reason（不伪造空读数）
 
 ## DoD
 
