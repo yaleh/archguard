@@ -9,6 +9,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Project, SyntaxKind } from 'ts-morph';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
+import { QueryEngine } from '@/cli/query/query-engine.js';
+import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import type { ArchJSON } from '@/types/index.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 import type { SourceFile, ImportDeclaration, ExportDeclaration } from 'ts-morph';
 
 // ---------------------------------------------------------------------------
@@ -559,5 +563,153 @@ describe('ModuleGraphBuilder — external edges are resolution-independent', () 
 
     expect(graph.edges.length).toBe(0);
     expect(graph.nodes.some((n) => n.type === 'node_modules')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Root / dynamic-import edge attribution + per-edge provenance
+// ---------------------------------------------------------------------------
+
+describe('ModuleGraphBuilder — root and dynamic-import edge attribution', () => {
+  const makeProject = () =>
+    new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+
+  /** Run the exact `detect_cycles(outputScope=package)` engine over a built graph. */
+  const packageCyclesOf = (graph: TsModuleGraph) => {
+    const archJson = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: { tsAnalysis: { version: '1.0', moduleGraph: graph } },
+    } as ArchJSON;
+    const engine = new QueryEngine({
+      archJson,
+      archIndex: buildArchIndex(archJson, 'fixture'),
+      scopeEntry: {
+        key: 'fixture',
+        label: 'fixture',
+        kind: 'parsed',
+        sources: ['.'],
+        language: 'typescript',
+      },
+    });
+    return engine.getPackageCycles();
+  };
+
+  it('AC1: detect_cycles(package) reports no (root) <-> modules/browser-use cycle when neither side imports the other', () => {
+    // The reported claudecodeui false cycle requires *some* edge in both
+    // directions. With neither side importing the other, none may appear —
+    // in particular no fabricated browser-use -> root edge.
+    const project = makeProject();
+    project.createSourceFile(
+      '/root/index.ts',
+      `import express from 'express';\nexport const app = express();`
+    );
+    project.createSourceFile('/root/modules/browser-use/index.ts', `export const start = () => 1;`);
+    project.createSourceFile(
+      '/root/modules/browser-use/browser-use.routes.ts',
+      `import express from 'express';\nexport const routes = express.Router();`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    expect(graph.edges.some((e) => e.from === 'modules/browser-use' && e.to === '')).toBe(false);
+    expect(graph.cycles).toEqual([]);
+    const cycles = packageCyclesOf(graph);
+    expect(cycles.evaluated).toBe(true);
+    expect(cycles.cycles).toEqual([]);
+  });
+
+  it("AC2: a literal import('../../index.js') is attributed to its containing module, not a sibling", () => {
+    // Regression for the reported misattribution: the dynamic import lives in
+    // modules/cli; an unrelated modules/browser-use directory exists alongside.
+    const project = makeProject();
+    project.createSourceFile('/root/index.ts', `export const boot = () => 1;`);
+    project.createSourceFile(
+      '/root/modules/browser-use/index.ts',
+      `export const startBrowserUseMcp = () => 1;`
+    );
+    project.createSourceFile(
+      '/root/modules/cli/cli.module.ts',
+      `export async function main() {\n  // server entrypoint, loaded lazily\n  await import('../../index.js');\n}`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'modules/cli' && e.to === '');
+    expect(edge).toBeDefined();
+    expect(edge?.valueStrength).toBe(1);
+    expect(edge?.evidence).toEqual([
+      {
+        specifier: '../../index.js',
+        file: 'modules/cli/cli.module.ts',
+        line: 3,
+        kind: 'dynamic-import',
+      },
+    ]);
+    // The unrelated sibling never receives the dynamic-import edge.
+    expect(graph.edges.some((e) => e.from === 'modules/browser-use' && e.to === '')).toBe(false);
+  });
+
+  it('AC3: each edge records specifier + file:line for every contributing statement', () => {
+    const project = makeProject();
+    project.createSourceFile('/root/index.ts', `export const boot = 1;`);
+    project.createSourceFile('/root/load-env.ts', `export const env = 1;`);
+    project.createSourceFile(
+      '/root/modules/cli/cli.ts',
+      `import '../../load-env.js';\nexport const main = () => 1;`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    const edge = graph.edges.find((e) => e.from === 'modules/cli' && e.to === '');
+    expect(edge?.evidence).toEqual([
+      {
+        specifier: '../../load-env.js',
+        file: 'modules/cli/cli.ts',
+        line: 1,
+        kind: 'import',
+      },
+    ]);
+  });
+
+  it('AC3: a reported cycle carries the raw specifiers that form it, so it can be audited', () => {
+    // Real shape of the claudecodeui SCC: the root module bundles the app
+    // entrypoint and a leaf bootstrap file, so `(root) <-> modules/browser-use`
+    // is really `index.ts -> browser-use` + `browser-use -> load-env.ts`.
+    const project = makeProject();
+    project.createSourceFile(
+      '/root/index.ts',
+      `import './modules/browser-use/index.js';\nexport const boot = 1;`
+    );
+    project.createSourceFile('/root/load-env.ts', `export const env = 1;`);
+    project.createSourceFile(
+      '/root/modules/browser-use/index.ts',
+      `import '../../load-env.js';\nexport const start = 1;`
+    );
+
+    const graph = new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+
+    expect(graph.cycles).toHaveLength(1);
+    expect([...graph.cycles[0].modules].sort()).toEqual(['', 'modules/browser-use']);
+    expect(graph.cycles[0].edges).toEqual([
+      {
+        from: '',
+        to: 'modules/browser-use',
+        specifier: './modules/browser-use/index.js',
+        file: 'index.ts',
+        line: 1,
+      },
+      {
+        from: 'modules/browser-use',
+        to: '',
+        specifier: '../../load-env.js',
+        file: 'modules/browser-use/index.ts',
+        line: 1,
+      },
+    ]);
   });
 });
