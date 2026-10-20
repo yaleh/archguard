@@ -5,6 +5,36 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.41] - 2026-10-20
+
+### Added
+- **TS 解析器识别 `export default` / `export { X }` 引用的 `memo`/`forwardRef` 组件** —
+  `export default <Identifier>`、`export default memo/forwardRef/React.memo/React.forwardRef(<Identifier>)`
+  与命名导出引用的组件函数现在都进 ArchJSON 实体图，前端主组件不再整体漏出（此前只有
+  `export const X = memo(...)` 一种形态被识别）。
+- **`archguard_get_dependencies` edge-list 收窄** — `queryFormat=edge-list` 的 `relations` 只含
+  查询闭包（返回实体集 ∪ 起始实体），不再泄全图；新增 `topN` 截断。
+- **`archguard_get_package_metrics.cycleCount` 与包级 SCC 同源** — `cycleCount` 改由目录级
+  `getPackageCycles()` 推导，与 `detect_cycles(outputScope=package)` 一致；not-evaluated 时返回
+  `null`（未知），不再落 0。
+- **`detect_cycles(outputScope=package)` 逐边证据** — 每个 SCC 附带 `from/to/specifier/file/line`
+  边证据，假环可自查。
+- **TS god-package 检测** — `archguard_detect_god_packages` 对 TypeScript 用
+  fanIn/fanOut + fileCount/entityCount/loc 阈值产出结果，不再返回 `applicable:false`。
+- **跨 scope 合并依赖视图** — 多 `sources` 拆出的独立 scope 现在能查询到跨 scope 边。
+- **bridge/keystone 排名** — 对每条内部包边计算单边删除后的 `maxScc` 变化（`delta`），产出
+  keystone 边候选。
+- **slice preflight** — 给定 `subject` 枚举可合法声明的 moves/stays/newDirs，避免试错式
+  `not-evaluated`。
+- **git-ref 轻量 drift 入口** — 两个 git ref / scope 直接 diff，不依赖 `arch-health-history.json`。
+- **查询 stale/HEAD 信号** — `scopeInfo.staleness` 比较 `generatedAt` 与 git HEAD。
+
+### Fixed
+- package 级 `get_ownership` 统一 repo-relative / keyRoot-relative 解析。
+- cognitive / CCB / project-semantics 的 `found:false` 与 `null` 字段带 reason code，缺失
+  project-semantics 时显式报缺。
+- `detect_cycles` 的 `(root)↔子目录` 环现在带边证据可逐边归因。
+
 ## [0.1.40] - 2026-10-11
 
 ### Added
