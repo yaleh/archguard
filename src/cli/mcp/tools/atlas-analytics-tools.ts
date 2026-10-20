@@ -12,13 +12,27 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
-import { computePackageFanMetrics, enrichPackageNodes } from '@/analysis/atlas-metrics-analysis.js';
-import type { EnrichedPackageNode } from '@/analysis/atlas-metrics-analysis.js';
+import {
+  computePackageFanMetrics,
+  enrichPackageNodes,
+  evaluateGodPackages,
+} from '@/analysis/atlas-metrics-analysis.js';
+import type {
+  EnrichedPackageNode,
+  GodPackageMetrics,
+  GodPackageThresholds,
+} from '@/analysis/atlas-metrics-analysis.js';
+import {
+  computePackageFanMetricsFromRelations,
+  extractPackageName,
+} from '@/analysis/package-metrics-analysis.js';
+import type { ExtensionAccessor } from '@/core/query/extension-accessor.js';
+import type { QueryEngine } from '@/cli/query/query-engine.js';
 import { errorMessage } from '@/utils/error-message.js';
 
 // Re-export for backward compatibility with existing tests
-export type { EnrichedPackageNode };
-export { computePackageFanMetrics, enrichPackageNodes };
+export type { EnrichedPackageNode, GodPackageMetrics };
+export { computePackageFanMetrics, enrichPackageNodes, evaluateGodPackages };
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
@@ -57,6 +71,54 @@ function notApplicableResponse(
 }
 
 // ── MCP tool registration ─────────────────────────────────────────────────────
+
+/**
+ * Assemble per-package god-package metrics for a non-Atlas TypeScript scope.
+ *
+ * There is no Atlas package graph on TS scopes, but the two existing
+ * all-language instruments carry everything the judgement needs:
+ *   - archguard_get_package_metrics → fanIn/fanOut from cross-package relations
+ *   - archguard_get_package_stats   → fileCount/entityCount (loc unavailable for TS)
+ *
+ * Package names are directory-level on both sides: entity IDs are
+ * `<dir>/<file>.ts.<Entity>`, so `extractPackageName` yields the directory,
+ * matching the module graph node id used by the package-stats path.
+ */
+function buildTypeScriptGodPackageMetrics(
+  engine: QueryEngine,
+  extensionAccessor: ExtensionAccessor
+): GodPackageMetrics[] {
+  const packageNames = new Set(extensionAccessor.getEntityIds().map(extractPackageName));
+  const { fanIn, fanOut } = computePackageFanMetricsFromRelations(
+    extensionAccessor.getRelations(),
+    packageNames
+  );
+
+  const stats = engine.getPackageStats();
+  const statsByName = new Map(stats.packages.map((entry) => [entry.package, entry]));
+
+  // Prefer the stats package list when available: it is directory-keyed exactly
+  // like the module graph, whereas relation-derived names can include a bare
+  // root file (`foo.ts`) that the stats path buckets as `(root)`.
+  const names = statsByName.size > 0 ? Array.from(statsByName.keys()) : Array.from(packageNames);
+
+  return names.map((packageName) => {
+    const stat = statsByName.get(packageName);
+    const metrics: GodPackageMetrics = {
+      packageName,
+      fanIn: fanIn.get(packageName) ?? 0,
+      fanOut: fanOut.get(packageName) ?? 0,
+      fileCount: stat?.fileCount ?? 0,
+      entityCount: stat?.entityCount ?? 0,
+    };
+    if (stat?.loc !== undefined) metrics.loc = stat.loc;
+    return metrics;
+  });
+}
+
+function isTypeScriptScope(language: string | undefined): boolean {
+  return language === 'typescript';
+}
 
 export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: string): void {
   // ── archguard_get_package_fanin ──────────────────────────────────────────────
@@ -189,8 +251,10 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
   server.tool(
     'archguard_detect_god_packages',
     'Detect "god packages" — packages that violate single-responsibility by exceeding size or coupling thresholds. ' +
-      'Each flagged package includes a list of violated thresholds (reasons). Requires an Atlas-mode Go project; ' +
-      'on other scopes returns { applicable: false, reason, alternative }.',
+      'Each flagged package includes a list of violated thresholds (reasons). ' +
+      'Go Atlas scopes use the package graph (fanIn/structs/functions/files); TypeScript scopes use ' +
+      'relation-based fanIn/fanOut plus package file/entity counts, returning { applicable: true, godPackages }. ' +
+      'Other scopes return { applicable: false, reason, alternative }.',
     {
       projectRoot: z
         .string()
@@ -206,6 +270,14 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
         .default(5)
         .optional()
         .describe('Fan-in threshold — packages at or above this value are flagged (default: 5).'),
+      minFanOut: z.coerce
+        .number()
+        .min(0)
+        .default(20)
+        .optional()
+        .describe(
+          'Fan-out threshold — packages at or above this value are flagged (default: 20; TypeScript only).'
+        ),
       minStructs: z.coerce
         .number()
         .min(0)
@@ -224,15 +296,46 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
         .default(20)
         .optional()
         .describe('File count threshold (default: 20).'),
+      minEntities: z.coerce
+        .number()
+        .min(0)
+        .default(50)
+        .optional()
+        .describe(
+          'Entity count threshold — size proxy (default: 50; TypeScript only, loc is unavailable).'
+        ),
     },
-    async ({ projectRoot, scope, minFanIn, minStructs, minFunctions, minFiles }) => {
+    async ({
+      projectRoot,
+      scope,
+      minFanIn,
+      minFanOut,
+      minStructs,
+      minFunctions,
+      minFiles,
+      minEntities,
+    }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
-        const { extensionAccessor, scopeEntry } = await loadEngine(archDir, scope);
+        const { engine, extensionAccessor, scopeEntry } = await loadEngine(archDir, scope);
 
         if (!extensionAccessor.hasAtlasExtension()) {
-          return notApplicableResponse(root, scopeEntry?.language);
+          if (!isTypeScriptScope(scopeEntry?.language)) {
+            return notApplicableResponse(root, scopeEntry?.language);
+          }
+
+          const thresholds: GodPackageThresholds = {
+            minFanIn: minFanIn ?? 5,
+            minFanOut: minFanOut ?? 20,
+            minFiles: minFiles ?? 20,
+            minEntities: minEntities ?? 50,
+          };
+          const godPackages = evaluateGodPackages(
+            buildTypeScriptGodPackageMetrics(engine, extensionAccessor),
+            thresholds
+          );
+          return textResponse(JSON.stringify({ applicable: true, godPackages }, null, 2));
         }
 
         const graph = extensionAccessor.getAtlasLayer('package');
