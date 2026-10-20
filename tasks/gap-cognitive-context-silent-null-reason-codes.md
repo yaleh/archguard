@@ -2,7 +2,7 @@
 id: gap-cognitive-context-silent-null-reason-codes
 title: cognitive/CCB/project-semantics 的 found:false 与 null 字段带 reason code，缺
   project-semantics 显式报缺
-status: todo
+status: ready
 labels:
   - gap
 parent: null
