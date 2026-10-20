@@ -161,4 +161,76 @@ describe('FunctionExtractor', () => {
       expect(toolGroupFns[0].name).toBe('ToolGroup');
     });
   });
+
+  describe('declarations exported by reference', () => {
+    it('extracts a memo const referenced by export default', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          const MessageComponent = memo((props: { text: string }) => props.text);
+          export default MessageComponent;
+        `,
+        'src/components/Message.tsx'
+      );
+      const fns = arch.entities.filter((e) => e.type === 'function');
+      expect(fns).toHaveLength(1);
+      expect(fns[0].id).toBe('src/components/Message.tsx.MessageComponent');
+      expect(fns[0].name).toBe('MessageComponent');
+    });
+
+    it('extracts a plain arrow const referenced by export default memo(...)', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          const ChatMessagesPane = (props: { text: string }) => props.text;
+          export default memo(ChatMessagesPane);
+        `,
+        'src/components/ChatMessagesPane.tsx'
+      );
+      const fns = arch.entities.filter((e) => e.type === 'function');
+      expect(fns).toHaveLength(1);
+      expect(fns[0].name).toBe('ChatMessagesPane');
+    });
+
+    it('extracts a function declaration referenced by export default React.memo(...)', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          function ChatInterface(props: { text: string }) { return props.text; }
+          export default React.memo(ChatInterface);
+        `,
+        'src/components/ChatInterface.tsx'
+      );
+      const fns = arch.entities.filter((e) => e.type === 'function');
+      expect(fns).toHaveLength(1);
+      expect(fns[0].name).toBe('ChatInterface');
+    });
+
+    it('extracts declarations re-exported through export { X }', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          const ToolGroupContainer = memo((props: { label: string }) => props.label);
+          function helper(props: { label: string }) { return props.label; }
+          export { ToolGroupContainer, helper as renamedHelper };
+        `,
+        'src/components/ToolGroup.tsx'
+      );
+      const fns = arch.entities.filter((e) => e.type === 'function');
+      expect(fns.map((e) => e.name).sort()).toEqual(['ToolGroupContainer', 'helper']);
+    });
+
+    it('does not treat re-exports from another module as local declarations', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          const localOnly = memo(() => null);
+          export { localOnly, SomethingElse } from './elsewhere';
+        `,
+        'src/components/ReExport.tsx'
+      );
+      const fns = arch.entities.filter((e) => e.type === 'function');
+      expect(fns).toHaveLength(0);
+    });
+  });
 });

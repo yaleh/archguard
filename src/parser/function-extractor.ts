@@ -30,6 +30,11 @@ const HOC_WRAPPER_NAMES = new Set(['memo', 'forwardRef']);
  *      export const Quux = forwardRef<HTMLDivElement, P>(function Quux() { ... })
  *      export const Corge = React.memo(() => ...)
  *      (nested wrappers such as memo(forwardRef(...)) are unwrapped recursively)
+ *  - Declarations that are exported by reference rather than by modifier:
+ *      const Grault = memo(...); export default Grault;
+ *      const Garply = (...) => ...; export default memo(Garply);
+ *      function Waldo(...) {}; export default React.memo(Waldo);
+ *      const Fred = memo(...); export { Fred };
  */
 export class FunctionExtractor {
   /**
@@ -40,12 +45,13 @@ export class FunctionExtractor {
    */
   extract(sourceFile: SourceFile, relativeFilePath: string): Entity[] {
     const entities: Entity[] = [];
+    const referencedExports = this.collectReferencedExportNames(sourceFile);
 
     // 1. Named exported function declarations: export function foo(...)
     for (const fn of sourceFile.getFunctions()) {
-      if (!fn.isExported()) continue;
       const name = fn.getName();
       if (!name) continue;
+      if (!fn.isExported() && !referencedExports.has(name)) continue;
       entities.push({
         id: `${relativeFilePath}.${name}`,
         name,
@@ -64,14 +70,16 @@ export class FunctionExtractor {
     //    export const bar = (...) => ...
     //    export const baz = function(...) { ... }
     //    plus HOC-wrapped variants (memo / forwardRef / React.memo / React.forwardRef)
+    //    and declarations referenced by `export default` / `export { ... }`.
     for (const stmt of sourceFile.getVariableStatements()) {
-      if (!stmt.isExported()) continue;
+      const statementIsExported = stmt.isExported();
       for (const decl of stmt.getDeclarations()) {
+        const name = decl.getName();
+        if (!statementIsExported && !referencedExports.has(name)) continue;
         const init = decl.getInitializer();
         if (!init) continue;
         const fn = this.unwrapFunctionInitializer(init);
         if (!fn) continue;
-        const name = decl.getName();
         entities.push({
           id: `${relativeFilePath}.${name}`,
           name,
@@ -88,6 +96,68 @@ export class FunctionExtractor {
     }
 
     return entities;
+  }
+
+  /**
+   * Collect names of top-level declarations that are exported by reference:
+   *  - `export default <Identifier>`
+   *  - `export default memo/forwardRef/React.memo/React.forwardRef(<Identifier>)`
+   *  - `export { A, B as C }` (local exports only; re-exports from another module
+   *    reference declarations that live elsewhere and are ignored)
+   */
+  private collectReferencedExportNames(sourceFile: SourceFile): Set<string> {
+    const names = new Set<string>();
+
+    for (const assignment of sourceFile.getExportAssignments()) {
+      if (assignment.isExportEquals()) continue;
+      const expression = assignment.getExpression();
+      for (const name of this.collectHocTargetIdentifiers(expression)) {
+        names.add(name);
+      }
+    }
+
+    for (const declaration of sourceFile.getExportDeclarations()) {
+      if (declaration.getModuleSpecifier()) continue;
+      for (const specifier of declaration.getNamedExports()) {
+        names.add(specifier.getName());
+      }
+    }
+
+    return names;
+  }
+
+  /**
+   * Resolve an expression used in an export position to the identifiers whose
+   * declarations it exports. Unwraps HOC wrapper calls the same way
+   * `unwrapFunctionInitializer` does, so `export default memo(Foo)` exports `Foo`.
+   */
+  private collectHocTargetIdentifiers(expression: Node): string[] {
+    let current: Node = expression;
+    while (Node.isParenthesizedExpression(current)) {
+      current = current.getExpression();
+    }
+    if (Node.isIdentifier(current)) {
+      return [current.getText()];
+    }
+
+    const names: string[] = [];
+    const seen = new Set<Node>();
+    while (Node.isCallExpression(current) && !seen.has(current)) {
+      seen.add(current);
+      if (!this.isHocWrapperCall(current)) break;
+      const [firstArg] = current.getArguments();
+      if (!firstArg) break;
+      current = firstArg;
+      while (Node.isParenthesizedExpression(current)) {
+        current = current.getExpression();
+      }
+      if (Node.isIdentifier(current)) {
+        names.push(current.getText());
+        break;
+      }
+    }
+
+    return names;
   }
 
   /**
