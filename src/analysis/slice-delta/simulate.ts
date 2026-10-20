@@ -44,6 +44,15 @@ import type {
   SliceDeltaWhyLeft,
   SliceEdge,
   SliceMove,
+  SlicePreflightBlocking,
+  SlicePreflightDestinationVerdict,
+  SlicePreflightEdgeObligation,
+  SlicePreflightEvaluatedReport,
+  SlicePreflightInput,
+  SlicePreflightMoveGroup,
+  SlicePreflightReport,
+  SlicePreflightStayGroup,
+  SlicePreflightSymbolMove,
   SliceStay,
 } from './types.js';
 
@@ -922,6 +931,409 @@ export function simulateRefactorSlice(input: SimulateRefactorSliceInput): SliceD
           })()
         : null,
     },
+  };
+
+  return report;
+}
+
+// ── Slice preflight (discovery vocabulary, never an evaluation) ──────────────
+
+/** Fixed rule text shared by the report and the MCP adapter. */
+const NEW_DIR_RULE =
+  '图中不存在的目录只有在 proposedCut.newDirs 里显式声明后才可作为 move.to；声明会把它作为新节点加入模拟图（其 fileCount / stats 一律 unknown，即 null）。未声明的缺失目的地仍然 not-evaluated。已存在的节点不能声明为新建。';
+
+/**
+ * Enumerate the declarations a caller may legally write for `subject` — the step
+ * BEFORE `simulateRefactorSlice`. Pure: reads only the graph, invents no slice.
+ *
+ * Two move-source relationships are derived from the subject's edges:
+ *   - `subject-exports`: incoming edges (`X -> subject`) carry the names other dirs
+ *     import from the subject. A move of one of those names has `from = subject`.
+ *   - `subject-imports`: outgoing edges (`subject -> N`) carry names the subject
+ *     imports from N. Moving one of them has `from = N`, NOT the subject — this is
+ *     the shape of the real claudecodeui cut (subject `modules/settings`, source
+ *     `modules/settings/hooks`).
+ *
+ * For each source it reports every edge a move would reconcile (direct + barrel)
+ * and the `stays` group needed to cover the names that do NOT move. Candidate
+ * destinations are classified into internal / requires-newDirs / unusable, so a
+ * `MOVE_TO_NOT_AN_INTERNAL_DIR` never has to be discovered by tripping it.
+ *
+ * It never emits `pass` / `fail` / an exit code: a preflight is vocabulary, not a gate.
+ */
+export function preflightSlice(input: SlicePreflightInput): SlicePreflightReport {
+  const graph: TsModuleGraph | undefined = input?.graph;
+  const rawSubject = input?.subject ?? '';
+
+  if (
+    !graph ||
+    !Array.isArray(graph.edges) ||
+    !Array.isArray(graph.nodes) ||
+    !Array.isArray(graph.cycles)
+  ) {
+    return {
+      status: 'not-evaluated',
+      reason: 'graph 输入缺少 extensions.tsAnalysis.moduleGraph（nodes/edges/cycles 不全）',
+    };
+  }
+
+  const internalDirs = graph.nodes
+    .filter((n) => n.type === 'internal')
+    .map((n) => n.id)
+    .sort();
+  const internalSet = new Set(internalDirs);
+  if (internalSet.size === 0) {
+    return {
+      status: 'not-evaluated',
+      reason: 'moduleGraph 里没有 internal 目录节点，没有可评估的内容',
+    };
+  }
+
+  const internalEdges: GraphEdge[] = graph.edges
+    .filter((e) => internalSet.has(e.from) && internalSet.has(e.to))
+    .map((e: TsModuleDependency) => ({
+      from: e.from,
+      to: e.to,
+      valueStrength: e.valueStrength ?? null,
+      typeOnlyStrength: e.typeOnlyStrength ?? null,
+      importedNames: Array.isArray(e.importedNames) ? e.importedNames : [],
+    }));
+
+  // Same self-check as the evaluator: a graph whose reported cycles do not match
+  // its edges cannot justify a declaration either.
+  const recomputed = sccsOf(internalDirs, internalEdges);
+  const selfReported = (Array.isArray(graph.cycles) ? graph.cycles : []).map((c) =>
+    Array.isArray(c) ? c : ((c as { modules?: string[] }).modules ?? [])
+  );
+  if (canon(recomputed) !== canon(selfReported)) {
+    return {
+      status: 'not-evaluated',
+      reason: `自校验失败：按 moduleGraph.edges 重算的 SCC 与 moduleGraph.cycles 不一致，这张图上的 preflight 不可信 —— 重算=${canon(recomputed)} 自报=${canon(selfReported)}`,
+    };
+  }
+
+  const subject = normalizeSubjectDir(rawSubject, internalDirs, internalSet);
+  if (subject === null) {
+    return {
+      status: 'not-evaluated',
+      reason: `slice.subject=${JSON.stringify(rawSubject)} 不是本图的 internal 目录节点，也不是能归一到某个 internal 目录的文件路径（不静默取空）`,
+    };
+  }
+
+  const beforeScc = (recomputed.find((c) => c.includes(subject)) ?? [subject]).slice().sort();
+  const incoming = internalEdges.filter((e) => e.to === subject);
+  const outgoing = internalEdges.filter((e) => e.from === subject);
+
+  const unresolvedRefs = Array.isArray(graph.unresolved) ? graph.unresolved : [];
+  const allNodeIds = new Set(graph.nodes.map((n) => n.id));
+
+  const blocking: SlicePreflightBlocking[] = [];
+  const blockingSeen = new Set<string>();
+  const addBlocking = (b: SlicePreflightBlocking): void => {
+    const key = `${b.code}|${b.scope}`;
+    if (blockingSeen.has(key)) return;
+    blockingSeen.add(key);
+    blocking.push(b);
+  };
+
+  // ── Classify caller-supplied candidate destinations ───────────────────────
+  const rawDestinations = Array.isArray(input?.destinations) ? input.destinations : [];
+  const destinations: SlicePreflightDestinationVerdict[] = [];
+  const blockedDestDirs = new Set<string>();
+  for (const raw of rawDestinations) {
+    const dir = typeof raw === 'string' ? raw : String(raw);
+    if (internalSet.has(dir)) {
+      if (dir === subject) {
+        destinations.push({
+          dir,
+          kind: 'subject-itself',
+          legalAsMoveTarget: false,
+          reason:
+            '目的目录等于源目录：from === to 不是搬移，原地不动的符号要用 proposedCut.stays 显式声明',
+        });
+      } else {
+        const refs = unresolvedRefs.filter((u) => u?.from === dir).map((u) => u.specifier);
+        if (refs.length > 0) {
+          blockedDestDirs.add(dir);
+          addBlocking({
+            code: 'DESTINATION_UNRESOLVED_ALIAS',
+            scope: dir,
+            reason: `目的地 ${dir} 有未解析别名 ref（[${refs.join(', ')}]）：该目录参与切法时图上边集合不完整，切法会 not-evaluated`,
+            fix: '先解析这些别名（修 tsconfig paths / 重新 analyze），或换一个目的地',
+          });
+        }
+        destinations.push({
+          dir,
+          kind: 'internal',
+          legalAsMoveTarget: refs.length === 0,
+          reason:
+            refs.length === 0
+              ? '本图已有的 internal 目录节点：可直接作为 move.to'
+              : '本图 internal 目录，但其自身的未解析别名 ref 会让以它为参与者的切法 not-evaluated',
+          ...(refs.length > 0 ? { blocking: refs } : {}),
+        });
+      }
+    } else if (allNodeIds.has(dir)) {
+      addBlocking({
+        code: 'DESTINATION_EXISTS_NOT_INTERNAL',
+        scope: dir,
+        reason: `${dir} 是本图已有节点但不是 internal 目录：既不能作为 move.to，也不能写入 proposedCut.newDirs（把已有节点声明为新建会被拒绝）`,
+        fix: '改用一个 internal 目录，或使用图中不存在的目录名并写入 proposedCut.newDirs',
+      });
+      destinations.push({
+        dir,
+        kind: 'not-an-internal-node',
+        legalAsMoveTarget: false,
+        reason: '本图已有但不是 internal 目录节点：不能作为 move.to，也不能声明为新建',
+      });
+    } else {
+      destinations.push({
+        dir,
+        kind: 'requires-new-dir',
+        legalAsMoveTarget: true,
+        reason:
+          '图中不存在该目录：可作为 move.to，但必须在 proposedCut.newDirs 里显式声明为新建；未声明仍然 not-evaluated',
+        declaration: { newDirs: [dir] },
+      });
+    }
+  }
+  const newDirDestinations = destinations.flatMap((d) =>
+    d.kind === 'requires-new-dir' && d.declaration
+      ? [{ dir: d.dir, declaration: d.declaration }]
+      : []
+  );
+
+  // ── Move sources: the subject itself + each internal out-neighbour ────────
+  interface SourceSpec {
+    from: string;
+    relationship: 'subject-exports' | 'subject-imports';
+    via: string[];
+  }
+  const sourceSpecs: SourceSpec[] = [];
+  const sourceByDir = new Map<string, SourceSpec>();
+  const addSource = (spec: SourceSpec): void => {
+    const existing = sourceByDir.get(spec.from);
+    if (existing) {
+      for (const v of spec.via) if (!existing.via.includes(v)) existing.via.push(v);
+      return;
+    }
+    sourceByDir.set(spec.from, spec);
+    sourceSpecs.push(spec);
+  };
+  addSource({
+    from: subject,
+    relationship: 'subject-exports',
+    via: incoming.map((e) => edgeKeyOf(e.from, e.to)).sort(),
+  });
+  for (const e of outgoing) {
+    if (e.to === subject) continue; // a self-loop is not a second source
+    addSource({ from: e.to, relationship: 'subject-imports', via: [edgeKeyOf(e.from, e.to)] });
+  }
+  sourceSpecs.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
+
+  const moveGroups: SlicePreflightMoveGroup[] = [];
+  const stayGroups: SlicePreflightStayGroup[] = [];
+  const obligations: SlicePreflightEdgeObligation[] = [];
+
+  for (const spec of sourceSpecs) {
+    const incomingToSource = internalEdges.filter((e) => e.to === spec.from);
+
+    // Names the caller could plausibly move OUT of this source, evidenced by edges:
+    //   - subject-exports: every name on an incoming edge (the subject's consumers);
+    //   - subject-imports: the names the subject itself imports from the source.
+    const candidateNames: string[] = [];
+    if (spec.relationship === 'subject-exports') {
+      for (const e of incomingToSource) for (const n of e.importedNames) candidateNames.push(n);
+    } else {
+      for (const e of outgoing) {
+        if (e.to !== spec.from) continue;
+        for (const n of e.importedNames) candidateNames.push(n);
+      }
+    }
+    const uniqueNames = [...new Set(candidateNames)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    if (uniqueNames.length === 0) continue; // nothing evidenced to move from here
+    const candidateSet = new Set(uniqueNames);
+
+    // Source-level fail-closed conditions: these make EVERY move from here fail.
+    const blockedBy: string[] = [];
+    const refsFromSource = unresolvedRefs.filter((u) => u?.from === spec.from);
+    if (refsFromSource.length > 0) {
+      const specs = refsFromSource.map((u) => u.specifier);
+      addBlocking({
+        code: 'UNRESOLVED_ALIAS_FROM_SOURCE',
+        scope: spec.from,
+        reason: `源目录 ${spec.from} 有未解析别名 ref（[${specs.join(', ')}]）：任何以它为 move.from 的切法都会 not-evaluated`,
+        fix: '先解析这些别名（修 tsconfig paths / 重新 analyze），或换一个 move 源',
+      });
+      blockedBy.push('UNRESOLVED_ALIAS_FROM_SOURCE');
+    }
+    const namelessEdges = incomingToSource.filter((e) => e.importedNames.length === 0);
+    if (namelessEdges.length > 0) {
+      for (const e of namelessEdges) {
+        addBlocking({
+          code: 'INCOMING_EDGE_WITHOUT_NAMES',
+          scope: spec.from,
+          reason: `边 ${edgeKeyOf(e.from, e.to)} 进入源目录 ${spec.from} 却没有 importedNames：任何从该目录搬走符号的切法都无法对账`,
+          fix: '重新 analyze 以补齐 importedNames，或不要从该目录搬走符号',
+        });
+      }
+      blockedBy.push('INCOMING_EDGE_WITHOUT_NAMES');
+    }
+    const legal = blockedBy.length === 0;
+
+    // Every edge a move from this source would reconcile: direct incoming edges
+    // carrying a candidate name, plus barrel edges (edges into a dir that
+    // structurally re-exports from this source) carrying one.
+    const barrelDirs = new Set(internalEdges.filter((e) => e.to === spec.from).map((e) => e.from));
+    const localObligations: SlicePreflightEdgeObligation[] = [];
+    for (const e of incomingToSource) {
+      if (e.importedNames.length === 0) continue;
+      if (!e.importedNames.some((n) => candidateSet.has(n))) continue;
+      localObligations.push({
+        forSource: spec.from,
+        edge: edgeKeyOf(e.from, e.to),
+        kind: 'incoming',
+        from: e.from,
+        to: e.to,
+        importedNames: e.importedNames,
+        reason: `进入源目录 ${spec.from} 的边：从该目录搬走符号会把它 retarget 到目的地`,
+      });
+    }
+    for (const e of internalEdges) {
+      if (e.to === spec.from) continue; // direct incoming handled above
+      if (!barrelDirs.has(e.to)) continue;
+      if (e.importedNames.length === 0) continue;
+      if (!e.importedNames.some((n) => candidateSet.has(n))) continue;
+      localObligations.push({
+        forSource: spec.from,
+        edge: edgeKeyOf(e.from, e.to),
+        kind: 'barrel',
+        from: e.from,
+        to: e.to,
+        importedNames: e.importedNames,
+        reason: `barrel/re-export 边：${e.to} 结构性 re-export 自 ${spec.from}，从该目录搬走符号时这条边也会被对账（certainty=unknown）`,
+      });
+    }
+    localObligations.sort((a, b) => (a.edge < b.edge ? -1 : a.edge > b.edge ? 1 : 0));
+    obligations.push(...localObligations);
+
+    for (const o of localObligations) {
+      stayGroups.push({
+        dir: o.to,
+        symbols: o.importedNames,
+        edge: o.edge,
+        forSource: spec.from,
+        reason:
+          o.kind === 'incoming'
+            ? `若只搬走这条边 importedNames 的一部分，其余名字必须写进 proposedCut.stays[dir=${JSON.stringify(o.to)}]；未声明的名字不会被默认留下，全部搬走则不需要`
+            : `这条 barrel 边只要有一个被搬走的符号出现就会被对账，它的全部 importedNames 都必须被 move 或 stays 覆盖`,
+      });
+    }
+
+    const legalInternalTargets = legal
+      ? internalDirs.filter((d) => d !== spec.from && !blockedDestDirs.has(d)).sort()
+      : [];
+
+    const symbols: SlicePreflightSymbolMove[] = uniqueNames.map((symbol) => {
+      const carriedBy = incomingToSource
+        .filter((e) => e.importedNames.includes(symbol))
+        .map((e) => edgeKeyOf(e.from, e.to))
+        .sort();
+      return {
+        symbol,
+        destinations: legalInternalTargets,
+        newDirDestinations: legal ? newDirDestinations : [],
+        carriedBy,
+        reason:
+          spec.relationship === 'subject-exports'
+            ? `该名字被其他目录从 ${JSON.stringify(spec.from)} import（边 [${carriedBy.join(', ')}]）；move.from 必须是 ${JSON.stringify(spec.from)}`
+            : `subject 的出边 [${spec.via.join(', ')}] 显示该名字属于 ${JSON.stringify(spec.from)}，不是 ${JSON.stringify(subject)}；要搬它，move.from 必须是 ${JSON.stringify(spec.from)}`,
+      };
+    });
+
+    moveGroups.push({
+      from: spec.from,
+      relationship: spec.relationship,
+      via: spec.via.slice().sort(),
+      legal,
+      blockedBy,
+      symbols,
+      reason:
+        spec.relationship === 'subject-exports'
+          ? `subject 自身导出、被外部消费的符号：来自它的 ${incomingToSource.length} 条入边`
+          : `subject 的出边把该源目录的名字带入 subject：这些名字属于 ${JSON.stringify(spec.from)}，搬家时 move.from 是它而不是 subject`,
+    });
+  }
+
+  const namedSources = sourceSpecs.map((s) => JSON.stringify(s.from)).join(', ');
+
+  const nextSteps: string[] = [
+    `1. 选择 move 的源目录：declarations.moves[].from（候选：${namedSources}）。move.from 必须精确等于它——把 subject 出边的名字搬走时，from 是对端目录，不是 ${JSON.stringify(subject)}。`,
+    '2. 为每个要搬走的符号选一个目的地：本图 internal 目录见 legalDestinations.internal（源目录自身除外）；图中不存在的目录必须先写进 proposedCut.newDirs（每条的 declaration 已给出）。同一个符号只能有一个目的地。',
+    '3. 声明 move：{ from: <源目录>, to: <目的地>, symbols: [<符号>] }（可带 file / note）。',
+    '4. 对 edges[] 里属于该源的每条边，把不搬走的名字写进 proposedCut.stays[{ dir: <edge.to>, symbols: [...] }]；被搬走的名字不能再出现在 stays 里。',
+    '5. 提供 negativeControl.restoreEdges（至少一条、两端都是 internal 目录）：空数组恒为 not-evaluated。',
+    '6. 用 archguard_simulate_refactor_slice 复跑；期望 status="evaluated"（guards.clean 另论，不是 preflight 的判据）。',
+  ];
+
+  const notes: string[] = [
+    '本 preflight 只枚举有图上证据的 move：subject 的入边给出它被外部消费的符号，出边给出它从邻居 import 的符号。它不发明切法、不排序、不判定好坏。',
+    '只有「进入 moved-from 目录」的边、以及「进入某个结构性 re-export 该目录的目录」的边会被 reconcile；出边本身不会因搬走 subject 的符号而被 retarget。',
+    '每条被 reconcile 的边，其 importedNames 必须 100% 被 move 或 stays 覆盖——少一个名字就是 not-evaluated。stays 是声明，不是默认值。',
+    NEW_DIR_RULE,
+    '同一个符号不能既被 move 又出现在 stays 里，也不能被两处 move 搬向不同目的地。',
+    '本报告不含 pass / fail / exitCode：preflight 只给词汇表，判定留给 archguard_simulate_refactor_slice。',
+  ];
+  if (rawSubject !== subject) {
+    notes.push(
+      `subject 输入 ${JSON.stringify(rawSubject)} 已归一化为 internal 目录 ${JSON.stringify(subject)}。`
+    );
+  }
+  if (incoming.length === 0) {
+    notes.push(
+      `subject ${JSON.stringify(subject)} 没有进入边：图上没有它被其他目录消费的符号，从 subject 自身的 move 没有可对账的边。`
+    );
+  }
+  if (rawDestinations.length === 0) {
+    notes.push(
+      '未提供 destinations：legalDestinations.internal 列出所有 internal 目录；任何图中不存在的目录都可用 newDirs 规则声明。'
+    );
+  }
+
+  const report: SlicePreflightEvaluatedReport = {
+    status: 'preflight',
+    subject,
+    provenance: input?.provenance ?? null,
+    current: {
+      sccMembers: beforeScc,
+      sccSize: beforeScc.length,
+      subjectFanIn: inSources(subject, internalEdges).length,
+      subjectFanOut: outgoing.length,
+      internalDirCount: internalDirs.length,
+    },
+    outgoing: outgoing.map((e) => ({
+      edge: edgeKeyOf(e.from, e.to),
+      to: e.to,
+      importedNames: e.importedNames,
+      reason: `subject 从 ${JSON.stringify(e.to)} import 这些名字；它们不属于 subject，要把它们搬走时 move.from 必须是 ${JSON.stringify(e.to)}。`,
+    })),
+    declarations: {
+      moves: moveGroups,
+      stays: stayGroups,
+      newDirs: {
+        required: destinations.filter((d) => d.kind === 'requires-new-dir'),
+        rule: NEW_DIR_RULE,
+      },
+    },
+    destinations,
+    legalDestinations: {
+      internal: [...internalDirs],
+      newDirRule: NEW_DIR_RULE,
+    },
+    edges: obligations,
+    blocking,
+    nextSteps,
+    notes,
   };
 
   return report;
