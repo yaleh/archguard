@@ -15,9 +15,9 @@ extra:
 
 ## AC
 
-- [ ] 新增轻量 drift 入口：给定两个 git ref（或两个 scope key），直接分析/比对出 per-entity drift，不依赖 `arch-health-history.json`；新增用例到 `tests/unit/cli/mcp/tools/arch-health-tools.test.ts`
-- [ ] 缺两个可比对象时返回 not-evaluated 带 reason（不伪造空报告）
-- [ ] 现有基于快照的 `get_architecture_drift` 行为不回归
+- [x] 新增轻量 drift 入口：给定两个 git ref（或两个 scope key），直接分析/比对出 per-entity drift，不依赖 `arch-health-history.json`；新增用例到 `tests/unit/cli/mcp/tools/arch-health-tools.test.ts`
+- [x] 缺两个可比对象时返回 not-evaluated 带 reason（不伪造空报告）
+- [x] 现有基于快照的 `get_architecture_drift` 行为不回归
 
 ## DoD
 
