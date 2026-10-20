@@ -218,7 +218,7 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
     'archguard_get_architecture_drift',
     'Compute per-entity L2 architecture drift between two git snapshots in adjacency-matrix space. ' +
       'Two modes: (1) lightweight — pass fromRef + toRef to analyze two git refs directly, with no ' +
-      'arch-health history required; (2) snapshot — resolve fromCommit/toCommit from ' +
+      'arch-health history required; (2) snapshot — resolve fromCommit/toCommit via ' +
       '.archguard/arch-health-history.json and re-analyze both commits on demand. Returns ' +
       '{ report, hasBreakingDrift, breakingEntities } (ref mode also sets evaluated: true); a missing ' +
       'or unresolvable ref pair returns { evaluated: false, reason, hint }.',
