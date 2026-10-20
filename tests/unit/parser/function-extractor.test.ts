@@ -131,6 +131,44 @@ describe('FunctionExtractor', () => {
       expect(entities[0].name).toBe('Markdown');
     });
 
+    it('produces entities for HOC-wrapped named function references', () => {
+      const entities = extractFromCode(
+        `
+          function Plain(props: { text: string }) { return props.text; }
+          function Forwarded(props: { text: string }, ref: unknown) { return null; }
+          function Qualified(props: { text: string }) { return props.text; }
+          function QualifiedForwarded(props: { text: string }, ref: unknown) { return null; }
+          export const MemoNamed = memo(Plain);
+          export const ForwardRefNamed = forwardRef<HTMLDivElement, { text: string }>(Forwarded);
+          export const ReactMemoNamed = React.memo(Qualified);
+          export const ReactForwardRefNamed = React.forwardRef(QualifiedForwarded);
+        `,
+        'src/components/NamedRefs.tsx'
+      );
+      expect(entities.map((e) => e.name).sort()).toEqual([
+        'ForwardRefNamed',
+        'MemoNamed',
+        'ReactForwardRefNamed',
+        'ReactMemoNamed',
+      ]);
+      expect(entities.every((e) => e.type === 'function')).toBe(true);
+    });
+
+    it('produces an entity for a memo-wrapped named function reference through parseCode', () => {
+      const parser = new TypeScriptParser();
+      const arch = parser.parseCode(
+        `
+          function MarkdownBodyRenderer(props: { text: string }) { return props.text; }
+          export const MarkdownBody = memo(MarkdownBodyRenderer);
+        `,
+        'src/modules/chat/transcript/Markdown.tsx'
+      );
+      expect(arch.entities).toHaveLength(1);
+      expect(arch.entities[0].id).toBe('src/modules/chat/transcript/Markdown.tsx.MarkdownBody');
+      expect(arch.entities[0].name).toBe('MarkdownBody');
+      expect(arch.entities[0].type).toBe('function');
+    });
+
     it('does not unwrap unrelated call-expression initializers', () => {
       const entities = extractFromCode(
         `

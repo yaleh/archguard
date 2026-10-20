@@ -9,8 +9,15 @@ import {
   type FunctionDeclaration,
   type ArrowFunction,
   type FunctionExpression,
+  type Identifier,
 } from 'ts-morph';
 import type { Entity, Member } from '@/types/index.js';
+
+/**
+ * What a variable initializer may resolve to: an inline function, or (when a HOC
+ * wraps a named function reference) the identifier naming that function.
+ */
+type FunctionInitializer = ArrowFunction | FunctionExpression | Identifier;
 
 /**
  * Higher-order component wrappers whose first argument is the actual component
@@ -29,6 +36,7 @@ const HOC_WRAPPER_NAMES = new Set(['memo', 'forwardRef']);
  *      export const Qux = memo((...) => ...)
  *      export const Quux = forwardRef<HTMLDivElement, P>(function Quux() { ... })
  *      export const Corge = React.memo(() => ...)
+ *      export const MarkdownBody = memo(MarkdownBodyRenderer)  // named function reference
  *      (nested wrappers such as memo(forwardRef(...)) are unwrapped recursively)
  *  - Declarations that are exported by reference rather than by modifier:
  *      const Grault = memo(...); export default Grault;
@@ -166,9 +174,12 @@ export class FunctionExtractor {
    *
    * Returns the initializer itself when it is an arrow / function expression, or
    * the first argument of `memo(...)` / `forwardRef(...)` (also `React.`-qualified),
-   * unwrapping nested wrappers. Returns undefined for anything else.
+   * unwrapping nested wrappers. The wrapped first argument may itself be a named
+   * function reference (`memo(MarkdownBodyRenderer)`), in which case the identifier
+   * is returned and the entity takes the const's name. Returns undefined for
+   * anything else.
    */
-  private unwrapFunctionInitializer(init: Node): ArrowFunction | FunctionExpression | undefined {
+  private unwrapFunctionInitializer(init: Node): FunctionInitializer | undefined {
     let current: Node = init;
     // Parentheses may survive as explicit nodes in some ts-morph versions.
     while (Node.isParenthesizedExpression(current)) {
@@ -189,6 +200,12 @@ export class FunctionExtractor {
         current = current.getExpression();
       }
       if (Node.isArrowFunction(current) || Node.isFunctionExpression(current)) {
+        return current;
+      }
+      // `memo(NamedFunction)`: the wrapped component is a named function reference
+      // rather than an inline function. There is no body to read parameters from,
+      // but the const still declares a function entity — fall back to the identifier.
+      if (Node.isIdentifier(current)) {
         return current;
       }
     }
@@ -220,8 +237,10 @@ export class FunctionExtractor {
    * Member interface (which requires a MemberType).
    */
   private extractParamsAsMembers(
-    fn: FunctionDeclaration | ArrowFunction | FunctionExpression
+    fn: FunctionDeclaration | ArrowFunction | FunctionExpression | Identifier
   ): Member[] {
+    // A HOC-wrapped named function reference has no inline parameter list.
+    if (Node.isIdentifier(fn)) return [];
     return fn.getParameters().map((p) => ({
       name: p.getName(),
       type: 'field' as const,
