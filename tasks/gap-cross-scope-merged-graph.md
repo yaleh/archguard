@@ -1,7 +1,7 @@
 ---
 id: gap-cross-scope-merged-graph
 title: 多 sources 各成独立 scope：提供跨 scope 合并依赖视图，让 monorepo 跨 root 边可见
-status: ready
+status: done
 labels:
   - gap
 parent: null
