@@ -18,7 +18,11 @@ import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PassThrough } from 'node:stream';
 import { EventEmitter } from 'node:events';
-import { loadEngine } from '@/cli/query/engine-loader.js';
+import {
+  loadEngine,
+  computeStaleness,
+  type StalenessInfo,
+} from '@/cli/query/engine-loader.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
@@ -93,7 +97,10 @@ function createTestEngine(): { engine: QueryEngine; archJson: ArchJSON } {
   return { engine, archJson };
 }
 
-function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJSON }) {
+function wrapEngine(
+  { engine, archJson }: { engine: QueryEngine; archJson: ArchJSON },
+  staleness?: StalenessInfo
+) {
   return {
     engine,
     extensionAccessor: new ExtensionAccessor(archJson),
@@ -104,6 +111,7 @@ function wrapEngine({ engine, archJson }: { engine: QueryEngine; archJson: ArchJ
       label: scopeEntry.label,
       sources: scopeEntry.sources,
       generatedAt: '2026-01-01T00:00:00.000Z',
+      ...(staleness ? { staleness } : {}),
     },
     availableScopes: [
       { key: scopeEntry.key, label: scopeEntry.label, entityCount: scopeEntry.entityCount },
@@ -665,6 +673,82 @@ describe('scopeInfo in query responses', () => {
 
     const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
     expect(summary.scopeInfo.warning).toBeUndefined();
+  });
+});
+
+describe('snapshot staleness (generatedAt vs git HEAD)', () => {
+  const head = { sha: 'abc123def456', committedAt: '2026-02-01T12:00:00+00:00' };
+  const staleSnapshot = '2026-01-01T00:00:00.000Z';
+  const freshSnapshot = '2026-03-01T00:00:00.000Z';
+
+  function contextWithStaleness(staleness: StalenessInfo) {
+    return wrapEngine(createTestEngine(), staleness);
+  }
+
+  it('computeStaleness flags a snapshot older than HEAD and explains how to refresh', () => {
+    const staleness = computeStaleness(staleSnapshot, head);
+    expect(staleness.status).toBe('stale');
+    expect(staleness.generatedAt).toBe(staleSnapshot);
+    expect(staleness.head).toEqual(head);
+    expect(staleness.hint).toContain(head.sha);
+    expect(staleness.hint).toContain('re-run archguard_analyze');
+  });
+
+  it('computeStaleness does not flag a snapshot newer than HEAD', () => {
+    const staleness = computeStaleness(freshSnapshot, head);
+    expect(staleness.status).toBe('fresh');
+    expect(staleness.head).toEqual(head);
+    expect(staleness.hint).toBeUndefined();
+  });
+
+  it('computeStaleness reports not-checked when git HEAD is unavailable', () => {
+    const staleness = computeStaleness(staleSnapshot, undefined);
+    expect(staleness.status).toBe('not-checked');
+    expect(staleness.head).toBeUndefined();
+    expect(staleness.hint).toContain('not checked');
+  });
+
+  it('summary response carries the stale marker and HEAD-vs-snapshot correspondence', async () => {
+    loadEngineMock.mockResolvedValue(contextWithStaleness(computeStaleness(staleSnapshot, head)));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
+    expect(summary.scopeInfo.staleness.status).toBe('stale');
+    expect(summary.scopeInfo.staleness.generatedAt).toBe(staleSnapshot);
+    expect(summary.scopeInfo.staleness.head.sha).toBe(head.sha);
+    expect(summary.scopeInfo.staleness.head.committedAt).toBe(head.committedAt);
+    expect(summary.scopeInfo.staleness.hint).toContain('re-run archguard_analyze');
+  });
+
+  it('fresh snapshot is not marked and carries no re-run hint', async () => {
+    loadEngineMock.mockResolvedValue(contextWithStaleness(computeStaleness(freshSnapshot, head)));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
+    expect(summary.scopeInfo.staleness.status).toBe('fresh');
+    expect(summary.scopeInfo.staleness.hint).toBeUndefined();
+  });
+
+  it('array-payload tools expose staleness in their scopeInfo block', async () => {
+    loadEngineMock.mockResolvedValue(contextWithStaleness(computeStaleness(staleSnapshot, head)));
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const found = await tools.get('archguard_find_entity')({ name: 'CacheManager' });
+    expect(JSON.parse(found.content[1].text).scopeInfo.staleness.status).toBe('stale');
+  });
+
+  it('not-checked is surfaced when git is unavailable', async () => {
+    loadEngineMock.mockResolvedValue(
+      contextWithStaleness(computeStaleness(staleSnapshot, undefined))
+    );
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const summary = JSON.parse((await tools.get('archguard_summary')({})).content[0].text);
+    expect(summary.scopeInfo.staleness.status).toBe('not-checked');
   });
 });
 
