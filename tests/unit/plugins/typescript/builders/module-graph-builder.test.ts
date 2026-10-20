@@ -9,6 +9,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Project, SyntaxKind } from 'ts-morph';
 import { ModuleGraphBuilder } from '@/plugins/typescript/builders/module-graph-builder.js';
+import { QueryEngine } from '@/cli/query/query-engine.js';
+import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import type { ArchJSON } from '@/types/index.js';
+import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 import type { SourceFile, ImportDeclaration, ExportDeclaration } from 'ts-morph';
 
 // ---------------------------------------------------------------------------
@@ -570,7 +574,32 @@ describe('ModuleGraphBuilder — root and dynamic-import edge attribution', () =
   const makeProject = () =>
     new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
 
-  it('AC1: reports no (root) <-> modules/browser-use cycle when neither side imports the other', () => {
+  /** Run the exact `detect_cycles(outputScope=package)` engine over a built graph. */
+  const packageCyclesOf = (graph: TsModuleGraph) => {
+    const archJson = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: { tsAnalysis: { version: '1.0', moduleGraph: graph } },
+    } as ArchJSON;
+    const engine = new QueryEngine({
+      archJson,
+      archIndex: buildArchIndex(archJson, 'fixture'),
+      scopeEntry: {
+        key: 'fixture',
+        label: 'fixture',
+        kind: 'parsed',
+        sources: ['.'],
+        language: 'typescript',
+      },
+    });
+    return engine.getPackageCycles();
+  };
+
+  it('AC1: detect_cycles(package) reports no (root) <-> modules/browser-use cycle when neither side imports the other', () => {
     // The reported claudecodeui false cycle requires *some* edge in both
     // directions. With neither side importing the other, none may appear —
     // in particular no fabricated browser-use -> root edge.
@@ -589,6 +618,9 @@ describe('ModuleGraphBuilder — root and dynamic-import edge attribution', () =
 
     expect(graph.edges.some((e) => e.from === 'modules/browser-use' && e.to === '')).toBe(false);
     expect(graph.cycles).toEqual([]);
+    const cycles = packageCyclesOf(graph);
+    expect(cycles.evaluated).toBe(true);
+    expect(cycles.cycles).toEqual([]);
   });
 
   it("AC2: a literal import('../../index.js') is attributed to its containing module, not a sibling", () => {
