@@ -2,7 +2,7 @@
 id: gap-ts-god-packages-instrumentation
 title: TS 项目也需要 god-package 检测：用 fanIn/fanOut + fileCount/entityCount/loc 叠阈值，复用
   applicable/reason 三态
-status: todo
+status: ready
 labels:
   - gap
 parent: null
