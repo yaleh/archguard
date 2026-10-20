@@ -1,7 +1,7 @@
 ---
 id: gap-ts-parser-hoc-named-function-reference
 title: TS 解析器处理 export const X = memo(<NamedFunction>) 形态（内层具名函数引用，MarkdownBody 单例）
-status: ready
+status: done
 labels:
   - gap
   - defect
