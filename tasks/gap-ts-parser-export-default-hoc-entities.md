@@ -1,7 +1,7 @@
 ---
 id: gap-ts-parser-export-default-hoc-entities
 title: TS 解析器识别 export default / export { X } 引用的 memo/forwardRef 组件，补全仍缺的 22 个
-status: todo
+status: ready
 labels:
   - gap
   - defect
