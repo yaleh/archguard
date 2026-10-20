@@ -8,6 +8,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import { execFileSync } from 'node:child_process';
 import type { QueryManifest, QueryScopeEntry } from './query-manifest.js';
 import type { ArchIndex } from './arch-index.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -18,6 +19,33 @@ import { QueryEngine } from './query-engine.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import { RelationQueryService } from '@/core/query/relation-query-service.js';
 
+/** Where the current git HEAD sits, as read from the project that owns the snapshot. */
+export interface GitHeadInfo {
+  /** Short (12-char) HEAD commit sha. */
+  sha: string;
+  /** ISO-8601 committer date of HEAD. */
+  committedAt: string;
+}
+
+export type StalenessStatus = 'fresh' | 'stale' | 'not-checked';
+
+/**
+ * Whether a query snapshot still describes the current checkout.
+ *
+ * `stale` means the manifest was generated before the current git HEAD commit,
+ * so the readings come from an older tree; `not-checked` means git (or a
+ * parseable timestamp) was unavailable and no claim is made either way.
+ */
+export interface StalenessInfo {
+  status: StalenessStatus;
+  /** ISO-8601 timestamp of the snapshot the comparison used (manifest.generatedAt). */
+  generatedAt: string;
+  /** Current HEAD when it could be read; absent when status is `not-checked`. */
+  head?: GitHeadInfo;
+  /** Actionable explanation, present for `stale` (and for `not-checked` diagnostics). */
+  hint?: string;
+}
+
 /** Metadata about the scope a query was resolved against. */
 export interface ResolvedScopeInfo {
   key: string;
@@ -25,6 +53,75 @@ export interface ResolvedScopeInfo {
   sources: string[];
   /** ISO-8601 timestamp of the manifest (analysis) that produced this scope. */
   generatedAt: string;
+  /**
+   * Snapshot-vs-HEAD signal. Absent on older loaders/mocks that predate the
+   * check; `loadEngine` always populates it.
+   */
+  staleness?: StalenessInfo;
+}
+
+/**
+ * Read the git HEAD of the project that owns `archDir`.
+ * Returns undefined when git is unavailable or the directory is not in a repo —
+ * callers must then report `not-checked`, never a silent "fresh".
+ */
+export function readGitHead(projectRoot: string): GitHeadInfo | undefined {
+  const opts = {
+    encoding: 'utf8' as const,
+    stdio: ['ignore', 'pipe', 'ignore'] as ['ignore', 'pipe', 'ignore'],
+  };
+  try {
+    const sha = execFileSync('git', ['-C', projectRoot, 'rev-parse', '--short=12', 'HEAD'], opts)
+      .trim();
+    const committedAt = execFileSync(
+      'git',
+      ['-C', projectRoot, 'log', '-1', '--format=%cI', 'HEAD'],
+      opts
+    ).trim();
+    if (!sha || !committedAt) return undefined;
+    return { sha, committedAt };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Pure snapshot-vs-HEAD comparison. A snapshot generated before HEAD's commit
+ * time is `stale` (it describes an older tree) and carries a re-run hint;
+ * otherwise it is `fresh`.
+ */
+export function computeStaleness(
+  generatedAt: string,
+  head: GitHeadInfo | undefined
+): StalenessInfo {
+  if (!head) {
+    return {
+      status: 'not-checked',
+      generatedAt,
+      hint: 'Git HEAD unavailable (not a git work tree, git not installed, or no commits); staleness not checked.',
+    };
+  }
+  const genMs = Date.parse(generatedAt);
+  const headMs = Date.parse(head.committedAt);
+  if (!Number.isFinite(genMs) || !Number.isFinite(headMs)) {
+    return {
+      status: 'not-checked',
+      generatedAt,
+      head,
+      hint: 'Could not parse generatedAt or git commit time; staleness not checked.',
+    };
+  }
+  if (genMs < headMs) {
+    return {
+      status: 'stale',
+      generatedAt,
+      head,
+      hint:
+        `Snapshot generatedAt ${generatedAt} predates git HEAD ${head.sha} (${head.committedAt}). ` +
+        'Readings come from an older tree — re-run archguard_analyze to refresh.',
+    };
+  }
+  return { status: 'fresh', generatedAt, head };
 }
 
 /** Compact description of a scope available in the manifest. */
@@ -205,11 +302,15 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
   const extensionAccessor = new ExtensionAccessor(archJson);
   const relationQueryService = engine.relationQueryService;
+  // The .archguard dir lives inside the analyzed project; its parent is the
+  // git work tree whose HEAD the snapshot is compared against.
+  const projectRoot = path.dirname(archDir);
   const scopeInfo: ResolvedScopeInfo = {
     key: scopeEntry.key,
     label: scopeEntry.label,
     sources: scopeEntry.sources,
     generatedAt: manifest.generatedAt,
+    staleness: computeStaleness(manifest.generatedAt, readGitHead(projectRoot)),
   };
   const availableScopes: AvailableScope[] = manifest.scopes.map((s) => ({
     key: s.key,

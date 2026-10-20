@@ -4,6 +4,7 @@ import type { ArchJSON, Entity } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
+import type { TsModuleDependency } from '@/types/extensions/ts-analysis.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 // ---------------------------------------------------------------------------
@@ -1821,5 +1822,114 @@ describe('applyOutputOptions on getDependents results (TASK-99 outputScope regre
   it('outputScope=method keeps members with method signatures', () => {
     const [dep] = dependentsOfBeta('method');
     expect(dep.members?.map((m) => m.name)).toEqual(['run', 'count']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Package cycle edge evidence (root / dynamic-import attribution audit)
+// ---------------------------------------------------------------------------
+
+describe('QueryEngine — package cycle edge evidence', () => {
+  const stats = { classes: 0, interfaces: 0, functions: 0, enums: 0 };
+
+  /** Graph with a (root) <-> modules/browser-use SCC plus an acyclic third module. */
+  function makeCycleArchJson(edges: TsModuleDependency[]): ArchJSON {
+    return makeArchJson({
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              { id: '', name: '(root)', type: 'internal', fileCount: 2, stats },
+              {
+                id: 'modules/browser-use',
+                name: 'modules/browser-use',
+                type: 'internal',
+                fileCount: 2,
+                stats,
+              },
+              { id: 'modules/other', name: 'modules/other', type: 'internal', fileCount: 1, stats },
+            ],
+            edges,
+            cycles: [],
+          },
+        },
+      },
+    });
+  }
+
+  it('AC3: attaches specifier + file:line to each edge inside the SCC', () => {
+    const archJson = makeCycleArchJson([
+      {
+        from: '',
+        to: 'modules/browser-use',
+        strength: 1,
+        importedNames: [],
+        evidence: [
+          {
+            specifier: './modules/browser-use/browser-use.routes.js',
+            file: 'index.ts',
+            line: 83,
+            kind: 'import',
+          },
+        ],
+      },
+      {
+        from: 'modules/browser-use',
+        to: '',
+        strength: 1,
+        importedNames: [],
+        evidence: [
+          {
+            specifier: '../../load-env.js',
+            file: 'modules/browser-use/browser-use-mcp.ts',
+            line: 4,
+            kind: 'import',
+          },
+        ],
+      },
+      {
+        // Acyclic edge to a third module: must not be attached to the SCC.
+        from: '',
+        to: 'modules/other',
+        strength: 1,
+        importedNames: [],
+        evidence: [{ specifier: './modules/other.js', file: 'index.ts', line: 90, kind: 'import' }],
+      },
+    ]);
+
+    const result = createEngine(archJson).getPackageCycles();
+
+    expect(result.evaluated).toBe(true);
+    expect(result.cycles).toHaveLength(1);
+    expect([...result.cycles[0].modules].sort()).toEqual(['', 'modules/browser-use']);
+    expect(result.cycles[0].edges).toEqual([
+      {
+        from: '',
+        to: 'modules/browser-use',
+        specifier: './modules/browser-use/browser-use.routes.js',
+        file: 'index.ts',
+        line: 83,
+      },
+      {
+        from: 'modules/browser-use',
+        to: '',
+        specifier: '../../load-env.js',
+        file: 'modules/browser-use/browser-use-mcp.ts',
+        line: 4,
+      },
+    ]);
+  });
+
+  it('omits `edges` for legacy graphs that carry no per-edge provenance', () => {
+    const archJson = makeCycleArchJson([
+      { from: '', to: 'modules/browser-use', strength: 1, importedNames: [] },
+      { from: 'modules/browser-use', to: '', strength: 1, importedNames: [] },
+    ]);
+
+    const result = createEngine(archJson).getPackageCycles();
+
+    expect(result.cycles).toHaveLength(1);
+    expect(result.cycles[0].edges).toBeUndefined();
   });
 });
