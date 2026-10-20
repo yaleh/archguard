@@ -131,6 +131,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
     const engine = makeFixtureEngine();
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), {
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
@@ -146,6 +147,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
       outputScope: 'method',
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
@@ -161,6 +163,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
       outputScope: 'class',
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     const edgeList = result as EdgeListOutput;
     expect(edgeList.entities).toHaveLength(1);
@@ -184,6 +187,7 @@ describe('CLI/MCP parity (Phase 88)', () => {
     const engine = makeFixtureEngine();
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     const edgeList = result as EdgeListOutput;
     // The relation in the fixture is { source: 'pkg.A', target: 'pkg.B', type: 'dependency' }

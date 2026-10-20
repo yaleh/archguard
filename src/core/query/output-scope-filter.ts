@@ -23,6 +23,20 @@ export function narrowEntities(entities: readonly Entity[], scope: OutputScope):
 }
 
 /**
+ * Restrict relations to the query closure.
+ *
+ * A relation is kept only when BOTH endpoints are in `allowedIds`. Query results
+ * (BFS neighbors) are a subset of the graph, so serializing every relation in the
+ * scope would leak unrelated subgraphs into edge-list output.
+ */
+export function filterRelationsToClosure(
+  relations: readonly Relation[],
+  allowedIds: ReadonlySet<string>
+): Relation[] {
+  return relations.filter((r) => allowedIds.has(r.source) && allowedIds.has(r.target));
+}
+
+/**
  * Filter/transform relations based on the output scope.
  *
  * - scope='package': remove all call edges (method-level noise at package view)
