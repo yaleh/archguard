@@ -17,9 +17,9 @@ extra:
 
 ## AC
 
-- [ ] 新增 `archguard_slice_preflight`（或 `simulate_refactor_slice` 的 preflight 模式）：给定 `subject` dir，返回可合法声明的 moves/stays/newDirs 与每条的理由；新增用例到 `tests/unit/analysis/slice-delta/simulate.test.ts`
-- [ ] preflight 输出涵盖 0.1.38 那 4 条 `MOVE_TO_NOT_AN_INTERNAL_DIR` 的合法目标（或明确指出需声明 newDirs），使同类 not-evaluated 可被避免
-- [ ] 现有 `simulate_refactor_slice` 行为与 fail-closed 语义不回归
+- [x] 新增 `archguard_slice_preflight`（或 `simulate_refactor_slice` 的 preflight 模式）：给定 `subject` dir，返回可合法声明的 moves/stays/newDirs 与每条的理由；新增用例到 `tests/unit/analysis/slice-delta/simulate.test.ts`
+- [x] preflight 输出涵盖 0.1.38 那 4 条 `MOVE_TO_NOT_AN_INTERNAL_DIR` 的合法目标（或明确指出需声明 newDirs），使同类 not-evaluated 可被避免
+- [x] 现有 `simulate_refactor_slice` 行为与 fail-closed 语义不回归
 
 ## DoD
 
@@ -29,6 +29,8 @@ extra:
 
 - src/analysis/slice-delta/simulate.ts
 - src/analysis/slice-delta/types.ts
+- src/analysis/slice-delta/index.ts
 - src/cli/mcp/tools/slice-delta-tool.ts
 - tests/unit/analysis/slice-delta/simulate.test.ts
+- tests/unit/cli/mcp/slice-delta-tool.test.ts
 - tasks/gap-slice-declaration-preflight.md
