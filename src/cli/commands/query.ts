@@ -338,6 +338,11 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     // Determine which query to run
     let result: unknown;
 
+    // Relation queries return neighbors only; declare the queried entity as the
+    // closure anchor so edge-list output keeps its own edges (MCP parity).
+    const withAnchor = (anchor: string): QueryMethodOptions | undefined =>
+      queryOptions ? { ...queryOptions, anchorNames: [anchor] } : undefined;
+
     // When queryOptions are present, the engine already applies scope/format narrowing.
     // In that case we bypass projectEntitiesForOutput (which would strip members via toSummary).
     // For text output we still use the pre-options entities for formatEntityList.
@@ -352,7 +357,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const raw = engine.applyOutputOptions(
         relationQueryService.getDependencies(opts.depsOf, depth),
-        queryOptions
+        withAnchor(opts.depsOf)
       );
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
@@ -361,7 +366,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
       const depth = parseBoundedInt(opts.depth, '--depth', 1, 5);
       const raw = engine.applyOutputOptions(
         relationQueryService.getDependents(opts.usedBy, depth),
-        queryOptions
+        withAnchor(opts.usedBy)
       );
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
@@ -369,7 +374,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     } else if (opts.implementersOf) {
       const raw = engine.applyOutputOptions(
         relationQueryService.findImplementers(opts.implementersOf),
-        queryOptions
+        withAnchor(opts.implementersOf)
       );
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);
@@ -377,7 +382,7 @@ async function queryHandler(opts: QueryOptions): Promise<void> {
     } else if (opts.subclassesOf) {
       const raw = engine.applyOutputOptions(
         relationQueryService.findSubclasses(opts.subclassesOf),
-        queryOptions
+        withAnchor(opts.subclassesOf)
       );
       const entities = toDisplayEntities(raw);
       result = useRawEngineResult ? raw : projectEntitiesForOutput(engine, entities, opts.verbose);

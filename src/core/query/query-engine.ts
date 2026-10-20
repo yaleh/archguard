@@ -13,7 +13,11 @@ import type { ArchIndex } from './arch-index.js';
 import type { QueryScopeEntry } from '@/types/query-scope.js';
 import type { PackageCoverage, TestFileInfo } from '@/types/extensions/test-analysis.js';
 import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
-import { narrowEntities, filterRelationsForScope } from './output-scope-filter.js';
+import {
+  narrowEntities,
+  filterRelationsForScope,
+  filterRelationsToClosure,
+} from './output-scope-filter.js';
 import { serialize } from './edge-list-serializer.js';
 import { ArchMetrics } from './arch-metrics.js';
 import { ExtensionAccessor } from './extension-accessor.js';
@@ -40,9 +44,28 @@ export interface QueryEngineOptions {
 export type OutputScope = 'package' | 'class' | 'method';
 export type QueryOutputFormat = 'structured' | 'edge-list';
 
+/** Relation fields that can be selected for edge-list output. */
+export type EdgeListField = 'from' | 'to' | 'type';
+
 export interface QueryMethodOptions {
   outputScope?: OutputScope;
   queryFormat?: QueryOutputFormat;
+  /**
+   * Entity names that anchor the relation closure (the query's start entities).
+   *
+   * BFS relation queries return the *neighbors* of the start entity, not the start
+   * entity itself. Without declaring it here, edge-list output cannot include the
+   * start entity's outgoing/incoming edges. Closure = returned entity IDs ∪ anchor IDs.
+   */
+  anchorNames?: readonly string[];
+  /**
+   * Maximum number of relations to serialize (applied after closure narrowing and
+   * scope filtering, in deterministic ArchJSON order). Guards against dumping an
+   * unbounded edge list for high-degree entities.
+   */
+  topN?: number;
+  /** Restrict serialized relations to these fields (default: all fields). */
+  relationFields?: readonly EdgeListField[];
 }
 
 export interface EdgeListEntity {
@@ -65,7 +88,26 @@ export interface EdgeListRelation {
 
 export interface EdgeListOutput {
   entities: EdgeListEntity[];
-  relations: EdgeListRelation[];
+  /** Relations within the query closure. Fields may be omitted when filtered. */
+  relations: Array<Partial<EdgeListRelation>>;
+  /** Number of relations in the closure before `topN` truncation. */
+  totalRelations?: number;
+  /** True when `topN` truncated the relation list. */
+  truncated?: boolean;
+}
+
+/** One in-cycle directory edge, with the raw specifier and source position. */
+export interface PackageCycleEdgeEvidence {
+  /** Importing directory module id (`''` is the root module). */
+  from: string;
+  /** Imported directory module id (`''` is the root module). */
+  to: string;
+  /** Raw specifier exactly as written in `file` at `line`. */
+  specifier: string;
+  /** Project-root-relative file containing the reference. */
+  file: string;
+  /** 1-based line of the reference. */
+  line: number;
 }
 
 /** One directory-level strongly connected component (package-granularity cycle). */
@@ -74,6 +116,16 @@ export interface PackageCycle {
   size: number;
   /** Module IDs (project-root-relative directory paths) that form the SCC. */
   modules: string[];
+  /**
+   * Every edge whose endpoints both lie in this SCC, carrying the underlying
+   * `specifier` + `file:line`. This is what makes a directory-level SCC
+   * auditable: e.g. `["", "modules/browser-use"]` dissolves into
+   * `index.ts → browser-use/*.js` plus `browser-use-mcp.ts → ../../load-env.js`,
+   * showing the root end of the "cycle" is a leaf bootstrap file, not the
+   * entrypoint. Absent when the graph carries no per-edge provenance (older
+   * ArchJSON), or empty when no in-SCC edge has provenance.
+   */
+  edges?: PackageCycleEdgeEvidence[];
 }
 
 /**
@@ -180,11 +232,11 @@ export class QueryEngine {
     );
     const adj = new Map<string, string[]>();
     for (const id of internal) adj.set(id, []);
-    for (const edge of moduleGraph.edges) {
-      if (edge.from === edge.to) continue;
-      if (internal.has(edge.from) && internal.has(edge.to)) {
-        adj.get(edge.from)?.push(edge.to);
-      }
+    const internalEdges = moduleGraph.edges.filter(
+      (edge) => edge.from !== edge.to && internal.has(edge.from) && internal.has(edge.to)
+    );
+    for (const edge of internalEdges) {
+      adj.get(edge.from)?.push(edge.to);
     }
 
     const index = new Map<string, number>();
@@ -226,7 +278,24 @@ export class QueryEngine {
 
     return sccs
       .sort((a, b) => b.length - a.length || (a[0] ?? '').localeCompare(b[0] ?? ''))
-      .map((modules) => ({ size: modules.length, modules }));
+      .map((modules) => {
+        const members = new Set(modules);
+        const edges = internalEdges
+          .filter((edge) => members.has(edge.from) && members.has(edge.to))
+          .flatMap((edge) =>
+            (edge.evidence ?? []).map((evidence) => ({
+              from: edge.from,
+              to: edge.to,
+              specifier: evidence.specifier,
+              file: evidence.file,
+              line: evidence.line,
+            }))
+          )
+          .sort(comparePackageCycleEvidence);
+        const cycle: PackageCycle = { size: modules.length, modules };
+        if (edges.length > 0) cycle.edges = edges;
+        return cycle;
+      });
   }
 
   /** Return a summary of the scope. */
@@ -361,8 +430,31 @@ export class QueryEngine {
 
     const narrowed = narrowEntities(entities, scope);
     if (format === 'edge-list') {
-      const filteredRelations = filterRelationsForScope(this.archJson.relations, scope);
-      return serialize(narrowed, filteredRelations, scope);
+      // Restrict relations to the query closure: the returned entity set plus the
+      // explicitly declared start entities. Serializing `this.archJson.relations`
+      // here used to leak the whole scope's graph (500k+ chars for large projects).
+      const closureIds = new Set<string>();
+      for (const entity of entities) {
+        if (entity.id) closureIds.add(entity.id);
+      }
+      for (const anchorName of options.anchorNames ?? []) {
+        for (const id of this.index.nameToIds[anchorName] ?? []) {
+          closureIds.add(id);
+        }
+      }
+
+      const closureRelations = filterRelationsToClosure(this.archJson.relations, closureIds);
+      const scopedRelations = filterRelationsForScope(closureRelations, scope);
+      const totalRelations = scopedRelations.length;
+      const limitedRelations =
+        options.topN !== undefined ? scopedRelations.slice(0, options.topN) : scopedRelations;
+
+      return serialize(narrowed, limitedRelations, scope, {
+        relationFields: options.relationFields,
+        totalRelations: options.topN !== undefined ? totalRelations : undefined,
+        truncated:
+          options.topN !== undefined ? limitedRelations.length < totalRelations : undefined,
+      });
     }
     return narrowed;
   }
@@ -417,4 +509,18 @@ export class QueryEngine {
       fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
     };
   }
+}
+
+/** Deterministic ordering for in-cycle edge evidence (stable in JSON output). */
+function comparePackageCycleEvidence(
+  a: PackageCycleEdgeEvidence,
+  b: PackageCycleEdgeEvidence
+): number {
+  return (
+    a.from.localeCompare(b.from) ||
+    a.to.localeCompare(b.to) ||
+    a.file.localeCompare(b.file) ||
+    a.line - b.line ||
+    a.specifier.localeCompare(b.specifier)
+  );
 }

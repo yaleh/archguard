@@ -250,6 +250,7 @@ describe('QueryEngine options (Phase 84)', () => {
     const engine = makeEngine();
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     expect(result).toHaveProperty('entities');
     expect(result).toHaveProperty('relations');
@@ -268,6 +269,7 @@ describe('QueryEngine options (Phase 84)', () => {
     const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
       outputScope: 'method',
       queryFormat: 'edge-list',
+      anchorNames: ['A'],
     });
     const edgeList = result as {
       entities: Array<{ id: string; methods: unknown[] }>;
@@ -320,6 +322,91 @@ describe('QueryEngine options (Phase 84)', () => {
     expect(entities).toHaveLength(1);
     // scope=class → members stripped
     expect(entities[0].members).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// gap-query-edge-list-leaks-full-relations — edge-list relations must stay
+// inside the query closure (returned entities ∪ anchor/start entity).
+// ---------------------------------------------------------------------------
+
+describe('edge-list relation closure', () => {
+  // Two disconnected subgraphs:
+  //   A → B → C        X → Y → Z
+  function makeClosureEngine() {
+    const archJson = makeArchJson({
+      entities: [
+        makeEntity('pkg.A', 'A'),
+        makeEntity('pkg.B', 'B'),
+        makeEntity('pkg.C', 'C'),
+        makeEntity('pkg.X', 'X'),
+        makeEntity('pkg.Y', 'Y'),
+        makeEntity('pkg.Z', 'Z'),
+      ],
+      relations: [
+        { id: 'A->B', source: 'pkg.A', target: 'pkg.B', type: 'dependency' },
+        { id: 'B->C', source: 'pkg.B', target: 'pkg.C', type: 'dependency' },
+        { id: 'X->Y', source: 'pkg.X', target: 'pkg.Y', type: 'dependency' },
+        { id: 'Y->Z', source: 'pkg.Y', target: 'pkg.Z', type: 'dependency' },
+      ],
+    });
+    const index = buildArchIndex(archJson, 'hash-edge-closure');
+    return new QueryEngine({ archJson, archIndex: index, scopeEntry: defaultScope });
+  }
+
+  it('getDependencies(A, 1, edge-list) only emits edges of A and its neighbors', () => {
+    const engine = makeClosureEngine();
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      queryFormat: 'edge-list',
+      anchorNames: ['A'],
+    }) as { entities: Array<{ id: string }>; relations: Array<{ from: string; to: string }> };
+
+    // Entities: B only (BFS neighbors; the anchor is not part of the result set)
+    expect(result.entities.map((e) => e.id)).toEqual(['pkg.B']);
+    // Closure = {A, B}: only A→B. The unrelated X→Y / Y→Z subgraph is not leaked.
+    expect(result.relations).toEqual([{ from: 'pkg.A', to: 'pkg.B', type: 'dependency' }]);
+  });
+
+  it('getDependencies(A, 2, edge-list) includes the two-hop edge but not the other subgraph', () => {
+    const engine = makeClosureEngine();
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), {
+      queryFormat: 'edge-list',
+      anchorNames: ['A'],
+    }) as { entities: Array<{ id: string }>; relations: Array<{ from: string; to: string }> };
+
+    expect(result.entities.map((e) => e.id)).toEqual(['pkg.B', 'pkg.C']);
+    expect(result.relations).toEqual([
+      { from: 'pkg.A', to: 'pkg.B', type: 'dependency' },
+      { from: 'pkg.B', to: 'pkg.C', type: 'dependency' },
+    ]);
+  });
+
+  it('topN truncates the closure relation list and reports totals', () => {
+    const engine = makeClosureEngine();
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 2), {
+      queryFormat: 'edge-list',
+      anchorNames: ['A'],
+      topN: 1,
+    }) as {
+      relations: unknown[];
+      totalRelations: number;
+      truncated: boolean;
+    };
+
+    expect(result.relations).toHaveLength(1);
+    expect(result.totalRelations).toBe(2);
+    expect(result.truncated).toBe(true);
+  });
+
+  it('relationFields restricts serialized relation fields', () => {
+    const engine = makeClosureEngine();
+    const result = engine.applyOutputOptions(engine.relationQueryService.getDependencies('A', 1), {
+      queryFormat: 'edge-list',
+      anchorNames: ['A'],
+      relationFields: ['from', 'to'],
+    }) as { relations: Array<Record<string, unknown>> };
+
+    expect(result.relations).toEqual([{ from: 'pkg.A', to: 'pkg.B' }]);
   });
 });
 
