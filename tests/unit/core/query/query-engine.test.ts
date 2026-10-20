@@ -492,3 +492,71 @@ describe('QueryEngine — ExtensionAccessor delegation (Phase 111)', () => {
     expect(ext.hasAtlasExtension()).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// getPackageCycles — three-valued evaluation state
+// ---------------------------------------------------------------------------
+
+describe('QueryEngine — getPackageCycles evaluation state', () => {
+  function makeEngine(archJson: ArchJSON): QueryEngine {
+    return new QueryEngine({
+      archJson,
+      archIndex: buildArchIndex(archJson),
+      scopeEntry: defaultScope,
+    });
+  }
+
+  it('returns evaluated:false with a reason when tsAnalysis.moduleGraph is absent', () => {
+    // A scope can have entity/class cycles and still not answer the
+    // directory-level question. Callers must see "unknown", never "no cycles".
+    const engine = makeEngine(
+      makeArchJson({
+        entities: [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B')],
+        relations: [{ source: 'pkg.A', target: 'pkg.B', type: 'dependency' }],
+      })
+    );
+
+    const result = engine.getPackageCycles();
+
+    expect(result.granularity).toBe('package');
+    expect(result.evaluated).toBe(false);
+    expect(result.reason).toBeTruthy();
+    expect(result.cycles).toEqual([]);
+  });
+
+  it('returns evaluated:true with cycles:[] for an acyclic module graph', () => {
+    const archJson = makeArchJson({
+      extensions: {
+        tsAnalysis: {
+          version: '1.0',
+          moduleGraph: {
+            nodes: [
+              {
+                id: 'src/a',
+                name: 'src/a',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+              {
+                id: 'src/b',
+                name: 'src/b',
+                type: 'internal',
+                fileCount: 1,
+                stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+              },
+            ],
+            edges: [{ from: 'src/a', to: 'src/b', strength: 1, importedNames: [] }],
+            cycles: [],
+          },
+        },
+      },
+    });
+
+    const result = makeEngine(archJson).getPackageCycles();
+
+    expect(result.evaluated).toBe(true);
+    expect(result.reason).toBeUndefined();
+    expect(result.cycles).toEqual([]);
+  });
+});
