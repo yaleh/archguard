@@ -14,16 +14,31 @@ vi.mock('@/analysis/jl/history-writer.js', () => ({
 vi.mock('@/cli/utils/cluster-archjson-loader.js', () => ({
   loadArchJsonForCluster: vi.fn(),
 }));
+vi.mock('@/cli/analyze/drift-baseline.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/cli/analyze/drift-baseline.js')>();
+  return {
+    ...actual,
+    reanalyzeCommitSnapshot: vi.fn(),
+    resolveCommitShaOrNull: vi.fn(),
+  };
+});
 
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import {
   buildClusterBoundaryReport,
   derivePackageOf,
   registerArchHealthTools,
+  registerArchHealthDriftTool,
   registerClusterBoundaryTool,
+  resolveDriftByRefs,
 } from '@/cli/mcp/tools/arch-health-tools.js';
 import { loadArchJsonForCluster } from '@/cli/utils/cluster-archjson-loader.js';
-import type { ArchHealthHistory, IntrinsicDimensionResult } from '@/analysis/jl/types.js';
+import { reanalyzeCommitSnapshot, resolveCommitShaOrNull } from '@/cli/analyze/drift-baseline.js';
+import type {
+  ArchHealthHistory,
+  DriftSnapshot,
+  IntrinsicDimensionResult,
+} from '@/analysis/jl/types.js';
 import type { ArchJSON } from '@/types/index.js';
 
 function makeSnapshot(
@@ -371,5 +386,191 @@ describe('cluster boundary — TS-style entities (TASK-96)', () => {
     vi.mocked(loadArchJsonForCluster).mockResolvedValue(makeTsStyleArchJson());
     const data = await invokeClusterTool({ minPackageSize: 1 });
     expect(data.packageCount).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// gap-git-ref-drift-entry — lightweight git-ref drift entry
+// ---------------------------------------------------------------------------
+
+function makeDriftSnapshot(
+  commitSha: string,
+  entityIndex: string[],
+  adjacencyRows: number[][]
+): DriftSnapshot {
+  return {
+    timestamp: '2026-01-01T00:00:00Z',
+    commitSha,
+    entityIndex,
+    adjacencyRows,
+  };
+}
+
+function zeroRows(n: number): number[][] {
+  return Array.from({ length: n }, () => Array<number>(n).fill(0));
+}
+
+async function invokeDriftTool(
+  args: Record<string, unknown> = {},
+  history: ArchHealthHistory | null = null
+) {
+  vi.mocked(readHistoryFile).mockResolvedValue(history);
+  const { server, getHandler } = buildMockServer();
+  registerArchHealthDriftTool(server, '/project');
+  const handler = getHandler();
+  const result = (await handler(args)) as { content: Array<{ type: string; text: string }> };
+  return JSON.parse(result.content[0].text);
+}
+
+describe('archguard_get_architecture_drift — lightweight git-ref entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Fully reset the shared mocks (implementation + once-queue) so a previous
+    // test's mockResolvedValueOnce queue cannot leak into the next.
+    vi.mocked(reanalyzeCommitSnapshot).mockReset();
+    vi.mocked(resolveCommitShaOrNull).mockReset();
+  });
+
+  it('registers the drift tool (same tool name, extended parameter schema)', () => {
+    const { server } = buildMockServer();
+    registerArchHealthDriftTool(server, '/project');
+    const call = vi.mocked(server.tool).mock.calls[0];
+    expect(call[0]).toBe('archguard_get_architecture_drift');
+    const schema = call[2] as Record<string, unknown>;
+    expect(schema).toHaveProperty('fromRef');
+    expect(schema).toHaveProperty('toRef');
+    // Snapshot mode parameters remain available (no regression).
+    expect(schema).toHaveProperty('fromCommit');
+    expect(schema).toHaveProperty('toCommit');
+  });
+
+  it('two git refs → per-entity drift without reading arch-health-history.json', async () => {
+    vi.mocked(resolveCommitShaOrNull).mockImplementation(async (_root, ref) =>
+      ref === 'main~1' ? 'aaa' : 'bbb'
+    );
+    vi.mocked(reanalyzeCommitSnapshot)
+      .mockResolvedValueOnce(makeDriftSnapshot('aaa', ['A', 'B'], zeroRows(2)))
+      .mockResolvedValueOnce(
+        makeDriftSnapshot(
+          'bbb',
+          ['A', 'B'],
+          [
+            [0, 6],
+            [0, 0],
+          ]
+        )
+      );
+
+    const data = await invokeDriftTool({ fromRef: 'main~1', toRef: 'HEAD' });
+
+    expect(data.evaluated).toBe(true);
+    expect(data.report.sharedEntityCount).toBe(2);
+    expect(data.report.fromSnapshot.commitSha).toBe('aaa');
+    expect(data.report.toSnapshot.commitSha).toBe('bbb');
+    expect(data.hasBreakingDrift).toBe(true);
+    expect(data.breakingEntities).toContain('A');
+    // The lightweight entry never consults the snapshot history.
+    expect(readHistoryFile).not.toHaveBeenCalled();
+    expect(reanalyzeCommitSnapshot).toHaveBeenNthCalledWith(1, '/project', 'aaa');
+    expect(reanalyzeCommitSnapshot).toHaveBeenNthCalledWith(2, '/project', 'bbb');
+  });
+
+  it('refs take precedence over a present history file', async () => {
+    vi.mocked(resolveCommitShaOrNull).mockResolvedValue('sha');
+    vi.mocked(reanalyzeCommitSnapshot).mockResolvedValue(
+      makeDriftSnapshot('sha', ['A'], zeroRows(1))
+    );
+    const history = makeHistory([
+      makeSnapshot(1, '2026-01-01T00:00:00Z', { commitSha: 'old' }),
+      makeSnapshot(2, '2026-01-02T00:00:00Z', { commitSha: 'new' }),
+    ]);
+
+    const data = await invokeDriftTool({ fromRef: 'main~1', toRef: 'HEAD' }, history);
+
+    expect(data.evaluated).toBe(true);
+    expect(readHistoryFile).not.toHaveBeenCalled();
+  });
+
+  it('only one ref → not-evaluated with reason, never a fabricated empty report', async () => {
+    const data = await invokeDriftTool({ fromRef: 'main~1' });
+
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('to_ref_required');
+    expect(data.hint).toEqual(expect.stringContaining('fromRef and toRef'));
+    expect(data).not.toHaveProperty('report');
+    expect(data).not.toHaveProperty('hasBreakingDrift');
+    expect(readHistoryFile).not.toHaveBeenCalled();
+    expect(reanalyzeCommitSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('only toRef → not-evaluated with reason', async () => {
+    const data = await invokeDriftTool({ toRef: 'HEAD' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('from_ref_required');
+    expect(data).not.toHaveProperty('report');
+  });
+
+  it('unresolvable fromRef → not-evaluated with reason and the offending ref', async () => {
+    vi.mocked(resolveCommitShaOrNull).mockResolvedValue(null);
+    const data = await invokeDriftTool({ fromRef: 'does-not-exist', toRef: 'HEAD' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('from_ref_not_found');
+    expect(data.hint).toContain('does-not-exist');
+    expect(reanalyzeCommitSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('unresolvable toRef → not-evaluated with reason', async () => {
+    vi.mocked(resolveCommitShaOrNull).mockResolvedValueOnce('aaa').mockResolvedValueOnce(null);
+    const data = await invokeDriftTool({ fromRef: 'main~1', toRef: 'nope' });
+    expect(data.evaluated).toBe(false);
+    expect(data.reason).toBe('to_ref_not_found');
+    expect(data.hint).toContain('nope');
+    expect(reanalyzeCommitSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('resolveDriftByRefs is a pure resolver: hooks are injectable', async () => {
+    const reanalyze = vi.fn(async (_root: string, sha: string) =>
+      makeDriftSnapshot(sha, ['A'], zeroRows(1))
+    );
+    const resolveRef = vi.fn(async (_root: string, ref: string) =>
+      ref === 'left' ? '1'.repeat(40) : '2'.repeat(40)
+    );
+    const resolution = await resolveDriftByRefs('/repo', 'left', 'right', reanalyze, resolveRef);
+    expect(resolution.kind).toBe('snapshots');
+    expect(reanalyze).toHaveBeenNthCalledWith(1, '/repo', '1'.repeat(40));
+    expect(reanalyze).toHaveBeenNthCalledWith(2, '/repo', '2'.repeat(40));
+  });
+});
+
+describe('archguard_get_architecture_drift — snapshot mode (no regression)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(reanalyzeCommitSnapshot).mockReset();
+    vi.mocked(resolveCommitShaOrNull).mockReset();
+  });
+
+  it('no history and no refs → "no baseline available" with a null report (unchanged)', async () => {
+    const data = await invokeDriftTool({});
+    expect(data.message).toBe('no baseline available');
+    expect(data.report).toBeNull();
+    expect(data.hasBreakingDrift).toBe(false);
+    expect(data.breakingEntities).toEqual([]);
+  });
+
+  it('history-based mode still resolves and compares the two latest snapshots', async () => {
+    const history = makeHistory([
+      makeSnapshot(1, '2026-01-01T00:00:00Z', { commitSha: 'aaa' }),
+      makeSnapshot(2, '2026-01-02T00:00:00Z', { commitSha: 'bbb' }),
+    ]);
+    vi.mocked(reanalyzeCommitSnapshot)
+      .mockResolvedValueOnce(makeDriftSnapshot('aaa', ['A'], zeroRows(1)))
+      .mockResolvedValueOnce(makeDriftSnapshot('bbb', ['A'], zeroRows(1)));
+
+    const data = await invokeDriftTool({}, history);
+
+    expect(data.report.fromSnapshot.commitSha).toBe('aaa');
+    expect(data.report.toSnapshot.commitSha).toBe('bbb');
+    expect(data.evaluated).toBeUndefined();
+    expect(resolveCommitShaOrNull).not.toHaveBeenCalled();
   });
 });

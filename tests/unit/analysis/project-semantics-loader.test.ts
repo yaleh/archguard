@@ -60,4 +60,50 @@ describe('project-semantics-loader', () => {
 
     await expect(loadProjectSemanticsSidecar(workDir)).rejects.toThrow(/project-semantics\.json/);
   });
+
+  describe('preflightProjectSemantics', () => {
+    it('returns projectSemantics: "missing" when the sidecar is absent', async () => {
+      const workDir = await makeWorkDir();
+      const { preflightProjectSemantics } = await import(
+        '@/analysis/project-semantics-loader.js'
+      );
+
+      await expect(preflightProjectSemantics(workDir)).resolves.toEqual({
+        projectSemantics: 'missing',
+      });
+    });
+
+    it('returns projectSemantics: "loaded" with the parsed semantics', async () => {
+      const workDir = await makeWorkDir();
+      await fs.writeFile(
+        path.join(workDir, 'project-semantics.json'),
+        JSON.stringify({ additionalTestPatterns: ['**/*.integration.ts'] })
+      );
+
+      const { preflightProjectSemantics } = await import(
+        '@/analysis/project-semantics-loader.js'
+      );
+
+      await expect(preflightProjectSemantics(workDir)).resolves.toEqual({
+        projectSemantics: 'loaded',
+        semantics: { additionalTestPatterns: ['**/*.integration.ts'] },
+      });
+    });
+
+    it('returns projectSemantics: "invalid" with an error for a malformed sidecar', async () => {
+      const workDir = await makeWorkDir();
+      await fs.writeFile(
+        path.join(workDir, 'project-semantics.json'),
+        JSON.stringify({ suggestedDepth: '2' })
+      );
+
+      const { preflightProjectSemantics } = await import(
+        '@/analysis/project-semantics-loader.js'
+      );
+
+      const result = await preflightProjectSemantics(workDir);
+      expect(result.projectSemantics).toBe('invalid');
+      expect(result.error).toMatch(/project-semantics\.json/);
+    });
+  });
 });

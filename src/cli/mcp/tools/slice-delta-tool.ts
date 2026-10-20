@@ -14,7 +14,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { loadEngine } from '../../query/engine-loader.js';
 import { resolveRoot } from '../mcp-server.js';
-import { simulateRefactorSlice } from '@/analysis/slice-delta/index.js';
+import { preflightSlice, simulateRefactorSlice } from '@/analysis/slice-delta/index.js';
 import type { RefactorSliceDeclaration } from '@/analysis/slice-delta/index.js';
 import { readArchguardVersion } from '../../commands/slice-delta.js';
 import { errorMessage } from '@/utils/error-message.js';
@@ -154,6 +154,110 @@ export function registerSliceDeltaTool(server: McpServer, defaultRoot: string): 
         graph,
         slice: slice as unknown as RefactorSliceDeclaration,
         observed: observed ?? null,
+        provenance,
+      });
+
+      return textResponse(JSON.stringify(report, null, 2));
+    }
+  );
+
+  // adr-ok: ADR-007 — MCP surface for the top-level `archguard slice-delta` subcommand, not a `query` --flag
+  server.tool(
+    'archguard_slice_preflight',
+    'Preflight for an explicitly-declared refactor slice: given a `subject` directory, enumerate the ' +
+      'moves / stays / newDirs a caller can LEGALLY declare, each with its reason, BEFORE writing the ' +
+      'slice. This is vocabulary discovery, not an evaluation — it emits no pass/fail and computes no delta. ' +
+      'Graph comes from the analysed scope: run archguard_analyze first if it is missing.\n\n' +
+      'WHY: simulateRefactorSlice is fail-closed. A move.to that is not an internal dir must be declared ' +
+      'in proposedCut.newDirs; an edge entering a moved-from dir must have every importedName covered by a ' +
+      'move or a stays; every symbol needs exactly one destination. Discovering these by tripping ' +
+      'not-evaluated means reading `accounting` backwards. Preflight answers it up front.\n\n' +
+      'OUTPUT:\n' +
+      '  declarations.moves[]  — groups keyed by move.from. relationship="subject-exports" means the ' +
+      '                          subject owns the symbols (its incoming edges carry them); ' +
+      '                          relationship="subject-imports" means the subject IMPORTS them from an ' +
+      '                          out-neighbour, so move.from is that neighbour, NOT the subject. Each symbol ' +
+      '                          lists its legal internal destinations + newDirDestinations, and carriedBy ' +
+      '                          (the edges a move would reconcile).\n' +
+      '  declarations.stays[]  — for every reconciled edge (direct incoming + barrel/re-export), the full ' +
+      '                          importedNames and the dir they stay in. Declare the names you do NOT move; ' +
+      '                          an undeclared name is never defaulted to staying.\n' +
+      '  declarations.newDirs.required[] — candidate destinations absent from the graph, each with the ' +
+      '                          `{ newDirs: [...] }` declaration that makes it legal.\n' +
+      '  destinations[]        — verdict for each caller-supplied candidate (`internal` | ' +
+      '                          `requires-new-dir` | `subject-itself` | `not-an-internal-node`).\n' +
+      '  edges[] / blocking[] / nextSteps[] / notes[] — the coverage obligations, any graph condition that ' +
+      '                          blocks a source or destination (unresolved alias refs, an incoming edge ' +
+      '                          with no importedNames), and an executable "how to declare it next" recipe.\n\n' +
+      'RULES IT ENCODES: from===to is not a move (use stays); one symbol cannot move to two destinations or ' +
+      'both move and stay; negativeControl.restoreEdges must be non-empty; a declared-new dir may not be an ' +
+      'existing node.',
+    {
+      projectRoot: z
+        .string()
+        .optional()
+        .describe('Root directory of the target project. Defaults to the MCP server startup cwd.'),
+      scope: z
+        .string()
+        .optional()
+        .describe(
+          'Query scope key / label fragment. Omit to use manifest.globalScopeKey resolution.'
+        ),
+      subject: z
+        .string()
+        .describe(
+          'Directory node id to preflight, OR a file path (normalized to its containing internal dir).'
+        ),
+      destinations: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Candidate destinations to classify (e.g. the dirs you are considering, including ones absent ' +
+            'from the graph). Absent dirs are reported as requires-new-dir with the exact declaration. ' +
+            'Omit to get the internal-target list plus the newDirs rule.'
+        ),
+    },
+    async ({ projectRoot, scope, subject, destinations }) => {
+      const root = resolveRoot(projectRoot, defaultRoot);
+      const archDir = path.join(root, '.archguard');
+      const analyzeHint = `Run archguard_analyze({ projectRoot: "${root}" }) first, then retry.`;
+
+      let ctx;
+      try {
+        ctx = await loadEngine(archDir, scope);
+      } catch (e) {
+        return errorResponse(
+          `Could not resolve a query scope at ${archDir}/query: ${errorMessage(e)}. ${analyzeHint}`
+        );
+      }
+
+      const graph = ctx.extensionAccessor.getTsModuleGraph();
+      if (!graph) {
+        return errorResponse(
+          `This scope carries no TypeScript module graph (extensions.tsAnalysis.moduleGraph); ` +
+            `the slice preflight only applies to a package-level TS ArchJSON. ${analyzeHint}`
+        );
+      }
+
+      const archJsonPath = path.join(archDir, 'query', ctx.scopeEntry.key, 'arch.json');
+      const provenance = {
+        analysis: { source: archJsonPath, workspaceRoot: root },
+        slice: {},
+        observed: null,
+        tool: {
+          archguardVersion: readArchguardVersion(),
+          command: 'archguard_slice_preflight',
+        },
+        provenanceConsistency: {
+          status: 'not-checked' as const,
+          reason: 'MCP adapter 不做 git 探测',
+        },
+      };
+
+      const report = preflightSlice({
+        graph,
+        subject,
+        destinations,
         provenance,
       });
 

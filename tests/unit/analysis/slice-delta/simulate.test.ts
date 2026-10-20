@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { simulateRefactorSlice } from '@/analysis/slice-delta/index.js';
+import { preflightSlice, simulateRefactorSlice } from '@/analysis/slice-delta/index.js';
 import type { RefactorSliceDeclaration } from '@/analysis/slice-delta/index.js';
 import type { TsModuleGraph } from '@/types/extensions/ts-analysis.js';
 
@@ -1255,5 +1255,221 @@ describe('unknowns.unreferencedSymbols — declared names on no internal edge', 
     expect(note).toMatch(/不等于/);
     expect(note).toMatch(/internal 或 external/);
     expect(note).not.toMatch(/fabricat|hallucinat/i);
+  });
+});
+
+// ── slice preflight (gap-slice-declaration-preflight) ─────────────────────────
+
+describe('preflightSlice — declarable vocabulary (not an evaluation)', () => {
+  it("AC1: subject-exports group is derived from the subject's incoming edges", () => {
+    const r = preflightSlice({ graph: quayGraph, subject: 'gate' });
+    expect(r.status).toBe('preflight');
+    if (r.status !== 'preflight') return;
+    expect(r.subject).toBe('gate');
+
+    const group = r.declarations.moves.find((g) => g.from === 'gate');
+    expect(group).toBeDefined();
+    expect(group?.relationship).toBe('subject-exports');
+    expect(group?.legal).toBe(true);
+
+    const gateFn = group?.symbols.find((s) => s.symbol === 'GateFn');
+    expect(gateFn?.carriedBy).toEqual(['gate/config -> gate', 'gate/factories -> gate']);
+    expect(gateFn?.destinations).toContain('gate/config');
+    expect(gateFn?.destinations).not.toContain('gate');
+    expect(group?.symbols.map((s) => s.symbol)).toEqual(
+      expect.arrayContaining(['GateFn', 'runAcceptance', 'verdictFromAcceptance', 'listGates'])
+    );
+
+    // Stays groups force 100% coverage on every edge a move from `gate` reconciles.
+    const stays = r.declarations.stays.filter((s) => s.forSource === 'gate');
+    expect(stays.map((s) => s.edge).sort()).toEqual([
+      ' -> gate',
+      'cli -> gate',
+      'gate/config -> gate',
+      'gate/factories -> gate',
+    ]);
+    const factories = stays.find((s) => s.edge === 'gate/factories -> gate');
+    expect(factories?.dir).toBe('gate');
+    expect(factories?.symbols).toEqual(['GateFn', 'runAcceptance', 'verdictFromAcceptance']);
+
+    // Outgoing edges are reported for orientation but are NOT the subject's own symbols.
+    expect(r.outgoing.map((e) => e.edge)).toEqual(
+      expect.arrayContaining(['gate -> gate/config', 'gate -> gate/factories', 'gate -> kernel'])
+    );
+  });
+
+  it('AC1: subject-imports groups reveal the REAL move source (subject out-edges)', () => {
+    const r = preflightSlice({ graph: ccGraph, subject: 'modules/settings' });
+    if (r.status !== 'preflight') throw new Error('expected preflight');
+    const hooks = r.declarations.moves.find((g) => g.from === 'modules/settings/hooks');
+    expect(hooks?.relationship).toBe('subject-imports');
+    expect(hooks?.via).toEqual(['modules/settings -> modules/settings/hooks']);
+    expect(hooks?.symbols.map((s) => s.symbol)).toEqual(
+      expect.arrayContaining([
+        'readDeviceName',
+        'readMcpNavigationPolicy',
+        'writeMcpNavigationPolicy',
+        'McpNavigationPolicy',
+        'useSettingsController',
+        'useWebPush',
+      ])
+    );
+    const read = hooks?.symbols.find((s) => s.symbol === 'readDeviceName');
+    expect(read?.destinations).toContain('shared');
+
+    // A file-path subject is normalized exactly like the evaluator does.
+    const fileSubject = preflightSlice({
+      graph: ccGraph,
+      subject: 'modules/settings/hooks/useMcpNavigationSettings.ts',
+    });
+    if (fileSubject.status !== 'preflight') throw new Error('expected preflight');
+    expect(fileSubject.subject).toBe('modules/settings/hooks');
+  });
+
+  it('AC1: an invalid subject → not-evaluated (never a silently empty vocabulary)', () => {
+    const r = preflightSlice({ graph: ccGraph, subject: 'does/not/exist.ts' });
+    expect(r.status).toBe('not-evaluated');
+    if (r.status !== 'not-evaluated') return;
+    expect(r.reason).toMatch(/不静默取空|文件路径/);
+  });
+
+  it('AC2: the four 0.1.38 MOVE_TO_NOT_AN_INTERNAL_DIR targets are classified as requiring newDirs', () => {
+    const targets = ['gate/core', 'gate/contract', 'gate/runtime', 'model'];
+    const r = preflightSlice({ graph: quayGraph, subject: 'gate', destinations: targets });
+    if (r.status !== 'preflight') throw new Error('expected preflight');
+
+    expect(r.destinations.map((d) => d.dir)).toEqual(targets);
+    for (const v of r.destinations) {
+      expect(v.kind).toBe('requires-new-dir');
+      expect(v.legalAsMoveTarget).toBe(true);
+      expect(v.declaration).toEqual({ newDirs: [v.dir] });
+    }
+    expect(r.declarations.newDirs.required.map((d) => d.dir).sort()).toEqual([...targets].sort());
+    expect(r.declarations.newDirs.rule).toContain('newDirs');
+
+    // Every move candidate carries the ready-to-paste declaration.
+    const gateGroup = r.declarations.moves.find((g) => g.from === 'gate');
+    for (const s of gateGroup?.symbols ?? []) {
+      expect(s.newDirDestinations.map((d) => d.dir).sort()).toEqual([...targets].sort());
+    }
+  });
+
+  it('AC2: a slice assembled from the preflight answer is evaluated (the not-evaluated is avoided)', () => {
+    const targets = ['gate/core', 'gate/contract', 'gate/runtime', 'model'];
+    const pre = preflightSlice({ graph: quayGraph, subject: 'gate', destinations: targets });
+    if (pre.status !== 'preflight') throw new Error('expected preflight');
+    const runtime = pre.destinations.find((d) => d.dir === 'gate/runtime');
+    expect(runtime?.declaration).toEqual({ newDirs: ['gate/runtime'] });
+    if (!runtime?.declaration) throw new Error('expected a newDirs declaration');
+
+    const moved = ['GateFn', 'runAcceptance', 'verdictFromAcceptance'];
+    const stays = pre.declarations.stays
+      .filter((s) => s.forSource === 'gate')
+      .map((s) => ({ dir: s.dir, symbols: s.symbols.filter((n) => !moved.includes(n)) }))
+      .filter((s) => s.symbols.length > 0);
+
+    const report = simulateRefactorSlice({
+      graph: quayGraph,
+      slice: {
+        subject: 'gate',
+        proposedCut: {
+          moves: [{ from: 'gate', to: 'gate/runtime', symbols: moved }],
+          newDirs: runtime.declaration.newDirs,
+          stays,
+        },
+        negativeControl: {
+          restoreEdges: [
+            { from: 'gate/config', to: 'gate' },
+            { from: 'gate/factories', to: 'gate' },
+          ],
+        },
+      },
+    });
+    expect(report.status).toBe('evaluated');
+    if (report.status !== 'evaluated') return;
+    // The point is that the preflight-guided declaration is EVALUATED (not the
+    // `MOVE_TO_NOT_AN_INTERNAL_DIR` not-evaluated); guards.clean is a separate
+    // question about whether the cut breaks the cycle.
+    expect(report.computedDelta.syntheticNodes?.map((n) => n.id)).toEqual(['gate/runtime']);
+    expect(report.computedDelta.removedEdges.map((e) => `${e.from} -> ${e.to}`)).toEqual(
+      expect.arrayContaining(['gate/config -> gate', 'gate/factories -> gate'])
+    );
+  });
+
+  it('AC2: destination verdicts distinguish internal / subject / existing-non-internal / absent', () => {
+    const r = preflightSlice({
+      graph: quayGraph,
+      subject: 'gate',
+      destinations: ['gate', 'gate/config', 'yaml', 'gate/runtime'],
+    });
+    if (r.status !== 'preflight') throw new Error('expected preflight');
+    const byDir = new Map(r.destinations.map((d) => [d.dir, d]));
+    expect(byDir.get('gate')?.kind).toBe('subject-itself');
+    expect(byDir.get('gate')?.legalAsMoveTarget).toBe(false);
+    expect(byDir.get('gate/config')?.kind).toBe('internal');
+    expect(byDir.get('gate/config')?.legalAsMoveTarget).toBe(true);
+    expect(byDir.get('yaml')?.kind).toBe('not-an-internal-node');
+    expect(byDir.get('yaml')?.legalAsMoveTarget).toBe(false);
+    expect(byDir.get('gate/runtime')?.kind).toBe('requires-new-dir');
+    expect(r.blocking.some((b) => b.code === 'DESTINATION_EXISTS_NOT_INTERNAL')).toBe(true);
+  });
+
+  it('DoD: on a REAL subject (claudecodeui modules/settings) the answer is executable', () => {
+    const r = preflightSlice({
+      graph: ccGraph,
+      subject: 'modules/settings',
+      destinations: ['shared'],
+    });
+    if (r.status !== 'preflight') throw new Error('expected preflight');
+
+    // The stays group for the hooks edge is exactly the complement the real slice declares.
+    const stay = r.declarations.stays.find(
+      (s) =>
+        s.forSource === 'modules/settings/hooks' &&
+        s.edge === 'modules/settings -> modules/settings/hooks'
+    );
+    expect(stay).toBeDefined();
+    expect(stay?.dir).toBe('modules/settings/hooks');
+    const complement = (stay?.symbols ?? []).filter((n) => n !== 'readDeviceName').sort();
+    const realStays = (ccSlice.proposedCut.stays ?? [])[0];
+    expect(complement).toEqual([...realStays.symbols].sort());
+
+    // The recipe is executable and the real destination is a legal internal target.
+    expect(r.nextSteps.length).toBeGreaterThanOrEqual(5);
+    expect(r.destinations.find((d) => d.dir === 'shared')?.kind).toBe('internal');
+    const report = simulateRefactorSlice({ graph: ccGraph, slice: ccSlice });
+    expect(report.status).toBe('evaluated');
+  });
+
+  it('AC3: preflight emits no pass/fail/exitCode and never changes fail-closed semantics', () => {
+    const pre = preflightSlice({ graph: quayGraph, subject: 'gate' });
+    const keys = new Set<string>();
+    const walk = (o: unknown): void => {
+      if (!o || typeof o !== 'object') return;
+      for (const k of Object.keys(o as Record<string, unknown>)) {
+        keys.add(k);
+        walk((o as Record<string, unknown>)[k]);
+      }
+    };
+    walk(pre);
+    expect(keys.has('pass')).toBe(false);
+    expect(keys.has('fail')).toBe(false);
+    expect(keys.has('exitCode')).toBe(false);
+
+    // Removing the declaration the preflight told you to add still fails closed.
+    const noDecl = simulateRefactorSlice({
+      graph: quayGraph,
+      slice: {
+        subject: 'gate',
+        proposedCut: {
+          moves: [{ from: 'gate', to: 'gate/runtime', symbols: ['GateFn'] }],
+          stays: [{ dir: 'gate', symbols: ['runAcceptance', 'verdictFromAcceptance'] }],
+        },
+        negativeControl: { restoreEdges: [{ from: 'gate/config', to: 'gate' }] },
+      },
+    });
+    expect(noDecl.status).toBe('not-evaluated');
+    if (noDecl.status !== 'not-evaluated') return;
+    expect(noDecl.reason).toContain('newDirs');
   });
 });

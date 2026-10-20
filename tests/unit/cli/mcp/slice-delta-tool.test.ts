@@ -373,3 +373,48 @@ describe('archguard_simulate_refactor_slice — unreferencedSymbols parity (CLI 
     }
   });
 });
+
+// ── archguard_slice_preflight: declarable vocabulary through the MCP face ─────
+
+describe('archguard_slice_preflight', () => {
+  beforeEach(() => {
+    loadEngineMock.mockReset();
+    mockGraph(quayGraph);
+  });
+
+  it('registers the tool', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    expect(collectTools(server).has('archguard_slice_preflight')).toBe(true);
+  });
+
+  it('returns the preflight answer for a subject + candidate destinations', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_slice_preflight');
+    const result = await handler({
+      projectRoot: '/workspace',
+      subject: 'gate',
+      destinations: ['gate/core', 'gate/runtime'],
+    });
+    const report = JSON.parse(String(result.content[0].text));
+
+    expect(report.status).toBe('preflight');
+    expect(report.subject).toBe('gate');
+    expect(report.destinations.map((d: { kind: string }) => d.kind)).toEqual([
+      'requires-new-dir',
+      'requires-new-dir',
+    ]);
+    expect(report.declarations.newDirs.required).toHaveLength(2);
+    expect(report.declarations.moves.some((g: { from: string }) => g.from === 'gate')).toBe(true);
+    expect(report.provenance.tool.command).toBe('archguard_slice_preflight');
+  });
+
+  it('returns isError with an actionable hint when the scope has no TS module graph', async () => {
+    mockGraph(undefined);
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const handler = collectTools(server).get('archguard_slice_preflight');
+    const result = await handler({ projectRoot: '/workspace', subject: 'gate' });
+    expect(result.isError).toBe(true);
+    expect(String(result.content[0].text)).toMatch(/archguard_analyze/);
+    expect(String(result.content[0].text)).toMatch(/moduleGraph/);
+  });
+});

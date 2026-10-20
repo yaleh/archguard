@@ -23,6 +23,36 @@ import { loadEngine } from '../query/engine-loader.js';
 import { loadHistoryData } from '../git-history/history-loader.js';
 import { HistoryQuery } from '../git-history/history-query.js';
 
+/**
+ * Why a CCB field is null. A bare null is indistinguishable from "not computed
+ * yet" / "artifact absent" / "not collected"; every null field carries one of
+ * these so the caller can say WHY instead of guessing.
+ */
+export type CcbFieldReason =
+  | 'not-collected'
+  | 'no-archjson-artifacts'
+  | 'no-git-history-artifacts'
+  | 'git-history-unavailable'
+  | 'not-in-graph'
+  | 'in-graph-no-artifact';
+
+export interface CcbFieldReasons {
+  structural?: CcbFieldReason;
+  behavioral?: CcbFieldReason;
+  git?: CcbFieldReason;
+  guidance?: CcbFieldReason;
+  coverage?: CcbFieldReason;
+}
+
+/** CCB plus the per-field reason markers for its null fields. */
+export type CognitiveContextBundleWithReasons = CognitiveContextBundle & {
+  reasons?: CcbFieldReasons;
+};
+
+type StructuralSummary = CognitiveSummaryEntry & {
+  reason?: 'not-in-graph' | 'in-graph-no-artifact';
+};
+
 export interface AssembleOptions {
   /** When true, bypass cache and always reassemble even if bundle is fresh. */
   forceRefresh?: boolean;
@@ -55,12 +85,12 @@ interface FileEntity {
 
 /**
  * Fetch structural summary for the file by looking up entities in ArchJSON.
- * Returns null when ArchJSON artifacts are absent or entity not found.
+ * Returns null when ArchJSON artifacts are absent or unreadable.
  */
 async function fetchStructural(
   filePath: string,
   archDir: string
-): Promise<CognitiveSummaryEntry | null> {
+): Promise<{ entry: StructuralSummary | null; reason?: CcbFieldReason }> {
   try {
     const { engine } = await loadEngine(archDir);
     const fileEntities = (
@@ -74,41 +104,65 @@ async function fetchStructural(
         const entity = found[0];
         const members = entity.members ?? [];
         return {
-          name: entity.name,
-          found: true,
-          entityId: entity.id,
-          methodCount: members.filter((m) => m.type === 'method' || m.type === 'constructor')
-            .length,
-          fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
-          inDegree: 0,
-          outDegree: 0,
-          topDependents: [],
-          topDependencies: [],
+          entry: {
+            name: entity.name,
+            found: true,
+            entityId: entity.id,
+            methodCount: members.filter((m) => m.type === 'method' || m.type === 'constructor')
+              .length,
+            fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
+            inDegree: 0,
+            outDegree: 0,
+            topDependents: [],
+            topDependencies: [],
+          },
         };
       }
+      // The file's entities are in the graph, but the name index cannot resolve
+      // them — an in-graph / artifact mismatch rather than an absent entity.
+      return {
+        entry: { name: firstEntityName, found: false, reason: 'in-graph-no-artifact' },
+      };
     }
-    return { name: path.basename(filePath), found: false };
+    return {
+      entry: { name: path.basename(filePath), found: false, reason: 'not-in-graph' },
+    };
   } catch {
-    return null;
+    return { entry: null, reason: 'no-archjson-artifacts' };
   }
 }
 
 /**
  * Fetch git signals from history artifacts.
- * Returns null when git history artifacts are absent.
+ * Returns { signals: null, reason } when git history artifacts are absent or unreadable.
  */
-async function fetchGit(filePath: string, archDir: string): Promise<CognitiveGitSignals | null> {
+async function fetchGit(
+  filePath: string,
+  archDir: string
+): Promise<{ signals: CognitiveGitSignals | null; reason?: CcbFieldReason }> {
   try {
     const historyData = await loadHistoryData(archDir);
     const historyQuery = new HistoryQuery(historyData);
     const risk = historyQuery.getChangeRisk('file', filePath);
     return {
-      riskLevel: risk.riskLevel ?? 'low',
-      hotspotScore: 0,
-      cochangeNeighbors: [],
+      signals: {
+        riskLevel: risk.riskLevel ?? 'low',
+        hotspotScore: 0,
+        cochangeNeighbors: [],
+      },
     };
-  } catch {
-    return null;
+  } catch (error) {
+    // Match by `name` rather than `instanceof GitHistoryNotFoundError`: unit
+    // tests fully mock the history-loader module (exporting only
+    // loadHistoryData), so touching the class binding would throw there. The
+    // real class sets `name` to exactly this string.
+    return {
+      signals: null,
+      reason:
+        (error as Error | undefined)?.name === 'GitHistoryNotFoundError'
+          ? 'no-git-history-artifacts'
+          : 'git-history-unavailable',
+    };
   }
 }
 
@@ -305,7 +359,7 @@ export async function assembleCcb(
   filePath: string,
   archDir: string,
   options?: AssembleOptions
-): Promise<CognitiveContextBundle> {
+): Promise<CognitiveContextBundleWithReasons> {
   // Return cached bundle if fresh and not forced
   if (!options?.forceRefresh) {
     const { bundle, stale } = await readCcb(fileId, filePath, archDir);
@@ -315,12 +369,15 @@ export async function assembleCcb(
   }
 
   // Fetch all signals in parallel (null-safe on failure)
-  const [fileHash, structural, git, behavioral] = await Promise.all([
+  const [fileHash, structuralResult, gitResult, behavioral] = await Promise.all([
     hashFile(filePath).catch(() => ''),
     fetchStructural(filePath, archDir),
     fetchGit(filePath, archDir),
     fetchBehavioral(),
   ]);
+  const structural = structuralResult.entry;
+  const git = gitResult.signals;
+  const guidance = null;
 
   // Fetch documentation signals after git (needs cochangeNeighbors + filePath + archDir for meta-cc)
   const documentation = await fetchDocumentationSignals(
@@ -329,7 +386,25 @@ export async function assembleCcb(
     git?.cochangeNeighbors ?? []
   );
 
-  const bundle: CognitiveContextBundle = {
+  // Every null field carries a reason so consumers never see a bare null.
+  const reasons: CcbFieldReasons = {};
+  if (structural === null) {
+    reasons.structural = structuralResult.reason ?? 'no-archjson-artifacts';
+  }
+  if (behavioral === null) {
+    reasons.behavioral = 'not-collected';
+  }
+  if (git === null) {
+    reasons.git = gitResult.reason ?? 'not-collected';
+  }
+  if (guidance === null) {
+    reasons.guidance = 'not-collected';
+  }
+  if (structural?.testCoverageRatio == null) {
+    reasons.coverage = 'not-collected';
+  }
+
+  const bundle: CognitiveContextBundleWithReasons = {
     fileId,
     filePath,
     fileHash,
@@ -337,8 +412,9 @@ export async function assembleCcb(
     structural,
     behavioral,
     git,
-    guidance: null,
+    guidance,
     documentation,
+    reasons,
   };
 
   await writeCcb(bundle, archDir);

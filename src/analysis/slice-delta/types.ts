@@ -407,3 +407,167 @@ export interface SimulateRefactorSliceInput {
   /** Provenance段 injected by the adapter (CLI/MCP); the core does not read the environment. */
   provenance?: unknown;
 }
+
+// ── Slice preflight (discovery, not evaluation) ───────────────────────────────
+//
+// `preflightSlice` answers the question that precedes a declaration: "given THIS
+// subject, which moves / stays / newDirs can I declare at all, and why?" It reads
+// only the module graph and never invents a slice, ranks anything, or emits a
+// pass/fail. Its output is the vocabulary a caller needs so that the subsequent
+// `simulateRefactorSlice` call is evaluated instead of tripping a fail-closed rule
+// and forcing the caller to reverse-engineer `accounting`.
+
+/** Input to the pure preflight entry point. */
+export interface SlicePreflightInput {
+  graph: TsModuleGraph;
+  /** Directory node id OR a file path (normalized to its containing internal dir). */
+  subject: string;
+  /**
+   * Optional destinations the caller is considering. Each is CLASSIFIED: an
+   * internal node is a legal target as-is; a directory absent from the graph is
+   * legal ONLY after being declared in `proposedCut.newDirs`; an existing
+   * non-internal node cannot be used at all. Omit it to get the rule plus the
+   * full list of internal targets.
+   */
+  destinations?: string[];
+  /** Provenance段 injected by the adapter; the core does not read the environment. */
+  provenance?: unknown;
+}
+
+/** One symbol that may be moved out of a source directory, with its legal targets. */
+export interface SlicePreflightSymbolMove {
+  symbol: string;
+  /** Internal dirs that are structurally legal `move.to` targets (source dir excluded). */
+  destinations: string[];
+  /** Absent candidate destinations, each legal only after this `newDirs` declaration. */
+  newDirDestinations: Array<{ dir: string; declaration: { newDirs: string[] } }>;
+  /** Edges entering the source dir whose `importedNames` carry this symbol. */
+  carriedBy: string[];
+  reason: string;
+}
+
+/**
+ * A group of move candidates sharing one `move.from`.
+ *
+ * Two relationships are enumerated:
+ *   - `subject-exports` — the source IS the subject; its incoming edges carry the
+ *     names other directories import from it.
+ *   - `subject-imports` — the source is a directory the subject imports FROM; the
+ *     subject's outgoing edge carries those names. The real claudecodeui cut is of
+ *     this shape (`subject=modules/settings`, `from=modules/settings/hooks`).
+ */
+export interface SlicePreflightMoveGroup {
+  from: string;
+  relationship: 'subject-exports' | 'subject-imports';
+  /** The subject-side edge(s) that justify this group. */
+  via: string[];
+  /** False when a graph condition makes EVERY move from this source fail closed. */
+  legal: boolean;
+  /** Blocking codes (see `blocking[]`); empty when legal. */
+  blockedBy: string[];
+  symbols: SlicePreflightSymbolMove[];
+  reason: string;
+}
+
+/**
+ * A `proposedCut.stays` group that covers one reconciled edge's imported names.
+ * `dir` is the directory whose names the edge imports (so the non-moved names
+ * "stay" there). An undeclared name is never defaulted to staying.
+ */
+export interface SlicePreflightStayGroup {
+  dir: string;
+  symbols: string[];
+  edge: string;
+  /** The moved-from dir whose cut makes this edge reconciled. */
+  forSource: string;
+  reason: string;
+}
+
+/** An edge a move from `forSource` would reconcile, with the names it forces you to account for. */
+export interface SlicePreflightEdgeObligation {
+  forSource: string;
+  edge: string;
+  /** `incoming` = enters the moved-from dir; `barrel` = enters a dir that re-exports from it. */
+  kind: 'incoming' | 'barrel';
+  from: string;
+  to: string;
+  importedNames: string[];
+  reason: string;
+}
+
+/** How a candidate destination would be treated by `simulateRefactorSlice`. */
+export interface SlicePreflightDestinationVerdict {
+  dir: string;
+  kind: 'internal' | 'requires-new-dir' | 'subject-itself' | 'not-an-internal-node';
+  legalAsMoveTarget: boolean;
+  reason: string;
+  /** Present when `requires-new-dir`: the declaration that makes the target legal. */
+  declaration?: { newDirs: string[] };
+  /** Unresolved alias refs from this destination (they make the cut fail closed). */
+  blocking?: string[];
+}
+
+/** A graph condition that makes some or all declarations fail closed. */
+export interface SlicePreflightBlocking {
+  /**
+   * `UNRESOLVED_ALIAS_FROM_SOURCE` | `INCOMING_EDGE_WITHOUT_NAMES` |
+   * `DESTINATION_EXISTS_NOT_INTERNAL` | `DESTINATION_UNRESOLVED_ALIAS`.
+   */
+  code: string;
+  /** The dir the condition belongs to (a move source or a candidate destination). */
+  scope: string;
+  reason: string;
+  fix: string;
+}
+
+/** An outgoing edge of the subject, reported for orientation (not reconciled by a move FROM the subject). */
+export interface SlicePreflightOutgoingEdge {
+  edge: string;
+  to: string;
+  importedNames: string[];
+  reason: string;
+}
+
+/** A preflight answer: declarable vocabulary + the rules that make a declaration legal. */
+export interface SlicePreflightEvaluatedReport {
+  status: 'preflight';
+  /** Normalized internal dir id (a file-path input is resolved to its containing dir). */
+  subject: string;
+  provenance: unknown;
+  current: {
+    sccMembers: string[];
+    sccSize: number;
+    subjectFanIn: number;
+    subjectFanOut: number;
+    internalDirCount: number;
+  };
+  outgoing: SlicePreflightOutgoingEdge[];
+  declarations: {
+    moves: SlicePreflightMoveGroup[];
+    stays: SlicePreflightStayGroup[];
+    newDirs: {
+      /** Candidate destinations absent from the graph — each needs an explicit declaration. */
+      required: SlicePreflightDestinationVerdict[];
+      rule: string;
+    };
+  };
+  /** Verdicts for every caller-supplied candidate destination (empty when none were supplied). */
+  destinations: SlicePreflightDestinationVerdict[];
+  legalDestinations: {
+    /** Every internal dir (sorted). Each move group excludes its own source dir. */
+    internal: string[];
+    newDirRule: string;
+  };
+  edges: SlicePreflightEdgeObligation[];
+  blocking: SlicePreflightBlocking[];
+  nextSteps: string[];
+  notes: string[];
+}
+
+/** The preflight could not read the graph/subject — no vocabulary is emitted. */
+export interface SlicePreflightNotEvaluatedReport {
+  status: 'not-evaluated';
+  reason: string;
+}
+
+export type SlicePreflightReport = SlicePreflightEvaluatedReport | SlicePreflightNotEvaluatedReport;

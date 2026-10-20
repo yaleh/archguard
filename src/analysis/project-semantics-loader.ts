@@ -7,6 +7,24 @@ import {
 
 const PROJECT_SEMANTICS_FILE_NAME = 'project-semantics.json';
 
+/**
+ * Explicit three-valued load status for the project-semantics sidecar.
+ *
+ * `missing` is a first-class outcome (not an empty object / silent null): callers
+ * that would otherwise degrade coverage ratios to null can report WHY instead of
+ * leaving a bare null indistinguishable from "loaded but empty".
+ */
+export type ProjectSemanticsStatus = 'loaded' | 'missing' | 'invalid';
+
+export interface ProjectSemanticsPreflight {
+  /** Explicit sidecar status. */
+  projectSemantics: ProjectSemanticsStatus;
+  /** Parsed semantics — present only when projectSemantics === 'loaded'. */
+  semantics?: ProjectSemanticsInput;
+  /** Validation/read error — present only when projectSemantics === 'invalid'. */
+  error?: string;
+}
+
 export async function loadProjectSemanticsSidecar(
   workDir: string
 ): Promise<ProjectSemanticsInput | undefined> {
@@ -27,5 +45,31 @@ export async function loadProjectSemanticsSidecar(
       return undefined;
     }
     throw error;
+  }
+}
+
+/**
+ * Preflight the project-semantics sidecar without collapsing "no sidecar" into
+ * an absent value. A caller that pairs this with nullable coverage fields can
+ * emit `projectSemantics: "missing"` instead of a bare `null` ratio.
+ *
+ * Never throws for a malformed sidecar — an invalid file is reported as
+ * `{ projectSemantics: 'invalid', error }` so it stays distinguishable from
+ * both a valid file and a missing one.
+ */
+export async function preflightProjectSemantics(
+  workDir: string
+): Promise<ProjectSemanticsPreflight> {
+  try {
+    const semantics = await loadProjectSemanticsSidecar(workDir);
+    if (semantics === undefined) {
+      return { projectSemantics: 'missing' };
+    }
+    return { projectSemantics: 'loaded', semantics };
+  } catch (error) {
+    return {
+      projectSemantics: 'invalid',
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
