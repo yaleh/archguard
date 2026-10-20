@@ -16,9 +16,9 @@ extra:
 
 ## AC
 
-- [ ] `HistoryQuery.getOwnership('package', 'server/modules/session-hosts')` 与 keyRoot-relative 写法解析到同一 `packageMetrics` key，且不再误报 `no-commits-in-window`；新增用例到 `tests/unit/analysis/git-history/history-query.test.ts`
-- [ ] 相对路径 `modules/...` 与仓库相对 `server/modules/...` 的判定一致，not-found 时给出 `outside-analyzed-paths` / `no-commits-in-window` 及建议写法
-- [ ] file 级 ownership 行为不回归（同目录 file 级仍命中）
+- [x] `HistoryQuery.getOwnership('package', 'server/modules/session-hosts')` 与 keyRoot-relative 写法解析到同一 `packageMetrics` key，且不再误报 `no-commits-in-window`；新增用例到 `tests/unit/analysis/git-history/history-query.test.ts`
+- [x] 相对路径 `modules/...` 与仓库相对 `server/modules/...` 的判定一致，not-found 时给出 `outside-analyzed-paths` / `no-commits-in-window` 及建议写法
+- [x] file 级 ownership 行为不回归（同目录 file 级仍命中）
 
 ## DoD
 
