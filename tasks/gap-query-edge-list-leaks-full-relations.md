@@ -1,7 +1,7 @@
 ---
 id: gap-query-edge-list-leaks-full-relations
 title: get_dependencies 的 edge-list 输出把 relations 泄成全图，name 对关系侧不生效，需收窄到查询闭包并支持分页/字段过滤
-status: todo
+status: ready
 labels:
   - gap
   - defect
