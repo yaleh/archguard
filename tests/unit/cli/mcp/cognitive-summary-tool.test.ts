@@ -187,7 +187,7 @@ describe('archguard_get_cognitive_summary — batch of 10', () => {
 });
 
 describe('archguard_get_cognitive_summary — missing entity', () => {
-  it('returns { name, found: false } without throwing for unknown entity', async () => {
+  it('returns { name, found: false, reason: not-in-graph } for an unknown entity', async () => {
     loadEngineMock.mockResolvedValue(buildEngineContext([]));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
@@ -200,8 +200,61 @@ describe('archguard_get_cognitive_summary — missing entity', () => {
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('NonExistent');
     expect(parsed[0].found).toBe(false);
+    expect(parsed[0].reason).toBe('not-in-graph');
+    expect(typeof parsed[0].reasonDetail).toBe('string');
     expect(parsed[0].entityId).toBeUndefined();
     expect(parsed[0].methodCount).toBeUndefined();
+  });
+
+  it('returns reason id-format-mismatch + resolvedName when queried by entity id', async () => {
+    const entity = makeEntity('src/foo.ts.QueryEngine', 'QueryEngine');
+    loadEngineMock.mockResolvedValue(buildEngineContext([entity]));
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_cognitive_summary');
+
+    const result = await cb({ entities: ['src/foo.ts.QueryEngine'] });
+    const parsed = JSON.parse(result.content[0].text) as any[];
+
+    expect(parsed[0].found).toBe(false);
+    expect(parsed[0].reason).toBe('id-format-mismatch');
+    expect(parsed[0].resolvedName).toBe('QueryEngine');
+  });
+
+  it('returns reason in-graph-no-artifact when ArchJSON has the entity but the name index does not', async () => {
+    // Simulate a stale/incomplete arch-index artifact: the entity id exists in
+    // ArchJSON, but the name→id index has no entry for it.
+    const entity = makeEntity('src/legacy.ts.StaleWidget', 'LegacyWidget');
+    const ctx = buildEngineContext([entity]);
+    vi.spyOn(ctx.extensionAccessor, 'getEntityIds').mockReturnValue(['src/legacy.ts.StaleWidget']);
+    loadEngineMock.mockResolvedValue(ctx);
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_cognitive_summary');
+
+    const result = await cb({ entities: ['StaleWidget'] });
+    const parsed = JSON.parse(result.content[0].text) as any[];
+
+    expect(parsed[0].found).toBe(false);
+    expect(parsed[0].reason).toBe('in-graph-no-artifact');
+  });
+
+  it('reports projectSemantics "missing" instead of a silent null coverage ratio', async () => {
+    const entity = makeEntity('src/ps.ts.PsClass', 'PsClass');
+    loadEngineMock.mockResolvedValue(buildEngineContext([entity]));
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_cognitive_summary');
+
+    const result = await cb({ entities: ['PsClass'] });
+    const parsed = JSON.parse(result.content[0].text) as any[];
+
+    expect(parsed[0].projectSemantics).toBe('missing');
+    expect(parsed[0].testCoverageRatio).toBeNull();
+    expect(parsed[0].testCoverageReason).toBe('no-test-analysis-artifacts');
   });
 });
 
@@ -228,6 +281,7 @@ describe('archguard_get_cognitive_summary — absent test artifacts', () => {
 
     expect(parsed[0].found).toBe(true);
     expect(parsed[0].testCoverageRatio).toBeNull();
+    expect(parsed[0].testCoverageReason).toBe('coverage-lookup-failed');
   });
 });
 
@@ -247,6 +301,7 @@ describe('archguard_get_cognitive_summary — absent git artifacts', () => {
 
     expect(parsed[0].found).toBe(true);
     expect(parsed[0].gitRiskLevel).toBeNull();
+    expect(parsed[0].gitRiskReason).toBe('no-git-history-artifacts');
   });
 });
 

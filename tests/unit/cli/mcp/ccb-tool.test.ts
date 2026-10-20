@@ -117,6 +117,45 @@ describe('archguard_get_ccb tool behaviour', () => {
     const result = await cb({ filePath: 'src/nonexistent.ts' });
     expect(result.content[0].text).toContain('Error');
   });
+
+  it('annotates every null field with a reason instead of returning a bare null', async () => {
+    const { tools, assembleCcbMock } = await registerAndCapture();
+    assembleCcbMock.mockResolvedValue(mockBundle);
+
+    const cb = tools.get('archguard_get_ccb');
+    const result = await cb({ filePath: 'src/cli/query/query-engine.ts' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    // The fixture deliberately has behavioral/git/guidance null and no coverage.
+    expect(parsed.behavioral).toBeNull();
+    expect(parsed.git).toBeNull();
+    expect(parsed.guidance).toBeNull();
+    expect(parsed.reasons).toBeDefined();
+    expect(parsed.reasons.behavioral).toBe('not-collected');
+    expect(parsed.reasons.git).toBe('not-collected');
+    expect(parsed.reasons.guidance).toBe('not-collected');
+    expect(parsed.reasons.coverage).toBe('not-collected');
+  });
+
+  it('annotates a null structural field when ArchJSON artifacts are absent', async () => {
+    const { tools, assembleCcbMock } = await registerAndCapture();
+    const nullStructuralBundle: CognitiveContextBundle = {
+      ...mockBundle,
+      structural: null,
+      behavioral: null,
+      git: null,
+      guidance: null,
+    };
+    assembleCcbMock.mockResolvedValue(nullStructuralBundle);
+
+    const cb = tools.get('archguard_get_ccb');
+    const result = await cb({ filePath: 'src/cli/query/query-engine.ts' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.structural).toBeNull();
+    expect(parsed.reasons.structural).toBe('not-collected');
+    expect(parsed.reasons.coverage).toBe('not-collected');
+  });
 });
 
 describe('cognitive-prep SKILL.md and .gitignore', () => {

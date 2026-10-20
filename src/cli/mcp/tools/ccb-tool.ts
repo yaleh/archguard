@@ -15,7 +15,38 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { resolveRoot } from '../mcp-server.js';
-import { assembleCcb, filePathToId } from '../../cognitive/ccb-assembler.js';
+import {
+  assembleCcb,
+  filePathToId,
+  type CcbFieldReasons,
+  type CognitiveContextBundleWithReasons,
+} from '../../cognitive/ccb-assembler.js';
+
+/**
+ * Backfill reason markers for legacy cached bundles (and for any field the
+ * assembler left unannotated) so a null field is never returned bare.
+ */
+function withReasonMarkers(
+  bundle: CognitiveContextBundleWithReasons
+): CognitiveContextBundleWithReasons {
+  const reasons: CcbFieldReasons = { ...(bundle.reasons ?? {}) };
+  if (bundle.structural === null && reasons.structural === undefined) {
+    reasons.structural = 'not-collected';
+  }
+  if (bundle.behavioral === null && reasons.behavioral === undefined) {
+    reasons.behavioral = 'not-collected';
+  }
+  if (bundle.git === null && reasons.git === undefined) {
+    reasons.git = 'not-collected';
+  }
+  if (bundle.guidance === null && reasons.guidance === undefined) {
+    reasons.guidance = 'not-collected';
+  }
+  if (bundle.structural?.testCoverageRatio == null && reasons.coverage === undefined) {
+    reasons.coverage = 'not-collected';
+  }
+  return { ...bundle, reasons };
+}
 
 function textResponse(text: string): { content: Array<{ type: 'text'; text: string }> } {
   return { content: [{ type: 'text' as const, text }] };
@@ -32,6 +63,9 @@ export function registerCcbTool(server: McpServer, defaultRoot: string): void {
       'Bundles are SHA-256-keyed and cached in .archguard/cognitive/; ' +
       'they are invalidated automatically when the source file changes. ' +
       'Call with forceRefresh:true to bypass the cache. ' +
+      'NULL FIELDS: behavioral, git, guidance and coverage are null only when the ' +
+      'corresponding signal was not collected; `reasons` carries the matching code ' +
+      '(e.g. not-collected, no-git-history-artifacts) so a null is never unexplained. ' +
       'DOCUMENTATION SIGNALS: The returned bundle includes a `documentation` field with ' +
       '`docFreshnessGap` (fraction of co-changed files that are docs; null if no data), ' +
       '`docVoid` (true when session history shows edits without doc reads), and ' +
@@ -78,7 +112,7 @@ export function registerCcbTool(server: McpServer, defaultRoot: string): void {
           forceRefresh,
         });
 
-        return textResponse(JSON.stringify(bundle, null, 2));
+        return textResponse(JSON.stringify(withReasonMarkers(bundle), null, 2));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         return textResponse(`Error: ${message}`);
