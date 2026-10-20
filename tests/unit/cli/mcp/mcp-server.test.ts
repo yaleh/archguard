@@ -1229,6 +1229,64 @@ describe('edge-list queryFormat — applyView crash fix', () => {
   });
 });
 
+// ── gap-query-edge-list-leaks-full-relations ────────────────────────────────
+// get_dependencies edge-list must emit only the query closure's relations, and
+// support topN / field filtering for high-degree entities.
+describe('archguard_get_dependencies edge-list closure + bounding', () => {
+  it('relations stay inside the queried entity closure (not the whole scope)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_dependencies');
+    const result = await cb({
+      name: 'DiagramProcessor',
+      depth: 1,
+      queryFormat: 'edge-list',
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    const pairs = parsed.relations.map((r: { from: string; to: string }) => `${r.from}->${r.to}`);
+    // dp→cm, dp→ilp (from dp's own edges) and cm→dp (within the closure).
+    expect(pairs).toContain('dp->cm');
+    expect(pairs).toContain('dp->ilp');
+    expect(pairs).toContain('cm->dp');
+    // tsp→ilp is outside the {DiagramProcessor, neighbors} closure.
+    expect(pairs).not.toContain('tsp->ilp');
+    expect(parsed.relations).toHaveLength(3);
+  });
+
+  it('topN truncates relations and reports totalRelations/truncated', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_dependencies');
+    const result = await cb({
+      name: 'DiagramProcessor',
+      depth: 1,
+      queryFormat: 'edge-list',
+      topN: 2,
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.relations).toHaveLength(2);
+    expect(parsed.totalRelations).toBe(3);
+    expect(parsed.truncated).toBe(true);
+  });
+
+  it('relationFields restricts serialized relation fields', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+    const cb = tools.get('archguard_get_dependencies');
+    const result = await cb({
+      name: 'DiagramProcessor',
+      depth: 1,
+      queryFormat: 'edge-list',
+      relationFields: ['from', 'to'],
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.relations.length).toBeGreaterThan(0);
+    for (const relation of parsed.relations) {
+      expect(Object.keys(relation).sort()).toEqual(['from', 'to']);
+    }
+  });
+});
+
 describe('createMcpCommand', () => {
   it('registers with correct name', async () => {
     const { createMcpCommand } = await import('@/cli/commands/mcp.js');

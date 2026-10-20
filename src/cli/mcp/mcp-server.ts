@@ -22,6 +22,7 @@ import type {
   QueryMethodOptions,
   QueryOutputFormat,
 } from '../query/query-engine.js';
+import type { EdgeListField } from '@/core/query/query-engine.js';
 import type { Entity } from '@/types/index.js';
 import type {
   PackageGraph,
@@ -300,6 +301,21 @@ const queryFormatParam = z
       '"edge-list" (flat { entities[], relations[] } — best for LLM reasoning).'
   );
 
+const edgeListTopNParam = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .optional()
+  .describe(
+    'edge-list only: maximum number of relations to return (deterministic closure order). ' +
+      'When truncated the response carries totalRelations and truncated:true.'
+  );
+
+const edgeListFieldsParam = z
+  .array(z.enum(['from', 'to', 'type']))
+  .optional()
+  .describe('edge-list only: relation fields to include (default: all of from/to/type).');
+
 function applyView(
   engine: QueryEngine,
   result: Entity[] | Partial<Entity>[] | EdgeListOutput,
@@ -458,8 +474,20 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       verbose: verboseParam,
       outputScope: outputScopeParam('method'),
       queryFormat: queryFormatParam,
+      topN: edgeListTopNParam,
+      relationFields: edgeListFieldsParam,
     },
-    async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
+    async ({
+      projectRoot,
+      scope,
+      name,
+      depth,
+      verbose,
+      outputScope,
+      queryFormat,
+      topN,
+      relationFields,
+    }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const ctx = await loadEngine(path.join(root, '.archguard'), scope);
@@ -467,6 +495,11 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
+          // BFS returns neighbors only — anchor the closure at the queried entity
+          // so its own edges survive relation narrowing.
+          anchorNames: [name],
+          topN,
+          relationFields: relationFields as readonly EdgeListField[] | undefined,
         };
         const payload = applyView(
           engine,
@@ -501,6 +534,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
+          anchorNames: [name],
         };
         const payload = applyView(
           engine,
@@ -531,6 +565,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
+          anchorNames: [name],
         };
         const payload = applyView(
           engine,
@@ -561,6 +596,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
         const queryOptions: QueryMethodOptions = {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
+          anchorNames: [name],
         };
         const payload = applyView(
           engine,
