@@ -877,3 +877,116 @@ describe('HistoryQuery notFound codes', () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// package key normalization (gap-git-ownership-package-key-normalization)
+// ---------------------------------------------------------------------------
+
+describe('HistoryQuery package key normalization', () => {
+  function notFoundOf(fn: () => unknown): HistoryTargetNotFoundError {
+    try {
+      fn();
+    } catch (err) {
+      expect(err).toBeInstanceOf(HistoryTargetNotFoundError);
+      return err as HistoryTargetNotFoundError;
+    }
+    throw new Error('expected a not-found error');
+  }
+
+  /**
+   * Mirrors the manifest that produced the report: repo root with `server/` and
+   * `src/` collected, package depth 1, so package keys are only `server` / `src`
+   * while file keys carry the full repo-relative path.
+   */
+  const repoWide = () =>
+    new HistoryQuery(
+      makeData(
+        [
+          makeFileMetric('server/modules/session-hosts/session-hosts.routes.ts', {
+            primaryOwner: 'server@example.com',
+            primaryOwnerShare: 0.8,
+          }),
+        ],
+        [
+          makePackageMetric('server', {
+            primaryOwner: 'server@example.com',
+            primaryOwnerShare: 0.8,
+          }),
+          makePackageMetric('src'),
+        ],
+        {
+          keyRoot: '',
+          pathFilters: ['server', 'src'],
+          windowStart: '2026-04-30',
+          windowEnd: '2026-10-20',
+        }
+      )
+    );
+
+  it('AC1: a repo-relative package directory resolves instead of no-commits-in-window', () => {
+    const result = repoWide().getOwnership('package', 'server/modules/session-hosts');
+    expect(result.resolvedTarget).toBe('server');
+    expect(result.primaryOwner).toBe('server@example.com');
+    expect(result.busFactor).toBe(1);
+  });
+
+  it('AC1: relative and repo-relative writings resolve to the same package key and readings', () => {
+    const q = repoWide();
+    const repoRel = q.getOwnership('package', 'server/modules/session-hosts');
+    const rel = q.getOwnership('package', 'modules/session-hosts');
+    expect(rel.resolvedTarget).toBe(repoRel.resolvedTarget);
+    expect(rel.primaryOwner).toBe(repoRel.primaryOwner);
+    expect(rel.primaryOwnerShare).toBe(repoRel.primaryOwnerShare);
+    expect(rel.busFactor).toBe(repoRel.busFactor);
+    expect(rel.contributors).toEqual(repoRel.contributors);
+    // the target as written is echoed unchanged
+    expect(rel.target).toBe('modules/session-hosts');
+  });
+
+  it('AC1: with a keyRoot, repo-relative and keyRoot-relative writings share one key', () => {
+    const q = new HistoryQuery(
+      makeData([makeFileMetric('modules/session-hosts/host.ts')], [makePackageMetric('modules')], {
+        keyRoot: 'server',
+        pathFilters: ['server'],
+      })
+    );
+    const repoRel = q.getOwnership('package', 'server/modules/session-hosts');
+    const keyRel = q.getOwnership('package', 'modules/session-hosts');
+    expect(repoRel.resolvedTarget).toBe('modules');
+    expect(keyRel.resolvedTarget).toBe('modules');
+    expect(keyRel.primaryOwner).toBe(repoRel.primaryOwner);
+    expect(keyRel.busFactor).toBe(repoRel.busFactor);
+  });
+
+  it('AC2: a genuinely outside path stays outside-analyzed-paths and suggests accepted writings', () => {
+    const err = notFoundOf(() => repoWide().getOwnership('package', 'docs/architecture'));
+    expect(err.code).toBe('outside-analyzed-paths');
+    expect(err.suggestion).toBeDefined();
+    expect(err.message).toContain("e.g. 'server/<path>'");
+    expect(err.message).toContain('Available package keys: server, src');
+  });
+
+  it('AC2: an ambiguous relative path is not mislabeled outside — no-commits-in-window + both writings', () => {
+    const q = new HistoryQuery(
+      makeData(
+        [makeFileMetric('server/modules/chat/a.ts'), makeFileMetric('src/modules/chat/b.ts')],
+        [makePackageMetric('server'), makePackageMetric('src')],
+        { keyRoot: '', pathFilters: ['server', 'src'] }
+      )
+    );
+    const err = notFoundOf(() => q.getOwnership('package', 'modules/chat'));
+    expect(err.code).toBe('no-commits-in-window');
+    expect(err.suggestion).toContain("'server/modules/chat'");
+    expect(err.suggestion).toContain("'src/modules/chat'");
+  });
+
+  it('AC3: same-directory file-level ownership is unchanged', () => {
+    const result = repoWide().getOwnership(
+      'file',
+      'server/modules/session-hosts/session-hosts.routes.ts'
+    );
+    expect(result.resolvedTarget).toBe('server/modules/session-hosts/session-hosts.routes.ts');
+    expect(result.primaryOwner).toBe('server@example.com');
+    expect(result.busFactor).toBe(1);
+  });
+});
