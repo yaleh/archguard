@@ -17,10 +17,10 @@ extra:
 
 ## AC
 
-- [ ] `archguard_get_package_metrics` 的 `cycleCount`/`cyclesWith` 改由 `engine.getPackageCycles()` 推导，与 `detect_cycles(outputScope=package)` 同源；新增单测在 `tests/unit/cli/mcp/tools/package-metrics-tool.test.ts` 断言：目录级 SCC 存在、class 级环为空时 cycleCount > 0
-- [ ] `getPackageCycles()` 的每个 SCC 额外输出参与边（`from`/`to`/`specifier`/`file:line`），`detect_cycles(outputScope=package)` 结果里能据此自查每一条环边
-- [ ] `getPackageCycles()` 的 `evaluated:false` 分支在 `get_package_metrics` 里显式透出（不落 0）；`tests/unit/core/query/query-engine.test.ts` 有对应断言
-- [ ] 现有 package-metrics / query-engine 用例不回归
+- [x] `archguard_get_package_metrics` 的 `cycleCount`/`cyclesWith` 改由 `engine.getPackageCycles()` 推导，与 `detect_cycles(outputScope=package)` 同源；新增单测在 `tests/unit/cli/mcp/tools/package-metrics-tool.test.ts` 断言：目录级 SCC 存在、class 级环为空时 cycleCount > 0
+- [x] `getPackageCycles()` 的每个 SCC 额外输出参与边（`from`/`to`/`specifier`/`file:line`），`detect_cycles(outputScope=package)` 结果里能据此自查每一条环边
+- [x] `getPackageCycles()` 的 `evaluated:false` 分支在 `get_package_metrics` 里显式透出（不落 0）；`tests/unit/core/query/query-engine.test.ts` 有对应断言
+- [x] 现有 package-metrics / query-engine 用例不回归
 
 ## DoD
 

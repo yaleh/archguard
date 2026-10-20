@@ -11,7 +11,11 @@ import path from 'path';
 import type { Readable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 import { z } from 'zod';
-import { loadEngine, type QueryContext } from '../query/engine-loader.js';
+import {
+  loadEngine,
+  type QueryContext,
+  type StalenessInfo,
+} from '../query/engine-loader.js';
 import type {
   QueryEngine,
   EntitySummary,
@@ -93,6 +97,8 @@ interface ScopeInfoPayload {
   label: string;
   sources: string[];
   generatedAt: string;
+  /** Snapshot-vs-git-HEAD signal; absent only for legacy contexts without it. */
+  staleness?: StalenessInfo;
   warning?: string;
   availableScopes?: Array<{
     key: string;
@@ -118,6 +124,7 @@ function buildScopeInfo(ctx: ScopedContext, requestedScope: string | undefined):
   };
   const availableScopes = ctx.availableScopes ?? [];
   const info: ScopeInfoPayload = { key, label, sources, generatedAt };
+  if (ctx.scopeInfo?.staleness) info.staleness = ctx.scopeInfo.staleness;
   if (!requestedScope && availableScopes.length > 1) {
     const list = availableScopes
       .map(
