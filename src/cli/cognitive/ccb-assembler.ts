@@ -20,7 +20,7 @@ import type {
 } from './ccb-schema.js';
 import type { CognitiveSummaryEntry } from '@/types/cognitive-summary.js';
 import { loadEngine } from '../query/engine-loader.js';
-import { loadHistoryData, GitHistoryNotFoundError } from '../git-history/history-loader.js';
+import { loadHistoryData } from '../git-history/history-loader.js';
 import { HistoryQuery } from '../git-history/history-query.js';
 
 /**
@@ -152,10 +152,14 @@ async function fetchGit(
       },
     };
   } catch (error) {
+    // Match by `name` rather than `instanceof GitHistoryNotFoundError`: unit
+    // tests fully mock the history-loader module (exporting only
+    // loadHistoryData), so touching the class binding would throw there. The
+    // real class sets `name` to exactly this string.
     return {
       signals: null,
       reason:
-        error instanceof GitHistoryNotFoundError
+        (error as Error | undefined)?.name === 'GitHistoryNotFoundError'
           ? 'no-git-history-artifacts'
           : 'git-history-unavailable',
     };
