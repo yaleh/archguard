@@ -1,7 +1,7 @@
 ---
 id: gap-module-graph-root-dynamic-import-attribution
 title: detect_cycles 的 (root)↔子目录假环：修 root/动态 import 边归因并让证据回显 specifier
-status: ready
+status: done
 labels:
   - gap
   - defect

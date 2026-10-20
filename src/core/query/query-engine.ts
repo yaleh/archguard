@@ -96,12 +96,36 @@ export interface EdgeListOutput {
   truncated?: boolean;
 }
 
+/** One in-cycle directory edge, with the raw specifier and source position. */
+export interface PackageCycleEdgeEvidence {
+  /** Importing directory module id (`''` is the root module). */
+  from: string;
+  /** Imported directory module id (`''` is the root module). */
+  to: string;
+  /** Raw specifier exactly as written in `file` at `line`. */
+  specifier: string;
+  /** Project-root-relative file containing the reference. */
+  file: string;
+  /** 1-based line of the reference. */
+  line: number;
+}
+
 /** One directory-level strongly connected component (package-granularity cycle). */
 export interface PackageCycle {
   /** Number of modules (directories) in this cycle. */
   size: number;
   /** Module IDs (project-root-relative directory paths) that form the SCC. */
   modules: string[];
+  /**
+   * Every edge whose endpoints both lie in this SCC, carrying the underlying
+   * `specifier` + `file:line`. This is what makes a directory-level SCC
+   * auditable: e.g. `["", "modules/browser-use"]` dissolves into
+   * `index.ts → browser-use/*.js` plus `browser-use-mcp.ts → ../../load-env.js`,
+   * showing the root end of the "cycle" is a leaf bootstrap file, not the
+   * entrypoint. Absent when the graph carries no per-edge provenance (older
+   * ArchJSON), or empty when no in-SCC edge has provenance.
+   */
+  edges?: PackageCycleEdgeEvidence[];
 }
 
 /**
@@ -208,11 +232,11 @@ export class QueryEngine {
     );
     const adj = new Map<string, string[]>();
     for (const id of internal) adj.set(id, []);
-    for (const edge of moduleGraph.edges) {
-      if (edge.from === edge.to) continue;
-      if (internal.has(edge.from) && internal.has(edge.to)) {
-        adj.get(edge.from)?.push(edge.to);
-      }
+    const internalEdges = moduleGraph.edges.filter(
+      (edge) => edge.from !== edge.to && internal.has(edge.from) && internal.has(edge.to)
+    );
+    for (const edge of internalEdges) {
+      adj.get(edge.from)?.push(edge.to);
     }
 
     const index = new Map<string, number>();
@@ -254,7 +278,24 @@ export class QueryEngine {
 
     return sccs
       .sort((a, b) => b.length - a.length || (a[0] ?? '').localeCompare(b[0] ?? ''))
-      .map((modules) => ({ size: modules.length, modules }));
+      .map((modules) => {
+        const members = new Set(modules);
+        const edges = internalEdges
+          .filter((edge) => members.has(edge.from) && members.has(edge.to))
+          .flatMap((edge) =>
+            (edge.evidence ?? []).map((evidence) => ({
+              from: edge.from,
+              to: edge.to,
+              specifier: evidence.specifier,
+              file: evidence.file,
+              line: evidence.line,
+            }))
+          )
+          .sort(comparePackageCycleEvidence);
+        const cycle: PackageCycle = { size: modules.length, modules };
+        if (edges.length > 0) cycle.edges = edges;
+        return cycle;
+      });
   }
 
   /** Return a summary of the scope. */
@@ -468,4 +509,18 @@ export class QueryEngine {
       fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
     };
   }
+}
+
+/** Deterministic ordering for in-cycle edge evidence (stable in JSON output). */
+function comparePackageCycleEvidence(
+  a: PackageCycleEdgeEvidence,
+  b: PackageCycleEdgeEvidence
+): number {
+  return (
+    a.from.localeCompare(b.from) ||
+    a.to.localeCompare(b.to) ||
+    a.file.localeCompare(b.file) ||
+    a.line - b.line ||
+    a.specifier.localeCompare(b.specifier)
+  );
 }

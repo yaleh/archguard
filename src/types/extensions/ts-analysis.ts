@@ -48,6 +48,35 @@ export interface TsModuleNode {
   stats: { classes: number; interfaces: number; functions: number; enums: number };
 }
 
+/**
+ * Syntactic form of one module reference contributing to a `TsModuleDependency`.
+ * `import`         — static `import ... from '...'` / side-effect `import '...'`
+ * `export-from`    — `export ... from '...'`
+ * `dynamic-import` — literal `import('...')` call (runtime dependency)
+ * `import-type`    — type-position `import('...')` (erased at compile time)
+ */
+export type TsModuleEdgeKind = 'import' | 'export-from' | 'dynamic-import' | 'import-type';
+
+/**
+ * Provenance of one statement that contributes to a module edge.
+ *
+ * Directory-level edges aggregate several statements, and a directory pair can
+ * look like a cycle that no single file pair actually performs (e.g. the root
+ * module `''` holds both the application entrypoint and leaf bootstrap files).
+ * Recording the raw specifier plus the exact `file:line` lets a reported cycle
+ * be audited against its source instead of being taken on faith.
+ */
+export interface TsModuleEdgeEvidence {
+  /** Raw module specifier exactly as written in the source file. */
+  specifier: string;
+  /** Project-root-relative path of the file containing the reference. */
+  file: string;
+  /** 1-based line of the reference (0 when the node exposes no position). */
+  line: number;
+  /** Syntactic form of the reference. */
+  kind: TsModuleEdgeKind;
+}
+
 export interface TsModuleDependency {
   /** Module id of the importing module (project-root-relative directory). */
   from: string;
@@ -87,9 +116,38 @@ export interface TsModuleDependency {
    */
   valueStrength?: number;
   importedNames: string[];
+  /**
+   * One entry per statement that contributed to this edge (`strength` equals
+   * the number of entries). Optional — graphs produced before this field
+   * existed leave it `undefined`, and consumers MUST treat `undefined` as
+   * "provenance unknown", never as "no statements".
+   */
+  evidence?: TsModuleEdgeEvidence[];
+}
+
+/** One in-cycle edge with the source provenance needed to audit it. */
+export interface TsModuleCycleEdgeEvidence {
+  /** Module id of the importing directory. */
+  from: string;
+  /** Module id of the imported directory. */
+  to: string;
+  /** Raw specifier written in `file` at `line`. */
+  specifier: string;
+  /** Project-root-relative file containing the reference. */
+  file: string;
+  /** 1-based line of the reference. */
+  line: number;
 }
 
 export interface TsModuleCycle {
   modules: string[];
   severity: 'warning' | 'error';
+  /**
+   * Every edge whose endpoints both lie in this SCC, with its raw specifier
+   * and `file:line`. This is what makes a directory-level "cycle" auditable:
+   * a false `(root) ↔ child` reading can be traced to the exact statement
+   * (e.g. a side-effect import of a root-level bootstrap file) instead of the
+   * shared root module id. Optional for graphs built before it existed.
+   */
+  edges?: TsModuleCycleEdgeEvidence[];
 }
