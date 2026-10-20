@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ArchJSON } from '@/types/index.js';
+import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import { QueryEngine } from '@/cli/query/query-engine.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSONExtensions } from '@/types/extensions/index.js';
@@ -130,27 +130,125 @@ function makeAtlasEngine(graph: PackageGraph = PACKAGE_GRAPH): {
   return { engine, archJson };
 }
 
-function makeNoAtlasEngine(): { engine: QueryEngine; archJson: ArchJSON } {
+function makeNoAtlasEngine(language = 'typescript'): {
+  engine: QueryEngine;
+  archJson: ArchJSON;
+  scopeEntry: QueryScopeEntry;
+} {
   const archJson: ArchJSON = {
     version: '1.1',
-    language: 'typescript',
+    language,
     timestamp: '2026-01-01T00:00:00Z',
     sourceFiles: [],
     entities: [],
     relations: [],
   };
   const scopeEntry: QueryScopeEntry = {
-    key: 'ts-scope',
-    label: 'src (typescript)',
-    language: 'typescript',
+    key: `${language}-scope`,
+    label: `src (${language})`,
+    language,
     kind: 'parsed',
     sources: ['/project/src'],
     entityCount: 0,
     relationCount: 0,
     hasAtlasExtension: false,
   };
-  const archIndex = buildArchIndex(archJson, 'ts-hash');
+  const archIndex = buildArchIndex(archJson, `${language}-hash`);
   const engine = new QueryEngine({ archJson, archIndex, scopeEntry });
+  return { engine, archJson, scopeEntry };
+}
+
+// ── TypeScript god-package fixture ──────────────────────────────────────────
+//
+// Directory-level packages, matching what StructureMetrics' TS path reports:
+//   modules/mcp-gateway → 41 files, 1 entity, 25 outgoing cross-package relations
+//   modules/core        →  5 files, 1 entity
+//
+// Entity IDs are `<dir>/<file>.ts.<Entity>` so extractPackageName yields the
+// same directory the module graph uses.
+const tsGodScopeEntry: QueryScopeEntry = {
+  key: 'ts-god',
+  label: 'src (typescript)',
+  language: 'typescript',
+  kind: 'parsed',
+  sources: ['/project/src'],
+  entityCount: 0,
+  relationCount: 0,
+  hasAtlasExtension: false,
+};
+
+function makeTsGodArchJson(gatewayFanOutRelations = 25): ArchJSON {
+  const entities: Entity[] = [
+    {
+      id: 'modules/mcp-gateway/gateway.ts.Gateway',
+      name: 'Gateway',
+      type: 'class',
+      visibility: 'public',
+      members: [],
+      sourceLocation: { file: 'modules/mcp-gateway/gateway.ts', startLine: 1, endLine: 10 },
+    },
+    {
+      id: 'modules/core/core.ts.Core',
+      name: 'Core',
+      type: 'class',
+      visibility: 'public',
+      members: [],
+      sourceLocation: { file: 'modules/core/core.ts', startLine: 1, endLine: 10 },
+    },
+  ];
+
+  const relations: Relation[] = [];
+  for (let i = 0; i < gatewayFanOutRelations; i++) {
+    relations.push({
+      id: `rel-${i}`,
+      type: 'dependency',
+      source: 'modules/mcp-gateway/gateway.ts.Gateway',
+      target: 'modules/core/core.ts.Core',
+    });
+  }
+
+  return {
+    version: '1.1',
+    language: 'typescript',
+    timestamp: '2026-01-01T00:00:00Z',
+    sourceFiles: ['modules/mcp-gateway/gateway.ts', 'modules/core/core.ts'],
+    entities,
+    relations,
+    extensions: {
+      tsAnalysis: {
+        version: '1.0',
+        moduleGraph: {
+          nodes: [
+            {
+              id: 'modules/mcp-gateway',
+              name: 'modules/mcp-gateway',
+              type: 'internal',
+              fileCount: 41,
+              stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+            },
+            {
+              id: 'modules/core',
+              name: 'modules/core',
+              type: 'internal',
+              fileCount: 5,
+              stats: { classes: 1, interfaces: 0, functions: 0, enums: 0 },
+            },
+          ],
+          edges: [],
+          cycles: [],
+        },
+      },
+    },
+  };
+}
+
+function makeTsGodEngine(gatewayFanOutRelations = 25): {
+  engine: QueryEngine;
+  archJson: ArchJSON;
+} {
+  const archJson = makeTsGodArchJson(gatewayFanOutRelations);
+  const archIndex = buildArchIndex(archJson, 'ts-god-hash');
+  const engine = new QueryEngine({ archJson, archIndex, scopeEntry: tsGodScopeEntry });
   return { engine, archJson };
 }
 
@@ -426,13 +524,22 @@ describe('archguard_detect_god_packages — tool schema', () => {
 });
 
 describe('archguard_detect_god_packages — handler', () => {
-  it('returns No Atlas data message when hasAtlasExtension returns false', async () => {
-    loadEngineMock.mockResolvedValueOnce(wrapEngine(makeNoAtlasEngine()));
+  it('returns applicable:false when the scope is neither Atlas nor TypeScript', async () => {
+    const { engine, archJson, scopeEntry } = makeNoAtlasEngine('python');
+    loadEngineMock.mockResolvedValueOnce({
+      engine,
+      extensionAccessor: new ExtensionAccessor(archJson),
+      scopeEntry,
+    } as unknown as Awaited<ReturnType<typeof loadEngine>>);
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
     const cb = tools.get('archguard_detect_god_packages');
     const result = await cb({});
-    expect(result.content[0].text).toMatch(/No Atlas data/i);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.applicable).toBe(false);
+    expect(parsed.reason).toMatch(/No Atlas data/i);
+    expect(parsed.alternative).toContain('archguard_get_package_metrics');
+    expect(parsed.alternative).toContain('archguard_get_package_stats');
   });
 
   it('returns No package data message when packageGraph has no nodes', async () => {
@@ -572,6 +679,74 @@ describe('archguard_detect_god_packages — handler', () => {
   });
 });
 
+// ── TypeScript god packages (relations fan metrics + package stats) ──────────
+
+describe('archguard_detect_god_packages — TypeScript scope', () => {
+  function mockTsGodScope(gatewayFanOutRelations = 25): void {
+    const { engine, archJson } = makeTsGodEngine(gatewayFanOutRelations);
+    loadEngineMock.mockResolvedValueOnce({
+      engine,
+      extensionAccessor: new ExtensionAccessor(archJson),
+      scopeEntry: tsGodScopeEntry,
+    } as unknown as Awaited<ReturnType<typeof loadEngine>>);
+  }
+
+  async function call(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server, '/workspace', registerAtlasAnalyticsTools);
+    const result = await tools.get('archguard_detect_god_packages')(args);
+    return JSON.parse(result.content[0].text);
+  }
+
+  it('returns applicable:true instead of the not-applicable payload', async () => {
+    mockTsGodScope();
+    const parsed = await call({});
+    expect(parsed.applicable).toBe(true);
+    expect(Array.isArray(parsed.godPackages)).toBe(true);
+    expect(parsed).not.toHaveProperty('alternative');
+  });
+
+  it('flags a TS package exceeding both fanOut and fileCount thresholds with correct reasons', async () => {
+    mockTsGodScope(25);
+    const parsed = await call({});
+    const godPackages = parsed.godPackages as Array<Record<string, unknown>>;
+    const gateway = godPackages.find((p) => p.packageName === 'modules/mcp-gateway');
+
+    expect(gateway).toBeDefined();
+    expect(gateway).toMatchObject({
+      packageName: 'modules/mcp-gateway',
+      fanIn: 0,
+      fanOut: 25,
+      fileCount: 41,
+      entityCount: 1,
+    });
+    expect(gateway?.reasons).toContain('highFanOut');
+    expect(gateway?.reasons).toContain('tooManyFiles');
+    expect(gateway?.reasons).not.toContain('highFanIn');
+    // loc is unavailable for TypeScript — the field must be omitted, not null.
+    expect(gateway).not.toHaveProperty('loc');
+  });
+
+  it('does not flag packages below the TS thresholds', async () => {
+    mockTsGodScope(25);
+    const parsed = await call({
+      minFanIn: 100,
+      minFanOut: 100,
+      minFiles: 100,
+      minEntities: 100,
+    });
+    expect(parsed.godPackages).toHaveLength(0);
+  });
+
+  it('flags a TS package exceeding the entityCount volume threshold', async () => {
+    mockTsGodScope(1);
+    const parsed = await call({ minFanIn: 0, minFanOut: 0, minFiles: 0, minEntities: 1 });
+    const godPackages = parsed.godPackages as Array<{ reasons: string[] }>;
+    expect(godPackages.length).toBeGreaterThan(0);
+    expect(godPackages[0].reasons).toContain('tooManyEntities');
+  });
+});
+
 // ── Applicability marker for non-Atlas scopes ────────────────────────────────
 
 describe('Atlas analytics tools — applicability on non-Atlas scopes', () => {
@@ -602,17 +777,23 @@ describe('Atlas analytics tools — applicability on non-Atlas scopes', () => {
     return { text: result.content[0].text as string };
   }
 
-  it.each([
-    'archguard_detect_god_packages',
-    'archguard_get_package_fanin',
-    'archguard_get_package_fanout',
-  ])('%s returns applicable:false with reason and alternative on a TS scope', async (toolName) => {
+  it.each(['archguard_get_package_fanin', 'archguard_get_package_fanout'])(
+    '%s returns applicable:false with reason and alternative on a TS scope',
+    async (toolName) => {
+      mockTypeScriptScope();
+      const payload = JSON.parse((await call(toolName)).text);
+      expect(payload.applicable).toBe(false);
+      expect(payload.reason).toMatch(/No Atlas data/);
+      expect(payload.reason).toContain('typescript');
+      expect(payload.alternative).toContain('archguard_get_package_metrics');
+    }
+  );
+
+  it('archguard_detect_god_packages is now applicable on a TS scope', async () => {
     mockTypeScriptScope();
-    const payload = JSON.parse((await call(toolName)).text);
-    expect(payload.applicable).toBe(false);
-    expect(payload.reason).toMatch(/No Atlas data/);
-    expect(payload.reason).toContain('typescript');
-    expect(payload.alternative).toContain('archguard_get_package_metrics');
+    const payload = JSON.parse((await call('archguard_detect_god_packages')).text);
+    expect(payload.applicable).toBe(true);
+    expect(Array.isArray(payload.godPackages)).toBe(true);
   });
 
   it('Go Atlas scope behaviour is unchanged (no applicable marker)', async () => {

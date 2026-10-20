@@ -1,7 +1,7 @@
 ---
 id: gap-ts-parser-hoc-memo-forwardref-entities
 title: TypeScript 解析器把 memo/forwardRef/HOC 包装的组件解包为实体，前端主组件不再整体漏出实体图
-status: ready
+status: done
 labels:
   - gap
   - defect
