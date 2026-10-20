@@ -2,7 +2,7 @@
 id: gap-package-cycle-count-and-evidence
 title: get_package_metrics.cycleCount 改用包级 SCC、detect_cycles(package) 输出带上
   from→to+specifier+file:line 边证据
-status: ready
+status: done
 labels:
   - gap
   - defect
