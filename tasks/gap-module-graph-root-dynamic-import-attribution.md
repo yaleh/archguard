@@ -16,16 +16,29 @@ extra:
 
 ## AC
 
-- [ ] 复现夹具：`root/index.ts` 不 import `modules/browser-use`、`modules/browser-use/*.ts` 不 import root 时，`detect_cycles(outputScope=package)` 不报 `{ "", "modules/browser-use" }` 假环；新增用例到 `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts`
-- [ ] 字面量动态 `import('../../index.js')` 的边归属到正确源模块（`modules/cli`，而非无关的 `modules/browser-use`），并有断言
-- [ ] package cycle 证据里回显每条边的 `specifier` + `file:line`，使假环能被自查（与 gap-package-cycle-count-and-evidence 的边证据输出互通）
+- [x] 复现夹具：`root/index.ts` 不 import `modules/browser-use`、`modules/browser-use/*.ts` 不 import root 时，`detect_cycles(outputScope=package)` 不报 `{ "", "modules/browser-use" }` 假环；新增用例到 `tests/unit/plugins/typescript/builders/module-graph-builder.test.ts`
+- [x] 字面量动态 `import('../../index.js')` 的边归属到正确源模块（`modules/cli`，而非无关的 `modules/browser-use`），并有断言
+- [x] package cycle 证据里回显每条边的 `specifier` + `file:line`，使假环能被自查（与 gap-package-cycle-count-and-evidence 的边证据输出互通）
 
 ## DoD
 
 在 claudecodeui server scope 上重跑 `detect_cycles(outputScope=package)`，要么不再出现 `["","modules/browser-use"]` SCC，要么该 SCC 的证据里给出真实 specifier（`cli.module.ts:88` 的 `../../index.js`）——即「root 假环」能被归因或证明。
 
+## Verification
+
+实测（2026-10-20，claudecodeui `server` scope `bcc56acf`，修后构建）：
+
+- `detect_cycles(outputScope=package)` 的 `["", "modules/browser-use"]` SCC 现在带 `edges` 证据，真实 specifier 为：
+  - `"" → "modules/browser-use"`：`index.ts:83/87/136` 的 `./modules/browser-use/*.js` 静态 import；
+  - `"modules/browser-use" → ""`：`modules/browser-use/browser-use-mcp.ts:4` 的 `import '../../load-env.js'`。
+- 因此该 SCC 是**目录粒度把 root 入口 `index.ts` 与 root 叶子引导文件 `load-env.ts` 合并成 `''`** 造成的读数，并非 `browser-use → index.ts` 的虚构边；证据使假环可被逐边归因（DoD 的「证据给出真实 specifier」分支）。
+- `cli.module.ts:88` 的 `await import('../../index.js')` 在图中归属为 `modules/cli → ""`（证据 `{"specifier":"../../index.js","file":"modules/cli/cli.module.ts","line":88,"kind":"dynamic-import"}`），未落到 `modules/browser-use`；Proposal 里「browser-use → root 复现不到」的前提不完整——反向边来自 `browser-use-mcp.ts:4` 的 `load-env.js` 静态 import，与 cli 的动态 import 是两条不同边。
+
 ## Touches
 
 - src/plugins/typescript/builders/module-graph-builder.ts
+- src/types/extensions/ts-analysis.ts
+- src/core/query/query-engine.ts
 - tests/unit/plugins/typescript/builders/module-graph-builder.test.ts
+- tests/unit/cli/query/query-engine.test.ts
 - tasks/gap-module-graph-root-dynamic-import-attribution.md
