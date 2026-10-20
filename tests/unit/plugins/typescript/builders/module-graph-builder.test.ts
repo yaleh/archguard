@@ -713,3 +713,153 @@ describe('ModuleGraphBuilder — root and dynamic-import edge attribution', () =
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Bridge / keystone edge-deletion ranking (package cycles)
+// ---------------------------------------------------------------------------
+
+describe('ModuleGraphBuilder — bridge/keystone edge deletion ranking', () => {
+  const makeProject = () =>
+    new Project({ useInMemoryFileSystem: true, compilerOptions: { target: 99 } });
+
+  /** Run the exact `detect_cycles(outputScope=package)` engine over a built graph. */
+  const packageCyclesOf = (graph: TsModuleGraph) => {
+    const archJson = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+      extensions: { tsAnalysis: { version: '1.0', moduleGraph: graph } },
+    } as ArchJSON;
+    return new QueryEngine({
+      archJson,
+      archIndex: buildArchIndex(archJson, 'fixture'),
+      scopeEntry: {
+        key: 'fixture',
+        label: 'fixture',
+        kind: 'parsed',
+        sources: ['.'],
+        language: 'typescript',
+      },
+    }).getPackageCycles();
+  };
+
+  /**
+   * One 3-node SCC (a → b → c → a) plus the redundant chord a → c:
+   *
+   *   a → b    (b is only reachable via this edge from a, but b still reaches a)
+   *   b → c
+   *   c → a
+   *   a → c    (chord: c is already reachable via b → c)
+   *
+   * Deleting `a → c` leaves the full 3-cycle intact (delta 0), so it is not a
+   * bridge candidate. Deleting `c → a` breaks every cycle (maxScc 3 → 1), and
+   * deleting `a → b` leaves the a ↔ c 2-cycle (maxScc 3 → 2).
+   */
+  const buildCycleWithChord = () => {
+    const project = makeProject();
+    project.createSourceFile(
+      '/root/a/index.ts',
+      `import '../b/index.js';\nimport '../c/index.js';\nexport const a = 1;`
+    );
+    project.createSourceFile('/root/b/index.ts', `import '../c/index.js';\nexport const b = 1;`);
+    project.createSourceFile('/root/c/index.ts', `import '../a/index.js';\nexport const c = 1;`);
+    return new ModuleGraphBuilder().build('/root', project.getSourceFiles(), []);
+  };
+
+  it('AC1: reports every internal package edge with from/to/specifier/maxSccBefore/maxSccAfter/delta', () => {
+    const graph = buildCycleWithChord();
+    const result = packageCyclesOf(graph);
+
+    expect(result.evaluated).toBe(true);
+    expect(result.maxScc).toBe(3);
+    expect(result.edgeDeletions).toHaveLength(4);
+
+    for (const impact of result.edgeDeletions ?? []) {
+      expect(impact).toEqual({
+        from: expect.any(String),
+        to: expect.any(String),
+        specifier: expect.any(String),
+        maxSccBefore: expect.any(Number),
+        maxSccAfter: expect.any(Number),
+        delta: expect.any(Number),
+      });
+      expect(impact.delta).toBe(impact.maxSccBefore - impact.maxSccAfter);
+      expect(impact.maxSccBefore).toBe(3);
+    }
+
+    const chord = result.edgeDeletions?.find((i) => i.from === 'a' && i.to === 'c');
+    expect(chord?.specifier).toBe('../c/index.js');
+  });
+
+  it('AC2: an edge whose deletion shrinks maxScc ranks as a bridge candidate; a redundant chord does not', () => {
+    const result = packageCyclesOf(buildCycleWithChord());
+
+    // Ranked by SCC reduction: c → a destroys all cycles; a → c does nothing.
+    expect(result.edgeDeletions?.[0]).toMatchObject({ from: 'c', to: 'a', delta: 2 });
+
+    const bridgeBefore = result.edgeDeletions?.find((i) => i.from === 'a' && i.to === 'b');
+    expect(bridgeBefore).toMatchObject({ maxSccBefore: 3, maxSccAfter: 2, delta: 1 });
+
+    const chord = result.edgeDeletions?.find((i) => i.from === 'a' && i.to === 'c');
+    expect(chord).toMatchObject({ maxSccBefore: 3, maxSccAfter: 3, delta: 0 });
+
+    // The `bridges` list is exactly the delta > 0 subset, in ranked order.
+    expect(result.bridges?.map((i) => `${i.from}->${i.to}`)).toEqual(['c->a', 'a->b', 'b->c']);
+    expect(result.bridges).not.toContainEqual(expect.objectContaining({ from: 'a', to: 'c' }));
+  });
+
+  it('AC3: no TS module graph → evaluated:false with a reason, never fabricated bridge readings', () => {
+    const archJson = {
+      version: '1.1',
+      language: 'typescript',
+      timestamp: '2026-01-01T00:00:00Z',
+      sourceFiles: [],
+      entities: [],
+      relations: [],
+    } as ArchJSON;
+    const result = new QueryEngine({
+      archJson,
+      archIndex: buildArchIndex(archJson, 'fixture'),
+      scopeEntry: {
+        key: 'fixture',
+        label: 'fixture',
+        kind: 'parsed',
+        sources: ['.'],
+        language: 'typescript',
+      },
+    }).getPackageCycles();
+
+    expect(result.evaluated).toBe(false);
+    expect(result.reason).toBeTruthy();
+    expect(result.cycles).toEqual([]);
+    expect(result.maxScc).toBeUndefined();
+    expect(result.edgeDeletions).toBeUndefined();
+    expect(result.bridges).toBeUndefined();
+  });
+
+  it('evaluated acyclic graph: no bridges, but an explicit empty ranking', () => {
+    const project = makeProject();
+    project.createSourceFile('/root/a/index.ts', `import '../b/index.js';`);
+    project.createSourceFile('/root/b/index.ts', `export const b = 1;`);
+    const result = packageCyclesOf(
+      new ModuleGraphBuilder().build('/root', project.getSourceFiles(), [])
+    );
+
+    expect(result.evaluated).toBe(true);
+    expect(result.maxScc).toBe(1);
+    expect(result.edgeDeletions).toEqual([
+      {
+        from: 'a',
+        to: 'b',
+        specifier: '../b/index.js',
+        maxSccBefore: 1,
+        maxSccAfter: 1,
+        delta: 0,
+      },
+    ]);
+    expect(result.bridges).toEqual([]);
+  });
+});

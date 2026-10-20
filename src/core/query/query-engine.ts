@@ -129,6 +129,36 @@ export interface PackageCycle {
 }
 
 /**
+ * Impact of deleting one internal package edge, measured in SCC size.
+ *
+ * `maxSccBefore` is the size of the largest strongly connected component in the
+ * scope's internal package graph; `maxSccAfter` is that same measure after this
+ * single edge is removed. `delta = maxSccBefore - maxSccAfter`, so an edge whose
+ * deletion does not reduce the largest SCC reads `0` — a measured non-bridge,
+ * not a missing entry.
+ *
+ * Removing one edge is cheap here because package graphs are small (one node per
+ * directory), unlike the external per-edge Tarjan brute force this replaces.
+ */
+export interface PackageEdgeDeletionImpact {
+  /** Importing directory module id (`''` is the root module). */
+  from: string;
+  /** Imported directory module id (`''` is the root module). */
+  to: string;
+  /**
+   * Raw module specifier of the first contributing statement (edges built from
+   * older ArchJSON without per-edge provenance read `''`).
+   */
+  specifier: string;
+  /** Largest SCC size before deleting this edge. */
+  maxSccBefore: number;
+  /** Largest SCC size after deleting this edge. */
+  maxSccAfter: number;
+  /** `maxSccBefore - maxSccAfter`; `> 0` means this edge is a bridge candidate. */
+  delta: number;
+}
+
+/**
  * Package-granularity cycle result.
  *
  * Three-valued by construction: `evaluated: false` (with a `reason`) means the
@@ -141,6 +171,23 @@ export interface PackageCyclesResult {
   /** Present only when `evaluated` is false — why package cycles could not be computed. */
   reason?: string;
   cycles: PackageCycle[];
+  /**
+   * Largest SCC size in the internal package graph (singletons included; `0`
+   * when the graph has no internal nodes). Present only when `evaluated`.
+   */
+  maxScc?: number;
+  /**
+   * Every internal package edge, ranked by single-edge deletion impact
+   * (`delta` descending, then deterministically by endpoints). Present only when
+   * `evaluated` — `[]` honestly means "evaluated, no internal package edges".
+   */
+  edgeDeletions?: PackageEdgeDeletionImpact[];
+  /**
+   * Bridge/keystone candidates: the subset of {@link edgeDeletions} with
+   * `delta > 0`, i.e. edges whose single deletion shrinks the largest SCC.
+   * Present only when `evaluated`.
+   */
+  bridges?: PackageEdgeDeletionImpact[];
 }
 
 export class QueryEngine {
@@ -214,28 +261,113 @@ export class QueryEngine {
         cycles: [],
       };
     }
+    const analysis = this.computePackageGraphAnalysis(moduleGraph);
     return {
       granularity: 'package',
       evaluated: true,
-      cycles: this.computePackageCycles(moduleGraph),
+      cycles: analysis.cycles,
+      maxScc: analysis.maxScc,
+      edgeDeletions: analysis.edgeDeletions,
+      bridges: analysis.bridges,
     };
   }
 
   /**
-   * Tarjan SCC over the module graph's internal directory edges. SCCs of size
-   * > 1 are directory-level cycles. External (node_modules) nodes and
+   * Directory-level SCC analysis over the module graph's internal package edges.
+   *
+   * Returns cycles (SCCs of size > 1), the baseline `maxScc`, and the impact of
+   * deleting each internal edge on `maxScc`. External (node_modules) nodes and
    * self-edges are ignored, matching the module graph's own cycle semantics.
+   *
+   * The per-edge ranking is what makes keystone/bridge edges answerable in one
+   * call: `delta > 0` means removing that single edge shrinks the largest SCC,
+   * so callers no longer have to re-run Tarjan once per edge themselves.
    */
-  private computePackageCycles(moduleGraph: TsModuleGraph): PackageCycle[] {
+  private computePackageGraphAnalysis(moduleGraph: TsModuleGraph): {
+    cycles: PackageCycle[];
+    maxScc: number;
+    edgeDeletions: PackageEdgeDeletionImpact[];
+    bridges: PackageEdgeDeletionImpact[];
+  } {
     const internal = new Set(
       moduleGraph.nodes.filter((n) => n.type === 'internal').map((n) => n.id)
     );
-    const adj = new Map<string, string[]>();
-    for (const id of internal) adj.set(id, []);
     const internalEdges = moduleGraph.edges.filter(
       (edge) => edge.from !== edge.to && internal.has(edge.from) && internal.has(edge.to)
     );
-    for (const edge of internalEdges) {
+
+    const sccs = this.stronglyConnectedComponents(internal, internalEdges);
+    const maxScc = sccs.reduce((max, scc) => Math.max(max, scc.length), 0);
+
+    // One Tarjan run per internal edge. Package graphs are directory-sized
+    // (tens of nodes, low hundreds of edges), so this stays cheap and keeps the
+    // result exact rather than approximate.
+    const edgeDeletions: PackageEdgeDeletionImpact[] = internalEdges.map((edge) => {
+      const remaining = internalEdges.filter((candidate) => candidate !== edge);
+      const maxSccAfter = this.maxSccSize(internal, remaining);
+      return {
+        from: edge.from,
+        to: edge.to,
+        // Evidence is sorted (file, line, specifier, kind) by the builder, so
+        // "first" is deterministic. Legacy graphs carry no provenance → ''.
+        specifier: edge.evidence?.[0]?.specifier ?? '',
+        maxSccBefore: maxScc,
+        maxSccAfter,
+        delta: maxScc - maxSccAfter,
+      };
+    });
+    edgeDeletions.sort(compareEdgeDeletionImpact);
+
+    const bridges = edgeDeletions.filter((impact) => impact.delta > 0);
+
+    const cycles = sccs
+      .filter((scc) => scc.length > 1)
+      .sort((a, b) => b.length - a.length || (a[0] ?? '').localeCompare(b[0] ?? ''))
+      .map((modules) => {
+        const members = new Set(modules);
+        const edges = internalEdges
+          .filter((edge) => members.has(edge.from) && members.has(edge.to))
+          .flatMap((edge) =>
+            (edge.evidence ?? []).map((evidence) => ({
+              from: edge.from,
+              to: edge.to,
+              specifier: evidence.specifier,
+              file: evidence.file,
+              line: evidence.line,
+            }))
+          )
+          .sort(comparePackageCycleEvidence);
+        const cycle: PackageCycle = { size: modules.length, modules };
+        if (edges.length > 0) cycle.edges = edges;
+        return cycle;
+      });
+
+    return { cycles, maxScc, edgeDeletions, bridges };
+  }
+
+  /** Size of the largest SCC in `edges` (0 when there are no internal nodes). */
+  private maxSccSize(
+    internal: ReadonlySet<string>,
+    edges: readonly Pick<TsModuleGraph['edges'][number], 'from' | 'to'>[]
+  ): number {
+    return this.stronglyConnectedComponents(internal, edges).reduce(
+      (max, scc) => Math.max(max, scc.length),
+      0
+    );
+  }
+
+  /**
+   * Tarjan SCC over internal directory edges. Returns every component —
+   * singletons included — so callers can measure the largest SCC; cycle
+   * reporting filters to size > 1 itself. Members of each SCC are sorted.
+   */
+  private stronglyConnectedComponents(
+    internal: ReadonlySet<string>,
+    edges: readonly Pick<TsModuleGraph['edges'][number], 'from' | 'to'>[]
+  ): string[][] {
+    const adj = new Map<string, string[]>();
+    for (const id of internal) adj.set(id, []);
+    for (const edge of edges) {
       adj.get(edge.from)?.push(edge.to);
     }
 
@@ -268,7 +400,7 @@ export class QueryEngine {
           onStack.delete(w);
           scc.push(w);
         } while (w !== v);
-        if (scc.length > 1) sccs.push(scc.sort());
+        sccs.push(scc.sort());
       }
     };
 
@@ -276,26 +408,7 @@ export class QueryEngine {
       if (!index.has(id)) strongConnect(id);
     }
 
-    return sccs
-      .sort((a, b) => b.length - a.length || (a[0] ?? '').localeCompare(b[0] ?? ''))
-      .map((modules) => {
-        const members = new Set(modules);
-        const edges = internalEdges
-          .filter((edge) => members.has(edge.from) && members.has(edge.to))
-          .flatMap((edge) =>
-            (edge.evidence ?? []).map((evidence) => ({
-              from: edge.from,
-              to: edge.to,
-              specifier: evidence.specifier,
-              file: evidence.file,
-              line: evidence.line,
-            }))
-          )
-          .sort(comparePackageCycleEvidence);
-        const cycle: PackageCycle = { size: modules.length, modules };
-        if (edges.length > 0) cycle.edges = edges;
-        return cycle;
-      });
+    return sccs;
   }
 
   /** Return a summary of the scope. */
@@ -509,6 +622,22 @@ export class QueryEngine {
       fieldCount: members.filter((m) => m.type === 'property' || m.type === 'field').length,
     };
   }
+}
+
+/**
+ * Deterministic ordering for edge-deletion impacts: highest SCC reduction first,
+ * then endpoints/specifier so equal-delta edges have a stable rank.
+ */
+function compareEdgeDeletionImpact(
+  a: PackageEdgeDeletionImpact,
+  b: PackageEdgeDeletionImpact
+): number {
+  return (
+    b.delta - a.delta ||
+    a.from.localeCompare(b.from) ||
+    a.to.localeCompare(b.to) ||
+    a.specifier.localeCompare(b.specifier)
+  );
 }
 
 /** Deterministic ordering for in-cycle edge evidence (stable in JSON output). */
