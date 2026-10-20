@@ -1,7 +1,7 @@
 ---
 id: gap-query-stale-snapshot-warning
 title: 查询带 stale/HEAD 信号：generatedAt 落后于 git HEAD 时显式提示重跑 analyze
-status: todo
+status: ready
 labels:
   - gap
 parent: null
