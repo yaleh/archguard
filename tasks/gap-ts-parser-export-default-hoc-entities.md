@@ -18,9 +18,9 @@ extra:
 
 ## AC
 
-- [ ] `src/parser/function-extractor.ts` 对 `export default <Identifier>`、`export default memo/forwardRef/React.memo/React.forwardRef(<Identifier>)`、`export { X }` 三种形态，把被引用的函数/变量声明视为导出并生成实体
-- [ ] `tests/unit/parser/function-extractor.test.ts` 新增三条真实形态 fixture：`const MessageComponent = memo(...)` + `export default MessageComponent`；`const X = ...` + `export default memo(X)`；`function Y(...)` + `export default React.memo(Y)`，各经 `parseCode` 产出 1 个 entity
-- [ ] `export const Z = memo(...)` 既有形态不回归；`npm test -- --run tests/unit/parser/function-extractor.test.ts` 绿
+- [x] `src/parser/function-extractor.ts` 对 `export default <Identifier>`、`export default memo/forwardRef/React.memo/React.forwardRef(<Identifier>)`、`export { X }` 三种形态，把被引用的函数/变量声明视为导出并生成实体
+- [x] `tests/unit/parser/function-extractor.test.ts` 新增三条真实形态 fixture：`const MessageComponent = memo(...)` + `export default MessageComponent`；`const X = ...` + `export default memo(X)`；`function Y(...)` + `export default React.memo(Y)`，各经 `parseCode` 产出 1 个 entity
+- [x] `export const Z = memo(...)` 既有形态不回归；`npm test -- --run tests/unit/parser/function-extractor.test.ts` 绿
 
 ## DoD
 
