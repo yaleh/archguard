@@ -1,6 +1,7 @@
 ---
 id: gap-module-graph-root-dynamic-import-attribution
-title: detect_cycles 的 (root)↔子目录假环：修 root/动态 import 边归因并让证据回显 specifier
+title: detect_cycles 的 (root)↔browser-use 环：边证据归因证明是真环（root 的 index.ts 与
+  load-env.ts 合并为 ''），非假阳性
 status: done
 labels:
   - gap
