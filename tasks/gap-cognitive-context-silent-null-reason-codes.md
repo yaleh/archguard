@@ -16,9 +16,9 @@ cognitive/context 层把多种「没有」混成一个静默 false/null：`get_c
 
 ## AC
 
-- [ ] `archguard_get_cognitive_summary` 的 `found:false` 附带 reason code（`not-in-graph` / `in-graph-no-artifact` / `id-format-mismatch`），`tests/unit/cli/mcp/cognitive-summary-tool.test.ts` 有断言
-- [ ] `archguard_get_ccb` 的 null 字段（behavioral/git/guidance/coverage）带 reason 或 `not-collected` 标记，不再裸 null；`tests/unit/cli/mcp/ccb-tool.test.ts` 有断言
-- [ ] project-semantics 缺失时显式返回 `projectSemantics: "missing"`（或等价 preflight），而非静默把 testCoverageRatio/entityCoverageRatio 置 null；`tests/unit/analysis/project-semantics-loader.test.ts` 有断言
+- [x] `archguard_get_cognitive_summary` 的 `found:false` 附带 reason code（`not-in-graph` / `in-graph-no-artifact` / `id-format-mismatch`），`tests/unit/cli/mcp/cognitive-summary-tool.test.ts` 有断言
+- [x] `archguard_get_ccb` 的 null 字段（behavioral/git/guidance/coverage）带 reason 或 `not-collected` 标记，不再裸 null；`tests/unit/cli/mcp/ccb-tool.test.ts` 有断言
+- [x] project-semantics 缺失时显式返回 `projectSemantics: "missing"`（或等价 preflight），而非静默把 testCoverageRatio/entityCoverageRatio 置 null；`tests/unit/analysis/project-semantics-loader.test.ts` 有断言
 
 ## DoD
 
