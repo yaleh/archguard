@@ -1,7 +1,7 @@
 ---
 id: gap-ts-parser-hoc-memo-forwardref-entities
 title: TypeScript 解析器把 memo/forwardRef/HOC 包装的组件解包为实体，前端主组件不再整体漏出实体图
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -16,9 +16,9 @@ extra:
 
 ## AC
 
-- [ ] `src/parser/function-extractor.ts` 对 `memo` / `forwardRef` / `React.memo` / `React.forwardRef` 包裹的箭头或函数表达式初始化器，unwrap 内层函数并生成 `type:'function'` 实体，name 取变量声明名
-- [ ] `tests/unit/parser/function-extractor.test.ts` 新增 fixture：`export const MessageComponent = memo((props) => …)` 与 `export const ToolGroup = forwardRef<HTMLDivElement, P>(function ToolGroup(){…})` 经 `parseCode` 各产出 1 个 entity，`npm test -- --run tests/unit/parser/function-extractor.test.ts` 绿
-- [ ] 现有 function-extractor 用例不回归：`export const bar = () => …` 与 `export function foo()` 仍照常产出实体
+- [x] `src/parser/function-extractor.ts` 对 `memo` / `forwardRef` / `React.memo` / `React.forwardRef` 包裹的箭头或函数表达式初始化器，unwrap 内层函数并生成 `type:'function'` 实体，name 取变量声明名
+- [x] `tests/unit/parser/function-extractor.test.ts` 新增 fixture：`export const MessageComponent = memo((props) => …)` 与 `export const ToolGroup = forwardRef<HTMLDivElement, P>(function ToolGroup(){…})` 经 `parseCode` 各产出 1 个 entity，`npm test -- --run tests/unit/parser/function-extractor.test.ts` 绿
+- [x] 现有 function-extractor 用例不回归：`export const bar = () => …` 与 `export function foo()` 仍照常产出实体
 
 ## DoD
 
