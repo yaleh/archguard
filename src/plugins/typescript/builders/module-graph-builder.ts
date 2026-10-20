@@ -25,6 +25,8 @@ import type {
   TsModuleNode,
   TsModuleDependency,
   TsModuleCycle,
+  TsModuleCycleEdgeEvidence,
+  TsModuleEdgeEvidence,
   TsModuleUnresolvedRef,
 } from '@/types/extensions/ts-analysis.js';
 import type { Entity } from '@/types/index.js';
@@ -37,6 +39,8 @@ interface EdgeAccumulator {
   /** Subset of `strength` from value (runtime) statements. */
   valueStrength: number;
   importedNames: Set<string>;
+  /** One provenance entry per contributing statement. */
+  evidence: TsModuleEdgeEvidence[];
 }
 
 /** Path-alias configuration read from the project's compiler options / tsconfig. */
@@ -108,20 +112,28 @@ export class ModuleGraphBuilder {
       fromModule: string,
       toModule: string,
       names: Iterable<string>,
-      isTypeOnly: boolean
+      isTypeOnly: boolean,
+      evidence: TsModuleEdgeEvidence
     ): void => {
       // Skip self-imports
       if (fromModule === toModule) return;
       const edgeKey = `${fromModule}|||${toModule}`;
       let acc = edgeMap.get(edgeKey);
       if (!acc) {
-        acc = { strength: 0, typeOnlyStrength: 0, valueStrength: 0, importedNames: new Set() };
+        acc = {
+          strength: 0,
+          typeOnlyStrength: 0,
+          valueStrength: 0,
+          importedNames: new Set(),
+          evidence: [],
+        };
         edgeMap.set(edgeKey, acc);
       }
       acc.strength += 1;
       if (isTypeOnly) acc.typeOnlyStrength += 1;
       else acc.valueStrength += 1;
       for (const name of names) acc.importedNames.add(name);
+      acc.evidence.push(evidence);
     };
 
     const applyResolution = (
@@ -129,15 +141,16 @@ export class ModuleGraphBuilder {
       specifier: string,
       resolution: TargetResolution,
       names: Iterable<string>,
-      isTypeOnly: boolean
+      isTypeOnly: boolean,
+      evidence: TsModuleEdgeEvidence
     ): void => {
       switch (resolution.kind) {
         case 'internal':
-          record(fromModule, resolution.module, names, isTypeOnly);
+          record(fromModule, resolution.module, names, isTypeOnly, evidence);
           break;
         case 'external':
           externalModules.add(resolution.name);
-          record(fromModule, resolution.name, names, isTypeOnly);
+          record(fromModule, resolution.name, names, isTypeOnly, evidence);
           break;
         case 'unresolved-alias':
           unresolved.push({ from: fromModule, specifier });
@@ -147,9 +160,14 @@ export class ModuleGraphBuilder {
       }
     };
 
+    /** Project-root-relative path used in edge provenance. */
+    const relativeFile = (sf: SourceFile): string =>
+      path.relative(projectRoot, sf.getFilePath()).replace(/\\/g, '/');
+
     for (const sf of sourceFiles) {
       const fromModule = fileToModule.get(sf.getFilePath());
       if (fromModule === undefined) continue;
+      const evidenceFile = relativeFile(sf);
 
       // 3a. Static imports
       for (const importDecl of sf.getImportDeclarations()) {
@@ -173,7 +191,13 @@ export class ModuleGraphBuilder {
           specifier,
           resolution,
           names,
-          this.isTypeOnlyImport(importDecl)
+          this.isTypeOnlyImport(importDecl),
+          {
+            specifier,
+            file: evidenceFile,
+            line: this.startLineOf(importDecl),
+            kind: 'import',
+          }
         );
       }
 
@@ -201,7 +225,13 @@ export class ModuleGraphBuilder {
           specifier,
           resolution,
           names,
-          this.isTypeOnlyExport(exportDecl)
+          this.isTypeOnlyExport(exportDecl),
+          {
+            specifier,
+            file: evidenceFile,
+            line: this.startLineOf(exportDecl),
+            kind: 'export-from',
+          }
         );
       }
 
@@ -218,7 +248,14 @@ export class ModuleGraphBuilder {
         // argument, so resolve manually against fileToModule (relative + alias).
         const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
         // A literal `import()` always loads the module at runtime → value dependency.
-        applyResolution(fromModule, specifier, resolution, [], false);
+        // The edge's source is the file that *contains* the call (`fromModule`) —
+        // never the directory ts-morph would resolve the argument to.
+        applyResolution(fromModule, specifier, resolution, [], false, {
+          specifier,
+          file: evidenceFile,
+          line: this.startLineOf(call),
+          kind: 'dynamic-import',
+        });
       }
 
       // 3d. Type-position `import('...')` (TSImportType / ts-morph ImportTypeNode).
@@ -235,7 +272,12 @@ export class ModuleGraphBuilder {
         const specifier = this.importTypeSpecifier(importType);
         if (specifier === undefined) continue;
         const resolution = this.resolveTarget(sf, specifier, undefined, fileToModule, aliasConfig);
-        applyResolution(fromModule, specifier, resolution, [], true);
+        applyResolution(fromModule, specifier, resolution, [], true, {
+          specifier,
+          file: evidenceFile,
+          line: this.startLineOf(importType),
+          kind: 'import-type',
+        });
       }
     }
 
@@ -250,6 +292,7 @@ export class ModuleGraphBuilder {
         typeOnlyStrength: acc.typeOnlyStrength,
         valueStrength: acc.valueStrength,
         importedNames: [...acc.importedNames],
+        evidence: acc.evidence.sort(compareEvidence),
       });
     }
 
@@ -535,6 +578,19 @@ export class ModuleGraphBuilder {
 
   // ── Private: dynamic import ───────────────────────────────────────────────
 
+  /**
+   * Start line of a ts-morph node (1-based). Minimal test doubles may not
+   * implement the Node position API; that is reported as `0` ("unknown")
+   * rather than throwing, so provenance is best-effort for mocks and exact
+   * for real SourceFiles.
+   */
+  private startLineOf(node: unknown): number {
+    const getStartLineNumber = (node as { getStartLineNumber?: () => number }).getStartLineNumber;
+    if (typeof getStartLineNumber !== 'function') return 0;
+    const line = getStartLineNumber.call(node);
+    return Number.isFinite(line) ? line : 0;
+  }
+
   private isDynamicImportCall(call: CallExpression): boolean {
     return call.getExpression().getKind() === SyntaxKind.ImportKeyword;
   }
@@ -639,13 +695,46 @@ export class ModuleGraphBuilder {
     const cycles: TsModuleCycle[] = [];
     for (const scc of sccs) {
       if (scc.length > 1) {
+        const members = new Set(scc);
+        const cycleEdges: TsModuleCycleEdgeEvidence[] = edges
+          .filter((edge) => members.has(edge.from) && members.has(edge.to))
+          .flatMap((edge) =>
+            (edge.evidence ?? []).map((evidence) => ({
+              from: edge.from,
+              to: edge.to,
+              specifier: evidence.specifier,
+              file: evidence.file,
+              line: evidence.line,
+            }))
+          )
+          .sort(compareCycleEvidence);
         cycles.push({
           modules: scc,
           severity: scc.length === 2 ? 'warning' : 'error',
+          edges: cycleEdges,
         });
       }
     }
 
     return cycles;
   }
+}
+
+function compareEvidence(a: TsModuleEdgeEvidence, b: TsModuleEdgeEvidence): number {
+  return (
+    a.file.localeCompare(b.file) ||
+    a.line - b.line ||
+    a.specifier.localeCompare(b.specifier) ||
+    a.kind.localeCompare(b.kind)
+  );
+}
+
+function compareCycleEvidence(a: TsModuleCycleEdgeEvidence, b: TsModuleCycleEdgeEvidence): number {
+  return (
+    a.from.localeCompare(b.from) ||
+    a.to.localeCompare(b.to) ||
+    a.file.localeCompare(b.file) ||
+    a.line - b.line ||
+    a.specifier.localeCompare(b.specifier)
+  );
 }
