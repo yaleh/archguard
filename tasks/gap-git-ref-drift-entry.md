@@ -1,7 +1,7 @@
 ---
 id: gap-git-ref-drift-entry
 title: drift 增加轻量 git-ref 入口：两个 ref/scope 直接 diff，不依赖 arch-health-history
-status: ready
+status: done
 labels:
   - gap
 parent: null
