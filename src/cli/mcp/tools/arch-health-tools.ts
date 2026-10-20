@@ -16,7 +16,11 @@ import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
 import { ClusterBoundaryAnalyzer } from '@/analysis/jl/cluster-boundary-analyzer.js';
 import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
-import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../../analyze/drift-baseline.js';
+import {
+  reanalyzeCommitSnapshot,
+  resolveCommitShaOrNull,
+  resolveDriftSnapshots,
+} from '../../analyze/drift-baseline.js';
 import { loadArchJsonForCluster } from '../../utils/cluster-archjson-loader.js';
 import { DRIFT_THRESHOLDS, TREND_DELTA_THRESHOLD } from '@/analysis/jl/types.js';
 import type {
@@ -24,6 +28,7 @@ import type {
   ClusterBoundaryReport,
   DriftLevel,
   DriftReport,
+  DriftSnapshot,
   IntrinsicDimensionResult,
 } from '@/analysis/jl/types.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -136,6 +141,75 @@ export function registerArchHealthTools(server: McpServer, defaultRoot: string):
   );
 }
 
+export type DriftRefResolution =
+  | { kind: 'snapshots'; from: DriftSnapshot; to: DriftSnapshot }
+  | { kind: 'not-evaluated'; notEvaluated: NotEvaluated };
+
+/**
+ * Resolve the two snapshots for the lightweight git-ref drift entry point.
+ *
+ * Unlike `resolveDriftSnapshots`, this never touches
+ * `.archguard/arch-health-history.json`: the caller names the two git refs,
+ * each is canonicalized with `git rev-parse`, and the source tree at each
+ * commit is re-analyzed into an in-memory `DriftSnapshot` (temporary detached
+ * git worktree — the host working tree is never disturbed).
+ *
+ * A missing or unresolvable ref yields a `NotEvaluated` payload instead of an
+ * empty report: "no comparable pair" must not look like "no drift".
+ *
+ * @param root - Git repository root.
+ * @param fromRef - Baseline git ref (branch, tag or sha).
+ * @param toRef - Comparison git ref (branch, tag or sha).
+ * @param reanalyze - Snapshot reconstruction hook (overridable in tests).
+ * @param resolveRef - Ref canonicalization hook (overridable in tests).
+ */
+export async function resolveDriftByRefs(
+  root: string,
+  fromRef: string | undefined,
+  toRef: string | undefined,
+  reanalyze: (root: string, commitSha: string) => Promise<DriftSnapshot> = reanalyzeCommitSnapshot,
+  resolveRef: (root: string, ref: string) => Promise<string | null> = resolveCommitShaOrNull
+): Promise<DriftRefResolution> {
+  const notEvaluated = (reason: string, hint: string): DriftRefResolution => ({
+    kind: 'not-evaluated',
+    notEvaluated: { evaluated: false, reason, hint },
+  });
+
+  if (fromRef === undefined || fromRef.trim().length === 0) {
+    return notEvaluated(
+      'from_ref_required',
+      'Pass both fromRef and toRef to compare two git refs directly (no arch-health history needed).'
+    );
+  }
+  if (toRef === undefined || toRef.trim().length === 0) {
+    return notEvaluated(
+      'to_ref_required',
+      'Pass both fromRef and toRef to compare two git refs directly (no arch-health history needed).'
+    );
+  }
+
+  const fromSha = await resolveRef(root, fromRef);
+  if (fromSha === null) {
+    return notEvaluated(
+      'from_ref_not_found',
+      `Git ref "${fromRef}" does not resolve to a commit in ${root}.`
+    );
+  }
+  const toSha = await resolveRef(root, toRef);
+  if (toSha === null) {
+    return notEvaluated(
+      'to_ref_not_found',
+      `Git ref "${toRef}" does not resolve to a commit in ${root}.`
+    );
+  }
+
+  // Sequential (not Promise.all): concurrent `git worktree add/remove` contends
+  // on the repository's worktrees lock.
+  const from = await reanalyze(root, fromSha);
+  const to = await reanalyze(root, toSha);
+  return { kind: 'snapshots', from, to };
+}
+
 /**
  * Register the architecture-drift MCP tool (TASK-65 Phase D).
  */
@@ -143,14 +217,30 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
   server.tool(
     'archguard_get_architecture_drift',
     'Compute per-entity L2 architecture drift between two git snapshots in adjacency-matrix space. ' +
-      'Resolves fromCommit/toCommit from .archguard/arch-health-history.json, re-analyzes both ' +
-      'commits on demand, and returns { report, hasBreakingDrift, breakingEntities }. ' +
-      'Requires at least two prior `analyze --arch-health` runs.',
+      'Two modes: (1) lightweight — pass fromRef + toRef to analyze two git refs directly, with no ' +
+      'arch-health history required; (2) snapshot — resolve fromCommit/toCommit via ' +
+      '.archguard/arch-health-history.json and re-analyze both commits on demand. Returns ' +
+      '{ report, hasBreakingDrift, breakingEntities } (ref mode also sets evaluated: true); a missing ' +
+      'or unresolvable ref pair returns { evaluated: false, reason, hint }.',
     {
       projectRoot: z
         .string()
         .optional()
         .describe('Root directory of the target project. Defaults to MCP server startup cwd.'),
+      fromRef: z
+        .string()
+        .optional()
+        .describe(
+          'Lightweight mode: baseline git ref (branch, tag, or sha). Requires toRef; bypasses ' +
+            '.archguard/arch-health-history.json entirely.'
+        ),
+      toRef: z
+        .string()
+        .optional()
+        .describe(
+          'Lightweight mode: comparison git ref (branch, tag, or sha). Requires fromRef; bypasses ' +
+            '.archguard/arch-health-history.json entirely.'
+        ),
       fromCommit: z
         .string()
         .optional()
@@ -170,10 +260,28 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
         .optional()
         .describe('Lowest severity level included in report.drifts (default stable).'),
     },
-    async ({ projectRoot, fromCommit, toCommit, topK, minLevel }) => {
+    async ({ projectRoot, fromRef, toRef, fromCommit, toCommit, topK, minLevel }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const archDir = path.join(root, '.archguard');
+
+        // Lightweight git-ref mode: both refs are analyzed on demand, so no
+        // `.archguard/arch-health-history.json` is read at all.
+        if (fromRef !== undefined || toRef !== undefined) {
+          const resolvedByRef = await resolveDriftByRefs(root, fromRef, toRef);
+          if (resolvedByRef.kind === 'not-evaluated') {
+            return textResponse(JSON.stringify(resolvedByRef.notEvaluated, null, 2));
+          }
+          const report = DriftCalculator.compare(resolvedByRef.from, resolvedByRef.to, {
+            threshold: DRIFT_THRESHOLDS.critical,
+            topK: topK ?? 10,
+            minLevel: (minLevel as DriftLevel | undefined) ?? 'stable',
+          });
+          return textResponse(
+            JSON.stringify({ evaluated: true, ...buildDriftToolResult(report) }, null, 2)
+          );
+        }
+
         const history = await readHistoryFile(archDir);
 
         if (history === null || history.snapshots.length < 2) {

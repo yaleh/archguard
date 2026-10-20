@@ -1,7 +1,7 @@
 ---
 id: gap-slice-declaration-preflight
 title: slice-delta 增加 preflight：从 subject 枚举可合法声明的 moves/stays/newDirs
-status: ready
+status: done
 labels:
   - gap
 parent: null

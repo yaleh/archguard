@@ -15,5 +15,5 @@
  * ```
  */
 
-export { simulateRefactorSlice } from './simulate.js';
+export { preflightSlice, simulateRefactorSlice } from './simulate.js';
 export type * from './types.js';

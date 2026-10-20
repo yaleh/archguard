@@ -274,12 +274,17 @@ describe('loadEngine scope metadata', () => {
     const manifest = (await fs.readJson(
       path.join(tmpDir, 'query', 'manifest.json')
     )) as QueryManifest;
-    expect(ctx.scopeInfo).toEqual({
+    expect(ctx.scopeInfo).toMatchObject({
       key: 'scope-2',
       label: 'lib',
       sources: ['./lib'],
       generatedAt: manifest.generatedAt,
     });
+    // loadEngine always attaches a snapshot-vs-HEAD verdict (see staleness tests
+    // in tests/unit/cli/mcp/mcp-server.test.ts); the exact value depends on
+    // whether the temp dir happens to sit inside a git work tree.
+    expect(ctx.scopeInfo.staleness).toBeDefined();
+    expect(['fresh', 'stale', 'not-checked']).toContain(ctx.scopeInfo.staleness?.status);
   });
 
   it('lists every manifest scope with its entity count', async () => {
