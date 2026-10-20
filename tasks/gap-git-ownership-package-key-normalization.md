@@ -1,7 +1,7 @@
 ---
 id: gap-git-ownership-package-key-normalization
 title: package 级 get_ownership 统一 repo-relative / keyRoot-relative 解析，与 file 级同源
-status: todo
+status: ready
 labels:
   - gap
   - defect
