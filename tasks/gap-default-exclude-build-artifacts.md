@@ -83,3 +83,4 @@ quay 副本（`/tmp/quay-baseline` vs `/tmp/quay-after`，同一份源码，主�
 - tests/unit/cli/utils/file-discovery-ignore.test.ts
 - tests/unit/cli/config-loader.test.ts
 - tests/plugins/typescript/index.test.ts
+- tests/integration/custom-config-path.test.ts
