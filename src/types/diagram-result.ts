@@ -28,6 +28,14 @@ export interface DiagramResult {
     png?: string;
     json?: string;
   };
+  /**
+   * Every source artifact actually written for this diagram (if successful).
+   *
+   * `paths` only names the primary artifact; a class diagram may be split into
+   * one file per layer/namespace, and a Go Atlas diagram emits one file per
+   * layer. The manifest uses this list to enumerate real on-disk products.
+   */
+  outputs?: string[];
   /** Processing statistics (if successful) */
   stats?: {
     entities: number;
