@@ -23,7 +23,7 @@ import type {
   QueryOutputFormat,
 } from '../query/query-engine.js';
 import type { EdgeListField } from '@/core/query/query-engine.js';
-import type { Entity } from '@/types/index.js';
+import type { Entity, RelationType } from '@/types/index.js';
 import type {
   PackageGraph,
   CapabilityGraph,
@@ -319,6 +319,31 @@ const edgeListFieldsParam = z
   .optional()
   .describe('edge-list only: relation fields to include (default: all of from/to/type).');
 
+/**
+ * Relation-type enum shared by the dependency/dependents tools.
+ *
+ * Kept as a literal tuple (not derived from the TS union) so zod rejects unknown
+ * values at the MCP boundary instead of silently ignoring them.
+ */
+const RELATION_TYPE_VALUES = [
+  'inheritance',
+  'implementation',
+  'composition',
+  'aggregation',
+  'dependency',
+  'association',
+  'call',
+] as const;
+
+const relationTypesParam = z
+  .array(z.enum(RELATION_TYPE_VALUES))
+  .optional()
+  .describe(
+    'Relation types to traverse (default: all internal types, including class-level call edges). ' +
+      'Restricts both BFS traversal and edge-list relations; e.g. ["inheritance","composition"]. ' +
+      'Call edges are class-level only (no sourceMethod/targetMethod).'
+  );
+
 function applyView(
   engine: QueryEngine,
   result: Entity[] | Partial<Entity>[] | EdgeListOutput,
@@ -468,7 +493,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependencies',
-    'Return direct and transitive class-level dependency graph with method signatures (outputScope=method by default); call graph edges (method→method calls) are not included — only class-level structural relations. For Go Atlas package-level dependencies use archguard_get_atlas_layer.',
+    'Return direct and transitive class-level dependency neighbors with method signatures (outputScope=method by default). By default every internal relation type is followed — including class-level call edges (aggregated per entity, no sourceMethod/targetMethod). Pass relationTypes to narrow the traversal and edge-list relations (e.g. ["inheritance","composition"]). For Go Atlas package-level dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -479,6 +504,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       queryFormat: queryFormatParam,
       topN: edgeListTopNParam,
       relationFields: edgeListFieldsParam,
+      relationTypes: relationTypesParam,
     },
     async ({
       projectRoot,
@@ -490,6 +516,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       queryFormat,
       topN,
       relationFields,
+      relationTypes,
     }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
@@ -503,11 +530,12 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           anchorNames: [name],
           topN,
           relationFields: relationFields as readonly EdgeListField[] | undefined,
+          relationTypes: relationTypes as readonly RelationType[] | undefined,
         };
         const payload = applyView(
           engine,
           engine.applyOutputOptions(
-            relationQueryService.getDependencies(name, depth),
+            relationQueryService.getDependencies(name, depth, relationTypes),
             queryOptions
           ),
           verbose
@@ -519,7 +547,7 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
 
   server.tool(
     'archguard_get_dependents',
-    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). For Go Atlas package-level reverse dependencies use archguard_get_atlas_layer.',
+    'Return entities that depend on the named entity, with method signatures (outputScope=method by default). By default every internal relation type is followed — including class-level call edges (aggregated per entity, no sourceMethod/targetMethod). Pass relationTypes to narrow the traversal and edge-list relations (e.g. ["inheritance"]). For Go Atlas package-level reverse dependencies use archguard_get_atlas_layer.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,
@@ -528,8 +556,18 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       verbose: verboseParam,
       outputScope: outputScopeParam('method'),
       queryFormat: queryFormatParam,
+      relationTypes: relationTypesParam,
     },
-    async ({ projectRoot, scope, name, depth, verbose, outputScope, queryFormat }) => {
+    async ({
+      projectRoot,
+      scope,
+      name,
+      depth,
+      verbose,
+      outputScope,
+      queryFormat,
+      relationTypes,
+    }) => {
       const root = resolveRoot(projectRoot, defaultRoot);
       return withEngineErrorContext(root, async () => {
         const ctx = await loadEngine(path.join(root, '.archguard'), scope);
@@ -538,10 +576,14 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
           outputScope: resolveOutputScope(outputScope, verbose),
           queryFormat: queryFormat as QueryOutputFormat,
           anchorNames: [name],
+          relationTypes: relationTypes as readonly RelationType[] | undefined,
         };
         const payload = applyView(
           engine,
-          engine.applyOutputOptions(relationQueryService.getDependents(name, depth), queryOptions),
+          engine.applyOutputOptions(
+            relationQueryService.getDependents(name, depth, relationTypes),
+            queryOptions
+          ),
           verbose
         );
         return scopedJsonResponse(ctx, scope, payload);

@@ -362,3 +362,101 @@ describe('RelationQueryService — findCallers', () => {
     expect(result[0].callType).toBe('direct');
   });
 });
+
+// ---------------------------------------------------------------------------
+// relationTypes filtering (gap-query-relation-type-filter)
+// ---------------------------------------------------------------------------
+
+describe('RelationQueryService — relationTypes filter', () => {
+  const root = makeEntity('src/root.ts.Root', 'Root');
+  const dep = makeEntity('src/dep.ts.Dep', 'Dep');
+  const called = makeEntity('src/called.ts.Called', 'Called');
+  const composed = makeEntity('src/composed.ts.Composed', 'Composed');
+  const base = makeEntity('src/base.ts.Base', 'Base');
+  const downstream = makeEntity('src/downstream.ts.Downstream', 'Downstream');
+
+  // Four distinct relation types leave Root; Dep additionally leaves a
+  // dependency-only hop so depth=2 proves the filter is applied during
+  // traversal, not as a post-hoc filter on the returned entity list.
+  const mixedArchJson = makeArchJson(
+    [root, dep, called, composed, base, downstream],
+    [
+      makeRelation('src/root.ts.Root', 'src/dep.ts.Dep', 'dependency'),
+      makeCallRelation('src/root.ts.Root', 'src/called.ts.Called'),
+      makeRelation('src/root.ts.Root', 'src/composed.ts.Composed', 'composition'),
+      makeRelation('src/root.ts.Root', 'src/base.ts.Base', 'inheritance'),
+      makeRelation('src/dep.ts.Dep', 'src/downstream.ts.Downstream', 'dependency'),
+    ]
+  );
+
+  it('omitting relationTypes keeps the historical mixed-type traversal order', () => {
+    const svc = buildService(mixedArchJson);
+    // Unfiltered BFS walks index.dependencies, populated in ArchJSON relation
+    // order — exact array equality pins both membership and ordering.
+    expect(svc.getDependencies('Root', 1).map((e) => e.name)).toEqual([
+      'Dep',
+      'Called',
+      'Composed',
+      'Base',
+    ]);
+    expect(svc.getDependencies('Root', 2).map((e) => e.name)).toEqual([
+      'Dep',
+      'Called',
+      'Composed',
+      'Base',
+      'Downstream',
+    ]);
+  });
+
+  it('depth=1 with ["inheritance"] only returns inheritance targets', () => {
+    const svc = buildService(mixedArchJson);
+    expect(svc.getDependencies('Root', 1, ['inheritance']).map((e) => e.name)).toEqual(['Base']);
+  });
+
+  it('multiple selected types follow only those types, in caller order', () => {
+    const svc = buildService(mixedArchJson);
+    expect(
+      svc.getDependencies('Root', 1, ['inheritance', 'composition']).map((e) => e.name)
+    ).toEqual(['Base', 'Composed']);
+  });
+
+  it('filters during traversal (depth=2 never reaches unselected-type edges)', () => {
+    const svc = buildService(mixedArchJson);
+    // Root -dependency-> Dep -dependency-> Downstream; both are dependency edges.
+    expect(svc.getDependencies('Root', 2, ['dependency']).map((e) => e.name)).toEqual([
+      'Dep',
+      'Downstream',
+    ]);
+    // The only inheritance edge leaves Root: Base has no inheritance descendants.
+    expect(svc.getDependencies('Root', 2, ['inheritance']).map((e) => e.name)).toEqual(['Base']);
+  });
+
+  it('an empty relationTypes list yields no neighbors', () => {
+    const svc = buildService(mixedArchJson);
+    expect(svc.getDependencies('Root', 2, [])).toEqual([]);
+  });
+
+  it('getDependents applies the same filter in reverse direction', () => {
+    const svc = buildService(mixedArchJson);
+    expect(svc.getDependents('Base', 1, ['inheritance']).map((e) => e.name)).toEqual(['Root']);
+    expect(svc.getDependents('Base', 1, ['dependency'])).toEqual([]);
+    // Symmetric depth=2 chain in reverse: Downstream <- Dep <- Root.
+    expect(svc.getDependents('Downstream', 2, ['dependency']).map((e) => e.name)).toEqual([
+      'Dep',
+      'Root',
+    ]);
+    expect(svc.getDependents('Downstream', 2, ['inheritance'])).toEqual([]);
+  });
+
+  it('omitting relationTypes on getDependents keeps every type', () => {
+    const svc = buildService(mixedArchJson);
+    expect(svc.getDependents('Base', 1).map((e) => e.name)).toEqual(['Root']);
+    expect(svc.getDependents('Downstream', 2).map((e) => e.name)).toEqual(['Dep', 'Root']);
+  });
+
+  it('unknown entity still returns empty when filtering', () => {
+    const svc = buildService(mixedArchJson);
+    expect(svc.getDependencies('Ghost', 1, ['inheritance'])).toEqual([]);
+    expect(svc.getDependents('Ghost', 1, ['inheritance'])).toEqual([]);
+  });
+});

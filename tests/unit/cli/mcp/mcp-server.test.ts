@@ -377,6 +377,163 @@ describe('archguard_get_dependents', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// relationTypes filter (gap-query-relation-type-filter)
+// ---------------------------------------------------------------------------
+
+describe('archguard_get_dependencies / get_dependents — relationTypes', () => {
+  function getToolSchema(
+    server: McpServer,
+    toolName: string
+  ): z.ZodObject<z.ZodRawShape> | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const registeredTools = (server as any)._registeredTools as Record<
+      string,
+      { inputSchema?: z.ZodObject<z.ZodRawShape> }
+    >;
+    return registeredTools[toolName]?.inputSchema;
+  }
+
+  it('schema accepts the full relation-type enum on both tools', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+
+    for (const toolName of ['archguard_get_dependencies', 'archguard_get_dependents']) {
+      const schema = getToolSchema(server, toolName);
+      expect(schema, `${toolName} is not registered`).toBeDefined();
+      if (!schema) continue;
+      expect(() =>
+        schema.parse({
+          name: 'Foo',
+          relationTypes: [
+            'inheritance',
+            'implementation',
+            'composition',
+            'aggregation',
+            'dependency',
+            'association',
+            'call',
+          ],
+        })
+      ).not.toThrow();
+    }
+  });
+
+  it('schema rejects unknown relation types on both tools', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    registerTools(server, '/workspace');
+
+    for (const toolName of ['archguard_get_dependencies', 'archguard_get_dependents']) {
+      const schema = getToolSchema(server, toolName);
+      expect(schema, `${toolName} is not registered`).toBeDefined();
+      if (!schema) continue;
+      expect(() => schema.parse({ name: 'Foo', relationTypes: ['bogus'] })).toThrow();
+    }
+  });
+
+  it('omitted relationTypes keeps every relation type (backward compatibility)', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const defaultDeps = JSON.parse(
+      (await tools.get('archguard_get_dependencies')({ name: 'DiagramProcessor', depth: 1 }))
+        .content[0].text
+    );
+    expect(defaultDeps.map((e: { name: string }) => e.name)).toEqual([
+      'CacheManager',
+      'ILanguagePlugin',
+    ]);
+
+    const defaultDependents = JSON.parse(
+      (await tools.get('archguard_get_dependents')({ name: 'ILanguagePlugin', depth: 1 }))
+        .content[0].text
+    );
+    expect(defaultDependents.map((e: { name: string }) => e.name)).toEqual([
+      'DiagramProcessor',
+      'TypeScriptPlugin',
+    ]);
+  });
+
+  it('get_dependents filters the BFS to the selected relation types', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const implementationOnly = JSON.parse(
+      (
+        await tools.get('archguard_get_dependents')({
+          name: 'ILanguagePlugin',
+          depth: 1,
+          relationTypes: ['implementation'],
+        })
+      ).content[0].text
+    );
+    expect(implementationOnly.map((e: { name: string }) => e.name)).toEqual(['TypeScriptPlugin']);
+
+    const dependencyOnly = JSON.parse(
+      (
+        await tools.get('archguard_get_dependents')({
+          name: 'ILanguagePlugin',
+          depth: 1,
+          relationTypes: ['dependency'],
+        })
+      ).content[0].text
+    );
+    expect(dependencyOnly.map((e: { name: string }) => e.name)).toEqual(['DiagramProcessor']);
+  });
+
+  it('get_dependencies filters the BFS to the selected relation types', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    // DiagramProcessor has only dependency edges out; none are implementations.
+    const implementationOnly = JSON.parse(
+      (
+        await tools.get('archguard_get_dependencies')({
+          name: 'DiagramProcessor',
+          depth: 1,
+          relationTypes: ['implementation'],
+        })
+      ).content[0].text
+    );
+    expect(implementationOnly).toEqual([]);
+  });
+
+  it('edge-list relations honour relationTypes', async () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const tools = collectTools(server);
+
+    const result = await tools.get('archguard_get_dependents')({
+      name: 'ILanguagePlugin',
+      depth: 1,
+      queryFormat: 'edge-list',
+      relationTypes: ['implementation'],
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.entities.map((e: { name: string }) => e.name)).toEqual(['TypeScriptPlugin']);
+    expect(parsed.relations.map((r: { type: string }) => r.type)).toEqual(['implementation']);
+  });
+
+  it('tool descriptions no longer deny call edges and document relationTypes', () => {
+    const descriptions = new Map<string, string>();
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const originalTool = server.tool.bind(server);
+    vi.spyOn(server, 'tool').mockImplementation((...args: unknown[]) => {
+      descriptions.set(args[0] as string, args[1] as string);
+      return (originalTool as Function)(...args);
+    });
+    registerTools(server, '/workspace');
+
+    for (const toolName of ['archguard_get_dependencies', 'archguard_get_dependents']) {
+      const description = descriptions.get(toolName);
+      expect(description, `${toolName} is not registered`).toBeTruthy();
+      expect(description).not.toContain('call graph edges');
+      expect(description).not.toContain('are not included');
+      expect(description).toContain('relationTypes');
+      expect(description).toContain('call edges');
+    }
+  });
+});
+
 describe('archguard_find_implementers', () => {
   it('returns implementers as summary by default', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });

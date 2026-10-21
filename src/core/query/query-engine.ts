@@ -99,6 +99,14 @@ export interface QueryMethodOptions {
   topN?: number;
   /** Restrict serialized relations to these fields (default: all fields). */
   relationFields?: readonly EdgeListField[];
+  /**
+   * Restrict edge-list relations to these relation types (default: every type).
+   * Applied after closure narrowing and scope normalization, so the serialized
+   * relations never contain a type outside this list. Keep this in sync with the
+   * `relationTypes` passed to the relation query so `entities` and `relations`
+   * describe the same subgraph.
+   */
+  relationTypes?: readonly RelationType[];
 }
 
 export interface EdgeListEntity {
@@ -604,9 +612,16 @@ export class QueryEngine {
 
       const closureRelations = filterRelationsToClosure(this.archJson.relations, closureIds);
       const scopedRelations = filterRelationsForScope(closureRelations, scope);
-      const totalRelations = scopedRelations.length;
+      // Narrow by relation type last so the serialized relations only ever carry
+      // the requested types (scope normalization can rewrite call → dependency at
+      // class scope; those rewritten edges are not raw edges of a requested type).
+      const relationTypes = options.relationTypes;
+      const filteredRelations = relationTypes
+        ? scopedRelations.filter((r) => relationTypes.includes(r.type))
+        : scopedRelations;
+      const totalRelations = filteredRelations.length;
       const limitedRelations =
-        options.topN !== undefined ? scopedRelations.slice(0, options.topN) : scopedRelations;
+        options.topN !== undefined ? filteredRelations.slice(0, options.topN) : filteredRelations;
 
       return serialize(narrowed, limitedRelations, scope, {
         relationFields: options.relationFields,
