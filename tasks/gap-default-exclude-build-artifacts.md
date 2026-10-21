@@ -1,7 +1,7 @@
 ---
 id: gap-default-exclude-build-artifacts
 title: 默认排除只挡 node_modules/test：dist/vendor/archive 被当作源码分析，实体数与所有下游指标虚高（quay 实测）
-status: todo
+status: ready
 labels:
   - gap
   - defect
