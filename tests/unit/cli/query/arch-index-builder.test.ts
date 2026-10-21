@@ -363,4 +363,146 @@ describe('buildArchIndex', () => {
     expect(index.dependencies['Bar']).toEqual([]);
     expect(index.relationsByType).toEqual({});
   });
+
+  describe('externalRelationsByType', () => {
+    // Mirrors the real shapes that motivated the field:
+    //   class A extends ExternalBase                          → inheritance, external target
+    //   class B implements LocalInterface                     → internal (control)
+    //   class C implements MobileTerminalSelectionManager     → implementation, target is a
+    //                                                           type alias the parser never
+    //                                                           turned into an entity
+    const localInterface = makeEntity({
+      id: 'src/iface.ts.LocalInterface',
+      name: 'LocalInterface',
+      type: 'interface',
+      sourceLocation: { file: 'src/iface.ts', startLine: 1, endLine: 5 },
+    });
+    const classA = makeEntity({
+      id: 'src/a.ts.A',
+      name: 'A',
+      sourceLocation: { file: 'src/a.ts', startLine: 1, endLine: 5 },
+    });
+    const classB = makeEntity({
+      id: 'src/b.ts.B',
+      name: 'B',
+      sourceLocation: { file: 'src/b.ts', startLine: 1, endLine: 5 },
+    });
+    const classC = makeEntity({
+      id: 'src/c.ts.C',
+      name: 'C',
+      sourceLocation: { file: 'src/c.ts', startLine: 1, endLine: 5 },
+    });
+
+    const extendsExternal = makeRelation('src/a.ts.A', 'ExternalBase', 'inheritance');
+    const implementsLocal = makeRelation(
+      'src/b.ts.B',
+      'src/iface.ts.LocalInterface',
+      'implementation'
+    );
+    const implementsTypeAlias = makeRelation(
+      'src/c.ts.C',
+      'shared/types.ts.MobileTerminalSelectionManager',
+      'implementation'
+    );
+
+    const entities = [localInterface, classA, classB, classC];
+    const relations = [extendsExternal, implementsLocal, implementsTypeAlias];
+
+    it('keeps unresolvable inheritance/implementation endpoints with raw from/to and type', () => {
+      const index = buildArchIndex(makeArchJson(entities, relations), 'h');
+
+      expect(index.externalRelationsByType).toEqual({
+        inheritance: [
+          {
+            from: 'src/a.ts.A',
+            to: 'ExternalBase',
+            sourceResolved: true,
+            targetResolved: false,
+          },
+        ],
+        implementation: [
+          {
+            from: 'src/c.ts.C',
+            to: 'shared/types.ts.MobileTerminalSelectionManager',
+            sourceResolved: true,
+            targetResolved: false,
+          },
+        ],
+      });
+    });
+
+    it('negative control: fully internal relations stay only in relationsByType', () => {
+      const index = buildArchIndex(makeArchJson(entities, relations), 'h');
+
+      expect(index.relationsByType['implementation']).toEqual([
+        ['src/b.ts.B', 'src/iface.ts.LocalInterface'],
+      ]);
+      // The internal implementation edge must not leak into the external bucket.
+      expect(index.externalRelationsByType?.['implementation']).toHaveLength(1);
+      expect(index.externalRelationsByType?.['implementation']?.[0].to).toBe(
+        'shared/types.ts.MobileTerminalSelectionManager'
+      );
+    });
+
+    it('does not add external endpoints to the adjacency maps', () => {
+      const index = buildArchIndex(makeArchJson(entities, relations), 'h');
+
+      // A's only external edge is dropped from BFS adjacency.
+      expect(index.dependencies['src/a.ts.A']).toEqual([]);
+      expect(index.dependents['src/a.ts.A']).toEqual([]);
+      // No ghost keys for unresolved endpoints.
+      expect(index.dependencies['ExternalBase']).toBeUndefined();
+      expect(index.dependents['ExternalBase']).toBeUndefined();
+      expect(index.dependencies).not.toHaveProperty(
+        'shared/types.ts.MobileTerminalSelectionManager'
+      );
+      // The internal control edge is still there.
+      expect(index.dependencies['src/b.ts.B']).toEqual(['src/iface.ts.LocalInterface']);
+    });
+
+    it('records an unresolved source endpoint too', () => {
+      const rel = makeRelation('UnknownBase', 'src/a.ts.A', 'inheritance');
+      const index = buildArchIndex(makeArchJson([classA], [rel]), 'h');
+
+      expect(index.externalRelationsByType?.['inheritance']).toEqual([
+        {
+          from: 'UnknownBase',
+          to: 'src/a.ts.A',
+          sourceResolved: false,
+          targetResolved: true,
+        },
+      ]);
+    });
+
+    it('deduplicates by (type, from, to) and preserves arch.json order', () => {
+      const first = makeRelation('src/a.ts.A', 'ExternalBase', 'inheritance');
+      const duplicate = makeRelation('src/a.ts.A', 'ExternalBase', 'inheritance', 'different-id');
+      const other = makeRelation('src/a.ts.A', 'OtherExternal', 'inheritance');
+      const differentType = makeRelation('src/a.ts.A', 'ExternalBase', 'dependency');
+
+      const index = buildArchIndex(
+        makeArchJson([classA], [first, duplicate, other, differentType]),
+        'h'
+      );
+
+      expect(index.externalRelationsByType?.['inheritance']?.map((e) => e.to)).toEqual([
+        'ExternalBase',
+        'OtherExternal',
+      ]);
+      expect(index.externalRelationsByType?.['dependency']?.map((e) => e.to)).toEqual([
+        'ExternalBase',
+      ]);
+      expect(index.externalRelationsByType?.['inheritance']).toHaveLength(2);
+    });
+
+    it('omits the field entirely when every relation resolves', () => {
+      const index = buildArchIndex(
+        makeArchJson(entities, [implementsLocal]),
+        'h'
+      );
+
+      expect(index.externalRelationsByType).toBeUndefined();
+      expect('externalRelationsByType' in index).toBe(false);
+    });
+  });
 });

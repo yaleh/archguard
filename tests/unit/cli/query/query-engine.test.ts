@@ -244,6 +244,62 @@ describe('QueryEngine', () => {
     });
   });
 
+  describe('external / unresolved relations', () => {
+    // Alpha extends ExternalBase (external target) and depends on Beta internally.
+    // Gamma implements a type alias the parser never turned into an entity.
+    // Ghost is an unresolved source that depends on Alpha.
+    const extArchJson = makeArchJson({
+      entities: [entityA, entityB, entityC],
+      relations: [
+        { id: 'x1', type: 'inheritance', source: 'A', target: 'ExternalBase' },
+        { id: 'x2', type: 'dependency', source: 'A', target: 'B' },
+        { id: 'x3', type: 'implementation', source: 'C', target: 'shared/types.ts.Selection' },
+        { id: 'x4', type: 'dependency', source: 'Ghost', target: 'A' },
+      ],
+    });
+
+    it('keeps BFS results identical — external endpoints never become graph nodes', () => {
+      const engine = createEngine(extArchJson);
+
+      // Alpha still depends only on Beta; "ExternalBase" is not traversable.
+      expect(engine.relationQueryService.getDependencies('Alpha').map((e) => e.id)).toEqual(['B']);
+      expect(engine.relationQueryService.getDependencies('Alpha', 5).map((e) => e.id)).toEqual([
+        'B',
+      ]);
+
+      // Nothing depends on Alpha through the external-only declaration.
+      expect(engine.relationQueryService.getDependents('Alpha')).toEqual([]);
+      // Unresolved endpoints resolve to no entity at all.
+      expect(engine.findEntity('ExternalBase')).toHaveLength(0);
+      expect(engine.findEntity('shared/types.ts.Selection')).toHaveLength(0);
+    });
+
+    it('findImplementers ignores implementation edges with an unresolved target', () => {
+      const engine = createEngine(extArchJson);
+
+      expect(engine.relationQueryService.findImplementers('Selection')).toEqual([]);
+      expect(engine.relationQueryService.findImplementers('shared/types.ts.Selection')).toEqual([]);
+    });
+
+    it('answers queries against a legacy index object lacking externalRelationsByType', () => {
+      // Simulates an arch-index.json written before the field existed: consumers
+      // must treat the missing property as "no external relations", not error.
+      const legacyIndex = JSON.parse(JSON.stringify(buildArchIndex(extArchJson, 'legacy-hash')));
+      expect(legacyIndex.externalRelationsByType).toBeDefined();
+      delete legacyIndex.externalRelationsByType;
+
+      const engine = new QueryEngine({
+        archJson: extArchJson,
+        archIndex: legacyIndex,
+        scopeEntry: defaultScope,
+      });
+
+      expect(engine.relationQueryService.getDependencies('Alpha').map((e) => e.id)).toEqual(['B']);
+      expect(engine.relationQueryService.getDependents('Beta').map((e) => e.id)).toEqual(['A']);
+      expect(legacyIndex.version).toBe('1.0');
+    });
+  });
+
   describe('findImplementers', () => {
     it('returns only entities with implementation relation', () => {
       const engine = createEngine(baseArchJson);

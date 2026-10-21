@@ -3,9 +3,9 @@
  */
 
 import path from 'path';
-import type { ArchJSON, RelationType, CycleInfo } from '@/types/index.js';
+import type { ArchJSON, Relation, RelationType, CycleInfo } from '@/types/index.js';
 import { ARCH_INDEX_VERSION } from './arch-index.js';
-import type { ArchIndex } from './arch-index.js';
+import type { ArchIndex, ExternalRelationEdge } from './arch-index.js';
 
 /**
  * Build an ArchIndex from a rawArchJSON.
@@ -65,14 +65,40 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
   // The TypeScript parser emits mixed formats: some targets are full IDs
   // (e.g. "cli/errors.ts.ParseError"), others are bare class names ("ArchJSON").
   // We resolve bare names when they map unambiguously to a single entity.
-  const internalRelations = (relations ?? [])
-    .map((r) => {
-      const src = resolveId(r.source);
-      const tgt = resolveId(r.target);
-      if (!src || !tgt) return null;
-      return src === r.source && tgt === r.target ? r : { ...r, source: src, target: tgt };
-    })
-    .filter(Boolean);
+  //
+  // Relations with at least one unresolved endpoint (an external base class, a
+  // type alias the parser never turned into an entity, …) are not internal, but
+  // they are not silently dropped either: they are collected verbatim into
+  // externalRelationsByType so downstream consumers can still see that the edge
+  // exists.
+  const internalRelations: Relation[] = [];
+  const externalRelationsByType: Partial<Record<RelationType, ExternalRelationEdge[]>> = {};
+  const seenExternal = new Set<string>();
+
+  for (const r of relations ?? []) {
+    const src = resolveId(r.source);
+    const tgt = resolveId(r.target);
+
+    if (src && tgt) {
+      internalRelations.push(src === r.source && tgt === r.target ? r : { ...r, source: src, target: tgt });
+      continue;
+    }
+
+    // Deduplicate by (type, raw from, raw to), keeping the first occurrence so
+    // output order follows arch.json.
+    const dedupeKey = `${r.type}\u0000${r.source}\u0000${r.target}`;
+    if (seenExternal.has(dedupeKey)) continue;
+    seenExternal.add(dedupeKey);
+
+    const bucket = externalRelationsByType[r.type] ?? [];
+    bucket.push({
+      from: r.source,
+      to: r.target,
+      sourceResolved: src !== undefined,
+      targetResolved: tgt !== undefined,
+    });
+    externalRelationsByType[r.type] = bucket;
+  }
 
   // Populate adjacency + relationsByType
   const relationsByType: Partial<Record<RelationType, [string, string][]>> = {};
@@ -84,7 +110,6 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
     typeBucket.push([r.source, r.target]);
     relationsByType[r.type] = typeBucket;
   }
-
   // SCC (Kosaraju)
   const cycles = computeCycles(entities, internalRelations, idToFile, idToName);
 
@@ -99,6 +124,7 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
     dependents,
     dependencies,
     relationsByType,
+    ...(Object.keys(externalRelationsByType).length > 0 ? { externalRelationsByType } : {}),
     fileToIds,
     cycles,
   };

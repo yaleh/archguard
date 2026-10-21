@@ -6,6 +6,26 @@
 
 import type { RelationType, CycleInfo } from '@/types/index.js';
 
+/**
+ * One relation whose source and/or target could not be resolved to a project
+ * entity, and which is therefore absent from `relationsByType` (and from the
+ * `dependencies` / `dependents` adjacency maps).
+ *
+ * `from` / `to` keep the raw ArchJSON endpoint strings: unresolved endpoints
+ * have no entity ID or file to normalise to, so the original spelling is the
+ * only faithful representation.
+ */
+export interface ExternalRelationEdge {
+  /** Raw relation source string from arch.json. */
+  from: string;
+  /** Raw relation target string from arch.json. */
+  to: string;
+  /** Whether `from` resolved to a known entity ID. */
+  sourceResolved: boolean;
+  /** Whether `to` resolved to a known entity ID. */
+  targetResolved: boolean;
+}
+
 export interface ArchIndex {
   /** Schema version for forward-compatibility checks. */
   version: string; // "1.0"
@@ -39,6 +59,18 @@ export interface ArchIndex {
 
   /** Relation type → [source ID, target ID][] (only internal relations). */
   relationsByType: Partial<Record<RelationType, [string, string][]>>;
+
+  /**
+   * Relation type → edges with at least one unresolved endpoint, in arch.json
+   * order, deduplicated by (type, from, to). Absent when there are none; older
+   * index files predating this field also omit it, so readers must treat a
+   * missing field as empty.
+   *
+   * These edges are deliberately NOT folded into `dependencies` / `dependents`:
+   * an unresolved endpoint is not an entity, and adding it would create ghost
+   * nodes in BFS traversals.
+   */
+  externalRelationsByType?: Partial<Record<RelationType, ExternalRelationEdge[]>>;
 
   /** Source file relative path → entity ID list. */
   fileToIds: Record<string, string[]>;
