@@ -2,7 +2,7 @@
 id: gap-query-relation-type-filter
 title: get_dependencies/get_dependents 无法按关系类型过滤：BFS 邻接混入
   call/composition，工具描述还声称不含 call 边
-status: ready
+status: done
 labels:
   - gap
   - query
