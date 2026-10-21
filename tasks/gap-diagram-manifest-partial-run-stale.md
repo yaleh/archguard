@@ -2,7 +2,7 @@
 id: gap-diagram-manifest-partial-run-stale
 title: 带 sources/diagrams 的 partial analyze 完全不回写 diagram-manifest：lastRun
   停在旧日期、split 产物不在册（quay 实测）
-status: ready
+status: done
 labels:
   - gap
   - defect
