@@ -29,6 +29,7 @@ import { findTsConfigPath, loadPathAliases } from '@/utils/tsconfig-finder.js';
 import { globbySync } from 'globby';
 import { ParallelParser } from '@/parser/parallel-parser.js';
 import { TypeScriptAnalyzer } from './typescript-analyzer.js';
+import { defaultExcludeNegations } from '@/cli/utils/default-excludes.js';
 
 // ---------------------------------------------------------------------------
 // Module-level helpers for extractTestStructure
@@ -190,33 +191,25 @@ export class TypeScriptPlugin implements ILanguagePlugin {
     const project = pathAliases
       ? new Project({ compilerOptions: { target: 99 /* ESNext */, allowJs: true, ...pathAliases } })
       : new Project({ compilerOptions: { target: 99 /* ESNext */, allowJs: true } });
-    const builtinExcludes = [
-      `!${workspaceRoot}/**/*.test.ts`,
-      `!${workspaceRoot}/**/*.spec.ts`,
-      `!${workspaceRoot}/**/*.test.tsx`,
-      `!${workspaceRoot}/**/*.spec.tsx`,
-      `!${workspaceRoot}/**/*.test.jsx`,
-      `!${workspaceRoot}/**/*.test.js`,
-      `!${workspaceRoot}/**/*.spec.js`,
-      `!${workspaceRoot}/**/*.spec.jsx`,
-      `!${workspaceRoot}/**/node_modules/**`,
-    ];
+    // An explicit caller list REPLACES the built-in defaults; the defaults only
+    // apply when no exclusions were supplied. Rooted at the workspace, which
+    // also preserves the `-s ./dist` escape hatch (root/**/dist/** only matches
+    // a nested dist, not the selected directory itself).
     const callerExcludes = (excludePatterns ?? []).map((p) =>
       p.startsWith('!') || path.isAbsolute(p) ? p : `!${workspaceRoot}/${p}`
     );
+    const excludes =
+      callerExcludes.length > 0 ? callerExcludes : defaultExcludeNegations(workspaceRoot);
     // Enumerate files ourselves (never following symlinks) and hand ts-morph an
     // explicit list — its own glob follows symlinks and would re-introduce them.
     // Explicit `ignorePaths` go through globby's `ignore` option: a `!`-negation
     // pattern holding a literal absolute path is silently dropped by fast-glob.
-    const files = globbySync(
-      [`${workspaceRoot}/${pattern}`, ...builtinExcludes, ...callerExcludes],
-      {
-        absolute: true,
-        onlyFiles: true,
-        followSymbolicLinks: false,
-        ignore: ignorePaths ?? [],
-      }
-    );
+    const files = globbySync([`${workspaceRoot}/${pattern}`, ...excludes], {
+      absolute: true,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+      ignore: ignorePaths ?? [],
+    });
     project.addSourceFilesAtPaths(files);
     return project;
   }

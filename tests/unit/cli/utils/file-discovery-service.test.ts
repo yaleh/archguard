@@ -5,6 +5,8 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FileDiscoveryService } from '@/cli/utils/file-discovery-service';
+import { DEFAULT_EXCLUDE_PATTERNS, defaultExcludeNegations } from '@/cli/utils/default-excludes';
+import { ConfigLoader } from '@/cli/config-loader';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -166,7 +168,7 @@ describe('FileDiscoveryService', () => {
       expect(fileNames).not.toContain('button.ts'); // Should be excluded
     });
 
-    it('should combine default and custom exclude patterns', async () => {
+    it('should let an explicit exclude list replace the defaults', async () => {
       const files = await service.discoverFiles({
         sources: [path.join(testDir, 'src')],
         baseDir: testDir,
@@ -174,11 +176,12 @@ describe('FileDiscoveryService', () => {
       });
 
       const fileNames = files.map((f) => path.basename(f));
-      // Default excludes should still work
-      expect(fileNames).not.toContain('index.test.ts');
-      expect(fileNames).not.toContain('app.spec.ts');
-      // Custom exclude
+      // Custom exclude still applies.
       expect(fileNames).not.toContain('button.ts');
+      // Negative control: the explicit list REPLACES the default set, so the
+      // default test/spec exclusion is no longer in force.
+      expect(fileNames).toContain('index.test.ts');
+      expect(fileNames).toContain('app.spec.ts');
     });
 
     it('should support multiple exclude patterns', async () => {
@@ -369,6 +372,60 @@ describe('FileDiscoveryService', () => {
 
       const hasNodeModules = files.some((f) => f.includes('node_modules'));
       expect(hasNodeModules).toBe(false);
+    });
+
+    it('should exclude dist, vendor and archive by default', async () => {
+      for (const dir of ['dist', 'vendor', 'archive']) {
+        await fs.ensureDir(path.join(testDir, dir));
+        await fs.writeFile(path.join(testDir, dir, 'generated.ts'), 'export const generated = 1;');
+      }
+
+      const files = await service.discoverFiles({ sources: [testDir] });
+      const rel = files.map((f) => path.relative(testDir, f).replace(/\\/g, '/'));
+
+      // Positive control: regular source is still discovered.
+      expect(rel).toContain('src/index.ts');
+      // Negative controls: build output / vendored / archived trees are not.
+      expect(rel.some((p) => p.startsWith('dist/'))).toBe(false);
+      expect(rel.some((p) => p.startsWith('vendor/'))).toBe(false);
+      expect(rel.some((p) => p.startsWith('archive/'))).toBe(false);
+    });
+
+    it('should still analyze an explicitly selected default-excluded directory', async () => {
+      await fs.ensureDir(path.join(testDir, 'dist'));
+      await fs.writeFile(path.join(testDir, 'dist/gen.ts'), 'export const g = 1;');
+
+      const files = await service.discoverFiles({ sources: [path.join(testDir, 'dist')] });
+
+      // The explicit source wins over the default `**/dist/**` rule.
+      expect(files.map((f) => path.basename(f))).toEqual(['gen.ts']);
+    });
+
+    it('keeps discovery, config defaults and plugin negations on one shared default set', async () => {
+      const root = path.join(testDir, 'proj');
+      await fs.ensureDir(path.join(root, 'src'));
+      await fs.writeFile(path.join(root, 'src/index.ts'), 'export const a = 1;');
+
+      // Entry 1: config schema default.
+      const config = await new ConfigLoader(root).load();
+      expect(config.exclude).toEqual([...DEFAULT_EXCLUDE_PATTERNS]);
+
+      // Entry 2: file discovery's effective defaults.
+      const svc = new FileDiscoveryService();
+      await svc.discoverFiles({ sources: [root] });
+      const defaultEntry = svc.getExcludeReport().find((e) => e.source === 'default exclude');
+      expect(defaultEntry?.rules).toEqual([...DEFAULT_EXCLUDE_PATTERNS]);
+
+      // Entry 3: TS plugin's rooted negation globs.
+      const normalizedRoot = root.replace(/\\/g, '/').replace(/\/+$/, '');
+      const pluginRules = defaultExcludeNegations(root).map((rule) =>
+        rule.replace(`!${normalizedRoot}/`, '')
+      );
+      expect(pluginRules).toEqual([...DEFAULT_EXCLUDE_PATTERNS]);
+
+      // Mechanical equality across all three entry points.
+      expect(config.exclude).toEqual(defaultEntry?.rules);
+      expect(pluginRules).toEqual(defaultEntry?.rules);
     });
   });
 });

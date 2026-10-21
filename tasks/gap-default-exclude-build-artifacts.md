@@ -1,7 +1,7 @@
 ---
 id: gap-default-exclude-build-artifacts
 title: 默认排除只挡 node_modules/test：dist/vendor/archive 被当作源码分析，实体数与所有下游指标虚高（quay 实测）
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -37,25 +37,50 @@ extra:
 
 ## AC
 
-- [ ] 合成夹具（`src/keep.ts` + `dist/gen.ts` + `vendor/lib.ts` + `archive/old/x.ts` + `node_modules/pkg/y.ts`，每个文件含可提取实体）：默认 analyze 后只出现 `keep.ts` 的实体，其余四类都不出现在 ArchJSON/summary 中
-- [ ] 逃生口：同一夹具上显式 `-s <fixture>/dist` 或 `--exclude` 只写自定义规则时，`dist` 内容仍被分析（默认集合不吞掉用户显式选择）
-- [ ] 三个入口同源：file discovery、config 默认 exclude、TS plugin `builtinExcludes` 引用同一份默认集合；单测机械断言三处展开后的集合一致（不是各写各的）
-- [ ] 显式 `-e`/config `exclude` 仍整体替换默认集合；负对照：只传一个自定义 exclude 时 `dist` 不再被自动排除
-- [ ] 真实数据验证：复制 `/data/home/yale/work/quay`（或只复制其源码 + 复制出的 `.archguard`，不改原仓库）后用默认参数复跑 analyze，`package.mmd` 不再出现 `packages_quay_dist` 与 `archive_group` 节点，并记录 entityCount 前后差值
-- [ ] `bash scripts/test.sh --for-task gap-default-exclude-build-artifacts` 与 `npm run type-check` 通过
+- [x] 合成夹具（`src/keep.ts` + `dist/gen.ts` + `vendor/lib.ts` + `archive/old/x.ts` + `node_modules/pkg/y.ts`，每个文件含可提取实体）：默认 analyze 后只出现 `keep.ts` 的实体，其余四类都不出现在 ArchJSON/summary 中
+- [x] 逃生口：同一夹具上显式 `-s <fixture>/dist` 或 `--exclude` 只写自定义规则时，`dist` 内容仍被分析（默认集合不吞掉用户显式选择）
+- [x] 三个入口同源：file discovery、config 默认 exclude、TS plugin `builtinExcludes` 引用同一份默认集合；单测机械断言三处展开后的集合一致（不是各写各的）
+- [x] 显式 `-e`/config `exclude` 仍整体替换默认集合；负对照：只传一个自定义 exclude 时 `dist` 不再被自动排除
+- [x] 真实数据验证：复制 `/data/home/yale/work/quay`（或只复制其源码 + 复制出的 `.archguard`，不改原仓库）后用默认参数复跑 analyze，`package.mmd` 不再出现 `packages_quay_dist` 与 `archive_group` 节点，并记录 entityCount 前后差值
+- [x] `bash scripts/test.sh --for-task gap-default-exclude-build-artifacts` 与 `npm run type-check` 通过
 
 ## DoD
 
 不是“加了三条 glob 字符串、单测断言数组长度”就算完成。要在合成夹具和 quay 副本上各跑一次完整 analyze：前者证明五类目录的取舍与逃生口都按预期工作，后者证明默认产物里 `packages_quay_dist` / `archive_group` / god-package 误报确实消失，并给出修复前后的实体数、包列表和 `detect_god_packages` 输出对照。
+
+## Verification Evidence
+
+合成夹具（无 `archguard.config.json` 的 cwd）：
+
+| 场景 | 结果 |
+|---|---|
+| 默认 analyze（`-s <fixture>`） | `architecture.json` 仅有 `KeepMe`；Dist/Vendor/Archive/NodeModules 实体均不存在；verbose 显示 `default exclude: 5 rule(s)` |
+| `-s <fixture>/dist` | `DistEntity` 被分析；报告 `default exclude: 4 rule(s)`（`**/dist/**` 被显式源豁免） |
+| `-e '**/nothing-matches/**'` | 5 个实体全部出现（显式 exclude 整体替换默认集合） |
+
+quay 副本（`/tmp/quay-baseline` vs `/tmp/quay-after`，同一份源码，主检出旧构建 vs 本分支构建）：
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| class/all-classes entityCount | 5830 | 5727（−103） |
+| class/all-classes relations | 7577 | 7461（−116） |
+| overview/package 包节点 | 61 | 52 |
+| `method/archive` 图 | 94 实体 | 不再生成 |
+| `package.mmd` 节点 | 含 `packages_quay_dist`、`archive_group` | 两者均无（`archive/`、`quay/dist` 全文无匹配） |
+| `detect_god_packages` 数量 | 15 | 13 |
+| 其中误报 | `archive/2026-09-07-zero-call-scripts/plugin/scripts`（fanOut=83, entityCount=89）、`packages/quay/dist`（fanOut=20, entityCount=9） | 两者均消失 |
 
 ## Touches
 
 - tasks/gap-default-exclude-build-artifacts.md
 - src/cli/utils/file-discovery-service.ts
 - src/cli/utils/default-excludes.ts
+- src/cli/utils/ignore-file-loader.ts
+- src/cli/utils/project-structure-detector.ts
 - src/cli/config-loader.ts
 - src/plugins/typescript/index.ts
 - tests/unit/cli/utils/file-discovery-service.test.ts
 - tests/unit/cli/utils/file-discovery-ignore.test.ts
 - tests/unit/cli/config-loader.test.ts
 - tests/plugins/typescript/index.test.ts
+- tests/integration/custom-config-path.test.ts

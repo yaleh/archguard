@@ -12,6 +12,7 @@ import {
   loadIgnoreRuleSets,
   type ExcludeReportEntry,
 } from './ignore-file-loader.js';
+import { defaultExcludesForSource, isDefaultExcludePatterns } from './default-excludes.js';
 
 /**
  * Options for file discovery
@@ -25,7 +26,8 @@ export interface FileDiscoveryOptions {
 
   /**
    * Exclude patterns (glob patterns)
-   * Will be combined with default excludes
+   * When provided, they REPLACE the built-in default excludes (see
+   * `default-excludes.ts`) instead of being unioned with them.
    */
   exclude?: string[];
 
@@ -41,11 +43,6 @@ export interface FileDiscoveryOptions {
    */
   extensions?: string[];
 }
-
-/**
- * Default exclude patterns
- */
-const DEFAULT_EXCLUDES = ['**/*.{test,spec}.{ts,tsx,js,jsx}', '**/node_modules/**'];
 
 /**
  * Extensions enumerated by default — mirrors TypeScriptPlugin.metadata.fileExtensions.
@@ -130,6 +127,26 @@ export class FileDiscoveryService {
   }
 
   /**
+   * True when the caller left exclusions at their default value — either no
+   * list at all, or the config schema's restatement of the shared default set.
+   */
+  private usesDefaults(exclude: string[]): boolean {
+    return exclude.length === 0 || isDefaultExcludePatterns(exclude);
+  }
+
+  /** Record (and merge, across multiple sources) the applied default rules. */
+  private recordDefaultExcludes(rules: string[]): void {
+    const existing = this.report.get('default exclude');
+    const merged = existing ? new Set([...existing.rules, ...rules]) : new Set(rules);
+    this.report.set('default exclude', {
+      source: 'default exclude',
+      count: merged.size,
+      rules: [...merged],
+      excludedFiles: existing?.excludedFiles ?? 0,
+    });
+  }
+
+  /**
    * Discover TypeScript files from configured sources
    */
   async discoverFiles(options: FileDiscoveryOptions = {}): Promise<string[]> {
@@ -141,7 +158,9 @@ export class FileDiscoveryService {
     } = options;
 
     this.report = new Map();
-    if (exclude.length > 0) {
+    // The config schema ships the default set as the value of `exclude`; that
+    // restatement is still "defaults", not a user list that replaces them.
+    if (!this.usesDefaults(exclude)) {
       this.report.set('config exclude', {
         source: 'config exclude',
         count: exclude.length,
@@ -210,11 +229,18 @@ export class FileDiscoveryService {
     // Build glob pattern for TypeScript files
     const globPattern = `${sourcePath}/**/*.${extGlob(extensions)}`;
 
-    // Combine default and custom excludes
-    const allExcludes = [...DEFAULT_EXCLUDES, ...exclude];
+    // Effective excludes: an explicit list replaces the defaults; otherwise
+    // apply the shared defaults, minus directory rules neutralized by an
+    // explicit source selection (e.g. `-s ./dist`).
+    const effectiveExcludes = this.usesDefaults(exclude)
+      ? defaultExcludesForSource(sourcePath)
+      : [...exclude];
+    if (this.usesDefaults(exclude) && effectiveExcludes.length > 0) {
+      this.recordDefaultExcludes(effectiveExcludes);
+    }
 
     // Convert excludes to glob ignore patterns
-    const ignorePatterns = allExcludes.map((pattern) => {
+    const ignorePatterns = effectiveExcludes.map((pattern) => {
       // If pattern is already negated or absolute, use as-is
       if (pattern.startsWith('!') || path.isAbsolute(pattern)) {
         return pattern;
@@ -248,7 +274,7 @@ export class FileDiscoveryService {
     return files.filter((f) => {
       const hit = findIgnoringSet(sets, f);
       if (!hit) return true;
-      this.report.get(hit.source)!.excludedFiles! += 1;
+      this.report.get(hit.source).excludedFiles += 1;
       return false;
     });
   }
@@ -265,7 +291,10 @@ export class FileDiscoveryService {
       if (!(await fs.pathExists(sourcePath)) || !(await fs.stat(sourcePath)).isDirectory()) {
         continue;
       }
-      const ignore = [...DEFAULT_EXCLUDES, ...exclude].map((p) =>
+      const excludeRules = this.usesDefaults(exclude)
+        ? defaultExcludesForSource(sourcePath)
+        : [...exclude];
+      const ignore = excludeRules.map((p) =>
         p.startsWith('!') || path.isAbsolute(p) ? p : `!${p}`
       );
       const files = await globby(

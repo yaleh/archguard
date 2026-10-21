@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
+import { DEFAULT_EXCLUDE_PATTERNS } from '@/cli/utils/default-excludes';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -177,8 +178,12 @@ describe('Story 5: Configuration File Support', () => {
 
     it('should use default exclude patterns', async () => {
       const config = await loader.load();
-      expect(config.exclude).toContain('**/*.test.ts');
-      expect(config.exclude).toContain('**/*.spec.ts');
+      // Single source of truth: the schema default IS the shared default set.
+      expect(config.exclude).toEqual([...DEFAULT_EXCLUDE_PATTERNS]);
+      expect(config.exclude).toContain('**/node_modules/**');
+      expect(config.exclude).toContain('**/dist/**');
+      expect(config.exclude).toContain('**/vendor/**');
+      expect(config.exclude).toContain('**/archive/**');
     });
 
     it('should use default cache settings', async () => {

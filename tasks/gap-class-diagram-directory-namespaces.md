@@ -35,12 +35,12 @@ Quay_Github_Layer.mmd / Quay_Native_Layer.mmd / Criterion_Fidelity_Layer.mmd 也
 
 ## AC
 
-- [ ] 渲染能力先行实测并留证：对两层嵌套 namespace 的 classDiagram 样例跑一次内置渲染，明确给出“支持/不支持”的结论与输出，再据此选择实现路线（嵌套 namespace 或按目录拆图）
-- [ ] 合成夹具（`a/b/c/` 与 `a/b/d/` 各含若干类）：class 级产物中不同子目录的类不会全部落在同一个 namespace；机械断言存在 namespace 路径深度 ≥2，或存在 ≥2 个分组且最大分组不包含全部类
-- [ ] quay 副本实跑后，Scripts 层不再由单个 namespace 承载全部 2343 类：记录修复前后每个输出文件的 namespace 数与“最大单 namespace 类数”，后者必须显著下降
-- [ ] 生成物可渲染：对修复后生成的 `.mmd` 跑一次内置渲染校验，无 parse error（拆分方案则每个文件都校验）
-- [ ] 确定性：同一输入连续生成两次，`.mmd` 字节一致
-- [ ] `bash scripts/test.sh --for-task gap-class-diagram-directory-namespaces` 与 `npm run type-check` 通过
+- [x] 渲染能力先行实测并留证：对两层嵌套 namespace 的 classDiagram 样例跑一次内置渲染，明确给出“支持/不支持”的结论与输出，再据此选择实现路线（嵌套 namespace 或按目录拆图）
+- [x] 合成夹具（`a/b/c/` 与 `a/b/d/` 各含若干类）：class 级产物中不同子目录的类不会全部落在同一个 namespace；机械断言存在 namespace 路径深度 ≥2，或存在 ≥2 个分组且最大分组不包含全部类
+- [x] quay 副本实跑后，Scripts 层不再由单个 namespace 承载全部 2343 类：记录修复前后每个输出文件的 namespace 数与“最大单 namespace 类数”，后者必须显著下降
+- [x] 生成物可渲染：对修复后生成的 `.mmd` 跑一次内置渲染校验，无 parse error（拆分方案则每个文件都校验）
+- [x] 确定性：同一输入连续生成两次，`.mmd` 字节一致
+- [x] `bash scripts/test.sh --for-task gap-class-diagram-directory-namespaces` 与 `npm run type-check` 通过
 
 ## DoD
 
@@ -51,8 +51,17 @@ Quay_Github_Layer.mmd / Quay_Native_Layer.mmd / Criterion_Fidelity_Layer.mmd 也
 - tasks/gap-class-diagram-directory-namespaces.md
 - src/mermaid/generator.ts
 - src/mermaid/grouper.ts
+- src/mermaid/types.ts
+- src/mermaid/generator-grouping.ts
+- src/mermaid/generator-formatting.ts
 - src/mermaid/auto-repair.ts
 - src/mermaid/diagram-generator.ts
+- src/cli/processors/diagram-output-router.ts
+- src/cli/processors/diagram-pipeline-runner.ts
+- src/cli/utils/diagram-index-generator.ts
+- src/types/diagram-result.ts
 - tests/unit/mermaid/generator.test.ts
 - tests/unit/mermaid/grouper.test.ts
 - tests/unit/mermaid/auto-repair.test.ts
+- tests/unit/mermaid/generator-formatting.test.ts
+- tests/unit/mermaid/class-diagram-directory-namespaces.test.ts

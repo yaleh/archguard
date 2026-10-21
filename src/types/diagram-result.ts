@@ -29,13 +29,14 @@ export interface DiagramResult {
     json?: string;
   };
   /**
-   * Every file actually written for this diagram, in deterministic order.
+   * Every source artifact actually written for this diagram (if successful).
    *
-   * Class/method diagrams over the node limit are split into one file per
-   * group (and large groups are chunked), so `paths.mmd` may be only the
-   * logical entry point. `files` lets index.md enumerate all split artifacts.
+   * `paths` only names the primary artifact; a class diagram may be split into
+   * one file per layer/namespace (and per oversized-group chunk), and a Go
+   * Atlas diagram emits one file per layer. The manifest and index.md use this
+   * list to enumerate real on-disk products.
    */
-  files?: string[];
+  outputs?: string[];
   /** Processing statistics (if successful) */
   stats?: {
     entities: number;

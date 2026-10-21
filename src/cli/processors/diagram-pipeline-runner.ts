@@ -192,7 +192,7 @@ export class DiagramPipelineRunner {
         );
       }
 
-      const generatedFiles = (await this.router.route(outputJSON, paths, diagram, pool)) ?? [];
+      const outputs = await this.router.route(outputJSON, paths, diagram, pool);
 
       if (progress) {
         progress.update(diagram.name, 90, 'Finalizing');
@@ -234,7 +234,10 @@ export class DiagramPipelineRunner {
         success: true,
         metrics: computedMetrics,
         paths: resultPaths,
-        ...(generatedFiles.length > 0 ? { files: generatedFiles } : {}),
+        // Actual source artifacts on disk (split class diagrams and Atlas layers
+        // write more than the primary path). Mocks/older routers may return
+        // undefined — normalize to an empty list.
+        outputs: Array.isArray(outputs) ? outputs : [],
         stats: {
           entities: usesModuleGraph
             ? moduleGraph.nodes.length

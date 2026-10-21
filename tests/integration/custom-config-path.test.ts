@@ -15,7 +15,7 @@
  *    (config-loader.ts:355-375, 397-412).
  *  - Zod schema defaults: workDir './.archguard', format 'mermaid',
  *    mermaid {renderer:'isomorphic', theme:'default', transparentBackground:false},
- *    exclude [test/spec globs under node_modules-glob defaults] (see source),
+ *    exclude DEFAULT_EXCLUDE_PATTERNS (shared default set; see source),
  *    cli {command:'claude', args:[], timeout:60000},
  *    cache {enabled:true, ttl:86400}, concurrency os.cpus().length,
  *    verbose false, diagrams [] (config-loader.ts:141-275).
@@ -29,6 +29,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
+import { DEFAULT_EXCLUDE_PATTERNS } from '@/cli/utils/default-excludes';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -254,7 +255,10 @@ describe('Config defaults (no config file)', () => {
       theme: 'default',
       transparentBackground: false,
     });
-    expect(config.exclude).toEqual(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']);
+    // Defaults come from the shared DEFAULT_EXCLUDE_PATTERNS single source of
+    // truth (src/cli/utils/default-excludes.ts) — test/spec, node_modules and
+    // the build/archive trees (dist, vendor, archive).
+    expect(config.exclude).toEqual([...DEFAULT_EXCLUDE_PATTERNS]);
     expect(config.cli).toEqual({ command: 'claude', args: [], timeout: 60000 });
     expect(config.verbose).toBe(false);
     expect(config.diagrams).toEqual([]);

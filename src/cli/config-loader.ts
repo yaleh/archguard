@@ -8,6 +8,7 @@ import path from 'path';
 import os from 'os';
 import { z } from 'zod';
 import { PartialProjectSemanticsSchema } from '../types/extensions/project-semantics.js';
+import { DEFAULT_EXCLUDE_PATTERNS } from './utils/default-excludes.js';
 export type { ArchGuardConfig } from '../types/config.js';
 
 /**
@@ -152,7 +153,7 @@ const configSchema = z.object({
     theme: 'default',
     transparentBackground: false,
   }),
-  exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**']),
+  exclude: z.array(z.string()).default([...DEFAULT_EXCLUDE_PATTERNS]),
 
   // ========== CLI Configuration ==========
   cli: z
