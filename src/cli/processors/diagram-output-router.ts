@@ -267,8 +267,15 @@ export class DiagramOutputRouter {
     paths: OutputPaths,
     level: DetailLevel
   ): Promise<void> {
-    const grouping = new HeuristicGrouper().group(archJSON);
-    const generator = new PlantUmlGenerator(archJSON, { level, grouping });
+    // Canonicalize BEFORE grouping. The disk cache stores an already-canonical
+    // ArchJSON (arch-json-disk-cache.ts), so a warm-cache run would otherwise
+    // group a differently-ordered ArchJSON than a cold run and emit different
+    // bytes for the same sources. Canonicalizing here makes the emitted `.puml`
+    // invariant to cache state, which is the whole point of an emit-only,
+    // deterministic format.
+    const canonicalJSON = canonicalizeArchJson(archJSON);
+    const grouping = new HeuristicGrouper().group(canonicalJSON);
+    const generator = new PlantUmlGenerator(canonicalJSON, { level, grouping });
     const puml = generator.generate();
 
     const validation = new PlantUmlStructuralValidator().validate(puml);

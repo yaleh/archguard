@@ -3,29 +3,29 @@ package "Core Layer" as Core_Layer {
   abstract class BaseEntity {
     +{abstract} getId(): string
   }
-  interface Timestamped {
-    +createdAt: Date
-  }
   enum Role {
     +Admin
     +Member
   }
-  class UserProfile {
+  interface Timestamped {
     +createdAt: Date
-    +role: Role
-    +getId(): string
-    +display(): string
-    +money(): Wallet
-  }
-  class Wallet {
-    +balance: number
   }
   class "Money$" as Money_ {
     +amount: number
   }
+  class UserProfile {
+    +createdAt: Date
+    +display(): string
+    +getId(): string
+    +money(): Wallet
+    +role: Role
+  }
+  class Wallet {
+    +balance: number
+  }
 }
-UserProfile --|> BaseEntity
-UserProfile ..|> Timestamped
 UserProfile *-- Role
 UserProfile ..> Wallet
+UserProfile ..|> Timestamped
+UserProfile --|> BaseEntity
 @enduml
