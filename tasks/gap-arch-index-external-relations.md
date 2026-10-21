@@ -2,7 +2,7 @@
 id: gap-arch-index-external-relations
 title: arch-index 静默丢弃外部/未解析端点：inheritance/implementation 指向外部基类或 type alias
   时整条边消失（claudecodeui + quay 实测）
-status: todo
+status: ready
 labels:
   - gap
   - defect
