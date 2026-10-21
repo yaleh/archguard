@@ -223,6 +223,30 @@ describe('loadEngine', () => {
     expect(engine.findEntity('Alpha')).toHaveLength(1);
   });
 
+  it('loads an old index written before entityTypes existed (backward compatible)', async () => {
+    const archJson = makeArchJson();
+    await writeManifest([scope1]);
+    const { archJsonHash } = await writeScopeArchJson(scope1.key, archJson);
+
+    // Simulate an arch-index.json from before the entityTypes field: same
+    // version/hash, but no entityTypes key.
+    const scopeDir = path.join(tmpDir, 'query', scope1.key);
+    const legacyIndex = buildArchIndex(archJson, archJsonHash) as unknown as Record<
+      string,
+      unknown
+    >;
+    delete legacyIndex.entityTypes;
+    await fs.writeJson(path.join(scopeDir, 'arch-index.json'), legacyIndex);
+
+    // Loading must not throw, and the index must be used as-is (not rebuilt).
+    const { engine } = await loadEngine(tmpDir);
+    expect(engine.findEntity('Alpha')).toHaveLength(1);
+
+    const loadedIndex = await fs.readJson(path.join(scopeDir, 'arch-index.json'));
+    expect(loadedIndex.entityTypes).toBeUndefined();
+    expect(loadedIndex.archJsonHash).toBe(archJsonHash);
+  });
+
   it('rebuilds index when hash mismatches', async () => {
     const archJson = makeArchJson();
     await writeManifest([scope1]);

@@ -4,7 +4,7 @@
  * Built by ArchIndexBuilder from a rawArchJSON; persisted as arch-index.json.
  */
 
-import type { RelationType, CycleInfo } from '@/types/index.js';
+import type { RelationType, CycleInfo, EntityType } from '@/types/index.js';
 
 /**
  * One relation whose source and/or target could not be resolved to a project
@@ -50,6 +50,18 @@ export interface ArchIndex {
 
   /** entity ID → entity name (for display without loading full arch.json). */
   idToName: Record<string, string>;
+
+  /**
+   * entity ID → entity type ('class' / 'interface' / 'function' / 'enum' / …),
+   * in arch.json entity order. Covers exactly the same entity set as
+   * `idToName`, so downstream consumers can decide a UML stereotype without
+   * re-reading arch.json.
+   *
+   * Optional for backward compatibility: index files written before this field
+   * existed omit it. Readers must treat a missing field as empty. This is why
+   * ARCH_INDEX_VERSION is not bumped — old and new indexes load alike.
+   */
+  entityTypes?: Record<string, EntityType>;
 
   /** entity ID → list of entity IDs that depend on it (reverse edges). */
   dependents: Record<string, string[]>;

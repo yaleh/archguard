@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
+import type { ArchIndex } from '@/cli/query/arch-index.js';
 import type { ArchJSON, Entity, Relation, RelationType } from '@/types/index.js';
 
 // ── helpers ──────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ describe('buildArchIndex', () => {
     expect(index.dependents).toEqual({});
     expect(index.dependencies).toEqual({});
     expect(index.relationsByType).toEqual({});
+    expect(index.entityTypes).toEqual({});
     expect(index.fileToIds).toEqual({});
     expect(index.cycles).toEqual([]);
     expect(index.generatedAt).toBeTruthy();
@@ -76,6 +78,7 @@ describe('buildArchIndex', () => {
     expect(index.idToFile).toEqual({ Foo: 'src/foo.ts' });
     expect(index.nameToIds).toEqual({ Foo: ['Foo'] });
     expect(index.fileToIds).toEqual({ 'src/foo.ts': ['Foo'] });
+    expect(index.entityTypes).toEqual({ Foo: 'class' });
     expect(index.cycles).toEqual([]);
   });
 
@@ -503,6 +506,55 @@ describe('buildArchIndex', () => {
 
       expect(index.externalRelationsByType).toBeUndefined();
       expect('externalRelationsByType' in index).toBe(false);
+    });
+  });
+
+  describe('entityTypes', () => {
+    // Fixture deliberately covers all four built-in kinds a UML class diagram
+    // needs to stereotype: class, interface, function, enum.
+    const entities: Entity[] = [
+      makeEntity({ id: 'src/a.ts.AClass', name: 'AClass', type: 'class' }),
+      makeEntity({ id: 'src/b.ts.IThing', name: 'IThing', type: 'interface' }),
+      makeEntity({ id: 'src/c.ts.doWork', name: 'doWork', type: 'function' }),
+      makeEntity({ id: 'src/d.ts.Color', name: 'Color', type: 'enum' }),
+    ];
+
+    it('records the type of every entity, in arch.json order', () => {
+      const archJson = makeArchJson(entities);
+      const index = buildArchIndex(archJson, 'h');
+
+      // Full comparison, not a sample: one entry per entity, same key set.
+      expect(Object.keys(index.entityTypes ?? {})).toEqual(entities.map((e) => e.id));
+
+      const expected = Object.fromEntries(entities.map((e) => [e.id, e.type]));
+      expect(index.entityTypes).toEqual(expected);
+
+      for (const entity of archJson.entities) {
+        expect(index.entityTypes?.[entity.id]).toBe(entity.type);
+      }
+    });
+
+    it('covers exactly the same entity set as idToName', () => {
+      const index = buildArchIndex(makeArchJson(entities), 'h');
+
+      expect(Object.keys(index.entityTypes ?? {}).sort()).toEqual(
+        Object.keys(index.idToName).sort()
+      );
+    });
+
+    it('is optional: an old index without entityTypes still reads as a valid ArchIndex', () => {
+      const index = buildArchIndex(makeArchJson([makeEntity({ id: 'A', name: 'A' })]), 'h');
+
+      // Simulate an arch-index.json written before the field existed.
+      const legacy = { ...index } as Record<string, unknown>;
+      delete legacy.entityTypes;
+
+      const reloaded = legacy as unknown as ArchIndex;
+      expect(reloaded.entityTypes).toBeUndefined();
+      // Readers must treat a missing field as empty, not throw.
+      expect(reloaded.entityTypes ?? {}).toEqual({});
+      // Everything else is unchanged.
+      expect(reloaded.idToName).toEqual({ A: 'A' });
     });
   });
 });

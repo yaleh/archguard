@@ -3,7 +3,7 @@
  */
 
 import path from 'path';
-import type { ArchJSON, Relation, RelationType, CycleInfo } from '@/types/index.js';
+import type { ArchJSON, Relation, RelationType, CycleInfo, EntityType } from '@/types/index.js';
 import { ARCH_INDEX_VERSION } from './arch-index.js';
 import type { ArchIndex, ExternalRelationEdge } from './arch-index.js';
 
@@ -22,6 +22,7 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
   const nameToIds: Record<string, string[]> = {};
   const idToFile: Record<string, string> = {};
   const idToName: Record<string, string> = {};
+  const entityTypes: Record<string, EntityType> = {};
   const dependents: Record<string, string[]> = {};
   const dependencies: Record<string, string[]> = {};
   const fileToIds: Record<string, string[]> = {};
@@ -41,6 +42,9 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
 
     // idToName
     idToName[entity.id] = entity.name;
+
+    // entityTypes (same entity set as idToName, arch.json order preserved)
+    entityTypes[entity.id] = entity.type;
 
     // seed empty adjacency lists
     dependents[entity.id] = [];
@@ -121,6 +125,7 @@ export function buildArchIndex(archJson: ArchJSON, archJsonHash: string): ArchIn
     nameToIds,
     idToFile,
     idToName,
+    entityTypes,
     dependents,
     dependencies,
     relationsByType,
