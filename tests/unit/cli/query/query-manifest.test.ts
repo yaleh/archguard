@@ -101,24 +101,33 @@ describe('QueryScopeEntry generatedAt', () => {
 
   it('keeps old manifests (no generatedAt on entries) readable', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-manifest-'));
+    const legacySource = path.join(dir, 'legacy-src');
+    fs.ensureDirSync(legacySource);
     try {
       const legacy: QueryManifest = {
         version: '1.0',
         generatedAt: '2026-09-06T00:00:00.000Z',
         globalScopeKey: base.key,
-        scopes: [base],
+        scopes: [{ ...base, sources: [legacySource] }],
       };
       await fs.outputJson(path.join(dir, 'query', 'manifest.json'), legacy);
+      // A real manifest entry always has its payload next to it.
+      await fs.outputJson(path.join(dir, 'query', base.key, 'arch.json'), makeArch());
 
       const loaded = (await fs.readJson(path.join(dir, 'query', 'manifest.json'))) as QueryManifest;
       expect(loaded.scopes[0].generatedAt).toBeUndefined();
 
-      // Merging a new scope into a legacy manifest must work
+      // Merging a new scope into a legacy manifest must work. The legacy entry's
+      // identity is re-derived from its (now existing) source, so its key becomes
+      // the canonical hash rather than the historical string.
       await persistQueryScopes(dir, [
         { key: 'new', sources: ['/p/new'], archJson: makeArch(), kind: 'parsed' },
       ]);
       const merged = (await fs.readJson(path.join(dir, 'query', 'manifest.json'))) as QueryManifest;
-      expect(merged.scopes.map((s) => s.key)).toEqual(['abcd1234', 'new']);
+      expect(merged.scopes).toHaveLength(2);
+      const legacyEntry = merged.scopes.find((s) => s.sources[0] === legacySource);
+      expect(legacyEntry).toBeDefined();
+      expect(legacyEntry?.generatedAt).toBeUndefined();
       expect(merged.scopes.find((s) => s.key === 'new')?.generatedAt).toBeDefined();
     } finally {
       await fs.remove(dir);

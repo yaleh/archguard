@@ -2,7 +2,7 @@
 id: gap-query-scope-replace-on-reanalyze
 title: query scope 只按当前路径串算身份、旧条目永不归一：同一目录留下 26 个 scope（/home vs /data、相对 vs
   绝对），replace 不 accumulate
-status: ready
+status: done
 labels:
   - gap
   - defect
