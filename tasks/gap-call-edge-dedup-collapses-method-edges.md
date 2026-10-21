@@ -1,7 +1,7 @@
 ---
 id: gap-call-edge-dedup-collapses-method-edges
 title: call 边被类级去重键二次合并：extractor 原始 9 条归档只剩 2 条，findCallers 方法级过滤丢调用者（quay 实测）
-status: todo
+status: ready
 labels:
   - gap
   - defect
