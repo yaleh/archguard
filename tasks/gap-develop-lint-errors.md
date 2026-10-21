@@ -18,11 +18,11 @@ CI develop 工作流（0.1.42 发布后的 develop push）在 Lint 步红了：`
 
 ## AC
 
-- [ ] `npm run lint:fix` 修掉全部 auto-fixable 错误（prettier/prettier + no-unnecessary-type-assertion）
-- [ ] `src/plugins/shared/parser-runtime.ts` 删除未使用的 `ParserBackend`（:33）与 `ParserRuntimeKind`（:44）导入
-- [ ] `tests/fixtures/plantuml/src/core.ts` 的 `BaseEntity<T>` 未用泛型 `T` 修复（改名 `_T` 或 eslint-disable，保留泛型 fixture 语义；若 plantuml golden 因改名漂移则同步更新）
-- [ ] `npm run lint` 退出 0（0 errors，CI Lint 步的精确门）
-- [ ] 改动的测试文件全绿：`npm test` 通过
+- [x] `npm run lint:fix` 修掉全部 auto-fixable 错误（prettier/prettier + no-unnecessary-type-assertion）
+- [x] `src/plugins/shared/parser-runtime.ts` 删除未使用的 `ParserBackend`（:33）与 `ParserRuntimeKind`（:44）导入
+- [x] `tests/fixtures/plantuml/src/core.ts` 的 `BaseEntity<T>` 未用泛型 `T` 修复（改名 `_T` 或 eslint-disable，保留泛型 fixture 语义；若 plantuml golden 因改名漂移则同步更新）
+- [x] `npm run lint` 退出 0（0 errors，CI Lint 步的精确门）
+- [x] 改动的测试文件全绿：`npm test` 通过
 
 ## DoD
 
