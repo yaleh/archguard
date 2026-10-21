@@ -62,3 +62,5 @@ v1.x 的 PlantUML 由 LLM 整份生成，复杂类图渲染失败率 40–60%，
 - tests/fixtures/plantuml/src/core.ts
 - tests/fixtures/plantuml/src/user.ts
 - tasks/gap-plantuml-deterministic-generation.md
+- tests/integration/custom-config-path.test.ts
+- tests/unit/config-mermaid.test.ts
