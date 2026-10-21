@@ -37,14 +37,14 @@ extra:
 
 ## AC
 
-- [ ] 夹具：`class A { constructor(private repo: Repo) {} }` 产出 `A -> Repo` 的 `aggregation`；`class B { private x = new Foo(); }` 仍产出 `composition`；方法参数/返回仍产出 `dependency`
-- [ ] 同一对 (source,target) 不会同时出现 composition 与 aggregation（无重复边）
-- [ ] 现有 TypeScript 关系测试按新语义更新并通过；非 TS 插件（C++ 的指针/值分类）行为不变
-- [ ] 文档：`docs/dev-guide/archjson-levels.md` 有「关系类型判定口径」表，覆盖全部 RelationType，并明确 composition 是「字段持有、生命周期未知」、aggregation 是「构造注入/弱持有」，附 dependency 与它们的边界示例
-- [ ] 真实数据：复制 claudecodeui `93e0a992` 的 arch.json 重跑关系提取，记录 composition → aggregation 的迁移条数，并与构造参数数量对得上
-- [ ] 渲染不回归：Mermaid 对 aggregation 产出 `o--`、composition 产出 `*--`（现有 generator 测试覆盖）
-- [ ] 明确边界：不做字段级强/弱推断、不重命名类型、不改变其他语言插件
-- [ ] `bash scripts/test.sh --for-task gap-ts-relation-semantics-aggregation` 与 `npm run type-check` 通过
+- [x] 夹具：`class A { constructor(private repo: Repo) {} }` 产出 `A -> Repo` 的 `aggregation`；`class B { private x = new Foo(); }` 仍产出 `composition`；方法参数/返回仍产出 `dependency`
+- [x] 同一对 (source,target) 不会同时出现 composition 与 aggregation（无重复边）
+- [x] 现有 TypeScript 关系测试按新语义更新并通过；非 TS 插件（C++ 的指针/值分类）行为不变
+- [x] 文档：`docs/dev-guide/archjson-levels.md` 有「关系类型判定口径」表，覆盖全部 RelationType，并明确 composition 是「字段持有、生命周期未知」、aggregation 是「构造注入/弱持有」，附 dependency 与它们的边界示例
+- [x] 真实数据：复制 claudecodeui `93e0a992` 的 arch.json 重跑关系提取，记录 composition → aggregation 的迁移条数，并与构造参数数量对得上
+- [x] 渲染不回归：Mermaid 对 aggregation 产出 `o--`、composition 产出 `*--`（现有 generator 测试覆盖）
+- [x] 明确边界：不做字段级强/弱推断、不重命名类型、不改变其他语言插件
+- [x] `bash scripts/test.sh --for-task gap-ts-relation-semantics-aggregation` 与 `npm run type-check` 通过
 
 ## DoD
 
