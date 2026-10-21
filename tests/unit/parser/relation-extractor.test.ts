@@ -1,6 +1,7 @@
 /**
  * Unit tests for Relation Extraction - Story 5
- * Testing relationship extraction (inheritance, implementation, composition, dependency)
+ * Testing relationship extraction (inheritance, implementation, composition,
+ * aggregation, dependency)
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -131,11 +132,11 @@ describe('RelationExtractor - Composition', () => {
     });
   });
 
-  it('should detect composition in constructor', () => {
+  it('should materialize a field initialized with new as composition', () => {
     const code = `
-      class Database {}
-      class UserService {
-        constructor(private db: Database) {}
+      class Foo {}
+      class B {
+        private x = new Foo();
       }
     `;
 
@@ -144,9 +145,72 @@ describe('RelationExtractor - Composition', () => {
     expect(relations).toContainEqual({
       id: expect.any(String),
       type: 'composition',
-      source: 'UserService',
-      target: 'Database',
+      source: 'B',
+      target: 'Foo',
     });
+  });
+});
+
+describe('RelationExtractor - Aggregation', () => {
+  it('should detect aggregation in constructor (parameter property)', () => {
+    const code = `
+      class Repo {}
+      class A {
+        constructor(private repo: Repo) {}
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual({
+      id: expect.any(String),
+      type: 'aggregation',
+      source: 'A',
+      target: 'Repo',
+    });
+  });
+
+  it('should detect aggregation for a plain (non-property) constructor parameter', () => {
+    const code = `
+      class Repo {}
+      class Service {
+        constructor(repo: Repo) {}
+      }
+    `;
+
+    const relations = extractor.extract(code);
+
+    expect(relations).toContainEqual({
+      id: expect.any(String),
+      type: 'aggregation',
+      source: 'Service',
+      target: 'Repo',
+    });
+  });
+
+  it('should not emit both composition and aggregation for the same pair', () => {
+    const code = `
+      class Repo {}
+      class Service {
+        private repo: Repo;
+        constructor(repo: Repo) {
+          this.repo = repo;
+        }
+      }
+    `;
+
+    const relations = extractor.extract(code);
+    const pairRelations = relations.filter(
+      (r) =>
+        r.source === 'Service' &&
+        r.target === 'Repo' &&
+        (r.type === 'composition' || r.type === 'aggregation')
+    );
+
+    // The field-level relation wins; the constructor injection of the same
+    // type must not add a second, conflicting ownership edge.
+    expect(pairRelations).toHaveLength(1);
+    expect(pairRelations[0].type).toBe('composition');
   });
 });
 
