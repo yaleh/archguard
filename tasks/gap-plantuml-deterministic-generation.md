@@ -2,7 +2,7 @@
 id: gap-plantuml-deterministic-generation
 title: PlantUML 确定性生成：ArchJSON → PlantUML 类图 .puml emitter（复用 grouper，renderer
   facade 去 Mermaid 化）
-status: todo
+status: ready
 labels:
   - gap
 parent: null
