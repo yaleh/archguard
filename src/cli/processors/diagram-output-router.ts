@@ -138,13 +138,17 @@ export class DiagramOutputRouter {
    * 4. mermaid + tsAnalysis.moduleGraph + level=package → generateTsModuleGraphOutput
    * 5. mermaid + language=cpp + level=package → generateCppPackageOutput
    * 6. mermaid (all other) → generateDefaultOutput (MermaidDiagramGenerator)
+   *
+   * @returns every source artifact actually written (.mmd / .puml / .json).
+   *          Class diagrams split into several files and Atlas diagrams emit one
+   *          file per layer, so this may be longer than the primary `paths`.
    */
   async route(
     archJSON: ArchJSON,
     paths: OutputPaths,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const format = diagram.format ?? this.globalConfig.format;
     const level = diagram.level;
 
@@ -156,25 +160,27 @@ export class DiagramOutputRouter {
       // languages / levels pass through unchanged.
       const outputJson = level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
       await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
-      return;
+      return [paths.paths.json];
     }
 
     // Step 2: plantuml format — deterministic emit-only .puml output
     if (format === 'plantuml') {
       await this.generatePlantUmlOutput(archJSON, paths, level);
-      return;
+      return [paths.paths.puml];
     }
 
     // Step 2: mermaid routing — based on ArchJSON extensions and archJSON.language
     // NOTE: uses archJSON.extensions / archJSON.language, NOT diagram.language
     if (new ExtensionAccessor(archJSON).hasAtlasExtension()) {
-      await this.generateAtlasOutput(archJSON, paths, diagram, pool);
+      return await this.generateAtlasOutput(archJSON, paths, diagram, pool);
     } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
       await this.generateTsModuleGraphOutput(archJSON, paths, diagram, pool);
+      return [paths.paths.mmd];
     } else if (level === 'package' && archJSON.language === 'cpp') {
       await this.generateCppPackageOutput(archJSON, paths, pool);
+      return [paths.paths.mmd];
     } else {
-      await this.generateDefaultOutput(archJSON, paths, level, diagram, pool);
+      return await this.generateDefaultOutput(archJSON, paths, level, diagram, pool);
     }
   }
 
@@ -298,7 +304,7 @@ export class DiagramOutputRouter {
     level: DetailLevel,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const renderOptions = this.buildRenderOptions();
     const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
 
@@ -349,6 +355,10 @@ export class DiagramOutputRouter {
 
       await this.renderCache.writeHash(job.outputPath.source, job.diagramCode, renderOptions);
     }
+
+    // Every job's source was written above (split diagrams write one .mmd per
+    // namespace group), so the real on-disk product set is exactly this list.
+    return jobs.map((job) => job.outputPath.source);
   }
 
   /**
@@ -366,7 +376,7 @@ export class DiagramOutputRouter {
     paths: OutputPaths,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
@@ -445,6 +455,9 @@ export class DiagramOutputRouter {
     await fs.writeJson(atlasJsonPath, atlas, { spaces: 2 });
     console.error(`  Atlas JSON: ${atlasJsonPath}`);
     console.error(`\n  Atlas layers: ${availableLayers.join(', ')}`);
+
+    // One .mmd per rendered layer is the source-artifact set for this diagram.
+    return availableLayers.map((layer) => `${basePath}-${layer}.mmd`);
   }
 
   /**

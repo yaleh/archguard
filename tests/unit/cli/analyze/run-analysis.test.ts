@@ -12,6 +12,7 @@ const normalizeToDiagramsMock = vi.fn();
 const readManifestMock = vi.fn();
 const cleanStaleDiagramsMock = vi.fn();
 const writeManifestMock = vi.fn();
+const mergeManifestMock = vi.fn();
 const persistQueryScopesMock = vi.fn();
 const processAllMock = vi.fn();
 const getQuerySourceGroupsMock = vi.fn();
@@ -46,6 +47,7 @@ vi.mock('@/cli/cache/diagram-manifest.js', () => ({
   readManifest: readManifestMock,
   cleanStaleDiagrams: cleanStaleDiagramsMock,
   writeManifest: writeManifestMock,
+  mergeManifest: mergeManifestMock,
 }));
 
 vi.mock('@/cli/metrics-history-writer.js', () => ({
@@ -173,6 +175,7 @@ describe('runAnalysis', () => {
     readManifestMock.mockReset();
     cleanStaleDiagramsMock.mockReset();
     writeManifestMock.mockReset();
+    mergeManifestMock.mockReset();
     persistQueryScopesMock.mockReset();
     processAllMock.mockReset();
     getQuerySourceGroupsMock.mockReset();
@@ -226,6 +229,7 @@ describe('runAnalysis', () => {
     readManifestMock.mockResolvedValue(null);
     cleanStaleDiagramsMock.mockResolvedValue([]);
     writeManifestMock.mockResolvedValue(undefined);
+    mergeManifestMock.mockResolvedValue(undefined);
     persistQueryScopesMock.mockResolvedValue([persistedEntry]);
     processAllMock.mockResolvedValue([successfulResult]);
     getQuerySourceGroupsMock.mockReturnValue([
@@ -474,7 +478,7 @@ describe('runAnalysis', () => {
     expect(cleanStaleDiagramsMock).not.toHaveBeenCalled();
   });
 
-  it('skips writeManifest when --diagrams level filter is set (partial run)', async () => {
+  it('merges the manifest when --diagrams level filter is set (partial run)', async () => {
     const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
     await runAnalysis({
       sessionRoot: '/tmp/project',
@@ -483,10 +487,17 @@ describe('runAnalysis', () => {
       reporter: silentReporter(),
     });
 
+    expect(mergeManifestMock).toHaveBeenCalledTimes(1);
+    expect(mergeManifestMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard/cache',
+      ['class/all-classes'],
+      '/tmp/project/.archguard/output',
+      {}
+    );
     expect(writeManifestMock).not.toHaveBeenCalled();
   });
 
-  it('skips writeManifest when --sources override is set (partial run)', async () => {
+  it('merges the manifest when --sources override is set (partial run)', async () => {
     const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
     await runAnalysis({
       sessionRoot: '/tmp/project',
@@ -495,7 +506,38 @@ describe('runAnalysis', () => {
       reporter: silentReporter(),
     });
 
+    expect(mergeManifestMock).toHaveBeenCalledTimes(1);
+    expect(mergeManifestMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard/cache',
+      ['class/all-classes'],
+      '/tmp/project/.archguard/output',
+      {}
+    );
     expect(writeManifestMock).not.toHaveBeenCalled();
+  });
+
+  it('records each successful diagram’s actual output artifacts', async () => {
+    processAllMock.mockResolvedValue([
+      {
+        ...successfulResult,
+        outputs: ['/tmp/project/.archguard/output/class/Quay_Layer.mmd'],
+      },
+    ]);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: { sources: ['./src'] },
+      reporter: silentReporter(),
+    });
+
+    expect(mergeManifestMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard/cache',
+      ['class/all-classes'],
+      '/tmp/project/.archguard/output',
+      { 'class/all-classes': ['/tmp/project/.archguard/output/class/Quay_Layer.mmd'] }
+    );
   });
 
   it('runs cleanStaleDiagrams and writeManifest on a full run (no diagrams, no sources)', async () => {
@@ -515,6 +557,39 @@ describe('runAnalysis', () => {
 
     expect(cleanStaleDiagramsMock).toHaveBeenCalledTimes(1);
     expect(writeManifestMock).toHaveBeenCalledTimes(1);
+    expect(mergeManifestMock).not.toHaveBeenCalled();
+  });
+
+  it('full run passes collected outputs to writeManifest', async () => {
+    processAllMock.mockResolvedValue([
+      {
+        ...successfulResult,
+        outputs: [
+          '/tmp/project/.archguard/output/class/A_Layer.mmd',
+          '/tmp/project/.archguard/output/class/B_Layer.mmd',
+        ],
+      },
+    ]);
+
+    const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+    await runAnalysis({
+      sessionRoot: '/tmp/project',
+      workDir: '/tmp/project/.archguard',
+      cliOptions: {},
+      reporter: silentReporter(),
+    });
+
+    expect(writeManifestMock).toHaveBeenCalledWith(
+      '/tmp/project/.archguard/cache',
+      ['class/all-classes'],
+      '/tmp/project/.archguard/output',
+      {
+        'class/all-classes': [
+          '/tmp/project/.archguard/output/class/A_Layer.mmd',
+          '/tmp/project/.archguard/output/class/B_Layer.mmd',
+        ],
+      }
+    );
   });
 
   it('merges sidecar architecturalLayers into config.projectSemantics', async () => {

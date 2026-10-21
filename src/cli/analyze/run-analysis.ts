@@ -10,7 +10,12 @@ import { DiagramIndexGenerator } from '../utils/diagram-index-generator.js';
 import { ParseCache } from '@/parser/parse-cache.js';
 import { persistQueryScopes } from '../query/query-artifacts.js';
 import type { QueryScopeEntry } from '../query/query-manifest.js';
-import { readManifest, writeManifest, cleanStaleDiagrams } from '../cache/diagram-manifest.js';
+import {
+  readManifest,
+  writeManifest,
+  mergeManifest,
+  cleanStaleDiagrams,
+} from '../cache/diagram-manifest.js';
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { TestAnalyzer } from '@/analysis/test-analyzer.js';
@@ -140,6 +145,20 @@ function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
   const hasLevelFilter = Array.isArray(cliOptions.diagrams) && cliOptions.diagrams.length > 0;
   const hasSourceOverride = Array.isArray(cliOptions.sources) && cliOptions.sources.length > 0;
   return hasLevelFilter || hasSourceOverride;
+}
+
+/**
+ * Build the manifest's per-diagram artifact map from successful results.
+ * Diagrams that wrote no source artifact are omitted.
+ */
+function collectDiagramOutputs(results: DiagramResult[]): Record<string, string[]> {
+  const outputs: Record<string, string[]> = {};
+  for (const result of results) {
+    if (Array.isArray(result.outputs) && result.outputs.length > 0) {
+      outputs[result.name] = result.outputs;
+    }
+  }
+  return outputs;
 }
 
 export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnalysisResult> {
@@ -304,10 +323,20 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     }
   }
 
-  const successfulNames = results.filter((r) => r.success).map((r) => r.name);
-  if (successfulNames.length > 0 && !partial) {
+  const successfulResults = results.filter((r) => r.success);
+  const successfulNames = successfulResults.map((r) => r.name);
+  if (successfulNames.length > 0) {
     try {
-      await writeManifest(cacheDir, successfulNames, outputDir);
+      const outputs = collectDiagramOutputs(successfulResults);
+      if (partial) {
+        // A partial run only knows about the diagrams it processed: refresh
+        // lastRun and merge its entries, but never clean other diagrams' files.
+        await mergeManifest(cacheDir, successfulNames, outputDir, outputs);
+      } else {
+        // Full run: this run's success list is authoritative (stale cleanup for
+        // diagrams that disappeared already ran above).
+        await writeManifest(cacheDir, successfulNames, outputDir, outputs);
+      }
     } catch (err) {
       if (config.verbose) {
         const msg = err instanceof Error ? err.message : String(err);

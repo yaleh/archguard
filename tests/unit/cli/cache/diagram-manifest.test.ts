@@ -5,6 +5,7 @@ import os from 'os';
 import {
   readManifest,
   writeManifest,
+  mergeManifest,
   cleanStaleDiagrams,
   clearRenderHashes,
   MANIFEST_VERSION,
@@ -93,6 +94,108 @@ describe('diagram-manifest', () => {
 
       const result = await readManifest(cacheDir);
       expect(result?.outputDir).toBe(path.resolve(relativeOutputDir));
+    });
+
+    it('records per-diagram output artifacts and drops entries for other diagrams', async () => {
+      const mmdA = path.join(outputDir, 'class', 'A_Layer.mmd');
+      const mmdB = path.join(outputDir, 'class', 'B_Layer.mmd');
+      await writeManifest(cacheDir, ['class/all-classes'], outputDir, {
+        'class/all-classes': [mmdA, mmdB],
+        'other/diagram': [path.join(outputDir, 'other.mmd')],
+      });
+
+      const result = await readManifest(cacheDir);
+      expect(result?.outputs).toEqual({ 'class/all-classes': [mmdA, mmdB] });
+    });
+
+    it('omits outputs when none were provided (backward compatibility)', async () => {
+      await writeManifest(cacheDir, ['overview/package'], outputDir);
+
+      const result = await readManifest(cacheDir);
+      expect(result?.outputs).toBeUndefined();
+    });
+  });
+
+  // ── mergeManifest ──────────────────────────────────────────────────────────
+
+  describe('mergeManifest', () => {
+    it('creates a manifest when none exists', async () => {
+      const mmd = path.join(outputDir, 'class', 'A_Layer.mmd');
+      await mergeManifest(cacheDir, ['class/all-classes'], outputDir, {
+        'class/all-classes': [mmd],
+      });
+
+      const result = await readManifest(cacheDir);
+      expect(result?.diagrams).toEqual(['class/all-classes']);
+      expect(result?.outputs).toEqual({ 'class/all-classes': [mmd] });
+      expect(result?.lastRun).toBeTruthy();
+    });
+
+    it('preserves existing entries and refreshes lastRun', async () => {
+      await fs.writeJson(path.join(cacheDir, MANIFEST_FILENAME), {
+        version: MANIFEST_VERSION,
+        lastRun: '2026-01-01T00:00:00.000Z',
+        outputDir,
+        diagrams: ['overview/package', 'class/all-classes'],
+        outputs: {
+          'overview/package': [path.join(outputDir, 'overview', 'package.mmd')],
+        },
+      });
+      const before = Date.now();
+
+      const partialMmd = path.join(outputDir, 'class', 'A_Layer.mmd');
+      await mergeManifest(cacheDir, ['class/all-classes'], outputDir, {
+        'class/all-classes': [partialMmd],
+      });
+
+      const result = await readManifest(cacheDir);
+      expect(result?.diagrams).toEqual(['overview/package', 'class/all-classes']);
+      // Existing entry survives instead of the partial run overwriting the list.
+      expect(result?.outputs?.['overview/package']).toEqual([
+        path.join(outputDir, 'overview', 'package.mmd'),
+      ]);
+      expect(result?.outputs?.['class/all-classes']).toEqual([partialMmd]);
+      expect(new Date(result!.lastRun).getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it('appends a new diagram to the existing entry list', async () => {
+      await writeManifest(cacheDir, ['overview/package'], outputDir);
+
+      await mergeManifest(cacheDir, ['method/core'], outputDir);
+
+      const result = await readManifest(cacheDir);
+      expect(result?.diagrams).toEqual(['overview/package', 'method/core']);
+    });
+
+    it('replaces the outputs of a diagram that runs again', async () => {
+      await writeManifest(cacheDir, ['class/all-classes'], outputDir, {
+        'class/all-classes': [path.join(outputDir, 'old.mmd')],
+      });
+
+      const replacement = path.join(outputDir, 'class', 'New_Layer.mmd');
+      await mergeManifest(cacheDir, ['class/all-classes'], outputDir, {
+        'class/all-classes': [replacement],
+      });
+
+      const result = await readManifest(cacheDir);
+      expect(result?.outputs?.['class/all-classes']).toEqual([replacement]);
+      // Same entry, not duplicated.
+      expect(result?.diagrams).toEqual(['class/all-classes']);
+    });
+
+    it('does not delete files for diagrams that did not participate', async () => {
+      const untouched = path.join(outputDir, 'overview', 'package.mmd');
+      await fs.ensureDir(path.dirname(untouched));
+      await fs.writeFile(untouched, 'graph LR\n  A');
+      await writeManifest(cacheDir, ['overview/package'], outputDir, {
+        'overview/package': [untouched],
+      });
+
+      await mergeManifest(cacheDir, ['class/all-classes'], outputDir);
+
+      expect(await fs.pathExists(untouched)).toBe(true);
+      const result = await readManifest(cacheDir);
+      expect(result?.diagrams).toContain('overview/package');
     });
   });
 
@@ -207,6 +310,29 @@ describe('diagram-manifest', () => {
         false
       );
       expect(await fs.pathExists(path.join(atlasDir, 'architecture-capability.mmd'))).toBe(false);
+    });
+
+    it('removes split outputs recorded in the manifest (names not derived from the diagram)', async () => {
+      const classDir = path.join(outputDir, 'quay', 'class');
+      await fs.ensureDir(classDir);
+      const quayLayer = path.join(classDir, 'Quay_Layer.mmd');
+      const scriptsLayer = path.join(classDir, 'Scripts_Layer.mmd');
+      await fs.writeFile(quayLayer, 'classDiagram\n  class A');
+      await fs.writeFile(`${quayLayer}.render-hash`, 'hash');
+      await fs.writeFile(path.join(classDir, 'Quay_Layer.svg'), '<svg/>');
+      await fs.writeFile(scriptsLayer, 'classDiagram\n  class B');
+
+      const manifest: DiagramManifest = {
+        ...makeManifest(['quay/class/all-classes']),
+        outputs: { 'quay/class/all-classes': [quayLayer, scriptsLayer] },
+      };
+      const stale = await cleanStaleDiagrams([], manifest, outputDir);
+
+      expect(stale).toEqual(['quay/class/all-classes']);
+      expect(await fs.pathExists(quayLayer)).toBe(false);
+      expect(await fs.pathExists(`${quayLayer}.render-hash`)).toBe(false);
+      expect(await fs.pathExists(path.join(classDir, 'Quay_Layer.svg'))).toBe(false);
+      expect(await fs.pathExists(scriptsLayer)).toBe(false);
     });
   });
 
