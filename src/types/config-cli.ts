@@ -1,11 +1,11 @@
-import type { OutputFormat } from './config-mermaid.js';
+import type { OutputFormats } from './config-mermaid.js';
 
 export interface CLIOptions {
   config?: string;
   diagrams?: string[];
   sources?: string[];
   lang?: string;
-  format?: OutputFormat;
+  formats?: OutputFormats;
   outputDir?: string;
   workDir?: string;
   cacheDir?: string;

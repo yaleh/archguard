@@ -57,7 +57,7 @@ describe('MCP cross-project queries', () => {
       await fs.remove(path.join(projectB, '.archguard'));
       const analyzeResult = await client.callTool({
         name: 'archguard_analyze',
-        arguments: { projectRoot: projectB, format: 'json' },
+        arguments: { projectRoot: projectB, formats: ['json'] },
       });
       expect(analyzeResult.content[0].text).toContain('Analysis completed');
 

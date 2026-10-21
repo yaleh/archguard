@@ -32,6 +32,7 @@ import { generateTestCoverageHeatmap } from './test-coverage-writer.js';
 import { WorkerPoolFactory } from './worker-pool-factory.js';
 import { QueryScopeCollector } from './query-scope-collector.js';
 import { DiagramPipelineRunner } from './diagram-pipeline-runner.js';
+import { resolveFormats } from '@/cli/utils/format-selection.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import pMap from 'p-map';
 import os from 'os';
@@ -179,8 +180,10 @@ export class DiagramProcessor {
     // Pool sizing is handled by WorkerPoolFactory (accounts for Go Atlas layer count).
     const pool = this.poolFactory.create(this.diagrams, this.globalConfig);
 
-    const needsRendering = this.diagrams.some(
-      (d) => (d.format ?? this.globalConfig.format ?? 'mermaid') !== 'json'
+    const needsRendering = this.diagrams.some((d) =>
+      resolveFormats({ diagram: d.formats, global: this.globalConfig.formats }).some(
+        (format) => format !== 'json'
+      )
     );
     if (needsRendering) pool.start();
 

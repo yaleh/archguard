@@ -126,7 +126,7 @@ vi.mock('@/cli/utils/diagram-index-generator.js', () => ({
 const baseConfig: Config = {
   workDir: '/tmp/project/.archguard',
   outputDir: '/tmp/project/.archguard/output',
-  format: 'mermaid',
+  formats: ['mermaid'],
   mermaid: { renderer: 'isomorphic', theme: 'default', transparentBackground: false },
   exclude: [],
   cli: { command: 'claude', args: [], timeout: 60000 },

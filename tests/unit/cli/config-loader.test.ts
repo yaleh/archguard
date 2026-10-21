@@ -41,7 +41,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'class',
           },
         ],
-        format: 'mermaid',
+        formats: ['mermaid'],
       });
 
       const config = await loader.load();
@@ -49,40 +49,40 @@ describe('Story 5: Configuration File Support', () => {
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('overview');
       expect(config.diagrams[0].sources).toEqual(['./src']);
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
 
     it('should use default values when config file not found', async () => {
       const config = await loader.load();
 
       expect(config.diagrams).toEqual([]);
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
 
     it('should merge CLI options with config file', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-        format: 'mermaid',
+        formats: ['mermaid'],
       });
 
       const config = await loader.load({ outputDir: './custom' });
 
       expect(config.diagrams).toHaveLength(1); // From config
       expect(config.outputDir).toBe('./custom'); // From CLI (overrides)
-      expect(config.format).toBe('mermaid'); // From config
+      expect(config.formats).toEqual(['mermaid']); // From config
     });
 
     it('should give CLI options higher priority', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-        format: 'mermaid',
+        formats: ['mermaid'],
       });
 
-      const config = await loader.load({ format: 'json' });
+      const config = await loader.load({ formats: ['json'] });
 
-      expect(config.format).toBe('json'); // CLI overrides config
+      expect(config.formats).toEqual(['json']); // CLI overrides config
     });
   });
 
@@ -91,7 +91,7 @@ describe('Story 5: Configuration File Support', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'test', sources: ['./src'], level: 'class' }],
-        format: 'invalid-format',
+        formats: ['invalid-format'],
       });
 
       await expect(loader.load()).rejects.toThrow();
@@ -102,13 +102,63 @@ describe('Story 5: Configuration File Support', () => {
 
       for (const format of formats) {
         const configPath = path.join(testDir, 'archguard.config.json');
-        await fs.writeJson(configPath, { format });
+        await fs.writeJson(configPath, { formats: [format] });
 
         const config = await loader.load();
-        expect(config.format).toBe(format);
+        expect(config.formats).toEqual([format]);
 
         await fs.remove(configPath);
       }
+    });
+
+    it('should parse a multi-format array, preserving order', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, { formats: ['plantuml', 'mermaid'] });
+
+      const config = await loader.load();
+      expect(config.formats).toEqual(['plantuml', 'mermaid']);
+    });
+
+    it('should parse per-diagram formats', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [
+          {
+            name: 'overview',
+            sources: ['./src'],
+            level: 'class',
+            formats: ['json', 'plantuml'],
+          },
+        ],
+      });
+
+      const config = await loader.load();
+      expect(config.diagrams[0].formats).toEqual(['json', 'plantuml']);
+    });
+
+    it('should reject the removed single-value "format" key at the global level', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, { format: 'json' });
+
+      await expect(loader.load()).rejects.toThrow(
+        /single-value "format" key is no longer supported/
+      );
+    });
+
+    it('should reject the removed single-value "format" key in a diagram', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [
+          {
+            name: 'overview',
+            sources: ['./src'],
+            level: 'class',
+            format: 'json',
+          },
+        ],
+      });
+
+      await expect(loader.load()).rejects.toThrow(/diagrams\.0\.format/);
     });
 
     it('should validate exclude patterns as array', async () => {
@@ -141,7 +191,7 @@ describe('Story 5: Configuration File Support', () => {
 
       const config = await fs.readJson(configPath);
       expect(config).toHaveProperty('diagrams');
-      expect(config).toHaveProperty('format');
+      expect(config).toHaveProperty('formats');
     });
 
     it('should not overwrite existing config', async () => {
@@ -158,7 +208,7 @@ describe('Story 5: Configuration File Support', () => {
       const config = await fs.readJson(configPath);
 
       expect(config.diagrams).toBeDefined();
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
       expect(config.exclude).toBeInstanceOf(Array);
       expect(config.cache).toBeDefined();
       expect(config.cache.enabled).toBe(true);
@@ -173,7 +223,7 @@ describe('Story 5: Configuration File Support', () => {
 
     it('should use default format', async () => {
       const config = await loader.load();
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
 
     it('should use default exclude patterns', async () => {
@@ -446,7 +496,7 @@ describe('Story 5: Configuration File Support', () => {
         await fs.writeJson(configPath, {
           diagrams: [{ name: 'overview', sources: ['./lib'], level: 'class' }],
           outputDir: './docs/output',
-          format: 'json',
+          formats: ['json'],
           exclude: ['**/*.test.ts', '**/dist/**'],
           cli: {
             command: '/usr/local/bin/claude',
@@ -465,7 +515,7 @@ describe('Story 5: Configuration File Support', () => {
         expect(config.diagrams).toHaveLength(1);
         expect(config.diagrams[0].name).toBe('overview');
         expect(config.outputDir).toBe('./docs/output');
-        expect(config.format).toBe('json');
+        expect(config.formats).toEqual(['json']);
         expect(config.exclude).toEqual(['**/*.test.ts', '**/dist/**']);
         expect(config.cli.command).toBe('/usr/local/bin/claude');
         expect(config.cli.args).toEqual(['--model', 'claude-3-5-sonnet-20241022']);
@@ -483,7 +533,7 @@ describe('Story 5: Configuration File Support', () => {
             { name: 'overview', sources: ['./src'], level: 'package' },
             { name: 'modules/parser', sources: ['./src/parser'], level: 'class' },
           ],
-          format: 'mermaid',
+          formats: ['mermaid'],
           cli: {
             command: 'claude',
             args: ['--model', 'claude-3-5-sonnet-20241022'],
@@ -514,7 +564,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'class',
           },
         ],
-        format: 'json',
+        formats: ['json'],
         outputDir: './custom-output',
       });
 
@@ -522,7 +572,7 @@ describe('Story 5: Configuration File Support', () => {
 
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('custom-diagram');
-      expect(config.format).toBe('json');
+      expect(config.formats).toEqual(['json']);
       expect(config.outputDir).toBe('./custom-output');
     });
 
@@ -537,7 +587,7 @@ describe('Story 5: Configuration File Support', () => {
               level: 'package',
             },
           ],
-          format: 'mermaid',
+          formats: ['mermaid'],
         },
         null,
         2
@@ -549,7 +599,7 @@ describe('Story 5: Configuration File Support', () => {
 
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('js-diagram');
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
 
     it('should throw error if custom config path does not exist', async () => {
@@ -589,14 +639,14 @@ describe('Story 5: Configuration File Support', () => {
             level: 'class',
           },
         ],
-        format: 'json',
+        formats: ['json'],
         outputDir: './custom-output',
       });
 
-      const config = await loader.load({ format: 'mermaid' }, customPath);
+      const config = await loader.load({ formats: ['mermaid'] }, customPath);
 
       expect(config.diagrams).toHaveLength(1);
-      expect(config.format).toBe('mermaid'); // CLI override
+      expect(config.formats).toEqual(['mermaid']); // CLI override
       expect(config.outputDir).toBe('./custom-output'); // From custom config
     });
 
@@ -611,7 +661,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'class',
           },
         ],
-        format: 'json',
+        formats: ['json'],
       });
 
       // Create custom config file
@@ -624,7 +674,7 @@ describe('Story 5: Configuration File Support', () => {
             level: 'package',
           },
         ],
-        format: 'mermaid',
+        formats: ['mermaid'],
       });
 
       // Load with custom path
@@ -633,7 +683,7 @@ describe('Story 5: Configuration File Support', () => {
       // Should use custom config, not default
       expect(config.diagrams).toHaveLength(1);
       expect(config.diagrams[0].name).toBe('custom-diagram');
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
   });
 });

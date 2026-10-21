@@ -1,13 +1,13 @@
 import type { DiagramConfig } from './config-diagram.js';
 import type { ProjectSemantics } from './extensions/project-semantics.js';
-import type { MermaidConfig, OutputFormat } from './config-mermaid.js';
+import type { MermaidConfig, OutputFormats } from './config-mermaid.js';
 import type { FitnessConfig } from './fitness-rules.js';
 import type { ParserRuntimePolicy } from './parser-runtime.js';
 
 export interface GlobalConfig {
   workDir?: string;
   outputDir: string;
-  format: OutputFormat;
+  formats: OutputFormats;
   mermaid?: MermaidConfig;
   exclude: string[];
   cli: {

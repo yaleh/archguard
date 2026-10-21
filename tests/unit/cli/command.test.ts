@@ -203,7 +203,31 @@ describe('Story 1: Basic CLI Framework', () => {
       expect(mockAction).toHaveBeenCalled();
       const callArgs = mockAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[0]).toMatchObject({ format: 'json' });
+      expect(callArgs[0]).toMatchObject({ format: ['json'] });
+
+      exitSpy.mockRestore();
+    });
+
+    it('collects repeated --format values in order (no comma shorthand)', async () => {
+      const mockAction = vi.fn();
+      const testProgram = createCLI();
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        return undefined as never;
+      });
+
+      const analyzeCmd = testProgram.commands.find((cmd) => cmd.name() === 'analyze');
+      if (analyzeCmd) {
+        analyzeCmd.action(mockAction);
+      }
+
+      await testProgram.parseAsync(['analyze', '-f', 'plantuml', '-f', 'mermaid'], {
+        from: 'user',
+      });
+
+      expect(mockAction.mock.calls[0][0]).toMatchObject({
+        format: ['plantuml', 'mermaid'],
+      });
 
       exitSpy.mockRestore();
     });

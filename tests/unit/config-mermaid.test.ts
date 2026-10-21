@@ -13,7 +13,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           renderer: 'isomorphic',
           theme: 'default',
@@ -22,7 +22,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('mermaid');
+      expect(result.formats).toEqual(['mermaid']);
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
       expect(result.mermaid?.transparentBackground).toBe(true);
@@ -32,11 +32,11 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('mermaid');
+      expect(result.formats).toEqual(['mermaid']);
       // Zod applies defaults, so mermaid config will have default values
       expect(result.mermaid).toBeDefined();
       expect(result.mermaid?.renderer).toBe('isomorphic');
@@ -48,7 +48,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           theme: 'dark',
         },
@@ -72,7 +72,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
 
       for (const theme of themes) {
         const config: Partial<Config> = {
-          format: 'mermaid',
+          formats: ['mermaid'],
           mermaid: { theme },
         };
 
@@ -88,7 +88,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
 
       for (const renderer of renderers) {
         const config: Partial<Config> = {
-          format: 'mermaid',
+          formats: ['mermaid'],
           mermaid: { renderer },
         };
 
@@ -101,7 +101,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           theme: 'invalid' as any,
         },
@@ -114,7 +114,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           renderer: 'invalid' as any,
         },
@@ -129,18 +129,18 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader('/tmp/test-config-accept');
 
       const config: Partial<Config> = {
-        format: 'plantuml' as any,
+        formats: ['plantuml'] as any,
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('plantuml');
+      expect(result.formats).toEqual(['plantuml']);
     });
 
     it('should reject svg format with validation error', async () => {
       const loader = new ConfigLoader('/tmp/test-config-svg');
 
       const config: Partial<Config> = {
-        format: 'svg' as any,
+        formats: ['svg'] as any,
       };
 
       await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
@@ -151,19 +151,19 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader('/tmp/test-config-diagram');
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         diagrams: [
           {
             name: 'test',
             sources: ['./src'],
             level: 'class',
-            format: 'plantuml' as any,
+            formats: ['plantuml'] as any,
           },
         ],
       };
 
       const result = await loader.load(config);
-      expect(result.diagrams?.[0]?.format).toBe('plantuml');
+      expect(result.diagrams?.[0]?.formats).toEqual(['plantuml']);
     });
   });
 
@@ -172,29 +172,29 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader('/tmp/test-config-default');
 
       const result = await loader.load({});
-      expect(result.format).toBe('mermaid');
+      expect(result.formats).toEqual(['mermaid']);
     });
 
     it('should allow explicit json format', async () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'json',
+        formats: ['json'],
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('json');
+      expect(result.formats).toEqual(['json']);
     });
 
     it('should allow explicit mermaid format', async () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('mermaid');
+      expect(result.formats).toEqual(['mermaid']);
     });
   });
 
@@ -204,7 +204,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader(testDir);
 
       const testConfig = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           renderer: 'cli',
           theme: 'forest',
@@ -218,7 +218,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
 
       try {
         const result = await loader.load();
-        expect(result.format).toBe('mermaid');
+        expect(result.formats).toEqual(['mermaid']);
         expect(result.mermaid?.renderer).toBe('cli');
         expect(result.mermaid?.theme).toBe('forest');
         expect(result.mermaid?.transparentBackground).toBe(false);
@@ -240,7 +240,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
         expect(exists).toBe(true);
 
         const config = await fs.readJson(configPath);
-        expect(config.format).toBe('mermaid'); // Should default to mermaid
+        expect(config.formats).toEqual(['mermaid']); // Should default to mermaid
       } finally {
         await fs.remove(testDir);
       }
@@ -253,7 +253,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader(testDir);
 
       const fileConfig = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           theme: 'default',
         },
@@ -283,12 +283,12 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {},
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('mermaid');
+      expect(result.formats).toEqual(['mermaid']);
       // Zod applies defaults even for empty object
       expect(result.mermaid?.renderer).toBe('isomorphic');
       expect(result.mermaid?.theme).toBe('default');
@@ -299,14 +299,14 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'json',
+        formats: ['json'],
         mermaid: {
           theme: 'dark',
         },
       };
 
       const result = await loader.load(config);
-      expect(result.format).toBe('json');
+      expect(result.formats).toEqual(['json']);
       // mermaid config can still be present even if format is json
       expect(result.mermaid?.theme).toBe('dark');
     });
@@ -315,7 +315,7 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       const loader = new ConfigLoader();
 
       const config: Partial<Config> = {
-        format: 'mermaid',
+        formats: ['mermaid'],
         mermaid: {
           transparentBackground: false,
         },

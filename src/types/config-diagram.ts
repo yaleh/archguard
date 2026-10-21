@@ -1,4 +1,4 @@
-import type { DetailLevel, OutputFormat } from './config-mermaid.js';
+import type { DetailLevel, OutputFormats } from './config-mermaid.js';
 
 export interface DiagramMetadata {
   title?: string;
@@ -96,7 +96,7 @@ export interface DiagramConfig {
   sources: string[];
   level: DetailLevel;
   description?: string;
-  format?: OutputFormat;
+  formats?: OutputFormats;
   exclude?: string[];
   language?: string;
   languageSpecific?: Record<string, unknown>;

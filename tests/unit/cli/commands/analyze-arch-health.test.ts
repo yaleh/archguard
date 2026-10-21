@@ -69,7 +69,7 @@ function makeConfig(workDir: string): Config {
     diagrams: [],
     workDir,
     outputDir: workDir,
-    format: 'json',
+    formats: ['json'],
     exclude: [],
     cli: { command: 'claude', args: [], timeout: 60000 },
     cache: { enabled: true, ttl: 86400 },

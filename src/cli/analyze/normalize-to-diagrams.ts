@@ -15,7 +15,7 @@ import type { CLIOptions, DiagramConfig } from '../../types/config.js';
 /** Common options passed to every structure detector. */
 interface DetectorOptions {
   label?: string;
-  format?: DiagramConfig['format'];
+  formats?: DiagramConfig['formats'];
   exclude?: string[];
   /** Used only by cpp when --sources is provided (basename of sourcePath). */
   moduleName?: string;
@@ -47,18 +47,18 @@ export const LANGUAGE_STRUCTURE_DETECTORS: Record<string, StructureDetector> = {
   kotlin: (root, opts) =>
     detectKotlinProjectStructure(root, {
       label: opts?.label,
-      format: opts?.format,
+      formats: opts?.formats,
       exclude: opts?.exclude,
     }),
   cpp: (root, opts) =>
     detectCppProjectStructure(root, opts?.moduleName ?? path.basename(root), {
-      format: opts?.format as string | undefined,
+      formats: opts?.formats,
       exclude: opts?.exclude,
     }),
   java: (root, opts) =>
     detectJavaProjectStructure(root, {
       label: opts?.label,
-      format: opts?.format,
+      formats: opts?.formats,
       exclude: opts?.exclude,
     }),
 };
@@ -88,7 +88,10 @@ export async function normalizeToDiagrams(
           'remove config.diagrams or edit its sources to change what is analyzed.'
       );
     }
-    return filterByLevels(config.diagrams as DiagramConfig[], cliOptions.diagrams);
+    return filterByLevels(
+      withCliFormats(config.diagrams as DiagramConfig[], cliOptions.formats),
+      cliOptions.diagrams
+    );
   }
 
   if (cliOptions.sources && cliOptions.sources.length > 0) {
@@ -101,7 +104,7 @@ export async function normalizeToDiagrams(
         name: 'architecture',
         sources: cliOptions.sources,
         level: 'package',
-        format: cliOptions.format,
+        formats: cliOptions.formats,
         exclude: cliOptions.exclude,
         language,
         languageSpecific: {
@@ -142,7 +145,7 @@ export async function normalizeToDiagrams(
         name: 'architecture',
         sources: ['.'],
         level: 'package',
-        format: cliOptions.format,
+        formats: cliOptions.formats,
         exclude: cliOptions.exclude,
         language: 'go',
         languageSpecific: {
@@ -166,7 +169,7 @@ export async function normalizeToDiagrams(
   if (LANGUAGE_STRUCTURE_DETECTORS[lang] && !GENERIC_FALLBACK_LANGS.has(lang)) {
     return filterByLevels(
       await LANGUAGE_STRUCTURE_DETECTORS[lang](resolvedRoot, {
-        format: cliOptions.format,
+        formats: cliOptions.formats,
         exclude: cliOptions.exclude,
       }),
       cliOptions.diagrams
@@ -177,7 +180,7 @@ export async function normalizeToDiagrams(
   if (GENERIC_FALLBACK_LANGS.has(lang)) {
     return filterByLevels(
       createProjectRootLanguageDiagrams(resolvedRoot, lang as 'typescript' | 'python' | 'cpp', {
-        format: cliOptions.format,
+        formats: cliOptions.formats,
         exclude: cliOptions.exclude,
       }),
       cliOptions.diagrams
@@ -196,10 +199,26 @@ export async function normalizeToDiagrams(
   }
 
   const diagrams = await planDefaultDiagrams(resolvedRoot, {
-    format: cliOptions.format,
+    formats: cliOptions.formats,
     exclude: cliOptions.exclude,
   });
   return filterByLevels(diagrams, cliOptions.diagrams);
+}
+
+/**
+ * Apply the CLI/MCP format selection to config-file diagrams.
+ *
+ * CLI/MCP outranks the per-diagram `formats` key (see resolveFormats), so when
+ * the command line selected formats every diagram inherits that selection.
+ */
+function withCliFormats(
+  diagrams: DiagramConfig[],
+  formats: DiagramConfig['formats']
+): DiagramConfig[] {
+  if (!formats || formats.length === 0) {
+    return diagrams;
+  }
+  return diagrams.map((diagram) => ({ ...diagram, formats }));
 }
 
 /** Drop repeated sources (compared by resolved path), keeping first-seen order. */
@@ -227,7 +246,7 @@ async function normalizeSingleSource(
     return createProjectRootLanguageDiagrams(resolvedRoot, language, {
       label: path.basename(sourcePath),
       source,
-      format: cliOptions.format,
+      formats: cliOptions.formats,
       exclude: cliOptions.exclude,
     });
   }
@@ -238,7 +257,7 @@ async function normalizeSingleSource(
     return detector(sourcePath, {
       label: path.basename(sourcePath),
       moduleName: path.basename(sourcePath),
-      format: cliOptions.format,
+      formats: cliOptions.formats,
       exclude: cliOptions.exclude,
     });
   }

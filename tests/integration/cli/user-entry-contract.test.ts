@@ -227,7 +227,7 @@ describe('CLI user-entry contract (analyze / init / cache)', () => {
       const configPath = path.join(root, 'archguard.config.json');
       expect(await fs.pathExists(configPath)).toBe(true);
       const loaded = await new ConfigLoader(root).load({}, configPath);
-      expect(loaded.format).toBe('mermaid');
+      expect(loaded.formats).toEqual(['mermaid']);
       expect(loaded.workDir).toBe('./.archguard');
       expect(loaded.diagrams).toEqual([]);
     });
@@ -246,7 +246,7 @@ describe('CLI user-entry contract (analyze / init / cache)', () => {
 
     it('init on an existing config reports "already exists" and exits 0', async () => {
       const root = await fixtureDir();
-      await fs.writeJson(path.join(root, 'archguard.config.json'), { format: 'mermaid' });
+      await fs.writeJson(path.join(root, 'archguard.config.json'), { formats: ['mermaid'] });
 
       const { stderr, exitCodes } = await runCli(['init'], root);
 

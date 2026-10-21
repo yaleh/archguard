@@ -154,6 +154,44 @@ describe('registerAnalyzeTool', () => {
     expect(schema.lang.safeParse('zh-CN').success).toBe(false);
   });
 
+  it('accepts a formats array and forwards it to runAnalysis cliOptions', async () => {
+    runAnalysisMock.mockResolvedValue({
+      config: { workDir: '/project/.archguard', outputDir: '/project/.archguard/output' },
+      diagrams: [],
+      results: [],
+      queryScopesPersisted: 1,
+      persistedScopeKeys: ['abc'],
+      hasDiagramFailures: false,
+    });
+
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const toolSpy = vi.spyOn(server, 'tool');
+    const { registerAnalyzeTool } = await import('@/cli/mcp/analyze-tool.js');
+    registerAnalyzeTool(server, { defaultRoot: '/project' });
+
+    const registration = toolSpy.mock.calls.find(([name]) => name === 'archguard_analyze');
+    const schema = registration?.[2] as Record<
+      string,
+      { safeParse: (value: unknown) => { success: boolean } }
+    >;
+    const callback = registration?.[3] as Function;
+
+    expect(schema.formats.safeParse(undefined).success).toBe(true);
+    expect(schema.formats.safeParse(['plantuml', 'mermaid']).success).toBe(true);
+    expect(schema.formats.safeParse(['json', 'plantuml']).success).toBe(true);
+    expect(schema.formats.safeParse(['svg']).success).toBe(false);
+    expect(schema.formats.safeParse('mermaid').success).toBe(false);
+    expect(schema.format).toBeUndefined();
+
+    await callback({ projectRoot: '/project', formats: ['plantuml', 'mermaid'] });
+
+    expect(runAnalysisMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cliOptions: expect.objectContaining({ formats: ['plantuml', 'mermaid'] }),
+      })
+    );
+  });
+
   it('rejects concurrent calls for the same project while an analysis is running', async () => {
     let resolveRun: ((value: unknown) => void) | undefined;
     runAnalysisMock.mockImplementation(

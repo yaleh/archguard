@@ -147,7 +147,7 @@ const configSchema = z.object({
   // ========== Global Configuration ==========
   workDir: z.string().default('./.archguard'),
   outputDir: z.string().default('./.archguard/output'),
-  format: z.enum(['mermaid', 'json', 'plantuml']).default('mermaid'),
+  formats: z.array(z.enum(['mermaid', 'json', 'plantuml'])).default(['mermaid']),
   mermaid: MermaidConfigSchema.default({
     renderer: 'isomorphic',
     theme: 'default',
@@ -256,8 +256,8 @@ const configSchema = z.object({
         level: z.enum(['package', 'class', 'method']),
         /** Human-readable description */
         description: z.string().optional(),
-        /** Output format override */
-        format: z.enum(['mermaid', 'json', 'plantuml']).optional(),
+        /** Output format overrides */
+        formats: z.array(z.enum(['mermaid', 'json', 'plantuml'])).optional(),
         /** Exclude patterns override */
         exclude: z.array(z.string()).optional(),
         /** Language plugin: typescript | cpp | python | go | java | kotlin */
@@ -289,7 +289,7 @@ export type Config = z.infer<typeof configSchema>;
 interface FileConfig {
   workDir?: string;
   outputDir?: string;
-  format?: 'mermaid' | 'json' | 'plantuml';
+  formats?: Array<'mermaid' | 'json' | 'plantuml'>;
   mermaid?: {
     renderer?: 'isomorphic' | 'cli';
     theme?: 'default' | 'forest' | 'dark' | 'neutral';
@@ -321,7 +321,7 @@ interface FileConfig {
     sources: string[];
     level: 'package' | 'class' | 'method';
     description?: string;
-    format?: 'mermaid' | 'json' | 'plantuml';
+    formats?: Array<'mermaid' | 'json' | 'plantuml'>;
     exclude?: string[];
     language?: string;
     languageSpecific?: Record<string, unknown>;
@@ -359,6 +359,11 @@ export class ConfigLoader {
    */
   async load(cliOptions: Partial<Config> = {}, configPath?: string): Promise<Config> {
     const fileConfig = await this.loadFromFile(configPath);
+    // The single-value `format` key was replaced by the `formats` array. Reject
+    // it loudly instead of letting Zod's default unknown-key stripping make a
+    // stale config silently fall back to mermaid.
+    this.assertNoLegacyFormatKey(fileConfig, 'config file');
+    this.assertNoLegacyFormatKey(cliOptions, 'CLI/MCP options');
     const normalized = this.normalizeConfig(fileConfig);
     const merged = this.deepMerge(normalized, cliOptions);
     const resolvedDirs = this.resolveDirectoryDefaults(merged);
@@ -376,6 +381,41 @@ export class ConfigLoader {
         throw new Error(`Configuration validation failed:\n${issues}`);
       }
       throw error;
+    }
+  }
+
+  /**
+   * Reject the removed single-value `format` key at the global and per-diagram
+   * level. Zod strips unknown keys, so without this check an old config would
+   * be silently ignored and quietly default to mermaid.
+   */
+  private assertNoLegacyFormatKey(value: unknown, origin: string): void {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      return;
+    }
+    const object = value as Record<string, unknown>;
+
+    if ('format' in object && object.format !== undefined) {
+      throw new Error(
+        `Configuration validation failed:\n  - format: the single-value "format" key is no longer supported (${origin}); ` +
+          'use "formats" with an array, e.g. "formats": ["mermaid"]'
+      );
+    }
+
+    if (Array.isArray(object.diagrams)) {
+      object.diagrams.forEach((diagram, index) => {
+        if (
+          diagram !== null &&
+          typeof diagram === 'object' &&
+          'format' in diagram &&
+          (diagram as Record<string, unknown>).format !== undefined
+        ) {
+          throw new Error(
+            `Configuration validation failed:\n  - diagrams.${index}.format: the single-value "format" key is no longer supported (${origin}); ` +
+              'use "formats" with an array, e.g. "formats": ["mermaid"]'
+          );
+        }
+      });
     }
   }
 

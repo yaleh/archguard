@@ -2,7 +2,7 @@
  * Config schema: PlantUML is an EMIT-ONLY output format.
  *
  * History: v2.1 removed PlantUML entirely (this file used to assert that
- * `format: 'plantuml'` was rejected). gap-plantuml-deterministic-generation
+ * `formats: ['plantuml']` was rejected). gap-plantuml-deterministic-generation
  * reintroduced it as a deterministic `.puml` emitter, so the assertions are
  * inverted: `plantuml` is accepted everywhere a format is accepted, while
  * rendering-only formats such as `svg` remain rejected.
@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
-import type { OutputFormat } from '@/types/config';
+import type { OutputFormat, OutputFormats } from '@/types/config';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -38,11 +38,11 @@ describe('PlantUML as an emit-only configuration format', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'plantuml',
+        formats: ['plantuml'],
       });
 
       const config = await loader.load();
-      expect(config.format).toBe('plantuml');
+      expect(config.formats).toEqual(['plantuml']);
     });
 
     it('accepts "plantuml" format in diagram config', async () => {
@@ -53,37 +53,37 @@ describe('PlantUML as an emit-only configuration format', () => {
             name: 'overview',
             sources: ['./src'],
             level: 'class',
-            format: 'plantuml',
+            formats: ['plantuml'],
           },
         ],
       });
 
       const config = await loader.load();
-      expect(config.diagrams[0]?.format).toBe('plantuml');
+      expect(config.diagrams[0]?.formats).toEqual(['plantuml']);
     });
 
     it('accepts "plantuml" format via CLI override', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'json',
+        formats: ['json'],
       });
 
-      const config = await loader.load({ format: 'plantuml' });
-      expect(config.format).toBe('plantuml');
+      const config = await loader.load({ formats: ['plantuml'] });
+      expect(config.formats).toEqual(['plantuml']);
     });
 
     it('does not enable a renderer for the emit-only plantuml format', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'plantuml',
+        formats: ['plantuml'],
       });
 
       const config = await loader.load();
       // Emit-only: format is plantuml, but the mermaid renderer settings stay at
       // their defaults and are never consulted by the plantuml output path.
-      expect(config.format).toBe('plantuml');
+      expect(config.formats).toEqual(['plantuml']);
       expect(config.mermaid.renderer).toBe('isomorphic');
     });
   });
@@ -93,7 +93,7 @@ describe('PlantUML as an emit-only configuration format', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'svg',
+        formats: ['svg'],
       });
 
       await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
@@ -107,7 +107,7 @@ describe('PlantUML as an emit-only configuration format', () => {
             name: 'overview',
             sources: ['./src'],
             level: 'class',
-            format: 'svg',
+            formats: ['svg'],
           },
         ],
       });
@@ -121,7 +121,7 @@ describe('PlantUML as an emit-only configuration format', () => {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
       });
 
-      await expect(loader.load({ format: 'svg' as unknown as OutputFormat })).rejects.toThrow(
+      await expect(loader.load({ formats: ['svg'] as unknown as OutputFormats })).rejects.toThrow(
         /Invalid enum value|Invalid option|svg/
       );
     });
@@ -132,22 +132,22 @@ describe('PlantUML as an emit-only configuration format', () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'mermaid',
+        formats: ['mermaid'],
       });
 
       const config = await loader.load();
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
 
     it('accepts "json" format', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-        format: 'json',
+        formats: ['json'],
       });
 
       const config = await loader.load();
-      expect(config.format).toBe('json');
+      expect(config.formats).toEqual(['json']);
     });
 
     it('defaults to "mermaid" format when not specified', async () => {
@@ -157,7 +157,7 @@ describe('PlantUML as an emit-only configuration format', () => {
       });
 
       const config = await loader.load();
-      expect(config.format).toBe('mermaid');
+      expect(config.formats).toEqual(['mermaid']);
     });
   });
 
@@ -169,11 +169,11 @@ describe('PlantUML as an emit-only configuration format', () => {
         const configPath = path.join(testDir, 'archguard.config.json');
         await fs.writeJson(configPath, {
           diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
-          format,
+          formats: [format],
         });
 
         const config = await loader.load();
-        expect(config.format).toBe(format);
+        expect(config.formats).toEqual([format]);
 
         await fs.remove(configPath);
       }

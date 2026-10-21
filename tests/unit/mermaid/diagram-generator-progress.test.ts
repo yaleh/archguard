@@ -22,7 +22,7 @@ import type { ArchJSON } from '@/types';
 
 const makeConfig = (): GlobalConfig => ({
   outputDir: './archguard',
-  format: 'mermaid',
+  formats: ['mermaid'],
   exclude: [],
   cli: { command: 'claude', args: [], timeout: 180000 },
   cache: { enabled: false, ttl: 3600 },

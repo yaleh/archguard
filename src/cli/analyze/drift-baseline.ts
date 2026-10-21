@@ -91,7 +91,7 @@ export async function reanalyzeCommitSnapshot(
     const result = await runAnalysis({
       sessionRoot: worktreePath,
       workDir: path.join(worktreePath, '.archguard'),
-      cliOptions: { format: 'json', concurrency: 2 },
+      cliOptions: { formats: ['json'], concurrency: 2 },
       reporter: new ProgressReporter(),
     });
 

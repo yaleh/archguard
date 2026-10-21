@@ -66,12 +66,12 @@ async function readMavenModules(projectRoot: string): Promise<string[]> {
 
 export async function detectJavaProjectStructure(
   projectRoot: string,
-  options?: { label?: string; format?: DiagramConfig['format']; exclude?: string[] }
+  options?: { label?: string; formats?: DiagramConfig['formats']; exclude?: string[] }
 ): Promise<DiagramConfig[]> {
   const label = options?.label ?? path.basename(projectRoot);
   const common: Partial<DiagramConfig> = {
     language: 'java',
-    ...(options?.format !== undefined && { format: options.format }),
+    ...(options?.formats !== undefined && { formats: options.formats }),
     ...(options?.exclude !== undefined && { exclude: options.exclude }),
   };
 

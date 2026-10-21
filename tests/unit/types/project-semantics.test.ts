@@ -232,7 +232,7 @@ describe('ProjectSemantics config typing', () => {
     const config: ArchGuardConfig = {
       diagrams: [],
       outputDir: './archguard',
-      format: 'mermaid',
+      formats: ['mermaid'],
       exclude: [],
       cli: {
         command: 'claude',

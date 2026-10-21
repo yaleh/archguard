@@ -594,7 +594,9 @@ function buildConfigOverrides(
   sessionRoot: string
 ): Partial<Config> {
   const configOverrides: Partial<Config> = { workDir };
-  if (cliOptions.format) configOverrides.format = cliOptions.format;
+  if (cliOptions.formats && cliOptions.formats.length > 0) {
+    configOverrides.formats = cliOptions.formats;
+  }
   if (cliOptions.exclude) configOverrides.exclude = cliOptions.exclude;
   if (cliOptions.cache !== undefined) {
     configOverrides.cache = { enabled: cliOptions.cache, ttl: 86400 } as Config['cache'];

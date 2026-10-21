@@ -106,7 +106,7 @@ describe('CLI / MCP analyze equivalence', () => {
       await client.callTool({
         name: 'archguard_analyze',
         arguments: {
-          format: 'json',
+          formats: ['json'],
         },
       });
       await clientTransport.close();

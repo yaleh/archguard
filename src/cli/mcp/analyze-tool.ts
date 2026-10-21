@@ -48,11 +48,12 @@ const analyzeSchema = {
     .describe(
       'Diagram levels to generate. Omit to use the detected/default set for the target sources.'
     ),
-  format: z
-    .enum(['mermaid', 'json'])
+  formats: z
+    .array(z.enum(['mermaid', 'json', 'plantuml']))
     .optional()
     .describe(
-      'Output artifact format. Use json for query/index refresh without Mermaid rendering.'
+      'Output artifact formats to produce in one run (e.g. ["plantuml", "mermaid"]). ' +
+        'Overrides the config file selection. Use json for query/index refresh without Mermaid rendering.'
     ),
   noCache: z.boolean().default(false).describe('Disable analysis caches for this run.'),
   includeTests: z
@@ -112,7 +113,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
       sources,
       lang,
       diagrams,
-      format,
+      formats,
       noCache,
       includeTests,
       testSources,
@@ -135,7 +136,7 @@ export function registerAnalyzeTool(server: McpServer, ctx: AnalyzeToolContext):
               sources: normalizedSources,
               lang,
               diagrams,
-              format,
+              formats,
               cache: noCache ? false : undefined,
               includeTests,
               testSources: testSources?.map((source) => path.resolve(root, source)),

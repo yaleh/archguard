@@ -75,7 +75,7 @@ function makeConfig(overrides?: Partial<Config>): Config {
 }
 
 function makeOptions(overrides?: Partial<CLIOptions>): CLIOptions {
-  return { format: 'mermaid', ...overrides } as CLIOptions;
+  return { formats: ['mermaid'], ...overrides } as CLIOptions;
 }
 
 // ── LANGUAGE_STRUCTURE_DETECTORS registry ────────────────────────────────────

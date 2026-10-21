@@ -19,3 +19,12 @@ export const defaultMermaidConfig: MermaidConfig = {
  * performs no rendering (there is no PlantUML renderer in v2).
  */
 export type OutputFormat = 'mermaid' | 'json' | 'plantuml';
+
+/**
+ * The canonical shape of a format selection: an ordered, de-duplicated set.
+ *
+ * Every entry point (config file, CLI, MCP, programmatic) speaks this one
+ * shape; `resolveFormats()` in `src/cli/utils/format-selection.ts` normalizes
+ * it and applies source precedence.
+ */
+export type OutputFormats = OutputFormat[];

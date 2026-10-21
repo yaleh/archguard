@@ -35,7 +35,7 @@ vi.mock('@/mermaid/diagram-generator.js', () => ({
       {
         name: 'test',
         diagramCode: 'classDiagram\n  class Foo',
-        format: 'mermaid',
+        formats: ['mermaid'],
         outputPath: {
           source: '/out/diagram.mmd',
           svg: '/out/diagram.svg',
@@ -99,7 +99,7 @@ async function getFsMock(): Promise<FsMock> {
 
 function makeGlobalConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
   return {
-    format: 'mermaid',
+    formats: ['mermaid'],
     outputDir: './.archguard',
     exclude: [],
     ...overrides,
@@ -113,6 +113,7 @@ function makePaths(): OutputPaths {
       mmd: '/out/diagram.mmd',
       svg: '/out/diagram.svg',
       png: '/out/diagram.png',
+      puml: '/out/diagram.puml',
     },
   };
 }
@@ -170,7 +171,7 @@ describe('DiagramOutputRouter', () => {
     it('writes JSON file and returns without entering mermaid branch', async () => {
       const fsMock = await getFsMock();
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
       const archJSON = makeArchJSON();
       const paths = makePaths();
 
@@ -184,13 +185,14 @@ describe('DiagramOutputRouter', () => {
     it('ensures the JSON parent directory before writing nested output paths', async () => {
       const fsMock = await getFsMock();
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
       const paths: OutputPaths = {
         paths: {
           json: '/out/method/utils.json',
           mmd: '/out/method/utils.mmd',
           svg: '/out/method/utils.svg',
           png: '/out/method/utils.png',
+          puml: '/out/method/utils.puml',
         },
       };
 
@@ -205,7 +207,7 @@ describe('DiagramOutputRouter', () => {
     it('canonicalizes JSON output before writing it to disk', async () => {
       const fsMock = await getFsMock();
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
       const archJSON = makeArchJSON({
         sourceFiles: ['src/z.ts', 'src/a.ts'],
         entities: [
@@ -244,8 +246,13 @@ describe('DiagramOutputRouter', () => {
       const fsMock = await getFsMock();
 
       // globalConfig is mermaid, but diagram overrides to json
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'mermaid' }), progress);
-      await router.route(makeArchJSON(), makePaths(), makeDiagram({ format: 'json' }), makePool());
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['mermaid'] }), progress);
+      await router.route(
+        makeArchJSON(),
+        makePaths(),
+        makeDiagram({ formats: ['json'] }),
+        makePool()
+      );
 
       expect(fsMock.writeJson).toHaveBeenCalledOnce();
     });
@@ -254,7 +261,7 @@ describe('DiagramOutputRouter', () => {
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
       const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
       await router.route(makeArchJSON(), makePaths(), makeDiagram(), makePool());
 
       expect(MermaidDiagramGenerator).not.toHaveBeenCalled();
@@ -335,11 +342,11 @@ describe('DiagramOutputRouter', () => {
 
     async function routePackageJson(archJSON: ArchJSON): Promise<ArchJSON> {
       const fsMock = await getFsMock();
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
       await router.route(
         archJSON,
         makePaths(),
-        makeDiagram({ level: 'package', format: 'json' }),
+        makeDiagram({ level: 'package', formats: ['json'] }),
         makePool()
       );
       return fsMock.writeJson.mock.calls[0]?.[1] as ArchJSON;
@@ -481,12 +488,12 @@ describe('DiagramOutputRouter', () => {
     it('does not rewrite entities/relations when level=class', async () => {
       const fsMock = await getFsMock();
       const archJSON = makeModuleGraphArchJSON();
-      const router = new DiagramOutputRouter(makeGlobalConfig({ format: 'json' }), progress);
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['json'] }), progress);
 
       await router.route(
         archJSON,
         makePaths(),
-        makeDiagram({ level: 'class', format: 'json' }),
+        makeDiagram({ level: 'class', formats: ['json'] }),
         makePool()
       );
 
@@ -997,6 +1004,86 @@ describe('DiagramOutputRouter', () => {
       expect(svgCall?.[1]).toBe(poolSvg);
       // inlineEdgeStyles should NOT be called (post-processing done inside worker)
       expect(inlineEdgeStyles).not.toHaveBeenCalled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Multi-format selection
+  // --------------------------------------------------------------------------
+
+  describe('multi-format selection', () => {
+    function makeClassArchJSON(): ArchJSON {
+      return makeArchJSON({
+        entities: [
+          {
+            id: 'Foo',
+            name: 'Foo',
+            type: 'class',
+            visibility: 'public',
+            members: [],
+            sourceLocation: { file: 'src/foo.ts', startLine: 1, endLine: 2 },
+          },
+        ],
+      });
+    }
+
+    it('emits .puml and .mmd/.svg/.png in the same run', async () => {
+      const fsMock = await getFsMock();
+      const router = new DiagramOutputRouter(
+        makeGlobalConfig({ formats: ['plantuml', 'mermaid'] }),
+        progress
+      );
+
+      const outputs = await router.route(
+        makeClassArchJSON(),
+        makePaths(),
+        makeDiagram(),
+        makePool()
+      );
+
+      const written = fsMock.writeFile.mock.calls.map((call) => call[0]);
+      expect(written).toContain('/out/diagram.puml');
+      expect(written).toContain('/out/diagram.mmd');
+      expect(written).toContain('/out/diagram.svg');
+      expect(outputs).toContain('/out/diagram.puml');
+      expect(outputs).toContain('/out/diagram.mmd');
+    });
+
+    it('emits .json and .puml in the same run', async () => {
+      const fsMock = await getFsMock();
+      const router = new DiagramOutputRouter(
+        makeGlobalConfig({ formats: ['json', 'plantuml'] }),
+        progress
+      );
+
+      const outputs = await router.route(
+        makeClassArchJSON(),
+        makePaths(),
+        makeDiagram(),
+        makePool()
+      );
+
+      expect(fsMock.writeJson).toHaveBeenCalledWith('/out/diagram.json', expect.any(Object), {
+        spaces: 2,
+      });
+      const written = fsMock.writeFile.mock.calls.map((call) => call[0]);
+      expect(written).toContain('/out/diagram.puml');
+      expect(outputs).toEqual(['/out/diagram.json', '/out/diagram.puml']);
+    });
+
+    it('diagram formats override global formats entirely (override, not union)', async () => {
+      const fsMock = await getFsMock();
+      const router = new DiagramOutputRouter(makeGlobalConfig({ formats: ['mermaid'] }), progress);
+
+      const outputs = await router.route(
+        makeClassArchJSON(),
+        makePaths(),
+        makeDiagram({ formats: ['json'] }),
+        makePool()
+      );
+
+      expect(outputs).toEqual(['/out/diagram.json']);
+      expect(fsMock.writeFile).not.toHaveBeenCalled();
     });
   });
 });

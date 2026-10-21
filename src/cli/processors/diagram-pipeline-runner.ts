@@ -17,6 +17,7 @@ import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
 import { MetricsCalculator } from '@/parser/metrics-calculator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { DiagramOutputRouter, buildTsPackageGraphArchJson } from './diagram-output-router.js';
+import { resolveFormats } from '@/cli/utils/format-selection.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import type { DiagramConfig, GlobalConfig } from '@/types/config.js';
@@ -117,7 +118,10 @@ export class DiagramPipelineRunner {
       if (progress) {
         progress.update(diagram.name, 70, 'Generating output');
       }
-      const format = diagram.format || this.globalConfig.format;
+      const formats = resolveFormats({
+        diagram: diagram.formats,
+        global: this.globalConfig.formats,
+      });
 
       // Compute metrics unconditionally so they can be attached to the DiagramResult
       // (consumers like DiagramIndexGenerator need them regardless of output format).
@@ -206,17 +210,20 @@ export class DiagramPipelineRunner {
         this.progress.succeed(`Diagram ${diagram.name} completed`);
       }
 
-      // Build result paths based on format
+      // Build result paths for every selected format. One diagram can produce
+      // several artifact kinds in the same run.
       const resultPaths: DiagramResult['paths'] = {};
-      if (format === 'json') {
-        resultPaths.json = paths.paths.json;
-      } else if (format === 'mermaid') {
-        resultPaths.mmd = paths.paths.mmd;
-        resultPaths.svg = paths.paths.svg;
-        resultPaths.png = paths.paths.png;
-      } else if (format === 'plantuml') {
-        // Emit-only: the .puml source is the sole artifact.
-        resultPaths.puml = paths.paths.puml;
+      for (const format of formats) {
+        if (format === 'json') {
+          resultPaths.json = paths.paths.json;
+        } else if (format === 'mermaid') {
+          resultPaths.mmd = paths.paths.mmd;
+          resultPaths.svg = paths.paths.svg;
+          resultPaths.png = paths.paths.png;
+        } else if (format === 'plantuml') {
+          // Emit-only: the .puml source is the sole artifact.
+          resultPaths.puml = paths.paths.puml;
+        }
       }
 
       // For package-level TS diagrams the rendered output comes from the

@@ -245,7 +245,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       const mockOptions = {
         source: './lib',
         output: './output.puml',
-        format: 'plantuml' as const,
+        formats: ['plantuml'] as const,
         cliCommand: '/custom/claude',
         cliArgs: '--timeout 120000',
         outputDir: './custom-dir',
@@ -258,7 +258,7 @@ describe('Phase 4.2: CLI Parameter Integration', () => {
       const configLoaderOptions = {
         source: mockOptions.source,
         output: mockOptions.output,
-        format: mockOptions.format,
+        formats: mockOptions.formats,
         cli: {
           command: mockOptions.cliCommand,
           args: mockOptions.cliArgs.split(' '),

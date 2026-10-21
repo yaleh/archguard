@@ -50,7 +50,7 @@ async function analyze(root: string, sources: string[]): Promise<void> {
     cliOptions: {
       sources,
       outputDir: path.join(root, '.archguard', 'output'),
-      format: 'json',
+      formats: ['json'],
       cache: false,
     },
     reporter: new NoopReporter(),

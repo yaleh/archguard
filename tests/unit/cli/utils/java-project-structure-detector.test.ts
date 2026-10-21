@@ -97,7 +97,7 @@ describe('detectJavaProjectStructure', () => {
     ]);
   });
 
-  it('passes format and exclude through to every diagram', async () => {
+  it('passes formats and exclude through to every diagram', async () => {
     root = await makeTempProject({
       'pom.xml': `
         <project>
@@ -111,12 +111,12 @@ describe('detectJavaProjectStructure', () => {
 
     const result = await detectJavaProjectStructure(root, {
       label: 'Jlama',
-      format: 'json',
+      formats: ['json'],
       exclude: ['**/generated/**'],
     });
 
     expect(result.every((diagram) => diagram.language === 'java')).toBe(true);
-    expect(result.every((diagram) => diagram.format === 'json')).toBe(true);
+    expect(result.every((diagram) => diagram.formats?.join(',') === 'json')).toBe(true);
     expect(result.every((diagram) => diagram.exclude?.[0] === '**/generated/**')).toBe(true);
   });
 

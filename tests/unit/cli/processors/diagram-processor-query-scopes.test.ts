@@ -82,7 +82,7 @@ vi.mock('cli-progress', () => ({
 
 const createGlobalConfig = (): GlobalConfig => ({
   outputDir: './archguard',
-  format: 'mermaid',
+  formats: ['mermaid'],
   exclude: ['**/*.test.ts'],
   cli: {
     command: 'claude',

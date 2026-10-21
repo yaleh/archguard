@@ -59,7 +59,7 @@ vi.mock('@/cli/cache/arch-json-disk-cache.js', () => ({
 describe('DiagramProcessor.parallel', () => {
   const createGlobalConfig = (): GlobalConfig => ({
     outputDir: './archguard',
-    format: 'mermaid',
+    formats: ['mermaid'],
     exclude: ['**/*.test.ts'],
     cli: {
       command: 'claude',
