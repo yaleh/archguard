@@ -241,8 +241,11 @@ export class TypeScriptPlugin implements ILanguagePlugin {
       config.ignorePaths
     );
 
-    // Parse ArchJSON using the shared Project
-    const archJson = this.parser.parseProject(workspaceRoot, pattern, tsProject);
+    // Parse ArchJSON using the shared Project. `languageSpecific.verbose` is the
+    // ParseConfig extension point the CLI uses to surface call-site diagnostics.
+    const archJson = this.parser.parseProject(workspaceRoot, pattern, tsProject, undefined, {
+      verbose: config.languageSpecific?.['verbose'] === true,
+    });
 
     // Run TypeScript-specific analysis (module graph, etc.) with same source files
     const analyzer = new TypeScriptAnalyzer();

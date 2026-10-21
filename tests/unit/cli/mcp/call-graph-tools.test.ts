@@ -101,6 +101,17 @@ describe('archguard_find_callers — tool schema', () => {
     const tools = collectTools(server);
     expect(tools.has('archguard_find_callers')).toBe(true);
   });
+
+  it('documents the TypeScript function-level coverage and its boundaries', () => {
+    const server = new McpServer({ name: 'test', version: '1.0.0' });
+    const spy = vi.spyOn(server, 'tool');
+    registerCallGraphTools(server, '/workspace');
+
+    const description = String(spy.mock.calls[0][1]);
+    expect(description).toContain('exported standalone functions');
+    expect(description).toContain('exported arrow/function-expression consts');
+    expect(description).toContain('non-exported');
+  });
 });
 
 describe('archguard_find_callers — handler', () => {

@@ -537,6 +537,8 @@ export class ArchJsonProvider {
       // handed over as an explicit ignore list: fast-glob silently drops a `!`-negation
       // pattern whose path is absolute, so encoding them as `!${f}` had no effect.
       ignorePaths: ignoredFiles,
+      // Surface call-site diagnostics (skipped non-exported functions etc.) under -v.
+      languageSpecific: { verbose: this.globalConfig.verbose === true },
     };
     if (this.parseWorkerPool) {
       const fileCount = await this.projectFileCounter(

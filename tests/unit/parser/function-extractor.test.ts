@@ -65,6 +65,22 @@ describe('FunctionExtractor', () => {
     expect(entities.map((e) => e.name)).toContain('publicArrow');
   });
 
+  it('collectEntitySources enumerates exactly the declarations extract() turns into entities', () => {
+    const code = `
+      export function publicFn(): void {}
+      function privateFn(): void {}
+      export const publicArrow = () => {};
+      const privateArrow = () => {};
+    `;
+    const sourceFile = project.createSourceFile('src/enumerate.ts', code, { overwrite: true });
+    const extractor = new FunctionExtractor();
+    const sources = extractor.collectEntitySources(sourceFile, 'src/enumerate.ts');
+    const entities = extractor.extract(sourceFile, 'src/enumerate.ts');
+
+    expect(sources.map((s) => s.id)).toEqual(entities.map((e) => e.id));
+    expect(sources.map((s) => s.name).sort()).toEqual(['publicArrow', 'publicFn']);
+  });
+
   it('extracts function parameters as members', () => {
     const entities = extractFromCode(
       'export function greet(name: string, age: number): string { return name; }'

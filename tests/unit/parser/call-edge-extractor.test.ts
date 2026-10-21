@@ -1,6 +1,22 @@
 import { Project } from 'ts-morph';
 import { CallEdgeExtractor } from '@/parser/call-edge-extractor.js';
-import { describe, it, expect, beforeEach } from 'vitest';
+import type { Entity } from '@/types/index.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+function makeEntity(id: string, name: string, type: Entity['type'] = 'class'): Entity {
+  return {
+    id,
+    name,
+    type,
+    visibility: 'public',
+    members: [],
+    sourceLocation: { file: id.slice(0, id.lastIndexOf('.')), startLine: 1, endLine: 1 },
+  };
+}
+
+function fnEntity(id: string, name: string): Entity {
+  return makeEntity(id, name, 'function');
+}
 
 describe('CallEdgeExtractor', () => {
   const workspaceRoot = '/workspace';
@@ -169,7 +185,7 @@ describe('CallEdgeExtractor', () => {
     expect(relations.filter((r) => r.type === 'call')).toHaveLength(0);
   });
 
-  it('skips call expressions that are not property access (plain function call)', () => {
+  it('does not emit an edge for an unresolved bare identifier call', () => {
     project.createSourceFile(
       '/workspace/a.ts',
       `
@@ -233,6 +249,303 @@ describe('CallEdgeExtractor', () => {
   });
 });
 
+describe('CallEdgeExtractor - function-level coverage matrix', () => {
+  const workspaceRoot = '/workspace';
+  let project: Project;
+
+  beforeEach(() => {
+    project = new Project({ useInMemoryFileSystem: true });
+  });
+
+  it('extracts a cross-file bare-identifier call between top-level functions', () => {
+    project.createSourceFile('/workspace/util.ts', 'export function helper(): void {}');
+    project.createSourceFile(
+      '/workspace/main.ts',
+      `
+      import { helper } from './util.js';
+      export function run(): void { helper(); }
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [fnEntity('util.ts.helper', 'helper'), fnEntity('main.ts.run', 'run')],
+      workspaceRoot
+    );
+    const edges = extractor.extractAll().filter((r) => r.type === 'call');
+
+    expect(edges).toHaveLength(1);
+    expect(edges[0]).toMatchObject({
+      source: 'main.ts.run',
+      sourceMethod: 'run',
+      target: 'util.ts.helper',
+      targetMethod: 'helper',
+      callType: 'direct',
+    });
+  });
+
+  it('extracts a call from an exported arrow const to another exported arrow const', () => {
+    project.createSourceFile('/workspace/lib.ts', 'export const arrowTarget = (): void => {};');
+    project.createSourceFile(
+      '/workspace/main.ts',
+      `
+      import { arrowTarget } from './lib.js';
+      export const runArrow = (): void => { arrowTarget(); };
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [fnEntity('lib.ts.arrowTarget', 'arrowTarget'), fnEntity('main.ts.runArrow', 'runArrow')],
+      workspaceRoot
+    );
+    const edge = extractor.extractAll().find((r) => r.type === 'call');
+
+    expect(edge).toMatchObject({
+      source: 'main.ts.runArrow',
+      sourceMethod: 'runArrow',
+      target: 'lib.ts.arrowTarget',
+      targetMethod: 'arrowTarget',
+    });
+  });
+
+  it('extracts a bare-identifier call from inside a class method', () => {
+    project.createSourceFile('/workspace/util.ts', 'export function helper(): void {}');
+    project.createSourceFile(
+      '/workspace/service.ts',
+      `
+      import { helper } from './util.js';
+      export class Service {
+        run(): void { helper(); }
+      }
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [fnEntity('util.ts.helper', 'helper'), makeEntity('service.ts.Service', 'Service')],
+      workspaceRoot
+    );
+    const edge = extractor.extractAll().find((r) => r.type === 'call');
+
+    expect(edge).toMatchObject({
+      source: 'service.ts.Service',
+      sourceMethod: 'run',
+      target: 'util.ts.helper',
+      targetMethod: 'helper',
+    });
+  });
+
+  it('extracts a cross-file function-to-function call chain', () => {
+    project.createSourceFile(
+      '/workspace/steps.ts',
+      'export function stepTwo(): void {}\nexport function stepOne(): void { stepTwo(); }'
+    );
+    project.createSourceFile(
+      '/workspace/entry.ts',
+      `
+      import { stepOne } from './steps.js';
+      export function entry(): void { stepOne(); }
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [
+        fnEntity('steps.ts.stepTwo', 'stepTwo'),
+        fnEntity('steps.ts.stepOne', 'stepOne'),
+        fnEntity('entry.ts.entry', 'entry'),
+      ],
+      workspaceRoot
+    );
+    const edges = extractor.extractAll().filter((r) => r.type === 'call');
+
+    expect(edges).toHaveLength(2);
+    expect(edges.map((e) => `${e.source}->${e.target}`).sort()).toEqual([
+      'entry.ts.entry->steps.ts.stepOne',
+      'steps.ts.stepOne->steps.ts.stepTwo',
+    ]);
+  });
+
+  it('resolves same-named functions by declaration instead of cross-linking them', () => {
+    project.createSourceFile('/workspace/a.ts', 'export function main(): void {}');
+    project.createSourceFile('/workspace/b.ts', 'export function main(): void {}');
+    project.createSourceFile(
+      '/workspace/caller.ts',
+      `
+      import { main } from './a.js';
+      export function callA(): void { main(); }
+      `
+    );
+    project.createSourceFile(
+      '/workspace/local.ts',
+      'export function main(): void {}\nexport function runLocal(): void { main(); }'
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [
+        fnEntity('a.ts.main', 'main'),
+        fnEntity('b.ts.main', 'main'),
+        fnEntity('caller.ts.callA', 'callA'),
+        fnEntity('local.ts.main', 'main'),
+        fnEntity('local.ts.runLocal', 'runLocal'),
+      ],
+      workspaceRoot
+    );
+    const edges = extractor.extractAll().filter((r) => r.type === 'call');
+
+    expect(edges.map((e) => e.target).sort()).toEqual(['a.ts.main', 'local.ts.main']);
+    expect(edges.some((e) => e.target === 'b.ts.main')).toBe(false);
+  });
+
+  it('does not emit an edge when the called method does not exist on the target', () => {
+    project.createSourceFile('/workspace/a.ts', 'export class A { ok(): void {} }');
+    project.createSourceFile(
+      '/workspace/b.ts',
+      `
+      import { A } from './a.js';
+      export function run(): void {
+        const a = new A();
+        a.ok();
+        a.s();
+      }
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [makeEntity('a.ts.A', 'A'), fnEntity('b.ts.run', 'run')],
+      workspaceRoot
+    );
+    const edges = extractor.extractAll().filter((r) => r.type === 'call');
+
+    expect(edges).toHaveLength(1);
+    expect(edges[0].targetMethod).toBe('ok');
+    expect(extractor.getStats().skippedMissingTargetMethod).toBe(1);
+  });
+
+  it('does not emit edges for external APIs (fs.readFile / console.log)', () => {
+    project.createSourceFile(
+      '/workspace/main.ts',
+      `
+      import * as fs from 'fs';
+      export function run(): void {
+        fs.readFile('x', () => {});
+        console.log('hello');
+      }
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [fnEntity('main.ts.run', 'run')],
+      workspaceRoot
+    );
+
+    expect(extractor.extractAll().filter((r) => r.type === 'call')).toHaveLength(0);
+  });
+});
+
+describe('CallEdgeExtractor - explicit boundaries and diagnostics', () => {
+  const workspaceRoot = '/workspace';
+  let project: Project;
+
+  beforeEach(() => {
+    project = new Project({ useInMemoryFileSystem: true });
+  });
+
+  it('counts call sites inside non-exported top-level functions instead of silently dropping them', () => {
+    project.createSourceFile(
+      '/workspace/main.ts',
+      `
+      function hidden(): void { helper(); }
+      function helper(): void {}
+      export function run(): void {}
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [fnEntity('main.ts.run', 'run')],
+      workspaceRoot
+    );
+    expect(extractor.extractAll().filter((r) => r.type === 'call')).toHaveLength(0);
+    expect(extractor.getStats().skippedNonExportedFunction).toBe(1);
+  });
+
+  it('counts constructor, object-literal method, and class-property arrow call sites', () => {
+    project.createSourceFile(
+      '/workspace/shapes.ts',
+      `
+      export class A {
+        field = (): void => { arrowBody(); };
+        constructor() { ctorCall(); }
+      }
+      const obj = { m(): void { objectCall(); } };
+      `
+    );
+    const extractor = new CallEdgeExtractor(
+      project,
+      [makeEntity('shapes.ts.A', 'A')],
+      workspaceRoot
+    );
+    expect(extractor.extractAll().filter((r) => r.type === 'call')).toHaveLength(0);
+
+    const stats = extractor.getStats();
+    expect(stats.skippedConstructor).toBe(1);
+    expect(stats.skippedObjectLiteralMethod).toBe(1);
+    expect(stats.skippedClassPropertyArrow).toBe(1);
+    expect(stats.skippedUnsupportedContext).toBeGreaterThanOrEqual(3);
+  });
+
+  it('catches TypeChecker exceptions per call site instead of aborting extraction', () => {
+    project.createSourceFile('/workspace/a.ts', 'export class A { ok(): void {} }');
+    project.createSourceFile(
+      '/workspace/b.ts',
+      `
+      import { A } from './a.js';
+      export function run(): void {
+        const a = new A();
+        a.ok();
+      }
+      `
+    );
+    const checker = project.getTypeChecker();
+    vi.spyOn(checker, 'getTypeAtLocation').mockImplementation(() => {
+      throw new Error('ts-morph internal TypeError');
+    });
+
+    const extractor = new CallEdgeExtractor(
+      project,
+      [makeEntity('a.ts.A', 'A'), fnEntity('b.ts.run', 'run')],
+      workspaceRoot
+    );
+
+    expect(() => extractor.extractAll()).not.toThrow();
+    expect(extractor.getStats().checkerErrors).toBeGreaterThan(0);
+  });
+
+  it('prints skipped call-site counts when verbose', () => {
+    project.createSourceFile(
+      '/workspace/main.ts',
+      `
+      function hidden(): void { helper(); }
+      function helper(): void {}
+      export function run(): void {}
+      `
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const extractor = new CallEdgeExtractor(
+        project,
+        [fnEntity('main.ts.run', 'run')],
+        workspaceRoot,
+        { verbose: true }
+      );
+      extractor.extractAll();
+
+      const output = warn.mock.calls.map((call) => call.join(' ')).join('\n');
+      expect(output).toContain('non-exported function call sites=1');
+      expect(output).toContain('TypeChecker errors caught per call site=0');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
 describe('CallEdgeExtractor - multiple calling methods', () => {
   it('emits one edge per calling method when both call the same target method', () => {
     const project = new Project({ useInMemoryFileSystem: true });
@@ -249,10 +562,7 @@ describe('CallEdgeExtractor - multiple calling methods', () => {
       }
     `
     );
-    const entities = [
-      { id: 'b.ts.B', name: 'B' } as any,
-      { id: 'a.ts.A', name: 'A' } as any,
-    ];
+    const entities = [{ id: 'b.ts.B', name: 'B' } as any, { id: 'a.ts.A', name: 'A' } as any];
     const extractor = new CallEdgeExtractor(project, entities, '/workspace');
     const callEdges = extractor.extractAll().filter((r) => r.type === 'call');
 

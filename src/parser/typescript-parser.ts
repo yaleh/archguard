@@ -159,7 +159,8 @@ export class TypeScriptParser {
     rootDir: string,
     pattern: string = '**/*.ts',
     externalProject?: Project,
-    excludePatterns?: string[]
+    excludePatterns?: string[],
+    options?: { verbose?: boolean }
   ): ArchJSON {
     // Set workspaceRoot so toRelPath() can relativize paths
     this.workspaceRoot = rootDir;
@@ -292,7 +293,9 @@ export class TypeScriptParser {
     };
 
     // Extract method-level call edges (parseProject path only — full TypeChecker available)
-    const callEdgeExtractor = new CallEdgeExtractor(fsProject, entities, rootDir);
+    const callEdgeExtractor = new CallEdgeExtractor(fsProject, entities, rootDir, {
+      verbose: options?.verbose === true,
+    });
     const callEdges = callEdgeExtractor.extractAll();
     if (callEdges.length > 5000) {
       console.warn(`[CallEdgeExtractor] Large call edge set: ${callEdges.length} edges.`);

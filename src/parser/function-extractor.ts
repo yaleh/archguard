@@ -7,6 +7,7 @@ import {
   Node,
   type SourceFile,
   type FunctionDeclaration,
+  type VariableDeclaration,
   type ArrowFunction,
   type FunctionExpression,
   type Identifier,
@@ -18,6 +19,21 @@ import type { Entity, Member } from '@/types/index.js';
  * wraps a named function reference) the identifier naming that function.
  */
 type FunctionInitializer = ArrowFunction | FunctionExpression | Identifier;
+
+/**
+ * A single function entity's backing AST nodes.
+ *
+ * `functionNode` is the node the entity's parameters are read from (an
+ * `Identifier` for a HOC-wrapped named function reference, which has no inline
+ * parameter list). `declarationNode` is the node used for source location —
+ * either the function declaration itself or the const's variable declaration.
+ */
+export interface FunctionEntitySource {
+  id: string;
+  name: string;
+  functionNode: FunctionDeclaration | ArrowFunction | FunctionExpression | Identifier;
+  declarationNode: FunctionDeclaration | VariableDeclaration;
+}
 
 /**
  * Higher-order component wrappers whose first argument is the actual component
@@ -52,7 +68,30 @@ export class FunctionExtractor {
    * @returns Array of Entity objects with type 'function'
    */
   extract(sourceFile: SourceFile, relativeFilePath: string): Entity[] {
-    const entities: Entity[] = [];
+    return this.collectEntitySources(sourceFile, relativeFilePath).map((source) => ({
+      id: source.id,
+      name: source.name,
+      type: 'function',
+      visibility: 'public',
+      members: this.extractParamsAsMembers(source.functionNode),
+      sourceLocation: {
+        file: relativeFilePath,
+        startLine: source.declarationNode.getStartLineNumber(),
+        endLine: source.declarationNode.getEndLineNumber(),
+      },
+    }));
+  }
+
+  /**
+   * Enumerate the AST nodes that back this file's function entities.
+   *
+   * This is the single source of truth for "which declarations count as
+   * exported function entities": `extract()` builds its entities from this
+   * list, and `CallEdgeExtractor` scans exactly these bodies so the call graph
+   * can never drift from the entity surface.
+   */
+  collectEntitySources(sourceFile: SourceFile, relativeFilePath: string): FunctionEntitySource[] {
+    const sources: FunctionEntitySource[] = [];
     const referencedExports = this.collectReferencedExportNames(sourceFile);
 
     // 1. Named exported function declarations: export function foo(...)
@@ -60,17 +99,11 @@ export class FunctionExtractor {
       const name = fn.getName();
       if (!name) continue;
       if (!fn.isExported() && !referencedExports.has(name)) continue;
-      entities.push({
+      sources.push({
         id: `${relativeFilePath}.${name}`,
         name,
-        type: 'function',
-        visibility: 'public',
-        members: this.extractParamsAsMembers(fn),
-        sourceLocation: {
-          file: relativeFilePath,
-          startLine: fn.getStartLineNumber(),
-          endLine: fn.getEndLineNumber(),
-        },
+        functionNode: fn,
+        declarationNode: fn,
       });
     }
 
@@ -88,22 +121,16 @@ export class FunctionExtractor {
         if (!init) continue;
         const fn = this.unwrapFunctionInitializer(init);
         if (!fn) continue;
-        entities.push({
+        sources.push({
           id: `${relativeFilePath}.${name}`,
           name,
-          type: 'function',
-          visibility: 'public',
-          members: this.extractParamsAsMembers(fn),
-          sourceLocation: {
-            file: relativeFilePath,
-            startLine: decl.getStartLineNumber(),
-            endLine: decl.getEndLineNumber(),
-          },
+          functionNode: fn,
+          declarationNode: decl,
         });
       }
     }
 
-    return entities;
+    return sources;
   }
 
   /**

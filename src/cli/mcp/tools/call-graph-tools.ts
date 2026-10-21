@@ -21,7 +21,12 @@ export function registerCallGraphTools(server: McpServer, defaultRoot: string): 
     'Return direct and transitive callers of an entity or method using ' +
       'statically-extracted call edges; call archguard_analyze first. ' +
       'Precision: TypeScript ~85% (TypeChecker-resolved; parseProject path only — ' +
-      'parseCode and ParallelParser paths do not generate call edges), ' +
+      'parseCode and ParallelParser paths do not generate call edges). ' +
+      'TypeScript coverage: class methods, exported standalone functions, and exported ' +
+      'arrow/function-expression consts, including cross-file calls resolved by declaration ' +
+      '(bare identifiers are never matched by name alone). Not covered: non-exported ' +
+      'functions, constructor bodies, object-literal methods, and class-property arrow ' +
+      'functions; calls inside inline callbacks are attributed to the enclosing function. ' +
       'Go ~90% (gopls-assisted; entry-point-reachable paths only), ' +
       'Java ~60% (tree-sitter heuristic; field-type resolution only), ' +
       'Python ~40% (duck-typed; self.field calls only). ' +
