@@ -37,12 +37,12 @@ const key = `${relation.type}:${relation.source}:${relation.target}`;
 
 ## AC
 
-- [ ] 单测：夹具中 `class A { m1(){ b.x() } m2(){ b.x() } }` 必须产出 2 条 call 边（两条边的 `sourceMethod` 分别为 `m1`/`m2`）；修复前该夹具只能得到 1 条
-- [ ] 非 call 关系去重语义不变：inheritance/dependency/composition 的现有去重行为与测试保持通过
-- [ ] 两个解析入口一致：`typescript-parser` 与 `parallel-parser` 对同一输入产出相同的 call 边集合（共享 helper 则单测 helper；各写一份则两边各有用例）
-- [ ] `findCallers` 回归：夹具上 `findCallers("<Class>.<targetMethod>")` 返回全部调用方法，不再只返回第一个
-- [ ] 真实数据：把 `/data/home/yale/work/quay/.archguard` 复制到 `/tmp` 夹具复跑分析后，`relationCountByType.call` 从 2 变为 9（若 extractor 行为另有变化，记录实测值并解释）；`findCallers("PhaseDifferentialAccounting.readFor")` 返回 `init`/`boundary`/`finalize` 三个调用者
-- [ ] `bash scripts/test.sh --for-task gap-call-edge-dedup-collapses-method-edges` 与 `npm run type-check` 通过
+- [x] 单测：夹具中 `class A { m1(){ b.x() } m2(){ b.x() } }` 必须产出 2 条 call 边（两条边的 `sourceMethod` 分别为 `m1`/`m2`）；修复前该夹具只能得到 1 条
+- [x] 非 call 关系去重语义不变：inheritance/dependency/composition 的现有去重行为与测试保持通过
+- [x] 两个解析入口一致：`typescript-parser` 与 `parallel-parser` 对同一输入产出相同的 call 边集合（共享 helper 则单测 helper；各写一份则两边各有用例）
+- [x] `findCallers` 回归：夹具上 `findCallers("<Class>.<targetMethod>")` 返回全部调用方法，不再只返回第一个
+- [x] 真实数据：把 `/data/home/yale/work/quay/.archguard` 复制到 `/tmp` 夹具复跑分析后，`relationCountByType.call` 从 2 变为 9（若 extractor 行为另有变化，记录实测值并解释）；`findCallers("PhaseDifferentialAccounting.readFor")` 返回 `init`/`boundary`/`finalize` 三个调用者
+- [x] `bash scripts/test.sh --for-task gap-call-edge-dedup-collapses-method-edges` 与 `npm run type-check` 通过
 
 ## DoD
 
@@ -57,3 +57,4 @@ const key = `${relation.type}:${relation.source}:${relation.target}`;
 - tests/unit/parser/typescript-parser.test.ts
 - tests/unit/parser/call-edge-extractor.test.ts
 - tests/unit/core/query/find-callers.test.ts
+- tests/unit/parser/relation-dedup.test.ts
