@@ -18,12 +18,12 @@ v1.x 的 PlantUML 由 LLM 整份生成，复杂类图渲染失败率 40–60%，
 
 ## AC
 
-- [ ] src/plantuml/generator-formatting.ts 逐函数对译 src/mermaid/generator-formatting.ts 的发射面：class/interface/enum/abstract class 声明、成员行、四种关系（--|> 继承、..|> 实现、..> 依赖、--> 关联）、package/namespace 分组；含空格/特殊字符的类名产出 `"..." as alias` 且关系端点引用别名
-- [ ] src/plantuml/generator.ts 从 ArchJSON + GroupingDecision 确定性产出 @startuml/@enduml 包裹的 .puml，空 ArchJSON 产出合法空图；含泛型实体/端点不产出含 `Map<K,V>` 的非法声明
-- [ ] src/plantuml/validator-structural.ts：@startuml/@enduml 配对、拒绝 containsGenericType 的非法声明与端点、关系端点必须引用已定义实体（未定义端点 = 负对照断言报错）
-- [ ] src/core/interfaces/renderer-facade.ts 与 renderer-types.ts 去 Mermaid 化：RenderJob.mermaidCode → diagramCode + format（'mermaid'|'plantuml'），outputPath.mmd → source；src/mermaid/diagram-generator.ts 适配后 tests/unit/mermaid/generator.test.ts 全绿
-- [ ] src/cli/config-loader.ts 放行 plantuml 格式（emit-only），tests/unit/cli/config-loader-plantuml-removal.test.ts 由「拒绝 plantuml」反转为「放行 plantuml 为 emit-only 格式」；src/cli/utils/output-path-resolver.ts 产出 .puml 路径
-- [ ] tests/unit/plantuml/generator.test.ts（黄金文件 byte-identical）+ tests/unit/plantuml/validator-structural.test.ts 覆盖：空 ArchJSON、含泛型实体、含空格类名、四种关系、package 分组、未定义端点负对照
+- [x] src/plantuml/generator-formatting.ts 逐函数对译 src/mermaid/generator-formatting.ts 的发射面：class/interface/enum/abstract class 声明、成员行、四种关系（--|> 继承、..|> 实现、..> 依赖、--> 关联）、package/namespace 分组；含空格/特殊字符的类名产出 `"..." as alias` 且关系端点引用别名
+- [x] src/plantuml/generator.ts 从 ArchJSON + GroupingDecision 确定性产出 @startuml/@enduml 包裹的 .puml，空 ArchJSON 产出合法空图；含泛型实体/端点不产出含 `Map<K,V>` 的非法声明
+- [x] src/plantuml/validator-structural.ts：@startuml/@enduml 配对、拒绝 containsGenericType 的非法声明与端点、关系端点必须引用已定义实体（未定义端点 = 负对照断言报错）
+- [x] src/core/interfaces/renderer-facade.ts 与 renderer-types.ts 去 Mermaid 化：RenderJob.mermaidCode → diagramCode + format（'mermaid'|'plantuml'），outputPath.mmd → source；src/mermaid/diagram-generator.ts 适配后 tests/unit/mermaid/generator.test.ts 全绿
+- [x] src/cli/config-loader.ts 放行 plantuml 格式（emit-only），tests/unit/cli/config-loader-plantuml-removal.test.ts 由「拒绝 plantuml」反转为「放行 plantuml 为 emit-only 格式」；src/cli/utils/output-path-resolver.ts 产出 .puml 路径
+- [x] tests/unit/plantuml/generator.test.ts（黄金文件 byte-identical）+ tests/unit/plantuml/validator-structural.test.ts 覆盖：空 ArchJSON、含泛型实体、含空格类名、四种关系、package 分组、未定义端点负对照
 
 ## DoD
 
@@ -33,9 +33,14 @@ v1.x 的 PlantUML 由 LLM 整份生成，复杂类图渲染失败率 40–60%，
 
 - src/core/interfaces/renderer-facade.ts
 - src/core/interfaces/renderer-types.ts
+- src/core/interfaces/index.ts
+- src/mermaid/index.ts
 - src/mermaid/diagram-generator.ts
+- src/types/config-mermaid.ts
+- src/types/diagram-result.ts
 - src/cli/config-loader.ts
 - src/cli/processors/diagram-output-router.ts
+- src/cli/processors/diagram-pipeline-runner.ts
 - src/cli/utils/output-path-resolver.ts
 - src/plantuml/generator.ts
 - src/plantuml/generator-formatting.ts
@@ -43,9 +48,17 @@ v1.x 的 PlantUML 由 LLM 整份生成，复杂类图渲染失败率 40–60%，
 - src/plantuml/index.ts
 - tests/unit/cli/config-loader-plantuml-removal.test.ts
 - tests/unit/cli/config-loader.test.ts
+- tests/unit/cli/processors/diagram-output-router.test.ts
 - tests/unit/mermaid/generator.test.ts
+- tests/unit/mermaid/diagram-generator-progress.test.ts
 - tests/unit/architecture/layer-imports.test.ts
 - tests/integration/render-separation.test.ts
+- tests/integration/mermaid/e2e.test.ts
+- tests/integration/parallel-diagrams.test.ts
 - tests/unit/plantuml/generator.test.ts
 - tests/unit/plantuml/validator-structural.test.ts
+- tests/fixtures/plantuml/golden-class.puml
+- tests/fixtures/plantuml/golden-cli.puml
+- tests/fixtures/plantuml/src/core.ts
+- tests/fixtures/plantuml/src/user.ts
 - tasks/gap-plantuml-deterministic-generation.md
