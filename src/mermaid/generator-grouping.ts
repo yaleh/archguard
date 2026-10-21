@@ -8,18 +8,23 @@ import type { GroupingDecision, PackageGroup } from './types.js';
  * File discovery and parallel parsing do not guarantee a stable ArchJSON order
  * (and a warm cache can hand back an already-canonicalized order), so the
  * generator sorts explicitly: same input => byte-identical `.mmd`.
+ *
+ * The key is `id|name`, the same total order `canonicalizeArchJson()` applies
+ * before the PlantUML path groups. Entity ids are derived from the file path
+ * and symbol name, so this order is stable across cold-parse, warm-cache and
+ * parallel-parse runs. Within-group output therefore matches the canonical
+ * order the `.puml` golden was captured against; ordering by source location
+ * instead would reorder PlantUML output (and skip line numbers lexicographically).
  */
 export function compareEntitiesForDiagram(a: Entity, b: Entity): number {
-  const keyA = `${a.sourceLocation?.file ?? ''}|${a.sourceLocation?.startLine ?? 0}|${a.sourceLocation?.endLine ?? 0}|${a.id}|${a.name}`;
-  const keyB = `${b.sourceLocation?.file ?? ''}|${b.sourceLocation?.startLine ?? 0}|${b.sourceLocation?.endLine ?? 0}|${b.id}|${b.name}`;
-  return keyA.localeCompare(keyB);
+  return `${a.id}|${a.name}`.localeCompare(`${b.id}|${b.name}`);
 }
 
-/** Deterministic relation order; same rationale as compareEntitiesForDiagram. */
+/** Deterministic relation order; same key as `canonicalizeArchJson()`. */
 export function compareRelationsForDiagram(a: Relation, b: Relation): number {
-  const keyA = `${a.source}|${a.target}|${a.type}|${a.id}`;
-  const keyB = `${b.source}|${b.target}|${b.type}|${b.id}`;
-  return keyA.localeCompare(keyB);
+  return `${a.id}|${a.source}|${a.target}|${a.type}`.localeCompare(
+    `${b.id}|${b.source}|${b.target}|${b.type}`
+  );
 }
 
 export function groupEntitiesByPackage(
