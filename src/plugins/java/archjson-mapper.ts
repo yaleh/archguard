@@ -78,6 +78,16 @@ const JDK_COMMON_NAMES = new Set([
   'Request',
 ]);
 
+/**
+ * True when the source file lives under a test source set (src/test or src/androidTest).
+ * Test-stub classes placed there to compile tests (e.g. android.content.Context stubs) are
+ * not project entities — including them pollutes arch.json and inflates the coverage
+ * denominator. Real project entities live under src/main and are unaffected.
+ */
+function isTestDirectoryPath(filePath: string): boolean {
+  return /\/src\/(?:test|androidTest)\//.test(filePath.replace(/\\/g, '/'));
+}
+
 export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
   /**
    * Map Java packages to ArchJSON entities
@@ -88,16 +98,19 @@ export class ArchJsonMapper extends BaseArchJsonMapper<JavaRawPackage> {
     for (const pkg of packages) {
       // Map classes
       for (const cls of pkg.classes) {
+        if (isTestDirectoryPath(cls.filePath)) continue;
         entities.push(this.mapClass(cls));
       }
 
       // Map interfaces
       for (const iface of pkg.interfaces) {
+        if (isTestDirectoryPath(iface.filePath)) continue;
         entities.push(this.mapInterface(iface));
       }
 
       // Map enums
       for (const enumDecl of pkg.enums) {
+        if (isTestDirectoryPath(enumDecl.filePath)) continue;
         entities.push(this.mapEnum(enumDecl));
       }
     }
