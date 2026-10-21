@@ -1,7 +1,7 @@
 ---
 id: gap-call-edge-function-coverage
 title: CallEdgeExtractor 只扫类方法与属性访问调用：quay 93.4% 调用点在类外，扩面实测下界 ≥5,309 条 call 边
-status: ready
+status: done
 labels:
   - gap
   - parser
